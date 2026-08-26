@@ -169,4 +169,31 @@ open; expected to span multiple phases.*
 
 ## Traceability
 
-*Filled by the roadmapper.*
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| FIRSTRUN-01 | Phase 164 | Pending |
+| FIRSTRUN-02 | Phase 164 | Pending |
+| FIRSTRUN-03 | Phase 164 | Pending |
+| A11Y-01 | Phase 165 | Pending |
+| A11Y-02 | Phase 165 | Pending |
+| A11Y-03 | Phase 165 | Pending |
+| A11Y-04 | Phase 165 | Pending |
+| A11Y-05 | Phase 165 | Pending |
+| GATE-01 | Phase 166 | Pending |
+| GATE-02 | Phase 166 | Pending |
+| UATREC-01 | Phase 167 | Pending |
+| UATREC-02 | Phase 167 | Pending |
+| UATREC-03 | Phase 168, 169 | Pending |
+| UATREC-04 | Phase 169 | Pending |
+| TRACE-01 | Phase 170 | Pending |
+| TRACE-02 | Phase 170 | Pending |
+| TRACE-03 | Phase 170 | Pending |
+| TRACE-04 | Phase 170 | Pending |
+| TRACE-05 | Phase 170 | Pending |
+| TRACE-06 | Phase 170 | Pending |
+| TRACE-07 | Phase 170 | Pending |
+| RUNBOOK-01 | Phase 170 | Pending |
+| RESUME-05 | Phase 171 | Pending |
+| RESUME-06 | Phase 171 | Pending |
+
+All 24 v5.16 requirements mapped. 0 orphans.

@@ -30,6 +30,7 @@
 - ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
+- 🚧 **v5.16 Review Drain & Gate Integrity** — Phases 164–171 (in progress)
 
 ### Release-integrity note (RVW-004, corrected 2026-08-25)
 
@@ -49,6 +50,223 @@ not happen. Rather than retro-publish two versions whose source never carried
 those numbers, the record is corrected here and **v5.15 becomes the next real
 release**, tagged with a 3-component version. `release.yml`'s trigger has been
 broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
+
+## Current Milestone: v5.16 Review Drain & Gate Integrity
+
+**Goal:** Close every open finding from the 2026-08-24 third-party functional review, so QUIRK's
+own gating documents, accessibility baseline, and first-run path are as trustworthy as the scan
+pipeline v5.15 fixed. Ops milestone — no net-new scanner surface.
+
+**Phase Numbering:** Continues from v5.15's last phase (163). Integer phases only for this
+milestone — no urgent insertions anticipated.
+
+### Phases
+
+- [ ] **Phase 164: First-Run Correctness** - A new user following the dashboard's empty-state instruction runs a command that actually exists and succeeds, and an unparseable target argument fails with a coded error instead of a traceback.
+- [ ] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift.
+- [ ] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, and the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser.
+- [ ] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique.
+- [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the ~325 unrecorded UAT cases each carry a recorded result or an explicit deferral naming a specific substitute test.
+- [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases.
+- [ ] **Phase 170: Traceability, Documentation & Runbook** - The changelog, archive status headers, requirement-to-test linkage, planning-summary cross-references, and CLAUDE.md's staleness runbook are all brought into agreement with what actually shipped and what CI actually gates.
+- [ ] **Phase 171: Resume UX Tail** - Resuming an already-complete scan short-circuits cleanly, and `--list-resumable` shows the correct target for every run type.
+
+## Phase Details
+
+### Phase 164: First-Run Correctness
+
+**Goal**: A new user's very first interaction with QUIRK — following the dashboard's empty-state
+instruction — works on the first try, and a mistyped target argument fails helpfully instead of
+crashing.
+**Depends on**: Nothing (first phase of milestone; deliberately led with per the milestone's
+stated risk that an ops cycle with no visible feature gets deferred)
+**Requirements**: FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03
+**Success Criteria** (what must be TRUE):
+
+  1. The command instructed by the dashboard empty state (`src/dashboard/src/.../findings.tsx:119`)
+     exists as a real CLI invocation and runs successfully against a real target.
+
+  2. Passing an unparseable or unrecognized target argument (e.g. a mistyped `--targets` flag that
+     used to prefix-match `--targets-file`) fails with a coded error message, not an uncaught
+     `FileNotFoundError` traceback — the existing UX-02 contract applied to the target-argument path.
+
+  3. `docs/chaos-lab.md:676` and all six UAT step definitions in `docs/UAT-SERIES.md` that reference
+     the old nonexistent command form are corrected to the fixed invocation.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 165: Accessibility Remediation
+
+**Goal**: The accessibility baseline stops being a permanent accumulation of accepted debt and
+becomes a set of documented, justified decisions — with the 3 genuine screen-reader blockers fixed
+rather than baselined, and the baseline mechanism itself resistant to browser-upgrade churn.
+
+**Context for the planner:** RVW-012 (291 violations, 0 of 11 routes clean) is the same debt class
+as `BACK-A11Y-01`, filed 2026-05-22 in v5.0 Phase 87 and now visible only in the archived
+`.planning/milestones/v5.0-ROADMAP.md`. That entry contains a root-cause analysis and file pointers
+this review lacks — `src/dashboard/tests/a11y/run-a11y.mjs`, `baseline-*.json`, and the
+`src/dashboard/src/index.css` design tokens (`--muted-foreground`, accent and severity-badge hsl
+values) most likely to move the color-contrast numbers. Consult both sources.
+
+**Depends on**: Nothing (independent of Phases 164, 166–171)
+**Requirements**: A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05
+**Success Criteria** (what must be TRUE):
+
+  1. Every one of the 291 violations recorded in `src/dashboard/tests/a11y/baseline-*.json` carries
+     a recorded impact level and WCAG success-criterion reference, so each acceptance reads as a
+     decision rather than a number.
+
+  2. Zero `button-name` violations remain in any of the 11 route baselines — the 3 icon-only radix
+     dropdown triggers gain discernible text or an `aria-label` in the UI itself.
+
+  3. The `color-contrast` violations are split into a fixed set and an explicitly-accepted set, with
+     the accepted set's justification recorded in writing (not merely re-baselined).
+
+  4. Baseline entries are keyed on an identifier stable across a UI refactor and a browser/axe
+     upgrade — not axe's full CSS-selector path, the mechanism that made the v5.0-era baseline stale
+     within one milestone.
+
+  5. `package.json` pins `@axe-core/puppeteer` to an exact version rather than a `^` range.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 166: Gate Robustness
+
+**Goal**: The e2e-smoke and UAT-tooling gates measure real problems and can actually be satisfied
+on ordinary developer hardware, so red stops training people to ignore the suite.
+**Depends on**: Nothing (independent of every other phase in this milestone)
+**Requirements**: GATE-01, GATE-02
+**Success Criteria** (what must be TRUE):
+
+  1. `npm run e2e:smoke` completes and passes within its budget on a developer machine with
+     services listening on common ports (currently ~140s against a 120s budget) — achieved by
+     raising the budget, narrowing the scan scope, or pinning the E2E port scope, whichever is
+     defensible.
+
+  2. `uat_runner.py` parses all XML via `defusedxml` rather than stdlib `ElementTree`; no
+     XXE/billion-laughs-vulnerable parse path remains in that module, matching the migration the
+     project already made for the SAML path in v5.0.
+**Plans**: TBD
+
+### Phase 167: UAT Format Unification & Deduplication
+
+**Goal**: `docs/UAT-SERIES.md` speaks one result format with a case-to-result count that matches by
+construction, and the 3 duplicate case IDs are resolved — the precondition that makes the Phase
+168/169 drain mechanically checkable rather than asserted.
+**Depends on**: Nothing new, but must complete before Phase 168 (UATREC-01 must precede UATREC-03
+per the milestone's sequencing constraint — a normalized format is what makes drain completeness
+verifiable)
+**Requirements**: UATREC-01, UATREC-02
+**Success Criteria** (what must be TRUE):
+
+  1. `docs/UAT-SERIES.md` uses exactly one `**Result:**` block format throughout, and the count of
+     result blocks equals the count of `### UAT-` case headings (628 = 628, closing the 636-vs-628
+     mismatch that was itself RVW-014 evidence).
+
+  2. Every UAT case ID in the document is unique — the 3 duplicate case IDs (UAT-144-01/02/03) are
+     renumbered to distinct IDs with no orphaned cross-references left behind.
+**Plans**: TBD
+
+### Phase 168: UAT Record Drain — Series 1–~100
+
+**Goal**: The older half of the UAT corpus's ~325 unrecorded cases each get a real disposition,
+proving the UAT-33-03 pattern (recorded result, or an explicit deferral naming a specific
+substitute test) scales across the bulk of the document.
+**Depends on**: Phase 167 (needs the unified result format and resolved duplicate IDs to be
+mechanically checkable)
+**Requirements**: UATREC-03 (partial — Series 1 through approximately the document's midpoint)
+**Success Criteria** (what must be TRUE):
+
+  1. Every previously-empty-checkbox case in the first half of the UAT-SERIES.md series range now
+     carries either a recorded PASS/FAIL result or an explicit deferral naming a specific,
+     named substitute test — never an inferred requirement-ID annotation standing in for coverage.
+
+  2. No new duplicate case IDs or result-format variants are introduced while drain work proceeds
+     (Phase 167's invariants hold across the edit).
+**Plans**: TBD
+
+### Phase 169: UAT Record Drain — Series ~100–163 + Enforcement
+
+**Goal**: The remaining unrecorded UAT cases are drained to zero and a standing mechanism prevents
+the corpus from silently re-accumulating undispositioned cases — closing RVW-008 for good rather
+than for one milestone.
+**Depends on**: Phase 168 (completes the same drain effort across the remainder of the series
+range)
+**Requirements**: UATREC-03 (remainder), UATREC-04
+**Success Criteria** (what must be TRUE):
+
+  1. Zero cases in `docs/UAT-SERIES.md` have an empty `**Result:**` block — the full ~325-case
+     backlog is drained via recorded result or named-test deferral.
+
+  2. A check (CI or pre-commit) fails when a new UAT case is added to `docs/UAT-SERIES.md` without
+     a disposition, and fails again if the corpus's undispositioned-case count is ever nonzero.
+
+  3. The enforcement check is documented alongside the other gating mechanisms so a future
+     contributor discovers it before hitting it in CI.
+**Plans**: TBD
+
+### Phase 170: Traceability, Documentation & Runbook
+
+**Goal**: QUIRK's own historical record — changelog, archive status, requirement-to-test linkage,
+planning cross-references, and the staleness runbook — agrees with what actually shipped and what
+CI actually enforces.
+**Depends on**: Nothing (independent of every other phase in this milestone)
+**Requirements**: TRACE-01, TRACE-02, TRACE-03, TRACE-04, TRACE-05, TRACE-06, TRACE-07, RUNBOOK-01
+**Success Criteria** (what must be TRUE):
+
+  1. `CHANGELOG.md` has an entry for every milestone v5.9 through v5.14, with v5.13/v5.14 described
+     accurately as developed-but-never-released rather than claiming a publish that never happened.
+
+  2. v4.7's ROADMAP and REQUIREMENTS are reconstructed from `v4.7-phases/` (or ROADMAP.md's dead
+     link to them is corrected so it no longer points nowhere), and the five archive documents
+     recording no completion status (v4.10, v4.3, v5.1, v5.12, v5.4) each gain a `**Status:**`
+     header.
+
+  3. DEBT-02, GAP-02, QRAMM-08, and QRAMM-09 each have a discoverable, runnable test (`lab.sh`
+     PROFILE_ARGS precedence, the re-enabled SAML scan-window test, the 120-question/4-tab
+     assessment page, and the Org Profile multiplier respectively), and AUTH-05, DEBT-04, GAP-01,
+     QRAMM-11, TAIL-04, and GAUGE-01/02/03 each carry a requirement-ID annotation linking to their
+     existing (already-correct) tests.
+
+  4. All 16 planning-summary references that currently point at pre-archive sibling paths are
+     fixed to survive archival, and new requirement documents (going forward) use exactly one
+     declaration format — archive backfill remains explicitly out of scope.
+
+  5. CLAUDE.md's Staleness Review Cadence lists the CMVP, error-codes, and SNMP-contract catalogs
+     alongside the existing entries, so the runbook matches every catalog
+     `.github/workflows/python-staleness.yml` actually gates.
+**Plans**: TBD
+
+### Phase 171: Resume UX Tail
+
+**Goal**: The two Phase 163 human-UAT findings that were surfaced but not actioned in that phase
+are closed — resume behavior and `--list-resumable` output are both fully correct.
+**Depends on**: Nothing (independent of every other phase in this milestone; different subsystem
+from the discovery-checkpoint work Phase 163 itself completed)
+**Requirements**: RESUME-05, RESUME-06
+**Success Criteria** (what must be TRUE):
+
+  1. Resuming an already-complete scan short-circuits instead of re-appending
+     `discovery`/`inventory`/`reports` checkpoint rows — pre-existing correct batch-row behavior is
+     unaffected.
+
+  2. `quirk --list-resumable` shows the correct target for `--targets-file` runs instead of a blank
+     Target column — the target is resolved independently of the `scan_jobs` join that only exists
+     for `--job-id` runs.
+**Plans**: TBD
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 164. First-Run Correctness | 0/TBD | Not started | - |
+| 165. Accessibility Remediation | 0/TBD | Not started | - |
+| 166. Gate Robustness | 0/TBD | Not started | - |
+| 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
+| 168. UAT Record Drain — Series 1–~100 | 0/TBD | Not started | - |
+| 169. UAT Record Drain — Series ~100–163 + Enforcement | 0/TBD | Not started | - |
+| 170. Traceability, Documentation & Runbook | 0/TBD | Not started | - |
+| 171. Resume UX Tail | 0/TBD | Not started | - |
 
 ---
 

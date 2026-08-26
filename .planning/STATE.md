@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-08-26T13:45:16.331Z"
 last_activity: 2026-08-26
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,27 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 163 — discovery-sub-batch-checkpoint-granularity
+**Current focus:** Phase 164 — first-run-correctness (roadmap approved; 8 phases, 164–171)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 164 (First-Run Correctness) — not yet planned
 Plan: —
-Status: Defining requirements
-Last activity: 2026-08-26 — Milestone v5.16 started
+Status: Roadmap approved; awaiting /gsd:plan-phase 164
+Last activity: 2026-08-26 — v5.16 roadmap created (8 phases, 164–171; 24/24 requirements mapped)
+
+## v5.16 Phase Map (IN PROGRESS)
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 164 | First-Run Correctness | FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03 | None (first, deliberately led per milestone risk note) | Not started |
+| 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
+| 166 | Gate Robustness | GATE-01, GATE-02 | None (independent) | Not started |
+| 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | Not started |
+| 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Not started |
+| 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Not started |
+| 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Not started |
+| 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Not started |
 
 ## v5.15 Phase Map (SHIPPED 2026-08-26)
 
