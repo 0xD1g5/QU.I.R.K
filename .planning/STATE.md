@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: Phase 164 context gathered
-last_updated: "2026-08-26T17:25:35.041Z"
-last_activity: 2026-08-26 -- Phase 164 planning complete
+last_updated: "2026-08-26T17:53:47.759Z"
+last_activity: 2026-08-26
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 164 — first-run-correctness (roadmap approved; 8 phases, 164–171)
+**Current focus:** Phase 164 — first-run-correctness
 
 ## Current Position
 
-Phase: 164 (First-Run Correctness) — context gathered, not yet planned
-Plan: —
+Phase: 164 (first-run-correctness) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-08-26 -- Phase 164 planning complete
+Last activity: 2026-08-26
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -214,6 +214,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 161 P01 | 20min | 3 tasks | 5 files |
 | Phase 163 P01 | 30min | 3 tasks | 2 files |
 | Phase 163 P02 | 45min | 2 tasks | 2 files |
+| Phase 164 P01 | 8min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -405,6 +406,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: Resume-skip guard requires BOTH a completed-batch checkpoint AND a live cache hit before skipping; checkpoint alone falls through and re-probes
 - [Phase ?]: Skip-path deliberately does not call update_batch_progress to preserve the pre-existing Phase 146 single-call-site AST lock
 - [Phase ?]: Per-batch save_cache/write_scan_checkpoint gate is args.db_path alone (D-02), never args.cache, never args.job_id
+- [Phase 164]: TARGET-001/TARGET-002 registry entries use static cause/fix strings with no embedded path or token (T-164-01)
 
 ### Pending Todos
 
@@ -535,7 +537,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-26T16:04:29.464Z
+Last session: 2026-08-26T17:51:29.068Z
 Stopped at: Phase 164 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

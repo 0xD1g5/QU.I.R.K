@@ -25,7 +25,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   exists. `src/dashboard/src/.../findings.tsx:119` currently instructs `quirk scan --targets ...`;
   there is no `scan` subcommand and no `--targets` flag. The instructed command must run
   successfully against a real target.
-- [ ] **FIRSTRUN-02**: An unparseable or unrecognized target argument fails with a coded error
+- [x] **FIRSTRUN-02**: An unparseable or unrecognized target argument fails with a coded error
   message, not a Python traceback. `--targets` currently prefix-matches `--targets-file` and raises
   an uncaught `FileNotFoundError`. This is the existing UX-02 contract applied to the target-argument
   path.
@@ -172,7 +172,7 @@ open; expected to span multiple phases.*
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FIRSTRUN-01 | Phase 164 | Pending |
-| FIRSTRUN-02 | Phase 164 | Pending |
+| FIRSTRUN-02 | Phase 164 | Complete |
 | FIRSTRUN-03 | Phase 164 | Pending |
 | A11Y-01 | Phase 165 | Pending |
 | A11Y-02 | Phase 165 | Pending |
