@@ -1393,9 +1393,19 @@ def main():
     # wizard and only then crashing. Cheap stat() only; full validation (and
     # TARGET-002) still happens at the apply_targets_file_override call site.
     targets_file = getattr(args, "targets_file", None)
-    if targets_file and not os.path.exists(targets_file):
-        print(format_error("TARGET-001"), file=sys.stderr)
-        sys.exit(2)
+    if targets_file:
+        if not os.path.exists(targets_file):
+            print(format_error("TARGET-001"), file=sys.stderr)
+            sys.exit(2)
+        # Phase 164 code review WR-01/WR-02: os.path.exists() is True for a
+        # directory and says nothing about readability, so both cases used to
+        # sail past this guard and reach open(), raising IsADirectoryError /
+        # PermissionError -- siblings of FileNotFoundError under OSError, which
+        # neither except clause at the call site caught. Result was the raw
+        # traceback this phase exists to eliminate (FIRSTRUN-02).
+        if not os.path.isfile(targets_file) or not os.access(targets_file, os.R_OK):
+            print(format_error("TARGET-003"), file=sys.stderr)
+            sys.exit(2)
 
     quiet = getattr(args, "quiet", False)
     print_banner(__version__, quiet=quiet)
@@ -1443,6 +1453,14 @@ def main():
             # Reachable if the file disappears between the early D-09 stat()
             # guard and here, or a nested @-file it references is missing.
             print(format_error("TARGET-001"), file=sys.stderr)
+            sys.exit(2)
+        except OSError:
+            # WR-01/WR-02: IsADirectoryError, PermissionError, and any other
+            # OSError open() can raise. FileNotFoundError is a subclass and is
+            # handled above, so it never reaches this clause. Reachable if the
+            # path's type or permissions change between the early D-09 guard
+            # and here, or via a nested @-file that is unreadable.
+            print(format_error("TARGET-003"), file=sys.stderr)
             sys.exit(2)
         except ValueError:
             # quirk.util.targets.TargetFileError subclasses ValueError, so

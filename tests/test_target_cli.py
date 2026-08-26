@@ -194,3 +194,70 @@ def test_malformed_target_token_emits_target_002_exit_2(tmp_path):
         f"Expected QRK-TARGET-002 in output; got: {combined!r}"
     )
     assert "Traceback" not in combined, f"Unexpected traceback: {combined!r}"
+
+
+def test_directory_as_targets_file_emits_target_003_exit_2(tmp_path):
+    """A directory passed to --targets-file exits 2 coded, never a traceback.
+
+    Regression pin for code-review WR-01. os.path.exists() returns True for a
+    directory, so the D-09 guard used to wave this through to open(), which
+    raises IsADirectoryError -- an OSError sibling of FileNotFoundError that
+    no except clause caught. The user got a raw traceback, the exact defect
+    class FIRSTRUN-02 forbids.
+    """
+    a_dir = tmp_path / "not_a_file"
+    a_dir.mkdir()
+    result = subprocess.run(
+        [sys.executable, str(RUN_SCAN), "--targets-file", str(a_dir)],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        timeout=20,
+    )
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert result.returncode == 2, (
+        f"Expected exit 2, got {result.returncode}. combined={combined!r}"
+    )
+    assert "QRK-TARGET-003" in combined, (
+        f"Expected QRK-TARGET-003 in output; got: {combined!r}"
+    )
+    assert "Traceback" not in combined, f"Traceback leaked: {combined!r}"
+    assert BANNER_LITERAL not in combined, (
+        f"Banner printed before the TARGET-003 guard fired: {combined!r}"
+    )
+
+
+def test_unreadable_targets_file_emits_target_003_exit_2(tmp_path):
+    """An existing but unreadable --targets-file exits 2 coded (WR-02).
+
+    PermissionError is likewise an OSError sibling of FileNotFoundError.
+    Skipped when running as root, where the mode bits do not deny access.
+    """
+    import os
+
+    if os.geteuid() == 0:
+        import pytest
+
+        pytest.skip("root bypasses the mode bits this test relies on")
+
+    unreadable = tmp_path / "noperm.txt"
+    unreadable.write_text("127.0.0.1\n", encoding="utf-8")
+    unreadable.chmod(0o000)
+    try:
+        result = subprocess.run(
+            [sys.executable, str(RUN_SCAN), "--targets-file", str(unreadable)],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            timeout=20,
+        )
+    finally:
+        unreadable.chmod(0o644)
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert result.returncode == 2, (
+        f"Expected exit 2, got {result.returncode}. combined={combined!r}"
+    )
+    assert "QRK-TARGET-003" in combined, (
+        f"Expected QRK-TARGET-003 in output; got: {combined!r}"
+    )
+    assert "Traceback" not in combined, f"Traceback leaked: {combined!r}"

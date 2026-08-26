@@ -74,3 +74,21 @@ def test_target_file_error_is_a_value_error():
     import quirk.util.targets as targets
 
     assert issubclass(targets.TargetFileError, ValueError)
+
+
+def test_target_003_is_registered_and_wire_formatted():
+    """TARGET-003 covers the unreadable/not-a-regular-file case (WR-01/WR-02).
+
+    Distinct from TARGET-001 on purpose: a directory or a permission-denied
+    file DOES exist, so TARGET-001's "could not be found" cause text would be
+    inaccurate for it (code review IN-01).
+    """
+    from quirk.errors import ERROR_REGISTRY, format_error
+
+    assert "TARGET-003" in ERROR_REGISTRY
+    rendered = format_error("TARGET-003")
+    assert rendered.startswith("[QRK-TARGET-003] ")
+    assert " Fix: " in rendered
+    assert "could not be found" not in rendered, (
+        "TARGET-003 must not reuse TARGET-001's not-found wording (IN-01)"
+    )

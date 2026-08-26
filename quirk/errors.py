@@ -204,6 +204,11 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         cause="A target token or CIDR in the targets file is malformed.",
         fix="Use one bare host, FQDN, IP, or CIDR per line in the targets file.",
     ),
+    "TARGET-003": ErrorEntry(
+        code="TARGET-003",
+        cause="The targets file supplied to --targets-file exists but could not be read.",
+        fix="Confirm the path is a regular file rather than a directory, and that you have read permission on it.",
+    ),
 
     # --- Reserved per-domain exception fallback codes (NNN-099) ---
     # Used by render-time CATEGORY_TO_CODE dispatch when scan_error_category == "exception"

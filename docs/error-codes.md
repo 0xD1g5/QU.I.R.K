@@ -96,6 +96,7 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 |------|-------|-----|
 | QRK-TARGET-001 | The targets file supplied to --targets-file could not be found. | Check the path and confirm the file exists relative to the current working directory. |
 | QRK-TARGET-002 | A target token or CIDR in the targets file is malformed. | Use one bare host, FQDN, IP, or CIDR per line in the targets file. |
+| QRK-TARGET-003 | The targets file supplied to --targets-file exists but could not be read. | Confirm the path is a regular file rather than a directory, and that you have read permission on it. |
 
 ## TLS
 
