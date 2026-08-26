@@ -1388,6 +1388,15 @@ def main():
         _job_report["job_id"] = args.job_id
         _job_report["db_path"] = args.db_path
 
+    # Phase 164 / D-09: fail fast on a missing --targets-file before the banner
+    # and interactive wizard, instead of walking the user through the whole
+    # wizard and only then crashing. Cheap stat() only; full validation (and
+    # TARGET-002) still happens at the apply_targets_file_override call site.
+    targets_file = getattr(args, "targets_file", None)
+    if targets_file and not os.path.exists(targets_file):
+        print(format_error("TARGET-001"), file=sys.stderr)
+        sys.exit(2)
+
     quiet = getattr(args, "quiet", False)
     print_banner(__version__, quiet=quiet)
 
@@ -1428,7 +1437,21 @@ def main():
 
     # Phase 47 / D-03: --targets-file REPLACES cfg.targets.fqdns + cidrs (does NOT merge)
     if getattr(args, "targets_file", None):
-        apply_targets_file_override(cfg, args.targets_file)  # D-03
+        try:
+            apply_targets_file_override(cfg, args.targets_file)  # D-03
+        except FileNotFoundError:
+            # Reachable if the file disappears between the early D-09 stat()
+            # guard and here, or a nested @-file it references is missing.
+            print(format_error("TARGET-001"), file=sys.stderr)
+            sys.exit(2)
+        except ValueError:
+            # quirk.util.targets.TargetFileError subclasses ValueError, so
+            # @-file path-traversal / blocked-prefix / size-cap / line-cap
+            # rejections are routed here too — coded exit-2 TARGET-002
+            # instead of a traceback, without registering dedicated codes
+            # (Phase 164 CONTEXT.md Deferred Ideas).
+            print(format_error("TARGET-002"), file=sys.stderr)
+            sys.exit(2)
 
     # Phase 57 / D-04: CLI flags override YAML security block per-run (opt-in only, never opt-out).
     apply_security_cli_overrides(cfg, args)
