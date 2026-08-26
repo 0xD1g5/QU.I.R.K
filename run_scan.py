@@ -820,6 +820,7 @@ def main():
         init_parser = argparse.ArgumentParser(
             prog="quirk init",
             description="Generate a starter config.yaml",
+            allow_abbrev=False,
         )
         init_parser.add_argument(
             "--output",
@@ -836,6 +837,7 @@ def main():
         serve_parser = argparse.ArgumentParser(
             prog="quirk serve",
             description="Start the QU.I.R.K. web dashboard",
+            allow_abbrev=False,
         )
         serve_parser.add_argument(
             "--port",
@@ -881,11 +883,13 @@ def main():
         comp_parser = argparse.ArgumentParser(
             prog="quirk compliance",
             description="Inspect QUIRK's compliance mapping data (PCI-DSS / HIPAA / FIPS 140-3)",
+            allow_abbrev=False,
         )
         comp_sub = comp_parser.add_subparsers(dest="action", required=True)
         status_parser = comp_sub.add_parser(
             "status",
             help="Print per-framework version, last_verified date, and source URL",
+            allow_abbrev=False,
         )
         status_parser.add_argument(
             "--format",
@@ -897,10 +901,13 @@ def main():
         cmvp_parser = comp_sub.add_parser(
             "cmvp",
             help="Inspect / refresh CMVP attestation cache",
+            allow_abbrev=False,
         )
         cmvp_sub = cmvp_parser.add_subparsers(dest="cmvp_action", required=True)
         cmvp_refresh = cmvp_sub.add_parser(
-            "refresh", help="Refresh CMVP cache from NIST"
+            "refresh",
+            help="Refresh CMVP cache from NIST",
+            allow_abbrev=False,
         )
         cmvp_refresh.add_argument(
             "--dry-run",
@@ -908,7 +915,9 @@ def main():
             help="Preview changes without writing the cache",
         )
         cmvp_status = cmvp_sub.add_parser(
-            "status", help="Print CMVP cache freshness"
+            "status",
+            help="Print CMVP cache freshness",
+            allow_abbrev=False,
         )
         cmvp_status.add_argument(
             "--format", choices=["text", "json"], default="text"
@@ -1005,6 +1014,7 @@ def main():
         db_parser = argparse.ArgumentParser(
             prog="quirk db",
             description="Database maintenance subcommands",
+            allow_abbrev=False,
         )
         db_sub = db_parser.add_subparsers(dest="action", required=True)
         migrate_parser = db_sub.add_parser(
@@ -1015,6 +1025,7 @@ def main():
                 "additive column as 'added' or 'already-present'. Never drops, "
                 "renames, or retypes columns. Exits 0 on success."
             ),
+            allow_abbrev=False,
         )
         migrate_parser.add_argument(
             "--db",
@@ -1063,7 +1074,10 @@ def main():
             print(footer)
             return
 
-    parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
+    parser = argparse.ArgumentParser(
+        description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit",
+        allow_abbrev=False,
+    )
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
     parser.add_argument("--config", help="Path to config.yaml (skip prompts)")
