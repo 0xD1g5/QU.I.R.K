@@ -73,7 +73,7 @@ from quirk.reports.writer import write_reports
 from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
 from quirk.engine.profiles import apply_profile
-from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets, open_ports_to_serial, serial_to_open_ports
+from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets, open_ports_to_serial, serial_to_open_ports, liveness_to_serial, serial_to_liveness
 from quirk.engine.rate_limiter import TokenBucket
 
 from quirk import __version__
@@ -1731,6 +1731,17 @@ def main():
                             # AST lock) — not duplicated here; the skip path only
                             # updates the local counter and prints its own message.
                             all_open_ports.extend(serial_to_open_ports(_cached_batch.get("ports", [])))
+                            # Phase 163 UAT fix / T-163-01: without this the
+                            # undetermined-host advisories recorded when this
+                            # batch was first swept vanish, and the resumed
+                            # scan under-reports its own coverage by a full
+                            # batch. Pre-fix caches have no "liveness" key and
+                            # degrade to the old (lossy) behaviour rather than
+                            # raising.
+                            liveness_endpoints.extend(
+                                CryptoEndpoint(**_rec)
+                                for _rec in serial_to_liveness(_cached_batch.get("liveness", []))
+                            )
                             _discovery_hosts_checked += len(batch)
                             if not args.quiet:
                                 print(
@@ -1747,6 +1758,10 @@ def main():
                     # rather than solved.
                     _batch_swept_ok = True
                     batch_open_ports: List = []
+                    # Phase 163 UAT fix: accumulate THIS batch's undetermined-host
+                    # advisories separately so they can be cached alongside the
+                    # ports and restored when a resumed run skips the batch.
+                    _batch_liveness_serial: List = []
 
                     # Phase 146 / D-05/D-06/D-07, RESEARCH.md Pitfall 2, Open
                     # Question 1: the formula's output REPLACES
@@ -1790,13 +1805,15 @@ def main():
                         sweep_targets = [h for h in batch if h not in down_hosts]
                         for h in batch:
                             if h in down_hosts:
-                                liveness_endpoints.append(CryptoEndpoint(
-                                    host=h,
-                                    port=0,
-                                    protocol="ADVISORY",
-                                    scan_error="liveness pre-pass: no response",
-                                    scan_error_category="liveness_skip",
-                                ))
+                                _adv = {
+                                    "host": h,
+                                    "port": 0,
+                                    "protocol": "ADVISORY",
+                                    "scan_error": "liveness pre-pass: no response",
+                                    "scan_error_category": "liveness_skip",
+                                }
+                                _batch_liveness_serial.append(_adv)
+                                liveness_endpoints.append(CryptoEndpoint(**_adv))
                         logger.stamp(
                             f"liveness pre-pass batch {batch_num}: "
                             f"{len(sweep_targets)} responsive, {len(down_hosts)} skipped"
@@ -1852,7 +1869,10 @@ def main():
                     if args.db_path and _batch_swept_ok:
                         save_cache(
                             cfg.output.directory, _batch_cache_key,
-                            {"ports": open_ports_to_serial(batch_open_ports)},
+                            {
+                                "ports": open_ports_to_serial(batch_open_ports),
+                                "liveness": liveness_to_serial(_batch_liveness_serial),
+                            },
                         )
                         write_scan_checkpoint(
                             args.db_path, scan_run_id, _batch_stage,

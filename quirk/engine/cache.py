@@ -139,3 +139,51 @@ def serial_to_open_ports(serial: List[Dict[str, Any]]) -> List["NmapOpenPort"]:
         if h and p is not None and proto:
             out.append(NmapOpenPort(host=str(h), port=int(p), protocol=str(proto), service=item.get("service")))
     return out
+
+
+# Phase 163 / DISC-08 UAT fix: the per-batch discovery cache originally carried
+# only `ports`, so the per-host "undetermined" ADVISORY records produced by the
+# liveness pre-pass were lost for every batch a resumed scan skipped. That
+# understated "Hosts scanned"/"Hosts undetermined" by roughly one batch-size per
+# skipped batch and regressed the Phase 145 / DISC-03 / D-04 guarantee that a
+# non-responsive host is recorded rather than silently dropped.
+#
+# These records are plain JSON-safe dicts, not ORM objects: run_scan.py rebuilds
+# CryptoEndpoint rows from them on the skip path. Keeping them dict-shaped is
+# what lets save_cache's _write_json (which has no try/except) handle them.
+_LIVENESS_FIELDS = ("host", "port", "protocol", "scan_error", "scan_error_category")
+
+
+def liveness_to_serial(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # Mirrors open_ports_to_serial: project onto a fixed, JSON-safe field set
+    # rather than trusting the caller to hand over only primitives.
+    return [
+        {
+            "host": str(r.get("host")),
+            "port": int(r.get("port") or 0),
+            "protocol": str(r.get("protocol") or "ADVISORY"),
+            "scan_error": r.get("scan_error"),
+            "scan_error_category": r.get("scan_error_category"),
+        }
+        for r in (records or [])
+        if r.get("host")
+    ]
+
+
+def serial_to_liveness(serial: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # Mirrors serial_to_open_ports' defensive .get() posture — a malformed item
+    # is skipped, never raised on, so a corrupted cache file degrades into a
+    # re-probe instead of killing the scan.
+    out: List[Dict[str, Any]] = []
+    for item in serial or []:
+        h = item.get("host")
+        if not h:
+            continue
+        out.append({
+            "host": str(h),
+            "port": int(item.get("port") or 0),
+            "protocol": str(item.get("protocol") or "ADVISORY"),
+            "scan_error": item.get("scan_error"),
+            "scan_error_category": item.get("scan_error_category"),
+        })
+    return out

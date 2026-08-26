@@ -815,3 +815,126 @@ def test_only_one_discovery_call_site_each_local_regression_guard():
     _, tree = _parse_run_scan()
     assert len(_find_calls(tree, "run_nmap_discovery")) == 1
     assert len(_find_calls(tree, "run_nmap_liveness_check")) == 1
+
+
+# ---------------------------------------------------------------------------
+# Part D: liveness advisory records survive a skipped batch (DISC-08 / T-163-01)
+#
+# UAT-163-04 surfaced a silent-coverage-loss defect: the per-batch cache
+# payload carried only `ports`, so the per-host "undetermined" ADVISORY
+# endpoints a live batch appends to `liveness_endpoints` (run_scan.py, inside
+# the `else:` of the liveness try) were lost for every SKIPPED batch. A resumed
+# scan therefore reported ~1024 fewer "Hosts scanned"/"Hosts undetermined" per
+# skipped batch than an uninterrupted scan of the same targets, understating
+# the coverage claimed by a client-facing report.
+#
+# Observed on a real /20 (4094 hosts, 4 batches):
+#   2 batches cached -> "Hosts scanned 2005 / undetermined 2000"
+#   3 batches cached -> "Hosts scanned 1014 / undetermined 1008"
+#   discovered endpoint count was correct (6) in BOTH runs.
+#
+# This directly regresses the Phase 145 / DISC-03 / D-04 guarantee that a
+# non-responsive host is recorded rather than silently dropped.
+# ---------------------------------------------------------------------------
+
+
+def test_liveness_endpoint_serializer_roundtrip():
+    """liveness_to_serial/serial_to_liveness must round-trip advisory records
+    through a JSON-safe payload, mirroring the open_ports_to_serial pair."""
+    from quirk.engine.cache import liveness_to_serial, serial_to_liveness
+
+    records = [
+        {
+            "host": "194.168.7.9",
+            "port": 0,
+            "protocol": "ADVISORY",
+            "scan_error": "liveness pre-pass: no response",
+            "scan_error_category": "liveness_skip",
+        },
+        {
+            "host": "194.168.7.10",
+            "port": 0,
+            "protocol": "ADVISORY",
+            "scan_error": "liveness pre-pass: no response",
+            "scan_error_category": "liveness_skip",
+        },
+    ]
+
+    serial = liveness_to_serial(records)
+
+    # Must be JSON-safe: save_cache's _write_json has no try/except.
+    import json
+
+    json.dumps(serial)
+
+    restored = serial_to_liveness(serial)
+    assert len(restored) == 2
+    assert {r["host"] for r in restored} == {"194.168.7.9", "194.168.7.10"}
+    for r in restored:
+        assert r["protocol"] == "ADVISORY"
+        assert r["port"] == 0
+        assert r["scan_error_category"] == "liveness_skip"
+
+
+def test_liveness_serializer_skips_malformed_items():
+    """Mirrors serial_to_open_ports' defensive posture — a malformed cache
+    entry is skipped, never raised on, so a corrupted cache file degrades to
+    a re-probe rather than killing the scan."""
+    from quirk.engine.cache import serial_to_liveness
+
+    assert serial_to_liveness([]) == []
+    assert serial_to_liveness(None) == []
+    assert serial_to_liveness([{"port": 0}]) == []  # no host
+
+
+def test_batch_cache_payload_includes_liveness_records():
+    """The per-batch save_cache payload must carry a 'liveness' key alongside
+    'ports', or skipped batches lose their undetermined-host advisories."""
+    _, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+    save_cache_calls = _calls_inside(loop_nodes, _find_calls(tree, "save_cache"))
+    assert save_cache_calls, "No save_cache(...) call found inside the _chunked loop."
+
+    keys_seen = set()
+    for call in save_cache_calls:
+        for arg in call.args:
+            if isinstance(arg, ast.Dict):
+                for k in arg.keys:
+                    if isinstance(k, ast.Constant) and isinstance(k.value, str):
+                        keys_seen.add(k.value)
+
+    assert "ports" in keys_seen, "per-batch cache payload lost its 'ports' key"
+    assert "liveness" in keys_seen, (
+        "per-batch cache payload has no 'liveness' key — undetermined-host "
+        "ADVISORY records will be silently dropped for every skipped batch "
+        "(T-163-01 / DISC-03 D-04 regression)"
+    )
+
+
+def test_skip_path_restores_liveness_endpoints():
+    """The resume-skip branch must repopulate liveness_endpoints from cache,
+    not just all_open_ports."""
+    src, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+
+    restores = []
+    for loop in loop_nodes:
+        for node in ast.walk(loop):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "extend"
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "liveness_endpoints"
+            ):
+                restores.append(node)
+
+    assert restores, (
+        "No liveness_endpoints.extend(...) inside the _chunked loop — the "
+        "resume-skip branch cannot be restoring cached advisory records."
+    )
+
+    # The restore must read the cached payload, not rebuild from a live probe.
+    assert any(
+        "serial_to_liveness" in ast.dump(node) for node in restores
+    ), "liveness_endpoints.extend(...) does not deserialize from the batch cache."
