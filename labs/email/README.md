@@ -12,7 +12,18 @@ available for manual regeneration with the identical CNs/permissions:
 ```bash
 make -C labs/email certs   # optional — lab.sh generates these automatically
 docker compose --profile email --file quantum-chaos-enterprise-lab/docker-compose.yml up -d
-quirk scan --target localhost --ports 30025,30465,30587,30143,30993,30110,30995
+echo localhost > targets.txt
+# There is no --ports flag. The email scanner's EMAIL_PORTS table
+# (quirk/scanner/email_scanner.py) is hardcoded to standard ports 25, 465,
+# 587, 143, 993, 110, 995 — it is NOT config-overridable (documented gap,
+# see expected_results.md's "Port mapping" section). This lab remaps those
+# to the high ports in the table below to avoid privileged binding, so
+# `quirk --targets-file targets.txt` alone will not reach the lab's
+# containers; forward the standard ports to the remapped ones first
+# (e.g. `sudo socat tcp-listen:25,fork tcp:localhost:30025` per port). Email
+# scanning also requires connectors.enable_email: true in config.yaml (no
+# CLI flag exists for it), then:
+quirk --targets-file targets.txt --config config.yaml
 docker compose --profile email --file quantum-chaos-enterprise-lab/docker-compose.yml down
 ```
 

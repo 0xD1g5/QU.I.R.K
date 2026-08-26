@@ -13049,7 +13049,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 4. Backward-compat + scoring stability proven (D-05):
    - `grep -q "compute_readiness_score" tests/test_sensor_schema.py`
    - `python -m pytest tests/test_sensor_schema.py -k "migrates_without_data_loss or score_stable" -q` exits 0
-5. `quirk scan` runs unchanged against an existing pre-v5.4 SQLite database (no schema error, no data loss) — covered by `test_pre_v54_db_migrates_without_data_loss`.
+5. `quirk --targets-file targets.txt` runs unchanged against an existing pre-v5.4 SQLite database (no schema error, no data loss) — covered by `test_pre_v54_db_migrates_without_data_loss`.
 6. `python -m compileall quirk/` exits 0.
 
 **Expected:** Fresh `init_db` produces `crypto_endpoints.sensor_id` (indexed), `crypto_endpoints.segment`, and the `sensors`/`sensor_tokens`/`sensor_pushes` tables; a pre-v5.4 DB migrates with no data loss and identical scoring; CASCADE FKs and the `payload_id` unique constraint are enforced; the `_ensure_columns` allowlist rejects poisoned DDL.

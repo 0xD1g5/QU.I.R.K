@@ -167,7 +167,8 @@ PROFILE_ARGS="--profile jwt" ./lab.sh up
 
 **Scanner validation command:**
 ```
-quirk scan --targets http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004
+printf '%s\n' http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004 > targets.txt
+quirk --targets-file targets.txt
 ```
 **Expected:** JWT scanner returns >= 2 weak-algorithm findings (HS256-weak + RSA-1024 + alg:none = 3 findings).
 
@@ -190,9 +191,19 @@ PROFILE_ARGS="--profile registry" ./lab.sh up
 | image-mixed | openssl | 1.0.2n | OUTDATED_CRYPTO_LIB | Combined old libssl + old pycrypto |
 | image-mixed | cryptography | 2.9.2 | OUTDATED_CRYPTO_LIB | Combined finding |
 
-**Scanner validation command:**
+**Scanner validation command:** container scanning is config-driven — there is no
+`--container` flag. Set `connectors.enable_container: true` and
+`connectors.container_targets` in `config.yaml`:
+```yaml
+connectors:
+  enable_container: true
+  container_targets:
+    - localhost:20005/image-old-pycrypto
+    - localhost:20005/image-old-libssl
+    - localhost:20005/image-mixed
 ```
-quirk scan --container localhost:20005/image-old-pycrypto localhost:20005/image-old-libssl localhost:20005/image-mixed
+```
+quirk --config config.yaml
 ```
 **Expected:** Container scanner returns at least 4 crypto library findings (cryptography, pyopenssl, openssl per image).
 
@@ -350,7 +361,9 @@ PROFILE_ARGS="--profile dnssec" ./lab.sh up
 
 **Scanner validation command:**
 ```
-docker compose --profile dnssec up -d && sleep 5 && quirk scan --targets weak.example.com unsigned.example.com nsec.example.com
+docker compose --profile dnssec up -d && sleep 5
+printf '%s\n' weak.example.com unsigned.example.com nsec.example.com > targets.txt
+quirk --targets-file targets.txt
 ```
 **Expected:** DNSSEC scanner returns >= 1 CRITICAL finding (RSASHA1) for weak.example.com, 1 HIGH finding (unsigned zone) for unsigned.example.com, and 1 MEDIUM finding (NSEC) for nsec.example.com. ECDSAP256SHA256 zones produce no algorithm severity finding.
 
@@ -375,7 +388,9 @@ PROFILE_ARGS="--profile saml" ./lab.sh up
 
 **Scanner validation command:**
 ```
-docker compose --profile saml up -d && sleep 10 && quirk scan --targets http://localhost:8080/simplesaml/saml2/idp/metadata.php
+docker compose --profile saml up -d && sleep 10
+echo http://localhost:8080/simplesaml/saml2/idp/metadata.php > targets.txt
+quirk --targets-file targets.txt
 ```
 **Expected:** SAML scanner returns 1 CRITICAL finding for RSA-1024 signing certificate and optionally 1 HIGH finding if SHA-1 algorithm URI is present in metadata. Findings appear in the Identity tab (source="saml"), not the Findings tab.
 
@@ -401,7 +416,9 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 **Scanner validation command:**
 ```
-docker compose --profile kerberos up -d && sleep 15 && quirk scan --targets localhost:88
+docker compose --profile kerberos up -d && sleep 15
+echo localhost > targets.txt
+quirk --targets-file targets.txt
 ```
 **Expected:** Kerberos scanner returns >= 2 HIGH findings for weak etypes (rc4-hmac, aes128-cts-hmac-sha1-96).
 
@@ -540,7 +557,11 @@ PROFILE_ARGS="--profile tls-cert-defects" ./lab.sh up
 **Live-fire smoke command:**
 
 ```bash
-quirk scan localhost:13444,localhost:13445,localhost:13446,localhost:13447 --output report.html
+echo localhost > targets.txt
+# Ports 13444-13447 come from config, not the targets file (targets.py's
+# RFC-1123 hostname validator rejects host:port tokens). Set
+# scan.ports_tls: [13444, 13445, 13446, 13447] in config.yaml.
+quirk --targets-file targets.txt --config config.yaml --output report.html
 ```
 
 **Expected:** 4 distinct findings, severities CRITICAL / HIGH / MEDIUM / HIGH, no untrusted-CA finding emitted on the self-signed endpoint (D-04 mutual exclusivity), no rollup (D-02 — one finding per defect class).
@@ -572,9 +593,20 @@ PROFILE_ARGS="--profile smime" ./lab.sh up
 | uid=bob,ou=people,dc=quirk,dc=lab   | RSA-1024 / SHA-256 | Weak S/MIME key (RSA-1024)     | HIGH |
 | uid=carol,ou=people,dc=quirk,dc=lab | RSA-2048 / SHA-256 | (none — SAFE)                  | —    |
 
-**Scanner validation command** *(Plan 79-02 will wire `--smime-target` / `--smime-base`)*:
+**Scanner validation command:** S/MIME LDAP discovery is config-driven — there
+is no `--smime-target` / `--smime-base` flag. Set
+`connectors.enable_smime: true`, `connectors.smime_targets` and
+`connectors.smime_search_base` in `config.yaml`:
+```yaml
+connectors:
+  enable_smime: true
+  smime_targets:
+    - ldap://localhost:38900
+  smime_search_base: dc=quirk,dc=lab
 ```
-docker compose --profile smime up -d && sleep 10 && quirk scan --smime-target ldap://localhost:38900 --smime-base dc=quirk,dc=lab
+```
+docker compose --profile smime up -d && sleep 10
+quirk --config config.yaml
 ```
 
 **Expected:** SMIME scanner returns **2 HIGH findings** (alice, bob); **0 findings from carol**. Findings appear in the Identity tab (`source="smime"`). **No IMAP traffic, no mailbox access** (privacy invariant, enforced by SMIME-08 AST gate in Plan 79-04). Idempotent — re-running `./lab.sh up --profile smime` must not produce duplicate LDIF entries; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`) on subsequent runs.
@@ -609,9 +641,21 @@ PROFILE_ARGS="--profile adcs" ./lab.sh up
 | `CN=SafeTemplate,CN=Certificate Templates,...` | `pKICertificateTemplate` | benign defaults, email-protection EKU only | (none — SAFE) | — | — |
 | ESC5 / ESC7 / ESC8 classes | non-LDAP-observable | (no LDAP attribute) | ADCS-COVERAGE-GAP (one per class) | LOW | `identity_adcs_coverage_gap_count` |
 
-**Scanner validation command** *(Plan 80-02 will wire `--adcs-target` / `--adcs-base`)*:
-```
-docker compose --profile adcs up -d && sleep 12 && quirk scan --adcs-target ldap://localhost:38910 --adcs-base dc=quirk,dc=lab
+**Scanner validation command:** **documented gap** — there is no `--adcs-target`
+/ `--adcs-base` CLI flag, and unlike S/MIME, `quirk/config.py`'s
+`ConnectorsCfg` dataclass does not declare `enable_adcs` / `adcs_targets` /
+`adcs_search_base` fields either, so `config.yaml` cannot set them (`ConnectorsCfg(**conn_raw)`
+raises `TypeError` on an undeclared key). `run_scan.py`'s `_run_adcs_phase()`
+reads those attributes via `getattr(cfg.connectors, "enable_adcs", False)`,
+which is real scanner code, but there is currently no supported way to set
+`enable_adcs=True` through the CLI or a config file — the ADCS scanner is
+unreachable end-to-end pending a config-schema fix. This lab profile remains
+useful for `tests/test_adcs_no_writes.py` / `tests/test_adcs_ast_gate.py`
+unit-level and directly-invoked coverage; there is no sanctioned end-user
+invocation to document here.
+
+```bash
+docker compose --profile adcs up -d && sleep 12
 ```
 
 **Expected:** ADCS scanner returns **1 HIGH weak-signing finding** (QuirkLabCA RSA-1024 SHA-1), **1 HIGH ESC1 finding** (BadTemplate-ESC1), **0 from SafeTemplate**, and exactly **4 LOW ADCS-COVERAGE-GAP findings** (one per non-LDAP-observable ESC class: ESC4, ESC5, ESC7, ESC8 per D-80-R8). Findings appear in the Identity tab (`source="adcs"`, `protocol="ADCS"`). **No certificate enrollment, no CSR generation, no LDAP modify/add/delete operations** (privacy invariant, enforced by `tests/test_adcs_no_writes.py` + `tests/test_adcs_ast_gate.py` per ADCS-09). Idempotent — re-running `./lab.sh up --profile adcs` must not error; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`).
@@ -897,7 +941,9 @@ PROFILE_ARGS="--profile fuzz-target" ./lab.sh up
 
 **Scanner validation command:**
 ```
-quirk scan --targets http://localhost:20100 --fuzz --openapi-spec http://localhost:20100/openapi.json
+echo http://localhost:20100 > targets.txt
+quirk --targets-file targets.txt \
+  --fuzz --openapi-spec http://localhost:20100/openapi.json
 ```
 **Expected:** REST fuzzer returns >= 2 findings: HSTS_MISSING (HIGH) + ALG_CONFUSION (CRITICAL, when `--fuzz-jwt-alg-confusion` is set and a Bearer RS256 token is supplied via `CredentialContext`).
 

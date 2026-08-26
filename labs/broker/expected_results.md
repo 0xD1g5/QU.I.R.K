@@ -36,7 +36,8 @@ redis-broker      Up (healthy)   0.0.0.0:26379->6379/tcp,  0.0.0.0:26380->6380/t
 Boot the QU.I.R.K. scan with broker scanning enabled (standard profile auto-enables broker):
 
 ```bash
-quirk scan --target localhost --profile standard
+echo localhost > targets.txt
+quirk --targets-file targets.txt --profile standard
 ```
 
 ## Port Map

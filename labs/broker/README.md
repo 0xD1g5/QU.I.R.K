@@ -37,7 +37,8 @@ docker compose --profile broker --file quantum-chaos-enterprise-lab/docker-compo
 docker compose --profile broker --file quantum-chaos-enterprise-lab/docker-compose.yml ps
 
 # 4. Run the QU.I.R.K. broker scan (standard profile enables broker scanning)
-quirk scan --target localhost --profile standard
+echo localhost > targets.txt
+quirk --targets-file targets.txt --profile standard
 
 # 5. Tear down
 docker compose --profile broker --file quantum-chaos-enterprise-lab/docker-compose.yml down

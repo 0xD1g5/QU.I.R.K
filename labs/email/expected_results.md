@@ -183,7 +183,8 @@ Phase-32 followup item — not blocking for EMAIL-12).
 The sanctioned consulting/CI invocation is the full pipeline:
 
 ```bash
-quirk scan --target localhost --profile standard
+echo localhost > targets.txt
+quirk --targets-file targets.txt --profile standard
 # Or, equivalent: any invocation that triggers cfg.connectors.enable_email = True
 # Requires: sudo socat to forward 25/465/587/143/993/110/995 → 30025/...
 ```
