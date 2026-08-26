@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: planning
-last_updated: "2026-08-26T13:45:16.331Z"
+last_updated: "2026-08-26T16:04:29.478Z"
 last_activity: 2026-08-26
 progress:
   total_phases: 8
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Phase: 164 (First-Run Correctness) — not yet planned
+Phase: 164 (First-Run Correctness) — context gathered, not yet planned
 Plan: —
-Status: Roadmap approved; awaiting /gsd:plan-phase 164
-Last activity: 2026-08-26 — v5.16 roadmap created (8 phases, 164–171; 24/24 requirements mapped)
+Status: 164-CONTEXT.md written (16 decisions); awaiting /gsd-plan-phase 164
+Last activity: 2026-08-26 — Phase 164 discussion: re-verified RVW-021 (doc half already fixed by Phase 161-06 / UAT-161-07); locked allow_abbrev=False + new TARGET error domain + early fail-fast + repo-wide doc guard
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -467,7 +467,6 @@ Added at the v5.16 open (2026-08-26):
 | uat_gap (158) | `158-HUMAN-UAT.md` — 2 pending visual scenarios (`/hardware`, `/compare` rendering of sensor-pushed devices) | open — carried forward unchanged; HWLC-15 independently SATISFIED at code/test level. Explicitly **not** in v5.16 scope. |
 | vault_sync | Phase-162 note absent; `_QUIRK-Hub.md` missing 152/156/162 links and carrying a wrong Phase 163 date; vault `Roadmap.md` stale by 12 days | **RESOLVED 2026-08-26** at the v5.16 milestone-boundary doc review — note written, hub repaired (callout rewritten to v5.15, 3 links added, 163 date corrected), `Roadmap.md` re-synced. Vault `Requirements.md` re-syncs once `.planning/REQUIREMENTS.md` is regenerated for v5.16. |
 
-
 **Last re-triaged:** 2026-08-20 (Phase 161 plan-phase — decision-coverage gate override, see row below)
 
 Acknowledged at Phase 161 plan-phase (2026-08-20):
@@ -535,8 +534,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-25T17:38:53.518Z
-Stopped at: v5.15 milestone CLOSED and archived 2026-08-26. Version bumped 5.12.0 -> 5.15.0, tagged v5.15.0. RVW-004 closed. Next: /gsd-new-milestone.
+Last session: 2026-08-26T16:04:29.464Z
+Stopped at: Phase 164 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
