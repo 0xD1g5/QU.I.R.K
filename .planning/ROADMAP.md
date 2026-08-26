@@ -189,8 +189,10 @@ verifiable)
      result blocks equals the count of `### UAT-` case headings (628 = 628, closing the 636-vs-628
      mismatch that was itself RVW-014 evidence).
 
-  2. Every UAT case ID in the document is unique — the 3 duplicate case IDs (UAT-144-01/02/03) are
-     renumbered to distinct IDs with no orphaned cross-references left behind.
+  2. Every UAT case ID in the document is unique — the **5** duplicate case IDs are renumbered to
+     distinct IDs with no orphaned cross-references left behind. Count corrected 2026-08-26 at the
+     Phase 164 close: `UAT-144-01/02/03` **plus `UAT-89-02` and `UAT-89-03`**, which the original
+     sizing missed. Both sets are pre-existing (verified identical before and after Phase 164).
 **Plans**: TBD
 
 ### Phase 168: UAT Record Drain — Series 1–~100

@@ -104,7 +104,12 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 - [ ] **UATREC-01**: `docs/UAT-SERIES.md` uses exactly one UAT result format, and the count of
   result blocks equals the count of case headings. This is the precondition that makes drain
   completeness mechanically checkable rather than asserted.
-- [ ] **UATREC-02**: The 3 duplicate case IDs are resolved — every case ID in the document is unique.
+- [ ] **UATREC-02**: The duplicate case IDs are resolved — every case ID in the document is unique.
+  **Count corrected 2026-08-26 during Phase 164 close: there are 5 duplicates, not 3.** Measured
+  directly with `grep -o '^### UAT-[0-9]*-[0-9]*' docs/UAT-SERIES.md | sort | uniq -d`:
+  `UAT-144-01`, `UAT-144-02`, `UAT-144-03` (the three originally named) **plus `UAT-89-02` and
+  `UAT-89-03`**, which the original sizing missed. Verified identical before and after Phase 164,
+  so these are pre-existing and Phase 164 introduced none. Do not inherit the "3" figure.
 - [ ] **UATREC-03**: Every one of the ~325 unrecorded cases carries either a recorded result or an
   explicit deferral naming a substitute test. **A deferral must name a specific test, not infer
   coverage from a requirement-ID annotation** — the review's own re-verification found annotation an
