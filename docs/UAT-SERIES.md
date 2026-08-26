@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-26 (v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..07 added, ALL PASS. Closes FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03. UAT-164-01 cites `UAT-161-07` as prior evidence plus a fresh human-confirmed run: the installed entry point completed a real scan and wrote 12 report files. Structural fix: `allow_abbrev=False` on all 10 parser construction sites closes the bare `--targets` abbreviation trap at the parser instead of catching the resulting traceback; two new coded errors (TARGET-001 missing file, TARGET-002 malformed token/CIDR) replace the prior uncaught exceptions, both exit 2 before the banner. A repo-wide doc-form CI gate (`tests/test_doc_command_forms.py`) replaces UAT-161-07's manual grep and caught a second dashboard empty-state defect in `executive.tsx` the source review missed. Known deferred item, not a Series 164 failure: 4 of `tests/test_target_cli.py`'s 7 cases crash on a macOS fork()-after-Network.framework fatal signal in full-suite runs only (7/7 pass standalone); tracked as GATE-03 in Phase 166. See Series 164. Earlier: v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -19200,3 +19200,196 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
   rather than raising; see §13.7's decision table.
 
 Operator approved 2026-08-26 after reviewing the corrected §13 text (step 8).
+
+---
+
+## Series 164: First-Run Correctness (Phase 164 — v5.16)
+
+**Last Updated:** 2026-08-26
+
+### UAT-164-01: Dashboard empty-state command completes a real scan (FIRSTRUN-01) — Human + Automated
+
+**What to test:** The command the dashboard's findings empty state instructs a brand-new user to
+type is a real invocation that runs an actual scan to completion. This case builds on
+`UAT-161-07` (recorded PASS, 2026-08-25), which established that the instructed string exists and
+is not the nonexistent form — see that case for the string-level verification. This case adds the
+missing half: an end-to-end confirmation that running the instructed command actually completes a
+scan, per D-13's human-verification split.
+
+**Steps:**
+1. Prior evidence: `UAT-161-07` confirms the dashboard findings empty state instructs
+   `quirk --targets-file targets.txt` and that this string exists as a real CLI invocation.
+2. Fresh confirmation run (2026-08-26): a human operator repointed a stale `quirk` console-script
+   install (an old editable install on `PATH` pointed at a different project tree and raised
+   `ModuleNotFoundError: No module named 'run_scan'`) via `python -m pip install -e . --no-deps`,
+   producing a working entry point reporting `QU.I.R.K. v5.15.0`.
+3. From a scratch directory containing `targets.txt` (content: `127.0.0.1`), the operator ran the
+   installed entry point with the instructed invocation and no other flags.
+4. The v5.15.0 banner rendered, followed by `=== QU.I.R.K. -- Interactive Setup ===` and the
+   `Targets (CSV, @file, or CIDR; ...)` prompt — the intended D-11 onboarding path, no traceback.
+5. The operator answered the wizard prompts and confirmed the scan ran to completion.
+
+**Pass criteria:**
+- The wizard starts cleanly with no traceback
+- The scan runs to completion
+- Report files are written under `quirk-output/`
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** Digs (human walkthrough) + automated (`UAT-161-07` prior evidence)
+**Notes:** FIRSTRUN-01. The operator reported: "Yes, the scan ran to completion, reporting was
+successful." Twelve output files were written under `quirk-output/`:
+`findings-20260826-184619.json`, `run-stats-20260826-184619.json`,
+`executive-summary-20260826-184619.md`, `technical-findings-20260826-184619.md`,
+`scorecard-20260826-184619.md`, `roadmap-20260826-184619.md`,
+`intelligence-20260826-184619.json`, `cbom-20260826-184619.cdx.json`,
+`cbom-20260826-184619.cdx.xml`, `report-20260826-184619.html`, `report-20260826-184619.pdf`,
+`report-20260826-184619.docx`. Environment note (not a scope expansion): a stale editable
+install on `PATH` was the operator's first obstacle, resolved with a standard editable
+reinstall — real first-run friction worth knowing about, not a Phase 164 defect.
+
+---
+
+### UAT-164-02: An abbreviated `--targets` flag is rejected by the parser, never a traceback (FIRSTRUN-02) — Automated + Human-confirmed
+
+**What to test:** The abbreviation of `--targets-file` down to a bare `--targets` flag — the
+argparse prefix-match trap — is now rejected structurally by the parser (`allow_abbrev=False`)
+rather than crashing after a full wizard walkthrough.
+
+**Steps:**
+1. Automated: `python -m pytest tests/test_target_cli.py -k rejected -q`.
+2. Human-confirmed, run through the installed entry point with the bare `--targets` flag
+   (the abbreviation of `--targets-file`) followed by `127.0.0.1`.
+
+**Pass criteria:**
+- The command exits immediately with `unrecognized arguments`
+- Exit code is 2
+- No banner, no wizard, no traceback
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_target_cli.py`) + Digs (human walkthrough)
+**Notes:** FIRSTRUN-02. Verbatim captured output: `quirk: error: unrecognized arguments: --targets
+127.0.0.1`, exit 2. Traceback count 0, banner count 0, wizard count 0. The `quirk: error:` prog
+prefix confirms this exercised the real installed console script, not `python run_scan.py`.
+
+---
+
+### UAT-164-03: Missing `--targets-file` path fails coded and fast, before the banner (FIRSTRUN-02) — Automated + Human-confirmed
+
+**What to test:** A `--targets-file` argument pointing at a nonexistent path emits a coded
+`TARGET-001` error and exits 2 before the startup banner or the interactive wizard render (D-09
+fail-fast ordering).
+
+**Steps:**
+1. Automated: `python -m pytest tests/test_target_cli.py -k missing_targets_file -q`.
+2. Human-confirmed, run through the installed entry point:
+   `quirk --targets-file /nonexistent.txt`
+
+**Pass criteria:**
+- The command emits a `[QRK-TARGET-001]` line on stderr
+- Exit code is 2
+- No banner, no wizard, no traceback
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_target_cli.py`) + Digs (human walkthrough)
+**Notes:** FIRSTRUN-02 / D-09. Verbatim captured output: `[QRK-TARGET-001] The targets file
+supplied to --targets-file could not be found. Fix: Check the path and confirm the file exists
+relative to the current working directory.`, exit 2. Traceback 0, banner 0, wizard 0 — confirms
+the early guard fires before parsing proceeds further.
+
+---
+
+### UAT-164-04: Malformed target token / CIDR fails coded, never a traceback (FIRSTRUN-02) — Automated + Human-confirmed
+
+**What to test:** A malformed target token or CIDR inside an otherwise-existing `--targets-file`
+emits a coded `TARGET-002` error and exits 2 rather than raising an uncaught `ValueError`.
+
+**Steps:**
+1. Automated: `python -m pytest tests/test_target_cli.py -k malformed_target_token -q`.
+2. Human-confirmed (bonus check beyond the plan's ask), run through the installed entry point with
+   a targets file containing a malformed token:
+   `quirk --targets-file bad.txt`
+
+**Pass criteria:**
+- The command emits a `[QRK-TARGET-002]` line on stderr
+- Exit code is 2
+- No traceback
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_target_cli.py`) + Digs (human walkthrough)
+**Notes:** FIRSTRUN-02. Verbatim captured output: `[QRK-TARGET-002] A target token or CIDR in the
+targets file is malformed. Fix: Use one bare host, FQDN, IP, or CIDR per line in the targets
+file.`, exit 2, traceback 0.
+
+---
+
+### UAT-164-05: `docs/error-codes.md` is byte-current and documents the TARGET domain (FIRSTRUN-02) — Automated
+
+**What to test:** `docs/error-codes.md` is byte-identical to the generator output and contains a
+`## TARGET` section covering `TARGET-001`/`TARGET-002`.
+
+**Steps:**
+1. `python run_scan.py errors --dump-md | diff - docs/error-codes.md`.
+2. `grep -c '^## TARGET' docs/error-codes.md`.
+
+**Pass criteria:**
+- The diff produces no output (byte-identical)
+- The `## TARGET` section is present
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_error_codes_freshness.py`)
+**Notes:** FIRSTRUN-02. Regenerated mechanically via `python run_scan.py errors --dump-md`, never
+hand-edited, per Plan 01.
+
+---
+
+### UAT-164-06: Repo-wide doc-form gate passes clean (FIRSTRUN-03) — Automated
+
+**What to test:** No tracked file outside the explicit historical allowlist instructs a
+nonexistent `quirk` invocation. This converts `UAT-161-07`'s manual grep into an enforced CI gate.
+
+**Steps:**
+1. `python -m pytest tests/test_doc_command_forms.py -q`.
+
+**Pass criteria:**
+- The gate exits 0
+- No unallowlisted tracked file matches the forbidden-form pattern
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_doc_command_forms.py`)
+**Notes:** FIRSTRUN-03. Six tests pass, covering the full-repo sweep, the three allowlisted
+historical files, matcher terminator coverage (space, backtick, end-of-line), and a regression
+pin on `findings.tsx`'s empty-state string. Closes the residue left by `UAT-161-07`'s manual-grep
+scope (four `labs/` files + a backtick-terminated line the original space-only grep could not see).
+
+---
+
+### UAT-164-07: `executive.tsx`'s empty state instructs a real command (FIRSTRUN-01) — Automated
+
+**What to test:** The dashboard's second empty-state surface (`executive.tsx`, not examined by the
+original source review) instructs a working invocation and the served bundle no longer contains
+the stale string.
+
+**Steps:**
+1. `grep -n "targets-file" src/dashboard/src/pages/executive.tsx`.
+2. Confirm the rebuilt bundle under `quirk/dashboard/static/assets/` no longer contains the old
+   hashed filename.
+
+**Pass criteria:**
+- `executive.tsx` instructs the real `--targets-file` invocation
+- The served static bundle reflects the corrected string
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_doc_command_forms.py`, `npm run build`)
+**Notes:** FIRSTRUN-01. This defect was found by the Phase 164 documentation sweep (Plan 03), not
+by the source review — the review only examined `findings.tsx`. `npm run lint` and `npm run build`
+both exited 0 in `src/dashboard/`; the old bundle (`index-CtXYkcko.js`, carrying the stale string)
+was replaced by `index-C5l1_qJ5.js`.
+
+---
+
+**Series 164 disposition.** All seven cases PASS. `UAT-161-07` is unedited — cited as prior
+evidence for `UAT-164-01` only, per D-16. Known deferred item (not a Series 164 gate failure): the
+full-suite `pytest -q` run on macOS crashes 4 of `tests/test_target_cli.py`'s 7 cases on a fatal
+signal (fork-after-Network.framework, not an assertion failure) — that file passes 7/7 standalone
+in 3.43s and is tracked as **GATE-03** in Phase 166; see
+`.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`.
