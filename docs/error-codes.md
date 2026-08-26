@@ -90,6 +90,13 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 | QRK-SSH-002 | SSH scanner timed out for a target. | Increase the per-host timeout in config.yaml or exclude unreachable hosts. |
 | QRK-SSH-099 | Unexpected error in SSH scanner. | Re-run with `--verbose` and inspect logs; file an issue if reproducible. |
 
+## TARGET
+
+| Code | Cause | Fix |
+|------|-------|-----|
+| QRK-TARGET-001 | The targets file supplied to --targets-file could not be found. | Check the path and confirm the file exists relative to the current working directory. |
+| QRK-TARGET-002 | A target token or CIDR in the targets file is malformed. | Use one bare host, FQDN, IP, or CIDR per line in the targets file. |
+
 ## TLS
 
 | Code | Cause | Fix |
