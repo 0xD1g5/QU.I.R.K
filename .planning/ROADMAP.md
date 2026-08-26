@@ -143,7 +143,18 @@ values) most likely to move the color-contrast numbers. Consult both sources.
 
   5. `package.json` pins `@axe-core/puppeteer` to an exact version rather than a `^` range.
 
-**Plans**: TBD
+**Plans**: 8 plans in 6 waves
+
+Plans:
+- [ ] 165-01-PLAN.md — Live ground-truth re-run and the committed-vs-live delta finding (D-03)
+- [ ] 165-02-PLAN.md — Count-budget baseline schema: extract baseline-diff.mjs, rewire both harness branches (D-01/D-02/D-06/D-13/D-14)
+- [ ] 165-03-PLAN.md — Exact dependency pins, vitest include-glob widening, CI npm test step (D-04)
+- [ ] 165-04-PLAN.md — Contrast token fixes, severity-token promotion, ScanSelector aria-label (D-08..D-10, D-12)
+- [ ] 165-05-PLAN.md — Variant-aware baseline filenames, missing-baseline hard error, variant generation scripts (D-15/D-16)
+- [ ] 165-06-PLAN.md — ACCEPTED-VIOLATIONS.md generator and its byte-compare freshness test (D-05/D-07)
+- [ ] 165-07-PLAN.md — Regenerate all baselines against the fixed UI, write justifications, green the gates (D-11)
+- [ ] 165-08-PLAN.md — Docs updates, Obsidian vault sync, UAT-SERIES.md, phase note
+
 **UI hint**: yes
 
 ### Phase 166: Gate Robustness
