@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Phase 164 context gathered
-last_updated: "2026-08-26T17:53:47.759Z"
+stopped_at: Completed 164-03-PLAN.md
+last_updated: "2026-08-26T18:04:44.136Z"
 last_activity: 2026-08-26
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 164 (first-run-correctness) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-26
 
@@ -215,6 +215,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 163 P01 | 30min | 3 tasks | 2 files |
 | Phase 163 P02 | 45min | 2 tasks | 2 files |
 | Phase 164 P01 | 8min | 3 tasks | 3 files |
+| Phase 164 P03 | 25min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -407,6 +408,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: Skip-path deliberately does not call update_batch_progress to preserve the pre-existing Phase 146 single-call-site AST lock
 - [Phase ?]: Per-batch save_cache/write_scan_checkpoint gate is args.db_path alone (D-02), never args.cache, never args.job_id
 - [Phase 164]: TARGET-001/TARGET-002 registry entries use static cause/fix strings with no embedded path or token (T-164-01)
+- [Phase 164]: 164-03: FORBIDDEN_RE terminator group must include space|backtick|EOL, never optional (widened per D-15) - a space-only matcher hid docs/UAT-SERIES.md:13052's backtick-terminated quirk scan form
+- [Phase 164]: 164-03: ADCS scanning documented as a genuine config-schema gap (no enable_adcs/adcs_targets fields in ConnectorsCfg) rather than fabricating a command
 
 ### Pending Todos
 
@@ -537,8 +540,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-26T17:51:29.068Z
-Stopped at: Phase 164 context gathered
+Last session: 2026-08-26T18:04:44.130Z
+Stopped at: Completed 164-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

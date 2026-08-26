@@ -98,7 +98,7 @@ Plans:
 **Wave 1**
 
 - [x] 164-01-PLAN.md — Register the TARGET error domain and regenerate docs/error-codes.md
-- [ ] 164-03-PLAN.md — Repo-wide invocation sweep, executive.tsx empty state, CI doc-form gate
+- [x] 164-03-PLAN.md — Repo-wide invocation sweep, executive.tsx empty state, CI doc-form gate
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -275,7 +275,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 164. First-Run Correctness | 1/4 | In Progress|  |
+| 164. First-Run Correctness | 2/4 | In Progress|  |
 | 165. Accessibility Remediation | 0/TBD | Not started | - |
 | 166. Gate Robustness | 0/TBD | Not started | - |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |

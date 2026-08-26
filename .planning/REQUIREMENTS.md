@@ -21,7 +21,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 
 ### First-Run Correctness
 
-- [ ] **FIRSTRUN-01**: A new user following the dashboard's empty state is given a command that
+- [x] **FIRSTRUN-01**: A new user following the dashboard's empty state is given a command that
   exists. `src/dashboard/src/.../findings.tsx:119` currently instructs `quirk scan --targets ...`;
   there is no `scan` subcommand and no `--targets` flag. The instructed command must run
   successfully against a real target.
@@ -29,7 +29,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   message, not a Python traceback. `--targets` currently prefix-matches `--targets-file` and raises
   an uncaught `FileNotFoundError`. This is the existing UX-02 contract applied to the target-argument
   path.
-- [ ] **FIRSTRUN-03**: Every documented invocation of the corrected command is consistent across
+- [x] **FIRSTRUN-03**: Every documented invocation of the corrected command is consistent across
   surfaces — `docs/chaos-lab.md:676` and the six UAT step definitions in `docs/UAT-SERIES.md` that
   reference the nonexistent form.
 
@@ -171,9 +171,9 @@ open; expected to span multiple phases.*
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIRSTRUN-01 | Phase 164 | Pending |
+| FIRSTRUN-01 | Phase 164 | Complete |
 | FIRSTRUN-02 | Phase 164 | Complete |
-| FIRSTRUN-03 | Phase 164 | Pending |
+| FIRSTRUN-03 | Phase 164 | Complete |
 | A11Y-01 | Phase 165 | Pending |
 | A11Y-02 | Phase 165 | Pending |
 | A11Y-03 | Phase 165 | Pending |
