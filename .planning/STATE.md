@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: planning
-last_updated: "2026-08-26T16:04:29.478Z"
-last_activity: 2026-08-26
+status: executing
+stopped_at: Phase 164 context gathered
+last_updated: "2026-08-26T17:25:35.041Z"
+last_activity: 2026-08-26 -- Phase 164 planning complete
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -27,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 164 (First-Run Correctness) — context gathered, not yet planned
 Plan: —
-Status: 164-CONTEXT.md written (16 decisions); awaiting /gsd-plan-phase 164
-Last activity: 2026-08-26 — Phase 164 discussion: re-verified RVW-021 (doc half already fixed by Phase 161-06 / UAT-161-07); locked allow_abbrev=False + new TARGET error domain + early fail-fast + repo-wide doc guard
+Status: Ready to execute
+Last activity: 2026-08-26 -- Phase 164 planning complete
 
 ## v5.16 Phase Map (IN PROGRESS)
 
