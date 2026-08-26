@@ -102,7 +102,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 164-02-PLAN.md — allow_abbrev=False on all 10 parsers, fail-fast guard, coded exit-2 call site
+- [x] 164-02-PLAN.md — allow_abbrev=False on all 10 parsers, fail-fast guard, coded exit-2 call site
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -275,7 +275,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 164. First-Run Correctness | 2/4 | In Progress|  |
+| 164. First-Run Correctness | 3/4 | In Progress|  |
 | 165. Accessibility Remediation | 0/TBD | Not started | - |
 | 166. Gate Robustness | 0/TBD | Not started | - |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
