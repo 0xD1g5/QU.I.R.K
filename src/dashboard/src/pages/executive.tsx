@@ -178,7 +178,7 @@ export function ExecutivePage() {
       <div className="space-y-4 py-8">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Executive Summary</h1>
         <p className="text-muted-foreground text-sm">
-          No scan data available. Run a scan first: <code>quirk scan &lt;target&gt;</code>
+          No scan data available. Run a scan first: <code>quirk --targets-file targets.txt</code>
         </p>
       </div>
     )
