@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..07 added, ALL PASS. Closes FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03. UAT-164-01 cites `UAT-161-07` as prior evidence plus a fresh human-confirmed run: the installed entry point completed a real scan and wrote 12 report files. Structural fix: `allow_abbrev=False` on all 10 parser construction sites closes the bare `--targets` abbreviation trap at the parser instead of catching the resulting traceback; two new coded errors (TARGET-001 missing file, TARGET-002 malformed token/CIDR) replace the prior uncaught exceptions, both exit 2 before the banner. A repo-wide doc-form CI gate (`tests/test_doc_command_forms.py`) replaces UAT-161-07's manual grep and caught a second dashboard empty-state defect in `executive.tsx` the source review missed. Known deferred item, not a Series 164 failure: 4 of `tests/test_target_cli.py`'s 7 cases crash on a macOS fork()-after-Network.framework fatal signal in full-suite runs only (7/7 pass standalone); tracked as GATE-03 in Phase 166. See Series 164. Earlier: v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..08 added, ALL PASS. UAT-164-01 human-verified live on 2026-08-26 (wizard + full scan, 12 artifacts). UAT-164-08 records a post-verification code-review catch: a directory or unreadable --targets-file still tracebacked (OSError siblings of FileNotFoundError); closed with a new TARGET-003. Known deferred: 4 of tests/test_target_cli.py's 9 cases crash in FULL-SUITE macOS runs on a fork-after-Network.framework fatal signal (pass standalone) — tracked as GATE-03 in Phase 166. 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..07 added, ALL PASS. Closes FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03. UAT-164-01 cites `UAT-161-07` as prior evidence plus a fresh human-confirmed run: the installed entry point completed a real scan and wrote 12 report files. Structural fix: `allow_abbrev=False` on all 10 parser construction sites closes the bare `--targets` abbreviation trap at the parser instead of catching the resulting traceback; two new coded errors (TARGET-001 missing file, TARGET-002 malformed token/CIDR) replace the prior uncaught exceptions, both exit 2 before the banner. A repo-wide doc-form CI gate (`tests/test_doc_command_forms.py`) replaces UAT-161-07's manual grep and caught a second dashboard empty-state defect in `executive.tsx` the source review missed. Known deferred item, not a Series 164 failure: 4 of `tests/test_target_cli.py`'s 7 cases crash on a macOS fork()-after-Network.framework fatal signal in full-suite runs only (7/7 pass standalone); tracked as GATE-03 in Phase 166. See Series 164. Earlier: v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -19384,6 +19384,37 @@ the stale string.
 by the source review — the review only examined `findings.tsx`. `npm run lint` and `npm run build`
 both exited 0 in `src/dashboard/`; the old bundle (`index-CtXYkcko.js`, carrying the stale string)
 was replaced by `index-C5l1_qJ5.js`.
+
+---
+
+### UAT-164-08: A directory or unreadable path given to `--targets-file` fails coded, never a traceback (FIRSTRUN-02) — Automated
+
+**What to test:** The two remaining `OSError` inputs to `--targets-file` — a path that is a
+directory, and a file that exists but is not readable — emit a coded `TARGET-003` error and exit 2
+rather than raising an uncaught `IsADirectoryError` / `PermissionError` traceback.
+
+**Steps:**
+1. `python -m pytest tests/test_target_cli.py -k target_003 -q`
+2. `python -m pytest tests/test_target_errors.py -k target_003 -q`
+3. Manual: point `--targets-file` at a directory, then at a `chmod 000` file.
+
+**Pass criteria:**
+- Both inputs emit `[QRK-TARGET-003]` on stderr
+- Exit code is 2 for both
+- No traceback, and no banner (the widened D-09 guard fires first)
+- `TARGET-003` does not reuse `TARGET-001`'s "could not be found" wording
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** automated (`tests/test_target_cli.py`, `tests/test_target_errors.py`)
+**Notes:** FIRSTRUN-02. Found by the Phase 164 code-review gate (`164-REVIEW.md` WR-01/WR-02) AFTER
+phase verification had already returned passed 3/3 — verification exercised the paths the plans
+promised, not this one. Root cause: `os.path.exists()` returns True for a directory and says nothing
+about readability, so the D-09 guard waved both through to `open()`; `IsADirectoryError` and
+`PermissionError` are `OSError` siblings of `FileNotFoundError`, so neither call-site `except`
+clause caught them. Fixed in `d24f9bb` with a distinct `TARGET-003` rather than stretching
+`TARGET-001`'s inaccurate wording (review finding IN-01). Both inputs reproduced before the fix
+(exit 1 + traceback) and re-verified after (exit 2 + coded); the three original coded paths were
+regression-checked unchanged.
 
 ---
 
