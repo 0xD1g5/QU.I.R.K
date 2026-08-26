@@ -1920,8 +1920,22 @@ batches (batches 61-64).
 
 ### 13.2 How to use it
 
-1. Note the `scan_run_id` printed by the original (interrupted) scan.
+1. Find the interrupted scan's ID with `--list-resumable`:
+
+   ```bash
+   python run_scan.py --config config.yaml --db-path output/quirk.db --list-resumable
+   ```
+
+   This prints every scan that has checkpoint rows but never reached a completed
+   `reports` stage, newest first, with its last completed stage and age. Rows older
+   than 72h are highlighted, but a run stays resumable until its batch cache files
+   expire at 720h (see 13.4).
+
 2. Re-run the identical command with `--resume-scan-id <scan_run_id>` added.
+
+Note that an interrupted scan does **not** print its own `scan_run_id` to the console
+— `--list-resumable` is the supported way to recover it. The ID is echoed only on the
+resumed run, in the `Resuming scan <id>: N stages complete` line.
 
 `--cache` is not required for batch resume — batch resume does NOT require `--cache`.
 Per-batch resume state is written on every run that has a `--db-path` set,
@@ -1935,17 +1949,34 @@ Each completed batch produces two artifacts:
 - A `ScanCheckpoint` row with a synthetic stage name `discovery:batch-N` (no new table,
   no schema change — the existing checkpoint mechanism is reused with a structured
   stage string).
-- A small JSON payload at `{output_dir}/.cache/discovery-batch-{scan_run_id}-{N}.json`
-  holding that batch's discovered open-ports list.
+- A JSON payload at `{output_dir}/.cache/discovery-batch-{scan_run_id}-{N}.json`
+  holding two things: that batch's discovered open-ports list (`ports`), and the
+  per-host "undetermined" advisory records produced by its liveness pre-pass
+  (`liveness`). Both are restored when the batch is skipped — see 13.4 for why the
+  second one matters to your reported coverage.
 
-### 13.4 Disk usage is proportional to batch count
+### 13.4 Disk usage is proportional to swept host count
 
 Resume state now occupies disk space proportional to the batch count, not a single
 file per scan as before. The batch count is `ceil(total_hosts / 1024)`: a /16 (~65,000
 hosts) produces roughly 64 batch files; a /12 (~1,048,576 hosts) produces roughly
-1,024. Each file holds only that batch's open-ports list (host, port, protocol,
-service) — not raw nmap XML/stdout — so the per-file footprint stays small even at
-that batch count.
+1,024.
+
+Each batch file holds that batch's open-ports list plus one small advisory record per
+non-responsive host — not raw nmap XML/stdout. The advisory records dominate the
+footprint on a sparse network, at roughly 190 bytes per non-responsive host: a fully
+dark 1024-host batch produces a file of about 190 KB, so a /20 costs well under 1 MB
+and a /16 roughly 12 MB in total. Dense networks produce *smaller* files, since a
+responsive host generates no advisory record.
+
+Those advisory records are what let a resumed scan report the same coverage as an
+uninterrupted one. They are the same "undetermined host" entries that appear in the
+scan summary's `Hosts undetermined` count and as `ADVISORY` findings in the report.
+Without them cached, a resumed run would silently under-report its own scope by one
+batch's worth of hosts for every batch it skipped — the report would look like a
+completed smaller scan rather than an interrupted larger one. If you need to reclaim
+the space, delete the cache directory rather than individual files (see below); the
+cost is a re-probe, never a wrong number.
 
 Batch cache files are read back with a 720-hour (30-day) TTL. After 30 days, a batch
 file is treated as expired and ignored on resume — that batch is re-probed instead of
@@ -1956,8 +1987,10 @@ it never corrupts or blocks a scan.
 ### 13.5 Cache files carry the discovered inventory
 
 The per-batch cache files under `{output_dir}/.cache/` contain the discovered
-host/port inventory for their batch, and live in the same `{output_dir}` that already
-holds the CBOM, the delivered report, and the SQLite DB. Apply the same handling
+host/port inventory for their batch **and the address of every non-responsive host in
+it** — in effect, a full record of which addresses were swept and which answered. They
+live in the same `{output_dir}` that already holds the CBOM, the delivered report, and
+the SQLite DB. Apply the same handling
 (storage, retention, access control) to `{output_dir}/.cache/` that you already apply
 to the rest of the output directory — it is not a separate trust tier.
 
@@ -1982,3 +2015,4 @@ existing one more granular.
 | Completed (checkpoint row exists) | Present and within the 720h TTL | Skipped — no nmap subprocess is spawned for this batch |
 | Completed (checkpoint row exists) | Expired (>720h) or deleted | Re-probed — a checkpoint row alone never causes a skip; a live cache hit is also required |
 | Failed with a `RuntimeError` | No checkpoint written | Re-attempted on resume; the batch's error endpoint from the failed attempt is still recorded in the scan artifact |
+| Completed (checkpoint row exists) | Present, but written before the advisory records were cached | Skipped, and its open ports are restored, but its undetermined-host records are not — that run's reported `Hosts undetermined` will be low by roughly one batch per such file. Start a fresh scan if the coverage figure matters. |

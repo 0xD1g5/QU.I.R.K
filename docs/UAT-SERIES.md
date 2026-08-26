@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-25 (v5.15 Phase 163 wrap — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added; UAT-163-02..04 pending human verification (blocking checkpoint). Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-26 (v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -19068,10 +19068,13 @@ untouched by this phase's wiring.
 - The matching cache file `discovery-batch-<scan_run_id>-N.json` exists
 - Both are present even though `--cache` was never passed
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** —  **Tester:** —
-**Notes:** DISC-08 / D-02. Deferred to human execution alongside UAT-163-04's end-to-end
-walkthrough — see the checkpoint gate in Plan 163-03 Task 4.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** Digs
+**Notes:** DISC-08 / D-02. Verified live during the UAT-163-04 walkthrough on a real `/20`.
+`--cache` was never passed on any run, yet every completed batch produced BOTH a
+`discovery:batch-N` checkpoint row and its `discovery-batch-<scan_run_id>-N.json` cache file.
+Representative run `2026-08-25T20:16:03.430847+00:00`: 3 rows, 3 files after a Ctrl-C during
+batch 4. The D-02 canary holds — batch writes are gated on `--db-path` alone.
 
 ---
 
@@ -19090,10 +19093,14 @@ completed batches and produces an equivalent inventory.
 - Total wall time is materially shorter than an unresumed run over the same target
 - The resulting inventory host/port count matches the original (uninterrupted) run's
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** —  **Tester:** —
-**Notes:** DISC-08. Deferred to human execution alongside UAT-163-04 — see the checkpoint gate
-in Plan 163-03 Task 4.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** Digs
+**Notes:** DISC-08. Verified live during the UAT-163-04 walkthrough. Skip lines appeared for
+every completed batch and the batches completed near-instantly with no nmap subprocess spawned:
+on run `2026-08-25T20:57:29.782070+00:00`, batches 1-3 skipped in under two seconds combined
+against 46s / 189s / 44s for the same batches when live-probed. Inventory parity held on both
+the endpoint count and — after the in-phase fix recorded under UAT-163-04 — the
+`Hosts undetermined` coverage figure.
 
 ---
 
@@ -19137,7 +19144,11 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
    come from `--targets-file` or `config.yaml` `targets.cidrs`).
 3. Watch for `Discovery: batch N/M (X hosts checked)` lines. After at least 3 batches have
    printed, press `Ctrl-C`.
-4. Note the `scan_run_id`. Confirm state landed via
+4. Recover the `scan_run_id` with
+   `python run_scan.py --config config.yaml --db-path output/quirk.db --list-resumable`.
+   **The interrupted scan does not print its own `scan_run_id`** — it is echoed only on the
+   resumed run's `Resuming scan <id>:` line, so `--list-resumable` is the only way to get it
+   before you resume. Confirm state landed via
    `sqlite3 output/quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`
    and `ls output/.cache/discovery-batch-<id>-*.json` (or your configured
    `output.directory`).
@@ -19146,6 +19157,11 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
    `Discovery: batch N/M — skipped (completed on a prior run)` and complete near-instantly.
 7. Confirm the final inventory (host/port count in the report or DB) equals an uninterrupted
    reference scan over the same range — no hosts silently dropped.
+7b. Confirm the resumed run's `Hosts undetermined` figure in the Scan Summary table also matches
+   the uninterrupted reference (within live-network jitter), NOT just the discovered endpoint
+   count. This is the coverage half of T-163-01: a resumed run must not under-report the scope
+   it actually swept. Expect `Hosts undetermined` to equal the sum of the per-batch
+   `N down` counts across ALL batches, including the skipped ones.
 8. Read `docs/operators-guide.md` §13 and confirm the disk-usage note and the target-scope-change
    warning make sense as an operator.
 
@@ -19155,9 +19171,32 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
 - The resumed run printed a skip line for each of those batches and issued no nmap subprocess
   for them
 - The resumed run's final host/port inventory count equals the uninterrupted reference scan's
+- The resumed run's `Hosts undetermined` count equals the sum of every batch's down-host count,
+  skipped batches included — proving the cached advisory records were restored
 - The operator confirms §13's disk-usage and target-scope-change text is clear and accurate
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** —  **Tester:** —
-**Notes:** DISC-08 / T-163-01. Awaiting human verification — see the blocking checkpoint gate in
-Plan 163-03 Task 4.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-26  **Tester:** Digs
+**Notes:** DISC-08 / T-163-01. Executed live 2026-08-25 against a real `/20` (4094 hosts,
+4 batches). The run surfaced a defect and it was fixed in-phase before this case could pass:
+
+- **Defect found:** the per-batch cache payload carried only `ports`, so a skipped batch lost its
+  per-host `ADVISORY` "undetermined" records. A resumed run under-reported coverage by roughly one
+  batch of hosts per skipped batch (observed: `Hosts scanned 1014 / undetermined 1008` on a
+  3-batches-cached resume, versus `4034 / 4029` for the uninterrupted reference over the same
+  range). Discovered endpoint counts were correct throughout — only the coverage figures were
+  wrong. This regressed the Phase 145 / DISC-03 / D-04 guarantee that a non-responsive host is
+  recorded rather than silently dropped.
+- **Fix:** `liveness_to_serial` / `serial_to_liveness` added to `quirk/engine/cache.py`; the batch
+  cache payload gained a `liveness` key; the resume-skip path now rebuilds the advisory endpoints
+  from it. Four regression tests added to `tests/test_discovery_batch_checkpoint.py` (RED verified
+  before the fix).
+- **Post-fix live evidence:** resumed run reported `Hosts undetermined 4030`, exactly the sum of
+  all four batches' down-host counts (1013 + 1018 + 991 + 1008), with three of those four batches
+  restored from cache. Uninterrupted reference over the same range: 4029 (batch 3 saw one fewer
+  down host on the reference pass — genuine network jitter, and evidence the resume replayed its
+  OWN cached records rather than reconstructing them).
+- Caches written before the fix have no `liveness` key and degrade to the old lossy behaviour
+  rather than raising; see §13.7's decision table.
+
+Operator approved 2026-08-26 after reviewing the corrected §13 text (step 8).

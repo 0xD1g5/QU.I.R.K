@@ -44,9 +44,9 @@ created: 2026-08-25
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 163-01-T2 / 163-01-T3 | 163-01 | 1 | DISC-08 (c1) | — | Resume skips batches completed before interruption; no re-probe | unit | `pytest tests/test_discovery_batch_checkpoint.py::test_resume_skips_completed_batches -x` | ✅ | ✅ green |
-| 163-02-T1 | 163-02 | 2 | DISC-08 (c2) | — | No new checkpoint table or `ScanCheckpoint` model change | structural (AST) | `pytest tests/test_discovery_batch_checkpoint.py::test_no_new_checkpoint_table_or_model_change -x` | ❌ W0 | ⬜ pending |
+| 163-02-T1 | 163-02 | 2 | DISC-08 (c2) | — | No new checkpoint table or `ScanCheckpoint` model change | structural (AST) | `pytest tests/test_discovery_batch_checkpoint.py::test_no_new_checkpoint_table_or_model_change -x` | ✅ green | ✅ green |
 | 163-01-T2 / 163-02-T2 | 163-01, 163-02 | 1 | DISC-08 (c3 / DISC-02) | T-163-01 | A `RuntimeError` batch writes no checkpoint; loop continues; later batches still checkpoint | unit | `pytest tests/test_discovery_batch_checkpoint.py::test_failed_batch_writes_no_checkpoint_and_loop_continues -x` | ✅ | ✅ green |
-| 163-02-T2 | 163-02 | 2 | DISC-08 (c4 / DISC-06) | — | Single shared chunked-discovery call site preserved (AST lock still passes) | structural (AST) | `pytest tests/test_cli_dashboard_discovery_parity.py -x` | ✅ existing | ⬜ pending |
+| 163-02-T2 | 163-02 | 2 | DISC-08 (c4 / DISC-06) | — | Single shared chunked-discovery call site preserved (AST lock still passes) | structural (AST) | `pytest tests/test_cli_dashboard_discovery_parity.py -x` | ✅ existing | ✅ green |
 | 163-01-T2 / 163-02-T1 | 163-01, 163-02 | 1 | DISC-08 (D-02) | — | Batch payloads written unconditionally, not gated on `--cache` | unit | `pytest tests/test_discovery_batch_checkpoint.py::test_batch_cache_written_without_cache_flag -x` | ✅ | ✅ green |
 | 163-01-T2 | 163-01 | 1 | DISC-08 (D-02) | — | Batch cache ignored on a fresh (non-resume) run | unit | `pytest tests/test_discovery_batch_checkpoint.py::test_batch_cache_ignored_on_fresh_non_resume_run -x` | ✅ | ✅ green |
 | 163-01-T2 / 163-02-T2 | 163-01, 163-02 | 1 | DISC-08 (D-05) | — | A fully-dead batch (liveness filtered every host) still gets a completion checkpoint | unit | `pytest tests/test_discovery_batch_checkpoint.py::test_fully_dead_batch_still_checkpoints -x` | ✅ | ✅ green |
@@ -64,8 +64,8 @@ Four coverage rows added during `/gsd-plan-phase 163` beyond the pre-seeded ten:
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 163-01-T3 | 163-01 | 1 | DISC-08 (c1) | T-163-01 | Two-invocation real-SQLite interruption simulation: batches 1-2 skipped, batch 3 re-attempted, no duplicate rows | integration | `pytest tests/test_discovery_batch_checkpoint.py::test_resume_skips_completed_batches_against_real_db -x` | ✅ | ✅ green |
 | 163-01-T2 | 163-01 | 1 | DISC-08 (D-06) | T-163-01 | A completed batch whose cache entry expired or was deleted falls through and IS re-probed — a checkpoint alone never causes a skip | unit | `pytest tests/test_discovery_batch_checkpoint.py::test_completed_stage_without_cache_hit_reprobes -x` | ✅ | ✅ green |
-| 163-02-T1 | 163-02 | 2 | DISC-08 (D-02) | T-163-01 | Per-batch writes are gated on `args.db_path` alone — not `args.cache`, not `args.job_id` | structural (AST) | `pytest tests/test_discovery_batch_checkpoint.py::test_batch_writes_are_not_gated_on_args_job_id -x` | ❌ W0 | ⬜ pending |
-| 163-03-T4 | 163-03 | 3 | DISC-08 (c1) | T-163-01 | HUMAN-UAT: resumed inventory equals uninterrupted inventory (zero silently dropped hosts) | manual | UAT-163-04 in `docs/UAT-SERIES.md` | ❌ W3 | ⬜ pending |
+| 163-02-T1 | 163-02 | 2 | DISC-08 (D-02) | T-163-01 | Per-batch writes are gated on `args.db_path` alone — not `args.cache`, not `args.job_id` | structural (AST) | `pytest tests/test_discovery_batch_checkpoint.py::test_batch_writes_are_not_gated_on_args_job_id -x` | ✅ green | ✅ green |
+| 163-03-T4 | 163-03 | 3 | DISC-08 (c1) | T-163-01 | HUMAN-UAT: resumed inventory equals uninterrupted inventory (zero silently dropped hosts) | manual | UAT-163-04 in `docs/UAT-SERIES.md` | ✅ W3 | ✅ green |
 
 **Threat coverage note:** T-163-05 (batch-ordinal drift on target-scope change) and T-163-06
 (inventory in `{output_dir}/.cache/` without `--cache`) are documentation-mitigated only and are

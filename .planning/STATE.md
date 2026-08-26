@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
-status: executing
+status: milestone_complete
 stopped_at: "Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15."
-last_updated: "2026-08-25T17:38:53.523Z"
-last_activity: 2026-08-25
+last_updated: "2026-08-26T00:00:00.000Z"
+last_activity: 2026-08-26
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 9
-  completed_plans: 8
-  percent: 33
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Phase: 163 (discovery-sub-batch-checkpoint-granularity) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
+Phase: 163 (discovery-sub-batch-checkpoint-granularity) — COMPLETE
+Plan: 4 of 4
+Status: Verified PASS 2026-08-26 — v5.15 phases all complete
 Last activity: 2026-08-25
 Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last phase of v5.15.
       After 163, v5.15 becomes the first real release since v5.12.0 (see RVW-004 note in ROADMAP).
@@ -39,7 +39,7 @@ Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last p
 |-------|------|--------------|------|--------|
 | 161 | Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | HWLC-14, HWLC-19 | None (first, independent) | ✅ Complete (2026-08-25) |
 | 162 | Check-in Scan Scheduling | HWLC-20 | None (independent of 161) | ✅ Complete (2026-08-25) |
-| 163 | Discovery Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Executing (1 of 3 plans done — 163-01 Wave 0 tests green 2026-08-25) |
+| 163 | Discovery Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | ✅ Complete (2026-08-26; 4 plans — 163-04 added mid-phase to fix a coverage-loss defect the UAT caught; VERIFICATION PASS 6/6, UAT-163-01..04 all PASS) |
 
 ## v5.14 Phase Map (SHIPPED 2026-08-19)
 
@@ -507,7 +507,7 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-08-25T17:38:53.518Z
-Stopped at: Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15.
+Stopped at: Phase 163 COMPLETE and verified (2026-08-26). All v5.15 phases (161, 162, 163) done. Next: /gsd-complete-milestone for v5.15, which per RVW-004 would be the first real release since v5.12.0.
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
@@ -536,4 +536,8 @@ rounds (141-09) on 2026-08-03 — no longer pending.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Close v5.15 with /gsd-complete-milestone — all three phases (161, 162, 163) are complete and verified
+- Then /gsd-new-milestone. Carry forward from the Phase 163 UAT: three unactioned findings recorded in
+  163-03-SUMMARY.md (duplicate stage rows when resuming an already-complete scan; blank Target column in
+  --list-resumable for --targets-file runs; the two order-dependent test_verify_phase_gates.py failures,
+  which are a cheap reproducer for RVW-017)
