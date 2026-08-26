@@ -193,6 +193,18 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         fix="Run `quirk compliance cmvp refresh` and commit with message `chore: re-verify CMVP catalog (YYYY-MM-DD)`.",
     ),
 
+    # --- TARGET domain (scan target input errors, Phase 164) ---
+    "TARGET-001": ErrorEntry(
+        code="TARGET-001",
+        cause="The targets file supplied to --targets-file could not be found.",
+        fix="Check the path and confirm the file exists relative to the current working directory.",
+    ),
+    "TARGET-002": ErrorEntry(
+        code="TARGET-002",
+        cause="A target token or CIDR in the targets file is malformed.",
+        fix="Use one bare host, FQDN, IP, or CIDR per line in the targets file.",
+    ),
+
     # --- Reserved per-domain exception fallback codes (NNN-099) ---
     # Used by render-time CATEGORY_TO_CODE dispatch when scan_error_category == "exception"
     # and the host/scanner_label is one of these domains.
