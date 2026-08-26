@@ -72,7 +72,26 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   which is XXE- and billion-laughs-vulnerable by default. The project already made this migration
   once in v5.0 for the SAML path; the tooling never followed.
 
-*Source: RVW-011 (MEDIUM), RVW-020 (OBSERVATION).*
+- [ ] **GATE-03**: A full-suite `python -m pytest` run on macOS does not crash subprocess-based
+  CLI tests. Four `tests/test_target_cli.py` cases (added in Phase 164) die on a **fatal signal**,
+  not an assertion: `fork` -> `_pthread_atfork_child_handlers` -> `nw_settings_child_has_forked`,
+  the macOS "fork() after Network.framework initialised" crash. They pass 7/7 standalone. This is
+  ordering-dependent and broader than the one file — `test_compliance_cli.py` and
+  `test_db_migrate_cli.py` use the same `subprocess.run(..., cwd=...)` pattern and survive only by
+  running alphabetically earlier. Linux CI is unaffected (no Network.framework).
+
+  **Diagnosed, do not re-derive:** the obvious fix does not work. CPython reaches the safe
+  `posix_spawn` path only when `(not close_fds or _HAVE_POSIX_SPAWN_CLOSEFROM)` **and**
+  `cwd is None`. On this Python 3.14 build `_HAVE_POSIX_SPAWN_CLOSEFROM` is `False`, so with the
+  default `close_fds=True` `posix_spawn` is never selected — with or without `cwd`. A fix needs
+  BOTH `close_fds=False` AND `cwd=None`, and `close_fds=False` leaks inherited file descriptors
+  into the child, which is a real trade-off requiring a decision. Full evidence and the probe
+  table: `.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`.
+
+  Explicitly NOT to be folded into the repo's existing "known macOS-only failures" bucket — a
+  crash is materially worse than a failure.
+
+*Source: RVW-011 (MEDIUM), RVW-020 (OBSERVATION), GATE-03 from the Phase 164 post-merge test gate (2026-08-26).*
 
 ### UAT Record Integrity
 
@@ -181,6 +200,7 @@ open; expected to span multiple phases.*
 | A11Y-05 | Phase 165 | Pending |
 | GATE-01 | Phase 166 | Pending |
 | GATE-02 | Phase 166 | Pending |
+| GATE-03 | Phase 166 | Pending |
 | UATREC-01 | Phase 167 | Pending |
 | UATREC-02 | Phase 167 | Pending |
 | UATREC-03 | Phase 168, 169 | Pending |

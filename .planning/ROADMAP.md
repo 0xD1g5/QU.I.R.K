@@ -64,7 +64,7 @@ milestone — no urgent insertions anticipated.
 
 - [ ] **Phase 164: First-Run Correctness** - A new user following the dashboard's empty-state instruction runs a command that actually exists and succeeds, and an unparseable target argument fails with a coded error instead of a traceback.
 - [ ] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift.
-- [ ] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, and the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser.
+- [ ] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
 - [ ] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique.
 - [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the ~325 unrecorded UAT cases each carry a recorded result or an explicit deferral naming a specific substitute test.
 - [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases.
@@ -151,7 +151,7 @@ values) most likely to move the color-contrast numbers. Consult both sources.
 **Goal**: The e2e-smoke and UAT-tooling gates measure real problems and can actually be satisfied
 on ordinary developer hardware, so red stops training people to ignore the suite.
 **Depends on**: Nothing (independent of every other phase in this milestone)
-**Requirements**: GATE-01, GATE-02
+**Requirements**: GATE-01, GATE-02, GATE-03
 **Success Criteria** (what must be TRUE):
 
   1. `npm run e2e:smoke` completes and passes within its budget on a developer machine with
@@ -162,6 +162,16 @@ on ordinary developer hardware, so red stops training people to ignore the suite
   2. `uat_runner.py` parses all XML via `defusedxml` rather than stdlib `ElementTree`; no
      XXE/billion-laughs-vulnerable parse path remains in that module, matching the migration the
      project already made for the SAML path in v5.0.
+
+  3. A full-suite `python -m pytest` on macOS completes without a fatal-signal crash in
+     subprocess-based CLI tests (GATE-03, deferred here from Phase 164 on 2026-08-26). The four
+     `tests/test_target_cli.py` failures are a macOS `fork()`-after-Network.framework crash, not
+     assertion failures, and the same `subprocess.run(..., cwd=...)` pattern in
+     `test_compliance_cli.py` / `test_db_migrate_cli.py` is equally exposed — it survives only by
+     alphabetical ordering. Root cause is fully diagnosed in
+     `.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`; the fix requires both
+     `close_fds=False` and `cwd=None`, a trade-off (fd leakage into the child) that needs an
+     explicit decision. Do not absorb this into the "known macOS-only failures" bucket.
 **Plans**: TBD
 
 ### Phase 167: UAT Format Unification & Deduplication
