@@ -1,6 +1,6 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 5.12.0
+**Version:** 5.15.0
 **Last Updated:** 2026-08-26 (v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
@@ -262,13 +262,13 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `QU.I.R.K. v5.12.0`
+- Output matches format: `QU.I.R.K. v5.15.0`
 - Exit code 0
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
-**Notes:** Version bumped to v5.12.0 at v5.12 milestone close (pyproject.toml sole SoT;
-importlib.metadata derives it). Re-test required against v5.12.0 install.
+**Notes:** Version bumped to v5.15.0 at v5.15 milestone close (pyproject.toml sole SoT;
+importlib.metadata derives it). Re-test required against v5.15.0 install. Note v5.13 and v5.14 were tagged as two-component tags (`v5.13`, `v5.14`) which never matched release.yml's `v*.*.*` glob, so no release ran for them and the shipped package stayed at 5.12.0 — see RVW-004.
 
 ---
 

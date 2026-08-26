@@ -5,6 +5,59 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.15.0] - 2026-08-26
+
+Lifecycle Tail Drain — Phases 161-163. Note that 5.9 through 5.14 were developed but
+never released: their tags were two-component (`v5.9`, `v5.13`, `v5.14`), which never
+matched the `v*.*.*` trigger glob in `release.yml`, so no release workflow ran. 5.15.0 is
+the first published release since 5.12.0 and carries that accumulated work.
+
+### Added
+
+- **Hardware lifecycle notifications** (Phase 161, HWLC-14) — opt-in email/webhook dispatch
+  when a monitored device drifts tier or crosses an EOL/EOS boundary. Gated behind
+  `notify_on_hardware_lifecycle` on `NotifyCfg`, reusing the Phase 101 dispatch foundation.
+  The trigger is a never-raising advisory hook on `persist_and_reconcile()`'s success path —
+  a notification failure can never fail a scan.
+- **Vendor PQC status trend surfacing** (Phase 161, HWLC-19) — catalog-level vendor PQC trend
+  data rendered in the CLI technical markdown report, the HTML report, the DOCX report, and a
+  new section on the `/hardware` dashboard tab, with cross-surface caption parity enforced by
+  test. Advisory-only: never contributes to the readiness score, guarded mechanically by
+  `vendor-trend-advisory-guard.test.ts`.
+- **Scheduled check-in re-probes** (Phase 162, HWLC-20) — `quirk schedule add --check-in`
+  puts HWLC-13's lightweight re-probe on a recurring cadence. `--target` becomes optional for
+  check-ins (stored as a `(known fleet)` sentinel) and stays mandatory for profile scans. The
+  `/schedules` page marks check-in jobs with an advisory chip.
+- **Batch-granular discovery resume** (Phase 163, DISC-08) — the chunked discovery loop now
+  writes a `discovery:batch-N` checkpoint plus a per-batch cache payload after each completed
+  batch, and skips those batches on `--resume-scan-id`. A /16 interrupted at batch 60 of 64
+  previously re-probed all ~65,000 hosts on resume; it now re-probes only the ~4,000 in the
+  unfinished batches. No new table and no schema change — the existing checkpoint mechanism is
+  reused with a structured stage string. Requires no `--cache` flag.
+
+### Fixed
+
+- **SCHED-02: every default-profile schedule died at argparse** (Phase 162) —
+  `_dispatch_schedule()` fell back to `schedule.profile or "balanced"`, a *score* profile value
+  that `run_scan --profile` rejects. Any CLI-created schedule without an explicit profile was
+  recorded "failed" with no reason recorded. Survived three months because the dispatched argv
+  was only reachable through `Popen`; `build_scan_argv()` was extracted as a pure function so it
+  can be asserted directly. `quirk schedule list` also stopped displaying "balanced" for a null
+  profile — a value that is neither valid nor what would actually run.
+- **Resumed discovery scans under-reported their own coverage** (Phase 163) — the per-batch
+  cache stored only discovered `ports`, so a skipped batch lost the per-host "undetermined"
+  ADVISORY records from its liveness pre-pass. A resumed scan reported only the coverage of the
+  batches it re-probed live: measured on a 4094-host range, a 3-batches-cached resume reported
+  1,014 hosts scanned against 4,034 for an uninterrupted reference. Discovered endpoint counts
+  were correct throughout, so the report did not look broken — it looked like a completed
+  smaller engagement. `Confidence` is coverage-derived and was depressed by it. Found by human
+  UAT, fixed in-phase via a `liveness` key in the batch cache payload.
+
+### Changed
+
+- `operators-guide.md` gains section 13, "Discovery Batch Resume", covering the resume
+  mechanism, disk cost, cache data-handling class, and the unchanged-target-scope limitation.
+
 ## [5.8.0] - 2026-06-16
 
 ### Added

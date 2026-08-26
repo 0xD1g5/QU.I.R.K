@@ -247,25 +247,58 @@ vendor-level PQC trend visibility at all (Phase 160, backend now exists).
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.15 Lifecycle Tail Drain
+## Current Milestone: (none — v5.15 shipped, next milestone not yet opened)
 
-**Goal:** Close out the remaining hardware-lifecycle backlog tail — notification, dashboard
-surfacing, scheduling, and discovery-checkpoint granularity — so the HWLC arc (v5.10–v5.14) has
-no unclaimed loose ends before the next capability theme opens.
+Run `/gsd-new-milestone` to open the next one. Per the standing PM preference, review HORIZON.md
+plus ROADMAP.md's Backlog first and drain existing prioritized work before net-new features.
+**HORIZON.md needs a fresh forward-outlook pass** — its last two sketched anchors (Release
+Integrity → v5.12, Continuous Hardware Lifecycle Monitoring → v5.13/v5.14) are both shipped and
+nothing further is sketched.
 
-**Target features:**
-- Email/webhook notification on hardware tier-crossing/EOL events (HWLC-14), reusing the Phase 101
-  notification fan-out layer
-- Dashboard/report surfacing for vendor-level PQC trend data (`GET /api/hardware/vendor-trends`
-  currently has zero consumers)
-- Recurring/scheduled cadence on top of HWLC-13's on-demand check-in scan mode
-- DISC-08 sub-batch (mid-discovery) checkpoint/resume granularity
+Live inputs for that review:
 
-**Key context:** Sourced entirely from the "Active" carried-forward tech-debt list below plus
-ROADMAP.md's Backlog section — no net-new capability, PM-prioritized drain-before-net-new per
-standing preference. HORIZON.md's last two sketched anchors (Release Integrity → v5.12,
-Continuous Hardware Lifecycle Monitoring → v5.13/v5.14) are both now shipped; HORIZON needs a
-fresh forward-outlook pass after this milestone since nothing further is sketched.
+- **20 open findings** from the 2026-08-24 third-party functional review
+  (`docs/reviews/2026-08-24-functional-review-findings.md`). Milestone A "Scan Integrity" is
+  complete (RVW-001, RVW-003). Next candidates per the action plan: **RVW-022** (`quirk compliance
+  cmvp refresh` corrupts the cache — do NOT run that command until fixed; blocks RVW-006),
+  **RVW-017** (shared-DB test isolation — now has a cheap reproducer, see below), **RVW-002**
+  (dashboard's second finding engine disagrees with the report). **RVW-004 is closed by this
+  milestone.**
+- **Three unactioned findings from the Phase 163 human UAT**: duplicate stage rows when resuming an
+  already-complete scan; `--list-resumable`'s blank Target column for `--targets-file` runs; and
+  two order-dependent `test_verify_phase_gates.py::test_hook_integration_*` failures that pass in
+  isolation — the RVW-017 reproducer.
+- **Long-standing deferred human-UAT items** — see STATE.md Deferred Items. Several are
+  environment-gated by design (live Windows host, live Slack/email/webhook/syslog/Jira/ServiceNow
+  endpoints, TTY/LDAPS gates); the Windows Authenticode production-signing half (UAT-143-03) may
+  finally be exercisable now that a correctly-formed tag will actually fire `release.yml`.
+
+## Previous Milestone: v5.15 Lifecycle Tail Drain — SHIPPED 2026-08-26
+
+**Delivered:** Closed the hardware-lifecycle backlog tail and the discovery-checkpoint gap, and
+cut the first published release since 5.12.0.
+
+- **HWLC-14** — opt-in email/webhook notification on device tier-crossing and EOL/EOS events,
+  through the existing Phase 101 fan-out. Never-raising advisory hook; a notification failure
+  cannot fail a scan.
+- **HWLC-19** — vendor PQC-status trend data given its first consumer: a `/hardware` dashboard
+  section plus CLI, HTML and DOCX report sections, advisory-only and machine-guarded.
+- **HWLC-20** — `quirk schedule add --check-in` puts HWLC-13's lightweight re-probe on a cadence.
+  Uncovered and fixed **SCHED-02**, a three-month-old defect where every CLI-created schedule
+  without an explicit profile died at argparse and was logged "failed" with no reason.
+- **DISC-08** — batch-granular discovery resume. The roadmap assumed this layer existed; it did
+  not, and the phase built it. A /16 interrupted at batch 60 of 64 now re-probes ~4,000 hosts on
+  resume rather than ~65,000.
+
+**Release integrity (RVW-004 closed):** `pyproject.toml` moved 5.12.0 → 5.15.0 and the tag is
+three-component (`v5.15.0`). v5.13/v5.14 were never published because their two-component tags
+missed `release.yml`'s old `v*.*.*` glob; that trigger is now `v[0-9]*`.
+
+**Process note worth carrying forward:** Phase 163's blocking human-verify checkpoint caught a
+defect that every automated criterion passed over — resumed scans silently under-reported swept
+coverage while reporting the correct endpoint count. The criterion was right in intent ("zero
+silently dropped hosts") and wrong in scope ("host/port inventory count"). Human UAT gates earn
+their cost.
 
 ## Previous Milestone: v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting — SHIPPED 2026-08-19
 

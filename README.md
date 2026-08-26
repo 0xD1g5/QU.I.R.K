@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.12.0
+# QU.I.R.K. — v5.15.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -82,9 +82,11 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.10
+## What's New in v5.15
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
+
+- **Lifecycle Tail Drain (v5.15)** — opt-in email/webhook notifications when a monitored device drifts or crosses an EOL boundary; vendor PQC-status trend data surfaced across the CLI, HTML and DOCX reports and the `/hardware` dashboard tab; `--check-in` re-probes schedulable on a recurring cadence via `quirk schedule add --check-in`; and batch-granular discovery resume, so an interrupted scan re-probes only the unfinished 1024-host batches instead of starting the whole discovery stage over.
 
 - **Hardware Lifecycle Depth (v5.10)** — SNMPv3 auth+priv fingerprinting with a safe v2c/none fallback ladder; SNMP-confirmed bridge mitigation (`upstream_mitigated`, evidence-backed, never scored); OT/ICS fingerprinting for Modbus/TCP + BACnet/IP (opt-in, read-only, circuit-breakered) via a new `otics` chaos-lab profile; advisory-only firmware CVE correlation against fingerprinted hardware; a persistent dashboard scan-date badge, server-enforced trusted-targets allowlist, and Windows Authenticode signing CI mechanism.
 - **SNMP hardware fingerprinting + CBOM DEVICE/FIRMWARE hierarchy (v5.8)** — SSH banner → HTTP management interface → SNMP cascade classifies network hardware vendor, model, and CNSA 2.0 remediation tier; crypto-bridge detection; CBOM now emits a DEVICE parent component with FIRMWARE children; dashboard "Hardware Inventory" section in the CBOM tab; requires `[hw]` extras (pysnmp, not included in `[all]`).

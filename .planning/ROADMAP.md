@@ -29,7 +29,7 @@
 - ✅ **v5.12 Release & Verification Integrity** — Phases 148–153, 36 plans (shipped 2026-08-14) → `.planning/milestones/v5.12-ROADMAP.md`
 - ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
-- 🚧 **v5.15 Lifecycle Tail Drain** — Phases 161–163 (in progress)
+- ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
 
 ### Release-integrity note (RVW-004, corrected 2026-08-25)
 
@@ -49,151 +49,6 @@ not happen. Rather than retro-publish two versions whose source never carried
 those numbers, the record is corrected here and **v5.15 becomes the next real
 release**, tagged with a 3-component version. `release.yml`'s trigger has been
 broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
-
----
-
-## Current Milestone: v5.15 Lifecycle Tail Drain
-
-**Goal:** Close out the remaining hardware-lifecycle backlog tail — notification, dashboard
-surfacing, scheduling — plus discovery-checkpoint granularity, so the HWLC arc (v5.10–v5.14) has
-no unclaimed loose ends before the next capability theme opens. Backlog-drain milestone — every
-requirement is an additive extension of an existing, already-shipped subsystem (Phase 101
-notification fan-out, `GET /api/hardware/vendor-trends`, Phase 63 `quirk schedule` CRUD/dispatcher,
-v5.11 Phase 144 per-batch checkpointing). No net-new capability territory.
-
-**Phase Numbering:** Continues from v5.14's last phase (160). Integer phases only for this
-milestone — no urgent insertions anticipated.
-
-### Phases
-
-- [x] **Phase 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing** - Consultants get proactive tier-crossing/EOL notifications via the existing fan-out layer, and the previously-unconsumed vendor PQC-trend backend gets its first dashboard and report home.
-- [x] **Phase 162: Check-in Scan Scheduling** - HWLC-13's on-demand check-in re-probe mode can be put on a recurring cadence through the existing `quirk schedule` CRUD/dispatcher.
-- [ ] **Phase 163: Discovery Batch Checkpoint Granularity** - An interrupted discovery scan resumed via `--resume-scan-id` skips the batches that already completed instead of re-probing every batch from zero (builds the per-batch layer the roadmap wrongly assumed existed).
-
-## Phase Details
-
-### Phase 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing
-
-**Goal**: Consultants get visible, proactive signals for hardware-lifecycle events — an opt-in
-notification when a monitored device crosses a CNSA 2.0 tier boundary or an EOL/EOS date, and a
-first-class dashboard/report home for the vendor-level PQC trend data that has existed as a
-backend-only API since v5.14.
-**Depends on**: Nothing (first phase of milestone; extends Phase 101 notification fan-out and
-Phase 160's `GET /api/hardware/vendor-trends`)
-**Requirements**: HWLC-14, HWLC-19
-**Success Criteria** (what must be TRUE):
-
-  1. Consultant can opt in to email/webhook notification, delivered through the existing Phase 101
-     fan-out layer, when a monitored device's drift event crosses a CNSA 2.0 tier boundary or
-     reaches an EOL/EOS threshold — no new delivery path, channel, or credential model introduced.
-
-  2. Notification delivery is captured in the existing `integration_deliveries` audit table and
-     goes through the existing `safe_str`/SSRF-safe delivery primitives, matching every other
-     Phase 101-derived channel.
-
-  3. Consultant can view vendor-level PQC-status trend history (backed by
-     `GET /api/hardware/vendor-trends`) on the dashboard for the first time.
-
-  4. Vendor PQC trend data appears in exported reports (HTML/DOCX/CLI) as advisory content,
-     structurally isolated from scoring — consistent with the existing hardware-lifecycle
-     advisory-only firewall (zero `SCORE_WEIGHTS` references, machine-enforced).
-
-  5. Both features degrade gracefully with zero devices/zero trend events — no crashes, no empty
-     tracebacks, a sensible empty state on dashboard and reports alike.
-**Plans**: 6 plans
-
-Plans:
-**Wave 1**
-
-- [x] 161-01-PLAN.md — Notification opt-in config, hardware-lifecycle payload model, and the email/webhook dispatch entry point (HWLC-14)
-- [x] 161-02-PLAN.md — ExecContent.vendor_pqc_trends field, the shared non-fatal loader, and the CLI markdown vendor-trend section (HWLC-19)
-- [x] 161-03-PLAN.md — /hardware dashboard Vendor PQC Status Trends section: types, hook, component pair, advisory-only guard test (HWLC-19)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 161-04-PLAN.md — Terminal notification hook inside persist_and_reconcile() so every scan path triggers (HWLC-14)
-- [x] 161-05-PLAN.md — HTML and DOCX vendor-trend renderers plus Jinja template wiring (HWLC-19)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 161-06-PLAN.md — Advisory-only firewall extension, docs updates, UAT Series 161, Obsidian sync (HWLC-14, HWLC-19)
-
-### Phase 162: Check-in Scan Scheduling
-
-**Goal**: Consultants can schedule HWLC-13's lightweight check-in re-probe on a recurring cadence
-instead of remembering to trigger it manually, reusing the scheduler infrastructure shipped in
-Phase 63.
-**Depends on**: Nothing new (independent of Phase 161; extends Phase 63's `quirk schedule`
-CRUD/dispatcher and Phase 159's `--check-in` mode)
-**Requirements**: HWLC-20
-**Status**: ✅ Complete 2026-08-25 — executed inline; see 162-VERIFICATION.md
-**Success Criteria** (what must be TRUE):
-
-  1. Consultant can create a scheduled check-in job via `quirk schedule` CRUD, distinct from a
-     scheduled full/standard/deep profile scan.
-
-  2. The existing scheduler dispatcher correctly invokes `--check-in` mode on cadence for those
-     jobs — a scheduled check-in job never silently runs a full profile scan instead.
-
-  3. Scheduled check-in runs persist through the same `is_partial_scan`-marked, non-scored path as
-     manually-triggered check-ins — HWLC-13's guarantees (partial-scan banner, exclusion from
-     `/trends`/`/compare`) hold identically for scheduled runs.
-
-  4. The dashboard `/schedules` page displays check-in jobs distinctly from other scheduled scan
-     types, so a consultant can tell at a glance which schedules are lightweight re-probes.
-**Plans**: TBD
-
-### Phase 163: Discovery Batch Checkpoint Granularity
-
-**Goal**: A discovery scan interrupted mid-run and resumed via `--resume-scan-id` skips the
-batches that already completed instead of re-probing every batch from zero.
-
-> **Scope correction (2026-08-25, during `/gsd-discuss-phase 163`).** This entry previously
-> described the phase as "tightening the granularity of the v5.11 Phase 144 per-batch
-> checkpoint/resume system." That system does not exist — verified against the tree:
-> `write_scan_checkpoint(..., "discovery", ...)` fires ONCE after the whole loop
-> (`run_scan.py:1824`) and `_completed_stages` is a set of stage NAMES, so an interrupted
-> discovery re-runs every batch. This phase BUILDS the missing per-batch layer. True sub-batch
-> (intra-batch) resume is explicitly DEFERRED. See `163-CONTEXT.md` for the full decision record.
-
-**Depends on**: Nothing (independent of Phases 161–162; different subsystem — extends v5.11 Phase
-144's discovery chunking, not the hardware-lifecycle arc)
-**Requirements**: DISC-08
-**Success Criteria** (what must be TRUE) — rewritten per 163-CONTEXT.md:
-
-  1. A discovery scan interrupted mid-run, resumed via `--resume-scan-id`, does not re-probe hosts
-     in batches that completed before the interruption.
-
-  2. Batch checkpoint state persists via the existing `ScanCheckpoint` mechanism — no new table,
-     no parallel persistence pattern.
-
-  3. Per-batch failure isolation (v5.11 DISC-02) is preserved unchanged — a failed batch writes no
-     completion checkpoint and is re-attempted on resume.
-
-  4. Both CLI `--discovery nmap` and dashboard-initiated discovery benefit via the single shared
-     chunked-discovery call site (the v5.11 DISC-06 AST-locked invariant continues to hold).
-**Plans**: 3 plans
-
-Plans:
-**Wave 1**
-
-- [x] 163-01-PLAN.md — NmapOpenPort cache serializer pair (D-07) + Part A mirror-shape tests pinning the per-batch checkpoint/resume rules (DISC-08)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 163-02-PLAN.md — Part B AST-structural tests, then the resume-skip guard and per-batch checkpoint+cache write inside run_scan.py's chunked loop (DISC-08)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [ ] 163-03-PLAN.md — Operators-guide section 13, UAT Series 163, Obsidian vault sync, and the HUMAN-UAT resume walkthrough (DISC-08)
-
-### Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 6/6 | Complete | 2026-08-25 |
-| 162. Check-in Scan Scheduling | 1/1 | Complete | 2026-08-25 |
-| 163. Discovery Batch Checkpoint Granularity | 2/3 | In Progress|  |
 
 ---
 
@@ -425,7 +280,7 @@ Items to be organized into future milestones. Organized by theme.
 
 ### Release & Verification Integrity (v5.12 candidates)
 
-Promoted into the v5.12 milestone (see Current Milestone section above) — kept here for
+Promoted into the v5.12 milestone and shipped 2026-08-14 (see `.planning/milestones/v5.12-ROADMAP.md`) — kept here for
 backlog-history continuity:
 
 - Windows release asset gap (v5.11.0 shipped no Windows build) → RELEASE-04 (Phase 148)
@@ -490,7 +345,7 @@ continuity:
 
 ### Lifecycle Tail Drain (v5.15)
 
-Promoted into v5.15 (see Current Milestone section above) — kept here for backlog-history
+Promoted into v5.15 and shipped 2026-08-26 (see `.planning/milestones/v5.15-ROADMAP.md`) — kept here for backlog-history
 continuity:
 
 - HWLC-14 — email/webhook notification on tier-crossing/EOL events, reusing Phase 101 fan-out →
