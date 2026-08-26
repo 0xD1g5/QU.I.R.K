@@ -2,8 +2,8 @@
 
 **Purpose:** Themes for the next 5–7 milestones — deep enough to anchor backlog grooming and inter-milestone deferrals, shallow enough to revise after each ship. **Plan the next one or two in detail; sketch the rest.**
 
-**Last updated:** 2026-08-19 (post-v5.14 ship — milestone-boundary PM review, no full re-evaluation cadence run yet)
-**Current state:** Both sketched anchors from the 2026-08-11 revision have now shipped — v5.12 Release & Verification Integrity (SHIPPED 2026-08-14) and the continuous-hardware-lifecycle-monitoring theme, which took two milestones instead of one: v5.13 Continuous Hardware Lifecycle Monitoring (SHIPPED 2026-08-15, Phases 154–156) built the core drift/EOL engine, and v5.14 Hardware Lifecycle Tail (SHIPPED 2026-08-19, Phases 157–160) closed the fleet-coverage and forecasting gaps left open by v5.13. **v5.15 Lifecycle Tail Drain is now open** (Phases 161–163) — a small, explicitly-not-net-new milestone draining the last 4 backlog items left by the HWLC arc (notifications, vendor-trend surfacing, check-in scheduling, DISC-08 checkpoint granularity). See rationale log below. **HORIZON has no further theme sketched past v5.15** — a full re-evaluation cadence run is owed at the next milestone boundary (after v5.15 ships) to identify what comes after the hardware-lifecycle arc closes out. SaaS multi-tenancy stays parked (no business-model signal, unchanged since v5.4).
+**Last updated:** 2026-08-26 (post-v5.15 ship — full re-evaluation cadence run, the one owed since 2026-08-11)
+**Current state:** The hardware-lifecycle arc is closed. v5.13 (Phases 154–156) built the drift/EOL engine, v5.14 (157–160) closed its fleet-coverage and forecasting gaps, and v5.15 (161–163) drained the last four backlog items — shipping as the first published release since 5.12.0, after v5.13/v5.14's two-component tags silently missed `release.yml`'s glob entirely. **ROADMAP.md's `## Backlog` is now genuinely drained**: nothing remains unpromoted except the parked SaaS block. **v5.16 Review Drain & Gate Integrity is now open** (Phases 164+) — the ops cycle the 2:1 cadence has owed since v5.12, closing the open findings from the 2026-08-24 third-party functional review. See rationale log below. Themes past v5.16 are sketched fresh in this pass (Forward Outlook, revised 2026-08-26). SaaS multi-tenancy stays parked (no business-model signal, unchanged since v5.4).
 
 ---
 
@@ -163,48 +163,87 @@ attached to *all* prior capability work is currently unverified.
 milestone was **v5.0 (2026-05-22)** — eleven milestones back. v5.7's Wave A was a targeted audit
 drain, not a systems-integrity pass.
 
-## v5.12 — Release & Verification Integrity *(NEXT — recommended anchor)*
+## v5.12 — Release & Verification Integrity — SHIPPED 2026-08-14
 
-**Anchor / North Star:** **a release you can trust without watching it** — cutting a tag produces a
-complete, verified artifact set, and a phase cannot be marked complete while its verification
-artifacts are missing.
+6 phases (148–153), 36 plans. Release pipeline repair + Windows asset backfill, test-suite triage
+and a green CI-gated baseline, phase-completion artifact gates (`scripts/verify_phase_gates.py` +
+pre-commit hook), DISC-09 empirical closure, and a real tag cut. Details:
+`.planning/milestones/v5.12-MILESTONE-AUDIT.md`.
+
+## v5.13 / v5.14 / v5.15 — the Hardware Lifecycle arc — SHIPPED 2026-08-15 / 08-19 / 08-26
+
+The "continuous hardware lifecycle monitoring" theme deferred since v5.10 took three milestones
+rather than the sketched one. Research resolved its flagged 3x sizing uncertainty toward the
+smaller estimate — a scheduling/diffing/reporting layer over existing `HardwareDevice` data, not a
+new scanner surface — but the tail was longer than the core. See recaps in ROADMAP.md.
+
+---
+
+# Forward Outlook — Re-evaluated 2026-08-26 (post-arc)
+
+**Framing.** For the first time since roughly v5.9, there is no obvious next thing. The backlog is
+drained, the hardware-lifecycle arc is closed, the release pipeline is repaired and proven, and all
+five Primetime gates remain met. That is a good problem, but it means the next two or three
+milestones have to be *chosen* rather than inherited.
+
+The 2026-08-24 third-party functional review is the one large body of live, externally-sourced
+evidence available, and it is not yet drained — which makes v5.16 an easy call. What follows it is
+a genuine open question, sketched below rather than committed.
+
+## v5.16 — Review Drain & Gate Integrity *(OPEN — Phases 164+)*
+
+**Anchor / North Star:** **QUIRK's own gating documents deserve the standard QUIRK applies to
+customer estates.** The tool's stated bar is "every detected weakness is real, every missed weakness
+is intentional." A release-gate document with no recorded result for 325 of 628 cases, and an
+accessibility baseline that permanently accepts 291 violations including three screen-reader
+blockers, does not meet that bar.
 
 | Source | Item | Why it matters |
 |---|---|---|
-| v5.11 release run | Windows release asset missing from v5.11.0; self-test fix (`1a6effc`) committed but unexercised | The next tag is the only thing that proves the repair; until then the Windows path is unverified |
-| v5.11 release run | Tag hygiene — `v5.9` never matched `v*.*.*`; `v5.10.0` never pushed | Structural: a malformed or unpushed tag silently skips the entire release pipeline with no signal |
-| v5.11 retrospective L15 | Phase-completion artifacts enforced only at milestone close | Three of four v5.11 phases needed retroactive repair; the fix is a gate at phase close |
-| v5.11 audit tech debt | ~102 pre-existing suite failures | A permanently-red suite cannot detect a new regression — the signal is already saturated |
-| v5.11 audit tech debt | DISC-09 segmented-network lab profile + Phase 144 nmap timing artifact | The lab profile *is* the instrument that settles the artifact; separately, both age forever |
-| Backlog (Discovery UX) | Flip interactive setup's nmap-discovery-first default N→Y | Trivial; users hitting enter silently skip the entire v5.11 discovery path |
+| RVW-021 | `quirk scan --targets` doesn't exist, yet the dashboard empty state instructs it | It is the literal first thing a new user is told to type, and it tracebacks |
+| RVW-012 | 291 baselined a11y violations, 0 of 11 routes clean, 3 screen-reader blockers accepted | Baselining a blocker converts a decision into an accumulation |
+| RVW-008 | 325 of 628 UAT cases carry no result | The document calls itself the release gate |
+| RVW-011, RVW-020 | E2E smoke can't pass locally; `uat_runner.py` parses XML with stdlib ElementTree | A gate that can't pass trains people to ignore red; XXE-by-default in a security product |
+| RVW-007/009/010/014/015/018/019 | Changelog, archive, traceability and format debt | Genuine debt, no functional urgency — the tail, not the anchor |
 
-**Why now:** every item above is a *measurement* failure rather than a capability gap, and they
-compound — a red suite hides regressions, a silent release pipeline hides broken artifacts, missing
-verification artifacts hide unproven phases. Fixing them restores the ability to trust every
-subsequent milestone's green.
+**Why now:** drain-before-net-new (standing PM preference) applies directly, and the 2:1
+capability/ops ratio is owed — v5.13/v5.14/v5.15 were all capability or capability-drain cycles and
+the last true ops milestone was v5.12 on 2026-08-14. The findings are also *pre-scoped*: the
+reviewer wrote remediation text in requirement phrasing, so promotion cost is near zero.
 
-**Risk:** an integrity milestone has no user-visible feature, which makes it easy to defer again.
-Mitigation: the Windows asset is a concrete, demonstrable deliverable, and DISC-09 unblocks a
-capability question that is otherwise permanently unanswerable.
+**Risk:** same as v5.12's — an integrity milestone has no user-visible feature and is easy to defer
+again. Mitigation is the same too: lead with RVW-021, which is a concrete first-run bug, and treat
+RVW-008's drain as the tail rather than the opening act.
 
-**Explicitly NOT in scope:** continuous hardware lifecycle monitoring (needs its own research pass —
-see v5.13), SaaS multi-tenancy (still parked).
+## Beyond v5.16 — three candidates, none committed *(sketch)*
 
-## v5.13 — Continuous Hardware Lifecycle Monitoring *(sketch — capability anchor)*
+No candidate here is a commitment. Each needs a shaping conversation, and at least one needs a
+research pass before it can be sized.
 
-The last substantial unbuilt backlog item, deferred since v5.10 as "needs its own research pass."
-Restores the 2:1 rhythm after v5.12's ops cycle. Shape unknown until research: likely re-scan
-cadence against the hardware fleet, drift detection on firmware/EOL/vendor-PQC-status changes, and
-alerting when a device crosses a CNSA 2.0 tier boundary. Depends on v5.10's `HardwareDevice` table,
-`hw_cve.py`, and the tier assignment logic already shipped.
+**Candidate A — Migration Execution.** QUIRK detects, scores, and produces a prioritized
+remediation roadmap — then stops. The consultant hands over a document and the client executes it
+somewhere else entirely. Closing that loop (tracking remediation items to completion across
+re-scans, showing movement against the roadmap rather than only against the score) is the most
+natural extension of the *consulting* value proposition, and it compounds every detection
+capability shipped since v3.9. **Open question:** is this a QUIRK feature or a Jira/ServiceNow
+integration deepening on top of the Phase 101–105 ticketing surface already shipped? The answer
+changes its size by 3x, exactly like the hardware-monitoring question did at v5.10.
 
-**Open question for research:** is this a new scanner surface, or a scheduling/diffing layer over
-data QUIRK already collects? The answer determines whether this is a 2-phase or 6-phase milestone.
+**Candidate B — Detection breadth, re-opened.** Nothing has been added to the scanner surface since
+v5.10's OT/ICS work. The standing Out-of-Scope list has three entries worth re-testing rather than
+re-inheriting: Windows AD CS live connector (stub still present), S/MIME message-content scanning,
+and passive network capture. All three were deferred for reasons that may or may not still hold.
+**Open question:** is there a real engagement asking for any of them, or is this breadth for its own
+sake? Do not open this without a demand signal.
 
-## Beyond v5.13 *(unchanged)*
+**Candidate C — Another ops cycle.** Explicitly listed so it isn't forgotten: if the v5.16 drain
+surfaces evidence density the way the 2026-05-08 audit did for v4.8 (44 blockers → a 13-phase
+milestone), the correct response is to let v5.17 absorb the overflow rather than force a capability
+pivot. v4.8 and v4.9 are the precedent.
 
-SaaS multi-tenancy remains parked pending a business-model signal. No new themes have been surfaced
-by v5.10/v5.11 that warrant a horizon slot.
+**Still parked:** SaaS multi-tenancy. Unchanged since v5.4 — the gate is a business-model signal,
+and none has appeared. Note that Candidate A does *not* require it; cross-tenant PQC trend
+aggregation does, which is why that item stays rejected.
 
 ---
 
@@ -214,6 +253,7 @@ Track here when the horizon shifts so future-you can see why:
 
 | Item | From | To | Rationale | Date |
 |---|---|---|---|---|
+| v5.16 opened as Review Drain & Gate Integrity (ops cycle); HORIZON re-sketched with three uncommitted candidates past it | HORIZON had **no** theme sketched past v5.15, and had explicitly owed a full re-evaluation cadence run since 2026-08-11 | v5.16 = the 11 open + 3 partial findings from the 2026-08-24 third-party functional review, led by RVW-021 (first-run command doesn't exist), RVW-012 (291 baselined a11y violations incl. 3 screen-reader blockers), RVW-011/020 (gate robustness), with RVW-008's full 325-case UAT drain as the tail; Beyond-v5.16 sketched as three explicit candidates (Migration Execution / Detection breadth / another ops cycle) | PM review with the user as PM (2026-08-26, post-v5.15 ship). This is the first boundary where **`ROADMAP.md`'s Backlog is genuinely empty** — the hardware-lifecycle arc closed with v5.15 and nothing remains unpromoted except the parked SaaS block, so the usual drain-before-net-new answer had no items to point at. The live evidence pointed instead: an independent 2026-08-24 functional review left 11 fully-open and 3 partial findings, all pre-scoped with remediation text written in requirement phrasing. Cadence agreed: v5.13/v5.14/v5.15 were all capability or capability-drain, and the last true ops milestone was v5.12 (2026-08-14), so the 2:1 ratio was owed. Two findings are user-facing correctness rather than hygiene — RVW-021 means the dashboard's own empty state instructs a nonexistent command that tracebacks, and RVW-012 baselines three screen-reader blockers as accepted — which answers the standing objection that ops milestones have no demonstrable deliverable. Options considered: (1) drain the review — chosen; (2) net-new capability — rejected, no theme was ready and inventing one under time pressure risks a worse pick, the same reasoning that produced v5.15; (3) split gates-now/docs-later across v5.16+v5.17 — rejected by the user in favour of one milestone with a full RVW-008 drain. Sizing verified rather than inherited: the review's "353 of 601" measured as 325 unmarked of 628 headings, with 3 duplicate IDs not 5 — and the 636-vs-628 mismatch between `**Result:**` blocks and `### UAT-` headings is itself RVW-014 evidence, which is why format unification is sequenced *before* the drain. Explicitly excluded: RVW-002's wholesale `findings_evaluator` merge (TLS cert findings already converged with a parity test; the rest is a design-judgment refactor). SaaS still parked. Also corrected at this boundary: the `test_verify_phase_gates` pair recorded as a "cheap reproducer for RVW-017" is neither — RVW-017 was fixed in `034da44` and Phase 162 established the failures as macOS-only subprocess SIGSEGV, with Linux CI green. Same record-drift class the v5.11 review flagged. | 2026-08-26 |
 | v5.15 opened as Lifecycle Tail Drain (small, backlog-only) | HORIZON had no sketch past v5.13/v5.14 — "Beyond v5.13" only listed parked SaaS | v5.15 = 3 phases (161–163) draining HWLC-14, HWLC-19 (vendor-trend surfacing), HWLC-20 (check-in scheduling), DISC-08 (checkpoint granularity); no net-new capability | PM review with the user as PM (2026-08-19, post-v5.14 ship). HORIZON's last two sketched anchors both shipped (Release Integrity → v5.12; Continuous Hardware Lifecycle Monitoring → split across v5.13/v5.14), leaving no next theme. Rather than force a premature net-new capability pick, PM review confirmed the backlog itself as the answer: v5.14's Active-requirements carry-forward list already named 4 small, well-scoped items (all additive extensions of already-shipped subsystems — Phase 101 fan-out, Phase 63 scheduler, Phase 144 checkpointing, Phase 160's dormant API), none individually milestone-sized but collectively closing out the HWLC arc cleanly. Drain-before-net-new (standing PM preference) applies directly. Options considered: (1) drain the tail — chosen; (2) pick a new capability area — rejected, no HORIZON theme was ready and inventing one under time pressure risks a worse pick than researching properly next cycle; (3) another stabilization/ops cycle — rejected, v5.12 (3 milestones back) already covered the ops cadence and nothing has surfaced comparable evidence density since. HORIZON explicitly flagged as needing a full re-evaluation cadence run at the *next* boundary (after v5.15 ships), since this file has had no fresh theme-sketching pass since 2026-08-11. SaaS still parked. | 2026-08-19 |
 | v5.12 shaped as Release & Verification Integrity (ops cycle); continuous hardware lifecycle monitoring pushed to v5.13 | Backlog theme "Hardware Compatibility & Lifecycle (v5.11+)" implied continuous monitoring was next up | v5.12 = integrity/ops (release pipeline repair, test-suite stabilization, phase-artifact enforcement, DISC-09 empirical closure); v5.13 = continuous monitoring as capability anchor | PM review with the user as PM (2026-08-11, post-v5.11 ship). Three factors converged. (1) **Cadence:** the 2:1 capability/ops ratio is badly overdue — last true ops milestone was v5.0 on 2026-05-22, eleven milestones back. (2) **Evidence density:** the v5.11 cycle surfaced five independent measurement failures — a release pipeline that produced no Windows build for three milestones (v5.9's tag never matched the `v*.*.*` glob, v5.10.0 was never pushed), a signing self-test that could never pass and had never run, three of four phases shipping without a completion artifact, a deferred-item rationale that decayed within a day, and ~102 tests red since ~Phase 97. (3) **Compounding:** these hide each other — a saturated test signal cannot flag a regression, a silent release pipeline cannot flag a missing artifact. Drain-before-net-new (standing PM preference) applies with unusual force here because the debt is in the *verification layer itself*, so every future milestone's "green" is currently unproven. Continuous monitoring stays deferred one more slot for the same reason it was deferred at v5.10: it needs a research pass to determine whether it is a new scanner surface or a scheduling/diffing layer, and that answer changes its size by 3x. SaaS still parked. Also noted: two backlog rows (OT/ICS resume-checkpoint gap, BACnet CVE key coverage) were already closed by v5.11 Phase 147 as DRAIN-01/DRAIN-02 but never struck from the backlog — same record-drift class as the findings above. | 2026-08-11 |
 | v5.10 opened as Hardware Lifecycle Depth (SNMPv3, SNMP-confirmed bridge, OT/ICS, firmware CVE correlation) | Backlog theme "Hardware Compatibility & Lifecycle Remediation (v5.10+)" — 5 items, one (continuous monitoring) least-scoped | v5.10 = 4 of the 5 tagged items (SNMPv3, upstream_mitigated confirmation, OT/ICS fingerprinting, firmware CVE correlation) + a folded-in Dashboard/UX tail (scan-date badge, trusted-targets allowlist, Authenticode signing); continuous monitoring deferred to v5.11+ | PM review with the user as PM (2026-07-30, post-v5.9 ship). Drain-before-net-new (standing PM preference): this backlog theme was explicitly tagged "v5.10+" when v5.8 shipped SNMP fingerprinting, so it's the clearest unbuilt, already-scoped theme rather than net-new scope. Continuous hardware lifecycle monitoring excluded from the multiSelect as the least-scoped item, needing its own research pass before it can be sized. Dashboard/UX tail (3 small items) folded in as a stabilization tail per the v4.8/v5.4 pattern rather than left to age further in the backlog. Research (4 parallel agents) confirmed all four capability items are additive extensions of existing patterns (no new architecture), with two dominant risk themes flagged for same-phase mitigation: false assurance in a consulting deliverable (over-eager bridge promotion, unqualified CVE claims) and OT/ICS probe safety (fragile production control systems). SaaS still parked. | 2026-07-30 |

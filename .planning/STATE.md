@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.15
-milestone_name: Lifecycle Tail Drain
-status: shipped
-stopped_at: "Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15."
-last_updated: "2026-08-26T00:00:00.000Z"
+milestone: v5.16
+milestone_name: Review Drain & Gate Integrity
+status: planning
+last_updated: "2026-08-26T13:45:16.331Z"
 last_activity: 2026-08-26
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,11 +25,10 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Milestone v5.15 SHIPPED 2026-08-26 — archived, version bumped to 5.15.0, tagged v5.15.0
-Next: /gsd-new-milestone (HORIZON.md needs a fresh forward-outlook pass first)
-Last activity: 2026-08-25
-Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last phase of v5.15.
-      After 163, v5.15 becomes the first real release since v5.12.0 (see RVW-004 note in ROADMAP).
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-26 — Milestone v5.16 started
 
 ## v5.15 Phase Map (SHIPPED 2026-08-26)
 
@@ -438,14 +436,23 @@ None yet.
 
 ## Deferred Items
 
-Items acknowledged and deferred at the v5.15 milestone close on 2026-08-26:
+Items acknowledged and deferred at the v5.15 milestone close on 2026-08-26, **re-triaged at the
+v5.16 open (2026-08-26)**:
 
 | Category | Item | Status |
 |----------|------|--------|
 | quick_task | 260611-g0b-merge-healthcare-vertical-branch-into-ma | missing — known false positive; genuinely complete (PLAN + SUMMARY + merge commit all exist), misreported by the audit scanner at every close since v5.10. Do not re-investigate. |
-| uat_finding (163) | Resuming an already-complete scan re-appends `discovery`/`inventory`/`reports` checkpoint rows instead of short-circuiting | open — pre-existing stage-level resume behaviour; batch rows stay correct. Not actioned in Phase 163. |
-| uat_finding (163) | `--list-resumable` Target column blank for `--targets-file` runs | open — recovers the target by joining `scan_jobs`, which only has a row when `--job-id` is passed. Cosmetic. |
-| test_isolation | `test_verify_phase_gates.py::test_hook_integration_green_path_commit_succeeds` and `..._red_path_commit_rejected_on_missing_verification` | open — order-dependent; 44 pass in isolation, 2 fail in a full-suite run. Cheap reproducer for RVW-017. |
+| uat_finding (163) | Resuming an already-complete scan re-appends `discovery`/`inventory`/`reports` checkpoint rows instead of short-circuiting | **promoted into v5.16** — pre-existing stage-level resume behaviour; batch rows stay correct. Scoped as part of the Phase 163 UAT tail. |
+| uat_finding (163) | `--list-resumable` Target column blank for `--targets-file` runs | **promoted into v5.16** — recovers the target by joining `scan_jobs`, which only has a row when `--job-id` is passed. Cosmetic but user-facing. |
+| test_isolation | `test_verify_phase_gates.py::test_hook_integration_green_path_commit_succeeds` and `..._red_path_commit_rejected_on_missing_verification` | **NOT A DEFECT — re-triaged 2026-08-26.** The "cheap reproducer for RVW-017" framing is stale: RVW-017 (shared in-memory DB across 31 test files) was fixed in `034da44`. Phase 162's VERIFICATION.md independently established these two as **macOS-only subprocess SIGSEGV** — a child killed by a signal produces no stderr, so asserting on it is a false failure, and the same root cause hit two `scheduler_cmd` tests (it is not git-specific). Linux CI takes no such branch and the Full Suite is green. No v5.16 work scoped against them. |
+
+Added at the v5.16 open (2026-08-26):
+
+| Category | Item | Status |
+|----------|------|--------|
+| human-UAT (143) | UAT-143-03 — Windows Authenticode production signing | **engineering-complete, blocked on procurement.** The v5.15.0 release proved the mechanism end to end: the previously-broken ephemeral-cert self-test **succeeded** on a real tagged build, `Sign with production certificate (if configured)` **skipped** cleanly with no cert present as designed, and `quirk-windows-5.15.0.zip` (58.6 MB) attached to the GitHub Release. The sole remaining blocker is acquiring a real Authenticode signing certificate and loading it into GitHub Actions secrets — a purchasing decision, not engineering work. Per user direction at the v5.16 open, keep deferred and re-triage at the v5.16 close. |
+| uat_gap (158) | `158-HUMAN-UAT.md` — 2 pending visual scenarios (`/hardware`, `/compare` rendering of sensor-pushed devices) | open — carried forward unchanged; HWLC-15 independently SATISFIED at code/test level. Explicitly **not** in v5.16 scope. |
+| vault_sync | Phase-162 note absent; `_QUIRK-Hub.md` missing 152/156/162 links and carrying a wrong Phase 163 date; vault `Roadmap.md` stale by 12 days | **RESOLVED 2026-08-26** at the v5.16 milestone-boundary doc review — note written, hub repaired (callout rewritten to v5.15, 3 links added, 163 date corrected), `Roadmap.md` re-synced. Vault `Requirements.md` re-syncs once `.planning/REQUIREMENTS.md` is regenerated for v5.16. |
 
 
 **Last re-triaged:** 2026-08-20 (Phase 161 plan-phase — decision-coverage gate override, see row below)

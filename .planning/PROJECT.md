@@ -213,28 +213,50 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.15 Lifecycle Tail Drain in progress. `.planning/REQUIREMENTS.md` will formalize these into
-REQ-IDs during requirements definition; this list is the PM-approved scope going in:
-- [ ] **DISC-08** sub-batch (mid-discovery) checkpoint/resume granularity — deferred as an
-      accepted boundary since v5.11; revisit only if batch cost grows. Promoted into v5.15.
-- [ ] **HWLC-14** email/webhook notification on tier-crossing/EOL events — validation gate cleared
-      by v5.14's drift/trend event types shipping; no scheduling/notification infra exists yet.
-      Promoted into v5.15.
-- [ ] **Vendor-trend presentation layer** (from v5.14) — `GET /api/hardware/vendor-trends` has a
-      complete backend/API but zero dashboard or report consumers, explicitly deferred by v5.14's
-      Phase 160 locked scope. Promoted into v5.15.
-- [ ] **Sub-batch check-in scheduling** — recurring cadence on top of HWLC-13's on-demand check-in
-      scan mode; deferred at v5.14 pending proof the on-demand form is useful, now promoted.
-- [ ] **Phase 158 human-UAT** — 2 deferred visual scenarios (`/hardware`/`/compare` rendering of
-      sensor-pushed devices); code-level criteria independently satisfied, opportunistic follow-up
-      only. Not in v5.15 scope — remains a standing carry-forward.
+v5.16 Review Drain & Gate Integrity in progress. `.planning/REQUIREMENTS.md` will formalize these
+into REQ-IDs during requirements definition; this list is the PM-approved scope going in, sourced
+from `docs/reviews/2026-08-24-functional-review-action-plan.md`:
 
-Resolved by v5.12/v5.13/v5.14 (no longer active): Windows release asset gap (v5.12.0 shipped a
-real Windows zip on the GitHub Release, live-verified); DISC-09 segmented-network lab profile
-(Phase 152, does-not-reproduce finding); ~102 pre-existing full-suite failures (Phases 149/150,
-green CI-gated baseline); `hardware_drift_events` unbounded growth (Phase 157 retention sweep);
-sensor-fleet drift coverage gap (Phase 158); no lightweight re-probe mode (Phase 159); no
-vendor-level PQC trend visibility at all (Phase 160, backend now exists).
+- [ ] **RVW-021** — `quirk scan --targets` does not exist, yet the dashboard empty state instructs
+      it; `--targets` prefix-matches `--targets-file` and raises an uncaught `FileNotFoundError`.
+      First-run experience; also touches 6 UAT step definitions and `docs/chaos-lab.md:676`.
+- [ ] **RVW-012** — 291 accessibility violations permanently baselined across 11 routes, 0 clean;
+      3 `button-name` screen-reader blockers to fix rather than accept; baseline keyed on axe's
+      full CSS-selector path so it breaks on browser upgrades; `@axe-core/puppeteer` on a `^` range.
+- [ ] **RVW-011** — `npm run e2e:smoke` cannot pass on a developer machine (140s scan vs 120s).
+- [ ] **RVW-020** — `uat_runner.py` parses XML with stdlib `ElementTree` (XXE by default).
+- [ ] **RVW-008** — ~325 of 628 UAT cases carry no recorded result; 3 duplicate case IDs
+      (UAT-144-01/02/03). Full drain agreed at the v5.16 open. Largest item; multi-phase.
+- [ ] **RVW-014** — four requirement formats and five UAT result formats across the corpus.
+      Sequenced before RVW-008 so drain completeness is mechanically checkable.
+- [ ] **RVW-007** — `CHANGELOG.md` backfill for v5.9–v5.14.
+- [ ] **RVW-009** — v4.7 shipped with no archived ROADMAP or REQUIREMENTS; dead link in ROADMAP.md.
+- [ ] **RVW-010** — DEBT-02, GAP-02, QRAMM-08, QRAMM-09 have no discoverable test; AUTH-05,
+      DEBT-04, GAP-01, QRAMM-11, TAIL-04 have tests but no linkage.
+- [ ] **RVW-015** — five archive documents record no completion status (v4.10, v4.3, v5.1, v5.12,
+      v5.4).
+- [ ] **RVW-018** — 16 planning summaries reference siblings by pre-archive path.
+- [ ] **RVW-019** — GAUGE-01/02/03 have no traceability link (code independently verified correct).
+- [ ] **RVW-006 remainder** — CMVP, error-codes and SNMP-contract catalogs absent from CLAUDE.md's
+      Staleness Review Cadence, so the runbook and `python-staleness.yml` disagree.
+- [ ] **Phase 163 UAT tail** — resuming an already-complete scan re-appends `discovery`/`inventory`/
+      `reports` checkpoint rows; `--list-resumable` Target column blank for `--targets-file` runs.
+
+Standing carry-forward, not in v5.16 scope:
+
+- [ ] **Phase 158 human-UAT** — 2 deferred visual scenarios (`/hardware` and `/compare` rendering of
+      sensor-pushed devices); code-level criteria independently satisfied, opportunistic only.
+- [ ] **UAT-143-03 Windows Authenticode** — engineering-complete and proven by the v5.15.0 release;
+      blocked solely on procuring a production signing certificate.
+
+Resolved by v5.15 and the review remediation (no longer active): RVW-001 (every endpoint persisted
+twice), RVW-002 (dashboard's divergent finding engine — TLS cert findings converged with a parity
+test), RVW-003 (scan sessions had no stored identity), RVW-004/RVW-013/RVW-016 (v5.13/v5.14 declared
+shipped but never released — one defect, not three), RVW-005 (CI red on `main` — root cause was 32
+unpushed commits, not a trigger fault), RVW-017 (31 test files sharing one in-memory database),
+RVW-022 (`quirk compliance cmvp refresh` corrupting the compliance cache). Plus the whole v5.15
+requirement set: HWLC-14, HWLC-19, HWLC-20, DISC-08.
+
 
 ### Out of Scope (v1)
 
@@ -247,31 +269,69 @@ vendor-level PQC trend visibility at all (Phase 160, backend now exists).
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: (none — v5.15 shipped, next milestone not yet opened)
+## Current Milestone: v5.16 Review Drain & Gate Integrity
 
-Run `/gsd-new-milestone` to open the next one. Per the standing PM preference, review HORIZON.md
-plus ROADMAP.md's Backlog first and drain existing prioritized work before net-new features.
-**HORIZON.md needs a fresh forward-outlook pass** — its last two sketched anchors (Release
-Integrity → v5.12, Continuous Hardware Lifecycle Monitoring → v5.13/v5.14) are both shipped and
-nothing further is sketched.
+**Goal:** Close every open finding from the 2026-08-24 third-party functional review, so QUIRK's
+own gating documents, accessibility baseline and first-run path are as trustworthy as the scan
+pipeline v5.15 fixed.
 
-Live inputs for that review:
+**Target features:**
 
-- **20 open findings** from the 2026-08-24 third-party functional review
-  (`docs/reviews/2026-08-24-functional-review-findings.md`). Milestone A "Scan Integrity" is
-  complete (RVW-001, RVW-003). Next candidates per the action plan: **RVW-022** (`quirk compliance
-  cmvp refresh` corrupts the cache — do NOT run that command until fixed; blocks RVW-006),
-  **RVW-017** (shared-DB test isolation — now has a cheap reproducer, see below), **RVW-002**
-  (dashboard's second finding engine disagrees with the report). **RVW-004 is closed by this
-  milestone.**
-- **Three unactioned findings from the Phase 163 human UAT**: duplicate stage rows when resuming an
-  already-complete scan; `--list-resumable`'s blank Target column for `--targets-file` runs; and
-  two order-dependent `test_verify_phase_gates.py::test_hook_integration_*` failures that pass in
-  isolation — the RVW-017 reproducer.
-- **Long-standing deferred human-UAT items** — see STATE.md Deferred Items. Several are
-  environment-gated by design (live Windows host, live Slack/email/webhook/syslog/Jira/ServiceNow
-  endpoints, TTY/LDAPS gates); the Windows Authenticode production-signing half (UAT-143-03) may
-  finally be exercisable now that a correctly-formed tag will actually fire `release.yml`.
+- **First-run correctness (RVW-021)** — the dashboard empty state instructs `quirk scan --targets`,
+  a command that does not exist; `--targets` prefix-matches `--targets-file` and raises an uncaught
+  `FileNotFoundError`. Fix the instructed command, correct `docs/chaos-lab.md:676` and the six UAT
+  step definitions, and make an unparseable target argument fail with a coded error (UX-02) rather
+  than a traceback.
+- **Accessibility triage (RVW-012)** — 291 violations are permanently baselined across all 11
+  routes, 0 of 11 clean. The 3 `button-name` failures are screen-reader blockers and get fixed, not
+  baselined. Record impact and WCAG level so acceptance is a decision rather than an accumulation.
+  Re-key baselines off something stabler than axe's full CSS-selector path; pin
+  `@axe-core/puppeteer` exactly instead of `^`.
+- **Gate robustness (RVW-011, RVW-020)** — `npm run e2e:smoke` must pass on a developer machine
+  (currently a 140s scan against a 120s budget). `uat_runner.py` moves to `defusedxml`; stdlib
+  `ElementTree` is XXE-vulnerable by default, which is indefensible in a security product.
+- **UAT record drain, full (RVW-008)** — all ~325 unmarked cases get a recorded result or an
+  explicit deferral naming a substitute test, per the UAT-33-03 model. Resolve the 3 duplicate case
+  IDs (UAT-144-01/02/03). Largest item in the milestone; will span multiple phases.
+- **Format unification (RVW-014)** — one requirement declaration format and one UAT result format
+  for new documents. Sequenced *before* the RVW-008 drain, because a normalized format is what makes
+  drain completeness mechanically checkable. Backfilling archives stays optional.
+- **Traceability and docs (RVW-007, -009, -010, -015, -018, -019)** — `CHANGELOG.md` backfill for
+  v5.9–v5.14; v4.7's dead archive link; tests for the four requirements that have none (DEBT-02,
+  GAP-02, QRAMM-08, QRAMM-09) plus five annotations; status headers on five archive documents;
+  16 pre-archive path references; GAUGE-01/02/03 annotation.
+- **Catalog runbook (RVW-006 remainder)** — add the CMVP, error-codes and SNMP-contract catalogs to
+  CLAUDE.md's Staleness Review Cadence so the runbook matches `python-staleness.yml`.
+- **Phase 163 UAT tail** — resuming an already-complete scan re-appends `discovery`/`inventory`/
+  `reports` checkpoint rows instead of short-circuiting; `--list-resumable` shows a blank Target for
+  `--targets-file` runs.
+
+**Explicitly out of scope:**
+
+- **RVW-002's wholesale `findings_evaluator` merge.** TLS certificate findings already converged
+  with a cross-surface parity test in v5.15; what remains is a design-judgment refactor, not a
+  review finding.
+- **SaaS multi-tenancy** — still parked, unchanged since v5.4, no business-model signal.
+
+**Key context:**
+
+- **Cadence.** This is the ops milestone the 2:1 capability/ops ratio has owed since v5.12
+  (2026-08-14). v5.13, v5.14 and v5.15 were all capability or capability-drain cycles.
+- **Baseline is healthy going in.** All three CI workflows green on `main`, `v5.15.0` published to
+  PyPI with a Windows asset attached, nothing unpushed, working tree clean.
+- **`test_verify_phase_gates`'s two failures are not a defect.** Phase 162's VERIFICATION.md
+  independently established them as macOS-only (subprocess SIGSEGV, not git-specific) and Linux CI
+  is green. The STATE.md row calling them a "cheap reproducer for RVW-017" is stale — RVW-017 was
+  fixed in `034da44`. Corrected at this boundary; no v5.16 work is scoped against them.
+- **UAT-143-03 (Windows Authenticode)** is engineering-complete. The v5.15.0 release proved the
+  mechanism end to end — the ephemeral-cert self-test passed and the production-signing step skipped
+  cleanly as designed. The sole remaining blocker is procuring a real signing certificate, which is
+  a purchasing decision. Re-triage at v5.16 close.
+- **HORIZON.md** gets its rationale-log entry for this milestone plus the forward-outlook sketch it
+  has owed since 2026-08-11, covering what follows v5.16.
+
+Phase numbering continues at **164** (v5.15 ended at 163).
+
 
 ## Previous Milestone: v5.15 Lifecycle Tail Drain — SHIPPED 2026-08-26
 
