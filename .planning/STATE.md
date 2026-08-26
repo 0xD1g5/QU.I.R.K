@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: verifying
-stopped_at: Completed 164-04-PLAN.md
-last_updated: "2026-08-26T18:56:46.443Z"
+stopped_at: Phase 165 context gathered
+last_updated: "2026-08-26T20:48:33.121Z"
 last_activity: 2026-08-26
 progress:
   total_phases: 8
@@ -546,8 +546,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-26T18:56:46.437Z
-Stopped at: Completed 164-04-PLAN.md
+Last session: 2026-08-26T20:48:33.105Z
+Stopped at: Phase 165 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
