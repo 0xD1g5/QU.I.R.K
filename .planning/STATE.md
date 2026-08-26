@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: verifying
+status: executing
 stopped_at: Phase 165 context gathered
-last_updated: "2026-08-26T20:48:33.121Z"
-last_activity: 2026-08-26
+last_updated: "2026-08-26T21:34:50.553Z"
+last_activity: 2026-08-26 -- Phase 165 planning complete
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 4
+  total_plans: 12
   completed_plans: 4
   percent: 13
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 164 (first-run-correctness) — EXECUTING
 Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-08-26
+Status: Ready to execute
+Last activity: 2026-08-26 -- Phase 165 planning complete
 
 ## v5.16 Phase Map (IN PROGRESS)
 
