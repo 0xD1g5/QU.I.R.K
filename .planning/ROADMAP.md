@@ -92,7 +92,14 @@ stated risk that an ops cycle with no visible feature gets deferred)
 
   3. `docs/chaos-lab.md:676` and all six UAT step definitions in `docs/UAT-SERIES.md` that reference
      the old nonexistent command form are corrected to the fixed invocation.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 164-01-PLAN.md — Register the TARGET error domain and regenerate docs/error-codes.md
+- [ ] 164-02-PLAN.md — allow_abbrev=False on all 10 parsers, fail-fast guard, coded exit-2 call site
+- [ ] 164-03-PLAN.md — Repo-wide invocation sweep, executive.tsx empty state, CI doc-form gate
+- [ ] 164-04-PLAN.md — Human first-run UAT, UAT Series 164, traceability and Obsidian sync
+
 **UI hint**: yes
 
 ### Phase 165: Accessibility Remediation
