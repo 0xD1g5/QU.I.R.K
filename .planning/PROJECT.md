@@ -319,10 +319,21 @@ pipeline v5.15 fixed.
   (2026-08-14). v5.13, v5.14 and v5.15 were all capability or capability-drain cycles.
 - **Baseline is healthy going in.** All three CI workflows green on `main`, `v5.15.0` published to
   PyPI with a Windows asset attached, nothing unpushed, working tree clean.
-- **`test_verify_phase_gates`'s two failures are not a defect.** Phase 162's VERIFICATION.md
-  independently established them as macOS-only (subprocess SIGSEGV, not git-specific) and Linux CI
-  is green. The STATE.md row calling them a "cheap reproducer for RVW-017" is stale — RVW-017 was
-  fixed in `034da44`. Corrected at this boundary; no v5.16 work is scoped against them.
+- **Local `pytest -q` has nine pre-existing failures, not two.** Phase 162 established
+  `test_verify_phase_gates`'s two as macOS-only (subprocess SIGSEGV, not git-specific) with Linux CI
+  green. Phase 165 re-measured at close and found **nine**: those two, plus five in
+  `test_target_cli.py` and one consequent `test_skip_registry` failure. The five are
+  *order-dependent* — all nine tests in the file pass in isolation at both the pre- and post-phase
+  commits, but fail inside the full suite, so something earlier in the run mutates parser/CLI state.
+  Verified identical at pre-phase commit `89894e8` in a throwaway worktree, so none are regressions.
+  This is squarely Phase 166's GATE-03 ("a full macOS pytest run stops crashing subprocess-based CLI
+  tests") — the ordering bug is the concrete lead. To distinguish a real regression from this
+  baseline, diff the failure list against a pre-phase worktree; do not assume the set is still two.
+- **Phase 165 corrected this milestone's own "291 violations" premise.** RVW-012's number was
+  restated without re-measuring. Live measurement found **81**; after token-layer contrast fixes,
+  **1** remains (accepted, justified). The 291→81 gap is pure staleness — 72% were already phantoms,
+  including all three `button-name` screen-reader blockers, which were fixed before this milestone
+  began. Direct empirical input to Phase 170's record-drift work.
 - **UAT-143-03 (Windows Authenticode)** is engineering-complete. The v5.15.0 release proved the
   mechanism end to end — the ephemeral-cert self-test passed and the production-signing step skipped
   cleanly as designed. The sole remaining blocker is procuring a real signing certificate, which is
