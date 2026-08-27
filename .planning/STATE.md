@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
+status: verifying
 stopped_at: Phase 165 context gathered
-last_updated: "2026-08-27T14:06:30.569Z"
+last_updated: "2026-08-27T14:12:40.898Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 11
-  percent: 13
+  completed_plans: 12
+  percent: 25
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 165 (accessibility-remediation) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -224,6 +224,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 165 P04 | 35min | 3 tasks | 6 files |
 | Phase 165 P05 | 25min | 3 tasks | 15 files |
 | Phase 165 P07 | 112min | 3 tasks | 40 files |
+| Phase 165 P08 | 55min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -433,6 +434,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: 165-06: D-05 triad (JSON baseline -> generateMarkdown -> byte-compare freshness test) copied from errors_cmd.py; ACCEPTED-VIOLATIONS.md is intentionally RED until 165-07
 - [Phase 165]: D-16: loading-variant a11y gate wired into CI directly (clean 0-exit first run, no debt to baseline)
 - [Phase 165]: 5 additional token-swap contrast misses fixed at token layer per D-11, leaving only 1 justified accepted entry (data-at-rest scrollable-region-focusable)
+- [Phase 165]: quirk serve multi-DB trap verified against deps.py and documented in operators-guide.md, with a stray 0-byte quirk.db cleanup note
 
 ### Pending Todos
 
@@ -563,7 +565,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T14:05:29.912Z
+Last session: 2026-08-27T14:12:04.655Z
 Stopped at: Phase 165 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
