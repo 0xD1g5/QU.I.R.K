@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
-stopped_at: Completed 166-03-PLAN.md
-last_updated: "2026-08-27T15:26:03.795Z"
+status: verifying
+stopped_at: Completed 166-04-PLAN.md
+last_updated: "2026-08-27T15:38:49.406Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 166 (Gate Robustness) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -37,7 +37,7 @@ Last activity: 2026-08-27
 |-------|------|--------------|------|--------|
 | 164 | First-Run Correctness | FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03 | None (first, deliberately led per milestone risk note) | Not started |
 | 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
-| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Planned (2026-08-27; 4 plans in 2 waves) |
+| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 4/4 plans done — GATE-01/GATE-02 verified clean, GATE-03 verified within its declared 3-file scope; see 166-04-SUMMARY.md for the honest full-suite scope gap; pending /gsd:verify-phase before phase close) |
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | Not started |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Not started |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Not started |
@@ -228,6 +228,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 166 P01 | 12min | 2 tasks | 1 files |
 | Phase 166 P02 | 25min | 3 tasks | 4 files |
 | Phase 166 P03 | 45 | 3 tasks | 5 files |
+| Phase 166 P04 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -440,6 +441,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 165]: quirk serve multi-DB trap verified against deps.py and documented in operators-guide.md, with a stray 0-byte quirk.db cleanup note
 - [Phase ?]: Selected common port scope via page.click + aria-checked wait, not page.select() -- control is a Radix RadioGroup
 - [Phase 166]: GATE-02 requires quirk.util.xml_safe.parse_safely() (Phase 87/DEP-02 lxml chokepoint), not defusedxml — original requirement premise was factually backwards and corrected in REQUIREMENTS.md/ROADMAP.md
+- [Phase 166]: GATE-03 full-suite verification (166-04) confirms the 3-file fix works but the same fork-crash pattern persists in 6 other files outside declared scope, tracked for a future cleanup phase
 
 ### Pending Todos
 
@@ -570,8 +572,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T15:26:03.789Z
-Stopped at: Completed 166-03-PLAN.md
+Last session: 2026-08-27T15:38:49.400Z
+Stopped at: Completed 166-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

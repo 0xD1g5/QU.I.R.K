@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-27 (v5.16 Phase 165 close — Accessibility Remediation: UAT-165-01..03
+**Last Updated:** 2026-08-27 (v5.16 Phase 166 close — Gate Robustness: UAT-166-01..03 added.
+GATE-01 (E2E smoke budget) and GATE-02 (UAT tooling XML hardening) PASS cleanly. GATE-03
+(macOS fork-crash fix) PASSES within its declared 3-file scope
+(`test_target_cli.py`/`test_compliance_cli.py`/`test_db_migrate_cli.py`) but a full unfiltered
+`python -m pytest` on macOS surfaces the same pre-existing fork-after-Network.framework
+SIGSEGV pattern in 6 files outside that scope — an honest, documented gap, not a regression,
+tracked for a future cleanup phase. The E2E smoke gate now selects the `common` port scope
+(not `top1000`) with a 180s budget and a logged wall-clock (measured 3.1s locally). Closes
+GATE-01, GATE-02; GATE-03 closed within its declared scope. See Series 166.
+Earlier: 2026-08-27 (v5.16 Phase 165 close — Accessibility Remediation: UAT-165-01..03
 added, ALL PASS. Closes A11Y-01..A11Y-05. The a11y baseline mechanism moved from a
 selector-keyed snapshot to a per-route, per-rule count budget with mandatory written
 justifications (`ACCEPTED-VIOLATIONS.md`); the true live violation count fell from a stale
@@ -19535,3 +19544,120 @@ a real engineering decision, not filler text like "pre-existing" or "will fix la
 is an engineering artifact co-located with the baselines (D-07) and is not itself a user-facing
 doc; it is exercised by UAT-165-01/03 but has no Obsidian vault counterpart, matching
 `docs/error-codes.md`'s treatment in Phase 164.
+
+---
+
+## Series 166: Gate Robustness (Phase 166 — v5.16)
+
+**Last Updated:** 2026-08-27
+
+### UAT-166-01: E2E smoke gate completes inside its 180s budget on a developer machine (GATE-01) — Automated + Human
+
+**What to test:** `npm run e2e:smoke` now selects the `common` port scope via the real Radix
+RadioGroup form control (`#scope-common`, waiting for `aria-checked="true"`) before submitting
+the scan, dropping the `top1000`/forced-nmap sweep the gate previously inherited by default.
+`SCAN_TIMEOUT_MS` was raised to 180s as headroom, and the PASS path now logs the measured scan
+wall-clock so budget drift is visible in CI output.
+
+**Steps:**
+1. From `src/dashboard/`, run `npm run e2e:smoke`.
+2. Confirm Phase 2 (scan submission) selects the `common` port scope, not `top1000`.
+3. Confirm the run exits 0 and prints `[e2e] Scan wall-clock: <N>s (budget 180s)`.
+
+**Pass criteria:**
+- Exit code 0.
+- The logged wall-clock is comfortably under the 180s budget.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (166-04 plan execution, local macOS run)
+**Notes:** GATE-01. Local run: `[e2e] Scan wall-clock: 3.1s (budget 180s)`, exit 0, all three
+phases (empty-DB route walk, scan submission lifecycle, populated-DB zero-tolerance route walk)
+passed clean. `scan-new.tsx` was not touched — only `run-e2e.mjs`'s test-harness code changed.
+
+---
+
+### UAT-166-02: UAT tooling's CBOM XML parse path has no XXE / billion-laughs route (GATE-02) — Automated
+
+**What to test:** `uat_runner.py`'s two CBOM XML parse call sites (previously stdlib
+`xml.etree.ElementTree`) now route through `quirk.util.xml_safe.parse_safely()` — the Phase
+87/DEP-02 hardened-lxml chokepoint — and catch `lxml.etree.XMLSyntaxError` instead of
+`ET.ParseError`. **Corrected premise:** GATE-02's original text instructed migrating to
+`defusedxml`; that was factually backwards for this repo. Phase 87/DEP-02 migrated *away* from
+`defusedxml` to the lxml chokepoint, and `tests/test_packaging.py::test_defusedxml_not_in_core_deps`
+plus `tests/test_xml_safe.py::test_no_defusedxml_import_in_quirk` actively forbid reintroducing
+it. `.planning/REQUIREMENTS.md` and `.planning/ROADMAP.md` were amended in 166-02 to name the
+real precedent.
+
+**Steps:**
+1. Run `pytest tests/test_xml_safe.py -x -q`.
+2. Confirm `test_no_stdlib_xml_or_defusedxml_import_in_repo_root_tooling` (new in this phase)
+   passes, and the existing `test_no_defusedxml_import_in_quirk` / `test_parse_safely_blocks_xxe`
+   cases still pass.
+3. Run `python -m compileall -q uat_runner.py`.
+
+**Pass criteria:**
+- All `tests/test_xml_safe.py` cases pass (8 total: 7 pre-existing + 1 new).
+- `uat_runner.py` compiles clean.
+- Zero `defusedxml` imports or dependency additions anywhere in the diff.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (166-02 plan execution)
+**Notes:** GATE-02. Negative control (temporarily injecting `import xml.etree.ElementTree` into
+`uat_runner.py`) correctly failed the new AST-based gate; positive control (the file's real
+line-191 string-literal mentions of `'lxml.etree'`/`'defusedxml'` in its dependency-probe list)
+correctly passed, proving the gate is AST-aware and does not false-positive on prose/string
+mentions. Full evidence in `166-02-SUMMARY.md`.
+
+---
+
+### UAT-166-03: A full unfiltered macOS `python -m pytest` shows zero fatal signals in the three migrated CLI-runner files, but the same pre-existing crash pattern persists in files outside this phase's declared scope (GATE-03) — Automated + Human
+
+**What to test:** The shared `tests/cli_helpers.py::run_cli()` helper (`close_fds=False`, never
+passing `cwd`) fixes the macOS fork-after-Network.framework `SIGSEGV` documented in
+`164-FINDING-fork-crash.md` for the three CLI-runner test files this phase's scope covers
+(`tests/test_target_cli.py`, `tests/test_compliance_cli.py`, `tests/test_db_migrate_cli.py`).
+A full, unfiltered `python -m pytest` run is the only way to observe this — the crash is
+ordering-dependent and invisible to filtered/targeted runs, and Linux CI cannot reproduce it at
+all (no Network.framework).
+
+**Steps:**
+1. From the repo root, run `python -m pytest` with no filters (`-k`, file args, or `-x`).
+2. Grep the captured output for `SIGSEGV`, `Fatal Python error`, `Aborted`, `Segmentation fault`.
+3. Confirm the three migrated files show zero occurrences of any of the above.
+4. Separately record any occurrences in files *outside* the three-file scope.
+
+**Pass criteria (as scoped by 166-CONTEXT.md):**
+- `tests/test_target_cli.py`, `tests/test_compliance_cli.py`, `tests/test_db_migrate_cli.py`
+  show zero fatal signals and their previously-crashing cases now pass.
+- Any remaining fatal signals elsewhere in the suite are named explicitly and NOT folded into
+  the "known macOS-only failures" bucket.
+
+**Result:** - [x] PASS (scoped) — [x] KNOWN GAP (whole-suite) — [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (166-04 plan execution, local macOS run,
+`python -m pytest`, 309.48s, `3 failed, 3600 passed, 42 skipped, 61 deselected, 74 xfailed,
+1 xpassed`)
+**Notes:** GATE-03. The scoped fix is proven: `test_target_cli.py` (9/9), `test_compliance_cli.py`
+(3/3), and `test_db_migrate_cli.py` (5 pass / 3 pre-existing unrelated xfail) all show **zero**
+fatal signals across the full unfiltered run. **Honest gap, not a regression:** the identical
+crash pattern (`Fatal Python error: Segmentation fault` inside a `subprocess.run(...)` call)
+reproduced 14 times across 6 files this phase never touched — `tests/test_lab_profile_certs.py`,
+`tests/test_qramm_staleness.py`, `tests/test_scheduler_dispatch_profile.py`,
+`tests/test_sensor_windows_smoke.py`, `tests/test_vault_connector.py`, and
+`tests/test_verify_phase_gates.py`. `166-CONTEXT.md` explicitly scoped GATE-03 to the three
+CLI-runner files ("Twenty test files call subprocess.run... the rest are not in scope for this
+phase") and deferred a broader migration as a separate cleanup. This run reclassifies
+`test_verify_phase_gates.py`'s two previously-recorded "macOS-only assertion failures" as
+actual fatal-signal crashes surfaced as `CalledProcessError` text — a materially different,
+more serious finding, not folded into the accepted-assertion-failure baseline per this phase's
+explicit constraint. See `166-04-SUMMARY.md` and `166-VALIDATION.md`'s red row for full
+evidence and file-by-file crash counts. The 3 assertion-level `FAILED` lines in this run were
+`tests/test_skip_registry.py::test_no_unregistered_skips` (pre-existing, unrelated) and the two
+`test_verify_phase_gates.py` cases (now known to be crash-caused, not ordinary assertions).
+
+---
+
+**Series 166 disposition.** GATE-01 and GATE-02 PASS cleanly. GATE-03 PASSES within its
+declared 3-file scope but the full-suite run surfaces the same pre-existing crash pattern in 6
+files outside that scope — an honest, documented gap rather than a closed gate, tracked for a
+future cleanup phase. No version bump occurred in this phase — the `UAT-1-02` version-string
+pass criteria are unaffected.
