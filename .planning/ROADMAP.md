@@ -235,7 +235,12 @@ verifiable)
      distinct IDs with no orphaned cross-references left behind. Count corrected 2026-08-26 at the
      Phase 164 close: `UAT-144-01/02/03` **plus `UAT-89-02` and `UAT-89-03`**, which the original
      sizing missed. Both sets are pre-existing (verified identical before and after Phase 164).
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 167-01-PLAN.md — Normalize docs/UAT-SERIES.md: one result format, promote 23 headingless cases, delete misfiled UAT-144 Block A, restore heading/result-block parity
+- [ ] 167-02-PLAN.md — tests/test_uat_series_format.py invariant guard (single format, count parity, ID uniqueness, no headingless declarations) + full-suite baseline
+- [ ] 167-03-PLAN.md — Correct 5→3 duplicate count and stale 628/636 figures, dated review correction note, UAT-SERIES header + Series 167, Obsidian sync, validation close
 
 ### Phase 168: UAT Record Drain — Series 1–~100
 
