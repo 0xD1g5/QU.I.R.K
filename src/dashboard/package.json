@@ -15,7 +15,9 @@
     "a11y:check": "node tests/a11y/run-a11y.mjs",
     "a11y:check:empty": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty node tests/a11y/run-a11y.mjs",
     "a11y:check:loading": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading node tests/a11y/run-a11y.mjs",
-    "a11y:baseline": "VITE_A11Y_FIXTURE=1 node tests/a11y/run-a11y.mjs --update-baselines"
+    "a11y:baseline": "VITE_A11Y_FIXTURE=1 node tests/a11y/run-a11y.mjs --update-baselines",
+    "a11y:baseline:empty": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty node tests/a11y/run-a11y.mjs --update-baselines",
+    "a11y:baseline:loading": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading node tests/a11y/run-a11y.mjs --update-baselines"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
