@@ -14,7 +14,7 @@ Totals: 1 route(s), 1 (route, rule) entries, 1 accepted violation node(s).
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| scrollable-region-focusable | 1 | serious | 2.1.1, 2.1.3 | **MISSING** |
+| scrollable-region-focusable | 1 | serious | 2.1.1, 2.1.3 | Category (b) — design/scope decision beyond this ops milestone. The shadcn Table wrapper (src/dashboard/src/components/ui/table.tsx:9, `<div class="relative w-full overflow-auto">`) that renders data-at-rest's findings table has no tabIndex/role on the scrolling container, so a keyboard user cannot focus and scroll it independently of page scroll. Fixing this correctly means adding focus + ARIA landmark handling to a component shared by every table across the app (findings, identity, certificates, roadmap, etc.), which is a focus-order change with app-wide blast radius. 165-CONTEXT.md's phase boundary explicitly excludes 'keyboard-navigation or focus-order audits' from this milestone's scope. Blocker: requires a dedicated keyboard-accessibility pass across components/ui/table.tsx's consumers, not a single-route token/aria edit — tracked as follow-up work, not accepted as permanent debt. |
 
 <details><summary>scrollable-region-focusable evidence samples (1)</summary>
 
