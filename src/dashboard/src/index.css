@@ -35,16 +35,16 @@
 
     /* ── Accent: Obsidian Pro teal — interactive elements only ── */
     --primary: 180 37% 47%;            /* #4ba8a8 */
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 220 22% 12%;
 
     --secondary: 220 18% 11%;          /* #161921 surface bg */
     --secondary-foreground: 220 43% 96%;
 
     --muted: 220 21% 7%;               /* #0d0f14 */
-    --muted-foreground: 220 16% 50%;   /* #6e7a95 labels */
+    --muted-foreground: 220 16% 52%;   /* #717e98 labels */
 
     --accent: 180 37% 47%;             /* #4ba8a8 teal — matches primary */
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 220 22% 12%;
 
     --destructive: 0 68% 60%;          /* #e05555 critical */
     --destructive-foreground: 0 0% 100%;
@@ -90,6 +90,11 @@
     --severity-medium: 220 16% 50%;    /* #8892a4 neutral */
     --severity-low: 180 37% 47%;       /* #4ba8a8 teal info */
     --severity-info: 220 16% 50%;      /* #8892a4 */
+
+    --risk-badge-high: 24 95% 53%;              /* #f97015 */
+    --risk-badge-high-foreground: 220 22% 12%;  /* #11141c */
+    --qs-node-safe: 142 71% 45%;                /* #21c45d */
+    --qs-node-safe-foreground: 220 22% 12%;     /* #11141c */
   }
 
   /* Light mode override */
@@ -104,7 +109,7 @@
     --popover-foreground: 220 22% 12%;
 
     --primary: 180 45% 41%;            /* #4ba8a8 slightly deepened for light */
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 220 22% 12%;
 
     --secondary: 220 20% 94%;          /* #f1f3f9 surface */
     --secondary-foreground: 220 22% 12%;
@@ -113,7 +118,7 @@
     --muted-foreground: 220 17% 40%;   /* #525e78 */
 
     --accent: 180 45% 41%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 220 22% 12%;
 
     --destructive: 0 64% 47%;          /* #c83a3a */
     --destructive-foreground: 0 0% 100%;
