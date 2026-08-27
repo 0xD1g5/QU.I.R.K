@@ -37,7 +37,10 @@ const PORT = Number(process.env.E2E_PORT || 8517)
 const HOST = '127.0.0.1'
 const BASE = `http://${HOST}:${PORT}`
 const PYTHON = process.env.E2E_PYTHON || resolve(REPO_ROOT, '.venv/bin/python')
-const SCAN_TIMEOUT_MS = 120_000
+// 180s of headroom for slow developer machines. With the E2E now selecting
+// the `common` port scope (17-port direct-TCP-connect probe, no nmap), the
+// scan is expected to finish well inside this budget.
+const SCAN_TIMEOUT_MS = 180_000
 const CONNECT_TIMEOUT_MS = 30_000
 const CONNECT_POLL_MS = 250
 
@@ -200,6 +203,7 @@ try {
 } catch {
   report('scan-flow', 'no-job-page', 'submitting the form never navigated to /scan/job/{id}')
 }
+const scanStartedAt = Date.now()
 try {
   // On completion the job page redirects to the executive summary.
   await page.waitForFunction(
@@ -214,6 +218,7 @@ try {
       { timeout: 30_000 },
     )
     console.log('[e2e] Scan completed and dashboard populated')
+    console.log(`[e2e] Scan wall-clock: ${((Date.now() - scanStartedAt) / 1000).toFixed(1)}s (budget ${SCAN_TIMEOUT_MS / 1000}s)`)
   } catch {
     const snippet = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 300))
     report('scan-flow', 'no-results', `redirected to / but "Scan Results" never rendered; page shows: ${snippet}`)
