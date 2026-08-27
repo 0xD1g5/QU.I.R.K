@@ -9,7 +9,8 @@ Usage:  python3 uat_runner.py [--no-lab-scan] [--no-dashboard]
 
 import subprocess, json, os, sys, time, tempfile, datetime, re, shutil, socket, signal
 from pathlib import Path
-import xml.etree.ElementTree as ET
+from lxml import etree  # Phase 87 DEP-02 hardened chokepoint
+from quirk.util.xml_safe import parse_safely
 import argparse
 
 # ──────────────────────────────────────────────────────────────────────
@@ -820,13 +821,13 @@ def run_series_6(lab_out_dir=None):
     t = time.time()
     if cbom_xml_path and cbom_xml_path.exists():
         try:
-            tree = ET.parse(str(cbom_xml_path))
+            tree = parse_safely(str(cbom_xml_path))
             root = tree.getroot()
             ns_ok = 'cyclonedx' in root.tag.lower() or 'bom' in root.tag.lower()
             size_ok = cbom_xml_path.stat().st_size > 500
             status = 'PASS' if ns_ok and size_ok else 'FAIL'
             notes = '' if status == 'PASS' else f'tag={root.tag}, size={cbom_xml_path.stat().st_size}'
-        except ET.ParseError as e:
+        except etree.XMLSyntaxError as e:
             status = 'FAIL'; notes = f'XML parse error: {e}'
     else:
         status = 'FAIL'; notes = 'CBOM XML missing'
@@ -1187,13 +1188,13 @@ def run_series_9(lab_out_dir=None):
     cbom_xml = latest('cbom-*.cdx.xml')
     if cbom_xml:
         try:
-            tree = ET.parse(str(cbom_xml))
+            tree = parse_safely(str(cbom_xml))
             root = tree.getroot()
             size_ok = cbom_xml.stat().st_size > 1000
             has_ns = 'cyclonedx' in root.tag.lower() or 'bom' in root.tag.lower()
             status = 'PASS' if size_ok and has_ns else 'FAIL'
             notes = '' if status == 'PASS' else f'size={cbom_xml.stat().st_size}, tag={root.tag}'
-        except ET.ParseError as e:
+        except etree.XMLSyntaxError as e:
             status = 'FAIL'; notes = f'XML error: {e}'
     else:
         status = 'FAIL'; notes = 'No CBOM XML'
