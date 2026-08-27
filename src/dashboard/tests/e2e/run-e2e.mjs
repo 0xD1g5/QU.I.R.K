@@ -174,6 +174,19 @@ currentPhase = 'scan-flow'
 apiAllow = [{ urlRe: /\/api\/scan\/latest/, status: 404 }]
 await page.goto(`${BASE}/scan/new`, { waitUntil: 'networkidle0' })
 await page.type('input[placeholder*="api.example.com"], textarea[placeholder*="api.example.com"]', '127.0.0.1')
+try {
+  // Select the `common` port scope so the scan probes only the 17
+  // CONSULTING_TLS_PORTS via direct TCP connect instead of inheriting the
+  // form's `top1000` default, which forces a full nmap --top-ports 1000
+  // sweep and blows the E2E's time budget on ordinary developer hardware.
+  await page.click('#scope-common')
+  // Wait for React state to actually flip before the form submits — a bare
+  // click() without this confirmation races the submit and can silently
+  // fall back to the top1000 default, reintroducing the nmap sweep.
+  await page.waitForSelector('#scope-common[aria-checked="true"]', { timeout: 5_000 })
+} catch {
+  report('scan-flow', 'scope-not-selected', 'could not select #scope-common port scope radio before submitting')
+}
 await page.evaluate(() => {
   const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Run Scan')
   if (!btn) throw new Error('Run Scan button not found')
