@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: verifying
-stopped_at: Phase 166 complete (5 plans, VERIFICATION passed) — ready to discuss Phase 167
+status: in_progress
+stopped_at: Phase 167 complete (3 plans, VERIFICATION passed 6/6, human checkpoint cleared) — ready to discuss Phase 168
 last_updated: "2026-08-27T16:16:06.435Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
-  completed_phases: 3
-  total_plans: 17
-  completed_plans: 17
-  percent: 38
+  completed_phases: 4
+  total_plans: 20
+  completed_plans: 20
+  percent: 50
 ---
 
 # Project State
@@ -22,13 +22,27 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 166 — Gate Robustness
+**Current focus:** Phase 168 — UAT Record Drain, Series 1–~100 (next)
+
+## Decisions Carried Forward (Phase 167)
+
+- **The "5 duplicate case IDs" figure was a truncating-regex artifact, not a finding.**
+  `grep -o '^### UAT-[0-9]*-[0-9]*'` collapses three-segment IDs to two segments, turning the four
+  distinct headings `UAT-89-02-01`, `UAT-89-02-02`, `UAT-89-03-01`, `UAT-89-03-02` into phantom
+  `UAT-89-02` / `UAT-89-03` collisions. The true count was 3 (`UAT-144-01/02/03`). Phases 168-170
+  draw on the same 2026-08-24 review — re-measure before actioning any count it asserts.
+- **`tests/test_uat_series_format.py` now gates `docs/UAT-SERIES.md`.** Any Phase 168/169
+  disposition edit must keep result blocks in the single canonical format, keep case IDs unique,
+  and keep heading count == result-block count. The test asserts computed equality, so adding
+  cases is fine; breaking the grammar is not.
+- **Phase 168 starts from 666 cases, all with a result block, most undispositioned.** Structural
+  parity is done; recording outcomes is UATREC-03 and was deliberately left untouched here.
 
 ## Current Position
 
-Phase: 166 (Gate Robustness) — COMPLETE
-Plan: 5 of 5
-Status: Phase complete — VERIFICATION passed 3/3 (2026-08-27)
+Phase: 167 (UAT Format Unification & Deduplication) — COMPLETE
+Plan: 3 of 3
+Status: Phase complete — VERIFICATION passed 6/6 (2026-08-27); human checkpoint cleared by user
 Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -38,7 +52,7 @@ Last activity: 2026-08-27
 | 164 | First-Run Correctness | FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03 | None (first, deliberately led per milestone risk note) | Not started |
 | 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
 | 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 5/5 plans done — GATE-01/GATE-02/GATE-03 all verified clean; 166-05 closed GATE-03's full-suite scope gap 166-04 had honestly flagged, zero fatal signals suite-wide; see 166-05-SUMMARY.md) — ✅ Complete: VERIFICATION passed 3/3 (2026-08-27), e2e:smoke independently re-run at 3.1s vs 180s budget, full unfiltered macOS pytest independently re-run with zero fatal signals (was 14 across 6 files) — ✅ VERIFICATION passed 3/3 (2026-08-27); e2e:smoke independently re-run at 3.1s vs 180s budget; full unfiltered macOS pytest independently re-run with ZERO fatal signals (was 14 across 6 files) |
-| 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | Tasks 1-4 of Plan 03 done (2026-08-27; 663==663 parity, 3 duplicates resolved, docs corrected, vault synced) — Task 5 (blocking human-verify checkpoint) still pending; ROADMAP.md checkbox and this row intentionally NOT flipped to a completed status until that checkpoint clears — see 167-03-SUMMARY.md |
+| 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | ✅ Complete (2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, zero headingless cases, all locked behind `tests/test_uat_series_format.py`, which was proven to FAIL on the pre-normalization document. Parity was 663==663 at Plan 02 and moved to 666==666 when Plan 03 appended Series 167 — the test asserts computed equality, never a constant, so it survived its own phase. VERIFICATION passed 6/6; human checkpoint cleared by user 2026-08-27) |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Not started |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Not started |
 | 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Not started |
