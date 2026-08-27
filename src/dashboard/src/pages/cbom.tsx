@@ -35,10 +35,24 @@ const QS_BADGE: Record<string, string> = {
 }
 
 const QS_NODE_COLOR: Record<string, string> = {
-  Safe: "hsl(142 71% 45%)",
+  Safe: "hsl(var(--qs-node-safe))",
   "At Risk": "hsl(38 92% 50%)",
   Vulnerable: "hsl(0 72% 51%)",
   Unknown: "hsl(240 5% 46%)",
+}
+
+// D-09: Cytoscape stylesheets are plain JS objects evaluated at graph-init time, outside the
+// DOM's CSS cascade — a raw `var(--token)` reference in an element's `data(color)` mapper does
+// not resolve to a computed value the way it does in a `.tsx` `style=` prop or Tailwind arbitrary
+// value (confirmed at implementation time; see 165-04-SUMMARY.md). Resolve any CSS custom-property
+// reference to its computed literal value before handing a color to Cytoscape element data. Colors
+// used directly in DOM `style=` props (the legend swatches below) do not need this — `var()`
+// resolves natively there.
+function resolveCytoscapeColor(color: string): string {
+  const match = /var\((--[\w-]+)\)/.exec(color)
+  if (!match || typeof document === "undefined") return color
+  const resolved = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim()
+  return resolved ? color.replace(match[0], resolved) : color
 }
 
 // ── Table Tab ──────────────────────────────────────────────────────────────
@@ -249,7 +263,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           label: comp.algorithm,
           nodeType: "algorithm",
           qs: comp.quantum_safety ?? "Unknown",
-          color: QS_NODE_COLOR[comp.quantum_safety ?? "Unknown"] ?? QS_NODE_COLOR.Unknown,
+          color: resolveCytoscapeColor(QS_NODE_COLOR[comp.quantum_safety ?? "Unknown"] ?? QS_NODE_COLOR.Unknown),
         },
         group: "nodes",
       })

@@ -22,6 +22,11 @@ const FORBIDDEN_PALETTE = [
   "hsl(271 81% 56%)",
   "hsl(var(--ds-ok, 142 46% 46%))",
   "hsl(var(--destructive))",
+  // Phase 165 D-09: executive.tsx/cbom.tsx now consume these two literals via new design
+  // tokens instead of the raw hsl() values above. Additive coverage so the guard keeps
+  // preventing this advisory-only component from adopting the token-referenced form too.
+  "hsl(var(--risk-badge-high))",
+  "hsl(var(--qs-node-safe))",
 ]
 
 function stripComments(src: string): string {

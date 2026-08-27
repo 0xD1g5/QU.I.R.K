@@ -17,7 +17,11 @@ import { useVertical } from "@/context/vertical-context"
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
-  HIGH: "hsl(24 95% 53%)",
+  // HIGH pairs with --risk-badge-high-foreground (220 22% 12%) in index.css (D-09). No text is
+  // currently rendered on top of this Recharts <Cell> fill — it is a solid bar-fill color with no
+  // overlaid label — so the foreground half of the token pair has no consuming site in this file.
+  // See 165-04-SUMMARY.md.
+  HIGH: "hsl(var(--risk-badge-high))",
   MEDIUM: "hsl(38 92% 50%)",
   LOW: "hsl(213 94% 68%)",
   INFO: "hsl(240 5% 46%)",
