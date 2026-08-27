@@ -62,8 +62,8 @@ milestone — no urgent insertions anticipated.
 
 ### Phases
 
-- [ ] **Phase 164: First-Run Correctness** - A new user following the dashboard's empty-state instruction runs a command that actually exists and succeeds, and an unparseable target argument fails with a coded error instead of a traceback.
-- [ ] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift.
+- [x] **Phase 164: First-Run Correctness** - A new user following the dashboard's empty-state instruction runs a command that actually exists and succeeds, and an unparseable target argument fails with a coded error instead of a traceback. (completed 2026-08-26)
+- [x] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift. (completed 2026-08-27)
 - [ ] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
 - [ ] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique.
 - [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the ~325 unrecorded UAT cases each carry a recorded result or an explicit deferral naming a specific substitute test.

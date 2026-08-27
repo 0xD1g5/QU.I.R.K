@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: verifying
-stopped_at: Phase 165 context gathered
-last_updated: "2026-08-27T14:12:40.898Z"
+status: ready_to_plan
+stopped_at: Phase 165 complete (8/8) — ready to discuss Phase 166
+last_updated: 2026-08-27T14:35:31.725Z
 last_activity: 2026-08-27
 progress:
   total_phases: 8
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 165 — accessibility-remediation
+**Current focus:** Phase 166 — gate robustness
 
 ## Current Position
 
-Phase: 165 (accessibility-remediation) — EXECUTING
-Plan: 8 of 8
-Status: Phase complete — ready for verification
+Phase: 166
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
