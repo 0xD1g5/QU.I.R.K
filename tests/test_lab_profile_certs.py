@@ -24,6 +24,8 @@ import pytest
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 
+from tests.cli_helpers import run_fork_safe
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LAB_DIR = REPO_ROOT / "quantum-chaos-enterprise-lab"
 LABS_ROOT = REPO_ROOT / "labs"
@@ -49,11 +51,8 @@ CERT_TARGETS = [
 
 
 def _run_certs() -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["./lab.sh", "certs"],
-        cwd=LAB_DIR,
-        capture_output=True,
-        text=True,
+    return run_fork_safe(
+        [str(LAB_DIR / "lab.sh"), "certs"],
         timeout=60,
     )
 

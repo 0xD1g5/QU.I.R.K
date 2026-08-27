@@ -20,6 +20,8 @@ import subprocess
 
 import pytest
 
+from tests.cli_helpers import run_fork_safe
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "scripts" / "verify_phase_gates.py"
 
@@ -843,15 +845,14 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
     `git rev-parse --show-toplevel` resolution and the script's own
     REPO_ROOT (computed from `__file__`) both correctly resolve to
     `repo_dir`, not the real QUIRK checkout."""
-    subprocess.run(["git", "init", "-q"], cwd=repo_dir, check=True)
-    subprocess.run(
-        ["git", "config", "user.email", "hook-integration-test@example.invalid"],
-        cwd=repo_dir,
+    run_fork_safe(["git", "-C", str(repo_dir), "init", "-q"], check=True)
+    run_fork_safe(
+        ["git", "-C", str(repo_dir), "config", "user.email",
+         "hook-integration-test@example.invalid"],
         check=True,
     )
-    subprocess.run(
-        ["git", "config", "user.name", "hook-integration-test"],
-        cwd=repo_dir,
+    run_fork_safe(
+        ["git", "-C", str(repo_dir), "config", "user.name", "hook-integration-test"],
         check=True,
     )
 
@@ -866,8 +867,9 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
     shutil.copy(HOOK_PATH, hooks_dir / "pre-commit")
     (hooks_dir / "pre-commit").chmod(0o755)
 
-    subprocess.run(
-        ["git", "config", "core.hooksPath", ".githooks"], cwd=repo_dir, check=True
+    run_fork_safe(
+        ["git", "-C", str(repo_dir), "config", "core.hooksPath", ".githooks"],
+        check=True,
     )
 
     planning = repo_dir / ".planning"
@@ -885,12 +887,9 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
 
 
 def _commit(repo_dir: pathlib.Path, message: str) -> subprocess.CompletedProcess:
-    subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True)
-    return subprocess.run(
-        ["git", "commit", "-m", message],
-        cwd=repo_dir,
-        capture_output=True,
-        text=True,
+    run_fork_safe(["git", "-C", str(repo_dir), "add", "-A"], check=True)
+    return run_fork_safe(
+        ["git", "-C", str(repo_dir), "commit", "-m", message],
         check=False,
     )
 

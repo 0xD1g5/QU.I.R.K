@@ -24,10 +24,11 @@ Schedules created through the dashboard API were unaffected: its schema declares
 """
 from __future__ import annotations
 
-import subprocess
 import sys
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 VALID_SCAN_PROFILES = {"quick", "standard", "deep"}
 
@@ -83,9 +84,9 @@ def _run_scan_argparse(profile: str):
     asserting on its empty stderr would be a false failure. CI (Linux) is
     unaffected and runs these for real.
     """
-    proc = subprocess.run(
+    proc = run_fork_safe(
         [sys.executable, "-m", "run_scan", "--profile", profile, "--help"],
-        capture_output=True, text=True, timeout=120,
+        timeout=120,
     )
     if proc.returncode is not None and proc.returncode < 0:
         pytest.skip(

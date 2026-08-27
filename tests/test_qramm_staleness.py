@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import datetime
 import os
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 
 # ---------------- QRAMM-05: model shape ----------------
@@ -104,9 +105,9 @@ def test_qramm_status_cli_smoke_fresh() -> None:
     with current model_meta."""
     env = dict(os.environ)
     env.pop("QUIRK_CI_STALENESS_OVERRIDE_DATE", None)
-    result = subprocess.run(
+    result = run_fork_safe(
         [sys.executable, str(_run_scan_path()), "qramm", "status"],
-        capture_output=True, text=True, timeout=15, env=env,
+        timeout=15, env=env,
     )
     assert result.returncode == 0, (
         f"exit={result.returncode} stdout={result.stdout!r} "
@@ -132,9 +133,9 @@ def test_qramm_status_cli_smoke_stale_via_override() -> None:
 
     env = dict(os.environ)
     env["QUIRK_CI_STALENESS_OVERRIDE_DATE"] = fake_today
-    result = subprocess.run(
+    result = run_fork_safe(
         [sys.executable, str(_run_scan_path()), "qramm", "status"],
-        capture_output=True, text=True, timeout=15, env=env,
+        timeout=15, env=env,
     )
     assert result.returncode == 1, (
         f"expected exit=1 (STALE), got exit={result.returncode}; "

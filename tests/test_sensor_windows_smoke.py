@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from quirk.cli.sensor_cmd import _build_envelope, _build_compressed_payload
+from tests.cli_helpers import run_fork_safe
 
 # ---------------------------------------------------------------------------
 # Fixtures — sample sensor config + fake endpoints
@@ -199,10 +200,8 @@ class TestCleanShutdownOnKeyboardInterrupt:
 
     def _run_child_script(self, script: str) -> subprocess.CompletedProcess:
         """Run a Python script in a subprocess and return the result."""
-        return subprocess.run(
+        return run_fork_safe(
             [sys.executable, "-c", script],
-            capture_output=True,
-            text=True,
             timeout=15,
         )
 
