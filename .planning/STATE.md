@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Phase 165 context gathered
-last_updated: "2026-08-27T15:10:21.203Z"
+stopped_at: Completed 166-02-PLAN.md
+last_updated: "2026-08-27T15:17:08.877Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 25
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 166 (Gate Robustness) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-27
 
@@ -226,6 +226,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 165 P07 | 112min | 3 tasks | 40 files |
 | Phase 165 P08 | 55min | 3 tasks | 3 files |
 | Phase 166 P01 | 12min | 2 tasks | 1 files |
+| Phase 166 P02 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -437,6 +438,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 165]: 5 additional token-swap contrast misses fixed at token layer per D-11, leaving only 1 justified accepted entry (data-at-rest scrollable-region-focusable)
 - [Phase 165]: quirk serve multi-DB trap verified against deps.py and documented in operators-guide.md, with a stray 0-byte quirk.db cleanup note
 - [Phase ?]: Selected common port scope via page.click + aria-checked wait, not page.select() -- control is a Radix RadioGroup
+- [Phase 166]: GATE-02 requires quirk.util.xml_safe.parse_safely() (Phase 87/DEP-02 lxml chokepoint), not defusedxml — original requirement premise was factually backwards and corrected in REQUIREMENTS.md/ROADMAP.md
 
 ### Pending Todos
 
@@ -567,8 +569,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T15:07:40.394Z
-Stopped at: Phase 165 context gathered
+Last session: 2026-08-27T15:17:08.871Z
+Stopped at: Completed 166-02-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
