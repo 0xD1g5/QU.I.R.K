@@ -44,11 +44,16 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The nine test files that spawn real subprocesses and are covered by the
-# fork-safety fix: the three CLI-runner files migrated in 166-03, plus the
-# six broader crash-exposed files migrated in 166-05. tests/cli_helpers.py
-# itself is deliberately excluded -- it is the sanctioned chokepoint that
-# implements the close_fds=False / no-cwd contract, not a caller of it.
+# The ten files that spawn real subprocesses and are covered by the
+# fork-safety fix: the three CLI-runner files migrated in 166-03, the six
+# broader crash-exposed files migrated in 166-05, plus tests/conftest.py
+# (its _patch_sha1_signing shim was the actual crash source behind
+# test_vault_connector.py's fatal signal -- discovered by 166-05's mandatory
+# full-suite proof run, fixed alongside the nine, and added here so a future
+# direct subprocess.run() reintroduced there is caught too).
+# tests/cli_helpers.py itself is deliberately excluded -- it is the
+# sanctioned chokepoint that implements the close_fds=False / no-cwd
+# contract, not a caller of it.
 _COVERED_FILES = [
     "tests/test_target_cli.py",
     "tests/test_compliance_cli.py",
@@ -59,6 +64,7 @@ _COVERED_FILES = [
     "tests/test_sensor_windows_smoke.py",
     "tests/test_vault_connector.py",
     "tests/test_verify_phase_gates.py",
+    "tests/conftest.py",
 ]
 
 # Attribute names on a `subprocess` module reference that spawn a real

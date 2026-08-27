@@ -22,6 +22,13 @@ import pytest
 
 from tests.cli_helpers import run_fork_safe
 
+# run_fork_safe requires argv[0] to contain a path separator (a bare "git"
+# looked up via PATH defeats CPython's posix_spawn eligibility on this
+# build -- see tests/cli_helpers.py::run_fork_safe's docstring, discovered
+# in 166-05's full-suite proof run). Resolve once at import time.
+_GIT = shutil.which("git")
+assert _GIT is not None, "git not found on PATH -- required for hook-integration tests"
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "scripts" / "verify_phase_gates.py"
 
@@ -845,14 +852,14 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
     `git rev-parse --show-toplevel` resolution and the script's own
     REPO_ROOT (computed from `__file__`) both correctly resolve to
     `repo_dir`, not the real QUIRK checkout."""
-    run_fork_safe(["git", "-C", str(repo_dir), "init", "-q"], check=True)
+    run_fork_safe([_GIT, "-C", str(repo_dir), "init", "-q"], check=True)
     run_fork_safe(
-        ["git", "-C", str(repo_dir), "config", "user.email",
+        [_GIT, "-C", str(repo_dir), "config", "user.email",
          "hook-integration-test@example.invalid"],
         check=True,
     )
     run_fork_safe(
-        ["git", "-C", str(repo_dir), "config", "user.name", "hook-integration-test"],
+        [_GIT, "-C", str(repo_dir), "config", "user.name", "hook-integration-test"],
         check=True,
     )
 
@@ -868,7 +875,7 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
     (hooks_dir / "pre-commit").chmod(0o755)
 
     run_fork_safe(
-        ["git", "-C", str(repo_dir), "config", "core.hooksPath", ".githooks"],
+        [_GIT, "-C", str(repo_dir), "config", "core.hooksPath", ".githooks"],
         check=True,
     )
 
@@ -887,9 +894,9 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
 
 
 def _commit(repo_dir: pathlib.Path, message: str) -> subprocess.CompletedProcess:
-    run_fork_safe(["git", "-C", str(repo_dir), "add", "-A"], check=True)
+    run_fork_safe([_GIT, "-C", str(repo_dir), "add", "-A"], check=True)
     return run_fork_safe(
-        ["git", "-C", str(repo_dir), "commit", "-m", message],
+        [_GIT, "-C", str(repo_dir), "commit", "-m", message],
         check=False,
     )
 

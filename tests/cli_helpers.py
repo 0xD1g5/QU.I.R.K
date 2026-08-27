@@ -6,6 +6,7 @@ docstring on ``run_fork_safe`` for the full rationale.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -62,15 +63,28 @@ def run_fork_safe(
     executable's own native flag instead of a ``cwd`` kwarg -- e.g.
     ``["git", "-C", str(abs_dir), "init", "-q"]``.
 
+    **``argv[0]`` (the executable) must itself contain a path separator --
+    a bare command name looked up via ``PATH`` (e.g. ``"git"`` or
+    ``"openssl"``) is REJECTED, not just discouraged.** This is not a style
+    preference: CPython's own ``posix_spawn`` eligibility check requires
+    ``os.path.dirname(executable)`` to be truthy (found empirically on this
+    build -- see ``subprocess.Popen._execute_child`` source), so a bare
+    executable name silently falls back to the crash-prone ``fork()`` path
+    even with ``close_fds=False`` and no ``cwd`` correctly set. This was
+    discovered in 166-05's full-suite proof run, where ``git`` invoked as a
+    bare name via ``["git", "-C", ...]`` still crashed with SIGSEGV despite
+    both other conditions being satisfied. Resolve the executable first,
+    e.g. ``shutil.which("git")``.
+
     This helper always shells out to a real executable as a subprocess -- it
     deliberately never calls anything in-process, to preserve real exit-code
     and argv-boundary coverage.
 
     Args:
         argv: the full argument vector, including the executable itself
-            (e.g. ``["git", "-C", str(repo_dir), "init", "-q"]`` or
-            ``[sys.executable, "-c", script]``). Any path-like argument must
-            be absolute.
+            (e.g. ``[shutil.which("git"), "-C", str(repo_dir), "init", "-q"]``
+            or ``[sys.executable, "-c", script]``). ``argv[0]`` and every
+            other path-like argument must already be absolute.
         timeout: seconds to wait before raising
             ``subprocess.TimeoutExpired``. Default 30.
         env: optional environment mapping to pass through to the child.
@@ -82,7 +96,24 @@ def run_fork_safe(
 
     Returns:
         The completed subprocess, with ``capture_output=True, text=True``.
+
+    Raises:
+        ValueError: if ``argv[0]`` has no path separator (i.e. would be
+            resolved via ``PATH`` lookup rather than being an absolute or
+            explicitly relative path) -- this is the exact condition that
+            defeats CPython's ``posix_spawn`` selection on this build.
     """
+    executable = str(argv[0])
+    if not os.path.dirname(executable):
+        raise ValueError(
+            f"run_fork_safe: argv[0] {executable!r} has no path separator, "
+            "so it would be resolved via PATH lookup at exec time. CPython's "
+            "posix_spawn selection on this build requires "
+            "os.path.dirname(executable) to be truthy -- a bare command name "
+            "silently falls back to the crash-prone fork() path even with "
+            "close_fds=False and no cwd. Resolve it first, e.g. "
+            "shutil.which('git')."
+        )
     return subprocess.run(
         list(argv),
         capture_output=True,

@@ -47,14 +47,34 @@ def _isolate_quirk_db(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def _patch_sha1_signing():
-    """Return True if patching succeeded, False if openssl binary is absent."""
+    """Return True if patching succeeded, False if openssl binary is absent.
+
+    Phase 166 GATE-03 (166-05): this shim's `subprocess.run(["openssl", ...])`
+    call was the cause of a fatal SIGSEGV in test_vault_connector.py's
+    full-suite run -- discovered by 166-05's mandatory full unfiltered proof
+    run even though this file was outside the plan's declared nine-file
+    scope. Two conditions were required together (see
+    .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md and
+    tests/cli_helpers.py::run_fork_safe's docstring): close_fds=False + no
+    cwd, AND (discovered here) argv[0] must contain a path separator --
+    a bare "openssl" resolved via PATH defeats CPython's posix_spawn
+    eligibility check (`os.path.dirname(executable)` must be truthy) exactly
+    like the bare "git" case test_verify_phase_gates.py hit. Routed through
+    tests.cli_helpers.run_fork_safe, which enforces both.
+    """
     try:
-        import subprocess
+        import shutil
         import tempfile
         import os
         from cryptography import x509
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import rsa
+
+        from tests.cli_helpers import run_fork_safe
+
+        _openssl = shutil.which("openssl")
+        if _openssl is None:
+            return False
 
         _original_sign = x509.CertificateBuilder.sign
 
@@ -77,17 +97,16 @@ def _patch_sha1_signing():
                     fh.write(key_pem)
 
                 subj = "/CN=quirk-test-sha1-ca"
-                result = subprocess.run(
+                result = run_fork_safe(
                     [
-                        "openssl", "req", "-new", "-x509", "-sha1",
+                        _openssl, "req", "-new", "-x509", "-sha1",
                         "-key", key_path, "-out", cert_path,
                         "-days", "365", "-subj", subj,
                     ],
-                    capture_output=True,
                 )
                 if result.returncode != 0:
                     raise RuntimeError(
-                        f"openssl SHA1 cert failed: {result.stderr.decode()}"
+                        f"openssl SHA1 cert failed: {result.stderr}"
                     )
 
                 with open(cert_path, "rb") as fh:
