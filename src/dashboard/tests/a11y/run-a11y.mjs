@@ -30,6 +30,7 @@ import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, baselineFilename } from './baseline-diff.mjs'
+import { generateMarkdown } from './generate-accepted-violations.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -136,6 +137,9 @@ try {
 
 let exitCode = 0
 const summary = []
+// D-07: collected only when UPDATE_BASELINES + VARIANT === 'default', so the regenerated
+// ledger reflects the same default-variant entries the freshness test byte-compares against.
+const writtenBaselinesByRoute = []
 
 for (const { slug, path: routePath } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
@@ -184,6 +188,10 @@ for (const { slug, path: routePath } of ROUTES) {
     }
     writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n')
     console.log(`[a11y] Wrote baseline for ${slug}: ${entries.length} rule(s)`)
+
+    if (VARIANT === 'default') {
+      writtenBaselinesByRoute.push({ route: slug, entries })
+    }
 
     if (refusedCritical.length > 0) {
       exitCode = 1
@@ -288,6 +296,17 @@ for (const { slug, path: routePath } of ROUTES) {
 
 await browser.close()
 cleanup()
+
+// D-05/D-07: regenerate the human-readable accepted-debt ledger from the JSON just written,
+// so ACCEPTED-VIOLATIONS.md can never drift from the baseline files it describes. Written
+// beside the baselines (src/dashboard/tests/a11y/), NOT under docs/ — an engineering artifact
+// with no Obsidian vault counterpart, same treatment docs/error-codes.md got in Phase 164.
+if (UPDATE_BASELINES && VARIANT === 'default') {
+  const ledgerPath = resolve(A11Y_DIR, 'ACCEPTED-VIOLATIONS.md')
+  const ledger = generateMarkdown(writtenBaselinesByRoute, VARIANT)
+  writeFileSync(ledgerPath, ledger)
+  console.log(`[a11y] Regenerated ${ledgerPath}`)
+}
 
 console.log('\n[a11y] Summary:')
 for (const { slug, violations, console: consoleCount, status } of summary) {
