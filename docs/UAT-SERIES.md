@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..08 added, ALL PASS. UAT-164-01 human-verified live on 2026-08-26 (wizard + full scan, 12 artifacts). UAT-164-08 records a post-verification code-review catch: a directory or unreadable --targets-file still tracebacked (OSError siblings of FileNotFoundError); closed with a new TARGET-003. Known deferred: 4 of tests/test_target_cli.py's 9 cases crash in FULL-SUITE macOS runs on a fork-after-Network.framework fatal signal (pass standalone) — tracked as GATE-03 in Phase 166. 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..07 added, ALL PASS. Closes FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03. UAT-164-01 cites `UAT-161-07` as prior evidence plus a fresh human-confirmed run: the installed entry point completed a real scan and wrote 12 report files. Structural fix: `allow_abbrev=False` on all 10 parser construction sites closes the bare `--targets` abbreviation trap at the parser instead of catching the resulting traceback; two new coded errors (TARGET-001 missing file, TARGET-002 malformed token/CIDR) replace the prior uncaught exceptions, both exit 2 before the banner. A repo-wide doc-form CI gate (`tests/test_doc_command_forms.py`) replaces UAT-161-07's manual grep and caught a second dashboard empty-state defect in `executive.tsx` the source review missed. Known deferred item, not a Series 164 failure: 4 of `tests/test_target_cli.py`'s 7 cases crash on a macOS fork()-after-Network.framework fatal signal in full-suite runs only (7/7 pass standalone); tracked as GATE-03 in Phase 166. See Series 164. Earlier: v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-27 (v5.16 Phase 165 close — Accessibility Remediation: UAT-165-01..03
+added, ALL PASS. Closes A11Y-01..A11Y-05. The a11y baseline mechanism moved from a
+selector-keyed snapshot to a per-route, per-rule count budget with mandatory written
+justifications (`ACCEPTED-VIOLATIONS.md`); the true live violation count fell from a stale
+committed 291 to a post-fix 1 (see `165-DELTA.md`). UAT-165-01 covers the count-budget gate
+commands (`a11y:check`, `a11y:check:empty`, `a11y:check:loading`, all exit 0); UAT-165-02
+covers the human dashboard walkthrough across both themes on Executive/CBOM/Findings/QRAMM
+Assessment, already performed and approved during 165-07's checkpoint; UAT-165-03 covers the
+sole accepted-violations entry reading as a genuine decision, not filler. See Series 165.
+Earlier: 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..08 added, ALL PASS. UAT-164-01 human-verified live on 2026-08-26 (wizard + full scan, 12 artifacts). UAT-164-08 records a post-verification code-review catch: a directory or unreadable --targets-file still tracebacked (OSError siblings of FileNotFoundError); closed with a new TARGET-003. Known deferred: 4 of tests/test_target_cli.py's 9 cases crash in FULL-SUITE macOS runs on a fork-after-Network.framework fatal signal (pass standalone) — tracked as GATE-03 in Phase 166. 2026-08-26 (v5.16 Phase 164 close — First-Run Correctness: UAT-164-01..07 added, ALL PASS. Closes FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03. UAT-164-01 cites `UAT-161-07` as prior evidence plus a fresh human-confirmed run: the installed entry point completed a real scan and wrote 12 report files. Structural fix: `allow_abbrev=False` on all 10 parser construction sites closes the bare `--targets` abbreviation trap at the parser instead of catching the resulting traceback; two new coded errors (TARGET-001 missing file, TARGET-002 malformed token/CIDR) replace the prior uncaught exceptions, both exit 2 before the banner. A repo-wide doc-form CI gate (`tests/test_doc_command_forms.py`) replaces UAT-161-07's manual grep and caught a second dashboard empty-state defect in `executive.tsx` the source review missed. Known deferred item, not a Series 164 failure: 4 of `tests/test_target_cli.py`'s 7 cases crash on a macOS fork()-after-Network.framework fatal signal in full-suite runs only (7/7 pass standalone); tracked as GATE-03 in Phase 166. See Series 164. Earlier: v5.15 Phase 163 close — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added and ALL PASS; UAT-163-02..04 human-verified live on a real /20 on 2026-08-26. The walkthrough surfaced and closed an in-phase defect: the per-batch cache dropped undetermined-host ADVISORY records, making resumed scans under-report their own coverage — fixed via a `liveness` key in the batch cache payload, with 4 regression tests. Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -19424,3 +19433,105 @@ full-suite `pytest -q` run on macOS crashes 4 of `tests/test_target_cli.py`'s 7 
 signal (fork-after-Network.framework, not an assertion failure) — that file passes 7/7 standalone
 in 3.43s and is tracked as **GATE-03** in Phase 166; see
 `.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`.
+
+---
+
+## Series 165: Accessibility Remediation (Phase 165 — v5.16)
+
+**Last Updated:** 2026-08-27
+
+### UAT-165-01: Count-budget accessibility gate exits 0 across all three fixture variants (A11Y-01, A11Y-03, A11Y-04, A11Y-05) — Automated
+
+**What to test:** The rebuilt a11y harness (`src/dashboard/tests/a11y/run-a11y.mjs`) checks
+per-route, per-rule count budgets — not axe's CSS-selector path — against a11y baselines
+regenerated for all three fixture variants (default, empty, loading), and the generated
+`ACCEPTED-VIOLATIONS.md` ledger stays byte-fresh against the baselines it describes.
+
+**Steps:**
+1. From `src/dashboard/`, run `npm run a11y:check` — the default (happy-path) fixture sweep.
+2. Run `npm run a11y:check:empty` — the empty-state fixture sweep (previously a dead gate that
+   passed unconditionally on a missing-baseline fallback; D-15 made a missing baseline file a
+   hard error instead).
+3. Run `npm run a11y:check:loading` — the loading-state fixture sweep, wired into
+   `.github/workflows/dashboard-quality.yml` in this phase (D-16).
+4. Run `npx vitest run tests/a11y/accepted-violations-freshness.test.ts` — confirms
+   `ACCEPTED-VIOLATIONS.md` byte-matches a regeneration from the current baseline JSONs, every
+   entry carries a non-empty, non-placeholder justification, no entry has `impact: critical`,
+   and the ledger's Totals line reconstructs from the per-entry counts.
+
+**Pass criteria:**
+- All three `npm run a11y:check*` commands exit 0.
+- `accepted-violations-freshness.test.ts` passes all 7 of its cases.
+- No baseline entry anywhere carries `impact: critical` (`button-name` is structurally refused
+  at write time per D-14).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (165-05/165-06/165-07 plan execution)
+**Notes:** A11Y-01, A11Y-03, A11Y-04, A11Y-05. Baselines regenerated against the fixed UI in
+165-07 landed a live count of 1 accepted entry (`data-at-rest`'s
+`scrollable-region-focusable`), down from a stale committed 291 and a measured live pre-fix 81
+— see `165-DELTA.md`'s three-total reconciliation. `npm test` is green (29 files / 186 tests)
+with the same working tree.
+
+---
+
+### UAT-165-02: Dashboard remains visually coherent in both themes after the token flips (A11Y-03) — Human
+
+**What to test:** The `--accent-foreground`/`--primary-foreground`/`--risk-badge-high-foreground`/
+`--qs-node-safe-foreground`/`--muted-foreground` token flips (D-08..D-10) read correctly on a
+live, populated dashboard in both light and dark themes, across the Executive, CBOM, Findings,
+and QRAMM Assessment pages — not just against the empty a11y fixture.
+
+**Steps:**
+1. Start the dashboard against a populated database (a real scan's `quirk.db`).
+2. In dark theme, visit `/executive` (HIGH severity badge), `/cbom` (Safe graph node),
+   `/findings`, and `/qramm-assessment` (Confirm answer button on the affected question) —
+   confirm all badge/button text is legible dark-on-colour, and the colour itself still reads
+   as the same severity/quantum-safety signal as before this phase.
+2. Repeat step 1 in light theme.
+3. Confirm no button, badge, or label anywhere reads as low-contrast or illegible in either
+   theme.
+
+**Pass criteria:**
+- All checked pages show dark, legible text on the flipped badges/buttons in both themes.
+- No colour's *meaning* changed — HIGH is still orange, Safe is still green, primary/accent
+  buttons are still teal.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Digs (human walkthrough during 165-07 Task 2's checkpoint)
+**Notes:** A11Y-03. Performed against a live populated dashboard (24 endpoints, 17 findings, 13
+certificates, 6 CBOM components) in both light and dark themes during 165-07's human-verify
+checkpoint; user approved. Recorded here rather than re-run, per 165-07-SUMMARY.md.
+
+---
+
+### UAT-165-03: The sole accepted-violations entry reads as a genuine, specific decision (A11Y-01) — Human
+
+**What to test:** `ACCEPTED-VIOLATIONS.md`'s one surviving entry
+(`data-at-rest`'s `scrollable-region-focusable`) carries a justification specific enough to be
+a real engineering decision, not filler text like "pre-existing" or "will fix later."
+
+**Steps:**
+1. Open `src/dashboard/tests/a11y/ACCEPTED-VIOLATIONS.md`.
+2. Confirm the entry names the concrete element (the shared shadcn Table wrapper,
+   `components/ui/table.tsx`), the D-11 acceptance category (b — a design/scope decision, not
+   a token-layer miss), and the specific blocker (a focus-order change with app-wide blast
+   radius, out of this milestone's scope).
+3. Confirm no other entry exists and the ledger's Totals line reads 1 accepted entry.
+
+**Pass criteria:**
+- The justification names the element, the category, and the blocker — not a placeholder.
+- Exactly one entry exists across all 11 routes' default baselines.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Digs (human walkthrough during 165-07 Task 2's checkpoint)
+**Notes:** A11Y-01. Justification and specificity confirmed and approved as part of the same
+165-07 Task 2 checkpoint that covered UAT-165-02.
+
+---
+
+**Series 165 disposition.** All three cases PASS. No version bump occurred in this phase — the
+`UAT-1-02` version-string pass criteria are unaffected. `src/dashboard/tests/a11y/ACCEPTED-VIOLATIONS.md`
+is an engineering artifact co-located with the baselines (D-07) and is not itself a user-facing
+doc; it is exercised by UAT-165-01/03 but has no Obsidian vault counterpart, matching
+`docs/error-codes.md`'s treatment in Phase 164.
