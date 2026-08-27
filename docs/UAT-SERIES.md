@@ -1,7 +1,22 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-27 (v5.16 Phase 166-05 — Gate Robustness scope amendment: GATE-03
+**Last Updated:** 2026-08-27 (v5.16 Phase 167 — UAT Format Unification & Deduplication:
+docs/UAT-SERIES.md normalized to one canonical `**Result:**` format (`- [ ] PASS  - [ ] FAIL  -
+[ ] SKIP`, with optional inline ` (annotation)` suffixes preserved), 23 previously headingless
+`**ID:**`-only cases promoted to real `### UAT-` headings, and the misfiled `UAT-144` Block A
+(filed under the wrong `## UAT-143 Series` header) deleted with its caveat wording merged into
+the surviving Block B. Case-heading count now equals result-block count by construction: **663
+== 663**, closing the pre-migration 642-heading/650-result-block/665-true-case mismatch.
+Duplicate case IDs eliminated: the true count was 3 (`UAT-144-01/02/03`), not the previously
+reported 5 — the "5" figure was a truncating-regex artifact, corrected in REQUIREMENTS.md
+UATREC-02. All four invariants (one result format, heading/result parity, unique case IDs, no
+headingless declarations) are now enforced by `tests/test_uat_series_format.py`. **No
+dispositions were recorded by this phase** — every newly-promoted or newly-parity-padded case
+carries an empty, all-unchecked canonical result block; recording actual PASS/FAIL/SKIP outcomes
+for the ~325 still-undispositioned cases is UATREC-03, Phases 168/169. Closes UATREC-01,
+UATREC-02. See Series 167.
+Earlier: 2026-08-27 (v5.16 Phase 166-05 — Gate Robustness scope amendment: GATE-03
 closed suite-wide. UAT-166-03 updated to reflect a full unfiltered macOS `python -m pytest`
 with ZERO fatal signals, up from the honest 3-file-scoped-only close 166-03/166-04 had
 recorded. GATE-01 (E2E smoke budget) and GATE-02 (UAT tooling XML hardening) remain PASS
@@ -1014,8 +1029,9 @@ All of these services show status `Up` or `running`:
 - `unknown-port` (5555)
 - `tls-slow-proxy` (12443)
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
 ### UAT-4-02: Modern TLS Service (Port 443)
 
 **Steps:**
@@ -2561,8 +2577,9 @@ Each finding object contains:
 - `description`
 - `quantum_risk` or equivalent quantum safety assessment
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
 ### UAT-6-02: TLS Findings — Cipher Suite Detection
 
 **Prerequisites:** Lab core running. Completed scan covering port 8443 (legacy TLS).
@@ -3869,11 +3886,11 @@ Each finding object contains:
 
 ---
 
-### UAT-129: Crypto-Bridge Detection + CBOM Pass 4
+## Series 129: Crypto-Bridge Detection + CBOM Pass 4 (Phase 129)
 
 **Last Updated:** 2026-06-14
 
-#### UAT-129-01: Bridge Detection — partial_only classification
+### UAT-129-01: Bridge Detection — partial_only classification
 
 **ID:** UAT-129-01
 **Requirement:** HWCOMPAT-03
@@ -3903,7 +3920,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 
 ---
 
-#### UAT-129-02: CBOM Pass 4 — FIRMWARE component emission and schema validation
+### UAT-129-02: CBOM Pass 4 — FIRMWARE component emission and schema validation
 
 **ID:** UAT-129-02
 **Requirement:** HWCOMPAT-05
@@ -5327,6 +5344,7 @@ These tests validate core functionality. Any failure here blocks the release gat
 
 **Expected:** Scan completes; query returns `0`. No `broker-scanning` phase in run_stats.
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-02: Standard Profile Enables Broker Scan
 **Prerequisites:** `--profile standard` and at least one TLS target reachable.
 **Steps:**
@@ -5334,21 +5352,27 @@ These tests validate core functionality. Any failure here blocks the release gat
 
 **Expected:** Logs include `Broker scan: kafka=N rabbit=N redis=N`. `cfg.connectors.enable_broker == True` after profile applied.
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-03: Kafka Plaintext Detection (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent unit coverage exists in `tests/test_broker_scanner_kafka.py::test_detect_kafka_plaintext_*`.
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-04: Kafka TLS Weak Cipher (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent integration coverage exists in `tests/test_broker_run_integration.py`.
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-05: RabbitMQ AMQP Plaintext Detection (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_broker_scanner_rabbitmq.py::test_detect_amqp_plaintext_*` (validates `len(data) > 0` rule).
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-06: RabbitMQ AMQPS Weak Cipher (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent coverage in `tests/test_broker_scanner_rabbitmq.py`.
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-07: Redis Plaintext No-Auth Detection (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_broker_scanner_redis.py::test_probe_redis_plaintext_*`.
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 ### UAT-33-08: broker_scan_json Persisted to DB
 **Prerequisites:** `--profile standard` scan completed against any reachable broker (live or via integration test fixtures).
 **Steps:**
@@ -5357,16 +5381,16 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 **Expected:** Row returned with valid JSON object. Top-level keys are a subset of `{kafka, rabbitmq, redis, azure_servicebus, aws_sqs}` per the protocol families that produced endpoints.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
 ---
-
 ## Phase 34: Motion Intelligence (UAT-34-XX)
 
 **Purpose:** Verify the `data_in_motion` 6th subscore wires email + broker TLS evidence into the quantum-readiness score (MOTION-01..04).
 
 ---
 
+### UAT-34-01: data_in_motion appears as the 6th subscore in compute_readiness_score output
 **ID:** UAT-34-01
 **Title:** data_in_motion appears as the 6th subscore in compute_readiness_score output
 **Prerequisites:** Python venv active; `pytest` available; QU.I.R.K. v4.4.x checked out
@@ -5377,8 +5401,10 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** The `subscores` object contains exactly 6 keys: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, `data_in_motion`.
 **Pass Criteria:** `"data_in_motion"` is present in `subscores`; the existing 5 keys are unchanged.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
+### UAT-34-02: Plaintext-broker evidence lowers the data_in_motion subscore vs zero baseline
 **ID:** UAT-34-02
 **Title:** Plaintext-broker evidence lowers the data_in_motion subscore vs zero baseline
 **Prerequisites:** Python venv active; `pytest` available
@@ -5387,8 +5413,10 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** Test PASSES.
 **Pass Criteria:** `pytest` exits 0; the assertion `bad["subscores"]["data_in_motion"] < baseline["subscores"]["data_in_motion"]` holds, AND `bad["score"] < baseline["score"]`.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
+### UAT-34-03: SCORE_WEIGHTS and PROFILE_MULTIPLIERS contain locked motion_ values
 **ID:** UAT-34-03
 **Title:** SCORE_WEIGHTS and PROFILE_MULTIPLIERS contain locked motion_ values
 **Prerequisites:** Python venv active
@@ -5397,14 +5425,16 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** Both tests PASS.
 **Pass Criteria:** `motion_email_plaintext_ratio=12.0`, `motion_email_weak_cipher_ratio=6.0`, `motion_broker_plaintext_ratio=14.0`, `motion_broker_weak_tls_ratio=8.0`, `motion_broker_weak_cipher_ratio=6.0`; `PROFILE_MULTIPLIERS[*]["motion_"]` equals 1.4 / 1.0 / 0.7 for strict / balanced / lenient.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
 ## Phase 35: CBOM Integration (UAT-35-XX)
 
 **Purpose:** Verify email + broker TLS endpoints flow correctly through CycloneDX CBOM Passes 1/2/3, and plaintext-only broker endpoints are skipped from cert + protocol passes (CBOM-01..04).
 
 ---
 
+### UAT-35-01: Golden email CBOM matches committed snapshot
 **ID:** UAT-35-01
 **Title:** Golden email CBOM matches committed snapshot
 **Prerequisites:** Phase 35 merged; `tests/fixtures/cbom/expected_email_cbom.json` present; Python venv active; pytest available
@@ -5414,8 +5444,10 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** Test passes — normalized CBOM emitted from the 7-endpoint email lab fixture matches the committed JSON snapshot exactly.
 **Pass Criteria:** Exit code 0; the test reports 1 PASSED. If a divergence is reported, the divergence is intentional (scanner/builder change) and the snapshot has been regenerated via `REGEN_CBOM_FIXTURES=1` and re-committed.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
+### UAT-35-02: Golden broker CBOM matches committed snapshot
 **ID:** UAT-35-02
 **Title:** Golden broker CBOM matches committed snapshot
 **Prerequisites:** Phase 35 merged; `tests/fixtures/cbom/expected_broker_cbom.json` present; Python venv active
@@ -5424,8 +5456,10 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** Both tests pass — 6-endpoint broker lab CBOM (3 TLS + 3 plaintext) matches the committed snapshot, and the `AMQPS/Azure-ServiceBus` protocol component is present (D-03 passthrough verified).
 **Pass Criteria:** Exit code 0; 2 PASSED.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
+### UAT-35-03: No hollow cert components for plaintext brokers
 **ID:** UAT-35-03
 **Title:** No hollow cert components for plaintext brokers
 **Prerequisites:** Phase 35 merged; Python venv active
@@ -5435,14 +5469,16 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** Both tests pass; the grep on the broker snapshot returns 0 — no plaintext-port bom_refs leak into the CBOM.
 **Pass Criteria:** Both tests exit 0; grep step returns 0 matches.
 
----
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 
+---
 ## Phase 36: Dashboard Motion Tab (UAT-36-XX)
 
 **Purpose:** Verify the new `/motion` dashboard route, Email Protocols table (STARTTLS badge), Message Brokers grouped sections (plaintext badge + cloud chip), 6th ScoreGauge on the executive summary, and empty-state cards when no email/broker data is present. Maps to requirements DASH-01..05.
 
 ---
 
+### UAT-36-01: `/motion` route loads with both sections
 **ID:** UAT-36-01
 **Title:** `/motion` route loads with both sections
 **Maps to:** DASH-01
@@ -5465,6 +5501,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-36-02: Port-25 STARTTLS warning badge renders
 **ID:** UAT-36-02
 **Title:** Port-25 STARTTLS warning badge renders
 **Maps to:** DASH-02
@@ -5486,6 +5523,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-36-03: Plaintext broker shows `☠ PLAINTEXT` badge
 **ID:** UAT-36-03
 **Title:** Plaintext broker shows `☠ PLAINTEXT` badge
 **Maps to:** DASH-03
@@ -5507,6 +5545,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-36-04: Executive summary shows 6 ScoreGauges with Data in Motion last
 **ID:** UAT-36-04
 **Title:** Executive summary shows 6 ScoreGauges with Data in Motion last
 **Maps to:** DASH-04
@@ -5529,6 +5568,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-36-05: Empty-state cards render when no email/broker findings
 **ID:** UAT-36-05
 **Title:** Empty-state cards render when no email/broker findings
 **Maps to:** DASH-01, DASH-05 (empty-state path)
@@ -5556,6 +5596,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-38-01: SAML scan-window regression — automated
 **ID:** UAT-38-01
 **Title:** SAML scan-window regression — automated
 **Maps to:** GAP-01, GAP-02
@@ -5579,6 +5620,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-38-02: Live `/api/scan/latest` SAML round-trip — manual
 **ID:** UAT-38-02
 **Title:** Live `/api/scan/latest` SAML round-trip — manual
 **Maps to:** GAP-01
@@ -5617,6 +5659,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-01: Navigate to `/data-at-rest` from sidebar
 **ID:** UAT-39-01
 **Title:** Navigate to `/data-at-rest` from sidebar
 **Maps to:** GAP-04, DASH-05
@@ -5640,6 +5683,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-02: Empty state per section when no DAR data
 **ID:** UAT-39-02
 **Title:** Empty state per section when no DAR data
 **Maps to:** GAP-04
@@ -5662,6 +5706,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-03: Database table renders with locked columns
 **ID:** UAT-39-03
 **Title:** Database table renders with locked columns
 **Maps to:** GAP-04
@@ -5683,6 +5728,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-04: Object Storage table renders with locked columns
 **ID:** UAT-39-04
 **Title:** Object Storage table renders with locked columns
 **Maps to:** GAP-04
@@ -5704,6 +5750,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-05: Kubernetes table renders with locked columns
 **ID:** UAT-39-05
 **Title:** Kubernetes table renders with locked columns
 **Maps to:** GAP-04
@@ -5724,6 +5771,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-06: Vault table renders with locked columns
 **ID:** UAT-39-06
 **Title:** Vault table renders with locked columns
 **Maps to:** GAP-04
@@ -5745,6 +5793,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-07: Sidebar nav order matches D-11 lock
 **ID:** UAT-39-07
 **Title:** Sidebar nav order matches D-11 lock
 **Maps to:** GAP-04
@@ -5764,6 +5813,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 ---
 
+### UAT-39-08: Zero console errors gate
 **ID:** UAT-39-08
 **Title:** Zero console errors gate
 **Maps to:** GAP-04
@@ -8766,7 +8816,7 @@ All tests are automated (pytest). No chaos lab required.
 - Tooltip appears on hover with correct data shape.
 - `npm run build` exits 0 (pre-built statics verified).
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-10  **Tester:** Digs
 **Notes:** 9 automated tests pass (5 timeline + 4 existing trend tests). Chart renders correctly with seeded multi-session data.
 
@@ -8792,7 +8842,7 @@ All tests are automated (pytest). No chaos lab required.
 - "View trends →" link navigates correctly.
 - Chip absent when `score_delta > -5` AND `new_high == 0`.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-10  **Tester:** Digs
 **Notes:** Seeded HIGH finding via direct DB insert. Bug fixed during UAT: `severity=None` endpoints caused Pydantic ValidationError 500 on `/api/trends` — fixed by adding `ep.severity is not None` filter to key-set comprehensions in `quirk/intelligence/trends.py`.
 
@@ -8820,7 +8870,7 @@ All tests are automated (pytest). No chaos lab required.
 - Persistent hide on refresh.
 - localStorage key present and equals `"1"`.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-10  **Tester:** Digs
 **Notes:** localStorage key encodes `current_session_ts` from `/api/trends` response. Render-time localStorage check (not `useState` initial) prevents stale-on-mount false-positive.
 
@@ -8845,7 +8895,7 @@ All tests are automated (pytest). No chaos lab required.
 - Chip visible for S2 after S1 was dismissed.
 - `localStorage.getItem('quirk.dismissed_regression.S2_ts')` returns `null` (not yet dismissed).
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-10  **Tester:** Digs
 **Notes:** Second seed required a different `(host, port, protocol, severity)` 4-tuple than the first — same tuple in both sessions yields `new_high=0` (set-difference logic). Seeded port 8443 vs original port 443.
 
@@ -8873,7 +8923,7 @@ All tests are automated (pytest). No chaos lab required.
 - `/scan/new` renders 4 controls with correct defaults.
 - Empty submit and `@file` submit both show correct inline errors.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-13  **Tester:** Digs
 
 ---
@@ -8893,7 +8943,7 @@ All tests are automated (pytest). No chaos lab required.
 - Stage indicator advances through all stages as scan progresses.
 - Cancel button visible while running.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-13  **Tester:** Digs
 **Notes:** Two UAT bugs fixed during phase: (1) subprocess was launched with non-existent `--target`/`--output` flags — fixed by writing a per-job config YAML and passing `--config`; (2) `init_db` called `create_all` without `checkfirst=True` causing "table already exists" on restart — fixed.
 
@@ -8914,7 +8964,7 @@ All tests are automated (pytest). No chaos lab required.
 - New scan selected in switcher.
 - Results indistinguishable from CLI-launched scan.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-13  **Tester:** Digs
 
 ---
@@ -8934,7 +8984,7 @@ All tests are automated (pytest). No chaos lab required.
 - "Cancelled" badge renders on next poll cycle (~3s).
 - "Scan cancelled." message with link to `/scan/new` visible.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-13  **Tester:** Digs
 **Notes:** Initial implementation called `navigate("/scan/new")` immediately after DELETE 204 — fixed to stay on page and let polling pick up `status: "cancelled"`.
 
@@ -8962,7 +9012,7 @@ All tests are automated (pytest). No chaos lab required.
 - All 7 column headers present.
 - No "Could not load scan history" error message.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 **Notes:** Required null `scanned_at` guard fix in `list_scans()` — SQLite strftime returns NULL for null timestamps, causing TypeError uncaught by existing ValueError guard.
 
@@ -8982,7 +9032,7 @@ All tests are automated (pytest). No chaos lab required.
 - "Compare" button present in the bar.
 - Bar not visible with 0 or 1 selections.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 
 ---
@@ -9000,7 +9050,7 @@ All tests are automated (pytest). No chaos lab required.
 - Never more than 2 rows checked simultaneously.
 - The oldest-checked row is the one auto-unchecked.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 
 ---
@@ -9018,7 +9068,7 @@ All tests are automated (pytest). No chaos lab required.
 - target/profile/calibration fields pre-filled from ScanJob data.
 - No amber notice rendered.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 
 ---
@@ -9036,7 +9086,7 @@ All tests are automated (pytest). No chaos lab required.
 - Target field pre-filled with reconstructed host list.
 - Amber notice visible above the form.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 
 ---
@@ -9054,7 +9104,7 @@ All tests are automated (pytest). No chaos lab required.
 - Score header card visible with both scores and delta.
 - Correct badge color for the score difference direction.
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 
 ---
@@ -9072,7 +9122,7 @@ All tests are automated (pytest). No chaos lab required.
 - All 6 subscore rows present.
 - ±0 rows visible (not filtered out).
 
-**Result:** PASS
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-14  **Tester:** Digs
 
 ---
@@ -9092,7 +9142,7 @@ All tests are automated (pytest). No chaos lab required.
 - Scans older than 72h are highlighted (amber/yellow).
 - Command exits 0.
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9112,7 +9162,7 @@ All tests are automated (pytest). No chaos lab required.
 - Resumed scan completes and produces output JSON.
 - `partial_failures` key present in output JSON (may be empty list).
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9130,7 +9180,7 @@ All tests are automated (pytest). No chaos lab required.
 - If any scanner errored, corresponding entries appear with `stage`, `error_type`, `endpoint_count`, `error_summary`.
 - Key is present even when no failures occurred (empty list `[]`).
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9150,7 +9200,7 @@ All tests are automated (pytest). No chaos lab required.
 - Card does NOT appear when there are no partial failures.
 - All badges have accessible aria-labels.
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9179,7 +9229,7 @@ All tests are automated (pytest). No chaos lab required.
 - Step 4: Exit code 1; "unknown" in output.
 - Step 5: Output matches `diff <(quirk errors --dump-md) docs/error-codes.md` with no diff output.
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9195,7 +9245,7 @@ All tests are automated (pytest). No chaos lab required.
 - All 3 tests pass: `test_error_codes_md_exists`, `test_error_codes_md_is_current`, `test_error_codes_md_contains_install_section`.
 - `test_error_codes_md_is_current` compares byte-for-byte output of `quirk errors --dump-md` against the committed file.
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9214,7 +9264,7 @@ All tests are automated (pytest). No chaos lab required.
 - Every install-day error message starts with `[QRK-INSTALL-` and contains ` Fix: `.
 - Port-conflict message substitutes the actual port number (not the literal `<port>` placeholder).
 
-**Result:** [ ] PASS / [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** —  **Tester:** —
 
 ---
@@ -9222,6 +9272,8 @@ All tests are automated (pytest). No chaos lab required.
 ## Phase 999.83 — Chaos Lab Service Config Drift (BACK-90)
 
 **Last Updated:** 2026-05-15
+
+### UAT-999.83-01: Chaos Lab Service Config Drift (BACK-90)
 
 Closes the four pre-existing chaos-lab service config drift bugs surfaced under BACK-90, plus a cross-cutting docs cleanup. Lab UAT criterion (`./lab.sh down && ./lab.sh all`, 60s settle, zero unexpected exited/unhealthy on the four fix sites) passes on macOS.
 
@@ -9238,7 +9290,7 @@ Closes the four pre-existing chaos-lab service config drift bugs surfaced under 
 - `quantum-chaos-enterprise-lab/README.md` contains `Image Pin Policy` subsection.
 - `quantum-chaos-enterprise-lab/expected_results_v4.md` no longer contains `## Profile: storage`.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-15  **Tester:** Claude (Phase 999.83-05 executor)
 **Notes:** Strict "zero non-zero exits anywhere in lab" criterion not met due to three pre-existing macOS-host issues unrelated to BACK-90 (see deferred-items.md). Phase scope (the four BACK-90 fix sites + deprecated profile removal + image-pin policy) verifies clean.
 
@@ -9247,6 +9299,8 @@ Closes the four pre-existing chaos-lab service config drift bugs surfaced under 
 ## Phase 999.84 — Chaos Lab macOS Host-Mount Compat (BACK-91)
 
 **Last Updated:** 2026-05-15
+
+### UAT-999.84-01: Chaos Lab macOS Host-Mount Compat (BACK-91)
 
 Closes the three pre-existing macOS Docker Desktop bind-mount failures surfaced as deferred items during the Phase 999.83 global UAT (DEF-999.83-A/B/C). Lab UAT criterion (`./lab.sh down && ./lab.sh all`, 60s settle, zero Restarting / Exited(1) / Exited(2) / Exited(22) / unhealthy containers across the whole compose tree) now passes on macOS.
 
@@ -9261,7 +9315,7 @@ Closes the three pre-existing macOS Docker Desktop bind-mount failures surfaced 
 - Re-run idempotency: a second `./lab.sh down && ./lab.sh all` (with `chaoslab_gitea_data` preserved) produces the same clean result with zero Exited(22) from gitea-seed — the CONTEXT-locked regression scenario.
 - Linux non-regression: cross-platform fix choices (env vars, image swap to bitnamilegacy/*, GET-then-POST shell pattern) carry no Linux-specific behavior.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-15  **Tester:** Claude (Phase 999.84-04 executor)
 **Bucket counts (post 60s settle):** Up=45, Healthy=13, Seeds(Exit 0)=5, Restarting=0, Unhealthy=0, Bad-exit=0, Other=0.
 **Notes:** ROADMAP Phase 999.84 success criteria 1-4 all confirmed in the global UAT. Kerberos services auto-skipped on macOS (LAB_INCLUDE_KERBEROS not set) as expected. Plan 01 took the option (a) image-swap fallback after option (c) verifiably failed; the CLAUDE.md chaos-lab rule (compose + README + oracle co-update) was honored atomically in commit `f48e534`.
@@ -9288,7 +9342,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 - No raw `\r` / `\n` inside any data row of either markdown file.
 - Pytest run shows 14 tests green (9 in `test_md_cell_escape.py` + 5 in `test_report_sanitization.py`).
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9306,7 +9360,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 - Every scanner-controlled variable site is escaped (autoescape on) AND the `| sanitize` Jinja filter chains through `sanitize_scanner_text` (defense in depth).
 - The AST gate test passes — zero unpaired `| safe` filter usages in `quirk/reports/templates/*.j2`.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9324,7 +9378,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 - DB-invariant test `test_db_stored_raw_payload_preserved` passes — `findings-*.json` retains the raw payload (Cluster C: sanitize at render boundary, never at write time).
 - PDF test either passes or is cleanly skipped via `pytest.importorskip` on Playwright / pypdf.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9342,7 +9396,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 - PDF `Author` is the exact string `QU.I.R.K. Scanner`.
 - Pytest run passes (or skips cleanly) — when running, `test_pdf_title_is_constant`, `test_pdf_author_is_constant`, and `test_pdf_renders_with_locked_context` are all green (the last test proves `java_script_enabled=False` is effective by attempting to mutate the title via embedded JS).
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9360,7 +9414,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 - Step 3: Gate explicitly fails when an unpaired `| safe` is introduced — proves the detector is wired correctly.
 - Forward-guard intent: adding `markdown` / `markdown-it-py` / `mistune` / `commonmark` to `pyproject.toml` `[project] dependencies` (or any `[project.optional-dependencies]` extra) trips `test_no_markdown_to_html_lib_in_deps`. Adding `bleach` trips `test_no_bleach_in_deps`.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9379,7 +9433,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 - `pyproject.toml` contains exactly one `nh3>=0.2.17` line in `[project] dependencies` and zero `bleach` references anywhere in the file.
 - The 14 tests in `test_sanitize_scanner_text.py` plus the bleach forward guard all pass.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9409,7 +9463,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - React Identity tab renders the SMIME rows without layout change.
 - Pytest: all 6 tests in `test_smime_scanner.py` are green.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual lab walkthrough
 
 ---
@@ -9427,7 +9481,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - The HIGH-path assertion additionally verifies the JSON blob parses and contains zero sentinel substrings.
 - Manual grep returns zero matches across all scan outputs.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9445,7 +9499,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - Step 3: Gate explicitly fails when a forbidden import is introduced — proves the detector is wired correctly.
 - Forbidden set is `{imaplib, poplib, smtplib, email}` plus `ImportFrom` prefix `email.` — catches every IMAP/SMTP/POP/envelope import shape.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9466,7 +9520,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - React Identity tab renders ADCS rows; CBOM contains an algorithm component for the CA cert (Pass-1) with no spurious TLS-style protocol component for ADCS endpoints (Pass-2/3 skip-list).
 - Pytest: all 3 tests in `test_adcs_scanner.py` pass.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual lab walkthrough
 
 ---
@@ -9483,7 +9537,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - `test_scanner_never_instantiates_csr_builder` monkeypatches `cryptography.x509.CertificateSigningRequestBuilder` with a sentinel that raises AssertionError; a full scan produces zero AssertionErrors — confirming no enrollment code path exists.
 - Manual greps return zero matches.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9503,7 +9557,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - Forbidden from-name: `(cryptography.x509, CertificateSigningRequestBuilder)`.
 - Forbidden method calls: `{add, modify, delete, modify_dn}` on any attribute (covers `conn.add(...)` and aliased receivers).
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9519,7 +9573,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - All 3 tests pass: `quirk[adcs]` (ldap3 present, cryptography>=44.0, NO impacket), `quirk[all]` (cryptography>=44.0, NO impacket — Phase 45 / D-01 invariant preserved), `quirk[adcs,identity]` (cryptography>=44.0 floor holds even with impacket allowed via `[identity]`).
 - Manual pip dry-runs match the test assertions.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest)
 
 ---
@@ -9537,7 +9591,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - Scan session error log contains zero ADCS-related entries (the scanner converted the bind failure into a coverage-gap finding rather than propagating).
 - Pytest corroboration: `python -m pytest tests/test_adcs_scanner.py::test_bind_failure_emits_adcs_unreachable_no_propagation -v` is green.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual misconfig walkthrough
 
 ## Phase 81 — CMVP Attestation Feed (UAT-81-XX)
@@ -9556,7 +9610,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - JSON output contains keys `schema_version`, `last_verified`, `source_url`, `module_count`, `age_days`, `days_remaining`, `threshold_days=90`, `status="FRESH"`.
 - Pytest `tests/test_cmvp_freshness.py` is green (5 tests); `test_cmvp_fail_message_cites_source_url` confirms remediation message cites `source_url`.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual CLI walkthrough
 
 ### UAT-81-02: `quirk compliance cmvp refresh --dry-run` prints diff, writes nothing (CMVP-03)
@@ -9574,7 +9628,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - Pytest corroboration: `pytest tests/test_cmvp_refresh.py::test_refresh_dry_run_writes_nothing -v` is green.
 - Network failures map to error code `CMVP-REFRESH-NETWORK` (exit 1); HTML schema drift maps to `CMVP-REFRESH-PARSE` (exit 1) — both verified by `tests/test_cmvp_refresh.py`.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual CLI walkthrough
 
 ### UAT-81-03: AES-256-GCM scan produces report with `CMVP Coverage` column populated (CMVP-05, CMVP-06)
@@ -9593,7 +9647,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - Unmapped algorithm rows display the literal `Not in CMVP catalog` (v4.10-D-01 wording is locked).
 - Pytest corroboration: `pytest tests/test_cmvp_report_column.py -v` is green (6 tests).
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual HTML inspection
 
 ### UAT-81-04: Offline scan still produces CBOM with `quirk:cmvp-coverage` populated (CMVP-01, CMVP-05)
@@ -9612,7 +9666,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - The `quirk:cmvp-coverage` Property sits alongside (never inside) `quirk:fips140-3-status` — verified by inspection of the rendered component.
 - CBOM contains zero occurrences of `"certified": true` (v4.10-D-01 invariant).
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** manual offline walkthrough + grep audit
 
 ### UAT-81-05: CMVP-07 permanent AST invariant gate (v4.10-D-01)
@@ -9630,7 +9684,7 @@ Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and
 - Workflow YAML parses cleanly: `python -c "import yaml; yaml.safe_load(open('.github/workflows/python-staleness.yml').read())"` exits 0.
 - Removing the test file would constitute a v4.10-D-01 violation requiring documented rationale in PROJECT.md Key Decisions.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest + YAML parse)
 
 ---
@@ -9658,7 +9712,7 @@ three DEF-999.83 fixes plus the pin-policy CI gate.
 - `docker logs chaoslab-ldaps-1` contains no `chown: Read-only file system` or `Permission denied` lines.
 - `ldapsearch` returns the `dc=chaos,dc=local` base entry with `dc: chaos` and `o: example` attributes.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** Plan 82-01 live verification (commit `be425f8`)
 
 ### UAT-82-02: `rabbitmq-broker` survives a down/up cycle (CHAOS-02)
@@ -9676,7 +9730,7 @@ three DEF-999.83 fixes plus the pin-policy CI gate.
 - Logs contain the expected `[warning] Overriding Erlang cookie using the value set in the environment` line (env var honoured).
 - Logs contain NO `Connection attempt from disallowed node` and NO `Cookie file ... must be accessible by owner only` lines.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** Plan 82-02 live verification (commit `e725276`)
 
 ### UAT-82-03: `gitea` source seed is idempotent (CHAOS-03)
@@ -9694,7 +9748,7 @@ three DEF-999.83 fixes plus the pin-policy CI gate.
 - No `409` / `already exists` errors in seed-sidecar logs on either cycle.
 - All three crypto-antipattern repos (python / go / java) remain intact under `labadmin`.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** Plan 82-03 live verification (commit `fdded8e`)
 
 ### UAT-82-04: Chaos-lab image-pin policy enforced (CHAOS-05)
@@ -9714,7 +9768,7 @@ three DEF-999.83 fixes plus the pin-policy CI gate.
 - After step 4 (revert), `./lab.sh up` proceeds normally.
 - (If executed) Step 5 collects 21 tests; `kerberos` skips on macOS without `LAB_INCLUDE_KERBEROS=1`; remaining 19 profile tests pass on a properly-provisioned Docker host.
 
-**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-16  **Tester:** automated (pytest) + manual negative-case verification
 
 ---
@@ -9737,7 +9791,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 - Step 2 prints the same version string set in `pyproject.toml [project.version]` (e.g. `4.10.0`).
 - Step 3 finds zero matches — no stale `"4.4.0"` literal anywhere in the package or version test.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-84-02: towncrier draft renders changelog fragments
@@ -9752,7 +9806,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 - Output includes a `## 4.10.0` heading and at least one sectioned fragment heading (`Features`, `Bugfixes`, `Misc`, etc.).
 - No fragments are removed from `changelog.d/` (draft mode is non-destructive).
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-84-03: Release workflow YAML lints and carries required OIDC + attestation flags
@@ -9767,7 +9821,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 - Step 1 exits 0 (workflow YAML parses cleanly).
 - Step 2 finds all three patterns (`attestations: true`, `id-token: write`, `pypa/gh-action-pypi-publish`).
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-84-04: SECURITY.md publishes 90-day disclosure SLA
@@ -9782,7 +9836,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All four checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-84-05: Release process docs cross-reference attestation verification
@@ -9797,7 +9851,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All four checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-01: `quirk db migrate` idempotence (LAUNCH-04)
@@ -9812,7 +9866,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All four checks exit 0 and pytest reports 8 passed.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-02: `docs/upgrade-guide.md` presence + required markers (LAUNCH-04)
@@ -9828,7 +9882,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All five checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-03: `.github/workflows/release-container.yml` lints + multi-arch present (LAUNCH-03)
@@ -9845,7 +9899,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-04: `Formula/quirk.rb` Ruby syntax + DSL markers (LAUNCH-02)
@@ -9863,7 +9917,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-05: Sample CBOM fixtures present + valid JSON + non-empty components (LAUNCH-05)
@@ -9879,7 +9933,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All five checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-06: README marketing polish — badges, personas, quickstart, hero (LAUNCH-01)
@@ -9898,7 +9952,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Note:** Step 4 currently passes against a placeholder PNG (1×1 transparent); the SUMMARY for Plan 85-05 documents the deferred real-screenshot capture as a manual post-merge task. A separate UAT-85-08 entry can be filed once the real screenshot lands.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-07: `docs/release-process.md` curl|bash non-decision section (LAUNCH-07)
@@ -9916,7 +9970,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All seven checks exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -9941,7 +9995,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 6 and 7 both true; commit lands; README still embeds correctly when rendered on github.com.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-09: Asciinema demo recorded + README link updated (LAUNCH-01)
@@ -9959,7 +10013,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 4 and 5 both true; manual playback test passes.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-10: End-to-end getting-started.md quickstart on clean macOS arm64 (LAUNCH-06)
@@ -9978,7 +10032,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** All 8 steps succeed verbatim from the doc; no undocumented `brew install`, `pip install <other>`, or manual config edit required. Discrepancies file follow-up PRs against `docs/getting-started.md`.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-11: v4.10.0 tag-push fires release pipeline end-to-end (LAUNCH-02/03)
@@ -10000,7 +10054,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Failure recovery:** A failed pipeline can be retried by deleting the tag (`git tag -d v4.10.0 && git push origin :refs/tags/v4.10.0`), fixing the issue, and re-tagging. Trusted Publishers does NOT allow re-publishing the same version to PyPI — if the PyPI publish job specifically fails after artifacts were uploaded, bump to v4.10.1.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-12: Homebrew tap bootstrap with real sdist sha256 (LAUNCH-02)
@@ -10022,7 +10076,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** All 9 steps succeed; tap repo is public on github.com/0xD1g5/homebrew-quirk; clean macOS arm64 install + test exit 0.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10039,7 +10093,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** All six labeled subscores present with `/25`; rollup math shown; overall reconciles with the dashboard value for the same scan.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10055,7 +10109,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Six-row decomposition table renders; values match the CLI markdown (UAT-88-01) and the dashboard.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10071,7 +10125,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Decomposition table renders intact in the PDF; overall reconciles across PDF / HTML / dashboard.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 
@@ -11337,7 +11391,7 @@ Expect: PASS.
 - Pytest: all 7 + 4 + 6 + 5 = 22 tests across the four test files pass.
 - `SCORE_WEIGHTS` sum is **299.0** (count 40): `python -c "from quirk.intelligence.scoring import SCORE_WEIGHTS; print(sum(SCORE_WEIGHTS.values()))"` prints `299.0`.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11357,7 +11411,7 @@ Expect: PASS.
 - `codesign_weak_algo_count` and `agility_codesign_weak_algo_ratio` both present in the
   evidence dict returned by `build_evidence_summary`.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11387,7 +11441,7 @@ Expect: PASS.
 - Any input other than `CONFIRM` aborts with zero probe requests sent.
 - No exception or stack trace on abort.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11409,7 +11463,7 @@ Expect: PASS.
 - Exit code is non-zero.
 - Zero HTTP requests are made to the target (`http://localhost:20100`).
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11436,7 +11490,7 @@ Expect: PASS.
 - `--fuzz-budget` default is 50.
 - Exit code is non-zero when budget exceeds 500.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11467,7 +11521,7 @@ Expect: PASS.
 - `validate_external_url` or equivalent scope gate is called per-request.
 - A 5xx cascade pause is implemented (pause after 3 consecutive 5xx responses).
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11492,7 +11546,7 @@ Expect: PASS.
 - The finding describes RS256→HS256 algorithm substitution.
 - The scan completes without exception.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11519,7 +11573,7 @@ Expect: PASS.
 - `agility_fuzz_crypto_posture_ratio` key present in `SCORE_WEIGHTS` with value `4.0`.
 - Direct Python check prints `sum: 303.0 | count: 41`.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11545,7 +11599,7 @@ Expect: PASS.
 - `schemathesis` does NOT appear in the `all` section of `pyproject.toml`.
 - `tests/test_install_all_excludes_schemathesis.py` passes (confirms `schemathesis` excluded from `[all]`).
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11576,7 +11630,7 @@ Expect: PASS.
 - No `Strict-Transport-Security` header on `/probe` responses.
 - `docker-compose.yml` contains `profiles: ["fuzz-target"]` and `ports: "20100:8000"`.
 
-**Result:** [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11956,7 +12010,7 @@ effort/impact bands, and rollup formula text must be present and identical in bo
 - HTML and PDF roadmap items both show effort and impact band labels.
 - No section present in HTML is absent from PDF.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP  - [ ] DEFERRED (Playwright environment required)
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP (Playwright environment required)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -16146,7 +16200,7 @@ not-attempted em-dash), matched in HTML/PDF/DOCX reports with a persistent abort
 
 **Automated gate:** `python -m pytest tests/test_report_render_otics_columns.py -v` → 6 PASSED.
 
-**Result:** - [x] PASS (BACnet)  - [x] PASS (Modbus)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (BACnet; Modbus)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-07-31 (BACnet); 2026-08-03 (Modbus)  **Tester:** automated (pytest — Phase 141 Plan 06) + human (visual, checkpoint)
 **Notes:** OTICS-05, D-12, D-13. Human approved the 2026-07-31 checkpoint scoped to BACnet only: the
 dashboard was verified live showing a purple "identified" BACnet badge for `127.0.0.1` sourced from
@@ -16182,7 +16236,7 @@ ever tripping their own crash/hang detection.
 
 **Automated gate:** N/A — this UAT is inherently live/manual (real Docker + real network traffic).
 
-**Result:** - [x] PASS (BACnet)  - [x] PASS (Modbus)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (BACnet; Modbus)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-07-31 (BACnet); 2026-08-03 (Modbus)  **Tester:** human (live, `chaoslab-otics-bacnet-1`/`chaoslab-otics-modbus-1`)
 **Notes:** OTICS-04, D-10. BACnet reproduced live 5/5 clean identifications
 (`vendor=5, model=FX16, firmware=9.0.1`) after fixing two real bugs (UAT-141-03) plus a chaos-lab
@@ -16372,126 +16426,6 @@ echo) was verified; runtime behavior on a real Windows Actions runner was not ex
 branch/tag and inspect the live log to close this row.
 
 
-### UAT-144-01: Chunked discovery — host-count reject gates removed (DISC-01) — Automated
-
-**What to test:** A CIDR expanding to more than 1024 hosts is accepted through both entry
-points (`target_expander.expand_targets()` and the dashboard `POST /api/jobs` endpoint) instead
-of being rejected with a `ValueError`/HTTP 422, while the trust-boundary gates
-(`is_target_trusted()`/`allow_internal_targets`) remain fully enforced.
-
-**Steps:**
-1. Run `pytest tests/test_extras_concurrency_expander.py -q` — confirm the oversized-CIDR test
-   asserts acceptance (not `pytest.raises(ValueError, match="refusing to scan")`), and the new
-   `_expand_and_dedup_hosts`/`_chunked` helper tests all pass.
-2. Run `pytest tests/test_jobs_nmap_scope_cap.py -q` — confirm both previously-422 tests now
-   assert `response.status_code == 201`.
-3. Grep gate: `grep -c "refusing to scan more than" quirk/scanner/target_expander.py` and
-   `grep -c "refuses to scan" quirk/dashboard/api/routes/jobs.py` both return 0; `grep -c
-   "is_target_trusted" quirk/dashboard/api/routes/jobs.py` returns >= 1 (trust gate preserved).
-
-**Pass criteria:**
-- No test in the suite asserts a 422/`ValueError` host-count rejection
-- `_MAX_HOSTS_PER_CIDR = 1024` (target_expander.py) unchanged in name/value — repurposed as chunk
-  size, not a reject ceiling
-- Trust gates and `--nmap-timeout 300` literal in jobs.py are unaffected
-
-**Automated gate:** `pytest -q tests/test_extras_concurrency_expander.py tests/test_jobs_nmap_scope_cap.py` → 33/33 PASSED (Phase 144 Plan 01).
-
-**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-08-03  **Tester:** automated (pytest — Phase 144 Plan 01)
-**Notes:** DISC-01, D-01, D-02, D-05, D-06. See 144-01-SUMMARY.md.
-
----
-
-### UAT-144-02: Sequential per-batch discovery with failure isolation (DISC-02) — Automated
-
-**What to test:** nmap discovery runs as a strictly sequential loop over 1024-host batches; a
-`RuntimeError` from one batch is caught, recorded as an error `CryptoEndpoint`, and does not
-prevent subsequent batches from running; the job still reaches `mark_job_completed` (never
-`mark_job_failed`) and a `stage="discovery"` `ScanCheckpoint` row is written
-(`status="partial"` if any batch failed, else `"completed"`).
-
-**Steps:**
-1. Run `pytest tests/test_nmap_provider.py -k batch -q` — confirm a monkeypatched batch-2
-   failure does not stop batch 3, and the merged results contain batch 1's and batch 3's ports.
-2. Run `pytest tests/test_nmap_provider.py -q` (full file) — confirm no regression, including the
-   `stage="discovery"` checkpoint-row-shape tests.
-3. Grep gate: `grep -n "for batch in _chunked" run_scan.py` and `grep -n "except RuntimeError"
-   run_scan.py` both match inside the discovery block; `grep -c "error_endpoints: List\[CryptoEndpoint\] = \[\]" run_scan.py` returns 1 (relocated, not duplicated).
-
-**Pass criteria:**
-- The `try/except RuntimeError` wraps only the single `run_nmap_discovery()` call inside the
-  loop, not the whole loop (batch N failing must not skip batch N+1)
-- `quirk/models.py` `ScanCheckpoint` docstring lists `discovery` among stage values (doc-only)
-- Full suite green: no cross-stage regression from the `error_endpoints` relocation
-
-**Automated gate:** `pytest -q tests/test_extras_concurrency_expander.py tests/test_nmap_provider.py tests/test_jobs_nmap_scope_cap.py` → 54/54 PASSED (Phase 144 Plan 02).
-
-**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-08-03  **Tester:** automated (pytest — Phase 144 Plan 02)
-**Notes:** DISC-02, D-03, D-04. See 144-02-SUMMARY.md. 102 pre-existing full-suite failures in
-unrelated modules (version-string drift, notify/webhook/servicenow/jwt/sensor tests) confirmed
-not caused by this plan — see deferred-items.md.
-
----
-
-### UAT-144-03: Live end-to-end chunked discovery against a real >1024-host range (DISC-01, DISC-02) — Human (live)
-
-**What to test:** The composed DISC-01/DISC-02 path against a real >1024-host range through
-`run_scan.py`'s actual nmap discovery block (CLI-equivalent of the dashboard job-creation
-path), with real `--job-id`/`--db-path` job tracking — not a mock.
-
-**Steps performed (2026-08-09/10, live session):**
-1. Submitted `172.18.0.0/21` (containing CIDR over the chaos lab's Docker bridge subnet) via
-   `run_scan.py --discovery nmap --allow-internal-targets`. Result: accepted (no 422), ran two
-   sequential 1024/1022-host batches; batch 1 timed out and failed, batch 2 still ran to
-   completion — confirming failure isolation live. Root cause of the timeout: `172.18.x`
-   container IPs are not routable from the macOS Docker Desktop host at all (independently
-   confirmed via `nc`/routing table inspection) — an environment constraint, not a code defect.
-2. Switched target to `127.0.0.0/22` + `127.0.4.0/28` (loopback range containing `127.0.0.1`,
-   where the chaos lab's real published ports live), with a real `ScanJob` row for
-   `--job-id`/`--db-path` tracking. Result: both batches completed cleanly within the timeout
-   budget (no `RuntimeError`), job reached `completed` (`scan_jobs.status`), and the
-   `discovery`-stage `ScanCheckpoint` was written correctly (`status=completed`,
-   `partial_failure=0`) — but `endpoint_count=0`: nmap reported zero open ports, including on
-   `127.0.0.1`, which independently had 5 real open ports at scan time (`curl` + `docker ps`
-   confirmed).
-3. Root-caused the zero-hosts result: isolated `nmap` run against `127.0.0.1` alone (identical
-   flags) found all 5 open ports correctly in 0.02s. Inspecting the raw `-oX` XML from the full
-   batch run showed `127.0.0.1`'s host entry had no `<ports>` block at all — the identical empty
-   shape as every confirmed-dead host in the same scan. This rules out a QUIRK XML-parsing bug
-   (nothing was in the XML to lose) and points to nmap's own adaptive RTT/timing-estimation
-   engine suppressing port probing across an entire scan group when ~99.9% of the group is
-   silent/unresponsive — a documented category of nmap behavior, not representative of a real
-   routed network (where dead hosts return RST/ICMP-unreachable rather than staying silent).
-
-**Pass criteria:**
-- [x] `>1024`-host range accepted, not rejected with 422
-- [x] Discovery runs in strict sequential batches (verified via nmap command logs + process
-  inspection)
-- [x] A failed batch does not stop subsequent batches (batch 1 failed → batch 2 still ran)
-- [x] Job reaches `completed`, never `failed`
-- [x] `discovery`-stage `ScanCheckpoint` written correctly
-- [ ] Real hosts from the scanned range appear in persisted results — **not achieved**; see
-  root-cause above. Accepted as an environment-specific, fully root-caused, non-blocking finding
-  per explicit human sign-off (2026-08-10) rather than routed to gap-closure rework of this
-  phase's code.
-
-**Automated gate:** N/A — this UAT is inherently a live, human-verify checkpoint
-(`checkpoint:human-verify`, blocking gate per 144-03-PLAN.md). See 144-03-SUMMARY.md for full
-verification-environment detail and command transcripts.
-
-**Result:** - [x] PASS (with documented caveat)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-08-10  **Tester:** Digs (live session, interactive troubleshooting)
-**Notes:** DISC-01, DISC-02. Candidate follow-up (not a Phase 144 blocker, own review/tradeoffs
-required): add timing-template/RTT-bound tuning (e.g. `-T4`, `--initial-rtt-timeout`,
-`--max-rtt-timeout`) to `quirk/discovery/nmap_provider.py`'s hardcoded nmap args, and/or
-re-verify this exact scenario against a real routed network segment (not loopback aliases) where
-dead hosts return RST/ICMP-unreachable instead of staying silent. Logged in this phase's
-deferred-items.md.
-
----
-
 ## Series 144: Chunked Discovery Core (Phase 144 — v5.11)
 
 **Last Updated:** 2026-08-11
@@ -16617,7 +16551,7 @@ isolation cannot show that the gates, the loop, the checkpoint, and the job life
 **Automated gate:** N/A — inherently a live end-to-end checkpoint. Plan 144-03 made this a
 blocking gate precisely because the unit tests mock the nmap subprocess.
 
-**Result:** - [x] PASS (with documented override)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (with documented override; documented caveat)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-08-10  **Tester:** human (live, two attempts — Digs)
 **Notes:** DISC-01, DISC-02. **Verified live, twice:** the >1024-host CIDR was accepted (no
 422/reject), discovery ran in strictly sequential 1024+remainder batches, the job reached
@@ -19635,7 +19569,7 @@ all (no Network.framework).
 - Zero fatal signals anywhere in a full unfiltered macOS `python -m pytest` run.
 - The remaining assertion-failure set is a strict subset of the pre-existing known baseline.
 
-**Result:** - [x] PASS (suite-wide) — [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (suite-wide)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-08-27  **Tester:** Automated (166-05 plan execution, local macOS run,
 `python -m pytest`, 310.76s, `1 failed, 3609 passed, 38 skipped, 61 deselected, 68 xfailed,
 4 xpassed`)
@@ -19663,3 +19597,98 @@ in `166-05-SUMMARY.md` and `166-VALIDATION.md`.
 documented full-suite gap, which 166-05 closed the same day via a user-approved scope amendment.
 No version bump occurred in this phase — the `UAT-1-02` version-string pass criteria are
 unaffected.
+
+## Series 167: UAT Format Unification & Deduplication (Phase 167 — v5.16)
+
+**Last Updated:** 2026-08-27
+
+### UAT-167-01: Single canonical result format across the gating document (UATREC-01)
+
+**What to test:** `docs/UAT-SERIES.md` uses exactly one `**Result:**` block format throughout —
+`- [ ] PASS  - [ ] FAIL  - [ ] SKIP`, with an optional inline ` (annotation)` suffix on a checked
+box preserving provenance (e.g. `- [x] PASS (automated)`). The 12 pre-migration variant spellings
+(bare `**Result:** PASS`, two-box slash form, four-box DEFERRED form, double-checked BACnet/Modbus
+lines, etc.) were all canonicalized by `scripts/uat_series_normalize.py`.
+
+**Steps:**
+1. Run `python scripts/uat_series_normalize.py audit docs/UAT-SERIES.md`.
+2. Confirm `is_canonical: True` in the audit output.
+3. Run `python -m pytest tests/test_uat_series_format.py::test_single_result_format -q` (or the
+   equivalent format-invariant test in that file).
+
+**Pass criteria:**
+- `audit()` reports `is_canonical: True`.
+- The format-invariant test passes.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (167-01/167-02 plan execution)
+**Notes:** Closes the format half of UATREC-01. 663/663 result lines match the canonical shape
+(100%). Zero bare `**Result:** PASS` lines, zero two-box slash-form lines remain.
+
+---
+
+### UAT-167-02: Case-heading / result-block count parity by construction (UATREC-01)
+
+**What to test:** The count of `### UAT-` case headings equals the count of `**Result:**` blocks
+— not by coincidence, but by construction: the 23 previously headingless `**ID:**`-only case
+declarations were promoted to real `### UAT-` headings (closing the heading side of the gap), and
+the zero-result cases exposed by that promotion received empty canonical result blocks (closing
+the result side).
+
+**Steps:**
+1. Run `grep -cE '^### *UAT-' docs/UAT-SERIES.md`.
+2. Run `grep -c '^\*\*Result:\*\*' docs/UAT-SERIES.md`.
+3. Confirm the two counts are equal.
+4. Run `python -m pytest tests/test_uat_series_format.py::test_heading_result_parity -q` (or the
+   equivalent parity test).
+
+**Pass criteria:**
+- Heading count == result-block count.
+- The parity-invariant test passes, asserting equality between two freshly-computed values (no
+  hardcoded total).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (167-01/167-02 plan execution)
+**Notes:** Closes the parity half of UATREC-01. Achieved 663 == 663, closing the pre-migration
+642-heading/650-result-block mismatch (642 headings, 650 result blocks, 665 true cases once the
+23 headingless declarations are counted).
+
+---
+
+### UAT-167-03: Duplicate case IDs eliminated; 5→3 count corrected (UATREC-02)
+
+**What to test:** Every `### UAT-` case ID in the document is unique. The true pre-migration
+duplicate count was 3 (`UAT-144-01`, `UAT-144-02`, `UAT-144-03`), not the previously reported 5
+— the "5" figure was produced by a regex (`grep -o '^### UAT-[0-9]*-[0-9]*'`) that truncates
+three-segment IDs, manufacturing phantom `UAT-89-02`/`UAT-89-03` collisions between four distinct,
+non-colliding headings. The misfiled `UAT-144` Block A (filed under the wrong `## UAT-143 Series`
+header) was deleted, retaining Block B with Block A's caveat wording merged forward into
+`UAT-144-03`.
+
+**Steps:**
+1. Run `grep -oE '^### *UAT-[^ :]+' docs/UAT-SERIES.md | sed 's/:$//' | sort | uniq -d`.
+2. Confirm zero output (no duplicate exact-match case IDs).
+3. Run `python -m pytest tests/test_uat_series_format.py::test_no_duplicate_case_ids -q` (or the
+   equivalent uniqueness test).
+4. Confirm `## Series 144: Chunked Discovery Core (Phase 144 — v5.11)` contains exactly one set
+   of `UAT-144-01/02/03`, and `UAT-144-03`'s result mentions both "documented override" and
+   "documented caveat".
+
+**Pass criteria:**
+- The exact-ID duplicate grep produces no output.
+- The uniqueness-invariant test passes.
+- Only one `UAT-144-01/02/03` block remains, under Series 144.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (167-01 plan execution)
+**Notes:** Closes UATREC-02. Corrects `.planning/REQUIREMENTS.md` UATREC-02 and
+`.planning/ROADMAP.md` Phase 167 criterion 2 from "5 duplicates" to the true figure of 3, with
+the truncating-regex cause named so Phases 168-170 do not re-inherit the error. See the dated
+correction note in `docs/reviews/2026-08-24-functional-review-findings.md`.
+
+---
+
+**Series 167 disposition.** UATREC-01 and UATREC-02 both PASS. **No dispositions were recorded
+by this phase** — all 23 newly-promoted headings and pre-existing zero-result cases carry empty,
+all-unchecked canonical result blocks. Recording actual PASS/FAIL/SKIP outcomes for the ~325
+still-undispositioned cases is UATREC-03, out of scope for Phase 167 (see Phases 168/169).
