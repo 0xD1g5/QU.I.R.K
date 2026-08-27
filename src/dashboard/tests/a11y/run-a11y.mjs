@@ -157,6 +157,10 @@ for (const { slug, path: routePath } of ROUTES) {
   } catch (err) {
     console.error(`[a11y] ERROR: Navigation to ${url} failed: ${err.message}`)
     exitCode = 1
+    // Record the route so it appears in the summary table. Without this the
+    // run still fails (exitCode is 1), but the route vanishes from the summary
+    // and a maintainer has to scroll the raw log to find which one broke.
+    summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'NAV_ERR' })
     await page.close()
     continue
   }
