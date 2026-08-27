@@ -4,14 +4,14 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: verifying
 stopped_at: Completed 166-04-PLAN.md
-last_updated: "2026-08-27T15:38:49.406Z"
+last_updated: "2026-08-27T16:16:06.435Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 16
-  completed_plans: 15
-  percent: 25
+  completed_phases: 3
+  total_plans: 17
+  completed_plans: 17
+  percent: 38
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 166 (Gate Robustness) — EXECUTING
-Plan: 4 of 4
+Plan: 5 of 5
 Status: Phase complete — ready for verification
 Last activity: 2026-08-27
 
@@ -37,7 +37,7 @@ Last activity: 2026-08-27
 |-------|------|--------------|------|--------|
 | 164 | First-Run Correctness | FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03 | None (first, deliberately led per milestone risk note) | Not started |
 | 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
-| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 4/4 plans done — GATE-01/GATE-02 verified clean, GATE-03 verified within its declared 3-file scope; see 166-04-SUMMARY.md for the honest full-suite scope gap; pending /gsd:verify-phase before phase close) |
+| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 5/5 plans done — GATE-01/GATE-02/GATE-03 all verified clean; 166-05 closed GATE-03's full-suite scope gap 166-04 had honestly flagged, zero fatal signals suite-wide; see 166-05-SUMMARY.md; pending /gsd:verify-phase before phase close) |
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | Not started |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Not started |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Not started |
@@ -229,6 +229,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 166 P02 | 25min | 3 tasks | 4 files |
 | Phase 166 P03 | 45 | 3 tasks | 5 files |
 | Phase 166 P04 | 20min | 2 tasks | 2 files |
+| Phase 166 P05 | 75min | 5 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -495,7 +496,7 @@ v5.16 open (2026-08-26)**:
 | quick_task | 260611-g0b-merge-healthcare-vertical-branch-into-ma | missing — known false positive; genuinely complete (PLAN + SUMMARY + merge commit all exist), misreported by the audit scanner at every close since v5.10. Do not re-investigate. |
 | uat_finding (163) | Resuming an already-complete scan re-appends `discovery`/`inventory`/`reports` checkpoint rows instead of short-circuiting | **promoted into v5.16** — pre-existing stage-level resume behaviour; batch rows stay correct. Scoped as part of the Phase 163 UAT tail. |
 | uat_finding (163) | `--list-resumable` Target column blank for `--targets-file` runs | **promoted into v5.16** — recovers the target by joining `scan_jobs`, which only has a row when `--job-id` is passed. Cosmetic but user-facing. |
-| test_isolation | `test_verify_phase_gates.py::test_hook_integration_green_path_commit_succeeds` and `..._red_path_commit_rejected_on_missing_verification` | **NOT A DEFECT — re-triaged 2026-08-26.** The "cheap reproducer for RVW-017" framing is stale: RVW-017 (shared in-memory DB across 31 test files) was fixed in `034da44`. Phase 162's VERIFICATION.md independently established these two as **macOS-only subprocess SIGSEGV** — a child killed by a signal produces no stderr, so asserting on it is a false failure, and the same root cause hit two `scheduler_cmd` tests (it is not git-specific). Linux CI takes no such branch and the Full Suite is green. No v5.16 work scoped against them. |
+| test_isolation | `test_verify_phase_gates.py::test_hook_integration_green_path_commit_succeeds` and `..._red_path_commit_rejected_on_missing_verification` | **FIXED 2026-08-27 (Phase 166-05, GATE-03).** Previously triaged as macOS-only subprocess SIGSEGV, not scoped for v5.16 work. Phase 166's GATE-03 scope amendment closed the underlying fork-crash root cause suite-wide (`164-FINDING-fork-crash.md`: `close_fds=False` + no `cwd`, plus a second discovered condition — `argv[0]` must not be a bare PATH-lookup name). Both tests now pass cleanly with zero crashes in a full unfiltered macOS run. |
 
 Added at the v5.16 open (2026-08-26):
 
@@ -572,7 +573,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T15:38:49.400Z
+Last session: 2026-08-27T16:16:06.421Z
 Stopped at: Completed 166-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

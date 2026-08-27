@@ -1,15 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-27 (v5.16 Phase 166 close — Gate Robustness: UAT-166-01..03 added.
-GATE-01 (E2E smoke budget) and GATE-02 (UAT tooling XML hardening) PASS cleanly. GATE-03
-(macOS fork-crash fix) PASSES within its declared 3-file scope
-(`test_target_cli.py`/`test_compliance_cli.py`/`test_db_migrate_cli.py`) but a full unfiltered
-`python -m pytest` on macOS surfaces the same pre-existing fork-after-Network.framework
-SIGSEGV pattern in 6 files outside that scope — an honest, documented gap, not a regression,
-tracked for a future cleanup phase. The E2E smoke gate now selects the `common` port scope
-(not `top1000`) with a 180s budget and a logged wall-clock (measured 3.1s locally). Closes
-GATE-01, GATE-02; GATE-03 closed within its declared scope. See Series 166.
+**Last Updated:** 2026-08-27 (v5.16 Phase 166-05 — Gate Robustness scope amendment: GATE-03
+closed suite-wide. UAT-166-03 updated to reflect a full unfiltered macOS `python -m pytest`
+with ZERO fatal signals, up from the honest 3-file-scoped-only close 166-03/166-04 had
+recorded. GATE-01 (E2E smoke budget) and GATE-02 (UAT tooling XML hardening) remain PASS
+cleanly, unchanged. The E2E smoke gate selects the `common` port scope (not `top1000`) with
+a 180s budget and a logged wall-clock (measured 3.1s locally). Closes GATE-01, GATE-02,
+GATE-03 — all three, suite-wide. See Series 166.
 Earlier: 2026-08-27 (v5.16 Phase 165 close — Accessibility Remediation: UAT-165-01..03
 added, ALL PASS. Closes A11Y-01..A11Y-05. The a11y baseline mechanism moved from a
 selector-keyed snapshot to a per-route, per-rule count budget with mandatory written
@@ -19610,54 +19608,58 @@ mentions. Full evidence in `166-02-SUMMARY.md`.
 
 ---
 
-### UAT-166-03: A full unfiltered macOS `python -m pytest` shows zero fatal signals in the three migrated CLI-runner files, but the same pre-existing crash pattern persists in files outside this phase's declared scope (GATE-03) — Automated + Human
+### UAT-166-03: A full unfiltered macOS `python -m pytest` shows zero fatal signals suite-wide (GATE-03) — Automated + Human
 
-**What to test:** The shared `tests/cli_helpers.py::run_cli()` helper (`close_fds=False`, never
-passing `cwd`) fixes the macOS fork-after-Network.framework `SIGSEGV` documented in
-`164-FINDING-fork-crash.md` for the three CLI-runner test files this phase's scope covers
-(`tests/test_target_cli.py`, `tests/test_compliance_cli.py`, `tests/test_db_migrate_cli.py`).
+**What to test:** The shared `tests/cli_helpers.py::run_fork_safe()` primitive (`close_fds=False`,
+never passing `cwd`, and — per 166-05's mid-plan finding — a resolvable, non-PATH-lookup
+`argv[0]`) fixes the macOS fork-after-Network.framework `SIGSEGV` documented in
+`164-FINDING-fork-crash.md` suite-wide, across all ten crash-exposed test files: the three
+CLI-runner files 166-03 migrated (`tests/test_target_cli.py`, `tests/test_compliance_cli.py`,
+`tests/test_db_migrate_cli.py`), the six 166-05 migrated (`tests/test_lab_profile_certs.py`,
+`tests/test_qramm_staleness.py`, `tests/test_scheduler_dispatch_profile.py`,
+`tests/test_sensor_windows_smoke.py`, `tests/test_vault_connector.py`,
+`tests/test_verify_phase_gates.py`), plus `tests/conftest.py` (found during 166-05's proof run).
 A full, unfiltered `python -m pytest` run is the only way to observe this — the crash is
 ordering-dependent and invisible to filtered/targeted runs, and Linux CI cannot reproduce it at
 all (no Network.framework).
 
 **Steps:**
 1. From the repo root, run `python -m pytest` with no filters (`-k`, file args, or `-x`).
-2. Grep the captured output for `SIGSEGV`, `Fatal Python error`, `Aborted`, `Segmentation fault`.
-3. Confirm the three migrated files show zero occurrences of any of the above.
-4. Separately record any occurrences in files *outside* the three-file scope.
+2. Grep the captured output for `SIGSEGV`, `Fatal Python error`, `Aborted`, `Segmentation fault`,
+   `died with`.
+3. Confirm zero occurrences of any of the above across the entire suite.
+4. Confirm the assertion-failure set (non-crash `FAILED` lines) is a subset of the known
+   baseline (`tests/test_skip_registry.py::test_no_unregistered_skips`).
 
-**Pass criteria (as scoped by 166-CONTEXT.md):**
-- `tests/test_target_cli.py`, `tests/test_compliance_cli.py`, `tests/test_db_migrate_cli.py`
-  show zero fatal signals and their previously-crashing cases now pass.
-- Any remaining fatal signals elsewhere in the suite are named explicitly and NOT folded into
-  the "known macOS-only failures" bucket.
+**Pass criteria (phase-goal level, per 166-05's scope amendment):**
+- Zero fatal signals anywhere in a full unfiltered macOS `python -m pytest` run.
+- The remaining assertion-failure set is a strict subset of the pre-existing known baseline.
 
-**Result:** - [x] PASS (scoped) — [x] KNOWN GAP (whole-suite) — [ ] FAIL  - [ ] SKIP
-**Date:** 2026-08-27  **Tester:** Automated (166-04 plan execution, local macOS run,
-`python -m pytest`, 309.48s, `3 failed, 3600 passed, 42 skipped, 61 deselected, 74 xfailed,
-1 xpassed`)
-**Notes:** GATE-03. The scoped fix is proven: `test_target_cli.py` (9/9), `test_compliance_cli.py`
-(3/3), and `test_db_migrate_cli.py` (5 pass / 3 pre-existing unrelated xfail) all show **zero**
-fatal signals across the full unfiltered run. **Honest gap, not a regression:** the identical
-crash pattern (`Fatal Python error: Segmentation fault` inside a `subprocess.run(...)` call)
-reproduced 14 times across 6 files this phase never touched — `tests/test_lab_profile_certs.py`,
-`tests/test_qramm_staleness.py`, `tests/test_scheduler_dispatch_profile.py`,
-`tests/test_sensor_windows_smoke.py`, `tests/test_vault_connector.py`, and
-`tests/test_verify_phase_gates.py`. `166-CONTEXT.md` explicitly scoped GATE-03 to the three
-CLI-runner files ("Twenty test files call subprocess.run... the rest are not in scope for this
-phase") and deferred a broader migration as a separate cleanup. This run reclassifies
-`test_verify_phase_gates.py`'s two previously-recorded "macOS-only assertion failures" as
-actual fatal-signal crashes surfaced as `CalledProcessError` text — a materially different,
-more serious finding, not folded into the accepted-assertion-failure baseline per this phase's
-explicit constraint. See `166-04-SUMMARY.md` and `166-VALIDATION.md`'s red row for full
-evidence and file-by-file crash counts. The 3 assertion-level `FAILED` lines in this run were
-`tests/test_skip_registry.py::test_no_unregistered_skips` (pre-existing, unrelated) and the two
-`test_verify_phase_gates.py` cases (now known to be crash-caused, not ordinary assertions).
+**Result:** - [x] PASS (suite-wide) — [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-27  **Tester:** Automated (166-05 plan execution, local macOS run,
+`python -m pytest`, 310.76s, `1 failed, 3609 passed, 38 skipped, 61 deselected, 68 xfailed,
+4 xpassed`)
+**Notes:** GATE-03, closed. 166-04's full-suite run had found 14 `Fatal Python error:
+Segmentation fault` + 2 `died with SIGSEGV` occurrences across 6 files outside 166-03's declared
+3-file scope — an honestly-reported gap, promoted the same day into 166-05's scope by user
+decision. 166-05 migrated all six plus a seventh, previously-unknown crash source
+(`tests/conftest.py`'s `_patch_sha1_signing` shim, which shelled out to a bare
+`subprocess.run(["openssl", ...])`) onto the shared `run_fork_safe()` primitive. A first
+full-suite attempt after that migration still showed 3 fatal signals, tracing to a second,
+previously-undocumented `posix_spawn` precondition: `argv[0]` must contain a path separator, so
+a bare `"git"`/`"openssl"` resolved via `PATH` lookup defeats `posix_spawn` selection
+independently of `close_fds`/`cwd` correctness. Fixing that (resolving both executables via
+`shutil.which()`, plus a defensive `ValueError` in `run_fork_safe()` for future regressions)
+produced a second full-suite run with **zero** fatal signals of any kind. The sole remaining
+`FAILED` line, `tests/test_skip_registry.py::test_no_unregistered_skips`, is the pre-existing,
+unrelated, out-of-scope known baseline. `test_verify_phase_gates.py`'s two previously-recorded
+"macOS-only assertion failures" are now confirmed fixed, not merely reclassified. Full evidence
+in `166-05-SUMMARY.md` and `166-VALIDATION.md`.
 
 ---
 
-**Series 166 disposition.** GATE-01 and GATE-02 PASS cleanly. GATE-03 PASSES within its
-declared 3-file scope but the full-suite run surfaces the same pre-existing crash pattern in 6
-files outside that scope — an honest, documented gap rather than a closed gate, tracked for a
-future cleanup phase. No version bump occurred in this phase — the `UAT-1-02` version-string
-pass criteria are unaffected.
+**Series 166 disposition.** GATE-01, GATE-02, and GATE-03 all PASS cleanly and suite-wide as of
+166-05 (2026-08-27). GATE-03's initial 3-file-scoped close (166-03/166-04) had an honestly-
+documented full-suite gap, which 166-05 closed the same day via a user-approved scope amendment.
+No version bump occurred in this phase — the `UAT-1-02` version-string pass criteria are
+unaffected.
