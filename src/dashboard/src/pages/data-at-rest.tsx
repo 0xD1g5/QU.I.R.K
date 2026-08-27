@@ -12,7 +12,7 @@ import {
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
-  HIGH:     "bg-[hsl(24_95%_53%)] text-white",
+  HIGH:     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM:   "bg-[hsl(38_92%_50%)] text-black",
   LOW:      "bg-[hsl(213_94%_68%)] text-black",
   INFO:     "bg-[hsl(240_5%_46%)] text-white",
@@ -90,12 +90,12 @@ function DatabaseTable({ findings }: { findings: DarFinding[] }) {
                 <TableCell className="text-sm">{f.title}</TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.encryption_at_rest}
-                    trueLabel="ENCRYPTED" trueClass="bg-[hsl(142_71%_45%)] text-white"
+                    trueLabel="ENCRYPTED" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
                     falseLabel="UNENCRYPTED" falseClass="bg-[hsl(0_72%_51%)] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.tls_in_transit}
-                    trueLabel="TLS ON" trueClass="bg-[hsl(142_71%_45%)] text-white"
+                    trueLabel="TLS ON" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
                     falseLabel="TLS OFF" falseClass="bg-[hsl(0_72%_51%)] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>
@@ -235,7 +235,7 @@ function VaultTable({ findings }: { findings: DarFinding[] }) {
                 <TableCell className="text-sm">{nullDash(f.seal_type)}</TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.auto_unseal}
-                    trueLabel="YES" trueClass="bg-[hsl(142_71%_45%)] text-white"
+                    trueLabel="YES" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
                     falseLabel="NO" falseClass="bg-[hsl(240_5%_46%)] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>

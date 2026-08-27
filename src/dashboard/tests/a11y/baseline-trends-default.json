@@ -1,34 +1,5 @@
 {
-  "violations": [
-    {
-      "id": "color-contrast",
-      "nodes": [
-        {
-          "target": [
-            ".items-baseline > p"
-          ]
-        },
-        {
-          "target": [
-            "section > p"
-          ]
-        },
-        {
-          "target": [
-            ".gap-4.pt-0.p-6 > span"
-          ]
-        },
-        {
-          "target": [
-            ".bg-\\[hsl\\(var\\(--quantum-safe\\)\\)\\]"
-          ]
-        },
-        {
-          "target": [
-            ".max-w-\\[1200px\\] > .space-y-4 > p"
-          ]
-        }
-      ]
-    }
-  ]
+  "route": "trends",
+  "generated": "2026-08-27T12:11:08.095Z",
+  "entries": []
 }

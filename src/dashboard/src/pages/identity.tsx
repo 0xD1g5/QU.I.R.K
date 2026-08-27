@@ -24,7 +24,7 @@ import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
-  HIGH: "bg-[hsl(24_95%_53%)] text-white",
+  HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM: "bg-[hsl(38_92%_50%)] text-black",
   LOW: "bg-[hsl(213_94%_68%)] text-black",
   INFO: "bg-[hsl(240_5%_46%)] text-white",
@@ -47,8 +47,8 @@ function getProtocolStatus(findings: IdentityFinding[], protocol: string) {
 
 const STATUS_BADGE_STYLES: Record<string, string> = {
   "Critical": "bg-[hsl(0_72%_51%)] text-white",
-  "At Risk": "bg-[hsl(24_95%_53%)] text-white",
-  "Clean": "bg-[hsl(142_71%_45%)] text-white",
+  "At Risk": "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
+  "Clean": "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
   "Not Scanned": "bg-[hsl(240_5%_46%)] text-white",
 }
 

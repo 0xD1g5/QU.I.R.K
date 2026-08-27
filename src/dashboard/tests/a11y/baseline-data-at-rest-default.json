@@ -1,128 +1,19 @@
 {
-  "violations": [
+  "route": "data-at-rest",
+  "generated": "2026-08-27T12:11:03.642Z",
+  "entries": [
     {
-      "id": "color-contrast",
-      "nodes": [
-        {
-          "target": [
-            ".flex-col.gap-2.flex > span"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(1)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(2)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(3)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(4)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(5)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(6)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(7)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(8)"
-          ]
-        },
-        {
-          "target": [
-            ".bg-\\[hsl\\(24_95\\%_53\\%\\)\\]"
-          ]
-        },
-        {
-          "target": [
-            ".bg-\\[hsl\\(142_71\\%_45\\%\\)\\]"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(1)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(2)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(3)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(4)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(5)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(6)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(7)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full > table > thead > .hover\\:bg-muted\\/50 > th:nth-child(8)"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-k8s-heading\"] > .rounded-xl.text-card-foreground[role=\"status\"] > .p-6.py-8 > p"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-vault-heading\"] > .rounded-xl.text-card-foreground[role=\"status\"] > .p-6.py-8 > p"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "scrollable-region-focusable",
-      "nodes": [
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-db-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full"
-          ]
-        },
-        {
-          "target": [
-            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full"
-          ]
-        }
+      "rule": "scrollable-region-focusable",
+      "count": 1,
+      "impact": "serious",
+      "wcag": [
+        "2.1.1",
+        "2.1.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/scrollable-region-focusable?application=axe-puppeteer",
+      "justification": "",
+      "samples": [
+        "<div class=\"relative w-full overflow-auto\">"
       ]
     }
   ]

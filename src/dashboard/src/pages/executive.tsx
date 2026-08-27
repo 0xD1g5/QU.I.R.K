@@ -232,7 +232,7 @@ export function ExecutivePage() {
           <Button
             onClick={handleExportPdf}
             disabled={pdfExporting}
-            className="bg-accent text-white hover:bg-accent/90"
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
             title="Export PDF — requires playwright install chromium"
           >
             {pdfExporting ? (

@@ -37,7 +37,7 @@ type TimelineRow = {
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
-  HIGH: "bg-[hsl(24_95%_53%)] text-white",
+  HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM: "bg-[hsl(38_92%_50%)] text-black",
   LOW: "bg-[hsl(213_94%_68%)] text-black",
   INFO: "bg-[hsl(240_5%_46%)] text-white",
@@ -46,7 +46,7 @@ const SEVERITY_STYLES: Record<string, string> = {
 function ScoreDeltaBadge({ delta }: { delta: number | null }) {
   if (delta === null) return <Badge variant="outline">— First scan</Badge>
   if (delta > 0) return (
-    <Badge className="bg-[hsl(var(--quantum-safe))] text-white">
+    <Badge className="bg-[hsl(var(--quantum-safe))] text-[hsl(var(--quantum-safe-foreground))]">
       ▲ +{delta} pts
     </Badge>
   )

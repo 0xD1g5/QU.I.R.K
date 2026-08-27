@@ -32,7 +32,7 @@ function SensorStatusBadge({ status }: { status: SensorRegistryItem["status"] })
   if (status === "current") {
     return (
       <Badge
-        className="bg-[hsl(var(--quantum-safe))] text-white text-xs"
+        className="bg-[hsl(var(--quantum-safe))] text-[hsl(var(--quantum-safe-foreground))] text-xs"
         aria-label="status: Current"
       >
         Current

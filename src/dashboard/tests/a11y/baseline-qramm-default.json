@@ -1,24 +1,5 @@
 {
-  "violations": [
-    {
-      "id": "color-contrast",
-      "nodes": [
-        {
-          "target": [
-            ".pt-0 > p:nth-child(1)"
-          ]
-        },
-        {
-          "target": [
-            "p:nth-child(2)"
-          ]
-        },
-        {
-          "target": [
-            ".gap-3 > .bg-primary.text-primary-foreground.hover\\:bg-primary\\/90"
-          ]
-        }
-      ]
-    }
-  ]
+  "route": "qramm",
+  "generated": "2026-08-27T12:11:09.288Z",
+  "entries": []
 }

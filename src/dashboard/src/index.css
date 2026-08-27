@@ -95,6 +95,9 @@
     --risk-badge-high-foreground: 220 22% 12%;  /* #11141c */
     --qs-node-safe: 142 71% 45%;                /* #21c45d */
     --qs-node-safe-foreground: 220 22% 12%;     /* #11141c */
+    /* Phase 165 Wave 5: --quantum-safe badge text was hardcoded white (2.97:1, fails AA);
+       dark foreground matches the D-08/D-09 pattern (6.20:1). Brand hue unchanged. */
+    --quantum-safe-foreground: 220 22% 12%;     /* #11141c */
   }
 
   /* Light mode override */
