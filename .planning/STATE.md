@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: verifying
-stopped_at: Completed 166-04-PLAN.md
+stopped_at: Phase 166 complete (5 plans, VERIFICATION passed) — ready to discuss Phase 167
 last_updated: "2026-08-27T16:16:06.435Z"
 last_activity: 2026-08-27
 progress:
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Phase: 166 (Gate Robustness) — EXECUTING
+Phase: 166 (Gate Robustness) — COMPLETE
 Plan: 5 of 5
-Status: Phase complete — ready for verification
+Status: Phase complete — VERIFICATION passed 3/3 (2026-08-27)
 Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -37,7 +37,7 @@ Last activity: 2026-08-27
 |-------|------|--------------|------|--------|
 | 164 | First-Run Correctness | FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03 | None (first, deliberately led per milestone risk note) | Not started |
 | 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
-| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 5/5 plans done — GATE-01/GATE-02/GATE-03 all verified clean; 166-05 closed GATE-03's full-suite scope gap 166-04 had honestly flagged, zero fatal signals suite-wide; see 166-05-SUMMARY.md; pending /gsd:verify-phase before phase close) |
+| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 5/5 plans done — GATE-01/GATE-02/GATE-03 all verified clean; 166-05 closed GATE-03's full-suite scope gap 166-04 had honestly flagged, zero fatal signals suite-wide; see 166-05-SUMMARY.md) — ✅ Complete: VERIFICATION passed 3/3 (2026-08-27), e2e:smoke independently re-run at 3.1s vs 180s budget, full unfiltered macOS pytest independently re-run with zero fatal signals (was 14 across 6 files) — ✅ VERIFICATION passed 3/3 (2026-08-27); e2e:smoke independently re-run at 3.1s vs 180s budget; full unfiltered macOS pytest independently re-run with ZERO fatal signals (was 14 across 6 files) |
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | Not started |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Not started |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Not started |

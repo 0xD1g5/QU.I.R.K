@@ -64,7 +64,7 @@ milestone — no urgent insertions anticipated.
 
 - [x] **Phase 164: First-Run Correctness** - A new user following the dashboard's empty-state instruction runs a command that actually exists and succeeds, and an unparseable target argument fails with a coded error instead of a traceback. (completed 2026-08-26)
 - [x] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift. (completed 2026-08-27)
-- [ ] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
+- [x] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
 - [ ] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique.
 - [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the ~325 unrecorded UAT cases each carry a recorded result or an explicit deferral naming a specific substitute test.
 - [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases.
@@ -207,13 +207,14 @@ on ordinary developer hardware, so red stops training people to ignore the suite
      `.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`; the fix requires both
      `close_fds=False` and `cwd=None`, a trade-off (fd leakage into the child) that needs an
      explicit decision. Do not absorb this into the "known macOS-only failures" bucket.
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 - [x] 166-01-PLAN.md — GATE-01: narrow the E2E scan to the `common` port scope, raise the budget to 180s, log scan wall-clock
 - [x] 166-02-PLAN.md — GATE-02: migrate `uat_runner.py` to the hardened lxml chokepoint, add an AST import gate, amend the incorrect requirement premise
 - [x] 166-03-PLAN.md — GATE-03: shared fork-safe `run_cli()` helper, migrate the three CLI-runner test files, add an AST `cwd=` gate
 - [x] 166-04-PLAN.md — Full-suite + E2E verification, UAT-SERIES.md update, Obsidian sync
+- [x] 166-05-PLAN.md — GATE-03 scope amendment (user decision 2026-08-27): generalize the primitive to `run_fork_safe()`, migrate the 6 remaining crash-exposed files, remove the Phase 149-11 xfail markers, strengthen the AST gate to require `close_fds=False`, prove suite-wide zero fatal signals
 
 ### Phase 167: UAT Format Unification & Deduplication
 
