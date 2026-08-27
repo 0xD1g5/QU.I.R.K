@@ -55,6 +55,11 @@ jobs:
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
 
+      - name: Run axe + console sweep (loading fixture)
+        run: npm run a11y:check:loading
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
   e2e-smoke:
     name: E2E Smoke (real server + committed bundle)
     runs-on: ubuntu-latest
