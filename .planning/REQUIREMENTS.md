@@ -64,7 +64,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 
 ### Gate Robustness
 
-- [ ] **GATE-01**: `npm run e2e:smoke` passes on a developer machine with services listening on
+- [x] **GATE-01**: `npm run e2e:smoke` passes on a developer machine with services listening on
   common ports. It currently cannot: the scan takes ~140s against a 120s budget. Fix by raising the
   budget, narrowing the scan scope, or pinning the port scope for E2E — whichever is defensible, but
   the gate must be able to pass.
@@ -203,7 +203,7 @@ open; expected to span multiple phases.*
 | A11Y-03 | Phase 165 | Complete |
 | A11Y-04 | Phase 165 | Complete |
 | A11Y-05 | Phase 165 | Complete |
-| GATE-01 | Phase 166 | Pending |
+| GATE-01 | Phase 166 | Complete |
 | GATE-02 | Phase 166 | Pending |
 | GATE-03 | Phase 166 | Pending |
 | UATREC-01 | Phase 167 | Pending |

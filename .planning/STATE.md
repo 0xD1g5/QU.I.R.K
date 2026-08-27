@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: ready_to_plan
-stopped_at: Phase 165 complete (8/8) — ready to discuss Phase 166
-last_updated: 2026-08-27T14:35:31.725Z
+status: executing
+stopped_at: Phase 165 context gathered
+last_updated: "2026-08-27T15:10:21.203Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 16
+  completed_plans: 13
   percent: 25
 ---
 
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 166 — gate robustness
+**Current focus:** Phase 166 — Gate Robustness
 
 ## Current Position
 
-Phase: 166
-Plan: Not started
-Status: Ready to plan
+Phase: 166 (Gate Robustness) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -37,7 +37,7 @@ Last activity: 2026-08-27
 |-------|------|--------------|------|--------|
 | 164 | First-Run Correctness | FIRSTRUN-01, FIRSTRUN-02, FIRSTRUN-03 | None (first, deliberately led per milestone risk note) | Not started |
 | 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
-| 166 | Gate Robustness | GATE-01, GATE-02 | None (independent) | Not started |
+| 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Planned (2026-08-27; 4 plans in 2 waves) |
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | Not started |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Not started |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Not started |
@@ -225,6 +225,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 165 P05 | 25min | 3 tasks | 15 files |
 | Phase 165 P07 | 112min | 3 tasks | 40 files |
 | Phase 165 P08 | 55min | 3 tasks | 3 files |
+| Phase 166 P01 | 12min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -435,6 +436,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 165]: D-16: loading-variant a11y gate wired into CI directly (clean 0-exit first run, no debt to baseline)
 - [Phase 165]: 5 additional token-swap contrast misses fixed at token layer per D-11, leaving only 1 justified accepted entry (data-at-rest scrollable-region-focusable)
 - [Phase 165]: quirk serve multi-DB trap verified against deps.py and documented in operators-guide.md, with a stray 0-byte quirk.db cleanup note
+- [Phase ?]: Selected common port scope via page.click + aria-checked wait, not page.select() -- control is a Radix RadioGroup
 
 ### Pending Todos
 
@@ -565,7 +567,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T14:12:04.655Z
+Last session: 2026-08-27T15:07:40.394Z
 Stopped at: Phase 165 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
