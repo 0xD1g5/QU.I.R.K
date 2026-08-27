@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
-import { buildBaselineEntries, compareToBaseline } from './baseline-diff.mjs'
+import { buildBaselineEntries, compareToBaseline, resolveVariant, baselineFilename } from './baseline-diff.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -38,6 +38,12 @@ const DASHBOARD_DIR = resolve(__dirname, '../..')
 const A11Y_DIR = __dirname
 
 const UPDATE_BASELINES = process.argv.includes('--update-baselines')
+// D-15/D-16: baseline filenames are variant-aware (baseline-{slug}-{variant}.json), so the
+// empty and loading fixture variants each hold their own baseline data. A missing baseline
+// file is a deliberate hard error, not a silent empty-violations fallback — that silent
+// fallback was the actual defect that made the empty-state CI gate a no-op.
+const VARIANT = resolveVariant(process.env)
+console.log(`[a11y] Fixture variant: ${VARIANT}`)
 const PREVIEW_PORT = 4173
 const PREVIEW_HOST = 'localhost'
 const CONNECT_TIMEOUT_MS = 30_000
@@ -157,7 +163,7 @@ for (const { slug, path: routePath } of ROUTES) {
   let newViolationsCount = 0
   let routeStatus = 'PASS'
 
-  const baselinePath = resolve(A11Y_DIR, `baseline-${slug}.json`)
+  const baselinePath = resolve(A11Y_DIR, baselineFilename(slug, VARIANT))
 
   if (UPDATE_BASELINES) {
     // Write baseline snapshot: per-(route, rule) count budget (D-01), no selectors stored
@@ -192,9 +198,26 @@ for (const { slug, path: routePath } of ROUTES) {
     // Diff mode: compare live per-(route, rule) counts against the saved baseline (D-01/D-13),
     // refusing any critical-impact violation regardless of baseline state (D-14) and failing
     // on any missing/placeholder justification (D-06).
-    const baseline = existsSync(baselinePath)
-      ? JSON.parse(readFileSync(baselinePath, 'utf8'))
-      : { entries: [] }
+    //
+    // A missing baseline file is a deliberate hard error, not a silent empty-violations
+    // fallback (D-15) — that fallback was the actual defect that made the empty-state CI gate
+    // a no-op: it made every route unconditionally pass regardless of live violations.
+    if (!existsSync(baselinePath)) {
+      const generateCmd =
+        VARIANT === 'default'
+          ? 'npm run a11y:baseline'
+          : `npm run a11y:baseline:${VARIANT}`
+      console.error(
+        `[a11y] FAIL [${slug}]: missing baseline file ${baselinePath} — run \`${generateCmd}\` to generate it`,
+      )
+      exitCode = 1
+      routeStatus = 'FAIL'
+      summary.push({ slug, violations: 0, console: 0, status: routeStatus })
+      await page.close()
+      continue
+    }
+
+    const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'))
 
     const { regressions, staleEntries, criticalViolations, missingJustifications } =
       compareToBaseline(slug, results.violations, baseline.entries ?? [])

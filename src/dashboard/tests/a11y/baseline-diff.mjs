@@ -46,6 +46,18 @@ export function isPlaceholderJustification(value) {
   return false
 }
 
+// D-15/D-16: baseline filenames are variant-aware so the empty and loading fixture variants
+// each hold their own baseline data instead of silently sharing the happy-path fixture's
+// file. `resolveVariant` normalizes an unset or empty-string variant to "default" so the
+// unsuffixed run never collides with a literal "" segment in the filename.
+export function resolveVariant(env) {
+  return (env && env.VITE_A11Y_FIXTURE_VARIANT) || 'default'
+}
+
+export function baselineFilename(slug, variant) {
+  return `baseline-${slug}-${variant}.json`
+}
+
 const WCAG_TAG_RE = /^wcag(\d)(\d)(\d+)$/
 
 /**
