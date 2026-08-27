@@ -68,9 +68,17 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   common ports. It currently cannot: the scan takes ~140s against a 120s budget. Fix by raising the
   budget, narrowing the scan scope, or pinning the port scope for E2E — whichever is defensible, but
   the gate must be able to pass.
-- [ ] **GATE-02**: `uat_runner.py` parses XML with `defusedxml` rather than stdlib `ElementTree`,
-  which is XXE- and billion-laughs-vulnerable by default. The project already made this migration
-  once in v5.0 for the SAML path; the tooling never followed.
+- [x] **GATE-02**: `uat_runner.py` parses XML through `quirk.util.xml_safe.parse_safely()`,
+  the Phase 87 / DEP-02 hardened lxml chokepoint, rather than stdlib `ElementTree`, which is
+  XXE- and billion-laughs-vulnerable by default. Both call sites catch `lxml.etree.XMLSyntaxError`
+  specifically, and an AST-based grep gate in `tests/test_xml_safe.py` forward-locks the file
+  against regressing to stdlib `xml.etree` or `defusedxml`.
+  **Premise corrected 2026-08-27 during Phase 166 research:** the original text above said to
+  migrate to `defusedxml`, framing it as "matching" a v5.0 SAML migration. That was factually
+  backwards for this repo — Phase 87 / DEP-02 migrated *away from* `defusedxml` to the lxml
+  chokepoint, and `tests/test_packaging.py::test_defusedxml_not_in_core_deps` plus
+  `tests/test_xml_safe.py::test_no_defusedxml_import_in_quirk` actively forbid reintroducing it.
+  Phase 87 / DEP-02 is the real precedent, not the v5.0 SAML path.
 
 - [ ] **GATE-03**: A full-suite `python -m pytest` run on macOS does not crash subprocess-based
   CLI tests. Four `tests/test_target_cli.py` cases (added in Phase 164) die on a **fatal signal**,
@@ -204,7 +212,7 @@ open; expected to span multiple phases.*
 | A11Y-04 | Phase 165 | Complete |
 | A11Y-05 | Phase 165 | Complete |
 | GATE-01 | Phase 166 | Complete |
-| GATE-02 | Phase 166 | Pending |
+| GATE-02 | Phase 166 | Complete |
 | GATE-03 | Phase 166 | Pending |
 | UATREC-01 | Phase 167 | Pending |
 | UATREC-02 | Phase 167 | Pending |

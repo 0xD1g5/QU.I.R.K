@@ -187,9 +187,16 @@ on ordinary developer hardware, so red stops training people to ignore the suite
      raising the budget, narrowing the scan scope, or pinning the E2E port scope, whichever is
      defensible.
 
-  2. `uat_runner.py` parses all XML via `defusedxml` rather than stdlib `ElementTree`; no
-     XXE/billion-laughs-vulnerable parse path remains in that module, matching the migration the
-     project already made for the SAML path in v5.0.
+  2. `uat_runner.py` parses all XML through `quirk.util.xml_safe.parse_safely()`, the Phase 87 /
+     DEP-02 hardened lxml chokepoint, rather than stdlib `ElementTree`; no
+     XXE/billion-laughs-vulnerable parse path remains in that module, and an AST-based gate in
+     `tests/test_xml_safe.py` forward-locks the file against a stdlib-xml or `defusedxml`
+     regression. **Corrected 2026-08-27 during Phase 166 (166-02):** the original wording here
+     said to migrate to `defusedxml`, framed as matching a v5.0 SAML migration — that premise was
+     factually backwards. Phase 87 / DEP-02 migrated *away from* `defusedxml` to the lxml
+     chokepoint, and two CI gates (`tests/test_packaging.py::test_defusedxml_not_in_core_deps`,
+     `tests/test_xml_safe.py::test_no_defusedxml_import_in_quirk`) actively forbid reintroducing
+     it. Phase 87 / DEP-02 is the real precedent, not the v5.0 SAML path.
 
   3. A full-suite `python -m pytest` on macOS completes without a fatal-signal crash in
      subprocess-based CLI tests (GATE-03, deferred here from Phase 164 on 2026-08-26). The four
@@ -204,7 +211,7 @@ on ordinary developer hardware, so red stops training people to ignore the suite
 
 Plans:
 - [x] 166-01-PLAN.md — GATE-01: narrow the E2E scan to the `common` port scope, raise the budget to 180s, log scan wall-clock
-- [ ] 166-02-PLAN.md — GATE-02: migrate `uat_runner.py` to the hardened lxml chokepoint, add an AST import gate, amend the incorrect requirement premise
+- [x] 166-02-PLAN.md — GATE-02: migrate `uat_runner.py` to the hardened lxml chokepoint, add an AST import gate, amend the incorrect requirement premise
 - [ ] 166-03-PLAN.md — GATE-03: shared fork-safe `run_cli()` helper, migrate the three CLI-runner test files, add an AST `cwd=` gate
 - [ ] 166-04-PLAN.md — Full-suite + E2E verification, UAT-SERIES.md update, Obsidian sync
 
@@ -323,7 +330,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 |-------|----------------|--------|-----------|
 | 164. First-Run Correctness | 4/4 | Complete   | 2026-08-26 |
 | 165. Accessibility Remediation | 8/8 | Complete   | 2026-08-27 |
-| 166. Gate Robustness | 1/4 | In Progress|  |
+| 166. Gate Robustness | 2/4 | In Progress|  |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
 | 168. UAT Record Drain — Series 1–~100 | 0/TBD | Not started | - |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 0/TBD | Not started | - |
