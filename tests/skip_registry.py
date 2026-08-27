@@ -61,7 +61,7 @@ ALLOWED_SKIPS = [
     ("test_cmvp_refresh.py",                 22,  "optional_extra", "bs4 not installed"),
     ("test_cmvp_refresh.py",                 23,  "optional_extra", "httpx not installed"),
     ("test_credential_leakage.py",           306, "live_infra",     "Defensive guard: dashboard_client get_db override not configured"),
-    ("test_db_migrate_cli.py",               203, "optional_extra", "run_scan not importable in minimal dev env (optional reporting deps missing)"),
+    ("test_db_migrate_cli.py",               209, "optional_extra", "run_scan not importable in minimal dev env (optional reporting deps missing)"),
     ("test_distributed_topology.py",         48,  "live_infra",     "Requires docker binary"),
     ("test_identity_scanner_hardening.py",   80,  "optional_extra", "impacket not installed"),
     ("test_jobs_api.py",                     489, "live_infra",     "Linux-only /proc zombie-reconciliation check"),
