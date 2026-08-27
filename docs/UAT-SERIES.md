@@ -5345,6 +5345,7 @@ These tests validate core functionality. Any failure here blocks the release gat
 **Expected:** Scan completes; query returns `0`. No `broker-scanning` phase in run_stats.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-02: Standard Profile Enables Broker Scan
 **Prerequisites:** `--profile standard` and at least one TLS target reachable.
 **Steps:**
@@ -5353,26 +5354,32 @@ These tests validate core functionality. Any failure here blocks the release gat
 **Expected:** Logs include `Broker scan: kafka=N rabbit=N redis=N`. `cfg.connectors.enable_broker == True` after profile applied.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-03: Kafka Plaintext Detection (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent unit coverage exists in `tests/test_broker_scanner_kafka.py::test_detect_kafka_plaintext_*`.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-04: Kafka TLS Weak Cipher (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent integration coverage exists in `tests/test_broker_run_integration.py`.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-05: RabbitMQ AMQP Plaintext Detection (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_broker_scanner_rabbitmq.py::test_detect_amqp_plaintext_*` (validates `len(data) > 0` rule).
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-06: RabbitMQ AMQPS Weak Cipher (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent coverage in `tests/test_broker_scanner_rabbitmq.py`.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-07: Redis Plaintext No-Auth Detection (DEFERRED — chaos-lab smoke)
 Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_broker_scanner_redis.py::test_probe_redis_plaintext_*`.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+
 ### UAT-33-08: broker_scan_json Persisted to DB
 **Prerequisites:** `--profile standard` scan completed against any reachable broker (live or via integration test fixtures).
 **Steps:**
