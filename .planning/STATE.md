@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: Phase 165 context gathered
-last_updated: "2026-08-26T21:34:50.553Z"
-last_activity: 2026-08-26 -- Phase 165 planning complete
+last_updated: "2026-08-27T11:33:38.634Z"
+last_activity: 2026-08-27
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 12
-  completed_plans: 4
+  completed_plans: 5
   percent: 13
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 164 — first-run-correctness
+**Current focus:** Phase 165 — accessibility-remediation
 
 ## Current Position
 
-Phase: 164 (first-run-correctness) — EXECUTING
-Plan: 4 of 4
+Phase: 165 (accessibility-remediation) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-08-26 -- Phase 165 planning complete
+Last activity: 2026-08-27
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -218,6 +218,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 164 P03 | 25min | 3 tasks | 9 files |
 | Phase 164 P02 | 18min | 3 tasks | 2 files |
 | Phase 164 P04 | 35min | 2 tasks | 5 files |
+| Phase 165 P01 | 20min | 3 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -416,6 +417,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 164]: TARGET-001/TARGET-002 stderr emissions print only the static format_error() string, never str(exc) or the user-supplied path, per T-164-11 information-disclosure mitigation
 - [Phase ?]: REQUIREMENTS.md FIRSTRUN traceability was already flipped by plans 01/03 before 164-04 started; plan 04 verified only, no re-edit
 - [Phase ?]: 164-VALIDATION.md rows backed by tests/test_target_cli.py marked green with an explicit GATE-03 footnote (macOS-only full-suite fork-crash, deferred to Phase 166) rather than silently absorbed as clean
+- [Phase 165]: Plan 01: live axe sweep confirms committed 291-violation baseline is stale; live count is 81 (0 live button-name, 189 phantom qramm-assessment entries). D-03 order followed exactly.
 
 ### Pending Todos
 
@@ -546,7 +548,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-26T20:48:33.105Z
+Last session: 2026-08-27T11:33:13.156Z
 Stopped at: Phase 165 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

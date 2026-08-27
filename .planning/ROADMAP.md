@@ -148,7 +148,7 @@ values) most likely to move the color-contrast numbers. Consult both sources.
 Plans:
 **Wave 1**
 
-- [ ] 165-01-PLAN.md — Live ground-truth re-run and the committed-vs-live delta finding (D-03)
+- [x] 165-01-PLAN.md — Live ground-truth re-run and the committed-vs-live delta finding (D-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -316,7 +316,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 164. First-Run Correctness | 4/4 | Complete   | 2026-08-26 |
-| 165. Accessibility Remediation | 0/TBD | Not started | - |
+| 165. Accessibility Remediation | 1/8 | In Progress|  |
 | 166. Gate Robustness | 0/TBD | Not started | - |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
 | 168. UAT Record Drain — Series 1–~100 | 0/TBD | Not started | - |
