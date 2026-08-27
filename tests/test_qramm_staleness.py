@@ -6,8 +6,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
-
 from tests.cli_helpers import run_fork_safe
 
 
@@ -88,18 +86,11 @@ def _run_scan_path() -> Path:
     return Path(__file__).resolve().parents[1] / "run_scan.py"
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Phase 149-11: intermittent SIGSEGV (exit=-11) in this subprocess.run() "
-    "spawn under full-suite (`pytest -q -m \"\"`) load — confirmed via a "
-    "'Fatal Python error: Segmentation fault' crash dump inside CPython's fork/exec "
-    "path (subprocess.py _execute_child) at this exact call site, reproducing "
-    "consistently across repeat full-suite runs on this sandbox (macOS/darwin, "
-    "Python 3.14.6) though never in isolation. Not a code defect in this test or "
-    "run_scan.py — flagged as a systemic macOS fork()-under-load instability "
-    "shared with 4 other subprocess-spawning tests (see docs/test-triage-149.md "
-    "Reconciliation section). Phase 150 follow-up.",
-)
+# Phase 149-11's xfail(strict=False) marker on this test (documenting the
+# fork()-under-full-suite-load SIGSEGV) was removed in Phase 166: the crash
+# is fixed at the spawn mechanism (close_fds=False + no cwd) by
+# tests/cli_helpers.py::run_fork_safe -- see
+# .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md.
 def test_qramm_status_cli_smoke_fresh() -> None:
     """Subprocess `python run_scan.py qramm status` exits 0 (FRESH)
     with current model_meta."""
@@ -118,11 +109,8 @@ def test_qramm_status_cli_smoke_fresh() -> None:
     assert "FRESH" in result.stdout
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Phase 149-11: same systemic macOS fork()-under-full-suite-load SIGSEGV "
-    "as test_qramm_status_cli_smoke_fresh — see that test's xfail reason.",
-)
+# Phase 149-11's xfail(strict=False) marker on this test was removed in
+# Phase 166 for the same reason as test_qramm_status_cli_smoke_fresh above.
 def test_qramm_status_cli_smoke_stale_via_override() -> None:
     """OVERRIDE_DATE forces STALE → CLI exits 1, stdout contains 'STALE'."""
     from quirk.qramm.model_meta import QRAMM_MODEL

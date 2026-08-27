@@ -296,17 +296,14 @@ def test_pki_rsa4096_root_ca_no_severity():
     assert root.cert_pubkey_size == 4096
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Phase 149-11: intermittent SIGSEGV under full-suite load in the "
-    "`openssl req -new -x509 -sha1 ...` subprocess spawned by _make_test_pem_rsa "
-    "(returncode=-11), confirmed via a 'Fatal Python error: Segmentation fault' "
-    "crash dump at this exact subprocess.run() call site. Same systemic macOS "
-    "fork()-under-load instability as test_qramm_staleness.py's SIGSEGV pair — not "
-    "an OpenSSL SHA1-cert-generation defect (Plan 08's original environment-dependent "
-    "hypothesis was on the right track, but the actual trigger is fork() instability, "
-    "not SHA1 algorithm support). Phase 150 follow-up.",
-)
+# Phase 149-11's xfail(strict=False) marker on this test (documenting the
+# fork()-under-full-suite-load SIGSEGV, originally attributed to an openssl
+# subprocess spawn inside _make_test_pem_rsa) was removed in Phase 166:
+# _make_test_pem_rsa no longer shells out to openssl at all (it now uses the
+# cryptography library in-process), and the broader fork-crash class is
+# fixed at the spawn mechanism elsewhere by
+# tests/cli_helpers.py::run_fork_safe -- see
+# .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md.
 def test_pki_sha1_signed_ca_high_severity():
     """D-03: SHA-1 signing algorithm on PKI CA cert produces HIGH severity."""
     pem = _make_test_pem_rsa(4096, "SHA1")
