@@ -175,6 +175,33 @@ Compose profiles, with an oracle of expected findings per profile.
   [Configuration → CORS Allowlist](configuration.md#cors-allowlist-v511--phase-147-drain-03--wr-02).
 - **Data not loading** — confirm a recent scan has populated `quirk.db`; the dashboard
   reads SQLite directly.
+- **`quirk serve` starts but every API call renders an empty state — check for multiple
+  candidate DBs.** `_default_db_path()` (`quirk/dashboard/api/deps.py`) checks, in order,
+  `QUIRK_DB_PATH`, then whether more than one of `./quirk.db`, `./output/quirk.db`,
+  `./quirk-output/quirk.db` exists. If **more than one** of those three paths is present, it
+  raises `ValueError: Multiple QU.I.R.K. DBs found` — and because this check runs inside a
+  FastAPI `Depends()`, it fires on *every request*, not at startup. The server itself starts
+  cleanly with no error printed to the console; the dashboard just silently renders empty
+  states over the failed API calls, which reads exactly like "no scan data yet." Fix: set
+  `QUIRK_DB_PATH=<path-to-the-db-you-want>` before running `quirk serve` to disambiguate
+  explicitly. Also worth checking: a stray 0-byte `quirk.db` left over from an earlier run in
+  the working directory counts toward this conflict even though it holds no data — delete it
+  if it isn't the DB you intend to serve.
+- **Appearance note (Phase 165, A11Y-03)** — primary and accent buttons, and the
+  severity/quantum-safety badges described in
+  [Report Interpretation](report-interpretation.md#4-severity-tiers), now render dark text
+  instead of white. Muted label text is also very slightly lighter. All underlying colours
+  (teal buttons, orange/red/green badges) are numerically unchanged — only the foreground text
+  moved, to clear WCAG 2.1 AA contrast (teal buttons: 2.81:1 → 6.27:1). This is a contrast
+  fix, not a redesign.
+- **Accessibility gate (Phase 165, A11Y-01/A11Y-04)** — `npm run a11y:check` (and its
+  `:empty`/`:loading` variants) in `src/dashboard/` now enforce a per-route, per-rule *count
+  budget* rather than a selector snapshot: each baselined `(route, rule)` pair records a
+  maximum node count, impact level, WCAG success criterion, and a written justification.
+  The gate fails if a count goes **up**
+  (new debt) — and, deliberately, also if a count goes **down** without the baseline being
+  regenerated (`npm run a11y:baseline`), so a real fix always tightens the ledger instead of
+  leaving a now-stale, looser number in place.
 
 ### 5.4 Connector gotchas
 

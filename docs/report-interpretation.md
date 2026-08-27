@@ -102,6 +102,13 @@ Every finding in a QU.I.R.K. report is assigned one of five severity levels. CRI
 | LOW | Blue | Technical debt or deprecated standard — e.g., legacy TLS 1.0/1.1 allowed | Schedule upgrade — typically 1–2 sprint cycles |
 | INFO | Gray | Observations and planning advisories — e.g., quantum migration advisories, mTLS signals | Awareness — no immediate action required |
 
+**Badge colours are unchanged; badge text got darker for legibility (Phase 165, A11Y-03).** The
+severity colour coding above still means exactly what it always meant — HIGH is still the same
+orange, CRITICAL is still the same red. What changed is the *text drawn on top* of those badges:
+it now renders in a dark foreground instead of white, closing a WCAG 2.1 AA contrast gap that
+existed on the orange HIGH badge (2.85:1 white-on-orange, now 7.36:1 dark-on-orange). Do not read
+any change in what a colour signifies from this — only legibility moved.
+
 > **Client Conversation — Severity Tiers:**
 > "We use five severity levels. CRITICAL and HIGH are things we'd want fixed in the next 30 days — they're risks you have right now, today, independent of any quantum threat. MEDIUM and LOW are things that need a remediation schedule. INFO items are planning advisories — they tell you what to think about for the quantum migration, but there's no immediate action required."
 
@@ -135,6 +142,12 @@ The Cryptographic Bill of Materials (CBOM) is an inventory of every cryptographi
 | `quantum-safe` | Resistant to both classical and quantum attacks at current NIST security levels | AES-256-GCM, AES-128, SHA-384, HMAC-SHA512, ML-KEM-768, ML-DSA-65, SLH-DSA |
 | `quantum-vulnerable` | Broken by Shor's algorithm (asymmetric) or Grover-weakened (symmetric with < 256-bit key) | RSA (any size), ECDSA, ECDH, DH, SHA-256, AES-128 (marginal) |
 | `unknown` | Algorithm not recognized or no cryptography present (e.g., `alg:none` JWT) | `alg:none`, unrecognized algorithm names |
+
+**The Safe graph node's colour is unchanged; its text got darker (Phase 165, A11Y-03).** The
+quantum-safety graph on the CBOM tab colours the `quantum-safe` node the same green it always has
+— only the label text drawn on that node changed, from white to a dark foreground, raising
+contrast from 2.30:1 to 9.12:1. The green still means quantum-safe; nothing about the label's
+meaning changed, only its legibility.
 
 > **Client Conversation — CBOM Quantum Labels:**
 > "The CBOM — Cryptographic Bill of Materials — is an inventory of every cryptographic algorithm we found in your environment. Each algorithm is labeled quantum-safe, quantum-vulnerable, or unknown. Quantum-vulnerable doesn't mean you're at risk today — it means these algorithms will be broken when large-scale quantum computers become available, which NIST projects around 2030–2035 for currently deployed RSA key sizes. The CBOM gives you a roadmap of what to migrate."
