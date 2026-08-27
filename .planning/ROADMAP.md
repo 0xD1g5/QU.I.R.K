@@ -200,7 +200,13 @@ on ordinary developer hardware, so red stops training people to ignore the suite
      `.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`; the fix requires both
      `close_fds=False` and `cwd=None`, a trade-off (fd leakage into the child) that needs an
      explicit decision. Do not absorb this into the "known macOS-only failures" bucket.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 166-01-PLAN.md — GATE-01: narrow the E2E scan to the `common` port scope, raise the budget to 180s, log scan wall-clock
+- [ ] 166-02-PLAN.md — GATE-02: migrate `uat_runner.py` to the hardened lxml chokepoint, add an AST import gate, amend the incorrect requirement premise
+- [ ] 166-03-PLAN.md — GATE-03: shared fork-safe `run_cli()` helper, migrate the three CLI-runner test files, add an AST `cwd=` gate
+- [ ] 166-04-PLAN.md — Full-suite + E2E verification, UAT-SERIES.md update, Obsidian sync
 
 ### Phase 167: UAT Format Unification & Deduplication
 
