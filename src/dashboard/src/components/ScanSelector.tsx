@@ -30,7 +30,7 @@ export function ScanSelector() {
         value={value}
         onValueChange={(v) => setSelectedScanId(v === "__latest__" ? null : v)}
       >
-        <SelectTrigger className="w-full text-xs h-8">
+        <SelectTrigger className="w-full text-xs h-8" aria-label="Select scan">
           <SelectValue placeholder="Latest scan" />
         </SelectTrigger>
         <SelectContent>
