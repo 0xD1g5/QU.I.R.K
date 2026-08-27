@@ -5,6 +5,8 @@ import {
   deriveWcagCriteria,
   isPlaceholderJustification,
   SAMPLE_CAP,
+  resolveVariant,
+  baselineFilename,
 } from "./baseline-diff.mjs"
 
 // Phase 165 A11Y-04 / D-01, D-02, D-06, D-13, D-14 — the count-budget baseline comparison
@@ -193,5 +195,37 @@ describe("justification carry-forward and enforcement (D-06)", () => {
       "color-contrast",
       "scrollable-region-focusable",
     ])
+  })
+})
+
+describe("variant-aware baseline naming (A11Y-04, D-15, D-16)", () => {
+  it("resolveVariant({}) returns 'default' — the unsuffixed run is not an empty-string variant", () => {
+    expect(resolveVariant({})).toBe("default")
+  })
+
+  it("resolveVariant with VITE_A11Y_FIXTURE_VARIANT='empty' returns 'empty'", () => {
+    expect(resolveVariant({ VITE_A11Y_FIXTURE_VARIANT: "empty" })).toBe("empty")
+  })
+
+  it("resolveVariant with VITE_A11Y_FIXTURE_VARIANT='loading' returns 'loading' — D-16 rides the same code path", () => {
+    expect(resolveVariant({ VITE_A11Y_FIXTURE_VARIANT: "loading" })).toBe("loading")
+  })
+
+  it("resolveVariant with an empty-string variant falls back to 'default', not 'baseline-cbom-.json'", () => {
+    expect(resolveVariant({ VITE_A11Y_FIXTURE_VARIANT: "" })).toBe("default")
+  })
+
+  it("baselineFilename('cbom', 'default') returns 'baseline-cbom-default.json'", () => {
+    expect(baselineFilename("cbom", "default")).toBe("baseline-cbom-default.json")
+  })
+
+  it("baselineFilename('qramm-assessment', 'empty') round-trips a hyphenated slug correctly", () => {
+    expect(baselineFilename("qramm-assessment", "empty")).toBe(
+      "baseline-qramm-assessment-empty.json",
+    )
+  })
+
+  it("the default and empty variants produce different filenames for the same slug", () => {
+    expect(baselineFilename("cbom", "default")).not.toBe(baselineFilename("cbom", "empty"))
   })
 })
