@@ -558,6 +558,23 @@ however, 31 cases out of 353.
 UAT-89-03 each appear twice as `###` headings, so a reader searching by ID finds two
 different cases under one identifier.
 
+> **CORRECTION (2026-08-27, Phase 167):** The true figure is **3** duplicates, not 5 —
+> `UAT-144-01`, `UAT-144-02`, `UAT-144-03`. The "5" figure above (and its 2026-08-26 Phase
+> 164-close reaffirmation in REQUIREMENTS.md) was produced by
+> `grep -o '^### UAT-[0-9]*-[0-9]*' docs/UAT-SERIES.md | sort | uniq -d`, which truncates
+> three-segment case IDs to two segments. `UAT-89-02-01` and `UAT-89-02-02` are two distinct,
+> non-colliding headings that both truncate to the same two-segment string `UAT-89-02`, so the
+> regex reports a phantom duplicate where none exists; the same happens to
+> `UAT-89-03-01`/`UAT-89-03-02` under `UAT-89-03`. The exact-ID command
+> `grep -oE '^### *UAT-[^ :]+' docs/UAT-SERIES.md | sed 's/:$//' | sort | uniq -d` yields only
+> the three genuine Phase 144 duplicates, resolved by deleting the misfiled `UAT-144` Block A
+> (filed under the wrong `## UAT-143 Series` header) and retaining Block B. This is a further
+> instance of the standing project caution that this review's symptoms are reliable but its
+> root causes and scale often are not (see the "353 of 601" correction below, and
+> `.planning/STATE.md`'s note on RVW-005/017/021/022). Phases 168-170 draw on this same review
+> and must not re-inherit the "5" figure. Full detail: `.planning/REQUIREMENTS.md` UATREC-02,
+> `.planning/phases/167-uat-format-unification-deduplication/167-01-SUMMARY.md`.
+
 **Qualification, weakened from the original.** The report previously asserted that "75 of
 the 91 affected requirements retain automated test evidence." That figure is derived from
 Tier-D annotation (requirement IDs written into test docstrings). RVW-010's re-verification

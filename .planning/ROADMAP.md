@@ -65,7 +65,7 @@ milestone — no urgent insertions anticipated.
 - [x] **Phase 164: First-Run Correctness** - A new user following the dashboard's empty-state instruction runs a command that actually exists and succeeds, and an unparseable target argument fails with a coded error instead of a traceback. (completed 2026-08-26)
 - [x] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift. (completed 2026-08-27)
 - [x] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
-- [ ] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique.
+- [ ] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique. (Tasks 1-4 complete 2026-08-27; Task 5 human verification pending — checkbox intentionally NOT flipped to [x] yet, see 167-03-SUMMARY.md)
 - [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the ~325 unrecorded UAT cases each carry a recorded result or an explicit deferral naming a specific substitute test.
 - [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases.
 - [ ] **Phase 170: Traceability, Documentation & Runbook** - The changelog, archive status headers, requirement-to-test linkage, planning-summary cross-references, and CLAUDE.md's staleness runbook are all brought into agreement with what actually shipped and what CI actually gates.
@@ -228,19 +228,25 @@ verifiable)
 **Success Criteria** (what must be TRUE):
 
   1. `docs/UAT-SERIES.md` uses exactly one `**Result:**` block format throughout, and the count of
-     result blocks equals the count of `### UAT-` case headings (628 = 628, closing the 636-vs-628
-     mismatch that was itself RVW-014 evidence).
+     result blocks equals the count of `### UAT-` case headings. Achieved 2026-08-27: **663 = 663**,
+     closing the pre-migration mismatch (642 case headings vs. 650 result blocks vs. 665 true cases
+     once 23 headingless `**ID:**`-only declarations are counted) — the earlier "628 = 628" figure
+     was stale, pre-dating Phase 165/166.
 
-  2. Every UAT case ID in the document is unique — the **5** duplicate case IDs are renumbered to
-     distinct IDs with no orphaned cross-references left behind. Count corrected 2026-08-26 at the
-     Phase 164 close: `UAT-144-01/02/03` **plus `UAT-89-02` and `UAT-89-03`**, which the original
-     sizing missed. Both sets are pre-existing (verified identical before and after Phase 164).
+  2. Every UAT case ID in the document is unique — the **3** duplicate case IDs are resolved with
+     no orphaned cross-references left behind. The 2026-08-26 correction to "5" was itself wrong:
+     it was produced by a regex (`grep -o '^### UAT-[0-9]*-[0-9]*'`) that truncates three-segment
+     IDs, collapsing the four distinct headings `UAT-89-02-01`/`-02`/`UAT-89-03-01`/`-02` into
+     phantom `UAT-89-02`/`UAT-89-03` duplicates that never existed. The true count is 3:
+     `UAT-144-01/02/03`. Resolved by deleting the misfiled UAT-144 Block A (filed under the wrong
+     `## UAT-143 Series` header) and retaining Block B, merging Block A's caveat wording forward —
+     no renumbering occurred.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 167-01-PLAN.md — Normalize docs/UAT-SERIES.md: one result format, promote 23 headingless cases, delete misfiled UAT-144 Block A, restore heading/result-block parity
-- [ ] 167-02-PLAN.md — tests/test_uat_series_format.py invariant guard (single format, count parity, ID uniqueness, no headingless declarations) + full-suite baseline
-- [ ] 167-03-PLAN.md — Correct 5→3 duplicate count and stale 628/636 figures, dated review correction note, UAT-SERIES header + Series 167, Obsidian sync, validation close
+- [x] 167-01-PLAN.md — Normalize docs/UAT-SERIES.md: one result format, promote 23 headingless cases, delete misfiled UAT-144 Block A, restore heading/result-block parity
+- [x] 167-02-PLAN.md — tests/test_uat_series_format.py invariant guard (single format, count parity, ID uniqueness, no headingless declarations) + full-suite baseline
+- [x] 167-03-PLAN.md — Correct 5→3 duplicate count and stale 628/636 figures, dated review correction note, UAT-SERIES header + Series 167, Obsidian sync, validation close (Tasks 1-4 complete; Task 5 human verification pending)
 
 ### Phase 168: UAT Record Drain — Series 1–~100
 

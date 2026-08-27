@@ -104,20 +104,34 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 ### UAT Record Integrity
 
 > **Sizing verified at the v5.16 open, not inherited.** The review reported "353 of 601 cases."
-> Direct measurement of `docs/UAT-SERIES.md` (19,202 lines) gives **628** `### UAT-` case headings,
-> **636** `**Result:**` blocks, **325** with every checkbox empty, **259** marked `[x] PASS`, and
-> **3** duplicate case IDs (UAT-144-01/02/03), not 5. The 636-vs-628 mismatch between result blocks
-> and case headings is itself RVW-014 evidence, which is why UATREC-01 is sequenced first.
+> Direct measurement of `docs/UAT-SERIES.md` (re-measured 2026-08-27 at the Phase 167 open;
+> 19,665 lines pre-migration) gives **642** `### UAT-` case headings, **650** `**Result:**` blocks,
+> and **23** further cases declared only via headingless `**ID:**` lines with no enclosing
+> heading of the same ID — making the true pre-migration case count **665**. Promoting those 23
+> headingless declarations to real `### UAT-` headings is what actually closes the
+> 650-vs-642 gap; result-format work alone does not. Phase 167 drove the document to an exact
+> **663 == 663** heading/result-block parity (three prior-count cases were removed by the
+> UATREC-02 dedup below, netting 665 − 3 + 1 already-counted = 663; see 167-01-SUMMARY.md for the
+> full reconciliation). Duplicate case IDs: **3** (`UAT-144-01/02/03`), not 5 — see UATREC-02.
 
-- [ ] **UATREC-01**: `docs/UAT-SERIES.md` uses exactly one UAT result format, and the count of
+- [x] **UATREC-01**: `docs/UAT-SERIES.md` uses exactly one UAT result format, and the count of
   result blocks equals the count of case headings. This is the precondition that makes drain
-  completeness mechanically checkable rather than asserted.
-- [ ] **UATREC-02**: The duplicate case IDs are resolved — every case ID in the document is unique.
-  **Count corrected 2026-08-26 during Phase 164 close: there are 5 duplicates, not 3.** Measured
-  directly with `grep -o '^### UAT-[0-9]*-[0-9]*' docs/UAT-SERIES.md | sort | uniq -d`:
-  `UAT-144-01`, `UAT-144-02`, `UAT-144-03` (the three originally named) **plus `UAT-89-02` and
-  `UAT-89-03`**, which the original sizing missed. Verified identical before and after Phase 164,
-  so these are pre-existing and Phase 164 introduced none. Do not inherit the "3" figure.
+  completeness mechanically checkable rather than asserted. **Achieved 2026-08-27 (Phase 167):
+  663 `### UAT-` case headings == 663 `**Result:**` blocks, one canonical result format, zero
+  headingless declarations — locked behind `tests/test_uat_series_format.py`.**
+- [x] **UATREC-02**: The duplicate case IDs are resolved — every case ID in the document is unique.
+  **Corrected 2026-08-27 (Phase 167): there are 3 duplicates, not 5.** The 2026-08-26 upward
+  correction to 5 was itself wrong. It was produced by
+  `grep -o '^### UAT-[0-9]*-[0-9]*' docs/UAT-SERIES.md | sort | uniq -d`, which **truncates
+  three-segment IDs to two segments** — collapsing the four distinct, non-colliding headings
+  `UAT-89-02-01`, `UAT-89-02-02`, `UAT-89-03-01`, `UAT-89-03-02` into phantom `UAT-89-02` /
+  `UAT-89-03` "duplicates" that were never actually duplicated. The same truncation bug
+  manufactures a phantom `UAT-56` from `UAT-56.1-01/02/03`. The correct exact-ID command is
+  `grep -oE '^### *UAT-[^ :]+' docs/UAT-SERIES.md | sed 's/:$//' | sort | uniq -d`, which yields
+  only the three genuine Phase 144 duplicates: `UAT-144-01`, `UAT-144-02`, `UAT-144-03`. Resolved
+  by deleting the misfiled UAT-144 Block A (which sat under the wrong `## UAT-143 Series` header)
+  and retaining Block B, merging Block A's caveat wording forward. Phases 168-170 must not
+  re-inherit the "5" figure.
 - [ ] **UATREC-03**: Every one of the ~325 unrecorded cases carries either a recorded result or an
   explicit deferral naming a substitute test. **A deferral must name a specific test, not infer
   coverage from a requirement-ID annotation** — the review's own re-verification found annotation an
