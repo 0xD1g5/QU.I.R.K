@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: Phase 165 context gathered
-last_updated: "2026-08-27T12:01:22.890Z"
+last_updated: "2026-08-27T12:06:08.490Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 13
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 165 (accessibility-remediation) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-08-27
 
@@ -429,6 +429,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: D-08/D-09/D-10 token flips applied verbatim (teal foreground flip both themes, muted-foreground dark nudge, two new severity token pairs); executive.tsx HIGH badge has no foreground application site (Recharts Cell fill, no overlaid text) — documented in comment rather than force-applied
 - [Phase ?]: cbom.tsx QS_NODE_COLOR.Safe needed a getComputedStyle-based resolveCytoscapeColor() fallback since Cytoscape stylesheets are plain JS objects outside the DOM cascade and cannot resolve var() references
 - [Phase 165]: D-15/D-16 (165-05): baseline filenames variant-aware (baseline-{slug}-{variant}.json); missing baseline is a hard exitCode=1 error, not a silent empty-violations fallback
+- [Phase ?]: 165-06: D-05 triad (JSON baseline -> generateMarkdown -> byte-compare freshness test) copied from errors_cmd.py; ACCEPTED-VIOLATIONS.md is intentionally RED until 165-07
 
 ### Pending Todos
 
@@ -559,7 +560,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T12:00:21.893Z
+Last session: 2026-08-27T12:05:51.511Z
 Stopped at: Phase 165 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
