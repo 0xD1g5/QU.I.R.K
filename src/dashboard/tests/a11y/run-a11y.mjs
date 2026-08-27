@@ -11,6 +11,15 @@
  *   VITE_A11Y_FIXTURE=1          — activates the Vite middleware that serves fixture JSON
  *   VITE_A11Y_FIXTURE_VARIANT    — optional: "empty" or "loading"
  *   PUPPETEER_EXECUTABLE_PATH    — fallback Chrome path if system Chrome not found
+ *
+ * Deliberately-unpinned and indirectly-pinned inputs (D-04, A11Y-05) — named here rather
+ * than hidden, since both decide what axe reports on a given run:
+ *   - The Chrome binary is resolved via `puppeteer.launch({ channel: 'chrome' })`, falling
+ *     back to `PUPPETEER_EXECUTABLE_PATH`. It is NOT version pinned. This is a deliberate,
+ *     named residual risk, mitigated (not eliminated) by D-01's count-budget key tolerating
+ *     rendering jitter across Chrome versions.
+ *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
+ *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -20,6 +29,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
+import { buildBaselineEntries, compareToBaseline } from './baseline-diff.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -145,54 +155,90 @@ for (const { slug, path: routePath } of ROUTES) {
   const results = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
 
   let newViolationsCount = 0
+  let routeStatus = 'PASS'
+
+  const baselinePath = resolve(A11Y_DIR, `baseline-${slug}.json`)
 
   if (UPDATE_BASELINES) {
-    // Write baseline snapshot
+    // Write baseline snapshot: per-(route, rule) count budget (D-01), no selectors stored
+    // (D-02), justifications carried forward from the previous file (D-06).
+    const previous = existsSync(baselinePath)
+      ? JSON.parse(readFileSync(baselinePath, 'utf8'))
+      : null
+    const previousEntries = previous?.entries ?? []
+
+    const { entries, refusedCritical } = buildBaselineEntries(slug, results.violations, {
+      previousEntries,
+    })
+
     const baseline = {
-      violations: results.violations.map(v => ({
-        id: v.id,
-        nodes: v.nodes.map(n => ({ target: n.target })),
-      })),
+      route: slug,
+      generated: new Date().toISOString(),
+      entries,
     }
-    const baselinePath = resolve(A11Y_DIR, `baseline-${slug}.json`)
     writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n')
-    console.log(`[a11y] Wrote baseline for ${slug}: ${results.violations.length} violation(s)`)
+    console.log(`[a11y] Wrote baseline for ${slug}: ${entries.length} rule(s)`)
+
+    if (refusedCritical.length > 0) {
+      exitCode = 1
+      routeStatus = 'FAIL'
+      for (const entry of refusedCritical) {
+        console.error(
+          `[a11y] REFUSED [${slug}]: ${entry.rule} is impact:critical and cannot be baselined — fix it in the UI`,
+        )
+      }
+    }
   } else {
-    // Diff mode: compare against saved baseline
-    // NOTE: The baseline filename is not variant-aware. When VITE_A11Y_FIXTURE_VARIANT=empty
-    // (i.e. npm run a11y:check:empty), the harness falls back to { violations: [] } for
-    // every route because no baseline-<slug>-empty.json files exist. This means empty-state
-    // a11y regressions are silently swallowed and will not cause CI to fail.
-    // TODO: Make baselines variant-aware by writing/reading baseline-${slug}-${variant || 'default'}.json
-    const baselinePath = resolve(A11Y_DIR, `baseline-${slug}.json`)
+    // Diff mode: compare live per-(route, rule) counts against the saved baseline (D-01/D-13),
+    // refusing any critical-impact violation regardless of baseline state (D-14) and failing
+    // on any missing/placeholder justification (D-06).
     const baseline = existsSync(baselinePath)
       ? JSON.parse(readFileSync(baselinePath, 'utf8'))
-      : { violations: [] }
+      : { entries: [] }
 
-    // Build a set of (id, sortedTargets) keys from baseline
-    const baselineKeys = new Set()
-    for (const v of baseline.violations) {
-      for (const n of v.nodes) {
-        baselineKeys.add(`${v.id}::${[...n.target].sort().join('|')}`)
+    const { regressions, staleEntries, criticalViolations, missingJustifications } =
+      compareToBaseline(slug, results.violations, baseline.entries ?? [])
+
+    newViolationsCount = regressions.length
+
+    for (const r of regressions) {
+      exitCode = 1
+      routeStatus = 'FAIL'
+      console.error(
+        `[a11y] FAIL [${slug}]: ${r.rule} count ${r.observedCount} exceeds baseline ${r.baselineCount}`,
+      )
+      if (r.samples[0]) {
+        console.error(`    sample: ${r.samples[0]}`)
       }
     }
 
-    const newViolations = results.violations.filter(v =>
-      v.nodes.some(n => !baselineKeys.has(`${v.id}::${[...n.target].sort().join('|')}`))
-    )
-    newViolationsCount = newViolations.length
-
-    if (newViolations.length > 0) {
+    for (const s of staleEntries) {
       exitCode = 1
-      console.error(`[a11y] FAIL [${slug}]: ${newViolations.length} new violation(s)`)
-      for (const v of newViolations) {
-        console.error(`  - ${v.id}: ${v.help}`)
-        for (const n of v.nodes) {
-          console.error(`    targets: ${JSON.stringify(n.target)}`)
-        }
-      }
-    } else {
-      console.log(`[a11y] PASS [${slug}]: no new violations (${results.violations.length} baseline)`)
+      routeStatus = 'FAIL'
+      console.error(
+        `[a11y] FAIL [${slug}]: ${s.rule} count ${s.observedCount} is BELOW baseline ${s.baselineCount} — Baseline is stale — run npm run a11y:baseline to tighten`,
+      )
+    }
+
+    for (const c of criticalViolations) {
+      exitCode = 1
+      routeStatus = 'FAIL'
+      console.error(`[a11y] FAIL [${slug}]: ${c.rule} is impact:critical — never baselineable`)
+    }
+
+    for (const m of missingJustifications) {
+      exitCode = 1
+      routeStatus = 'FAIL'
+      console.error(`[a11y] FAIL [${slug}]: ${m.rule} has no written justification`)
+    }
+
+    if (
+      regressions.length === 0 &&
+      staleEntries.length === 0 &&
+      criticalViolations.length === 0 &&
+      missingJustifications.length === 0
+    ) {
+      console.log(`[a11y] PASS [${slug}]: no regressions (${results.violations.length} live)`)
     }
   }
 
@@ -205,8 +251,15 @@ for (const { slug, path: routePath } of ROUTES) {
       console.error(`  - ${msg}`)
     }
   }
+  if (unallowlisted.length > 0) {
+    routeStatus = 'FAIL'
+  }
 
-  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length })
+  if (UPDATE_BASELINES && routeStatus !== 'FAIL') {
+    routeStatus = 'WRITTEN'
+  }
+
+  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, status: routeStatus })
   await page.close()
 }
 
@@ -214,8 +267,7 @@ await browser.close()
 cleanup()
 
 console.log('\n[a11y] Summary:')
-for (const { slug, violations, console: consoleCount } of summary) {
-  const status = violations === 0 && consoleCount === 0 ? 'PASS' : UPDATE_BASELINES ? 'WRITTEN' : 'FAIL'
+for (const { slug, violations, console: consoleCount, status } of summary) {
   console.log(`  ${status.padEnd(7)} ${slug} — violations: ${violations}, console: ${consoleCount}`)
 }
 
