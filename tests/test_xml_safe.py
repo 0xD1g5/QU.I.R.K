@@ -224,3 +224,77 @@ def test_no_defusedxml_import_in_quirk() -> None:
         f"quirk/util/xml_safe.py (make_safe_parser / parse_safely). "
         f"Offending files: {hits}"
     )
+
+
+# ---------------------------------------------------------------------------
+# GATE-02 correction (Phase 166, 2026-08-27): the original requirement text
+# said uat_runner.py should migrate to `defusedxml` "matching" the v5.0 SAML
+# migration. That premise was factually backwards for this repo: Phase 87 /
+# DEP-02 migrated *away from* defusedxml to the hardened lxml chokepoint in
+# quirk/util/xml_safe.py, and this file's own test_no_defusedxml_import_in_quirk
+# above (plus tests/test_packaging.py::test_defusedxml_not_in_core_deps)
+# actively forbid reintroducing defusedxml. The gate below therefore checks
+# repo-root tooling for the SAME lxml-chokepoint invariant, not defusedxml
+# adoption — do not "restore" a defusedxml migration here.
+# ---------------------------------------------------------------------------
+
+# Repo-root tooling files that must route XML parsing through the hardened
+# lxml chokepoint (quirk.util.xml_safe). Add future files to this list.
+_REPO_ROOT_TOOLING_FILES = ["uat_runner.py"]
+
+# Import module prefixes forbidden in the tooling files above. Note:
+# "lxml.etree".startswith("xml.etree") is False, so lxml.etree stays allowed
+# — do not simplify this to a substring/regex check, which would false-
+# positive on uat_runner.py's own optional-dependency probe list containing
+# the string literals 'lxml.etree' and 'defusedxml' (not imports).
+_FORBIDDEN_IMPORT_PREFIXES = ("xml.etree", "defusedxml")
+
+
+def _forbidden_imports_in_file(path: Path) -> list[str]:
+    """Return forbidden import module names found via AST (not substring/grep)."""
+    import ast
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    hits: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith(_FORBIDDEN_IMPORT_PREFIXES):
+                    hits.append(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module.startswith(_FORBIDDEN_IMPORT_PREFIXES):
+                hits.append(module)
+    return hits
+
+
+def test_no_stdlib_xml_or_defusedxml_import_in_repo_root_tooling() -> None:
+    """GATE-02 (Phase 166) forward-locking gate for repo-root tooling.
+
+    Extends test_no_defusedxml_import_in_quirk's invariant beyond quirk/ to
+    repo-root scripts (currently just uat_runner.py) that also parse
+    untrusted XML (CBOM artifacts). Uses an AST walk of ast.Import /
+    ast.ImportFrom nodes — NOT a substring/line grep — because
+    uat_runner.py:191 legitimately contains the string literals
+    'lxml.etree' and 'defusedxml' inside an optional-dependency probe list
+    (`for pkg in [..., 'lxml.etree', 'defusedxml', ...]`). A substring gate
+    would false-positive on that literal; the AST walk correctly ignores it
+    since it is not an Import/ImportFrom node.
+
+    A future `import xml.etree...` or `import defusedxml` in these files
+    will make this test RED, halting CI before the regression ships.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    offenders: dict[str, list[str]] = {}
+    for rel_path in _REPO_ROOT_TOOLING_FILES:
+        full_path = repo_root / rel_path
+        hits = _forbidden_imports_in_file(full_path)
+        if hits:
+            offenders[rel_path] = hits
+    assert not offenders, (
+        f"Forbidden XML import(s) found in repo-root tooling: {offenders} — "
+        f"route XML parsing through quirk/util/xml_safe.py "
+        f"(make_safe_parser / parse_safely), the Phase 87 DEP-02 hardened "
+        f"lxml chokepoint. defusedxml is NOT the target here — Phase 87 "
+        f"migrated away from it; see the comment above this test."
+    )
