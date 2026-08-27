@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import json
 import pathlib
-import subprocess
-import sys
+
+from tests.cli_helpers import run_cli
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -23,13 +23,7 @@ def test_run_scan_path_exists():
 
 
 def test_status_text_smoke():
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "compliance", "status"],
-        capture_output=True,
-        text=True,
-        cwd=_REPO_ROOT,
-        timeout=30,
-    )
+    result = run_cli(["compliance", "status"], timeout=30)
     assert result.returncode == 0, f"stderr: {result.stderr}"
     for needle in ("PCI-DSS", "HIPAA", "FIPS"):
         assert needle in result.stdout, (
@@ -38,13 +32,7 @@ def test_status_text_smoke():
 
 
 def test_status_json_smoke():
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "compliance", "status", "--format", "json"],
-        capture_output=True,
-        text=True,
-        cwd=_REPO_ROOT,
-        timeout=30,
-    )
+    result = run_cli(["compliance", "status", "--format", "json"], timeout=30)
     assert result.returncode == 0, f"stderr: {result.stderr}"
     data = json.loads(result.stdout)
     assert isinstance(data, dict), f"Expected dict, got {type(data).__name__}"

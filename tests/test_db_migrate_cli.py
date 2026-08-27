@@ -24,6 +24,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import inspect as sa_inspect
 
+from tests.cli_helpers import run_cli
+
 
 # ---------------------------------------------------------------------------
 # Helper-level tests (Task 1)
@@ -176,28 +178,32 @@ def test_result_shape(tmp_path: Path) -> None:
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _run_cli(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [sys.executable, str(REPO_ROOT / "run_scan.py"), *args],
-        cwd=str(cwd),
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-
-
 def _ensure_run_scan_importable() -> None:
     """Skip CLI subprocess tests when the current interpreter cannot import
     `run_scan` (typically: optional reporting deps like `pypdf` are missing
     in a bare dev env). CI environments install `quirk[all]` so the gate
     is non-issue there. This avoids false failures in minimal local envs
-    while still exercising the actual CLI path when it's available."""
+    while still exercising the actual CLI path when it's available.
+
+    166-03 note: this probe is NOT a "run run_scan.py with args" call, so it
+    does not fit tests/cli_helpers.py::run_cli's contract, AND its `cwd`
+    argument was load-bearing -- it put REPO_ROOT on `sys.path` so
+    `import run_scan` could resolve. Since the fork-safety fix (see
+    tests/cli_helpers.py) requires never passing `cwd` to subprocess.run in
+    this file, PYTHONPATH is prepended via `env=` instead, achieving the
+    same sys.path effect without a `cwd` keyword.
+    """
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        filter(None, [str(REPO_ROOT), env.get("PYTHONPATH", "")])
+    )
     probe = subprocess.run(
         [sys.executable, "-c", "import run_scan"],
-        cwd=str(REPO_ROOT),
+        env=env,
         capture_output=True,
         text=True,
         timeout=30,
+        close_fds=False,
     )
     if probe.returncode != 0:
         pytest.skip(
@@ -208,7 +214,7 @@ def _ensure_run_scan_importable() -> None:
 
 def test_cli_migrate_help_lists_flags(tmp_path: Path) -> None:
     _ensure_run_scan_importable()
-    proc = _run_cli(["db", "migrate", "--help"], cwd=tmp_path)
+    proc = run_cli(["db", "migrate", "--help"], timeout=60)
     assert proc.returncode == 0, proc.stderr
     out = proc.stdout
     assert "--db" in out
@@ -220,7 +226,7 @@ def test_cli_migrate_fresh_db_exit_zero(tmp_path: Path) -> None:
     status lines + a summary footer."""
     _ensure_run_scan_importable()
     db_path = tmp_path / "cli_fresh.db"
-    proc = _run_cli(["db", "migrate", "--db", str(db_path)], cwd=tmp_path)
+    proc = run_cli(["db", "migrate", "--db", str(db_path)], timeout=60)
     assert proc.returncode == 0, f"stderr: {proc.stderr}\nstdout: {proc.stdout}"
     # Status lines: `table.column: status`
     assert "crypto_endpoints.dat_scan_json" in proc.stdout
@@ -241,8 +247,8 @@ def test_cli_migrate_dry_run_no_write(tmp_path: Path) -> None:
     mtime_before = os.path.getmtime(db_path)
     size_before = os.path.getsize(db_path)
 
-    proc = _run_cli(
-        ["db", "migrate", "--db", str(db_path), "--dry-run"], cwd=tmp_path
+    proc = run_cli(
+        ["db", "migrate", "--db", str(db_path), "--dry-run"], timeout=60
     )
     assert proc.returncode == 0, f"stderr: {proc.stderr}\nstdout: {proc.stdout}"
     assert "dry-run" in proc.stdout.lower()
@@ -258,10 +264,10 @@ def test_cli_migrate_idempotent_double_run(tmp_path: Path) -> None:
     `already-present` status lines on the second run."""
     _ensure_run_scan_importable()
     db_path = tmp_path / "cli_idemp.db"
-    first = _run_cli(["db", "migrate", "--db", str(db_path)], cwd=tmp_path)
+    first = run_cli(["db", "migrate", "--db", str(db_path)], timeout=60)
     assert first.returncode == 0, first.stderr
 
-    second = _run_cli(["db", "migrate", "--db", str(db_path)], cwd=tmp_path)
+    second = run_cli(["db", "migrate", "--db", str(db_path)], timeout=60)
     assert second.returncode == 0, second.stderr
     # Second run must show every line as already-present; therefore zero
     # `added` status tokens in the per-column lines.
