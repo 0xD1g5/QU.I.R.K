@@ -57,7 +57,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 - [x] **A11Y-04**: Baselines are keyed on an identifier stable across UI refactors and browser
   upgrades, rather than axe's full CSS-selector path — the mechanism that made the v5.0-era baselines
   stale within one milestone and that breaks the gate on Chromium updates.
-- [ ] **A11Y-05**: `@axe-core/puppeteer` is pinned to an exact version rather than a `^` range, so a
+- [x] **A11Y-05**: `@axe-core/puppeteer` is pinned to an exact version rather than a `^` range, so a
   transitive upgrade cannot silently change what the gate reports.
 
 *Source: RVW-012 (MEDIUM, raised from LOW — scope was understated 23 → 291). Supersedes BACK-A11Y-01.*
@@ -202,7 +202,7 @@ open; expected to span multiple phases.*
 | A11Y-02 | Phase 165 | Complete |
 | A11Y-03 | Phase 165 | Pending |
 | A11Y-04 | Phase 165 | Complete |
-| A11Y-05 | Phase 165 | Pending |
+| A11Y-05 | Phase 165 | Complete |
 | GATE-01 | Phase 166 | Pending |
 | GATE-02 | Phase 166 | Pending |
 | GATE-03 | Phase 166 | Pending |

@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: Phase 165 context gathered
-last_updated: "2026-08-27T11:45:37.538Z"
+last_updated: "2026-08-27T11:49:03.065Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 12
-  completed_plans: 6
+  completed_plans: 7
   percent: 13
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 165 (accessibility-remediation) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-08-27
 
@@ -220,6 +220,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 164 P04 | 35min | 2 tasks | 5 files |
 | Phase 165 P01 | 20min | 3 tasks | 0 files |
 | Phase 165 P02 | 35min | 3 tasks | 3 files |
+| Phase 165 P03 | 20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -420,6 +421,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: 164-VALIDATION.md rows backed by tests/test_target_cli.py marked green with an explicit GATE-03 footnote (macOS-only full-suite fork-crash, deferred to Phase 166) rather than silently absorbed as clean
 - [Phase 165]: Plan 01: live axe sweep confirms committed 291-violation baseline is stale; live count is 81 (0 live button-name, 189 phantom qramm-assessment entries). D-03 order followed exactly.
 - [Phase ?]: D-01/D-02/D-06/D-13/D-14 baseline-diff.mjs count-budget module extracted and wired into run-a11y.mjs
+- [Phase 165]: D-04: pinned @axe-core/puppeteer to 4.11.3 and puppeteer-core to 24.43.1 (already-resolved versions, not caret face values); npm install left resolved versions unchanged
+- [Phase 165]: Widened vitest.config.ts include glob (second entry) to reach tests/a11y/ rather than relocating test files
+- [Phase 165]: Added CI Test step (npm run test) in dashboard-quality.yml a11y job, between Lint and Install Chrome — first-time CI gating of the dashboard vitest suite
 
 ### Pending Todos
 
@@ -550,7 +554,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T11:43:13.208Z
+Last session: 2026-08-27T11:48:56.027Z
 Stopped at: Phase 165 context gathered
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
