@@ -154,7 +154,7 @@ Plans:
 
 - [x] 165-02-PLAN.md — Count-budget baseline schema: extract baseline-diff.mjs, rewire both harness branches (D-01/D-02/D-06/D-13/D-14)
 - [x] 165-03-PLAN.md — Exact dependency pins, vitest include-glob widening, CI npm test step (D-04)
-- [ ] 165-04-PLAN.md — Contrast token fixes, severity-token promotion, ScanSelector aria-label (D-08..D-10, D-12)
+- [x] 165-04-PLAN.md — Contrast token fixes, severity-token promotion, ScanSelector aria-label (D-08..D-10, D-12)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -316,7 +316,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 164. First-Run Correctness | 4/4 | Complete   | 2026-08-26 |
-| 165. Accessibility Remediation | 3/8 | In Progress|  |
+| 165. Accessibility Remediation | 4/8 | In Progress|  |
 | 166. Gate Robustness | 0/TBD | Not started | - |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
 | 168. UAT Record Drain — Series 1–~100 | 0/TBD | Not started | - |
