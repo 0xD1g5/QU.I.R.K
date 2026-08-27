@@ -1,8 +1,8 @@
-"""Phase 166 GATE-03: shared fork-safe subprocess helper for CLI-runner tests.
+"""Phase 166 GATE-03: shared fork-safe subprocess helpers for CLI-runner tests.
 
 Do not import this module outside ``tests/`` — the ``close_fds`` trade-off
 below is accepted ONLY for short-lived test-harness subprocesses. See the
-docstring on ``run_cli`` for the full rationale.
+docstring on ``run_fork_safe`` for the full rationale.
 """
 from __future__ import annotations
 
@@ -14,8 +14,15 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _RUN_SCAN = _REPO_ROOT / "run_scan.py"
 
 
-def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess:
-    """Run ``run_scan.py`` as a real subprocess, fork-safely, on macOS.
+def run_fork_safe(
+    argv: list[str],
+    *,
+    timeout: int = 30,
+    env: dict[str, str] | None = None,
+    check: bool = False,
+    input: str | None = None,
+) -> subprocess.CompletedProcess:
+    """Run an arbitrary executable as a real subprocess, fork-safely, on macOS.
 
     Root cause (fully diagnosed in
     ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`` —
@@ -44,16 +51,57 @@ def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProces
     silently.
 
     ``cwd`` is intentionally NEVER passed to the underlying ``subprocess.run``
-    call (not even explicitly as ``cwd=None`` -- the forward-locking AST gate
-    in ``tests/test_cli_helper_usage.py`` forbids a literal ``cwd`` keyword on
-    any ``subprocess.run`` call in the CLI-runner test files). Because there
-    is no ``cwd``, every path passed in ``args`` MUST already be absolute --
-    a relative path would resolve against pytest's own invocation directory,
-    not against any test's ``tmp_path``.
+    call (not even explicitly set to ``None`` -- the forward-locking AST gate
+    in ``tests/test_cli_helper_usage.py`` requires an explicit ``close_fds``
+    keyword set to ``False`` and forbids a literal ``cwd`` keyword on any
+    covered ``subprocess.run``/``Popen``/``check_output``/``call`` call).
+    Because there is no ``cwd`` kwarg, every path passed in ``argv`` MUST
+    already be absolute -- a relative path would resolve against pytest's
+    own invocation directory, not against any test's ``tmp_path``. Callers
+    that genuinely need a working directory (e.g. git) must use the
+    executable's own native flag instead of a ``cwd`` kwarg -- e.g.
+    ``["git", "-C", str(abs_dir), "init", "-q"]``.
 
-    This helper always shells out to the real ``run_scan.py`` entry point as
-    a subprocess -- it deliberately does NOT call ``run_scan.main()``
-    in-process, to preserve real exit-code and argparse-boundary coverage.
+    This helper always shells out to a real executable as a subprocess -- it
+    deliberately never calls anything in-process, to preserve real exit-code
+    and argv-boundary coverage.
+
+    Args:
+        argv: the full argument vector, including the executable itself
+            (e.g. ``["git", "-C", str(repo_dir), "init", "-q"]`` or
+            ``[sys.executable, "-c", script]``). Any path-like argument must
+            be absolute.
+        timeout: seconds to wait before raising
+            ``subprocess.TimeoutExpired``. Default 30.
+        env: optional environment mapping to pass through to the child.
+            When ``None`` (the default), the child inherits this process's
+            environment as usual.
+        check: when ``True``, raise ``subprocess.CalledProcessError`` on a
+            non-zero exit code (mirrors ``subprocess.run``'s own ``check``).
+        input: optional text passed to the child's stdin.
+
+    Returns:
+        The completed subprocess, with ``capture_output=True, text=True``.
+    """
+    return subprocess.run(
+        list(argv),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        close_fds=False,
+        env=env,
+        check=check,
+        input=input,
+    )
+
+
+def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess:
+    """Run ``run_scan.py`` as a real subprocess, fork-safely, on macOS.
+
+    Thin wrapper over ``run_fork_safe`` that prepends
+    ``[sys.executable, str(run_scan.py)]``. See ``run_fork_safe`` for the
+    full fork-safety rationale (root-caused in
+    ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md``).
 
     Args:
         args: CLI arguments to pass after ``run_scan.py`` (e.g.
@@ -67,10 +115,4 @@ def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProces
     Returns:
         The completed subprocess, with ``capture_output=True, text=True``.
     """
-    return subprocess.run(
-        [sys.executable, str(_RUN_SCAN), *args],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        close_fds=False,
-    )
+    return run_fork_safe([sys.executable, str(_RUN_SCAN), *args], timeout=timeout)
