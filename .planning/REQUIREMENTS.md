@@ -80,7 +80,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   `tests/test_xml_safe.py::test_no_defusedxml_import_in_quirk` actively forbid reintroducing it.
   Phase 87 / DEP-02 is the real precedent, not the v5.0 SAML path.
 
-- [ ] **GATE-03**: A full-suite `python -m pytest` run on macOS does not crash subprocess-based
+- [x] **GATE-03**: A full-suite `python -m pytest` run on macOS does not crash subprocess-based
   CLI tests. Four `tests/test_target_cli.py` cases (added in Phase 164) die on a **fatal signal**,
   not an assertion: `fork` -> `_pthread_atfork_child_handlers` -> `nw_settings_child_has_forked`,
   the macOS "fork() after Network.framework initialised" crash. They pass 7/7 standalone. This is
@@ -213,7 +213,7 @@ open; expected to span multiple phases.*
 | A11Y-05 | Phase 165 | Complete |
 | GATE-01 | Phase 166 | Complete |
 | GATE-02 | Phase 166 | Complete |
-| GATE-03 | Phase 166 | Pending |
+| GATE-03 | Phase 166 | Complete |
 | UATREC-01 | Phase 167 | Pending |
 | UATREC-02 | Phase 167 | Pending |
 | UATREC-03 | Phase 168, 169 | Pending |
