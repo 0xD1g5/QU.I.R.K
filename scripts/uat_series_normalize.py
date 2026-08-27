@@ -30,6 +30,7 @@ is UATREC-03, Phases 168/169.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 import sys
@@ -46,7 +47,11 @@ SECTION_RE = re.compile(r"^## ")
 # Canonical shape: **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 # with optional inline " (annotation)" suffix after any box's label.
 CANONICAL_RESULT_RE = re.compile(
-    r"^\*\*Result:\*\* +"
+    # Exactly ONE space after the label. This MUST stay in lockstep with
+# tests/test_uat_series_format.py::CANONICAL_RESULT_RE -- a looser `+`
+# here would call a two-space line canonical while the gate test rejects
+# it, producing a normalizer-says-clean / CI-says-dirty split.
+r"^\*\*Result:\*\* "
     r"- \[[ x]\] PASS( \([^)]*\))?  "
     r"- \[[ x]\] FAIL( \([^)]*\))?  "
     r"- \[[ x]\] SKIP( \([^)]*\))?$"
@@ -114,8 +119,17 @@ def _read(path: pathlib.Path) -> list[str]:
 
 
 def _write(path: pathlib.Path, lines: list[str]) -> None:
-    with open(path, "w", encoding="utf-8", newline="") as f:
-        f.writelines(lines)
+    """Write atomically. This rewrites a ~19.6k-line gating document in place;
+    an interruption mid-write would leave it truncated with no recovery path
+    other than git. Write to a sibling temp file, then os.replace()."""
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            f.writelines(lines)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def _detect_series_headers(lines: list[str]) -> set[int]:
@@ -186,10 +200,6 @@ def audit(path: pathlib.Path, lines: list[str] | None = None) -> AuditResult:
             cid = m3.group(1)
             if current_heading_case != cid:
                 result.headingless.append((lineno, cid, current_heading_case))
-                if cid not in all_case_ids and current_heading_case not in (
-                    None,
-                ):
-                    pass
                 if cid not in all_case_ids:
                     all_case_ids.append(cid)
             current_open_case = cid
@@ -270,8 +280,17 @@ def _rewrite_result_line(line: str) -> str:
         body,
     )
     if m:
-        pass_chk, pass_ann, fail_chk, fail_ann, skip_chk, _skip_ann, _da, deferred_ann = m.groups()
-        skip_ann = f" ({deferred_ann})" if deferred_ann else ""
+        (pass_chk, pass_ann, fail_chk, fail_ann, skip_chk, existing_skip_ann,
+         _da, deferred_ann) = m.groups()
+        # Merge rather than overwrite: a line carrying BOTH `SKIP (foo)` and
+        # `DEFERRED (bar)` must not silently lose `foo`.
+        parts = [
+            p for p in (
+                (existing_skip_ann or "").strip().strip("()").strip() or None,
+                (deferred_ann or "").strip() or None,
+            ) if p
+        ]
+        skip_ann = f" ({'; '.join(parts)})" if parts else ""
         pass_a = pass_ann or ""
         fail_a = fail_ann or ""
         return (

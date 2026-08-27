@@ -144,7 +144,15 @@ def find_orphan_ids(lines):
 
 
 def _read_lines(path: Path) -> list[str]:
-    return path.read_text(encoding="utf-8").splitlines(keepends=True)
+    """Match scripts/uat_series_normalize.py::_read exactly.
+
+    str.splitlines() also breaks on \x0b, \x0c, \x1c-\x1e, \x85, U+2028 and
+    U+2029, which readlines(newline="") does not. A stray Unicode line
+    separator pasted into a title or annotation would give the two parsers
+    different line counts and silently misalign parity.
+    """
+    with path.open(encoding="utf-8", newline="") as f:
+        return f.readlines()
 
 
 # ---------------------------------------------------------------------------
