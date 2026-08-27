@@ -44,17 +44,17 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 > not; use both. That an item could disappear from every subsequent milestone review by being
 > archived is itself the RVW-018 record-drift class, and is why TRACE-05 exists.
 
-- [ ] **A11Y-01**: Every one of the 291 accepted violations in
+- [x] **A11Y-01**: Every one of the 291 accepted violations in
   `src/dashboard/tests/a11y/baseline-*.json` carries a recorded impact level and WCAG criterion, so
   each acceptance is a decision with a reason rather than an accumulation.
-- [ ] **A11Y-02**: The 3 `button-name` violations are fixed in the UI, not baselined. Icon-only
+- [x] **A11Y-02**: The 3 `button-name` violations are fixed in the UI, not baselined. Icon-only
   radix dropdown triggers get discernible text or an `aria-label`. These are screen-reader blockers;
   a screen-reader blocker must never appear in an accepted baseline.
 - [ ] **A11Y-03**: The `color-contrast` violations are triaged into fixed and explicitly-accepted
   sets, with the accepted set justified in writing. Phase 87 identified the likely lever as design
   tokens in `src/dashboard/src/index.css` (`--muted-foreground`, accent and severity-badge hsl
   values) reaching 4.5:1.
-- [ ] **A11Y-04**: Baselines are keyed on an identifier stable across UI refactors and browser
+- [x] **A11Y-04**: Baselines are keyed on an identifier stable across UI refactors and browser
   upgrades, rather than axe's full CSS-selector path — the mechanism that made the v5.0-era baselines
   stale within one milestone and that breaks the gate on Chromium updates.
 - [ ] **A11Y-05**: `@axe-core/puppeteer` is pinned to an exact version rather than a `^` range, so a
@@ -198,10 +198,10 @@ open; expected to span multiple phases.*
 | FIRSTRUN-01 | Phase 164 | Complete |
 | FIRSTRUN-02 | Phase 164 | Complete |
 | FIRSTRUN-03 | Phase 164 | Complete |
-| A11Y-01 | Phase 165 | Pending |
-| A11Y-02 | Phase 165 | Pending |
+| A11Y-01 | Phase 165 | Complete |
+| A11Y-02 | Phase 165 | Complete |
 | A11Y-03 | Phase 165 | Pending |
-| A11Y-04 | Phase 165 | Pending |
+| A11Y-04 | Phase 165 | Complete |
 | A11Y-05 | Phase 165 | Pending |
 | GATE-01 | Phase 166 | Pending |
 | GATE-02 | Phase 166 | Pending |
