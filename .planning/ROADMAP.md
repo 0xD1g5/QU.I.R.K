@@ -309,7 +309,7 @@ Plans:
 - [x] 169-04-PLAN.md — Bucket C+D+E drain (25 cases)
 - [x] 169-05-PLAN.md — Bucket F drain (12 cases) + independent recount + coverage-gaps.md
 - [x] 169-06-PLAN.md — Re-disposition Phase 168's 31 series-7 GAPs via vitest (D-05 half 2)
-- [ ] 169-07-PLAN.md — Zero-undispositioned standing gate (UATREC-04) + D-04 CI-wiring check
+- [x] 169-07-PLAN.md — Zero-undispositioned standing gate (UATREC-04) + D-04 CI-wiring check
 - [ ] 169-08-PLAN.md — Full-suite baseline, 4-place gate docs, Obsidian sync, phase close
 
 ### Phase 170: Traceability, Documentation & Runbook
@@ -371,7 +371,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 166. Gate Robustness | 5/5 | Complete   | 2026-08-27 |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
 | 168. UAT Record Drain — Series 1–~100 | 8/9 | In Progress|  |
-| 169. UAT Record Drain — Series ~100–163 + Enforcement | 6/8 | In Progress|  |
+| 169. UAT Record Drain — Series ~100–163 + Enforcement | 7/8 | In Progress|  |
 | 170. Traceability, Documentation & Runbook | 0/TBD | Not started | - |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
 

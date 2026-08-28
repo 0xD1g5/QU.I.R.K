@@ -141,7 +141,7 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   (78 cases) remain and are assigned to Phase 169; this requirement stays unchecked at the
   parent level until Phase 169 closes the remainder — see the per-phase status in the
   traceability table below.
-- [ ] **UATREC-04**: A check enforces the invariant going forward, so a case cannot be added to the
+- [x] **UATREC-04**: A check enforces the invariant going forward, so a case cannot be added to the
   gating document without a disposition and the corpus cannot silently re-accumulate.
 
 *Source: RVW-008 (MEDIUM, counts corrected upward), RVW-014 (LOW). Full drain agreed at the v5.16
@@ -236,7 +236,7 @@ open; expected to span multiple phases.*
 | UATREC-01 | Phase 167 | Pending |
 | UATREC-02 | Phase 167 | Pending |
 | UATREC-03 | Phase 168, 169 | Phase 168 (series 1-100) complete; series 101-163 pending Phase 169 |
-| UATREC-04 | Phase 169 | Pending |
+| UATREC-04 | Phase 169 | Complete |
 | TRACE-01 | Phase 170 | Pending |
 | TRACE-02 | Phase 170 | Pending |
 | TRACE-03 | Phase 170 | Pending |
