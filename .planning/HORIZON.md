@@ -23,7 +23,7 @@ QU.I.R.K. is "primetime" when a consultant or enterprise security team can:
 
 ## v4.7 — Governance & Compliance Platform — SHIPPED 2026-05-08
 
-QRAMM (Quantum Readiness Assessment & Maturity Model) — 120-question maturity assessment with evidence bridge from live scans, compliance framework coverage view, combined governance+technical PDF export, quarterly CI staleness gate. 6 phases (51–56) + Phase 56.1. Audit: `.planning/v4.7-MILESTONE-AUDIT.md`.
+QRAMM (Quantum Readiness Assessment & Maturity Model) — 120-question maturity assessment with evidence bridge from live scans, compliance framework coverage view, combined governance+technical PDF export, quarterly CI staleness gate. 6 phases (51–56) + Phase 56.1. Audit: `.planning/milestones/v4.7-MILESTONE-AUDIT.md`.
 
 ## v4.8 — Pre-Primetime Hardening + Operating Model — SHIPPED 2026-05-14
 
