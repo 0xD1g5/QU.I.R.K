@@ -30,7 +30,23 @@
 - ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
-- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (shipped 2026-08-28) → `.planning/milestones/v5.16-ROADMAP.md`
+- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **deliberately untagged** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
+
+### v5.16 deliberately untagged (2026-08-28)
+
+v5.16 is archived but **not tagged and not released**, by explicit decision.
+
+`pyproject.toml` still reads `5.15.0` — v5.16 was an ops milestone and never bumped it. Tagging
+`v5.16.0` would have produced a tag whose source carries the wrong version string, which is exactly
+the v5.13/v5.14 defect recorded below. Bumping properly is blocked behind a deferred toolchain
+repair: a version bump alone fails `tests/test_version.py`, which needs `pip install -e . --no-deps`,
+and the local editable install is currently broken (stale `__editable__.quirk-4.0.0.pth`).
+
+`release.yml` now triggers on `v[0-9]*`, so any pushed tag fires a real release — the no-op failure
+mode is fixed, which is precisely why an incorrect tag would now do damage rather than nothing.
+
+v5.16's user-visible fixes (the first-run command, three screen-reader blockers, resume UX) are on
+`main` and ship with the next release that bumps the version correctly.
 
 ### Release-integrity note (RVW-004, corrected 2026-08-25)
 
