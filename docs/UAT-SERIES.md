@@ -19748,3 +19748,130 @@ correction note in `docs/reviews/2026-08-24-functional-review-findings.md`.
 by this phase** — all 23 newly-promoted headings and pre-existing zero-result cases carry empty,
 all-unchecked canonical result blocks. Recording actual PASS/FAIL/SKIP outcomes for the ~325
 still-undispositioned cases is UATREC-03, out of scope for Phase 167 (see Phases 168/169).
+
+---
+
+## Series 170: Traceability, Documentation & Runbook (Phase 170 — v5.16)
+
+**Last Updated:** 2026-08-28
+
+### UAT-170-01: CHANGELOG covers v5.9-v5.14 with honest release framing (TRACE-01)
+
+**What to test:** `CHANGELOG.md` has an unbroken entry for every milestone from 5.8.0 through
+5.15.0, and v5.13.0/v5.14.0 are described as developed-but-never-released rather than claiming a
+publish that never happened. The last version actually published to PyPI is 5.12.0 (RVW-004).
+
+**Steps:**
+1. Run `grep -oE '^## \[5\.(8|9|10|11|12|13|14|15)\.0\]' CHANGELOG.md`.
+2. Confirm all eight headings appear, in descending version order, with no gaps.
+3. Run `grep -c 'Developed but never released' CHANGELOG.md`.
+
+**Pass criteria:**
+- All eight version headings present and correctly ordered.
+- Both v5.13.0 and v5.14.0 carry the developed-but-never-released framing.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (170-01 plan execution, re-verified at phase close)
+**Notes:** Verified 8/8 headings present in descending order; both 5.14.0 and 5.13.0 contain the
+literal phrase "**Developed but never released**" with the two-component-tag glob-mismatch root
+cause cited.
+
+### UAT-170-02: Archive links resolve and carry completion status (TRACE-02, TRACE-06, TRACE-07)
+
+**What to test:** `.planning/ROADMAP.md`'s v4.7 link points at a path that exists, the misfiled
+v4.7 milestone audit sits alongside its siblings, and the five archives that recorded no
+completion status each carry exactly one `**Status:**` header.
+
+**Steps:**
+1. Run `grep -n 'v4.7' .planning/ROADMAP.md` and confirm no reference to `v4.7-ROADMAP.md`.
+2. Run `test -d .planning/milestones/v4.7-phases && test -f .planning/milestones/v4.7-MILESTONE-AUDIT.md`.
+3. For each of v4.10, v4.3, v5.1, v5.12, v5.4, run
+   `grep -c '^\*\*Status:\*\*' .planning/milestones/<v>-ROADMAP.md`.
+
+**Pass criteria:**
+- No dangling `v4.7-ROADMAP.md` reference; the replacement target exists.
+- The relocated audit is present and no reference to its old root path remains.
+- Each of the five archives reports exactly 1.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (170-02 plan execution, re-verified at phase close)
+**Notes:** Per locked decision D-01 the dead link was fixed rather than reconstructing
+`v4.7-ROADMAP.md`/`v4.7-REQUIREMENTS.md` — a rebuilt roadmap would present inference as a
+contemporaneous record. v4.3's pre-existing Status header was re-verified, not duplicated.
+
+### UAT-170-03: DEBT-02 and QRAMM-08 have real, falsifiable tests (TRACE-03)
+
+**What to test:** The two requirements that genuinely lacked coverage now have runnable tests that
+fail if the behaviour regresses — not smoke tests that cannot fail. `lab.sh` PROFILE_ARGS
+precedence is asserted without starting the chaos lab.
+
+**Steps:**
+1. Run `python -m pytest tests/test_lab_profile_args_precedence.py -q -m ""`.
+2. Run `cd src/dashboard && npx vitest run src/pages/__tests__/qramm-assessment-dimension-coverage.test.tsx`.
+3. Confirm no `docker compose` or `lab.sh up` is invoked by either.
+
+**Pass criteria:**
+- Both suites pass.
+- The lab.sh test asserts resolved PROFILE_ARGS values, not merely that the script runs.
+- The QRAMM test asserts 120 questions, 30 per dimension, and all four dimension tabs render.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (170-03 plan execution, re-verified at phase close)
+**Notes:** 3 pytest + 3 vitest tests pass. The lab.sh test reads `bash -x` xtrace output to assert
+the resolved value ("--profile identity" / "--profile core" / ""), so the shell interpreter is the
+oracle and the lab is never started. GAP-02 and QRAMM-09 were found to already have real coverage
+the original review missed — annotated rather than duplicated.
+
+### UAT-170-04: Cross-phase planning references survive archival (TRACE-05)
+
+**What to test:** No archived planning document references a sibling phase at a pre-archive
+`.planning/phases/<slug>/` path when that phase now lives under `.planning/milestones/vX.Y-phases/`.
+References to phases whose artifacts are genuinely absent are honest prose, not fabricated paths.
+
+**Steps:**
+1. Build a slug-to-directory index from `.planning/milestones/v*-phases/*`.
+2. Sweep every `.planning/milestones/**/*.md` for `.planning/phases/<slug>/` references, excluding
+   same-phase self-references, `999.x` backlog placeholders, and glob forms.
+3. Confirm zero hits resolve to a slug that exists in the index.
+4. Read the de-linkified entries for Phases 04, 29, 133, 134, 144 and confirm each names the phase
+   and points at its surviving milestone ROADMAP section.
+
+**Pass criteria:**
+- Zero concrete broken cross-phase references remain.
+- Every de-linkified reference is prose naming the phase, with no invented path.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (170-06 + phase-close gap closure, independently re-verified)
+**Notes:** The enumerated scope was incomplete three times over — plan 170-06 fixed 68 lines but
+missed the `38-identity-api-regression-fix` family, close-out caught 28 more, verification found 6
+more, and a full derivation-based sweep found 174 more across 90 files. Root cause: every pass
+worked from a hand-enumerated slug list. Replaced enumeration with a filesystem-derived index;
+re-run sweep now returns zero. The user explicitly endorsed prose over fabricated paths.
+
+### UAT-170-05: Staleness runbook matches what CI actually gates (RUNBOOK-01)
+
+**What to test:** `CLAUDE.md`'s Staleness Review Cadence lists every catalog
+`.github/workflows/python-staleness.yml` gates, including CMVP, error-codes, and the SNMP contract
+catalog — and flags that `quirk compliance cmvp refresh` must not be run (RVW-022).
+
+**Steps:**
+1. Run `grep -i cmvp CLAUDE.md`, `grep 'error-codes' CLAUDE.md`, `grep -i snmp CLAUDE.md`.
+2. Read `.github/workflows/python-staleness.yml` and confirm the runbook names every catalog it
+   gates, with no entry for a gate that does not exist.
+3. Confirm the CMVP entry carries the "never run `quirk compliance cmvp refresh`" warning.
+
+**Pass criteria:**
+- All three catalogs documented with real paths and real cadences read from source.
+- `docs/error-codes.md` documented as a content-assertion gate, not a `last_verified` date file.
+- The RVW-022 warning is present inline.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (170-05 plan execution, re-verified at phase close)
+**Notes:** Derived from the workflow rather than the plan's prose; no discrepancy found between the
+three named catalogs and the workflow's real gates. `CLAUDE.md` is gitignored per the Phase 120
+public-repo cutover, so this edit is local-filesystem-only by design.
+
+---
+
+**Series 170 disposition.** All five cases PASS. TRACE-01 through TRACE-07 and RUNBOOK-01 are
+complete. Phase 170 verification passed 5/5 after a gap-found/gap-closed cycle on criterion 4.
