@@ -44,11 +44,12 @@ from __future__ import annotations
 import fnmatch
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -253,17 +254,35 @@ def _skipped_report_lines(output: str) -> list[str]:
     return [line for line in output.splitlines() if line.startswith("SKIPPED ")]
 
 
+def _absolutize_node_id(node_id: str) -> str:
+    """Make the file-path portion of a pytest node ID absolute (relative to
+    REPO_ROOT), leaving an already-absolute path (e.g. a tmp_path scratch
+    file) untouched. ``run_fork_safe`` forbids a ``cwd`` kwarg (Phase 166
+    fork-safety fix, tests/cli_helpers.py), so every path-like argv element
+    must already be absolute before it reaches the child process."""
+    path_part, sep, rest = node_id.partition("::")
+    path = Path(path_part)
+    if not path.is_absolute():
+        path = (REPO_ROOT / path).resolve()
+    return f"{path}{sep}{rest}"
+
+
 def _run_pytest_nodes(node_ids) -> tuple[int, str]:
     """Run the given node IDs in ONE subprocess. Returns (returncode,
-    combined stdout+stderr). Empty input is a no-op (rc=0, no output)."""
+    combined stdout+stderr). Empty input is a no-op (rc=0, no output).
+
+    Uses ``run_fork_safe`` (Phase 166 GATE-03), not a raw ``subprocess.run``
+    with ``cwd=`` -- that combination is the exact macOS fork()-after-
+    Network.framework SIGSEGV documented in
+    ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md``,
+    reproduced by this module in a full unfiltered suite run (168-09)."""
     node_ids = sorted(node_ids)
     if not node_ids:
         return 0, ""
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-rA", *node_ids],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
+    abs_node_ids = [_absolutize_node_id(n) for n in node_ids]
+    proc = run_fork_safe(
+        [sys.executable, "-m", "pytest", "-q", "-rA", *abs_node_ids],
+        timeout=180,
     )
     return proc.returncode, proc.stdout + "\n" + proc.stderr
 
@@ -290,11 +309,9 @@ def collected_node_ids() -> set[str]:
     """The real collect-only node ID set, collected exactly once per test
     session (collection over ~3700 nodes costs a few seconds; re-collecting
     per test would be wasteful and is explicitly disallowed by the plan)."""
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "--collect-only", "-q"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
+    proc = run_fork_safe(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q", str(REPO_ROOT / "tests")],
+        timeout=180,
     )
     if proc.returncode != 0:
         pytest.fail(

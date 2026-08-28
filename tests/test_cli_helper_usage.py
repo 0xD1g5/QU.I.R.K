@@ -65,6 +65,12 @@ _COVERED_FILES = [
     "tests/test_vault_connector.py",
     "tests/test_verify_phase_gates.py",
     "tests/conftest.py",
+    # Phase 168-09: test_uat_disposition_integrity.py spawns `pytest`
+    # subprocesses (collect-only + substitute-node execution) and hit the
+    # exact same SIGSEGV in a full-suite run; migrated to run_fork_safe and
+    # added here so a future direct subprocess.run() reintroduced there is
+    # caught too.
+    "tests/test_uat_disposition_integrity.py",
 ]
 
 # Attribute names on a `subprocess` module reference that spawn a real
