@@ -42,7 +42,7 @@
 {"id": "UAT-33-06", "series": "33", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-33-07", "series": "33", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-33-08", "series": "33", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-34-01", "series": "34", "bucket": "B", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-34-01", "series": "34", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_motion_scoring.py::test_subscores_includes_data_in_motion exit 0", "recorded": "2026-08-27"}
 {"id": "UAT-34-02", "series": "34", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-34-03", "series": "34", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-35-01", "series": "35", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}

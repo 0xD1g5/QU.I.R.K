@@ -5408,7 +5408,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Expected:** The `subscores` object contains exactly 6 keys: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, `data_in_motion`.
 **Pass Criteria:** `"data_in_motion"` is present in `subscores`; the existing 5 keys are unchanged.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_motion_scoring.py::test_subscores_includes_data_in_motion exit 0)  - [ ] FAIL  - [ ] SKIP
 
 ---
 ### UAT-34-02: Plaintext-broker evidence lowers the data_in_motion subscore vs zero baseline
