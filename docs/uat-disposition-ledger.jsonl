@@ -1,23 +1,23 @@
-{"id": "UAT-1-02", "series": "1", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-01", "series": "10", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-02", "series": "10", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-03", "series": "10", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-04", "series": "10", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-05", "series": "10", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-06", "series": "10", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-07", "series": "10", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-1-02", "series": "1", "bucket": "D", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Got: 'QU.I.R.K. v5.15.0', code=0", "recorded": "2026-08-27"}
+{"id": "UAT-10-01", "series": "10", "bucket": "C", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS: Graceful exit. code=0, files=4", "recorded": "2026-08-27"}
+{"id": "UAT-10-02", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-10-03", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-10-04", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-10-05", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-10-06", "series": "10", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-10-07", "series": "10", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS: 4 distinct scan timestamps", "recorded": "2026-08-27"}
 {"id": "UAT-10-08", "series": "10", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-09", "series": "10", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-10-10", "series": "10", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-10-09", "series": "10", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS: ssh-audit not installed no crash observed. code=0", "recorded": "2026-08-27"}
+{"id": "UAT-10-10", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-10-11", "series": "10", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-100-01", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-100-02", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-100-03", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-100-04", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-11-01", "series": "11", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-11-01", "series": "11", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: No lab scan dir [use --no-lab-scan=False]", "recorded": "2026-08-27"}
 {"id": "UAT-11-02", "series": "11", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-11-03", "series": "11", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-11-04", "series": "11", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-11-03", "series": "11", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-11-04", "series": "11", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: --no-lab-scan flag", "recorded": "2026-08-27"}
 {"id": "UAT-28-01", "series": "28", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-28-02", "series": "28", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-28-03", "series": "28", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -62,7 +62,7 @@
 {"id": "UAT-39-06", "series": "39", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-39-07", "series": "39", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-39-08", "series": "39", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-4-01", "series": "4", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-4-01", "series": "4", "bucket": "C", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Down: [443, 8443, 9443, 10443, 11443, 8444, 8000, 2222, 5555]", "recorded": "2026-08-27"}
 {"id": "UAT-41-01", "series": "41", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-41-03", "series": "41", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-42-01", "series": "42", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -93,19 +93,19 @@
 {"id": "UAT-49-03", "series": "49", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-49-04", "series": "49", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-49-05", "series": "49", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-01", "series": "5", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-02", "series": "5", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-03", "series": "5", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-04", "series": "5", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-05", "series": "5", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-06", "series": "5", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-07", "series": "5", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-08", "series": "5", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-09", "series": "5", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-10", "series": "5", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-11", "series": "5", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-12", "series": "5", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-5-13", "series": "5", "bucket": "C", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-5-01", "series": "5", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: Container group check see UAT-4-01", "recorded": "2026-08-27"}
+{"id": "UAT-5-02", "series": "5", "bucket": "F", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 13443 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-03", "series": "5", "bucket": "F", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 14443 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-04", "series": "5", "bucket": "F", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 15443 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-05", "series": "5", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: Container group check see UAT-4-01", "recorded": "2026-08-27"}
+{"id": "UAT-5-06", "series": "5", "bucket": "E", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20001 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-07", "series": "5", "bucket": "E", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20002 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-08", "series": "5", "bucket": "E", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20003 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-09", "series": "5", "bucket": "E", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20004 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-10", "series": "5", "bucket": "D", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: JWT ports not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-11", "series": "5", "bucket": "C", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20022 not reachable", "recorded": "2026-08-27"}
+{"id": "UAT-5-12", "series": "5", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-5-13", "series": "5", "bucket": "C", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 15449 not reachable", "recorded": "2026-08-27"}
 {"id": "UAT-5-15", "series": "5", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-5-16", "series": "5", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-5-17", "series": "5", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -144,19 +144,19 @@
 {"id": "UAT-58-05", "series": "58", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-58-06", "series": "58", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-58-07", "series": "58", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-01", "series": "6", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-02", "series": "6", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-03", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-04", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-05", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-06", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-07", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-08", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-09", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-10", "series": "6", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-11", "series": "6", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-12", "series": "6", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-6-13", "series": "6", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-6-01", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-02", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-03", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-04", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-05", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-06", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: No findings for port 8000", "recorded": "2026-08-27"}
+{"id": "UAT-6-07", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: No findings for port 8444", "recorded": "2026-08-27"}
+{"id": "UAT-6-08", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: No findings for port 2222", "recorded": "2026-08-27"}
+{"id": "UAT-6-09", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-10", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-11", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-12", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-6-13", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-6-14", "series": "6", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-6-15", "series": "6", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-62-03", "series": "62", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -186,8 +186,8 @@
 {"id": "UAT-7-15", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-16", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-17", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-7-18", "series": "7", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-7-19", "series": "7", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-7-18", "series": "7", "bucket": "E", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: --no-dashboard flag", "recorded": "2026-08-27"}
+{"id": "UAT-7-19", "series": "7", "bucket": "E", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: --no-dashboard flag", "recorded": "2026-08-27"}
 {"id": "UAT-7-20", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-21", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-22", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -210,17 +210,17 @@
 {"id": "UAT-7-39", "series": "7", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-40", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-41", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-01", "series": "8", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-02", "series": "8", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-03", "series": "8", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-8-01", "series": "8", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-8-02", "series": "8", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-8-03", "series": "8", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-8-04", "series": "8", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-05", "series": "8", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-06", "series": "8", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-8-06", "series": "8", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-8-07", "series": "8", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-08", "series": "8", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-09", "series": "8", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-10", "series": "8", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-11", "series": "8", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-8-08", "series": "8", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-8-09", "series": "8", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-8-10", "series": "8", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-8-11", "series": "8", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-8-12", "series": "8", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-13", "series": "8", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-14", "series": "8", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -251,14 +251,14 @@
 {"id": "UAT-89-02-02", "series": "89", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-89-03-01", "series": "89", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-89-03-02", "series": "89", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-01", "series": "9", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-02", "series": "9", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-03", "series": "9", "bucket": "F", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-04", "series": "9", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-05", "series": "9", "bucket": "D", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-9-01", "series": "9", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-9-02", "series": "9", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-9-03", "series": "9", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-9-04", "series": "9", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-9-05", "series": "9", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-9-06", "series": "9", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-07", "series": "9", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-9-08", "series": "9", "bucket": "E", "runner_covered": true, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-9-07", "series": "9", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
+{"id": "UAT-9-08", "series": "9", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-9-09", "series": "9", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-9-10", "series": "9", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-92-01", "series": "92", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}

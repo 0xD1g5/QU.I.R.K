@@ -296,7 +296,7 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 - Output matches format: `QU.I.R.K. v5.15.0`
 - Exit code 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Got: 'QU.I.R.K. v5.15.0', code=0)  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:** Version bumped to v5.15.0 at v5.15 milestone close (pyproject.toml sole SoT;
 importlib.metadata derives it). Re-test required against v5.15.0 install. Note v5.13 and v5.14 were tagged as two-component tags (`v5.13`, `v5.14`) which never matched release.yml's `v*.*.*` glob, so no release ran for them and the shipped package stayed at 5.12.0 — see RVW-004.
@@ -1029,7 +1029,7 @@ All of these services show status `Up` or `running`:
 - `unknown-port` (5555)
 - `tls-slow-proxy` (12443)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Down: [443, 8443, 9443, 10443, 11443, 8444, 8000, 2222, 5555])  - [ ] SKIP
 
 ---
 ### UAT-4-02: Modern TLS Service (Port 443)
@@ -1251,7 +1251,7 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Services on ports 13443, 14443, 15443, 15001, 18000, 5556, 15432, 16379, 15672, 24443 show `Up`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: Container group check see UAT-4-01)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1268,7 +1268,7 @@ All of these services show status `Up` or `running`:
 - `verify error:num=2` (unable to get issuer certificate) or similar chain error
 - Connection still establishes (TLS is present, chain is incomplete)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 13443 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1284,7 +1284,7 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Output shows `Public-Key: (1024 bit)`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 14443 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1300,7 +1300,7 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Output shows `sha1WithRSAEncryption` or similar SHA-1 algorithm
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 15443 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1319,7 +1319,7 @@ All of these services show status `Up` or `running`:
 - `curl -s http://127.0.0.1:20001/.well-known/jwks.json` → returns JSON with keys
 - Ports 20001, 20002, 20003, 20004 all respond to curl
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: Container group check see UAT-4-01)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1337,7 +1337,7 @@ All of these services show status `Up` or `running`:
 - `kty` is `RSA`
 - Key modulus length (base64url `n`) decodes to ≥ 2048 bits
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20001 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1354,7 +1354,7 @@ All of these services show status `Up` or `running`:
 - `alg` field shows `HS256`
 - OR JWT scanner detects symmetric key usage (no public key in JWKS)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20002 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1371,7 +1371,7 @@ All of these services show status `Up` or `running`:
 - RSA modulus length decodes to 1024 bits
 - QuRisk JWT scanner flags this as weak key size
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20003 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1388,7 +1388,7 @@ All of these services show status `Up` or `running`:
 - Response indicates `alg: none` usage or scanner classifies as `CRITICAL_NO_SIGNATURE`
 - QuRisk flags this as a critical finding
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20004 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1419,7 +1419,7 @@ All of these services show status `Up` or `running`:
 - Findings include RSA-1024 weak key finding
 - Total JWT-related findings ≥ 3
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: JWT ports not reachable)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1439,7 +1439,7 @@ All of these services show status `Up` or `running`:
 - MAC: `hmac-md5` flagged as CRITICAL
 - Total critical+warning findings ≥ 3
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20022 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1490,7 +1490,7 @@ All of these services show status `Up` or `running`:
 - TLS certificate has Keycloak-related subject
 - TLS version ≥ 1.2
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 15449 not reachable)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2577,7 +2577,7 @@ Each finding object contains:
 - `description`
 - `quantum_risk` or equivalent quantum safety assessment
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 
 ---
 ### UAT-6-02: TLS Findings — Cipher Suite Detection
@@ -2596,7 +2596,7 @@ Each finding object contains:
 - Finding severity is MEDIUM or HIGH
 - `quantum_risk: quantum-vulnerable` for RSA key exchange
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2618,7 +2618,7 @@ Each finding object contains:
 - Finding recommendation includes the expiry date
 - No `"TLS certificate expiring within 30 days"` finding also present (expired wins)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2639,7 +2639,7 @@ Each finding object contains:
 - `cert_issuer` equals `cert_subject` in the underlying scan data
 - Finding recommendation references replacing with a CA-issued certificate
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2660,7 +2660,7 @@ Each finding object contains:
 - Condition includes `MTLS_REQUIRED` or `TLS_HANDSHAKE_FAILED`
 - Service correctly identified as TLS, not misclassified as HTTP
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2681,7 +2681,7 @@ Each finding object contains:
 - Severity: HIGH or CRITICAL
 - Finding includes remediation guidance
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: No findings for port 8000)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2702,7 +2702,7 @@ Each finding object contains:
 - Finding type references `HTTP_ON_TLS_LIKE_PORT`
 - Severity: HIGH
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: No findings for port 8444)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2724,7 +2724,7 @@ Each finding object contains:
 - ECDSA algorithms classified as `quantum-vulnerable`
 - Each algorithm has NIST quantum level in the finding
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: No findings for port 2222)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2747,7 +2747,7 @@ Each finding object contains:
 - `## Recommended Actions (Next 30 Days)` section
 - `## Recommended Actions (Next 60 Days)` section
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2770,7 +2770,7 @@ Each finding object contains:
 - Each item has `Why:` evidence description
 - Each item has an `Owner:` placeholder
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2794,7 +2794,7 @@ Each finding object contains:
   - At least one algorithm component (e.g., AES-256-GCM, RSA)
 - CBOM has a `serialNumber` BOM-ref
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2813,7 +2813,7 @@ Each finding object contains:
 - No XML parse error
 - Root element is CycloneDX namespace element
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2835,7 +2835,7 @@ Each finding object contains:
 - `roadmap` contains NOW/NEXT/LATER items
 - `evidence` contains finding counts
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3247,7 +3247,7 @@ Each finding object contains:
 - File size > 50KB (not empty or truncated)
 - HTTP 200 from the API endpoint
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: --no-dashboard flag)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3266,7 +3266,7 @@ Each finding object contains:
 - `score` is numeric
 - Response time < 3 seconds
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: --no-dashboard flag)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4173,7 +4173,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
   - 35–54 → FAIR
   - 0–34 → POOR
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4195,7 +4195,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - If scan error rate > 50%, confidence < 60
 - Confidence score in output JSON
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4217,7 +4217,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - `score_scan2 < score_scan1`
 - Score difference ≥ 5 points (HTTP exposure is penalized up to 18 pts)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4276,7 +4276,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Why text references actual scan data (not generic placeholder)
 - Remediation steps are specific to findings
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4324,7 +4324,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - `quirk --help` output contains no `--no-require-delta` or `--require-delta` flags
 - Passing a second positional argument to `validate_run` raises `TypeError` (no dead parameter to silently absorb it)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4356,7 +4356,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - When Kerberos weak etypes are detected, score is penalized (lower than no-identity scan)
 - `SCORE_WEIGHTS` entry `identity_kerberos_weak_etype_ratio` present in scoring module
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4389,7 +4389,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Score is penalized when SAML weak signing certs are detected
 - `SCORE_WEIGHTS` entry `identity_saml_weak_signing_ratio` present in scoring module
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4423,7 +4423,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - `SCORE_WEIGHTS` entry `identity_dnssec_weak_algo_ratio` present in scoring module
 - Chaos lab DNSSEC zone with RSASHA1 produces `dnssec_weak_algo_count >= 1`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4640,7 +4640,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - `run-stats-{stamp}.json` ✓
 - `quirk.db` ✓
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4662,7 +4662,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Contains recommended next steps
 - Does not contain raw JSON or technical jargon
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4683,7 +4683,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Certificate expiry dates present for cert findings
 - Algorithm quantum assessment present
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4706,7 +4706,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - `endpoint_count` matches actual scanned endpoints
 - `profile` field matches used profile
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4729,7 +4729,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Contains score, findings table, and certificate inventory
 - Fully self-contained (no external CDN dependencies)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4793,7 +4793,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Total component count ≥ 10 for a full lab scan
 - No duplicate components (same algorithm not listed twice)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4824,7 +4824,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Each component has `<name>`, `<type>` attributes
 - File size > 1KB (not empty or stub)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4921,7 +4921,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Scorecard still generated (low confidence score)
 - No uncaught Python exception traceback
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS: Graceful exit. code=0, files=4)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4939,7 +4939,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Exit code is non-zero
 - No Python traceback exposed to user
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4962,7 +4962,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Line number of error indicated if possible
 - Exit code non-zero
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4995,7 +4995,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Scan does not hang or crash
 - Run stats reflect actual reachable vs. error count
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5017,7 +5017,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - No errors caused by rate limiting itself
 - `run-stats` shows longer duration
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5039,7 +5039,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - No Python `RuntimeError` or threading errors in output
 - SQLite database is not corrupted: `sqlite3 ./quirk.db "PRAGMA integrity_check"`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5061,7 +5061,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Timestamps differ between runs
 - `scanned_at` field distinguishes runs
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS: 4 distinct scan timestamps)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5106,7 +5106,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Warning logged indicating ssh-audit fallback
 - Restore: `sudo mv /tmp/ssh-audit-bak $(dirname $(which python))/ssh-audit`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS: ssh-audit not installed no crash observed. code=0)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5128,7 +5128,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Basic TLS data (version, cert) still captured
 - `tls_enum_mode` reflected as `fast` or `off` in run-stats
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5186,7 +5186,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - PDF export succeeds
 - Score reflects lab environment (should be POOR or FAIR given all the intentional vulnerabilities)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: No lab scan dir [use --no-lab-scan=False])
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5231,7 +5231,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Finding count in `findings-*.json` matches dashboard findings table count
 - Certificate count matches across CLI and UI
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 uat_runner.py PASS)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5252,7 +5252,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Score may improve slightly (one less critical finding)
 - Run stats show fewer scanned endpoints
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: --no-lab-scan flag)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
