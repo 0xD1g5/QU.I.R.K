@@ -9889,7 +9889,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All five checks exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: test -f and 4 of 5 grep checks against docs/upgrade-guide.md - step 3 grep -q 'pip install -U quirk-scanner' finds no match because the doc uses the quoted extras form pip install -U quirk-scanner[all] with a literal quote character breaking the exact substring)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-03: `.github/workflows/release-container.yml` lints + multi-arch present (LAUNCH-03)
@@ -9959,7 +9959,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Note:** Step 4 currently passes against a placeholder PNG (1×1 transparent); the SUMMARY for Plan 85-05 documents the deferred real-screenshot capture as a manual post-merge task. A separate UAT-85-08 entry can be filed once the real screenshot lands.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: 6 grep checks against README.md - badge count is 5 as expected and steps 2/4/5/6 pass, but step 3 grep -q 'pip install quirk-scanner[all]' finds no match because README now quotes it as pip install 'quirk-scanner[all]' for zsh glob safety)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-07: `docs/release-process.md` curl|bash non-decision section (LAUNCH-07)
@@ -10020,7 +10020,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 4 and 5 both true; manual playback test passes.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires recording and uploading a real asciinema demo to an external service, not available in this environment)
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-10: End-to-end getting-started.md quickstart on clean macOS arm64 (LAUNCH-06)
@@ -10039,7 +10039,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** All 8 steps succeed verbatim from the doc; no undocumented `brew install`, `pip install <other>`, or manual config edit required. Discrepancies file follow-up PRs against `docs/getting-started.md`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires a fresh macOS arm64 machine with only python3.11 and pipx pre-installed, not available in this environment)
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-11: v4.10.0 tag-push fires release pipeline end-to-end (LAUNCH-02/03)
@@ -10061,7 +10061,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Failure recovery:** A failed pipeline can be retried by deleting the tag (`git tag -d v4.10.0 && git push origin :refs/tags/v4.10.0`), fixing the issue, and re-tagging. Trusted Publishers does NOT allow re-publishing the same version to PyPI — if the PyPI publish job specifically fails after artifacts were uploaded, bump to v4.10.1.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires pushing a real release tag to trigger GitHub Actions release.yml/release-container.yml and publishing to PyPI/GHCR, out of scope and unsafe to execute from this sandbox)
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-12: Homebrew tap bootstrap with real sdist sha256 (LAUNCH-02)
@@ -10083,7 +10083,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** All 9 steps succeed; tap repo is public on github.com/0xD1g5/homebrew-quirk; clean macOS arm64 install + test exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires creating a public GitHub repo and Homebrew tap plus a v4.10.0 PyPI publish as a prerequisite, not available in this environment)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11056,7 +11056,7 @@ Expect: PASS printed; exit 0.
 - `quantum_safety` is not `"safe"` (RSA is quantum-vulnerable).
 - No raw token content echoed to stdout.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: the case's own python -c gate against quirk.cli.analyze_token_cmd.run_analyze_token - JSON output alg=RS256 is_alg_none=false quantum_safety=quantum-vulnerable not safe, process exits 0 -- note run_analyze_token calls sys.exit internally so the script's own trailing assert/print never executes, but the real exit code and JSON match the Pass Criteria)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
@@ -11095,7 +11095,7 @@ Expect: all 4 variants print PASS; final PASS line printed.
 - Output contains `CRITICAL` text.
 - Raw token bytes are not echoed to stdout (first JWT segment absent from output).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: all 4 alg:none case variants -- none/NONE/None/NonE via run_analyze_token - each exits 1 with CRITICAL text, no raw token echoed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
@@ -11131,7 +11131,7 @@ Expect: PASS printed; exit 0.
 - Output contains "opaque" (case-insensitive) or equivalent INFO text.
 - No exception traceback printed.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: the case's own python -c gate with an opaque sk-live- token - exits 0, INFO opaque-token message printed, no traceback)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
@@ -11180,7 +11180,7 @@ Expect: PASS printed with finding count >= 3.
 - At least one `service_detail` containing `"unauthenticated_endpoint"`.
 - All endpoints have `protocol="OpenAPI"`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: the case's own python -c gate against quirk.scanner.openapi_scanner.scan_openapi_spec using .venv/bin/python3 -- properly installed env with openapi-spec-validator - 3 endpoints found, plaintext_server + security_scheme + unauthenticated_endpoint all present)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
@@ -11470,7 +11470,7 @@ Expect: PASS.
 - Exit code is non-zero.
 - Zero HTTP requests are made to the target (`http://localhost:20100`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: echo | quirk --config config-lab-fuzz.yaml --openapi-spec http://localhost:20100/openapi.json --fuzz with piped non-TTY stdin - scan completed normally and exited 0 instead of hard-aborting before any request; no non-interactive-mode error message printed)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11497,7 +11497,7 @@ Expect: PASS.
 - `--fuzz-budget` default is 50.
 - Exit code is non-zero when budget exceeds 500.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: quirk --config config-lab-fuzz.yaml --openapi-spec http://localhost:20100/openapi.json --fuzz --fuzz-budget 501 - scan completed normally and exited 0 instead of being rejected; default --fuzz-budget is confirmed 50 per argparse default but the documented 500 hard maximum is not enforced at runtime)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11553,7 +11553,7 @@ Expect: PASS.
 - The finding describes RS256→HS256 algorithm substitution.
 - The scan completes without exception.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires a live fuzz-target service on localhost:20100 from the chaos lab, not available in this environment)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -12017,7 +12017,7 @@ effort/impact bands, and rollup formula text must be present and identical in bo
 - HTML and PDF roadmap items both show effort and impact band labels.
 - No section present in HTML is absent from PDF.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP (Playwright environment required)
+**Result:** - [x] PASS (2026-08-27 ran: pdftotext against report-*.pdf and read report-*.html from a real scan - both contain Readiness Assessment, Priority Business Risks, How this score was computed, EFFORT/IMPACT labels, and Six pillar subscores text identically)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
