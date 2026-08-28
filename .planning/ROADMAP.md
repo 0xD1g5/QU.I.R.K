@@ -350,7 +350,7 @@ Plans:
 - [x] 170-03-PLAN.md — New tests: lab.sh PROFILE_ARGS precedence (DEBT-02), QRAMM assessment dimension coverage (QRAMM-08) (TRACE-03)
 - [x] 170-04-PLAN.md — Requirement-ID annotations on 11 already-passing tests, incl. re-verified GAP-02/QRAMM-09 (TRACE-03, TRACE-04)
 - [x] 170-05-PLAN.md — CLAUDE.md staleness runbook: add CMVP, error-codes, SNMP-contract catalogs (RUNBOOK-01)
-- [ ] 170-06-PLAN.md — Sibling-reference repair across 24 archived planning files (TRACE-05)
+- [x] 170-06-PLAN.md — Sibling-reference repair across 25 archived planning files: 22 rewrites + 14 de-linkifications (TRACE-05)
 - [ ] 170-07-PLAN.md — Full-suite verification, docs/Obsidian sync, human checkpoint
 
 ### Phase 171: Resume UX Tail
@@ -381,7 +381,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 167. UAT Format Unification & Deduplication | 3/3 | Complete   | 2026-08-27 |
 | 168. UAT Record Drain — Series 1–~100 | 9/9 | Complete   | 2026-08-28 |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 8/8 | Complete   | 2026-08-28 |
-| 170. Traceability, Documentation & Runbook | 5/7 | In Progress|  |
+| 170. Traceability, Documentation & Runbook | 6/7 | In Progress|  |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
 
 ---

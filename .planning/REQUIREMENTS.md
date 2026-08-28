@@ -177,9 +177,14 @@ open; expected to span multiple phases.*
 - [x] **TRACE-04**: AUTH-05, DEBT-04, GAP-01, QRAMM-11 and TAIL-04 — which have tests but no
   linkage — gain a requirement-ID annotation. GAUGE-01/02/03 likewise in `ScoreGauge.test.tsx`
   (code independently verified correct; only the link is missing).
-- [ ] **TRACE-05**: Planning summaries reference sibling phase artifacts by a path that survives
-  archival, or are rewritten on archive. 16 references are currently broken. This is the same failure
-  mode that lost BACK-A11Y-01 from the live backlog.
+- [x] **TRACE-05**: Planning summaries reference sibling phase artifacts by a path that survives
+  archival, or are rewritten on archive. Re-measured at 68 broken reference lines across 25 files
+  (superseding the review's unmethodologied "16" figure) — 22 lines/17 files rewritten to their
+  real post-archive `.planning/milestones/vX.Y-phases/` paths, 14 lines/8 files (Phases 133, 134,
+  144 — genuinely absent artifact directories) de-linkified to plain prose naming the phase and
+  pointing at its surviving milestone ROADMAP.md section. See
+  `.planning/phases/170-traceability-documentation-runbook/170-06-SUMMARY.md`. This is the same
+  failure mode that lost BACK-A11Y-01 from the live backlog.
 - [x] **TRACE-06**: The five archive documents recording no completion status (v4.10, v4.3, v5.1,
   v5.12, v5.4) gain a `**Status:**` header.
 - [x] **TRACE-07**: New requirement documents use exactly one declaration format. Backfilling
@@ -258,7 +263,7 @@ open; expected to span multiple phases.*
 | TRACE-02 | Phase 170 | Complete |
 | TRACE-03 | Phase 170 | Complete |
 | TRACE-04 | Phase 170 | Complete |
-| TRACE-05 | Phase 170 | Pending |
+| TRACE-05 | Phase 170 | Complete |
 | TRACE-06 | Phase 170 | Complete |
 | TRACE-07 | Phase 170 | Complete |
 | RUNBOOK-01 | Phase 170 | Complete |

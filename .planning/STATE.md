@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: ` header; v4.3's
-stopped_at: Completed 170-04-PLAN.md
-last_updated: "2026-08-28T19:05:00.000Z"
+status: executing
+stopped_at: Completed 170-06-PLAN.md
+last_updated: "2026-08-28T19:10:00.000Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 44
-  completed_plans: 42
-  percent: 77
+  completed_plans: 44
+  percent: 75
 ---
 
 # Project State
@@ -22,13 +22,30 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 170 — traceability-documentation-runbook (4/7 plans executed; TRACE-01,
-TRACE-02/06/07, TRACE-03, TRACE-04 all complete; 170-04 annotated the remaining GAP-01/GAP-02/
-QRAMM-09/AUTH-05/DEBT-04/QRAMM-11/TAIL-04/GAUGE-01-03 requirement IDs onto their existing,
-already-passing tests; remaining workstreams — planning-summary path drift, CLAUDE.md staleness
-cadence, full-suite verification — not yet planned)
+**Current focus:** Phase 170 — traceability-documentation-runbook (6/7 plans executed; TRACE-01,
+TRACE-02/06/07, TRACE-03, TRACE-04, RUNBOOK-01, TRACE-05 all complete; 170-06 rewrote 22 stale
+cross-milestone sibling-phase references to their real archived paths and de-linkified 14
+references to genuinely-absent Phase 133/134/144 artifacts into plain prose, correcting one wrong
+destination path in the plan's own ground truth (36-dashboard-motion-tab archived under
+v4.5-phases, not the stated v4.4-phases) along the way; remaining workstream — full-suite
+verification + docs/Obsidian sync + human checkpoint (170-07) — not yet executed)
 
 ## Decisions Carried Forward (Phase 170)
+
+- **170-06 closed TRACE-05.** Re-verified the plan's own ground-truth mapping table before
+  acting per the plan's explicit instruction, and found one wrong destination:
+  `36-dashboard-motion-tab` was claimed to archive under `v4.4-phases/` (which does not exist
+  anywhere in the repo) but actually lives at `v4.5-phases/36-dashboard-motion-tab` — corrected
+  to the real, `test -d`-verified path instead of the plan's stated one. Rewrote 22 Category A
+  stale-but-resolvable cross-milestone sibling-phase citations across 17 files to their real
+  post-archive `.planning/milestones/vX.Y-phases/` paths, and de-linkified 14 Category B
+  citations across 8 files referencing Phases 133/134 (entire `v5.8-phases/` milestone directory
+  absent, no incident manifest) and 144 (specifically missing from `v5.11-phases/`, documented in
+  `ARCHIVE-MANIFEST.md`) into plain prose naming the phase and pointing at its surviving milestone
+  `ROADMAP.md` section. Only 1 of the 25 edited files (`v5.12-phases/151-CONTEXT.md`) is tracked
+  by git — the rest are gitignored under the Phase 120 `.planning/` exclusion and are correct
+  filesystem-only edits, not missing work. See
+  `.planning/phases/170-traceability-documentation-runbook/170-06-SUMMARY.md`.
 
 - **170-04 closed TRACE-03 and TRACE-04.** GAP-02 and QRAMM-09 (the two TRACE-03 items the
   original review claimed had no discoverable test) were re-verified during planning to already
@@ -52,7 +69,7 @@ cadence, full-suite verification — not yet planned)
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**` header; v4.3's
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -151,9 +168,11 @@ cadence, full-suite verification — not yet planned)
 
 ## Current Position
 
-Phase: 170 (traceability-documentation-runbook) — 4 plans executed (170-01, 170-02, 170-03, 170-04)
-Plan: 04 of 7 (complete)
-Status: Plan 04 complete — requirement-ID annotations added to 10 test files (8 Python, 2 TypeScript) closing TRACE-03 and TRACE-04; remaining phase 170 workstreams (planning-summary path drift, CLAUDE.md staleness cadence, full-suite verification) not yet executed
+Phase: 170 (traceability-documentation-runbook) — 6 plans executed (170-01, 170-02, 170-03, 170-04, 170-05, 170-06)
+Plan: 6 of 7 (complete)
+Status: Plan 06 complete — TRACE-05 closed (22 Category A rewrites + 14 Category B de-linkifications
+across 25 archived planning files); only 170-07 (full-suite verification, docs/Obsidian sync, human
+checkpoint) remains
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -166,7 +185,7 @@ Last activity: 2026-08-28
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | ✅ Complete (2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, zero headingless cases, all locked behind `tests/test_uat_series_format.py`, which was proven to FAIL on the pre-normalization document. Parity was 663==663 at Plan 02 and moved to 666==666 when Plan 03 appended Series 167 — the test asserts computed equality, never a constant, so it survived its own phase. VERIFICATION passed 6/6; human checkpoint cleared by user 2026-08-27) |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Plans executed (2026-08-27; 9/9 plans done — 299/299 series-1-100 cases dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3631 passing); human checkpoint 168-09 Task 3 awaiting review; `/gsd:verify-phase 168` not yet run |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned; full 666-case document + 377-row ledger 100% dispositioned (202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP); `tests/test_uat_zero_undispositioned_gate.py` standing gate live, documented in all four D-07 locations; vitest dialect found zero genuine conversions among Phase 168's 31 series-7 GAPs; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); UATREC-03/UATREC-04 both marked complete; 169-08 Task 3 human checkpoint APPROVED by user 2026-08-28; `/gsd:verify-phase 169` not yet run |
-| 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Plans executed (2026-08-28; 4/7 plans done — 170-01 gave CHANGELOG.md six entries for v5.9.0-v5.14.0 closing the gap between the existing 5.15.0 and 5.8.0 entries, v5.13.0/v5.14.0 correctly framed as developed-but-never-released; 170-02 fixed the dead v4.7 link, relocated the misfiled milestone audit, added Status headers to four archive ROADMAP.md files (v4.3 re-verified, not duplicated), and documented the canonical requirement-declaration format; 170-03 added real tests for DEBT-02 and QRAMM-08; 170-04 annotated GAP-01/GAP-02/QRAMM-09/AUTH-05/DEBT-04/QRAMM-11/TAIL-04/GAUGE-01-03 onto their existing already-passing tests; TRACE-01, TRACE-02, TRACE-03, TRACE-04, TRACE-06, TRACE-07 complete; TRACE-05 and RUNBOOK-01 not yet planned) |
+| 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Plans executed (2026-08-28; 6/7 plans done — 170-01 gave CHANGELOG.md six entries for v5.9.0-v5.14.0 closing the gap between the existing 5.15.0 and 5.8.0 entries, v5.13.0/v5.14.0 correctly framed as developed-but-never-released; 170-02 fixed the dead v4.7 link, relocated the misfiled milestone audit, added Status headers to four archive ROADMAP.md files (v4.3 re-verified, not duplicated), and documented the canonical requirement-declaration format; 170-03 added real tests for DEBT-02 and QRAMM-08; 170-04 annotated GAP-01/GAP-02/QRAMM-09/AUTH-05/DEBT-04/QRAMM-11/TAIL-04/GAUGE-01-03 onto their existing already-passing tests; 170-05 added CMVP/error-codes/SNMP-contract catalogs to CLAUDE.md's staleness runbook (RUNBOOK-01); 170-06 rewrote 22 stale sibling-phase references to real archived paths and de-linkified 14 references to genuinely-absent Phase 133/134/144 artifacts (TRACE-05); TRACE-01 through TRACE-07 and RUNBOOK-01 all complete; only 170-07 (full-suite verification, docs/Obsidian sync, human checkpoint) remains) |
 | 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Not started |
 
 ## v5.15 Phase Map (SHIPPED 2026-08-26)
@@ -373,6 +392,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 169 P08 | ~35min | 2 tasks | 4 files |
 | Phase 170 P02 | 12min | 2 tasks | 8 files |
 | Phase 170 P04 | 15min | 2 tasks | 10 files |
+| Phase 170 P06 | 25min | 2 tasks | 25 files |
 
 ## Accumulated Context
 
