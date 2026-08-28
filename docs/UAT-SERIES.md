@@ -12382,7 +12382,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Message contains score band (e.g. HIGH, CRITICAL) and finding counts
 - `integration_deliveries` row: `destination='slack'`, `status='ok'`, `error_summary IS NULL`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (Slack live delivery requires a real Slack workspace incoming webhook -- QUIRK_SLACK_WEBHOOK cannot be provisioned in this sandboxed environment; the integration_deliveries audit-log write mechanism and CEF/dispatcher batching pattern this case's Step 4 query relies on is exercised structurally by the SIEM dispatcher tests already run and passing this plan)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12413,7 +12413,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Subject line contains "QUIRK Alert" and finding count
 - `integration_deliveries` row: `destination='email'`, `status='ok'`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (Email live delivery requires a reachable SMTP relay -- no Mailhog or SMTP server is provisioned in this sandboxed environment; QUIRK_SMTP_PASSWORD and a live mailbox cannot be exercised here)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12512,7 +12512,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Token rotated in step 5 differs from step 2 token
 - `grep "security:" /tmp/uat-102-test.yaml` shows the token was written
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 python run_scan.py token generate/show/rotate --config uat-102-test.yaml; generated token 43 chars non-empty at least 32; token show step 4 printed the same token as generate step 2; rotate step 5 token differed from the generated token; grep security: uat-102-test.yaml shows the token was written)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12595,7 +12595,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Step 6: Full dashboard (Executive Summary gauges) loads after correct token
 - Step 8: Login form returns after Sign out; `quirk_api_token` absent in localStorage
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 headless Playwright against quirk serve with token auth enabled -- step 2 Dashboard Login card shown pre-auth, not dashboard content; step 4 incorrect token shows inline Invalid token error with zero page reload or redirect; step 6 correct token loads the Executive Summary gauges; step 8 Sign out returns the login form and clears quirk_api_token from localStorage)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12624,7 +12624,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - No browser error dialog or unhandled exception in the console
 - Entering the new token in the login form successfully loads the dashboard
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 headless Playwright -- a pre-rotation stale token seeded into localStorage triggers the mid-session 401 handler automatically on the next API call, returning to the login form with zero page errors or unhandled exceptions; entering the newly rotated token successfully loads the Executive Summary)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12652,7 +12652,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Dashboard loads directly without presenting the login form
 - `curl http://localhost:8512/api/scans` returns HTTP 200 (not 401)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 quirk serve with no token configured loads the full dashboard directly, zero Dashboard Login occurrences, zero console errors; curl -s http://localhost:8511/api/scans returns HTTP 200 not 401)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12735,7 +12735,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - No `cert_pem`, `-----BEGIN CERTIFICATE-----`, `cert_sans`, or `compliance` text in any event
 - `python run_scan.py export --siem` exits 0 with a count message (e.g. "Exported N events to siem")
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 local UDP listener on 127.0.0.1:15514; python run_scan.py export --siem sent 4043/4043 findings as CEF events, every event matching the literal <12>CEF:0|QUIRK|scanner| header; dhost= present on all 4043 events, dpt= present on the 12 port-bearing findings; zero cert_pem, BEGIN CERTIFICATE, cert_sans, or compliance strings found anywhere in the captured stream; export --siem exited 0 with the SIEM export complete count message)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12800,7 +12800,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `integration_deliveries` row: `destination='siem'`, `status='ok'`, `scan_id` matches the completed run
 - (Failure case) Unreachable receiver: `scheduled_runs.status='completed'`; `integration_deliveries.status='failed'`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 QUIRK_CONFIG_PATH set to the scan config so export_after_scan_hook resolves the correct siem block per its own documented no-args contract -- python run_scan.py scheduler run --once dispatched 3 due schedules automatically; 33 real CEF events received on the UDP listener with zero manual export --siem step; integration_deliveries rows recorded destination=siem status=ok with scan_id matching each completed run's output-directory timestamp)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12894,7 +12894,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Each Jira issue gains a comment noting the rediscovery (timestamp + QUIRK mention)
 - `integration_deliveries` rows: `destination='jira'`, `status='ok'`, `finding_hash` non-empty
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (live Jira Cloud or Data Center instance, a writable project key, and QUIRK_JIRA_TOKEN credentials required -- unavailable in this sandboxed environment; JiraChannel mocked-JIRA coverage is already exercised and passing via UAT-104-01 and UAT-104-04 this phase)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13042,7 +13042,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Each incident gains a `work_notes` journal entry noting rediscovery (PATCH operation confirmed)
 - `integration_deliveries` rows: `destination='servicenow'`, `status='ok'`, `finding_hash` non-empty
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (live ServiceNow developer instance and QUIRK_SNOW_USER/QUIRK_SNOW_PASSWORD credentials required -- unavailable in this sandboxed environment; ServiceNowChannel mocked-urllib coverage is already exercised and passing via UAT-105-01 this phase)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13617,7 +13617,7 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 - Coverage_warning WARNING line appears when a sensor is overdue
 - DB `crypto_endpoints.scanned_at` values unchanged before vs. after merge
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-28 full round trip against a local quirk serve console -- quirk console enroll, quirk sensor enroll, quirk sensor push all succeeded HTTP 200; quirk sensor merge printed the required Merged scan_id and Score lines and left crypto_endpoints.scanned_at unchanged, 95 rows before and after. Step 2's own literal command, quirk sensor merge --stale-days 1 against a sensor with a forced past last_push_at, NEVER prints the documented coverage_warning WARNING line: stale_days=1 excludes any sensor silent more than 1 day, and the default 2x-expected-cadence overdue threshold is 48h, so a sensor can never simultaneously be within the 1-day inclusion window and past the 48h overdue threshold -- the two thresholds are mathematically incompatible in the case's own example. Re-running with the default stale_days=30 and a sensor silent 3 days DID correctly print WARNING: 1 enrolled sensors have not pushed within 2x their expected cadence, confirming the underlying feature works and the defect is isolated to the case's own --stale-days 1 example command)  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13804,7 +13804,7 @@ Human (visual):
 - `test -f quantum-chaos-enterprise-lab/expected_results_distributed.md` exits 0
 - ALL_PROFILES line in lab.sh does not contain "distributed"
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_distributed_topology.py::test_config_validates and tests/test_distributed_topology.py::test_distributed_compose_file_exists, both run 2026-08-28 and passing, proving the docker compose config -q validity check without starting any container. The remaining oracle-file, lab.sh-arm, and ALL_PROFILES-exclusion checks are pure static file/grep checks with zero docker interaction and were directly confirmed today: expected_results_distributed.md exists, the distributed arm keyword is present in lab.sh, and the ALL_PROFILES line does not contain distributed)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13890,7 +13890,7 @@ startup. Run from the `quantum-chaos-enterprise-lab/` directory.
 - `coverage_warning` field is null / absent in merge output
 - One score line printed by `quirk sensor merge`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_distributed_topology.py::test_e2e_script_enroll_push_merge_order, tests/test_distributed_topology.py::test_both_sensors_scan_crypto_internal, and tests/test_distributed_topology.py::test_crypto_internal_alias_per_segment, all run 2026-08-28 and passing -- proving the enroll-then-push-then-merge script ordering and per-segment sensor isolation structurally. The live Docker bring-up leg, an actual container start plus a real HTTP enroll/push/merge round trip against the distributed compose stack, is not exercised -- Docker daemon unavailable for a multi-container distributed bring-up in this environment, consistent with the D-01 constraint not to bring the chaos lab up)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13966,7 +13966,7 @@ startup. Run from the `quantum-chaos-enterprise-lab/` directory.
 - `grep -q "%APPDATA%" docs/operators-guide.md` exits 0
 - `grep -q "scan.timeouts" docs/operators-guide.md` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 grep docs/operators-guide.md -- section 8 Distributed Sensor Deployment heading present; all five key command strings present, quirk sensor merge, percent APPDATA percent, quirk console enroll, quirk sensor push, quirk sensor export-results; scan.timeouts settings reference present)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14177,7 +14177,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `grep -q "auto_merge\|auto-merge" quantum-chaos-enterprise-lab/expected_results_distributed.md` exits 0.
 - `grep -q "quirk sensor merge" quantum-chaos-enterprise-lab/expected_results_distributed.md` exits 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 grep quantum-chaos-enterprise-lab/expected_results_distributed.md -- auto_merge or auto-merge reference present, quirk sensor merge manual-step reference present, regression note present, all three checks OK)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14208,7 +14208,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - All six items confirmed by visual review.
 - No contradictions with §8.4 (existing manual merge docs).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 read docs/operators-guide.md section 8.9 Automatic Merge in full -- confirms the enabled: false disable snippet, an explicit statement that toggling does not affect in-flight pushes or already-started merge tasks, the all-sensors-in trigger with revoked-sensor exclusion, the cadence-window trigger with cadence_window_minutes, an IntegrationDelivery audit table keyed on destination=auto_merge, and an explicit Manual merge is unchanged AUTOMERGE-03 subsection stating quirk sensor merge remains available and calls the same merge_scan function; no contradictions found against the surrounding manual-merge sections)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14317,7 +14317,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `bash -n` exits 0 on `distributed-e2e.sh`.
 - `python -c` compose parse exits 0 with `tls-weak-b OK`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 all 7 steps run directly with zero docker interaction -- this case was bucket-classified C only because its own filename docker-compose.distributed.yml matches the classifier's docker-compose substring, not because it touches Docker. python -c yaml parse confirms tls-weak-b service present with nginx:1.28.0 image at ipv4_address 10.20.0.20 on segment-b; python -c yaml parse confirms sensor-config-b.yaml includes 10.20.0.20; grep confirms the sensor-b compose mount references sensor-config-b.yaml, the oracle and README both reference tls-weak-b, bash -n confirms distributed-e2e.sh syntax is clean, and Test 7 is present in the script)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14403,7 +14403,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `pyinstaller` pinned in `[dev]` group in `pyproject.toml` (Phase 117 WINBUILD-01); absent from `[project.dependencies]` (not a runtime dep).
 - `freeze_support` present in `run_scan.py`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 grep confirms the windows-packaging-spike job and multiprocessing.freeze_support present in run_scan.py; pyinstaller==6.20.0 is pinned in the dev optional-dependency group per Phase 117 WINBUILD-01, which the case's own Pass Criteria text acknowledges supersedes the older not-present-at-all expectation. The case's own Step 2 command, grep -A2 windows-packaging-spike: piped to grep -q continue-on-error true, fails because continue-on-error: true sits 3 lines after the job header, not 2 -- confirmed present via grep -A3, an off-by-one doc-drift bug in the case's own reproduction command, not a product defect)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14467,7 +14467,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `git ls-files | grep .exe` returns no matches.
 - `pyinstaller` absent from `pyproject.toml`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 bash -c ls star.spec star.nsi with negation confirms zero matches at repo root or docs/; git ls-files piped grep for star.exe dollar confirms zero committed EXE files; python -c tomllib confirms pyinstaller is absent from project.dependencies. The case's own Step 3 heuristic, grep pyinstaller pyproject.toml piped grep -q dev, fails because the pin line's trailing comment text does not contain the literal substring dev -- same off-by-one-style doc-drift pattern as UAT-116-02/UAT-117-02, not a product defect; the authoritative tomllib check confirms the dev-group placement is correct)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14522,7 +14522,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `workflow_dispatch` trigger in `on:` block.
 - `windows-packaging-spike` job still has `continue-on-error: true`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 python -c yaml parse of .github/workflows/python-ci.yml confirms windows-sensor-build runs on windows-latest with no continue-on-error and workflow_dispatch present in the on: block; grep confirms --onedir, copy-metadata quirk-scanner, quirk-windows-onedir artifact name, 10 hidden-import occurrences and 6 add-data occurrences, both well above the case's own not-in-0-4 and not-in-0-2 thresholds. The case's own Step 8 spike-unchanged check, grep -A2 windows-packaging-spike: piped grep -q continue-on-error true, fails for the same off-by-one reason documented in UAT-116-02 -- confirmed present via grep -A3, not a product defect)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14553,7 +14553,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - Pin is in the `dev` optional-dependency group.
 - Not in `[project.dependencies]`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 grep confirms pyinstaller==6.20.0 present in pyproject.toml; python -c tomllib confirms the pin is inside project.optional-dependencies.dev and absent from project.dependencies, matching the case's authoritative Pass Criteria. The case's own Step 2 heuristic, grep pyinstaller pyproject.toml piped grep -q dev, fails for the same trailing-comment-text reason documented in UAT-116-04, not a product defect)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -15395,7 +15395,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - sysObjectID returns `1.3.6.1.4.1.9.1.1`
 - `./lab.sh status hwcompat` shows hwcompat-snmp as running
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_snmp_scanner_contract.py::test_sysdescr_parse_cisco_ios, run 2026-08-28 and passing, proving the Cisco IOS Software sysDescr string parses to vendor equals Cisco -- the exact sysDescr-classification mechanism this case's SNMP query is designed to exercise. The live hwcompat-snmp container query itself, snmpget against a real alpine plus net-snmp container on port 20223, is not exercised -- requires the hwcompat chaos-lab profile, unavailable this plan per D-01)
 **Date:** (deferred — requires Docker environment)
 **Notes:** SNMP-04. Container: alpine:3.19 + net-snmp, port 20223/udp. Expected results oracle: `quantum-chaos-enterprise-lab/expected_results_hwcompat.md`.
 
@@ -15421,7 +15421,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - Tier badge colors: Tier 1 = red, Tier 2 = amber, Tier 3 = green
 - Section is completely absent (not an empty table) when `hardware_devices` is `[]`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; the case's core assertion is the React HardwareInventory component's rendering behavior in src/dashboard/src/pages/cbom.tsx -- two badge rows per device, DEVICE and FIRMWARE badge colors, tier-based row coloring, and complete section absence when hardware_devices is empty. No vitest test file anywhere under src/dashboard/src/pages/__tests__/ references HardwareInventory or hardwareDevices; the only related coverage is the backend data-shape unit test tests/test_dashboard_api.py::test_derive_hw_components_bridge_status_promoted_and_null, which proves the API payload shape but not the frontend render. A live hwcompat chaos-lab scan plus browser walkthrough, or a new HardwareInventory vitest test, is needed to close this gap)
 **Date:** (deferred — requires Docker environment + hwcompat lab)
 **Notes:** CBOM-02. React component: `HardwareInventory` in `src/dashboard/src/pages/cbom.tsx`. Uses `React.Fragment key={...}` for two-row-per-device pattern.
 
@@ -15441,7 +15441,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - Returns `[]` — not null, not absent — when no hardware was scanned
 - No 500 error when hardware table is empty
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 quirk serve against a fresh local scan with no hardware targets configured; curl -s http://localhost:8511/api/scan/latest returns HTTP 200 with hardware_devices: empty array, not null and not absent, no 500 error -- matching the no-hardware leg of the Pass Criteria in full. The hardware-populated leg, real SNMP-derived HardwareComponent entries, requires the hwcompat chaos lab profile, unavailable this plan per the D-01 no-docker constraint; the underlying data-shape mechanism is unit-tested by tests/test_dashboard_api.py::test_derive_hw_components_bridge_status_promoted_and_null)  - [ ] FAIL  - [ ] SKIP
 **Date:** (deferred — requires live scan environment)
 **Notes:** CBOM-01/CBOM-02. Pydantic model: `HardwareComponent` in `quirk/dashboard/api/schemas.py`. Helper: `_derive_hw_components` in `quirk/dashboard/api/routes/scan.py` (MAX anchor + 1s window + try/except advisory pattern).
 
@@ -17439,7 +17439,7 @@ documented in `docs/chaos-lab.md` §3.24.
 - Matches `quantum-chaos-enterprise-lab/expected_results_segmented_network.md`'s documented
   expected results
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; this case's assertion is real network-layer behavior, an iptables-REJECT gateway producing genuine TCP RST on the dead subnet versus a genuine open TLS port on the live subnet, observed via nmap against live containers on the segmented-network chaos-lab profile. No unit test in tests/test_nmap_provider.py, tests/test_nmap_parser.py, or elsewhere exercises real network RST/timeout behavior -- those tests parse pre-canned nmap output text, not live network responses, so none can substitute for this case's live-fire assertion. The segmented-network profile and its segnet-gateway/segnet-live-tls/segnet-prober services are confirmed present in quantum-chaos-enterprise-lab/docker-compose.yml and expected_results_segmented_network.md exists, but the live smoke test itself requires the Docker daemon, unavailable this plan per D-01)
 **Date:** __________  **Tester:** __________
 **Notes:** DISC-09. Requirement: DISC-09.
 
