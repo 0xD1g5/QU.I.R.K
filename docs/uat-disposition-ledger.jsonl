@@ -10,10 +10,10 @@
 {"id": "UAT-10-09", "series": "10", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS: ssh-audit not installed no crash observed. code=0", "recorded": "2026-08-27"}
 {"id": "UAT-10-10", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-10-11", "series": "10", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-100-01", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-100-02", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-100-03", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-100-04", "series": "100", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-100-01", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_html_report.py -k 'cover_page or logo' exit 0, 6 passed -- automated leg only, browser visual leg not exercised", "recorded": "2026-08-27"}
+{"id": "UAT-100-02", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_html_report.py -k 'print or table' exit 0, 3 passed -- automated leg only, PDF print-preview visual leg not exercised", "recorded": "2026-08-27"}
+{"id": "UAT-100-03", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_docx_report.py exit 0, 9 passed -- automated leg only, Word/Google-Docs manual leg not exercised", "recorded": "2026-08-27"}
+{"id": "UAT-100-04", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_docx_report.py tests/test_reports_writer.py tests/test_cross_surface_parity.py exit 0, 13 passed 5 skipped", "recorded": "2026-08-27"}
 {"id": "UAT-11-01", "series": "11", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: No lab scan dir [use --no-lab-scan=False]", "recorded": "2026-08-27"}
 {"id": "UAT-11-02", "series": "11", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-11-03", "series": "11", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
@@ -270,30 +270,30 @@
 {"id": "UAT-94-06", "series": "94", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-94-07", "series": "94", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-94-08", "series": "94", "bucket": "A", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 tests/test_install_all_excludes_schemathesis.py -m slow SKIP: TRIAGE-149 documented flaky-under-load skip.mark, see docs/test-triage-149.md", "recorded": "2026-08-27"}
-{"id": "UAT-95-01", "series": "95", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-95-02", "series": "95", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-95-01", "series": "95", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_codesign_scanner.py tests/test_codesign_cbom.py tests/test_evidence_codesign.py tests/test_run_scan_codesign_wiring.py exit 0, 21 passed -- doc's stale SCORE_WEIGHTS-sum-299.0 manual bullet superseded by UAT-96-06, current 303.0/41, verified separately", "recorded": "2026-08-27"}
+{"id": "UAT-95-02", "series": "95", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_score_weights_invariant.py tests/test_evidence_codesign.py exit 0, 6 passed; SCORE_WEIGHTS['agility_codesign_weak_algo_ratio']=6.0", "recorded": "2026-08-27"}
 {"id": "UAT-96-01", "series": "96", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-96-02", "series": "96", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-96-03", "series": "96", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-96-04", "series": "96", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-96-05", "series": "96", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-96-06", "series": "96", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-96-07", "series": "96", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-96-06", "series": "96", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_score_weights_invariant.py exit 0, 2 passed; sum=303.0 count=41", "recorded": "2026-08-27"}
+{"id": "UAT-96-07", "series": "96", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_install_all_excludes_schemathesis.py exit 0, 1 passed 1 deselected; schemathesis present in pyproject.toml [api] extras only", "recorded": "2026-08-27"}
 {"id": "UAT-96-08", "series": "96", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-97-01", "series": "97", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-97-02", "series": "97", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-97-03", "series": "97", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-97-04", "series": "97", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-98-01", "series": "98", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-98-02", "series": "98", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-98-03", "series": "98", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-98-04", "series": "98", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-98-05", "series": "98", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-98-06", "series": "98", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-97-01", "series": "97", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_schedule_auth_reject.py exit 0, 5 passed", "recorded": "2026-08-27"}
+{"id": "UAT-97-02", "series": "97", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_jwt_scanner.py exit 0, 9 passed 6 xfailed", "recorded": "2026-08-27"}
+{"id": "UAT-97-03", "series": "97", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_rest_fuzzer_cascade.py exit 0, 3 passed", "recorded": "2026-08-27"}
+{"id": "UAT-97-04", "series": "97", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_credential_leakage.py exit 0, 28 passed", "recorded": "2026-08-27"}
+{"id": "UAT-98-01", "series": "98", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_exec_narrative_ordering.py::test_narrative_before_findings_cli exit 0", "recorded": "2026-08-27"}
+{"id": "UAT-98-02", "series": "98", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_exec_narrative_ordering.py::test_risks_list_in_html tests/test_cross_surface_parity.py::test_top_risks_parity exit 0", "recorded": "2026-08-27"}
+{"id": "UAT-98-03", "series": "98", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_exec_narrative_ordering.py::test_priority_labels_in_html_roadmap exit 0", "recorded": "2026-08-27"}
+{"id": "UAT-98-04", "series": "98", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_exec_narrative_ordering.py::test_rollup_formula_in_html exit 0", "recorded": "2026-08-27"}
+{"id": "UAT-98-05", "series": "98", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_congruence_guard.py exit 0, 17 passed", "recorded": "2026-08-27"}
+{"id": "UAT-98-06", "series": "98", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_exec_content_model.py tests/test_congruence_guard.py tests/test_exec_narrative_ordering.py tests/test_cross_surface_parity.py exit 0, 36 passed", "recorded": "2026-08-27"}
 {"id": "UAT-98-07", "series": "98", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-99-01", "series": "99", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-99-02", "series": "99", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-99-03", "series": "99", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-99-04", "series": "99", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-99-01", "series": "99", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_quantum_risk_render_parity.py::test_markdown_has_quantum_risk_column tests/test_quantum_risk_render_parity.py::test_markdown_renders_quantum_risk_text tests/test_quantum_risk_render_parity.py::test_render_fallback_when_missing exit 0, 3 passed", "recorded": "2026-08-27"}
+{"id": "UAT-99-02", "series": "99", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_quantum_risk_render_parity.py exit 0, 5 passed -- automated leg only, HTML/PDF manual visual leg not exercised", "recorded": "2026-08-27"}
+{"id": "UAT-99-03", "series": "99", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_codesign_expiry_classification.py tests/test_codesign_findings_evaluator.py exit 0, 31 passed", "recorded": "2026-08-27"}
+{"id": "UAT-99-04", "series": "99", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_quantum_risk_render_parity.py tests/test_codesign_expiry_classification.py tests/test_codesign_findings_evaluator.py tests/test_risk_engine.py exit 0, 77 passed; python -m compileall quirk/ -q exit 0", "recorded": "2026-08-27"}
 {"id": "UAT-Q-53-01", "series": "53", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_qramm_evidence_bridge.py::test_bridge_populates_on_session_create exit 0", "recorded": "2026-08-27"}
 {"id": "UAT-Q-53-02", "series": "53", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_qramm_evidence_bridge.py::test_confirmed_included_in_score tests/test_qramm_evidence_bridge.py::test_confirmed_at_auto_set exit 0", "recorded": "2026-08-27"}

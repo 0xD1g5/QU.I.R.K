@@ -11398,7 +11398,7 @@ Expect: PASS.
 - Pytest: all 7 + 4 + 6 + 5 = 22 tests across the four test files pass.
 - `SCORE_WEIGHTS` sum is **299.0** (count 40): `python -c "from quirk.intelligence.scoring import SCORE_WEIGHTS; print(sum(SCORE_WEIGHTS.values()))"` prints `299.0`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_codesign_scanner.py tests/test_codesign_cbom.py tests/test_evidence_codesign.py tests/test_run_scan_codesign_wiring.py exit 0, 21 passed -- doc's stale SCORE_WEIGHTS-sum-299.0 manual bullet superseded by UAT-96-06, current 303.0/41, verified separately)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11418,7 +11418,7 @@ Expect: PASS.
 - `codesign_weak_algo_count` and `agility_codesign_weak_algo_ratio` both present in the
   evidence dict returned by `build_evidence_summary`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_score_weights_invariant.py tests/test_evidence_codesign.py exit 0, 6 passed; SCORE_WEIGHTS['agility_codesign_weak_algo_ratio']=6.0)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11580,7 +11580,7 @@ Expect: PASS.
 - `agility_fuzz_crypto_posture_ratio` key present in `SCORE_WEIGHTS` with value `4.0`.
 - Direct Python check prints `sum: 303.0 | count: 41`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_score_weights_invariant.py exit 0, 2 passed; sum=303.0 count=41)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11606,7 +11606,7 @@ Expect: PASS.
 - `schemathesis` does NOT appear in the `all` section of `pyproject.toml`.
 - `tests/test_install_all_excludes_schemathesis.py` passes (confirms `schemathesis` excluded from `[all]`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_install_all_excludes_schemathesis.py exit 0, 1 passed 1 deselected; schemathesis present in pyproject.toml [api] extras only)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11677,7 +11677,7 @@ silently bypassing the D-11 reject.)
 - No schedule row created in the database.
 - Automated: `pytest tests/test_schedule_auth_reject.py -q` — all tests pass.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_schedule_auth_reject.py exit 0, 5 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11706,7 +11706,7 @@ silently bypassing the D-11 reject.)
 - Automated: `pytest tests/test_jwt_scanner.py -q` — all tests including the pre-existing-param
   reject tests pass.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_jwt_scanner.py exit 0, 9 passed 6 xfailed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11737,7 +11737,7 @@ reset the counter to 0, so a timeout-only host never tripped the cascade pause.)
 - Automated: `pytest tests/test_rest_fuzzer_cascade.py -q` — all cascade tests pass, including the
   connection-exception cascade test.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_rest_fuzzer_cascade.py exit 0, 3 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11768,7 +11768,7 @@ the real scanner exception path. The PDF test is explicitly annotated as a docum
   `safe_str` call in the test body.
 - `test_sentinel_not_in_pdf_export_surface` docstring contains "DOCUMENTED COVERAGE GAP".
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_credential_leakage.py exit 0, 28 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11808,7 +11808,7 @@ any GFM table row in the CLI executive markdown output.
 - Narrative lead sentence (e.g. "This organization demonstrates strong quantum-readiness...") is
   present in the CLI markdown, not just the section heading.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_exec_narrative_ordering.py::test_narrative_before_findings_cli exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11844,7 +11844,7 @@ ALGO_IMPACT_MAP) and a business impact sentence. Labels are identical across sur
 - HTML contains `risks-list` class element and `Priority Business Risks` heading.
 - Risk label count in CLI == risk label count in HTML == `exec_content.top_risks` count.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_exec_narrative_ordering.py::test_risks_list_in_html tests/test_cross_surface_parity.py::test_top_risks_parity exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11877,7 +11877,7 @@ sorted high-impact/low-effort first (D-04).
 - CLI markdown contains `[LOW EFFORT`, `[MEDIUM EFFORT`, or `[HIGH EFFORT` pattern on
   at least one roadmap bullet when roadmap items are present.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_exec_narrative_ordering.py::test_priority_labels_in_html_roadmap exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11911,7 +11911,7 @@ Decomposition table and before the Findings Breakdown section.
 - Automated: `python -m pytest tests/test_score_transparency.py -q` still passes (CLI ÷1.5
   rollup regression gate).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_exec_narrative_ordering.py::test_rollup_formula_in_html exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11948,7 +11948,7 @@ FAIR and POOR bands are unrestricted — they may coexist with any number of CRI
   executive-summary file created when guard fires).
 - `ReportCongruenceError` is a `ValueError` subclass and message matches the exact template.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_congruence_guard.py exit 0, 17 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -11977,7 +11977,7 @@ to both `build_exec_markdown()` (CLI) and `render_html_report()` (HTML). The sam
 - `pytest tests/test_cross_surface_parity.py::test_top_risks_parity -x` exits 0.
 - Full Phase 98 quick suite: `python -m pytest tests/test_exec_content_model.py tests/test_congruence_guard.py tests/test_exec_narrative_ordering.py tests/test_cross_surface_parity.py -q` -- 23 tests pass.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_exec_content_model.py tests/test_congruence_guard.py tests/test_exec_narrative_ordering.py tests/test_cross_surface_parity.py exit 0, 36 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12054,7 +12054,7 @@ findings without `quantum_risk` show the fallback string (truncated to 120 chars
 - `python -m pytest tests/test_quantum_risk_render_parity.py::test_render_fallback_when_missing -v` exits 0
 - `grep -v '^#' quirk/reports/technical.py | grep -c 'Quantum Risk'` returns >= 1
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_quantum_risk_render_parity.py::test_markdown_has_quantum_risk_column tests/test_quantum_risk_render_parity.py::test_markdown_renders_quantum_risk_text tests/test_quantum_risk_render_parity.py::test_render_fallback_when_missing exit 0, 3 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12092,7 +12092,7 @@ HTML rendering via Playwright (no separate PDF work).
 - HTML report source contains `<th>Quantum Risk</th>` in the All Findings table
 - HTML report source contains `class="quantum-risk-block"` in the Top Findings table
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_quantum_risk_render_parity.py exit 0, 5 passed -- automated leg only, HTML/PDF manual visual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12123,7 +12123,7 @@ returns HIGH for expired certs, MEDIUM for approaching-expiry (≤90 days), and 
 - `grep -v '^#' quirk/scanner/codesign_scanner.py | grep -c 'approaching-expiry'` returns >= 2
 - `grep -c 'evaluate_codesign_endpoints' run_scan.py` returns >= 2 (import + call)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_codesign_expiry_classification.py tests/test_codesign_findings_evaluator.py exit 0, 31 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12152,7 +12152,7 @@ regressions.
 - `python -m pytest tests/test_risk_engine.py -x -q` exits 0
 - `python -m compileall quirk/ -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_quantum_risk_render_parity.py tests/test_codesign_expiry_classification.py tests/test_codesign_findings_evaluator.py tests/test_risk_engine.py exit 0, 77 passed; python -m compileall quirk/ -q exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12187,7 +12187,7 @@ Summary. No missing elements or broken layout.
 - `QU.I.R.K. Cryptographic Readiness Report` visible as cover title
 - Cover meta block contains scan date and organization name
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_html_report.py -k 'cover_page or logo' exit 0, 6 passed -- automated leg only, browser visual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12222,7 +12222,7 @@ distinct first page.
 - Cover page is visually distinct from page 2+ content
 - `python -m pytest tests/test_html_report.py -k "print or table" -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_html_report.py -k 'print or table' exit 0, 3 passed -- automated leg only, PDF print-preview visual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12264,7 +12264,7 @@ and clearly labelled.
 - Findings table has exactly 7 columns with the locked header order
 - `python -m pytest tests/test_docx_report.py -q` exits 0 (7 tests)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_docx_report.py exit 0, 9 passed -- automated leg only, Word/Google-Docs manual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12298,7 +12298,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c "from docx import Document" quirk/reports/docx_renderer.py` == 1 (only inside function)
 - `python -m pytest tests/test_html_report.py tests/test_docx_report.py tests/test_reports_writer.py -q` exits 0 (23 tests)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 tests/test_docx_report.py tests/test_reports_writer.py tests/test_cross_surface_parity.py exit 0, 13 passed 5 skipped)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
