@@ -189,7 +189,7 @@ open; expected to span multiple phases.*
 
 ### Maintenance Runbook
 
-- [ ] **RUNBOOK-01**: `CLAUDE.md`'s Staleness Review Cadence lists every catalog that
+- [x] **RUNBOOK-01**: `CLAUDE.md`'s Staleness Review Cadence lists every catalog that
   `.github/workflows/python-staleness.yml` actually gates. The CMVP, error-codes and SNMP-contract
   catalogs are enforced by CI but absent from the runbook — and CMVP was the one that failed. The
   refresh half is already unblocked and run (RVW-022 fixed in `a7cf302`; cache `last_verified`
@@ -261,7 +261,7 @@ open; expected to span multiple phases.*
 | TRACE-05 | Phase 170 | Pending |
 | TRACE-06 | Phase 170 | Complete |
 | TRACE-07 | Phase 170 | Complete |
-| RUNBOOK-01 | Phase 170 | Pending |
+| RUNBOOK-01 | Phase 170 | Complete |
 | RESUME-05 | Phase 171 | Pending |
 | RESUME-06 | Phase 171 | Pending |
 
