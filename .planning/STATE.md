@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: verifying
-stopped_at: Completed 168-01-PLAN.md (Wave 1 of 8) — ledger foundation built, 0/299 cases dispositioned
-last_updated: "2026-08-28T00:52:38.572Z"
+stopped_at: Completed 168-02-PLAN.md (Wave 2 of 8) — anti-fabrication guard built, 0/299 cases dispositioned
+last_updated: "2026-08-28T01:01:20.783Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 21
+  completed_plans: 22
   percent: 50
 ---
 
@@ -594,8 +594,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T00:52:38.565Z
-Stopped at: Completed 168-01-PLAN.md (Wave 1 of 8) — ledger foundation built, 0/299 cases dispositioned
+Last session: 2026-08-28T01:01:20.778Z
+Stopped at: Completed 168-02-PLAN.md (Wave 2 of 8) — anti-fabrication guard built, 0/299 cases dispositioned
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
