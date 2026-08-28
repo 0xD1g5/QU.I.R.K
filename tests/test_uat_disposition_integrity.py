@@ -868,3 +868,109 @@ def test_non_vacuity_passing_substitute_is_not_flagged():
     assert summary["errors"] == 0
     assert summary["skipped"] == 0
     assert summary["passed"] == 1
+
+
+# ---------------------------------------------------------------------------
+# D-05 (Task 2): vitest execution dispatcher + non-vacuity proof.
+#
+# Each scratch file below is written into a directory under tmp_path shaped
+# as `<tmp_path>/src/__tests__/*.test.tsx` -- the same relative layout
+# vitest.config.ts's `include` glob (`src/**/__tests__/**/*.test.tsx`)
+# matches in the real dashboard tree -- then run with `--root <tmp_path>`,
+# so the dashboard's own jsdom/react vitest config applies to a fully
+# synthetic, throwaway tree without touching the real dashboard source.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not VITEST_TOOLCHAIN_AVAILABLE, reason=VITEST_SKIP_REASON)
+def test_vitest_non_vacuity_passing_substitute_is_not_flagged(tmp_path):
+    """Positive control -- a genuinely passing vitest test is not flagged."""
+    scratch_dir = tmp_path / "src" / "__tests__"
+    scratch_dir.mkdir(parents=True)
+    (scratch_dir / "scratch_pass.test.tsx").write_text(
+        'import { describe, it, expect } from "vitest"\n'
+        'describe("scratch", () => {\n'
+        '  it("passes for real", () => { expect(1).toBe(1) })\n'
+        "})\n"
+    )
+    summary, output = _run_vitest_nodes(
+        [("src/__tests__/scratch_pass.test.tsx", "passes for real")], root=tmp_path
+    )
+    assert summary["failed"] == 0, output
+    assert summary["skipped"] == 0, output
+    assert summary["passed"] == 1, output
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not VITEST_TOOLCHAIN_AVAILABLE, reason=VITEST_SKIP_REASON)
+def test_vitest_non_vacuity_skipped_substitute_is_flagged(tmp_path):
+    """Constraint mirror of test_non_vacuity_skipped_substitute_is_flagged:
+    an it.skip() substitute must NOT count as proof of coverage."""
+    scratch_dir = tmp_path / "src" / "__tests__"
+    scratch_dir.mkdir(parents=True)
+    (scratch_dir / "scratch_skip.test.tsx").write_text(
+        'import { describe, it, expect } from "vitest"\n'
+        'describe("scratch", () => {\n'
+        '  it.skip("deliberately skipped", () => { expect(1).toBe(2) })\n'
+        "})\n"
+    )
+    summary, output = _run_vitest_nodes(
+        [("src/__tests__/scratch_skip.test.tsx", "deliberately skipped")], root=tmp_path
+    )
+    assert summary["skipped"] == 1, (
+        f"a skip must never count as proof of coverage, exactly like the pytest leg:\n{output}"
+    )
+    assert summary["passed"] == 0, output
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not VITEST_TOOLCHAIN_AVAILABLE, reason=VITEST_SKIP_REASON)
+def test_vitest_non_vacuity_failing_substitute_is_flagged(tmp_path):
+    """A deliberately-failing vitest test is caught by the execution leg,
+    exactly like the pytest existing-but-failing non-vacuity proof."""
+    scratch_dir = tmp_path / "src" / "__tests__"
+    scratch_dir.mkdir(parents=True)
+    (scratch_dir / "scratch_fail.test.tsx").write_text(
+        'import { describe, it, expect } from "vitest"\n'
+        'describe("scratch", () => {\n'
+        '  it("deliberately fails", () => { expect(1).toBe(2) })\n'
+        "})\n"
+    )
+    summary, output = _run_vitest_nodes(
+        [("src/__tests__/scratch_fail.test.tsx", "deliberately fails")], root=tmp_path
+    )
+    assert summary["failed"] == 1, output
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not VITEST_TOOLCHAIN_AVAILABLE, reason=VITEST_SKIP_REASON)
+def test_vitest_substitute_nodes_pass(uat_series_lines):
+    """Vitest analogue of test_substitute_nodes_pass (D-05). Deduplicates
+    every named vitest substitute across the real document and runs them in
+    ONE subprocess, asserting a clean pass -- failed==0, skipped==0,
+    passed>=1. Vacuous today (zero vitest citations exist until 169-06
+    spends this capability); see module docstring on non-vacuity."""
+    refs = sorted(
+        {
+            ref
+            for _, _, _, refs in iter_deferred_covered(uat_series_lines)
+            for ref in refs
+            if VITEST_REF_RE.fullmatch(ref)
+        }
+    )
+    if not refs:
+        return  # nothing to execute yet -- see module docstring
+
+    pairs = [
+        (_dashboard_relative_path(file_part), name)
+        for file_part, name in (parse_vitest_ref(r) for r in refs)
+    ]
+    summary, output = _run_vitest_nodes(pairs)
+    assert summary["failed"] == 0, f"vitest substitute node(s) failed:\n{output[-4000:]}"
+    assert summary["skipped"] == 0, (
+        "vitest substitute node(s) skipped -- a skip is NOT proof of coverage; pick a "
+        f"different substitute or record 'DEFERRED — no substitute coverage' instead:\n"
+        f"{output[-4000:]}"
+    )
+    assert summary["passed"] >= 1, f"vitest substitute run collected nothing:\n{output[-4000:]}"
