@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Completed 168-09-PLAN.md (Phase 168 complete)
+stopped_at: Completed 168-09-PLAN.md (Phase 168 complete); 168-09 Task 3 human-verify checkpoint APPROVED by user 2026-08-28; running verify-phase 168
 last_updated: "2026-08-27T00:00:00.000Z"
 last_activity: 2026-08-27
 progress:
