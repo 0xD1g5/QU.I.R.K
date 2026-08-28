@@ -207,3 +207,13 @@ runs.
 ---
 *Phase: 171-resume-ux-tail*
 *Completed: 2026-08-28*
+
+## Self-Check: PASSED
+
+- FOUND: docs/UAT-SERIES.md
+- FOUND: .planning/REQUIREMENTS.md
+- FOUND: .planning/phases/171-resume-ux-tail/171-03-SUMMARY.md
+- FOUND: /Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Phases/Phase-171-Resume-UX-Tail.md
+- FOUND: /Users/digs/vaults/Digs/20_Dev-Work/QUIRK/UAT-Series.md
+- FOUND commit: dc1db2b (docs: Series 171 + REQUIREMENTS.md flip)
+- FOUND commit: 46e19e6 (docs: 171-03 plan-execution completion)
