@@ -14,10 +14,88 @@
 {"id": "UAT-100-02", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_html_report.py -k 'print or table' exit 0, 3 passed -- automated leg only, PDF print-preview visual leg not exercised", "recorded": "2026-08-27"}
 {"id": "UAT-100-03", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_docx_report.py exit 0, 9 passed -- automated leg only, Word/Google-Docs manual leg not exercised", "recorded": "2026-08-27"}
 {"id": "UAT-100-04", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_docx_report.py tests/test_reports_writer.py tests/test_cross_surface_parity.py exit 0, 13 passed 5 skipped", "recorded": "2026-08-27"}
+{"id": "UAT-101-01", "series": "101", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-101-02", "series": "101", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-101-03", "series": "101", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-101-04", "series": "101", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-01", "series": "102", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-02", "series": "102", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-03", "series": "102", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-04", "series": "102", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-05", "series": "102", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-06", "series": "102", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-102-07", "series": "102", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-103-01", "series": "103", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-103-02", "series": "103", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-103-03", "series": "103", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-103-04", "series": "103", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-104-01", "series": "104", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-104-02", "series": "104", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-104-03", "series": "104", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-104-04", "series": "104", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-105-01", "series": "105", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-105-02", "series": "105", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-106-01", "series": "106", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-107-01", "series": "107", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-108-01", "series": "108", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-108-02", "series": "108", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-108-03", "series": "108", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-108-04", "series": "108", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-108-05", "series": "108", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-109-01", "series": "109", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-109-02", "series": "109", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-109-03", "series": "109", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-109-04", "series": "109", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-11-01", "series": "11", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: No lab scan dir [use --no-lab-scan=False]", "recorded": "2026-08-27"}
 {"id": "UAT-11-02", "series": "11", "bucket": "C", "runner_covered": false, "outcome": "GAP", "evidence": "DEFERRED \u2014 no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent", "recorded": "2026-08-27"}
 {"id": "UAT-11-03", "series": "11", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-11-04", "series": "11", "bucket": "C", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: --no-lab-scan flag", "recorded": "2026-08-27"}
+{"id": "UAT-110-01", "series": "110", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-110-02", "series": "110", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-110-03", "series": "110", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-110-04", "series": "110", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-110-05", "series": "110", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-110-06", "series": "110", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-111-01", "series": "111", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-111-02", "series": "111", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-111-03", "series": "111", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-112-01", "series": "112", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-112-02", "series": "112", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-112-03", "series": "112", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-112-04", "series": "112", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-112-05", "series": "112", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-113-01", "series": "113", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-113-02", "series": "113", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-113-03", "series": "113", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-113-04", "series": "113", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-113-05", "series": "113", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-114-01", "series": "114", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-114-02", "series": "114", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-114-03", "series": "114", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-115-01", "series": "115", "bucket": "B", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-115-02", "series": "115", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-115-03", "series": "115", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-116-01", "series": "116", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-116-02", "series": "116", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-116-03", "series": "116", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-116-04", "series": "116", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-117-01", "series": "117", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-117-02", "series": "117", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-118-01", "series": "118", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-118-03", "series": "118", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-118-04", "series": "118", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-133-06", "series": "133", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-134-01", "series": "134", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-134-02", "series": "134", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-150-01", "series": "150", "bucket": "B", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-150-02", "series": "150", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-150-03", "series": "150", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-151-01", "series": "151", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-151-02", "series": "151", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-152-01", "series": "152", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-157-05", "series": "157", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-158-01", "series": "158", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-158-02", "series": "158", "bucket": "A", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-28-01", "series": "28", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_s3_encryption.py exit 0, 10 passed; tests/test_dar_storage_scoring.py exit 0, 9 passed", "recorded": "2026-08-27"}
 {"id": "UAT-28-02", "series": "28", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_azure_blob.py exit 0, 10 passed", "recorded": "2026-08-27"}
 {"id": "UAT-28-03", "series": "28", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_gcs_reuse.py exit 0, 3 passed 2 skipped -- googleapiclient optional extra not installed, see docs/test-triage-149.md", "recorded": "2026-08-27"}
