@@ -10,6 +10,7 @@ import { MATURITY_BAR_CLASS, DIMENSION_COUNT } from "@/lib/qramm-constants"
 //  - Bar fill className = MATURITY_BAR_CLASS[level] (solid bg-*, no text-/border-)
 //  - Badge at the Dimension Summary table preserves MATURITY_BADGE_CLASS tokens
 //  - Indeterminate (all-null dimension scores) renders em-dash row, no bar div
+// Covers QRAMM-11 (Dimension Scorecard maturity-band rendering).
 
 afterEach(() => cleanup())
 

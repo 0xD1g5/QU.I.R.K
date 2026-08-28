@@ -7,6 +7,10 @@ function getColoredPath(container: HTMLElement): SVGPathElement | null {
   return container.querySelector('path[stroke^="hsl(var(--quantum"]')
 }
 
+// Covers GAUGE-01/02/03 (per-subscore color thresholds, overall-score amber/green
+// boundary, integer value display) — verified line-by-line correct against
+// ScoreGauge.tsx and executive.tsx by RVW-019; this comment closes the
+// traceability gap RVW-019 identified.
 describe("ScoreGauge", () => {
   it("renders green when subscore equals its category max (25/25)", () => {
     const { container } = render(<ScoreGauge score={25} maxValue={25} label="Hygiene" />)
