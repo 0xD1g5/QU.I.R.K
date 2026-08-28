@@ -29,6 +29,30 @@ NOTHING from ``scripts/uat_series_normalize.py`` or
 would otherwise let the writer and this checker agree with each other while
 both are wrong about what the document actually says.
 
+Phase 169 Plan 02 (D-05, first half): a second dialect, for a vitest
+substitute under ``src/dashboard/src/**/__tests__/*.test.tsx``, checked with
+the same two-way rigor as a pytest node -- EXISTENCE (source-text regex over
+``it(``/``test(``/``describe(`` call sites, no subprocess) and EXECUTION
+(a real ``npm --prefix <dashboard> test`` run via ``run_fork_safe``, JSON
+reporter parsed for passed/failed/skipped). Vitest test titles are free-form
+English sentences -- commas, conjunctions, punctuation -- unlike pytest's
+identifier-shaped node names, so they cannot be delimited by a bare
+``\\w+`` boundary the way ``NODE_REF_RE`` delimits a pytest test name. This module
+therefore requires the title segment of a vitest citation to be wrapped in
+double quotes, giving an unambiguous end-of-reference delimiter regardless
+of surrounding prose, e.g.::
+
+    DEFERRED — covered by src/dashboard/src/pages/__tests__/foo.test.tsx::"renders the error banner"
+
+A deferral annotation may cite pytest refs, vitest refs, or both, without
+the caller special-casing either kind -- ``iter_deferred_covered`` extracts
+both via ``NODE_REF_RE`` and ``VITEST_REF_RE`` and yields them in one list.
+The vitest execution leg requires the dashboard's Node toolchain
+(``npm`` on PATH and ``src/dashboard/node_modules`` installed); when either
+is absent -- as in the ``Linux Full Suite`` CI job, which does not set up
+Node -- the slow vitest tests skip with an explicit, honest reason
+(``VITEST_SKIP_REASON``) rather than faking a pass.
+
 Non-vacuity: at the time this module was written, zero deferrals exist in
 the document yet (Phase 168 plans 03-08 populate them; plan 09 re-runs this
 guard against the fully dispositioned document). Every document-driven test
@@ -43,8 +67,11 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -58,6 +85,7 @@ from tests.cli_helpers import run_fork_safe
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UAT_SERIES_PATH = REPO_ROOT / "docs" / "UAT-SERIES.md"
 LEDGER_PATH = REPO_ROOT / "docs" / "uat-disposition-ledger.jsonl"
+DASHBOARD_DIR = REPO_ROOT / "src" / "dashboard"
 
 # ---------------------------------------------------------------------------
 # Grammar (independently re-derived -- see module docstring on independence).
@@ -80,6 +108,12 @@ RESULT_RE = re.compile(
 # A real pytest node reference: <path ending .py>::<test name>, where the
 # test-name segment may end in a single `*` glob.
 NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?")
+
+# A vitest test reference under src/dashboard/src/**/__tests__/*.test.tsx.
+# The title segment MUST be double-quoted -- see module docstring (D-05) for
+# why: vitest titles are free-form prose, not `\w+`-shaped identifiers, so a
+# quoted string is the only unambiguous end-of-reference delimiter.
+VITEST_REF_RE = re.compile(r'src/dashboard/src/(?:[\w-]+/)*__tests__/[\w.-]+\.test\.tsx::"[^"]+"')
 
 # A bare requirement-ID-shaped token (e.g. DISC-01, LAB-03, HWCOMPAT-02) --
 # NEVER sufficient as a substitute (D-02).
@@ -122,9 +156,11 @@ def iter_results(lines):
 def iter_deferred_covered(lines):
     """Yield (lineno, case_id, annotation, refs) for every SKIP-checked
     Result line whose annotation is a 'DEFERRED — covered by ...' deferral.
-    ``refs`` is the list of node references extracted via NODE_REF_RE (may
-    be empty, e.g. for a bare-requirement-ID substitute -- that emptiness is
-    exactly what find_deferrals_without_node_ref() below flags).
+    ``refs`` is the list of node references extracted via NODE_REF_RE
+    (pytest) AND VITEST_REF_RE (D-05, vitest) combined -- a deferral may
+    cite either kind, or both, without special-casing the caller. May be
+    empty, e.g. for a bare-requirement-ID substitute -- that emptiness is
+    exactly what find_deferrals_without_node_ref() below flags.
 
     'DEFERRED — no substitute coverage' annotations (D-06, legal) are
     deliberately NOT yielded here -- they carry no node reference by design
@@ -137,7 +173,8 @@ def iter_deferred_covered(lines):
             continue
         for prefix in DEFERRED_COVERED_PREFIXES:
             if ann.startswith(prefix):
-                yield lineno, case_id, ann, NODE_REF_RE.findall(ann)
+                refs = NODE_REF_RE.findall(ann) + VITEST_REF_RE.findall(ann)
+                yield lineno, case_id, ann, refs
                 break
 
 
@@ -153,13 +190,57 @@ def find_deferrals_without_node_ref(lines):
 
 
 def find_unresolvable_node_refs(lines, node_id_set):
-    """Return [(lineno, case_id, ref)] for every node reference that fails
-    to resolve (via fnmatch, so a `*` glob matching zero nodes counts as
-    unresolvable) against ``node_id_set``."""
+    """Return [(lineno, case_id, ref)] for every PYTEST node reference that
+    fails to resolve (via fnmatch, so a `*` glob matching zero nodes counts
+    as unresolvable) against ``node_id_set``. Vitest refs (D-05) are
+    deliberately skipped here -- they are not pytest-node-shaped and are
+    checked separately by find_unresolvable_vitest_refs()."""
     bad = []
     for lineno, case_id, _ann, refs in iter_deferred_covered(lines):
         for ref in refs:
+            if not NODE_REF_RE.fullmatch(ref):
+                continue
             if not fnmatch.filter(node_id_set, ref):
+                bad.append((lineno, case_id, ref))
+    return bad
+
+
+def parse_vitest_ref(ref: str) -> tuple[str, str]:
+    """Split a VITEST_REF_RE match into (file_path, test_name).
+    ``file_path`` is repo-root-relative (e.g.
+    'src/dashboard/src/pages/__tests__/foo.test.tsx'); ``test_name`` has its
+    wrapping double quotes stripped."""
+    file_part, _, quoted = ref.partition("::")
+    return file_part, quoted[1:-1]
+
+
+def _vitest_title_pattern(name: str) -> re.Pattern:
+    """A regex matching an it()/test()/describe() call (including
+    `.skip`/`.only`/`.todo`/`.each` chained variants) whose first argument
+    is the literal string ``name``, quoted with a matching quote char."""
+    return re.compile(r"(?:it|test|describe)(?:\.\w+)*\s*\(\s*(['\"`])" + re.escape(name) + r"\1")
+
+
+def find_unresolvable_vitest_refs(lines):
+    """Return [(lineno, case_id, ref)] for every vitest reference (D-05)
+    whose file does not exist under the repo, or whose quoted test name does
+    not appear as an it()/test()/describe() call argument in that file's
+    source. A pure source-text check -- deliberately does NOT shell out to
+    Node for existence (that is reserved for the execution leg,
+    _run_vitest_nodes, which actually proves the test PASSES rather than
+    merely exists)."""
+    bad = []
+    for lineno, case_id, _ann, refs in iter_deferred_covered(lines):
+        for ref in refs:
+            if not VITEST_REF_RE.fullmatch(ref):
+                continue
+            file_part, name = parse_vitest_ref(ref)
+            path = REPO_ROOT / file_part
+            if not path.is_file():
+                bad.append((lineno, case_id, ref))
+                continue
+            src = path.read_text(encoding="utf-8")
+            if not _vitest_title_pattern(name).search(src):
                 bad.append((lineno, case_id, ref))
     return bad
 
@@ -290,6 +371,119 @@ def _run_pytest_nodes(node_ids) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------------------
+# D-05: vitest execution dispatcher + JSON-reporter summary parser.
+#
+# The dashboard's Node toolchain is NOT guaranteed to be present -- the
+# `Linux Full Suite` CI job (.github/workflows/python-ci.yml) that runs
+# `pytest -q -m ""` never installs it. VITEST_TOOLCHAIN_AVAILABLE gates the
+# slow vitest tests below with an honest skip (VITEST_SKIP_REASON) rather
+# than faking a pass when npm or src/dashboard/node_modules is absent.
+# ---------------------------------------------------------------------------
+
+DASHBOARD_NODE_MODULES = DASHBOARD_DIR / "node_modules"
+NPM_PATH = shutil.which("npm")
+VITEST_TOOLCHAIN_AVAILABLE = NPM_PATH is not None and DASHBOARD_NODE_MODULES.is_dir()
+VITEST_SKIP_REASON = (
+    "vitest toolchain unavailable in this environment (npm on PATH: "
+    f"{NPM_PATH is not None}, src/dashboard/node_modules present: "
+    f"{DASHBOARD_NODE_MODULES.is_dir()}) -- the Linux Full Suite CI job does "
+    "not install the dashboard's Node toolchain, so this leg is honestly "
+    "skipped there rather than faked. Run `npm ci` in src/dashboard/ to "
+    "exercise it locally."
+)
+
+_JS_REGEX_SPECIAL_RE = re.compile(r"[.*+?^${}()|[\]\\]")
+
+
+def _js_regex_escape(name: str) -> str:
+    """Escape JS regex metacharacters in ``name`` for safe use as a vitest
+    `-t`/testNamePattern argument (vitest's `-t` is a regex, not a literal
+    substring match)."""
+    return _JS_REGEX_SPECIAL_RE.sub(lambda m: "\\" + m.group(0), name)
+
+
+def _dashboard_relative_path(repo_relative_file: str) -> str:
+    """Convert a repo-root-relative vitest ref file path (e.g.
+    'src/dashboard/src/pages/__tests__/foo.test.tsx') into a path relative
+    to DASHBOARD_DIR, as required by the `npm --prefix <dashboard> test --
+    <file>` invocation."""
+    return str(Path(repo_relative_file).relative_to("src/dashboard"))
+
+
+def parse_vitest_summary(data: dict) -> dict:
+    """Parse a vitest `--reporter=json` report into counts. Does NOT trust
+    the process return code -- mirrors parse_pytest_summary's rationale.
+    ``skipped`` folds in vitest's numPendingTests, which covers both
+    `.skip` and `.todo` -- neither is proof of coverage."""
+    if not data:
+        return {"passed": 0, "failed": 0, "skipped": 0, "total": 0}
+    return {
+        "passed": data.get("numPassedTests", 0),
+        "failed": data.get("numFailedTests", 0),
+        "skipped": data.get("numPendingTests", 0),
+        "total": data.get("numTotalTests", 0),
+    }
+
+
+def _vitest_assertion_lines(data: dict) -> list[str]:
+    """Non-passed assertion result lines, for failure-message context."""
+    lines = []
+    for tr in data.get("testResults", []):
+        for a in tr.get("assertionResults", []):
+            if a.get("status") != "passed":
+                lines.append(f"{a.get('status')}: {a.get('fullName')}")
+    return lines
+
+
+def _run_vitest_nodes(
+    file_and_names: list[tuple[str, str]], *, root: Path | None = None, timeout: int = 180
+) -> tuple[dict, str]:
+    """Run the given (dashboard-relative-file, test-name) pairs in ONE
+    subprocess via `npm --prefix <dashboard> test -- <files> -t <pattern>
+    --reporter=json --outputFile=<tmp>`. Returns (summary_dict,
+    combined_output_for_debugging). Empty input is a no-op.
+
+    Never passes a `cwd` kwarg to run_fork_safe (Phase 166 GATE-03,
+    identical constraint to _run_pytest_nodes) -- `root` (when given, for a
+    synthetic scratch tree under a caller's tmp_path) is threaded through
+    vitest's own `--root` flag instead of a subprocess working-directory
+    change; the real-document call path passes root=None and relies on
+    `npm --prefix` to locate the dashboard package without a cwd change
+    either.
+    """
+    if not file_and_names:
+        return {"passed": 0, "failed": 0, "skipped": 0, "total": 0}, ""
+    assert NPM_PATH, (
+        "npm not found on PATH -- cannot run the vitest execution leg. "
+        "Callers must check VITEST_TOOLCHAIN_AVAILABLE and skip honestly "
+        "instead of calling this helper when npm is absent."
+    )
+    files = sorted({f for f, _ in file_and_names})
+    pattern = "|".join(_js_regex_escape(n) for _, n in file_and_names)
+
+    fd, tmp_name = tempfile.mkstemp(suffix=".json", prefix="vitest_report_")
+    os.close(fd)
+    out_path = Path(tmp_name)
+    try:
+        argv = [NPM_PATH, "--prefix", str(DASHBOARD_DIR), "test", "--"]
+        if root is not None:
+            argv += ["--root", str(root)]
+        argv += [*files, "-t", pattern, "--reporter=json", f"--outputFile={out_path}"]
+        proc = run_fork_safe(argv, timeout=timeout)
+        data = {}
+        if out_path.exists() and out_path.stat().st_size:
+            data = json.loads(out_path.read_text(encoding="utf-8"))
+        summary = parse_vitest_summary(data)
+        combined = proc.stdout + "\n" + proc.stderr
+        assertion_lines = _vitest_assertion_lines(data)
+        if assertion_lines:
+            combined += "\n" + "\n".join(assertion_lines)
+        return summary, combined
+    finally:
+        out_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
@@ -353,6 +547,15 @@ def test_deferrals_name_a_real_node_reference(uat_series_lines):
 def test_substitute_nodes_resolve(uat_series_lines, collected_node_ids):
     bad = find_unresolvable_node_refs(uat_series_lines, collected_node_ids)
     assert bad == [], f"{len(bad)} substitute node reference(s) do not resolve: {bad}"
+
+
+def test_vitest_substitute_refs_resolve(uat_series_lines):
+    """D-05 fast leg: every vitest reference in the document must resolve
+    (file exists, quoted title found in source) -- no subprocess needed.
+    Vacuous today (zero vitest citations exist until 169-06 spends this
+    capability); see module docstring on non-vacuity."""
+    bad = find_unresolvable_vitest_refs(uat_series_lines)
+    assert bad == [], f"{len(bad)} vitest substitute reference(s) do not resolve: {bad}"
 
 
 def test_ledger_matches_document(uat_series_lines, ledger_rows):
@@ -488,6 +691,61 @@ def test_negative_control_wr03_matching_evidence_still_passes():
     ]
     mismatches = find_ledger_document_mismatches(ledger_rows, lines)
     assert mismatches == []
+
+
+def test_negative_control_vitest_fabricated_file_is_rejected():
+    synthetic = [
+        "### UAT-10-01: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        '(DEFERRED — covered by src/dashboard/src/pages/__tests__/does_not_exist.test.tsx::"some test")\n',
+    ]
+    bad = find_unresolvable_vitest_refs(synthetic)
+    assert len(bad) == 1
+    assert bad[0][1] == "UAT-10-01"
+
+
+def test_negative_control_vitest_fabricated_title_in_real_file_is_rejected():
+    synthetic = [
+        "### UAT-10-02: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        '(DEFERRED — covered by src/dashboard/src/context/__tests__/AuthProvider.test.tsx::'
+        '"this title does not exist anywhere")\n',
+    ]
+    bad = find_unresolvable_vitest_refs(synthetic)
+    assert len(bad) == 1
+    assert bad[0][1] == "UAT-10-02"
+
+
+def test_negative_control_vitest_well_formed_reference_is_accepted():
+    synthetic = [
+        "### UAT-10-03: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        '(DEFERRED — covered by src/dashboard/src/context/__tests__/AuthProvider.test.tsx::'
+        '"setToken writes to sessionStorage, NOT localStorage")\n',
+    ]
+    assert find_unresolvable_vitest_refs(synthetic) == []
+    assert find_deferrals_without_node_ref(synthetic) == []
+
+
+def test_negative_control_mixed_pytest_and_vitest_refs_in_one_annotation():
+    """D-05: a single deferral annotation may cite a pytest ref and a vitest
+    ref together -- iter_deferred_covered must yield both without the
+    caller special-casing either kind."""
+    synthetic = [
+        "### UAT-10-04: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_real.py::test_ok and "
+        'src/dashboard/src/context/__tests__/AuthProvider.test.tsx::'
+        '"setToken writes to sessionStorage, NOT localStorage")\n',
+    ]
+    _lineno, _case_id, _ann, refs = next(iter(iter_deferred_covered(synthetic)))
+    assert refs == [
+        "tests/test_real.py::test_ok",
+        'src/dashboard/src/context/__tests__/AuthProvider.test.tsx::'
+        '"setToken writes to sessionStorage, NOT localStorage"',
+    ]
+    assert find_unresolvable_node_refs(synthetic, {"tests/test_real.py::test_ok"}) == []
+    assert find_unresolvable_vitest_refs(synthetic) == []
 
 
 # ---------------------------------------------------------------------------
