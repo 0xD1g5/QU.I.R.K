@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: verifying
-stopped_at: Completed 168-02-PLAN.md (Wave 2 of 8) — anti-fabrication guard built, 0/299 cases dispositioned
-last_updated: "2026-08-28T01:13:08.049Z"
+status: executing
+stopped_at: Session resumed — 168-03 complete (56/299 dispositioned), proceeding to Phase 168 Wave 3 (plans 04-09)
+last_updated: "2026-08-28T01:57:54.809Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 23
+  completed_plans: 24
   percent: 50
 ---
 
@@ -22,7 +22,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 168 — UAT Record Drain, Series 1–~100 (next)
+**Current focus:** Phase 168 — uat-record-drain-series-1-100
 
 ## Decisions Carried Forward (Phase 167)
 
@@ -42,9 +42,9 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Phase: 167 (UAT Format Unification & Deduplication) — COMPLETE
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 168 (uat-record-drain-series-1-100) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -248,6 +248,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 166 P05 | 75min | 5 tasks | 9 files |
 | Phase 168 P01 | 45min | 3 tasks | 2 files |
 | Phase 168 P03 | 35min | 2 tasks | 2 files |
+| Phase 168 P04 | 70min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -467,6 +468,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 168]: Series extraction is alpha-prefix-aware; ledger's 299-case scope and A:72/B:1/C:34/D:60/E:49/F:83 bucket split are authoritative for Plans 02-08 (reconciled in 168-01-SUMMARY.md against CONTEXT's 299/A:72-B:2-C:34-D:51-E:33-F:107 and the planner's 297). — Independent re-measurement corrects the planner's alpha-prefix regex miss and locks the frozen ledger contract for downstream plans.
 - [Phase 168]: UAT-5-12's runner_covered flag corrected to false: uat_runner.py rlog() call for it is unreachable under --no-lab-scan due to an earlier return in run_series_5()
 - [Phase 168]: uat-auto-results.json regenerated fresh but left uncommitted per repo .gitignore convention; ledger + docs/UAT-SERIES.md are the reviewable committed record
+- [Phase ?]: UAT-34-01 reclassified bucket B->A via tests/test_motion_scoring.py::test_subscores_includes_data_in_motion; bucket B now empty
+- [Phase 168]: 73 bucket A/B UAT cases dispositioned from real pytest runs: 62 PASS, 6 SKIP (chaos-lab gated), 5 DEFERRED (verified substitutes, incl. D-06 gap fill for UAT-33-07)
 
 ### Pending Todos
 
@@ -597,8 +600,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T01:13:03.198Z
-Stopped at: Completed 168-02-PLAN.md (Wave 2 of 8) — anti-fabrication guard built, 0/299 cases dispositioned
+Last session: 2026-08-28T01:53:37.309Z
+Stopped at: Session resumed — 168-03 complete (56/299 dispositioned), proceeding to Phase 168 Wave 3 (plans 04-09)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
