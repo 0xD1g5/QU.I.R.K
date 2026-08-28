@@ -1969,6 +1969,14 @@ batches (batches 61-64).
    than 72h are highlighted, but a run stays resumable until its batch cache files
    expire at 720h (see 13.4).
 
+   The **Target** column reflects how the scan was started. For dashboard-dispatched
+   `--job-id` runs, it shows the literal target string recorded at dispatch time
+   (e.g. `10.0.0.0/24`). For `--targets-file` and other CLI runs — which have no such
+   record — it shows a summary derived from the endpoints scanned so far for that run,
+   e.g. `10.0.0.1, 10.0.0.2 (+3 more)`, truncated to the first 2 hosts. A run with no
+   scanned endpoints yet (interrupted before any stage produced rows) shows
+   `(no target recorded)` rather than a blank column.
+
 2. Re-run the identical command with `--resume-scan-id <scan_run_id>` added.
 
 Note that an interrupted scan does **not** print its own `scan_run_id` to the console
