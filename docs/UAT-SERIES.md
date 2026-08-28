@@ -12350,7 +12350,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c 'config_path' quirk/notify/dispatcher.py` == 0
 - `python -m compileall quirk/notify/dispatcher.py -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_notify_dispatcher.py exit 0, 14 passed; tests/test_notify*.py tests/test_integration_deliveries_schema.py exit 0, 129 passed 8 xfailed; grep safe_str=1 config_path=0 dispatch_notifications=2; compileall exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12482,7 +12482,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `python -m compileall quirk/cli/token_cmd.py -q` exits 0
 - `grep -c '_sys.argv\[1\] == "token"' run_scan.py` returns >= 1
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_token_cmd.py exit 0, 4 passed; compileall exit 0; grep token-intercept=1)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12538,7 +12538,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `python -m pytest tests/test_route_coverage.py -q` exits 0 (>= 1 test)
 - `grep -c "X-API-Key" quirk/dashboard/api/middleware/auth.py` >= 1
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_dashboard_auth_apikey.py exit 0, 5 passed; tests/test_route_coverage.py 1 xfailed -- pre-existing documented TRIAGE-149 finding, GET /api/config deliberately unauthenticated, exemption list stale -- not this case's target; grep X-API-Key=4)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12562,7 +12562,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `python -m pytest tests/test_score_parity.py tests/test_cross_surface_parity.py -q` exits 0 (>= 4 tests)
 - `grep -c "exec_content.score_total" quirk/reports/executive.py` >= 2
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_score_parity.py tests/test_cross_surface_parity.py exit 0, 4 passed; grep exec_content.score_total=2)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12689,7 +12689,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c 'cert_pem' quirk/siem/formatter.py` == 0
 - `python -m compileall quirk/siem/ -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_siem_cef.py exit 0 37 passed; tests/test_siem_payload_whitelist.py exit 0 16 passed -- combined 53; grep cert_pem=2 -- both hits are docstring/comment references naming the redacted field, not extraction code; test_cert_pem_excluded and test_cert_pem_not_in_cef_line prove zero leakage; compileall quirk/siem exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12767,7 +12767,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `integration_deliveries` row: `destination='siem'`, `status='failed'`, `error_summary` is non-empty
 - Scan record for the originating scan: `status='completed'` (unaffected)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_siem_dispatcher.py -k unreachable exit 0 1 passed; tests/test_siem_export_cmd.py -k missing exit 0 1 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12840,7 +12840,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `python -m compileall quirk/ticketing/ -q` exits 0
 - Slow CI guard: `python -m pytest tests/test_install_all_includes_tickets.py -m slow -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_ticketing_base.py tests/test_ticketing_jira.py tests/test_ticket_cmd.py exit 0, 25 passed; grep from-jira=0; compileall quirk/ticketing exit 0; slow guard tests/test_install_all_includes_tickets.py -m slow exits 0, 1 skipped -- pre-existing unconditional TRIAGE-149 flaky-under-load skip, documented in test file, unrelated to this case's core assertions)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12921,7 +12921,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Manual (optional): stderr contains `pip install quirk[tickets]` — no `ImportError:` line
 - Exit code 2 (not 1 or traceback crash)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_ticket_cmd.py -k test_missing_extra_advisory exit 0, 1 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12948,7 +12948,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c "validate_external_url" quirk/ticketing/jira.py` >= 1
 - `grep -c "allow_internal" quirk/ticketing/jira.py` >= 1
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; Pass Criteria's -k ssrf filter against tests/test_ticketing_jira.py matches 0 of 8 collected tests: test_create_issue_per_finding, test_dedup_creates_once_then_comments, test_missing_extra_graceful_skip, test_credentials_not_in_logs, test_jql_project_key_quoted, test_invalid_project_key_rejected, test_empty_project_key_rejected, test_invalid_auth_mode_rejected -- none exercise an internal/RFC1918 jira_url. No test anywhere in tests/ constructs a JiraChannel with an internal URL to prove validate_external_url raises. quirk/ticketing/jira.py wiring confirmed via grep, validate_external_url x3, allow_internal x1, but that is source inspection, not an executed test)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -12989,7 +12989,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c "validate_external_url" quirk/ticketing/servicenow.py` >= 1
 - `python -m compileall quirk/ticketing/ -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_ticketing_servicenow.py tests/test_ticket_cmd.py exit 0, 18 passed 6 xfailed pre-existing unrelated; git diff --quiet base.py jira.py exit 0, TICKET-04 invariant holds; grep validate_external_url=4; compileall exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13155,7 +13155,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 > **pre-existing** failure (reflection-calls `_ensure_columns` with one arg; fails identically at
 > the pre-107 commit) — NOT a Phase 107 regression and out of scope for this gate.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_schema.py tests/test_db_ensure_columns_generic.py exit 0, 31 passed; all grep assertions OK; -k migrates_without_data_loss-or-score_stable exit 0, 2 passed; compileall quirk/ exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 ---
@@ -13202,7 +13202,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -q "raw_token" quirk/cli/sensor_cmd.py` succeeds (token minted)
 - SSRF test cases pass
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_cmd.py -k enroll exit 0, 11 passed; grep _write_sensor_config/os.replace/raw_token OK; -k ssrf exit 0, 1 passed; compileall exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13234,7 +13234,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `python -m pytest tests/test_sensor_cmd.py tests/test_sensor_no_verify_false.py -q` reports 0 failed
 - `grep -c "verify=False" quirk/cli/sensor_cmd.py` returns 0 (after comment stripping)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_cmd.py -k push-or-spool exit 0, 5 passed + 9 xfailed TRIAGE-149 environment-dependent SSRF-DNS-blocked-sandbox, documented; tests/test_sensor_no_verify_false.py exit 0, 2 passed; -k retry and -k offline-or-spool_on_connect both 100% xfailed under same documented TRIAGE-149 reason, no fabricated pass claimed; -k evict-or-spool exit 0, 1 passed + 4 xfailed; grep verify=False count=0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13267,7 +13267,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `python -m pytest tests/test_sensor_cmd.py -k "export" tests/test_console_cmd.py -q` reports 0 failed
 - `grep -q "skip_replay_window=True" quirk/cli/console_cmd.py` succeeds
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_cmd.py -k export exit 0, 5 passed; tests/test_console_cmd.py exit 0, 17 passed; -k byte_identical exit 0, 1 passed; grep _ingest_envelope OK; -k corrupt exit 0, 1 passed; -k skip_replay exit 0, 1 passed; grep skip_replay_window=True OK)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13300,7 +13300,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -q "KeyboardInterrupt" quirk/cli/sensor_cmd.py` succeeds
 - No `Traceback (most recent call last)` in subprocess stderr on KeyboardInterrupt
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_windows_smoke.py exit 0, 11 passed 1 xpassed, 12 total matches doc; -k backslash-or-recursive exit 0 5 passed; -k shutdown-or-interrupt exit 0 1 passed 1 xpassed; -k imports exit 0 1 passed; grep KeyboardInterrupt OK)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13333,7 +13333,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c "continue-on-error" .github/workflows/python-ci.yml` returns 0
 - `grep -c "windows-latest" .github/workflows/python-ci.yml` returns at least 1
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_windows_ci_hardgate.py exit 0, 7 passed; grep windows-sensor-smoke/windows-latest/test_sensor_windows_smoke OK; continue-on-error count=0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13365,7 +13365,7 @@ Tests the `POST /api/sensor/push` endpoint and `quirk console enroll` provisioni
 - `test_console_enroll`: sensors row exists, segment="dmz", token_hash == SHA-256(raw_token), raw token not in any column
 - `test_console_enroll_duplicate`: SystemExit code != 0, row counts still 1/1 after second attempt
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_console_enroll.py exit 0, 2 passed -- test_console_enroll, test_console_enroll_duplicate)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13389,7 +13389,7 @@ Tests the `POST /api/sensor/push` endpoint and `quirk console enroll` provisioni
 - `test_push_requires_auth` asserts `status_code == 401`
 - Test passes with 0 failures
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_ingest.py -k requires_auth exit 0, 1 passed -- test_push_requires_auth)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13422,7 +13422,7 @@ Tests the `POST /api/sensor/push` endpoint and `quirk console enroll` provisioni
 - `test_push_422_replay_window`: status_code == 422 AND "console_utc" in detail
 - `test_push_409_duplicate_payload`: first 200, second 409
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_ingest.py exit 0, 12 passed -- doc expects 10, 2 additional hardware-devices tests added since)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13450,7 +13450,7 @@ Tests the `POST /api/sensor/push` endpoint and `quirk console enroll` provisioni
 - `test_ingest_no_raw_exception_stringification[console_cmd.py]`: passes
 - `test_ingest_no_raw_exception_stringification[sensor.py]`: passes
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_ingest.py -k extra_fields_ignored-or-version_skew exit 0, 2 passed -- doc's own -k extra_ignore filter is a substring typo matching 0 tests, real test is test_extra_fields_ignored; tests/scanner/test_phase57_invariants.py -k ingest exit 0, 2 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
