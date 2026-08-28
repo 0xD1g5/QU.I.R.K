@@ -269,7 +269,7 @@ requirement set: HWLC-14, HWLC-19, HWLC-20, DISC-08.
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.16 Review Drain & Gate Integrity
+## Previous Milestone: v5.16 Review Drain & Gate Integrity — SHIPPED 2026-08-28
 
 **Goal:** Close every open finding from the 2026-08-24 third-party functional review, so QUIRK's
 own gating documents, accessibility baseline and first-run path are as trustworthy as the scan
@@ -585,85 +585,60 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 
 ## Current State
 
-**v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED and archived 2026-08-15.** All 3 phases
-(154–156) complete, 17 plans, 12/12 HWLC requirements satisfied. Milestone audit
-(`.planning/v5.13-MILESTONE-AUDIT.md`) scored `passed` — 12/12 requirements satisfied with no
-orphans, cross-phase integration independently re-verified end-to-end (154's identity/probe-status
-projection → 155's drift-reconciliation engine → 156's dashboard/report surfacing, plus 156's
-OT/ICS cadence gate confirmed as the sole non-bypassable chokepoint in front of the Phase 141
-Modbus/BACnet scanners), 0 blockers. `/gsd-secure-phase 156` independently SECURED 19/19 threats,
-0 high-severity findings. Non-blocking tech debt carried forward: `hardware_drift_events` has no
-retention policy (backlog candidate), and two Nyquist-validation artifacts are missing/partial
-(154 has no VALIDATION.md, 155's reads `nyquist_compliant: false`) — discovery-only, not a
-functional gap per the audit. Awaiting next milestone via `/gsd:new-milestone`.
+**v5.16 Review Drain & Gate Integrity — SHIPPED and archived 2026-08-28.** All 8 phases (164–171)
+complete, 47 plans, 24/24 requirements satisfied, 187 commits over three days.
 
-**v5.12 Release & Verification Integrity — SHIPPED and archived 2026-08-14.** All 6 phases
-(148–153) complete, 36 plans, 14/14 requirements satisfied, version 5.12.0 — genuinely tagged,
-pushed, published to PyPI, and Windows operator zip attached to the GitHub Release, all
-independently re-verified against live GitHub Actions and PyPI's own JSON API. Milestone audit
-(`.planning/milestones/v5.12-MILESTONE-AUDIT.md`) scored `passed`; one real integration gap
-(stale VALIDATION.md docs on Phases 151/153, and the pre-commit hook they built never actually
-installed) was found and fixed during the audit itself, and `core.hooksPath` is now live in this
-checkout going forward. Two order-dependent local test failures in the new hook-integration test
-file (`tests/test_verify_phase_gates.py`) are carried forward as non-blocking tech debt — CI's
-hosted Linux runner is green on the same commit; local macOS full-suite ordering is the only
-place they reproduce. Awaiting next milestone via `/gsd:new-milestone`.
+The milestone closed every open finding from the 2026-08-24 third-party functional review. Its
+headline outcome: **QUIRK's own release-gate document went from 325 unrecorded cases to zero
+undispositioned across all 666**, held there by a standing CI gate
+(`tests/test_uat_zero_undispositioned_gate.py`) that was proven load-bearing by mutating a scratch
+corpus and confirming it names the offending case by ID and line.
 
-**Phase 153 (release-tag-cut) complete 2026-08-14** — 5/5 plans, verification 12/13 must-haves
-live-verified (2 `human_needed` items both closed same-session: local commits pushed,
-human-attendance of the tag-push checkpoints confirmed directly). One real deviation: the initial
-combined `git push origin main --tags` silently didn't fire `release.yml`'s push-event trigger —
-a documented GitHub Actions limitation — caught by the executor, independently verified by the
-orchestrator, and fixed via a human-approved standalone tag re-push. RELEASE-01 satisfied.
+**The substantive deliverable is the honest record, not the green gate:** 31 recorded product FAILs
+and 57 named coverage GAPs, each stating what would be needed to close it. `docs/uat-coverage-gaps.md`
+is the worklist; the FAILs are enumerated with command/expected/observed evidence in the Phase
+168/169 summaries. A corpus reading 100% PASS would have been worth nothing.
 
-**Phase 152 (discovery-empirical-closure) complete 2026-08-13** — 4/4 plans, verification 4/4
-must-haves. Built a genuine two-subnet routed chaos-lab topology (iptables REJECT gateway, not
-loopback aliases) to settle the Phase 144 nmap timing-engine artifact once and for all: verdict
-**does not reproduce** across 3 independent live-fire runs. `enable_nmap` interactive default
-flipped to `True`. DISC-09/10/11 satisfied.
+A CRITICAL security finding surfaced and was fixed mid-milestone: **CR-01**, an evidence-newline
+injection in `scripts/uat_disposition_apply.py` that could splice a fabricated, fully-`[x] PASS` UAT
+case into the gating document past all three guards simultaneously — the zero-undispositioned gate
+saw a PASS, heading/result parity was preserved, and the fabricated ID was novel. Root cause was a
+`[^)]*` annotation group matching newlines. Fixed in two layers with 8 regression tests that fail
+against the pre-fix code.
 
-**Phase 151 (phase-completion-artifact-gates) complete 2026-08-13** — 3/3 plans, verification
-4/4 must-haves. `scripts/verify_phase_gates.py` + `.githooks/pre-commit` block a phase-close
-commit missing VERIFICATION.md, stale VALIDATION.md, or a missing UAT-SERIES.md entry, plus a
-destructive-archive guard scoped to `(phase_num, milestone_tag)` with a narrow, documented
-exemption for Phase 144's permanent historical gap. ARTIFACT-01..04 satisfied.
+Also shipped: first-run correctness (164), 291 accessibility violations converted from an
+accumulation into documented decisions with 3 screen-reader blockers fixed (165), e2e smoke +
+XXE-safe UAT XML parsing + a suite-wide macOS fork-after-Network.framework SIGSEGV fix (166), UAT
+format unification with mechanically-verified count parity (167), and a traceability tail that
+backfilled CHANGELOG v5.9–v5.14 — honestly marking v5.13/v5.14 developed-but-never-released — and
+repaired 230 stale cross-phase references (170). Resume behaviour and `--list-resumable`'s Target
+column were closed last (171).
 
-**Phase 150 (test-suite-green-baseline-ci-gate) complete 2026-08-13** — 9/9 plans, verification
-4/4 must-haves, live-fire proven on real GitHub Actions (green run + a deliberate red-smoke run).
-SUITE-02/03 satisfied.
+Milestone audit (`.planning/v5.16-MILESTONE-AUDIT.md`) scored `gaps_found` with **one gap, accepted
+and carried to v5.17**: GATE-03's fork-safety forward-lock is a hand-maintained 11-file allowlist,
+while 18 files carry 38 call sites matching its own crash-exposed criterion. Latent and
+order-dependent — the full unfiltered suite passes with zero fatal signals — but the gate cannot
+deliver the protection its docstring claims from an enumerated list. Fixing it needs a scoped phase,
+not an unplanned close-time change.
 
-**Phase 149 (test-suite-triage) complete 2026-08-12** — 11/11 plans, verification passed 3/3
-must-haves. All 116 pre-existing full-suite failures individually investigated and
-dispositioned (fixed / quarantined-xfail / quarantined-skip) across 9 clusters in
-`docs/test-triage-149.md`; 2 genuine production bugs fixed in place (sslyze `__version__`
-submodule-shape drift silently discarding every sslyze result on sslyze>=6.3; impacket
-`MethodData`→`METHOD_DATA` rename silently disabling all Kerberos scanning on the current
-pin). A systemic macOS `fork()`-under-full-suite-load SIGSEGV cluster (5 tests) was traced to
-one shared root cause rather than 5 independent defects. Code review caught a real gap before
-close (CR-01: an orphaned `test_dashboard_trends.py` flake the reconciliation sweep missed,
-same shared-cache SQLite class as Cluster 5) — fixed in follow-up commit before verification.
-Final ledger: 117 rows, fresh `pytest -q -m ""` is 0 failed (3087 passed, 82 xfailed, 42
-skipped). SUITE-01 satisfied.
+**Test baseline at close:** `pytest -q -m ""` → 3,684 passed, 4 failed, zero fatal signals. The 4
+are `test_skip_registry::test_no_unregistered_skips` plus 3 `test_extras_install_matrix` failures
+that are pre-existing and environmental (a stale `__editable__.quirk-4.0.0.pth` breaks pip's
+build-backend locally; CI installs fresh).
 
-**Phase 148 (release-pipeline-repair-windows-asset-backfill) complete 2026-08-11** — 4/4 plans,
-verification passed 5/5 must-haves. RELEASE-02/03/04 proven against live GitHub Actions (real
-`workflow_dispatch` dry-run, real tag-hygiene guard run, real `v5.11.0` GitHub Release with
-zero assets and the PyPI-only disposition body) rather than by code inspection alone.
+**Carried forward:** seven items are recorded in `.planning/HORIZON.md`'s v5.16 section rather than
+ROADMAP.md's Backlog, because archived roadmaps swallow backlog items — `BACK-A11Y-01` was invisible
+for three months that way.
 
-**v5.11 Discovery at Scale + Backlog Drain — SHIPPED and archived 2026-08-11.** All 4 phases
-(144–147) complete, 16 plans, 11/11 requirements satisfied, version 5.11.0. Milestone audit
-(`.planning/milestones/v5.11-MILESTONE-AUDIT.md`) scored `passed` — 4/4 phases verified, 8/8
-cross-phase seams wired, 3/3 E2E flows complete, Nyquist compliant. All six audit findings were
-closed during closeout; only one required a code change (WR-02, per-batch SQLAlchemy engine
-disposal). Five remaining tech-debt items are non-blocking and either deferred by explicit scope
-decision (DISC-08, DISC-09), accepted by design (IN-01), or unresolvable without hardware the dev
-machine doesn't have (the Phase 144 nmap timing-engine artifact, which needs a real routed
-network segment). Awaiting next milestone via `/gsd:new-milestone`.
+**Recurring lessons recorded:** the 2026-08-24 review's symptoms were reliable while its counts
+failed re-measurement every single time (5→3 duplicate IDs, 4→2 missing tests, 16→230 stale
+references); and **enumeration loses entries where derivation does not** — three successive
+hand-written slug lists each silently omitted work, and the same flaw was then found in GATE-03's
+own allowlist.
 
-**Notable for next-milestone planning:** the release workflow (`release.yml`, holding the
-`windows-package` job and its Authenticode signing step) fires only on a `v*.*.*` tag push, and
-the newest remote tag before v5.11 was `v5.9`. Cutting the v5.11.0 tag is therefore the action
-that exercises the Windows build path for all Phase 139–147 work for the first time.
+**Next milestone:** not yet opened. `/gsd-new-milestone` will PM-review HORIZON.md and the
+carry-forward table before scoping.
+
 
 ## Previous Milestone: v5.3 Adoption & Integration Surface — SHIPPED 2026-05-25
 
