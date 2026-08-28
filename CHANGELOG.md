@@ -58,6 +58,66 @@ the first published release since 5.12.0 and carries that accumulated work.
 - `operators-guide.md` gains section 13, "Discovery Batch Resume", covering the resume
   mechanism, disk cost, cache data-handling class, and the unchanged-target-scope limitation.
 
+## [5.14.0] - 2026-08-19
+
+Hardware Lifecycle Tail — Fleet Coverage & Forecasting (Phases 157-160). **Developed but never
+released**: like v5.13, this milestone's tag (`v5.14`) was two-component, which never matched the
+`v*.*.*` trigger glob in `release.yml`, so no release workflow ran and no PyPI publish happened.
+The last version actually published to PyPI remains 5.12.0 (2026-08-14); `pyproject.toml` stayed
+at `5.12.0` throughout. The code shipped to `main` and is in use — only the release step never
+fired. 5.15.0 was the first published release since 5.12.0 and carries this work forward.
+
+### Added
+
+- **Drift-event retention purge** (Phase 157, HWLC-16) — a table-wide calendar-cutoff sweep bounds
+  `hardware_drift_events` growth via a new `hardware_drift_event_retention_days` config field.
+- **EOL/Tier Forecast narrative** (Phase 157, HWLC-18) — a hedged, catalog-cited 12-month EOL/tier
+  forecast renders in the CLI markdown report, the HTML report, and the DOCX report, backed by a
+  new `quirk/scanner/hardware_forecast.py` engine wired behind the advisory-only firewall.
+- **`persist_and_reconcile()` shared chokepoint** (Phase 158) — sensor-scanned segments now reach
+  the console's drift history exactly like console-direct scans; both `run_scan.py` persist sites
+  and the sensor `_ingest_envelope()` path delegate onto one function, and `hardware_devices` was
+  added to the sensor push envelope so sensor-side hardware findings round-trip into drift history.
+- **Lightweight check-in re-probe mode** (Phase 159, HWLC-13) — `--check-in` re-probes only
+  already-known devices without running a full scan.
+- **Vendor-level PQC catalog status tracking** (Phase 160) — a new event-sourced table tracks
+  vendor PQC catalog status changes over time; a single-host confirmation-gate domination design
+  flaw was caught by research before implementation began. The `GET /api/hardware/vendor-trends`
+  presentation layer was intentionally left unwired in this milestone per locked scope (wired in
+  Phase 161's HWLC-19 in the subsequent v5.15.0 release).
+
+### Fixed
+
+- A session-rollback data-loss bug in Phase 158's persist path and a dashboard surface silently
+  dropping a backend-serialized field in Phase 159 were both caught and closed via this
+  milestone's code-review → fix → re-review cycle on every phase.
+
+## [5.13.0] - 2026-08-15
+
+Continuous Hardware Lifecycle Monitoring (Phases 154-156). **Developed but never released**: its
+tag (`v5.13`) was two-component, which never matched the `v*.*.*` trigger glob in `release.yml`,
+so pushing it matched nothing and fired no release workflow — no run, no failure, no signal.
+`v5.13` was never even pushed to origin. The last version actually published to PyPI remains
+5.12.0 (2026-08-14); `pyproject.toml` stayed at `5.12.0` throughout this milestone, so even the
+tag string is wrong. The code shipped to `main` and is in use — only the release step never fired.
+
+### Added
+
+- **Stable hardware identity across re-IP/DHCP** (Phase 154, HWLC-01/HWLC-02) — a secondary SSH
+  host-key-fingerprint match key lets a device survive a DHCP lease change or re-IP; honest
+  `probe_status` classification (success vs. failed) distinguishes a confirmed re-probe from a
+  timeout, and failed re-probes no longer erase last-known-good device state. A new
+  `hardware_history_retention_days` config field (default 180) bounds history growth, purged
+  inside the same persist transaction.
+- **Two-scan drift-reconciliation engine** (Phase 155) — `hardware_drift.py` compares consecutive
+  scans of the same device and surfaces CNSA 2.0 tier crossings, PQC/bridge-mitigation shifts,
+  EOL/EOS proximity, and CVE deltas as four distinct, N-of-M-confirmed event types, backed by a new
+  `hardware_drift_events` table and visible on the `/hardware` and `/compare` dashboard tabs and in
+  HTML/DOCX reports as structurally separate advisory content.
+- **Opt-in recurring OT/ICS re-probing** — recurring Modbus/BACnet re-probing requires explicit
+  opt-in plus a hardcoded 168-hour cadence floor, closed by an independent `/gsd-secure-phase`
+  review (19/19 threats, 0 high-severity findings).
+
 ## [5.8.0] - 2026-06-16
 
 ### Added
