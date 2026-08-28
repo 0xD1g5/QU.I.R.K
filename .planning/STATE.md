@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: completed
-stopped_at: Phase 169 context gathered — 7 decisions locked, WR-02 corrected as a false finding
-last_updated: "2026-08-28T14:42:28.319Z"
+status: executing
+stopped_at: Completed 169-02-PLAN.md
+last_updated: "2026-08-28T14:53:30.205Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 37
-  completed_plans: 30
+  completed_plans: 31
   percent: 63
 ---
 
@@ -69,8 +69,8 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 169 (uat-record-drain-series-100-163-enforcement) — 1/8 plans executed
-Plan: 1 of 8
-Status: Plan 01 complete — ledger foundation + guard hardening (WR-01, WR-03, cmd_classify data-loss fix)
+Plan: 2 of 8
+Status: Ready to execute
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -281,6 +281,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 168 P08 | 55min | 2 tasks | 3 files |
 | Phase 168 P09 | 55min | 2 tasks | 6 files |
 | Phase 169 P01 | 12min | - tasks | - files |
+| Phase 169 P02 | 25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -523,6 +524,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 168]: 168-08: 5 bucket-F cases with directly runnable shell/grep steps (test -f, grep -q, ruby -c) run directly rather than substitute-searched, since the phase-01 classifier's command-detection regex doesn't recognize those forms; produced one genuine FAIL (UAT-84-02, empty changelog.d fragment dir). UAT-58-01/58-02 DEFERRED substitutes verify correct security behavior but the response body now uses the QRK-DASHBOARD-00N wrapper format rather than the case's literal expected string (doc drift). UAT-92-01 (one-time historical v5.0.0 tag gate) recorded GAP as structurally unrepeatable and naturally stale against v5.15.0, not a live defect. Independent from-scratch recount (zero imports from scripts/) confirms 0 in-scope undispositioned cases remain across the full 666-case document; 433 in-scope total reconciles as 299 (this phase's ledger scope) + 134 pre-existing dispositioned.
 - [Phase ?]: test
 - [Phase 169]: Plan 01 fixed cmd_classify's data-loss bug (silently dropped all 299 already-dispositioned ledger rows when MAX_SERIES widened, since it built output purely from in_scope_undispositioned and write_ledger replaces the whole file) discovered mid-execution, before any commit — reverted via git checkout, then fixed with a seed-then-overlay merge pattern. Also fixed WR-01 (NODE_REF_RE truncation, lockstep across both files), WR-03 (empty-evidence cross-check hole), and a newly-found Case.dispositioned scope bug that would have silently dropped UAT-151-01 from the drain. Ledger extended to 377 rows (78 new outcome:null for series 101-163), independently re-derived count matches the orchestrator's ground truth exactly.
+- [Phase ?]: Vitest substitute citations require a double-quoted title segment (D-05) since vitest titles are free-form prose, unlike pytest's identifier-shaped node names
+- [Phase ?]: Vitest slow tests gated on VITEST_TOOLCHAIN_AVAILABLE (npm + node_modules present); honest skip in CI since Linux Full Suite job never installs Node -- confirmed to actually run locally
 
 ### Pending Todos
 
@@ -653,8 +656,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T14:41:08.861Z
-Stopped at: Phase 169 context gathered — 7 decisions locked, WR-02 corrected as a false finding
+Last session: 2026-08-28T14:53:27.477Z
+Stopped at: Completed 169-02-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

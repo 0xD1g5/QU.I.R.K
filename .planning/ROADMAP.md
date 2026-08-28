@@ -304,7 +304,7 @@ range)
 
 Plans:
 - [x] 169-01-PLAN.md — Guard defect fixes (WR-01/WR-03) + 78-row ledger skeleton for series 101-163
-- [ ] 169-02-PLAN.md — Vitest dialect for the anti-fabrication guard (D-05 half 1)
+- [x] 169-02-PLAN.md — Vitest dialect for the anti-fabrication guard (D-05 half 1)
 - [ ] 169-03-PLAN.md — Bucket A+B drain (41 cases)
 - [ ] 169-04-PLAN.md — Bucket C+D+E drain (25 cases)
 - [ ] 169-05-PLAN.md — Bucket F drain (12 cases) + independent recount + coverage-gaps.md
@@ -371,7 +371,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 166. Gate Robustness | 5/5 | Complete   | 2026-08-27 |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
 | 168. UAT Record Drain — Series 1–~100 | 8/9 | In Progress|  |
-| 169. UAT Record Drain — Series ~100–163 + Enforcement | 1/8 | In Progress|  |
+| 169. UAT Record Drain — Series ~100–163 + Enforcement | 2/8 | In Progress|  |
 | 170. Traceability, Documentation & Runbook | 0/TBD | Not started | - |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
 
