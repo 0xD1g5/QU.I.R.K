@@ -7448,7 +7448,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 1: HTTP 200; `session_id` matches; `answers_count == 0`; `score` is null.
 - Step 3: HTTP 404; body contains `"Session not found"`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: curl GET /api/qramm/sessions/2 and /api/qramm/sessions/9999 - 200 with matching session_id, answers_count=0, score null all correct; 404 body reads QRAMM session not found -- capital-S Session not found the case quotes literally does not appear, only lowercase session)  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** UAT-51-02
 
@@ -7473,7 +7473,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 1: HTTP 200; response contains `saved_count == 1` and `total_answered == 1`.
 - Step 3: HTTP 422 (Pydantic Field(ge=1, le=4) validation failure).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: curl POST /api/qramm/sessions/2/answers with answer_value 3 then 5 - 200 with saved_count=1 total_answered=1, then 422 Pydantic le=4 validation error for the out-of-range value)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** UAT-51-03
 
@@ -7505,7 +7505,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Response contains `profile_multiplier == 1.0` (when no profile row exists).
 - With all-2 answers: `overall == 2.0` and `maturity == "Developing"`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: curl POST all 120 answers at value 2 then POST /score - 200, overall=2.0, maturity=Developing, dimensions has exactly CVI/SGRM/DPE/ITR keys, profile_multiplier=1.0)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** UAT-51-04
 
@@ -7530,7 +7530,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 1: HTTP 204 with empty body.
 - Step 3: HTTP 404.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: curl DELETE /api/qramm/sessions/2 then GET same id - 204 empty body then 404)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** UAT-51-05
 
@@ -7554,7 +7554,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 2 output: `['qramm_answers', 'qramm_profiles', 'qramm_sessions']` (sorted, all 3 tables).
 - Step 3: no exception raised (idempotent via `checkfirst=True`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: the case's own python -c init_db gate against a fresh /tmp/uat_qramm.db - prints the exact sorted 3-table list, re-run without deleting completes without error)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** UAT-51-06
 
@@ -8186,7 +8186,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - `python -c "import yaml; yaml.safe_load(...)"` exits 0
 - No `yaml.YAMLError`, `FileNotFoundError`, or other exception raised
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: python -c yaml.safe_load against .github/workflows/python-staleness.yml - exits 0, no exception)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** UAT-56.1-01
 
@@ -8636,7 +8636,7 @@ All tests are automated (pytest). No chaos lab required.
 - No GET to `/api/qramm/assessment` follows the confirm POST (no full session refetch).
 - Verify via: `sqlite3 quirk.db "SELECT confirmed_at FROM qramm_assessment_answers WHERE question_number = N"` shows a non-null timestamp.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires an active QRAMM assessment session with scan-derived auto-fill mappings reachable only via multi-step interactive UI plus DevTools Network-tab inspection, not practically automatable headless in this pass)
 **Date:**   **Tester:**
 **Notes:** Manual verification against running dashboard; confirmAnswer method wired in QRAMMProvider (Plan 03).
 
@@ -9828,7 +9828,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 - Step 1 exits 0 (workflow YAML parses cleanly).
 - Step 2 finds all three patterns (`attestations: true`, `id-token: write`, `pypa/gh-action-pypi-publish`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: python -c yaml.safe_load against .github/workflows/release.yml then grep for the 3 required patterns - all found)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-84-04: SECURITY.md publishes 90-day disclosure SLA
@@ -9906,7 +9906,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All checks exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: all 6 checks against .github/workflows/release-container.yml and Dockerfile - YAML parses, multi-arch/registry/permissions/qemu patterns all present, Dockerfile has python:3.11-slim, quirk-scanner[all], USER quirk)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-04: `Formula/quirk.rb` Ruby syntax + DSL markers (LAUNCH-02)
@@ -9940,7 +9940,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All five checks exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: all 5 checks against examples/cbom/*.cbom.json, examples/README.md, scripts/generate_cbom_fixtures.sh - all 4 fixture files exist and parse, 3 of 4 profiles have cryptographic-asset components, README mentions regenerating, generator script exists and is executable)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-06: README marketing polish — badges, personas, quickstart, hero (LAUNCH-01)
@@ -9977,7 +9977,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:** All seven checks exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: all 7 grep checks against docs/release-process.md - all 7 patterns found including curl bash Non-Decision, anti-feature, Sigstore, pip/brew/docker install commands, and permanent framing)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11215,7 +11215,7 @@ Expect: PASS printed; `httpx.get` not called.
 - `httpx.get` call count == 0 — no outbound request made.
 - Error message does not expose the raw URL value (redacted preview only).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: the case's own python -c gate against quirk.scanner.openapi_scanner.scan_openapi_spec - SpecParsingError raised and httpx.get call count is 0 as expected, but the exception message contains the full raw evil.example.com URL instead of a redacted preview)  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
@@ -11265,7 +11265,7 @@ Expect: PASS with zero calls to both `httpx.get` and `_oas_validate`.
 - `httpx.get` call count == 0.
 - `_oas_validate` call count == 0 (SSRF guard fires before validator).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: the case's own python -c SSRF-ref gate - SpecParsingError raised with httpx.get and _oas_validate both at 0 calls)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
@@ -11306,7 +11306,7 @@ Expect: PASS with yaml.safe_load call count == 0.
 - `yaml.safe_load` call count == 0 (size gate fires before parse).
 - `MAX_SPEC_BYTES` constant is accessible from `quirk.scanner.openapi_scanner`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-27 ran: the case's own python -c oversized-spec gate - SpecParsingError raised for a file just over MAX_SPEC_BYTES with yaml.safe_load never called)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
