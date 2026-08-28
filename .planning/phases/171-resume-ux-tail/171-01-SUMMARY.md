@@ -136,3 +136,12 @@ RESUME-05 closed. Plan 171-02 (RESUME-06, `--list-resumable` Target column deriv
 ---
 *Phase: 171-resume-ux-tail*
 *Completed: 2026-08-28*
+
+## Self-Check: PASSED
+
+- FOUND: run_scan.py
+- FOUND: tests/test_resume_already_complete_shortcircuit.py
+- FOUND: .planning/phases/171-resume-ux-tail/171-01-SUMMARY.md
+- FOUND commit: d8468c0 (RED)
+- FOUND commit: 629a8cb (GREEN)
+- FOUND commit: 0d77cc0 (docs: complete plan execution)
