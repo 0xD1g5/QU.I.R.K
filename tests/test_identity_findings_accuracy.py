@@ -7,6 +7,9 @@ Tests define the acceptance contract for three bug fixes:
 
 Tests MUST FAIL before Plan 02 implementation lands. Imports succeed because
 the modules exist; only the behaviors are absent.
+
+Covers GAP-01 — routes RS-family OIDC endpoints to _derive_identity_findings
+(not _derive_findings), the substance of the GAP-01 fix.
 """
 from __future__ import annotations
 

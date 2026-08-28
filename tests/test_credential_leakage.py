@@ -6,6 +6,9 @@ Approach: each connector's exception path funnels through safe_str().
 These tests assert (a) safe_str strips the credential payloads we know
 real libraries surface, (b) every modified file imports safe_str, and
 (c) a known sentinel credential appears in none of the 11 stored/rendered surfaces.
+
+Also covers AUTH-05 (credential scrubbing extended to API-key/token field shapes —
+the same safe_str()/AST-gate mechanism this file already tests).
 """
 from __future__ import annotations
 

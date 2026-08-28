@@ -9,6 +9,9 @@
 The static arm of ADCS-09 (paired with the runtime arm in
 `tests/test_adcs_no_writes.py`). Modeled on the Phase 79
 `tests/test_smime_ast_gate.py` walker.
+
+Contributes to AUTH-05 coverage (AST CI gate class for credential/write-path
+leakage prevention).
 """
 from __future__ import annotations
 

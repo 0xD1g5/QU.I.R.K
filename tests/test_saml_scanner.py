@@ -2,6 +2,9 @@
 
 Tests mock httpx and lxml to avoid network calls and lxml dependency.
 Scanner module: quirk/scanner/saml_scanner.py
+
+Exercises the lxml-migrated parsing path, closing DEBT-04 (SAML lxml
+migration test coverage).
 """
 
 import base64

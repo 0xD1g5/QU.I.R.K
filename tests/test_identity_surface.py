@@ -473,6 +473,9 @@ class Issue3ScanWindowRegressionTest(unittest.TestCase):
 
     Before the fix: scan-window query anchors on MAX(scanned_at) = T+30s,
     and the 1-second window [T+30, T+31) excludes DNSSEC/SAML at T.
+
+    Covers GAP-01 (SAML/OIDC restored in identity_findings[]) and GAP-02 (the
+    re-enabled SAML scan-window regression test — this class is that test).
     """
 
     def test_issue3_scan_window_returns_all_identity_protocols(self):
@@ -604,7 +607,9 @@ class Issue3ScanWindowRegressionTest(unittest.TestCase):
         return client, TestingSession
 
     def test_saml_visible_with_earlier_dnssec(self):
-        """Bracket edge case: DNSSEC at T-60s and SAML at T are both visible in identity_findings."""
+        """GAP-02: SAML visible within the scan-window bracket even when an earlier
+        DNSSEC endpoint anchors MAX(scanned_at) lower. Bracket edge case: DNSSEC at
+        T-60s and SAML at T are both visible in identity_findings."""
         from quirk.models import CryptoEndpoint
         from datetime import datetime
 

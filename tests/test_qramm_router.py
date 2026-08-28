@@ -290,7 +290,7 @@ def test_list_sessions_orders_desc():
 
 
 def test_create_profile():
-    """Test 3: POST /api/qramm/profiles returns 201 with profile_id, session_id, multiplier in 0.8-1.5."""
+    """QRAMM-09: Test 3: POST /api/qramm/profiles returns 201 with profile_id, session_id, multiplier in 0.8-1.5."""
     client, TestingSession = _make_qramm_client()
     sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
 
@@ -320,7 +320,7 @@ def test_create_profile():
 
 
 def test_create_profile_multiplier_varies():
-    """Test 4: Different industry+data_sensitivity combos produce different multipliers."""
+    """QRAMM-09: Test 4: Different industry+data_sensitivity combos produce different multipliers."""
     client, _ = _make_qramm_client()
     sid1 = client.post("/api/qramm/sessions", json={}).json()["session_id"]
     sid2 = client.post("/api/qramm/sessions", json={}).json()["session_id"]

@@ -11,6 +11,9 @@ Covers four behaviors:
     CODE_SIGNING endpoints are folded into the final endpoints list.
 
 CSIGN-01 end-to-end wiring requirement.
+
+Also satisfies TAIL-04's requirement that TAIL-02/TAIL-03 code-signing wiring
+receive test coverage.
 """
 from __future__ import annotations
 

@@ -8,6 +8,9 @@ content". This gate enforces the invariant at CI time.
 
 Modeled on the Phase 59 `tests/test_scan_error_gate.py` AST walker
 (PATTERNS.md authoritative analog).
+
+Contributes to AUTH-05 coverage (AST CI gate class for credential/write-path
+leakage prevention).
 """
 from __future__ import annotations
 
