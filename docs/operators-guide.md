@@ -203,6 +203,17 @@ Compose profiles, with an oracle of expected findings per profile.
   regenerated (`npm run a11y:baseline`), so a real fix always tightens the ledger instead of
   leaving a now-stale, looser number in place.
 
+### 5.3.1 UAT corpus integrity gate
+
+`tests/test_uat_zero_undispositioned_gate.py` fails the build the moment any case in
+`docs/UAT-SERIES.md` (the 666-case UAT gating document) has an all-unchecked `**Result:**`
+line — it rides the existing `Linux Full Suite` CI job rather than a pre-commit hook, so it
+cannot be bypassed with `--no-verify`. If you add a new UAT case, give it a real disposition
+(PASS/FAIL, or a checked SKIP with a `DEFERRED — covered by <test-node>` or `GAP — no substitute
+coverage` annotation) before committing. Full rationale and worked fix instructions are in
+`CLAUDE.md`'s "UAT Corpus Integrity Gate (UATREC-04)" section and in the gate test's own module
+docstring.
+
 ### 5.4 Connector gotchas
 
 For per-connector authentication and IAM-permission issues, see the dedicated connector

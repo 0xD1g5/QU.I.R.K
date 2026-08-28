@@ -1,7 +1,21 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-27 (v5.16 Phase 168 — UAT Record Drain, Series 1-100: all 299
+**Last Updated:** 2026-08-28 (v5.16 Phase 169 — UAT Record Drain, Series 101-163 + Enforcement:
+all 78 previously-undispositioned cases whose series number is 101-163 now carry a real
+disposition — 41 via bucket A/B pytest evidence (37 PASS, 1 GAP, 3 DEFERRED), 25 via bucket C/D/E
+(19 PASS, 1 FAIL, 4 SKIP, 3 DEFERRED, 2 GAP), and 12 via bucket F (8 PASS, 4 SKIP). Combined with
+Phase 168's 299 series-1-100 rows, the full 377-row `docs/uat-disposition-ledger.jsonl` and all
+666 case headings in this document are now 100% dispositioned: **202 PASS, 32 FAIL, 42 DEFERRED,
+44 SKIP, 57 GAP**. Phase 168's ~31 series-7 dashboard GAPs were re-examined against a new vitest
+substitute-citation dialect added to `tests/test_uat_disposition_integrity.py` — zero converted
+(every near-miss test checked and rejected as not covering the case's specific assertion; see
+`docs/uat-coverage-gaps.md` finding #15). **Every case added to this document from now on needs
+a disposition** — `tests/test_uat_zero_undispositioned_gate.py` fails the build (riding the
+`Linux Full Suite` CI job) the moment any `**Result:**` line has all three boxes empty; see
+`CLAUDE.md`'s "UAT Corpus Integrity Gate (UATREC-04)" section for the full rationale and how to
+fix a failure. Closes UATREC-03, UATREC-04.
+Earlier: 2026-08-27 (v5.16 Phase 168 — UAT Record Drain, Series 1-100: all 299
 previously-undispositioned cases whose series number is <= 100 now carry a real disposition —
 142 PASS, 31 FAIL (genuine product/documentation findings, see `docs/uat-coverage-gaps.md`), 36
 DEFERRED (naming a verified-passing pytest substitute node, `UAT-33-03` model), 36 SKIP (real
