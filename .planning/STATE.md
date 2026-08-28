@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: None
-last_updated: "2026-08-28T02:43:58.258Z"
+last_updated: "2026-08-28T02:53:56.372Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 26
+  completed_plans: 27
   percent: 50
 ---
 
@@ -43,7 +43,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 168 (uat-record-drain-series-1-100) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -251,6 +251,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 168 P04 | 70min | 2 tasks | 2 files |
 | Phase 168 P05 | 220min | 2 tasks | 2 files |
 | Phase 168 P06 | 1h50min | 2 tasks | 2 files |
+| Phase 168 P07 | 70min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -489,6 +490,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: UAT-34-01 reclassified bucket B->A via tests/test_motion_scoring.py::test_subscores_includes_data_in_motion; bucket B now empty
 - [Phase 168]: 73 bucket A/B UAT cases dispositioned from real pytest runs: 62 PASS, 6 SKIP (chaos-lab gated), 5 DEFERRED (verified substitutes, incl. D-06 gap fill for UAT-33-07)
 - [Phase 168]: Bucket C (chaos-lab, 34/34) closed via verified pytest substitutes per UAT-33-03 model without bringing the lab up (D-01); 8 rows recorded as honest GAPs including Vault lacking an rsa-1024 transit key type and pgcrypto column detection being unimplemented (BACK-12)
+- [Phase 168]: Bucket F series 1-50: 7 DEFERRED with verified pytest substitutes, 42 GAP; frontend-only UI cases are structurally ineligible for DEFERRED under the pytest-only anti-fabrication guard
 
 ### Pending Todos
 
@@ -619,7 +621,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T02:43:58.251Z
+Last session: 2026-08-28T02:52:30.751Z
 Stopped at: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

@@ -273,7 +273,7 @@ Plans:
 - [x] 168-04-PLAN.md — Buckets A+B: run the named pytest files, record real exit codes
 - [x] 168-05-PLAN.md — Buckets D+E: run the named CLI / curl / sqlite3 / npm commands
 - [x] 168-06-PLAN.md — Bucket C: chaos-lab cases deferred to verified substitute tests (lab stays down)
-- [ ] 168-07-PLAN.md — Bucket F series 1-50: substitute search or recorded gap
+- [x] 168-07-PLAN.md — Bucket F series 1-50: substitute search or recorded gap
 - [ ] 168-08-PLAN.md — Bucket F series 51-100, independent recount, docs/uat-coverage-gaps.md
 - [ ] 168-09-PLAN.md — Full-suite baseline, docs + Obsidian sync, phase note, human review
 
@@ -356,7 +356,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 165. Accessibility Remediation | 8/8 | Complete   | 2026-08-27 |
 | 166. Gate Robustness | 5/5 | Complete   | 2026-08-27 |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
-| 168. UAT Record Drain — Series 1–~100 | 6/9 | In Progress|  |
+| 168. UAT Record Drain — Series 1–~100 | 7/9 | In Progress|  |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 0/TBD | Not started | - |
 | 170. Traceability, Documentation & Runbook | 0/TBD | Not started | - |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
