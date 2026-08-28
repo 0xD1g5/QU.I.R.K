@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: None
-last_updated: "2026-08-28T02:53:56.372Z"
+stopped_at: Completed 168-08-PLAN.md
+last_updated: "2026-08-28T03:02:45.755Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 27
+  completed_plans: 28
   percent: 50
 ---
 
@@ -43,7 +43,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 168 (uat-record-drain-series-1-100) — EXECUTING
-Plan: 8 of 9
+Plan: 9 of 9
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -252,6 +252,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 168 P05 | 220min | 2 tasks | 2 files |
 | Phase 168 P06 | 1h50min | 2 tasks | 2 files |
 | Phase 168 P07 | 70min | 2 tasks | 2 files |
+| Phase 168 P08 | 55min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -491,6 +492,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 168]: 73 bucket A/B UAT cases dispositioned from real pytest runs: 62 PASS, 6 SKIP (chaos-lab gated), 5 DEFERRED (verified substitutes, incl. D-06 gap fill for UAT-33-07)
 - [Phase 168]: Bucket C (chaos-lab, 34/34) closed via verified pytest substitutes per UAT-33-03 model without bringing the lab up (D-01); 8 rows recorded as honest GAPs including Vault lacking an rsa-1024 transit key type and pgcrypto column detection being unimplemented (BACK-12)
 - [Phase 168]: Bucket F series 1-50: 7 DEFERRED with verified pytest substitutes, 42 GAP; frontend-only UI cases are structurally ineligible for DEFERRED under the pytest-only anti-fabrication guard
+- [Phase 168]: 168-08: 5 bucket-F cases with directly runnable shell/grep steps (test -f, grep -q, ruby -c) run directly rather than substitute-searched, since the phase-01 classifier's command-detection regex doesn't recognize those forms; produced one genuine FAIL (UAT-84-02, empty changelog.d fragment dir). UAT-58-01/58-02 DEFERRED substitutes verify correct security behavior but the response body now uses the QRK-DASHBOARD-00N wrapper format rather than the case's literal expected string (doc drift). UAT-92-01 (one-time historical v5.0.0 tag gate) recorded GAP as structurally unrepeatable and naturally stale against v5.15.0, not a live defect. Independent from-scratch recount (zero imports from scripts/) confirms 0 in-scope undispositioned cases remain across the full 666-case document; 433 in-scope total reconciles as 299 (this phase's ledger scope) + 134 pre-existing dispositioned.
 
 ### Pending Todos
 
@@ -621,8 +623,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T02:52:30.751Z
-Stopped at: None
+Last session: 2026-08-28T03:02:45.747Z
+Stopped at: Completed 168-08-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

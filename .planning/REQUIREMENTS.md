@@ -230,7 +230,7 @@ open; expected to span multiple phases.*
 | GATE-03 | Phase 166 | Complete |
 | UATREC-01 | Phase 167 | Pending |
 | UATREC-02 | Phase 167 | Pending |
-| UATREC-03 | Phase 168, 169 | Pending |
+| UATREC-03 | Phase 168, 169 | Phase 168 (series 1-100) complete; series 101-163 pending Phase 169 |
 | UATREC-04 | Phase 169 | Pending |
 | TRACE-01 | Phase 170 | Pending |
 | TRACE-02 | Phase 170 | Pending |
