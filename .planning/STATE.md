@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
-stopped_at: Completed 168-09-PLAN.md (Phase 168 complete); 168-09 Task 3 human-verify checkpoint APPROVED by user 2026-08-28; running verify-phase 168
-last_updated: "2026-08-27T00:00:00.000Z"
+status: verifying
+stopped_at: Phase 169 context gathered — 7 decisions locked, WR-02 corrected as a false finding
+last_updated: "2026-08-28T14:22:31.893Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 29
   completed_plans: 29
-  percent: 56
+  percent: 63
 ---
 
 # Project State
@@ -650,8 +650,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T03:02:45.747Z
-Stopped at: Completed 168-08-PLAN.md
+Last session: 2026-08-28T14:22:31.886Z
+Stopped at: Phase 169 context gathered — 7 decisions locked, WR-02 corrected as a false finding
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
