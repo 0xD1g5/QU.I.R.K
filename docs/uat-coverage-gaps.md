@@ -184,3 +184,41 @@ discoveries from Plans 03-08 that Phase 170's traceability work needs to act on:
     document's actual 214 series-101-163 headings with series >100 — the CONTEXT figure of
     233 predates a precise document-based recount and should not be treated as ground truth
     going forward; the document itself (666 headings, 0 undispositioned) is.
+15. **D-05 second half spent: all 31 series-7 GAP rows re-examined against real vitest
+    coverage, zero converted** (169-06). Finding #2 above flagged that `NODE_REF_RE`'s
+    pytest-only shape structurally excluded genuine frontend vitest coverage as a DEFERRED
+    substitute, inflating the series-7 GAP count by up to 31 cases. 169-02 built the vitest
+    dialect (`VITEST_REF_RE`, `find_unresolvable_vitest_refs`, `_run_vitest_nodes`,
+    `parse_vitest_summary`); this plan spent it. All 21 `.test.tsx` files under
+    `src/dashboard/src/**/__tests__/` were enumerated and every `it()`/`test()` title read
+    against each of the 31 cases' "coverage that would be needed" text. None genuinely cover
+    the case's specific assertion:
+    - `UAT-7-01`, `UAT-7-17`, `UAT-7-32` describe headless-browser/real-PDF/full-navigation
+      behavior jsdom cannot structurally exercise — no vitest substitute is possible for
+      these regardless of what future tests get written.
+    - `UAT-7-03` (`ScoreGauge.test.tsx`) only asserts numeric text and SVG stroke color, never
+      the EXCELLENT/GOOD/MODERATE/FAIR/POOR label or confidence badge the case requires.
+    - `UAT-7-06` (`findings-columns-memo.test.tsx`) only asserts `columns` is wrapped in
+      `useMemo`, not that rows render with the documented columns/row-count parity.
+    - `UAT-7-14`/`UAT-7-27` (`cbom-cytoscape-catch.test.tsx`) only assert `console.error`
+      logging on `cytoscape.use` failure, never actual graph render or node-click interaction.
+    - `UAT-7-22` (`theme-provider.test.tsx`) only asserts the `getStoredTheme` read-side
+      allowlist function directly (no toggle click, no rendered toggle button, no reload
+      simulation), not the case's click-toggle-then-persist-across-reload workflow.
+    - `UAT-7-30` (`print-no-createElement.test.tsx`, `print-pdf-cleanup.test.tsx`) only assert
+      the PRINT_CSS JSX-vs-`createElement` implementation detail and the `data-ready` sentinel,
+      never single-column layout or page-break rendering.
+    - `UAT-7-34` has a same-shaped test (`sensors-loading.test.tsx`) but for a different page
+      (Sensors, not Identity) — same component pattern, wrong subject, rejected as a
+      filename/pattern-coincidence match per this phase's explicit standard.
+    - The remaining 23 cases (`UAT-7-04`, `-05`, `-07`, `-08`, `-09`, `-10`, `-12`, `-15`,
+      `-16`, `-20`, `-21`, `-23`, `-24`, `-25`, `-26`, `-28`, `-29`, `-31`, `-37`, `-40`,
+      `-41`) have no existing vitest test file that even superficially targets their page or
+      interaction — no candidate to evaluate at all.
+
+    All 31 rows stay `GAP`, unchanged, with the reasoning above recorded per-case in the SUMMARY
+    (`.planning/phases/169-uat-record-drain-series-100-163-enforcement/169-06-SUMMARY.md`). Per
+    this plan's own instruction, "converting 31" was never the target — "every row's disposition
+    is true" was, and zero genuine substitutes exist today. Writing the missing vitest tests
+    themselves remains out of scope (see "Closing the 54 GAPs by writing the missing tests" in
+    169-CONTEXT.md's Deferred Ideas) and is the actual, still-open follow-up work.
