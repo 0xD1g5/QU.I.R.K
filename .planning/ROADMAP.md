@@ -30,6 +30,7 @@
 - ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
+- 🚧 **v5.17 Defect Drain** — Phases 172–176 (in progress)
 - ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **deliberately untagged** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
 
 ### v5.16 deliberately untagged (2026-08-28)
@@ -66,6 +67,153 @@ not happen. Rather than retro-publish two versions whose source never carried
 those numbers, the record is corrected here and **v5.15 becomes the next real
 release**, tagged with a 3-component version. `release.yml`'s trigger has been
 broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
+
+## Current Milestone: v5.17 Defect Drain
+
+**Goal:** Fix the defects the v5.16 drain surfaced, and convert its misleading records into true
+ones. Every phase traces to UAT cases with command / expected / observed evidence already captured.
+Ops milestone — no net-new scanner surface.
+
+**Phase Numbering:** Continues from v5.16's last phase (171). Integer phases only.
+
+> [!important] Scope was re-measured before opening
+> v5.16 reported "32 product FAILs" — a **ledger tally**, not a defect count. Re-measured
+> 2026-08-28: **18 genuine defects** (9 product bugs, 9 case/doc defects), **13 chaos-lab-down
+> artifacts**, and **1 spurious**. This is the fourth headline count on this project to fail
+> re-measurement, after 5→3 duplicate IDs, 16→230 stale references, and 4→2 missing tests.
+
+### Phases
+
+- [ ] **Phase 172: Fuzzing & Disclosure Safety** - `--fuzz` refuses to run non-interactively, the documented `--fuzz-budget` ceiling is enforced, and a spec-parsing failure never prints the raw target URL.
+- [ ] **Phase 173: Scanner Scope & Config Correctness** - Config that disables a scanner actually prevents the probe, and a disabled subsystem leaves no trace in run stats.
+- [ ] **Phase 174: Dashboard & API Correctness** - The dashboard score tracks the scan's score profile, the empty state loads clean, and the sidebar order and its documented lock agree.
+- [ ] **Phase 175: Case & Documentation Defect Correction** - Nine UAT cases where the product is right and the case is wrong are corrected, each verified as a case defect before being edited.
+- [ ] **Phase 176: Chaos-Lab Re-Run** - The 13 cases that failed only because the lab was down are re-run with it up, and carry their true outcome.
+
+## Phase Details
+
+### Phase 172: Fuzzing & Disclosure Safety
+
+**Goal**: QUIRK cannot fuzz a client's API without an interactive confirmation, cannot exceed its
+own documented request ceiling, and cannot leak a raw target URL in an error message.
+**Depends on**: Nothing (first phase; deliberately led with — these are the three defects with real
+client-estate consequences)
+**Requirements**: SAFE-01, SAFE-02, SAFE-03
+**Success Criteria** (what must be TRUE):
+
+  1. `--fuzz` with non-TTY stdin hard-aborts **before issuing any request**, printing a
+     non-interactive-mode error and exiting non-zero. Reproduced today as: scan completed normally,
+     exit 0, no message (`UAT-96-02`).
+
+  2. `--fuzz-budget 501` is rejected at runtime. The documented hard maximum is 500; the argparse
+     default of 50 is already correct and must not change (`UAT-96-03`).
+
+  3. A `SpecParsingError` from `scan_openapi_spec` reports a redacted URL preview, never the full
+     raw URL. Reproduced today with `evil.example.com` appearing in full (`UAT-94-05`). Any sibling
+     error path with the same shape is covered.
+**Plans**: TBD
+
+### Phase 173: Scanner Scope & Config Correctness
+
+**Goal**: A config that says "do not scan this" prevents the scan, and a disabled subsystem leaves
+no residue in run output.
+**Depends on**: Nothing
+**Requirements**: SCOPE-01, SCOPE-02, SCOPE-03
+**Success Criteria** (what must be TRUE):
+
+  1. With `connectors.enable_email` at its default `False`, no SMTP/IMAP/POP3 port is probed and the
+     Motion page's Email Protocols section renders its empty state. Email probing currently runs
+     unconditionally (`UAT-36-05`).
+
+  2. `run_stats.timings_sec` contains no `broker_scanning` key when no broker phase ran. The key
+     currently persists with a nonzero value while the row count is correctly 0 (`UAT-33-01`).
+
+  3. Enabling a scanner whose optional extras are absent emits the documented missing-extra signal —
+     stderr advisory plus a `scan_error_category=missing_extra` finding — for the broker/motion
+     family as it already does for identity (`UAT-41-01`).
+**Plans**: TBD
+
+### Phase 174: Dashboard & API Correctness
+
+**Goal**: The dashboard reports the same score the CLI did, loads its empty state without errors,
+and its navigation matches whatever the documentation says — with the disagreement resolved
+deliberately rather than silently.
+**Depends on**: Nothing
+**Requirements**: DASH-06, DASH-07, DASH-08
+**Success Criteria** (what must be TRUE):
+
+  1. Scans run under `--score-profile strict` / `balanced` / `standard` produce three different
+     dashboard scores matching their CLI scorecards, and `/api/scans` populates `profile` and
+     `calibration` rather than null. Currently 93 / 91 / 90 on the CLI all render as 93
+     (`UAT-8-07`).
+
+  2. The dashboard empty state on a fresh database logs zero console errors. A
+     `Failed to load resource 404` is currently logged (`UAT-10-08`).
+
+  3. The sidebar order and the documented D-11 lock agree. An undocumented Hardware item currently
+     sits between Motion and Data at Rest. **Decide which side is wrong** — do not re-order a
+     shipped UI to satisfy a stale document without establishing that the document is right
+     (`UAT-39-07`).
+**Plans**: TBD
+
+### Phase 175: Case & Documentation Defect Correction
+
+**Goal**: The nine UAT cases that record a FAIL against correct product behaviour are corrected, so
+the corpus stops asserting defects that do not exist.
+**Depends on**: Nothing
+**Requirements**: CASEFIX-01, CASEFIX-02, CASEFIX-03, CASEFIX-04, CASEFIX-05
+**Success Criteria** (what must be TRUE):
+
+  1. Each of the nine is **verified as a case defect before it is edited**. If any turns out to be a
+     real product bug, it is promoted to a product fix rather than quietly rewritten — the failure
+     mode here is editing the specification until it matches whatever the code happens to do.
+
+  2. `UAT-85-02` / `UAT-85-06` accept the quoted `'quirk-scanner[all]'` form the docs correctly use
+     for zsh glob safety; `UAT-84-02` can pass against the real `changelog.d/` state;
+     `UAT-110-06`'s impossible worked example is corrected.
+
+  3. `UAT-55-01`'s `control_id` / `practice_number` mismatch is resolved on the correct side — this
+     one may genuinely be an API naming problem rather than a case defect, and must be judged, not
+     assumed.
+
+  4. `UAT-58-07` is re-dispositioned as DEFERRED naming the deliberate `QRK-TARGET-002` design
+     decision, or that decision is explicitly reopened.
+
+  5. All four UAT guard suites stay green and the corpus stays at zero undispositioned throughout.
+**Plans**: TBD
+
+### Phase 176: Chaos-Lab Re-Run
+
+**Goal**: The 13 cases that failed only because the chaos lab was down carry their true outcome,
+and any genuine defect hiding behind them is surfaced.
+**Depends on**: Nothing, but scheduled last so that defects it uncovers can be triaged against a
+milestone whose other work is already complete
+**Requirements**: LABRUN-01, LABRUN-02
+**Success Criteria** (what must be TRUE):
+
+  1. All 13 cases (`UAT-4-01`, `UAT-5-02/03/04/06/07/08/09/11/13`, `UAT-6-06/07/08`) are re-executed
+     **with the chaos lab running** and carry a real outcome. Phase 168's D-01 forbade starting the
+     lab; this phase has no such constraint.
+
+  2. Any genuine defect the re-run uncovers is recorded with evidence and **explicitly triaged** —
+     into this milestone or the backlog — rather than absorbed silently.
+
+  3. `UAT-1-02` is correctly dispositioned. It currently records FAIL with evidence
+     `Got: 'QU.I.R.K. v5.15.0', code=0`, which matches its own expected output. Phase 168-03 blamed
+     a stale hardcoded check in `uat_runner.py`; no such literal exists there. Find the real cause.
+**Plans**: TBD
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 172. Fuzzing & Disclosure Safety | 0/TBD | Not started | - |
+| 173. Scanner Scope & Config Correctness | 0/TBD | Not started | - |
+| 174. Dashboard & API Correctness | 0/TBD | Not started | - |
+| 175. Case & Documentation Defect Correction | 0/TBD | Not started | - |
+| 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |
+
+---
 
 ## Phases
 

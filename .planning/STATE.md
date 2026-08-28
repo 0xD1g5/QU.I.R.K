@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.16
-milestone_name: Review Drain & Gate Integrity
-status: shipped
-stopped_at: v5.16 SHIPPED and archived 2026-08-28 — 8/8 phases, 47 plans, 24/24 requirements. Next: /gsd-new-milestone
+milestone: v5.17
+milestone_name: Defect Drain
+status: planning
+stopped_at: v5.17 OPENED 2026-08-28 — 5 phases (172-176), 16 requirements, all traced to v5.16 UAT evidence. Next: /gsd-discuss-phase 172
 last_updated: "2026-08-28T21:06:27.183Z"
 last_activity: 2026-08-28
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 47
-  completed_plans: 47
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
