@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
-stopped_at: Completed 171-02-PLAN.md (RESUME-06 --list-resumable Target column derivation closed; 2/3 plans in Phase 171 done)
-last_updated: "2026-08-28T20:45:51.270Z"
+status: verifying
+stopped_at: "Completed 171-03-PLAN.md (Phase 171 closed — RESUME-05/RESUME-06 complete, human-verify checkpoint approved 2026-08-28; 3/3 plans in Phase 171 done; this was the final phase of v5.16 — awaiting /gsd:verify-phase 171)"
+last_updated: "2026-08-28T21:06:27.183Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 48
+  completed_phases: 8
+  total_plans: 47
   completed_plans: 47
-  percent: 98
+  percent: 100
 ---
 
 # Project State
@@ -103,7 +103,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Phase complete — ready for verification
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -206,7 +206,7 @@ Phase: 171 (resume-ux-tail) — 171-01 and 171-02 executed (RESUME-05 closed: st
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -429,6 +429,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 170 P06 | 25min | 2 tasks | 25 files |
 | Phase 171 P01 | 25min | 1 tasks | 2 files |
 | Phase 171 P02 | 20min | 2 tasks | 3 files |
+| Phase 171 P03 | 65min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -685,6 +686,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 169-07]: Zero-undispositioned UAT gate built as pytest test riding Linux Full Suite CI (D-01), whole-document scoped (D-02), GAP is passing (D-03), D-04 CI-marker override claim independently re-verified and regression-locked
 - [Phase 171]: RESUME-05 (D-01, locked): resume of an already-complete scan exits 0 with a message naming the scan and finish time, writes zero new checkpoint rows, no --force flag
 - [Phase 171]: RESUME-06 (D-02, locked): --list-resumable Target column derives from CryptoEndpoint when no ScanJob row exists; ScanJob join stays primary, honest '(no target recorded)' placeholder when both are absent
+- [Phase 171]: RESUME-05/RESUME-06 both verified complete: resume-already-complete short-circuit (exit 0, zero new checkpoint rows) and --list-resumable Target column derivation from CryptoEndpoint rows — Full unfiltered suite holds at 3684 passed / 4 known pre-existing failures (+14 delta matching this phase's new tests); Series 171 UAT entry live-repro'd; Task 3 human-verify checkpoint approved 2026-08-28. Phase 171 closes the v5.16 milestone's last phase.
 
 ### Pending Todos
 
@@ -815,8 +817,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T20:45:51.264Z
-Stopped at: Completed 171-02-PLAN.md (RESUME-06 --list-resumable Target column derivation closed; 2/3 plans in Phase 171 done)
+Last session: 2026-08-28T21:06:27.177Z
+Stopped at: Completed 171-03-PLAN.md (Phase 171 closed — RESUME-05/RESUME-06 complete, human-verify checkpoint approved 2026-08-28; 3/3 plans in Phase 171 done; this was the final phase of v5.16 — awaiting /gsd:verify-phase 171)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

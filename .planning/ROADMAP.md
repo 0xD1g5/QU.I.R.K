@@ -386,7 +386,7 @@ Plans:
 
 **Wave 3**
 
-- [ ] 171-03-PLAN.md — Phase close: full-suite proof, Series 171 UAT entry, REQUIREMENTS.md, Obsidian sync, human checkpoint
+- [x] 171-03-PLAN.md — Phase close: full-suite proof, Series 171 UAT entry, REQUIREMENTS.md, Obsidian sync, human checkpoint
 
 ### Progress
 
@@ -399,7 +399,7 @@ Plans:
 | 168. UAT Record Drain — Series 1–~100 | 9/9 | Complete   | 2026-08-28 |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 8/8 | Complete   | 2026-08-28 |
 | 170. Traceability, Documentation & Runbook | 7/7 | Complete   | 2026-08-28 |
-| 171. Resume UX Tail | 2/3 | In Progress|  |
+| 171. Resume UX Tail | 3/3 | Complete   | 2026-08-28 |
 
 ---
 
