@@ -58,6 +58,7 @@ _COVERED_FILES = [
     "tests/test_target_cli.py",
     "tests/test_compliance_cli.py",
     "tests/test_db_migrate_cli.py",
+    "tests/test_lab_profile_args_precedence.py",
     "tests/test_lab_profile_certs.py",
     "tests/test_qramm_staleness.py",
     "tests/test_scheduler_dispatch_profile.py",
