@@ -246,6 +246,7 @@ items — `BACK-A11Y-01` was invisible for three months that way (see the note a
 
 | Item | Origin | Notes |
 |---|---|---|
+| **GATE-03's fork-safety gate is an allowlist, not a sweep** | v5.16 milestone audit (2026-08-28) | `tests/test_cli_helper_usage.py::_COVERED_FILES` names 11 files, but **18 files carry 38 call sites** matching the gate's own criterion (`cwd=` present, or `close_fds=False` absent). Worst: `test_errors_cmd.py` (8), `test_chaos_lab_idempotency.py` (6), `test_install_errors.py` (4). Latent and order-dependent — the suite passes with zero fatal signals today — but the gate's docstring claims protection "regardless of which subset of tests is run", which it cannot deliver from a hand-maintained list. This is the same enumeration-vs-derivation failure Phase 170 hit three times. **Needs a scoped phase:** convert `_find_offenders` to a repo-wide walk, decide whether the 38 sites migrate to `run_fork_safe` or just gain the kwargs, and grandfather explicitly rather than silently. |
 | Unanchored vitest `-t` substring matching | Phase 169 code review (WARNING) | Risks cross-test bleed when substitutes run batched. Latent, not exploited. |
 | `cmd_classify` never prunes orphaned ledger rows | Phase 169 code review (WARNING) | Latent; the data-loss half of this function was already fixed in 169-01. |
 | Vitest `-m slow` leg doesn't execute in CI | Phase 169 (169-02) | `Linux Full Suite` never installs Node, so vitest substitutes are existence-checked only there. `dashboard-quality.yml` may be the right home. |
