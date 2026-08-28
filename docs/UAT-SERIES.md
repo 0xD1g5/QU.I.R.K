@@ -1547,7 +1547,7 @@ All of these services show status `Up` or `running`:
 - Deprecated protocol (TLS 1.0 pinning) detected
 - Total source findings ≥ 4 across both repos
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_source_scanner.py::test_semgrep_findings_parsed, verified pass 2026-08-27 -- proves the semgrep-integration parsing mechanism MD5/DES findings to CryptoEndpoint with protocol=SOURCE; the specific hardcoded-key/weak-random/TLS1.0-pinning rules are semgrep's own ruleset, outside QUIRK's control)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1574,7 +1574,7 @@ All of these services show status `Up` or `running`:
 - `ECC_NIST_P256` key classified as quantum-vulnerable
 - `SYMMETRIC_DEFAULT` (AES-256) key classified
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_aws_connector.py::test_scan_kms_emits_for_enabled, verified pass 2026-08-27 -- exercises the same static KEY_SPEC_MAP classification mechanism RSA_2048 to RSA/2048, quantum-vulnerable; ECC_NIST_P256/SYMMETRIC_DEFAULT entries in the same table confirmed by direct source read at quirk/scanner/aws_connector.py lines 34-41 but not separately exercised by this node)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1620,7 +1620,7 @@ All of these services show status `Up` or `running`:
 - CBOM includes algorithms from the LDAPS TLS negotiation
 - No scan errors for port 636
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine_cert_defects.py::test_self_signed_emits_high, verified pass 2026-08-27 -- covers the self-signed-cert-detection logic the case exercises; port-636-specific LDAPS negotiation itself is generic TLS handshake, not protocol-specific code)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1649,7 +1649,7 @@ All of these services show status `Up` or `running`:
 - `aes256` key detected and classified (quantum-vulnerable via Grover)
 - All three keys appear as components in the CBOM output
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a Vault Transit unit test for an rsa-1024 key type. tests/test_vault_connector.py::test_transit_key_rsa2048_no_severity and test_transit_key_aes256_no_severity cover the rsa-2048/aes256 classification but HashiCorp Vault Transit does not support an rsa-1024 key type at all -- only rsa-2048/3072/4096 -- so the case's own rsa-1024 weak-plus-quantum-vulnerable dual-flag premise may be untestable against real Vault)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1675,7 +1675,7 @@ All of these services show status `Up` or `running`:
 - `pgp_sym_encrypt` function was used (visible in table schema or seed script)
 - Service is a valid scan target for future database-level crypto detection (BACK-12)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2240,7 +2240,7 @@ manually).
 - No exception traceback in scanner logs even when intermediate is absent
 - Both root and intermediate rows present when a chain exists
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_vault_connector.py::test_pki_intermediate_chain_emits_separate_endpoints, verified pass 2026-08-27 -- asserts root+intermediate PKI endpoints both emitted per D-03; tests/test_vault_connector.py::test_pki_intermediate_failure_swallowed_returns_root_only additionally proves the D-04 silent-swallow-on-missing-intermediate path)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -2269,7 +2269,7 @@ manually).
 - Vault auth row count: exactly 2 (token HIGH + userpass MEDIUM)
 - No row produced for approle or kubernetes
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_vault_connector.py::test_auth_token_unconditional_high, verified pass 2026-08-27 -- proves token row always HIGH even with approle/kubernetes enabled per D-05; tests/test_vault_connector.py::test_auth_approle_kubernetes_oidc_no_finding proves the D-06 positive-posture no-row behavior)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -2471,7 +2471,7 @@ on macOS (or run on Linux without restrictions).
   documented diff justified by container image drift / OpenSSL caveat).
 - No `Logger.info()` TypeError in the run-scan log output.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_email_findings.py::test_y1_starttls_downgrade_emitted_on_port_25, verified pass 2026-08-27 -- asserts the STARTTLS-downgrade MEDIUM finding on port 25; tests/test_email_findings.py::test_y3_weak_cipher_high_for_tls_rsa_with asserts the weak-cipher HIGH finding; tests/test_phase89_logger_stdlib_compat.py::test_info_accepts_printf_style_args is the current post-89-02 regression coverage for the Plan-32-06 Logger.info printf-style-args fix -- the older tests/test_email_run_scan_wiring.py::test_email_branch_logger_calls_use_real_logger_signatures now xfails intentionally per docs/test-triage-149.md and was not used as evidence)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -2878,7 +2878,7 @@ Each finding object contains:
 - Finding recommendation references RSA-1024, the 2048-bit classical minimum, and PQC migration
 - No separate `"TLS certificate uses quantum-vulnerable RSA key"` (MEDIUM) also present — undersized finding subsumes it
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine_cert_defects.py::test_rsa_1024_emits_high, verified pass 2026-08-27 -- directly asserts the undersized-RSA HIGH finding and D-04-style non-duplication with the quantum-vulnerable MEDIUM finding)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5210,7 +5210,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - CBOM grows with each scan (more algorithms discovered)
 - Dashboard reflects latest scan on each page refresh
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5523,7 +5523,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `⚠ STARTTLS` amber badge is present on the port-25 row.
 - No `⚠ STARTTLS` badge on port-587, port-465, or other rows.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_dashboard_api.py::test_derive_motion_findings_starttls, verified pass 2026-08-27 -- asserts starttls_warning=True only on port 25 and False on port 587, the exact backend field the motion.tsx STARTTLS badge conditionally renders on)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5545,7 +5545,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `☠ PLAINTEXT` orange badge visible on the port-29092 row.
 - Kafka subsection title includes `plaintext` count ≥ 1.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_dashboard_api.py::test_derive_motion_findings_plaintext, verified pass 2026-08-27 -- asserts plaintext_exposed=True and HIGH severity for a KAFKA-PLAIN endpoint, the exact backend field the motion.tsx PLAINTEXT badge conditionally renders on)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5653,7 +5653,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `identity_findings` array is non-empty (empty array is a FAIL)
 - No HTTP 404 from `/api/scan/latest`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::Issue3ScanWindowRegressionTest*test_saml_visible_with_earlier_dnssec, verified pass 2026-08-27 -- asserts SAML and DNSSEC present in /api/scan/latest identity_findings[] protocols via the same SESSION_BRACKET code path; the sibling test_issue3_scan_window_returns_all_identity_protocols in the same class additionally requires impacket, not installed in this environment, and was excluded to avoid a skip)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5999,7 +5999,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `grep -c 'compose --profile "\*" down' quantum-chaos-enterprise-lab/lab.sh` returns at least 2 (one for `down`, one for `reset`).
 - `bash -n quantum-chaos-enterprise-lab/lab.sh` exits 0 (script parses cleanly).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose orphan-sweep integration test verifying lab.sh down/reset leave zero quirk-lab containers -- inherently requires running Docker, out of scope per D-01)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -6764,7 +6764,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - Output findings JSON contains endpoints for at least 2 distinct hosts.
 - No `ValueError` or `FileNotFoundError` in output.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_targets_parser.py::test_csv_split, verified pass 2026-08-27 -- covers the comma-separated-target parsing logic the wizard's CSV entry path exercises)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -6795,7 +6795,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - Comment lines beginning with `#` are silently ignored.
 - No `FileNotFoundError` for the `@file` path.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_targets_parser.py::test_at_file_strips_comments_and_blanks, verified pass 2026-08-27 -- covers the @file ingestion and comment-stripping logic the wizard's @file entry path exercises)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -6821,7 +6821,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - Scan completes without interactive prompts.
 - No `FileNotFoundError` or `ValueError`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_run_scan_targets_file.py::test_targets_file_replaces_config_fqdns, verified pass 2026-08-27 -- directly asserts --targets-file replaces config-file targets rather than merging per D-03)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -6846,7 +6846,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - If `n` selected, scan uses CONSULTING_TLS_PORTS fallback (17 ports).
 - If `y` selected, nmap is invoked once for all targets combined.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; the interactive nmap y/N wizard prompt this case describes no longer exists in run_scan.py -- it was superseded by the --discovery builtin-or-nmap CLI flag per D-09, Phase 47/121, so there is no prompt-count code path left to unit test)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -6872,7 +6872,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - The `scan_error` text mentions `install nmap` or PATH.
 - TLS endpoints are still scanned using the consulting-TLS-ports fallback.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_optional_extra.py::test_nmap_binary_missing_emits_advisory, verified pass 2026-08-27 -- asserts exactly one ADVISORY with host=nmap_discovery and no crash when nmap binary is absent; tests/test_optional_extra.py::test_nmap_fallback_uses_consulting_tls_ports additionally proves the CONSULTING_TLS_PORTS fallback)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -10002,7 +10002,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 6 and 7 both true; commit lands; README still embeds correctly when rendered on github.com.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent)
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-09: Asciinema demo recorded + README link updated (LAUNCH-01)
@@ -10172,7 +10172,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 - Each weak config file matches the documented ciphers (postgres/redis/kafka).
 - README + `expected_results_v4.md` document all three with ports and expected findings (no drift — CLAUDE.md lab-sync).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10214,7 +10214,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 - `identity_trust` reflects the weak evidence (non-default).
 - Scan completes with no identity-scanner exception in `run-stats-*.json` `partial_failures`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::IdentityEvidenceCounterTests*, verified pass 2026-08-27 -- class contains test_dnssec_weak_algo_counted and test_saml_weak_signing_counted_sha1/_rsa_small, directly exercising the dnssec_weak_algo_count/saml_weak_signing_count evidence-counter wiring the live-lab case exercises)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10298,7 +10298,7 @@ self-signed RSA-2048 cert. grpc-go advertises ALPN `h2`. sslyze should complete 
 - Certificate subject is `CN=grpc-tls.chaos.local` with RSA-2048 key.
 - Expected quantum-readiness finding: RSA-2048 cert (MEDIUM, TLS-02).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_rsa_2048_produces_medium, verified pass 2026-08-27 -- covers the RSA-2048 MEDIUM quantum-vulnerable classification the case asserts; the gRPC/ALPN transport negotiation itself is TLS-transport-agnostic and not separately gated scanner logic)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10354,7 +10354,7 @@ service_detail=SMTP-STARTTLS:587` (HIGH, EMAIL-09) when the email profile is run
 - `expected_results_v4.md` `## Profile: email` section contains `LAB-03` text and `30587`.
 - No standalone `smtp-starttls` service exists in `docker-compose.yml` (decision D-01).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_email_scanner.py::test_scan_one_smtp_starttls_sslyze_port587, verified pass 2026-08-27 -- covers the SMTP-STARTTLS protocol/service_detail assignment logic the case's port-30587 docker-mapped-to-587 live check exercises)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11448,7 +11448,7 @@ Expect: PASS.
 - Any input other than `CONFIRM` aborts with zero probe requests sent.
 - No exception or stack trace on abort.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_rest_fuzzer_gate.py::test_confirm_required_exact_string_accepts_confirm, verified pass 2026-08-27 -- asserts the literal CONFIRM string is required to proceed; tests/test_rest_fuzzer_gate.py::test_confirm_required_exact_string_rejects_bad_input*, parametrized, proves any other input aborts with zero requests)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11637,7 +11637,7 @@ Expect: PASS.
 - No `Strict-Transport-Security` header on `/probe` responses.
 - `docker-compose.yml` contains `profiles: ["fuzz-target"]` and `ports: "20100:8000"`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01)
 **Date:** _____________  **Tester:** _____________
 
 ---
