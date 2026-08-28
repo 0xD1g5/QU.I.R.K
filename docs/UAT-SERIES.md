@@ -1,7 +1,22 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-27 (v5.16 Phase 167 — UAT Format Unification & Deduplication:
+**Last Updated:** 2026-08-27 (v5.16 Phase 168 — UAT Record Drain, Series 1-100: all 299
+previously-undispositioned cases whose series number is <= 100 now carry a real disposition —
+142 PASS, 31 FAIL (genuine product/documentation findings, see `docs/uat-coverage-gaps.md`), 36
+DEFERRED (naming a verified-passing pytest substitute node, `UAT-33-03` model), 36 SKIP (real
+infrastructure/environment gating), and 54 GAP (an honest, concretely-named absence of coverage,
+never a stretched or fabricated substitute). `tests/test_uat_disposition_integrity.py` (Phase
+168 Plan 02) makes a fabricated `DEFERRED` annotation mechanically impossible: every named
+substitute node must resolve via `pytest --collect-only` AND actually pass (a skip is not proof
+of coverage). `docs/uat-disposition-ledger.jsonl` is the reviewable, per-case source of truth;
+`scripts/uat_disposition_apply.py verify` confirms the document and ledger agree. Series
+101-163 (78 cases) remain undispositioned — Phase 169 drains the remainder and adds the standing
+UATREC-04 anti-re-accumulation gate. Closes UATREC-03 for series 1-100 only. No new `### UAT-`
+case headings were added this phase (existing cases were dispositioned in place, not created);
+see `docs/uat-coverage-gaps.md` for the full GAP list and `.planning/phases/168-uat-record-drain-
+series-1-100/` for the nine per-plan SUMMARYs.
+Earlier: 2026-08-27 (v5.16 Phase 167 — UAT Format Unification & Deduplication:
 docs/UAT-SERIES.md normalized to one canonical `**Result:**` format (`- [ ] PASS  - [ ] FAIL  -
 [ ] SKIP`, with optional inline ` (annotation)` suffixes preserved), 23 previously headingless
 `**ID:**`-only cases promoted to real `### UAT-` headings, and the misfiled `UAT-144` Block A
