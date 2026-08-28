@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Completed 169-03-PLAN.md
-last_updated: "2026-08-28T15:32:43.466Z"
+stopped_at: Completed 169-05-PLAN.md
+last_updated: "2026-08-28T15:47:25.625Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 37
-  completed_plans: 33
+  completed_plans: 34
   percent: 63
 ---
 
@@ -69,7 +69,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 169 (uat-record-drain-series-100-163-enforcement) — 1/8 plans executed
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -283,6 +283,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 169 P01 | 12min | - tasks | - files |
 | Phase 169 P02 | 25min | 2 tasks | 1 files |
 | Phase 169 P03 | 90min | 2 tasks | 2 files |
+| Phase 169 P05 | ~2h | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -532,6 +533,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 169]: UAT-110-04 resolved via D-06 name-drift substitute: test_scanned_at_not_mutated no longer exists, real equivalent test_scanned_at_preserved located and verified
 - [Phase 169]: Phase 169 plan 04 closed buckets C+D+E for series 101-163 (25/78 cases): 19 PASS, 1 FAIL, 4 SKIP, 3 DEFERRED, 2 GAP. Combined with plan 169-03 (41 cases), 66/78 series-101-163 cases are dispositioned; 12 bucket-F cases remain for plan 169-05.
 - [Phase 169]: UAT-110-06 FAIL: the case's own --stale-days 1 worked example can never trigger its documented coverage_warning WARNING line since the 1-day exclusion window and the 48h default 2x-cadence overdue threshold are mathematically incompatible; the underlying merge_scan coverage_warning mechanism itself was independently confirmed working with correct parameters.
+- [Phase 169-05]: Scratch-copy methodology for git-hook UAT reproduction: a plain git clone does not survive .planning/phases/ (gitignored), producing false destructive-archive-gate blocks -- use a full rsync working-tree copy instead
+- [Phase 169-05]: Independent recount scopes its disposition check to the Result line only, never the whole case body -- UAT-151-01's own steps contain a literal - [x] markdown example that would false-positive a whole-body check
+- [Phase 169-05]: Independent recount found 647 in-scope (series <=163) headings, not the plan's anticipated 596; corrected rather than forced to match -- 666/666 total headings/Result-blocks and 0 undispositioned confirmed
 
 ### Pending Todos
 
@@ -662,8 +666,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T15:31:49.668Z
-Stopped at: Completed 169-03-PLAN.md
+Last session: 2026-08-28T15:47:25.616Z
+Stopped at: Completed 169-05-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
