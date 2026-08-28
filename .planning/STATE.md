@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: verifying
 stopped_at: Completed 168-02-PLAN.md (Wave 2 of 8) — anti-fabrication guard built, 0/299 cases dispositioned
-last_updated: "2026-08-28T01:01:20.783Z"
+last_updated: "2026-08-28T01:13:08.049Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 22
+  completed_plans: 23
   percent: 50
 ---
 
@@ -247,6 +247,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 166 P04 | 20min | 2 tasks | 2 files |
 | Phase 166 P05 | 75min | 5 tasks | 9 files |
 | Phase 168 P01 | 45min | 3 tasks | 2 files |
+| Phase 168 P03 | 35min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -464,6 +465,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 167]: `tests/test_uat_series_format.py` now blocks any `docs/UAT-SERIES.md` change that breaks the single-result-format, heading/result-block-parity, case-ID-uniqueness, or no-headingless-declaration invariants. Phase 168/169 disposition-drain edits must keep result blocks canonical (`- [ ] PASS  - [ ] FAIL  - [ ] SKIP` with an optional inline ` (annotation)` suffix) — the achieved parity figure (663 case headings == 663 result blocks as of 167-03 Tasks 1-4, `docs/UAT-SERIES.md` re-measured post-Series-167-append) is the number Phase 168 starts from.
 - [Phase 167]: Plan 03 Tasks 1-4 intentionally did NOT flip the ROADMAP.md Phase 167 checkbox to `[x]` or mark this STATE.md row `Complete` — Task 5 (a `checkpoint:human-verify` gate) has not yet run, `.planning/phases/167-uat-format-unification-deduplication/167-VERIFICATION.md` does not exist yet, and `167-VALIDATION.md`'s human-only row (167-03-05) is genuinely still `⬜ pending`. Flipping either trigger string would fire `scripts/verify_phase_gates.py`'s ARTIFACT-01/02/03 phase-close gate falsely. Defer both flips to the commit that follows human approval of Task 5.
 - [Phase 168]: Series extraction is alpha-prefix-aware; ledger's 299-case scope and A:72/B:1/C:34/D:60/E:49/F:83 bucket split are authoritative for Plans 02-08 (reconciled in 168-01-SUMMARY.md against CONTEXT's 299/A:72-B:2-C:34-D:51-E:33-F:107 and the planner's 297). — Independent re-measurement corrects the planner's alpha-prefix regex miss and locks the frozen ledger contract for downstream plans.
+- [Phase 168]: UAT-5-12's runner_covered flag corrected to false: uat_runner.py rlog() call for it is unreachable under --no-lab-scan due to an earlier return in run_series_5()
+- [Phase 168]: uat-auto-results.json regenerated fresh but left uncommitted per repo .gitignore convention; ledger + docs/UAT-SERIES.md are the reviewable committed record
 
 ### Pending Todos
 
@@ -594,7 +597,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T01:01:20.778Z
+Last session: 2026-08-28T01:13:03.198Z
 Stopped at: Completed 168-02-PLAN.md (Wave 2 of 8) — anti-fabrication guard built, 0/299 cases dispositioned
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
