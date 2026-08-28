@@ -264,7 +264,19 @@ mechanically checkable)
 
   2. No new duplicate case IDs or result-format variants are introduced while drain work proceeds
      (Phase 167's invariants hold across the edit).
-**Plans**: TBD
+**Plans**: 9 plans
+
+Plans:
+- [ ] 168-01-PLAN.md — Scope re-measurement, bucket classifier, disposition ledger + idempotent apply driver
+- [ ] 168-02-PLAN.md — Anti-fabrication guard: substitute-test existence + execution + ledger agreement
+- [ ] 168-03-PLAN.md — Fresh uat_runner.py sweep, ingest ~57 executed outcomes
+- [ ] 168-04-PLAN.md — Buckets A+B: run the named pytest files, record real exit codes
+- [ ] 168-05-PLAN.md — Buckets D+E: run the named CLI / curl / sqlite3 / npm commands
+- [ ] 168-06-PLAN.md — Bucket C: chaos-lab cases deferred to verified substitute tests (lab stays down)
+- [ ] 168-07-PLAN.md — Bucket F series 1-50: substitute search or recorded gap
+- [ ] 168-08-PLAN.md — Bucket F series 51-100, independent recount, docs/uat-coverage-gaps.md
+- [ ] 168-09-PLAN.md — Full-suite baseline, docs + Obsidian sync, phase note, human review
+
 
 ### Phase 169: UAT Record Drain — Series ~100–163 + Enforcement
 
