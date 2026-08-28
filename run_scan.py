@@ -670,12 +670,59 @@ def _resolve_db_path(args) -> str | None:
     return "./quirk.db"
 
 
+def _derive_target_summary(hosts: list, max_shown: int = 2) -> str:
+    """Phase 171 RESUME-06 (D-02, locked): format a Target column summary
+    from a scan_run_id's CryptoEndpoint.host values.
+
+    De-duplicates ``hosts`` preserving first-seen order, shows the first
+    ``max_shown`` unique hosts, and appends a "(+N more)" suffix when more
+    exist. Returns an honest placeholder — never a fabricated target — when
+    ``hosts`` is empty (a scan_run_id with no endpoint rows, e.g. it failed
+    before any stage wrote rows, has nothing to derive from).
+    """
+    unique = list(dict.fromkeys(hosts))
+    if not unique:
+        return "(no target recorded)"
+    shown = ", ".join(unique[:max_shown])
+    remaining = len(unique) - max_shown
+    if remaining > 0:
+        shown += f" (+{remaining} more)"
+    return shown
+
+
+def _resolve_target_for_row(db, run_id: str, job_row) -> str:
+    """Phase 171 RESUME-06 (D-02, locked): resolve the Target column.
+
+    PRIMARY: if a ScanJob row exists for this scan_run_id (a --job-id
+    dashboard-dispatched run), its literal target string is more faithful to
+    user intent than any derived summary — return it unchanged.
+
+    FALLBACK: --targets-file and plain CLI runs never create a ScanJob row.
+    Derive a summary from the CryptoEndpoint rows already persisted for this
+    scan_run_id (RVW-003's stored session key), in scan-chronological order.
+    """
+    if job_row is not None:
+        return job_row.target
+    from quirk.models import CryptoEndpoint as _CE_target
+
+    rows = (
+        db.query(_CE_target.host)
+        .filter(_CE_target.scan_run_id == run_id)
+        .order_by(_CE_target.id.asc())
+        .all()
+    )
+    hosts = [r[0] for r in rows]
+    return _derive_target_summary(hosts)
+
+
 def _handle_list_resumable(args) -> None:
     """Phase 67 RESUME-01: print rich table of incomplete scan runs.
 
     A scan run is "resumable" if it has scan_checkpoints rows but does NOT
     have a 'reports' stage with status='completed'. Joins scan_jobs to
-    recover the original target if available.
+    recover the original target if available; when no ScanJob row exists
+    (Phase 171 RESUME-06, D-02), falls back to a summary derived from that
+    scan_run_id's CryptoEndpoint rows, or an honest placeholder if none exist.
 
     Output columns: Scan ID | Last Stage | Status | Age | Target
     Age > 72h: row highlighted yellow.
@@ -756,7 +803,7 @@ def _handle_list_resumable(args) -> None:
                     .filter(ScanJob.scan_run_id == run_id)
                     .first()
                 )
-                target_str = getattr(job_row, "target", "—") if job_row else "—"
+                target_str = _resolve_target_for_row(db, run_id, job_row)
 
                 row_style = "yellow" if total_hours >= STALE_HOURS else ""
                 table.add_row(
