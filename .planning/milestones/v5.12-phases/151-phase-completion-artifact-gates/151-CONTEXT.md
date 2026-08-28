@@ -84,9 +84,9 @@ content without a matching milestone archive manifest.
   (2026-08-11) that deleted ~39 unrecoverable v5.11 phase files after `milestone.complete` reported
   `archived.phases: false` with nothing gating on it. ARTIFACT-04's acceptance criteria cite this
   file directly.
-- Phase 145 (`.planning/phases/145-*/`, if present) — the missing-VERIFICATION.md precedent for
+- Phase 145 (`.planning/milestones/v5.11-phases/145-liveness-pre-pass/`) — the missing-VERIFICATION.md precedent for
   ARTIFACT-01.
-- Phase 147 (`.planning/phases/147-*/`) — the stale-VALIDATION.md precedent for ARTIFACT-02.
+- Phase 147 (`.planning/milestones/v5.11-phases/147-backlog-drain-lifecycle-ledger-tail/`) — the stale-VALIDATION.md precedent for ARTIFACT-02.
 - Phase 144 (`.planning/phases/144-*/`) — the missing-UAT-SERIES.md-entry precedent for ARTIFACT-03.
 
 ### Existing repo conventions to follow
