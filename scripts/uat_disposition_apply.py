@@ -52,7 +52,9 @@ UAT_SERIES_PATH = REPO_ROOT / "docs" / "UAT-SERIES.md"
 LEDGER_PATH = REPO_ROOT / "docs" / "uat-disposition-ledger.jsonl"
 UAT_RUNNER_PATH = REPO_ROOT / "uat_runner.py"
 
-MAX_SERIES = 100
+MAX_SERIES = 163  # Phase 169 extends coverage from series <=100 (Phase 168) through
+# series <=163; classify's `prior` merge in cmd_classify preserves all existing
+# series 1-100 ledger rows unchanged and idempotently on reclassify.
 
 # --- Case-ID / heading / result grammar -----------------------------------
 # Independently re-derived to match tests/test_uat_series_format.py exactly
@@ -80,7 +82,7 @@ SERIES_SEGMENT_RE = re.compile(r"^[0-9]+(?:\.[0-9]+)?$")
 # Node-reference shape used by the DEFERRED/GAP evidence guard (D-02):
 # a real pytest node id, e.g. tests/test_foo.py::test_bar or with a
 # trailing `*` glob on the test-name segment.
-NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+")
+NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?")
 # A bare requirement-ID-shaped token (all caps + digits + hyphens, no
 # tests/...py::... substring) -- NOT sufficient as a substitute (D-02).
 REQ_ID_ONLY_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[0-9]+)+$")
@@ -159,9 +161,14 @@ class Case:
 
     @property
     def dispositioned(self) -> bool:
+        # Scoped to the case's own Result line only (not the whole body) --
+        # a case body containing a literal "- [x]" markdown example
+        # elsewhere (e.g. UAT-151-01's own step-2 prose) must never
+        # false-positive as already dispositioned.
         if self.result_lineno is None:
             return False
-        return bool(DISPOSITIONED_BOX_RE.search(self.body_lines_joined))
+        result_line = self.body_lines[self.result_lineno - (self.heading_lineno + 1)]
+        return bool(DISPOSITIONED_BOX_RE.search(result_line))
 
     @property
     def body_lines_joined(self) -> str:

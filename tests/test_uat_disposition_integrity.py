@@ -79,7 +79,7 @@ RESULT_RE = re.compile(
 
 # A real pytest node reference: <path ending .py>::<test name>, where the
 # test-name segment may end in a single `*` glob.
-NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+")
+NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?")
 
 # A bare requirement-ID-shaped token (e.g. DISC-01, LAB-03, HWCOMPAT-02) --
 # NEVER sufficient as a substitute (D-02).
