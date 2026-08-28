@@ -13483,7 +13483,7 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 - `test_merge_cli_dispatch`: stdout contains scan_id, score, rating; exit code 0; `mock_merge.assert_called_once()` passes
 - `test_merge_cli_no_merge_logic_inlined`: `build_evidence_summary` and `compute_readiness_score` absent from sensor_cmd.py source
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_merge_cli.py exit 0, 4 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13507,7 +13507,7 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 - `test_merge_cli_coverage_warning`: stdout contains "WARNING", the reason text, "  - sensor-alpha", and "  - sensor-beta"
 - Exit code 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_merge_cli.py::test_merge_cli_coverage_warning exit 0, 1 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13531,7 +13531,7 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 - `pytest tests/test_merge_scan.py -q` reports 8 passed, 0 failed
 - `test_option_a_score_not_averaged`: result["score"] equals expected union-level score
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_merge_scan.py exit 0, 11 passed -- doc expects 8, grown since)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13555,7 +13555,7 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 - `test_scanned_at_not_mutated`: all pre-merge scanned_at values unchanged post-merge
 - `pytest tests/test_merge_scan.py -q` reports 8 passed, 0 failed
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 named node tests/test_merge_scan.py::test_scanned_at_not_mutated does not exist -- real equivalent tests/test_merge_scan.py::test_scanned_at_preserved located, run, exit 0 1 passed; full file exit 0, 11 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13579,7 +13579,7 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 - `test_two_sensors_same_ip_two_components`: `len(cert_refs) == 2`; both sensor-a and sensor-b bom_refs present
 - `test_null_sensor_id_backward_compat`: null sensor_id uses legacy `crypto/certificate/10.0.0.5:443` format unchanged
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_cbom_builder.py -k two_sensors_same_ip exit 0, 1 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13667,7 +13667,7 @@ Human (visual):
 - Status badges render text label alongside color; Current is green, Stale is amber, Unknown is secondary/grey (per UI-SPEC §Color)
 - Sensors nav link present in sidebar between Scan History and Schedules; page route `/sensors` resolves
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_dashboard_sensor_registry.py tests/test_sensor_registry_status.py exit 0, 15 passed -- doc expects 13, grown since -- automated leg only, human dashboard visual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13711,7 +13711,7 @@ Human (visual):
 - Segment Select visible on CBOM page with same behavior
 - "All segments" default shows all rows; named segment filters rows; NULL-segment rows survive "All segments" selection
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_dashboard_segment_filter.py tests/test_dashboard_finding_segment_field.py exit 0, 8 passed -- automated leg only, human dashboard visual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13753,7 +13753,7 @@ Human (visual):
 - Coverage_warning amber banner visible above gauges when `coverage_warning` is non-null; no dismiss button; correct `role="alert"` and amber styling per UI-SPEC
 - Existing org-wide gauge and subscore gauges render unchanged (regression: Recharts children statically mounted, no conditional unmount)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_dashboard_merge_latest.py exit 0, 11 passed -- doc expects 10, grown since -- automated leg only, human dashboard visual leg not exercised)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13842,7 +13842,7 @@ Human (visual):
 - `pytest tests/test_distributed_topology.py -q` reports 10 passed or 9 passed + 1 skipped (test_config_validates)
 - No failures — subnet/alias/sensor-isolation/base-pin/e2e-order assertions all green
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_distributed_topology.py exit 0, 10 passed -- Docker unavailable in this environment, test_config_validates self-skips per its own Docker-absent guard, but engine reported all 10 as passed here)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13998,7 +13998,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 **Pass Criteria:**
 - `pytest tests/test_sensor_auth_per_sensor.py::test_valid_sensor_token_accepted` exits 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_auth_per_sensor.py::test_valid_sensor_token_accepted exit 0, 1 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14023,7 +14023,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 **Pass Criteria:**
 - Both tests exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_auth_per_sensor.py::test_revoked_token_returns_401 tests/test_sensor_auth_per_sensor.py::test_revoke_isolates_to_one_sensor exit 0, 2 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14049,7 +14049,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 **Pass Criteria:**
 - `pytest tests/test_console_enroll.py` exits 0; `revoked_at IS NULL` assertion present.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_console_enroll.py -v exit 0, 2 passed; test_console_enroll asserts revoked_at IS NULL)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14074,7 +14074,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 **Pass Criteria:**
 - Both tests exit 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_auth_per_sensor.py::test_sensor_id_mismatch_returns_403 tests/test_sensor_auth_per_sensor.py::test_unknown_token_returns_401 exit 0, 2 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14106,7 +14106,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - Both `grep` commands exit 0 (per-sensor + revoke-sensor present).
 - `grep -c "NOT the push credential"` non-comment lines returns 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_sensor_ingest.py tests/test_sensor_auth_per_sensor.py tests/test_console_enroll.py exit 0, 22 passed -- doc expects 20, grown since; grep per-sensor/revoke-sensor in operators-guide.md OK; grep NOT-the-push-credential non-comment count=0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14252,7 +14252,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - pyproject.toml contains `"compliance/*.json"`.
 - `cmvp.py` contains `from importlib.resources import files as _ir_files`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 named pytest tests/ -k cmvp exit 0, 60 passed -- doc expects 38, grown since; python -c cmvp._load_cache force_reload=True prints OK; pyproject.toml has compliance/*.json entry; cmvp.py has importlib.resources import)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14282,7 +14282,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `test_scheduler_cmd_drops_target_and_output` appears in the test output.
 - `python -m compileall quirk/cli/scheduler_cmd.py` exits 0 with no syntax errors.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 tests/test_scheduler_posix_fixes.py exit 0, 3 passed -- test_scheduler_cmd_drops_target_and_output present; grep --target/--output non-comment count=0; scan_config_path is None fail-fast guard present; compileall exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -17269,7 +17269,7 @@ success on a real run against `main`, not just a local approximation.
   passed/skipped/xfailed count as a pass criterion — those numbers drift release to release; only
   `0 failed` is the invariant)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 live re-verified via gh CLI, gh run view 31723764281 -R 0xD1g5/QU.I.R.K: Linux Full Suite job conclusion=success; log line 3076 passed, 81 skipped, 73 xfailed, 10 xpassed, 299 warnings in 1302.33s confirms 0 failed -- matches 150-CI-EVIDENCE.md exactly, re-confirmed live today rather than transcribed from the artifact alone)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** SUITE-02. Requirement: SUITE-02.
 
@@ -17295,7 +17295,7 @@ correctly (not just locally simulated), and the smoke-check branch/PR was cleane
 - The smoke-check PR is closed, not merged
 - `git ls-remote --heads origin ci/smoke-check-150` returns no output
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 live re-verified via gh CLI, gh run view 31725715958 -R 0xD1g5/QU.I.R.K: Linux Full Suite job conclusion=failure, log confirms FAILED tests/test_ci_gate_smoke.py test_phase_150_d07_ci_gate_smoke_check_deliberately_fails; gh pr view 10 state=CLOSED not merged; ci-smoke-check-150 branch confirmed deleted, 404 plus empty ls-remote -- matches 150-CI-EVIDENCE.md, re-confirmed live today)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** SUITE-03. Requirement: SUITE-03.
 
@@ -17323,7 +17323,7 @@ on real CI.
 - A second `./lab.sh certs` run is idempotent (no regeneration, no error) — reuses the existing
   `tests/test_lab_profile_certs.py` idempotency contract
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_lab_profile_certs.py::test_lab_sh_certs_creates_all_six_files_and_is_idempotent, verified pass 2026-08-28, 3 xpassed across the file, lab.sh certs cert-generation regression confirmed, no Docker touched per file's own docstring contract; container-start leg email profile via docker compose not exercised -- tests/test_chaos_lab_idempotency.py -m slow SKIPPED, Docker daemon unavailable in this environment, consistent with the phase constraint not to bring the chaos lab up)
 **Date:** __________  **Tester:** __________
 **Notes:** D-12/D-13.
 
@@ -18400,7 +18400,7 @@ page, with vendor/model/tier matching the sensor-side scan.
 - Device rows visible on `/hardware` with vendor/model/tier matching the sensor-side scan
 - No duplicate or missing rows for the pushed devices
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_hardware_sensor_ingest.py::test_populated_hardware_devices_are_persisted, verified pass 2026-08-28, 2 passed with test_injected_session_path_persists_hardware; human /hardware dashboard visual walkthrough not exercised by this non-interactive drain)
 **Date:** _pending_  **Tester:** _pending — human dashboard walkthrough_
 **Notes:** HWLC-15. Automated coverage: `tests/test_hardware_sensor_ingest.py::test_populated_hardware_devices_are_persisted`
 and `test_injected_session_path_persists_hardware` prove the underlying persistence; this row is
@@ -18431,7 +18431,7 @@ dashboard/report code changed in this phase (RESEARCH.md Assumption A2 smoke tes
 - The same drift row appears in the generated HTML/DOCX report
 - The row is visually indistinguishable from a console-direct-scan drift row
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_hardware_sensor_ingest.py::test_sensor_hardware_produces_drift_events_end_to_end, verified pass 2026-08-28, 1 passed; human /compare plus report visual walkthrough not exercised by this non-interactive drain)
 **Date:** _pending_  **Tester:** _pending — human dashboard + report walkthrough_
 **Notes:** HWLC-15. Automated coverage: `tests/test_hardware_sensor_ingest.py::test_sensor_hardware_produces_drift_events_end_to_end`
 proves `HardwareDriftEvent` rows are created identically for sensor-origin devices; this row is
