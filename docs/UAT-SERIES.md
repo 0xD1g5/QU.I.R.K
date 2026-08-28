@@ -1,7 +1,27 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-28 (v5.16 Phase 169 — UAT Record Drain, Series 101-163 + Enforcement:
+**Last Updated:** 2026-08-28 (v5.16 Phase 170 — Traceability, Documentation & Runbook: no new
+`### UAT-` case was added and no product/scanner behavior changed this phase — it is
+documentation/traceability only. `CHANGELOG.md` backfilled with entries for v5.9.0 through
+v5.14.0 (derived from archived ROADMAP.md summaries and matching git log commit ranges, v5.13/
+v5.14 correctly framed as developed-but-never-released per RVW-004); the dead v4.7 ROADMAP link
+fixed and 4 archive `**Status:**` headers added; two genuinely-new tests written (DEBT-02 lab.sh
+PROFILE_ARGS precedence, QRAMM-08 120-question/4-tab dimension coverage); 11 requirement-ID
+annotations added to already-passing tests (including the honest finding that GAP-02 and
+QRAMM-09 already had real coverage the original review missed); 68 broken sibling-phase
+reference lines across 25 files repaired — 22 lines rewritten to real post-archive paths, 14
+de-linkified to plain prose for genuinely-lost Phase 133/134/144 artifacts (correcting the
+review's unmethodologied "16" figure); and CLAUDE.md's staleness runbook extended to list the
+CMVP, error-codes, and SNMP-contract catalogs CI actually gates. Closes TRACE-01..07, RUNBOOK-01.
+Full unfiltered suite (`pytest -m ""`) holds at 3670 passed, 4 failed (1 pre-existing
+`test_skip_registry`, 3 pre-existing environmental `test_extras_install_matrix` failures tied to
+a stale local editable install, not this phase's changes), zero fatal signals, 0 deselected. All
+four UAT corpus-integrity guard suites (`test_uat_zero_undispositioned_gate.py` 9/9,
+`test_uat_series_format.py` + `test_uat_disposition_integrity.py` both legs 29+5/34,
+`test_uat_apply_injection_guard.py` 10/10) green; `scripts/uat_disposition_apply.py verify`
+confirms all 377 ledger rows agree with the document.
+Earlier: 2026-08-28 (v5.16 Phase 169 — UAT Record Drain, Series 101-163 + Enforcement:
 all 78 previously-undispositioned cases whose series number is 101-163 now carry a real
 disposition — 41 via bucket A/B pytest evidence (37 PASS, 1 GAP, 3 DEFERRED), 25 via bucket C/D/E
 (19 PASS, 1 FAIL, 4 SKIP, 3 DEFERRED, 2 GAP), and 12 via bucket F (8 PASS, 4 SKIP). Combined with
