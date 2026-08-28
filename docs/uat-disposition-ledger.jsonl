@@ -83,7 +83,7 @@
 {"id": "UAT-47-05", "series": "47", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-47-06", "series": "47", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires a real interactive TTY for the y/N confirm prompt and a large-range nmap discovery scan, neither available/safe in this non-interactive sandbox", "recorded": "2026-08-27"}
 {"id": "UAT-47-07", "series": "47", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cbom_writer_validation.py exit 0, 5 passed", "recorded": "2026-08-27"}
-{"id": "UAT-47-08", "series": "47", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-47-08", "series": "47", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires a fresh venv lacking jsonschema/referencing, not available in this sandbox where both interpreters already have cbom extras installed", "recorded": "2026-08-27"}
 {"id": "UAT-48-01", "series": "48", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-48-02", "series": "48", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-48-03", "series": "48", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -118,32 +118,32 @@
 {"id": "UAT-5-24", "series": "5", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cloud_connectors.py exit 0, 15 passed", "recorded": "2026-08-27"}
 {"id": "UAT-5-25", "series": "5", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_db_connector.py exit 0, 19 passed", "recorded": "2026-08-27"}
 {"id": "UAT-50-01", "series": "50", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-50-02", "series": "50", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-50-02", "series": "50", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: test -f and 5 grep checks against docs/operators-guide.md - all 6 steps exit as expected, step 6 negative grep found zero matches", "recorded": "2026-08-27"}
 {"id": "UAT-50-03", "series": "50", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-50-04", "series": "50", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 grep checks x7 against docs/operators-guide.md exit 0 all 7 hits found, incl section 7.4 worked PCI-DSS example", "recorded": "2026-08-27"}
-{"id": "UAT-51-01", "series": "51", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-51-01", "series": "51", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk serve then curl -X POST /api/qramm/sessions - 201 with session_id=1, org_name=UAT-Org, status=draft exactly as expected", "recorded": "2026-08-27"}
 {"id": "UAT-51-02", "series": "51", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-51-03", "series": "51", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-51-04", "series": "51", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-51-05", "series": "51", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-51-06", "series": "51", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-51-07", "series": "51", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 python -m pytest tests/ -W error::DeprecationWarning exit 0, grep -c datetime.utcnow = 0; tests/test_saml_scanner.py tests/test_broker_scanner_redis.py -W error::DeprecationWarning exit 0, 41 passed 1 deselected", "recorded": "2026-08-27"}
-{"id": "UAT-55-01", "series": "55", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-55-02", "series": "55", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-55-03", "series": "55", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-55-01", "series": "55", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: curl GET /api/qramm/sessions/1/compliance-map - 200, 96 rows, relevance_score null, CVI scanner_informed true and non-CVI false all correct, but the field is named practice_number not the control_id the case's Pass Criteria names - no control_id key exists in the response", "recorded": "2026-08-27"}
+{"id": "UAT-55-02", "series": "55", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires multi-step interactive UI navigation to reach an answered-but-unscored QRAMM session state, not practically automatable headless in this pass", "recorded": "2026-08-27"}
+{"id": "UAT-55-03", "series": "55", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires multi-step interactive UI navigation to answer QRAMM questions and calculate a score, not practically automatable headless in this pass", "recorded": "2026-08-27"}
 {"id": "UAT-55-04", "series": "55", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_qramm_staleness.py exit 0, 6 passed -- unit test proxy", "recorded": "2026-08-27"}
-{"id": "UAT-56-01", "series": "56", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-56-02", "series": "56", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-56-03", "series": "56", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-56-01", "series": "56", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires a scored QRAMM session reached via multi-step interactive UI, not practically automatable headless in this pass", "recorded": "2026-08-27"}
+{"id": "UAT-56-02", "series": "56", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk serve then curl -X POST /api/export/pdf and headless nav to /print - QRAMM Governance Assessment heading present with exact placeholder text No QRAMM assessment completed, no radar/scorecard/compliance tables rendered", "recorded": "2026-08-27"}
+{"id": "UAT-56-03", "series": "56", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: headless nav to /print - h2 order is Executive Summary, Findings, Certificate Inventory, Cryptographic Bill of Materials, Migration Roadmap, QRAMM Governance Assessment - QRAMM appears after Migration Roadmap, zero console errors", "recorded": "2026-08-27"}
 {"id": "UAT-56.1-01", "series": "56.1", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-56.1-02", "series": "56.1", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_qramm_staleness.py exit 0, 6 passed", "recorded": "2026-08-27"}
 {"id": "UAT-58-01", "series": "58", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-58-02", "series": "58", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-58-03", "series": "58", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-58-04", "series": "58", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-58-05", "series": "58", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-58-05", "series": "58", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk init --output ../evil.yaml and /tmp/evil.yaml - both print an outside-CWD warning and create no file; quirk init --output quirk-output.yaml creates the file normally", "recorded": "2026-08-27"}
 {"id": "UAT-58-06", "series": "58", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-58-07", "series": "58", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-58-07", "series": "58", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: quirk --config config.yaml --targets-file t.txt containing @/etc/passwd - exit path raises TargetFileError but run_scan.py:1466 collapses ALL @-file guard reasons -- path_not_allowed_prefix, target_file_too_large, target_file_too_many_lines into the single generic QRK-TARGET-002 message by design -- documented as a deferred simplification in the source comment, so the case's expected distinct reason-code text never appears for any of the 3 steps", "recorded": "2026-08-27"}
 {"id": "UAT-6-01", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-6-02", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-6-03", "series": "6", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
@@ -161,12 +161,12 @@
 {"id": "UAT-6-15", "series": "6", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-62-03", "series": "62", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-63-02", "series": "63", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_scheduler_cmd.py exit 0, 12 passed -- automated proxy; live 60-90s integration leg not run", "recorded": "2026-08-27"}
-{"id": "UAT-63-04", "series": "63", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-67-01", "series": "67", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-67-02", "series": "67", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-67-03", "series": "67", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-63-04", "series": "63", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk schedule add via CLI then headless Playwright walkthrough of /schedules - table renders test-sched with mono cron, toggle flips to unchecked and persists across reload, delete dialog shows Delete schedule? and 'test-sched' name with Keep Schedule / Delete Schedule buttons matching exact copy, Keep cancels then Delete removes the row, zero console errors, Schedules nav item present after Trends and before QRAMM Assessment -- not strictly adjacent - Scan History and Sensors also sit between", "recorded": "2026-08-27"}
+{"id": "UAT-67-01", "series": "67", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires reliably killing a scan mid-discovery-stage before its first checkpoint write; repeated attempts in this sandboxed timing-sensitive environment either completed before the kill or the kill landed before any checkpoint was persisted, not reproducible without a real slow/hanging target", "recorded": "2026-08-27"}
+{"id": "UAT-67-02", "series": "67", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 same reproducibility blocker as UAT-67-01 - resuming requires a genuinely interrupted scan with at least one persisted checkpoint, not achievable in repeated attempts in this environment", "recorded": "2026-08-27"}
+{"id": "UAT-67-03", "series": "67", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk --config config.yaml --targets-file t2.txt then inspected run-stats JSON - partial_failures key present and populated with stage/error_category/error_message entries for missing_extra scanners", "recorded": "2026-08-27"}
 {"id": "UAT-67-04", "series": "67", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-68-01", "series": "68", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-68-01", "series": "68", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk errors, quirk errors --domain INSTALL, quirk errors QRK-INSTALL-004, quirk errors QRK-BOGUS-999, quirk errors --dump-md - all 5 steps match exactly including a zero-diff against docs/error-codes.md", "recorded": "2026-08-27"}
 {"id": "UAT-68-02", "series": "68", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_error_codes_freshness.py exit 0, 3 passed", "recorded": "2026-08-27"}
 {"id": "UAT-68-03", "series": "68", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_install_errors.py -m 'not slow' exit 0, 4 passed 2 deselected", "recorded": "2026-08-27"}
 {"id": "UAT-7-01", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
