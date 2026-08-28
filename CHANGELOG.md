@@ -118,6 +118,114 @@ tag string is wrong. The code shipped to `main` and is in use — only the relea
   opt-in plus a hardcoded 168-hour cadence floor, closed by an independent `/gsd-secure-phase`
   review (19/19 threats, 0 high-severity findings).
 
+## [5.12.0] - 2026-08-14
+
+Release & Verification Integrity (Phases 148-153). The real, published `v5.12.0` release —
+PyPI + Windows operator zip + GitHub Release — closing the release-pipeline debt that had
+accumulated since v5.9's silent tag-glob failure.
+
+### Added
+
+- **Release dry-run + tag-hygiene guards** (Phase 148, RELEASE-01/02/03/04) — `release.yml`
+  gained a `workflow_dispatch` dry-run trigger and tag-ref guards; a scheduled tag-hygiene
+  workflow with a seeded historical baseline (`.github/tag-hygiene-baseline.txt`) detects
+  malformed version tags going forward; a Windows release asset gap from v5.11.0 was closed.
+- **Suite-wide skip/xfail visibility** (Phase 149, SUITE-01) — the AST walker used to audit the
+  test suite was extended to detect `skip`/`xfail` decorators, surfacing previously invisible
+  disabled coverage.
+- **Gating Linux full-suite CI job** (Phase 150, SUITE-02/03) — a green, gating full-suite CI job
+  on Linux, plus idempotent per-profile chaos-lab certificate generation so cert expiry no longer
+  silently rots CI.
+- **Phase-completion artifact gate** (Phase 151, ARTIFACT-01/02/03/04) —
+  `scripts/verify_phase_gates.py` plus a `.githooks/pre-commit` wrapper enforce that
+  VERIFICATION.md/VALIDATION.md/UAT-SERIES.md artifacts exist before a phase can close, and a
+  `check_destructive_archive()` guard prevents an unchecked `phases.clear` from silently deleting
+  live phase directories (closing the incident that lost ~39 of ~58 v5.11 phase artifact files).
+- **Segmented-network chaos lab profile** (Phase 152, DISC-09/10/11) — a new gateway profile plus
+  a live-fire smoke test; the interactive nmap-discovery-first prompt now defaults to Y; the
+  Phase 144 nmap timing artifact was empirically confirmed to not reproduce.
+- **Actual tag cut** (Phase 153, RELEASE-01) — the real `v5.12.0` tag proving the repaired
+  pipeline end-to-end.
+
+## [5.11.0] - 2026-08-11
+
+Discovery at Scale + Backlog Drain (Phases 144-147). Made large (>1024-host) range scans reachable
+end-to-end from the dashboard's nmap-discovery path.
+
+### Added
+
+- **Chunked discovery core** (Phase 144, DISC-01/02) — lazy host-expansion and chunking helpers in
+  `target_expander.py`, a sequential per-batch nmap discovery loop with per-batch failure
+  isolation, and a `discovery` `ScanCheckpoint` stage for resumability.
+- **TCP-SYN/ACK liveness pre-pass** (Phase 145, DISC-03/04) — `run_nmap_liveness_check()` with
+  explicit privilege-fallback detection, wired into the discovery batch loop ahead of full probing.
+- **Batch progress, scaled timeouts, and undetermined-host disclosure** (Phase 146,
+  DISC-05/06/07) — `scan_jobs` gained discovery batch-progress columns rendered live on the
+  scan-job page; discovery timeouts scale with batch size; hosts that could not be determined
+  live/dead are now disclosed across markdown/HTML/DOCX report surfaces instead of silently
+  dropped.
+- **Backlog drain — lifecycle & ledger tail** (Phase 147) — OT/ICS fingerprinting now runs ahead
+  of the SSH-stage if/else so it is no longer skipped; a curated BACnet vendor-ID + model-family
+  resolution catalog was added and wired into the hardware scanner; the default CORS allowlist
+  became port-aware.
+
+4 phases, 16 plans, 11/11 requirements, audit `passed`.
+
+## [5.10.0] - 2026-08-03
+
+Hardware Lifecycle Depth (Phases 139-143). Closed out the Hardware Compatibility & Lifecycle
+Remediation arc opened in v5.7/v5.8.
+
+### Added
+
+- **SNMPv3 auth+priv support** (Phase 139) — a `SnmpV3Credential`-driven v3→v2c→none probe ladder
+  wired into the fingerprint waterfall, with SNMPv3 version/protocol fields projected through the
+  report writer, dashboard route, and CBOM Pass 4.
+- **SNMP-confirmed bridge mitigation** (Phase 140, BRIDGE-01..05) — a bounded ARP-table walk probe
+  (v2c + v3) confirms an upstream TLS terminator mitigating a quantum-vulnerable on-device cipher,
+  surfaced as a Bridge Status badge on the `/hardware` dashboard tab and in HTML/DOCX reports.
+- **OT/ICS Modbus/BACnet fingerprinting** (Phase 141, OTICS-01..06) — Modbus/TCP FC43/14 and
+  BACnet/IP Who-Is/I-Am + ReadProperty fingerprint probes, gated behind `--enable-modbus` /
+  `--enable-bacnet` CLI flags and a new `otics` chaos-lab profile with fragile Modbus/BACnet
+  simulators. Required two post-ship gap-closure rounds after a live checkpoint caught a deeper
+  orchestration bug the plan-checker had missed.
+- **Advisory-only firmware CVE correlation** (Phase 142, CVE-01..04) — a curated
+  `quirk/scanner/hw_cve.py` correlation module plus a `quirk cve status` CLI command; per-device
+  CVE annotations render in HTML/PDF/DOCX reports and as CBOM `quirk:hw-cve-*` properties.
+- **Dashboard & security tail** (Phase 143, TAIL-01..04) — a `ScanDateBadge` in the sidebar, a
+  `target_trust.py` allowlist matcher (`SecurityCfg.trusted_targets`) wired into CLI and dashboard
+  entry points, and Windows sensor exe self-test signing wired pre-zip.
+
+36 plans, 23/23 requirements satisfied, tech_debt disposition (0 blockers, 4 tracked non-blocking
+items).
+
+## [5.9.0] - 2026-07-30
+
+Documentation Audit & Living Docs System (Phases 135-138 + 138.1/138.2).
+
+### Added
+
+- **Full documentation audit against v5.4-v5.8** (Phase 135-138) — README, getting-started,
+  architecture, operators-guide, and report-interpretation refreshed; a net-new
+  `docs/admin-guide.md` added (ADMIN-01/02/03); the chaos-lab `hwcompat` profile documented; a
+  permanent doc-hygiene checklist embedded in `CLAUDE.md`.
+- **Hardware Inventory report section** (Phase 137, OPS-04) — `docs/report-interpretation.md`
+  gained a §10 Hardware Inventory section documenting the DEVICE/FIRMWARE component hierarchy.
+
+### Fixed
+
+- **CORE-04 tier-inversion** (Phase 138.1) — corrected an inverted CNSA 2.0 tier semantics
+  description in `architecture.md`.
+- **LIVE-03 vault re-sync** (Phase 138.2) — the Obsidian vault guide copies were re-synced after
+  drifting from their `docs/` source during the audit.
+- **Six write-review corrections in `architecture.md`** (Phase 135, WR-01..06) — fabricated
+  migration function names, an inverted crypto-bridge trust-model description, a stale module
+  path, an outdated dashboard route count (9→19), an outdated backend route module count
+  (4→10, missing the `HardwareFinding` DTO), and a hardcoded platform-version string were all
+  corrected to match the shipped codebase.
+
+16/16 requirements satisfied, tech_debt disposition (deferred human-UAT only, no content gaps).
+
 ## [5.8.0] - 2026-06-16
 
 ### Added
