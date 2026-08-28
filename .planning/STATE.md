@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
-stopped_at: Completed 169-08-PLAN.md
-last_updated: "2026-08-28T00:00:00.000Z"
+status: in_progress
+stopped_at: Completed 170-01-PLAN.md
+last_updated: "2026-08-28T18:36:54.155Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 37
-  completed_plans: 37
-  percent: 66
+  completed_phases: 6
+  total_plans: 44
+  completed_plans: 38
+  percent: 75
 ---
 
 # Project State
@@ -25,6 +25,18 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Current focus:** Phase 169 — uat-record-drain-series-100-163-enforcement (8/8 plans executed;
 UATREC-03 and UATREC-04 both complete; 169-08's human checkpoint approved by the user 2026-08-28;
 awaiting `/gsd:verify-phase 169` before Phase 170 starts)
+
+## Decisions Carried Forward (Phase 170)
+
+- **170-01 closed TRACE-01.** CHANGELOG.md now has an unbroken `## [X.Y.Z]` entry for every
+  milestone v5.8.0 through v5.15.0 — no gap. v5.14.0/v5.13.0 entries state plainly, with root
+  cause (`release.yml`'s `v*.*.*` three-component glob never matching the two-component `v5.13`/
+  `v5.14` tags), that those milestones were developed but never released; the last version
+  actually published to PyPI remains 5.12.0. v5.12.0/v5.11.0/v5.10.0/v5.9.0 entries document the
+  four milestones that genuinely shipped. Every bullet is derived from the matching archived
+  `.planning/milestones/vX.Y-ROADMAP.md` summary AND corroborated against
+  `git log <prev-tag>..<tag> --oneline` per D-03 — no invented capability. See
+  `.planning/phases/170-traceability-documentation-runbook/170-01-SUMMARY.md`.
 
 ## Decisions Carried Forward (Phase 169)
 
@@ -109,9 +121,9 @@ awaiting `/gsd:verify-phase 169` before Phase 170 starts)
 
 ## Current Position
 
-Phase: 169 (uat-record-drain-series-100-163-enforcement) — 8/8 plans executed
-Plan: 8 of 8 (complete)
-Status: Ready for verification — 169-08's human checkpoint (Task 3, fully-drained corpus + standing gate) presented and APPROVED by the user 2026-08-28; `/gsd:verify-phase 169` still needs to run before the phase-level ROADMAP checkbox can flip
+Phase: 170 (traceability-documentation-runbook) — 1 plan executed (170-01)
+Plan: 01 of TBD (complete)
+Status: Plan 01 complete — CHANGELOG.md backfilled for v5.9-v5.14; remaining phase 170 workstreams (v4.7 dead link, requirement-ID test annotations, planning-summary path drift, CLAUDE.md staleness cadence) not yet planned
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -124,7 +136,7 @@ Last activity: 2026-08-28
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | ✅ Complete (2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, zero headingless cases, all locked behind `tests/test_uat_series_format.py`, which was proven to FAIL on the pre-normalization document. Parity was 663==663 at Plan 02 and moved to 666==666 when Plan 03 appended Series 167 — the test asserts computed equality, never a constant, so it survived its own phase. VERIFICATION passed 6/6; human checkpoint cleared by user 2026-08-27) |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Plans executed (2026-08-27; 9/9 plans done — 299/299 series-1-100 cases dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3631 passing); human checkpoint 168-09 Task 3 awaiting review; `/gsd:verify-phase 168` not yet run |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned; full 666-case document + 377-row ledger 100% dispositioned (202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP); `tests/test_uat_zero_undispositioned_gate.py` standing gate live, documented in all four D-07 locations; vitest dialect found zero genuine conversions among Phase 168's 31 series-7 GAPs; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); UATREC-03/UATREC-04 both marked complete; 169-08 Task 3 human checkpoint APPROVED by user 2026-08-28; `/gsd:verify-phase 169` not yet run |
-| 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Not started |
+| 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Plan 01 executed (2026-08-28; CHANGELOG.md gained six entries for v5.9.0-v5.14.0 closing the gap between the existing 5.15.0 and 5.8.0 entries, v5.13.0/v5.14.0 correctly framed as developed-but-never-released; TRACE-01 complete; TRACE-02..07 and RUNBOOK-01 not yet planned) |
 | 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Not started |
 
 ## v5.15 Phase Map (SHIPPED 2026-08-26)

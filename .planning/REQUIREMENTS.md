@@ -151,7 +151,7 @@ open; expected to span multiple phases.*
 
 ### Traceability & Documentation
 
-- [ ] **TRACE-01**: `CHANGELOG.md` documents every shipped milestone. v5.9 through v5.14 are absent
+- [x] **TRACE-01**: `CHANGELOG.md` documents every shipped milestone. v5.9 through v5.14 are absent
   — noting that v5.13/v5.14 were developed but never released, so their entries must describe that
   accurately rather than claim a release.
 - [ ] **TRACE-02**: v4.7's ROADMAP and REQUIREMENTS are either reconstructed from `v4.7-phases/` or
@@ -239,7 +239,7 @@ open; expected to span multiple phases.*
 | UATREC-02 | Phase 167 | Pending |
 | UATREC-03 | Phase 168, 169 | Complete (series 1-100 Phase 168, series 101-163 Phase 169) |
 | UATREC-04 | Phase 169 | Complete |
-| TRACE-01 | Phase 170 | Pending |
+| TRACE-01 | Phase 170 | Complete |
 | TRACE-02 | Phase 170 | Pending |
 | TRACE-03 | Phase 170 | Pending |
 | TRACE-04 | Phase 170 | Pending |
