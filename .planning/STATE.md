@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
-status: planning
-stopped_at: v5.17 OPENED 2026-08-28 — 5 phases (172-176), 16 requirements, all traced to v5.16 UAT evidence. Next: /gsd-discuss-phase 172
-last_updated: "2026-08-28T21:06:27.183Z"
+status: verifying
+stopped_at: Phase 172 context gathered — 5 decisions locked (D-01..D-05); user delegated grey-area calls
+last_updated: "2026-08-28T23:55:18.854Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 5
@@ -817,8 +817,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T21:06:27.177Z
-Stopped at: Completed 171-03-PLAN.md (Phase 171 closed — RESUME-05/RESUME-06 complete, human-verify checkpoint approved 2026-08-28; 3/3 plans in Phase 171 done; this was the final phase of v5.16 — awaiting /gsd:verify-phase 171)
+Last session: 2026-08-28T23:55:18.845Z
+Stopped at: Phase 172 context gathered — 5 decisions locked (D-01..D-05); user delegated grey-area calls
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
