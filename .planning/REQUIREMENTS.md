@@ -169,7 +169,7 @@ open; expected to span multiple phases.*
 - [x] **TRACE-01**: `CHANGELOG.md` documents every shipped milestone. v5.9 through v5.14 are absent
   — noting that v5.13/v5.14 were developed but never released, so their entries must describe that
   accurately rather than claim a release.
-- [ ] **TRACE-02**: v4.7's ROADMAP and REQUIREMENTS are either reconstructed from `v4.7-phases/` or
+- [x] **TRACE-02**: v4.7's ROADMAP and REQUIREMENTS are either reconstructed from `v4.7-phases/` or
   ROADMAP.md's dead link to them is corrected. It is the only milestone of 40 with neither.
 - [ ] **TRACE-03**: DEBT-02, GAP-02, QRAMM-08 and QRAMM-09 each gain a discoverable test —
   respectively `lab.sh` PROFILE_ARGS precedence, the re-enabled SAML scan-window test, the
@@ -180,9 +180,9 @@ open; expected to span multiple phases.*
 - [ ] **TRACE-05**: Planning summaries reference sibling phase artifacts by a path that survives
   archival, or are rewritten on archive. 16 references are currently broken. This is the same failure
   mode that lost BACK-A11Y-01 from the live backlog.
-- [ ] **TRACE-06**: The five archive documents recording no completion status (v4.10, v4.3, v5.1,
+- [x] **TRACE-06**: The five archive documents recording no completion status (v4.10, v4.3, v5.1,
   v5.12, v5.4) gain a `**Status:**` header.
-- [ ] **TRACE-07**: New requirement documents use exactly one declaration format. Backfilling
+- [x] **TRACE-07**: New requirement documents use exactly one declaration format. Backfilling
   existing archives is explicitly optional and out of scope.
 
 *Source: RVW-007, RVW-009, RVW-010, RVW-014, RVW-015, RVW-018, RVW-019.*
@@ -255,12 +255,12 @@ open; expected to span multiple phases.*
 | UATREC-03 | Phase 168, 169 | Complete (series 1-100 Phase 168, series 101-163 Phase 169) |
 | UATREC-04 | Phase 169 | Complete |
 | TRACE-01 | Phase 170 | Complete |
-| TRACE-02 | Phase 170 | Pending |
+| TRACE-02 | Phase 170 | Complete |
 | TRACE-03 | Phase 170 | Pending |
 | TRACE-04 | Phase 170 | Pending |
 | TRACE-05 | Phase 170 | Pending |
-| TRACE-06 | Phase 170 | Pending |
-| TRACE-07 | Phase 170 | Pending |
+| TRACE-06 | Phase 170 | Complete |
+| TRACE-07 | Phase 170 | Complete |
 | RUNBOOK-01 | Phase 170 | Pending |
 | RESUME-05 | Phase 171 | Pending |
 | RESUME-06 | Phase 171 | Pending |
