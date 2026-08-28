@@ -303,7 +303,7 @@ def test_pki_rsa4096_root_ca_no_severity():
 # cryptography library in-process), and the broader fork-crash class is
 # fixed at the spawn mechanism elsewhere by
 # tests/cli_helpers.py::run_fork_safe -- see
-# .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md.
+# .planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md.
 def test_pki_sha1_signed_ca_high_severity():
     """D-03: SHA-1 signing algorithm on PKI CA cert produces HIGH severity."""
     pem = _make_test_pem_rsa(4096, "SHA1")

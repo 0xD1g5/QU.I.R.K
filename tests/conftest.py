@@ -54,7 +54,7 @@ def _patch_sha1_signing():
     full-suite run -- discovered by 166-05's mandatory full unfiltered proof
     run even though this file was outside the plan's declared nine-file
     scope. Two conditions were required together (see
-    .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md and
+    .planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md and
     tests/cli_helpers.py::run_fork_safe's docstring): close_fds=False + no
     cwd, AND (discovered here) argv[0] must contain a path separator --
     a bare "openssl" resolved via PATH defeats CPython's posix_spawn

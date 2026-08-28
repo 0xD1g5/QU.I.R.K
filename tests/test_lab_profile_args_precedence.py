@@ -14,7 +14,7 @@ Fork-safety: this spawns a real `bash` subprocess, so it is routed through
 `tests/cli_helpers.py::run_fork_safe` (never a bare `subprocess.run`/`Popen`)
 and this file is registered in `tests/test_cli_helper_usage.py`'s
 `_COVERED_FILES` AST gate. See
-`.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md` for
+`.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md` for
 why that matters.
 """
 from __future__ import annotations

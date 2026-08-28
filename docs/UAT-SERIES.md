@@ -53,8 +53,7 @@ of coverage). `docs/uat-disposition-ledger.jsonl` is the reviewable, per-case so
 101-163 (78 cases) remain undispositioned — Phase 169 drains the remainder and adds the standing
 UATREC-04 anti-re-accumulation gate. Closes UATREC-03 for series 1-100 only. No new `### UAT-`
 case headings were added this phase (existing cases were dispositioned in place, not created);
-see `docs/uat-coverage-gaps.md` for the full GAP list and `.planning/phases/168-uat-record-drain-
-series-1-100/` for the nine per-plan SUMMARYs.
+see `docs/uat-coverage-gaps.md` for the full GAP list and `.planning/milestones/v5.16-phases/168-uat-record-drain-series-1-100/` for the nine per-plan SUMMARYs.
 Earlier: 2026-08-27 (v5.16 Phase 167 — UAT Format Unification & Deduplication:
 docs/UAT-SERIES.md normalized to one canonical `**Result:**` format (`- [ ] PASS  - [ ] FAIL  -
 [ ] SKIP`, with optional inline ` (annotation)` suffixes preserved), 23 previously headingless
@@ -17447,7 +17446,7 @@ reverted or properly archived.
 - Step 5's restore-then-commit sequence succeeds cleanly, proving the gate is a real, recoverable
   guard rather than a permanent lockout
 
-**Result:** - [x] PASS (Direct execution in the same rsync scratch copy -- deleted all contents of .planning/phases/166-gate-robustness (a phase STATE.md marks Complete via plain rm -rf with no git rm, staged an unrelated commit, git commit was rejected exit 1 explicitly naming Phase 166 as missing its live or archived directory, confirming the deletion itself was not and could not be prevented since it happened outside git. Restored the directory contents from the real repo, committed again, succeeded exit 0)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (Direct execution in the same rsync scratch copy -- deleted all contents of .planning/milestones/v5.16-phases/166-gate-robustness (a phase STATE.md marks Complete via plain rm -rf with no git rm, staged an unrelated commit, git commit was rejected exit 1 explicitly naming Phase 166 as missing its live or archived directory, confirming the deletion itself was not and could not be prevented since it happened outside git. Restored the directory contents from the real repo, committed again, succeeded exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** ARTIFACT-04. Requirement: ARTIFACT-04.
 
@@ -19434,7 +19433,7 @@ evidence for `UAT-164-01` only, per D-16. Known deferred item (not a Series 164 
 full-suite `pytest -q` run on macOS crashes 4 of `tests/test_target_cli.py`'s 7 cases on a fatal
 signal (fork-after-Network.framework, not an assertion failure) — that file passes 7/7 standalone
 in 3.43s and is tracked as **GATE-03** in Phase 166; see
-`.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`.
+`.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md`.
 
 ---
 

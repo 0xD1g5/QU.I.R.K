@@ -34,7 +34,7 @@ confirming the Category B de-linkification approach). During checkpoint close-ou
 coordinator found and fixed a coverage gap in 170-06: the `38-identity-api-regression-fix`
 family (28 references across 6 files, one file not in 170-06's declared `files_modified`) was
 missed and has now been rewritten to `v4.5-phases/38-identity-api-regression-fix/` —
-filesystem-only, gitignored. `.planning/phases/170-traceability-documentation-runbook/
+filesystem-only, gitignored. `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/
 170-VALIDATION.md` is now `nyquist_compliant: true`, `status: complete`, all 14 rows green. The
 ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` from
 `/gsd:verify-phase` — next step is verify-phase, then Phase 171 (Resume UX Tail).
@@ -64,7 +64,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   `nyquist_compliant: true`, `status: complete`, 0 pending rows. ROADMAP.md phase-level checkbox
   intentionally left unchecked — `scripts/verify_phase_gates.py` gates it on
   `170-VERIFICATION.md`, produced by `/gsd:verify-phase`, not this plan. See
-  `.planning/phases/170-traceability-documentation-runbook/170-07-SUMMARY.md`.
+  `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-07-SUMMARY.md`.
 
 - **170-06 closed TRACE-05.** Re-verified the plan's own ground-truth mapping table before
   acting per the plan's explicit instruction, and found one wrong destination:
@@ -79,7 +79,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   `ROADMAP.md` section. Only 1 of the 25 edited files (`v5.12-phases/151-CONTEXT.md`) is tracked
   by git — the rest are gitignored under the Phase 120 `.planning/` exclusion and are correct
   filesystem-only edits, not missing work. See
-  `.planning/phases/170-traceability-documentation-runbook/170-06-SUMMARY.md`.
+  `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-06-SUMMARY.md`.
 
 - **170-04 closed TRACE-03 and TRACE-04.** GAP-02 and QRAMM-09 (the two TRACE-03 items the
   original review claimed had no discoverable test) were re-verified during planning to already
@@ -90,14 +90,14 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   (AUTH-05, DEBT-04, GAP-01, QRAMM-11, TAIL-04) plus GAUGE-01/02/03 each gained a requirement-ID
   annotation in their existing docstring/comment, verified against the test body (not just
   filename) before annotating, and re-run to confirm still-passing. See
-  `.planning/phases/170-traceability-documentation-runbook/170-04-SUMMARY.md`.
+  `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-04-SUMMARY.md`.
 
 - **170-03 added real, currently-passing tests for DEBT-02 and QRAMM-08** (`tests/test_lab_profile_args_precedence.py`
   exercises the real `lab.sh` script's CLI-wins-over-.env `PROFILE_ARGS` precedence via a real
   `bash -x lab.sh help` subprocess, no Docker; `qramm-assessment-dimension-coverage.test.tsx`
   renders the real `AssessmentPage` and proves all 4 dimension tabs together cover 120 questions
   at 30 each). TRACE-03 is NOT marked complete — it is shared with 170-04's annotation half. See
-  `.planning/phases/170-traceability-documentation-runbook/170-03-SUMMARY.md`.
+  `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-03-SUMMARY.md`.
 
 - **170-02 closed TRACE-02, TRACE-06, TRACE-07.** `.planning/ROADMAP.md:12`'s dead v4.7 link now
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
@@ -107,7 +107,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
-  `.planning/phases/170-traceability-documentation-runbook/170-02-SUMMARY.md`.
+  `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-02-SUMMARY.md`.
 
 - **170-01 closed TRACE-01.** CHANGELOG.md now has an unbroken `## [X.Y.Z]` entry for every
   milestone v5.8.0 through v5.15.0 — no gap. v5.14.0/v5.13.0 entries state plainly, with root
@@ -117,7 +117,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   four milestones that genuinely shipped. Every bullet is derived from the matching archived
   `.planning/milestones/vX.Y-ROADMAP.md` summary AND corroborated against
   `git log <prev-tag>..<tag> --oneline` per D-03 — no invented capability. See
-  `.planning/phases/170-traceability-documentation-runbook/170-01-SUMMARY.md`.
+  `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-01-SUMMARY.md`.
 
 ## Decisions Carried Forward (Phase 169)
 
@@ -661,7 +661,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 166]: GATE-03 full-suite verification (166-04) confirms the 3-file fix works but the same fork-crash pattern persists in 6 other files outside declared scope, tracked for a future cleanup phase
 - [Phase 167]: The "5 duplicate case IDs" figure (REQUIREMENTS.md UATREC-02, 2026-08-26 Phase-164-close reaffirmation, and the 2026-08-24 functional review) is a truncating-regex artifact, not a real finding — `grep -o '^### UAT-[0-9]*-[0-9]*'` collapses three-segment IDs (`UAT-89-02-01`/`-02`, `UAT-89-03-01`/`-02`) into phantom two-segment duplicates. The true count is 3 (`UAT-144-01/02/03`). Corrected in REQUIREMENTS.md, ROADMAP.md, the review's dated correction note, and this STATE.md entry. **Phases 168-170 draw on the same 2026-08-24 review and must not re-inherit the "5" figure.**
 - [Phase 167]: `tests/test_uat_series_format.py` now blocks any `docs/UAT-SERIES.md` change that breaks the single-result-format, heading/result-block-parity, case-ID-uniqueness, or no-headingless-declaration invariants. Phase 168/169 disposition-drain edits must keep result blocks canonical (`- [ ] PASS  - [ ] FAIL  - [ ] SKIP` with an optional inline ` (annotation)` suffix) — the achieved parity figure (663 case headings == 663 result blocks as of 167-03 Tasks 1-4, `docs/UAT-SERIES.md` re-measured post-Series-167-append) is the number Phase 168 starts from.
-- [Phase 167]: Plan 03 Tasks 1-4 intentionally did NOT flip the ROADMAP.md Phase 167 checkbox to `[x]` or mark this STATE.md row `Complete` — Task 5 (a `checkpoint:human-verify` gate) has not yet run, `.planning/phases/167-uat-format-unification-deduplication/167-VERIFICATION.md` does not exist yet, and `167-VALIDATION.md`'s human-only row (167-03-05) is genuinely still `⬜ pending`. Flipping either trigger string would fire `scripts/verify_phase_gates.py`'s ARTIFACT-01/02/03 phase-close gate falsely. Defer both flips to the commit that follows human approval of Task 5.
+- [Phase 167]: Plan 03 Tasks 1-4 intentionally did NOT flip the ROADMAP.md Phase 167 checkbox to `[x]` or mark this STATE.md row `Complete` — Task 5 (a `checkpoint:human-verify` gate) has not yet run, `.planning/milestones/v5.16-phases/167-uat-format-unification-deduplication/167-VERIFICATION.md` does not exist yet, and `167-VALIDATION.md`'s human-only row (167-03-05) is genuinely still `⬜ pending`. Flipping either trigger string would fire `scripts/verify_phase_gates.py`'s ARTIFACT-01/02/03 phase-close gate falsely. Defer both flips to the commit that follows human approval of Task 5.
 - [Phase 168]: Series extraction is alpha-prefix-aware; ledger's 299-case scope and A:72/B:1/C:34/D:60/E:49/F:83 bucket split are authoritative for Plans 02-08 (reconciled in 168-01-SUMMARY.md against CONTEXT's 299/A:72-B:2-C:34-D:51-E:33-F:107 and the planner's 297). — Independent re-measurement corrects the planner's alpha-prefix regex miss and locks the frozen ledger contract for downstream plans.
 - [Phase 168]: UAT-5-12's runner_covered flag corrected to false: uat_runner.py rlog() call for it is unreachable under --no-lab-scan due to an earlier return in run_series_5()
 - [Phase 168]: uat-auto-results.json regenerated fresh but left uncommitted per repo .gitignore convention; ledger + docs/UAT-SERIES.md are the reviewable committed record

@@ -357,7 +357,7 @@ def _run_pytest_nodes(node_ids) -> tuple[int, str]:
     Uses ``run_fork_safe`` (Phase 166 GATE-03), not a raw ``subprocess.run``
     with ``cwd=`` -- that combination is the exact macOS fork()-after-
     Network.framework SIGSEGV documented in
-    ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md``,
+    ``.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md``,
     reproduced by this module in a full unfiltered suite run (168-09)."""
     node_ids = sorted(node_ids)
     if not node_ids:

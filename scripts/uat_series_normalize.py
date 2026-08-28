@@ -9,7 +9,7 @@ heading, 2 orphan result blocks under `## Phase 999.8x` section headers with
 no case heading at all, and one misfiled duplicate Series-144 block. Phase
 168/169's disposition drain needs heading-count == result-block-count to be
 true *by construction* so it can be checked mechanically instead of asserted
-by hand. See .planning/phases/167-uat-format-unification-deduplication/
+by hand. See .planning/milestones/v5.16-phases/167-uat-format-unification-deduplication/
 167-01-PLAN.md for the full transform spec and measured ground truth.
 
 Run modes:

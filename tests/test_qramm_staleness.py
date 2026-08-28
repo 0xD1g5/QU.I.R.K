@@ -90,7 +90,7 @@ def _run_scan_path() -> Path:
 # fork()-under-full-suite-load SIGSEGV) was removed in Phase 166: the crash
 # is fixed at the spawn mechanism (close_fds=False + no cwd) by
 # tests/cli_helpers.py::run_fork_safe -- see
-# .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md.
+# .planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md.
 def test_qramm_status_cli_smoke_fresh() -> None:
     """Subprocess `python run_scan.py qramm status` exits 0 (FRESH)
     with current model_meta."""

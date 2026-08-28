@@ -217,7 +217,7 @@ discoveries from Plans 03-08 that Phase 170's traceability work needs to act on:
       interaction — no candidate to evaluate at all.
 
     All 31 rows stay `GAP`, unchanged, with the reasoning above recorded per-case in the SUMMARY
-    (`.planning/phases/169-uat-record-drain-series-100-163-enforcement/169-06-SUMMARY.md`). Per
+    (`.planning/milestones/v5.16-phases/169-uat-record-drain-series-100-163-enforcement/169-06-SUMMARY.md`). Per
     this plan's own instruction, "converting 31" was never the target — "every row's disposition
     is true" was, and zero genuine substitutes exist today. Writing the missing vitest tests
     themselves remains out of scope (see "Closing the 54 GAPs by writing the missing tests" in

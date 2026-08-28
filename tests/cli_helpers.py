@@ -26,7 +26,7 @@ def run_fork_safe(
     """Run an arbitrary executable as a real subprocess, fork-safely, on macOS.
 
     Root cause (fully diagnosed in
-    ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`` —
+    ``.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md`` —
     do not re-derive): CPython's ``subprocess.Popen._execute_child`` only
     selects the safe ``posix_spawn`` path when BOTH
     ``(not close_fds or _HAVE_POSIX_SPAWN_CLOSEFROM)`` AND ``cwd is None`` hold.
@@ -46,7 +46,7 @@ def run_fork_safe(
     trade-off, not a production code path -- ``grep -rn "close_fds" quirk/
     run_scan.py`` must always return zero hits. DO NOT REVERT this parameter
     in a later cleanup pass without re-reading
-    ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md``
+    ``.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md``
     first: removing it makes the SIGSEGV reappear ONLY in full-suite macOS
     runs, invisible to standalone file runs, so the regression would ship
     silently.
@@ -132,7 +132,7 @@ def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProces
     Thin wrapper over ``run_fork_safe`` that prepends
     ``[sys.executable, str(run_scan.py)]``. See ``run_fork_safe`` for the
     full fork-safety rationale (root-caused in
-    ``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md``).
+    ``.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md``).
 
     Args:
         args: CLI arguments to pass after ``run_scan.py`` (e.g.

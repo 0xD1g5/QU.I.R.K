@@ -573,7 +573,7 @@ different cases under one identifier.
 > root causes and scale often are not (see the "353 of 601" correction below, and
 > `.planning/STATE.md`'s note on RVW-005/017/021/022). Phases 168-170 draw on this same review
 > and must not re-inherit the "5" figure. Full detail: `.planning/REQUIREMENTS.md` UATREC-02,
-> `.planning/phases/167-uat-format-unification-deduplication/167-01-SUMMARY.md`.
+> `.planning/milestones/v5.16-phases/167-uat-format-unification-deduplication/167-01-SUMMARY.md`.
 
 **Qualification, weakened from the original.** The report previously asserted that "75 of
 the 91 affected requirements retain automated test evidence." That figure is derived from

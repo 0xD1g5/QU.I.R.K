@@ -3,7 +3,7 @@ crash-exposed ``subprocess.run``/``Popen``/``check_output``/``call`` spawn in
 the CLI-runner and subprocess-spawning test files.
 
 Root cause (fully diagnosed in
-``.planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md`` --
+``.planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md`` --
 do not re-derive): CPython's ``subprocess.Popen._execute_child`` only
 selects the safe ``posix_spawn`` path when BOTH
 ``(not close_fds or _HAVE_POSIX_SPAWN_CLOSEFROM)`` AND ``cwd is None``. On
@@ -134,7 +134,7 @@ def test_no_direct_crash_exposed_subprocess_spawn_in_covered_files() -> None:
 
     Either condition alone defeats CPython's posix_spawn selection on this
     Python build (posix_spawn requires BOTH close_fds=False AND cwd=None --
-    see .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md)
+    see .planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md)
     and reintroduces the macOS fork()-after-Network.framework SIGSEGV crash.
     Route the offending call through tests/cli_helpers.py::run_cli or
     ::run_fork_safe instead, which supply close_fds=False and never pass cwd.
@@ -150,7 +150,7 @@ def test_no_direct_crash_exposed_subprocess_spawn_in_covered_files() -> None:
         f"it defeats posix_spawn selection on this Python build and "
         f"reintroduces the macOS fork()-after-Network.framework SIGSEGV crash. "
         f"See tests/cli_helpers.py::run_cli / ::run_fork_safe and "
-        f".planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md."
+        f".planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md."
     )
 
 
@@ -159,7 +159,7 @@ def test_run_cli_helper_still_sets_close_fds_false() -> None:
     fork-safe primitive must still set close_fds=False.
 
     posix_spawn selection on this Python build requires close_fds=False
-    (see .planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md)
+    (see .planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md)
     -- omitting cwd alone is NOT sufficient. This assertion locks the other
     half of the fix, which the AST gate above does not cover (it inspects
     the covered *caller* files, not the chokepoint itself).
@@ -170,5 +170,5 @@ def test_run_cli_helper_still_sets_close_fds_false() -> None:
         "subprocess.run call. Both close_fds=False AND omitting cwd are "
         "required to reach CPython's safe posix_spawn path on this Python "
         "build -- see "
-        ".planning/phases/164-first-run-correctness/164-FINDING-fork-crash.md."
+        ".planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md."
     )
