@@ -81,7 +81,9 @@ data Phase 146 will surface, but does not build the surfacing itself.
   explicitly deferred to Phase 146
 - `.planning/ROADMAP.md` §"Phase 145: Liveness Pre-Pass" — goal, success criteria, dependency on
   Phase 144
-- `.planning/phases/144-chunked-discovery-core/144-CONTEXT.md` — the batch loop this phase's
+- Phase 144 (Chunked Discovery Core, v5.11) — phase artifacts lost in the documented v5.12-open
+  incident, see `.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`; shipped summary in
+  `.planning/milestones/v5.11-ROADMAP.md`'s "Phase 144" section — the batch loop this phase's
   pre-pass slots into; D-04's `ScanCheckpoint`/partial-failure precedent this phase's D-04/D-05
   extend
 

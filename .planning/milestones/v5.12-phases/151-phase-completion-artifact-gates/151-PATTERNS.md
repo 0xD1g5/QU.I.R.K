@@ -380,7 +380,7 @@ VALIDATION.md's `nyquist_compliant:` field.
   ROADMAP.md's checkbox flip alone and treat STATE.md as corroborating/optional — see Open
   Question 3 in RESEARCH.md, already resolved as "no change needed").
 - `150-VERIFICATION.md` frontmatter shape (real, lines 1-7 of
-  `.planning/phases/150-test-suite-green-baseline-ci-gate/150-VERIFICATION.md`):
+  `.planning/milestones/v5.12-phases/150-test-suite-green-baseline-ci-gate/150-VERIFICATION.md`):
   ```yaml
   ---
   phase: 150-test-suite-green-baseline-ci-gate

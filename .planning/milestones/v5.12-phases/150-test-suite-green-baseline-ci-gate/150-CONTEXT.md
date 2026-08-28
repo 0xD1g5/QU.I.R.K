@@ -226,10 +226,10 @@ addendum resolves.
   success criteria, depends-on Phase 149.
 
 ### Phase 149 outputs (this phase builds directly on these — do not re-derive)
-- `.planning/phases/149-test-suite-triage/149-CONTEXT.md` — Phase 149's own decisions (D-01
+- `.planning/milestones/v5.12-phases/149-test-suite-triage/149-CONTEXT.md` — Phase 149's own decisions (D-01
   through D-05), establishes the quarantine mechanism this phase must respect (D-05 above touches
   it for the KDCOptions fix only).
-- `.planning/phases/149-test-suite-triage/149-11-SUMMARY.md` — the final reconciliation: fresh
+- `.planning/milestones/v5.12-phases/149-test-suite-triage/149-11-SUMMARY.md` — the final reconciliation: fresh
   `pytest -q -m ""` is 0 failed (3088 passed, 42 skipped, 81 xfailed) in Phase 149's sandbox; the
   5 flagged follow-up items (see D-05/D-06 above) and their disposition in this phase.
   `key-decisions` frontmatter documents the SIGSEGV-cluster consolidation and the two production
