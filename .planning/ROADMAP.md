@@ -300,7 +300,17 @@ range)
 
   3. The enforcement check is documented alongside the other gating mechanisms so a future
      contributor discovers it before hitting it in CI.
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+- [ ] 169-01-PLAN.md — Guard defect fixes (WR-01/WR-03) + 78-row ledger skeleton for series 101-163
+- [ ] 169-02-PLAN.md — Vitest dialect for the anti-fabrication guard (D-05 half 1)
+- [ ] 169-03-PLAN.md — Bucket A+B drain (41 cases)
+- [ ] 169-04-PLAN.md — Bucket C+D+E drain (25 cases)
+- [ ] 169-05-PLAN.md — Bucket F drain (12 cases) + independent recount + coverage-gaps.md
+- [ ] 169-06-PLAN.md — Re-disposition Phase 168's 31 series-7 GAPs via vitest (D-05 half 2)
+- [ ] 169-07-PLAN.md — Zero-undispositioned standing gate (UATREC-04) + D-04 CI-wiring check
+- [ ] 169-08-PLAN.md — Full-suite baseline, 4-place gate docs, Obsidian sync, phase close
 
 ### Phase 170: Traceability, Documentation & Runbook
 
