@@ -12449,7 +12449,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - Failed webhook: `scheduled_runs` row for that scan still shows `status='completed'`
 - `error_summary` on failed row does not contain raw exception secrets
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (Live webhook.site endpoint unavailable in sandbox; nearest automated coverage: tests/test_notify_dispatcher.py::test_dispatch_delivery_failure_isolated and tests/test_notify_dispatcher.py::test_scheduler_dispatch_raises_scan_record_unaffected, both run and passing -- test_notify_webhook.py's topology/HMAC tests are TRIAGE-149 environment-xfailed here and cannot be cited as verified coverage)
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13101,7 +13101,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - No `SEAM FAIL` output from the seam-resolution loop
 - No-code boundary check prints `no-code boundary OK` (no runtime files in the phase commits)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (All 9 automated steps run directly and verified against docs/architecture-distributed.md -- 10 sections, 2 balanced mermaid blocks, ARCH-01..04 terms present, Requirement Coverage table maps all four IDs, all five seam symbols resolve, no-code boundary held)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -13929,7 +13929,7 @@ startup. Run from the `quantum-chaos-enterprise-lab/` directory.
 - `python -W error::DeprecationWarning -c "import quirk.cli.sensor_cmd"` exits 0
 - `python -m compileall quirk/cli/sensor_cmd.py -q` exits 0
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (Direct execution -- zero non-comment datetime.utcnow call sites in quirk/, python -W error::DeprecationWarning -c import quirk.cli.sensor_cmd exits 0, compileall exits 0. Case's own grep pipeline has a filter bug -- the grep -v comment-strip pattern never matches piped grep -rn file:line:content output -- but the underlying substance holds: both surviving hits are docstring comments in qramm_cmd.py and cve_cmd.py, zero real call sites)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14148,7 +14148,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `grep -q "all-sensors-in" docs/operators-guide.md && grep -q "cadence-window" docs/operators-guide.md` exits 0.
 - `grep -q "AUTOMERGE-03" docs/operators-guide.md` exits 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (All 4 grep checks against docs/operators-guide.md run directly and returned OK)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14370,7 +14370,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `pyinstaller-spike-evidence` artifact name present.
 - Line count >= 80.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (All checks run directly against docs/windows-packaging-spike.md -- file exists, all five topic headings present, onedir/onefile both present, pyinstaller-spike-evidence artifact cited, 315 non-empty lines >= 80 minimum)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14436,7 +14436,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - All six items confirmed by visual review.
 - No contradictions with the five required topics.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (Direct human-equivalent doc review of docs/windows-packaging-spike.md -- Recommendation section present with bold GO conditional line tied to the D-05 threshold, evidence-only D-06 warning present, Scheduled Task plus NSSM alternative D-04 both documented, RESULT line still placeholder because the live CI run has not completed yet per the doc's own Live CI Build Status section -- item 7 is conditional and does not apply)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -14637,7 +14637,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - Token is masked (`***`) in the log, not printed in plain text.
 - `E2E_PASS: frozen sensor authenticated + push accepted` is the final output line.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (Live windows-latest GitHub Actions run unavailable in this sandbox; the case's own Notes field already records local structure verification in 118-02-SUMMARY.md -- no substitute can reproduce a real Windows runner E2E log)
 **Date:** __________  **Tester:** __________
 **Notes:** DEFERRED — awaiting live windows-latest CI run after push to origin. Job structure (YAML parse, job exists, artifact download, console enroll + uvicorn wiring, frozen enroll/push, --allow-internal-console) verified locally. See 118-02-SUMMARY.md "Human Verification Required" section for exact steps.
 
@@ -14708,7 +14708,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - `E2E_PASS: frozen sensor authenticated + push accepted` is final output line.
 - Token not in plain text in log.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (Live windows-latest GitHub Actions run unavailable in this sandbox, same as UAT-118-01 -- structure verified locally per 118-02-SUMMARY.md)
 **Date:** __________  **Tester:** __________
 **Notes:** DEFERRED — awaiting push to origin. Job structure verified locally in 118-02-SUMMARY.md.
 
@@ -14753,7 +14753,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - Unsigned/Authenticode-deferral language in release body.
 - Zip contains the four expected items (onedir bundle + three packaging files).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (Live v5.6 GitHub Release tag not yet pushed and GitHub Release infrastructure unavailable in this sandbox -- release.yml windows-package job wiring already verified locally per 118-03-SUMMARY.md)
 **Date:** __________  **Tester:** __________
 **Notes:** DEFERRED — awaiting v5.6 tag. release.yml `windows-package` job wiring verified locally (YAML parses; windows-latest job present; contents:write; onedir flag set; zip assembly; softprops/action-gh-release@v2; unsigned/Authenticode notes in body). See 118-03-SUMMARY.md for exact deferred-verification steps.
 
@@ -17364,7 +17364,7 @@ ARTIFACT-03.
 - `git config --unset core.hooksPath` cleanly deactivates the gate afterward if the scratch clone
   is reused for other work
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (Direct execution in a full rsync scratch copy of the repo with core.hooksPath activated -- staged a ROADMAP.md checkbox flip to x for Phase 169 which has no VERIFICATION.md, git commit was rejected exit 1 naming VERIFICATION.md is missing, then reverted the flip and committed an unrelated file which succeeded exit 0, then git config --unset core.hooksPath cleanly deactivated the gate. A plain git clone was tried first and produced a false archive-gate block because most .planning/phases content is gitignored and does not survive git clone -- switched to an rsync full copy to faithfully reproduce the real working tree)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** ARTIFACT-01, ARTIFACT-03. Requirement: ARTIFACT-01, ARTIFACT-03.
 
@@ -17408,7 +17408,7 @@ reverted or properly archived.
 - Step 5's restore-then-commit sequence succeeds cleanly, proving the gate is a real, recoverable
   guard rather than a permanent lockout
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (Direct execution in the same rsync scratch copy -- deleted all contents of .planning/phases/166-gate-robustness (a phase STATE.md marks Complete via plain rm -rf with no git rm, staged an unrelated commit, git commit was rejected exit 1 explicitly naming Phase 166 as missing its live or archived directory, confirming the deletion itself was not and could not be prevented since it happened outside git. Restored the directory contents from the real repo, committed again, succeeded exit 0)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** ARTIFACT-04. Requirement: ARTIFACT-04.
 
@@ -18366,7 +18366,7 @@ EOL catalog's `last_verified` citation.
 - Every bucket sentence carries the catalog citation
 - Advisory qualifier present
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (Direct execution -- called quirk.scanner.hardware_forecast.build_eol_forecast with five EOL-staggered devices, read every generated bucket sentence: zero unqualified will claims -- uses have already passed and is projected to reach phrasing, every sentence cites the catalog verified as of 2026-08-14 date, and confirmed quirk/reports/executive.py wraps the EOL/Tier Forecast section in an Advisory only not included in readiness score qualifier. Backed by tests/test_hardware_forecast.py -q -m the-empty-marker-expression, 18 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:** _pending_  **Tester:** _pending — human read-through_
 **Notes:** HWLC-18. Automated test coverage (`test_hardware_forecast.py`'s
 hedged-language-enforcement test, forbidding a bare " will " substring) already backs this
