@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: Session resumed — 168-03 complete (56/299 dispositioned), proceeding to Phase 168 Wave 3 (plans 04-09)
-last_updated: "2026-08-28T01:57:54.809Z"
+last_updated: "2026-08-28T02:27:17.486Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 24
+  completed_plans: 25
   percent: 50
 ---
 
@@ -43,7 +43,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 168 (uat-record-drain-series-1-100) — EXECUTING
-Plan: 2 of 9
+Plan: 6 of 9
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -249,6 +249,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 168 P01 | 45min | 3 tasks | 2 files |
 | Phase 168 P03 | 35min | 2 tasks | 2 files |
 | Phase 168 P04 | 70min | 2 tasks | 2 files |
+| Phase 168 P05 | 220min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -258,6 +259,22 @@ log lives in PROJECT.md's Key Decisions table and `.planning/RETROSPECTIVE.md`'s
 Next milestone's numbering continues at Phase 161.
 
 ### Decisions
+
+- **Phase 168 Plan 05 (2026-08-27):** `run_scan.py --db-path` silent-no-op trap recurs at the
+  config level — `config.yaml`'s own `output.db_path` (default `./quirk.db`) governs where
+  `crypto_endpoints`/checkpoints actually land, not the CLI `--db-path` flag alone; both must
+  point at the same path or the scan silently writes to the wrong file. A local self-signed TLS
+  listener on `127.0.0.1:8443` substitutes for the chaos lab (D-01) when a UAT case only needs a
+  generic reachable TLS endpoint, not protocol-specific detection (SAML/Kerberos/DNSSEC/broker
+  still SKIP without the lab). Headless Playwright (already installed in `.venv`) substitutes for
+  human browser verification on dashboard-route/console/focus/pagination UAT cases — real SPA
+  route and API data, direct URL navigation instead of a literal sidebar click. This plan's real
+  execution surfaced 16 genuine product/doc findings: dashboard score not tracking
+  `--score-profile` (UAT-8-07), unconditional email-port probing breaking a documented
+  HTTPS-only empty state (UAT-36-05), an undocumented "Hardware" sidebar item breaking the D-11
+  nav-order lock (UAT-39-07), an unenforced `--fuzz-budget` 500 hard maximum and a non-hard-
+  aborting non-TTY `--fuzz` path (UAT-96-02/96-03), a raw-URL-disclosure gap in
+  `SpecParsingError`'s message (UAT-94-05), and 5 stale/quoted doc-grep patterns.
 
 - Numbering continues at Phase 154 (v5.12 ended at 153). Phase order is dependency-driven:
   identity/data-model (154) must land before drift detection (155) since every diff feature
@@ -600,8 +617,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T01:53:37.309Z
-Stopped at: Session resumed — 168-03 complete (56/299 dispositioned), proceeding to Phase 168 Wave 3 (plans 04-09)
+Last session: 2026-08-28T02:27:17.486Z
+Stopped at: 168-05 complete — buckets D (50) + E (30) fully dispositioned from real command execution (56 runner-covered + 73 A/B + 80 D/E = 209/299 done); 16 genuine product/doc FAILs surfaced; buckets C (34) and F (107) remain for plans 06-09
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
