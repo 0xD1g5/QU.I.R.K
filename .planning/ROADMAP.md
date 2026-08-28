@@ -373,7 +373,20 @@ from the discovery-checkpoint work Phase 163 itself completed)
   2. `quirk --list-resumable` shows the correct target for `--targets-file` runs instead of a blank
      Target column — the target is resolved independently of the `scan_jobs` join that only exists
      for `--job-id` runs.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 171-01-PLAN.md — RESUME-05: short-circuit resume of an already-complete scan (D-01)
+
+**Wave 2**
+
+- [ ] 171-02-PLAN.md — RESUME-06: derive --list-resumable Target column from CryptoEndpoint when no ScanJob row exists (D-02)
+
+**Wave 3**
+
+- [ ] 171-03-PLAN.md — Phase close: full-suite proof, Series 171 UAT entry, REQUIREMENTS.md, Obsidian sync, human checkpoint
 
 ### Progress
 
