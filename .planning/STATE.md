@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: verifying
-stopped_at: Completed 171-01-PLAN.md (RESUME-05 stage-level resume short-circuit closed; 1/3 plans in Phase 171 done)
-last_updated: "2026-08-28T20:40:07.918Z"
+status: executing
+stopped_at: Completed 171-02-PLAN.md (RESUME-06 --list-resumable Target column derivation closed; 2/3 plans in Phase 171 done)
+last_updated: "2026-08-28T20:45:51.270Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 47
-  completed_plans: 45
-  percent: 88
+  total_plans: 48
+  completed_plans: 47
+  percent: 98
 ---
 
 # Project State
@@ -103,7 +103,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Phase complete — ready for verification
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -202,10 +202,11 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 171 (resume-ux-tail) — 171-01 executed (RESUME-05 closed: stage-level resume-already-complete
-short-circuit; reproduced pre-fix, TDD RED/GREEN, batch-row behavior verified untouched)
-Plan: 1 of 3
-Status: In progress — 171-02 (RESUME-06, --list-resumable Target column derivation) and 171-03 next
+Phase: 171 (resume-ux-tail) — 171-01 and 171-02 executed (RESUME-05 closed: stage-level
+resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
+from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
+Plan: 3 of 3
+Status: Ready to execute
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -427,6 +428,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 170 P04 | 15min | 2 tasks | 10 files |
 | Phase 170 P06 | 25min | 2 tasks | 25 files |
 | Phase 171 P01 | 25min | 1 tasks | 2 files |
+| Phase 171 P02 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -682,6 +684,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 169-06]: D-05 second half spent: all 31 series-7 GAP rows individually re-examined against real vitest coverage; zero genuine conversions found (verify-then-record standard applied throughout), all stay honest GAP with per-case reasoning recorded
 - [Phase 169-07]: Zero-undispositioned UAT gate built as pytest test riding Linux Full Suite CI (D-01), whole-document scoped (D-02), GAP is passing (D-03), D-04 CI-marker override claim independently re-verified and regression-locked
 - [Phase 171]: RESUME-05 (D-01, locked): resume of an already-complete scan exits 0 with a message naming the scan and finish time, writes zero new checkpoint rows, no --force flag
+- [Phase 171]: RESUME-06 (D-02, locked): --list-resumable Target column derives from CryptoEndpoint when no ScanJob row exists; ScanJob join stays primary, honest '(no target recorded)' placeholder when both are absent
 
 ### Pending Todos
 
@@ -812,8 +815,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T20:40:07.914Z
-Stopped at: Completed 171-01-PLAN.md (RESUME-05 stage-level resume short-circuit closed; 1/3 plans in Phase 171 done)
+Last session: 2026-08-28T20:45:51.264Z
+Stopped at: Completed 171-02-PLAN.md (RESUME-06 --list-resumable Target column derivation closed; 2/3 plans in Phase 171 done)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

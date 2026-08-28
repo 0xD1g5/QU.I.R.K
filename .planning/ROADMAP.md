@@ -382,7 +382,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 171-02-PLAN.md — RESUME-06: derive --list-resumable Target column from CryptoEndpoint when no ScanJob row exists (D-02)
+- [x] 171-02-PLAN.md — RESUME-06: derive --list-resumable Target column from CryptoEndpoint when no ScanJob row exists (D-02)
 
 **Wave 3**
 
@@ -399,7 +399,7 @@ Plans:
 | 168. UAT Record Drain — Series 1–~100 | 9/9 | Complete   | 2026-08-28 |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 8/8 | Complete   | 2026-08-28 |
 | 170. Traceability, Documentation & Runbook | 7/7 | Complete   | 2026-08-28 |
-| 171. Resume UX Tail | 1/3 | In Progress|  |
+| 171. Resume UX Tail | 2/3 | In Progress|  |
 
 ---
 
