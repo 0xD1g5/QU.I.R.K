@@ -342,7 +342,16 @@ CI actually enforces.
   5. CLAUDE.md's Staleness Review Cadence lists the CMVP, error-codes, and SNMP-contract catalogs
      alongside the existing entries, so the runbook matches every catalog
      `.github/workflows/python-staleness.yml` actually gates.
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 170-01-PLAN.md — CHANGELOG.md entries for v5.9-v5.14 (TRACE-01)
+- [ ] 170-02-PLAN.md — v4.7 dead link fix, archive Status headers, declaration-format note (TRACE-02, TRACE-06, TRACE-07)
+- [ ] 170-03-PLAN.md — New tests: lab.sh PROFILE_ARGS precedence (DEBT-02), QRAMM assessment dimension coverage (QRAMM-08) (TRACE-03)
+- [ ] 170-04-PLAN.md — Requirement-ID annotations on 11 already-passing tests, incl. re-verified GAP-02/QRAMM-09 (TRACE-03, TRACE-04)
+- [ ] 170-05-PLAN.md — CLAUDE.md staleness runbook: add CMVP, error-codes, SNMP-contract catalogs (RUNBOOK-01)
+- [ ] 170-06-PLAN.md — Sibling-reference repair across 24 archived planning files (TRACE-05)
+- [ ] 170-07-PLAN.md — Full-suite verification, docs/Obsidian sync, human checkpoint
 
 ### Phase 171: Resume UX Tail
 
