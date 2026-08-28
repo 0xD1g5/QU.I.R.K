@@ -4,13 +4,13 @@ milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
 stopped_at: Completed 169-03-PLAN.md
-last_updated: "2026-08-28T15:05:44.470Z"
+last_updated: "2026-08-28T15:32:43.466Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 37
-  completed_plans: 32
+  completed_plans: 33
   percent: 63
 ---
 
@@ -69,7 +69,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 169 (uat-record-drain-series-100-163-enforcement) — 1/8 plans executed
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -530,6 +530,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 169]: UAT-104-04 recorded GAP not PASS -- named -k ssrf filter matches 0 tests, no substitute exercises JiraChannel internal-URL SSRF guard
 - [Phase 169]: UAT-150-01/02 dispositioned via live gh CLI re-query of real GitHub Actions runs today, not transcription of the evidence artifact alone
 - [Phase 169]: UAT-110-04 resolved via D-06 name-drift substitute: test_scanned_at_not_mutated no longer exists, real equivalent test_scanned_at_preserved located and verified
+- [Phase 169]: Phase 169 plan 04 closed buckets C+D+E for series 101-163 (25/78 cases): 19 PASS, 1 FAIL, 4 SKIP, 3 DEFERRED, 2 GAP. Combined with plan 169-03 (41 cases), 66/78 series-101-163 cases are dispositioned; 12 bucket-F cases remain for plan 169-05.
+- [Phase 169]: UAT-110-06 FAIL: the case's own --stale-days 1 worked example can never trigger its documented coverage_warning WARNING line since the 1-day exclusion window and the 48h default 2x-cadence overdue threshold are mathematically incompatible; the underlying merge_scan coverage_warning mechanism itself was independently confirmed working with correct parameters.
 
 ### Pending Todos
 
@@ -660,7 +662,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T15:05:36.352Z
+Last session: 2026-08-28T15:31:49.668Z
 Stopped at: Completed 169-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
