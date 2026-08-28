@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Completed 169-05-PLAN.md
-last_updated: "2026-08-28T15:58:14.285Z"
+stopped_at: Completed 169-08-PLAN.md
+last_updated: "2026-08-28T00:00:00.000Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 37
-  completed_plans: 36
-  percent: 63
+  completed_plans: 37
+  percent: 66
 ---
 
 # Project State
@@ -22,7 +22,48 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 168 — uat-record-drain-series-1-100 (9/9 plans executed; awaiting `/gsd:verify-phase 168` and human checkpoint review before Phase 169 starts)
+**Current focus:** Phase 169 — uat-record-drain-series-100-163-enforcement (8/8 plans executed;
+UATREC-03 and UATREC-04 both complete; awaiting `/gsd:verify-phase 169` and human checkpoint
+review before Phase 170 starts)
+
+## Decisions Carried Forward (Phase 169)
+
+- **Phase 169 closed the remainder of UATREC-03 (series 101-163, 78/78 dispositioned: 41 bucket
+  A/B, 25 bucket C/D/E, 12 bucket F — 37+19+8=... see per-plan SUMMARYs) and UATREC-04 (standing
+  gate).** Combined with Phase 168, the full 1-163 range (666 case headings, 377 ledger rows) is
+  100% dispositioned: 202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP.
+
+- **`tests/test_uat_zero_undispositioned_gate.py` is the standing UATREC-04 gate** — an
+  independently-parsed pytest test (zero imports from `scripts/uat_disposition_apply.py` or
+  either sibling guard) that fails the build the moment any case in `docs/UAT-SERIES.md` has an
+  all-empty `**Result:**` block. Rides the existing `Linux Full Suite` CI job
+  (`pytest -q -m ""`), not a pre-commit hook or dedicated CI step. Documented in all four D-07
+  locations: `CLAUDE.md`, the gate test's own docstring, `docs/UAT-SERIES.md`'s header,
+  `docs/operators-guide.md` §5.3.1.
+
+- **D-04 confirmed true and locked with a regression test**: `pytest -q -m ""` in the `Linux
+  Full Suite` CI job is an empty marker expression that overrides `pyproject.toml`'s
+  `addopts = -m 'not slow'`, so CI already execution-checks the `-m slow` substitute-proof leg
+  (both pytest and vitest dialects). No nightly job or duplicate `-m slow` CI step was built.
+  Phase 168's WR-02 code-review conclusion (that this leg never runs in CI) was based on
+  searching for a literal `-m slow` string and missing this stronger equivalent.
+
+- **The vitest dialect added to `tests/test_uat_disposition_integrity.py` (169-02) found zero
+  genuine substitutes among Phase 168's 31 series-7 dashboard GAPs (169-06)** — every existing
+  `.test.tsx` title was checked against each case's documented coverage need; zero converted.
+  This is an honest, correct outcome (the checking work, not a target conversion count, was the
+  deliverable) and confirms the series-7 GAP list Phase 170 inherits is accurate, not inflated by
+  tooling limitation.
+
+- **Known, documented limitation carried forward**: the vitest dialect's `-m slow` execution leg
+  is gated on `VITEST_TOOLCHAIN_AVAILABLE` (npm + `src/dashboard/node_modules` present). The
+  `Linux Full Suite` CI job never installs Node/npm for `src/dashboard/`, so in CI the vitest leg
+  substitute-checks by existence only, not execution — tracked in `docs/uat-coverage-gaps.md`,
+  not faked, not built out this phase.
+
+- **Full local suite held at its known baseline after the drain**: 1 pre-existing failure
+  (`test_skip_registry`), zero fatal signals, 3647 passing (up from Phase 168's ~3618/~3631 —
+  169-01/169-02/169-07 added new tests).
 
 ## Decisions Carried Forward (Phase 168)
 
@@ -68,9 +109,9 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Phase: 169 (uat-record-drain-series-100-163-enforcement) — 1/8 plans executed
-Plan: 7 of 8
-Status: Ready to execute
+Phase: 169 (uat-record-drain-series-100-163-enforcement) — 8/8 plans executed
+Plan: 8 of 8 (complete)
+Status: Ready for verification — awaiting `/gsd:verify-phase 169` and human checkpoint review
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -82,7 +123,7 @@ Last activity: 2026-08-28
 | 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 5/5 plans done — GATE-01/GATE-02/GATE-03 all verified clean; 166-05 closed GATE-03's full-suite scope gap 166-04 had honestly flagged, zero fatal signals suite-wide; see 166-05-SUMMARY.md) — ✅ Complete: VERIFICATION passed 3/3 (2026-08-27), e2e:smoke independently re-run at 3.1s vs 180s budget, full unfiltered macOS pytest independently re-run with zero fatal signals (was 14 across 6 files) — ✅ VERIFICATION passed 3/3 (2026-08-27); e2e:smoke independently re-run at 3.1s vs 180s budget; full unfiltered macOS pytest independently re-run with ZERO fatal signals (was 14 across 6 files) |
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | ✅ Complete (2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, zero headingless cases, all locked behind `tests/test_uat_series_format.py`, which was proven to FAIL on the pre-normalization document. Parity was 663==663 at Plan 02 and moved to 666==666 when Plan 03 appended Series 167 — the test asserts computed equality, never a constant, so it survived its own phase. VERIFICATION passed 6/6; human checkpoint cleared by user 2026-08-27) |
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Plans executed (2026-08-27; 9/9 plans done — 299/299 series-1-100 cases dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3631 passing); human checkpoint 168-09 Task 3 awaiting review; `/gsd:verify-phase 168` not yet run |
-| 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executing (2026-08-28; 1/8 plans done — 169-01 fixed WR-01 (NODE_REF_RE truncation), WR-03 (empty-evidence cross-check hole), a newly-found UAT-151-01 scope-detection bug, and a cmd_classify data-loss bug discovered mid-execution; generated the 78-row series-101-163 ledger skeleton, independently re-derived and count-matched against the orchestrator's ground truth) |
+| 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned; full 666-case document + 377-row ledger 100% dispositioned (202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP); `tests/test_uat_zero_undispositioned_gate.py` standing gate live, documented in all four D-07 locations; vitest dialect found zero genuine conversions among Phase 168's 31 series-7 GAPs; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); UATREC-03/UATREC-04 both marked complete; awaiting `/gsd:verify-phase 169` and human checkpoint review |
 | 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Not started |
 | 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Not started |
 
@@ -283,9 +324,11 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 169 P01 | 12min | - tasks | - files |
 | Phase 169 P02 | 25min | 2 tasks | 1 files |
 | Phase 169 P03 | 90min | 2 tasks | 2 files |
+| Phase 169 P04 | 160min | 2 tasks | 2 files |
 | Phase 169 P05 | ~2h | 2 tasks | 3 files |
 | Phase 169 P06 | 20min | 2 tasks | 1 files |
 | Phase 169 P07 | 25min | 2 tasks | 1 files |
+| Phase 169 P08 | ~35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 

@@ -67,7 +67,7 @@ milestone — no urgent insertions anticipated.
 - [x] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
 - [x] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique. (completed 2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, locked behind `tests/test_uat_series_format.py`; VERIFICATION passed 6/6, human checkpoint cleared by user)
 - [x] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the 377 unrecorded UAT cases (299 in series 1-100) each carry a recorded result or an explicit deferral naming a specific substitute test. Plans executed (2026-08-27; 9/9 plans done — 299/299 dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 real substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals); verified 2026-08-28 — 168-VERIFICATION.md status: passed, 8/8 must-haves, human checkpoint approved
-- [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases.
+- [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases. Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned, full 666-case document + 377-row ledger 100% dispositioned; `tests/test_uat_zero_undispositioned_gate.py` standing gate live and documented in all four D-07 locations; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); awaiting `/gsd:verify-phase 169` and human checkpoint review.
 - [ ] **Phase 170: Traceability, Documentation & Runbook** - The changelog, archive status headers, requirement-to-test linkage, planning-summary cross-references, and CLAUDE.md's staleness runbook are all brought into agreement with what actually shipped and what CI actually gates.
 - [ ] **Phase 171: Resume UX Tail** - Resuming an already-complete scan short-circuits cleanly, and `--list-resumable` shows the correct target for every run type.
 
@@ -310,7 +310,7 @@ Plans:
 - [x] 169-05-PLAN.md — Bucket F drain (12 cases) + independent recount + coverage-gaps.md
 - [x] 169-06-PLAN.md — Re-disposition Phase 168's 31 series-7 GAPs via vitest (D-05 half 2)
 - [x] 169-07-PLAN.md — Zero-undispositioned standing gate (UATREC-04) + D-04 CI-wiring check
-- [ ] 169-08-PLAN.md — Full-suite baseline, 4-place gate docs, Obsidian sync, phase close
+- [x] 169-08-PLAN.md — Full-suite baseline, 4-place gate docs, Obsidian sync, phase close
 
 ### Phase 170: Traceability, Documentation & Runbook
 
@@ -371,7 +371,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 166. Gate Robustness | 5/5 | Complete   | 2026-08-27 |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |
 | 168. UAT Record Drain — Series 1–~100 | 8/9 | In Progress|  |
-| 169. UAT Record Drain — Series ~100–163 + Enforcement | 7/8 | In Progress|  |
+| 169. UAT Record Drain — Series ~100–163 + Enforcement | 8/8 | In Progress|  |
 | 170. Traceability, Documentation & Runbook | 0/TBD | Not started | - |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
 
