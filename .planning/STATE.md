@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Completed 169-02-PLAN.md
-last_updated: "2026-08-28T14:53:30.205Z"
+stopped_at: Completed 169-03-PLAN.md
+last_updated: "2026-08-28T15:05:44.470Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 37
-  completed_plans: 31
+  completed_plans: 32
   percent: 63
 ---
 
@@ -69,7 +69,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 169 (uat-record-drain-series-100-163-enforcement) — 1/8 plans executed
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -282,6 +282,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 168 P09 | 55min | 2 tasks | 6 files |
 | Phase 169 P01 | 12min | - tasks | - files |
 | Phase 169 P02 | 25min | 2 tasks | 1 files |
+| Phase 169 P03 | 90min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -526,6 +527,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 169]: Plan 01 fixed cmd_classify's data-loss bug (silently dropped all 299 already-dispositioned ledger rows when MAX_SERIES widened, since it built output purely from in_scope_undispositioned and write_ledger replaces the whole file) discovered mid-execution, before any commit — reverted via git checkout, then fixed with a seed-then-overlay merge pattern. Also fixed WR-01 (NODE_REF_RE truncation, lockstep across both files), WR-03 (empty-evidence cross-check hole), and a newly-found Case.dispositioned scope bug that would have silently dropped UAT-151-01 from the drain. Ledger extended to 377 rows (78 new outcome:null for series 101-163), independently re-derived count matches the orchestrator's ground truth exactly.
 - [Phase ?]: Vitest substitute citations require a double-quoted title segment (D-05) since vitest titles are free-form prose, unlike pytest's identifier-shaped node names
 - [Phase ?]: Vitest slow tests gated on VITEST_TOOLCHAIN_AVAILABLE (npm + node_modules present); honest skip in CI since Linux Full Suite job never installs Node -- confirmed to actually run locally
+- [Phase 169]: UAT-104-04 recorded GAP not PASS -- named -k ssrf filter matches 0 tests, no substitute exercises JiraChannel internal-URL SSRF guard
+- [Phase 169]: UAT-150-01/02 dispositioned via live gh CLI re-query of real GitHub Actions runs today, not transcription of the evidence artifact alone
+- [Phase 169]: UAT-110-04 resolved via D-06 name-drift substitute: test_scanned_at_not_mutated no longer exists, real equivalent test_scanned_at_preserved located and verified
 
 ### Pending Todos
 
@@ -656,8 +660,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T14:53:27.477Z
-Stopped at: Completed 169-02-PLAN.md
+Last session: 2026-08-28T15:05:36.352Z
+Stopped at: Completed 169-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
