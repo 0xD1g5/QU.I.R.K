@@ -171,10 +171,10 @@ open; expected to span multiple phases.*
   accurately rather than claim a release.
 - [x] **TRACE-02**: v4.7's ROADMAP and REQUIREMENTS are either reconstructed from `v4.7-phases/` or
   ROADMAP.md's dead link to them is corrected. It is the only milestone of 40 with neither.
-- [ ] **TRACE-03**: DEBT-02, GAP-02, QRAMM-08 and QRAMM-09 each gain a discoverable test —
+- [x] **TRACE-03**: DEBT-02, GAP-02, QRAMM-08 and QRAMM-09 each gain a discoverable test —
   respectively `lab.sh` PROFILE_ARGS precedence, the re-enabled SAML scan-window test, the
   120-question/4-tab assessment page, and the Org Profile multiplier.
-- [ ] **TRACE-04**: AUTH-05, DEBT-04, GAP-01, QRAMM-11 and TAIL-04 — which have tests but no
+- [x] **TRACE-04**: AUTH-05, DEBT-04, GAP-01, QRAMM-11 and TAIL-04 — which have tests but no
   linkage — gain a requirement-ID annotation. GAUGE-01/02/03 likewise in `ScoreGauge.test.tsx`
   (code independently verified correct; only the link is missing).
 - [ ] **TRACE-05**: Planning summaries reference sibling phase artifacts by a path that survives
@@ -256,8 +256,8 @@ open; expected to span multiple phases.*
 | UATREC-04 | Phase 169 | Complete |
 | TRACE-01 | Phase 170 | Complete |
 | TRACE-02 | Phase 170 | Complete |
-| TRACE-03 | Phase 170 | Pending |
-| TRACE-04 | Phase 170 | Pending |
+| TRACE-03 | Phase 170 | Complete |
+| TRACE-04 | Phase 170 | Complete |
 | TRACE-05 | Phase 170 | Pending |
 | TRACE-06 | Phase 170 | Complete |
 | TRACE-07 | Phase 170 | Complete |
