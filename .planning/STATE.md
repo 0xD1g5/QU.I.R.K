@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: in_progress
-stopped_at: Phase 167 complete (3 plans, VERIFICATION passed 6/6, human checkpoint cleared) — ready to discuss Phase 168
-last_updated: "2026-08-27T16:16:06.435Z"
-last_activity: 2026-08-27
+status: verifying
+stopped_at: Completed 168-01-PLAN.md (Wave 1 of 8) — ledger foundation built, 0/299 cases dispositioned
+last_updated: "2026-08-28T00:52:38.572Z"
+last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 29
+  completed_plans: 21
   percent: 50
 ---
 
@@ -31,10 +31,12 @@ See: .planning/PROJECT.md (updated 2026-08-19)
   distinct headings `UAT-89-02-01`, `UAT-89-02-02`, `UAT-89-03-01`, `UAT-89-03-02` into phantom
   `UAT-89-02` / `UAT-89-03` collisions. The true count was 3 (`UAT-144-01/02/03`). Phases 168-170
   draw on the same 2026-08-24 review — re-measure before actioning any count it asserts.
+
 - **`tests/test_uat_series_format.py` now gates `docs/UAT-SERIES.md`.** Any Phase 168/169
   disposition edit must keep result blocks in the single canonical format, keep case IDs unique,
   and keep heading count == result-block count. The test asserts computed equality, so adding
   cases is fine; breaking the grammar is not.
+
 - **Phase 168 starts from 666 cases, all with a result block, most undispositioned.** Structural
   parity is done; recording outcomes is UATREC-03 and was deliberately left untouched here.
 
@@ -42,8 +44,8 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 167 (UAT Format Unification & Deduplication) — COMPLETE
 Plan: 3 of 3
-Status: Phase complete — VERIFICATION passed 6/6 (2026-08-27); human checkpoint cleared by user
-Last activity: 2026-08-27
+Status: Phase complete — ready for verification
+Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -244,6 +246,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 166 P03 | 45 | 3 tasks | 5 files |
 | Phase 166 P04 | 20min | 2 tasks | 2 files |
 | Phase 166 P05 | 75min | 5 tasks | 9 files |
+| Phase 168 P01 | 45min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -460,6 +463,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 167]: The "5 duplicate case IDs" figure (REQUIREMENTS.md UATREC-02, 2026-08-26 Phase-164-close reaffirmation, and the 2026-08-24 functional review) is a truncating-regex artifact, not a real finding — `grep -o '^### UAT-[0-9]*-[0-9]*'` collapses three-segment IDs (`UAT-89-02-01`/`-02`, `UAT-89-03-01`/`-02`) into phantom two-segment duplicates. The true count is 3 (`UAT-144-01/02/03`). Corrected in REQUIREMENTS.md, ROADMAP.md, the review's dated correction note, and this STATE.md entry. **Phases 168-170 draw on the same 2026-08-24 review and must not re-inherit the "5" figure.**
 - [Phase 167]: `tests/test_uat_series_format.py` now blocks any `docs/UAT-SERIES.md` change that breaks the single-result-format, heading/result-block-parity, case-ID-uniqueness, or no-headingless-declaration invariants. Phase 168/169 disposition-drain edits must keep result blocks canonical (`- [ ] PASS  - [ ] FAIL  - [ ] SKIP` with an optional inline ` (annotation)` suffix) — the achieved parity figure (663 case headings == 663 result blocks as of 167-03 Tasks 1-4, `docs/UAT-SERIES.md` re-measured post-Series-167-append) is the number Phase 168 starts from.
 - [Phase 167]: Plan 03 Tasks 1-4 intentionally did NOT flip the ROADMAP.md Phase 167 checkbox to `[x]` or mark this STATE.md row `Complete` — Task 5 (a `checkpoint:human-verify` gate) has not yet run, `.planning/phases/167-uat-format-unification-deduplication/167-VERIFICATION.md` does not exist yet, and `167-VALIDATION.md`'s human-only row (167-03-05) is genuinely still `⬜ pending`. Flipping either trigger string would fire `scripts/verify_phase_gates.py`'s ARTIFACT-01/02/03 phase-close gate falsely. Defer both flips to the commit that follows human approval of Task 5.
+- [Phase 168]: Series extraction is alpha-prefix-aware; ledger's 299-case scope and A:72/B:1/C:34/D:60/E:49/F:83 bucket split are authoritative for Plans 02-08 (reconciled in 168-01-SUMMARY.md against CONTEXT's 299/A:72-B:2-C:34-D:51-E:33-F:107 and the planner's 297). — Independent re-measurement corrects the planner's alpha-prefix regex miss and locks the frozen ledger contract for downstream plans.
 
 ### Pending Todos
 
@@ -590,8 +594,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-27T16:16:06.421Z
-Stopped at: Completed 166-04-PLAN.md
+Last session: 2026-08-28T00:52:38.565Z
+Stopped at: Completed 168-01-PLAN.md (Wave 1 of 8) — ledger foundation built, 0/299 cases dispositioned
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
