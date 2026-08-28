@@ -1,8 +1,12 @@
-# UAT Coverage Gaps (Phase 168)
+# UAT Coverage Gaps (Phases 168 + 169)
 
 Generated from `docs/uat-disposition-ledger.jsonl`. One row per case dispositioned `GAP`.
 
-**Totals (series 1-100, this phase's 299-row scope):** PASS 142, FAIL 31, DEFERRED 36, SKIP 36, GAP 54. Total 299.
+**Totals (series 1-100, Phase 168's 299-row scope):** PASS 142, FAIL 31, DEFERRED 36, SKIP 36, GAP 54. Total 299.
+
+**Totals (series 101-163, Phase 169's 78-row scope):** PASS 60, FAIL 1, DEFERRED 6, SKIP 8, GAP 3. Total 78.
+
+**Combined totals (series 1-163, full 377-row ledger):** PASS 202, FAIL 32, DEFERRED 42, SKIP 44, GAP 57. Total 377.
 
 Note: `SKIP` here is the document's on-disk checkbox state for both `DEFERRED` and `GAP`
 ledger outcomes (the canonical result grammar has no dedicated DEFERRED/GAP checkbox;
@@ -10,6 +14,8 @@ ledger outcomes (the canonical result grammar has no dedicated DEFERRED/GAP chec
 full evidence/need string in parens) — the ledger's `outcome` field is the authoritative
 distinction between a verified substitute (`DEFERRED`) and an honest absence of coverage
 (`GAP`).
+
+## Series 1-100 GAP Rows (Phase 168 — unchanged)
 
 | Case ID | Series | Bucket | Behavior the case asserts | Coverage that would be needed |
 |---|---|---|---|---|
@@ -68,7 +74,17 @@ distinction between a verified substitute (`DEFERRED`) and an honest absence of 
 | UAT-92-01 | 92 | F | Local annotated v5.0.0 tag created at final close-out HEAD (REL-01) | case is a one-time historical release gate for the v5.0.0 tag creation event from Phase 92, already completed per its own Notes field -- tag created locally after operator approval; running its Automated gate today against the current v5.15.0 state naturally fails 2 of 5 checks -- pyproject version now 5.15.0, and the v5.0.0 tag has since been pushed to origin by a later release -- this is expected temporal drift from 15+ subsequent releases, not a live coverage gap, but no substitute test can re-verify a historical one-time event |
 | UAT-96-08 | 96 | C | `fuzz-target` chaos profile appears in `./lab.sh profiles` (LAB-01) | no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01 |
 
-**54 GAP rows total** (out of 299 in this phase's ledger).
+**54 GAP rows total** (out of 299 in Phase 168's ledger scope).
+
+## Series 101-163 GAP Rows (Phase 169)
+
+| Case ID | Series | Bucket | Behavior the case asserts | Coverage that would be needed |
+|---|---|---|---|---|
+| UAT-104-04 | 104 | A | Jira SSRF guard — internal URL blocked without `allow_internal` (TICKET-03) | no substitute coverage; the case's own `-k ssrf` filter against `tests/test_ticketing_jira.py` matches 0 of 8 collected tests — none exercise an internal/RFC1918 `jira_url`. `quirk/ticketing/jira.py` wiring confirmed via grep (`validate_external_url` x3, `allow_internal` x1) but that is source inspection, not an executed test; needs a new test constructing a `JiraChannel` with an internal URL and asserting `validate_external_url` raises |
+| UAT-134-01 | 134 | C | CBOM Page — Hardware Inventory `[DEVICE]`/`[FIRMWARE]` labels (Manual) | no substitute coverage; the case's core assertion is the React `HardwareInventory` component's two-badge-per-device render and tier-color logic in `src/dashboard/src/pages/cbom.tsx` — zero vitest coverage exists anywhere under `src/dashboard/src/pages/__tests__/` for this component; only a backend data-shape test exists, proving the API payload but not the frontend render; needs a new `HardwareInventory` vitest test |
+| UAT-152-01 | 152 | C | `segmented-network` chaos lab profile smoke test (DISC-09) | no substitute coverage; the case's assertion is live network-layer behavior — a real iptables-REJECT gateway producing genuine TCP RST on a dead subnet versus a genuine open TLS port on a live segment — existing nmap tests parse pre-canned text output and cannot substitute for a live-fire network assertion; needs a live Docker run of the `segmented-network` chaos-lab profile |
+
+**3 GAP rows total** (out of 78 in Phase 169's ledger scope).
 
 ## Additional Gaps and Guard Limitations Surfaced During the Drain
 
@@ -122,3 +138,49 @@ discoveries from Plans 03-08 that Phase 170's traceability work needs to act on:
    the `[QRK-DASHBOARD-00N]` error-code format rather than the case's literal
    `{"detail": "Authentication required"}` / `"Missing CSRF header: X-Quirk-Request"`
    strings — a documentation drift, not a coverage or security gap.
+10. **`UAT-104-04`'s SSRF guard is wired but never exercised** (169-03) — Security-relevant.
+    `quirk/ticketing/jira.py`'s `validate_external_url`/`allow_internal` wiring is confirmed
+    present by source inspection, but the case's own `-k ssrf` filter matches zero of the 8
+    tests in `tests/test_ticketing_jira.py`. No test anywhere in `tests/` constructs a
+    `JiraChannel` with an internal/RFC1918 URL to prove the guard actually raises. Flagged
+    for Phase 170.
+11. **`UAT-110-06`'s own worked example is impossible** (169-04) — recorded FAIL, not GAP,
+    because the underlying feature was independently confirmed working. The case's literal
+    `--stale-days 1` reproduction can never trigger the documented `coverage_warning` line:
+    `stale_days=1` excludes any sensor silent more than 1 day, while the default
+    2x-expected-cadence overdue threshold is 48h — the two thresholds are mathematically
+    incompatible in the case's own worked example. Re-running the identical `quirk sensor
+    merge` command with the default `stale_days=30` and a sensor silent 3 days correctly
+    printed the WARNING line. This is a defective test case / documentation defect, not a
+    `merge_scan()`/`coverage_warning` implementation defect. A defective-worked-example
+    finding, not a coverage gap.
+12. **Vitest slow leg does not run in CI** (169-02). The new vitest dialect (`VITEST_REF_RE`,
+    `_run_vitest_nodes`, `parse_vitest_summary` in `tests/test_uat_disposition_integrity.py`)
+    verifies substitute execution locally, but the `Linux Full Suite` job
+    (`.github/workflows/python-ci.yml:399`, `pytest -q -m ""`) never installs Node/npm for
+    `src/dashboard/`, so `VITEST_TOOLCHAIN_AVAILABLE` is `False` there and vitest substitutes
+    are existence-checked only in CI, never executed. This is the same existence-vs-execution
+    asymmetry D-05 set out to remove for pytest substitutes, reappearing one layer down at the
+    CI layer for vitest substitutes specifically. A `dashboard-quality.yml` workflow already
+    exists in this repo and may be the right home for a Node-toolchain slow-leg CI job.
+    Flagged for Plans 169-07/169-08.
+13. **`scripts/uat_disposition_apply.py`'s `cmd_classify` data-loss bug** (169-01) — the
+    `classify` subcommand built its output solely from `in_scope_undispositioned()` and then
+    called whole-file `write_ledger()`, so the first `classify` run after raising
+    `MAX_SERIES` wiped the ledger from 299 rows to 78 rows (dropping every already-
+    dispositioned Phase 168 row). Caught pre-commit during Phase 169 planning and fixed with
+    a seed-then-overlay approach. Latent for the entirety of Phase 168 because `classify` had
+    only ever run once before, against an empty ledger. A tooling-integrity finding, not a
+    product/coverage finding, but load-bearing for trusting the ledger's own history.
+14. **377 ledger rows are a strict subset of the document's 647 series-1-163 headings**
+    (169-05 independent recount). An independent from-scratch parser confirmed 666 total case
+    headings / 666 Result blocks in `docs/UAT-SERIES.md`, of which 647 have series ≤163 and
+    zero remain undispositioned. Only 377 of those 647 in-scope cases are tracked by the
+    disposition ledger — the remaining 270 were already dispositioned through each phase's own
+    original UAT-verification pass (e.g. series 101-163 phases that ran their own
+    `/gsd:verify-phase` before Phase 168/169's ledger tooling existed), never through the
+    ledger/apply/verify pipeline. This fully accounts for the gap between 169-CONTEXT.md's
+    233-case estimate for series 101-163 (155 already dispositioned + 78 remaining) and the
+    document's actual 214 series-101-163 headings with series >100 — the CONTEXT figure of
+    233 predates a precise document-based recount and should not be treated as ground truth
+    going forward; the document itself (666 headings, 0 undispositioned) is.
