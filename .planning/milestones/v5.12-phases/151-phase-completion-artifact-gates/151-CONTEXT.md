@@ -87,7 +87,7 @@ content without a matching milestone archive manifest.
 - Phase 145 (`.planning/milestones/v5.11-phases/145-liveness-pre-pass/`) — the missing-VERIFICATION.md precedent for
   ARTIFACT-01.
 - Phase 147 (`.planning/milestones/v5.11-phases/147-backlog-drain-lifecycle-ledger-tail/`) — the stale-VALIDATION.md precedent for ARTIFACT-02.
-- Phase 144 (`.planning/phases/144-*/`) — the missing-UAT-SERIES.md-entry precedent for ARTIFACT-03.
+- Phase 144 (Chunked Discovery Core, v5.11 — phase artifacts lost in the documented v5.12-open incident, see .planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md; shipped-summary in .planning/milestones/v5.11-ROADMAP.md's "Phase 144" section) — the missing-UAT-SERIES.md-entry precedent for ARTIFACT-03.
 
 ### Existing repo conventions to follow
 - `scripts/release_tag_hygiene.py` + `tests/test_release_tag_hygiene.py` +
