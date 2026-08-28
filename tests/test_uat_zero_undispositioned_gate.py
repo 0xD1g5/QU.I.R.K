@@ -280,3 +280,72 @@ def test_gate_evaluates_a_non_trivial_number_of_real_cases(uat_series_lines):
         "make test_zero_undispositioned_cases vacuously pass."
     )
 
+
+# ---------------------------------------------------------------------------
+# Task 2: D-04 CI-wiring regression check
+# ---------------------------------------------------------------------------
+#
+# D-04's claim: the existing "Linux Full Suite" CI job
+# (.github/workflows/python-ci.yml) already execution-checks every ordinary
+# test -- including this gate -- via `pytest -q -m ""`. pyproject.toml's
+# `addopts = "-m 'not slow'"` would normally deselect @slow-marked tests, but
+# pytest uses the LAST -m value supplied when both addopts and the command
+# line provide one, so the job's explicit `-m ""` (an empty marker
+# expression, selecting ALL tests regardless of marker) overrides addopts
+# and runs the full suite, not just the non-slow subset. This test carries
+# no @pytest.mark.slow of its own, so it runs under both the CI job's
+# `-m ""` invocation and a plain local `pytest -q` (which respects addopts'
+# `-m 'not slow'` but still selects this unmarked test either way).
+#
+# Per D-04, this is explicitly NOT a nightly job and NOT a duplicate `-m
+# slow` CI step -- it does not re-run or re-implement execution-checking.
+# It is a cheap regression guard: if a future edit to either
+# python-ci.yml or pyproject.toml silently narrows the CI marker expression
+# (e.g. someone "cleans up" `-m ""` to `-m 'not slow'`, or the job gains a
+# `continue-on-error: true`), this test fails immediately and names exactly
+# which file drifted, rather than letting the claim go silently stale until
+# a fabricated deferral ships unnoticed in production.
+
+
+def test_full_suite_ci_job_still_selects_all_markers():
+    """Regression guard for D-04: the Linux Full Suite CI job must still run
+    `pytest` with an all-marker selection (`-m ""` or equivalent) and no
+    `continue-on-error`, and pyproject.toml's addopts must still narrow to
+    `-m 'not slow'` by default -- the exact combination that makes the CI
+    job's explicit `-m ""` an override, not a no-op."""
+    assert CI_WORKFLOW_PATH.is_file(), f"CI workflow not found at {CI_WORKFLOW_PATH}"
+    workflow_text = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    job_match = re.search(
+        r"linux-full-suite:\n(?P<body>(?:^(?:[ \t].*)?\n?)+)",
+        workflow_text,
+        re.MULTILINE,
+    )
+    assert job_match, (
+        "Could not locate the 'linux-full-suite:' job block in "
+        f"{CI_WORKFLOW_PATH} -- the job may have been renamed. Update this "
+        "test's job-name anchor if the rename was intentional (D-04)."
+    )
+    job_body = job_match.group("body")
+
+    assert re.search(r"pytest\s+-q\s+-m\s+[\"']{2}", job_body), (
+        "The 'linux-full-suite' job no longer runs `pytest -q -m \"\"` "
+        "(all-marker selection). D-04's claim that this CI job already "
+        "execution-checks slow-marked substitutes depends on this exact "
+        "invocation -- if this changed intentionally, re-verify the D-04 "
+        "claim and update this test accordingly."
+    )
+    assert "continue-on-error: true" not in job_body, (
+        "The 'linux-full-suite' job now has continue-on-error: true, which "
+        "would let a failing gate (including this one) pass silently. This "
+        "violates SUITE-03 and D-04's premise that the job gates the build."
+    )
+
+    assert PYPROJECT_PATH.is_file(), f"pyproject.toml not found at {PYPROJECT_PATH}"
+    pyproject_text = PYPROJECT_PATH.read_text(encoding="utf-8")
+    assert re.search(r"addopts\s*=\s*[\"']-m 'not slow'[\"']", pyproject_text), (
+        "pyproject.toml's addopts no longer contains \"-m 'not slow'\". D-04's "
+        "override claim (CLI -m \"\" beats addopts' -m 'not slow') depends on "
+        "addopts narrowing by default -- if addopts changed, re-verify pytest's "
+        "documented -m override precedence still applies and update this test."
+    )
