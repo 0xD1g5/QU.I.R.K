@@ -190,7 +190,7 @@ The 2026-08-24 third-party functional review is the one large body of live, exte
 evidence available, and it is not yet drained — which makes v5.16 an easy call. What follows it is
 a genuine open question, sketched below rather than committed.
 
-## v5.16 — Review Drain & Gate Integrity *(OPEN — Phases 164+)*
+## v5.16 — Review Drain & Gate Integrity — SHIPPED 2026-08-28 *(Phases 164–171)*
 
 **Anchor / North Star:** **QUIRK's own gating documents deserve the standard QUIRK applies to
 customer estates.** The tool's stated bar is "every detected weakness is real, every missed weakness
@@ -214,6 +214,45 @@ reviewer wrote remediation text in requirement phrasing, so promotion cost is ne
 **Risk:** same as v5.12's — an integrity milestone has no user-visible feature and is easy to defer
 again. Mitigation is the same too: lead with RVW-021, which is a concrete first-run bug, and treat
 RVW-008's drain as the tail rather than the opening act.
+
+### Outcome (2026-08-28)
+
+All 8 phases, all 24 requirements complete. The anchor held: the UAT corpus went from 325
+unrecorded cases to **zero undispositioned across all 666**, guarded by a standing
+`tests/test_uat_zero_undispositioned_gate.py` that was proven load-bearing by mutating a scratch
+corpus and confirming it names the offending case.
+
+**The real deliverable is the honest record, not the green gates:** 31 recorded product FAILs and
+57 honest coverage GAPs, each naming what would be needed. A corpus reading 100% PASS would have
+been worth nothing.
+
+One CRITICAL security finding surfaced mid-milestone and was fixed: **CR-01**, an evidence-newline
+injection in `scripts/uat_disposition_apply.py` that could splice a fabricated, fully-`[x] PASS`
+UAT case into the document past all three guards at once (the zero-undispositioned gate saw a
+PASS, heading/result parity was preserved, and the fabricated ID was novel). Root cause was a
+`[^)]*` annotation group matching newlines. Fixed in two layers with 8 regression tests that fail
+against the pre-fix code.
+
+**Recurring lesson worth carrying:** the 2026-08-24 review's *symptoms* were reliable but its
+*counts* failed re-measurement every single time — 5→3 duplicate IDs, 4→2 genuinely-missing tests,
+16→230 stale references. Separately, **enumeration loses entries and derivation does not**: three
+successive hand-written slug lists each silently omitted work, and a filesystem-derived index
+closed it in one pass.
+
+### Carried forward from v5.16 — deferred, not dropped
+
+Recorded here rather than in `ROADMAP.md`'s Backlog because archived roadmaps swallow backlog
+items — `BACK-A11Y-01` was invisible for three months that way (see the note at `ROADMAP.md:120`).
+
+| Item | Origin | Notes |
+|---|---|---|
+| Unanchored vitest `-t` substring matching | Phase 169 code review (WARNING) | Risks cross-test bleed when substitutes run batched. Latent, not exploited. |
+| `cmd_classify` never prunes orphaned ledger rows | Phase 169 code review (WARNING) | Latent; the data-loss half of this function was already fixed in 169-01. |
+| Vitest `-m slow` leg doesn't execute in CI | Phase 169 (169-02) | `Linux Full Suite` never installs Node, so vitest substitutes are existence-checked only there. `dashboard-quality.yml` may be the right home. |
+| Stale local editable install | Phase 170/171 suite runs | `__editable__.quirk-4.0.0.pth` claims v4.0.0 (project is at 5.15.0), breaking pip's build-backend and causing 3 environmental `test_extras_install_matrix` failures. Local-only; CI installs fresh. Fix is `pip install -e . --no-deps` — a toolchain change, user's call. |
+| Persist the literal scan target at start | Phase 171 (D-02 alternative) | Would record user intent rather than reconstructing it. Not a bug fix — derivation already repairs existing runs. |
+| Close the 57 UAT coverage GAPs | Phases 168/169 | Writing the missing tests. Its own milestone-sized effort; `docs/uat-coverage-gaps.md` is the worklist. |
+| Action the 31 product FAILs | Phases 168/169 | Enumerated with command/expected/observed evidence in the 168-03/04/05 and 169-04 SUMMARYs. |
 
 ## Beyond v5.16 — three candidates, none committed *(sketch)*
 
