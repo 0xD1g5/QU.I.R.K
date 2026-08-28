@@ -2499,7 +2499,7 @@ on macOS (or run on Linux without restrictions).
 - All email rows match the regex `^(SMTP-STARTTLS|SMTPS|IMAP-STARTTLS|IMAPS|POP3-STARTTLS|POP3S):\d+$`.
 - No row has empty `service_detail` or a malformed label.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_email_scanner.py::test_service_detail_labels_match_spec)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -2909,7 +2909,7 @@ Each finding object contains:
 - No JavaScript console errors (check DevTools)
 - No blank white screen
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a headless-browser render check that the SPA mounts without a blank screen or console errors)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2947,7 +2947,7 @@ Each finding object contains:
 - Score color-coded (green = good, red = poor)
 - Confidence badge present with value
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend component test asserting the score gauge renders a 0-100 value with EXCELLENT/GOOD/MODERATE/FAIR/POOR label and confidence badge)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2965,7 +2965,7 @@ Each finding object contains:
 - Severity counts match findings in `output/findings-*.json`
 - Chart is interactive (hover shows count)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend chart test asserting severity counts render and match findings JSON)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2984,7 +2984,7 @@ Each finding object contains:
 - Each card has a brief description
 - Cards total ≤ 100
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend test asserting the 4 driver cards render with subscore values totaling <= 100)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3004,7 +3004,7 @@ Each finding object contains:
 - Row count matches `output/findings-*.json` count
 - Severity badges color-coded correctly
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting findings rows render with the documented columns and row count parity)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3024,7 +3024,7 @@ Each finding object contains:
 - Second click: sorted descending (CRITICAL → INFO)
 - Sort indicator (arrow) visible on column header
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting column-header click toggles ascending/descending severity sort)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3044,7 +3044,7 @@ Each finding object contains:
 - Row count decreases when filter applied
 - Clearing filter restores all rows
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting the severity filter input narrows visible rows)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3065,7 +3065,7 @@ Each finding object contains:
 - Quantum risk assessment visible
 - Panel closes when clicking outside or X button
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting row click opens a detail slide-out panel with full finding fields)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3084,7 +3084,7 @@ Each finding object contains:
 - Expired certificates shown with visual indicator (red date)
 - Self-signed certs flagged
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting the certificate inventory renders with expiry/self-signed indicators)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3104,7 +3104,7 @@ Each finding object contains:
 - Badge colors differentiate safety levels
 - Badge tooltip or description available
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_rsa_2048_produces_medium and tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_ecdsa_256_produces_medium)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3123,7 +3123,7 @@ Each finding object contains:
 - Near-expiry certs show days remaining
 - Date format is human-readable
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting expiry-column sort ordering on the certificates table)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3143,7 +3143,7 @@ Each finding object contains:
 - Primitive type visible (e.g., KEY_AGREEMENT, ASYMMETRIC, SYMMETRIC)
 - NIST PQC level displayed where available
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_cbom_writer.py::test_json_algorithm_has_nist_level and tests/test_cbom_classifier.py::test_quantum_safety_enum)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3165,7 +3165,7 @@ Each finding object contains:
 - Clicking a node shows details panel or tooltip
 - At least 3 connected nodes visible
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend Cytoscape graph render/interaction test for the CBOM page)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3185,7 +3185,7 @@ Each finding object contains:
 - Clicking a node shows detail panel with `Why:` text and owner placeholder
 - Dependencies shown as directed edges
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend DAG render test asserting NOW/NEXT/LATER color coding on the roadmap page)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3205,7 +3205,7 @@ Each finding object contains:
 - Owner placeholder shown
 - Dependency list shown (if any)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting node click opens the roadmap detail panel with Why/owner/deps)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3228,7 +3228,7 @@ Each finding object contains:
 - PDF is A4 format
 - No error toast or error message
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a headless-browser test that clicks Export PDF and asserts a valid downloaded PDF)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3285,7 +3285,7 @@ Each finding object contains:
 - Same content as navigating via sidebar
 - URL stays at `/findings`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend SPA routing test asserting a direct navigation to /findings renders without a full reload)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3306,7 +3306,7 @@ Each finding object contains:
 - Electric-blue (`#00D8FF` or design system equivalent) used for accents
 - Dark background palette consistent across all pages
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend style-audit test asserting no hardcoded hex colors on major components)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3333,7 +3333,7 @@ Each finding object contains:
 - Theme persists after full page reload
 - Both themes are visually coherent (no invisible text, unreadable badges, or broken contrast)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting theme toggle persists via localStorage across reload)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3361,7 +3361,7 @@ Each finding object contains:
 - Tooltips appear on hover in collapsed state
 - Transition is smooth (no layout jumps or flicker)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend responsive-layout test asserting sidebar collapse at the 1024px breakpoint)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3389,7 +3389,7 @@ Each finding object contains:
 - Row count indicator shows "Showing X–Y of Z findings"
 - Applying a filter respects pagination (re-paginates filtered results)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend pagination test asserting 25-row pages and working next/prev controls)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3413,7 +3413,7 @@ Each finding object contains:
 - Clearing search restores full table
 - No results shows empty state (not a crash)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting the CBOM algorithm search box filters rows case-insensitively)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3437,7 +3437,7 @@ Each finding object contains:
 - Clearing filter restores all rows
 - Filter and search combine correctly (both applied simultaneously)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting the quantum-safety dropdown filters the CBOM table)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3461,7 +3461,7 @@ Each finding object contains:
 - Panel updates when clicking different nodes
 - Node colors match quantum-safety: green (Safe), amber (At Risk), red (Vulnerable)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend Cytoscape node-click test asserting the detail panel updates per node type)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3486,7 +3486,7 @@ Each finding object contains:
 - Click-drag on background pans the view
 - No nodes disappear off-screen permanently
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting zoom in/out/fit and scroll-wheel controls on the CBOM graph)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3510,7 +3510,7 @@ Each finding object contains:
 - Other nodes not affected by the drag
 - Layout does not reset on node release
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend drag-interaction test asserting roadmap node drag keeps edges connected)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3532,7 +3532,7 @@ Each finding object contains:
 - Content includes: score summary, findings, certificates, CBOM reference
 - Background colors and borders render (print background styling enabled)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend render test asserting the /print route renders a single-column layout with page breaks)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3554,7 +3554,7 @@ Each finding object contains:
 - Favicon shows electric-blue "Q" (not browser default icon)
 - No JS console errors on page load
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend render test asserting tab title, wordmark, and favicon branding)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3583,7 +3583,7 @@ Each finding object contains:
 - API requests all return 200 (check Network tab)
 - `/identity` page loads without errors even when no identity scan data is present
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a full-navigation headless-browser test asserting zero console errors across every dashboard route)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3633,7 +3633,7 @@ Each finding object contains:
 - No JavaScript errors in console
 - Cards do not crash when `identity_findings` array is empty or absent from API response
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend empty-state test asserting the 3 identity protocol cards render Not Scanned without crashing on an empty identity_findings array)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3689,7 +3689,7 @@ Each finding object contains:
 - Identity findings also appear in the main `findings` array (deduplication optional)
 - No `500` error on the endpoint when identity data is absent
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::IdentityFindingModelTests*test_scan_latest_response_has_identity_findings)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3721,7 +3721,7 @@ Each finding object contains:
 - Filter combines with Severity filter (both applied simultaneously)
 - Selecting "All Protocols" restores full findings list
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend interaction test asserting the Findings-page protocol dropdown narrows rows and combines with the severity filter)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3804,7 +3804,7 @@ Each finding object contains:
 - Sidebar shows "Hardware" entry after "Data in Motion", before CBOM
 - Score gauge on Executive page is unchanged (HWCOMPAT-SCORE-LOCK)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend render test asserting the /hardware advisory banner text and sidebar entry)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3830,7 +3830,7 @@ Each finding object contains:
 - Host:Port column uses monospace font
 - HPE-iLO5 device (port 20222) appears as vendor=HPE, model=iLO5, confidence=high
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting hardware device columns, tier badge colors, and tier-then-vendor sort order)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4237,7 +4237,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Hygiene subscore < 25 when ≥ 1 plaintext HTTP endpoint exists
 - Subscore decreases proportionally to number of HTTP endpoints
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a scoring unit test isolating the hygiene subscore specifically, not the overall score, below 25 when plaintext HTTP endpoints exist, proportional to count)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4256,7 +4256,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Identity Trust subscore is higher when mTLS endpoint is scanned
 - mTLS bonus noted in scorecard or intelligence JSON
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a scoring unit test isolating the identity_trust subscore increase attributable to mtls_present_count alone, holding all other evidence fixed)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4759,7 +4759,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - No horizontal scroll overflow
 - Print to PDF from browser produces clean output
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a visual/browser render check of the HTML report dark theme, layout, and mobile responsiveness)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5568,7 +5568,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - "Data in Motion" label present on the last gauge.
 - Score is a valid integer (not NaN, not empty).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend render test asserting exactly 6 ScoreGauge elements with Data in Motion last and an integer value)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5706,7 +5706,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - Kubernetes Secrets section shows EmptyStateCard naming the K8s scanner config.
 - Vault section shows EmptyStateCard naming the Vault scanner config.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend render test asserting the 4 DAR section EmptyStateCards show their scanner-specific locked copy)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5728,7 +5728,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - First row severity ≥ severity of last row.
 - Boolean fields render as ✓/✗ badges per UI-SPEC.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting the DatabaseTable's exact 9-column locked set and severity sort)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5750,7 +5750,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - Rows severity-sorted.
 - Any null/missing field is rendered as `—` (not `null`, `undefined`, or blank).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting the ObjectStorageTable's exact 10-column locked set and em-dash null rendering)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5771,7 +5771,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - Exactly the 8 columns above, in order.
 - Rows severity-sorted.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting the KubernetesTable's exact 8-column locked set and severity sort)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -5793,7 +5793,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - Rows severity-sorted.
 - Seal Type and Auto-Unseal columns render as `—` for every row.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend table test asserting the VaultTable's exact 8-column locked set with Seal Type/Auto-Unseal em-dashes)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -6986,7 +6986,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `jq 'all(.[]; .description != null and (.description | length > 0))'` outputs `true` against the latest findings file.
 - Spot-checking three finding entries shows a 1-3 sentence plain-English explanation of the cryptographic risk in `description`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext*test_every_finding_has_non_empty_description)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7013,7 +7013,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `grep -c '<th>Description</th>' <report.html>` returns `2` or more.
 - Description cells are populated (not blank) for every row visible in the table.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; the only candidate, tests/test_reports_writer.py::test_html_report_has_description_column, is unconditionally skipped per TRIAGE-149 Playwright flakiness, and a skip is not proof of coverage; needs that flake fixed or a non-Playwright equivalent)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7041,7 +7041,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `grep -c 'Per NIST IR 8547' findings-*.json` returns at least `1` when quantum-vulnerable findings are present.
 - For each quantum-vulnerable entry, both substrings appear in its `recommendation` field.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext*test_quantum_vulnerable_findings_cite_fips and tests/test_risk_engine.py::TestBuildFinding*test_quantum_vulnerable_appends_deprecation_phrase)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7306,7 +7306,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Steps 3–5: each grep finds a hit.
 - Step 6: no matches (grep exits 1).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_phase50_docs_presence.py::test_required_sections_present)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7362,7 +7362,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Steps 3–4: frontmatter shows the 5 standard fields with `type: reference` and the correct `source:` repo path.
 - Steps 5–6: hub MOC contains a wikilink to each Reference note.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a filesystem check of the Obsidian vault Reference notes and _QUIRK-Hub.md wikilinks, which lives outside the repo and is not reachable from pytest)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
