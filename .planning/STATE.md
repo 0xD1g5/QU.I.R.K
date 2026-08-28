@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
-stopped_at: Completed 170-07-PLAN.md
-last_updated: "2026-08-28T19:18:20.440Z"
+status: verifying
+stopped_at: Completed 171-01-PLAN.md (RESUME-05 stage-level resume short-circuit closed; 1/3 plans in Phase 171 done)
+last_updated: "2026-08-28T20:40:07.918Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 44
-  completed_plans: 44
+  total_plans: 47
+  completed_plans: 45
   percent: 88
 ---
 
@@ -103,7 +103,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Phase complete — ready for verification
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -202,11 +202,10 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 170 (traceability-documentation-runbook) — 6 plans executed (170-01, 170-02, 170-03, 170-04, 170-05, 170-06)
-Plan: 7 of 7 (complete)
-Status: Ready to execute
-across 25 archived planning files); only 170-07 (full-suite verification, docs/Obsidian sync, human
-checkpoint) remains
+Phase: 171 (resume-ux-tail) — 171-01 executed (RESUME-05 closed: stage-level resume-already-complete
+short-circuit; reproduced pre-fix, TDD RED/GREEN, batch-row behavior verified untouched)
+Plan: 1 of 3
+Status: In progress — 171-02 (RESUME-06, --list-resumable Target column derivation) and 171-03 next
 Last activity: 2026-08-28
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -220,7 +219,7 @@ Last activity: 2026-08-28
 | 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Plans executed (2026-08-27; 9/9 plans done — 299/299 series-1-100 cases dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3631 passing); human checkpoint 168-09 Task 3 awaiting review; `/gsd:verify-phase 168` not yet run |
 | 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned; full 666-case document + 377-row ledger 100% dispositioned (202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP); `tests/test_uat_zero_undispositioned_gate.py` standing gate live, documented in all four D-07 locations; vitest dialect found zero genuine conversions among Phase 168's 31 series-7 GAPs; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); UATREC-03/UATREC-04 both marked complete; 169-08 Task 3 human checkpoint APPROVED by user 2026-08-28; `/gsd:verify-phase 169` not yet run |
 | 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Plans executed (2026-08-28; 6/7 plans done — 170-01 gave CHANGELOG.md six entries for v5.9.0-v5.14.0 closing the gap between the existing 5.15.0 and 5.8.0 entries, v5.13.0/v5.14.0 correctly framed as developed-but-never-released; 170-02 fixed the dead v4.7 link, relocated the misfiled milestone audit, added Status headers to four archive ROADMAP.md files (v4.3 re-verified, not duplicated), and documented the canonical requirement-declaration format; 170-03 added real tests for DEBT-02 and QRAMM-08; 170-04 annotated GAP-01/GAP-02/QRAMM-09/AUTH-05/DEBT-04/QRAMM-11/TAIL-04/GAUGE-01-03 onto their existing already-passing tests; 170-05 added CMVP/error-codes/SNMP-contract catalogs to CLAUDE.md's staleness runbook (RUNBOOK-01); 170-06 rewrote 22 stale sibling-phase references to real archived paths and de-linkified 14 references to genuinely-absent Phase 133/134/144 artifacts (TRACE-05); TRACE-01 through TRACE-07 and RUNBOOK-01 all complete; only 170-07 (full-suite verification, docs/Obsidian sync, human checkpoint) remains) |
-| 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Not started |
+| 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Plans executed (2026-08-28; 1/3 plans done — 171-01 closed RESUME-05: `_resume_already_complete_message()` short-circuits `--resume-scan-id` on a scan whose `reports` checkpoint is already completed, printing the D-01 message and exiting 0 with zero new checkpoint rows; reproduced against a seeded sqlite DB before fixing (row count 3->8 pre-fix mid-scan, 3->3 post-fix); batch-row behavior (Phase 163 DISC-08) verified untouched) |
 
 ## v5.15 Phase Map (SHIPPED 2026-08-26)
 
@@ -427,6 +426,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 170 P02 | 12min | 2 tasks | 8 files |
 | Phase 170 P04 | 15min | 2 tasks | 10 files |
 | Phase 170 P06 | 25min | 2 tasks | 25 files |
+| Phase 171 P01 | 25min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -681,6 +681,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 169-05]: Independent recount found 647 in-scope (series <=163) headings, not the plan's anticipated 596; corrected rather than forced to match -- 666/666 total headings/Result-blocks and 0 undispositioned confirmed
 - [Phase 169-06]: D-05 second half spent: all 31 series-7 GAP rows individually re-examined against real vitest coverage; zero genuine conversions found (verify-then-record standard applied throughout), all stay honest GAP with per-case reasoning recorded
 - [Phase 169-07]: Zero-undispositioned UAT gate built as pytest test riding Linux Full Suite CI (D-01), whole-document scoped (D-02), GAP is passing (D-03), D-04 CI-marker override claim independently re-verified and regression-locked
+- [Phase 171]: RESUME-05 (D-01, locked): resume of an already-complete scan exits 0 with a message naming the scan and finish time, writes zero new checkpoint rows, no --force flag
 
 ### Pending Todos
 
@@ -811,8 +812,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T19:18:20.435Z
-Stopped at: Completed 170-07-PLAN.md (Phase 170 fully executed, 7/7 plans; human checkpoint approved 2026-08-28; ROADMAP phase-level checkbox left unchecked pending /gsd:verify-phase)
+Last session: 2026-08-28T20:40:07.914Z
+Stopped at: Completed 171-01-PLAN.md (RESUME-05 stage-level resume short-circuit closed; 1/3 plans in Phase 171 done)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
