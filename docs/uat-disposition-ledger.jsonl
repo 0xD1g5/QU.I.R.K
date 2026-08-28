@@ -6,10 +6,10 @@
 {"id": "UAT-10-05", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-10-06", "series": "10", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-10-07", "series": "10", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS: 4 distinct scan timestamps", "recorded": "2026-08-27"}
-{"id": "UAT-10-08", "series": "10", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-10-08", "series": "10", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: mv db then quirk serve --no-open then headless nav to / - page loads 200 with empty-state text but 1 console error logged: Failed to load resource 404", "recorded": "2026-08-27"}
 {"id": "UAT-10-09", "series": "10", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS: ssh-audit not installed no crash observed. code=0", "recorded": "2026-08-27"}
 {"id": "UAT-10-10", "series": "10", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
-{"id": "UAT-10-11", "series": "10", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-10-11", "series": "10", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: quirk --config kerberos-config.yaml with impacket absent - exit 0 no crash but stderr shows generic QRK-INSTALL-001 code not the literal identity-extras pip install quirk[identity] text", "recorded": "2026-08-27"}
 {"id": "UAT-100-01", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_html_report.py -k 'cover_page or logo' exit 0, 6 passed -- automated leg only, browser visual leg not exercised", "recorded": "2026-08-27"}
 {"id": "UAT-100-02", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_html_report.py -k 'print or table' exit 0, 3 passed -- automated leg only, PDF print-preview visual leg not exercised", "recorded": "2026-08-27"}
 {"id": "UAT-100-03", "series": "100", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_docx_report.py exit 0, 9 passed -- automated leg only, Word/Google-Docs manual leg not exercised", "recorded": "2026-08-27"}
@@ -29,13 +29,13 @@
 {"id": "UAT-30-03", "series": "30", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-32-01", "series": "32", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_email_scanner.py exit 0, 19 passed", "recorded": "2026-08-27"}
 {"id": "UAT-32-02", "series": "32", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_email_findings.py exit 0, 9 passed", "recorded": "2026-08-27"}
-{"id": "UAT-32-03", "series": "32", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-32-03", "series": "32", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk --config email_uat.yaml --profile standard --verbose against unreachable port 443 - exit 0, CLOSED REFUSED recorded, no crash; other-6-email-ports leg not exercised, no live email infra in this environment", "recorded": "2026-08-27"}
 {"id": "UAT-32-04", "series": "32", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_email_scanner.py -k fallback exit 0, 3 passed", "recorded": "2026-08-27"}
 {"id": "UAT-32-05", "series": "32", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-32-06", "series": "32", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-32-07", "series": "32", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-33-01", "series": "33", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-33-02", "series": "33", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-33-01", "series": "33", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: quirk --config config.yaml default then sqlite3 query - COUNT is 0 as expected but run-stats timings_sec still contains a broker_scanning key with nonzero value contradicting no broker-scanning phase in run_stats", "recorded": "2026-08-27"}
+{"id": "UAT-33-02", "series": "33", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk --profile standard --config config.yaml - stdout shows exact line Broker scan: kafka=0 rabbit=0 redis=0 as expected", "recorded": "2026-08-27"}
 {"id": "UAT-33-03", "series": "33", "bucket": "A", "runner_covered": false, "outcome": "DEFERRED", "evidence": "DEFERRED \u2014 covered by tests/test_broker_scanner_kafka.py::test_detect_kafka_plaintext_true_on_connect, verified pass 2026-08-27", "recorded": "2026-08-27"}
 {"id": "UAT-33-04", "series": "33", "bucket": "A", "runner_covered": false, "outcome": "DEFERRED", "evidence": "DEFERRED \u2014 covered by tests/test_broker_run_integration.py::test_weak_cipher_tls_rsa_with, verified pass 2026-08-27", "recorded": "2026-08-27"}
 {"id": "UAT-33-05", "series": "33", "bucket": "A", "runner_covered": false, "outcome": "DEFERRED", "evidence": "DEFERRED \u2014 covered by tests/test_broker_scanner_rabbitmq.py::test_detect_amqp_plaintext_true_on_binary_response, verified pass 2026-08-27", "recorded": "2026-08-27"}
@@ -48,22 +48,22 @@
 {"id": "UAT-35-01", "series": "35", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cbom_motion_golden.py::test_email_cbom_matches_snapshot exit 0", "recorded": "2026-08-27"}
 {"id": "UAT-35-02", "series": "35", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cbom_motion_golden.py::test_broker_cbom_matches_snapshot tests/test_cbom_motion_golden.py::test_amqps_azure_servicebus_protocol_component_present exit 0", "recorded": "2026-08-27"}
 {"id": "UAT-35-03", "series": "35", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cbom_motion_golden.py::test_no_certificate_components_for_plaintext_brokers tests/test_cbom_motion_golden.py::test_no_tls_protocol_components_for_plaintext_brokers exit 0", "recorded": "2026-08-27"}
-{"id": "UAT-36-01", "series": "36", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-36-01", "series": "36", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk serve then headless nav to /motion - Data in Motion heading and both Email Protocols and Message Brokers sections present, zero console errors", "recorded": "2026-08-27"}
 {"id": "UAT-36-02", "series": "36", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-36-03", "series": "36", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-36-04", "series": "36", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-36-05", "series": "36", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-36-05", "series": "36", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: quirk --config https-only-config against port 8443 only, connectors.enable_email left at default False - Motion page Email Protocols section still shows real SMTP/IMAP/POP3 findings not the empty-state copy, because email port probing runs unconditionally regardless of enable_email", "recorded": "2026-08-27"}
 {"id": "UAT-38-02", "series": "38", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-39-01", "series": "39", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-39-01", "series": "39", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: headless nav to /data-at-rest - URL correct, h1 Data at Rest visible, zero console errors", "recorded": "2026-08-27"}
 {"id": "UAT-39-02", "series": "39", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-39-03", "series": "39", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-39-04", "series": "39", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-39-05", "series": "39", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-39-06", "series": "39", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-39-07", "series": "39", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-39-08", "series": "39", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-39-07", "series": "39", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: headless nav, read sidebar order - actual order inserts a Hardware item between Motion and Data at Rest, contradicting the documented exact D-11 lock order", "recorded": "2026-08-27"}
+{"id": "UAT-39-08", "series": "39", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: headless reload plus nav-away-and-back cycle on /data-at-rest - zero console errors throughout", "recorded": "2026-08-27"}
 {"id": "UAT-4-01", "series": "4", "bucket": "C", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Down: [443, 8443, 9443, 10443, 11443, 8444, 8000, 2222, 5555]", "recorded": "2026-08-27"}
-{"id": "UAT-41-01", "series": "41", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-41-01", "series": "41", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: quirk --config uat-41-01.yaml enable_broker true with kafka-python/pika/redis absent - exit 0 but no stderr advisory line and no scan_error_category=missing_extra finding produced for broker/motion", "recorded": "2026-08-27"}
 {"id": "UAT-41-03", "series": "41", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-42-01", "series": "42", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cbom_schema_validation.py exit 0, 27 passed 1 xfailed", "recorded": "2026-08-27"}
 {"id": "UAT-43-01", "series": "43", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -73,7 +73,7 @@
 {"id": "UAT-43-05", "series": "43", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-43-06", "series": "43", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-43-07", "series": "43", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-43-08", "series": "43", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-43-08", "series": "43", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: quirk serve then curl -X POST /api/export/pdf with X-Quirk-Request header - returns valid 7-page populated PDF with score gauges, findings table, cert inventory, CBOM, roadmap - not blank", "recorded": "2026-08-27"}
 {"id": "UAT-44-01", "series": "44", "bucket": "A", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 tests/test_uat_db_integration.py -m slow SKIP: Set QUIRK_DB_INTEGRATION=1 -- chaos lab not up, D-01", "recorded": "2026-08-27"}
 {"id": "UAT-44-03", "series": "44", "bucket": "A", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 tests/test_vault_connector.py::test_vault_live_uat_30_01_five_findings -m slow SKIP: Set QUIRK_VAULT_INTEGRATION=1 -- chaos lab not up, D-01", "recorded": "2026-08-27"}
 {"id": "UAT-47-01", "series": "47", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -81,7 +81,7 @@
 {"id": "UAT-47-03", "series": "47", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-47-04", "series": "47", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-47-05", "series": "47", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-47-06", "series": "47", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-47-06", "series": "47", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires a real interactive TTY for the y/N confirm prompt and a large-range nmap discovery scan, neither available/safe in this non-interactive sandbox", "recorded": "2026-08-27"}
 {"id": "UAT-47-07", "series": "47", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_cbom_writer_validation.py exit 0, 5 passed", "recorded": "2026-08-27"}
 {"id": "UAT-47-08", "series": "47", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-48-01", "series": "48", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -104,7 +104,7 @@
 {"id": "UAT-5-09", "series": "5", "bucket": "E", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20004 not reachable", "recorded": "2026-08-27"}
 {"id": "UAT-5-10", "series": "5", "bucket": "D", "runner_covered": true, "outcome": "SKIP", "evidence": "2026-08-27 uat_runner.py SKIP: JWT ports not reachable", "recorded": "2026-08-27"}
 {"id": "UAT-5-11", "series": "5", "bucket": "C", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 20022 not reachable", "recorded": "2026-08-27"}
-{"id": "UAT-5-12", "series": "5", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-5-12", "series": "5", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires chaos lab weak-SSH target on port 20022, not available in this environment", "recorded": "2026-08-27"}
 {"id": "UAT-5-13", "series": "5", "bucket": "C", "runner_covered": true, "outcome": "FAIL", "evidence": "2026-08-27 uat_runner.py FAIL: Port 15449 not reachable", "recorded": "2026-08-27"}
 {"id": "UAT-5-15", "series": "5", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-5-16", "series": "5", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -157,7 +157,7 @@
 {"id": "UAT-6-11", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-6-12", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-6-13", "series": "6", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
-{"id": "UAT-6-14", "series": "6", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-6-14", "series": "6", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires chaos lab-core legacy-TLS target on port 8443 + sslyze deep profile, not available in this environment", "recorded": "2026-08-27"}
 {"id": "UAT-6-15", "series": "6", "bucket": "C", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-62-03", "series": "62", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-63-02", "series": "63", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_scheduler_cmd.py exit 0, 12 passed -- automated proxy; live 60-90s integration leg not run", "recorded": "2026-08-27"}
@@ -201,9 +201,9 @@
 {"id": "UAT-7-30", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-31", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-32", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-7-33", "series": "7", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-7-33", "series": "7", "bucket": "D", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 ran: headless nav to /identity - sidebar Identity item present, h1 reads Identity Protocols, SPA route loads, zero console errors", "recorded": "2026-08-27"}
 {"id": "UAT-7-34", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-7-35", "series": "7", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-7-35", "series": "7", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires chaos lab Kerberos/SAML/DNSSEC targets, not available in this environment", "recorded": "2026-08-27"}
 {"id": "UAT-7-36", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-37", "series": "7", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-7-38", "series": "7", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
@@ -216,16 +216,16 @@
 {"id": "UAT-8-04", "series": "8", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-05", "series": "8", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-06", "series": "8", "bucket": "F", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
-{"id": "UAT-8-07", "series": "8", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-8-07", "series": "8", "bucket": "D", "runner_covered": false, "outcome": "FAIL", "evidence": "2026-08-27 ran: quirk --config config.yaml --score-profile strict then balanced/standard - CLI scorecards were 93, 91, 90 across 3 profiles but dashboard /api/scans score stayed 93 for all, profile/calibration fields null", "recorded": "2026-08-27"}
 {"id": "UAT-8-08", "series": "8", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-8-09", "series": "8", "bucket": "D", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-8-10", "series": "8", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
 {"id": "UAT-8-11", "series": "8", "bucket": "E", "runner_covered": true, "outcome": "PASS", "evidence": "2026-08-27 uat_runner.py PASS", "recorded": "2026-08-27"}
-{"id": "UAT-8-12", "series": "8", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-8-12", "series": "8", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires chaos lab DNSSEC/SAML/Kerberos identity targets, not available in this environment", "recorded": "2026-08-27"}
 {"id": "UAT-8-13", "series": "8", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-14", "series": "8", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-8-15", "series": "8", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
-{"id": "UAT-8-16", "series": "8", "bucket": "D", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
+{"id": "UAT-8-16", "series": "8", "bucket": "D", "runner_covered": false, "outcome": "SKIP", "evidence": "2026-08-27 requires chaos lab reachable DNSSEC/SAML/Kerberos identity targets, not available in this environment", "recorded": "2026-08-27"}
 {"id": "UAT-84-01", "series": "84", "bucket": "A", "runner_covered": false, "outcome": "PASS", "evidence": "2026-08-27 tests/test_version.py -m 'not slow' exit 0, 6 passed 1 deselected", "recorded": "2026-08-27"}
 {"id": "UAT-84-02", "series": "84", "bucket": "F", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
 {"id": "UAT-84-03", "series": "84", "bucket": "E", "runner_covered": false, "outcome": null, "evidence": "", "recorded": ""}
