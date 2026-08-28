@@ -1,7 +1,12 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-28 (v5.16 Phase 170 — Traceability, Documentation & Runbook: no new
+**Last Updated:** 2026-08-28 (v5.16 Phase 171 — Resume UX Tail: added Series 171 with 2 real-disposition
+cases — UAT-171-01 confirms resuming an already-complete scan short-circuits with exit 0 and zero
+new checkpoint rows (RESUME-05), UAT-171-02 confirms `--list-resumable`'s Target column derives a
+host summary from `CryptoEndpoint` rows for `--targets-file` runs instead of a blank dash
+(RESUME-06). Full unfiltered suite held at 3684 passed / 4 known pre-existing failures, zero fatal
+signals. Earlier: v5.16 Phase 170 — Traceability, Documentation & Runbook: no new
 `### UAT-` case was added and no product/scanner behavior changed this phase — it is
 documentation/traceability only. `CHANGELOG.md` backfilled with entries for v5.9.0 through
 v5.14.0 (derived from archived ROADMAP.md summaries and matching git log commit ranges, v5.13/
@@ -19875,3 +19880,77 @@ public-repo cutover, so this edit is local-filesystem-only by design.
 
 **Series 170 disposition.** All five cases PASS. TRACE-01 through TRACE-07 and RUNBOOK-01 are
 complete. Phase 170 verification passed 5/5 after a gap-found/gap-closed cycle on criterion 4.
+
+## Series 171: Resume UX Tail (Phase 171 — v5.16)
+
+**Last Updated:** 2026-08-28
+
+### UAT-171-01: Resuming an already-complete scan short-circuits cleanly (RESUME-05)
+
+**What to test:** `run_scan.py --resume-scan-id <id>` against a scan whose `reports`-stage
+`ScanCheckpoint` row is already `completed` exits 0 with a clear "already complete" message and
+writes zero new checkpoint rows, instead of silently re-running discovery/inventory/reports and
+re-appending checkpoint rows on every resume.
+
+**Steps:**
+1. Seed a temp sqlite DB (`quirk.db.init_db`) with three `ScanCheckpoint` rows
+   (`discovery`/`inventory`/`reports`, all `status="completed"`) for a known `scan_run_id`,
+   pointing a scratch `config.yaml`'s `output.db_path` at the same file used for `--db-path`.
+2. Run `python run_scan.py --config <scratch-config.yaml> --db-path <seeded.db>
+   --resume-scan-id <scan_run_id>`.
+3. Confirm the process prints `Scan <id> is already complete (finished <timestamp>); nothing to
+   resume.`, exits 0, and the `scan_checkpoints` row count for that `scan_run_id` is unchanged.
+4. Run `python -m pytest tests/test_resume_already_complete_shortcircuit.py -v` and cite the pass
+   count.
+
+**Pass criteria:**
+- Real repro prints the exact short-circuit message and exits 0.
+- Checkpoint row count for the seeded `scan_run_id` is unchanged before/after (no re-appended
+  discovery/inventory/reports rows).
+- `tests/test_resume_already_complete_shortcircuit.py` passes in full.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (171-03 phase-close plan execution, live repro run against a freshly seeded scratch DB — not inferred from 171-01's summary)
+**Notes:** Live repro against a seeded scratch DB (`/private/tmp/.../uat171_01.db`, scan_run_id
+`2026-08-28T09:00:00`) printed `Scan 2026-08-28T09:00:00 is already complete (finished
+2026-08-28T20:50:38.996297); nothing to resume.`, exit code 0, checkpoint row count 3 -> 3.
+`tests/test_resume_already_complete_shortcircuit.py -v` — 6/6 passed (3 unit, 2 structural, 1
+signature-contract).
+
+### UAT-171-02: `--list-resumable` shows a derived target for `--targets-file` runs (RESUME-06)
+
+**What to test:** `--list-resumable`'s Target column derives a summary from `CryptoEndpoint` rows
+(e.g. `10.0.0.1, 10.0.0.2`) for scans with no `ScanJob` row (`--targets-file`/plain CLI runs),
+instead of rendering a blank `—`. `--job-id` runs keep showing the literal `ScanJob.target`
+untouched, and a scan with zero data of any kind shows the honest `(no target recorded)`
+placeholder rather than a fabricated target.
+
+**Steps:**
+1. Seed a temp sqlite DB with one `ScanCheckpoint` row (`stage="discovery"`, `status="completed"`)
+   and two `CryptoEndpoint` rows (`10.0.0.1`, `10.0.0.2`) for a known `scan_run_id`, with no
+   `ScanJob` row — mirroring a real `--targets-file` run.
+2. Run `python run_scan.py --config <scratch-config.yaml> --db-path <seeded.db>
+   --list-resumable`.
+3. Confirm the Target column shows `10.0.0.1, 10.0.0.2`, not a blank dash.
+4. Run `python -m pytest tests/test_resume_list_target_derivation.py -v` and cite the pass count.
+
+**Pass criteria:**
+- Real repro's Target column shows the derived host list, not `—`.
+- `tests/test_resume_list_target_derivation.py` passes in full (job-row-primary, endpoint-fallback,
+  and no-data-honest-placeholder cases all covered).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-28  **Tester:** Automated (171-03 phase-close plan execution, live repro run against a freshly seeded scratch DB — not inferred from 171-02's summary)
+**Notes:** Live repro against a seeded scratch DB (`/private/tmp/.../uat171_02.db`, scan_run_id
+`2026-08-28T10:00:00`, no ScanJob row) rendered the Resumable Scans table with Target column
+`10.0.0.1, 10.0.0.2`. `tests/test_resume_list_target_derivation.py -v` — 8/8 passed (4 unit, 3
+real-session, 1 structural).
+
+---
+
+**Series 171 disposition.** Both cases PASS. RESUME-05 and RESUME-06 are complete. Full unfiltered
+suite (`pytest -q -m ""`, 0 deselected) held at 3684 passed / 4 known pre-existing failures
+(`test_skip_registry` + 3x `test_extras_install_matrix`), zero fatal signals — a +14 delta over the
+documented 3670-passing baseline, exactly matching this phase's 6 (171-01) + 8 (171-02) new tests.
+All four UAT corpus-integrity guard suites green; `uat_disposition_apply.py verify` confirmed 377
+ledger rows agreeing before this Series was added.

@@ -204,10 +204,10 @@ open; expected to span multiple phases.*
 
 ### Resume UX Tail
 
-- [ ] **RESUME-05**: Resuming an already-complete scan short-circuits instead of re-appending
+- [x] **RESUME-05**: Resuming an already-complete scan short-circuits instead of re-appending
   `discovery`/`inventory`/`reports` checkpoint rows. Pre-existing stage-level behaviour; batch rows
   are already correct.
-- [ ] **RESUME-06**: `quirk --list-resumable` shows the target for `--targets-file` runs. It
+- [x] **RESUME-06**: `quirk --list-resumable` shows the target for `--targets-file` runs. It
   currently recovers the target by joining `scan_jobs`, which only has a row when `--job-id` is
   passed, leaving the column blank.
 
@@ -267,7 +267,7 @@ open; expected to span multiple phases.*
 | TRACE-06 | Phase 170 | Complete |
 | TRACE-07 | Phase 170 | Complete |
 | RUNBOOK-01 | Phase 170 | Complete |
-| RESUME-05 | Phase 171 | Pending |
-| RESUME-06 | Phase 171 | Pending |
+| RESUME-05 | Phase 171 | Complete |
+| RESUME-06 | Phase 171 | Complete |
 
 All 24 v5.16 requirements mapped. 0 orphans.
