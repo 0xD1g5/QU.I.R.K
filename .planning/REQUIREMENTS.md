@@ -17,6 +17,21 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
 
 ---
 
+## Declaration Format
+
+Every requirement entry in this document (and in all archived
+`.planning/milestones/*-REQUIREMENTS.md` files) uses exactly one canonical form:
+
+```
+- [ ] **REQ-ID**: One-sentence description of the observable behavior, optionally ending
+  with a parenthetical source citation.
+```
+
+Checked (`- [x]`) once the behavior is verified satisfied. This is the only format new
+requirement entries should use going forward. This section is forward-looking documentation
+only — it does not apply retroactively to already-archived requirement documents; backfilling
+older archives to a uniform format is explicitly out of scope.
+
 ## v1 Requirements
 
 ### First-Run Correctness
