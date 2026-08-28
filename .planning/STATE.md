@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Session resumed — 168-03 complete (56/299 dispositioned), proceeding to Phase 168 Wave 3 (plans 04-09)
-last_updated: "2026-08-28T02:27:17.486Z"
+stopped_at: None
+last_updated: "2026-08-28T02:43:58.258Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 29
-  completed_plans: 25
+  completed_plans: 26
   percent: 50
 ---
 
@@ -43,7 +43,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 ## Current Position
 
 Phase: 168 (uat-record-drain-series-1-100) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-08-28
 
@@ -250,6 +250,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 168 P03 | 35min | 2 tasks | 2 files |
 | Phase 168 P04 | 70min | 2 tasks | 2 files |
 | Phase 168 P05 | 220min | 2 tasks | 2 files |
+| Phase 168 P06 | 1h50min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -487,6 +488,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 168]: uat-auto-results.json regenerated fresh but left uncommitted per repo .gitignore convention; ledger + docs/UAT-SERIES.md are the reviewable committed record
 - [Phase ?]: UAT-34-01 reclassified bucket B->A via tests/test_motion_scoring.py::test_subscores_includes_data_in_motion; bucket B now empty
 - [Phase 168]: 73 bucket A/B UAT cases dispositioned from real pytest runs: 62 PASS, 6 SKIP (chaos-lab gated), 5 DEFERRED (verified substitutes, incl. D-06 gap fill for UAT-33-07)
+- [Phase 168]: Bucket C (chaos-lab, 34/34) closed via verified pytest substitutes per UAT-33-03 model without bringing the lab up (D-01); 8 rows recorded as honest GAPs including Vault lacking an rsa-1024 transit key type and pgcrypto column detection being unimplemented (BACK-12)
 
 ### Pending Todos
 
@@ -617,8 +619,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T02:27:17.486Z
-Stopped at: 168-05 complete — buckets D (50) + E (30) fully dispositioned from real command execution (56 runner-covered + 73 A/B + 80 D/E = 209/299 done); 16 genuine product/doc FAILs surfaced; buckets C (34) and F (107) remain for plans 06-09
+Last session: 2026-08-28T02:43:58.251Z
+Stopped at: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
