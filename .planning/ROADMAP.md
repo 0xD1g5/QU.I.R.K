@@ -75,7 +75,7 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
 Closed every open finding from the 2026-08-24 third-party functional review. The UAT corpus went
 from 325 unrecorded cases to **zero undispositioned across all 666**, guarded by a standing
 zero-undispositioned CI gate proven load-bearing by mutating a scratch corpus. The substantive
-output is the honest record it produced: **31 recorded product FAILs and 57 named coverage GAPs**.
+output is the honest record it produced: **32 recorded FAIL dispositions — **18 of them genuine product defects**, 13 chaos-lab-down artifacts from a sweep that was required not to start the lab, and 1 spurious (its observed output matched the expectation) — plus 57 honest coverage GAPs**.
 A CRITICAL evidence-newline injection (CR-01) that could splice a fabricated fully-PASSED case past
 all three guards was found and fixed mid-milestone. Also: first-run correctness (164), 291
 accessibility violations dispositioned with 3 screen-reader blockers fixed (165), e2e smoke +

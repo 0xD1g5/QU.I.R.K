@@ -594,7 +594,7 @@ undispositioned across all 666**, held there by a standing CI gate
 (`tests/test_uat_zero_undispositioned_gate.py`) that was proven load-bearing by mutating a scratch
 corpus and confirming it names the offending case by ID and line.
 
-**The substantive deliverable is the honest record, not the green gate:** 31 recorded product FAILs
+**The substantive deliverable is the honest record, not the green gate:** 32 recorded FAIL dispositions — **18 of them genuine product defects**, 13 chaos-lab-down artifacts from a sweep that was required not to start the lab, and 1 spurious (its observed output matched the expectation) — plus 57 honest coverage GAPs FAILs
 and 57 named coverage GAPs, each stating what would be needed to close it. `docs/uat-coverage-gaps.md`
 is the worklist; the FAILs are enumerated with command/expected/observed evidence in the Phase
 168/169 summaries. A corpus reading 100% PASS would have been worth nothing.

@@ -222,7 +222,7 @@ unrecorded cases to **zero undispositioned across all 666**, guarded by a standi
 `tests/test_uat_zero_undispositioned_gate.py` that was proven load-bearing by mutating a scratch
 corpus and confirming it names the offending case.
 
-**The real deliverable is the honest record, not the green gates:** 31 recorded product FAILs and
+**The real deliverable is the honest record, not the green gates:** 32 recorded FAIL dispositions — **18 of them genuine product defects**, 13 chaos-lab-down artifacts from a sweep that was required not to start the lab, and 1 spurious (its observed output matched the expectation) — plus 57 honest coverage GAPs and
 57 honest coverage GAPs, each naming what would be needed. A corpus reading 100% PASS would have
 been worth nothing.
 
@@ -253,7 +253,7 @@ items — `BACK-A11Y-01` was invisible for three months that way (see the note a
 | Stale local editable install | Phase 170/171 suite runs | `__editable__.quirk-4.0.0.pth` claims v4.0.0 (project is at 5.15.0), breaking pip's build-backend and causing 3 environmental `test_extras_install_matrix` failures. Local-only; CI installs fresh. Fix is `pip install -e . --no-deps` — a toolchain change, user's call. |
 | Persist the literal scan target at start | Phase 171 (D-02 alternative) | Would record user intent rather than reconstructing it. Not a bug fix — derivation already repairs existing runs. |
 | Close the 57 UAT coverage GAPs | Phases 168/169 | Writing the missing tests. Its own milestone-sized effort; `docs/uat-coverage-gaps.md` is the worklist. |
-| Action the 31 product FAILs | Phases 168/169 | Enumerated with command/expected/observed evidence in the 168-03/04/05 and 169-04 SUMMARYs. |
+| Action the 18 genuine product FAILs (of 32 FAIL rows; 13 are lab-down artifacts, 1 spurious — re-measured 2026-08-28) | Phases 168/169 | Enumerated with command/expected/observed evidence in the 168-03/04/05 and 169-04 SUMMARYs. |
 
 ## Beyond v5.16 — three candidates, none committed *(sketch)*
 
