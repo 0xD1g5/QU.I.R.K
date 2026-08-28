@@ -784,6 +784,24 @@ def _batch_stage_completed(completed_stages: set, prefix: str, batch_num: int) -
     return f"{prefix}:batch-{batch_num}" in completed_stages
 
 
+def _resume_already_complete_message(completed_stages: set, reports_completed_at, scan_run_id: str) -> Optional[str]:
+    """Phase 171 RESUME-05 (D-01, locked): resume short-circuit for a scan
+    whose "reports" stage checkpoint is already completed.
+
+    Returns None if "reports" is not in completed_stages (scan still in
+    progress — normal resume proceeds unaffected). Otherwise returns the D-01
+    message naming the scan and its finish time, so the caller can print it
+    and exit 0 BEFORE any stage work (discovery/inventory/reports checkpoint
+    writes) runs. `reports_completed_at` may be None (defensive only —
+    ScanCheckpoint.completed_at is non-nullable, so a real "reports"/"completed"
+    row always has a value); falls back to "unknown time" rather than raising.
+    """
+    if "reports" not in completed_stages:
+        return None
+    finished = reports_completed_at.isoformat() if reports_completed_at else "unknown time"
+    return f"Scan {scan_run_id} is already complete (finished {finished}); nothing to resume."
+
+
 def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
     """Read gcs_scan_json from the GCS-SUMMARY sentinel produced by Phase 26 (STOR-03).
 
@@ -1587,6 +1605,21 @@ def main():
                     .all()
                 )
                 _completed_stages = {cp.stage for cp in _cps}
+
+                # Phase 171 RESUME-05 (D-01, locked): short-circuit BEFORE the
+                # stale-checkpoint warning, before loading _resumed_endpoints,
+                # and before any stage logic runs. No new checkpoint rows are
+                # written past this point when the scan is already complete.
+                _reports_completed_at = next(
+                    (cp.completed_at for cp in _cps if cp.stage == "reports" and cp.status == "completed"),
+                    None,
+                )
+                _short_circuit_msg = _resume_already_complete_message(
+                    _completed_stages, _reports_completed_at, scan_run_id
+                )
+                if _short_circuit_msg:
+                    print(_short_circuit_msg)
+                    sys.exit(0)
 
                 # Stale checkpoint warning (72h threshold)
                 if _cps:

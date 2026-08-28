@@ -66,12 +66,12 @@ def test_short_circuit_call_site_precedes_stage_checkpoint_writes():
     precedes stage work, not merely exists somewhere in the file)."""
     source = _RUN_SCAN_PATH.read_text()
 
-    call_site_match = re.search(r"_resume_already_complete_message\(", source)
+    call_site_match = re.search(r"(?<!def )_resume_already_complete_message\(", source)
     assert call_site_match is not None, "call site not found in run_scan.py"
     call_site_pos = call_site_match.start()
 
     inventory_write_match = re.search(
-        r'write_scan_checkpoint\(args\.db_path, scan_run_id, "inventory"', source
+        r'write_scan_checkpoint\(\s*args\.db_path, scan_run_id, "inventory"', source
     )
     assert inventory_write_match is not None, "inventory checkpoint write not found"
 
@@ -99,7 +99,7 @@ def test_short_circuit_exits_immediately():
 
     call_site_line_idx = None
     for idx, line in enumerate(lines):
-        if "_resume_already_complete_message(" in line:
+        if "_resume_already_complete_message(" in line and "def _resume_already_complete_message(" not in line:
             call_site_line_idx = idx
             break
     assert call_site_line_idx is not None, "call site not found in run_scan.py"
