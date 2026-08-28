@@ -347,7 +347,7 @@ CI actually enforces.
 Plans:
 - [x] 170-01-PLAN.md — CHANGELOG.md entries for v5.9-v5.14 (TRACE-01)
 - [x] 170-02-PLAN.md — v4.7 dead link fix, archive Status headers, declaration-format note (TRACE-02, TRACE-06, TRACE-07)
-- [ ] 170-03-PLAN.md — New tests: lab.sh PROFILE_ARGS precedence (DEBT-02), QRAMM assessment dimension coverage (QRAMM-08) (TRACE-03)
+- [x] 170-03-PLAN.md — New tests: lab.sh PROFILE_ARGS precedence (DEBT-02), QRAMM assessment dimension coverage (QRAMM-08) (TRACE-03)
 - [ ] 170-04-PLAN.md — Requirement-ID annotations on 11 already-passing tests, incl. re-verified GAP-02/QRAMM-09 (TRACE-03, TRACE-04)
 - [ ] 170-05-PLAN.md — CLAUDE.md staleness runbook: add CMVP, error-codes, SNMP-contract catalogs (RUNBOOK-01)
 - [ ] 170-06-PLAN.md — Sibling-reference repair across 24 archived planning files (TRACE-05)
@@ -381,7 +381,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 167. UAT Format Unification & Deduplication | 3/3 | Complete   | 2026-08-27 |
 | 168. UAT Record Drain — Series 1–~100 | 9/9 | Complete   | 2026-08-28 |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 8/8 | Complete   | 2026-08-28 |
-| 170. Traceability, Documentation & Runbook | 2/7 | In Progress|  |
+| 170. Traceability, Documentation & Runbook | 3/7 | In Progress|  |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
 
 ---

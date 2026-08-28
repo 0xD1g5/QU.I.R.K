@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: in_progress
-stopped_at: Completed 170-02-PLAN.md
-last_updated: "2026-08-28T18:39:53.000Z"
+stopped_at: Completed 170-03-PLAN.md
+last_updated: "2026-08-28T18:43:59.000Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 44
-  completed_plans: 39
-  percent: 77
+  completed_plans: 40
+  percent: 79
 ---
 
 # Project State
@@ -22,12 +22,20 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 170 — traceability-documentation-runbook (2/7 plans executed; TRACE-01
-and TRACE-02/06/07 all complete; remaining workstreams — requirement-ID test annotations,
+**Current focus:** Phase 170 — traceability-documentation-runbook (3/7 plans executed; TRACE-01,
+TRACE-02/06/07 complete; 170-03 added real DEBT-02 and QRAMM-08 tests (TRACE-03 partial — shared
+with 170-04, not yet marked complete); remaining workstreams — requirement-ID test annotations,
 planning-summary path drift, CLAUDE.md staleness cadence, full-suite verification — not yet
 planned)
 
 ## Decisions Carried Forward (Phase 170)
+
+- **170-03 added real, currently-passing tests for DEBT-02 and QRAMM-08** (`tests/test_lab_profile_args_precedence.py`
+  exercises the real `lab.sh` script's CLI-wins-over-.env `PROFILE_ARGS` precedence via a real
+  `bash -x lab.sh help` subprocess, no Docker; `qramm-assessment-dimension-coverage.test.tsx`
+  renders the real `AssessmentPage` and proves all 4 dimension tabs together cover 120 questions
+  at 30 each). TRACE-03 is NOT marked complete — it is shared with 170-04's annotation half. See
+  `.planning/phases/170-traceability-documentation-runbook/170-03-SUMMARY.md`.
 
 - **170-02 closed TRACE-02, TRACE-06, TRACE-07.** `.planning/ROADMAP.md:12`'s dead v4.7 link now
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
