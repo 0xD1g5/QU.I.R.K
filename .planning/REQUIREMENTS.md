@@ -255,8 +255,8 @@ open; expected to span multiple phases.*
 | GATE-01 | Phase 166 | Complete |
 | GATE-02 | Phase 166 | Complete |
 | GATE-03 | Phase 166 | Complete |
-| UATREC-01 | Phase 167 | Pending |
-| UATREC-02 | Phase 167 | Pending |
+| UATREC-01 | Phase 167 | Complete |
+| UATREC-02 | Phase 167 | Complete |
 | UATREC-03 | Phase 168, 169 | Complete (series 1-100 Phase 168, series 101-163 Phase 169) |
 | UATREC-04 | Phase 169 | Complete |
 | TRACE-01 | Phase 170 | Complete |
