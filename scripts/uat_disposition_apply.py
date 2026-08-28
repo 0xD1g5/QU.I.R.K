@@ -317,7 +317,15 @@ def cmd_classify(_args: argparse.Namespace) -> int:
     covered = runner_covered_ids()
     existing = load_ledger()
 
-    rows = []
+    # Start from every existing ledger row (already-dispositioned cases are,
+    # by definition, excluded from `scope` below since scope is
+    # undispositioned-only -- without preserving `existing` verbatim here,
+    # write_ledger would silently drop every already-dispositioned row from
+    # the file, which is the opposite of "(re)generate/refresh ... preserving
+    # any existing non-null outcome/evidence/recorded" per this command's own
+    # docstring).
+    rows_by_id: dict[str, dict] = dict(existing)
+
     for c in scope:
         prior = existing.get(c.case_id)
         row = {
@@ -333,8 +341,9 @@ def cmd_classify(_args: argparse.Namespace) -> int:
             row["outcome"] = prior.get("outcome")
             row["evidence"] = prior.get("evidence", "")
             row["recorded"] = prior.get("recorded", "")
-        rows.append(row)
+        rows_by_id[c.case_id] = row
 
+    rows = list(rows_by_id.values())
     write_ledger(rows)
     print(f"wrote {len(rows)} rows to {LEDGER_PATH.relative_to(REPO_ROOT)}")
     return 0
