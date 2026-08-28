@@ -67,11 +67,16 @@ RESULT_LINE_RE = re.compile(r"^\*\*Result:\*\*")
 # Phase 167 canonical grammar (must stay in lockstep with
 # scripts/uat_series_normalize.py::CANONICAL_RESULT_RE and
 # tests/test_uat_series_format.py::CANONICAL_RESULT_RE).
+# The annotation groups exclude newlines as well as ')'. A negated class like
+# [^)]* matches newlines, and this pattern carries neither DOTALL nor MULTILINE
+# -- so [^)]* would swallow an injected multi-line block while the line still
+# "matched" (CR-01, Phase 169 review). Guarded by
+# tests/test_uat_apply_injection_guard.py.
 CANONICAL_RESULT_RE = re.compile(
     r"^\*\*Result:\*\* "
-    r"- \[[ x]\] PASS(?: \([^)]*\))?  "
-    r"- \[[ x]\] FAIL(?: \([^)]*\))?  "
-    r"- \[[ x]\] SKIP(?: \([^)]*\))?$"
+    r"- \[[ x]\] PASS(?: \([^)\n]*\))?  "
+    r"- \[[ x]\] FAIL(?: \([^)\n]*\))?  "
+    r"- \[[ x]\] SKIP(?: \([^)\n]*\))?$"
 )
 
 DISPOSITIONED_BOX_RE = re.compile(r"- \[[xX]\]")
@@ -353,6 +358,13 @@ def _validate_evidence(outcome: str, evidence: str) -> str | None:
     """Return an error string, or None if evidence is acceptable."""
     if ")" in evidence:
         return "evidence contains ')' -- would break the canonical grammar"
+    # CR-01 (Phase 169 review): a JSON-escaped \n is legal JSONL but decodes to
+    # a real newline. Spliced into the document by cmd_apply it can materialise
+    # an entire fabricated, fully-PASSED case -- invisible to the zero-
+    # undispositioned gate (the fake is marked PASS), to the heading/result
+    # parity check (it adds one of each), and to ID uniqueness (its ID is new).
+    if "\n" in evidence or "\r" in evidence:
+        return "evidence contains a newline -- would inject document structure"
     if outcome in ("DEFERRED", "GAP"):
         if not NODE_REF_RE.search(evidence) and outcome == "DEFERRED":
             return "DEFERRED evidence has no <file>.py::<name> node reference"

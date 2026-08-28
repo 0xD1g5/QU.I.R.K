@@ -64,9 +64,9 @@ ID_DECL_RE = re.compile(r"^\*\*ID:\*\* *(" + CASE_ID_PATTERN + r")")
 # followed by a single " (annotation)" suffix. Anchored start and end of line.
 CANONICAL_RESULT_RE = re.compile(
     r"^\*\*Result:\*\* "
-    r"- \[[ x]\] PASS(?: \([^)]*\))?  "
-    r"- \[[ x]\] FAIL(?: \([^)]*\))?  "
-    r"- \[[ x]\] SKIP(?: \([^)]*\))?$"
+    r"- \[[ x]\] PASS(?: \([^)\n]*\))?  "
+    r"- \[[ x]\] FAIL(?: \([^)\n]*\))?  "
+    r"- \[[ x]\] SKIP(?: \([^)\n]*\))?$"
 )
 
 

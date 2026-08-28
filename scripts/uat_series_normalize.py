@@ -52,9 +52,9 @@ CANONICAL_RESULT_RE = re.compile(
 # here would call a two-space line canonical while the gate test rejects
 # it, producing a normalizer-says-clean / CI-says-dirty split.
 r"^\*\*Result:\*\* "
-    r"- \[[ x]\] PASS( \([^)]*\))?  "
-    r"- \[[ x]\] FAIL( \([^)]*\))?  "
-    r"- \[[ x]\] SKIP( \([^)]*\))?$"
+    r"- \[[ x]\] PASS( \([^)\n]*\))?  "
+    r"- \[[ x]\] FAIL( \([^)\n]*\))?  "
+    r"- \[[ x]\] SKIP( \([^)\n]*\))?$"
 )
 
 EMPTY_CANONICAL = "**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP\n"
