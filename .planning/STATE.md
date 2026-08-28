@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
 status: executing
-stopped_at: Completed 170-06-PLAN.md
-last_updated: "2026-08-28T19:10:00.000Z"
+stopped_at: Completed 170-07-PLAN.md
+last_updated: "2026-08-28T19:18:20.440Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 44
   completed_plans: 44
-  percent: 75
+  percent: 88
 ---
 
 # Project State
@@ -22,15 +22,49 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 170 — traceability-documentation-runbook (6/7 plans executed; TRACE-01,
-TRACE-02/06/07, TRACE-03, TRACE-04, RUNBOOK-01, TRACE-05 all complete; 170-06 rewrote 22 stale
-cross-milestone sibling-phase references to their real archived paths and de-linkified 14
-references to genuinely-absent Phase 133/134/144 artifacts into plain prose, correcting one wrong
-destination path in the plan's own ground truth (36-dashboard-motion-tab archived under
-v4.5-phases, not the stated v4.4-phases) along the way; remaining workstream — full-suite
-verification + docs/Obsidian sync + human checkpoint (170-07) — not yet executed)
+**Current focus:** Phase 170 — traceability-documentation-runbook is FULLY EXECUTED (7/7
+plans; TRACE-01..07, RUNBOOK-01 all complete). 170-07 closed the phase: full unfiltered suite
+(`pytest -q -m ""`, 0 deselected) held at the documented true baseline — 3670 passed, 4 failed
+(1 pre-existing `test_skip_registry`, 3 pre-existing environmental `test_extras_install_matrix`
+failures tied to a stale local editable install), zero fatal signals; all four UAT
+corpus-integrity guard suites green; `scripts/uat_disposition_apply.py verify` confirmed all 377
+ledger rows agree. `docs/UAT-SERIES.md` updated + synced to the Obsidian vault, phase note
+written, and the human-verify checkpoint was **approved 2026-08-28** by the user (explicitly
+confirming the Category B de-linkification approach). During checkpoint close-out the
+coordinator found and fixed a coverage gap in 170-06: the `38-identity-api-regression-fix`
+family (28 references across 6 files, one file not in 170-06's declared `files_modified`) was
+missed and has now been rewritten to `v4.5-phases/38-identity-api-regression-fix/` —
+filesystem-only, gitignored. `.planning/phases/170-traceability-documentation-runbook/
+170-VALIDATION.md` is now `nyquist_compliant: true`, `status: complete`, all 14 rows green. The
+ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` from
+`/gsd:verify-phase` — next step is verify-phase, then Phase 171 (Resume UX Tail).
 
 ## Decisions Carried Forward (Phase 170)
+
+- **170-07 closed the phase (full-suite proof + docs/Obsidian sync + human checkpoint).**
+  Full unfiltered suite (`pytest -q -m ""`, confirmed 0 deselected) held at exactly the true
+  baseline: 3670 passed, 4 failed (1 pre-existing `test_skip_registry`, 3 pre-existing
+  environmental `test_extras_install_matrix` failures tied to a stale local editable install,
+  proven local-environment-only), zero fatal signals — no regression from any of the six Wave-1
+  plans landing together. All four UAT corpus-integrity guard suites green
+  (`test_uat_zero_undispositioned_gate.py` 9/9, `test_uat_series_format.py` +
+  `test_uat_disposition_integrity.py` 34/34 across both legs, `test_uat_apply_injection_guard.py`
+  10/10); `scripts/uat_disposition_apply.py verify` confirmed all 377 ledger rows agree.
+  `docs/UAT-SERIES.md` updated (commit `07c71b3`, `docs(phase-170):` format per the plan's own
+  verify-grep requirement) and synced to the Obsidian vault; Obsidian phase note written to
+  `Phases/Phase-170-Traceability-Documentation-Runbook.md`. Human-verify checkpoint (Task 3)
+  **approved by the user on 2026-08-28**, explicitly confirming the Category B de-linkification
+  approach ("honest prose please") for the 14 references to genuinely-absent Phase 133/134/144
+  artifacts. During checkpoint close-out the coordinator independently ran all 11 automated
+  `170-VALIDATION.md` rows (the executor had only run 2) and found row `170-06-01` genuinely
+  FAILED: 170-06 missed the entire `38-identity-api-regression-fix` family (28 stale references
+  across 6 files, one — `38-CONTEXT.md` — not in 170-06's declared `files_modified`). The
+  coordinator rewrote all 28 to `.planning/milestones/v4.5-phases/38-identity-api-regression-fix/`
+  (filesystem-only, gitignored) and re-ran the row: now PASSES. `170-VALIDATION.md` is now
+  `nyquist_compliant: true`, `status: complete`, 0 pending rows. ROADMAP.md phase-level checkbox
+  intentionally left unchecked — `scripts/verify_phase_gates.py` gates it on
+  `170-VERIFICATION.md`, produced by `/gsd:verify-phase`, not this plan. See
+  `.planning/phases/170-traceability-documentation-runbook/170-07-SUMMARY.md`.
 
 - **170-06 closed TRACE-05.** Re-verified the plan's own ground-truth mapping table before
   acting per the plan's explicit instruction, and found one wrong destination:
@@ -169,8 +203,8 @@ verification + docs/Obsidian sync + human checkpoint (170-07) — not yet execut
 ## Current Position
 
 Phase: 170 (traceability-documentation-runbook) — 6 plans executed (170-01, 170-02, 170-03, 170-04, 170-05, 170-06)
-Plan: 6 of 7 (complete)
-Status: Plan 06 complete — TRACE-05 closed (22 Category A rewrites + 14 Category B de-linkifications
+Plan: 7 of 7 (complete)
+Status: Ready to execute
 across 25 archived planning files); only 170-07 (full-suite verification, docs/Obsidian sync, human
 checkpoint) remains
 Last activity: 2026-08-28
@@ -777,8 +811,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T16:00:00.000Z
-Stopped at: Completed 170-05-PLAN.md
+Last session: 2026-08-28T19:18:20.435Z
+Stopped at: Completed 170-07-PLAN.md (Phase 170 fully executed, 7/7 plans; human checkpoint approved 2026-08-28; ROADMAP phase-level checkbox left unchecked pending /gsd:verify-phase)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

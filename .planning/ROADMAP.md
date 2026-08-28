@@ -210,6 +210,7 @@ on ordinary developer hardware, so red stops training people to ignore the suite
 **Plans**: 5 plans
 
 Plans:
+
 - [x] 166-01-PLAN.md — GATE-01: narrow the E2E scan to the `common` port scope, raise the budget to 180s, log scan wall-clock
 - [x] 166-02-PLAN.md — GATE-02: migrate `uat_runner.py` to the hardened lxml chokepoint, add an AST import gate, amend the incorrect requirement premise
 - [x] 166-03-PLAN.md — GATE-03: shared fork-safe `run_cli()` helper, migrate the three CLI-runner test files, add an AST `cwd=` gate
@@ -244,6 +245,7 @@ verifiable)
 **Plans**: 3 plans
 
 Plans:
+
 - [x] 167-01-PLAN.md — Normalize docs/UAT-SERIES.md: one result format, promote 23 headingless cases, delete misfiled UAT-144 Block A, restore heading/result-block parity
 - [x] 167-02-PLAN.md — tests/test_uat_series_format.py invariant guard (single format, count parity, ID uniqueness, no headingless declarations) + full-suite baseline
 - [x] 167-03-PLAN.md — Correct 5→3 duplicate count and stale 628/636 figures, dated review correction note, UAT-SERIES header + Series 167, Obsidian sync, validation close (Tasks 1-4 complete; Task 5 human verification pending)
@@ -271,6 +273,7 @@ mechanically checkable)
 **Plans**: 9 plans
 
 Plans:
+
 - [x] 168-01-PLAN.md — Scope re-measurement, bucket classifier, disposition ledger + idempotent apply driver
 - [x] 168-02-PLAN.md — Anti-fabrication guard: substitute-test existence + execution + ledger agreement
 - [x] 168-03-PLAN.md — Fresh uat_runner.py sweep, ingest ~57 executed outcomes
@@ -280,7 +283,6 @@ Plans:
 - [x] 168-07-PLAN.md — Bucket F series 1-50: substitute search or recorded gap
 - [x] 168-08-PLAN.md — Bucket F series 51-100, independent recount, docs/uat-coverage-gaps.md
 - [x] 168-09-PLAN.md — Full-suite baseline, docs + Obsidian sync, phase note, human review
-
 
 ### Phase 169: UAT Record Drain — Series ~100–163 + Enforcement
 
@@ -303,6 +305,7 @@ range)
 **Plans**: 8 plans
 
 Plans:
+
 - [x] 169-01-PLAN.md — Guard defect fixes (WR-01/WR-03) + 78-row ledger skeleton for series 101-163
 - [x] 169-02-PLAN.md — Vitest dialect for the anti-fabrication guard (D-05 half 1)
 - [x] 169-03-PLAN.md — Bucket A+B drain (41 cases)
@@ -345,13 +348,14 @@ CI actually enforces.
 **Plans**: 7 plans
 
 Plans:
+
 - [x] 170-01-PLAN.md — CHANGELOG.md entries for v5.9-v5.14 (TRACE-01)
 - [x] 170-02-PLAN.md — v4.7 dead link fix, archive Status headers, declaration-format note (TRACE-02, TRACE-06, TRACE-07)
 - [x] 170-03-PLAN.md — New tests: lab.sh PROFILE_ARGS precedence (DEBT-02), QRAMM assessment dimension coverage (QRAMM-08) (TRACE-03)
 - [x] 170-04-PLAN.md — Requirement-ID annotations on 11 already-passing tests, incl. re-verified GAP-02/QRAMM-09 (TRACE-03, TRACE-04)
 - [x] 170-05-PLAN.md — CLAUDE.md staleness runbook: add CMVP, error-codes, SNMP-contract catalogs (RUNBOOK-01)
 - [x] 170-06-PLAN.md — Sibling-reference repair across 25 archived planning files: 22 rewrites + 14 de-linkifications (TRACE-05)
-- [ ] 170-07-PLAN.md — Full-suite verification, docs/Obsidian sync, human checkpoint
+- [x] 170-07-PLAN.md — Full-suite verification, docs/Obsidian sync, human checkpoint
 
 ### Phase 171: Resume UX Tail
 
@@ -381,7 +385,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 | 167. UAT Format Unification & Deduplication | 3/3 | Complete   | 2026-08-27 |
 | 168. UAT Record Drain — Series 1–~100 | 9/9 | Complete   | 2026-08-28 |
 | 169. UAT Record Drain — Series ~100–163 + Enforcement | 8/8 | Complete   | 2026-08-28 |
-| 170. Traceability, Documentation & Runbook | 6/7 | In Progress|  |
+| 170. Traceability, Documentation & Runbook | 7/7 | Complete   | 2026-08-28 |
 | 171. Resume UX Tail | 0/TBD | Not started | - |
 
 ---
