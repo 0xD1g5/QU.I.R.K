@@ -132,10 +132,15 @@ changed the facts, the corrected figure is used and the discrepancy is called ou
   by deleting the misfiled UAT-144 Block A (which sat under the wrong `## UAT-143 Series` header)
   and retaining Block B, merging Block A's caveat wording forward. Phases 168-170 must not
   re-inherit the "5" figure.
-- [ ] **UATREC-03**: Every one of the ~325 unrecorded cases carries either a recorded result or an
-  explicit deferral naming a substitute test. **A deferral must name a specific test, not infer
-  coverage from a requirement-ID annotation** — the review's own re-verification found annotation an
-  unreliable proxy in both directions. `UAT-33-03` is the model to follow.
+- [ ] **UATREC-03**: Every one of the 377 unrecorded cases (independently re-measured 2026-08-27,
+  correcting the stale "~325" figure) carries either a recorded result or an explicit deferral
+  naming a substitute test. **A deferral must name a specific test, not infer coverage from a
+  requirement-ID annotation** — the review's own re-verification found annotation an unreliable
+  proxy in both directions. `UAT-33-03` is the model to follow. **Series 1-100 (299 cases)
+  complete as of Phase 168** — 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP. Series 101-163
+  (78 cases) remain and are assigned to Phase 169; this requirement stays unchecked at the
+  parent level until Phase 169 closes the remainder — see the per-phase status in the
+  traceability table below.
 - [ ] **UATREC-04**: A check enforces the invariant going forward, so a case cannot be added to the
   gating document without a disposition and the corpus cannot silently re-accumulate.
 

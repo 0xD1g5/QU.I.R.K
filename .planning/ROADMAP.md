@@ -66,7 +66,7 @@ milestone — no urgent insertions anticipated.
 - [x] **Phase 165: Accessibility Remediation** - Every one of the 291 baselined accessibility violations is a documented decision rather than an accumulation, the 3 screen-reader-blocking button-name violations are fixed in the UI, and the baseline mechanism itself is stabilized against browser upgrades and dependency drift. (completed 2026-08-27)
 - [x] **Phase 166: Gate Robustness** - `npm run e2e:smoke` passes on a developer machine, the UAT XML tooling no longer parses untrusted XML with a vulnerable-by-default parser, and a full macOS pytest run stops crashing subprocess-based CLI tests (GATE-03, deferred from Phase 164).
 - [x] **Phase 167: UAT Format Unification & Deduplication** - `docs/UAT-SERIES.md` uses exactly one result format with a mechanically verifiable case-to-result count, and every case ID in the document is unique. (completed 2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, locked behind `tests/test_uat_series_format.py`; VERIFICATION passed 6/6, human checkpoint cleared by user)
-- [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the ~325 unrecorded UAT cases each carry a recorded result or an explicit deferral naming a specific substitute test.
+- [ ] **Phase 168: UAT Record Drain — Series 1–~100** - The first half of the 377 unrecorded UAT cases (299 in series 1-100) each carry a recorded result or an explicit deferral naming a specific substitute test. Plans executed (2026-08-27; 9/9 plans done — 299/299 dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 real substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals); `/gsd:verify-phase 168` not yet run
 - [ ] **Phase 169: UAT Record Drain — Series ~100–163 + Enforcement** - The remaining unrecorded UAT cases are drained to zero, and a standing check prevents the corpus from silently re-accumulating undispositioned cases.
 - [ ] **Phase 170: Traceability, Documentation & Runbook** - The changelog, archive status headers, requirement-to-test linkage, planning-summary cross-references, and CLAUDE.md's staleness runbook are all brought into agreement with what actually shipped and what CI actually gates.
 - [ ] **Phase 171: Resume UX Tail** - Resuming an already-complete scan short-circuits cleanly, and `--list-resumable` shows the correct target for every run type.
@@ -250,9 +250,9 @@ Plans:
 
 ### Phase 168: UAT Record Drain — Series 1–~100
 
-**Goal**: The older half of the UAT corpus's ~325 unrecorded cases each get a real disposition,
-proving the UAT-33-03 pattern (recorded result, or an explicit deferral naming a specific
-substitute test) scales across the bulk of the document.
+**Goal**: The older half of the UAT corpus's 377 unrecorded cases (299 of them in series 1-100)
+each get a real disposition, proving the UAT-33-03 pattern (recorded result, or an explicit
+deferral naming a specific substitute test) scales across the bulk of the document.
 **Depends on**: Phase 167 (needs the unified result format and resolved duplicate IDs to be
 mechanically checkable)
 **Requirements**: UATREC-03 (partial — Series 1 through approximately the document's midpoint)
@@ -261,9 +261,13 @@ mechanically checkable)
   1. Every previously-empty-checkbox case in the first half of the UAT-SERIES.md series range now
      carries either a recorded PASS/FAIL result or an explicit deferral naming a specific,
      named substitute test — never an inferred requirement-ID annotation standing in for coverage.
+     Achieved 2026-08-27: all 299 in-scope cases dispositioned — 142 PASS, 31 FAIL, 36 DEFERRED
+     (verified-passing substitute node), 36 SKIP, 54 GAP (honest, concretely-named absence of
+     coverage, never a stretched or fabricated substitute).
 
   2. No new duplicate case IDs or result-format variants are introduced while drain work proceeds
-     (Phase 167's invariants hold across the edit).
+     (Phase 167's invariants hold across the edit). Achieved: `tests/test_uat_series_format.py`
+     green throughout every batch commit.
 **Plans**: 9 plans
 
 Plans:
@@ -275,7 +279,7 @@ Plans:
 - [x] 168-06-PLAN.md — Bucket C: chaos-lab cases deferred to verified substitute tests (lab stays down)
 - [x] 168-07-PLAN.md — Bucket F series 1-50: substitute search or recorded gap
 - [x] 168-08-PLAN.md — Bucket F series 51-100, independent recount, docs/uat-coverage-gaps.md
-- [ ] 168-09-PLAN.md — Full-suite baseline, docs + Obsidian sync, phase note, human review
+- [x] 168-09-PLAN.md — Full-suite baseline, docs + Obsidian sync, phase note, human review
 
 
 ### Phase 169: UAT Record Drain — Series ~100–163 + Enforcement
