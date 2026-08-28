@@ -215,7 +215,9 @@ def find_ledger_document_mismatches(ledger_rows, lines):
             continue
 
         ann = groups[f"{expected_box}_ann"] or ""
-        if evidence and ann != evidence:
+        if outcome is not None and not evidence:
+            mismatches.append(f"{case_id}: ledger outcome is {outcome!r} but evidence is empty")
+        elif ann != evidence:
             mismatches.append(
                 f"{case_id}: ledger evidence {evidence!r} != document annotation "
                 f"{ann!r} at line {lineno}"
@@ -447,6 +449,45 @@ def test_negative_control_null_ledger_but_dispositioned_document_detected():
     mismatches = find_ledger_document_mismatches(ledger_rows, lines)
     assert len(mismatches) == 1
     assert "UAT-5-01" in mismatches[0]
+
+
+def test_negative_control_wr03_empty_evidence_nonnull_outcome_detected():
+    """WR-03 (168-REVIEW.md): a ledger row with a non-null outcome and empty
+    evidence must be flagged even when the document's annotation is
+    non-empty garbage text. Before the fix, `if evidence and ann !=
+    evidence` short-circuited to False whenever `evidence` was falsy,
+    silently passing a malformed evidence-less non-null disposition. This
+    test fails against the pre-fix predicate and passes against the fixed
+    one."""
+    ledger_rows = [{"id": "UAT-9-01", "outcome": "DEFERRED", "evidence": ""}]
+    lines = [
+        "### UAT-9-01: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (unrelated garbage annotation)\n",
+    ]
+    mismatches = find_ledger_document_mismatches(ledger_rows, lines)
+    assert len(mismatches) == 1
+    assert "UAT-9-01" in mismatches[0]
+    assert "evidence is empty" in mismatches[0]
+
+
+def test_negative_control_wr03_matching_evidence_still_passes():
+    """WR-03 fix must not introduce a false positive: a non-null outcome
+    whose evidence matches the document annotation exactly must still
+    pass with zero mismatches."""
+    ledger_rows = [
+        {
+            "id": "UAT-9-02",
+            "outcome": "DEFERRED",
+            "evidence": "DEFERRED — covered by tests/test_foo.py::test_bar",
+        }
+    ]
+    lines = [
+        "### UAT-9-02: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_foo.py::test_bar)\n",
+    ]
+    mismatches = find_ledger_document_mismatches(ledger_rows, lines)
+    assert mismatches == []
 
 
 # ---------------------------------------------------------------------------
