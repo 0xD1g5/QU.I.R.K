@@ -717,8 +717,8 @@ def _resolve_target_for_row(db, run_id: str, job_row) -> str:
 
 def _fuzz_budget_exceeds_ceiling(budget: int) -> bool:
     """Phase 172 D-02: True if *budget* exceeds the single source-of-truth
-
     ``MAX_FUZZ_BUDGET`` ceiling (``quirk.scanner.rest_fuzzer.MAX_FUZZ_BUDGET``).
+
     Reject, never clamp -- the caller is responsible for exiting non-zero.
     """
     from quirk.scanner.rest_fuzzer import MAX_FUZZ_BUDGET
@@ -728,8 +728,9 @@ def _fuzz_budget_exceeds_ceiling(budget: int) -> bool:
 
 def _fuzz_requires_interactive_refusal(is_tty: bool | None = None) -> bool:
     """Phase 172 D-01: True if ``--fuzz`` must be refused because stdin is not
+    a TTY.
 
-    a TTY. Mirrors ``quirk.scanner.rest_fuzzer.confirm_fuzz_gate``'s own
+    Mirrors ``quirk.scanner.rest_fuzzer.confirm_fuzz_gate``'s own
     ``is_tty: bool | None = None`` injectable-override signature so this
     predicate is unit-testable without a real pty.
     """
