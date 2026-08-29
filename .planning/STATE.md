@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: 173-04-PLAN.md Tasks 1-2 complete; Task 3 (blocking human-verify checkpoint) awaiting approval
-last_updated: "2026-08-29T19:35:00.000Z"
+stopped_at: Completed 173-03-PLAN.md
+last_updated: "2026-08-29T21:58:05.052Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 10
-  completed_plans: 9
-  percent: 20
+  completed_phases: 2
+  total_plans: 15
+  completed_plans: 11
+  percent: 40
 ---
 
 # Project State
@@ -22,7 +22,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 173 — scanner-scope-config, plan 173-04 (phase close)
+**Current focus:** Phase 174 — dashboard-api-correctness
 173-04's Tasks 1-2 (docs + UAT Series 173 + requirement/roadmap bookkeeping + Obsidian sync) are
 complete and committed (`50de382`, `97d08c7`, `3608e32`). Task 3 is a **blocking human-verify
 checkpoint** (`autonomous: false`) awaiting user approval — full unfiltered suite reproduced at
@@ -255,10 +255,10 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 173 (scanner-scope-config) — EXECUTING
+Phase: 174 (dashboard-api-correctness) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 4 of 4
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -490,6 +490,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 173 P01 | 45min | 3 tasks | 4 files |
 | Phase 173 P02 | 45min | 3 tasks | 2 files |
 | Phase 173 P03 | 45min | 3 tasks | 2 files |
+| Phase 174 P01 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -760,6 +761,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 173]: SCOPE-02: renamed two tests to include absent/non_broker substrings to satisfy VALIDATION.md -k filters
 - [Phase 173]: 173-03: broker/smime/adcs all use inline _emit_missing_extra_advisory shape; optional_extra.py REGISTRY untouched (test_registry_omits_motion_and_redis stays locked)
 - [Phase 173]: 173-03: smime and adcs advisory messages use extras label adcs (not identity) since smime has no dedicated pyproject.toml extras group
+- [Phase 174]: D-01: minimal DASH-06 fix only -- pass ScanJob.calibration into compute_readiness_score(), no schema migration, no CLI-scan persistence
 
 ### Pending Todos
 
@@ -898,7 +900,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T18:20:15.816Z
+Last session: 2026-08-29T21:57:22.386Z
 Stopped at: Completed 173-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

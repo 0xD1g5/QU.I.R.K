@@ -73,7 +73,7 @@ leave no trace in run output.
 
 ## Dashboard & API Correctness (Phase 174)
 
-- [ ] **DASH-06**: The dashboard score reflects the `--score-profile` the scan was run under, and
+- [x] **DASH-06**: The dashboard score reflects the `--score-profile` the scan was run under, and
   the `profile` / `calibration` fields on `/api/scans` are populated rather than null.
   *Evidence: `UAT-8-07` — CLI scorecards were 93 / 91 / 90 across strict / balanced / standard
   while `/api/scans` reported 93 for all three, with both fields null.*
@@ -163,7 +163,7 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | SCOPE-01 | Phase 173 | Case defect — promoted to Phase 175 |
 | SCOPE-02 | Phase 173 | Complete |
 | SCOPE-03 | Phase 173 | Complete |
-| DASH-06 | Phase 174 | Pending |
+| DASH-06 | Phase 174 | Complete |
 | DASH-07 | Phase 174 | Pending |
 | DASH-08 | Phase 174 | Pending |
 | CASEFIX-01 | Phase 175 | Pending |
