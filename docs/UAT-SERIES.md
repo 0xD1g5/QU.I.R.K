@@ -20151,3 +20151,144 @@ corpus-integrity guard suites green (`test_uat_zero_undispositioned_gate.py`,
 `test_uat_series_format.py`, `test_uat_disposition_integrity.py`,
 `test_uat_apply_injection_guard.py`); `scripts/uat_disposition_apply.py verify` confirmed 377
 ledger rows agreeing before this Series was added.
+
+## Series 173: Scanner Scope & Config Correctness (Phase 173 — v5.17)
+
+**Last Updated:** 2026-08-29
+
+### UAT-173-01: CLI-narrowed `scan.ports_tls` and the standard/deep email/broker auto-enable (SCOPE-01)
+
+**What to test:** Whether a CLI user who explicitly narrows `scan.ports_tls` in YAML sees the
+`standard`/`deep` profile's email/broker auto-enable suppressed, per SCOPE-01's original wording
+("email probing does not run when `connectors.enable_email` is `False`").
+
+**Steps:**
+1. Load the repo's own `config.yaml` (which sets `ports_tls` explicitly, as every QUIRK config
+   must — it is a required constructor field) and apply the `standard` profile:
+   ```bash
+   .venv/bin/python -c "
+   from quirk.config import load_config
+   from quirk.engine.profiles import apply_profile
+   cfg = load_config('config.yaml')
+   apply_profile(cfg,'standard',safe_mode=False)
+   print('enable_email:', cfg.connectors.enable_email)
+   print('enable_broker:', cfg.connectors.enable_broker)
+   "
+   ```
+2. Confirm no scope-narrowing suppression mechanism exists in the shipped code:
+   `grep -c "scope_narrowed\|port_scope_origin" quirk/engine/profiles.py`.
+3. Run `pytest -q tests/test_profiles.py`.
+
+**Pass criteria:** This case's premise — that the compiled-default `False` should govern
+email/broker scanning under `standard`/`deep` regardless of the deliberate auto-enable — is
+**a case defect, not a product defect.** A fix implementing exactly this premise (suppress
+auto-enable when `ports_tls` is user-set) was built, shipped, and live-verified in plan 173-01,
+then reverted the same day: because `ports_tls` is a required YAML key with no default, the
+suppression fired for **every** real CLI config, silently reversing the intentional Phase
+32/33/72-D-02 email/broker default-coverage feature for all CLI users — the exact outcome
+173-CONTEXT.md's D-01 decision explicitly rejected before any code was written. No suppression
+mechanism can distinguish "the user deliberately doesn't want email/broker" from "the user's YAML
+sets the required `ports_tls` key," short of the explicit opt-out that already exists:
+`connectors.enable_email: false` / `enable_broker: false`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; case defect, see notes below)
+**Date:** 2026-08-29  **Tester:** Automated (173-04 phase-close plan execution)
+**Disposition detail:** the case's literal premise — that `standard`/`deep` should honor a
+compiled-default `enable_email: False` regardless of the CLI narrowing the port list — is a case
+defect against a deliberate, documented product behavior; see `173-DISPOSITIONS.md` for the full
+argument, the two candidate suppression mechanisms considered, and why both fail on real configs.
+**Promoted to Phase 175** for case-text correction alongside the other 2026-08-24 review case
+defects (the Phase 172 UAT-94-05 route). This case's own text in Series 36 (`UAT-36-05`) is left
+byte-untouched by this phase — confirmed `git diff --stat docs/UAT-SERIES.md` shows only this
+Series-173 append, no change inside Series 36. What IS real and now documented:
+`docs/configuration.md`'s new CLI companion note states plainly that email/broker auto-enable is
+independent of `scan.ports_tls`, and how to opt out explicitly.
+**Notes:** Live repro, verbatim: `enable_email: True` / `enable_broker: True` after
+`apply_profile(cfg, 'standard')` on the repo's own `config.yaml` — the auto-enable fires exactly as
+designed, unmodified from pre-Phase-173 behavior (`04e7f92`). `grep -c
+"scope_narrowed\|port_scope_origin" quirk/engine/profiles.py` = 0 (the reverted mechanism leaves no
+trace in the shipped file). `pytest -q tests/test_profiles.py` — 5 passed, confirming D-01's
+locked invariant ("does not reverse the flip those tests assert") holds.
+
+### UAT-173-02: `run_stats.timings_sec` omits the key for a phase that did not run (SCOPE-02)
+
+**What to test:** A scanner phase that performed no real work (disabled connector, no targets, or
+missing extra) omits its key from `run_stats.timings_sec` entirely; a phase that genuinely ran and
+found nothing still writes its key.
+
+**Steps:**
+1. Run `pytest -q tests/test_phase_timer_omission.py -v` and cite the full pass count and node
+   list.
+2. Run the two named sub-filters cited by `173-VALIDATION.md`:
+   `pytest -q tests/test_phase_timer_omission.py -k absent`,
+   `pytest -q tests/test_phase_timer_omission.py -k ran_but_empty`,
+   `pytest -q tests/test_phase_timer_omission.py -k non_broker`.
+
+**Pass criteria:**
+- All 6 tests in `tests/test_phase_timer_omission.py` pass.
+- The `-k absent`, `-k ran_but_empty`, and `-k non_broker` filters each select at least one test
+  and all selected tests pass — proving the absent/present contract holds for both broker AND a
+  non-broker phase (smime), with an explicit inversion guard (ran-but-empty still writes its key,
+  proving the sentinel is checked by identity, not truthiness).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (173-04 phase-close plan execution, re-executed
+independently against the shipped `run_scan.py`, not copied from 173-02-SUMMARY.md)
+**Notes:** Live re-run, verbatim: `pytest -q tests/test_phase_timer_omission.py` → `6 passed in
+0.50s`. Test node list: `test_skipped_broker_phase_timing_key_absent`,
+`test_skipped_smime_non_broker_phase_timing_key_absent`, a ran-but-empty inversion-guard test, a
+populated 3-tuple round-trip test, an exception-path test, and a `KeyboardInterrupt` re-raise test.
+`-k absent` and `-k ran_but_empty` and `-k non_broker` each collected and passed at least one test
+(confirmed by the two absent-key test names embedding both `absent` and `non_broker` substrings).
+
+### UAT-173-03: broker/smime/adcs emit the missing-extra advisory + finding (SCOPE-03)
+
+**What to test:** Enabling broker, smime, or adcs with an absent optional dependency produces
+BOTH halves of the documented signal — a `[QRK-INSTALL-001]` stderr advisory and a
+`scan_error_category=missing_extra` finding — for each scanner and each missing dependency
+independently (broker checks three: sslyze, kafka-python, redis).
+
+**Steps:**
+1. Confirm the real, unforced pre-fix defect surface in this repo's own `.venv`:
+   ```bash
+   .venv/bin/python -c "
+   import quirk.scanner.broker_scanner as b
+   print('SSLYZE_AVAILABLE', b.SSLYZE_AVAILABLE)
+   print('KAFKA_AVAILABLE', b.KAFKA_AVAILABLE)
+   print('REDIS_AVAILABLE', b.REDIS_AVAILABLE)
+   "
+   ```
+2. Run `pytest -q tests/test_missing_extra_advisory_per_scanner.py -v` and cite the pass count.
+3. Run `pytest -q tests/test_missing_extra_advisory_per_scanner.py -k broker`,
+   `-k smime`, `-k adcs` and confirm each selects and passes at least one test.
+4. Confirm `tests/test_scan_robustness.py`'s pre-existing source-grep tests still pass but are
+   independently known (per the falsification proof recorded in 173-03-SUMMARY.md) not to be able
+   to detect this regression on their own.
+
+**Pass criteria:**
+- All 12 tests in `tests/test_missing_extra_advisory_per_scanner.py` pass.
+- Each of broker/smime/adcs has at least one passing test asserting both signal halves.
+- `tests/test_scan_robustness.py` remains green (unmodified, byte-untouched by this phase).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (173-04 phase-close plan execution, re-executed
+independently against the shipped `run_scan.py`, not copied from 173-03-SUMMARY.md)
+**Notes:** Live repro, verbatim: `SSLYZE_AVAILABLE True` / `KAFKA_AVAILABLE False` /
+`REDIS_AVAILABLE False` in this repo's own `.venv` — a genuine, unforced pre-fix gap (broker was
+silently under-scanning kafka/redis targets before this phase, since the pre-fix gate checked only
+`SSLYZE_AVAILABLE`). `pytest -q tests/test_missing_extra_advisory_per_scanner.py` → `12 passed, 2
+warnings in 0.53s`. `git diff --stat quirk/util/optional_extra.py quirk/scanner/smime_scanner.py
+quirk/scanner/adcs_scanner.py tests/test_scan_robustness.py` empty (confirmed byte-untouched by
+this phase, per 173-03-SUMMARY.md's own recorded check, re-verified here).
+
+---
+
+**Series 173 disposition.** UAT-173-02 and UAT-173-03 PASS against re-executed, shipped
+behaviour. UAT-173-01 is a **case defect** (GAP, not PASS/FAIL) — the fix its premise called for
+was built, shipped, live-verified to regress every real CLI config, and reverted the same day;
+full argument in `173-DISPOSITIONS.md`. It is promoted to Phase 175 alongside `UAT-94-05` (Phase
+172's precedent case defect) for case-text correction; `UAT-36-05`'s own text in Series 36 remains
+byte-untouched. The real, product-level gap UAT-36-05/UAT-173-01 surfaced — that operators had no
+documentation stating email/broker auto-enable is independent of `scan.ports_tls` — is now closed
+in `docs/configuration.md` and `docs/operators-guide.md`. Full unfiltered suite results and the
+four UAT corpus-integrity guard suites are recorded in the Task 3 checkpoint evidence below.
