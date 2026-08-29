@@ -105,9 +105,12 @@ discoveries from Plans 03-08 that Phase 170's traceability work needs to act on:
 3. **16 product/documentation FAILs from buckets D+E** (168-05) — dashboard score not
    tracking `--score-profile`, a run-stats key that never disappears when broker
    scanning is disabled, unconditional email-port probing breaking a documented
-   empty-state, an undocumented "Hardware" sidebar item breaking the D-11 nav-order
-   lock, an unenforced `--fuzz-budget` 500 maximum, a non-hard-aborting non-TTY
-   `--fuzz` path, and a raw-URL-disclosure gap in an error message.
+   empty-state, a "Hardware" sidebar item flagged against a stale Phase-39 D-11
+   nav-order note (**corrected in Phase 174/DASH-08 — the note had drifted five items
+   stale before Hardware ever shipped; the shipped sidebar was always correct, per
+   `.planning/phases/174-dashboard-api-correctness/174-SIDEBAR-ORDER.md`**), an
+   unenforced `--fuzz-budget` 500 maximum, a non-hard-aborting non-TTY `--fuzz` path,
+   and a raw-URL-disclosure gap in an error message.
 4. **`UAT-1-02` FAIL is caused by a stale hardcoded version-substring check inside
    `uat_runner.py` itself** (168-03) — a genuine finding about the runner's own
    staleness, not a product regression. Not fixed (`uat_runner.py` out of scope this
