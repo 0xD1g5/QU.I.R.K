@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
-status: verifying
+status: executing
 stopped_at: Phase 172 context gathered — 5 decisions locked (D-01..D-05); user delegated grey-area calls
-last_updated: "2026-08-28T23:55:18.854Z"
-last_activity: 2026-08-28
+last_updated: "2026-08-29T00:29:47.487Z"
+last_activity: 2026-08-29 -- Phase 172 planning complete
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 6
   completed_plans: 0
   percent: 0
 ---
@@ -103,7 +103,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Phase complete — ready for verification
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -206,8 +206,8 @@ Phase: 171 (resume-ux-tail) — 171-01 and 171-02 executed (RESUME-05 closed: st
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
 Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-08-28
+Status: Ready to execute
+Last activity: 2026-08-29 -- Phase 172 planning complete
 
 ## v5.16 Phase Map (IN PROGRESS)
 

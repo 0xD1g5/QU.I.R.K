@@ -114,11 +114,19 @@ client-estate consequences)
 **Plans**: 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 172-01-PLAN.md — SAFE-01/02: argparse-time non-TTY refusal + budget ceiling, FUZZ-001/002 codes, CLI regression tests
 - [ ] 172-02-PLAN.md — SAFE-02 D-05: docs==code fuzz budget gate; layer-2 regression lock confirmed
 - [ ] 172-03-PLAN.md — SAFE-03 D-03: real URL redaction in url_allowlist, rename-only twin in subprocess_input, unit coverage
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 172-04-PLAN.md — D-04 UAT-94-05 disposition, UAT Series 172, corpus vault sync
 - [ ] 172-05-PLAN.md — operator docs (configuration, operators-guide, report-interpretation) + Obsidian sync
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 172-06-PLAN.md — invariant gate (full suite baseline, 28 fuzzer tests, UAT guards), VALIDATION/REQUIREMENTS/ROADMAP close, phase note
 
 ### Phase 173: Scanner Scope & Config Correctness
@@ -188,6 +196,7 @@ the corpus stops asserting defects that do not exist.
      decision, or that decision is explicitly reopened.
 
   5. All four UAT guard suites stay green and the corpus stays at zero undispositioned throughout.
+
 **Plans**: TBD
 
 ### Phase 176: Chaos-Lab Re-Run
@@ -243,7 +252,6 @@ carried to v5.17 (GATE-03's fork-safety allowlist).
 Full detail: `.planning/milestones/v5.16-ROADMAP.md`
 
 </details>
-
 
 <details>
 <summary>✅ v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting (Phases 157–160) — SHIPPED 2026-08-19</summary>
