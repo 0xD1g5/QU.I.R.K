@@ -152,7 +152,7 @@ no residue in run output.
 Plans:
 - [x] 173-01-PLAN.md — SCOPE-01: CLI port-scope suppression with declared provenance (D-01/D-01a)
 - [x] 173-02-PLAN.md — SCOPE-02: generic `_PHASE_SKIPPED` timing-key omission (D-02)
-- [ ] 173-03-PLAN.md — SCOPE-03: broker/smime/adcs missing-extra signal (D-03/D-05)
+- [x] 173-03-PLAN.md — SCOPE-03: broker/smime/adcs missing-extra signal (D-03/D-05)
 - [ ] 173-04-PLAN.md — Docs, UAT Series 173, Obsidian sync, full-suite regression gate
 
 ### Phase 174: Dashboard & API Correctness
@@ -243,7 +243,7 @@ milestone whose other work is already complete
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 172. Fuzzing & Disclosure Safety | 6/6 | Complete | 2026-08-29 |
-| 173. Scanner Scope & Config Correctness | 2/4 | In Progress|  |
+| 173. Scanner Scope & Config Correctness | 3/4 | In Progress|  |
 | 174. Dashboard & API Correctness | 0/TBD | Not started | - |
 | 175. Case & Documentation Defect Correction | 0/TBD | Not started | - |
 | 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 173-01-PLAN.md
-last_updated: "2026-08-29T18:13:18.281Z"
+stopped_at: Completed 173-03-PLAN.md
+last_updated: "2026-08-29T18:20:15.823Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 20
 ---
 
@@ -229,7 +229,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 173 (scanner-scope-config) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -460,6 +460,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 172 P05 | 25min | 3 tasks | 6 files |
 | Phase 173 P01 | 45min | 3 tasks | 4 files |
 | Phase 173 P02 | 45min | 3 tasks | 2 files |
+| Phase 173 P03 | 45min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -728,6 +729,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 173]: D-01/D-01a: port_scope_origin implemented as a new sibling ScanCfg field (not a widened nmap_port_scope); suppression guard nested inside the existing explicit-connector-value check to deliver locked precedence (explicit > scope suppression > profile auto-enable)
 - [Phase 173]: SCOPE-02: extended guard conversion to jwt/container/source/db (proven identical enable_* shape) per plan authorization
 - [Phase 173]: SCOPE-02: renamed two tests to include absent/non_broker substrings to satisfy VALIDATION.md -k filters
+- [Phase 173]: 173-03: broker/smime/adcs all use inline _emit_missing_extra_advisory shape; optional_extra.py REGISTRY untouched (test_registry_omits_motion_and_redis stays locked)
+- [Phase 173]: 173-03: smime and adcs advisory messages use extras label adcs (not identity) since smime has no dedicated pyproject.toml extras group
 
 ### Pending Todos
 
@@ -866,8 +869,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T18:10:59.221Z
-Stopped at: Completed 173-01-PLAN.md
+Last session: 2026-08-29T18:20:15.816Z
+Stopped at: Completed 173-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

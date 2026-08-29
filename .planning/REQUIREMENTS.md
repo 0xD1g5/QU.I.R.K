@@ -53,7 +53,7 @@ leave no trace in run output.
   *Evidence: `UAT-33-01` — `COUNT` was 0 as expected but `timings_sec.broker_scanning` was present
   and nonzero.*
 
-- [ ] **SCOPE-03**: Enabling a scanner whose optional extras are absent produces the documented
+- [x] **SCOPE-03**: Enabling a scanner whose optional extras are absent produces the documented
   missing-extra signal — a stderr advisory line and a `scan_error_category=missing_extra` finding —
   consistently across scanner families. The broker/motion family currently produces neither.
   *Evidence: `UAT-41-01` — `enable_broker=true` with `kafka-python`/`pika`/`redis` absent exited 0
@@ -150,7 +150,7 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | SAFE-03 | Phase 172 | Complete |
 | SCOPE-01 | Phase 173 | Pending |
 | SCOPE-02 | Phase 173 | Pending |
-| SCOPE-03 | Phase 173 | Pending |
+| SCOPE-03 | Phase 173 | Complete |
 | DASH-06 | Phase 174 | Pending |
 | DASH-07 | Phase 174 | Pending |
 | DASH-08 | Phase 174 | Pending |
