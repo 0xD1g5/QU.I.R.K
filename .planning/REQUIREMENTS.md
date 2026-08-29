@@ -78,7 +78,7 @@ leave no trace in run output.
   *Evidence: `UAT-8-07` — CLI scorecards were 93 / 91 / 90 across strict / balanced / standard
   while `/api/scans` reported 93 for all three, with both fields null.*
 
-- [ ] **DASH-07**: The dashboard empty state loads with zero console errors. A 404 for a missing
+- [x] **DASH-07**: The dashboard empty state loads with zero console errors. A 404 for a missing
   resource is currently logged on a fresh database.
   *Evidence: `UAT-10-08` — page loaded 200 with correct empty-state text but logged
   `Failed to load resource 404`.*
@@ -164,7 +164,7 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | SCOPE-02 | Phase 173 | Complete |
 | SCOPE-03 | Phase 173 | Complete |
 | DASH-06 | Phase 174 | Complete |
-| DASH-07 | Phase 174 | Pending |
+| DASH-07 | Phase 174 | Complete |
 | DASH-08 | Phase 174 | Pending |
 | CASEFIX-01 | Phase 175 | Pending |
 | CASEFIX-02 | Phase 175 | Pending |
