@@ -804,6 +804,41 @@ Rules:
 - The nmap checkbox is honored: if you also enable nmap, custom ports are passed to nmap as `-p <csv>`; if nmap is off, the builtin fingerprinter probes each listed port directly.
 - **Custom scope means exactly these ports.** The email and broker connectors (SMTP/IMAP/POP3 and Kafka/AMQP/Redis) probe their own fixed service-port tables, which the `standard` and `deep` profiles normally auto-enable independently of the port list. Under custom scope these connectors are explicitly disabled so the scan covers only the ports you specified — otherwise a 2-port custom scan would also probe the ~7 fixed email ports. To scan email/broker crypto, use the `common`, `top1000`, or `all` scope (the `common`/Consulting list already curates in the implicit-TLS email ports 993/995/465 by design).
 
+### CLI `scan.ports_tls`: email/broker auto-enable is independent of your port list (v5.17 — Phase 173)
+
+The section above documents the **dashboard's** `custom` port scope, which explicitly disables the
+email and broker connectors so a narrow custom scan does not also probe the fixed email/broker
+service ports. **There is no CLI equivalent of that suppression.** If you hand-author
+`scan.ports_tls` in `config.yaml` — narrowing it to, say, a single TLS port — the `standard` and
+`deep` profiles still auto-enable `connectors.enable_email` and `connectors.enable_broker`
+independently of that list, exactly as they do when `ports_tls` is left at its default. This is
+intentional, documented behavior (Phase 32 / Phase 33 D-10 / Phase 72 D-02): a CLI user who runs
+`--profile standard` and never touches the `connectors` block should still get full default
+crypto-posture coverage of any mail/broker services present, rather than silently missing them
+because they didn't know to opt in.
+
+**Operator note.** If you only want the ports you listed in `scan.ports_tls` scanned — no email or
+broker probing beyond that list — you must say so explicitly:
+
+```yaml
+connectors:
+  enable_email: false
+  enable_broker: false
+```
+
+An explicit `false` here always wins over the profile auto-enable (Phase 72 D-02 / WR-11); this is
+the correct, and currently the *only*, way to scope a CLI scan down to exactly your `ports_tls`
+list. Narrowing `ports_tls` alone does **not** achieve that — email/broker connectors have their
+own fixed service-port tables and are enabled or disabled independently of `scan.ports_tls`.
+
+> **Provenance note (2026-08-29).** An earlier draft of this phase's fix attempted to *infer*
+> "the user narrowed the scan" from `ports_tls` being present in config and suppress auto-enable
+> automatically. That mechanism shipped, was live-verified, and was reverted the same day: because
+> `ports_tls` is a *required* YAML key, the inference fired for every real CLI config, silently
+> reversing the auto-enable coverage feature described above for every user — the exact outcome
+> this feature exists to prevent. No code changes ship with this note; the underlying behavior is
+> unchanged from before Phase 173. See `173-DISPOSITIONS.md` for the full argument.
+
 ### `security.allow_internal_targets`
 
 Added in Phase 121, the QUIRK config supports an explicit operator flag that controls whether internal/loopback targets (RFC1918 ranges, `127.x.x.x`) are allowed when submitting scans from the dashboard:

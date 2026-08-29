@@ -171,7 +171,20 @@ Compose profiles, with an oracle of expected findings per profile.
   [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) for per-scanner defaults.
 - **`missing_extra` advisory finding** — install the named extra
   (e.g. `pip install quirk-scanner[identity]` for Kerberos). Phase 45 INSTALL-02 surfaces
-  these instead of silently skipping the scanner.
+  these instead of silently skipping the scanner. As of v5.17 (Phase 173), this signal — a
+  `[QRK-INSTALL-001]` stderr advisory plus a `scan_error_category=missing_extra` finding — is
+  emitted consistently across scanner families: the broker connector now checks all three of its
+  optional dependencies (`sslyze`, `kafka-python`, `redis`), not just `sslyze`, and the smime/adcs
+  connectors emit the signal for the first time (both previously failed silently with only a bare
+  log line). If you enable a connector and see this advisory, install the named extra
+  (`pip install quirk-scanner[motion]` for broker/email, `quirk-scanner[identity]` for smime/adcs)
+  or leave the connector disabled.
+- **A skipped scan phase leaves no `run_stats.timings_sec` key** — as of v5.17 (Phase 173), a
+  phase that did not actually run (disabled connector, no targets, missing extra) omits its key
+  from `run_stats.timings_sec` entirely, rather than recording a phantom near-zero duration. A
+  phase that ran and legitimately found nothing still writes its key (with a real, possibly small,
+  elapsed time) — the absence of a key means "did not run," not "ran fast." No consumer depends on
+  a fixed key set; this is safe to rely on when auditing which phases actually executed.
 - **TLS handshake errors against modern endpoints** — confirm the installed
   `cryptography` package version. Do not let `quirk-scanner[identity]`'s impacket dependency
   downgrade it (Phase 45-01 D-07); install `[identity]` in a separate environment if
