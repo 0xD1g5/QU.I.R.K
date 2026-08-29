@@ -583,11 +583,9 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     connectors_cfg = ConnectorsCfg(**conn_raw)
     connectors_cfg._user_set_fields = frozenset(conn_raw.keys())
 
-    scan_cfg = ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw)
-
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
-        scan=scan_cfg,
+        scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
         targets=targets,
         connectors=connectors_cfg,
         output=OutputCfg(**raw["output"]),
