@@ -210,6 +210,19 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         fix="Confirm the path is a regular file rather than a directory, and that you have read permission on it.",
     ),
 
+    # --- FUZZ domain (fuzz safety errors, Phase 172) ---
+    "FUZZ-001": ErrorEntry(
+        code="FUZZ-001",
+        cause="--fuzz was supplied but stdin is not a TTY (non-interactive / headless context); "
+        "REST fuzzing requires interactive confirmation and cannot be authorized unattended.",
+        fix="Run from an interactive terminal to confirm the fuzz gate, or drop --fuzz for unattended/scheduled runs.",
+    ),
+    "FUZZ-002": ErrorEntry(
+        code="FUZZ-002",
+        cause="--fuzz-budget exceeds the hard maximum of 500 requests; the requested value was rejected, not clamped.",
+        fix="Reduce --fuzz-budget to 500 or lower.",
+    ),
+
     # --- Reserved per-domain exception fallback codes (NNN-099) ---
     # Used by render-time CATEGORY_TO_CODE dispatch when scan_error_category == "exception"
     # and the host/scanner_label is one of these domains.

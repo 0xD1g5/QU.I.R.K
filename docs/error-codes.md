@@ -50,6 +50,13 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 |------|-------|-----|
 | QRK-DB-099 | Unexpected error in database scanner. | Re-run with `--verbose` and inspect logs; verify DB credentials and network reach. |
 
+## FUZZ
+
+| Code | Cause | Fix |
+|------|-------|-----|
+| QRK-FUZZ-001 | --fuzz was supplied but stdin is not a TTY (non-interactive / headless context); REST fuzzing requires interactive confirmation and cannot be authorized unattended. | Run from an interactive terminal to confirm the fuzz gate, or drop --fuzz for unattended/scheduled runs. |
+| QRK-FUZZ-002 | --fuzz-budget exceeds the hard maximum of 500 requests; the requested value was rejected, not clamped. | Reduce --fuzz-budget to 500 or lower. |
+
 ## INSTALL
 
 | Code | Cause | Fix |

@@ -715,6 +715,29 @@ def _resolve_target_for_row(db, run_id: str, job_row) -> str:
     return _derive_target_summary(hosts)
 
 
+def _fuzz_budget_exceeds_ceiling(budget: int) -> bool:
+    """Phase 172 D-02: True if *budget* exceeds the single source-of-truth
+
+    ``MAX_FUZZ_BUDGET`` ceiling (``quirk.scanner.rest_fuzzer.MAX_FUZZ_BUDGET``).
+    Reject, never clamp -- the caller is responsible for exiting non-zero.
+    """
+    from quirk.scanner.rest_fuzzer import MAX_FUZZ_BUDGET
+
+    return budget > MAX_FUZZ_BUDGET
+
+
+def _fuzz_requires_interactive_refusal(is_tty: bool | None = None) -> bool:
+    """Phase 172 D-01: True if ``--fuzz`` must be refused because stdin is not
+
+    a TTY. Mirrors ``quirk.scanner.rest_fuzzer.confirm_fuzz_gate``'s own
+    ``is_tty: bool | None = None`` injectable-override signature so this
+    predicate is unit-testable without a real pty.
+    """
+    if is_tty is None:
+        is_tty = sys.stdin.isatty()
+    return not is_tty
+
+
 def _handle_list_resumable(args) -> None:
     """Phase 67 RESUME-01: print rich table of incomplete scan runs.
 
@@ -1470,6 +1493,25 @@ def main():
         # traceback this phase exists to eliminate (FIRSTRUN-02).
         if not os.path.isfile(targets_file) or not os.access(targets_file, os.R_OK):
             print(format_error("TARGET-003"), file=sys.stderr)
+            sys.exit(2)
+
+    # Phase 172 D-01/D-02: --fuzz safety refusals fire at argument-validation
+    # time, before any config load, banner, or scan phase machinery runs.
+    # This is structural (order-independent) and closes both the
+    # gate-fired-but-exit-0 path and the out-of-scope-spec-URL silent-skip
+    # path -- an argparse-time refusal does not depend on _run_fuzz_phase's
+    # internal early-return ordering. confirm_fuzz_gate() and _resolve_budget()
+    # in quirk/scanner/rest_fuzzer.py are unmodified and remain a second,
+    # independent defence-in-depth layer.
+    if getattr(args, "fuzz", False):
+        # Budget check FIRST (fail-fast, TTY-independent, per D-02's ordering).
+        fuzz_budget = getattr(args, "fuzz_budget", 50)
+        if _fuzz_budget_exceeds_ceiling(fuzz_budget):
+            print(format_error("FUZZ-002"), file=sys.stderr)
+            sys.exit(2)
+        # Non-TTY check SECOND.
+        if _fuzz_requires_interactive_refusal():
+            print(format_error("FUZZ-001"), file=sys.stderr)
             sys.exit(2)
 
     quiet = getattr(args, "quiet", False)
