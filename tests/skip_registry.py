@@ -156,7 +156,7 @@ ALLOWED_SKIPS = [
     ("test_jwt_scanner.py",        132, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
     ("test_jwt_scanner.py",        213, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
     ("test_jwt_scanner.py",        321, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (h1/h2.example.com fail CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
-    ("test_openapi_scanner.py",    249, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails validate_external_url()'s dns_failure check inside scan_openapi_spec's SSRF gate); see docs/test-triage-149.md#openapi-scanner-dns-blocked"),
+    ("test_openapi_scanner.py",    296, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails validate_external_url()'s dns_failure check inside scan_openapi_spec's SSRF gate); see docs/test-triage-149.md#openapi-scanner-dns-blocked"),
     ("test_gap_closure.py",         48, "pre_existing_triage_149", "TRIAGE-149: stale fixture (_make_endpoint() SimpleNamespace lacks sensor_id/segment, AttributeError silently swallowed by _derive_findings()'s broad except); see docs/test-triage-149.md#gap-closure-stale-fixture"),
     ("test_gap_closure.py",         74, "pre_existing_triage_149", "TRIAGE-149: stale fixture (_make_endpoint() SimpleNamespace lacks sensor_id/segment, AttributeError silently swallowed by _derive_findings()'s broad except); see docs/test-triage-149.md#gap-closure-stale-fixture"),
 
@@ -269,12 +269,13 @@ ALLOWED_SKIPS = [
     ("test_rest_fuzzer_probes.py",         708, "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_probes.py",         786, "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_probes.py",         825, "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
-    ("test_openapi_scanner.py",             90, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
-    ("test_openapi_scanner.py",            122, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
-    ("test_openapi_scanner.py",            143, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
-    ("test_openapi_scanner.py",            164, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
-    ("test_openapi_scanner.py",            189, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
-    ("test_openapi_scanner.py",            232, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",             96, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",            128, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",            149, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",            168, "ci_extras_gap", "Phase 172 D-03/SAFE-03: test_url_scope_rejected_redacts_userinfo_and_query skipif — api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",            211, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",            236, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+    ("test_openapi_scanner.py",            279, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
 
     # ------------------------------------------------------------------
     # Phase 150 D-15 gitignored-planning-dir gap closure (Plan 06, Task 3):
