@@ -127,7 +127,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 172-06-PLAN.md — invariant gate (full suite baseline, 28 fuzzer tests, UAT guards), VALIDATION/REQUIREMENTS/ROADMAP close, phase note
+- [x] 172-06-PLAN.md — invariant gate (full suite baseline, 28 fuzzer tests, UAT guards), VALIDATION/REQUIREMENTS/ROADMAP close, phase note
 
 ### Phase 173: Scanner Scope & Config Correctness
 
@@ -178,6 +178,18 @@ deliberately rather than silently.
 the corpus stops asserting defects that do not exist.
 **Depends on**: Nothing
 **Requirements**: CASEFIX-01, CASEFIX-02, CASEFIX-03, CASEFIX-04, CASEFIX-05
+
+**Carried forward from Phase 172 (D-04):** `UAT-94-05`'s third pass-criterion ("Error message does
+not expose the raw URL value (redacted preview only)") was ruled a CASE DEFECT, not a product bug —
+it demands all-or-nothing URL redaction, which contradicts Phase 172's locked D-03 threat model
+(credentials/tokens in userinfo/query are the disclosure risk; the operator-supplied hostname is
+retained by design). The case's text and disposition were left byte-untouched in
+`docs/UAT-SERIES.md`; the full argument and a proposed corrected wording are in
+`.planning/phases/172-fuzzing-disclosure-safety/172-DISPOSITIONS.md` § 1. Phase 175 should also
+consider adding a second, credential-bearing UAT case (mirroring
+`https://user:hunter2@evil.example.com/openapi.json?token=SECRETVALUE`) since the current fixture
+has no userinfo/query to strip and so cannot exercise D-03's actual redaction behaviour.
+
 **Success Criteria** (what must be TRUE):
 
   1. Each of the nine is **verified as a case defect before it is edited**. If any turns out to be a
