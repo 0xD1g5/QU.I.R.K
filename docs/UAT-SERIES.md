@@ -20302,3 +20302,132 @@ byte-untouched. The real, product-level gap UAT-36-05/UAT-173-01 surfaced — th
 documentation stating email/broker auto-enable is independent of `scan.ports_tls` — is now closed
 in `docs/configuration.md` and `docs/operators-guide.md`. Full unfiltered suite results and the
 four UAT corpus-integrity guard suites are recorded in the Task 3 checkpoint evidence below.
+
+---
+
+## Series 174: Dashboard & API Correctness (Phase 174 — v5.17)
+
+**Last Updated:** 2026-08-29
+
+### UAT-174-01: `/api/scans` scores each session under its own stored calibration (DASH-06)
+
+**What to test:** `GET /api/scans` computes each dashboard-launched session's readiness score
+using that session's own stored `ScanJob.calibration` value, not a hardcoded `"balanced"` default.
+
+**Steps:**
+1. Run `pytest -q tests/test_dashboard_scans_score_profile.py -v` and cite the full pass count
+   and node list.
+2. Confirm the fix site: `grep -n "compute_readiness_score(evidence" quirk/dashboard/api/routes/scan.py`.
+3. Confirm no bare no-kwarg call remains inside `list_scans()`:
+   `grep -n "compute_readiness_score(evidence)$" quirk/dashboard/api/routes/scan.py`.
+
+**Pass criteria:**
+- All 3 tests in `tests/test_dashboard_scans_score_profile.py` pass:
+  `test_list_scans_score_varies_by_calibration`,
+  `test_list_scans_score_agrees_with_reference_scoring`,
+  `test_list_scans_cli_scan_still_null_and_balanced`.
+- `scan.py:1263` calls `compute_readiness_score(evidence, profile=calibration)` inside
+  `list_scans()`, matching the already-correct sibling call at `scan.py:1484`
+  (`profile=stored_profile`).
+- No `--score-profile` value appearing anywhere in this case is the illegal value rejected by
+  argparse (legal values are `lenient`, `balanced`, `strict` only).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (174-04 phase-close plan execution, re-executed
+independently against the shipped `quirk/dashboard/api/routes/scan.py`, not copied from
+174-01-SUMMARY.md)
+**Notes:** Live re-run, verbatim: `tests/test_dashboard_scans_score_profile.py` → `3 passed in
+0.55s`. Live grep, verbatim: `scan.py:1263:            score_dict =
+compute_readiness_score(evidence, profile=calibration)` inside `list_scans()`; the bare
+no-kwarg-call grep (`compute_readiness_score(evidence)$`) returns zero hits anywhere in the file.
+(Two unrelated pre-existing bare calls do exist at `scan.py:1641-1642`, inside the `/compare`
+two-session comparison endpoint — a different code path, out of scope for DASH-06 per D-01, and
+not part of `list_scans()`.)
+
+### UAT-174-02: Dashboard empty state serves cleanly on a genuinely empty database; `/api/scan/latest`'s 404 contract is unchanged (DASH-07)
+
+**What to test:** On a freshly-`init_db()`'d, zero-row database, the dashboard's landing route
+serves a correct empty state without an unhandled application error, and the intentional
+`QRK-DASHBOARD-006` 404 on `/api/scan/latest` is unmodified.
+
+**Steps:**
+1. Run `pytest -q tests/test_dashboard_empty_state_contract.py -v` and cite the full pass count
+   and node list.
+2. Re-execute the `174-ASSUMPTIONS.md` §D5 / `174-EMPTY-DB-EVIDENCE.md` reproduction: init a
+   scratch DB, boot the dashboard server against it, probe every path the landing route requests.
+
+**Pass criteria:**
+- Both tests in `tests/test_dashboard_empty_state_contract.py` pass:
+  `test_scan_latest_returns_404_with_documented_error_code_on_empty_db`,
+  `test_landing_route_endpoints_stay_200_on_empty_db`.
+- Of the 9 landing-route paths probed against a genuinely empty DB, exactly 1
+  (`api/scan/latest`) is non-2xx (404 with `QRK-DASHBOARD-006`); the other 8 (favicons,
+  `manifest.json`, `api/scans`, `api/config`, `api/health`) are 200.
+- The residual DevTools `Failed to load resource ... 404` network-panel line for
+  `api/scan/latest` is EXPECTED and BY DESIGN — a browser artefact of any non-2xx fetch response,
+  unsuppressable from application code, and not a JavaScript runtime error. This case does not
+  assert an empty console.
+- `docs/error-codes.md` and `quirk/dashboard/api/routes/scan.py` are byte-unmodified by this
+  phase.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (174-04 phase-close plan execution, re-executed
+independently against the shipped code, not copied from 174-02-SUMMARY.md)
+**Notes:** Live re-run, verbatim: `tests/test_dashboard_empty_state_contract.py` → `2 passed in
+0.51s`. `174-EMPTY-DB-EVIDENCE.md` (executed 2026-08-29T21:59:53Z this phase) confirms the
+status-code table: 8/9 probed paths 200, `api/scan/latest` 404 with body
+`{"detail":"[QRK-DASHBOARD-006] No scan results available yet. Fix: Run your first scan: \`quirk
+--config config.yaml\`."}`. `git diff --stat docs/error-codes.md
+quirk/dashboard/api/routes/scan.py` confirmed empty for this plan (174-01 modified `scan.py` for
+DASH-06's unrelated one-line fix; this plan reads it only).
+
+### UAT-174-03: Documented sidebar nav order matches the shipped fourteen-item sidebar and cannot silently drift (DASH-08)
+
+**What to test:** `docs/UAT-SERIES.md`'s `UAT-39-07` order matches `sidebar.tsx`'s `NAV_ITEMS`
+declaration order exactly, and a bidirectional automated guard now fails if either source changes
+without the other.
+
+**Steps:**
+1. Run `grep -n 'path:' src/dashboard/src/components/sidebar.tsx` and cite the full 14-entry
+   list.
+2. Run `pytest -q tests/test_sidebar_nav_order.py -v` and cite the full pass count and node list.
+3. Confirm `sidebar.tsx` is byte-unmodified by this phase: `git diff --stat
+   src/dashboard/src/components/sidebar.tsx`.
+
+**Pass criteria:**
+- All 3 tests in `tests/test_sidebar_nav_order.py` pass.
+- `sidebar.tsx`'s 14 top-level `NAV_ITEMS` labels, in order, equal: Executive Summary, Findings,
+  Identity, Motion, Hardware, Data at Rest, Certificates, CBOM Viewer, Migration Roadmap, Trends,
+  Scan History, Sensors, Schedules, QRAMM Assessment.
+- `sidebar.tsx` is byte-unmodified by this phase (`git diff --stat` empty) — this case is a
+  documentation and test-coverage fix, not a UI change.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (174-04 phase-close plan execution, re-executed
+independently against the shipped `sidebar.tsx`, not copied from 174-03-SUMMARY.md)
+**Notes:** Live grep, verbatim (`src/dashboard/src/components/sidebar.tsx:35-48`):
+`/` Executive Summary, `/findings` Findings, `/identity` Identity, `/motion` Motion, `/hardware`
+Hardware, `/data-at-rest` Data at Rest, `/certificates` Certificates, `/cbom` CBOM Viewer,
+`/roadmap` Migration Roadmap, `/trends` Trends, `/scans` Scan History, `/sensors` Sensors,
+`/schedules` Schedules, `/qramm` QRAMM Assessment. `pytest -q tests/test_sidebar_nav_order.py` →
+`3 passed`. `git diff --stat src/dashboard/src/components/sidebar.tsx` empty, confirmed
+byte-unmodified.
+
+---
+
+**Series 174 disposition.** Two of the three review-reported "defects" — DASH-07 and DASH-08 —
+turned out to be a document disagreeing with correct, deliberately-shipped code, not a product
+bug: DASH-07's dashboard empty state was already correct (only the intentional, documented
+`QRK-DASHBOARD-006` 404 remains, unsuppressable and by design), and DASH-08's sidebar order was
+exactly as Phase 128 planned, reviewed, and shipped it — the Phase 39 `D-11` note had simply gone
+undetected-stale across five subsequent feature phases. The one genuine defect, DASH-06, was a
+single call-site out of step with its own sibling — a missing `profile=` kwarg at `scan.py:1263`
+— now fixed and covered by `tests/test_dashboard_scans_score_profile.py`. `UAT-8-07`'s own case
+text (an illegal `--score-profile` value argparse rejects outright, out-of-scope bare-CLI-list-view reproduction) is
+promoted to Phase 175 for correction, alongside `UAT-94-05` (Phase 172) and `UAT-36-05` (Phase
+173) — this milestone's third consecutive case-text correction candidate rather than a case-text
+rewrite performed here. `UAT-39-07` IS corrected in place this phase (D-03's explicit
+authorization) since its criteria, not the product, were wrong. Persisting the score profile for
+CLI-run scans (a schema migration with no reliable backfill key) remains an explicitly deferred
+follow-up candidate, not built here. Full unfiltered suite results and the four UAT
+corpus-integrity guard suites are recorded in `174-04-SUMMARY.md`.
