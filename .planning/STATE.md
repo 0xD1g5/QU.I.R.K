@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 172-01-PLAN.md
-last_updated: "2026-08-29T00:57:33.472Z"
+last_updated: "2026-08-29T01:02:31.231Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -205,7 +205,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 172 (fuzzing-disclosure-safety) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -433,6 +433,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 172-fuzzing-disclosure-safety P01 | 25min | 3 tasks | 5 files |
 | Phase 172 P02 | 15min | 2 tasks | 1 files |
 | Phase 172 P03 | 50min | 3 tasks | 6 files |
+| Phase 172 P05 | 25min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -697,6 +698,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 172]: The two _redact_preview twins now have distinct names (per D-03) so the same-name-different-behaviour trap cannot recur; UAT-94-05 (D-04) disposition deliberately left to plan 172-04.
 - [Phase 172]: UAT-94-05 judged CASE DEFECT (D-04), promoted to Phase 175; case text left byte-untouched — Demands all-or-nothing URL redaction contradicting D-03's locked threat model (credentials/tokens redacted, hostname deliberately retained)
 - [Phase 172]: UAT-96-02 and UAT-96-03 re-executed against post-fix behaviour and re-dispositioned PASS — Historical Series 96 FAIL entries preserved as pre-fix record; corrected disposition recorded in new Series 172 cases
+- [Phase ?]: New-prose-around-anchor pattern: add explanatory paragraphs adjacent to regex-anchored docs rows rather than editing them, to avoid disarming drift gates
 
 ### Pending Todos
 
@@ -827,7 +829,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T00:55:41.599Z
+Last session: 2026-08-29T01:01:47.960Z
 Stopped at: Completed 172-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
