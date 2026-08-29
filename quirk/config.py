@@ -89,6 +89,16 @@ class ScanCfg:
     # Values: "top1000" | "all" | None  (common/custom scopes write ports_tls directly).
     nmap_port_scope: Optional[str] = None
 
+    # Phase 173 D-01a: machine-provenance marker for scan.ports_tls, written by
+    # _write_job_config for EVERY port_scope branch (common/custom/top1000/all).
+    # Values: "common" | "custom" | "top1000" | "all" | None. None means the
+    # [scan] block was human-authored YAML (no dashboard job-config writer
+    # touched it). A sibling field to nmap_port_scope rather than an
+    # overload of it — nmap_port_scope is separately consumed as an
+    # nmap-behaviour switch (run_scan.py) and two existing tests assert its
+    # absence for common/custom, so its value domain must not change.
+    port_scope_origin: Optional[str] = None
+
     # Phase 154 HWLC-03 / D-11: bounds how long hardware_devices scan-history
     # rows are retained, in days. Purge is opportunistic per-scan (D-12; see
     # Plan 04). Deliberately NOT the 90-day STALENESS_THRESHOLD_DAYS convention
@@ -136,6 +146,8 @@ class ScanCfg:
         openapi_spec_path: Optional[str] = None,
         # Phase 121: port-scope hint for nmap-native scopes (top1000/all)
         nmap_port_scope: Optional[str] = None,
+        # Phase 173 D-01a: scope-provenance marker for scan.ports_tls
+        port_scope_origin: Optional[str] = None,
         # Phase 154 HWLC-03 / D-11: hardware_devices history retention, days
         hardware_history_retention_days: int = 180,
         # Phase 157 HWLC-16 / D-02, D-03: hardware_drift_events retention, days
@@ -153,6 +165,7 @@ class ScanCfg:
         self.retry = retry if retry is not None else RetryCfg()
         self.openapi_spec_path = openapi_spec_path
         self.nmap_port_scope = nmap_port_scope
+        self.port_scope_origin = port_scope_origin
         self.hardware_history_retention_days = hardware_history_retention_days
         self.hardware_drift_event_retention_days = hardware_drift_event_retention_days
         # Phase 173 D-01: field(default_factory=...) does NOT fire on a
