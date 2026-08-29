@@ -147,7 +147,13 @@ no residue in run output.
   3. Enabling a scanner whose optional extras are absent emits the documented missing-extra signal —
      stderr advisory plus a `scan_error_category=missing_extra` finding — for the broker/motion
      family as it already does for identity (`UAT-41-01`).
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 173-01-PLAN.md — SCOPE-01: CLI port-scope suppression with declared provenance (D-01/D-01a)
+- [ ] 173-02-PLAN.md — SCOPE-02: generic `_PHASE_SKIPPED` timing-key omission (D-02)
+- [ ] 173-03-PLAN.md — SCOPE-03: broker/smime/adcs missing-extra signal (D-03/D-05)
+- [ ] 173-04-PLAN.md — Docs, UAT Series 173, Obsidian sync, full-suite regression gate
 
 ### Phase 174: Dashboard & API Correctness
 
