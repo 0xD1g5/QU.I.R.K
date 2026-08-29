@@ -177,7 +177,7 @@ Compose profiles, with an oracle of expected findings per profile.
   optional dependencies (`sslyze`, `kafka-python`, `redis`), not just `sslyze`, and the smime/adcs
   connectors emit the signal for the first time (both previously failed silently with only a bare
   log line). If you enable a connector and see this advisory, install the named extra
-  (`pip install quirk-scanner[motion]` for broker/email, `quirk-scanner[identity]` for smime/adcs)
+  (`pip install quirk-scanner[motion]` for broker/email, `quirk-scanner[adcs]` for smime/adcs)
   or leave the connector disabled.
 - **A skipped scan phase leaves no `run_stats.timings_sec` key** — as of v5.17 (Phase 173), a
   phase that did not actually run (disabled connector, no targets, missing extra) omits its key
