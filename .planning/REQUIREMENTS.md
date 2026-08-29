@@ -21,12 +21,12 @@ The three defects with real client-estate consequences. A scanner that fuzzes an
 asking, past its own documented ceiling, and then prints the target URL in an error, is a
 liability in an engagement.
 
-- [ ] **SAFE-01**: `--fuzz` with non-interactive (non-TTY) stdin hard-aborts before issuing any
+- [x] **SAFE-01**: `--fuzz` with non-interactive (non-TTY) stdin hard-aborts before issuing any
   request, with a non-interactive-mode error message. Currently the scan completes normally and
   exits 0.
   *Evidence: `UAT-96-02` — `echo | quirk ... --fuzz` completed and exited 0; no error printed.*
 
-- [ ] **SAFE-02**: The documented `--fuzz-budget` hard maximum of 500 is enforced at runtime; a
+- [x] **SAFE-02**: The documented `--fuzz-budget` hard maximum of 500 is enforced at runtime; a
   larger value is rejected rather than silently honoured. The argparse default of 50 is already
   correct and must not change.
   *Evidence: `UAT-96-03` — `--fuzz-budget 501` completed normally and exited 0.*
@@ -130,20 +130,23 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 
 - The **57 coverage GAPs** — writing the missing tests is its own milestone-sized effort;
   `docs/uat-coverage-gaps.md` remains the worklist.
+
 - **GATE-03's fork-safety allowlist** (18 files / 38 crash-exposed call sites) — recorded in
   `HORIZON.md`; needs a scoped phase and a decision between `run_fork_safe` migration and
   kwargs-only fixes.
+
 - The remaining **HORIZON carry-forward items**: vitest `-t` anchoring, `cmd_classify` orphan-row
   pruning, vitest `-m slow` in CI, the stale editable install, and persisting the literal scan
   target.
+
 - **Migration Execution** (HORIZON Candidate A) — still needs its shaping conversation.
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |---|---|---|
-| SAFE-01 | Phase 172 | Pending |
-| SAFE-02 | Phase 172 | Pending |
+| SAFE-01 | Phase 172 | Complete |
+| SAFE-02 | Phase 172 | Complete |
 | SAFE-03 | Phase 172 | Pending |
 | SCOPE-01 | Phase 173 | Pending |
 | SCOPE-02 | Phase 173 | Pending |

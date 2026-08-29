@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Phase 172 context gathered — 5 decisions locked (D-01..D-05); user delegated grey-area calls
-last_updated: "2026-08-29T00:29:47.487Z"
-last_activity: 2026-08-29 -- Phase 172 planning complete
+stopped_at: Completed 172-01-PLAN.md
+last_updated: "2026-08-29T00:37:22.674Z"
+last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -22,7 +22,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 170 — traceability-documentation-runbook is FULLY EXECUTED (7/7
+**Current focus:** Phase 172 — fuzzing-disclosure-safety
 plans; TRACE-01..07, RUNBOOK-01 all complete). 170-07 closed the phase: full unfiltered suite
 (`pytest -q -m ""`, 0 deselected) held at the documented true baseline — 3670 passed, 4 failed
 (1 pre-existing `test_skip_registry`, 3 pre-existing environmental `test_extras_install_matrix`
@@ -202,12 +202,12 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 171 (resume-ux-tail) — 171-01 and 171-02 executed (RESUME-05 closed: stage-level
+Phase: 172 (fuzzing-disclosure-safety) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 3 of 3
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-08-29 -- Phase 172 planning complete
+Last activity: 2026-08-29
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -430,6 +430,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 171 P01 | 25min | 1 tasks | 2 files |
 | Phase 171 P02 | 20min | 2 tasks | 3 files |
 | Phase 171 P03 | 65min | 3 tasks | 3 files |
+| Phase 172-fuzzing-disclosure-safety P01 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -687,6 +688,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 171]: RESUME-05 (D-01, locked): resume of an already-complete scan exits 0 with a message naming the scan and finish time, writes zero new checkpoint rows, no --force flag
 - [Phase 171]: RESUME-06 (D-02, locked): --list-resumable Target column derives from CryptoEndpoint when no ScanJob row exists; ScanJob join stays primary, honest '(no target recorded)' placeholder when both are absent
 - [Phase 171]: RESUME-05/RESUME-06 both verified complete: resume-already-complete short-circuit (exit 0, zero new checkpoint rows) and --list-resumable Target column derivation from CryptoEndpoint rows — Full unfiltered suite holds at 3684 passed / 4 known pre-existing failures (+14 delta matching this phase's new tests); Series 171 UAT entry live-repro'd; Task 3 human-verify checkpoint approved 2026-08-28. Phase 171 closes the v5.16 milestone's last phase.
+- [Phase 172-01]: Argparse-time refusal block for --fuzz: budget check before TTY check (fail-fast, TTY-independent) per D-02
+- [Phase 172-01]: MAX_FUZZ_BUDGET imported from quirk.scanner.rest_fuzzer; confirm_fuzz_gate and _resolve_budget left byte-for-byte unmodified as second defence-in-depth layer
 
 ### Pending Todos
 
@@ -817,8 +820,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-28T23:55:18.845Z
-Stopped at: Phase 172 context gathered — 5 decisions locked (D-01..D-05); user delegated grey-area calls
+Last session: 2026-08-29T00:37:22.670Z
+Stopped at: Completed 172-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
