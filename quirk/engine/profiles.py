@@ -111,14 +111,7 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_email"):
             user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
             if "enable_email" not in user_set:
-                # Phase 173 D-01/D-01a: suppress auto-enable only when the user
-                # DECLARED a narrower scan.ports_tls in human-authored YAML —
-                # i.e. ports_tls is user-set AND no machine port_scope_origin
-                # marker is present (dashboard's common scope also sets
-                # ports_tls but must keep auto-enabling; see jobs.py).
-                scan_user_set = getattr(scan, "_user_set_fields", frozenset())
-                scope_narrowed = "ports_tls" in scan_user_set and not getattr(scan, "port_scope_origin", None)
-                if not scope_narrowed and not cfg.connectors.enable_email:
+                if not cfg.connectors.enable_email:
                     cfg.connectors.enable_email = True
 
         # Phase 33: deep profile enables broker scanning (D-10).
@@ -126,10 +119,7 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_broker"):
             user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
             if "enable_broker" not in user_set:
-                # Phase 173 D-01/D-01a: see enable_email guard above.
-                scan_user_set = getattr(scan, "_user_set_fields", frozenset())
-                scope_narrowed = "ports_tls" in scan_user_set and not getattr(scan, "port_scope_origin", None)
-                if not scope_narrowed and not cfg.connectors.enable_broker:
+                if not cfg.connectors.enable_broker:
                     cfg.connectors.enable_broker = True
 
     else:
@@ -149,10 +139,7 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_email"):
             user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
             if "enable_email" not in user_set:
-                # Phase 173 D-01/D-01a: see deep-branch guard above for rationale.
-                scan_user_set = getattr(scan, "_user_set_fields", frozenset())
-                scope_narrowed = "ports_tls" in scan_user_set and not getattr(scan, "port_scope_origin", None)
-                if not scope_narrowed and not cfg.connectors.enable_email:
+                if not cfg.connectors.enable_email:
                     cfg.connectors.enable_email = True
 
         # Phase 33: standard profile enables broker scanning (D-10).
@@ -160,10 +147,7 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_broker"):
             user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
             if "enable_broker" not in user_set:
-                # Phase 173 D-01/D-01a: see deep-branch guard above for rationale.
-                scan_user_set = getattr(scan, "_user_set_fields", frozenset())
-                scope_narrowed = "ports_tls" in scan_user_set and not getattr(scan, "port_scope_origin", None)
-                if not scope_narrowed and not cfg.connectors.enable_broker:
+                if not cfg.connectors.enable_broker:
                     cfg.connectors.enable_broker = True
 
     # -------------------------

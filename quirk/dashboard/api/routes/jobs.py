@@ -80,15 +80,6 @@ def _write_job_config(
     Common scope is intentionally left alone — CONSULTING_TLS_PORTS already
     curates in the implicit-TLS email ports (993/995/465), so its connector
     coverage is by design, not a leak.
-
-    Phase 173 D-01a: every branch also writes scan.port_scope_origin, a
-    machine-provenance marker recording which port_scope produced this
-    ports_tls (or nmap_port_scope) value. quirk.engine.profiles consults it
-    to distinguish a dashboard-narrowed scan (which must NOT suppress the
-    standard/deep profile's email/broker auto-enable for common scope) from
-    a human-authored CLI YAML that explicitly narrows scan.ports_tls (which
-    SHOULD suppress it, per D-01). Absence of port_scope_origin in a [scan]
-    block means the YAML was human-authored, not machine-written.
     """
     from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
     from quirk.util.port_spec import parse_port_spec
@@ -105,14 +96,12 @@ def _write_job_config(
             "concurrency": 100,
             "ports_tls": list(CONSULTING_TLS_PORTS),
             "include_sni": True,
-            "port_scope_origin": port_scope,
         }
     elif port_scope == "custom":
         scan_block = {
             "concurrency": 100,
             "ports_tls": parse_port_spec(custom_ports or ""),
             "include_sni": True,
-            "port_scope_origin": port_scope,
         }
         connectors_block = {
             "enable_email": False,
@@ -125,7 +114,6 @@ def _write_job_config(
             "ports_tls": list(CONSULTING_TLS_PORTS),
             "include_sni": True,
             "nmap_port_scope": port_scope,
-            "port_scope_origin": port_scope,
         }
 
     config = {
