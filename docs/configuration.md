@@ -611,6 +611,14 @@ requests sent**.
 > nmap discovery prompt, which auto-proceeds in non-TTY mode — the fuzz gate is stricter
 > by design (T-96-03).
 
+**As of v5.17 (Phase 172, SAFE-01):** this refusal fires at argument-validation time,
+immediately after `--fuzz` is parsed and before any config load or scan phase begins —
+not later, inside the fuzz phase itself. `--fuzz` on non-interactive stdin is treated as
+a usage error: the scanner prints coded error `QRK-FUZZ-001` and exits `2`, regardless of
+whether an OpenAPI spec resolves. Previously this could be silently bypassed (the scan
+would complete and exit `0` with fuzzing quietly skipped); it no longer can be. See
+[docs/error-codes.md](error-codes.md) for the `FUZZ` error domain's full cause/fix text.
+
 ### Six safety guardrails (FUZZ-02)
 
 | # | Guardrail | Behavior |
@@ -621,6 +629,14 @@ requests sent**.
 | 4 | CONFIRM prompt | TTY: user must type the literal word `CONFIRM`; any other input aborts with zero requests sent |
 | 5 | Per-request scope enforcement | Every probe URL is validated via `validate_external_url` + `cfg.targets` before dispatch — out-of-scope URLs are rejected |
 | 6 | 5xx cascade pause | After 3 consecutive HTTP 5xx responses, the fuzzer pauses and emits a warning before continuing |
+
+**As of v5.17 (Phase 172, SAFE-02):** the budget ceiling in guardrail #2 is enforced at
+argument-validation time, before any config load or scan phase begins — a `--fuzz-budget`
+above the hard max is **rejected with an error, not silently clamped down to 500**. The
+boundary is inclusive: `500` is accepted, `501` is rejected. A request that exceeds the
+ceiling prints coded error `QRK-FUZZ-002` and exits `2`. The default of `50` is unchanged.
+See [docs/error-codes.md](error-codes.md) for the `FUZZ` error domain's full cause/fix
+text.
 
 ### Findings produced
 
