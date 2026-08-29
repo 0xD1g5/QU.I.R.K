@@ -111,7 +111,15 @@ client-estate consequences)
   3. A `SpecParsingError` from `scan_openapi_spec` reports a redacted URL preview, never the full
      raw URL. Reproduced today with `evil.example.com` appearing in full (`UAT-94-05`). Any sibling
      error path with the same shape is covered.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 172-01-PLAN.md — SAFE-01/02: argparse-time non-TTY refusal + budget ceiling, FUZZ-001/002 codes, CLI regression tests
+- [ ] 172-02-PLAN.md — SAFE-02 D-05: docs==code fuzz budget gate; layer-2 regression lock confirmed
+- [ ] 172-03-PLAN.md — SAFE-03 D-03: real URL redaction in url_allowlist, rename-only twin in subprocess_input, unit coverage
+- [ ] 172-04-PLAN.md — D-04 UAT-94-05 disposition, UAT Series 172, corpus vault sync
+- [ ] 172-05-PLAN.md — operator docs (configuration, operators-guide, report-interpretation) + Obsidian sync
+- [ ] 172-06-PLAN.md — invariant gate (full suite baseline, 28 fuzzer tests, UAT guards), VALIDATION/REQUIREMENTS/ROADMAP close, phase note
 
 ### Phase 173: Scanner Scope & Config Correctness
 
