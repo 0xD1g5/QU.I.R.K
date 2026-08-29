@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 172-01-PLAN.md
-last_updated: "2026-08-29T17:28:09.985Z"
-last_activity: 2026-08-29 -- Phase 173 execution started
+stopped_at: Completed 173-01-PLAN.md
+last_updated: "2026-08-29T17:37:17.881Z"
+last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
   percent: 20
 ---
 
@@ -127,7 +127,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Executing Phase 173
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -229,9 +229,9 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 173 (scanner-scope-config) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 1 of 4
-Status: Executing Phase 173
-Last activity: 2026-08-29 -- Phase 173 execution started
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-08-29
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -458,6 +458,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 172 P02 | 15min | 2 tasks | 1 files |
 | Phase 172 P03 | 50min | 3 tasks | 6 files |
 | Phase 172 P05 | 25min | 3 tasks | 6 files |
+| Phase 173 P01 | 45min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -723,6 +724,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 172]: UAT-94-05 judged CASE DEFECT (D-04), promoted to Phase 175; case text left byte-untouched — Demands all-or-nothing URL redaction contradicting D-03's locked threat model (credentials/tokens redacted, hostname deliberately retained)
 - [Phase 172]: UAT-96-02 and UAT-96-03 re-executed against post-fix behaviour and re-dispositioned PASS — Historical Series 96 FAIL entries preserved as pre-fix record; corrected disposition recorded in new Series 172 cases
 - [Phase ?]: New-prose-around-anchor pattern: add explanatory paragraphs adjacent to regex-anchored docs rows rather than editing them, to avoid disarming drift gates
+- [Phase 173]: D-01/D-01a: port_scope_origin implemented as a new sibling ScanCfg field (not a widened nmap_port_scope); suppression guard nested inside the existing explicit-connector-value check to deliver locked precedence (explicit > scope suppression > profile auto-enable)
 
 ### Pending Todos
 
@@ -861,8 +863,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T01:01:47.960Z
-Stopped at: Completed 172-01-PLAN.md
+Last session: 2026-08-29T17:37:17.876Z
+Stopped at: Completed 173-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
