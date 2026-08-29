@@ -72,6 +72,9 @@ _COVERED_FILES = [
     # added here so a future direct subprocess.run() reintroduced there is
     # caught too.
     "tests/test_uat_disposition_integrity.py",
+    # Phase 172-01: new CLI subprocess tests for the --fuzz argparse-time
+    # non-TTY / budget-ceiling refusal checks (FUZZ-001/FUZZ-002).
+    "tests/test_fuzz_cli_safety.py",
 ]
 
 # Attribute names on a `subprocess` module reference that spawn a real
