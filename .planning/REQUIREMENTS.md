@@ -77,17 +77,33 @@ leave no trace in run output.
   the `profile` / `calibration` fields on `/api/scans` are populated rather than null.
   *Evidence: `UAT-8-07` — CLI scorecards were 93 / 91 / 90 across strict / balanced / standard
   while `/api/scans` reported 93 for all three, with both fields null.*
+  *Scope note: fixed for dashboard-launched (`ScanJob`-backed) sessions only —
+  `scan.py:1263` now passes `profile=calibration` into `compute_readiness_score()`, matching the
+  already-correct `GET /api/scan/latest` sibling. Persisting the score profile for CLI-run scans
+  (so `profile`/`calibration` stop being null on those rows) is a deliberate deferral per D-01:
+  it would require a new schema column/table with no reliable backfill key for historical rows,
+  and is explicitly NOT built here — a follow-up candidate, not delivered.*
 
 - [x] **DASH-07**: The dashboard empty state loads with zero console errors. A 404 for a missing
   resource is currently logged on a fresh database.
   *Evidence: `UAT-10-08` — page loaded 200 with correct empty-state text but logged
   `Failed to load resource 404`.*
+  *Scope note: resolved as "no unhandled application error" per D-02, which was already true —
+  re-verified against a genuinely empty DB (`174-EMPTY-DB-EVIDENCE.md`). The documented,
+  intentional `QRK-DASHBOARD-006` 404 contract on `GET /api/scan/latest` is unchanged by design;
+  the residual DevTools network-panel log line is a browser artifact, not an application error,
+  and cannot be suppressed from application code.*
 
-- [ ] **DASH-08**: The sidebar navigation order matches its documented lock, or the documented lock
+- [x] **DASH-08**: The sidebar navigation order matches its documented lock, or the documented lock
   is corrected to match the shipped navigation — whichever is right. An undocumented Hardware item
   currently sits between Motion and Data at Rest, contradicting the D-11 order.
   *Evidence: `UAT-39-07`. Decide deliberately which side is wrong; do not silently re-order a
   shipped UI to satisfy a stale document.*
+  *Scope note: the document was wrong, not the product — Hardware's placement was planned,
+  reviewed and shipped deliberately in Phase 128 (commit `07db14d75cc0f0da9546bcdd11d5c0ecf3cd9772`).
+  The stale Phase-39 D-11 note was corrected to the canonical fourteen-item order derived live
+  from `sidebar.tsx`; see `174-SIDEBAR-ORDER.md` for the full evidence chain. `sidebar.tsx` itself
+  was never modified.*
 
 ## Case & Documentation Defect Correction (Phase 175)
 
@@ -165,7 +181,7 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | SCOPE-03 | Phase 173 | Complete |
 | DASH-06 | Phase 174 | Complete |
 | DASH-07 | Phase 174 | Complete |
-| DASH-08 | Phase 174 | Pending |
+| DASH-08 | Phase 174 | Complete |
 | CASEFIX-01 | Phase 175 | Pending |
 | CASEFIX-02 | Phase 175 | Pending |
 | CASEFIX-03 | Phase 175 | Pending |
