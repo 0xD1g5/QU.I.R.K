@@ -117,6 +117,35 @@ references. The CBOM enumerates every cryptographic asset discovered.
 > walkthrough, [`docs/report-interpretation.md`](report-interpretation.md) for
 > plain-English finding/score explanations and client-conversation guidance.
 
+### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
+
+`--fuzz` enables active REST crypto-posture probing against discovered OpenAPI
+endpoints (see [`docs/configuration.md`](configuration.md#rest-fuzzing-active-crypto-posture-probes)
+for the full flag reference and guardrail table). Two things every operator scheduling
+QU.I.R.K. runs needs to know before wiring `--fuzz` into automation:
+
+- **`--fuzz` requires an interactive terminal.** If stdin is not a TTY — piped input, a
+  CI/CD job, a cron job, any headless invocation — the scanner refuses to run fuzzing at
+  all. It prints coded error `FUZZ-001` and **exits non-zero (exit 2)**, and it does this
+  before any scan work begins. This is deliberate, not a bug: an unattended job must
+  never be able to authorize active probing of a client's live API on its own. If you see
+  a cron or CI run fail with `FUZZ-001`, that is the gate working as intended — drop
+  `--fuzz` from unattended/scheduled invocations, or run it manually from an interactive
+  session instead.
+- **`--fuzz` is never silently skipped.** Earlier behaviour could let a non-interactive
+  `--fuzz` invocation complete normally with fuzzing quietly disabled and no indication
+  in the output. That is no longer possible — either fuzzing runs (interactive session,
+  confirmed) or the scan refuses to start (non-interactive, `FUZZ-001`, exit 2). There is
+  no third, quiet outcome.
+- **`--fuzz-budget` is bounded, and out-of-range values are rejected, not clamped.** The
+  default is 50 requests; values above the hard ceiling documented in
+  [`docs/configuration.md`](configuration.md#rest-fuzzing-active-crypto-posture-probes)
+  are rejected up front with coded error `FUZZ-002` and exit 2 — the scan does not
+  silently reduce an over-budget request down to the ceiling and proceed.
+
+See [`docs/error-codes.md`](error-codes.md) for the full `FUZZ` error-domain cause/fix
+text for `FUZZ-001` and `FUZZ-002`.
+
 ---
 
 ## 4. Validation / Smoke Test

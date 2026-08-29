@@ -833,4 +833,27 @@ of ?" state) and disappears entirely once the job advances past the discovery st
 
 ---
 
+## 14. OpenAPI Spec-Parsing Error Previews (Phase 172, SAFE-03)
+
+If `--openapi-spec` (used with `--fuzz` or passive OpenAPI analysis) points at a spec URL
+that cannot be parsed or is rejected by scope enforcement, the raised error includes a
+short preview of the URL rather than the full raw value. As of Phase 172, that preview
+is a genuine redaction, not a truncation: userinfo (`user:pass@`), the query string, and
+the fragment are stripped before the preview is built. Scheme, host, and a truncated
+path are kept.
+
+This is a deliberate boundary, not an oversight — the host in the preview is the value
+the operator themselves supplied on the command line or in config; it is not a secret,
+and removing it would make the error message useless for diagnosing which target the
+scan was pointed at. What genuinely could leak through a spec URL — embedded basic-auth
+credentials or an API token in a query parameter — is what gets stripped.
+
+> **Client Conversation — Spec-Parsing Error Previews:**
+> "If a scan can't parse the OpenAPI spec you pointed it at, the error message we log
+> shows the host you gave us, so you can tell at a glance which target it was — but any
+> username, password, or token that happened to be embedded in that URL is stripped
+> before it's ever written to a log or a report."
+
+---
+
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*
