@@ -134,3 +134,30 @@ def test_top1000_deep_profile_still_enables_email(tmp_path: Path) -> None:
     cfg = config_from_dict(_load_cfg(cfg_path))
     apply_profile(cfg, "deep")
     assert cfg.connectors.enable_email is True
+
+
+def test_common_deep_profile_still_enables_email(tmp_path: Path) -> None:
+    """Phase 173 D-01a collision guard: common scope also writes ports_tls but
+    must NOT be suppressed by the CLI-path scope-narrowing guard added in
+    Phase 173 (SCOPE-01). Common scope's CONSULTING_TLS_PORTS already curates
+    in the implicit-TLS email ports (993/995/465) by design (Phase 121); the
+    deep profile must still auto-enable email/broker for it.
+
+    Falsifiability: fails if `_write_job_config`'s `common` branch stops
+    writing `port_scope_origin`, or if `apply_profile` stops consulting it —
+    either regression would silently suppress email/broker for every
+    dashboard user picking the default "common" scope, exactly the collision
+    that was invisible before this phase because no test previously covered
+    common scope through apply_profile('deep').
+    """
+    from quirk.config import config_from_dict
+    from quirk.engine.profiles import apply_profile
+
+    cfg_path = _write_job_config(
+        tmp_path, "127.0.0.1", "/tmp/q.db", "balanced",
+        allow_internal_targets=True, port_scope="common",
+    )
+    cfg = config_from_dict(_load_cfg(cfg_path))
+    apply_profile(cfg, "deep")
+    assert cfg.connectors.enable_email is True
+    assert cfg.connectors.enable_broker is True
