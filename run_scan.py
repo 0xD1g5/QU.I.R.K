@@ -1507,7 +1507,14 @@ def main():
         # Budget check FIRST (fail-fast, TTY-independent, per D-02's ordering).
         fuzz_budget = getattr(args, "fuzz_budget", 50)
         if _fuzz_budget_exceeds_ceiling(fuzz_budget):
-            print(format_error("FUZZ-002"), file=sys.stderr)
+            # Phase 172 code review WR-01: append the caller-supplied value so
+            # the operator sees both the ceiling and what they actually asked
+            # for, rather than rewording the UAT-172-02 pass criterion to fit
+            # a message that omitted it.
+            print(
+                f"{format_error('FUZZ-002')} (requested: {fuzz_budget})",
+                file=sys.stderr,
+            )
             sys.exit(2)
         # Non-TTY check SECOND.
         if _fuzz_requires_interactive_refusal():

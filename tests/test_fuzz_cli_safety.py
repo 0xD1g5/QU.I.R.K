@@ -102,6 +102,31 @@ def test_fuzz_budget_over_ceiling_refused_exit_2(tmp_path: Path) -> None:
     )
 
 
+def test_fuzz_budget_over_ceiling_message_references_requested_value(tmp_path: Path) -> None:
+    """Phase 172 code review WR-01: the FUZZ-002 message must reference the
+    caller-supplied value (501), not just the hard maximum (500) -- this is
+    the exact pass criterion UAT-172-02 was dispositioned PASS against
+    without the code actually satisfying it.
+
+    Falsifiability: reverting the ``(requested: {fuzz_budget})`` suffix at
+    the run_scan.py call site makes '501' disappear from stderr and this
+    fails.
+    """
+    spec_path, config_path = _write_repro_fixtures(tmp_path)
+    argv = _base_argv(spec_path, config_path) + [
+        "--fuzz",
+        "--fuzz-budget",
+        "501",
+    ]
+    result = run_fork_safe(argv, timeout=30, input="")
+    assert "501" in result.stderr, (
+        f"expected the requested value 501 in stderr; stderr={result.stderr!r}"
+    )
+    assert "500" in result.stderr, (
+        f"expected the hard maximum 500 in stderr; stderr={result.stderr!r}"
+    )
+
+
 def test_fuzz_budget_at_ceiling_is_legal(tmp_path: Path) -> None:
     """--fuzz --fuzz-budget 500 (the inclusive boundary) never produces
     FUZZ-002. It is still refused by FUZZ-001 in this non-TTY test
