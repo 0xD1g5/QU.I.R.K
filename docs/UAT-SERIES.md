@@ -20050,21 +20050,24 @@ docs==code gate.
   of `tests/test_rest_fuzzer_gate.py` both pass in full.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-08-29  **Tester:** Automated (172-04 phase-close plan execution, live repro run
-against the shipped `.venv` interpreter and commit `5b3dd24` — re-executed independently, not
-copied from 172-01/172-02-SUMMARY.md)
-**Notes:** Live repro: `echo "" | .venv/bin/python run_scan.py --config <repro-config.yaml>
---openapi-spec <mini-spec.json> --fuzz --fuzz-budget 501 --db-path <db> --quiet` printed
-`[QRK-FUZZ-002] --fuzz-budget exceeds the hard maximum of 500 requests; the requested value was
-rejected, not clamped. Fix: Reduce --fuzz-budget to 500 or lower.`, exit code 2. `grep -n
-'"--fuzz-budget"' -A5 run_scan.py | grep default` → `default=50`. `pytest -q
-tests/test_fuzz_budget_docs_agree.py` — 4/4 passed. `pytest -q tests/test_rest_fuzzer_gate.py -k
-budget` — 8/8 passed (`test_budget_hard_ceiling_raises_on_501`,
-`test_budget_hard_ceiling_accepts_500` among them, confirming the 500 boundary is accepted, not
-just documented). This case supersedes Series 96's `UAT-96-03` (dated 2026-08-27, disposition
-FAIL against the pre-fix build) — re-execution against the fixed code now PASSES; see
-`172-DISPOSITIONS.md` §3 for the full re-disposition argument. `UAT-96-03`'s original entry is
-left as the historical pre-fix record and is not rewritten.
+**Date:** 2026-08-29  **Tester:** Automated (172-code-review-fix re-verification, live repro run
+against the shipped `.venv` interpreter and commit `695c894` — re-executed independently after
+WR-01's fix, not copied from prior SUMMARY.md)
+**Notes:** UPDATE (172-code-review-fix, WR-01): the original PASS disposition below was recorded
+against a criterion the shipped code did not actually satisfy (the "provided value (501)" clause)
+— see `172-REVIEW.md` WR-01. Fixed via route (a): `run_scan.py`'s FUZZ-002 call site now appends
+`(requested: {fuzz_budget})`. Re-verified live repro: `echo "" | .venv/bin/python run_scan.py
+--config <repro-config.yaml> --openapi-spec <mini-spec.json> --fuzz --fuzz-budget 501 --db-path
+<db> --quiet` printed `[QRK-FUZZ-002] --fuzz-budget exceeds the hard maximum of 500 requests; the
+requested value was rejected, not clamped. Fix: Reduce --fuzz-budget to 500 or lower. (requested:
+501)`, exit code 2 — both `500` and `501` now genuinely present. `grep -n '"--fuzz-budget"' -A5
+run_scan.py | grep default` → `default=50`. `pytest -q tests/test_fuzz_budget_docs_agree.py` —
+4/4 passed. `pytest -q tests/test_rest_fuzzer_gate.py -k budget` — 8/8 passed
+(`test_budget_hard_ceiling_raises_on_501`, `test_budget_hard_ceiling_accepts_500` among them,
+confirming the 500 boundary is accepted, not just documented). This case supersedes Series 96's
+`UAT-96-03` (dated 2026-08-27, disposition FAIL against the pre-fix build) — re-execution against
+the fixed code now PASSES; see `172-DISPOSITIONS.md` §3 for the full re-disposition argument.
+`UAT-96-03`'s original entry is left as the historical pre-fix record and is not rewritten.
 
 ### UAT-172-03: `SpecParsingError` messages strip credentials/tokens, host remains visible by design (SAFE-03)
 
