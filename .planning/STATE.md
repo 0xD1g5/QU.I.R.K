@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 173-03-PLAN.md
-last_updated: "2026-08-29T22:02:36.985Z"
+last_updated: "2026-08-29T22:07:34.027Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
   percent: 40
 ---
 
@@ -258,7 +258,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 174 (dashboard-api-correctness) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -492,6 +492,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 173 P03 | 45min | 3 tasks | 2 files |
 | Phase 174 P01 | 25min | 2 tasks | 2 files |
 | Phase 174 P02 | 20min | 2 tasks | 2 files |
+| Phase 174 P03 | 35min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -764,6 +765,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 173]: 173-03: smime and adcs advisory messages use extras label adcs (not identity) since smime has no dedicated pyproject.toml extras group
 - [Phase 174]: D-01: minimal DASH-06 fix only -- pass ScanJob.calibration into compute_readiness_score(), no schema migration, no CLI-scan persistence
 - [Phase 174]: DASH-07 closed by verification not code change: D-02 honored literally, zero production code changed, evidence recorded in 174-EMPTY-DB-EVIDENCE.md, contract locked by tests/test_dashboard_empty_state_contract.py
+- [Phase 174]: (D-03) Corrected Phase-39's stale nine-item nav-order note to the current 14-item order; shipped sidebar.tsx untouched
 
 ### Pending Todos
 
@@ -902,7 +904,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T22:02:03.987Z
+Last session: 2026-08-29T22:06:53.004Z
 Stopped at: Completed 173-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

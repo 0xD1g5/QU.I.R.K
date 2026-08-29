@@ -191,7 +191,7 @@ deliberately rather than silently.
 Plans:
 - [x] 174-01-PLAN.md — DASH-06: RED test then the minimal `list_scans` calibration fix (no schema change)
 - [x] 174-02-PLAN.md — DASH-07: executed empty-DB evidence probe + 404-contract regression guard (no code change)
-- [ ] 174-03-PLAN.md — DASH-08: canonical nav-order record + lockstep correction of the stale Phase-39 D-11 note
+- [x] 174-03-PLAN.md — DASH-08: canonical nav-order record + lockstep correction of the stale Phase-39 D-11 note
 - [ ] 174-04-PLAN.md — UAT corpus: UAT-39-07 criteria corrected, three legacy cases re-dispositioned via the ledger, Series 174, sidebar drift guard
 - [ ] 174-05-PLAN.md — Obsidian sync + phase note, REQUIREMENTS.md close-out, blocking full-suite regression gate
 
@@ -276,7 +276,7 @@ milestone whose other work is already complete
 |-------|----------------|--------|-----------|
 | 172. Fuzzing & Disclosure Safety | 6/6 | Complete | 2026-08-29 |
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
-| 174. Dashboard & API Correctness | 2/5 | In Progress|  |
+| 174. Dashboard & API Correctness | 3/5 | In Progress|  |
 | 175. Case & Documentation Defect Correction | 0/TBD | Not started | - |
 | 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |
 
