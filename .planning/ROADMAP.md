@@ -122,7 +122,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 172-04-PLAN.md — D-04 UAT-94-05 disposition, UAT Series 172, corpus vault sync
+- [x] 172-04-PLAN.md — D-04 UAT-94-05 disposition, UAT Series 172, corpus vault sync
 - [ ] 172-05-PLAN.md — operator docs (configuration, operators-guide, report-interpretation) + Obsidian sync
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -224,7 +224,7 @@ milestone whose other work is already complete
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 172. Fuzzing & Disclosure Safety | 3/6 | In Progress|  |
+| 172. Fuzzing & Disclosure Safety | 4/6 | In Progress|  |
 | 173. Scanner Scope & Config Correctness | 0/TBD | Not started | - |
 | 174. Dashboard & API Correctness | 0/TBD | Not started | - |
 | 175. Case & Documentation Defect Correction | 0/TBD | Not started | - |
