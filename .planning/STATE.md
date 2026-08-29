@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 173-01-PLAN.md
-last_updated: "2026-08-29T17:37:17.881Z"
+last_updated: "2026-08-29T18:13:18.281Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 20
 ---
 
@@ -229,7 +229,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 173 (scanner-scope-config) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -459,6 +459,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 172 P03 | 50min | 3 tasks | 6 files |
 | Phase 172 P05 | 25min | 3 tasks | 6 files |
 | Phase 173 P01 | 45min | 3 tasks | 4 files |
+| Phase 173 P02 | 45min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -725,6 +726,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 172]: UAT-96-02 and UAT-96-03 re-executed against post-fix behaviour and re-dispositioned PASS — Historical Series 96 FAIL entries preserved as pre-fix record; corrected disposition recorded in new Series 172 cases
 - [Phase ?]: New-prose-around-anchor pattern: add explanatory paragraphs adjacent to regex-anchored docs rows rather than editing them, to avoid disarming drift gates
 - [Phase 173]: D-01/D-01a: port_scope_origin implemented as a new sibling ScanCfg field (not a widened nmap_port_scope); suppression guard nested inside the existing explicit-connector-value check to deliver locked precedence (explicit > scope suppression > profile auto-enable)
+- [Phase 173]: SCOPE-02: extended guard conversion to jwt/container/source/db (proven identical enable_* shape) per plan authorization
+- [Phase 173]: SCOPE-02: renamed two tests to include absent/non_broker substrings to satisfy VALIDATION.md -k filters
 
 ### Pending Todos
 
@@ -863,7 +866,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T17:37:17.876Z
+Last session: 2026-08-29T18:10:59.221Z
 Stopped at: Completed 173-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
