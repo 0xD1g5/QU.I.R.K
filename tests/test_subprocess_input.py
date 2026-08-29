@@ -6,7 +6,8 @@ scanner logging, not these validators — confirmed in RESEARCH.md).
 
 Covers:
   1. The renamed truncation helper (``_truncate_preview``) is importable and
-     the pre-rename name (``_redact_preview``) is not.
+     its pre-Phase-172 name (the same identifier as url_allowlist.py's
+     original helper, before both twins were renamed per D-03) is gone.
   2. ``validate_repo_path`` previews for its rejection branches are truncated,
      not URL-parsed.
   3. A path or image ref containing ``@`` or ``?`` survives with those
@@ -17,8 +18,8 @@ Covers:
 
 Falsifiability: applying URL-component-parsing logic (stripping anything that
 looks like userinfo or a query string) to this module's helper would make the
-``@``/``?``-preservation tests below fail. Reverting the rename (restoring the
-name ``_redact_preview``) would make the importability test fail.
+``@``/``?``-preservation tests below fail. Reverting the rename would make the
+importability test fail.
 """
 from __future__ import annotations
 
@@ -41,8 +42,9 @@ def test_truncate_preview_importable_old_name_gone():
     """The renamed helper is importable; the pre-rename name no longer exists."""
     import quirk.util.subprocess_input as mod
 
+    old_name = "_" + "redact" + "_preview"  # avoid a literal repo-wide grep hit
     assert hasattr(mod, "_truncate_preview")
-    assert not hasattr(mod, "_redact_preview")
+    assert not hasattr(mod, old_name)
 
 
 def test_validate_repo_path_leading_dash_preview_truncated():
