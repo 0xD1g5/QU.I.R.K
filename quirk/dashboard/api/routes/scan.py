@@ -1220,27 +1220,15 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
     ):
         eps = _fetch_session_endpoints_by_id(db, ts_str)
 
-        # Per-session score (D-02)
-        score = 0
-        if eps:
-            evidence = build_evidence_summary(eps)
-            score_dict = compute_readiness_score(evidence)
-            score = int(score_dict["score"])
-
-        # Finding counts (D-03)
-        keys = [
-            (ep.host, ep.port, ep.protocol, ep.severity)
-            for ep in eps
-            if ep.scan_error is None and ep.severity
-        ]
-        counts = _count_by_bucket(keys)
-
         # Clone data (D-04) — try ScanJob join first, fall back to host reconstruction.
         # RVW-003: for keyed sessions ts_str IS the scan_run_id, so this is now an
         # exact match rather than a prefix guess. Legacy sessions keep the old
         # prefix LIKE, which used ts.isoformat()[:19] (T-separator) because
         # scan_run_id is stored via datetime.isoformat() while the legacy ts_str
         # uses a space separator (Pitfall 2).
+        # DASH-06: resolved BEFORE the score computation below so `calibration` is
+        # in scope for the compute_readiness_score() call — matches the correct
+        # sibling call shape at :1476.
         job = (
             db.query(ScanJob)
             .filter(ScanJob.scan_run_id == ts_str)
@@ -1262,6 +1250,26 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             target = ", ".join(hosts) if hosts else None
             profile = None
             calibration = None
+
+        # Per-session score (D-02). DASH-06: score under the session's OWN stored
+        # calibration (strict|balanced|lenient) rather than the compute_readiness_score()
+        # default. NOTE: pass `calibration`, not `profile` — ScanJob.profile is the scan
+        # DEPTH vocabulary (quick|standard|deep) and would silently no-op back to
+        # "balanced" inside compute_readiness_score(). `calibration` is None for
+        # ScanJob-less (CLI-launched) sessions, which is the intended balanced fallback.
+        score = 0
+        if eps:
+            evidence = build_evidence_summary(eps)
+            score_dict = compute_readiness_score(evidence, profile=calibration)
+            score = int(score_dict["score"])
+
+        # Finding counts (D-03)
+        keys = [
+            (ep.host, ep.port, ep.protocol, ep.severity)
+            for ep in eps
+            if ep.scan_error is None and ep.severity
+        ]
+        counts = _count_by_bucket(keys)
 
         sessions.append(
             ScanSession(
