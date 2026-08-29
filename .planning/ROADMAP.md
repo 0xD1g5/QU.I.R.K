@@ -180,6 +180,12 @@ deliberately rather than silently.
      sits between Motion and Data at Rest. **Decide which side is wrong** — do not re-order a
      shipped UI to satisfy a stale document without establishing that the document is right
      (`UAT-39-07`).
+**Scope note (added 2026-08-29 during Phase 174 planning — the criteria text above is left INTACT; this records what was deliberately narrowed and why):**
+
+- **Criterion 1 is partially superseded by locked decision D-01.** Ground truth (`174-ASSUMPTIONS.md` §A) established the real defect is a single call site: `quirk/dashboard/api/routes/scan.py:1227` computes the score without the calibration its sibling at `:1476` passes correctly. The `profile`/`calibration` nulls are NOT a defect — they are locked by a passing regression test (`test_clone_reconstruction`, UI-HIST-01) because those fields exist only for dashboard-launched jobs. Making the literal bare-CLI reproduction pass would require new DB persistence for CLI-run scans (schema migration, no reliable backfill key), **explicitly deferred by user decision** and not delivered here. Note also that `--score-profile standard` is not a legal value (legal: `lenient`/`balanced`/`strict`), so the reproduction as written could not have run; `UAT-8-07`'s case-text correction is recorded for Phase 175.
+- **Criterion 2 is interpreted by locked decision D-02** as "no unhandled application error", which is already true. The only 404 on an empty DB is `GET /api/scan/latest` — an intentional, documented route (`QRK-DASHBOARD-006`) that the frontend already handles with correct empty-state text. The remaining DevTools entry is the browser logging any non-2xx fetch; it cannot be suppressed from frontend code, and silencing it would mean changing a documented error contract, which was **rejected by user decision**.
+- **Criterion 3 was resolved in favour of the shipped UI** per locked decision D-03. Git archaeology proved Hardware's placement was deliberate (Phase 128, explicit commit message, 4 corroborating artifacts), and the cited D-11 "lock" is a stale Phase-39 note that five other shipped items also violate. The DOCUMENTS are corrected; the sidebar is NOT re-ordered.
+
 **Plans**: 5 plans
 
 Plans:
