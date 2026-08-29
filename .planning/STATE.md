@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 172-06-PLAN.md (phase 172 execution complete; awaiting /gsd:verify-phase)
-last_updated: "2026-08-29T22:30:00.000Z"
-last_activity: 2026-08-29
+stopped_at: Completed 172-01-PLAN.md
+last_updated: "2026-08-29T17:28:09.985Z"
+last_activity: 2026-08-29 -- Phase 173 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 6
+  completed_phases: 1
+  total_plans: 10
   completed_plans: 6
   percent: 20
 ---
@@ -22,7 +22,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 172 — fuzzing-disclosure-safety — **execution complete 2026-08-29**
+**Current focus:** Phase 173 — scanner-scope-config
 (172-06 closed the phase: full unfiltered suite (`pytest -q -m ""`, 0 deselected) reproduced 3x
 at 1 failed / 3733 passed / zero Phase 172 node failing — BETTER than the documented 4-failure
 baseline in one respect (`test_extras_install_matrix` now passes) but revealed pre-existing
@@ -127,7 +127,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Executing Phase 173
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -226,12 +226,12 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 172 (fuzzing-disclosure-safety) — EXECUTING
+Phase: 173 (scanner-scope-config) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-08-29
+Plan: 1 of 4
+Status: Executing Phase 173
+Last activity: 2026-08-29 -- Phase 173 execution started
 
 ## v5.16 Phase Map (IN PROGRESS)
 
