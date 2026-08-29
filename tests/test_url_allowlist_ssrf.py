@@ -353,3 +353,52 @@ def test_validate_external_url_rejection_branches_populate_nonempty_redacted_pre
     assert r.ok is False
     assert r.reason == expect_reason
     assert r.redacted_preview != ""
+
+
+# ---------------------------------------------------------------------------
+# Phase 172 code review CR-01 — fallback path must not leak credentials
+# ---------------------------------------------------------------------------
+
+def test_redact_url_preview_userinfo_empty_host_does_not_leak():
+    """CR-01 repro #1: userinfo with an empty/missing host falls through
+    urlparse's `not parsed.hostname` guard into the fallback branch. The
+    fallback must still be userinfo-stripped, not the raw cleaned string.
+
+    Falsifiability: reverting the fail-closed regex pre-pass (so the fallback
+    branches return the raw `cleaned` string again) makes this fail because
+    'hunter2' would reappear verbatim.
+    """
+    raw = "https://user:hunter2@/openapi.json"
+    preview = _redact_url_preview(raw, max_len=200)
+    assert "hunter2" not in preview
+    assert "user" not in preview
+
+
+def test_redact_url_preview_userinfo_invalid_port_does_not_leak():
+    """CR-01 repro #2: userinfo with an out-of-range port makes `.port` raise
+    ValueError, caught by the `except (ValueError, AttributeError)` fallback.
+    The fallback must still be userinfo-stripped.
+
+    Falsifiability: reverting the fail-closed regex pre-pass makes this fail
+    because 'hunter2' would reappear verbatim in the truncated raw string.
+    """
+    raw = "https://user:hunter2@evil.example.com:99999/openapi.json"
+    preview = _redact_url_preview(raw, max_len=200)
+    assert "hunter2" not in preview
+    assert "user" not in preview
+    # Host is not secret under D-03's threat model — it may still survive.
+    assert "evil.example.com" in preview
+
+
+def test_fetch_spec_bytes_from_url_userinfo_empty_host_end_to_end_does_not_leak():
+    """CR-01 end-to-end repro: the exact reviewer repro through the real
+    SpecParsingError raise site an attacker-supplied --openapi-spec URL
+    reaches, not just the helper in isolation."""
+    from quirk.scanner.openapi_scanner import _fetch_spec_bytes_from_url, SpecParsingError
+
+    with pytest.raises(SpecParsingError) as exc_info:
+        _fetch_spec_bytes_from_url(
+            "https://user:hunter2@/openapi.json", cfg_targets=["acme.com"]
+        )
+    assert "hunter2" not in str(exc_info.value)
+

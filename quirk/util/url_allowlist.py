@@ -141,10 +141,22 @@ def _redact_url_preview(raw: str, max_len: int = 32) -> str:
 
     D-03 deliberately does NOT redact the host — see Phase 172 CONTEXT.md D-03/D-04.
 
-    If *raw* is not URL-shaped (no scheme, or unparseable), this falls back to the
-    previous control-strip-and-truncate behaviour rather than raising, because
-    several ``validate_external_url`` rejection branches feed it deliberately
-    malformed values.
+    If *raw* is not URL-shaped (no scheme, or unparseable), this falls back to a
+    userinfo-stripped truncation rather than raising, because several
+    ``validate_external_url`` rejection branches feed it deliberately malformed
+    values.
+
+    Phase 172 CR-01: the fallback must be at least as safe as the success path,
+    never less — malformed input is exactly when an attacker-influenced URL
+    arrives. Two shapes defeat ``urlparse``-based component stripping outright
+    (userinfo with an empty/missing host, e.g. ``http://user:pass@/x``; and
+    userinfo with an out-of-range port, e.g. ``http://user:pass@host:99999/x``,
+    where reading ``.port`` raises). Both used to fall through to the raw
+    control-stripped string, leaking credentials verbatim. A cheap regex strip
+    of any ``//...@`` userinfo-looking prefix is therefore applied to *every*
+    return path, including both fallback branches, BEFORE any parsing is
+    attempted — so a malformed URL that defeats ``urlparse`` still cannot leak
+    credentials.
 
     Args:
         raw: The raw input string (expected to be URL-shaped).
@@ -154,18 +166,25 @@ def _redact_url_preview(raw: str, max_len: int = 32) -> str:
         A sanitised, credential-stripped, truncated preview of *raw*.
     """
     cleaned = _CTRL_RE.sub("", raw)
+    # Fail-closed pre-pass: strip anything that looks like "//userinfo@" before
+    # any parsing is attempted, so every return path below — success or
+    # fallback — is guaranteed userinfo-free. Non-greedy up to the first '/'
+    # or '@' after the authority-marking "//" covers both malformed shapes
+    # named in CR-01 (empty host, invalid port) without depending on urlparse
+    # succeeding at all.
+    cleaned_no_userinfo = re.sub(r"//[^/@]*@", "//", cleaned)
     try:
-        parsed = urlparse(cleaned)
+        parsed = urlparse(cleaned_no_userinfo)
         if not parsed.scheme or not parsed.hostname:
-            # Not URL-shaped (e.g. a bare malformed string) — fall back to the
-            # original truncation-only behaviour rather than mangling non-URL input.
-            return cleaned[:max_len]
+            # Not URL-shaped (e.g. a bare malformed string) — fall back to a
+            # userinfo-stripped truncation rather than mangling non-URL input.
+            return cleaned_no_userinfo[:max_len]
         netloc = parsed.hostname
         if parsed.port is not None:
             netloc = f"{netloc}:{parsed.port}"
         rebuilt = f"{parsed.scheme}://{netloc}{parsed.path}"
     except (ValueError, AttributeError):
-        return cleaned[:max_len]
+        return cleaned_no_userinfo[:max_len]
     return rebuilt[:max_len]
 
 
