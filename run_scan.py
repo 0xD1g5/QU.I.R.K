@@ -3189,8 +3189,22 @@ def main():
         ) or []
 
         # ── S/MIME LDAP scanning (Phase 79 SMIME-01) ──────────────────
+        # Phase 173 D-03: smime borrows ldap3 from the adcs/identity extras group
+        # (pyproject.toml has no dedicated [smime] group). Probe availability up
+        # front so an absent ldap3 emits the documented missing-extra signal
+        # instead of the bare log.warning() inside smime_scanner.py.
+        if getattr(cfg.connectors, "enable_smime", False):
+            from quirk.scanner import smime_scanner as _smime_mod
+            if not getattr(_smime_mod, "LDAP3_AVAILABLE", True):
+                _emit_missing_extra_advisory("smime_scanner", "adcs", error_endpoints)
+                cfg_smime_skip = True
+            else:
+                cfg_smime_skip = False
+        else:
+            cfg_smime_skip = True
+
         def _run_smime_phase():
-            if not (getattr(cfg.connectors, "enable_smime", False)
+            if cfg_smime_skip or not (getattr(cfg.connectors, "enable_smime", False)
                     and getattr(cfg.connectors, "smime_targets", None)):
                 return _PHASE_SKIPPED
             from quirk.scanner.smime_scanner import scan_smime_targets
@@ -3210,8 +3224,22 @@ def main():
         ) or []
 
         # ── AD CS LDAP scanning (Phase 80 ADCS-01) ────────────────────
+        # Phase 173 D-03: adcs's ldap3 dependency ships under the [adcs] extras
+        # group. Probe availability up front so an absent ldap3 emits the
+        # documented missing-extra signal instead of the bare log.warning()
+        # inside adcs_scanner.py.
+        if getattr(cfg.connectors, "enable_adcs", False):
+            from quirk.scanner import adcs_scanner as _adcs_mod
+            if not getattr(_adcs_mod, "LDAP3_AVAILABLE", True):
+                _emit_missing_extra_advisory("adcs_scanner", "adcs", error_endpoints)
+                cfg_adcs_skip = True
+            else:
+                cfg_adcs_skip = False
+        else:
+            cfg_adcs_skip = True
+
         def _run_adcs_phase():
-            if not (getattr(cfg.connectors, "enable_adcs", False)
+            if cfg_adcs_skip or not (getattr(cfg.connectors, "enable_adcs", False)
                     and getattr(cfg.connectors, "adcs_targets", None)):
                 return _PHASE_SKIPPED
             from quirk.scanner.adcs_scanner import scan_adcs_targets
