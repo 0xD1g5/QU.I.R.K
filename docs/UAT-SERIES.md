@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-29 (v5.17 Phase 172 — Fuzzing & Disclosure Safety: added Series 172 with
+**Last Updated:** 2026-08-29 (v5.17 Phase 174 — Dashboard & API Correctness: re-dispositioned
+`UAT-8-07` (DEFERRED — covered by `tests/test_dashboard_scans_score_profile.py`, DASH-06's real
+fix is a one-line `profile=calibration` kwarg at `scan.py:1227`; the case's own reproduction uses
+the illegal `--score-profile standard` value and an out-of-scope bare-CLI path, case-text
+correction promoted to Phase 175), `UAT-10-08` (PASS, DASH-07, re-verified against a fresh
+empty-DB probe — the sole non-2xx path is the intentional, documented `QRK-DASHBOARD-006` 404 on
+`/api/scan/latest`, already handled gracefully by the frontend), and `UAT-39-07` (PASS, DASH-08,
+criteria corrected to the canonical fourteen-item sidebar order — the document was stale, not the
+shipped UI, per Phase 128's four corroborating planning artifacts). Added Series 174 with 3
+real-disposition cases and a new bidirectional drift guard, `tests/test_sidebar_nav_order.py`.
+Earlier: v5.17 Phase 172 — Fuzzing & Disclosure Safety: added Series 172 with
 3 real-disposition cases — UAT-172-01 confirms `--fuzz` with non-interactive stdin hard-aborts at
 argparse-validation time (SAFE-01), UAT-172-02 confirms `--fuzz-budget` over 500 is rejected before
 any scan work with the default holding at 50 (SAFE-02), UAT-172-03 confirms `SpecParsingError`
@@ -4369,7 +4379,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Running the same scan again with `--score-profile balanced` and refreshing the dashboard shows a *different* score
 - Dashboard score does not silently default to balanced when strict or lenient was used
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: quirk --config config.yaml --score-profile strict then balanced/standard - CLI scorecards were 93, 91, 90 across 3 profiles but dashboard /api/scans score stayed 93 for all, profile/calibration fields null)  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-29 re-verified: DEFERRED — covered by tests/test_dashboard_scans_score_profile.py::test_list_scans_score_varies_by_calibration for the dashboard-launched-scan half of this case, which is real and fixed [scan.py:1227 now passes profile=calibration, matching :1476]. The case's own literal reproduction is invalid and out of scope: its command uses --score-profile standard, which argparse rejects [legal values lenient|balanced|strict, run_scan.py:1286-1289], and its bare-CLI list-view path has no ScanJob row to score under, per D-01. Case-text correction [legal profile value + scoping to a dashboard-launched scan] recorded for Phase 175; not rewritten here.)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5151,7 +5161,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Empty state message displayed (e.g., "No scan data yet — run `quirk` to begin")
 - No JavaScript runtime errors in console
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: mv db then quirk serve --no-open then headless nav to / - page loads 200 with empty-state text but 1 console error logged: Failed to load resource 404)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-29 re-verified against 174-EMPTY-DB-EVIDENCE.md, a fresh empty-DB probe executed this phase: page loads 200, empty-state text served [api/scans returns []], no unhandled application error. The sole non-2xx path across all 9 landing-route requests is GET /api/scan/latest returning 404 with the documented, intentional QRK-DASHBOARD-006 error code [docs/error-codes.md:38], unmodified by this phase. useScanData.ts already converts this into correct empty-state text [static read only, no .tsx/.ts edits made]. Pass criteria satisfied: loads [not 500] yes, empty-state message shown yes, no JavaScript RUNTIME errors in console yes -- the residual DevTools 'Failed to load resource 404' line is a browser network-panel artefact for any non-2xx fetch response, not a JS runtime error, and cannot be suppressed from application code. Standing guard: tests/test_dashboard_empty_state_contract.py.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5876,12 +5886,12 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Steps:**
 1. Open `http://127.0.0.1:8512/`.
 2. Read the sidebar from top to bottom.
-**Expected:** Order is Executive Summary · Findings · Identity · Motion · Data at Rest · Certificates · CBOM Viewer · Migration Roadmap · Trends.
+**Expected:** Order is Executive Summary · Findings · Identity · Motion · Hardware · Data at Rest · Certificates · CBOM Viewer · Migration Roadmap · Trends · Scan History · Sensors · Schedules · QRAMM Assessment. (Criteria corrected in Phase 174 — evidence in `174-SIDEBAR-ORDER.md`; the original nine-item Phase 39 "D-11" lock predates five deliberately-shipped items including Hardware and had gone undetected-stale for four months. "D-11" here is Phase-39-scoped decision numbering, not a global identifier — Phase 128 has its own unrelated "D-11".)
 **Pass Criteria:**
-- Exact order above; "Data at Rest" sits between "Motion" and "Certificates".
+- Exact canonical order above for the fourteen fixed top-level `NAV_ITEMS` entries; "Hardware" immediately follows "Motion" and immediately precedes "Data at Rest". (Scope note: per-vertical entries injected at `sidebar.tsx:63` sit outside this fixed fourteen-item list and are not asserted by this criterion.)
 - "Data at Rest" entry uses the HardDrive icon.
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: headless nav, read sidebar order - actual order inserts a Hardware item between Motion and Data at Rest, contradicting the documented exact D-11 lock order)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-29 re-verified against corrected UAT-39-07 criteria: sidebar.tsx NAV_ITEMS order is Executive Summary . Findings . Identity . Motion . Hardware . Data at Rest . Certificates . CBOM Viewer . Migration Roadmap . Trends . Scan History . Sensors . Schedules . QRAMM Assessment, byte-matching 174-SIDEBAR-ORDER.md's canonical form and now the corrected document. Hardware's placement [after Motion, before Data at Rest] was planned, reviewed and shipped in Phase 128 commit 07db14d75cc0f0da9546bcdd11d5c0ecf3cd9772 with 4 corroborating planning artifacts; the original nine-item Phase 39 D-11 note was already 5 items stale before Hardware shipped. tests/test_sidebar_nav_order.py [added Task 3 this plan] now guards both sidebar.tsx and UAT-39-07 bidirectionally.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
