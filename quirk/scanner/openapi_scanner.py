@@ -40,7 +40,7 @@ except ImportError:
 
 from quirk.models import CryptoEndpoint
 from quirk.util.safe_exc import safe_str
-from quirk.util.url_allowlist import _redact_preview, validate_external_url
+from quirk.util.url_allowlist import _redact_url_preview, validate_external_url
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ MAX_SPEC_BYTES = 10 * 1024 * 1024  # 10 MB
 class SpecParsingError(Exception):
     """Raised for SSRF attempts, oversized specs, out-of-scope URLs, or parse failures.
 
-    Messages must not contain the raw URL/ref value — use _redact_preview() instead.
+    Messages must not contain the raw URL/ref value — use _redact_url_preview() instead.
     """
 
 
@@ -90,12 +90,12 @@ def _assert_no_external_refs(spec_dict: dict) -> None:
     External refs include: http://, https://, ./relative-file, ../parent-file.
     Local (intra-document) refs start with '#' and are safe.
 
-    T-94-05: Messages use _redact_preview() — never the raw ref value.
+    T-94-05: Messages use _redact_url_preview() — never the raw ref value.
     """
     refs = _collect_refs(spec_dict)
     external = [r for r in refs if not str(r).startswith("#")]
     if external:
-        first_safe = _redact_preview(str(external[0]))
+        first_safe = _redact_url_preview(str(external[0]))
         raise SpecParsingError(
             f"Spec contains {len(external)} external $ref(s) — blocked to prevent SSRF. "
             f"Only intra-document refs (#/...) are permitted. "
@@ -110,7 +110,7 @@ def _load_spec_bytes_from_file(path: str) -> bytes:
     T-94-07: size gate is the first thing checked to prevent decompression bombs.
     """
     if not os.path.isfile(path):
-        raise SpecParsingError(f"Spec file not found: {_redact_preview(path)!r}")
+        raise SpecParsingError(f"Spec file not found: {_redact_url_preview(path)!r}")
 
     # Read exactly MAX_SPEC_BYTES + 1 bytes — if we get more than the limit, reject.
     with open(path, "rb") as fh:
@@ -151,7 +151,7 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
         raise SpecParsingError(
             f"OpenAPI spec URL is outside configured scan-target scope — "
             f"URL fetch is only permitted for URLs whose host is in the targets list: "
-            f"{_redact_preview(url)!r}"
+            f"{_redact_url_preview(url)!r}"
         )
 
     # SSRF gate — validate_external_url blocks metadata IPs always; loopback/private
@@ -358,7 +358,7 @@ def scan_openapi_spec(
         - _assert_no_external_refs() called BEFORE _oas_validate() (SPEC-03 SSRF)
         - 10 MB gate applied BEFORE yaml.safe_load (SPEC-03 DoS)
         - URL scope gate applied BEFORE any network request (SPEC-02)
-        - SpecParsingError messages use _redact_preview() — never raw URL/ref values
+        - SpecParsingError messages use _redact_url_preview() — never raw URL/ref values
     """
     _targets = cfg_targets or []
 

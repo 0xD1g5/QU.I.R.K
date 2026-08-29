@@ -123,21 +123,50 @@ _CTRL_RE: re.Pattern[str] = re.compile(r"[\x00-\x1f\x7f]")
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _redact_preview(raw: str, max_len: int = 32) -> str:
-    """Strip ASCII control characters from *raw* and truncate to *max_len* chars.
+def _redact_url_preview(raw: str, max_len: int = 32) -> str:
+    """Strip control characters AND credential-bearing URL components from *raw*.
 
-    Used to build the ``redacted_preview`` field so that log entries or error
-    messages cannot contain terminal-escape injection or unreadable binary data.
+    Phase 172 D-03: a preview built by truncation alone only hides secrets that
+    happen to fall past the truncation window — the genuine disclosure risk in a
+    URL is credentials in userinfo (``http://user:pass@host``) and tokens in a
+    query string, not the hostname (which is the value the operator themselves
+    supplied and is required for the message to be actionable).
+
+    Behaviour:
+      1. Strip ASCII control characters (``_CTRL_RE``, D-08) — unchanged from the
+         prior implementation; this defends against terminal-escape injection.
+      2. Parse with ``urlparse`` and drop userinfo, query and fragment. Reassemble
+         scheme + host (+ port if present) + path.
+      3. Truncate the result to *max_len* chars.
+
+    D-03 deliberately does NOT redact the host — see Phase 172 CONTEXT.md D-03/D-04.
+
+    If *raw* is not URL-shaped (no scheme, or unparseable), this falls back to the
+    previous control-strip-and-truncate behaviour rather than raising, because
+    several ``validate_external_url`` rejection branches feed it deliberately
+    malformed values.
 
     Args:
-        raw: The raw input string (URL, path, image ref, …).
+        raw: The raw input string (expected to be URL-shaped).
         max_len: Maximum length of the returned string (default 32 per D-08).
 
     Returns:
-        A sanitised, truncated substring of *raw*.
+        A sanitised, credential-stripped, truncated preview of *raw*.
     """
     cleaned = _CTRL_RE.sub("", raw)
-    return cleaned[:max_len]
+    try:
+        parsed = urlparse(cleaned)
+        if not parsed.scheme or not parsed.hostname:
+            # Not URL-shaped (e.g. a bare malformed string) — fall back to the
+            # original truncation-only behaviour rather than mangling non-URL input.
+            return cleaned[:max_len]
+        netloc = parsed.hostname
+        if parsed.port is not None:
+            netloc = f"{netloc}:{parsed.port}"
+        rebuilt = f"{parsed.scheme}://{netloc}{parsed.path}"
+    except (ValueError, AttributeError):
+        return cleaned[:max_len]
+    return rebuilt[:max_len]
 
 
 def _strip_zone_id(addr: str) -> str:
@@ -186,7 +215,7 @@ def _classify_ip(
     """
     # Metadata — always blocked.
     if ip in _METADATA_IPS:
-        return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_preview(url))
+        return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_url_preview(url))
 
     # Console self-SSRF — always blocked (SSRF-04 / D-01), BEFORE the
     # allow_internal early-return. Blocks ONLY the console's own addr:port, not
@@ -208,18 +237,18 @@ def _classify_ip(
             pass
         if ip in console_ips:
             # Mirrors the metadata block's no-log, redacted-return style.
-            return ValidationResult(False, RC_CONSOLE_ENDPOINT, _redact_preview(url))
+            return ValidationResult(False, RC_CONSOLE_ENDPOINT, _redact_url_preview(url))
 
     # allow_internal suppresses loopback / link-local / private / reserved only.
     if allow_internal:
         return None
 
     if ip.is_loopback:
-        return ValidationResult(False, RC_LOOPBACK, _redact_preview(url))
+        return ValidationResult(False, RC_LOOPBACK, _redact_url_preview(url))
     if ip.is_link_local:
-        return ValidationResult(False, RC_LINK_LOCAL, _redact_preview(url))
+        return ValidationResult(False, RC_LINK_LOCAL, _redact_url_preview(url))
     if ip.is_private or ip.is_reserved:
-        return ValidationResult(False, RC_INTERNAL_IP, _redact_preview(url))
+        return ValidationResult(False, RC_INTERNAL_IP, _redact_url_preview(url))
     return None
 
 
@@ -261,7 +290,7 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
 
     # 1. Scheme check — must be http or https.
     if parsed.scheme not in _ALLOWED_SCHEMES:
-        return ValidationResult(False, RC_SCHEME_PREFIX, _redact_preview(url))
+        return ValidationResult(False, RC_SCHEME_PREFIX, _redact_url_preview(url))
 
     host = (parsed.hostname or "").lower()
 
@@ -270,7 +299,7 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
     # the IP looks innocuous (a hostile resolver can answer the alias with a
     # non-metadata IP while the metadata service still serves the alias).
     if host in _METADATA_HOSTS:
-        return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_preview(url))
+        return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_url_preview(url))
 
     # 3. Build the address set to check.
     addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
@@ -282,7 +311,7 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
             results = socket.getaddrinfo(host, None, family=socket.AF_UNSPEC)
         except (socket.gaierror, OSError, UnicodeError):
             # Phase 120 AC-02: fail-CLOSED on resolver error. Previously fail-open.
-            return ValidationResult(False, RC_DNS_FAILURE, _redact_preview(url))
+            return ValidationResult(False, RC_DNS_FAILURE, _redact_url_preview(url))
 
         for entry in results:
             sockaddr = entry[4] if len(entry) >= 5 else None
@@ -296,11 +325,11 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
             except ValueError:
                 # Defensive: an unparseable address from the resolver is itself a
                 # red flag. Treat as fail-closed.
-                return ValidationResult(False, RC_DNS_FAILURE, _redact_preview(url))
+                return ValidationResult(False, RC_DNS_FAILURE, _redact_url_preview(url))
 
         if not addresses:
             # getaddrinfo returned an empty list — treat as resolver failure.
-            return ValidationResult(False, RC_DNS_FAILURE, _redact_preview(url))
+            return ValidationResult(False, RC_DNS_FAILURE, _redact_url_preview(url))
 
     # 4. Apply blocklist to EVERY resolved address. Any single hit rejects.
     # url_port (scheme default when absent) feeds the console self-SSRF check.

@@ -82,8 +82,19 @@ _CTRL_RE: re.Pattern[str] = re.compile(r"[\x00-\x1f\x7f]")
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _redact_preview(raw: str, max_len: int = 32) -> str:
+def _truncate_preview(raw: str, max_len: int = 32) -> str:
     """Strip ASCII control characters from *raw* and truncate to *max_len* chars.
+
+    Phase 172 D-03: renamed for honesty from this module's former, differently-
+    named twin — this helper only truncates, it does not redact. Its inputs
+    (filesystem paths, container image refs) are NOT URL-shaped: ``@`` and
+    ``?`` are legal characters in both, and a ``@sha256:...`` digest would be
+    mis-parsed as URL userinfo if run through URL-component-parsing logic
+    (Phase 172 RESEARCH.md Pitfall 3). The body is deliberately unchanged from
+    before the rename — only the name changed, so this twin no longer shares a
+    name (and false behavioural promise) with
+    ``quirk.util.url_allowlist``'s ``_redact_url_preview``, which does perform
+    real URL-component stripping.
 
     Args:
         raw: The raw input string (path, image ref, …).
@@ -124,19 +135,19 @@ def validate_repo_path(p: str) -> ValidationResult:
         otherwise.
     """
     if p.startswith("-"):
-        return ValidationResult(False, RC_LEADING_DASH, _redact_preview(p))
+        return ValidationResult(False, RC_LEADING_DASH, _truncate_preview(p))
 
     if ".." in p or p == "":
-        return ValidationResult(False, RC_PATH_TRAVERSAL, _redact_preview(p))
+        return ValidationResult(False, RC_PATH_TRAVERSAL, _truncate_preview(p))
 
     if _SHELL_METACHARS.search(p):
-        return ValidationResult(False, RC_SHELL_METACHAR, _redact_preview(p))
+        return ValidationResult(False, RC_SHELL_METACHAR, _truncate_preview(p))
 
     real = os.path.realpath(p)
     if ".." in real:
-        return ValidationResult(False, RC_PATH_TRAVERSAL, _redact_preview(p))
+        return ValidationResult(False, RC_PATH_TRAVERSAL, _truncate_preview(p))
     if not os.path.isdir(real):
-        return ValidationResult(False, RC_NONEXISTENT_PATH, _redact_preview(p))
+        return ValidationResult(False, RC_NONEXISTENT_PATH, _truncate_preview(p))
 
     return ValidationResult(True, "", "")
 
@@ -162,16 +173,16 @@ def validate_image_ref(r: str) -> ValidationResult:
         otherwise.
     """
     if r.startswith("-"):
-        return ValidationResult(False, RC_LEADING_DASH, _redact_preview(r))
+        return ValidationResult(False, RC_LEADING_DASH, _truncate_preview(r))
 
     if any(r.startswith(p) for p in _LOCAL_REF_PREFIXES):
-        return ValidationResult(False, RC_INVALID_IMAGE_REF, _redact_preview(r))
+        return ValidationResult(False, RC_INVALID_IMAGE_REF, _truncate_preview(r))
 
     if _SHELL_METACHARS.search(r):
-        return ValidationResult(False, RC_SHELL_METACHAR, _redact_preview(r))
+        return ValidationResult(False, RC_SHELL_METACHAR, _truncate_preview(r))
 
     if not _IMAGE_REF_RE.match(r):
-        return ValidationResult(False, RC_INVALID_IMAGE_REF, _redact_preview(r))
+        return ValidationResult(False, RC_INVALID_IMAGE_REF, _truncate_preview(r))
 
     # SSRF-03 / SP-04: reject path-shaped refs (e.g. ``etc/passwd``) before syft.
     # OCI Distribution Spec registry-authority rule: when a ref contains ``/``, the
@@ -184,6 +195,6 @@ def validate_image_ref(r: str) -> ValidationResult:
     if "/" in r:
         first_seg = r.split("/", 1)[0]
         if "." not in first_seg and ":" not in first_seg and first_seg != "localhost":
-            return ValidationResult(False, RC_PATH_SHAPED_REF, _redact_preview(r))
+            return ValidationResult(False, RC_PATH_SHAPED_REF, _truncate_preview(r))
 
     return ValidationResult(True, "", "")
