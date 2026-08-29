@@ -43,7 +43,7 @@ def _fresh_run_stats():
 # Absent-key contract: phase did NOT really run
 # ---------------------------------------------------------------------------
 
-def test_skipped_broker_phase_omits_timing_key():
+def test_skipped_broker_phase_timing_key_absent():
     """Broker's guard clause returning _PHASE_SKIPPED must leave no timings_sec key.
 
     Fails if `_phase_timer.__exit__` reverts to writing unconditionally, or if
@@ -64,7 +64,7 @@ def test_skipped_broker_phase_omits_timing_key():
     assert "broker_scanning" not in run_stats["timings_sec"]
 
 
-def test_skipped_smime_phase_omits_timing_key():
+def test_skipped_smime_non_broker_phase_timing_key_absent():
     """The required D-04 non-broker phase: smime's guard must also omit its key.
 
     Fails if `_phase_timer.__exit__` reverts to writing unconditionally, or if
