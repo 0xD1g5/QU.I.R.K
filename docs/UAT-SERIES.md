@@ -1,7 +1,22 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-28 (v5.16 Phase 171 — Resume UX Tail: added Series 171 with 2 real-disposition
+**Last Updated:** 2026-08-29 (v5.17 Phase 172 — Fuzzing & Disclosure Safety: added Series 172 with
+3 real-disposition cases — UAT-172-01 confirms `--fuzz` with non-interactive stdin hard-aborts at
+argparse-validation time (SAFE-01), UAT-172-02 confirms `--fuzz-budget` over 500 is rejected before
+any scan work with the default holding at 50 (SAFE-02), UAT-172-03 confirms `SpecParsingError`
+messages strip userinfo and query strings from a URL while the operator-supplied host remains
+visible by design per D-03's threat model (SAFE-03). UAT-96-02 and UAT-96-03 (Series 96) were
+re-executed against the fixed code and confirmed PASS (their original 2026-08-27 FAIL entries are
+preserved as the pre-fix historical record; see `.planning/phases/172-fuzzing-disclosure-safety/
+172-DISPOSITIONS.md` for the re-execution transcripts). UAT-94-05 (Series 94) received an explicit
+D-04 disposition — its third pass-criterion demands an all-or-nothing URL redaction that D-03's
+locked threat model does not implement (D-03 redacts credentials/tokens, not the operator's own
+hostname); judged a CASE DEFECT and promoted to Phase 175 (CASEFIX scope) with proposed corrected
+wording recorded in `172-DISPOSITIONS.md`. UAT-94-05's own text and disposition are left
+byte-untouched in this document. Full unfiltered suite and all four UAT guard suites confirmed
+green; `scripts/uat_disposition_apply.py verify` confirmed 377 ledger rows agree.
+Earlier: 2026-08-28 (v5.16 Phase 171 — Resume UX Tail: added Series 171 with 2 real-disposition
 cases — UAT-171-01 confirms resuming an already-complete scan short-circuits with exit 0 and zero
 new checkpoint rows (RESUME-05), UAT-171-02 confirms `--list-resumable`'s Target column derives a
 host summary from `CryptoEndpoint` rows for `--targets-file` runs instead of a blank dash
@@ -19952,4 +19967,184 @@ suite (`pytest -q -m ""`, 0 deselected) held at 3684 passed / 4 known pre-existi
 (`test_skip_registry` + 3x `test_extras_install_matrix`), zero fatal signals — a +14 delta over the
 documented 3670-passing baseline, exactly matching this phase's 6 (171-01) + 8 (171-02) new tests.
 All four UAT corpus-integrity guard suites green; `uat_disposition_apply.py verify` confirmed 377
+ledger rows agreeing before this Series was added.
+
+## Series 172: Fuzzing & Disclosure Safety (Phase 172 — v5.17)
+
+**Last Updated:** 2026-08-29
+
+### UAT-172-01: `--fuzz` with non-interactive stdin hard-aborts before any scan work (SAFE-01)
+
+**What to test:** `--fuzz` supplied with non-interactive (non-TTY) stdin refuses at
+argument-validation time with a coded `[QRK-FUZZ-001]` error and a non-zero exit, before any
+config load or scan phase runs — for both the valid-in-scope-spec case and the out-of-scope
+spec-URL case that previously silently skipped the check entirely.
+
+**Steps:**
+1. Valid-in-scope-spec manifestation — run with piped (non-TTY) empty stdin and a resolvable
+   local spec:
+   ```bash
+   echo "" | python run_scan.py --config <repro-config.yaml> \
+     --openapi-spec <mini-spec.json> --fuzz --db-path <db> --quiet
+   ```
+2. Out-of-scope-spec-URL manifestation — run with a spec URL whose host is outside
+   `targets.fqdns` (this previously caused `_run_fuzz_phase` to return before ever reaching the
+   TTY gate):
+   ```bash
+   echo "" | python run_scan.py --config <repro-config.yaml> \
+     --openapi-spec https://evil.example.com/openapi.json --fuzz --db-path <db> --quiet
+   ```
+3. Run `pytest -q tests/test_fuzz_cli_safety.py` and cite the pass count.
+
+**Pass criteria:**
+- Both manifestations exit non-zero with the `[QRK-FUZZ-001]` coded error printed, not a stack
+  trace, and not a silent exit 0.
+- The refusal fires identically regardless of whether the spec URL is in-scope or resolvable,
+  proving the check is structural (argparse-time) rather than dependent on
+  `_run_fuzz_phase`'s internal early-return ordering.
+- `tests/test_fuzz_cli_safety.py` passes in full.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (172-04 phase-close plan execution, live repro run
+against the shipped `.venv` interpreter and commit `5b3dd24` — re-executed independently, not
+copied from 172-01-SUMMARY.md)
+**Notes:** Live repro: `echo "" | .venv/bin/python run_scan.py --config <repro-config.yaml>
+--openapi-spec <mini-spec.json> --fuzz --db-path <db> --quiet` printed `[QRK-FUZZ-001] --fuzz was
+supplied but stdin is not a TTY (non-interactive / headless context); REST fuzzing requires
+interactive confirmation and cannot be authorized unattended. Fix: Run from an interactive
+terminal to confirm the fuzz gate, or drop --fuzz for unattended/scheduled runs.`, exit code 2.
+`pytest -q tests/test_fuzz_cli_safety.py tests/test_fuzz_budget_docs_agree.py
+tests/test_url_allowlist_ssrf.py tests/test_subprocess_input.py` — 54/54 passed. This case
+supersedes Series 96's `UAT-96-02` (dated 2026-08-27, disposition FAIL against the pre-fix
+build) — re-execution against the fixed code now PASSES; see
+`.planning/phases/172-fuzzing-disclosure-safety/172-DISPOSITIONS.md` §2 for the full
+re-disposition argument. `UAT-96-02`'s original entry is left as the historical pre-fix record
+and is not rewritten.
+
+### UAT-172-02: `--fuzz-budget` hard ceiling enforced before any scan work (SAFE-02)
+
+**What to test:** `--fuzz-budget 501` is rejected at argument-validation time with a coded
+`[QRK-FUZZ-002]` error and non-zero exit before any scan work begins; `--fuzz-budget 500` is
+accepted; the argparse default remains 50; the enforced ceiling is a single named constant
+(`MAX_FUZZ_BUDGET`) shared with `docs/configuration.md`'s documented prose via a structural
+docs==code gate.
+
+**Steps:**
+1. Attempt an over-ceiling budget:
+   ```bash
+   echo "" | python run_scan.py --config <repro-config.yaml> \
+     --openapi-spec <mini-spec.json> --fuzz --fuzz-budget 501 --db-path <db> --quiet
+   ```
+2. Confirm the argparse default:
+   ```bash
+   grep -n '"--fuzz-budget"' -A5 run_scan.py | grep default
+   ```
+3. Run `pytest -q tests/test_fuzz_budget_docs_agree.py` and `pytest -q tests/test_rest_fuzzer_gate.py -k budget`, cite both pass counts.
+
+**Pass criteria:**
+- `--fuzz-budget 501` exits non-zero with `[QRK-FUZZ-002]` printed before any request is sent.
+- The error message references both the hard maximum (500) and the provided value (501).
+- `--fuzz-budget 500` is accepted (boundary case).
+- The argparse default is confirmed 50.
+- `tests/test_fuzz_budget_docs_agree.py` (docs==code drift gate) and the budget-specific subset
+  of `tests/test_rest_fuzzer_gate.py` both pass in full.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (172-04 phase-close plan execution, live repro run
+against the shipped `.venv` interpreter and commit `5b3dd24` — re-executed independently, not
+copied from 172-01/172-02-SUMMARY.md)
+**Notes:** Live repro: `echo "" | .venv/bin/python run_scan.py --config <repro-config.yaml>
+--openapi-spec <mini-spec.json> --fuzz --fuzz-budget 501 --db-path <db> --quiet` printed
+`[QRK-FUZZ-002] --fuzz-budget exceeds the hard maximum of 500 requests; the requested value was
+rejected, not clamped. Fix: Reduce --fuzz-budget to 500 or lower.`, exit code 2. `grep -n
+'"--fuzz-budget"' -A5 run_scan.py | grep default` → `default=50`. `pytest -q
+tests/test_fuzz_budget_docs_agree.py` — 4/4 passed. `pytest -q tests/test_rest_fuzzer_gate.py -k
+budget` — 8/8 passed (`test_budget_hard_ceiling_raises_on_501`,
+`test_budget_hard_ceiling_accepts_500` among them, confirming the 500 boundary is accepted, not
+just documented). This case supersedes Series 96's `UAT-96-03` (dated 2026-08-27, disposition
+FAIL against the pre-fix build) — re-execution against the fixed code now PASSES; see
+`172-DISPOSITIONS.md` §3 for the full re-disposition argument. `UAT-96-03`'s original entry is
+left as the historical pre-fix record and is not rewritten.
+
+### UAT-172-03: `SpecParsingError` messages strip credentials/tokens, host remains visible by design (SAFE-03)
+
+**What to test:** A `SpecParsingError` raised for a URL carrying userinfo (credentials) and a
+query string (token) reports neither in its message, while the operator-supplied host remains
+visible — a deliberate, D-03-locked design decision, not an oversight.
+
+**Steps:**
+1. Credential-bearing, out-of-scope URL:
+   ```bash
+   python -c "
+   from unittest.mock import patch
+   from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+   with patch('httpx.get') as mock_get:
+       try:
+           scan_openapi_spec(
+               'https://user:hunter2@evil.example.com/openapi.json?token=SECRETVALUE',
+               cfg_targets=['api.acme.com'],
+           )
+       except SpecParsingError as e:
+           msg = str(e)
+           print('contains hunter2:', 'hunter2' in msg)
+           print('contains SECRETVALUE:', 'SECRETVALUE' in msg)
+           print('contains evil.example.com:', 'evil.example.com' in msg)
+   "
+   ```
+2. Bare-host, no-credential URL (UAT-94-05's own fixture, for contrast):
+   ```bash
+   python -c "
+   from unittest.mock import patch
+   from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+   with patch('httpx.get') as mock_get:
+       try:
+           scan_openapi_spec('https://evil.example.com/openapi.json', cfg_targets=['api.acme.com'])
+       except SpecParsingError as e:
+           print(str(e))
+   "
+   ```
+3. Run `pytest -q tests/test_url_allowlist_ssrf.py -k redact tests/test_openapi_scanner.py -k redact tests/test_subprocess_input.py` and cite the pass count.
+
+**Pass criteria:**
+- The credential-bearing repro's message contains neither `hunter2` nor `SECRETVALUE`.
+- The bare-host repro's message still contains `evil.example.com` — this is expected, not a
+  defect; see the D-04 cross-reference below.
+- The renamed helpers (`_redact_url_preview` in `url_allowlist.py`, `_truncate_preview` in
+  `subprocess_input.py`) both exist and no `_redact_preview` reference remains anywhere in the
+  codebase.
+- The redaction/truncation unit suites pass in full.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-29  **Tester:** Automated (172-04 phase-close plan execution, live repro run
+against the shipped `.venv` interpreter and commit `5b3dd24` — the credential-bearing repro is
+re-run fresh in this task, not copied from 172-03-SUMMARY.md, though it independently confirms
+that plan's own transcript)
+**Notes:** Live repro (credential-bearing): `contains hunter2: False`, `contains SECRETVALUE:
+False`, `contains evil.example.com: True`. Live repro (bare-host, UAT-94-05's fixture):
+`"OpenAPI spec URL is outside configured scan-target scope — URL fetch is only permitted for
+URLs whose host is in the targets list: 'https://evil.example.com/openapi'"` — host visible,
+credentials/query never present in this fixture to begin with. `pytest -q
+tests/test_url_allowlist_ssrf.py -k redact tests/test_openapi_scanner.py -k redact
+tests/test_subprocess_input.py` — 20/20 passed. **Cross-reference to the UAT-94-05 disposition
+(D-04):** the bare-host visibility demonstrated here is the exact, deliberate design point that
+`UAT-94-05` (Series 94, SPEC-02) disputes in its third pass-criterion. This phase judged
+UAT-94-05's third criterion a CASE DEFECT — it demands all-or-nothing URL redaction, which
+contradicts D-03's locked threat model (credentials/tokens are the disclosure risk; the
+operator's own hostname is not) — and promoted it to Phase 175 (CASEFIX scope) rather than
+silently rewriting its expectation. Full argument, evidence, and proposed corrected wording:
+`.planning/phases/172-fuzzing-disclosure-safety/172-DISPOSITIONS.md` §1. `UAT-94-05`'s own text
+and disposition in Series 94 are left byte-untouched by this phase.
+
+---
+
+**Series 172 disposition.** All three cases PASS against re-executed, post-fix behaviour.
+SAFE-01, SAFE-02 and SAFE-03 are structurally closed. `UAT-96-02` and `UAT-96-03` (Series 96)
+were independently re-executed and now pass, superseding their 2026-08-27 pre-fix FAIL entries
+(left in place as historical record). `UAT-94-05` (Series 94) received an explicit, argued D-04
+disposition — CASE DEFECT, promoted to Phase 175 — and was not touched. Wave-1 regression check
+(`tests/test_fuzz_cli_safety.py tests/test_fuzz_budget_docs_agree.py
+tests/test_url_allowlist_ssrf.py tests/test_subprocess_input.py`): 54/54 passed. All four UAT
+corpus-integrity guard suites green (`test_uat_zero_undispositioned_gate.py`,
+`test_uat_series_format.py`, `test_uat_disposition_integrity.py`,
+`test_uat_apply_injection_guard.py`); `scripts/uat_disposition_apply.py verify` confirmed 377
 ledger rows agreeing before this Series was added.
