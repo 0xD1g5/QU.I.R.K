@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 172-01-PLAN.md
-last_updated: "2026-08-29T00:37:22.674Z"
+last_updated: "2026-08-29T00:41:30.634Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -205,7 +205,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 172 (fuzzing-disclosure-safety) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -431,6 +431,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 171 P02 | 20min | 2 tasks | 3 files |
 | Phase 171 P03 | 65min | 3 tasks | 3 files |
 | Phase 172-fuzzing-disclosure-safety P01 | 25min | 3 tasks | 5 files |
+| Phase 172 P02 | 15min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -690,6 +691,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 171]: RESUME-05/RESUME-06 both verified complete: resume-already-complete short-circuit (exit 0, zero new checkpoint rows) and --list-resumable Target column derivation from CryptoEndpoint rows — Full unfiltered suite holds at 3684 passed / 4 known pre-existing failures (+14 delta matching this phase's new tests); Series 171 UAT entry live-repro'd; Task 3 human-verify checkpoint approved 2026-08-28. Phase 171 closes the v5.16 milestone's last phase.
 - [Phase 172-01]: Argparse-time refusal block for --fuzz: budget check before TTY check (fail-fast, TTY-independent) per D-02
 - [Phase 172-01]: MAX_FUZZ_BUDGET imported from quirk.scanner.rest_fuzzer; confirm_fuzz_gate and _resolve_budget left byte-for-byte unmodified as second defence-in-depth layer
+- [Phase ?]: 172-02: docs/configuration.md documents the --fuzz-budget ceiling twice; gate iterates all matches
 
 ### Pending Todos
 
@@ -820,7 +822,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T00:37:22.670Z
+Last session: 2026-08-29T00:40:52.719Z
 Stopped at: Completed 172-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

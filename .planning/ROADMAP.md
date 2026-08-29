@@ -117,7 +117,7 @@ Plans:
 **Wave 1**
 
 - [x] 172-01-PLAN.md — SAFE-01/02: argparse-time non-TTY refusal + budget ceiling, FUZZ-001/002 codes, CLI regression tests
-- [ ] 172-02-PLAN.md — SAFE-02 D-05: docs==code fuzz budget gate; layer-2 regression lock confirmed
+- [x] 172-02-PLAN.md — SAFE-02 D-05: docs==code fuzz budget gate; layer-2 regression lock confirmed
 - [ ] 172-03-PLAN.md — SAFE-03 D-03: real URL redaction in url_allowlist, rename-only twin in subprocess_input, unit coverage
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -224,7 +224,7 @@ milestone whose other work is already complete
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 172. Fuzzing & Disclosure Safety | 1/6 | In Progress|  |
+| 172. Fuzzing & Disclosure Safety | 2/6 | In Progress|  |
 | 173. Scanner Scope & Config Correctness | 0/TBD | Not started | - |
 | 174. Dashboard & API Correctness | 0/TBD | Not started | - |
 | 175. Case & Documentation Defect Correction | 0/TBD | Not started | - |
