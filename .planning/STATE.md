@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 173-03-PLAN.md
-last_updated: "2026-08-29T22:07:34.027Z"
+last_updated: "2026-08-29T22:16:29.320Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
   percent: 40
 ---
 
@@ -258,7 +258,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 174 (dashboard-api-correctness) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -493,6 +493,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 174 P01 | 25min | 2 tasks | 2 files |
 | Phase 174 P02 | 20min | 2 tasks | 2 files |
 | Phase 174 P03 | 35min | 2 tasks | 5 files |
+| Phase 174 P04 | 55min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -766,6 +767,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 174]: D-01: minimal DASH-06 fix only -- pass ScanJob.calibration into compute_readiness_score(), no schema migration, no CLI-scan persistence
 - [Phase 174]: DASH-07 closed by verification not code change: D-02 honored literally, zero production code changed, evidence recorded in 174-EMPTY-DB-EVIDENCE.md, contract locked by tests/test_dashboard_empty_state_contract.py
 - [Phase 174]: (D-03) Corrected Phase-39's stale nine-item nav-order note to the current 14-item order; shipped sidebar.tsx untouched
+- [Phase ?]: UAT-8-07 dispositioned DEFERRED (not PASS): real DASH-06 fix covered by tests/test_dashboard_scans_score_profile.py, but case text uses illegal --score-profile standard and out-of-scope bare-CLI path; correction promoted to Phase 175
+- [Phase ?]: UAT-39-07's Expected line and Pass Criteria corrected in place to the canonical fourteen-item sidebar order (174-SIDEBAR-ORDER.md); the document was stale, not the shipped UI (Phase 128)
 
 ### Pending Todos
 
@@ -904,7 +907,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T22:06:53.004Z
+Last session: 2026-08-29T22:16:26.380Z
 Stopped at: Completed 173-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
