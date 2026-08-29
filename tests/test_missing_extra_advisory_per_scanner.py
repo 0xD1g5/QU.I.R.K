@@ -9,69 +9,27 @@ not coverage of this defect and are explicitly left byte-untouched here
 (supersede by addition, not replacement) -- see 173-03-SUMMARY.md for the
 falsification proof recording the exact evidence.
 
-These tests instead drive the real gate conditional expressions verbatim
-(mirrored, not imported, since they live inside `main()`'s closure) against a
-duck-typed `cfg` and `error_endpoints` list, monkeypatching the scanner
-modules' `_AVAILABLE` flags rather than uninstalling real packages. Each
-asserts BOTH halves of the documented signal: the QRK-INSTALL-001 stderr line
-(via capsys) AND an appended `CryptoEndpoint` row with
-`scan_error_category == "missing_extra"` and the correct `host`.
+Phase 173 WR-02: `_broker_missing_extra` / `_smime_missing_extra` /
+`_adcs_missing_extra` are extracted, importable, module-level predicates in
+run_scan.py (they no longer live only inline inside `main()`'s closure), so
+these tests import and exercise the REAL gates directly rather than a
+hand-mirrored copy of the conditional. A future divergence between the real
+gate and what these tests expect will show up as this file failing, not as a
+silently-stale mirror.
+
+Each test monkeypatches the scanner modules' `_AVAILABLE` flags rather than
+uninstalling real packages, and asserts BOTH halves of the documented signal:
+the QRK-INSTALL-001 stderr line (via capsys) AND an appended `CryptoEndpoint`
+row with `scan_error_category == "missing_extra"` and the correct `host`.
 """
 from __future__ import annotations
 
-import run_scan
+from run_scan import (
+    _broker_missing_extra as _broker_gate,
+    _smime_missing_extra as _smime_gate,
+    _adcs_missing_extra as _adcs_gate,
+)
 from quirk.scanner import broker_scanner, smime_scanner, adcs_scanner
-
-
-def _broker_gate(enable_broker: bool, error_endpoints: list) -> bool:
-    """Mirrors run_scan.py's broker gate (~run_scan.py:3374-3387, post-173-03).
-
-    Returns cfg_broker_skip. Fails if broker's gate reverts to checking only
-    SSLYZE_AVAILABLE -- the kafka-only and redis-only sub-cases below would
-    stop emitting an advisory and this function's return value / the
-    error_endpoints side effect would silently diverge from the real gate.
-    """
-    if enable_broker:
-        _broker_mod = broker_scanner
-        if not (getattr(_broker_mod, "SSLYZE_AVAILABLE", True)
-                and getattr(_broker_mod, "KAFKA_AVAILABLE", True)
-                and getattr(_broker_mod, "REDIS_AVAILABLE", True)):
-            run_scan._emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
-            return True
-        return False
-    return True
-
-
-def _smime_gate(enable_smime: bool, error_endpoints: list) -> bool:
-    """Mirrors run_scan.py's smime gate (~run_scan.py:3192-3202, post-173-03).
-
-    Fails if smime's advisory call is removed or its LDAP3_AVAILABLE check is
-    dropped -- the LDAP3_AVAILABLE=False sub-case below would stop appending a
-    missing_extra row.
-    """
-    if enable_smime:
-        _smime_mod = smime_scanner
-        if not getattr(_smime_mod, "LDAP3_AVAILABLE", True):
-            run_scan._emit_missing_extra_advisory("smime_scanner", "adcs", error_endpoints)
-            return True
-        return False
-    return True
-
-
-def _adcs_gate(enable_adcs: bool, error_endpoints: list) -> bool:
-    """Mirrors run_scan.py's adcs gate (~run_scan.py:3222-3232, post-173-03).
-
-    Fails if adcs's advisory call is removed or its LDAP3_AVAILABLE check is
-    dropped -- the LDAP3_AVAILABLE=False sub-case below would stop appending a
-    missing_extra row.
-    """
-    if enable_adcs:
-        _adcs_mod = adcs_scanner
-        if not getattr(_adcs_mod, "LDAP3_AVAILABLE", True):
-            run_scan._emit_missing_extra_advisory("adcs_scanner", "adcs", error_endpoints)
-            return True
-        return False
-    return True
 
 
 def _assert_both_halves(capsys, error_endpoints, host: str) -> None:

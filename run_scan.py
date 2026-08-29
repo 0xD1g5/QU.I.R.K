@@ -231,6 +231,64 @@ def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endp
     ))
 
 
+def _broker_missing_extra(enable_broker: bool, error_endpoints) -> bool:
+    """Phase 173 D-03 / WR-02: broker's missing-extra gate, extracted to a
+    standalone importable predicate so tests can exercise the real gate
+    instead of a hand-mirrored copy of it.
+
+    Consults all three of broker's optional-extra availability flags
+    (SSLYZE_AVAILABLE / KAFKA_AVAILABLE / REDIS_AVAILABLE) — any one being
+    False means broker cannot do its full job. getattr(..., True) degrades to
+    "available" if a flag is ever renamed, so a rename fails open (no false
+    advisory) rather than crashing. Emits exactly one advisory row per call
+    even when multiple flags are missing simultaneously (Phase 173 D-03
+    decision record). Returns True (skip the phase) when disabled or when any
+    dependency is missing; False when the phase should run.
+    """
+    if not enable_broker:
+        return True
+    from quirk.scanner import broker_scanner as _broker_mod
+    if not (getattr(_broker_mod, "SSLYZE_AVAILABLE", True)
+            and getattr(_broker_mod, "KAFKA_AVAILABLE", True)
+            and getattr(_broker_mod, "REDIS_AVAILABLE", True)):
+        _emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
+        return True
+    return False
+
+
+def _smime_missing_extra(enable_smime: bool, error_endpoints) -> bool:
+    """Phase 173 D-03 / WR-02: smime's missing-extra gate, extracted to a
+    standalone importable predicate (see `_broker_missing_extra` docstring
+    for the rationale). smime borrows ldap3 from the adcs/identity extras
+    group (pyproject.toml has no dedicated [smime] group), so the advisory
+    names extra_group="adcs". Returns True (skip) when disabled or ldap3 is
+    unavailable; False when the phase should run.
+    """
+    if not enable_smime:
+        return True
+    from quirk.scanner import smime_scanner as _smime_mod
+    if not getattr(_smime_mod, "LDAP3_AVAILABLE", True):
+        _emit_missing_extra_advisory("smime_scanner", "adcs", error_endpoints)
+        return True
+    return False
+
+
+def _adcs_missing_extra(enable_adcs: bool, error_endpoints) -> bool:
+    """Phase 173 D-03 / WR-02: adcs's missing-extra gate, extracted to a
+    standalone importable predicate (see `_broker_missing_extra` docstring
+    for the rationale). adcs's ldap3 dependency ships under the [adcs]
+    extras group. Returns True (skip) when disabled or ldap3 is unavailable;
+    False when the phase should run.
+    """
+    if not enable_adcs:
+        return True
+    from quirk.scanner import adcs_scanner as _adcs_mod
+    if not getattr(_adcs_mod, "LDAP3_AVAILABLE", True):
+        _emit_missing_extra_advisory("adcs_scanner", "adcs", error_endpoints)
+        return True
+    return False
+
+
 def _is_privileged() -> Optional[bool]:
     """Phase 145 / D-02: detect raw-socket (root/CAP_NET_RAW) privilege once per scan.
 
@@ -3193,15 +3251,9 @@ def main():
         # (pyproject.toml has no dedicated [smime] group). Probe availability up
         # front so an absent ldap3 emits the documented missing-extra signal
         # instead of the bare log.warning() inside smime_scanner.py.
-        if getattr(cfg.connectors, "enable_smime", False):
-            from quirk.scanner import smime_scanner as _smime_mod
-            if not getattr(_smime_mod, "LDAP3_AVAILABLE", True):
-                _emit_missing_extra_advisory("smime_scanner", "adcs", error_endpoints)
-                cfg_smime_skip = True
-            else:
-                cfg_smime_skip = False
-        else:
-            cfg_smime_skip = True
+        cfg_smime_skip = _smime_missing_extra(
+            getattr(cfg.connectors, "enable_smime", False), error_endpoints,
+        )
 
         def _run_smime_phase():
             if cfg_smime_skip or not (getattr(cfg.connectors, "enable_smime", False)
@@ -3228,15 +3280,9 @@ def main():
         # group. Probe availability up front so an absent ldap3 emits the
         # documented missing-extra signal instead of the bare log.warning()
         # inside adcs_scanner.py.
-        if getattr(cfg.connectors, "enable_adcs", False):
-            from quirk.scanner import adcs_scanner as _adcs_mod
-            if not getattr(_adcs_mod, "LDAP3_AVAILABLE", True):
-                _emit_missing_extra_advisory("adcs_scanner", "adcs", error_endpoints)
-                cfg_adcs_skip = True
-            else:
-                cfg_adcs_skip = False
-        else:
-            cfg_adcs_skip = True
+        cfg_adcs_skip = _adcs_missing_extra(
+            getattr(cfg.connectors, "enable_adcs", False), error_endpoints,
+        )
 
         def _run_adcs_phase():
             if cfg_adcs_skip or not (getattr(cfg.connectors, "enable_adcs", False)
@@ -3403,19 +3449,9 @@ def main():
         # canonical advisory and skips the phase rather than crashing on import.
         # getattr(..., True) degrades to "available" if a flag is ever renamed, so a
         # rename fails open (no false advisory) rather than crashing.
-        if cfg.connectors.enable_broker:
-            from quirk.scanner import broker_scanner as _broker_mod
-            if not (getattr(_broker_mod, "SSLYZE_AVAILABLE", True)
-                    and getattr(_broker_mod, "KAFKA_AVAILABLE", True)
-                    and getattr(_broker_mod, "REDIS_AVAILABLE", True)):
-                # Exactly one advisory row per scanner invocation (Phase 173 D-03
-                # decision record), even when multiple flags are missing.
-                _emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
-                cfg_broker_skip = True
-            else:
-                cfg_broker_skip = False
-        else:
-            cfg_broker_skip = True
+        cfg_broker_skip = _broker_missing_extra(
+            cfg.connectors.enable_broker, error_endpoints,
+        )
 
         def _run_broker_phase():
             if cfg_broker_skip or not cfg.connectors.enable_broker:
