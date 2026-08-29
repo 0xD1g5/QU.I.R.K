@@ -352,9 +352,17 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
 
     # 4. Apply blocklist to EVERY resolved address. Any single hit rejects.
     # url_port (scheme default when absent) feeds the console self-SSRF check.
-    url_port = parsed.port if parsed.port is not None else (
-        443 if parsed.scheme == "https" else 80
-    )
+    # Phase 172 CR-02: ``.port`` raises ValueError for a syntactically present
+    # but out-of-range port literal (e.g. ``:99999``). Reading it unguarded
+    # turned a handled rejection into an unhandled crash with a raw traceback
+    # on the same class of malformed, attacker-controlled URL that CR-01
+    # fixes redaction for. Map it to the same coded rejection path instead.
+    try:
+        url_port = parsed.port if parsed.port is not None else (
+            443 if parsed.scheme == "https" else 80
+        )
+    except ValueError:
+        return ValidationResult(False, RC_SCHEME_PREFIX, _redact_url_preview(url))
     for ip in addresses:
         rejection = _classify_ip(
             ip, url, allow_internal=allow_internal, url_port=url_port

@@ -402,3 +402,32 @@ def test_fetch_spec_bytes_from_url_userinfo_empty_host_end_to_end_does_not_leak(
         )
     assert "hunter2" not in str(exc_info.value)
 
+
+# ---------------------------------------------------------------------------
+# Phase 172 code review CR-02 — invalid port must not crash validate_external_url
+# ---------------------------------------------------------------------------
+
+def test_validate_external_url_out_of_range_port_does_not_raise():
+    """CR-02: an out-of-range port literal must produce a handled rejection,
+    not an uncaught ValueError propagating out of validate_external_url.
+
+    Falsifiability: reverting the try/except around the `.port` read makes
+    this fail with an uncaught ValueError instead of a ValidationResult.
+    """
+    r = validate_external_url("https://user:hunter2@evil.example.com:99999/openapi.json")
+    assert r.ok is False
+    assert "hunter2" not in r.redacted_preview
+
+
+def test_fetch_spec_bytes_from_url_invalid_port_end_to_end_does_not_crash():
+    """CR-02 end-to-end repro: the exact reviewer repro through the real
+    SpecParsingError raise site — must raise SpecParsingError, not a bare
+    ValueError with a traceback."""
+    from quirk.scanner.openapi_scanner import _fetch_spec_bytes_from_url, SpecParsingError
+
+    with pytest.raises(SpecParsingError) as exc_info:
+        _fetch_spec_bytes_from_url(
+            "https://user:hunter2@acme.com:99999/openapi.json", cfg_targets=["acme.com"]
+        )
+    assert "hunter2" not in str(exc_info.value)
+
