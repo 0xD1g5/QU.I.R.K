@@ -137,9 +137,13 @@ no residue in run output.
 **Requirements**: SCOPE-01, SCOPE-02, SCOPE-03
 **Success Criteria** (what must be TRUE):
 
-  1. With `connectors.enable_email` at its default `False`, no SMTP/IMAP/POP3 port is probed and the
-     Motion page's Email Protocols section renders its empty state. Email probing currently runs
-     unconditionally (`UAT-36-05`).
+  1. ~~With `connectors.enable_email` at its default `False`, no SMTP/IMAP/POP3 port is probed and
+     the Motion page's Email Protocols section renders its empty state.~~ **Ruled a case defect,
+     not a product defect** — the `standard`/`deep` profile's deliberate, documented auto-enable of
+     `enable_email`/`enable_broker` (Phase 32/33/72-D-02) is the intended behavior, and a fix
+     implementing this criterion literally was built, shipped, and reverted the same day once shown
+     to regress every real CLI config (`UAT-36-05` promoted to Phase 175; see
+     `173-DISPOSITIONS.md`).
 
   2. `run_stats.timings_sec` contains no `broker_scanning` key when no broker phase ran. The key
      currently persists with a nonzero value while the row count is correctly 0 (`UAT-33-01`).
@@ -153,7 +157,7 @@ Plans:
 - [x] 173-01-PLAN.md — SCOPE-01: CLI port-scope suppression with declared provenance (D-01/D-01a)
 - [x] 173-02-PLAN.md — SCOPE-02: generic `_PHASE_SKIPPED` timing-key omission (D-02)
 - [x] 173-03-PLAN.md — SCOPE-03: broker/smime/adcs missing-extra signal (D-03/D-05)
-- [ ] 173-04-PLAN.md — Docs, UAT Series 173, Obsidian sync, full-suite regression gate
+- [x] 173-04-PLAN.md — Docs, UAT Series 173, Obsidian sync, full-suite regression gate
 
 ### Phase 174: Dashboard & API Correctness
 
@@ -195,6 +199,21 @@ retained by design). The case's text and disposition were left byte-untouched in
 consider adding a second, credential-bearing UAT case (mirroring
 `https://user:hunter2@evil.example.com/openapi.json?token=SECRETVALUE`) since the current fixture
 has no userinfo/query to strip and so cannot exercise D-03's actual redaction behaviour.
+
+**Carried forward from Phase 173 (SCOPE-01):** `UAT-36-05` (Series 36) was ruled a CASE DEFECT, not
+a product bug — its premise ("the compiled-default `connectors.enable_email: False` should govern
+scanning under the `standard`/`deep` profiles") contradicts the intentional, documented Phase
+32/33/72-D-02 auto-enable coverage feature (`docs/configuration.md`). A fix implementing the case's
+literal premise (suppress auto-enable when `scan.ports_tls` is user-set) was built, shipped, and
+live-verified in plan 173-01, then reverted the same day once it was shown to fire on every real
+CLI config (`ports_tls` is a required YAML key with no default), silently reversing the coverage
+feature for all CLI users. The case's text and disposition were left byte-untouched in
+`docs/UAT-SERIES.md` (Series 36); the full argument, both rejected suppression mechanisms, and the
+evidence they fail on real configs are in
+`.planning/phases/173-scanner-scope-config/173-DISPOSITIONS.md`. The real operator-facing gap the
+case surfaced — no CLI documentation stated that email/broker auto-enable is independent of
+`scan.ports_tls` — is closed in `docs/configuration.md` (v5.17 / Phase 173), not by editing the
+case.
 
 **Success Criteria** (what must be TRUE):
 

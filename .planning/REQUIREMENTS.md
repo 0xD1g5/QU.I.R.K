@@ -41,17 +41,29 @@ liability in an engagement.
 Config that says "do not scan this" must actually prevent the scan, and disabled subsystems must
 leave no trace in run output.
 
-- [ ] **SCOPE-01**: Email port probing (SMTP/IMAP/POP3) does not run when
+- [ ] **SCOPE-01**: ~~Email port probing (SMTP/IMAP/POP3) does not run when
   `connectors.enable_email` is `False`. The Motion page's Email Protocols section shows its
-  empty state rather than real findings.
-  *Evidence: `UAT-36-05` — email probing ran unconditionally against an HTTPS-only config with
-  `enable_email` at its default `False`.*
+  empty state rather than real findings.~~ **Ruled a case defect (2026-08-29), promoted to
+  Phase 175, not left silently Pending.** This requirement's own text asserts behavior the
+  product deliberately does not have: `standard`/`deep` profiles intentionally auto-enable
+  `enable_email`/`enable_broker` regardless of other config, by design since Phase 32/33/72-D-02.
+  A fix implementing this requirement's literal wording was built, shipped, and live-verified in
+  plan 173-01, then reverted the same day once shown to regress every real CLI config (`ports_tls`
+  is a required YAML key, so "user narrowed the scan" was true unconditionally). See
+  `173-DISPOSITIONS.md` for the full argument and both rejected suppression mechanisms. The real
+  operator-facing gap — no docs stated auto-enable is independent of `scan.ports_tls` — is closed
+  in `docs/configuration.md` (v5.17). No further code work is planned against this requirement's
+  literal text; case-text correction is Phase 175's job.
+  *Evidence: `UAT-36-05` — promoted to Phase 175, case text left byte-untouched in
+  `docs/UAT-SERIES.md` Series 36.*
 
-- [ ] **SCOPE-02**: `run_stats.timings_sec` contains no `broker_scanning` key when no
+- [x] **SCOPE-02**: `run_stats.timings_sec` contains no `broker_scanning` key when no
   broker-scanning phase ran. Currently the key persists with a nonzero value while the broker row
   count is correctly 0.
   *Evidence: `UAT-33-01` — `COUNT` was 0 as expected but `timings_sec.broker_scanning` was present
-  and nonzero.*
+  and nonzero. Fixed and re-verified 2026-08-29: generic `_PHASE_SKIPPED` sentinel closes the
+  contract for 19 scanner phases (broker included), covered by
+  `tests/test_phase_timer_omission.py` (6/6 passing, includes a ran-but-empty inversion guard).*
 
 - [x] **SCOPE-03**: Enabling a scanner whose optional extras are absent produces the documented
   missing-extra signal — a stderr advisory line and a `scan_error_category=missing_extra` finding —
@@ -148,8 +160,8 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | SAFE-01 | Phase 172 | Complete |
 | SAFE-02 | Phase 172 | Complete |
 | SAFE-03 | Phase 172 | Complete |
-| SCOPE-01 | Phase 173 | Pending |
-| SCOPE-02 | Phase 173 | Pending |
+| SCOPE-01 | Phase 173 | Case defect — promoted to Phase 175 |
+| SCOPE-02 | Phase 173 | Complete |
 | SCOPE-03 | Phase 173 | Complete |
 | DASH-06 | Phase 174 | Pending |
 | DASH-07 | Phase 174 | Pending |
