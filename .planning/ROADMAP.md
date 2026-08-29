@@ -180,7 +180,14 @@ deliberately rather than silently.
      sits between Motion and Data at Rest. **Decide which side is wrong** — do not re-order a
      shipped UI to satisfy a stale document without establishing that the document is right
      (`UAT-39-07`).
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 174-01-PLAN.md — DASH-06: RED test then the minimal `list_scans` calibration fix (no schema change)
+- [ ] 174-02-PLAN.md — DASH-07: executed empty-DB evidence probe + 404-contract regression guard (no code change)
+- [ ] 174-03-PLAN.md — DASH-08: canonical nav-order record + lockstep correction of the stale Phase-39 D-11 note
+- [ ] 174-04-PLAN.md — UAT corpus: UAT-39-07 criteria corrected, three legacy cases re-dispositioned via the ledger, Series 174, sidebar drift guard
+- [ ] 174-05-PLAN.md — Obsidian sync + phase note, REQUIREMENTS.md close-out, blocking full-suite regression gate
 
 ### Phase 175: Case & Documentation Defect Correction
 
