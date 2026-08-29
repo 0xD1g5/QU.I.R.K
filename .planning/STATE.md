@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 172-01-PLAN.md
-last_updated: "2026-08-29T01:02:31.231Z"
+stopped_at: Completed 172-06-PLAN.md (phase 172 execution complete; awaiting /gsd:verify-phase)
+last_updated: "2026-08-29T22:30:00.000Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 20
 ---
 
 # Project State
@@ -22,7 +22,31 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 172 — fuzzing-disclosure-safety
+**Current focus:** Phase 172 — fuzzing-disclosure-safety — **execution complete 2026-08-29**
+(172-06 closed the phase: full unfiltered suite (`pytest -q -m ""`, 0 deselected) reproduced 3x
+at 1 failed / 3733 passed / zero Phase 172 node failing — BETTER than the documented 4-failure
+baseline in one respect (`test_extras_install_matrix` now passes) but revealed pre-existing
+skip-registry drift from Phases 166/170 across 5 unrelated files (fixed the in-scope
+172-03-caused portion, logged the rest as `DEFER-172-01`) and 3 reproducible macOS-only SIGSEGV
+crashes in forked `test_install_errors.py` children, pre-existing and non-test-failing
+(`DEFER-172-02`, corrects a stale "zero fatal signals" memory claim). 28/28 fuzzer tests green,
+`rest_fuzzer.py` byte-untouched, all UAT guards green, `uat_disposition_apply.py verify` 377/377.
+SAFE-01/02/03 independently re-verified against fresh test execution. `172-VALIDATION.md`
+`nyquist_compliant: true`. ROADMAP.md's Phase 172 phase-list checkbox deliberately left
+unflipped — reserved for `/gsd:verify-phase` per this repo's pre-commit gate and Phase 170
+precedent. Obsidian phase note + hub link written. Next step: `/gsd:verify-phase 172`, then
+Phase 173 (Scanner Scope & Config Correctness).
+
+## Decisions Carried Forward (Phase 172)
+
+- **172-06 closed the phase on an honestly-reported, independently re-executed baseline rather
+  than the documented figure.** Full suite ran 3x identically (1 failed, 3733 passed, 0
+  deselected); the single failure's root cause was split into an in-scope 172-03-caused portion
+  (fixed) and out-of-scope pre-existing drift (logged, not fixed) — see `deferred-items.md` in
+  the phase directory for both `DEFER-172-01` (skip-registry drift) and `DEFER-172-02` (SIGSEGV
+  crash reports). D-04's `UAT-94-05` case-defect disposition (promoted to Phase 175, case text
+  left byte-untouched) is now also recorded in `ROADMAP.md`'s Phase 175 section, not only here
+  and in the gitignored `172-DISPOSITIONS.md`.
 plans; TRACE-01..07, RUNBOOK-01 all complete). 170-07 closed the phase: full unfiltered suite
 (`pytest -q -m ""`, 0 deselected) held at the documented true baseline — 3670 passed, 4 failed
 (1 pre-existing `test_skip_registry`, 3 pre-existing environmental `test_extras_install_matrix`
@@ -762,7 +786,15 @@ Added at the v5.16 open (2026-08-26):
 | uat_gap (158) | `158-HUMAN-UAT.md` — 2 pending visual scenarios (`/hardware`, `/compare` rendering of sensor-pushed devices) | open — carried forward unchanged; HWLC-15 independently SATISFIED at code/test level. Explicitly **not** in v5.16 scope. |
 | vault_sync | Phase-162 note absent; `_QUIRK-Hub.md` missing 152/156/162 links and carrying a wrong Phase 163 date; vault `Roadmap.md` stale by 12 days | **RESOLVED 2026-08-26** at the v5.16 milestone-boundary doc review — note written, hub repaired (callout rewritten to v5.15, 3 links added, 163 date corrected), `Roadmap.md` re-synced. Vault `Requirements.md` re-syncs once `.planning/REQUIREMENTS.md` is regenerated for v5.16. |
 
-**Last re-triaged:** 2026-08-20 (Phase 161 plan-phase — decision-coverage gate override, see row below)
+Found at Phase 172 close (2026-08-29):
+
+| Category | Item | Status |
+|----------|------|--------|
+| test_isolation | `tests/skip_registry.py` drift across 5 files (`test_credential_leakage.py`, `test_identity_surface.py`, `test_saml_scanner.py`, `test_target_cli.py`, `test_uat_disposition_integrity.py`), caused by Phases 166/170, confirmed untouched by Phase 172 | open — logged as `DEFER-172-01` in `.planning/phases/172-fuzzing-disclosure-safety/deferred-items.md`. Needs a housekeeping commit correcting the 8 stale/missing registry line numbers. |
+| test_isolation (macOS-only) | 3 reproducible `Fatal Python error: Segmentation fault` crash reports in forked `tests/test_install_errors.py` children (`fork()` + `Network.framework`/`os_log`), does not fail any test, pre-existing/untouched by Phase 172 | open — logged as `DEFER-172-02`. Corrects the stale "zero fatal signals" claim in `project_verify_phase_gates_macos_only_failures.md` memory (that fix, Phase 166 GATE-03, closed a *different* fork-crash root cause in `test_verify_phase_gates.py`, not this one). CI (Linux) is unaffected. |
+| uat_finding (D-04) | `UAT-94-05`'s third pass-criterion demands all-or-nothing URL redaction, contradicting Phase 172's locked D-03 threat model | **promoted into v5.17 Phase 175** (`CASEFIX` scope) — case defect, case text left byte-untouched. Full argument in `172-DISPOSITIONS.md` § 1; carry-forward note added to `ROADMAP.md`'s Phase 175 section. |
+
+**Last re-triaged:** 2026-08-29 (Phase 172 close — see rows above)
 
 Acknowledged at Phase 161 plan-phase (2026-08-20):
 
