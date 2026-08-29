@@ -90,3 +90,25 @@ def test_registry_keys_match_entry_code_field():
 def test_category_to_code_values_are_registered():
     for category, code in CATEGORY_TO_CODE.items():
         assert code in ERROR_REGISTRY, f"CATEGORY_TO_CODE[{category!r}]={code!r} not in registry"
+
+
+def test_fuzz_002_cause_agrees_with_max_fuzz_budget():
+    """Phase 172 code review WR-02: FUZZ-002's cause/fix strings must derive
+    from quirk.scanner.rest_fuzzer.MAX_FUZZ_BUDGET, not restate it as a bare
+    literal -- a second hand-maintained copy is exactly how SAFE-02's
+    original prose-only ceiling drifted from the enforced code.
+
+    Falsifiability: bump MAX_FUZZ_BUDGET in rest_fuzzer.py to any other value
+    without touching errors.py -- this fails because the old literal would no
+    longer appear in the (now-stale) cause/fix strings, while this assertion
+    (which reads the live constant) would still expect the new value.
+    """
+    from quirk.scanner.rest_fuzzer import MAX_FUZZ_BUDGET
+
+    entry = ERROR_REGISTRY["FUZZ-002"]
+    assert str(MAX_FUZZ_BUDGET) in entry.cause, (
+        f"FUZZ-002 cause does not mention MAX_FUZZ_BUDGET ({MAX_FUZZ_BUDGET}): {entry.cause!r}"
+    )
+    assert str(MAX_FUZZ_BUDGET) in entry.fix, (
+        f"FUZZ-002 fix does not mention MAX_FUZZ_BUDGET ({MAX_FUZZ_BUDGET}): {entry.fix!r}"
+    )

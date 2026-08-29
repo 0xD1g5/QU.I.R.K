@@ -9,6 +9,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# Phase 172 code review WR-02: import the single source-of-truth ceiling
+# rather than restating "500" as a bare literal here. D-02/D-05's whole
+# premise is that the 500 ceiling living only in prose is precisely how
+# SAFE-02 came to exist -- a second hand-maintained literal in this
+# registry's FUZZ-002 cause string would recreate the exact same drift
+# risk, just relocated from docs into errors.py.
+from quirk.scanner.rest_fuzzer import MAX_FUZZ_BUDGET
+
 
 @dataclass(frozen=True)
 class ErrorEntry:
@@ -219,8 +227,9 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
     ),
     "FUZZ-002": ErrorEntry(
         code="FUZZ-002",
-        cause="--fuzz-budget exceeds the hard maximum of 500 requests; the requested value was rejected, not clamped.",
-        fix="Reduce --fuzz-budget to 500 or lower.",
+        cause=f"--fuzz-budget exceeds the hard maximum of {MAX_FUZZ_BUDGET} requests; "
+        "the requested value was rejected, not clamped.",
+        fix=f"Reduce --fuzz-budget to {MAX_FUZZ_BUDGET} or lower.",
     ),
 
     # --- Reserved per-domain exception fallback codes (NNN-099) ---
