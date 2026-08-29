@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 172-01-PLAN.md
-last_updated: "2026-08-29T00:41:30.634Z"
+last_updated: "2026-08-29T00:49:08.095Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -205,7 +205,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 Phase: 172 (fuzzing-disclosure-safety) — EXECUTING
 resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
 from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-08-29
 
@@ -432,6 +432,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 171 P03 | 65min | 3 tasks | 3 files |
 | Phase 172-fuzzing-disclosure-safety P01 | 25min | 3 tasks | 5 files |
 | Phase 172 P02 | 15min | 2 tasks | 1 files |
+| Phase 172 P03 | 50min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -692,6 +693,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 172-01]: Argparse-time refusal block for --fuzz: budget check before TTY check (fail-fast, TTY-independent) per D-02
 - [Phase 172-01]: MAX_FUZZ_BUDGET imported from quirk.scanner.rest_fuzzer; confirm_fuzz_gate and _resolve_budget left byte-for-byte unmodified as second defence-in-depth layer
 - [Phase ?]: 172-02: docs/configuration.md documents the --fuzz-budget ceiling twice; gate iterates all matches
+- [Phase 172]: D-03 implemented: url_allowlist.py's helper strips userinfo/query/fragment via urlparse and keeps scheme+host+truncated path; subprocess_input.py's twin renamed only, body unchanged (RESEARCH.md A3 signed off).
+- [Phase 172]: The two _redact_preview twins now have distinct names (per D-03) so the same-name-different-behaviour trap cannot recur; UAT-94-05 (D-04) disposition deliberately left to plan 172-04.
 
 ### Pending Todos
 
@@ -822,7 +825,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T00:40:52.719Z
+Last session: 2026-08-29T00:48:27.044Z
 Stopped at: Completed 172-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

@@ -31,7 +31,7 @@ liability in an engagement.
   correct and must not change.
   *Evidence: `UAT-96-03` — `--fuzz-budget 501` completed normally and exited 0.*
 
-- [ ] **SAFE-03**: A spec-parsing failure reports a redacted preview of the target URL, never the
+- [x] **SAFE-03**: A spec-parsing failure reports a redacted preview of the target URL, never the
   full raw URL. Applies to the `SpecParsingError` path in
   `quirk.scanner.openapi_scanner.scan_openapi_spec` and any sibling path with the same shape.
   *Evidence: `UAT-94-05` — exception message contained the full raw `evil.example.com` URL.*
@@ -147,7 +147,7 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 |---|---|---|
 | SAFE-01 | Phase 172 | Complete |
 | SAFE-02 | Phase 172 | Complete |
-| SAFE-03 | Phase 172 | Pending |
+| SAFE-03 | Phase 172 | Complete |
 | SCOPE-01 | Phase 173 | Pending |
 | SCOPE-02 | Phase 173 | Pending |
 | SCOPE-03 | Phase 173 | Pending |
