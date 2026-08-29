@@ -3368,12 +3368,20 @@ def main():
         kafka_endpoints = []
         rabbit_endpoints = []
         redis_endpoints = []
-        # Phase 41 / D-12: probe optional-extra availability — broker depends on the
-        # [motion] extra (sslyze + kafka-python + redis). If sslyze is absent, emit
-        # the canonical advisory and skip the phase rather than crashing on import.
+        # Phase 41 / D-12; Phase 173 D-03: probe optional-extra availability — broker
+        # depends on the [motion] extra (sslyze + kafka-python + redis). Any of the
+        # three being absent means broker cannot do its full job, so ANY of
+        # SSLYZE_AVAILABLE / KAFKA_AVAILABLE / REDIS_AVAILABLE being False emits the
+        # canonical advisory and skips the phase rather than crashing on import.
+        # getattr(..., True) degrades to "available" if a flag is ever renamed, so a
+        # rename fails open (no false advisory) rather than crashing.
         if cfg.connectors.enable_broker:
             from quirk.scanner import broker_scanner as _broker_mod
-            if not getattr(_broker_mod, "SSLYZE_AVAILABLE", True):
+            if not (getattr(_broker_mod, "SSLYZE_AVAILABLE", True)
+                    and getattr(_broker_mod, "KAFKA_AVAILABLE", True)
+                    and getattr(_broker_mod, "REDIS_AVAILABLE", True)):
+                # Exactly one advisory row per scanner invocation (Phase 173 D-03
+                # decision record), even when multiple flags are missing.
                 _emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
                 cfg_broker_skip = True
             else:
