@@ -143,12 +143,30 @@ def _get_scan_int(cfg, attr: str, fallback: int) -> int:
         return fallback
 
 
+# Phase 173 D-02 (SCOPE-02): sentinel identifying a phase that did NOT really run
+# (a disabled connector / no-targets guard fired before any scan I/O happened).
+# Contract: when a `_run_X_phase()` inner function returns this sentinel, its
+# `timings_sec` key is ABSENT, not present-and-zero. Compared by IDENTITY
+# (`is _PHASE_SKIPPED`) — never by truthiness — because a phase that legitimately
+# ran and found zero results returns `[]` / `([], [], [])`, which is falsy but
+# must still keep its timing key. Truthiness cannot distinguish "skipped" from
+# "ran, found nothing"; identity can.
+_PHASE_SKIPPED = object()
+
+
 def _phase_timer(run_stats: Dict[str, Any], name: str):
     class _T:
         def __enter__(self_t):
             self_t.start = time.perf_counter()
+            self_t.skipped = False
             return self_t
+        def mark_skipped(self_t):
+            # Phase 173 D-02: tell __exit__ not to write a phantom timing key
+            # for a phase that never did real work.
+            self_t.skipped = True
         def __exit__(self_t, exc_type, exc, tb):
+            if self_t.skipped:
+                return
             dur = time.perf_counter() - self_t.start
             run_stats["timings_sec"][name] = round(dur, 3)
     return _T()
@@ -162,10 +180,20 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
     abort cleanly. All other exceptions (BaseException subclasses) are turned
     into a CryptoEndpoint row with scan_error_category='exception' so the rest
     of the scan can continue and the failure is visible in the report / DB.
+
+    Phase 173 D-02 (SCOPE-02): if `fn()` returns `_PHASE_SKIPPED` (identity
+    check, never truthiness), the phase did no real work — its `timings_sec`
+    key is omitted rather than written as a phantom nonzero duration — and the
+    sentinel is translated to `[]` before returning to the caller so no
+    downstream consumer ever observes it.
     """
     try:
-        with _phase_timer(run_stats, phase_name):
-            return fn()
+        with _phase_timer(run_stats, phase_name) as _timer:
+            result = fn()
+            if result is _PHASE_SKIPPED:
+                _timer.mark_skipped()
+                return []
+            return result
     except (KeyboardInterrupt, SystemExit):
         # D-14: never swallow user-abort or interpreter-exit signals.
         raise
@@ -2728,7 +2756,7 @@ def main():
     else:
         def _run_jwt_phase():
             if not (cfg.connectors.enable_jwt and cfg.connectors.jwt_targets):
-                return []
+                return _PHASE_SKIPPED
             return scan_jwt_targets(
                 cfg.connectors.jwt_targets,
                 timeout=cfg.scan.timeouts.jwt_seconds,
@@ -2746,7 +2774,7 @@ def main():
         # ==============================
         def _run_container_phase():
             if not (cfg.connectors.enable_container and cfg.connectors.container_targets):
-                return []
+                return _PHASE_SKIPPED
             return scan_container_targets(
                 cfg.connectors.container_targets,
                 timeout=cfg.scan.timeouts.container_seconds,
@@ -2762,7 +2790,7 @@ def main():
         # ==============================
         def _run_source_phase():
             if not (cfg.connectors.enable_source and cfg.connectors.source_targets):
-                return []
+                return _PHASE_SKIPPED
             return scan_source_targets(
                 cfg.connectors.source_targets,
                 timeout=cfg.scan.timeouts.source_seconds,
@@ -2877,7 +2905,7 @@ def main():
     else:
         def _run_aws_phase():
             if not cfg.connectors.enable_aws:
-                return []
+                return _PHASE_SKIPPED
             return scan_aws_targets(
                 region=cfg.connectors.aws_region,
                 profile=cfg.connectors.aws_profile,
@@ -2893,7 +2921,7 @@ def main():
         # ==============================
         def _run_azure_phase():
             if not cfg.connectors.enable_azure:
-                return []
+                return _PHASE_SKIPPED
             return scan_azure_targets(
                 subscription_id=cfg.connectors.azure_subscription_id or "",
                 keyvault_urls=cfg.connectors.azure_keyvault_urls,
@@ -2909,7 +2937,7 @@ def main():
         # ==============================
         def _run_gcp_phase():
             if not cfg.connectors.enable_gcp:
-                return []
+                return _PHASE_SKIPPED
             return scan_gcp_targets(
                 project_id=cfg.connectors.gcp_project_id or "",
                 logger=logger,
@@ -2924,7 +2952,7 @@ def main():
         # ==============================
         def _run_db_phase():
             if not cfg.connectors.enable_db:
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.db_connector import scan_pg_targets, scan_mysql_targets
             result = []
             if cfg.connectors.pg_targets:
@@ -2998,11 +3026,11 @@ def main():
         # ==============================
         def _run_s3_phase():
             if not cfg.connectors.enable_s3:
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
             if not BOTO3_AVAILABLE:
                 logger.v("boto3 not installed — S3 scanning skipped")
-                return []
+                return _PHASE_SKIPPED
             import boto3
             s3_session = boto3.Session(
                 region_name=cfg.connectors.aws_region,
@@ -3026,14 +3054,14 @@ def main():
         # ==============================
         def _run_blob_phase():
             if not cfg.connectors.enable_blob:
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.azure_connector import _scan_blob_encryption, AZURE_AVAILABLE, DefaultAzureCredential
             if not AZURE_AVAILABLE:
                 logger.v("azure SDK not installed — Azure Blob scanning skipped")
-                return []
+                return _PHASE_SKIPPED
             if not (cfg.connectors.azure_subscription_id or "").strip():
                 logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
-                return []
+                return _PHASE_SKIPPED
             eps = _scan_blob_encryption(
                 credential=DefaultAzureCredential(),
                 subscription_id=cfg.connectors.azure_subscription_id,
@@ -3052,7 +3080,7 @@ def main():
         # ==============================
         def _run_k8s_phase():
             if not cfg.connectors.enable_k8s:
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.k8s_connector import scan_k8s_targets
             eps = scan_k8s_targets(
                 provider=cfg.connectors.k8s_provider or "",
@@ -3105,7 +3133,7 @@ def main():
         # ── DNSSEC scanning ─────────────────────────────────────
         def _run_dnssec_phase():
             if not (cfg.connectors.enable_dnssec and cfg.connectors.dnssec_targets):
-                return []
+                return _PHASE_SKIPPED
             eps = scan_dnssec_targets(
                 targets=cfg.connectors.dnssec_targets,
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
@@ -3124,7 +3152,7 @@ def main():
         # ── SAML/OIDC scanning ────────────────────────────────────
         def _run_saml_phase():
             if not (cfg.connectors.enable_saml and cfg.connectors.saml_targets):
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.saml_scanner import scan_saml_targets
             eps = scan_saml_targets(
                 targets=cfg.connectors.saml_targets,
@@ -3144,7 +3172,7 @@ def main():
         # ── Kerberos scanning ────────────────────────────────────
         def _run_kerberos_phase():
             if not (cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets):
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.kerberos_scanner import scan_kerberos_targets
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
@@ -3164,7 +3192,7 @@ def main():
         def _run_smime_phase():
             if not (getattr(cfg.connectors, "enable_smime", False)
                     and getattr(cfg.connectors, "smime_targets", None)):
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.smime_scanner import scan_smime_targets
             eps = scan_smime_targets(
                 targets=cfg.connectors.smime_targets,
@@ -3185,7 +3213,7 @@ def main():
         def _run_adcs_phase():
             if not (getattr(cfg.connectors, "enable_adcs", False)
                     and getattr(cfg.connectors, "adcs_targets", None)):
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.adcs_scanner import scan_adcs_targets
             eps = scan_adcs_targets(
                 targets=cfg.connectors.adcs_targets,
@@ -3209,7 +3237,7 @@ def main():
         # (scan_codesign_from_tls_endpoints) can operate on already-captured certs.
         def _run_codesign_phase():
             if not getattr(args, "inventory_code_signing", False):
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.codesign_scanner import (
                 scan_codesign_from_ldap,
                 scan_codesign_from_tls_endpoints,
@@ -3242,17 +3270,17 @@ def main():
         # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
         def _run_vault_phase():
             if not cfg.connectors.enable_vault:
-                return []
+                return _PHASE_SKIPPED
             from quirk.scanner.vault_connector import (
                 scan_vault_targets,
                 HVAC_AVAILABLE,
             )
             if not HVAC_AVAILABLE:
                 logger.v("hvac not installed -- Vault scanning skipped")
-                return []
+                return _PHASE_SKIPPED
             if not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
                 logger.v("vault_addr not set -- Vault scanning skipped")
-                return []
+                return _PHASE_SKIPPED
             # Phase 72 D-22 / WR-09: connector requires explicit token now (no implicit
             # env fallback inside vault_connector). Source the token here at the caller
             # boundary — config takes precedence; VAULT_TOKEN env is the operator override.
@@ -3318,10 +3346,10 @@ def main():
         # _run_email_phase def — correct ordering preserved.
         def _run_email_phase():
             if cfg_email_skip or not cfg.connectors.enable_email:
-                return []
+                return _PHASE_SKIPPED
             email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
             if not email_hosts:
-                return []
+                return _PHASE_SKIPPED
             eps = scan_email_targets(
                 hosts=email_hosts,
                 timeout=cfg.scan.timeouts.email_seconds,
@@ -3355,10 +3383,10 @@ def main():
 
         def _run_broker_phase():
             if cfg_broker_skip or not cfg.connectors.enable_broker:
-                return ([], [], [])
+                return _PHASE_SKIPPED
             broker_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
             if not broker_hosts:
-                return ([], [], [])
+                return _PHASE_SKIPPED
             k = scan_kafka_targets(
                 hosts=broker_hosts,
                 timeout=cfg.scan.timeouts.broker_seconds,
