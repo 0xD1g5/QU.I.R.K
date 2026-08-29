@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 173-03-PLAN.md
-last_updated: "2026-08-29T18:20:15.823Z"
+stopped_at: 173-04-PLAN.md Tasks 1-2 complete; Task 3 (blocking human-verify checkpoint) awaiting approval
+last_updated: "2026-08-29T19:35:00.000Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
@@ -22,7 +22,24 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 173 — scanner-scope-config
+**Current focus:** Phase 173 — scanner-scope-config, plan 173-04 (phase close)
+173-04's Tasks 1-2 (docs + UAT Series 173 + requirement/roadmap bookkeeping + Obsidian sync) are
+complete and committed (`50de382`, `97d08c7`, `3608e32`). Task 3 is a **blocking human-verify
+checkpoint** (`autonomous: false`) awaiting user approval — full unfiltered suite reproduced at
+1 failed / 3758 passed / 42 skipped / 73 xfailed / 4 xpassed, 0 deselected, the single failure
+being the pre-existing `test_skip_registry::test_no_unregistered_skips` (`DEFER-172-01`),
+node-for-node identical to the Phase 172 baseline set — zero new failing nodes. SCOPE-01's
+original mechanism (CLI port-scope suppression, D-01/D-01a) was built, shipped, and **reverted
+the same day** once live-verified to regress every real CLI config (`ports_tls` is a required
+YAML key, so "user narrowed the scan" fired unconditionally) — `UAT-36-05` ruled a case defect,
+promoted to Phase 175 alongside `UAT-94-05`; full argument in
+`.planning/phases/173-scanner-scope-config/173-DISPOSITIONS.md`. SCOPE-02/03 shipped clean and
+are independently re-verified. `173-VALIDATION.md` closed `nyquist_compliant: true` with SCOPE-01's
+rows honestly marked reverted/N/A rather than falsely green. `.planning/REQUIREMENTS.md` gives
+SCOPE-01 an honest case-defect disposition (not a false Complete or silent Pending) and flips
+SCOPE-02 to Complete. Obsidian phase note + hub link written. Next step once the checkpoint is
+approved: `/gsd:verify-phase 173`, then Phase 174 (Dashboard & API Correctness).
+
 (172-06 closed the phase: full unfiltered suite (`pytest -q -m ""`, 0 deselected) reproduced 3x
 at 1 failed / 3733 passed / zero Phase 172 node failing — BETTER than the documented 4-failure
 baseline in one respect (`test_extras_install_matrix` now passes) but revealed pre-existing
@@ -34,8 +51,20 @@ crashes in forked `test_install_errors.py` children, pre-existing and non-test-f
 SAFE-01/02/03 independently re-verified against fresh test execution. `172-VALIDATION.md`
 `nyquist_compliant: true`. ROADMAP.md's Phase 172 phase-list checkbox deliberately left
 unflipped — reserved for `/gsd:verify-phase` per this repo's pre-commit gate and Phase 170
-precedent. Obsidian phase note + hub link written. Next step: `/gsd:verify-phase 172`, then
-Phase 173 (Scanner Scope & Config Correctness).
+precedent. Obsidian phase note + hub link written.)
+
+## Decisions Carried Forward (Phase 173)
+
+- **173-04 closed the phase's docs/bookkeeping honestly, including an in-flight revert.** Plan
+  173-01's SCOPE-01 mechanism shipped, was live-verified correct against its own test fixtures,
+  and was reverted the same day once verified against the repo's own real `config.yaml` exposed
+  that the suppression fired unconditionally (`ScanCfg.ports_tls` has no default; every real
+  config sets it). `UAT-36-05` is ruled a case defect (not a product defect) and promoted to
+  Phase 175 — the case's own text in `docs/UAT-SERIES.md` Series 36 is left byte-untouched, and
+  the ruling plus both rejected suppression mechanisms are recorded in `173-DISPOSITIONS.md`.
+  `docs/configuration.md`'s companion-note task was retargeted (per that same dispositions
+  document) from "document a behaviour change" to "document the real, unchanged gap the
+  investigation surfaced" — no code changes accompany this plan.
 
 ## Decisions Carried Forward (Phase 172)
 
