@@ -104,6 +104,14 @@ class ScanCfg:
     # (compliance/__init__.py, bacnet_vendors.py, hardware_eol.py).
     hardware_drift_event_retention_days: int = 365
 
+    # Phase 173 D-01: tracks which keys appeared in the raw YAML [scan] block.
+    # Mirrors ConnectorsCfg._user_set_fields (quirk/config.py:333). Because
+    # ScanCfg is @dataclass(init=False) with a hand-written __init__, a
+    # field(default_factory=...) annotation alone would NOT be initialised —
+    # this is stamped explicitly in __init__ below and re-stamped by
+    # config_from_dict after construction (mirroring ConnectorsCfg's pattern).
+    _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
+
     def __init__(
         self,
         concurrency: int,
@@ -147,6 +155,10 @@ class ScanCfg:
         self.nmap_port_scope = nmap_port_scope
         self.hardware_history_retention_days = hardware_history_retention_days
         self.hardware_drift_event_retention_days = hardware_drift_event_retention_days
+        # Phase 173 D-01: field(default_factory=...) does NOT fire on a
+        # hand-written __init__ — must be assigned explicitly. Stamped again
+        # post-construction by config_from_dict with the real raw-key set.
+        self._user_set_fields = frozenset()
         # Route legacy flat kwargs into the nested TimeoutsCfg
         legacy_values = {
             "timeout_seconds": timeout_seconds,
@@ -583,9 +595,17 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     connectors_cfg = ConnectorsCfg(**conn_raw)
     connectors_cfg._user_set_fields = frozenset(conn_raw.keys())
 
+    # Phase 173 D-01: build ScanCfg then stamp user-set field set (mirrors
+    # connectors_cfg above), so quirk.engine.profiles can distinguish a
+    # user-explicit scan.ports_tls from an unset one. Stamped AFTER
+    # timeouts/retry/legacy *_timeout_seconds keys have already been popped
+    # from scan_raw, so only genuinely-authored [scan] keys are recorded.
+    scan_cfg = ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw)
+    scan_cfg._user_set_fields = frozenset(scan_raw.keys())
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
-        scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
+        scan=scan_cfg,
         targets=targets,
         connectors=connectors_cfg,
         output=OutputCfg(**raw["output"]),
