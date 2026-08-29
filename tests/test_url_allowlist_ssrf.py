@@ -11,6 +11,16 @@ Covers SP-01 / AC-01 / AC-02 / CD-01 / CD-02 from the 2026-05-27 audit:
 Phase 123 additions (SSRF-02, SSRF-05):
   6. SSRF-02 regression lock — metadata aliases blocked even with allow_internal=True (tagged ssrf02).
   7. SSRF-05 — resolved_ip populated on ValidationResult; single-resolution rebinding mitigation.
+
+Phase 172 D-03 additions (SAFE-03) — ``test_*redact*`` nodes below:
+  8. _redact_url_preview strips userinfo, query and fragment from a URL but
+     deliberately retains scheme + host + truncated path.
+  Falsifiability: reverting _redact_url_preview to truncation-only (its
+  pre-Phase-172 behaviour) makes the userinfo/query-stripping tests below
+  fail; re-adding host redaction (contradicting D-03/D-04's locked threat
+  model) makes the bare-host-retained test fail; every validate_external_url
+  rejection branch must still populate a non-empty redacted_preview or the
+  regression test at the bottom of this section fails.
 """
 from __future__ import annotations
 
@@ -27,6 +37,7 @@ from quirk.util.url_allowlist import (
     RC_SCHEME_PREFIX,
     RC_DNS_FAILURE,
     ValidationResult,
+    _redact_url_preview,
     validate_external_url,
 )
 
@@ -252,3 +263,93 @@ def test_rebinding_mitigated_by_pinning(mock_gai):
     # validate_external_url must resolve exactly once; callers connect to r.resolved_ip
     # instead of re-resolving (which a DNS-rebinding attacker could hijack).
     assert mock_gai.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Phase 172 D-03 (SAFE-03) — _redact_url_preview cases
+# ---------------------------------------------------------------------------
+
+def test_redact_url_preview_strips_userinfo_query_fragment():
+    """Userinfo, query and fragment are stripped; host is retained.
+
+    Falsifiability: if _redact_url_preview reverts to truncation-only, this
+    fails because 'user'/'pass'/'token'/'secret'/'frag' would all still be
+    present in the (truncated) raw string at this URL's length.
+    """
+    raw = "http://user:pass@evil.example.com/path?token=secret#frag"
+    preview = _redact_url_preview(raw, max_len=200)
+    assert "evil.example.com" in preview
+    assert "user" not in preview
+    assert "pass" not in preview
+    assert "token" not in preview
+    assert "secret" not in preview
+    assert "frag" not in preview
+
+
+def test_redact_url_preview_bare_host_not_further_redacted():
+    """A bare scheme+host+path URL is NOT redacted beyond D-03's scope.
+
+    This is the executable form of D-04's disposition: D-03's threat model
+    treats the operator-supplied host as non-secret, so it must survive.
+    Falsifiability: if a future change starts hiding the host, this fails.
+    """
+    raw = "https://evil.example.com/openapi.json"
+    preview = _redact_url_preview(raw, max_len=200)
+    assert "evil.example.com" in preview
+
+
+def test_redact_url_preview_truncates_after_stripping():
+    """Truncation is still applied to the stripped result."""
+    raw = "http://user:pass@evil.example.com/" + ("a" * 100) + "?token=secret"
+    preview = _redact_url_preview(raw, max_len=32)
+    assert len(preview) <= 32
+    assert "token" not in preview
+    assert "secret" not in preview
+    assert "pass" not in preview
+
+
+def test_redact_url_preview_strips_control_characters():
+    """Control characters (terminal-escape injection defence) are still stripped."""
+    raw = "http://evil.example.com/\x1b[31mred\x1b[0m"
+    preview = _redact_url_preview(raw, max_len=200)
+    assert "\x1b" not in preview
+    assert "evil.example.com" in preview
+
+
+def test_redact_url_preview_scheme_less_input_degrades_gracefully():
+    """Non-URL, scheme-less input does not crash and returns a sanitised truncated value."""
+    raw = "not a url at all"
+    preview = _redact_url_preview(raw, max_len=8)
+    assert preview == "not a u"[:8] or preview == raw[:8]
+    assert len(preview) <= 8
+
+
+def test_redact_url_preview_malformed_scheme_falls_back():
+    """A malformed/unparseable-looking value falls back to truncate-only, no raise."""
+    raw = "http://\x00\x01[not-a-real-host"
+    # Must not raise.
+    preview = _redact_url_preview(raw, max_len=32)
+    assert isinstance(preview, str)
+    assert len(preview) <= 32
+
+
+@pytest.mark.parametrize(
+    "url,expect_reason",
+    [
+        ("http://169.254.169.254/latest/meta-data/", RC_METADATA_SERVICE_IP),
+        ("http://127.0.0.1/", RC_LOOPBACK),
+        ("http://[fe80::1]/", RC_LINK_LOCAL),
+        ("ftp://evil.example.com/", RC_SCHEME_PREFIX),
+    ],
+)
+def test_validate_external_url_rejection_branches_populate_nonempty_redacted_preview(
+    url, expect_reason
+):
+    """SAFE-03 sibling-sites regression lock: every rejection branch still
+    populates a non-empty redacted_preview after the rename (Pitfall 2 — the
+    10 call sites inside validate_external_url did not regress).
+    """
+    r = validate_external_url(url)
+    assert r.ok is False
+    assert r.reason == expect_reason
+    assert r.redacted_preview != ""

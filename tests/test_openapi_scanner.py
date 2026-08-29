@@ -8,6 +8,12 @@ Coverage:
   - test_oversize_rejected: >10MB file raises SpecParsingError before yaml.safe_load
   - test_external_ref_ssrf_guard: external $ref raises SpecParsingError with ZERO network calls
   - test_missing_extra_degrades: OPENAPI_AVAILABLE=False returns missing_extra endpoint, never raises
+  - test_url_scope_rejected_redacts_userinfo_and_query (Phase 172 D-03 / SAFE-03):
+    SpecParsingError's message never contains userinfo or query-string values.
+    Falsifiability: reverting the redaction helper to truncation-only makes
+    this test fail; a skip (guarded by a real import probe, not a bare
+    pytest.skip) means the [api] extra is missing, not that the behaviour
+    passed — see the skipif reason on that test.
 """
 
 from __future__ import annotations
@@ -150,6 +156,47 @@ def test_url_scope_rejected():
         with pytest.raises(SpecParsingError, match="scope"):
             scan_openapi_spec(url, cfg_targets=cfg_targets)
         mock_get.assert_not_called()
+
+
+try:
+    import openapi_spec_validator as _osv  # noqa: F401
+    _API_EXTRA_INSTALLED = True
+except ImportError:
+    _API_EXTRA_INSTALLED = False
+
+
+@pytest.mark.skipif(
+    not _API_EXTRA_INSTALLED,
+    reason=(
+        "the [api] extra (openapi-spec-validator) is not installed under this "
+        "interpreter — a skip here means the extra is missing, NOT that the "
+        "SAFE-03 redaction behaviour passed. Run under the project .venv."
+    ),
+)
+def test_url_scope_rejected_redacts_userinfo_and_query():
+    """Phase 172 D-03 (SAFE-03): SpecParsingError from the scope gate never
+    reports userinfo or query-string values for an out-of-scope URL.
+
+    Falsifiability: reverting quirk.util.url_allowlist._redact_url_preview to
+    truncation-only makes this fail (hunter2/SECRETVALUE would reappear in the
+    message). A skip (not a pass) is reported if the [api] extra is missing —
+    see the skipif reason above; this guards against the vacuous-green failure
+    mode documented in Phase 172 RESEARCH.md Section 6.
+    """
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+
+    url = "https://user:hunter2@evil.example.com/openapi.json?token=SECRETVALUE"
+    cfg_targets = ["api.acme.com"]
+
+    with patch("httpx.get") as mock_get:
+        with pytest.raises(SpecParsingError) as exc_info:
+            scan_openapi_spec(url, cfg_targets=cfg_targets)
+        mock_get.assert_not_called()
+
+    msg = str(exc_info.value)
+    assert "hunter2" not in msg
+    assert "SECRETVALUE" not in msg
+    assert "evil.example.com" in msg  # D-03/D-04: host retained deliberately
 
 
 # ---------------------------------------------------------------------------
