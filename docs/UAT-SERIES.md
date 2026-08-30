@@ -1125,7 +1125,7 @@ All of these services show status `Up` or `running`:
 - `unknown-port` (5555)
 - `tls-slow-proxy` (12443)
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Down: [443, 8443, 9443, 10443, 11443, 8444, 8000, 2222, 5555])  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 lab up -- all core ports 443,8443,9443,10443,11443,8444,8000,2222,5555,12443 reachable per docker compose ps, see 176-LABRUN-EVIDENCE.md UAT-4-01)  - [ ] FAIL  - [ ] SKIP
 
 ---
 ### UAT-4-02: Modern TLS Service (Port 443)
@@ -1364,7 +1364,7 @@ All of these services show status `Up` or `running`:
 - `verify error:num=2` (unable to get issuer certificate) or similar chain error
 - Connection still establishes (TLS is present, chain is incomplete)
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 13443 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 13443 reachable, weak TLS chain missing intermediate confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-02)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1380,7 +1380,7 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Output shows `Public-Key: (1024 bit)`
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 14443 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 14443 reachable, weak RSA-1024 key confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-03)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1396,7 +1396,7 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Output shows `sha1WithRSAEncryption` or similar SHA-1 algorithm
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 15443 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 15443 reachable, SHA-1 signed certificate confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-04)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1433,7 +1433,7 @@ All of these services show status `Up` or `running`:
 - `kty` is `RSA`
 - Key modulus length (base64url `n`) decodes to ≥ 2048 bits
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20001 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 20001 reachable, JWT RS256 good service confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-06)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1450,7 +1450,7 @@ All of these services show status `Up` or `running`:
 - `alg` field shows `HS256`
 - OR JWT scanner detects symmetric key usage (no public key in JWKS)
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20002 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 20002 reachable, JWT HS256 symmetric weak service confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-07)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1467,7 +1467,7 @@ All of these services show status `Up` or `running`:
 - RSA modulus length decodes to 1024 bits
 - QuRisk JWT scanner flags this as weak key size
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20003 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 20003 reachable, JWT RSA-1024 weak key confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-08)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1484,7 +1484,7 @@ All of these services show status `Up` or `running`:
 - Response indicates `alg: none` usage or scanner classifies as `CRITICAL_NO_SIGNATURE`
 - QuRisk flags this as a critical finding
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20004 not reachable)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 20004 reachable, JWT algorithm none confirmed, see 176-LABRUN-EVIDENCE.md UAT-5-09)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1535,7 +1535,7 @@ All of these services show status `Up` or `running`:
 - MAC: `hmac-md5` flagged as CRITICAL
 - Total critical+warning findings ≥ 3
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 20022 not reachable)  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-30 GAP -- probe tool ssh-audit not installed in this environment; lab target port 20022 confirmed reachable and container healthy, see 176-LABRUN-EVIDENCE.md UAT-5-11 and TRIAGE-176 notes)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -1586,7 +1586,7 @@ All of these services show status `Up` or `running`:
 - TLS certificate has Keycloak-related subject
 - TLS version ≥ 1.2
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Port 15449 not reachable)  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-30 FAIL -- certs/keycloak.crt is byte-identical to certs/modern.crt, CN=modern.chaos.local not Keycloak-identifying; lab fixture defect, not a product defect, BACKLOG TRIAGE-176-01, see 176-LABRUN-EVIDENCE.md UAT-5-13)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2777,7 +2777,7 @@ Each finding object contains:
 - Severity: HIGH or CRITICAL
 - Finding includes remediation guidance
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: No findings for port 8000)  - [ ] SKIP
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-30 FAIL -- no PLAINTEXT_HTTP or HTTP_EXPOSURE finding type exists in quirk/; port 8000 and port 8444 findings are byte-identical once both are in ports_tls, product classification gap in findings_evaluator.py, BACKLOG TRIAGE-176-02, see 176-LABRUN-EVIDENCE.md UAT-6-06)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2798,7 +2798,7 @@ Each finding object contains:
 - Finding type references `HTTP_ON_TLS_LIKE_PORT`
 - Severity: HIGH
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: No findings for port 8444)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 port 8444 HTTP on TLS-designated port finding confirmed HIGH severity with remediation, see 176-LABRUN-EVIDENCE.md UAT-6-07)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2820,7 +2820,7 @@ Each finding object contains:
 - ECDSA algorithms classified as `quantum-vulnerable`
 - Each algorithm has NIST quantum level in the finding
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: No findings for port 2222)  - [ ] SKIP
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-30 GAP -- same missing ssh-audit tool dependency as UAT-5-11, confirmed at quirk/scanner/ssh_scanner.py source level; SSH port 2222 and container confirmed healthy, see 176-LABRUN-EVIDENCE.md UAT-6-08)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
