@@ -1,7 +1,25 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-29 (v5.17 Phase 174 — Dashboard & API Correctness: re-dispositioned
+**Last Updated:** 2026-08-30 (v5.17 Phase 175 — Case & Documentation Defect Correction: twelve UAT
+cases re-verified live against the current checkout and CONFIRMED as case defects — 12 CONFIRMS, 0
+CONTRADICTS, 0 product-defect promotions. Corrected case text in place for eleven
+(`UAT-85-02`/`UAT-85-06` quote-tolerant install greps, `UAT-84-02` towncrier empty-fragment
+acceptance, `UAT-110-06` `--stale-days 30` worked example, `UAT-51-02` coded `QRK-DASHBOARD-009`
+advisory, `UAT-55-01` `practice_number` per D-01 with the QRAMM field unrenamed and no
+`control_id` alias added, `UAT-9-10` shipped "No scan history yet" copy, `UAT-10-11` generic
+`QRK-INSTALL-001` advisory, `UAT-94-05` D-03 userinfo/query/fragment-stripping criterion,
+`UAT-36-05` explicit connectors opt-out prerequisite, `UAT-8-07` legal `--score-profile`
+calibration values); re-dispositioned ten of those eleven PASS through the ledger plus
+`UAT-58-07` DEFERRED naming `T-164-01` per D-02 (the `@`-file guard code-collapsing decision was
+NOT reopened); `UAT-8-07` keeps its Phase 174 DEFERRED disposition, text-only corrected. Added
+`UAT-94-09`, a credential-bearing companion case in Series 94 that DEMONSTRABLY detects a
+`_redact_url_preview` redaction regression (falsification proof: neutering the stripping logic in
+a scratch copy turns the case's own gate red; the real `quirk/` tree was never touched). Added
+Series 175 with 4 gating cases covering this phase's own deliverables. Zero product code changes.
+Corpus grew from 682/682/377 to 683/683/378 (the one companion case; Series 175's own new cases
+are `MAX_SERIES`-exempt and document-only). Full suite and corpus-integrity results recorded in
+`175-07-SUMMARY.md`. Earlier: v5.17 Phase 174 — Dashboard & API Correctness: re-dispositioned
 `UAT-8-07` (DEFERRED — covered by `tests/test_dashboard_scans_score_profile.py`, DASH-06's real
 fix is a one-line `profile=calibration` kwarg at `scan.py:1227`; the case's own reproduction uses
 the illegal `--score-profile standard` value and an out-of-scope bare-CLI path, case-text
@@ -20567,3 +20585,200 @@ authorization) since its criteria, not the product, were wrong. Persisting the s
 CLI-run scans (a schema migration with no reliable backfill key) remains an explicitly deferred
 follow-up candidate, not built here. Full unfiltered suite results and the four UAT
 corpus-integrity guard suites are recorded in `174-04-SUMMARY.md`.
+
+
+## Series 175: Case & Documentation Defect Correction (Phase 175 — v5.17)
+
+### UAT-175-01: The twelve corrected UAT cases no longer contain their stale literals
+
+**ID:** UAT-175-01
+**Title:** Every case corrected in this phase (`UAT-85-02`, `UAT-85-06`, `UAT-84-02`, `UAT-110-06`,
+`UAT-51-02`, `UAT-55-01`, `UAT-9-10`, `UAT-10-11`, `UAT-58-07`, `UAT-94-05`, `UAT-36-05`,
+`UAT-8-07`) is grep-verified to have shed the exact stale literal that made it a case defect
+**Maps to:** CASEFIX-01, CASEFIX-02, CASEFIX-03, CASEFIX-04, CASEFIX-05
+
+**What to test:** none of the twelve corrected cases still contains the literal that
+`175-REVERIFICATION.md` and `175-DISPOSITIONS.md` identified as the defect, and the two
+install-doc cases' corrected greps exit 0 against the real `README.md` and
+`docs/upgrade-guide.md`.
+
+**Steps:** run this one command block and confirm every line prints `0`:
+```bash
+grep -c 'Baseline scan recorded' docs/UAT-SERIES.md
+grep -c "score-profile standard" docs/UAT-SERIES.md
+grep -c '"Session not found"' docs/UAT-SERIES.md
+grep -c '`control_id`' docs/UAT-SERIES.md
+grep -c -- '--stale-days 1' docs/UAT-SERIES.md
+grep -qE "pip install -U ['\"]?quirk-scanner\[all\]['\"]?" docs/upgrade-guide.md && echo 0 || echo 1
+grep -qE "pip install ['\"]?quirk-scanner\[all\]['\"]?" README.md && echo 0 || echo 1
+```
+
+**Pass criteria:**
+- `Baseline scan recorded` count is 0 (UAT-9-10 now cites the shipped "No scan history yet..."
+  copy).
+- `score-profile standard` count is 0 (UAT-8-07 now uses the three legal `--score-profile`
+  choices only).
+- The bare-quoted `"Session not found"` literal count is 0 (UAT-51-02 now cites the coded
+  `[QRK-DASHBOARD-009]` advisory).
+- The backtick-quoted `` `control_id` `` literal count is 0 outside its own explanatory Notes —
+  `practice_number` is the field name UAT-55-01 asserts (D-01).
+- `--stale-days 1` count is 0 (UAT-110-06 now uses `--stale-days 30`,
+  `_DEFAULT_STALE_DAYS`).
+- Both install-doc greps exit 0 against the real files, tolerating the actual quoted forms
+  (`docs/upgrade-guide.md`'s double quotes, `README.md`'s single quotes).
+
+**Falsifiability:** this case turns red if any corrected case's stale literal is reintroduced by a
+future edit, or if the install-doc quoting convention changes without the grep pattern being
+updated to match.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (175-07 phase-close plan execution)
+**Notes:** Traceable to `175-DISPOSITIONS.md` (eleven per-case transcripts) and
+`175-REVERIFICATION.md` (initial identification of each stale literal). All seven checks executed
+this session; every count is 0 and both install-doc greps exit 0.
+
+---
+
+### UAT-175-02: The `UAT-94-09` credential-bearing companion detects a redaction regression
+
+**ID:** UAT-175-02
+**Title:** The Series 94 companion case added in plan 05 is falsifiable — it turns red when
+`_redact_url_preview`'s userinfo/query stripping is neutered
+**Maps to:** CASEFIX-04 (D-03)
+
+**What to test:** `175-COMPANION-EVIDENCE.md` §3 demonstrates, by execution against a scratch copy
+with `_redact_url_preview` reverted to its pre-Phase-172 truncate-only behaviour (the exact CR-01
+fallback-leak shape), that `UAT-94-09`'s own gate then reports `contains hunter2: True` — a
+genuine RED — while the real `quirk/` tree was never modified.
+
+**Steps:**
+1. Read `175-COMPANION-EVIDENCE.md` §3.2-3.4 and confirm the neutered `_redact_url_preview` was
+   written only inside a scratchpad rsync copy, never in the working tree.
+2. Confirm §3.3's observed output shows `contains hunter2: True` against the neutered copy.
+3. Confirm §3.4's `git status --porcelain quirk/` was empty both before and after.
+
+**Pass criteria:**
+- The falsification section exists and shows a genuine RED observation (`contains hunter2: True`),
+  not an assertion.
+- The product change that would make this case fail in the real tree, named explicitly: reverting
+  or removing the userinfo/query/fragment stripping in
+  `quirk/util/url_allowlist.py::_redact_url_preview`.
+- `git status --porcelain quirk/` is empty — the real module was never touched by the proof.
+
+**Falsifiability:** stated by construction — §3 IS the falsification proof. This case would itself
+turn red only if a future reviewer cannot reproduce the neutered-copy RED observation from the
+recorded transcript.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (175-07 phase-close plan execution)
+**Notes:** Traceable to `175-COMPANION-EVIDENCE.md` §2-4 (GREEN run against real code, RED run
+against neutered scratch copy, ledger `classify`/`apply`/`verify` cycle). Product change that
+flips this red: removing userinfo/query/fragment stripping from `_redact_url_preview`.
+
+---
+
+### UAT-175-03: Corpus integrity held and grew by exactly one
+
+**ID:** UAT-175-03
+**Title:** Heading count equals result-block count, zero undispositioned, ledger `verify` exits 0,
+and all three counters moved by exactly one relative to the phase-entry baseline
+**Maps to:** CASEFIX-01, CASEFIX-02, CASEFIX-03, CASEFIX-04, CASEFIX-05
+
+**What to test:** the corpus is internally consistent at phase close and grew by precisely the one
+case this phase added (`UAT-94-09`), not by Series 175's own new cases (which are
+`MAX_SERIES`-exempt and do not touch the ledger).
+
+**Steps:**
+```bash
+grep -c '^### UAT-' docs/UAT-SERIES.md
+grep -c '^\*\*Result:\*\*' docs/UAT-SERIES.md
+wc -l < docs/uat-disposition-ledger.jsonl
+.venv/bin/python scripts/uat_disposition_apply.py verify
+```
+
+**Pass criteria:**
+- Heading count and result-block count are equal.
+- Both moved from the `175-REVERIFICATION.md` phase-entry baseline of 682 to 683 by way of the
+  `UAT-94-09` companion, PLUS this series' own four-or-more cases added above `MAX_SERIES` — so the
+  post-Series-175 heading/result count exceeds 683, with the delta above 683 accounted for
+  entirely by Series 175's own new, ledger-exempt cases.
+- Ledger row count is 378 (`377 + 1`, the companion only — Series 175 mints zero ledger rows).
+- `scripts/uat_disposition_apply.py verify` exits 0.
+
+**Falsifiability:** this case turns red if the heading/result counts diverge, if the ledger row
+count is anything other than 378, or if `verify` exits non-zero.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (175-07 phase-close plan execution)
+**Notes:** Traceable to `175-COMPANION-EVIDENCE.md`'s "Corpus growth check" section (683/683/378
+before Series 175 was appended) and this task's own post-append measurement (see Series 175
+disposition paragraph below for the exact post-append counts).
+
+---
+
+### UAT-175-04: D-01 and D-02 judgements are recorded as gating documentation
+
+**ID:** UAT-175-04
+**Title:** `UAT-55-01` names `practice_number` with the QRAMM API field unrenamed and no alias
+added; `UAT-58-07` is DEFERRED naming `T-164-01`
+**Maps to:** CASEFIX-04, CASEFIX-05
+
+**What to test:** the D-01 and D-02 judgements are traceable in both the corpus and the source
+tree, and the two rejected alternatives (a `control_id` rename/alias, and reopening
+`QRK-TARGET-002`'s collapsing decision) are demonstrably absent from product code.
+
+**Steps:**
+```bash
+grep -n 'practice_number' docs/UAT-SERIES.md | grep -i 'UAT-55-01' -A2 -B2 || sed -n '/UAT-55-01/,/UAT-55-02/p' docs/UAT-SERIES.md | grep -c practice_number
+sed -n '/UAT-58-07/,/UAT-58-08/p' docs/UAT-SERIES.md | grep -c 'T-164-01'
+grep -rn 'control_id' quirk/dashboard/api/routes/qramm.py src/dashboard/src/types/api.ts src/dashboard/src/pages/print.tsx
+grep -n 'RC_PATH_NOT_ALLOWED_PREFIX\|RC_TARGET_FILE_TOO_LARGE\|RC_TARGET_FILE_TOO_MANY_LINES' quirk/util/targets.py
+grep -n 'TARGET-002' quirk/errors.py
+```
+
+**Pass criteria:**
+- The UAT-55-01 section names `practice_number`, not `control_id`, as the asserted field.
+- The UAT-58-07 section contains the literal `T-164-01` with a decision-record path reference.
+- `control_id` greps against the three live QRAMM surfaces (`qramm.py`, `api.ts`, `print.tsx`)
+  return no matches — no rename, no alias.
+- `quirk/errors.py` still registers a single `TARGET-002` entry, not three distinct codes — the
+  collapsing decision was not reopened.
+
+**Falsifiability:** this case turns red if `control_id` reappears in any of the three live QRAMM
+surfaces, or if `quirk/errors.py` gains distinct per-reason target-guard codes.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (175-07 phase-close plan execution)
+**Notes:** Traceable to `175-CONTEXT.md` D-01/D-02 (locked decisions) and
+`175-REVERIFICATION.md`'s UAT-55-01/UAT-58-07 sections (live re-derivation of the field-consistency
+and decision-record evidence). Re-confirmed this session: zero `control_id` hits in the three live
+surfaces; `quirk/errors.py` registers `TARGET-002` once.
+
+---
+
+**Series 175 disposition.** All four Series 175 cases PASS, each traceable to a transcript recorded
+in `175-DISPOSITIONS.md`, `175-COMPANION-EVIDENCE.md`, or `175-REVERIFICATION.md` — no case was
+marked PASS without an executed or source-read evidence basis behind it, and none required a GAP or
+DEFERRED disposition. Of the twelve UAT cases this phase touched, **12 re-verified as case defects
+and 0 were promoted as product defects** — the D-04 promotion gate stayed open (GATE OPEN, zero
+CONTRADICTS) through every one of the twelve independent re-verifications in
+`175-REVERIFICATION.md`. Eleven of the twelve were re-dispositioned through the ledger in plan 06
+(ten PASS, one — `UAT-58-07` — DEFERRED per D-02 rather than PASS, naming `T-164-01`); the twelfth,
+`UAT-8-07`, keeps its Phase 174 DEFERRED disposition untouched (text-only correction, per the
+`UAT-39-07` in-place-edit precedent) because its own criteria were already accurate about the
+scope decision, only its reproduction command was stale.
+
+**Milestone-level finding, recorded here for the retrospective.** This drain has now found the
+2026-08-24 functional review's root causes wrong in three consecutive phases (172, 173, 174 each
+independently re-derived a different, more precise mechanism than the review's stated cause) and
+its UAT cases wrong twelve times in this phase alone. That pattern is itself a finding, not a
+criticism of the review: a review pass reliably produces accurate SYMPTOMS — something is broken,
+here is the observable evidence — but not reliably accurate ROOT CAUSES or reliably current
+CASE TEXT, both of which require live re-verification against the current checkout before being
+trusted. This belongs in the milestone retrospective as guidance for how future review-drain
+phases should be scoped: budget for re-verification, not just re-application, of every review
+finding.
+
+Document header updated below. No `docs/error-codes.md`, `lab.sh`, `README.md`, `expected_results_*.md`,
+or version-bump change accompanies this series — none was needed; this phase corrected
+specifications and added one detector, and changed no product code.
