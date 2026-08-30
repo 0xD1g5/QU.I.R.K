@@ -316,6 +316,21 @@ advisory" when only classical KEX is offered, and surfaces specific weaknesses (
 `diffie-hellman-group1-sha1`, `ssh-rsa` host keys with short moduli). Requires the
 `ssh-audit` binary on `PATH`.
 
+**Optional prerequisite — `ssh-audit`:** the SSH scanner's per-algorithm classification
+(KEX, host-key, MAC breakdown) depends on the external `ssh-audit` binary
+(`quirk/scanner/ssh_scanner.py`, `shutil.which("ssh-audit")`). It is not a `quirk-scanner`
+dependency and is not installed by any `pip install quirk-scanner[...]` extra — install it
+separately:
+
+```bash
+pip install ssh-audit
+```
+
+If `ssh-audit` is not on `PATH`, the scanner does not fail — it silently falls back to a raw
+SSH banner grab and emits only a single generic "SSH quantum planning advisory" INFO finding,
+with no per-algorithm KEX/host-key/MAC breakdown or per-algorithm NIST quantum level. Install
+`ssh-audit` before scanning if you need that detail.
+
 #### JWT/API scanner
 
 Iterates over `jwt_targets` and inspects either local JWT samples or live token
