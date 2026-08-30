@@ -300,7 +300,7 @@ Plans:
   `core + phaseA + jwt + ssh-weak + identity` bring-up, or a clean `LAB STATUS: UNAVAILABLE` halt
 - [x] 176-04-PLAN.md — Execute the 13 lab cases, triage every genuine defect explicitly, and tear
   the lab down with a confirmed zero-container probe
-- [ ] 176-05-PLAN.md — Transcribe the 13 outcomes into the ledger and `apply` them into the corpus,
+- [x] 176-05-PLAN.md — Transcribe the 13 outcomes into the ledger and `apply` them into the corpus,
   including the `GAP — chaos lab unavailable` last-resort branch
 - [ ] 176-06-PLAN.md — Series 176, `176-VALIDATION.md` row flip, Obsidian vault sync + phase note,
   honest LABRUN close-out, and the full-suite delta reconciliation
@@ -313,7 +313,7 @@ Plans:
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
 | 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
-| 176. Chaos-Lab Re-Run | 4/6 | In Progress|  |
+| 176. Chaos-Lab Re-Run | 5/6 | In Progress|  |
 
 ---
 

@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 176-04-PLAN.md
-last_updated: "2026-08-30T17:26:47.673Z"
+last_updated: "2026-08-30T17:31:36.215Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
   percent: 80
 ---
 
@@ -288,7 +288,7 @@ UAT-1-02 pass-condition harness defect repaired under D-01's narrow, explicitly-
 test added and its RED/GREEN falsification demonstrated against a scratch copy. `176-HARNESS-LIFT.md`
 records the lift scope. UAT-1-02's disposition is NOT changed here — that is 176-02's job via the
 ledger.
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-08-30
 
@@ -533,6 +533,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 176 P02 | 15min | 2 tasks | 3 files |
 | Phase 176 P03 | 15min | 3 tasks | 1 files |
 | Phase 176 P04 | ~1h | 3 tasks | 2 files |
+| Phase 176 P05 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -825,6 +826,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: UAT-5-13 FAILs on evidence (cert-subject not Keycloak-related); certs/keycloak.crt is byte-identical to certs/modern.crt; disposition BACKLOG
 - [Phase ?]: UAT-6-06 FAILs on evidence (no PLAINTEXT_HTTP/HTTP_EXPOSURE finding type exists; port 8000 and 8444 findings are byte-identical); disposition BACKLOG
 - [Phase ?]: UAT-5-11 and UAT-6-08 both GAP — ssh-audit binary absent from environment, confirmed same root cause at ssh_scanner.py source level
+- [Phase 176]: UAT-5-13 and UAT-6-06 remain FAIL per D-03 -- each backed by a BACKLOG-triaged defect in 176-DEFECT-TRIAGE.md, not softened for a cleaner corpus
+- [Phase 176]: UAT-5-11 and UAT-6-08 dispositioned GAP for missing ssh-audit binary; LABRUN-01 flagged unmet for those two cases
 
 ### Pending Todos
 
@@ -963,7 +966,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T17:26:47.666Z
+Last session: 2026-08-30T17:30:50.211Z
 Stopped at: Completed 176-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
