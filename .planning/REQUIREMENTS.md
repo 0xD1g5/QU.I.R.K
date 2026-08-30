@@ -183,6 +183,18 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
   success criterion is not fully satisfied for those two. Both BACKLOG items are promoted verbatim
   into `.planning/ROADMAP.md`'s Backlog section. See `176-DEFECT-TRIAGE.md`,
   `176-LABRUN-EVIDENCE.md`, and `docs/UAT-SERIES.md` Series 176 for full evidence.
+  **Addendum (2026-08-30, plan 176-07, user-directed):** `ssh-audit` 3.9.0 installed into the
+  project venv (zero transitive deps; `pyproject.toml` deliberately left unchanged — this is not a
+  declared product dependency) to attempt closing the two GAPs. No suite regression: full
+  `pytest -q -m ""` unchanged at `1 failed, 3772 passed, 42 skipped, 73 xfailed, 4 xpassed`
+  (same pre-existing `test_skip_registry` failure). **The re-run itself could not be attempted**
+  — Docker Desktop's daemon was unresponsive this session (`docker ps`/`docker info` hung
+  indefinitely with no error, distinct from the "unreachable" case 176-03 handled; the client,
+  context, and socket file were all present and correctly configured). Per D-02, this plan does not
+  start or restart Docker Desktop itself. The tally is therefore **unchanged: 9/13 PASS, 2 BACKLOG,
+  2 GAP** — `UAT-5-11`/`UAT-6-08` remain GAP, now for lab-availability reasons rather than a missing
+  probe tool. `ssh-audit` is documented as an optional prerequisite in `docs/operators-guide.md`
+  §6.2. See `176-07-SUMMARY.md`.
 
 - [x] **LABRUN-02**: `UAT-1-02` is re-run and correctly dispositioned. It is currently recorded
   FAIL with evidence `Got: 'QU.I.R.K. v5.15.0', code=0` — which **matches** its own expected
