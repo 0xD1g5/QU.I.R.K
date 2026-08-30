@@ -11565,7 +11565,7 @@ openapi-spec-scanning contract's own series. The redundancy is intentional cross
 deleting either series must not delete the detection, per Phase 175 D-03
 (`.planning/phases/175-case-documentation-defect-correction/175-CONTEXT.md`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 ran: the case's own python -c gate against quirk.scanner.openapi_scanner.scan_openapi_spec with a credential-bearing out-of-scope URL - SpecParsingError raised, httpx.get call count 0, contains hunter2: False, contains SECRETVALUE: False, contains evil.example.com: True; falsifiability proven in a scratch copy with _redact_url_preview neutered to truncate-only, same gate observed contains hunter2: True on the neutered copy, real quirk/ untouched)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 
 ---
