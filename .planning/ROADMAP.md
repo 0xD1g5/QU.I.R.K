@@ -193,7 +193,7 @@ Plans:
 - [x] 174-02-PLAN.md — DASH-07: executed empty-DB evidence probe + 404-contract regression guard (no code change)
 - [x] 174-03-PLAN.md — DASH-08: canonical nav-order record + lockstep correction of the stale Phase-39 D-11 note
 - [x] 174-04-PLAN.md — UAT corpus: UAT-39-07 criteria corrected, three legacy cases re-dispositioned via the ledger, Series 174, sidebar drift guard
-- [ ] 174-05-PLAN.md — Obsidian sync + phase note, REQUIREMENTS.md close-out, blocking full-suite regression gate
+- [x] 174-05-PLAN.md — Obsidian sync + phase note, REQUIREMENTS.md close-out, blocking full-suite regression gate
 
 ### Phase 175: Case & Documentation Defect Correction
 
@@ -227,6 +227,18 @@ evidence they fail on real configs are in
 case surfaced — no CLI documentation stated that email/broker auto-enable is independent of
 `scan.ports_tls` — is closed in `docs/configuration.md` (v5.17 / Phase 173), not by editing the
 case.
+
+**Carried forward from Phase 174 (DASH-06):** `UAT-8-07`'s own case text needs correction, not a
+new product fix — its reproduction command uses `--score-profile standard`, an illegal value
+(argparse only accepts `lenient`/`balanced`/`strict`), and its bare-CLI list-view path has no
+`ScanJob` row to score under. The real, dashboard-launched-scan half of the defect was fixed in
+Phase 174 (`scan.py:1263` now passes `profile=calibration`, covered by
+`tests/test_dashboard_scans_score_profile.py`); `UAT-8-07` was dispositioned `DEFERRED` (not
+rewritten) in `docs/uat-disposition-ledger.jsonl`. Phase 175 should replace the illegal
+`--score-profile` value and re-scope the reproduction to a dashboard-launched scan.
+
+Phase 175 therefore inherits **three** carried-forward case-text corrections at its start:
+`UAT-94-05` (Phase 172), `UAT-36-05` (Phase 173), and `UAT-8-07` (Phase 174).
 
 **Success Criteria** (what must be TRUE):
 
@@ -276,7 +288,7 @@ milestone whose other work is already complete
 |-------|----------------|--------|-----------|
 | 172. Fuzzing & Disclosure Safety | 6/6 | Complete | 2026-08-29 |
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
-| 174. Dashboard & API Correctness | 4/5 | In Progress|  |
+| 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-29 |
 | 175. Case & Documentation Defect Correction | 0/TBD | Not started | - |
 | 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |
 

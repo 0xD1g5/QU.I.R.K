@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 173-03-PLAN.md
-last_updated: "2026-08-29T22:16:29.320Z"
+stopped_at: Completed 174-05-PLAN.md
+last_updated: "2026-08-29T23:00:00.000Z"
 last_activity: 2026-08-29
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 15
-  completed_plans: 14
-  percent: 40
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -22,36 +22,46 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 174 — dashboard-api-correctness
-173-04's Tasks 1-2 (docs + UAT Series 173 + requirement/roadmap bookkeeping + Obsidian sync) are
-complete and committed (`50de382`, `97d08c7`, `3608e32`). Task 3 is a **blocking human-verify
-checkpoint** (`autonomous: false`) awaiting user approval — full unfiltered suite reproduced at
-1 failed / 3758 passed / 42 skipped / 73 xfailed / 4 xpassed, 0 deselected, the single failure
-being the pre-existing `test_skip_registry::test_no_unregistered_skips` (`DEFER-172-01`),
-node-for-node identical to the Phase 172 baseline set — zero new failing nodes. SCOPE-01's
-original mechanism (CLI port-scope suppression, D-01/D-01a) was built, shipped, and **reverted
-the same day** once live-verified to regress every real CLI config (`ports_tls` is a required
-YAML key, so "user narrowed the scan" fired unconditionally) — `UAT-36-05` ruled a case defect,
-promoted to Phase 175 alongside `UAT-94-05`; full argument in
-`.planning/phases/173-scanner-scope-config/173-DISPOSITIONS.md`. SCOPE-02/03 shipped clean and
-are independently re-verified. `173-VALIDATION.md` closed `nyquist_compliant: true` with SCOPE-01's
-rows honestly marked reverted/N/A rather than falsely green. `.planning/REQUIREMENTS.md` gives
-SCOPE-01 an honest case-defect disposition (not a false Complete or silent Pending) and flips
-SCOPE-02 to Complete. Obsidian phase note + hub link written. Next step once the checkpoint is
-approved: `/gsd:verify-phase 173`, then Phase 174 (Dashboard & API Correctness).
+**Current focus:** Phase 174 — dashboard-api-correctness — **CLOSED, human-approved 2026-08-29.**
+174-05's Tasks 1-3 (Obsidian sync + phase note, REQUIREMENTS.md close-out with honest scoping
+notes, blocking full-suite regression gate) are complete. Task 3's checkpoint was presented and
+**explicitly approved by the user on 2026-08-29**: full unfiltered suite (`pytest -q -m ""`,
+408.13s) reproduced `1 failed, 3766 passed, 42 skipped, 73 xfailed, 4 xpassed` — the sole failure
+is the pre-existing `test_skip_registry::test_no_unregistered_skips` (`DEFER-172-01`), identical
+node to the Phase 173 baseline. Delta reconciliation exact: `3758 + 8 new tests (3+2+3) = 3766`,
+zero new failing nodes. All six locked-decision drift traps (no `.tsx`, empty diffs on
+`src/dashboard/`, `quirk/models.py`, `quirk/db.py`, `quirk/reports/writer.py`,
+`docs/error-codes.md`, `uat_runner.py`, `pyproject.toml`, `src/dashboard/package.json`) produced
+no output. `test_clone_reconstruction` green and byte-unmodified. Four UAT guard suites green
+(48 passed); `uat_disposition_apply.py verify` → 377 rows agree, exit 0. `174-VALIDATION.md`
+closed `status: complete`, `nyquist_compliant: true`, zero `⬜ pending` rows. DASH-06/07/08 marked
+Complete in `.planning/REQUIREMENTS.md` with honest scoping notes — DASH-06 explicitly records the
+CLI-scan score-profile persistence deferral (D-01) so the fix is not mistaken for full
+literal-text delivery. Obsidian vault fully synced: `UAT-Series.md` resynced with Series 174, the
+already-current `Phases/UAT/UAT-Series.md` duplicate confirmed current, the stray `Untitled 1.md`
+scratch note given an explicit STALE banner (not deleted, out of this plan's file-ownership
+scope), and the Phase 174 phase note written recording the narrowing honestly. Phase 175 now
+inherits **three** carried-forward case-text corrections: `UAT-94-05` (Phase 172), `UAT-36-05`
+(Phase 173), and `UAT-8-07` (Phase 174) — recorded in `ROADMAP.md`'s Phase 175 section. ROADMAP.md's
+Phase 174 phase-list checkbox is deliberately left unflipped, reserved for `/gsd:verify-phase 174`
+per this repo's pre-commit gate and Phase 172/173 precedent; the plan tally row is updated to
+`5/5 | Complete | 2026-08-29`. Next step: `/gsd:verify-phase 174`, then Phase 175 (Case &
+Documentation Defect Correction).
 
-(172-06 closed the phase: full unfiltered suite (`pytest -q -m ""`, 0 deselected) reproduced 3x
-at 1 failed / 3733 passed / zero Phase 172 node failing — BETTER than the documented 4-failure
-baseline in one respect (`test_extras_install_matrix` now passes) but revealed pre-existing
-skip-registry drift from Phases 166/170 across 5 unrelated files (fixed the in-scope
-172-03-caused portion, logged the rest as `DEFER-172-01`) and 3 reproducible macOS-only SIGSEGV
-crashes in forked `test_install_errors.py` children, pre-existing and non-test-failing
-(`DEFER-172-02`, corrects a stale "zero fatal signals" memory claim). 28/28 fuzzer tests green,
-`rest_fuzzer.py` byte-untouched, all UAT guards green, `uat_disposition_apply.py verify` 377/377.
-SAFE-01/02/03 independently re-verified against fresh test execution. `172-VALIDATION.md`
-`nyquist_compliant: true`. ROADMAP.md's Phase 172 phase-list checkbox deliberately left
-unflipped — reserved for `/gsd:verify-phase` per this repo's pre-commit gate and Phase 170
-precedent. Obsidian phase note + hub link written.)
+## Decisions Carried Forward (Phase 174)
+
+- **174-05 closed the phase honestly, with two of three "defects" resolved as document-not-product
+  and the third's scope narrowed by explicit user decision.** DASH-06's real fix (a one-line
+  `profile=calibration` kwarg at `scan.py:1263`) is delivered, but persisting the score profile
+  for CLI-run scans is deliberately deferred (D-01) — no schema migration, no backfill, and the
+  requirement body says so explicitly rather than implying full delivery. DASH-07 required zero
+  production code changes (D-02): the empty-state "defect" was already correct behavior, verified
+  against a genuine empty-DB probe. DASH-08 required zero UI changes (D-03): the stale Phase-39
+  D-11 nav-order note was corrected to match the deliberately-shipped 14-item `sidebar.tsx` order,
+  not the other way around, with a bidirectional drift guard to prevent future silent divergence.
+  `UAT-8-07`'s case-text correction (illegal `--score-profile standard` value, out-of-scope
+  bare-CLI reproduction) is promoted to Phase 175, joining `UAT-94-05` (Phase 172) and `UAT-36-05`
+  (Phase 173) — Phase 175 now inherits three case-text corrections at its start.
 
 ## Decisions Carried Forward (Phase 173)
 
