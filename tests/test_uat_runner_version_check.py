@@ -60,10 +60,11 @@ out to the built ``quirk`` CLI entry point directly -- it does not import
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UAT_RUNNER_PATH = REPO_ROOT / "uat_runner.py"
@@ -184,12 +185,7 @@ def test_pattern_matches_live_version_banner(status_line: str) -> None:
             "has no built venv. Registered per skip-registry conventions."
         )
     pattern = _extract_pattern_literal(status_line)
-    result = subprocess.run(
-        [str(QUIRK_BIN), "--version"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
+    result = run_fork_safe([str(QUIRK_BIN), "--version"], timeout=10)
     assert result.returncode == 0, (
         f"quirk --version exited {result.returncode}, expected 0"
     )

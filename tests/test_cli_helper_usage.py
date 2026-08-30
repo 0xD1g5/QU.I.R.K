@@ -75,6 +75,12 @@ _COVERED_FILES = [
     # Phase 172-01: new CLI subprocess tests for the --fuzz argparse-time
     # non-TTY / budget-ceiling refusal checks (FUZZ-001/FUZZ-002).
     "tests/test_fuzz_cli_safety.py",
+    # Phase 176-01: test_pattern_matches_live_version_banner shells out to
+    # the built `quirk` CLI entry point; hit the exact same order-dependent
+    # SIGSEGV in a full-suite run (discovered at 176-06 phase close), fixed
+    # by migrating to run_fork_safe and added here so a future direct
+    # subprocess.run() reintroduced there is caught too.
+    "tests/test_uat_runner_version_check.py",
 ]
 
 # Attribute names on a `subprocess` module reference that spawn a real
