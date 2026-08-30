@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 175-06-PLAN.md
-last_updated: "2026-08-30T12:37:46.247Z"
+stopped_at: Completed 176-01-PLAN.md
+last_updated: "2026-08-30T14:01:03.578Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 22
-  completed_plans: 21
-  percent: 60
+  completed_phases: 4
+  total_plans: 28
+  completed_plans: 23
+  percent: 80
 ---
 
 # Project State
@@ -281,11 +281,14 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 175 (case-documentation-defect-correction) — EXECUTING
-175-01 closed: all 12 pre-labelled UAT case defects independently re-verified against the current
-(2026-08-30) checkout by live execution or source read; zero contradictions found; D-04 promotion
-gate reads GATE OPEN. `175-REVERIFICATION.md` is the phase's gating artifact for plans 02-07.
-Plan: 6 of 7
+Phase: 176 (chaos-lab-re-run) — EXECUTING
+Phase 175 closed (all 7 plans complete — see Phase Map). 176-01 closed: `uat_runner.py:154`'s
+UAT-1-02 pass-condition harness defect repaired under D-01's narrow, explicitly-recorded lift
+(`git diff --numstat uat_runner.py` = 1/1; no version bump); falsifiable shape-pinning regression
+test added and its RED/GREEN falsification demonstrated against a scratch copy. `176-HARNESS-LIFT.md`
+records the lift scope. UAT-1-02's disposition is NOT changed here — that is 176-02's job via the
+ledger.
+Plan: 1 of 6
 Status: Ready to execute
 Last activity: 2026-08-30
 
@@ -526,6 +529,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 175 P04 | 25min | 3 tasks | 1 files |
 | Phase 175 P05 | 35min | 3 tasks | 3 files |
 | Phase 175 P06 | 90min | 2 tasks | 3 files |
+| Phase 176 P01 | 25m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -810,6 +814,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 175-05]: UAT-94-09 added to Series 94 as the D-03 credential-bearing companion detector, disposed PASS via the ledger route with falsifiability demonstrated in a scratch-copy neutered redaction test
 - [Phase 175]: UAT-58-07 re-dispositioned DEFERRED via ledger, not PASS, per D-02 -- names T-164-01
 - [Phase 175]: All eleven corrected UAT cases re-verified live 2026-08-30; zero surfaced as real product defects
+- [Phase 176-01]: Lifted the standing uat_runner.py prohibition for exactly one line (UAT-1-02 pass-condition) per D-01 -- harness was provably unsatisfiable by any current-era output; proven via git diff --numstat = 1/1, no version bump
 
 ### Pending Todos
 
@@ -948,8 +953,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T12:37:46.240Z
-Stopped at: Completed 175-06-PLAN.md
+Last session: 2026-08-30T14:01:01.879Z
+Stopped at: Completed 176-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

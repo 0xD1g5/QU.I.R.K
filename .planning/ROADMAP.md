@@ -292,7 +292,7 @@ milestone whose other work is already complete
 **Plans**: 6 plans
 
 Plans:
-- [ ] 176-01-PLAN.md — Fix the `uat_runner.py:154` harness defect under D-01's narrow lift, with a
+- [x] 176-01-PLAN.md — Fix the `uat_runner.py:154` harness defect under D-01's narrow lift, with a
   shape-pinning regression test and a written lift record (no Docker required)
 - [ ] 176-02-PLAN.md — Re-run `UAT-1-02` through the repaired harness and disposition it via the
   ledger (no Docker required)
@@ -313,7 +313,7 @@ Plans:
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
 | 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
-| 176. Chaos-Lab Re-Run | 0/6 | Planned | - |
+| 176. Chaos-Lab Re-Run | 1/6 | In Progress|  |
 
 ---
 
