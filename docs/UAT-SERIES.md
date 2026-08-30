@@ -13670,25 +13670,26 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
    ```
    quirk sensor merge
    ```
-2. With an overdue sensor (or force by setting a past last_push_at):
+2. Force a sensor overdue (set `last_push_at` to 3 days in the past at the default 24h cadence), then run merge with a `--stale-days` value large enough to leave the overdue window reachable:
    ```
-   quirk sensor merge --stale-days 1
+   quirk sensor merge --stale-days 30
    ```
+   (`--stale-days 30` is `_DEFAULT_STALE_DAYS` in `quirk/merge/scan.py::_build_coverage_warning`. General constraint for any cadence: `--stale-days` must exceed 2x the sensor's expected cadence expressed in days, or the exclusion window and the overdue window are disjoint and the warning can never fire — see the worked arithmetic in Notes below.)
 
 **Expected:**
 - Step 1: Prints `Merged scan_id: <iso_timestamp>`, `Score: <N> (<rating>)`. Exit 0.
-- Step 2 (if overdue sensor): Adds `WARNING: <N> enrolled sensor(s) have not pushed within 2x their expected cadence: <sensor_id>` and one `  - <sensor_id>` line per missing sensor.
+- Step 2 (overdue sensor, `--stale-days 30`): Adds `WARNING: <N> enrolled sensor(s) have not pushed within 2x their expected cadence: <sensor_id>` and one `  - <sensor_id>` line per missing sensor.
 - Source endpoint `scanned_at` values in the DB are unchanged (verify via `select scanned_at from crypto_endpoints limit 5` before and after).
 
 **Pass Criteria:**
 - `Merged scan_id:` line present in stdout
 - `Score:` line with numeric value and rating present in stdout
-- Coverage_warning WARNING line appears when a sensor is overdue
+- Coverage_warning WARNING line appears when a sensor is overdue and `--stale-days` exceeds 2x its expected cadence in days
 - DB `crypto_endpoints.scanned_at` values unchanged before vs. after merge
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-28 full round trip against a local quirk serve console -- quirk console enroll, quirk sensor enroll, quirk sensor push all succeeded HTTP 200; quirk sensor merge printed the required Merged scan_id and Score lines and left crypto_endpoints.scanned_at unchanged, 95 rows before and after. Step 2's own literal command, quirk sensor merge --stale-days 1 against a sensor with a forced past last_push_at, NEVER prints the documented coverage_warning WARNING line: stale_days=1 excludes any sensor silent more than 1 day, and the default 2x-expected-cadence overdue threshold is 48h, so a sensor can never simultaneously be within the 1-day inclusion window and past the 48h overdue threshold -- the two thresholds are mathematically incompatible in the case's own example. Re-running with the default stale_days=30 and a sensor silent 3 days DID correctly print WARNING: 1 enrolled sensors have not pushed within 2x their expected cadence, confirming the underlying feature works and the defect is isolated to the case's own --stale-days 1 example command)  - [ ] SKIP
 **Date:**   **Tester:**
-**Notes:**
+**Notes:** `quirk/merge/scan.py::_build_coverage_warning` excludes any sensor silent longer than `--stale-days` (line ~68: `if silent_duration > stale_cutoff: continue`) BEFORE checking the overdue condition (line ~76: `if now > s.last_push_at + 2 * cadence: overdue.append(...)`). With the case's original `--stale-days 1`: exclusion window = 24h, overdue threshold = 2x the default 24h cadence fallback = 48h. No silent duration can be simultaneously <= 24h (to survive exclusion) and > 48h (to trigger the warning) -- the two windows are disjoint, so the warning can never fire from that invocation, for any sensor. With `--stale-days 30`: exclusion window = 30 days, well past the 48h overdue threshold, so a sensor silent 3 days (72h > 48h overdue threshold, < 30 days exclusion) correctly triggers the warning. `merge_scan()` itself is correct; only the case's chosen `--stale-days` example value was impossible.
 
 ---
 
