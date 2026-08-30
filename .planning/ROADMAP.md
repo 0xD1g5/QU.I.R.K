@@ -304,6 +304,10 @@ Plans:
   including the `GAP — chaos lab unavailable` last-resort branch
 - [x] 176-06-PLAN.md — Series 176, `176-VALIDATION.md` row flip, Obsidian vault sync + phase note,
   honest LABRUN close-out, and the full-suite delta reconciliation
+- [x] 176-07 (addendum, no PLAN.md — added by explicit user direction at 176-06's checkpoint,
+  2026-08-30) — Installed `ssh-audit` and proved zero regression; the actual lab re-run of
+  `UAT-5-11`/`UAT-6-08` could not be attempted because Docker Desktop's daemon was unresponsive
+  this session. Tally unchanged (9/13 PASS, 2 BACKLOG, 2 GAP); see `176-07-SUMMARY.md`.
 
 ### Progress
 

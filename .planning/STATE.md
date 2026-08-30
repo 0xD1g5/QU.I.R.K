@@ -4,14 +4,14 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 176-04-PLAN.md
-last_updated: "2026-08-30T17:31:36.215Z"
+last_updated: "2026-08-30T21:24:05.948Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 28
-  completed_plans: 27
-  percent: 80
+  completed_plans: 29
+  percent: 100
 ---
 
 # Project State
@@ -828,6 +828,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: UAT-5-11 and UAT-6-08 both GAP — ssh-audit binary absent from environment, confirmed same root cause at ssh_scanner.py source level
 - [Phase 176]: UAT-5-13 and UAT-6-06 remain FAIL per D-03 -- each backed by a BACKLOG-triaged defect in 176-DEFECT-TRIAGE.md, not softened for a cleaner corpus
 - [Phase 176]: UAT-5-11 and UAT-6-08 dispositioned GAP for missing ssh-audit binary; LABRUN-01 flagged unmet for those two cases
+- [Phase 176-07]: Installed ssh-audit into .venv only (not pyproject.toml), zero-dependency, regression-free (full suite unchanged 1 failed/3772 passed) — Did not re-disposition UAT-5-11/UAT-6-08: actual re-run was blocked by an unresponsive Docker Desktop daemon; manufacturing a disposition from tool-presence alone would violate D-03/D-04
 
 ### Pending Todos
 
@@ -870,6 +871,7 @@ None yet.
   Re-surface at `/gsd:verify-phase 150` only if the same coverage question resurfaces there.
 
 - **RESOLVED (Plan 150-08, 2026-08-13):** Phase 150 Plan 03's original blocker — real GitHub Actions Linux Full Suite run (31598809033) failed with 38 failures on a genuine .[all]-only ubuntu-latest install — is closed. Plans 150-04 through 150-07 fixed all 8 failure categories; Plan 150-08 re-ran the live-fire proof end to end: green run 31723764281 (0 failed) + red run 31725715958 (1 failed, isolated to the deliberate smoke test) via PR #10 (closed unmerged). SUITE-02/SUITE-03 both proven and marked complete in REQUIREMENTS.md. See 150-08-SUMMARY.md and 150-CI-EVIDENCE.md.
+- 176-07: Docker Desktop daemon unresponsive this session (docker ps/info hung indefinitely, no error) -- blocked the chaos-lab re-run of UAT-5-11/UAT-6-08; ssh-audit is installed and ready, only Docker responsiveness remains. User must restart Docker Desktop before a follow-up attempt.
 
 ## Deferred Items
 
@@ -966,7 +968,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T17:30:50.211Z
+Last session: 2026-08-30T21:21:32.950Z
 Stopped at: Completed 176-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
