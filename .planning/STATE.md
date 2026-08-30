@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
-status: executing
-stopped_at: Completed 174-05-PLAN.md
-last_updated: "2026-08-29T23:00:00.000Z"
-last_activity: 2026-08-29
+status: verifying
+stopped_at: Completed 173-03-PLAN.md
+last_updated: "2026-08-30T12:04:02.562Z"
+last_activity: 2026-08-30
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_plans: 22
+  completed_plans: 16
+  percent: 60
 ---
 
 # Project State
@@ -47,6 +47,22 @@ Phase 174 phase-list checkbox is deliberately left unflipped, reserved for `/gsd
 per this repo's pre-commit gate and Phase 172/173 precedent; the plan tally row is updated to
 `5/5 | Complete | 2026-08-29`. Next step: `/gsd:verify-phase 174`, then Phase 175 (Case &
 Documentation Defect Correction).
+
+## Decisions Carried Forward (Phase 175)
+
+- **175-01 independently re-verified all 12 pre-labelled UAT case defects against the current
+  (2026-08-30) checkout** — 8 by direct source read/grep, 4 by live execution — rather than
+  trusting `175-ASSUMPTIONS.md`'s 2026-08-29 adjudication. Zero contradictions: all 12 confirmed
+  as CASE (documentation) defects, zero PRODUCT defects found, D-04's promotion gate reads
+  **GATE OPEN**. UAT-55-01's live `control_id` occurrence count re-confirmed as exactly 0 (D-01's
+  contradiction trigger did not fire). UAT-94-05's byte-identical redaction-message finding
+  re-confirmed live (the gap D-03's companion case closes). UAT-110-06's disjoint-window
+  arithmetic re-derived from current `quirk/merge/scan.py` source (line numbers shifted, logic
+  unchanged). Corpus baseline confirmed identical to the prior report's: 682 headings, 682 result
+  blocks, 0 undispositioned, 377 ledger rows, `verify` exit 0. Plan was strictly read-only —
+  `git status --porcelain quirk/ run_scan.py uat_runner.py src/dashboard/ docs/` produced no
+  output. See `175-REVERIFICATION.md` (gitignored, `.planning/phases/175-.../`) and
+  `175-01-SUMMARY.md`.
 
 ## Decisions Carried Forward (Phase 174)
 
@@ -166,7 +182,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Phase complete — ready for verification
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -265,12 +281,13 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
 
 ## Current Position
 
-Phase: 174 (dashboard-api-correctness) — EXECUTING
-resume-already-complete short-circuit; RESUME-06 closed: --list-resumable Target column derives
-from CryptoEndpoint when no ScanJob row exists, D-02; both reproduced pre-fix, TDD RED/GREEN)
-Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-08-29
+Phase: 175 (case-documentation-defect-correction) — EXECUTING
+175-01 closed: all 12 pre-labelled UAT case defects independently re-verified against the current
+(2026-08-30) checkout by live execution or source read; zero contradictions found; D-04 promotion
+gate reads GATE OPEN. `175-REVERIFICATION.md` is the phase's gating artifact for plans 02-07.
+Plan: 1 of 7
+Status: Executing — plan 01 complete, plans 02-07 remaining
+Last activity: 2026-08-30
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -917,7 +934,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-29T22:16:26.380Z
+Last session: 2026-08-30T12:04:02.554Z
 Stopped at: Completed 173-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
