@@ -151,7 +151,7 @@ def run_series_1():
     t = time.time()
     stdout, stderr, code = quirk('--version', timeout=10)
     ver = (stdout + stderr).strip()
-    status = 'PASS' if code == 0 and ('4.2.0' in ver or 'quirk' in ver.lower()) else 'FAIL'
+    status = 'PASS' if code == 0 and re.search(r'QU\.I\.R\.K\.\s+v\d+\.\d+\.\d+', ver) else 'FAIL'
     notes = '' if status == 'PASS' else f'Got: {ver!r}, code={code}'
     rlog('UAT-1-02', 'Version Flag', 'Installation & Setup', status, notes, ver, time.time()-t)
 
