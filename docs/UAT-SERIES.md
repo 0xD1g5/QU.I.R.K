@@ -1,7 +1,27 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-30 (v5.17 Phase 175 — Case & Documentation Defect Correction: twelve UAT
+**Last Updated:** 2026-08-30 (v5.17 Phase 176 — Chaos-Lab Re-Run, the final phase of v5.17: repaired
+`uat_runner.py:154`'s four-month-old unsatisfiable UAT-1-02 pass-condition under a narrow, explicitly
+recorded D-01 lift, guarded by a falsifiable shape-pinning regression test
+(`tests/test_uat_runner_version_check.py`, 6 nodes), and re-ran `UAT-1-02` to a genuine PASS —
+LABRUN-02 fully met. Re-executed all 13 chaos-lab-dependent cases (`UAT-4-01`,
+`UAT-5-02/03/04/06/07/08/09/11/13`, `UAT-6-06/07/08`) against a live 33-container
+core+phaseA+jwt+ssh-weak+identity lab: 9 PASS / 2 FAIL / 2 GAP. Both FAILs are real, root-caused,
+evidenced, and BACKLOGGED (`TRIAGE-176-01`: chaos-lab `certs/keycloak.crt` byte-identical to
+`certs/modern.crt`; `TRIAGE-176-02`: no distinct `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` finding type
+exists in `quirk/engine/findings_evaluator.py`, a genuine product classification gap). Both GAPs
+(`UAT-5-11`, `UAT-6-08`) trace to a missing `ssh-audit` binary in this environment, not installed
+per this milestone's package-install exclusion. LABRUN-01 is therefore recorded PARTIALLY MET, not
+Complete — see `.planning/REQUIREMENTS.md`. The lab was run, not modified, and torn down; zero
+containers remain (`git status --porcelain quantum-chaos-enterprise-lab/` empty). Added Series 176
+with 4 gating cases, hand-written under the documented `MAX_SERIES=163` out-of-ledger-scope
+exception (same as Series 175); the 14 ledger-driven cases this phase touched (`UAT-1-02` plus the
+13) were written only via `scripts/uat_disposition_apply.py apply`. Corpus grew from 687/687/378 to
+691/691/378 (Series 176's 4 cases; ledger unchanged, document-only). Zero product-fixing change —
+both discovered defects are BACKLOGGED, not fixed, in this phase. No version bump — v5.16 shipped
+deliberately untagged; v5.17 is a planning-milestone label. Full suite and corpus-integrity results
+recorded in `176-06-SUMMARY.md`. Earlier: v5.17 Phase 175 — Case & Documentation Defect Correction: twelve UAT
 cases re-verified live against the current checkout and CONFIRMED as case defects — 12 CONFIRMS, 0
 CONTRADICTS, 0 product-defect promotions. Corrected case text in place for eleven
 (`UAT-85-02`/`UAT-85-06` quote-tolerant install greps, `UAT-84-02` towncrier empty-fragment
@@ -20782,3 +20802,186 @@ finding.
 Document header updated below. No `docs/error-codes.md`, `lab.sh`, `README.md`, `expected_results_*.md`,
 or version-bump change accompanies this series — none was needed; this phase corrected
 specifications and added one detector, and changed no product code.
+
+## Series 176: Chaos-Lab Re-Run (Phase 176 — v5.17)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its four cases below
+carry HAND-WRITTEN `**Result:**` lines, exactly the same documented exception Series 175 used for
+its own cases. This is NOT a D-04 violation: D-04 governs the 14 ledger-driven cases this phase
+touched (`UAT-1-02` plus the 13 re-run cases), and every one of those 14 was written only by
+`scripts/uat_disposition_apply.py apply`, never by hand. `classify` was never run against the
+ledger during this phase; the ledger stayed at 378 rows throughout.
+
+### UAT-176-01: `uat_runner.py:154`'s UAT-1-02 pass-condition is version-literal-free and its regression test is green
+
+**ID:** UAT-176-01
+**Title:** The D-01 narrow harness lift left exactly one line changed, with no version literal and no `.lower()` substring check, guarded by a falsifiable shape-pinning test
+**Maps to:** LABRUN-02
+
+**What to test:** the repaired pass-condition contains no hardcoded version literal, no `.lower()`
+call, and `tests/test_uat_runner_version_check.py` passes.
+
+**Steps:** run this command block and confirm the results:
+```bash
+git diff --numstat uat_runner.py    # against the phase base, expect "1  1  uat_runner.py"
+grep -c "4\.2\.0" uat_runner.py     # expect 0
+grep -c "ver.lower()" uat_runner.py # expect 0
+.venv/bin/python -m pytest -q tests/test_uat_runner_version_check.py
+```
+
+**Pass criteria:**
+- Exactly one line changed in `uat_runner.py` (numstat `1 1`).
+- Neither the stale `'4.2.0'` literal nor the `.lower()` substring check remains.
+- `tests/test_uat_runner_version_check.py`'s 6 nodes all pass.
+- No version bump accompanies the fix — `git diff --stat pyproject.toml README.md` is empty.
+
+**Falsifiability:** this case turns red if the pass-condition regains a hardcoded version literal
+or a `.lower()` call, or if the regression test file is deleted or weakened. The regression test
+itself was demonstrated falsifiable in `176-01-SUMMARY.md` — it turns RED against a scratch copy
+carrying the historical defective condition and GREEN once restored.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (176-06 phase-close plan execution)
+**Notes:** Traceable to `176-HARNESS-LIFT.md` (the lift record) and `176-01-SUMMARY.md` (the
+falsification transcript). The lift is scoped to this one line only; the `UAT-5-*` SKIP-vs-FAIL
+text discrepancy at `uat_runner.py` lines 531-545 remains explicitly deferred and untouched.
+
+---
+
+### UAT-176-02: `UAT-1-02` and the 13 re-run cases carry document/ledger-agreed outcomes derived from a genuine execution
+
+**ID:** UAT-176-02
+**Title:** All 14 ledger-driven cases this phase touched were re-executed, not rubber-stamped, and the document and ledger agree
+**Maps to:** LABRUN-01, LABRUN-02
+
+**What to test:** `UAT-1-02` and the 13 chaos-lab cases each carry an outcome transcribed from an
+actual execution transcript (`176-DISPOSITIONS.md`, `176-LABRUN-EVIDENCE.md`), and
+`scripts/uat_disposition_apply.py verify` confirms document/ledger agreement.
+
+**Steps:**
+```bash
+.venv/bin/python scripts/uat_disposition_apply.py verify
+wc -l < docs/uat-disposition-ledger.jsonl
+grep -c '^### UAT-' docs/UAT-SERIES.md
+grep -c '^\*\*Result:\*\*' docs/UAT-SERIES.md
+```
+
+**Pass criteria:**
+- `verify` exits 0 and reports all rows agree.
+- Ledger row count is 378 (14 rows had `outcome`/`evidence` fields changed in place; row count
+  unchanged).
+- Heading count equals Result-line count.
+
+**Disposition tally (from `176-LABRUN-EVIDENCE.md` and `176-05-SUMMARY.md`'s before/after table):**
+`UAT-1-02` PASS (harness fix); of the 13 re-run cases: **9 PASS / 2 FAIL / 2 GAP** — PASS:
+`UAT-4-01`, `UAT-5-02/03/04/06/07/08/09`, `UAT-6-07`; FAIL: `UAT-5-13` (lab-fixture cert defect),
+`UAT-6-06` (product classification gap); GAP: `UAT-5-11`, `UAT-6-08` (missing `ssh-audit` binary
+in this environment). **Because two of the thirteen cases GAPped rather than carrying a
+lab-verified PASS or a triaged FAIL, LABRUN-01 is PARTIALLY, not fully, met** — see
+`.planning/REQUIREMENTS.md`'s LABRUN-01 entry for the requirement-level statement of this.
+
+**Falsifiability:** this case turns red if a future ledger write changes any of these 14 outcomes
+without a corresponding evidence transcript, or if `verify` stops exiting 0.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (176-06 phase-close plan execution)
+**Notes:** This case's own PASS reflects that the 14 outcomes are honestly recorded and internally
+consistent — it does NOT assert that all 13 re-run cases individually passed. The 2 FAIL and 2 GAP
+outcomes among them are real, and are exactly why LABRUN-01 closes PARTIALLY MET below, not clean
+Complete. See `176-DEFECT-TRIAGE.md` for the two FAIL root causes.
+
+---
+
+### UAT-176-03: The chaos lab was RUN, not MODIFIED, and was confirmed torn down afterward
+
+**ID:** UAT-176-03
+**Title:** D-02's targeted-profile bring-up left the lab tree byte-identical and the lab was brought back down
+**Maps to:** LABRUN-01
+
+**What to test:** `quantum-chaos-enterprise-lab/` carries zero uncommitted changes, and
+`176-LABRUN-EVIDENCE.md` records a confirmed zero-container teardown.
+
+**Steps:**
+```bash
+git status --porcelain quantum-chaos-enterprise-lab/
+grep -n "^TEARDOWN:" .planning/phases/176-chaos-lab-re-run/176-LABRUN-EVIDENCE.md
+docker ps -q | wc -l
+```
+
+**Pass criteria:**
+- `git status --porcelain quantum-chaos-enterprise-lab/` is empty — no `lab.sh`, `docker-compose.yml`,
+  README, or `expected_results_*.md` edit.
+- `176-LABRUN-EVIDENCE.md` contains `TEARDOWN: CONFIRMED`.
+- The targeted profile set (`core` + `phaseA` + `jwt` + `ssh-weak` + `identity`, 33 containers) was
+  used — `./lab.sh all up` was never invoked.
+
+**Falsifiability:** this case turns red if any file under `quantum-chaos-enterprise-lab/` shows an
+uncommitted diff, or if containers remain running after the phase closes.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (176-06 phase-close plan execution)
+**Notes:** Traceable to `176-03-SUMMARY.md` (targeted bring-up, 33 containers, 18 ports proven
+listening) and `176-04-SUMMARY.md` Task 3 (`./lab.sh down`, two independent zero-container probes).
+Per CLAUDE.md's Chaos Lab Maintenance section, no `lab.sh`/README/oracle update was required or
+made, because no profile, port, or service was added, removed, or reconfigured.
+
+---
+
+### UAT-176-04: Every FAIL surfaced by the re-run has a disposition in `176-DEFECT-TRIAGE.md`, and neither was fixed in this phase
+
+**ID:** UAT-176-04
+**Title:** Both genuine defects the re-run uncovered are triaged with evidence and BACKLOGGED, not silently fixed
+**Maps to:** LABRUN-01
+
+**What to test:** `176-DEFECT-TRIAGE.md` carries one disposition entry per `OUTCOME: FAIL`, drawn
+from the closed set `FIX-NOW | BACKLOG | NOT-A-DEFECT`, and no product/lab file was changed to make
+either FAIL disappear.
+
+**Steps:**
+```bash
+grep -c '^OUTCOME: FAIL' .planning/phases/176-chaos-lab-re-run/176-LABRUN-EVIDENCE.md
+grep -c '^Disposition: BACKLOG' .planning/phases/176-chaos-lab-re-run/176-DEFECT-TRIAGE.md
+git status --porcelain quirk/ run_scan.py uat_runner.py src/dashboard/ quantum-chaos-enterprise-lab/
+```
+
+**Pass criteria:**
+- The `OUTCOME: FAIL` count (2) equals the `Disposition:` count in `176-DEFECT-TRIAGE.md` (2).
+- Both entries carry a root-cause paragraph, an evidence pointer, a severity, and the literal
+  one-line backlog text pasted into `.planning/ROADMAP.md`'s Backlog section.
+- `git status --porcelain` across the named product/lab paths is empty — nothing was fixed.
+
+**Pass criteria (defect disposition, restated for the record):**
+- `UAT-5-13`: `certs/keycloak.crt` is byte-identical to `certs/modern.crt` — a lab-fixture defect.
+  Disposition BACKLOG (`TRIAGE-176-01`).
+- `UAT-6-06`: no `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` finding-type token exists anywhere in `quirk/`;
+  ports 8000 and 8444 produce byte-identical findings once both are in `ports_tls`. Root-caused to
+  `_postprocess_findings` in `quirk/engine/findings_evaluator.py`. Disposition BACKLOG
+  (`TRIAGE-176-02`) — a genuine PRODUCT classification gap, not a lab or oracle defect.
+
+**Falsifiability:** this case turns red if a future `OUTCOME: FAIL` is added without a matching
+`Disposition:` entry, or if either backlog item is silently dropped instead of promoted into
+`.planning/ROADMAP.md`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-30  **Tester:** Automated (176-06 phase-close plan execution)
+**Notes:** Traceable to `176-DEFECT-TRIAGE.md` (`TRIAGE-176-01`, `TRIAGE-176-02`) and
+`176-04-SUMMARY.md`. Both backlog one-line entries appear verbatim in `.planning/ROADMAP.md`'s
+Backlog section as of this phase's close.
+
+---
+
+**Series 176 disposition.** LABRUN-02 is fully met: `UAT-1-02`'s four-month-old unsatisfiable
+pass-condition is repaired under a narrow, explicitly-recorded D-01 lift, guarded by a falsifiable
+regression test, and the case itself now carries a genuine execution-derived PASS. **LABRUN-01 is
+PARTIALLY met**: all 13 cases were genuinely re-executed against a live 33-container chaos lab —
+**9 PASS / 2 FAIL / 2 GAP**. The 2 FAIL cases are real, root-caused, evidenced, and BACKLOGGED
+(`TRIAGE-176-01` a lab-fixture defect, `TRIAGE-176-02` a genuine product classification gap in
+`quirk/engine/findings_evaluator.py`). The 2 GAP cases (`UAT-5-11`, `UAT-6-08`) both trace to the
+same missing `ssh-audit` binary in this execution environment — a tooling gap, not a lab or
+product defect, and per this milestone's package-install exclusion, the binary was not installed
+to manufacture a cleaner board. Because two of the thirteen cases did not reach a lab-verified
+PASS or a fully-resolved outcome, LABRUN-01's own "re-execute with the lab actually running"
+success criterion is not fully satisfied for those two — recorded honestly in
+`.planning/REQUIREMENTS.md` as PARTIALLY met, not Complete. The lab was run, not modified, and was
+torn down; zero containers remain.
