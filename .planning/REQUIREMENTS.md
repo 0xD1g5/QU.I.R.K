@@ -111,30 +111,50 @@ Nine cases where the **product is correct and the UAT case is wrong**. Fixing th
 correcting the specification, not the code. Each must be verified as a case defect before it is
 edited — if any turns out to be a real product bug, it is promoted, not quietly rewritten.
 
-- [ ] **CASEFIX-01**: `UAT-85-02` and `UAT-85-06` grep for unquoted `pip install quirk-scanner[all]`
+- [x] **CASEFIX-01**: `UAT-85-02` and `UAT-85-06` grep for unquoted `pip install quirk-scanner[all]`
   while `README.md` and `docs/upgrade-guide.md` correctly quote it (`'quirk-scanner[all]'`) for zsh
   glob safety. The cases must accept the quoted form.
+  *Closed Phase 175 (175-02): corrected both cases to a quote-tolerant extended-regex grep;
+  both greps confirmed exit 0 against the real files. `Result:` lines re-dispositioned PASS via
+  175-06's ledger cycle.*
 
-- [ ] **CASEFIX-02**: `UAT-84-02` cannot pass while `changelog.d/` holds only `README.md` — a
+- [x] **CASEFIX-02**: `UAT-84-02` cannot pass while `changelog.d/` holds only `README.md` — a
   towncrier draft over an empty fragment directory renders "No significant changes." with no
   sectioned headings. Either the case gains a fixture fragment or its pass criteria are corrected.
+  *Closed Phase 175 (175-02): pass criteria corrected to accept towncrier's documented empty-state
+  message; no fixture fragment added (would leak into the real changelog at next release).*
 
-- [ ] **CASEFIX-03**: `UAT-110-06`'s own worked example is impossible — its `--stale-days 1`
+- [x] **CASEFIX-03**: `UAT-110-06`'s own worked example is impossible — its `--stale-days 1`
   invocation can never trigger the `coverage_warning` line it documents (mathematically
   incompatible thresholds). `merge_scan()` itself was independently confirmed correct.
+  *Closed Phase 175 (175-02): worked example replaced with `--stale-days 30`
+  (`_DEFAULT_STALE_DAYS`) against a sensor forced overdue 3 days; `merge_scan()` unmodified.*
 
-- [ ] **CASEFIX-04**: Copy and field-name mismatches where the case quotes a literal the product
+- [x] **CASEFIX-04**: Copy and field-name mismatches where the case quotes a literal the product
   does not emit — `UAT-51-02` (capital-S "Session not found" vs the emitted lowercase),
   `UAT-55-01` (names a `control_id` field; the API returns `practice_number`), `UAT-9-10`
   (expected "Baseline scan recorded" vs the shipped empty-state copy), `UAT-10-11` (expects literal
   extras text; the product emits coded `QRK-INSTALL-001`). For each, decide whether the product's
   wording or the case's expectation is correct — `UAT-55-01` in particular may be an API naming
   problem rather than a case defect.
+  *Closed Phase 175 (175-03, 175-04, 175-05). `UAT-55-01` was judged, not assumed (D-01): the
+  case is corrected to name `practice_number`, consistent across the Pydantic model, TS type and
+  PDF renderer — the QRAMM API field was NOT renamed and NO `control_id` alias was added, a
+  breaking-change alternative explicitly declined by the user. Also covers `UAT-94-05` (D-03
+  criterion corrected to userinfo/query/fragment stripping, host retained by design; companion
+  case `UAT-94-09` added in 175-05 to detect a redaction regression the original fixture could
+  not) and `UAT-36-05` (prerequisite corrected to an explicit connectors opt-out) and `UAT-8-07`
+  (re-scoped to a legal dashboard-launched calibration comparison; DEFERRED disposition
+  unchanged).*
 
-- [ ] **CASEFIX-05**: `UAT-58-07` records a FAIL against behaviour that is a **documented,
+- [x] **CASEFIX-05**: `UAT-58-07` records a FAIL against behaviour that is a **documented,
   deliberate deferral** — `run_scan.py` collapses all `@`-file guard reasons into a single generic
   `QRK-TARGET-002` message by design. Re-disposition as DEFERRED naming the design decision, or
   reopen the decision explicitly.
+  *Closed Phase 175 (175-03, 175-06). Re-dispositioned DEFERRED (not PASS) naming `T-164-01`
+  explicitly, per D-02. The `QRK-TARGET-002` collapsing decision was NOT reopened — this remains a
+  named, deliberate information-disclosure mitigation left in place, not endorsed as clean-slate
+  correct.*
 
 ## Chaos-Lab Re-Run (Phase 176)
 
@@ -182,10 +202,10 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | DASH-06 | Phase 174 | Complete |
 | DASH-07 | Phase 174 | Complete |
 | DASH-08 | Phase 174 | Complete |
-| CASEFIX-01 | Phase 175 | Pending |
-| CASEFIX-02 | Phase 175 | Pending |
-| CASEFIX-03 | Phase 175 | Pending |
-| CASEFIX-04 | Phase 175 | Pending |
-| CASEFIX-05 | Phase 175 | Pending |
+| CASEFIX-01 | Phase 175 | Complete |
+| CASEFIX-02 | Phase 175 | Complete |
+| CASEFIX-03 | Phase 175 | Complete |
+| CASEFIX-04 | Phase 175 | Complete — UAT-55-01 field not renamed, no alias (D-01) |
+| CASEFIX-05 | Phase 175 | Complete — DEFERRED, T-164-01 not reopened (D-02) |
 | LABRUN-01 | Phase 176 | Pending |
 | LABRUN-02 | Phase 176 | Pending |
