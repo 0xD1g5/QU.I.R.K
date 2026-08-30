@@ -5221,18 +5221,19 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 2. Run a scan with a Kerberos target configured: `quirk --config kerberos-config.yaml`
 3. Capture stderr output
 
-**Expected:** Scan continues without crash; a visible console message tells the user how to install Kerberos support.
+**Expected:** Scan continues without crash; a visible console message tells the user how to install the missing optional scanner package via the shipped coded advisory.
 
 **Pass Criteria:**
 - No unhandled exception or crash
-- Stderr contains `[QUIRK] Kerberos scanning requires the identity extras:`
-- Stderr contains `pip install quirk[identity]`
+- Stderr contains `[QRK-INSTALL-001]`
+- Stderr contains `pip install quirk[<extra>]`
 - Non-Kerberos scan results (TLS, SSH, etc.) are still produced normally
 - DNSSEC and SAML scan (if configured) still run successfully — those deps are now core
+- A missing optional extra no longer producing this coded stderr advisory would fail this case.
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: quirk --config kerberos-config.yaml with impacket absent - exit 0 no crash but stderr shows generic QRK-INSTALL-001 code not the literal identity-extras pip install quirk[identity] text)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
-**Notes:**
+**Notes:** `INSTALL-001` is deliberately scanner-agnostic, not Kerberos-specific — `_emit_missing_extra_advisory` in `run_scan.py` routes the identity/kerberos extra through the same mechanism as motion/broker (`broker_scanner`, line 254) and adcs/smime (`smime_scanner`/`adcs_scanner`, lines 271/287). A Kerberos-specific message will not return and should not be reintroduced to satisfy this case.
 
 ---
 
@@ -7520,11 +7521,11 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 2. Verify HTTP status code is 200.
 3. `curl -s -w "\n%{http_code}" http://localhost:8000/api/qramm/sessions/9999` (non-existent session).
 
-**Expected:** GET of valid session returns 200 with matching org_name, answers_count=0, score=null. GET of 9999 returns 404.
+**Expected:** GET of valid session returns 200 with matching org_name, answers_count=0, score=null. GET of 9999 returns 404 with a coded-advisory body.
 
 **Pass Criteria:**
 - Step 1: HTTP 200; `session_id` matches; `answers_count == 0`; `score` is null.
-- Step 3: HTTP 404; body contains `"Session not found"`.
+- Step 3: HTTP 404; body contains the substring `[QRK-DASHBOARD-009] QRAMM session not found` (the coded advisory raised by `_get_session_or_404`; the full `Fix:` wording is registered in `docs/error-codes.md` and may change independently, but the bracketed code and "QRAMM session not found" text must remain — the case would fail if the 404 handler stopped emitting the `QRK-DASHBOARD-009` coded advisory).
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: curl GET /api/qramm/sessions/2 and /api/qramm/sessions/9999 - 200 with matching session_id, answers_count=0, score null all correct; 404 body reads QRAMM session not found -- capital-S Session not found the case quotes literally does not appear, only lowercase session)  - [ ] SKIP
 **Date:** __________  **Tester:** __________
