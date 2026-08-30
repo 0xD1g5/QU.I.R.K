@@ -392,7 +392,7 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 - Output matches format: `QU.I.R.K. v5.15.0`
 - Exit code 0
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-27 uat_runner.py FAIL: Got: 'QU.I.R.K. v5.15.0', code=0)  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-30 uat_runner.py PASS: prior FAIL was caused by the uat_runner.py:154 harness defect -- stale 4.2.0 literal plus a ver.lower quirk substring check unsatisfiable by the dotted QU.I.R.K. acronym -- repaired in plan 176-01; re-run against the repaired condition returned QU.I.R.K. v5.15.0, code=0, guarded by tests/test_uat_runner_version_check.py)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:** Version bumped to v5.15.0 at v5.15 milestone close (pyproject.toml sole SoT;
 importlib.metadata derives it). Re-test required against v5.15.0 install. Note v5.13 and v5.14 were tagged as two-component tags (`v5.13`, `v5.14`) which never matched release.yml's `v*.*.*` glob, so no release ran for them and the shipped package stayed at 5.12.0 — see RVW-004.
