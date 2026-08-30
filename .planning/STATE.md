@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 175-02-PLAN.md
-last_updated: "2026-08-30T12:26:44.629Z"
+stopped_at: Completed 175-06-PLAN.md
+last_updated: "2026-08-30T12:37:46.247Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 60
 ---
 
@@ -285,7 +285,7 @@ Phase: 175 (case-documentation-defect-correction) — EXECUTING
 175-01 closed: all 12 pre-labelled UAT case defects independently re-verified against the current
 (2026-08-30) checkout by live execution or source read; zero contradictions found; D-04 promotion
 gate reads GATE OPEN. `175-REVERIFICATION.md` is the phase's gating artifact for plans 02-07.
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-08-30
 
@@ -525,6 +525,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 175 P03 | 25min | 3 tasks | 1 files |
 | Phase 175 P04 | 25min | 3 tasks | 1 files |
 | Phase 175 P05 | 35min | 3 tasks | 3 files |
+| Phase 175 P06 | 90min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -807,6 +808,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 175]: D-02 applied: UAT-58-07 corrected to single QRK-TARGET-002 code, names T-164-01; decision not reopened
 - [Phase ?]: UAT-94-05/UAT-36-05/UAT-8-07 case text corrected in place, arguments carried with source-disposition citations; no product code changed
 - [Phase 175-05]: UAT-94-09 added to Series 94 as the D-03 credential-bearing companion detector, disposed PASS via the ledger route with falsifiability demonstrated in a scratch-copy neutered redaction test
+- [Phase 175]: UAT-58-07 re-dispositioned DEFERRED via ledger, not PASS, per D-02 -- names T-164-01
+- [Phase 175]: All eleven corrected UAT cases re-verified live 2026-08-30; zero surfaced as real product defects
 
 ### Pending Todos
 
@@ -945,8 +948,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T12:25:06.077Z
-Stopped at: Completed 175-02-PLAN.md
+Last session: 2026-08-30T12:37:46.240Z
+Stopped at: Completed 175-06-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
