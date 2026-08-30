@@ -296,7 +296,7 @@ Plans:
   shape-pinning regression test and a written lift record (no Docker required)
 - [x] 176-02-PLAN.md — Re-run `UAT-1-02` through the repaired harness and disposition it via the
   ledger (no Docker required)
-- [ ] 176-03-PLAN.md — Bounded Docker-daemon preflight, blocking human-action gate, targeted
+- [x] 176-03-PLAN.md — Bounded Docker-daemon preflight, blocking human-action gate, targeted
   `core + phaseA + jwt + ssh-weak + identity` bring-up, or a clean `LAB STATUS: UNAVAILABLE` halt
 - [ ] 176-04-PLAN.md — Execute the 13 lab cases, triage every genuine defect explicitly, and tear
   the lab down with a confirmed zero-container probe
@@ -313,7 +313,7 @@ Plans:
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
 | 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
-| 176. Chaos-Lab Re-Run | 2/6 | In Progress|  |
+| 176. Chaos-Lab Re-Run | 3/6 | In Progress|  |
 
 ---
 
