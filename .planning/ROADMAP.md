@@ -302,7 +302,7 @@ Plans:
   the lab down with a confirmed zero-container probe
 - [x] 176-05-PLAN.md — Transcribe the 13 outcomes into the ledger and `apply` them into the corpus,
   including the `GAP — chaos lab unavailable` last-resort branch
-- [ ] 176-06-PLAN.md — Series 176, `176-VALIDATION.md` row flip, Obsidian vault sync + phase note,
+- [x] 176-06-PLAN.md — Series 176, `176-VALIDATION.md` row flip, Obsidian vault sync + phase note,
   honest LABRUN close-out, and the full-suite delta reconciliation
 
 ### Progress
@@ -313,7 +313,7 @@ Plans:
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
 | 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
-| 176. Chaos-Lab Re-Run | 5/6 | In Progress|  |
+| 176. Chaos-Lab Re-Run | 6/6 | Plans Complete — pending `/gsd:verify-phase 176` | 2026-08-30 |
 
 ---
 
@@ -643,6 +643,22 @@ continuity:
 
 - DISC-08 — sub-batch (mid-discovery) checkpoint/resume granularity, tightening the v5.11 Phase 144
   per-batch checkpoint system → Phase 163
+
+### Chaos-Lab & Findings-Quality Defects (v5.17 Phase 176)
+
+Found during Phase 176's LABRUN-01 live chaos-lab re-run (9 PASS / 2 FAIL / 2 GAP of 13 cases);
+neither was fixed in that phase — both need their own plans and tests:
+
+- Chaos lab `identity` profile: regenerate `certs/keycloak.crt`/`certs/keycloak.key` with a
+  Keycloak-identifying subject (currently byte-identical to `certs/modern.crt`, CN=modern.chaos.local)
+  so UAT-5-13's cert-subject criterion is actually verifiable — found during Phase 176 LABRUN-01
+  re-run (TRIAGE-176-01).
+
+- Scanner findings-quality: add a distinct plaintext-HTTP finding type/title (matching the
+  `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` vocabulary `docs/UAT-SERIES.md` UAT-6-06 already expects) so
+  ports outside `ports_tls` can be flagged as "known plaintext HTTP" separately from
+  `HTTP on TLS-designated port` misconfiguration findings, which currently collapse to the same
+  title regardless of intent — found during Phase 176 LABRUN-01 re-run (TRIAGE-176-02).
 
 ### v1.x / v2+ (deferred, see PROJECT.md Active Requirements)
 

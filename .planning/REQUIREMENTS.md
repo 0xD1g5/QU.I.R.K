@@ -166,11 +166,42 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
   `UAT-5-09`, `UAT-5-11`, `UAT-5-13`, `UAT-6-06`, `UAT-6-07`, `UAT-6-08`.*
   *Context: Phase 168's decision D-01 forbade starting the lab, so the sweep recorded "port not
   reachable" honestly. v5.17 carries no such constraint.*
+  **PARTIALLY MET (2026-08-30) — not Complete.** All 13 cases were genuinely re-executed against a
+  live 33-container `core + phaseA + jwt + ssh-weak + identity` chaos lab (176-03/176-04):
+  **9 PASS / 2 FAIL / 2 GAP.** PASS: `UAT-4-01`, `UAT-5-02/03/04/06/07/08/09`, `UAT-6-07`. The 2
+  FAILs are real, root-caused, evidenced, and BACKLOGGED, not fixed in this phase —
+  `UAT-5-13` (`TRIAGE-176-01`: chaos-lab `certs/keycloak.crt` is byte-identical to
+  `certs/modern.crt`, a lab-fixture defect) and `UAT-6-06` (`TRIAGE-176-02`: no
+  `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` finding-type token exists in `quirk/`; ports 8000 and 8444
+  produce byte-identical findings once both are in `ports_tls`, root-caused to
+  `_postprocess_findings` in `quirk/engine/findings_evaluator.py` — a genuine PRODUCT
+  classification gap). The 2 GAPs (`UAT-5-11`, `UAT-6-08`) both trace to a missing `ssh-audit`
+  binary in this execution environment (confirmed at `quirk/scanner/ssh_scanner.py` source level)
+  — a tooling gap, not a lab or product defect; the binary was not installed to manufacture a
+  cleaner board, per this milestone's package-install exclusion. Because two of the thirteen cases
+  did not reach a lab-verified outcome, LABRUN-01's own "re-execute with the lab actually running"
+  success criterion is not fully satisfied for those two. Both BACKLOG items are promoted verbatim
+  into `.planning/ROADMAP.md`'s Backlog section. See `176-DEFECT-TRIAGE.md`,
+  `176-LABRUN-EVIDENCE.md`, and `docs/UAT-SERIES.md` Series 176 for full evidence.
 
-- [ ] **LABRUN-02**: `UAT-1-02` is re-run and correctly dispositioned. It is currently recorded
+- [x] **LABRUN-02**: `UAT-1-02` is re-run and correctly dispositioned. It is currently recorded
   FAIL with evidence `Got: 'QU.I.R.K. v5.15.0', code=0` — which **matches** its own expected
   output. Phase 168-03 attributed this to a stale hardcoded check in `uat_runner.py`, but no such
   literal was found there; determine the real cause before dispositioning.
+  **Complete (2026-08-30).** Root cause found: `uat_runner.py:154`'s pass-condition contained a
+  stale `'4.2.0'` version literal (frozen since commit `bebb1d8fc`, 2026-04-16) plus a
+  `'quirk' in ver.lower()` substring check broken by the dotted `QU.I.R.K.` acronym (`.lower()` of
+  `QU.I.R.K. v5.15.0` never contains the contiguous substring `quirk`), making the condition
+  unsatisfiable by any current-era product output regardless of what shipped. Fixed under D-01's
+  narrow, explicitly-recorded lift — exactly one line of `uat_runner.py` changed
+  (`git diff --numstat` = `1 1`), scoped to this pass-condition only. Guarded by a falsifiable
+  shape-pinning regression test, `tests/test_uat_runner_version_check.py` (6 nodes), demonstrated
+  RED against the historical condition and GREEN against the fix. `UAT-1-02` re-executed against
+  the repaired harness and dispositioned PASS through the ledger (`scripts/uat_disposition_apply.py
+  apply` → `verify`). **No version bump was made** — v5.16 shipped deliberately untagged (commit
+  `03656097`); v5.17 is a planning-milestone label, not a release. The `UAT-5-*` SKIP-vs-FAIL text
+  discrepancy at `uat_runner.py` lines 531-545 is a separate, deliberately deferred item, named and
+  scoped out in `176-HARNESS-LIFT.md` — not touched by this fix.
 
 ---
 
@@ -207,5 +238,5 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | CASEFIX-03 | Phase 175 | Complete |
 | CASEFIX-04 | Phase 175 | Complete — UAT-55-01 field not renamed, no alias (D-01) |
 | CASEFIX-05 | Phase 175 | Complete — DEFERRED, T-164-01 not reopened (D-02) |
-| LABRUN-01 | Phase 176 | Pending |
-| LABRUN-02 | Phase 176 | Pending |
+| LABRUN-01 | Phase 176 | Partially Met, not Complete — 9/13 PASS, 2 BACKLOG, 2 GAP (ssh-audit) |
+| LABRUN-02 | Phase 176 | Complete |
