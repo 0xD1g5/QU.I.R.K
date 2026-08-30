@@ -5658,9 +5658,17 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **ID:** UAT-36-05
 **Title:** Empty-state cards render when no email/broker findings
 **Maps to:** DASH-01, DASH-05 (empty-state path)
-**Prerequisites:** A scan completed against a host with NEITHER email nor broker endpoints (e.g., `quirk --config <https-only-config>` against a plain HTTPS-only target).
+**Prerequisites:** A scan completed against a host with NEITHER email nor broker endpoints, using a
+fixture config that EXPLICITLY sets `connectors.enable_email: false` and
+`connectors.enable_broker: false` (e.g., `quirk --config <https-only-config-with-explicit-connector-opt-out>`
+against a plain HTTPS-only target). The compiled default `connectors.enable_email`/`enable_broker`
+of `False` is NOT sufficient prerequisite by itself: the default `standard`/`deep` profile
+auto-enables both independently of `scan.ports_tls`, per `docs/configuration.md` ("CLI
+`scan.ports_tls`: email/broker auto-enable is independent of your port list"). An explicit `false`
+in the fixture's `connectors:` block is required to opt out (Phase 72 D-02 — an explicit `False`
+always wins over the profile auto-enable).
 **Steps:**
-1. Run a scan against an HTTPS-only host: e.g., `quirk --config <https-only-config>`.
+1. Run a scan against an HTTPS-only host with the explicit connector opt-out fixture: e.g., `quirk --config <https-only-config-with-explicit-connector-opt-out>`.
 2. Open `http://localhost:8000/motion`.
 3. Inspect the Email Protocols section.
 4. Inspect the Message Brokers section.
@@ -5669,10 +5677,17 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - Email section shows: "No email endpoints scanned in this session — enable the email scanner in your config or scan a mail server."
 - Broker section shows: "No broker endpoints scanned in this session — enable the broker scanner in your config or scan a message broker host."
 
+**Notes:** Phase 173 attempted this case's original premise — suppressing the `standard`/`deep`
+auto-enable whenever `scan.ports_tls` was user-set — as a product fix (plan 173-01), and reverted
+it the same day once live-verified: `ScanCfg.ports_tls` is a required constructor field, so every
+real CLI config sets it, meaning the suppression fired unconditionally and silently reversed the
+Phase 32/33/72-D-02 auto-enable coverage feature for every CLI user. See
+`.planning/phases/173-scanner-scope-config/173-DISPOSITIONS.md` for the full argument and the
+live-verified evidence. Do not attempt this suppression mechanism a third time.
+
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: quirk --config https-only-config against port 8443 only, connectors.enable_email left at default False - Motion page Email Protocols section still shows real SMTP/IMAP/POP3 findings not the empty-state copy, because email port probing runs unconditionally regardless of enable_email)  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Status:** Pending
-**Notes:**
 
 ---
 
