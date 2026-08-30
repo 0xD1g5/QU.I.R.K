@@ -87,7 +87,7 @@ Ops milestone — no net-new scanner surface.
 - [x] **Phase 172: Fuzzing & Disclosure Safety** - `--fuzz` refuses to run non-interactively, the documented `--fuzz-budget` ceiling is enforced, and a spec-parsing failure never prints the raw target URL.
 - [x] **Phase 173: Scanner Scope & Config Correctness** - Config that disables a scanner actually prevents the probe, and a disabled subsystem leaves no trace in run stats.
 - [x] **Phase 174: Dashboard & API Correctness** - The dashboard score tracks the scan's score profile, the empty state loads clean, and the sidebar order and its documented lock agree.
-- [ ] **Phase 175: Case & Documentation Defect Correction** - Nine UAT cases where the product is right and the case is wrong are corrected, each verified as a case defect before being edited.
+- [x] **Phase 175: Case & Documentation Defect Correction** - Nine UAT cases where the product is right and the case is wrong are corrected, each verified as a case defect before being edited.
 - [ ] **Phase 176: Chaos-Lab Re-Run** - The 13 cases that failed only because the lab was down are re-run with it up, and carry their true outcome.
 
 ## Phase Details
@@ -268,7 +268,7 @@ Plans:
 - [x] 175-04-PLAN.md — Correct the three inherited cases: UAT-94-05, UAT-36-05, UAT-8-07
 - [x] 175-05-PLAN.md — Add the D-03 credential-bearing companion case to Series 94 with a demonstrated falsification proof
 - [x] 175-06-PLAN.md — Re-disposition the eleven corrected cases through the ledger, including UAT-58-07 FAIL to DEFERRED naming T-164-01
-- [ ] 175-07-PLAN.md — Series 175, Obsidian sync, CASEFIX close-out, full-suite invariant sign-off
+- [x] 175-07-PLAN.md — Series 175, Obsidian sync, CASEFIX close-out, full-suite invariant sign-off
 
 ### Phase 176: Chaos-Lab Re-Run
 
@@ -298,7 +298,7 @@ milestone whose other work is already complete
 | 172. Fuzzing & Disclosure Safety | 6/6 | Complete | 2026-08-29 |
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
-| 175. Case & Documentation Defect Correction | 6/7 | In Progress|  |
+| 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
 | 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |
 
 ---
