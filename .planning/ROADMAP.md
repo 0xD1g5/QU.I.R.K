@@ -265,7 +265,7 @@ Plans:
 - [x] 175-01-PLAN.md — Re-verify all twelve cases against the current checkout; capture the corpus baseline and the D-04 promotion gate
 - [x] 175-02-PLAN.md — Correct UAT-85-02, UAT-85-06, UAT-84-02, UAT-110-06 case text (CASEFIX-01/02/03)
 - [x] 175-03-PLAN.md — Correct UAT-51-02, UAT-55-01, UAT-9-10, UAT-10-11, UAT-58-07 case text (CASEFIX-04/05, D-01, D-02)
-- [ ] 175-04-PLAN.md — Correct the three inherited cases: UAT-94-05, UAT-36-05, UAT-8-07
+- [x] 175-04-PLAN.md — Correct the three inherited cases: UAT-94-05, UAT-36-05, UAT-8-07
 - [ ] 175-05-PLAN.md — Add the D-03 credential-bearing companion case to Series 94 with a demonstrated falsification proof
 - [ ] 175-06-PLAN.md — Re-disposition the eleven corrected cases through the ledger, including UAT-58-07 FAIL to DEFERRED naming T-164-01
 - [ ] 175-07-PLAN.md — Series 175, Obsidian sync, CASEFIX close-out, full-suite invariant sign-off
@@ -298,7 +298,7 @@ milestone whose other work is already complete
 | 172. Fuzzing & Disclosure Safety | 6/6 | Complete | 2026-08-29 |
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
-| 175. Case & Documentation Defect Correction | 3/7 | In Progress|  |
+| 175. Case & Documentation Defect Correction | 4/7 | In Progress|  |
 | 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |
 
 ---
