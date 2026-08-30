@@ -289,7 +289,21 @@ milestone whose other work is already complete
   3. `UAT-1-02` is correctly dispositioned. It currently records FAIL with evidence
      `Got: 'QU.I.R.K. v5.15.0', code=0`, which matches its own expected output. Phase 168-03 blamed
      a stale hardcoded check in `uat_runner.py`; no such literal exists there. Find the real cause.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 176-01-PLAN.md — Fix the `uat_runner.py:154` harness defect under D-01's narrow lift, with a
+  shape-pinning regression test and a written lift record (no Docker required)
+- [ ] 176-02-PLAN.md — Re-run `UAT-1-02` through the repaired harness and disposition it via the
+  ledger (no Docker required)
+- [ ] 176-03-PLAN.md — Bounded Docker-daemon preflight, blocking human-action gate, targeted
+  `core + phaseA + jwt + ssh-weak + identity` bring-up, or a clean `LAB STATUS: UNAVAILABLE` halt
+- [ ] 176-04-PLAN.md — Execute the 13 lab cases, triage every genuine defect explicitly, and tear
+  the lab down with a confirmed zero-container probe
+- [ ] 176-05-PLAN.md — Transcribe the 13 outcomes into the ledger and `apply` them into the corpus,
+  including the `GAP — chaos lab unavailable` last-resort branch
+- [ ] 176-06-PLAN.md — Series 176, `176-VALIDATION.md` row flip, Obsidian vault sync + phase note,
+  honest LABRUN close-out, and the full-suite delta reconciliation
 
 ### Progress
 
@@ -299,7 +313,7 @@ milestone whose other work is already complete
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
 | 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
-| 176. Chaos-Lab Re-Run | 0/TBD | Not started | - |
+| 176. Chaos-Lab Re-Run | 0/6 | Planned | - |
 
 ---
 
