@@ -4945,14 +4945,14 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 
 ### UAT-9-10: Trends Tab — Baseline Empty State (Phase 31)
 
-> Added Phase 31 (2026-04-26): Validates TREND-04 + D-06 — when fewer than 2 distinct scan sessions exist, /trends renders the 'Baseline scan recorded' empty state and score_delta is null (NOT zero). NULL scanned_at rows from v4.2-era data are excluded from session counting (D-13).
+> Added Phase 31 (2026-04-26): Validates TREND-04 + D-06 — when fewer than 2 distinct scan sessions exist, /trends renders the "No scan history yet. Run two or more scans to see trend lines." empty state (`src/dashboard/src/pages/trends.tsx`) and score_delta is null (NOT zero). NULL scanned_at rows from v4.2-era data are excluded from session counting (D-13).
 
 **Prerequisites:** Either an empty SQLite DB OR a DB with exactly 1 distinct non-NULL scanned_at session.
 
 **Steps:**
 1. Confirm session count: `SELECT COUNT(DISTINCT strftime('%Y-%m-%d %H:%M:%S', scanned_at)) FROM crypto_endpoint WHERE scanned_at IS NOT NULL;` — expect 0 or 1.
 2. Open the dashboard at http://localhost:8000, click the "Trends" tab in the sidebar.
-3. Confirm the rendered state matches the UI-SPEC empty state copy: "Baseline scan recorded".
+3. Confirm the rendered state matches the shipped empty state copy in `src/dashboard/src/pages/trends.tsx`: "No scan history yet. Run two or more scans to see trend lines."
 4. Hit `GET /api/trends` directly via curl and inspect the response.
 
 **Expected:**
@@ -4968,7 +4968,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: fresh db with exactly 1 session then quirk serve, curl /api/trends, headless nav to /trends - score_delta is JSON null as expected and no score-delta card renders, but the empty-state copy reads No scan history yet. Run two or more scans to see trend lines instead of the case's expected literal Baseline scan recorded text)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
-**Notes:**
+**Notes:** This case has now drifted from the shipped UI twice — the earlier drift was the Phase 31 code-review correction of `sessions.previous_ts` → `previous_session_ts`; this is the second, the empty-state copy itself. The literal must be re-checked against `src/dashboard/src/pages/trends.tsx` whenever the empty state changes.
 
 ---
 
@@ -8469,14 +8469,15 @@ pip install pytest
 3. Create a file with 10001 lines: `seq 1 10001 | sed 's/^/host/' > many.txt` then `echo '@many.txt' > t.txt && quirk --targets-file t.txt`
 
 **Expected:**
-- Step 1: `TargetFileError` with reason `path_not_allowed_prefix`
-- Step 2: `TargetFileError` with reason `target_file_too_large`
-- Step 3: `TargetFileError` with reason `target_file_too_many_lines`
+- Step 1: exits non-zero with the coded advisory `[QRK-TARGET-002]`
+- Step 2: exits non-zero with the coded advisory `[QRK-TARGET-002]`
+- Step 3: exits non-zero with the coded advisory `[QRK-TARGET-002]`
 
-**Pass criteria:** Each violation surfaces a clear error message containing the reason code; no silent failures; no file contents are read before the guard fires.
+**Pass criteria:** All three violations exit non-zero with `[QRK-TARGET-002]`; no distinct reason-code text (`path_not_allowed_prefix`, `target_file_too_large`, `target_file_too_many_lines`) reaches the operator; no silent failures; no file contents are read before the guard fires.
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: quirk --config config.yaml --targets-file t.txt containing @/etc/passwd - exit path raises TargetFileError but run_scan.py:1466 collapses ALL @-file guard reasons -- path_not_allowed_prefix, target_file_too_large, target_file_too_many_lines into the single generic QRK-TARGET-002 message by design -- documented as a deferred simplification in the source comment, so the case's expected distinct reason-code text never appears for any of the 3 steps)  - [ ] SKIP
 **Date:**   **Tester:**
+**Notes:** Collapsing the three internal `TargetFileError` reason codes (`path_not_allowed_prefix`, `target_file_too_large`, `target_file_too_many_lines` in `quirk/util/targets.py`) into the single generic `QRK-TARGET-002` at the CLI is a deliberate design decision, T-164-01 (Information Disclosure), recorded at `.planning/milestones/v5.16-phases/164-first-run-correctness/164-01-PLAN.md` and its companion `164-01-SUMMARY.md`: distinct codes would let an attacker fingerprint which specific `@`-file guard their input tripped, so the CLI-facing handler in `run_scan.py` intentionally surfaces only the one generic code. This decision was NOT reopened in this phase; reopening it would be a separate product phase.
 
 ---
 ## Series 26 — Credential Leakage Sweep (Phase 59)
