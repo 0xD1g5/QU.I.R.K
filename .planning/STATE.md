@@ -4,13 +4,13 @@ milestone: v5.17
 milestone_name: Defect Drain
 status: executing
 stopped_at: Completed 175-02-PLAN.md
-last_updated: "2026-08-30T12:09:13.966Z"
+last_updated: "2026-08-30T12:14:32.040Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 22
-  completed_plans: 17
+  completed_plans: 18
   percent: 60
 ---
 
@@ -285,7 +285,7 @@ Phase: 175 (case-documentation-defect-correction) — EXECUTING
 175-01 closed: all 12 pre-labelled UAT case defects independently re-verified against the current
 (2026-08-30) checkout by live execution or source read; zero contradictions found; D-04 promotion
 gate reads GATE OPEN. `175-REVERIFICATION.md` is the phase's gating artifact for plans 02-07.
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-08-30
 
@@ -522,6 +522,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 174 P03 | 35min | 2 tasks | 5 files |
 | Phase 174 P04 | 55min | 3 tasks | 3 files |
 | Phase 175 P02 | 12min | 3 tasks | 1 files |
+| Phase 175 P03 | 25min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -800,6 +801,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 175]: UAT-85-02/UAT-85-06: quote-tolerant grep replaces exact-substring grep; quote-style difference is stylistic, not a defect
 - [Phase 175]: UAT-84-02: pass criteria now accept towncrier's 'No significant changes.' as valid draft output for an empty changelog.d/; no fixture fragment committed
 - [Phase 175]: UAT-110-06: corrected worked example uses --stale-days 30 against a 3-day-overdue sensor; original --stale-days 1 example was arithmetically impossible
+- [Phase 175]: D-01 applied: UAT-55-01 corrected to practice_number; no API rename, no control_id alias
+- [Phase 175]: D-02 applied: UAT-58-07 corrected to single QRK-TARGET-002 code, names T-164-01; decision not reopened
 
 ### Pending Todos
 
@@ -938,7 +941,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T12:09:13.961Z
+Last session: 2026-08-30T12:13:43.007Z
 Stopped at: Completed 175-02-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
