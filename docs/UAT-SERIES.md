@@ -9888,8 +9888,10 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 
 **Pass criteria:**
 - Step 1 exits 0.
-- Output includes a `## 4.10.0` heading and at least one sectioned fragment heading (`Features`, `Bugfixes`, `Misc`, etc.).
-- No fragments are removed from `changelog.d/` (draft mode is non-destructive).
+- Output includes a `## 4.10.0` heading, OR the literal `No significant changes.` message when `changelog.d/` holds no fragment files — both are valid, correct `towncrier build --draft` outputs depending on `changelog.d/`'s state at run time. A sectioned fragment heading (`Features`, `Bugfixes`, `Misc`, etc.) is expected ONLY when `changelog.d/` contains at least one file matching towncrier's `<id>.<kind>.md` fragment pattern; between releases `changelog.d/` is legitimately empty (it holds only `.gitkeep` and its own `README.md` format-documentation file, neither of which matches the fragment pattern), and the tool's designed behaviour for that state is `No significant changes.` with no sections — not a bug.
+- No fragments are removed from `changelog.d/` (draft mode is non-destructive) — verify via `ls changelog.d/` before and after Step 1.
+
+**Notes:** Do NOT commit a fixture fragment into the tracked `changelog.d/` to force the sectioned-heading path to exercise on demand. A committed fake fragment would be consumed and rendered into the real `CHANGELOG.md` at the next actual release, polluting it with a fake entry. If the sectioned-rendering path needs exercising, do it with a throwaway fragment (e.g. `9999.misc.md`) in a scratch copy of the repository only, never in the tracked `changelog.d/`.
 
 **Result:** - [ ] PASS  - [x] FAIL (ran directly: .venv/bin/towncrier build --draft --version 4.10.0 exits 0 but changelog.d/ contains only README.md, no fragments, so the draft renders 'No significant changes.' with zero sectioned fragment headings -- pass criteria requires at least one Features/Bugfixes/Misc heading, which cannot appear with an empty fragment directory)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
