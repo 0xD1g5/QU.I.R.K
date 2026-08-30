@@ -11489,6 +11489,87 @@ Expect: PASS.
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 tests/test_install_all_excludes_schemathesis.py -m slow SKIP: TRIAGE-149 documented flaky-under-load skip.mark, see docs/test-triage-149.md)
 **Date:**   **Tester:**
 
+---
+
+### UAT-94-09: Credential-bearing out-of-scope spec URL is rejected AND its message strips the credential/token (SPEC-02)
+
+**ID:** UAT-94-09
+**Title:** A spec URL carrying userinfo credentials and a query-string token, outside scan-target scope, raises `SpecParsingError` with zero network requests and a message that strips the credential and token while retaining the operator-supplied host
+**Maps to:** SPEC-02
+
+**What to test:** `UAT-94-05`'s own fixture (`https://evil.example.com/openapi.json`) has no
+userinfo and no query string, so its exception message is byte-identical whether or not
+`_redact_url_preview`'s stripping logic actually runs — that case cannot detect a redaction
+regression. This case exercises a URL that DOES carry a credential and a token, so it can. An
+out-of-scope OpenAPI spec URL carrying credentials in userinfo and a token in the query string is
+rejected before any network request, and the resulting `SpecParsingError` message contains neither
+the credential nor the token.
+
+**Steps:**
+```bash
+python -c "
+from unittest.mock import patch
+from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+
+with patch('httpx.get') as mock_get:
+    try:
+        eps = scan_openapi_spec(
+            'https://user:hunter2@evil.example.com/openapi.json?token=SECRETVALUE',
+            cfg_targets=['api.acme.com'],
+        )
+        print(f'FAIL: expected SpecParsingError, got {eps}')
+    except SpecParsingError as e:
+        msg = str(e)
+        print('httpx.get call count:', mock_get.call_count)
+        print('contains hunter2:', 'hunter2' in msg)
+        print('contains SECRETVALUE:', 'SECRETVALUE' in msg)
+        print('contains evil.example.com:', 'evil.example.com' in msg)
+"
+```
+Expect: `SpecParsingError` raised; `httpx.get` call count 0; `contains hunter2: False`; `contains
+SECRETVALUE: False`; `contains evil.example.com: True`.
+
+**Pass criteria:**
+- `SpecParsingError` raised for the credential-bearing, out-of-scope URL.
+- `httpx.get` call count == 0 — no outbound request made (the scope gate fires before any fetch).
+- The message contains neither `hunter2` nor `SECRETVALUE`.
+- The message DOES still contain `evil.example.com` — this is expected and is D-03's deliberate
+  design point (the operator-supplied host is not a secret), not a defect.
+
+**Falsifiability:** This case turns red if any of the following regress:
+- The userinfo strip in `_redact_url_preview` (`quirk/util/url_allowlist.py`) is removed or
+  neutered, so `hunter2` reappears in the message.
+- The query-string strip in `_redact_url_preview` is removed, so `SECRETVALUE` reappears.
+- The raw URL is passed into the `SpecParsingError` message instead of the redacted preview
+  produced by `_redact_url_preview` — including via its documented CR-01 fallback branch (the
+  malformed-URL path that used to leak credentials verbatim before Phase 172 CR-01's fix), since a
+  fallback that regresses to truncate-only behaviour reproduces exactly that leak.
+- The out-of-scope check in `scan_openapi_spec` no longer raises `SpecParsingError` before the
+  `httpx.get` fetch (in which case `httpx.get` call count would be nonzero).
+
+Inverse guard: the `evil.example.com`-present assertion is load-bearing and must NOT be removed to
+make this case "safer" — if the host assertion were dropped, the case would silently tolerate
+over-redaction of the operator-supplied host, masking a different regression (D-03/D-04 host
+retention being disabled) rather than detecting it.
+
+**Notes:** Companion to `UAT-94-05`: that case owns the out-of-scope-URL-rejection contract
+(SPEC-02) but its own fixture has no userinfo and no query string, so its message is
+byte-identical whether or not `_redact_url_preview` actually strips anything — it cannot, on its
+own, distinguish working redaction from silently-broken redaction (the exact blind spot Phase
+172's CR-01 fell into). This case adds a credential-bearing fixture to Series 94 so SPEC-02 has its
+own in-series detector. This case is DELIBERATELY redundant with `UAT-172-03`
+(Series 172, SAFE-03-scoped): `UAT-172-03` owns the redaction-behaviour contract from the
+Phase 172 fuzzing/disclosure-safety series, while this case is the Series 94, SPEC-02-scoped
+sibling of `UAT-94-05` that exercises the same fixture URL and stripping behaviour from the
+openapi-spec-scanning contract's own series. The redundancy is intentional cross-series coverage —
+deleting either series must not delete the detection, per Phase 175 D-03
+(`.planning/phases/175-case-documentation-defect-correction/175-CONTEXT.md`).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
 ## UAT Series 95: Phase 95 — Code-Signing Certificate Inventory (CSIGN-01..03, SCORE-01, LAB-01)
 
 ### UAT-95-01: `ldaps` code-signing fixture end-to-end (CSIGN-01, CSIGN-02, CSIGN-03, LAB-01)
