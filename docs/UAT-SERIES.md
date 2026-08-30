@@ -8059,18 +8059,18 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 2. Note the `id` field.
 3. Fetch the compliance map: `curl -s http://localhost:8000/api/qramm/sessions/<id>/compliance-map | python3 -m json.tool`
 
-**Expected:** HTTP 200; JSON array of exactly 96 objects; every object contains `practice_area`, `dimension`, `framework`, `control_id`, `static_weight`, `relevance_score` (null for unscored), and `scanner_informed` (bool).
+**Expected:** HTTP 200; JSON array of exactly 96 objects; every object contains `practice_area`, `dimension`, `framework`, `practice_number`, `static_weight`, `relevance_score` (null for unscored), and `scanner_informed` (bool).
 
 **Pass Criteria:**
 - Response is HTTP 200.
 - Array length is 96.
-- Every row has all 7 fields present (not missing keys).
+- Every row has all 7 fields present (not missing keys), including `practice_number`.
 - For an unscored session: every `relevance_score` is null.
 - `scanner_informed=true` only for rows where `dimension='CVI'` (12 × 8 = 96 rows but only CVI rows are scanner-informed — verify at least one CVI row has `scanner_informed=true` and one non-CVI row has `scanner_informed=false`).
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: curl GET /api/qramm/sessions/1/compliance-map - 200, 96 rows, relevance_score null, CVI scanner_informed true and non-CVI false all correct, but the field is named practice_number not the control_id the case's Pass Criteria names - no control_id key exists in the response)  - [ ] SKIP
 **Date:** __________  **Tester:** __________
-**Notes:** UAT-55-01
+**Notes:** UAT-55-01. D-01 judgement (locked 2026-08-30): the field is `practice_number`, agreeing across four surfaces re-confirmed live this session — the FastAPI response model (`quirk/dashboard/api/routes/qramm.py:190`), its sole construction site where it is built as `practice_area` joined to `framework` (`qramm.py:753`, `f"{practice_area}-{framework}"`), the TypeScript API type (`src/dashboard/src/types/api.ts:414`), and the print/PDF renderer (`src/dashboard/src/pages/print.tsx:310`). Live QRAMM-concept `control_id` occurrence count: 0 — the only `control_id` hits anywhere in the tree are this case's own text, its own ledger row quoting the case, and one unrelated `test_iso_rejects_legacy_control_ids` test node in `quirk/compliance/` (ISO-27001 numbering, a different subsystem from `quirk.qramm`, imports from `quirk.compliance` not `quirk.qramm`). `practice_number` is correct rather than merely entrenched: it is QUIRK's own composite key for a practice-area-by-framework grid cell, not an external regulatory control identifier, so `control_id` would actively mislead. Per D-01, the API field was NOT renamed and a `control_id` alias was NOT added — both declined.
 
 ---
 
