@@ -4364,24 +4364,39 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 
 > Added Phase 14 (2026-04-07): dashboard now reads stored calibration profile from intelligence JSON.
 
-**Prerequisites:** Completed scan run with a non-default score profile (e.g., `--score-profile strict`).
+**Prerequisites:** A scan launched FROM THE DASHBOARD (not bare CLI) with a non-default
+`calibration` value set. The dashboard-launched scan path is what actually stores and re-scores
+under the requested profile (`quirk/dashboard/api/routes/scan.py:1263`,
+`compute_readiness_score(evidence, profile=calibration)`); there is no `ScanJob` row for a
+bare-CLI scan, so a bare-CLI reproduction has no dashboard list-view row to compare against.
 
 **Steps:**
-1. Run: `quirk --config config.yaml --score-profile strict`
-2. Note score from `output/scorecard-*.md`
-3. Start dashboard: `quirk serve`
-4. Open `http://127.0.0.1:8512` and view the score gauge on the Executive Summary page
+1. Launch a scan from the dashboard with `calibration` set to `strict`. Note that scan's own score
+   once it completes.
+2. Open the dashboard scan list view and confirm the score gauge for that row matches the noted
+   `strict` score exactly — not a recalculated `balanced`-profile score.
+3. Launch a second scan from the dashboard with `calibration` set to `balanced`.
+4. Confirm the list view shows a DIFFERENT score for the second row than the first. This second
+   scan is what makes the case falsifiable — a case that checks only one calibration would pass
+   even if `calibration` were ignored entirely.
 
-**Expected:** Dashboard score matches the CLI scorecard score exactly, not a recalculated balanced-profile score.
+**Expected:** Each row in the dashboard list view scores under its OWN stored `calibration`, not a
+single recalculated profile shared across rows.
 
 **Pass Criteria:**
-- Dashboard score gauge value equals score in `scorecard-*.md`
-- Running the same scan again with `--score-profile balanced` and refreshing the dashboard shows a *different* score
-- Dashboard score does not silently default to balanced when strict or lenient was used
+- The `strict`-calibration row's score gauge value equals that scan's own computed score.
+- The `balanced`-calibration row's score gauge value is DIFFERENT from the `strict` row's.
+- The dashboard does not silently recalculate every row under `balanced` regardless of its stored
+  `calibration`.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-29 re-verified: DEFERRED — covered by tests/test_dashboard_scans_score_profile.py::test_list_scans_score_varies_by_calibration for the dashboard-launched-scan half of this case, which is real and fixed [scan.py:1227 now passes profile=calibration, matching :1476]. The case's own literal reproduction is invalid and out of scope: its command uses --score-profile standard, which argparse rejects [legal values lenient|balanced|strict, run_scan.py:1286-1289], and its bare-CLI list-view path has no ScanJob row to score under, per D-01. Case-text correction [legal profile value + scoping to a dashboard-launched scan] recorded for Phase 175; not rewritten here.)
 **Date:** __________  **Tester:** __________  
-**Notes:**
+**Notes:** The CLI `--score-profile` flag's legal argparse values are exactly `lenient`, `balanced`
+and `strict` (`run_scan.py:1286-1289`) — `standard` was never a legal value and this case's prior
+reproduction was invalid on that basis alone. Persisting the score profile for bare-CLI scans (so a
+CLI-side reproduction of this case could exist at all) is an explicitly deferred follow-up (Phase
+174 D-01) and is not covered by this case. Standing automated coverage:
+`UAT-174-01` and `tests/test_dashboard_scans_score_profile.py::test_list_scans_score_varies_by_calibration`.
 
 ---
 
