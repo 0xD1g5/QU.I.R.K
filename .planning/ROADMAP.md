@@ -298,7 +298,7 @@ Plans:
   ledger (no Docker required)
 - [x] 176-03-PLAN.md — Bounded Docker-daemon preflight, blocking human-action gate, targeted
   `core + phaseA + jwt + ssh-weak + identity` bring-up, or a clean `LAB STATUS: UNAVAILABLE` halt
-- [ ] 176-04-PLAN.md — Execute the 13 lab cases, triage every genuine defect explicitly, and tear
+- [x] 176-04-PLAN.md — Execute the 13 lab cases, triage every genuine defect explicitly, and tear
   the lab down with a confirmed zero-container probe
 - [ ] 176-05-PLAN.md — Transcribe the 13 outcomes into the ledger and `apply` them into the corpus,
   including the `GAP — chaos lab unavailable` last-resort branch
@@ -313,7 +313,7 @@ Plans:
 | 173. Scanner Scope & Config Correctness | 4/4 | Complete | 2026-08-29 |
 | 174. Dashboard & API Correctness | 5/5 | Complete | 2026-08-30 |
 | 175. Case & Documentation Defect Correction | 7/7 | Complete | 2026-08-30 |
-| 176. Chaos-Lab Re-Run | 3/6 | In Progress|  |
+| 176. Chaos-Lab Re-Run | 4/6 | In Progress|  |
 
 ---
 

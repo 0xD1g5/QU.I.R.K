@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 176-02-PLAN.md
-last_updated: "2026-08-30T17:14:39.114Z"
+stopped_at: Completed 176-04-PLAN.md
+last_updated: "2026-08-30T17:26:47.673Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 28
-  completed_plans: 25
+  completed_plans: 26
   percent: 80
 ---
 
@@ -288,7 +288,7 @@ UAT-1-02 pass-condition harness defect repaired under D-01's narrow, explicitly-
 test added and its RED/GREEN falsification demonstrated against a scratch copy. `176-HARNESS-LIFT.md`
 records the lift scope. UAT-1-02's disposition is NOT changed here — that is 176-02's job via the
 ledger.
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-08-30
 
@@ -532,6 +532,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 176 P01 | 25m | 3 tasks | 3 files |
 | Phase 176 P02 | 15min | 2 tasks | 3 files |
 | Phase 176 P03 | 15min | 3 tasks | 1 files |
+| Phase 176 P04 | ~1h | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -821,6 +822,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 176]: uat-disposition-ledger.jsonl evidence strings must contain no ')' at all (not just unbalanced) -- _validate_evidence rejects any parenthesis; use ' -- ' asides instead.
 - [Phase 176]: 176-03: Chaos lab brought up with targeted D-02 profile set (core+phaseA+jwt+ssh-weak+identity, 33 containers); all 18 required ports proven listening; LAB STATUS: UP, lab left running for 176-04
 - [Phase 176]: 176-03: Task 2's blocking human-action checkpoint satisfied by orchestrator's pre-verified Docker-running state, corroborated by this plan's own independent daemon probe
+- [Phase ?]: UAT-5-13 FAILs on evidence (cert-subject not Keycloak-related); certs/keycloak.crt is byte-identical to certs/modern.crt; disposition BACKLOG
+- [Phase ?]: UAT-6-06 FAILs on evidence (no PLAINTEXT_HTTP/HTTP_EXPOSURE finding type exists; port 8000 and 8444 findings are byte-identical); disposition BACKLOG
+- [Phase ?]: UAT-5-11 and UAT-6-08 both GAP — ssh-audit binary absent from environment, confirmed same root cause at ssh_scanner.py source level
 
 ### Pending Todos
 
@@ -959,8 +963,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T17:12:23.280Z
-Stopped at: Completed 176-02-PLAN.md
+Last session: 2026-08-30T17:26:47.666Z
+Stopped at: Completed 176-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
