@@ -9961,11 +9961,13 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 **Steps:**
 1. `test -f docs/upgrade-guide.md`
 2. `grep -q 'quirk db migrate' docs/upgrade-guide.md`
-3. `grep -q 'pip install -U quirk-scanner' docs/upgrade-guide.md`
+3. `grep -qE "pip install -U ['\"]?quirk-scanner\[all\]['\"]?" docs/upgrade-guide.md`
 4. `grep -qi 'rollback' docs/upgrade-guide.md`
 5. `grep -qi 'additive' docs/upgrade-guide.md`
 
 **Pass criteria:** All five checks exit 0.
+
+**Notes:** Step 3's pattern tolerates a single quote, a double quote, or no quote around `quirk-scanner[all]`, and still requires the `[all]` extras marker (a bare `pip install quirk-scanner` line does not satisfy it). `docs/upgrade-guide.md` writes `pip install -U "quirk-scanner[all]"` with double quotes deliberately: zsh (the default shell on macOS, Kali, and Parrot) treats an unquoted `[all]` as a glob character class and fails with "no matches found," a fact README.md's own prose documents. The quoting is correct product behaviour, not a defect — the original case's exact-substring grep was simply too strict to tolerate it.
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: test -f and 4 of 5 grep checks against docs/upgrade-guide.md - step 3 grep -q 'pip install -U quirk-scanner' finds no match because the doc uses the quoted extras form pip install -U quirk-scanner[all] with a literal quote character breaking the exact substring)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
@@ -10028,7 +10030,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 **Steps:**
 1. `grep -c 'img.shields.io' README.md` is `5` (CI + PyPI + license + Sigstore + security).
 2. `grep -q 'For the security consultant' README.md && grep -q 'For the IT generalist' README.md && grep -q 'For the compliance officer' README.md`
-3. `grep -q 'pip install quirk-scanner\[all\]' README.md && grep -q 'quirk init' README.md && grep -q 'quirk --config config.yaml' README.md`
+3. `grep -qE "pip install ['\"]?quirk-scanner\[all\]['\"]?" README.md && grep -q 'quirk init' README.md && grep -q 'quirk --config config.yaml' README.md`
 4. `grep -q 'docs/images/dashboard-hero.png' README.md && test -f docs/images/dashboard-hero.png`
 5. `grep -q 'Develop from source' README.md`
 6. **No stale `pip install quirk[…]`** in README.md: `! grep -E 'pip install quirk\[' README.md`
@@ -10036,6 +10038,8 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 **Pass criteria:** All six checks exit 0.
 
 **Note:** Step 4 currently passes against a placeholder PNG (1×1 transparent); the SUMMARY for Plan 85-05 documents the deferred real-screenshot capture as a manual post-merge task. A separate UAT-85-08 entry can be filed once the real screenshot lands.
+
+**Notes:** Step 3's pattern tolerates a single quote, a double quote, or no quote around `quirk-scanner[all]`, and still requires the `[all]` extras marker. README.md writes `pip install 'quirk-scanner[all]'` with single quotes deliberately (see README.md's own note at line 35): zsh treats an unquoted `[all]` as a glob character class and fails with "no matches found." Both the single-quote form (README.md) and the double-quote form (docs/upgrade-guide.md, UAT-85-02) are correct, zsh-safe forms — the difference between the two files is stylistic, not a defect, and should not be "fixed" to satisfy a grep.
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: 6 grep checks against README.md - badge count is 5 as expected and steps 2/4/5/6 pass, but step 3 grep -q 'pip install quirk-scanner[all]' finds no match because README now quotes it as pip install 'quirk-scanner[all]' for zsh glob safety)  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
