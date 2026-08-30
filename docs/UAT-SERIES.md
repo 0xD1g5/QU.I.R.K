@@ -11299,7 +11299,23 @@ Expect: PASS printed; `httpx.get` not called.
 **Pass Criteria:**
 - `SpecParsingError` raised for a URL not in `cfg_targets`.
 - `httpx.get` call count == 0 — no outbound request made.
-- Error message does not expose the raw URL value (redacted preview only).
+- Error message strips userinfo, query string and fragment if present, so credentials and tokens
+  never appear; scheme, host and a truncated path may remain visible, because the host is the
+  operator-supplied scan target and not a secret (D-03, `172-fuzzing-disclosure-safety/172-CONTEXT.md`;
+  implemented in `quirk/util/url_allowlist.py::_redact_url_preview`).
+
+**Notes:** This case owns the out-of-scope-URL-rejection contract (SPEC-02, criteria 1-2).
+`UAT-172-03` owns the redaction-behaviour contract (SAFE-03) — the credential/token-stripping half
+of D-03. This case's own fixture (`https://evil.example.com/openapi.json`) carries no userinfo and
+no query string, so `_redact_url_preview()` has nothing to strip in it: a credential-bearing URL
+(`https://user:hunter2@evil.example.com/openapi.json?token=SECRETVALUE`) and this bare-host URL
+produce byte-identical exception messages (re-confirmed live 2026-08-30, see
+`.planning/phases/175-case-documentation-defect-correction/175-REVERIFICATION.md`). This case
+therefore cannot, on its own, distinguish working redaction from silently-broken redaction; the
+credential-bearing companion case that Phase 175 D-03 adds to Series 94 (plan 05) is the one that
+closes that gap. A product change that would make the corrected criterion above fail:
+`_redact_url_preview` ceasing to strip userinfo or the query string, or the scope check in
+`scan_openapi_spec` no longer raising `SpecParsingError` before the `httpx.get` fetch.
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-27 ran: the case's own python -c gate against quirk.scanner.openapi_scanner.scan_openapi_spec - SpecParsingError raised and httpx.get call count is 0 as expected, but the exception message contains the full raw evil.example.com URL instead of a redacted preview)  - [ ] SKIP
 **Date:**   **Tester:**
