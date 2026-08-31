@@ -21,7 +21,10 @@ def _run_ssh_audit(host: str, port: int, timeout: int) -> Optional[dict]:
         return None
     try:
         proc = subprocess.run(
-            [exe, "-j", host, str(port)],
+            # ssh-audit takes ONE positional target — "host:port", not two argv
+            # entries. Two positionals are a usage error (exit 2, empty stdout),
+            # which silently degraded every SSH scan to a banner grab (TRIAGE-176-03).
+            [exe, "-j", f"{host}:{port}"],
             capture_output=True,
             text=True,
             timeout=timeout + 5,

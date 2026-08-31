@@ -76,6 +76,42 @@ class TestScanSshOneWithSshAudit(unittest.TestCase):
 
     @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
     @patch("quirk.scanner.ssh_scanner.subprocess.run")
+    def test_ssh_audit_invoked_with_single_host_port_target(self, mock_run, mock_which):
+        """ssh-audit must be invoked with ONE positional target of the form host:port.
+
+        Regression guard for TRIAGE-176-03 (Phase 176 plan 08). ssh-audit's CLI
+        accepts exactly one positional target; passing host and port as two
+        separate argv entries (``[exe, "-j", host, str(port)]``) makes ssh-audit
+        exit 2 with a usage error and an EMPTY stdout, so _run_ssh_audit returned
+        None and scan_ssh_one silently fell back to a banner grab — leaving
+        ssh_audit_json NULL for every SSH endpoint ever scanned, on every install.
+
+        The pre-existing tests in this class mocked subprocess.run without ever
+        asserting how it was CALLED, so the malformed command line was invisible
+        to the entire suite. This test asserts the boundary contract itself.
+        """
+        mock_run.return_value = MagicMock(
+            stdout=json.dumps(SSH_AUDIT_JSON),
+            returncode=0,
+        )
+
+        scan_ssh_one("10.0.0.1", 2222, timeout=5)
+
+        argv = mock_run.call_args[0][0]
+        self.assertEqual(
+            argv,
+            ["/usr/local/bin/ssh-audit", "-j", "10.0.0.1:2222"],
+            "ssh-audit must receive a single 'host:port' positional target; "
+            "separate host and port argv entries are a usage error (exit 2, empty stdout)",
+        )
+        positionals = [a for a in argv[1:] if not a.startswith("-")]
+        self.assertEqual(
+            len(positionals), 1,
+            f"ssh-audit accepts exactly one positional target, got {positionals}",
+        )
+
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_tls_version_not_set(self, mock_run, mock_which):
         """tls_version must NOT be set for SSH endpoints (D-06)."""
         mock_run.return_value = MagicMock(

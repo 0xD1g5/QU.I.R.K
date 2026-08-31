@@ -650,8 +650,10 @@ continuity:
 
 ### Chaos-Lab & Findings-Quality Defects (v5.17 Phase 176)
 
-Found during Phase 176's LABRUN-01 live chaos-lab re-run (9 PASS / 2 FAIL / 2 GAP of 13 cases);
-neither was fixed in that phase — both need their own plans and tests:
+Found during Phase 176's LABRUN-01 live chaos-lab re-run. Final tally after the 2026-08-31
+GAP-closure re-run (plan 176-08): **10 PASS / 3 FAIL / 0 GAP** of 13 cases. TRIAGE-176-01 and
+TRIAGE-176-02 were not fixed in that phase and need their own plans and tests; TRIAGE-176-03 was
+fixed in plan 176-08 and is recorded here for traceability only:
 
 - Chaos lab `identity` profile: regenerate `certs/keycloak.crt`/`certs/keycloak.key` with a
   Keycloak-identifying subject (currently byte-identical to `certs/modern.crt`, CN=modern.chaos.local)
@@ -663,6 +665,39 @@ neither was fixed in that phase — both need their own plans and tests:
   ports outside `ports_tls` can be flagged as "known plaintext HTTP" separately from
   `HTTP on TLS-designated port` misconfiguration findings, which currently collapse to the same
   title regardless of intent — found during Phase 176 LABRUN-01 re-run (TRIAGE-176-02).
+
+- **CLOSED — TRIAGE-176-03 (fixed in plan 176-08, 2026-08-31).** `quirk/scanner/ssh_scanner.py`
+  invoked ssh-audit as `[exe, "-j", host, str(port)]` — two positionals — but ssh-audit accepts
+  exactly one `host:port` target. The malformed command exited 2 with empty stdout, so
+  `_run_ssh_audit` always returned `None` and every SSH scan silently degraded to a banner grab,
+  leaving `ssh_audit_json` NULL on every install since the integration shipped. Fixed with the
+  `host:port` form plus a regression test asserting the argv. Retained here because the fix
+  **unblocks downstream work that was never verifiable before**: the CBOM SSH algorithm
+  components, `qramm/evidence_bridge.py`, `scanner/hardware_scanner.py`, and the dashboard SSH
+  panel have all been receiving empty data and none of their SSH paths have ever run against real
+  ssh-audit output.
+
+### UAT Case-Text Corrections Carried Forward (from Phase 176 plan 176-08)
+
+Verified case defects where the product is correct and `docs/UAT-SERIES.md` is wrong. Same class as
+the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward in this milestone:
+
+- **`UAT-6-08` criterion 1** asserts an ED25519 host key should be "classified as `quantum-safe` or
+  at least not quantum-vulnerable". This is cryptographically false — Ed25519 is an elliptic-curve
+  signature scheme and Shor's algorithm breaks it as completely as RSA or ECDSA. QUIRK correctly
+  returns `nist_quantum_security_level=0`. The criterion should require Ed25519 be classified
+  **quantum-vulnerable** while noting its strong *classical* level of 128.
+
+- **`UAT-6-08` criterion 4** expects "each algorithm has NIST quantum level in the finding" and its
+  Steps direct the tester to the findings JSON — but that file carries a single generic
+  `INFO — SSH quantum planning advisory` per SSH endpoint. Per-algorithm NIST levels exist only in
+  the CBOM, and neither `run_scan.py` nor `quirk` exposes a CBOM emission flag. Either retarget the
+  criterion at the CBOM/scan record, or treat "no CLI-reachable surface for per-algorithm SSH
+  quantum data" as its own product gap and file it separately.
+
+- **`UAT-5-11` pass criteria** use the word `CRITICAL`, which ssh-audit never emits — its severity
+  vocabulary is `fail`/`warn`/`info`. The case passes on the merits (`[fail]` is the top tier), but
+  the wording should match the tool. Cosmetic; no disposition impact.
 
 ### v1.x / v2+ (deferred, see PROJECT.md Active Requirements)
 

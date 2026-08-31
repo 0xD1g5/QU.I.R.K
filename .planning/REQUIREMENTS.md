@@ -158,7 +158,7 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 
 ## Chaos-Lab Re-Run (Phase 176)
 
-- [ ] **LABRUN-01**: The 13 cases recorded FAIL solely because the chaos lab was not running are
+- [x] **LABRUN-01**: The 13 cases recorded FAIL solely because the chaos lab was not running are
   re-executed **with the lab up**, and carry their true outcome — PASS, or a genuine defect not
   previously seen. Any new defect discovered is recorded with evidence and triaged into this
   milestone or the backlog explicitly.
@@ -195,6 +195,30 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
   2 GAP** — `UAT-5-11`/`UAT-6-08` remain GAP, now for lab-availability reasons rather than a missing
   probe tool. `ssh-audit` is documented as an optional prerequisite in `docs/operators-guide.md`
   §6.2. See `176-07-SUMMARY.md`.
+
+  **COMPLETE as of 2026-08-31 (plan 176-08, user-directed).** After the user hard-quit and
+  relaunched Docker Desktop, the lab came up cleanly (Engine 29.7.2, 11 containers,
+  `core + ssh-weak`) and both outstanding GAP cases were genuinely re-executed. **Final tally:
+  10 PASS / 3 FAIL / 0 GAP.** `UAT-5-11` → **PASS** (ssh-audit against port 20022 returned 8
+  `[fail]` + 12 `[warn]`; all three named algorithms — `diffie-hellman-group1-sha1`, `ssh-dss`,
+  `hmac-md5` — flagged at ssh-audit's top severity tier). `UAT-6-08` → **FAIL**, and the FAIL is a
+  genuine defect not previously seen: with `ssh-audit` present, `ssh_audit_json` was *still* empty,
+  which falsified 176-04's missing-binary root cause. Root-caused to **TRIAGE-176-03** —
+  `quirk/scanner/ssh_scanner.py:_run_ssh_audit` passed `[exe, "-j", host, str(port)]`, two
+  positionals, but ssh-audit accepts exactly one `host:port` target; the malformed invocation exits
+  2 with empty stdout, so the scanner silently fell back to a banner grab on **every install since
+  the integration shipped**, starving the CBOM, QRAMM evidence bridge, hardware scanner, and
+  dashboard of all SSH algorithm data. **Fixed in this plan** (one-line argv correction plus a
+  regression test asserting the argv, which the pre-existing mocks never did); verified live —
+  `ssh_audit_json` 0 → 7218 bytes, 30 algorithms extracted and classified, including correct
+  NIST-level-3 recognition of `mlkem768x25519-sha256`. `UAT-6-08` nonetheless remains FAIL because
+  two **case-text** defects survive the product fix: criterion 1 demands `ssh-ed25519` be "not
+  quantum-vulnerable" (cryptographically false — Ed25519 is elliptic-curve, level 0 is correct),
+  and criterion 4 expects per-algorithm NIST levels in the findings JSON when they exist only in
+  the CBOM, which has no CLI emission path. Both are carried forward as case corrections, matching
+  the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` precedent. LABRUN-01's success criterion — "carry
+  their true outcome — PASS, or a genuine defect not previously seen" — is now **fully satisfied
+  for all 13 cases**. See `176-LABRUN-EVIDENCE.md` § ADDENDUM 2026-08-31 and `176-08-SUMMARY.md`.
 
 - [x] **LABRUN-02**: `UAT-1-02` is re-run and correctly dispositioned. It is currently recorded
   FAIL with evidence `Got: 'QU.I.R.K. v5.15.0', code=0` — which **matches** its own expected
@@ -250,5 +274,5 @@ edited — if any turns out to be a real product bug, it is promoted, not quietl
 | CASEFIX-03 | Phase 175 | Complete |
 | CASEFIX-04 | Phase 175 | Complete — UAT-55-01 field not renamed, no alias (D-01) |
 | CASEFIX-05 | Phase 175 | Complete — DEFERRED, T-164-01 not reopened (D-02) |
-| LABRUN-01 | Phase 176 | Partially Met, not Complete — 9/13 PASS, 2 BACKLOG, 2 GAP (ssh-audit) |
+| LABRUN-01 | Phase 176 | Complete — 10 PASS / 3 FAIL / 0 GAP; both ssh-audit GAPs closed 2026-08-31, TRIAGE-176-03 fixed |
 | LABRUN-02 | Phase 176 | Complete |

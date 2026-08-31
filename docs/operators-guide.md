@@ -331,6 +331,18 @@ SSH banner grab and emits only a single generic "SSH quantum planning advisory" 
 with no per-algorithm KEX/host-key/MAC breakdown or per-algorithm NIST quantum level. Install
 `ssh-audit` before scanning if you need that detail.
 
+> **If you installed `ssh-audit` before 2026-08-31 and saw no additional detail, that was a
+> bug, not your setup.** The scanner invoked `ssh-audit` with a malformed command line, so the
+> silent-fallback path above ran on every scan regardless of whether the binary was present.
+> Scans from affected versions recorded no SSH algorithm data, and their CBOMs contain no SSH
+> algorithm components. Re-scan any SSH hosts you need per-algorithm inventory for.
+
+Note that `ssh-audit` must be on the `PATH` of the process running the scan. If QU.I.R.K. is
+installed in a virtualenv and you invoke it via an absolute interpreter path
+(`/path/to/.venv/bin/python -m ...`) without activating the environment, the venv's `bin/`
+directory is *not* added to `PATH` and `shutil.which("ssh-audit")` will not find it. Activate
+the environment, or ensure the directory containing `ssh-audit` is on `PATH`.
+
 #### JWT/API scanner
 
 Iterates over `jwt_targets` and inspects either local JWT samples or live token

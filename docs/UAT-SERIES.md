@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.15.0
-**Last Updated:** 2026-08-30 (v5.17 Phase 176 — Chaos-Lab Re-Run, the final phase of v5.17: repaired
+**Last Updated:** 2026-08-31 (v5.17 Phase 176 — Chaos-Lab Re-Run, the final phase of v5.17: repaired
 `uat_runner.py:154`'s four-month-old unsatisfiable UAT-1-02 pass-condition under a narrow, explicitly
 recorded D-01 lift, guarded by a falsifiable shape-pinning regression test
 (`tests/test_uat_runner_version_check.py`, 6 nodes), and re-ran `UAT-1-02` to a genuine PASS —
@@ -11,17 +11,31 @@ core+phaseA+jwt+ssh-weak+identity lab: 9 PASS / 2 FAIL / 2 GAP. Both FAILs are r
 evidenced, and BACKLOGGED (`TRIAGE-176-01`: chaos-lab `certs/keycloak.crt` byte-identical to
 `certs/modern.crt`; `TRIAGE-176-02`: no distinct `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` finding type
 exists in `quirk/engine/findings_evaluator.py`, a genuine product classification gap). Both GAPs
-(`UAT-5-11`, `UAT-6-08`) trace to a missing `ssh-audit` binary in this environment, not installed
-per this milestone's package-install exclusion. LABRUN-01 is therefore recorded PARTIALLY MET, not
-Complete — see `.planning/REQUIREMENTS.md`. The lab was run, not modified, and torn down; zero
+(`UAT-5-11`, `UAT-6-08`) initially traced to a missing `ssh-audit` binary in this environment.
+**Superseded 2026-08-31 (plan 176-08, user-directed):** with Docker restored and `ssh-audit` 3.9.0
+installed, both GAP cases were genuinely re-executed against a live `core + ssh-weak` lab and now
+carry true outcomes — `UAT-5-11` **PASS**, `UAT-6-08` **FAIL**. The `UAT-6-08` FAIL exposed
+`TRIAGE-176-03`, a product defect present since the ssh-audit integration shipped:
+`quirk/scanner/ssh_scanner.py` passed host and port as two positionals when `ssh-audit` accepts one
+`host:port` target, so the invocation exited 2 with empty stdout and every SSH scan silently
+degraded to a banner grab, leaving `ssh_audit_json` NULL on every install. Fixed and
+regression-tested in that plan; verified live, `ssh_audit_json` 0 → 7218 bytes. `UAT-6-08` remains
+FAIL because two case-text defects survive the product fix — criterion 1 wrongly requires
+`ssh-ed25519` be "not quantum-vulnerable" (it is elliptic-curve; level 0 is correct) and criterion 4
+expects per-algorithm NIST levels in the findings JSON when they exist only in the CBOM. Both are
+carried forward per the `UAT-94-05`/`UAT-36-05`/`UAT-8-07` precedent. **Final LABRUN-01 tally:
+10 PASS / 3 FAIL / 0 GAP — Complete** — see `.planning/REQUIREMENTS.md`. The lab was run, not modified, and torn down; zero
 containers remain (`git status --porcelain quantum-chaos-enterprise-lab/` empty). Added Series 176
 with 4 gating cases, hand-written under the documented `MAX_SERIES=163` out-of-ledger-scope
 exception (same as Series 175); the 14 ledger-driven cases this phase touched (`UAT-1-02` plus the
 13) were written only via `scripts/uat_disposition_apply.py apply`. Corpus grew from 687/687/378 to
-691/691/378 (Series 176's 4 cases; ledger unchanged, document-only). Zero product-fixing change —
-both discovered defects are BACKLOGGED, not fixed, in this phase. No version bump — v5.16 shipped
+691/691/378 (Series 176's 4 cases; ledger unchanged, document-only). `TRIAGE-176-01` and
+`TRIAGE-176-02` are BACKLOGGED, not fixed, in this phase; `TRIAGE-176-03` — discovered later, in
+plan 176-08's GAP-closure re-run — WAS fixed in-phase at explicit user direction, a deliberate
+departure from this phase's no-product-change rule taken because the lab was already up and
+end-to-end verification would never be cheaper. No version bump — v5.16 shipped
 deliberately untagged; v5.17 is a planning-milestone label. Full suite and corpus-integrity results
-recorded in `176-06-SUMMARY.md`. Earlier: v5.17 Phase 175 — Case & Documentation Defect Correction: twelve UAT
+recorded in `176-06-SUMMARY.md` and `176-08-SUMMARY.md`. Earlier: v5.17 Phase 175 — Case & Documentation Defect Correction: twelve UAT
 cases re-verified live against the current checkout and CONFIRMED as case defects — 12 CONFIRMS, 0
 CONTRADICTS, 0 product-defect promotions. Corrected case text in place for eleven
 (`UAT-85-02`/`UAT-85-06` quote-tolerant install greps, `UAT-84-02` towncrier empty-fragment
@@ -1555,7 +1569,7 @@ All of these services show status `Up` or `running`:
 - MAC: `hmac-md5` flagged as CRITICAL
 - Total critical+warning findings ≥ 3
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-30 GAP -- probe tool ssh-audit not installed in this environment; lab target port 20022 confirmed reachable and container healthy, see 176-LABRUN-EVIDENCE.md UAT-5-11 and TRIAGE-176 notes)
+**Result:** - [x] PASS (2026-08-31 PASS -- re-run with lab up, core plus ssh-weak, and ssh-audit 3.9.0 installed; ssh-audit -j 127.0.0.1:20022 against chaoslab-ssh-weak-1 running OpenSSH 7.6p1 returned 8 fail plus 12 warn: kex diffie-hellman-group1-sha1 fail for small 1024-bit modulus and Logjam and broken SHA-1, host key ssh-dss fail for small 1024-bit modulus, mac hmac-md5 fail for broken MD5 -- all three named criteria met, total critical plus warning 20 which is >= 3. Note ssh-audit emits fail/warn/info and never the literal word CRITICAL used in the case text; fail is its top severity tier. See 176-LABRUN-EVIDENCE.md UAT-5-11 2026-08-31 addendum.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2840,7 +2854,7 @@ Each finding object contains:
 - ECDSA algorithms classified as `quantum-vulnerable`
 - Each algorithm has NIST quantum level in the finding
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-30 GAP -- same missing ssh-audit tool dependency as UAT-5-11, confirmed at quirk/scanner/ssh_scanner.py source level; SSH port 2222 and container confirmed healthy, see 176-LABRUN-EVIDENCE.md UAT-6-08)
+**Result:** - [ ] PASS  - [x] FAIL (2026-08-31 FAIL -- GAP closed, true outcome is FAIL. Re-run with ssh-audit present exposed PRODUCT defect TRIAGE-176-03: ssh_scanner.py _run_ssh_audit built argv exe, -j, host, str port as two positionals, but ssh-audit takes ONE positional target; ssh-audit -j 127.0.0.1 2222 exits 2 with a usage error and EMPTY stdout, so _run_ssh_audit always returned None and scan_ssh_one silently fell back to a banner grab, leaving ssh_audit_json NULL on every install. FIXED in this plan using the host:port form plus a regression test asserting the argv; verified live with ssh_audit_json going 0 to 7218 bytes and 30 algorithms extracted. Case still FAILs on two CASE-text defects carried forward: first, criterion 1 requires ssh-ed25519 be not quantum-vulnerable but Ed25519 is elliptic-curve and correctly classifies nist_quantum_security_level=0, so the product is right and the criterion is cryptographically false; second, criterion 4 expects per-algorithm NIST levels in the findings JSON, but that file carries one generic INFO advisory and the per-algorithm data lives only in the CBOM with no CLI CBOM emission path. Criteria 2 and 3 for RSA and ECDSA mapping to quantum-vulnerable both PASS. See 176-LABRUN-EVIDENCE.md UAT-6-08 2026-08-31 addendum.)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
