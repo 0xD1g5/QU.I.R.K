@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: executing
-stopped_at: Completed 176-04-PLAN.md
-last_updated: "2026-08-30T21:24:05.948Z"
-last_activity: 2026-08-30
+stopped_at: Completed 176-08 (ssh-audit GAP closure re-run)
+last_updated: "2026-08-31T20:45:00.000Z"
+last_activity: 2026-08-31
 progress:
   total_phases: 5
   completed_phases: 5
@@ -22,7 +22,31 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 174 — dashboard-api-correctness — **CLOSED, human-approved 2026-08-29.**
+**Current focus:** Phase 176 — chaos-lab-re-run — **all plans complete as of 2026-08-31.**
+Plan 176-08 (user-directed, executed after the user hard-quit and relaunched a wedged Docker
+Desktop) closed both outstanding LABRUN-01 GAP cases against a live `core + ssh-weak` lab:
+`UAT-5-11` → **PASS**, `UAT-6-08` → **FAIL**. The FAIL exposed **TRIAGE-176-03**, a product defect
+present since the ssh-audit integration shipped — `quirk/scanner/ssh_scanner.py:_run_ssh_audit`
+passed host and port as two positionals when `ssh-audit` accepts one `host:port` target, so the
+invocation exited 2 with empty stdout and every SSH scan silently degraded to a banner grab,
+leaving `ssh_audit_json` NULL on every install and starving the CBOM, QRAMM evidence bridge,
+hardware scanner, and dashboard of all SSH algorithm data. It survived the suite because
+`tests/test_ssh_scanner.py` patched `subprocess.run` and asserted only on `return_value`, never
+`call_args`. **Fixed in-phase at explicit user direction** (a deliberate departure from this
+phase's no-product-change rule, taken because the lab was already up), TDD with the argv assertion
+confirmed RED first; verified live, `ssh_audit_json` 0 → 7218 bytes, 30 algorithms classified
+including NIST-level-3 `mlkem768x25519-sha256`. `UAT-6-08` stays FAIL because two **case-text**
+defects survive the product fix — criterion 1 wrongly requires `ssh-ed25519` be "not
+quantum-vulnerable" (it is elliptic-curve; level 0 is correct) and criterion 4 expects
+per-algorithm NIST levels in the findings JSON when they exist only in the CBOM — both carried
+forward in ROADMAP.md per the `UAT-94-05`/`UAT-36-05`/`UAT-8-07` precedent. **LABRUN-01 Complete:
+10 PASS / 3 FAIL / 0 GAP.** Full suite `1 failed, 3802 passed` — sole failure the pre-existing
+`test_skip_registry` `DEFER-172-01` node, zero new failing nodes. Lab torn down, zero containers.
+Commit `2dedf0dc`. ROADMAP.md's Phase 176 checkbox deliberately left unflipped, reserved for
+`/gsd-verify-phase 176` per the Phase 172/173/174/175 precedent. **Next step:
+`/gsd-verify-phase 176`.**
+
+**Prior focus:** Phase 174 — dashboard-api-correctness — **CLOSED, human-approved 2026-08-29.**
 174-05's Tasks 1-3 (Obsidian sync + phase note, REQUIREMENTS.md close-out with honest scoping
 notes, blocking full-suite regression gate) are complete. Task 3's checkpoint was presented and
 **explicitly approved by the user on 2026-08-29**: full unfiltered suite (`pytest -q -m ""`,
