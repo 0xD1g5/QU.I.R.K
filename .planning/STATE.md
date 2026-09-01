@@ -42,9 +42,22 @@ per-algorithm NIST levels in the findings JSON when they exist only in the CBOM 
 forward in ROADMAP.md per the `UAT-94-05`/`UAT-36-05`/`UAT-8-07` precedent. **LABRUN-01 Complete:
 10 PASS / 3 FAIL / 0 GAP.** Full suite `1 failed, 3802 passed` — sole failure the pre-existing
 `test_skip_registry` `DEFER-172-01` node, zero new failing nodes. Lab torn down, zero containers.
-Commit `2dedf0dc`. ROADMAP.md's Phase 176 checkbox deliberately left unflipped, reserved for
-`/gsd-verify-phase 176` per the Phase 172/173/174/175 precedent. **Next step:
-`/gsd-verify-phase 176`.**
+Commit `2dedf0dc`. **Phase 176 VERIFIED 2026-09-01 — `176-VERIFICATION.md` `status: passed`,
+15/15 must-haves, 0 overrides.** ROADMAP.md's Phase 176 checkbox is now flipped `[x]` and the
+progress row reads `6/6 | Complete — verified 15/15 | 2026-09-01`. The verifier independently
+reproduced SC3's root cause (`git show 72c06529^:uat_runner.py:154` — both disjuncts of
+`'4.2.0' in ver or 'quirk' in ver.lower()` unsatisfiable against `QU.I.R.K. v5.15.0`), confirmed
+SC1's 13 outcomes against verbatim lab transcripts with `LAB STATUS: UP` and
+`TEARDOWN: CONFIRMED`, and confirmed SC2's TRIAGE-176-01/02 reached the ROADMAP Backlog.
+
+Note on tooling: **`/gsd-verify-phase` is not a real command** — no such skill exists.
+`NN-VERIFICATION.md` is produced by the `gsd-verifier` subagent, which `/gsd-execute-phase`
+spawns at its `verify_phase_goal` step; to backfill one for an already-executed phase, dispatch
+`Agent(subagent_type="gsd-verifier")` directly. Every prior `/gsd:verify-phase` reference in this
+file was corrected to name that mechanism on 2026-09-01.
+
+**Next step:** v5.17 milestone close-out (`/gsd-complete-milestone`) — Phases 172-176 all
+verified.
 
 **Prior focus:** Phase 174 — dashboard-api-correctness — **CLOSED, human-approved 2026-08-29.**
 174-05's Tasks 1-3 (Obsidian sync + phase note, REQUIREMENTS.md close-out with honest scoping
@@ -67,9 +80,9 @@ scratch note given an explicit STALE banner (not deleted, out of this plan's fil
 scope), and the Phase 174 phase note written recording the narrowing honestly. Phase 175 now
 inherits **three** carried-forward case-text corrections: `UAT-94-05` (Phase 172), `UAT-36-05`
 (Phase 173), and `UAT-8-07` (Phase 174) — recorded in `ROADMAP.md`'s Phase 175 section. ROADMAP.md's
-Phase 174 phase-list checkbox is deliberately left unflipped, reserved for `/gsd:verify-phase 174`
+Phase 174 phase-list checkbox is deliberately left unflipped, reserved for the `gsd-verifier` phase-goal pass for Phase 174
 per this repo's pre-commit gate and Phase 172/173 precedent; the plan tally row is updated to
-`5/5 | Complete | 2026-08-29`. Next step: `/gsd:verify-phase 174`, then Phase 175 (Case &
+`5/5 | Complete | 2026-08-29`. Next step: the `gsd-verifier` phase-goal pass for Phase 174, then Phase 175 (Case &
 Documentation Defect Correction).
 
 ## Decisions Carried Forward (Phase 175)
@@ -140,7 +153,7 @@ missed and has now been rewritten to `v4.5-phases/38-identity-api-regression-fix
 filesystem-only, gitignored. `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/
 170-VALIDATION.md` is now `nyquist_compliant: true`, `status: complete`, all 14 rows green. The
 ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` from
-`/gsd:verify-phase` — next step is verify-phase, then Phase 171 (Resume UX Tail).
+the `gsd-verifier` phase-goal pass — next step is that verification pass, then Phase 171 (Resume UX Tail).
 
 ## Decisions Carried Forward (Phase 170)
 
@@ -166,7 +179,7 @@ ROADMAP.md phase-level checkbox remains unchecked pending `170-VERIFICATION.md` 
   (filesystem-only, gitignored) and re-ran the row: now PASSES. `170-VALIDATION.md` is now
   `nyquist_compliant: true`, `status: complete`, 0 pending rows. ROADMAP.md phase-level checkbox
   intentionally left unchecked — `scripts/verify_phase_gates.py` gates it on
-  `170-VERIFICATION.md`, produced by `/gsd:verify-phase`, not this plan. See
+  `170-VERIFICATION.md`, produced by the `gsd-verifier` phase-goal pass, not this plan. See
   `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-07-SUMMARY.md`.
 
 - **170-06 closed TRACE-05.** Re-verified the plan's own ground-truth mapping table before
@@ -324,8 +337,8 @@ Last activity: 2026-08-30
 | 165 | Accessibility Remediation | A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05 | None (independent) | Not started |
 | 166 | Gate Robustness | GATE-01, GATE-02, GATE-03 | None (independent) | Plans executed (2026-08-27; 5/5 plans done — GATE-01/GATE-02/GATE-03 all verified clean; 166-05 closed GATE-03's full-suite scope gap 166-04 had honestly flagged, zero fatal signals suite-wide; see 166-05-SUMMARY.md) — ✅ Complete: VERIFICATION passed 3/3 (2026-08-27), e2e:smoke independently re-run at 3.1s vs 180s budget, full unfiltered macOS pytest independently re-run with zero fatal signals (was 14 across 6 files) — ✅ VERIFICATION passed 3/3 (2026-08-27); e2e:smoke independently re-run at 3.1s vs 180s budget; full unfiltered macOS pytest independently re-run with ZERO fatal signals (was 14 across 6 files) |
 | 167 | UAT Format Unification & Deduplication | UATREC-01, UATREC-02 | None (must precede Phase 168 — normalized format makes drain checkable) | ✅ Complete (2026-08-27; 3 plans — 666 case headings == 666 result blocks, one canonical result format, zero duplicate IDs, zero headingless cases, all locked behind `tests/test_uat_series_format.py`, which was proven to FAIL on the pre-normalization document. Parity was 663==663 at Plan 02 and moved to 666==666 when Plan 03 appended Series 167 — the test asserts computed equality, never a constant, so it survived its own phase. VERIFICATION passed 6/6; human checkpoint cleared by user 2026-08-27) |
-| 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Plans executed (2026-08-27; 9/9 plans done — 299/299 series-1-100 cases dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3631 passing); human checkpoint 168-09 Task 3 awaiting review; `/gsd:verify-phase 168` not yet run |
-| 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned; full 666-case document + 377-row ledger 100% dispositioned (202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP); `tests/test_uat_zero_undispositioned_gate.py` standing gate live, documented in all four D-07 locations; vitest dialect found zero genuine conversions among Phase 168's 31 series-7 GAPs; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); UATREC-03/UATREC-04 both marked complete; 169-08 Task 3 human checkpoint APPROVED by user 2026-08-28; `/gsd:verify-phase 169` not yet run |
+| 168 | UAT Record Drain — Series 1-~100 | UATREC-03 (partial) | Phase 167 | Plans executed (2026-08-27; 9/9 plans done — 299/299 series-1-100 cases dispositioned: 142 PASS, 31 FAIL, 36 DEFERRED, 36 SKIP, 54 GAP; `tests/test_uat_disposition_integrity.py` anti-fabrication guard proven non-vacuous against 39 substitute node references; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3631 passing); human checkpoint 168-09 Task 3 awaiting review; the `gsd-verifier` phase-goal pass for Phase 168 not yet run |
+| 169 | UAT Record Drain — Series ~100-163 + Enforcement | UATREC-03 (remainder), UATREC-04 | Phase 168 | Plans executed (2026-08-28; 8/8 plans done — 78/78 series-101-163 cases dispositioned; full 666-case document + 377-row ledger 100% dispositioned (202 PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, 57 GAP); `tests/test_uat_zero_undispositioned_gate.py` standing gate live, documented in all four D-07 locations; vitest dialect found zero genuine conversions among Phase 168's 31 series-7 GAPs; full-suite baseline held at 1 pre-existing failure, zero fatal signals, 3647 passing); UATREC-03/UATREC-04 both marked complete; 169-08 Task 3 human checkpoint APPROVED by user 2026-08-28; the `gsd-verifier` phase-goal pass for Phase 169 not yet run |
 | 170 | Traceability, Documentation & Runbook | TRACE-01..07, RUNBOOK-01 | None (independent) | Plans executed (2026-08-28; 6/7 plans done — 170-01 gave CHANGELOG.md six entries for v5.9.0-v5.14.0 closing the gap between the existing 5.15.0 and 5.8.0 entries, v5.13.0/v5.14.0 correctly framed as developed-but-never-released; 170-02 fixed the dead v4.7 link, relocated the misfiled milestone audit, added Status headers to four archive ROADMAP.md files (v4.3 re-verified, not duplicated), and documented the canonical requirement-declaration format; 170-03 added real tests for DEBT-02 and QRAMM-08; 170-04 annotated GAP-01/GAP-02/QRAMM-09/AUTH-05/DEBT-04/QRAMM-11/TAIL-04/GAUGE-01-03 onto their existing already-passing tests; 170-05 added CMVP/error-codes/SNMP-contract catalogs to CLAUDE.md's staleness runbook (RUNBOOK-01); 170-06 rewrote 22 stale sibling-phase references to real archived paths and de-linkified 14 references to genuinely-absent Phase 133/134/144 artifacts (TRACE-05); TRACE-01 through TRACE-07 and RUNBOOK-01 all complete; only 170-07 (full-suite verification, docs/Obsidian sync, human checkpoint) remains) |
 | 171 | Resume UX Tail | RESUME-05, RESUME-06 | None (independent) | Plans executed (2026-08-28; 1/3 plans done — 171-01 closed RESUME-05: `_resume_already_complete_message()` short-circuits `--resume-scan-id` on a scan whose `reports` checkpoint is already completed, printing the D-01 message and exiting 0 with zero new checkpoint rows; reproduced against a seeded sqlite DB before fixing (row count 3->8 pre-fix mid-scan, 3->3 post-fix); batch-row behavior (Phase 163 DISC-08) verified untouched) |
 
@@ -341,10 +354,10 @@ Last activity: 2026-08-30
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
-| 157 | Drift-Event Retention + Forecast Narrative Foundation | HWLC-16, HWLC-18 | None (first, fully independent) | Ready for verification (2026-08-16; 5/5 plans executed, HWLC-16/HWLC-18 satisfied — `/gsd:verify-phase 157` not yet run) |
+| 157 | Drift-Event Retention + Forecast Narrative Foundation | HWLC-16, HWLC-18 | None (first, fully independent) | Ready for verification (2026-08-16; 5/5 plans executed, HWLC-16/HWLC-18 satisfied — the `gsd-verifier` phase-goal pass for Phase 157 not yet run) |
 | 158 | Sensor Fleet Drift Coverage | HWLC-15 | None new (independent of 157; extends Phase 107/109/154 plumbing) | Ready for verification (2026-08-17; 3/3 plans, HWLC-15 satisfied — `158-VERIFICATION.md` on disk, VALIDATION.md rows not yet reconciled) |
-| 159 | Check-in Scan Mode | HWLC-13 | Phase 158 (reuses shared persist_and_reconcile() for drift writes) | Ready for verification (2026-08-17; 5/5 plans executed, HWLC-13 satisfied — docs + UAT Series 159 + Obsidian vault sync closed; `/gsd:verify-phase 159` not yet run) |
-| 160 | Catalog-Level PQC Vendor Trend Tracking | HWLC-17 | Phase 158 (reuses persist_and_reconcile() call site; needs complete fleet population) | Ready for verification (2026-08-18; 3/3 plans executed, HWLC-17 satisfied — GET /api/hardware/vendor-trends live, docs + UAT Series 160 + Obsidian vault sync closed; `/gsd:verify-phase 160` not yet run) |
+| 159 | Check-in Scan Mode | HWLC-13 | Phase 158 (reuses shared persist_and_reconcile() for drift writes) | Ready for verification (2026-08-17; 5/5 plans executed, HWLC-13 satisfied — docs + UAT Series 159 + Obsidian vault sync closed; the `gsd-verifier` phase-goal pass for Phase 159 not yet run) |
+| 160 | Catalog-Level PQC Vendor Trend Tracking | HWLC-17 | Phase 158 (reuses persist_and_reconcile() call site; needs complete fleet population) | Ready for verification (2026-08-18; 3/3 plans executed, HWLC-17 satisfied — GET /api/hardware/vendor-trends live, docs + UAT Series 160 + Obsidian vault sync closed; the `gsd-verifier` phase-goal pass for Phase 160 not yet run) |
 
 ## v5.13 Phase Map (SHIPPED 2026-08-15)
 
@@ -872,7 +885,7 @@ None yet.
   decision coverage with zero blockers/warnings, specifically calling out D-26/D-18's corrected
   write-path handling, D-07's palette layers, D-13's caption, and D-23's secure-phase gate as
   correctly implemented. Proceeded past the gate on this documented override. Re-surface at
-  `/gsd:verify-phase 156` only if the same coverage question resurfaces there.
+  the `gsd-verifier` phase-goal pass for Phase 156 only if the same coverage question resurfaces there.
 
 - Phase 140's evidence-sufficiency bar (what SNMP facts constitute "confirmed" vs "assumed") is
   not fully specified by research — flagged as a planning-time design decision to make explicit
@@ -892,7 +905,7 @@ None yet.
   are extensively cited in plan bodies, and the independent `gsd-plan-checker` agent's semantic
   review separately verified "D-01 through D-08 all traced to specific tasks" (Context Compliance
   dimension: Pass). User selected "Proceed anyway" at the /gsd-plan-phase 150 override prompt.
-  Re-surface at `/gsd:verify-phase 150` only if the same coverage question resurfaces there.
+  Re-surface at the `gsd-verifier` phase-goal pass for Phase 150 only if the same coverage question resurfaces there.
 
 - **RESOLVED (Plan 150-08, 2026-08-13):** Phase 150 Plan 03's original blocker — real GitHub Actions Linux Full Suite run (31598809033) failed with 38 failures on a genuine .[all]-only ubuntu-latest install — is closed. Plans 150-04 through 150-07 fixed all 8 failure categories; Plan 150-08 re-ran the live-fire proof end to end: green run 31723764281 (0 failed) + red run 31725715958 (1 failed, isolated to the deliberate smoke test) via PR #10 (closed unmerged). SUITE-02/SUITE-03 both proven and marked complete in REQUIREMENTS.md. See 150-08-SUMMARY.md and 150-CI-EVIDENCE.md.
 - 176-07: Docker Desktop daemon unresponsive this session (docker ps/info hung indefinitely, no error) -- blocked the chaos-lab re-run of UAT-5-11/UAT-6-08; ssh-audit is installed and ready, only Docker responsiveness remains. User must restart Docker Desktop before a follow-up attempt.
