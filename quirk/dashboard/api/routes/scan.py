@@ -1263,13 +1263,24 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             score_dict = compute_readiness_score(evidence, profile=calibration)
             score = int(score_dict["score"])
 
-        # Finding counts (D-03)
+        # Finding counts (D-03). Phase 178 IDENT-02: _count_by_bucket's signature
+        # changed from (keys) to (keys, sev_map) since severity is no longer
+        # embedded in the key tuple (quirk/intelligence/trends.py). This call site
+        # was missed by Plan 178-05's caller sweep (only trends.py's /api/trends
+        # endpoints were updated) — fixed here as a same-phase regression, not a
+        # new feature: severity is carried alongside the (host, port, protocol) key
+        # in a dict instead of as a 4th tuple element.
         keys = [
-            (ep.host, ep.port, ep.protocol, ep.severity)
+            (ep.host, ep.port, ep.protocol)
             for ep in eps
             if ep.scan_error is None and ep.severity
         ]
-        counts = _count_by_bucket(keys)
+        sev_map = {
+            (ep.host, ep.port, ep.protocol): ep.severity
+            for ep in eps
+            if ep.scan_error is None and ep.severity
+        }
+        counts = _count_by_bucket(keys, sev_map)
 
         sessions.append(
             ScanSession(
