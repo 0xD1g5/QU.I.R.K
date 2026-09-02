@@ -202,7 +202,7 @@ Plans:
 - [x] 178-02-PLAN.md — IDENT-02 guards written RED first: severity-NULL non-vacuity + severity-transition contract
 - [x] 178-03-PLAN.md — IDENT-03 fingerprint-equality agreement tests + the written bounded-divergence record
 - [x] 178-04-PLAN.md — Three normalizers collapse to one; all 22 titles classified; compute_fingerprint wired + docstring corrected
-- [ ] 178-05-PLAN.md — Trend delta re-keyed to (host, port, protocol); severity transitions and severity-agnostic totals
+- [x] 178-05-PLAN.md — Trend delta re-keyed to (host, port, protocol); severity transitions and severity-agnostic totals
 - [ ] 178-06-PLAN.md — AST guard across BOTH derivation paths; TRIAGE-149 and skip_registry drift dispositioned
 - [ ] 178-07-PLAN.md — ADVISORY-01 firewall proof, docs + Obsidian sync, UAT-SERIES, planning ledger
 
@@ -291,7 +291,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
-| 178. Finding Identity Repair | 4/7 | In Progress|  |
+| 178. Finding Identity Repair | 5/7 | In Progress|  |
 | 179. Remediation Item Model | 0/? | Not started | — |
 | 180. Closure Verification | 0/? | Not started | — |
 | 181. Surfacing | 0/? | Not started | — |

@@ -4,12 +4,12 @@ milestone: v5.18
 milestone_name: Migration Execution
 status: executing
 stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T19:12:15.514Z"
+last_updated: "2026-09-02T19:23:02.156Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 20
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 178 (finding-identity-repair) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 pushed the three-component tag `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`, dereferencing
 to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated). `release.yml` run
@@ -638,6 +638,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 178 P01 | 12min | 2 tasks | 1 files |
 | Phase 178 P02 | 18min | 2 tasks | 1 files |
 | Phase 178 P03 | 25min | 2 tasks | 2 files |
+| Phase 178 P05 | 35min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -945,6 +946,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 178]: 178-01 split the new IDENT-01 guard file into two per-task commits (day-boundary guard, then collision guards) for atomic task granularity, and reworded prose mentions of 'strict=True' to keep grep -c 'strict=True' at exactly 1 per the plan's acceptance criterion.
 - [Phase 178]: IDENT-03: report identity divergence rather than silently reconcile - D-178-A wording divergence (expired cert title, allowlisted+bounded) and D-178-B detection-coverage gap recorded separately in docs/reviews/178-derivation-path-divergence.md
 - [Phase ?]: Single title normalizer (normalize_finding_title) with two declared policy tables; cert-expiry normalized for fingerprint stability, container-library {name} preserved (T-178-01).
+- [Phase ?]: 178-05: _count_by_bucket signature changed to (keys, sev_map); external caller in routes/trends.py fixed same-commit (Rule 3)
 
 ### Pending Todos
 
@@ -1114,7 +1116,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T19:12:07.474Z
+Last session: 2026-09-02T19:20:31.927Z
 Stopped at: Completed 177-06-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
