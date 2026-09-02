@@ -9,8 +9,11 @@ This module is the integration seam that:
 CRITICAL CONSTRAINTS:
   - dispatch_finding MUST NOT raise into callers — failure isolation is absolute.
   - error_summary is ALWAYS safe_str(exc) — never str(exc) or repr(exc) (ISEC-02).
-  - Fingerprint formula: SHA256(f"{host}:{port}::{title}") — NEVER override
-    compute_fingerprint in subclasses (shared contract with Phase 105 ServiceNow).
+  - Fingerprint formula: SHA256(f"{host}:{port}::{normalize_finding_title(title,
+    FINGERPRINT_TITLE_ALIASES)}") — NEVER override compute_fingerprint in
+    subclasses (shared contract with Phase 105 ServiceNow). Phase 178 IDENT-01
+    added the normalization step; see compute_fingerprint's own docstring for
+    the full rationale and the one-time re-key consequence.
   - find_by_fingerprint returns Optional[str] (string key/sys_id), NEVER a Jira
     Issue object — Phase 105 ServiceNow returns a sys_id string, not a Jira type.
   - Credentials MUST NOT appear in logs or error_summary — always safe_str(exc).
@@ -23,6 +26,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Optional
 
+from quirk.compliance import FINGERPRINT_TITLE_ALIASES, normalize_finding_title
 from quirk.models import IntegrationDelivery
 from quirk.util.safe_exc import safe_str
 
@@ -64,16 +68,51 @@ class TicketingChannel(ABC):
 
     @staticmethod
     def compute_fingerprint(finding: dict) -> str:
-        """SHA256(host:port::title) hex — stable across re-scans (TICKET-03).
+        """SHA256(host:port::normalize_finding_title(title)) hex.
+
+        Formula: ``SHA256(f"{host}:{port}::{title}")`` where ``title`` is
+        first passed through ``quirk.compliance.normalize_finding_title``
+        using the ``FINGERPRINT_TITLE_ALIASES`` IDENTITY policy table (Phase
+        178 IDENT-01). This is NOT the same table used for compliance
+        framework mapping (``TITLE_PREFIX_ALIASES``) — the two policies are
+        declared separately because they disagree on purpose: compliance
+        mapping collapses the two `({name}@{version})` container-library
+        titles down to a class, while fingerprinting must NOT, because
+        `{name}` is a discriminator between genuinely different findings at
+        the same host:port (T-178-01). See
+        ``quirk.compliance.FINGERPRINT_TITLE_ALIASES`` for the full policy
+        and rationale.
 
         NOTE: findings-*.json has NO 'protocol' or 'category' keys (verified
         against real output). Formula uses title as category proxy, empty
         protocol. Produces 64-char hex safe as a Jira label.
         Phase 105 inherits this staticmethod — NEVER override in subclasses.
+
+        ONE-TIME RE-KEY: prior to Phase 178, this formula hashed the RAW
+        title, so any already-issued ticket for a title that now normalizes
+        differently (in practice, only the "Certificate expiring in {N}
+        day(s)" family — the only title whose classification changed) will
+        no longer match its old fingerprint. On the next scan/dispatch
+        cycle, the dedup lookup for that finding misses exactly ONCE:
+        Jira's ``find_by_fingerprint`` (quirk/ticketing/jira.py) matches on
+        the fingerprint stored as an issue **label** (``labels: [fp]``,
+        queried via ``JQL labels = "<fp>"``), and ServiceNow's
+        (quirk/ticketing/servicenow.py) matches on the fingerprint stored in
+        the **``correlation_id``** field (queried via
+        ``sysparm_query=correlation_id=<fp>``) — neither lookup will find
+        the old-fingerprint record, so one duplicate ticket is created.
+        After that one miss, the new fingerprint is stable and dedup works
+        normally. No migration of already-issued tickets is performed;
+        tracker readback/migration is explicitly out of scope per
+        REQUIREMENTS.md. Only the cert-expiry family is affected — it is
+        the only title whose fingerprint-relevant classification changed in
+        Phase 178.
         """
         host = str(finding.get("host") or "")
         port = str(finding.get("port") or "")
-        title = str(finding.get("title") or "")
+        title = normalize_finding_title(
+            str(finding.get("title") or ""), FINGERPRINT_TITLE_ALIASES
+        )
         raw = f"{host}:{port}::{title}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 

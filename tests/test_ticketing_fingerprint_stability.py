@@ -12,11 +12,10 @@ This file has two jobs, deliberately asymmetric (see 178-CONTEXT.md /
 178-01-PLAN.md rationale):
 
   1. `test_cert_expiry_fingerprint_stable_across_day_boundary` — proves the
-     defect exists. Marked strict-xfail (see decorator below) because it is
-     RED today and is EXPECTED to stay RED until Plan 178-04 lands the
-     normalizer fix. A strict xfail means an unexpected pass fails the suite
-     loudly, forcing the marker's removal in Plan 04 rather than letting it
-     rot green.
+     defect is fixed. Was RED (strict-expected-failure) prior to Plan
+     178-04; that marker has now been removed because `quirk.compliance.
+     FINGERPRINT_TITLE_ALIASES` normalizes the volatile `days_to_expiry`
+     segment out of the fingerprint (see compute_fingerprint's docstring).
 
   2. The T-178-01 collision guards below — proof that the eventual fix does
      NOT over-normalize. Over-normalizing two DIFFERENT vulnerable container
@@ -35,8 +34,6 @@ Guarded interpolation sites (verified this session):
 """
 from __future__ import annotations
 
-import pytest
-
 from quirk.ticketing.base import TicketingChannel
 
 
@@ -50,13 +47,6 @@ def _finding(title: str, host: str = "10.0.0.1", port: int = 443) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason=(
-        "IDENT-01 RED: compute_fingerprint does not yet normalize the "
-        "volatile days_to_expiry segment; Plan 178-04 removes this marker"
-    ),
-    strict=True,
-)
 def test_cert_expiry_fingerprint_stable_across_day_boundary():
     """Same cert, day 30 vs day 29, MUST yield the same fingerprint.
 
