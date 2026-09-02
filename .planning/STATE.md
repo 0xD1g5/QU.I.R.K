@@ -4,12 +4,12 @@ milestone: v5.18
 milestone_name: Migration Execution
 status: executing
 stopped_at: Completed 177-04-PLAN.md
-last_updated: "2026-09-02T13:46:48.949Z"
+last_updated: "2026-09-02T13:54:54.068Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 177 (release-toolchain-repair) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 
 **v5.18 opened after a research pass, not on the HORIZON sketch.** The 3x sizing question the sketch
@@ -613,6 +613,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 177 P02 | 55min | 2 tasks | 2 files |
 | Phase 177 P03 | 22min | 3 tasks | 2 files |
 | Phase 177 P04 | 35min | 3 tasks | 3 files |
+| Phase 177 P05 | 45min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -912,6 +913,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 177]: 177-02 re-verified the firmware CVE catalog against live NVD REST API data (one published-date drift found and corrected, CVE-2017-12240) and pre-emptively re-verified the SNMP vendor PQC catalog (11-day runway, under the 14-day margin), correcting two dead vendor source_urls. All seven staleness catalogs plus the error-codes generator gate are green. RELEASE-02 remains open (spans plans 177-02/04/06/07).
 - [Phase 177]: 177-03 closed RELEASE-01's requirements record honestly: removed the Homebrew-global orphan quirk 4.0.0 editable install (finder pointed at deleted predecessor project QuRisk) plus its broken /opt/homebrew/bin/quirk PATH shim, user-approved via blocking checkpoint; rewrote RELEASE-01 evidence to state the measured two-half root cause instead of the falsified stale-.pth-breaks-pip's-build-backend claim; checkbox left unchecked pending Plan 06 ship
 - [Phase 177-04]: Corrected the archived v5.16-ROADMAP.md 'What Shipped' summary figure (325 unrecorded UAT cases) to the re-measured true value of 377 in the CHANGELOG [5.18.0] entry and README — STATE.md's Phase 168 decision record and docs/UAT-SERIES.md both state 325 was a stale figure; true pre-drain total was 377
+- [Phase ?]: 177-05 bumped docs/UAT-SERIES.md to 5.18.0, re-executed UAT-1-02 live via the ledger (not hand-edit), and added Series 177 with 3 honestly-dispositioned SKIP(GAP) release-verification cases -- zero fabricated PASS.
+- [Phase ?]: 177-05 reframed .planning/ROADMAP.md's v5.16/v5.17 untagged and RVW-004 notes as resolved history (v5.13/v5.14 two-component-tag defect record preserved) and corrected Success Criterion 1's stale build-backend-failure premise.
+- [Phase ?]: 177-05 verified docs/getting-started.md carries no version literal and re-synced the Obsidian vault: UAT-Series.md byte-matched, Getting-Started.md confirmed current, new Phase 177 note written status: active pending the outstanding tag push.
 
 ### Pending Todos
 
@@ -1081,7 +1085,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T13:46:48.942Z
+Last session: 2026-09-02T13:53:59.692Z
 Stopped at: Completed 177-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
