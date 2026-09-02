@@ -235,6 +235,91 @@ def test_module_never_imports_scoring():
 
 
 # ---------------------------------------------------------------------------
+# Phase 180 (D-13): estate separation
+#
+# build_scope_signature captured scan CONFIGURATION only (signature_version,
+# port_scope, profile, extras_present, credentials_present, sensor_set) —
+# nothing identifying WHICH ESTATE was scanned. Two different clients
+# scanned with the same profile produced an IDENTICAL digest, so an absent
+# finding in client B's scan would read as client A's closure. These tests
+# prove that hole RED before quirk/intelligence/scope_signature.py is
+# touched (Task 2 fixes it). See 180-CONTEXT.md's addendum and D-13a/b/c.
+# ---------------------------------------------------------------------------
+
+
+def _cfg_with_targets(**targets_overrides):
+    raw = copy.deepcopy(_MINIMAL_RAW)
+    raw["targets"] = dict(raw["targets"], **targets_overrides)
+    return config_from_dict(raw)
+
+
+def test_estate_separation_different_targets_produce_different_digests():
+    cfg_a = _cfg_with_targets(fqdns=["a.example.com"])
+    cfg_b = _cfg_with_targets(fqdns=["b.example.net"])
+
+    digest_a = compute_signature_digest(build_scope_signature(cfg_a))
+    digest_b = compute_signature_digest(build_scope_signature(cfg_b))
+
+    assert digest_a != digest_b
+
+
+def test_estate_separation_holds_for_cidrs_and_include_ips():
+    cfg_cidr_a = _cfg_with_targets(cidrs=["10.0.0.0/24"])
+    cfg_cidr_b = _cfg_with_targets(cidrs=["192.168.7.0/24"])
+    assert compute_signature_digest(
+        build_scope_signature(cfg_cidr_a)
+    ) != compute_signature_digest(build_scope_signature(cfg_cidr_b))
+
+    cfg_ip_a = _cfg_with_targets(include_ips=["10.0.0.5"])
+    cfg_ip_b = _cfg_with_targets(include_ips=["192.168.7.5"])
+    assert compute_signature_digest(
+        build_scope_signature(cfg_ip_a)
+    ) != compute_signature_digest(build_scope_signature(cfg_ip_b))
+
+
+def test_same_estate_rescan_produces_identical_digest():
+    """Stability half of D-13a: same estate, different order/case/whitespace
+    of the target lists, must still produce the SAME digest — otherwise
+    nothing could ever close."""
+    cfg_1 = _cfg_with_targets(
+        fqdns=[" A.Example.com ", "b.example.net"],
+        cidrs=["10.0.0.0/24", " 192.168.7.0/24 "],
+    )
+    cfg_2 = _cfg_with_targets(
+        fqdns=["b.example.net", "a.example.com"],
+        cidrs=["192.168.7.0/24", "10.0.0.0/24"],
+    )
+
+    digest_1 = compute_signature_digest(build_scope_signature(cfg_1))
+    digest_2 = compute_signature_digest(build_scope_signature(cfg_2))
+
+    assert digest_1 == digest_2
+
+
+def test_target_set_digest_stores_no_host_literals():
+    literal_fqdn = "secret-client-host.example.com"
+    literal_cidr = "10.55.0.0/24"
+    literal_ip = "10.55.0.9"
+    cfg = _cfg_with_targets(
+        fqdns=[literal_fqdn], cidrs=[literal_cidr], include_ips=[literal_ip]
+    )
+
+    sig = build_scope_signature(cfg)
+    flat = str(sig)
+
+    assert literal_fqdn not in flat
+    assert literal_cidr not in flat
+    assert literal_ip not in flat
+
+
+def test_signature_version_is_two_zero_zero():
+    import quirk.intelligence.scope_signature as mod
+
+    assert mod.SCOPE_SIGNATURE_VERSION == "2.0.0"
+    assert "target_set_digest" in mod._DIGEST_FIELDS
+
+
+# ---------------------------------------------------------------------------
 # Task 2: assess_probe_health — positive assertion per family
 # ---------------------------------------------------------------------------
 
