@@ -29,7 +29,7 @@ from typing import Optional
 STALENESS_THRESHOLD_DAYS: int = 30
 
 CVE_TABLE_META = {
-    "last_verified": "2026-08-02",
+    "last_verified": "2026-09-02",
     "source": "NVD",
     "source_url": "https://nvd.nist.gov",
 }
@@ -82,7 +82,9 @@ def _cve(
 
 # Source: NVD (nvd.nist.gov) — each entry independently verified during
 # 142-RESEARCH.md (2026-08-02). See that file's Sources section for the
-# per-CVE fetch citations.
+# per-CVE fetch citations. Re-verified 2026-09-02 (177-02-SUMMARY.md) against
+# the live NVD REST API (services.nvd.nist.gov/rest/json/cves/2.0); one
+# correction made (CVE-2017-12240 published date 2017-09-28 -> 2017-09-29).
 CVE_TABLE: dict = {
     ("Schneider Electric", "M221"): [
         _cve(
@@ -103,7 +105,7 @@ CVE_TABLE: dict = {
             "CVE-2017-12240", "CRITICAL",
             "Buffer overflow in the DHCP relay subsystem allows unauthenticated "
             "remote code execution via crafted DHCPv4 packets (Cisco IOS 12.2-15.6).",
-            affected_before="15.6", published="2017-09-28",
+            affected_before="15.6", published="2017-09-29",
         ),
         _cve(
             "CVE-2016-6382", "HIGH",
