@@ -140,6 +140,8 @@ def test_uat_31_trends_two_sessions_flat_wire_format():
         "resolved_high", "resolved_medium", "resolved_low",
         "scan_errors_new_count", "scan_errors_resolved_count",
         "new_findings_sample", "resolved_findings_sample",
+        # Plan 178-05 (IDENT-02): severity-agnostic totals + transitions
+        "severity_transitions", "new_total", "resolved_total",
     )
     for key in required_keys:
         assert key in data, f"Missing required flat-wire-format key: {key!r}; got keys={list(data.keys())}"

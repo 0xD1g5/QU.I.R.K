@@ -410,6 +410,17 @@ class SampleFinding(BaseModel):
     severity: str
 
 
+class SeverityTransitionResponse(BaseModel):
+    """Mirrors quirk.intelligence.trends.SeverityTransitionItem — an endpoint
+    whose severity changed between two sessions without its identity
+    changing (replaces the old severity-in-key double-count, D-03)."""
+    host: str
+    port: int
+    protocol: str
+    previous_severity: Optional[str] = None
+    current_severity: Optional[str] = None
+
+
 class TrendReportResponse(BaseModel):
     current_session_ts: Optional[datetime] = None
     previous_session_ts: Optional[datetime] = None
@@ -426,6 +437,9 @@ class TrendReportResponse(BaseModel):
     scan_errors_resolved_count: int = 0
     new_findings_sample: List[SampleFinding] = []
     resolved_findings_sample: List[SampleFinding] = []
+    severity_transitions: List[SeverityTransitionResponse] = Field(default_factory=list)
+    new_total: int = 0
+    resolved_total: int = 0
 
 
 # ---- Timeline (Phase 64 TREND-01) ----

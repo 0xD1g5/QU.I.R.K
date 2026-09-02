@@ -22,6 +22,7 @@ from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.schemas import (
     FindingCounts,
     SampleFinding,
+    SeverityTransitionResponse,
     TrendReportResponse,
     TrendSessionPoint,
     TrendTimelineResponse,
@@ -143,6 +144,18 @@ def _to_response(report) -> TrendReportResponse:
             )
             for s in report.resolved_findings_sample
         ],
+        severity_transitions=[
+            SeverityTransitionResponse(
+                host=t.host,
+                port=t.port,
+                protocol=t.protocol,
+                previous_severity=t.previous_severity,
+                current_severity=t.current_severity,
+            )
+            for t in report.severity_transitions
+        ],
+        new_total=report.new_total,
+        resolved_total=report.resolved_total,
     )
 
 
