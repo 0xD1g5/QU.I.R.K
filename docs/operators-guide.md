@@ -2131,3 +2131,46 @@ existing one more granular.
 | Completed (checkpoint row exists) | Expired (>720h) or deleted | Re-probed — a checkpoint row alone never causes a skip; a live cache hit is also required |
 | Failed with a `RuntimeError` | No checkpoint written | Re-attempted on resume; the batch's error endpoint from the failed attempt is still recorded in the scan artifact |
 | Completed (checkpoint row exists) | Present, but written before the advisory records were cached | Skipped, and its open ports are restored, but its undetermined-host records are not — that run's reported `Hosts undetermined` will be low by roughly one batch per such file. Start a fresh scan if the coverage figure matters. |
+
+---
+
+## 14. Ticketing Integration
+
+Jira and ServiceNow ticket dispatch (`quirk ticket create`) is configured under
+`docs/configuration.md` §"Jira Ticketing" / §"ServiceNow Ticketing" — that is still the reference
+for the `ticketing:` config block and CLI usage. This section covers one operator-visible behavior
+change from Phase 178.
+
+### 14.1 One-time ticket re-key (v5.18 / IDENT-01)
+
+Finding fingerprints — the dedup key used to decide "have I already opened a ticket for this" —
+are now computed from a **normalized** title (`quirk/ticketing/base.py::compute_fingerprint`,
+routed through `quirk.compliance.normalize_finding_title`). Before Phase 178, the fingerprint
+hashed the raw title text, and one finding family interpolates a changing value into that title:
+`"Certificate expiring in {N} day(s)"`, where `N` counts down every day. That meant a still-open
+certificate-expiry finding minted a brand-new fingerprint — and therefore a brand-new Jira issue
+or ServiceNow incident — on every single scan, instead of being recognized as the same finding it
+was yesterday.
+
+**The only affected family is certificate-expiry findings.** No other finding title changed its
+fingerprint-relevant classification in this phase.
+
+**What operators will see on the next `quirk ticket create` run:** any certificate-expiry finding
+that already has an open ticket will look "new" exactly once, because its normalized fingerprint
+no longer matches the fingerprint stored on the existing ticket. Jira stores the fingerprint as a Jira **label**
+on the issue (`labels: [fp]`, matched via `JQL labels = "<fp>"`); ServiceNow stores it in the
+incident's **`correlation_id`** field (matched via `sysparm_query=correlation_id=<fp>`). Neither
+lookup finds the old-fingerprint record, so exactly ONE duplicate ticket is created per affected
+finding. After that single miss, the new fingerprint is stable and dedup works normally on every
+subsequent run — this is a one-time event, not a recurring duplication.
+
+No migration or tracker readback is performed against already-issued tickets — reading back
+existing Jira/ServiceNow state is explicitly out of scope (see `.planning/REQUIREMENTS.md`). If
+you want to avoid seeing the duplicate, close the old certificate-expiry ticket manually before
+running `quirk ticket create` again; QUIRK will open a fresh one under the new, stable fingerprint.
+
+**This is not a dedup regression.** Two different vulnerable container-image libraries found at
+the same host and port still produce two distinct tickets after this change, exactly as before —
+fingerprinting deliberately does NOT collapse findings that differ only in which library or
+package they name (T-178-01). Only the day-counting cert-expiry title was made fingerprint-stable;
+everything else that already deduplicated correctly continues to do so.

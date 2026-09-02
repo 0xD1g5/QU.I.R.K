@@ -856,4 +856,52 @@ credentials or an API token in a query parameter — is what gets stripped.
 
 ---
 
+## 15. Session-Over-Session Trends (Phase 178, IDENT-02)
+
+The `/api/trends` endpoint (`quirk/intelligence/trends.py::compute_trend_report`) compares the
+two most recent distinct scan sessions and reports which findings are new, which are resolved,
+and — as of Phase 178 — which changed severity without opening or closing. See
+`docs/intelligence-schema.md` §TrendReport for the full field table.
+
+**Findings are matched on `(host, port, protocol)`, not on severity.** Before Phase 178 the match
+key also included severity, and a filter dropped every row whose severity was `NULL` before the
+comparison ever ran. Severity is populated only by the three cloud connectors — on a typical scan
+database the overwhelming majority of endpoint rows carry no severity at all — so that filter
+emptied both sides of the comparison by construction: every scan reported 0 new / 0 resolved
+findings regardless of what actually changed. Phase 178 removed the filter and dropped severity
+from the key, so the delta now reflects real endpoint-level movement.
+
+**Severity transitions are their own list, not a hidden double-count.** Because severity is no
+longer part of the match key, an endpoint whose finding goes from HIGH to MEDIUM between two scans
+is no longer reported as "1 resolved + 1 new" (which would misrepresent a partial fix as an
+unrelated pair of events). Instead it appears once, in `severity_transitions`, as an entry naming
+the endpoint's previous and current severity. Read a `HIGH -> MEDIUM` transition entry as *partial
+remediation at that endpoint* — the underlying issue was not fully closed, but its severity
+dropped. An endpoint in `severity_transitions` is excluded from the new/resolved sample lists for
+that scan — it did not appear or disappear, it changed.
+
+**The high/medium/low bucket counts can legitimately read zero while `new_total`/`resolved_total`
+are non-zero.** `new_high`, `new_medium`, `new_low` (and their `resolved_*` counterparts) are
+severity-bucketed and are honestly zero when every underlying row has no severity — which is the
+normal case outside the three cloud connectors. `new_total` and `resolved_total` are the
+severity-agnostic counts (`len(new_keys)` / `len(resolved_keys)`) and are the signal to read when
+the bucket counts are zero: a report showing `new_total: 4` with all-zero severity buckets is the
+report honestly telling you 4 endpoints changed, but it does not know their severity — not an
+error and not a sign the trend engine is broken.
+
+**A related, bounded gap:** the console's live view and this report can still word one shared
+detection condition differently for the same underlying issue (the expired-certificate finding).
+That divergence is measured and bounded — not silently reconciled — in
+`docs/reviews/178-derivation-path-divergence.md` (D-178-A). It does not affect finding identity or
+the trend counts described above; it affects only the title text a consultant sees on each surface.
+
+> **Client Conversation — Trends:**
+> "This trend report compares your two most recent scans. New and resolved counts are endpoint-
+> based, not severity-based, so they reflect real change even when we haven't recorded a severity
+> for every finding. If a finding's severity dropped rather than closed outright — say HIGH to
+> MEDIUM — you'll see it listed as a severity transition, which we read as partial progress, not a
+> fix-and-reopen."
+
+---
+
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*

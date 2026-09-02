@@ -65,9 +65,25 @@ Full two-session response (two or more distinct sessions in the database):
   ],
   "resolved_findings_sample": [
     { "host": "10.0.1.3", "port": 443,  "protocol": "TLS", "severity": "HIGH" }
-  ]
+  ],
+  "severity_transitions": [
+    { "host": "10.0.1.9", "port": 443, "protocol": "TLS", "previous_severity": "HIGH", "current_severity": "MEDIUM" }
+  ],
+  "new_total": 3,
+  "resolved_total": 1
 }
 ```
+
+**Added in v5.18 (Phase 178, IDENT-02):** `severity_transitions`, `new_total`, `resolved_total`.
+Older clients that only read the severity-bucketed fields (`new_high`/`new_medium`/... and
+`resolved_high`/`resolved_medium`/...) are unaffected — the three new fields are additive, with
+backward-compatible defaults (`[]` / `0` / `0`) on the single-session response below.
+
+| Field | Type | Added | Meaning |
+|-------|------|-------|---------|
+| `severity_transitions` | `SeverityTransitionResponse[]` | v5.18 | One entry per `(host, port, protocol)` present in both sessions whose severity changed. Each entry has `host`, `port`, `protocol`, `previous_severity`, `current_severity`. An endpoint listed here is excluded from `new_findings_sample`/`resolved_findings_sample` — it did not appear or disappear, it changed. |
+| `new_total` | `int` | v5.18 | Severity-agnostic count of newly appeared `(host, port, protocol)` keys (`len(new_keys)`). Stays non-zero even when every row's severity is `NULL`, unlike the `new_high`/`new_medium`/`new_low` buckets. |
+| `resolved_total` | `int` | v5.18 | Severity-agnostic count of `(host, port, protocol)` keys present in the previous session but not the current one (`len(resolved_keys)`). Same non-zero-even-without-severity guarantee as `new_total`. |
 
 ### Single-session response (D-06)
 
@@ -89,15 +105,32 @@ When fewer than two distinct sessions exist, `GET /api/trends` returns HTTP 200 
   "scan_errors_new_count": 0,
   "scan_errors_resolved_count": 0,
   "new_findings_sample": [],
-  "resolved_findings_sample": []
+  "resolved_findings_sample": [],
+  "severity_transitions": [],
+  "new_total": 0,
+  "resolved_total": 0
 }
 ```
 
 `score_delta` is JSON `null`, NOT `0` — `null` signals "no comparison available", which the dashboard renders as the baseline empty state.
 
-### Match key (D-03)
+### Match key (D-03, re-keyed in Phase 178 / IDENT-02)
 
-Findings are matched across sessions by the tuple `(host, port, protocol, severity)`. A finding is "new" if it appears in the current session but not the previous. A finding is "resolved" if it appears in the previous session but not the current. A severity change on the same `(host, port, protocol)` surfaces as one resolved entry + one new entry.
+**As of v5.18**, findings are matched across sessions by the tuple `(host, port, protocol)` —
+severity is NOT part of the match key. A finding is "new" if its key appears in the current
+session but not the previous. A finding is "resolved" if its key appears in the previous session
+but not the current. Severity is carried alongside the key (not embedded in it), so a severity
+change at an unchanged `(host, port, protocol)` no longer surfaces as one resolved entry plus one
+new entry — it surfaces as a single `severity_transitions` entry instead. See "Wire format" above
+for the field.
+
+**Why this changed:** severity is populated only by the three cloud connectors; on a typical scan
+database the large majority of `crypto_endpoints` rows carry `severity IS NULL`. Before Phase 178
+the match key included severity AND a filter dropped every `severity IS NULL` row before the
+comparison ran, which together emptied both session's key sets by construction — every trend
+report showed 0 new / 0 resolved regardless of real change. The `severity IS NULL` filter was
+removed and severity was moved out of the key so the delta reflects real endpoint-level movement;
+see `docs/report-interpretation.md` §15 for the client-facing explanation.
 
 ### Severity buckets (D-05)
 
