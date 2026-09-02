@@ -161,7 +161,7 @@ Plans:
 - [x] 177-03-PLAN.md — Wave 2 · RELEASE-01 · Announced Homebrew-global orphan cleanup (user-gated), venv-only runbook note, RELEASE-01 evidence correction
 - [x] 177-04-PLAN.md — Wave 2 · RELEASE-02, RELEASE-03 · Bump to 5.18.0 with the editable reinstall; hand-written CHANGELOG `[5.18.0]`; README banner + one What's New in v5.18
 - [x] 177-05-PLAN.md — Wave 3 · RELEASE-03 · UAT-SERIES header/UAT-1-02 bump + Series 177; ROADMAP untagged notes reframed as history; Obsidian vault sync (LIVE-03)
-- [ ] 177-06-PLAN.md — Wave 4 · RELEASE-02, ADVISORY-01 · Full-suite phase gate, ADVISORY-01 score-firewall proof, pre-tag gate readiness table
+- [x] 177-06-PLAN.md — Wave 4 · RELEASE-02, ADVISORY-01 · Full-suite phase gate, ADVISORY-01 score-firewall proof, pre-tag gate readiness table
 - [ ] 177-07-PLAN.md — Wave 5 · RELEASE-02, RELEASE-03 · `workflow_dispatch` no-publish dry-run (user-approved), then the three-component `v5.18.0` tag handoff — **the user pushes, Claude does not**
 
 ### Phase 178: Finding Identity Repair
@@ -277,7 +277,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 177. Release Toolchain Repair | 5/7 | In Progress|  |
+| 177. Release Toolchain Repair | 6/7 | In Progress|  |
 | 178. Finding Identity Repair | 0/? | Not started | — |
 | 179. Remediation Item Model | 0/? | Not started | — |
 | 180. Closure Verification | 0/? | Not started | — |
