@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 180-01-PLAN.md
-last_updated: "2026-09-02T23:40:24.160Z"
+stopped_at: Completed 180-02-PLAN.md
+last_updated: "2026-09-02T23:46:16.688Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 28
-  completed_plans: 21
+  completed_plans: 22
   percent: 60
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 180 (closure-verification) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 
 **179-05 complete (2026-09-02):** Documentation-only plan. `remediation_aliases:` documented in
@@ -657,6 +657,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 179 P04 | 55min | 3 tasks | 3 files |
 | Phase 179 P06 | 90min | 3 tasks | 6 files |
 | Phase 180 P01 | 15min | 3 tasks | 4 files |
+| Phase 180 P02 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -978,6 +979,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 179]: Phase 179 full-suite gate: reproduced carried DEFER-172-01 baseline exactly after fixing a real phase-179-caused UAT-179-07 format regression; 3803+74=3877 passed reconciles
 - [Phase 180]: D-13a: target_set_digest hashes cfg.targets (configured spec), not observed hosts — stable across same-estate rescan, discriminates across estates
 - [Phase 180]: D-13c: SCOPE_SIGNATURE_VERSION bumped to 2.0.0 so a pre-Phase-180 signature row can never compare equal to a post-Phase-180 row
+- [Phase 180]: 180-02: EO 14412 PQC deadline catalog (8th staleness gate, 90-day cadence); PKE ambiguity resolved per-slug via drift-guarded overlay reusing classify_algorithm(), CNSA 2.0 omitted (media.defense.gov 403)
 
 ### Pending Todos
 
@@ -1147,8 +1149,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T23:40:24.145Z
-Stopped at: Completed 180-01-PLAN.md
+Last session: 2026-09-02T23:46:16.681Z
+Stopped at: Completed 180-02-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
