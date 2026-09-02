@@ -1,7 +1,14 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-02 (v5.18 Phase 177 — Release Toolchain Repair, plan 177-08: `v5.18.0`
+**Last Updated:** 2026-09-02 (v5.18 Phase 178 — Finding Identity Repair, plan 178-07: Series 178
+added (UAT-178-01..03, ALL PASS) for IDENT-01 fingerprint day-boundary stability, IDENT-02 trend
+non-vacuity on all-NULL-severity data, and severity-transition reporting. `UAT-9-09` updated in
+place — the trend-report match key changed from `(host, port, protocol, severity)` to
+`(host, port, protocol)`, and its Expected/Pass Criteria now cite the new `severity_transitions`/
+`new_total`/`resolved_total` wire-format fields. IDENT-01, IDENT-02, IDENT-03 closed by hand in
+`.planning/REQUIREMENTS.md`; ADVISORY-01 remains open (standing constraint, Phases 177-181).
+Earlier: v5.18 Phase 177 — Release Toolchain Repair, plan 177-08: `v5.18.0`
 shipped for real — the user pushed the tag, `release.yml` run 33656116783 fired on a `push` event
 and completed green across all three jobs, and PyPI now lists `5.18.0` as `latest`. Series 177's
 three release-verification cases were re-executed against that real release and flipped from
@@ -5000,9 +5007,9 @@ CLI-side reproduction of this case could exist at all) is an explicitly deferred
 
 ---
 
-### UAT-9-09: Trend Report — Score Delta + New/Resolved Counts (Phase 31)
+### UAT-9-09: Trend Report — Score Delta + New/Resolved Counts (Phase 31, re-keyed Phase 178)
 
-> Added Phase 31 (2026-04-26): Validates TREND-01/02/03 — compute_trend_report() correctly identifies score delta and per-severity new/resolved finding counts between the two most recent distinct scan sessions, via (host, port, protocol, severity) match key.
+> Added Phase 31 (2026-04-26): Validates TREND-01/02/03 — compute_trend_report() correctly identifies score delta and new/resolved finding counts between the two most recent distinct scan sessions. **Updated Phase 178 (2026-09-02, IDENT-02):** the match key is now `(host, port, protocol)` — severity was removed from the key because it is populated only by the three cloud connectors and a `severity IS NOT NULL` filter on the old key emptied every real-scan delta by construction. A HIGH→MEDIUM change at an unchanged endpoint now surfaces once, in `severity_transitions`, instead of as one resolved + one new. See `docs/intelligence-schema.md` §TrendReport and `docs/report-interpretation.md` §15.
 
 **Prerequisites:** SQLite DB with at least 2 distinct scan sessions completed (run quirk twice against any chaos lab profile, with at least 1 second between runs).
 
@@ -5012,20 +5019,21 @@ CLI-side reproduction of this case could exist at all) is an explicitly deferred
 3. `curl -s http://localhost:8000/api/trends | jq .` — capture response.
 
 **Expected:**
-- HTTP 200 with flat response fields: `current_session_ts`, `previous_session_ts`, `current_score`, `previous_score`, `score_delta`, `new_high`, `new_medium`, `new_low`, `resolved_high`, `resolved_medium`, `resolved_low`, `scan_errors_new_count`, `scan_errors_resolved_count`, `new_findings_sample`, `resolved_findings_sample`.
+- HTTP 200 with flat response fields: `current_session_ts`, `previous_session_ts`, `current_score`, `previous_score`, `score_delta`, `new_high`, `new_medium`, `new_low`, `resolved_high`, `resolved_medium`, `resolved_low`, `scan_errors_new_count`, `scan_errors_resolved_count`, `new_findings_sample`, `resolved_findings_sample`, and (Phase 178) `severity_transitions`, `new_total`, `resolved_total`.
 - `previous_session_ts` is non-null when ≥2 sessions exist; `score_delta` is a non-null integer (positive, negative, or zero).
-- `new_high`/`new_medium`/`new_low` and `resolved_high`/`resolved_medium`/`resolved_low` are non-negative integers (note: `new_high` and `resolved_high` bucket both CRITICAL and HIGH severity findings).
+- `new_high`/`new_medium`/`new_low` and `resolved_high`/`resolved_medium`/`resolved_low` are non-negative integers and can legitimately be all-zero when every underlying row has NULL severity — `new_total`/`resolved_total` are the severity-agnostic counterparts that still report real movement in that case.
 - Sample arrays are length-capped at 5.
 
 **Pass Criteria:**
-- `python -m pytest tests/test_intelligence_trends.py tests/test_dashboard_trends.py -q` is green
-- Response schema matches docs/intelligence-schema.md TrendReport block
+- `.venv/bin/pytest tests/test_intelligence_trends.py tests/test_dashboard_trends.py tests/test_trends_non_vacuity.py -q` is green
+- Response schema matches docs/intelligence-schema.md TrendReport block, including the three Phase 178 fields
 - Sample arrays do not contain INFO-severity rows (D-05 — INFO is excluded from buckets)
 - scan_errors_new_count and scan_errors_resolved_count are reported separately from the severity buckets (D-04 — scan_error rows excluded from finding delta)
+- On a seeded two-scan fixture with `severity=None` on every row, `new_total`/`resolved_total` are non-zero (IDENT-02 non-vacuity — see UAT-178-02)
 
-**Result:** - [x] PASS (2026-08-27 tests/test_intelligence_trends.py tests/test_dashboard_trends.py exit 0, 19 passed)  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________  
-**Notes:**
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_intelligence_trends.py tests/test_dashboard_trends.py tests/test_trends_non_vacuity.py -q` — 24 passed; re-verified against the Phase 178 re-keyed match key and new wire-format fields)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (178-07 phase-close plan execution)
+**Notes:** Superseded the stale `(host, port, protocol, severity)` match-key description carried since Phase 31 — see Series 178 for the three new Phase 178 cases this update introduces.
 
 ---
 
@@ -21170,3 +21178,135 @@ published `v5.18.0` release: PyPI JSON API + a genuine clean-venv install, PyPI'
 provenance/integrity endpoint (case text corrected — see UAT-177-02 above), and the pushed
 three-component tag plus a green `push`-event `release.yml` run. No disposition here was
 manufactured against absent evidence — each PASS cites the literal command output that proves it.
+
+---
+
+## Series 178: Finding Identity Repair (Phase 178 — v5.18)
+
+> Added Phase 178 (2026-09-02): Validates IDENT-01, IDENT-02, IDENT-03 — a finding keeps one
+> identity across re-scans (fingerprint stability), the trend report proves non-vacuous movement
+> on data with no severity, and a severity change reports as a transition rather than a
+> close-plus-reopen pair. ADVISORY-01 firewall proof (the phase gate itself) is not a UAT case —
+> it is machine-enforced by `tests/test_cve_score_guard.py`, covered directly in
+> `.planning/phases/178-finding-identity-repair/178-07-SUMMARY.md`.
+
+### UAT-178-01: Cert-Expiry Finding Dispatched Two Consecutive Days Produces ONE Ticket (IDENT-01)
+
+**ID:** UAT-178-01
+**Title:** A cert-expiry finding's fingerprint is stable across a simulated day boundary
+**Maps to:** IDENT-01
+
+**What to test:** the same certificate-expiry finding, whose title interpolates a day-count that
+decrements daily (`"Certificate expiring in {N} day(s)"`), produces the SAME
+`TicketingChannel.compute_fingerprint` hash at `days_to_expiry=30` and `days_to_expiry=29` — i.e.
+across a simulated day boundary a real dispatch would cross. This is the fix for the pre-Phase-178
+defect where every day's scan minted a fresh Jira ticket for the same still-open finding.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_ticketing_fingerprint_stability.py::test_cert_expiry_fingerprint_stable_across_day_boundary -q
+```
+
+**Pass Criteria:**
+- The test passes — the fingerprint computed for `days_to_expiry=30` equals the fingerprint
+  computed for `days_to_expiry=29` at the same host:port.
+- `tests/test_ticketing_fingerprint_stability.py::test_cert_expiry_fingerprint_differs_across_hosts`
+  and `::test_two_distinct_container_libraries_do_not_collide` also pass in the same run — proving
+  the stability fix did not widen the fingerprint into a collision (T-178-01).
+
+**Falsifiability:** this case turns red if `compute_fingerprint` reverts to hashing the raw,
+unnormalized title, or if the normalizer collapses two genuinely different findings (e.g. two
+different vulnerable container libraries at the same host:port) into one fingerprint.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_ticketing_fingerprint_stability.py -q` — 5 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (178-07 phase-close plan execution)
+**Notes:** This is a fixture-level proof, not a live Jira/ServiceNow dispatch — reading back
+already-issued ticket state is explicitly out of scope per `.planning/REQUIREMENTS.md`. The
+one-time re-key of already-issued tickets is documented as expected operator-visible behavior in
+`docs/operators-guide.md` §14.1, not independently re-verified against a live tracker here (see
+`178-RESEARCH.md` / `178-VALIDATION.md` "Manual-Only Verifications" — this exact case is named
+there as out-of-scope to automate).
+
+---
+
+### UAT-178-02: `/api/trends` Reports Non-Zero New/Resolved Totals With Zero Severity Data (IDENT-02)
+
+**ID:** UAT-178-02
+**Title:** Trend delta is non-vacuous on a two-scan dataset whose rows carry no severity
+**Maps to:** IDENT-02
+
+**What to test:** a seeded two-scan fixture where every row has `severity=None` (matching real
+scan-database shape — severity is populated only by the three cloud connectors) still produces a
+non-empty, correctly-keyed delta. Before Phase 178, a `severity IS NOT NULL` filter on a
+`(host, port, protocol, severity)` match key emptied both session's key sets before the comparison
+ever ran, so every real scan reported 0 new / 0 resolved regardless of actual change — while every
+existing test passed vacuously because they all seeded a non-null severity string.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_trends_non_vacuity.py::test_all_null_severity_delta_is_not_vacuous \
+  tests/test_trends_non_vacuity.py::test_all_null_severity_counts_are_reported_not_silently_zero \
+  tests/test_trends_non_vacuity.py::test_protocol_null_does_not_reintroduce_vacuity -q
+```
+
+**Pass Criteria:**
+- All three tests pass.
+- `test_all_null_severity_delta_is_not_vacuous` asserts a SPECIFIC non-empty delta (named
+  new/resolved endpoints), not merely `len(delta) > 0` — a test that can only fail on true vacuity,
+  not on the presence of any single truthy value.
+- `new_total`/`resolved_total` are non-zero even though every row's severity is `NULL`.
+
+**Falsifiability:** this case turns red if the `severity IS NOT NULL` filter is reintroduced
+anywhere in the match path, or if `protocol=None` rows are silently dropped from the key
+(re-collapsing a different NULL-shaped vacuity).
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_trends_non_vacuity.py -q` — 5 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (178-07 phase-close plan execution)
+**Notes:** Fixture-level proof against an in-memory SQLite session; no live chaos lab needed
+(matches the Phase 44 `UAT-44-04` precedent for trend-report testing).
+
+---
+
+### UAT-178-03: HIGH→MEDIUM Change Appears as a Severity Transition, Not a Close-Plus-Reopen (IDENT-02)
+
+**ID:** UAT-178-03
+**Title:** A severity change at an unchanged endpoint is one `severity_transitions` entry, not a
+new+resolved pair
+**Maps to:** IDENT-02
+
+**What to test:** D-03's original intent — that a HIGH→MEDIUM change at the same `(host, port,
+protocol)` should be visible as a partial-remediation signal — is preserved after removing
+severity from the match key. It is now served by a dedicated `severity_transitions` list instead
+of by keying on severity: the endpoint is excluded from `new_findings_sample` /
+`resolved_findings_sample` and appears exactly once in `severity_transitions` with its previous
+and current severity.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_trends_non_vacuity.py::test_severity_transition_reported_once_not_as_new_plus_resolved -q
+```
+
+**Pass Criteria:**
+- The test passes: a seeded endpoint whose severity changes from HIGH to MEDIUM between two
+  sessions appears in `severity_transitions` exactly once, with `previous_severity="HIGH"` and
+  `current_severity="MEDIUM"`.
+- That same endpoint does NOT also appear in `new_findings_sample` or `resolved_findings_sample`
+  (no double-count).
+
+**Falsifiability:** this case turns red if a severity change at an unchanged endpoint is reported
+as both a resolved and a new finding, or if `severity_transitions` is empty for a fixture that
+seeds a genuine severity change.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_trends_non_vacuity.py::test_severity_transition_reported_once_not_as_new_plus_resolved -q` — 1 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (178-07 phase-close plan execution)
+**Notes:** See `docs/report-interpretation.md` §15 for the client-facing explanation of how to
+read a severity-transition entry.
+
+---
+
+**Series 178 disposition.** All three cases are `[x] PASS`, executed 2026-09-02 against the
+fixture-level regression suites landed by plans 178-01/02/04/05. IDENT-01/02/03 close by hand in
+`.planning/REQUIREMENTS.md` on this same phase-close plan (178-07) — see that file's traceability
+table for the evidence citation. ADVISORY-01 is a standing constraint across Phases 177-181 and is
+NOT dispositioned by this series — it remains open, machine-enforced by
+`tests/test_cve_score_guard.py`.
