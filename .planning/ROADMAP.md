@@ -233,7 +233,15 @@ state.
      resolution is explicitly **not** attempted — `(host, port)` breaks on DHCP, hostname-vs-IP,
      VIPs, and container churn. Operator-supplied aliases carry that burden with the human in the
      loop. "9 closed, 4 open, 12 not observed" is defensible; "21 closed" is a liability.
-**Plans**: TBD
+**Plans**: 6 plans in 5 waves
+
+Plans:
+- [ ] 179-01-PLAN.md — Three new tables via create_all(checkfirst=True) + the 14-entry kind-slug closed set and not_observed vocabulary
+- [ ] 179-02-PLAN.md — remediation_aliases: config section (broker_credentials precedent), defensive parsing, no auto-learning
+- [ ] 179-03-PLAN.md — Scan-time item + fingerprint join-row persistence; ADVISORY-01 structural AST negative control
+- [ ] 179-04-PLAN.md — Scope signature (discrete columns + SHA256 digest) and positively-asserted per-family probe health
+- [ ] 179-05-PLAN.md — Docs (config option + sensor-origin known limitation), roadmap follow-up, Obsidian sync
+- [ ] 179-06-PLAN.md — Series 179 UAT, hand-edited REMED close-out (ADVISORY-01 stays open), blocking full-suite gate
 
 ### Phase 180: Closure Verification
 
