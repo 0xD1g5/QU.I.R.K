@@ -176,3 +176,9 @@ The tree is at its known, reproducible baseline: exactly one carried failure (`D
 ---
 *Phase: 177-release-toolchain-repair*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/177-release-toolchain-repair/177-06-SUMMARY.md`
+- FOUND: commit `50428cd5` in `git log --oneline --all`
+- `git tag --list 'v5.18*'` confirmed empty
