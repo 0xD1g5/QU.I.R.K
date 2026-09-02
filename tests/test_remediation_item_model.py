@@ -284,8 +284,18 @@ def test_slug_for_title_exact_match_and_none_for_excluded() -> None:
 def test_item_states_and_default() -> None:
     from quirk.intelligence.remediation import ITEM_STATES, DEFAULT_ITEM_STATE
 
-    assert ITEM_STATES == ("open", "closed", "not_observed")
+    assert ITEM_STATES == ("open", "closed", "not_observed", "resurfaced")
     assert DEFAULT_ITEM_STATE == "not_observed"
+
+
+def test_open_like_states_includes_resurfaced() -> None:
+    from quirk.intelligence.remediation import ITEM_STATES, OPEN_LIKE_STATES
+
+    assert OPEN_LIKE_STATES == ("open", "resurfaced")
+    for state in OPEN_LIKE_STATES:
+        assert state in ITEM_STATES
+    assert "closed" not in OPEN_LIKE_STATES
+    assert "not_observed" not in OPEN_LIKE_STATES
 
 
 def test_item_progress_returns_fraction_not_boolean(tmp_path) -> None:
