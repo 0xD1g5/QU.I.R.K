@@ -5,6 +5,73 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.18.0] - 2026-09-02
+
+The first release since 5.15.0 (2026-08-26). Two milestones of user-visible fixes — v5.16 Review
+Drain & Gate Integrity (Phases 164-171) and v5.17 Defect Drain (Phases 172-176) — were developed,
+merged, and archived but never tagged; both ship here as one release rather than being
+retro-published separately, since their content was never a separable source-tree state. This
+release also includes Phase 177's own release-toolchain repair.
+
+### Added
+
+- **UAT corpus integrity, permanently enforced** (v5.16, UATREC-03/UATREC-04) — a standing gate
+  (`tests/test_uat_zero_undispositioned_gate.py`) keeps all 666 UAT case headings dispositioned
+  going forward; the corpus itself went from 377 undispositioned cases to zero.
+- **First-run correctness** (v5.16, FIRSTRUN-01/02/03) — the command the dashboard's empty state
+  instructs a new user to run now exists and works; a mistyped `--targets` argument fails with a
+  coded error (`TARGET-001`/`TARGET-002`) instead of an uncaught `FileNotFoundError` traceback.
+- **Coded fuzzing safety** (v5.17, SAFE-01/SAFE-02) — `--fuzz` hard-aborts before issuing any
+  request when stdin is non-interactive, printing a coded error and exiting non-zero; `--fuzz-budget`
+  is enforced at its documented 500-request ceiling rather than only the 50 default.
+
+### Fixed
+
+- **Three screen-reader-blocking accessibility violations** (v5.16, A11Y-02) — icon-only radix
+  dropdown triggers now carry discernible labels; all 291 previously-baselined axe violations
+  carry a recorded impact level and WCAG reference instead of accumulating silently (A11Y-01).
+- **A CRITICAL evidence-injection vulnerability** (v5.16, CR-01, found during Phase 169 code
+  review) — a newline-splicing defect in `scripts/uat_disposition_apply.py`'s evidence-field
+  validation could fabricate a fully-`[x] PASS` UAT case past all three anti-fabrication guards at
+  once. Fixed in two layers, with 8 regression tests proven to fail against the pre-fix code.
+- **A macOS `fork()`-after-`Network.framework` SIGSEGV** affecting subprocess-spawning CLI tests
+  under full-suite load (v5.16, GATE-03) — every CLI-runner test file now goes through a shared
+  `run_fork_safe()` helper, forward-locked by an AST-based gate requiring `close_fds=False`.
+- **Raw target URL disclosure in spec-parsing errors** (v5.17, SAFE-03) — `SpecParsingError` and
+  its sibling error paths now report a redacted URL preview, never the full raw target.
+- **Dashboard score disagreed with the CLI score under non-default score profiles** (v5.17,
+  DASH-06) — a dashboard-launched scan's `list_scans` call site now passes the same `calibration`
+  its sibling call site already did, so `strict`/`balanced`/`lenient` dashboard scores match their
+  CLI scorecards.
+- **SSH scanner silently degraded to banner grabs** (v5.17, TRIAGE-176-03, found during the
+  Phase 176 chaos-lab re-run) — `_run_ssh_audit` invoked `ssh-audit` with host and port as two
+  positional arguments when the tool accepts one `host:port` target, so the invocation exited 2
+  with empty stdout and every SSH scan since the ssh-audit integration shipped had silently lost
+  `ssh_audit_json` (and the algorithm data it feeds to the CBOM, QRAMM evidence bridge, hardware
+  scanner, and dashboard). Fixed with an argv-asserting regression test; live-verified against the
+  chaos lab (0 -> 7218 bytes, 30 algorithms classified).
+- **Release toolchain repair** (Phase 177, this release) — a package-name-migration residue left
+  three distributions (`quirk` 4.4.0, `qu-i-r-k` 4.10.0, plus an orphan Homebrew-global `quirk`
+  4.0.0 editable install) all claiming the `quirk` import package alongside the canonical
+  `quirk-scanner`, so `importlib.metadata.packages_distributions()['quirk']` could resolve to a
+  stale distribution. Purged, with a new regression guard
+  (`tests/test_version.py::test_single_distribution_provides_quirk`) asserting exactly one
+  distribution claims `quirk` going forward.
+
+### Changed
+
+- **`run_stats.timings_sec` no longer carries a stale key for a scanner phase that did not run**
+  (v5.17, SCOPE-02) — e.g. `broker_scanning` no longer persists with a nonzero value when the row
+  count is 0.
+- **CHANGELOG and cross-phase references backfilled and repaired** (v5.16, TRACE-01..07) — v5.9
+  through v5.14 each gained an entry, v5.13/v5.14 honestly recorded as developed-but-never-released
+  rather than silently absent, and 22 stale sibling-phase references were rewritten to their real
+  archived paths.
+- **Nine UAT cases corrected where the product was right and the case was wrong** (v5.17,
+  CASEFIX-01..05) — including `UAT-6-08`'s cryptographically-incorrect claim that Ed25519 is
+  quantum-vulnerable, and the `UAT-1-02` false FAIL caused by an unsatisfiable `uat_runner.py`
+  version-string match.
+
 ## [5.15.0] - 2026-08-26
 
 Lifecycle Tail Drain — Phases 161-163. Note that 5.9 through 5.14 were developed but
