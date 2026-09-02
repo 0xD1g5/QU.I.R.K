@@ -663,6 +663,11 @@ class ScanScopeSignature(Base):
     per-probe-family health, never inferred from exit status —
     TRIAGE-176-03 precedent).
 
+    ``target_set_digest`` (Phase 180 D-13) stores a SHA256 digest of the
+    canonicalised target spec only — never a host/FQDN/CIDR/IP literal
+    (T-180-04). Without it, two different client estates scanned under the
+    same profile produced an identical digest.
+
     Deviation from CONTEXT D-06's general nullable=True guidance:
     ``scan_run_id`` and ``digest`` are deliberately NOT NULL here, for the
     same reason as RemediationItem.state — see that class's docstring.
@@ -679,6 +684,7 @@ class ScanScopeSignature(Base):
     extras_present       = Column(Text, nullable=True)   # canonical JSON list
     credentials_present  = Column(Text, nullable=True)   # canonical JSON list of credential-KIND names only — never values (D-06, T-179-05)
     sensor_set           = Column(Text, nullable=True)   # canonical JSON list
+    target_set_digest    = Column(String(64), nullable=True)  # Phase 180 D-13: SHA256 over the canonicalised target spec (fqdns/cidrs/include_ips/exclude_ips) — host/CIDR/IP literals are NEVER stored here, only the digest (T-180-04). Nullable per D-06: rows written under signature_version 1.0.0 (pre-Phase-180) predate this column.
     probe_health_json    = Column(Text, nullable=True)   # populated by Plan 04
     digest               = Column(String(64), nullable=False)  # SHA256 of a canonical serialisation of the above
     created_at           = Column(DateTime, nullable=True)

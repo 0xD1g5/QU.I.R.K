@@ -209,6 +209,13 @@ _PHASE146_SCANJOB_COLUMNS: tuple[tuple[str, str], ...] = (
     ("discovery_batch_total", "INTEGER"),
     ("discovery_hosts_checked", "INTEGER"),
 )
+_PHASE180_SCOPE_SIGNATURE_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 180 D-13: target-set digest column on scan_scope_signatures.
+    # This is the SECOND pure _ensure_*_table table (after scan_jobs) to
+    # also need an additive migration for an existing DB. Nullable — rows
+    # written under signature_version 1.0.0 (pre-Phase-180) predate it.
+    ("target_set_digest", "VARCHAR(64)"),
+)
 
 
 def _ensure_columns(
@@ -279,6 +286,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_drift_events", _CHECKIN_DRIFT_EVENT_COLUMNS),  # Phase 159 WR-03 fix
     ("crypto_endpoints", _RVW003_SCAN_SESSION_COLUMNS),       # RVW-003 scan session identity
     ("scheduled_scans",  _PHASE162_SCHEDULE_COLUMNS),         # Phase 162 HWLC-20
+    ("scan_scope_signatures", _PHASE180_SCOPE_SIGNATURE_COLUMNS),  # Phase 180 D-13
 )
 
 

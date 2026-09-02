@@ -500,6 +500,7 @@ def test_persist_scope_signature_round_trip_digest_matches(tmp_path):
             "extras_present": json.loads(row.extras_present),
             "credentials_present": json.loads(row.credentials_present),
             "sensor_set": json.loads(row.sensor_set),
+            "target_set_digest": row.target_set_digest,
         }
         recomputed_digest = compute_signature_digest(recomputed_sig)
         assert recomputed_digest == row.digest

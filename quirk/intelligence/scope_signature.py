@@ -41,6 +41,34 @@ comparable-by-default. This is why the signature is written at scan
 COMPLETION rather than scan start: a scan that crashes before producing
 endpoints leaves no signature row at all, which is the honest outcome —
 Phase 180 must treat a missing signature as not-comparable.
+
+Phase 180 (D-13) — the estate-blind defect and its fix: the original six
+fields above capture scan CONFIGURATION only — nothing identifying WHICH
+ESTATE was scanned. Two different clients scanned with the same profile
+therefore produced an IDENTICAL digest, so an absent finding in client B's
+re-scan would read as client A's closure — the exact false-closure failure
+this module exists to prevent, arriving through an axis nobody guarded.
+``target_set_digest`` closes this: a SHA256 digest computed over the
+canonicalised, sorted ``cfg.targets`` spec (fqdns/cidrs/include_ips/
+exclude_ips), added as a seventh ``_DIGEST_FIELDS`` member.
+
+D-13a — the digest is over the CONFIGURED target spec, not the observed
+host set. Hashing the scanned ``CryptoEndpoint.host`` set was rejected: the
+very remediation this phase detects (a host decommissioned, a service moved
+off a port) CHANGES the observed host set, which would change the digest
+and make the two scans incomparable — refusing the exact closure this phase
+exists to compute. ``cfg.targets`` is stable across a re-scan of the same
+estate with the same config/CLI, and differs across estates, which is
+precisely the stability/discrimination property required.
+
+D-13b — store a digest, never the host list. No FQDN, CIDR, or IP literal
+is ever assigned into any signature column, mirroring
+``credentials_present``'s kind-labels-only discipline (T-179-05).
+
+D-13c — ``SCOPE_SIGNATURE_VERSION`` is bumped to ``"2.0.0"``.
+``signature_version`` is already inside ``_DIGEST_FIELDS``, so this alone
+guarantees a pre-Phase-180 row can never compare equal to a post-Phase-180
+row, even if every other field happens to match.
 """
 from __future__ import annotations
 
@@ -60,7 +88,8 @@ logger = logging.getLogger(__name__)
 # Bump whenever the field set captured by build_scope_signature() changes, so
 # Phase 180 can refuse to compare signatures written under different field
 # sets rather than silently comparing incomplete records (T-179-15).
-SCOPE_SIGNATURE_VERSION = "1.0.0"
+# 2.0.0 (Phase 180 D-13c): target_set_digest added — see module docstring.
+SCOPE_SIGNATURE_VERSION = "2.0.0"
 
 # Exactly the fields the digest is computed over. probe_health_json is
 # deliberately NOT one of them — see compute_signature_digest()'s docstring.
@@ -71,16 +100,51 @@ _DIGEST_FIELDS = (
     "extras_present",
     "credentials_present",
     "sensor_set",
+    "target_set_digest",
 )
 
 
+def _compute_target_set_digest(cfg: Any) -> str:
+    """Phase 180 D-13a/b: SHA256 digest over the canonicalised target spec.
+
+    For each of fqdns/cidrs/include_ips/exclude_ips: lowercase + strip every
+    entry, drop empties, dedupe, sort. Serialise with
+    json.dumps(payload, sort_keys=True, separators=(",", ":")) then sha256
+    hexdigest. An absent or None cfg.targets yields the digest of the
+    all-empty-lists payload — a stable, honest "no declared targets" value,
+    never None (which would reintroduce a field that compares equal by
+    absence, T-180-06).
+
+    NEVER return or log the canonicalised lists themselves — only the
+    digest crosses out of this function (D-13b, T-180-04).
+    """
+    targets = getattr(cfg, "targets", None)
+
+    def _clean(values: Any) -> list:
+        if not values:
+            return []
+        cleaned = {str(v).strip().lower() for v in values if str(v).strip()}
+        return sorted(cleaned)
+
+    payload = {
+        "fqdns": _clean(getattr(targets, "fqdns", None)),
+        "cidrs": _clean(getattr(targets, "cidrs", None)),
+        "include_ips": _clean(getattr(targets, "include_ips", None)),
+        "exclude_ips": _clean(getattr(targets, "exclude_ips", None)),
+    }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def build_scope_signature(cfg: Any, session: Any = None) -> Dict[str, Any]:
-    """Build the six discrete scope-signature fields from a scan's config.
+    """Build the seven discrete scope-signature fields from a scan's config.
 
     Returns a dict with keys: signature_version, port_scope, profile,
-    extras_present, credentials_present, sensor_set. The three list-valued
-    fields are SORTED lists of strings so the digest is stable regardless of
-    dict/set iteration order.
+    extras_present, credentials_present, sensor_set, target_set_digest. The
+    three list-valued fields are SORTED lists of strings so the digest is
+    stable regardless of dict/set iteration order. target_set_digest is a
+    SHA256 hex digest over the canonicalised target spec (D-13) — never the
+    host/CIDR/IP literals themselves.
     """
     port_scope = getattr(cfg.scan, "nmap_port_scope", None)
     if not port_scope:
@@ -132,11 +196,12 @@ def build_scope_signature(cfg: Any, session: Any = None) -> Dict[str, Any]:
         "extras_present": extras_present,
         "credentials_present": credentials_present,
         "sensor_set": sensor_set,
+        "target_set_digest": _compute_target_set_digest(cfg),
     }
 
 
 def compute_signature_digest(sig: Dict[str, Any]) -> str:
-    """Deterministic SHA256 hex digest over the six scope-signature fields.
+    """Deterministic SHA256 hex digest over the seven scope-signature fields.
 
     Mirrors quirk.ticketing.base.TicketingChannel.compute_fingerprint's
     canonicalisation shape: json.dumps(payload, sort_keys=True,
@@ -304,6 +369,30 @@ _FAMILY_SPEC: Dict[str, _FamilySpec] = {
 }
 
 
+# Phase 180 D-14: reverse index built once at import from _FAMILY_SPEC, never
+# a second hand-written protocol->family table (that duplication class has
+# already been corrected three times this milestone — three normalizer
+# copies in 178, two alias tables in 178, _SLUG_PRIORITY in 179).
+_PROTOCOL_TO_FAMILY: Dict[str, str] = {
+    protocol: family
+    for family, spec in _FAMILY_SPEC.items()
+    for protocol in spec.protocols
+}
+
+
+def family_for_protocol(protocol: str) -> Optional[str]:
+    """Phase 180 D-14: PUBLIC protocol -> probe-family lookup.
+
+    Returns the _FAMILY_SPEC family name whose .protocols contains
+    `protocol`, else None. Added so Phase 180's closure module can resolve
+    a CryptoEndpoint.protocol to a probe family through a public function
+    rather than importing the private _FAMILY_SPEC directly — a rename in
+    this module would otherwise silently break a cross-module private-name
+    import with no deprecation contract.
+    """
+    return _PROTOCOL_TO_FAMILY.get(protocol)
+
+
 def assess_probe_health(
     cfg: Any, endpoints: Iterable[Any], run_stats: Optional[Dict[str, Any]]
 ) -> Dict[str, Dict[str, Any]]:
@@ -433,6 +522,7 @@ def persist_scope_signature(
                 sig["credentials_present"], sort_keys=True
             )
             row.sensor_set = json.dumps(sig["sensor_set"], sort_keys=True)
+            row.target_set_digest = sig["target_set_digest"]
             row.probe_health_json = json.dumps(health, sort_keys=True)
             row.digest = digest
             row.created_at = datetime.now(timezone.utc)
