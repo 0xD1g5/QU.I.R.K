@@ -533,6 +533,18 @@ def _ensure_scan_scope_signatures_table(engine) -> None:
     """
     Base.metadata.create_all(engine, checkfirst=True)
 
+def _ensure_remediation_closure_events_table(engine) -> None:
+    """Phase 180 CLOSE-02: create remediation_closure_events table if absent
+    (idempotent).
+
+    RemediationClosureEvent is registered on Base.metadata via import of
+    quirk.models. Uses Base.metadata.create_all with checkfirst=True — same
+    pattern as _ensure_vendor_pqc_trend_events_table. New table only — NOT new
+    columns, so _ensure_columns() / _ADDITIVE_MIGRATIONS deliberately do not
+    apply here.
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
 
 def init_db(db_path: str) -> Engine:
     """
@@ -574,6 +586,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_vendor_pqc_trend_events_table(engine)   # Phase 160 — HWLC-17
     _ensure_remediation_tables(engine)              # Phase 179 — REMED-01
     _ensure_scan_scope_signatures_table(engine)     # Phase 179 — REMED-02
+    _ensure_remediation_closure_events_table(engine)  # Phase 180 — CLOSE-02
     # Phase 107 D-02: explicit idempotent index on crypto_endpoints.sensor_id.
     # Column(index=True) + create_all(checkfirst=True) does NOT retro-add an
     # index to a pre-existing table, so this step is required for backward

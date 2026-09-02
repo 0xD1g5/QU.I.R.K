@@ -574,7 +574,7 @@ class RemediationItem(Base):
     not_observed, re-introducing the exact ambiguity REMED-03 exists to
     remove. Everything else on this table stays nullable per D-06.
 
-    state values: open | closed | not_observed (see ITEM_STATES).
+    state values: open | closed | not_observed | resurfaced (see ITEM_STATES).
     constituency values: fingerprint | severity | evidence_only.
     phase values: NOW | NEXT | LATER.
     """
@@ -616,7 +616,7 @@ class RemediationItemFingerprint(Base):
     finding_fingerprint would make a row that silently passes a comparison
     it never evaluated.
 
-    state values: open | closed | not_observed (see ITEM_STATES).
+    state values: open | closed | not_observed | resurfaced (see ITEM_STATES).
     finding_fingerprint is the Phase 178 SHA256 hex from
     TicketingChannel.compute_fingerprint — stable across re-scans because
     compute_fingerprint normalises the title before hashing.
@@ -640,6 +640,59 @@ class RemediationItemFingerprint(Base):
     finding_title       = Column(Text, nullable=True)                     # display only
     state               = Column(String(16), nullable=False)              # open | closed | not_observed — NOT NULL, see class docstring
     observed_at         = Column(DateTime, nullable=True)
+
+
+class RemediationClosureEvent(Base):
+    """Phase 180 Plan 03 (CLOSE-02): one APPEND-ONLY row per closure/resurface
+    state transition for a remediation fingerprint.
+
+    Never updated and never deleted — that append-only property is what
+    makes "closed once, regressed, closed again" survivable in a client
+    attestation instead of collapsing into a clean "closed" (D-19). D-19
+    rejected a `resurface_count` integer column on
+    `RemediationItemFingerprint` for exactly this reason: a counter records
+    *how many* transitions happened but not *when* or *against which prior
+    scan* — the same collapsing-history failure shape as folding
+    `resurfaced` into `closed` one abstraction level up. This table mirrors
+    the two existing event-table precedents in this file,
+    `HardwareDriftEvent` and `VendorPqcTrendEvent`.
+
+    No relationship() declarations and no ForeignKey — ``remediation_item_id``
+    is deliberately absent; ``scan_run_id``/``prior_scan_run_id``/``slug``/
+    ``finding_fingerprint`` are soft references only, matching the project's
+    existing scan_run_id / sensor_id convention (D-03).
+
+    ``event_type`` is validated at the WRITE SITE against
+    ``CLOSURE_EVENT_TYPES`` in ``quirk/intelligence/remediation.py``, never
+    free text (D-22, mirroring T-155-03's rule that the allowlist lives in
+    the writer module, not the model) — never a CHECK constraint here.
+
+    ``prior_scan_run_id`` NULL means no comparable prior scan existed for
+    this transition (e.g. the first scan that ever observed this
+    fingerprint).
+
+    Deliberately NO ``host``/``port`` columns (D-23): the joinable
+    ``remediation_item_fingerprints`` row (via ``scan_run_id``, ``slug``,
+    ``finding_fingerprint``) already carries them — duplicating a network
+    identifier into a second durable table with no consumer is gratuitous
+    identifier spread in an artifact that ships to a client (T-180-16).
+
+    event_type values: closed | resurfaced | reclosed (see
+    CLOSURE_EVENT_TYPES).
+    """
+
+    __tablename__ = "remediation_closure_events"
+
+    id                 = Column(Integer, primary_key=True, autoincrement=True)
+    slug               = Column(String(64), nullable=False, index=True)   # soft ref, no FK (D-03)
+    finding_fingerprint = Column(String(64), nullable=True, index=True)   # soft ref, no FK (D-03)
+    scan_run_id        = Column(String(64), nullable=True, index=True)    # the scan that OBSERVED the transition
+    prior_scan_run_id  = Column(String(64), nullable=True)                # the comparison basis; NULL = no comparable prior scan
+    event_type         = Column(String(32), nullable=False)               # closed | resurfaced | reclosed — validated at write site, see class docstring
+    from_state         = Column(String(16), nullable=True)
+    to_state            = Column(String(16), nullable=True)
+    reason             = Column(String(32), nullable=True)
+    observed_at        = Column(DateTime, nullable=False)
 
 
 class ScanScopeSignature(Base):

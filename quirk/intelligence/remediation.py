@@ -5,6 +5,14 @@ identity and state; it does NOT compute closure (Phase 180's two-sided
 condition — detected by a previous scan AND verified absent by the current
 one) and does NOT surface anything (Phase 181's CBOM/VEX/report/dashboard
 work).
+
+Phase 180 Plan 03: this module now also owns the four-member state
+vocabulary Phase 180 writes into (`resurfaced` added alongside
+`open`/`closed`/`not_observed`), the `OPEN_LIKE_STATES` counted-as-open
+grouping, and the `CLOSURE_EVENT_TYPES` write-site allowlist for
+`RemediationClosureEvent.event_type`. It still does not compute closure or
+resurface transitions itself — that decision lives in
+`quirk/intelligence/closure.py` (Plans 04/05).
 """
 from __future__ import annotations
 
@@ -104,9 +112,40 @@ REMEDIATION_CONSTITUENCY: Dict[str, Tuple[str, Tuple[str, ...]]] = {
 # ---------------------------------------------------------------------------
 # State vocabulary. D-12: an unmatched item defaults to not_observed, NEVER
 # closed — absence must never imply remediation.
+#
+# Phase 180 Plan 03 (CLOSE-02) — D-20: `resurfaced` is APPENDED as a fourth
+# member, not inserted alphabetically, so every pre-existing member keeps its
+# existing tuple index (a consumer that wrongly indexes the tuple keeps
+# working) while the exact-tuple drift guard in
+# tests/test_remediation_item_model.py still pins the literal value.
+#
+# `resurfaced` means a previously-`closed` item was detected again by a
+# later scan. It is COUNTED AS OPEN via `OPEN_LIKE_STATES` (D-21) and
+# REPORTED SEPARATELY — folding it silently into `open` would lose the
+# signal that remediation regressed, which is precisely the fact a client
+# attestation needs. A scope-signature mismatch can never produce
+# `resurfaced` either — the same hard refusal that governs closure:
+# comparing incomparable scans yields `not_observed` in both directions.
+#
+# The transition itself (deciding an item is newly `closed`, newly
+# `resurfaced`, or `reclosed` after a resurface) is NEVER decided here — that
+# is `quirk/intelligence/closure.py`'s job (Plans 04/05). This module only
+# owns the vocabulary those decisions are written into.
 # ---------------------------------------------------------------------------
-ITEM_STATES: Tuple[str, ...] = ("open", "closed", "not_observed")
+ITEM_STATES: Tuple[str, ...] = ("open", "closed", "not_observed", "resurfaced")
 DEFAULT_ITEM_STATE = "not_observed"
+RESURFACED_STATE = "resurfaced"
+
+# D-21: a named constant, not an inline `in ("open", "resurfaced")` at each
+# call site — a future counter that forgets `resurfaced` under-reports open
+# work visibly (import error / grep hit) rather than silently.
+OPEN_LIKE_STATES: Tuple[str, ...] = ("open", "resurfaced")
+
+# D-22: the event-type allowlist for RemediationClosureEvent.event_type
+# lives here (the writer module), never in quirk/models.py — mirrors
+# HardwareDriftEvent's T-155-03 precedent exactly. Validated at the write
+# site (Plan 04/05), never stored as free text.
+CLOSURE_EVENT_TYPES: Tuple[str, ...] = ("closed", "resurfaced", "reclosed")
 
 
 def slug_for_title(title: str) -> Optional[str]:
