@@ -195,7 +195,16 @@ reconciled or explicitly bounded.
      `quirk/dashboard/api/routes/scan.py` are proven to agree on finding identity, or their
      divergence is explicitly bounded and documented. Scope may be "prove they agree" rather than
      "merge them" — merging is the design-judgment refactor excluded since v5.16 as RVW-002.
-**Plans**: TBD
+**Plans**: 7 plans in 4 waves
+
+Plans:
+- [ ] 178-01-PLAN.md — IDENT-01 guards written RED first: day-boundary stability + T-178-01 fingerprint-collision
+- [ ] 178-02-PLAN.md — IDENT-02 guards written RED first: severity-NULL non-vacuity + severity-transition contract
+- [ ] 178-03-PLAN.md — IDENT-03 fingerprint-equality agreement tests + the written bounded-divergence record
+- [ ] 178-04-PLAN.md — Three normalizers collapse to one; all 22 titles classified; compute_fingerprint wired + docstring corrected
+- [ ] 178-05-PLAN.md — Trend delta re-keyed to (host, port, protocol); severity transitions and severity-agnostic totals
+- [ ] 178-06-PLAN.md — AST guard across BOTH derivation paths; TRIAGE-149 and skip_registry drift dispositioned
+- [ ] 178-07-PLAN.md — ADVISORY-01 firewall proof, docs + Obsidian sync, UAT-SERIES, planning ledger
 
 ### Phase 179: Remediation Item Model
 
