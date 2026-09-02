@@ -542,6 +542,63 @@ def test_persist_scope_signature_docstring_mentions_scan_run_id_and_sensor():
     assert "sensor" in doc
 
 
+def test_target_set_digest_column_added_by_additive_migration(tmp_path):
+    """Task 3: an existing pre-Phase-180 DB (scan_scope_signatures without
+    target_set_digest) gains the column via run_additive_migration, and a
+    second run is a no-op (idempotent)."""
+    from sqlalchemy import inspect as sa_inspect
+    from sqlalchemy import text
+
+    from quirk.db import get_engine, run_additive_migration
+
+    db_path = str(tmp_path / "legacy_scope_sig.db")
+    # init_db builds the FULL current schema (every table _ADDITIVE_MIGRATIONS
+    # walks); simulate "pre-Phase-180" by dropping just the new column off an
+    # otherwise-current scan_scope_signatures table.
+    engine = init_db(db_path)
+    with engine.begin() as conn:
+        conn.execute(
+            text("ALTER TABLE scan_scope_signatures DROP COLUMN target_set_digest")
+        )
+
+    insp = sa_inspect(engine)
+    before_cols = {c["name"] for c in insp.get_columns("scan_scope_signatures")}
+    assert "target_set_digest" not in before_cols
+
+    results = run_additive_migration(engine, dry_run=False)
+    added = {(r.table, r.column) for r in results if r.status == "added"}
+    assert ("scan_scope_signatures", "target_set_digest") in added
+
+    insp = sa_inspect(engine)
+    after_cols = {c["name"] for c in insp.get_columns("scan_scope_signatures")}
+    assert "target_set_digest" in after_cols
+
+    # Idempotent: second run reports already-present, adds nothing further.
+    results_2 = run_additive_migration(engine, dry_run=False)
+    scope_sig_results_2 = [r for r in results_2 if r.table == "scan_scope_signatures"]
+    assert all(r.status == "already-present" for r in scope_sig_results_2)
+
+
+def test_persisted_row_carries_target_set_digest(tmp_path):
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    cfg = _cfg_with_targets(fqdns=["a.example.com"])
+    endpoints = [CryptoEndpoint(host="h1", port=22, protocol="SSH")]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    persist_scope_signature(db_path, SCAN_RUN_ID, cfg, endpoints, run_stats)
+
+    with get_session(db_path) as session:
+        row = (
+            session.query(ScanScopeSignature)
+            .filter(ScanScopeSignature.scan_run_id == SCAN_RUN_ID)
+            .one()
+        )
+        assert row.target_set_digest is not None
+        assert len(row.target_set_digest) == 64
+        assert row.signature_version == "2.0.0"
+
+
 def test_run_scan_call_site_ordering_remediation_persist_then_scope_signature_then_reporting():
     import run_scan
 
