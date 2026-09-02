@@ -30,27 +30,40 @@
 - ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
-- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **deliberately untagged** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
+- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **developed and archived untagged, shipped inside v5.18.0** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
 - 🚧 **v5.18 Migration Execution** — Phases 177–181 (in progress, opened 2026-09-01)
-- ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **untagged**, same reason as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
+- ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside v5.18.0**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
 
-### v5.16 deliberately untagged (2026-08-28)
+### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
-v5.16 is archived but **not tagged and not released**, by explicit decision.
+v5.16 and v5.17 were each archived at development-complete without a tag or a PyPI release, by
+explicit decision — this section is the historical record of why, and of how that gap closed.
 
-`pyproject.toml` still reads `5.15.0` — v5.16 was an ops milestone and never bumped it. Tagging
-`v5.16.0` would have produced a tag whose source carries the wrong version string, which is exactly
-the v5.13/v5.14 defect recorded below. Bumping properly is blocked behind a deferred toolchain
-repair: a version bump alone fails `tests/test_version.py`, which needs `pip install -e . --no-deps`,
-and the local editable install is currently broken (stale `__editable__.quirk-4.0.0.pth`).
+`pyproject.toml` stayed at `5.15.0` through both milestones. v5.16 was an ops milestone and never
+bumped it; tagging `v5.16.0` at the time would have produced a tag whose source carried the wrong
+version string, exactly the v5.13/v5.14 defect recorded below. Bumping properly was blocked behind
+a deferred toolchain repair: a version bump alone fails `tests/test_version.py`, which needs
+`pip install -e . --no-deps` to succeed, and the local editable install was broken (three competing
+distributions all claiming the `quirk` import package, plus a stale
+`__editable__.quirk-4.0.0.pth` residue). v5.17 inherited the same untagged state rather than
+introduce a second broken bump on top of the first.
 
-`release.yml` now triggers on `v[0-9]*`, so any pushed tag fires a real release — the no-op failure
-mode is fixed, which is precisely why an incorrect tag would now do damage rather than nothing.
+`release.yml` triggers on `v[0-9]*`, so any pushed tag now fires a real release — the old
+silent-no-op failure mode (below) is fixed, which is precisely why an incorrect tag would do
+damage rather than nothing, and why the toolchain had to be repaired before tagging, not after.
 
-v5.16's user-visible fixes (the first-run command, three screen-reader blockers, resume UX) are on
-`main` and ship with the next release that bumps the version correctly.
+**Resolution: Phase 177 (Release Toolchain Repair) fixed the toolchain and both milestones' content
+ships together in the single `v5.18.0` release** — the local editable install works cleanly
+(single distribution, `tests/test_version.py::test_single_distribution_provides_quirk` guards
+against regression), `pyproject.toml` carries `5.18.0`, and `CHANGELOG.md`/`README.md` document
+v5.16 and v5.17's user-visible fixes (the first-run command, three screen-reader blockers, resume
+UX, the fuzzing/disclosure-safety hardening, scanner scope corrections, dashboard/API fixes, UAT
+case corrections, and the chaos-lab re-run findings) as shipping under that one version. The
+three-component `v5.18.0` tag push itself is a deliberate human handoff (plan 177-06/177-07) — see
+`docs/UAT-SERIES.md` Series 177 for the honestly-gapped release-verification cases pending that
+push.
 
-### Release-integrity note (RVW-004, corrected 2026-08-25)
+### Release-integrity note (RVW-004, corrected 2026-08-25; resolution recorded 2026-09-02)
 
 v5.13 and v5.14 were previously marked ✅ shipped. They were not. **The last
 version published to PyPI is 5.12.0** (2026-08-14), and `pyproject.toml` still
@@ -65,9 +78,12 @@ identically and is recorded in `.github/tag-hygiene-baseline.txt`.
 
 Disposition: the code shipped to `main` and is in use; only the *release* did
 not happen. Rather than retro-publish two versions whose source never carried
-those numbers, the record is corrected here and **v5.15 becomes the next real
-release**, tagged with a 3-component version. `release.yml`'s trigger has been
-broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
+those numbers, the record was corrected here and **v5.15 became the next real
+release**, tagged with a 3-component version. `release.yml`'s trigger was
+broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
+is the reason the three-component tag matters for every release after v5.15,
+including v5.18.0, and it is the institutional memory behind Phase 177's
+insistence on a real, correctly-formed tag rather than another silent gap.
 ## Current Milestone: v5.18 Migration Execution
 
 **Goal:** Close the loop. QUIRK detects, scores, and produces a prioritized remediation roadmap —
@@ -119,8 +135,13 @@ both v5.16 and v5.17 — so two milestones of user-visible fixes stop being invi
 
   1. `pip install -e . --no-deps` succeeds in a clean local environment and the three environmental
      `tests/test_extras_install_matrix` failures present in both the v5.16 and v5.17 close baselines
-     are gone. The stale `__editable__.quirk-4.0.0.pth` — claiming v4.0.0 against a 5.15.0 project
-     and breaking pip's build backend — is removed, not worked around.
+     are gone. **Correction (177-01):** the originally-suspected stale `__editable__.quirk-4.0.0.pth`
+     residue did not itself reproduce the build-backend failure premise this criterion originally
+     assumed — the real defect was three competing distributions (`qu-i-r-k`, `quirk`,
+     `quirk-scanner`) all claiming the `quirk` import package, plus a stray Homebrew-global orphan
+     install. The delivered fix is the three-distribution residue purge plus
+     `tests/test_version.py::test_single_distribution_provides_quirk`, which guards against the
+     regression recurring.
 
   2. `pyproject.toml` carries a correct three-component version, `tests/test_version.py` passes
      (which requires the editable reinstall, not the bump alone), a three-component tag is pushed,
