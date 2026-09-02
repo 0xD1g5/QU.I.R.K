@@ -36,6 +36,7 @@ jobs:
             tests/test_cve_staleness.py \
             tests/test_bacnet_vendor_resolution.py \
             tests/test_eol_staleness.py \
+            tests/test_pqc_deadline_staleness.py \
             -v -k "staleness or freshness"
 
       - name: Run install-error unit checks
