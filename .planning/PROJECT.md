@@ -596,6 +596,35 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 - **SaaS multi-tenancy stays PARKED** — unchanged from v5.4; gated on a business-model signal that does not yet exist.
 - **Cadence:** v5.4 broke the 2:1 capability/ops rhythm deliberately; v5.5 is the owed stabilization/hardening breather. Numbering continues at **Phase 113**. Source of truth for forward outlook: `.planning/HORIZON.md`.
 - **Live human-UAT keeps catching real bugs** that automated verification (which injected matching in-memory rows) missed — the entire 999.85–89 set came from the post-ship live distributed E2E. Treat live E2E as a first-class gate this milestone.
+## Current Milestone: v5.18 Migration Execution
+
+**Goal:** Close the loop. QUIRK detects, scores, and produces a prioritized remediation roadmap —
+then stops, and the client executes it elsewhere. v5.18 tracks remediation items to completion
+across re-scans, showing movement against the roadmap rather than only against the score. Ships the
+two unreleased milestones first.
+
+**Phases:** 177–181. **Requirements:** 16. **Opened:** 2026-09-01.
+
+**Why this, now:** honours the forward caveat recorded when v5.17 opened — three consecutive
+inward-facing cycles had broken the 2:1 capability/ops ratio, and v5.17's close produced nothing
+resembling the evidence density that would justify a fourth.
+
+**Shaped by research, not opened on the sketch.** HORIZON framed the milestone as a 3x sizing
+question. Re-measurement found 4-5x, and that the two readings are not two sizes of one feature:
+ticketing readback delegates item identity to the client's tracker, which is the entire problem the
+native reading must solve. A third option the sketch never named is the actual foundation.
+
+**Two live defects became prerequisites,** both found while sizing and independently verified: the
+trend report is structurally dead (10,069 live rows, 0 non-NULL severity, so every scan reports
+0 new / 0 resolved), and cert-expiry findings mint a fresh Jira ticket daily because the "stable"
+ticketing fingerprint interpolates the day count into its input.
+
+**Locked at the boundary:** closure state is advisory-only and never feeds the readiness score
+(ADVISORY-01), extending the machine-enforced `test_cve_score_guard.py` firewall rather than
+amending it. Closure is machine-observed under a two-sided condition, never human-asserted;
+`not_observed` is an honest third state; burndown is relative to a named target date, because
+EO 14412 deadlines key establishment (2030-12-31) and signatures (2031-12-31) separately.
+
 ## Current State
 
 **v5.17 Defect Drain — development complete and archived 2026-09-01.** All 5 phases (172–176),

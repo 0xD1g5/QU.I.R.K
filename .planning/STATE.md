@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.17
-milestone_name: Defect Drain
-status: completed
-stopped_at: Completed 176-08 (final addendum); milestone archived
+milestone: v5.18
+milestone_name: Migration Execution
+status: active
+stopped_at: v5.18 opened — no phase started
 last_updated: "2026-09-02T01:18:49.491Z"
-last_activity: 2026-09-01 — Milestone v5.17 completed and archived
+last_activity: 2026-09-01 — Milestone v5.18 (Migration Execution) opened, Phases 177-181
 progress:
   total_phases: 5
-  completed_phases: 5
-  total_plans: 28
-  completed_plans: 30
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -318,18 +318,39 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Milestone v5.17 (Defect Drain) COMPLETE — archived 2026-09-01
+Phase: v5.18 Migration Execution — opened 2026-09-01, no phase started
 Plan: —
-Status: Awaiting next milestone. Run `/gsd-new-milestone` to open v5.18.
-Last activity: 2026-09-01 — v5.17 archived (ROADMAP + REQUIREMENTS + audit → `.planning/milestones/v5.17-*`),
-`.planning/REQUIREMENTS.md` removed pending a fresh one, MILESTONES.md + PROJECT.md + RETROSPECTIVE.md updated.
-Not tagged — `pyproject.toml` remains `5.15.0`, same reason v5.16 was archived untagged.
+Status: Ready to plan Phase 177. Run `/gsd-discuss-phase 177` (or `/gsd-autonomous`).
 
-**Top candidate for v5.18's opening scope:** the release-toolchain repair. Two milestones of
-user-visible fixes are sitting unshipped on `main` because a version bump requires
-`pip install -e . --no-deps` and the local editable install is broken by a stale
-`__editable__.quirk-4.0.0.pth`. See `TRIAGE-176-01`/`TRIAGE-176-02` in ROADMAP.md's Backlog for the
-other two ready-to-plan items.
+**v5.18 opened after a research pass, not on the HORIZON sketch.** The 3x sizing question the sketch
+posed did not survive re-measurement — it is 4-5x, and the two readings share no infrastructure.
+Full argument: `.planning/research/v5.18-sizing.md` and `v5.18-domain.md`.
+
+**Two live defects are Phase 178 prerequisites** (both verified independently before scoping):
+1. `compute_trend_report` is structurally dead — delta keys on `(host, port, protocol, severity)`
+   and filters `severity is not None`, but severity is populated only by the three cloud connectors.
+   Live DB: **10,069 endpoint rows, 0 non-NULL severity** → every scan reports 0 new / 0 resolved.
+2. Ticketing fingerprint `SHA256(host:port::title)` interpolates 22 titles including
+   `f"Certificate expiring in {days_to_expiry} day(s)"` → **cert-expiry findings mint a fresh Jira
+   ticket every day**, despite the docstring claiming stability across re-scans.
+
+**Locked decisions (do not re-litigate at phase CONTEXT time):**
+- **ADVISORY-01** — closure state never feeds the readiness score. Extends
+  `tests/test_cve_score_guard.py`; does not amend it.
+- Closure is **machine-observed under a two-sided condition** (detected-by-previous AND
+  verified-by-current), never human-asserted.
+- **No re-scan entity resolution** — operator-supplied aliases plus an honest `not_observed` third
+  state. `(host, port)` breaks on DHCP, hostname-vs-IP, VIPs, and container churn.
+- Ticketing status readback is **out of scope** — it presumes a continuously-running control plane,
+  which is the parked SaaS block.
+
+**Carried verification debt:** the CNSA 2.0 date table is MEDIUM confidence — the research pass got
+HTTP 403 on the NSA PDF. It must be manually re-verified against the primary source before CLOSE-03
+ships, and it lands as a `last_verified` staleness-gated catalog, not inlined constants.
+
+**Watch item:** CISA/NIST CBOM minimum-elements guidance is due ≈2026-12-19 under EO 14412's 180-day
+tasking — a schema-risk event for the CBOM, inside this milestone's window. Not scoped; SURF-01's
+VEX surface should be built to absorb a schema shift.
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 

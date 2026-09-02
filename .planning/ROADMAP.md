@@ -31,6 +31,7 @@
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
 - ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **deliberately untagged** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
+- 🚧 **v5.18 Migration Execution** — Phases 177–181 (in progress, opened 2026-09-01)
 - ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **untagged**, same reason as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
 
 ### v5.16 deliberately untagged (2026-08-28)
@@ -67,12 +68,59 @@ not happen. Rather than retro-publish two versions whose source never carried
 those numbers, the record is corrected here and **v5.15 becomes the next real
 release**, tagged with a 3-component version. `release.yml`'s trigger has been
 broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
-## Current Milestone
+## Current Milestone: v5.18 Migration Execution
 
-None — v5.17 closed 2026-09-01. Run `/gsd-new-milestone` to open v5.18.
+**Goal:** Close the loop. QUIRK detects, scores, and produces a prioritized remediation roadmap —
+then stops, and the client executes it somewhere else. v5.18 tracks remediation items to completion
+across re-scans, showing **movement against the roadmap** rather than only against the score. Ships
+the two unreleased milestones first.
 
-Carried into the next milestone's opening scope (see `## Backlog` below and STATE.md
-`## Deferred Items`):
+**Phase Numbering:** Continues from v5.17's last phase (176). Integer phases only.
+
+**Capability milestone** — honours the forward caveat recorded when v5.17 opened: three consecutive
+inward-facing cycles had broken the 2:1 capability/ops ratio.
+
+> [!important] Shaped by research, not opened on the sketch
+> HORIZON framed this as a 3x sizing question. Re-measurement (2026-09-01) found **4-5x**, and that
+> the two readings are **not two sizes of one feature** — ticketing readback delegates item identity
+> to the client's tracker, which is the whole problem the native reading must solve, yielding zero
+> reusable infrastructure. A third option the sketch never named is the actual foundation. Full
+> argument in `.planning/research/v5.18-sizing.md` and `v5.18-domain.md`.
+
+> [!warning] Two live defects found while sizing — both are prerequisites, not bonus fixes
+> **The trend report is structurally dead:** `compute_trend_report` keys on
+> `(host, port, protocol, severity)` and filters `severity is not None`, but severity is populated
+> only by the three cloud connectors — 10,069 live rows, 0 non-NULL, so every scan reports
+> 0 new / 0 resolved. **Cert-expiry findings mint a fresh Jira ticket daily:** the fingerprint
+> `SHA256(host:port::title)` interpolates 22 titles including the day count, so dedup fails, despite
+> a docstring claiming stability across re-scans.
+
+**Standing constraint:** closure state is **advisory-only and never feeds the readiness score**
+(ADVISORY-01), decided at the boundary rather than mid-phase. Extends the machine-enforced
+`test_cve_score_guard.py` firewall; does not amend it.
+
+### Phases
+
+- [ ] **Phase 177: Release Toolchain Repair** - The editable install works, the version bumps, and a real release finally ships covering both v5.16 and v5.17. Gating: nothing else in v5.18 reaches a user until this does.
+- [ ] **Phase 178: Finding Identity Repair** - A finding keeps one identity across re-scans, the dead trend report either reports real movement or admits it cannot, and the two findings-derivation paths are reconciled or explicitly bounded. Gating: remediation tracking on a key that decays daily is worse than none.
+- [ ] **Phase 179: Remediation Item Model** - Roadmap items gain stable IDs joined to their constituent finding fingerprints, a scope signature that refuses closure across incomparable scans, and `not_observed` as an honest third state.
+- [ ] **Phase 180: Closure Verification** - Closure is machine-observed under a two-sided condition, never human-asserted; `resurfaced` is modelled explicitly; burndown is relative to a named target date rather than a single scalar.
+- [ ] **Phase 181: Surfacing** - Closure state emitted as CycloneDX VEX in the CBOM (zero new deps), plus advisory-only burndown in CLI/HTML/DOCX reports and on the dashboard.
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 177. Release Toolchain Repair | 0/? | Not started | — |
+| 178. Finding Identity Repair | 0/? | Not started | — |
+| 179. Remediation Item Model | 0/? | Not started | — |
+| 180. Closure Verification | 0/? | Not started | — |
+| 181. Surfacing | 0/? | Not started | — |
+
+### Carried into v5.18 from the v5.17 close
+
+Not all of this is v5.18 scope — it is the open-item ledger the milestone inherits. See also
+`## Backlog` below and STATE.md `## Deferred Items` (re-triaged 2026-09-01).
 
 - **TRIAGE-176-01 / TRIAGE-176-02** — two genuine defects surfaced by the Phase 176 chaos-lab
   re-run, explicitly triaged rather than absorbed. Each needs its own plan and tests.
