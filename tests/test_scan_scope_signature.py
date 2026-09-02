@@ -19,10 +19,12 @@ import pytest
 from quirk.config import config_from_dict
 from quirk.db import get_session, init_db
 from quirk.intelligence.scope_signature import (
+    _FAMILY_SPEC,
+    assess_probe_health,
     build_scope_signature,
     compute_signature_digest,
 )
-from quirk.models import Sensor
+from quirk.models import CryptoEndpoint, Sensor
 
 SCAN_RUN_ID = "2026-09-02T00:00:00Z"
 
@@ -229,5 +231,156 @@ def test_module_never_imports_scoring():
 
     source = inspect.getsource(mod)
     assert "scoring" not in source
+
+
+# ---------------------------------------------------------------------------
+# Task 2: assess_probe_health — positive assertion per family
+# ---------------------------------------------------------------------------
+
+
+def _run_stats_with_timing(*keys: str) -> dict:
+    return {"timings_sec": {k: 0.1 for k in keys}}
+
+
+def test_family_spec_covers_at_least_thirteen_families():
+    assert "ssh" in _FAMILY_SPEC
+    assert "broker" in _FAMILY_SPEC
+    assert len(_FAMILY_SPEC) >= 13
+
+
+def test_probe_health_positive_assertion() -> None:
+    """THE degraded-probe guard — TRIAGE-176-03's exact shape.
+
+    Three SSH endpoints, enabled, timing key present, every endpoint has
+    ssh_audit_json is None AND scan_error is None. This is exactly the
+    ssh-audit exit-2/empty-stdout defect: the scan exited 0 and scan_error
+    stayed NULL, yet no evidence was ever produced. Must record UNHEALTHY.
+    """
+    cfg = _cfg()
+    cfg.connectors.enable_kerberos = True  # unrelated; keep default off elsewhere
+    endpoints = [
+        CryptoEndpoint(
+            host=f"host{i}.example.com",
+            port=22,
+            protocol="SSH",
+            ssh_audit_json=None,
+            scan_error=None,
+        )
+        for i in range(3)
+    ]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["ssh"]["status"] == "unhealthy"
+    assert health["ssh"]["endpoints_seen"] == 3
+    assert health["ssh"]["endpoints_with_evidence"] == 0
+
+
+def test_probe_health_positive_control_ssh_healthy_with_evidence():
+    cfg = _cfg()
+    endpoints = [
+        CryptoEndpoint(host="h1", port=22, protocol="SSH", ssh_audit_json=None),
+        CryptoEndpoint(
+            host="h2", port=22, protocol="SSH", ssh_audit_json='{"algo": "mlkem768"}'
+        ),
+    ]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["ssh"]["status"] == "healthy"
+    assert health["ssh"]["endpoints_with_evidence"] == 1
+
+
+def test_probe_health_scan_error_none_alone_never_produces_healthy():
+    cfg = _cfg()
+    endpoints = [
+        CryptoEndpoint(host="h1", port=22, protocol="SSH", ssh_audit_json=None, scan_error=None)
+    ]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["ssh"]["status"] == "unhealthy"
+
+
+def test_probe_health_no_targets_distinguished_from_unhealthy():
+    cfg = _cfg()
+    endpoints: list = []
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["ssh"]["status"] == "no_targets"
+    assert health["ssh"]["endpoints_seen"] == 0
+
+
+def test_probe_health_family_disabled_in_cfg_is_not_run():
+    cfg = _cfg()
+    assert cfg.connectors.enable_jwt is False
+    endpoints = [CryptoEndpoint(host="h1", port=443, protocol="JWT", jwt_scan_json="{}")]
+    run_stats = _run_stats_with_timing("jwt_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["jwt"]["status"] == "not_run"
+
+
+def test_probe_health_timing_key_absent_is_not_run_even_if_enabled():
+    cfg = _cfg()
+    cfg.connectors.enable_jwt = True
+    endpoints = [CryptoEndpoint(host="h1", port=443, protocol="JWT", jwt_scan_json='{"kid": "1"}')]
+    run_stats = {"timings_sec": {}}
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["jwt"]["status"] == "not_run"
+
+
+def test_probe_health_stale_timing_key_never_upgrades_to_healthy():
+    """Phase 173 precedent: a stale broker_scanning key with zero broker
+    endpoints and no evidence must not read healthy."""
+    cfg = _cfg()
+    cfg.connectors.enable_broker = True
+    endpoints: list = []
+    run_stats = _run_stats_with_timing("broker_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["broker"]["status"] == "no_targets"
+
+
+@pytest.mark.parametrize("empty_value", ["", "   ", "null", "{}", "[]"])
+def test_probe_health_empty_json_containers_count_as_no_evidence(empty_value):
+    cfg = _cfg()
+    endpoints = [
+        CryptoEndpoint(host="h1", port=22, protocol="SSH", ssh_audit_json=empty_value)
+    ]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["ssh"]["status"] == "unhealthy"
+
+
+def test_probe_health_non_deep_tls_is_not_run():
+    cfg = _cfg()
+    assert cfg.scan.tls_enum_mode == "fast"
+    endpoints = [CryptoEndpoint(host="h1", port=443, protocol="TLS")]
+    run_stats = _run_stats_with_timing("tls_scanning")
+
+    health = assess_probe_health(cfg, endpoints, run_stats)
+
+    assert health["tls"]["status"] == "not_run"
+
+
+def test_probe_health_grep_no_exit_status_or_scan_error_signal():
+    import quirk.intelligence.scope_signature as mod
+
+    source = inspect.getsource(mod)
+    assert "scan_error is None" not in source
+    assert "returncode == 0" not in source
+    assert "exit_code" not in source
 
 
