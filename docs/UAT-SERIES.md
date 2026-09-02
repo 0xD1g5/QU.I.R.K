@@ -21584,9 +21584,7 @@ grep -n "Remediation Coverage" .planning/ROADMAP.md
 **Falsifiability:** turns red if the heading, the named code path, or the backlog follow-up
 entry is removed without a replacement.
 
-**Result:** - [x] PASS (2026-09-02 — `docs/operators-guide.md` line 2214 carries the named
-`### Known limitation` heading with `_ingest_envelope` cited; `.planning/ROADMAP.md` Backlog
-carries `### Remediation Coverage (post-v5.18)`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-02 `docs/operators-guide.md` line 2214 has the Known-limitation heading with `_ingest_envelope` cited; `.planning/ROADMAP.md` Backlog has the Remediation Coverage entry)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-02  **Tester:** Manual grep verification (179-06 phase-close plan execution)
 **Notes:** Landed by Plan 05; re-verified directly against the live file during this close-out
 plan rather than assumed from the SUMMARY.
