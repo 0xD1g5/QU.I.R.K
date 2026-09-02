@@ -41,7 +41,7 @@ the unshaped sketch.
 Two milestones of user-visible fixes are unreleased. Nothing else in v5.18 ships to a user until
 this does.
 
-- [x] **RELEASE-01**: The local editable install works — `pip install -e . --no-deps` succeeds and
+- [ ] **RELEASE-01**: The local editable install works — `pip install -e . --no-deps` succeeds and
   `tests/test_extras_install_matrix` stops failing environmentally. The stale
   `__editable__.quirk-4.0.0.pth` claims v4.0.0 against a 5.15.0 project and breaks pip's
   build-backend.
@@ -164,7 +164,7 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | Requirement | Phase | Status |
 |---|---|---|
 | ADVISORY-01 | All (standing) | Pending |
-| RELEASE-01 | Phase 177 | Complete |
+| RELEASE-01 | Phase 177 | Partial (177-01 done; 177-03 pending) |
 | RELEASE-02 | Phase 177 | Pending |
 | RELEASE-03 | Phase 177 | Pending |
 | IDENT-01 | Phase 178 | Pending |
