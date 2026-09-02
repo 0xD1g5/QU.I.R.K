@@ -1,14 +1,23 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-02 (v5.18 Phase 178 — Finding Identity Repair, plan 178-07: Series 178
-added (UAT-178-01..03, ALL PASS) for IDENT-01 fingerprint day-boundary stability, IDENT-02 trend
-non-vacuity on all-NULL-severity data, and severity-transition reporting. `UAT-9-09` updated in
-place — the trend-report match key changed from `(host, port, protocol, severity)` to
-`(host, port, protocol)`, and its Expected/Pass Criteria now cite the new `severity_transitions`/
-`new_total`/`resolved_total` wire-format fields. IDENT-01, IDENT-02, IDENT-03 closed by hand in
-`.planning/REQUIREMENTS.md`; ADVISORY-01 remains open (standing constraint, Phases 177-181).
-Earlier: v5.18 Phase 177 — Release Toolchain Repair, plan 177-08: `v5.18.0`
+**Last Updated:** 2026-09-02 (v5.18 Phase 179 — Remediation Item Model, plan 179-06: Series 179
+added (UAT-179-01..07; 6 PASS, 1 SKIP-DEFERRED) for REMED-01 slug-keyed items joined to finding
+fingerprints as an N-of-M fraction, REMED-02 per-scan scope signatures + positively-asserted
+probe health (the TRIAGE-176-03 shape closed), and REMED-03 `not_observed` as a first-class
+persisted state plus operator aliases config. `UAT-179-04` (the real two-scan `--profile`
+comparison) is SKIP (DEFERRED) — its digest-sensitivity mechanics are proven automated, but the
+full manual scenario additionally needs Phase 180's not-yet-built hard-refusal logic. REMED-01,
+REMED-02, REMED-03 closed by hand in `.planning/REQUIREMENTS.md`; ADVISORY-01 remains open
+(standing constraint, Phases 177-181). Earlier: v5.18 Phase 178 — Finding Identity Repair, plan
+178-07: Series 178 added (UAT-178-01..03, ALL PASS) for IDENT-01 fingerprint day-boundary
+stability, IDENT-02 trend non-vacuity on all-NULL-severity data, and severity-transition
+reporting. `UAT-9-09` updated in place — the trend-report match key changed from `(host, port,
+protocol, severity)` to `(host, port, protocol)`, and its Expected/Pass Criteria now cite the new
+`severity_transitions`/`new_total`/`resolved_total` wire-format fields. IDENT-01, IDENT-02,
+IDENT-03 closed by hand in `.planning/REQUIREMENTS.md`; ADVISORY-01 remains open (standing
+constraint, Phases 177-181). Earlier: v5.18 Phase 177 — Release Toolchain Repair, plan 177-08:
+`v5.18.0`
 shipped for real — the user pushed the tag, `release.yml` run 33656116783 fired on a `push` event
 and completed green across all three jobs, and PyPI now lists `5.18.0` as `latest`. Series 177's
 three release-verification cases were re-executed against that real release and flipped from
@@ -21310,3 +21319,285 @@ fixture-level regression suites landed by plans 178-01/02/04/05. IDENT-01/02/03 
 table for the evidence citation. ADVISORY-01 is a standing constraint across Phases 177-181 and is
 NOT dispositioned by this series — it remains open, machine-enforced by
 `tests/test_cve_score_guard.py`.
+
+---
+
+## Series 179: Remediation Item Model (Phase 179 — v5.18)
+
+**Scope:** REMED-01 (stable slug-keyed remediation items joined to constituent finding
+fingerprints), REMED-02 (per-scan scope signature + positively-asserted probe health),
+REMED-03 (`not_observed` as a first-class persisted state + operator aliases config). This
+phase models and persists only — it does not compute closure (Phase 180) or surface anything
+(Phase 181). ADVISORY-01 is a standing constraint across Phases 177-181 and is not dispositioned
+by this series.
+
+### UAT-179-01: Three New Tables Exist After init_db and init_db Is Safely Re-Runnable
+
+**ID:** UAT-179-01
+**Title:** `remediation_items`, `remediation_item_fingerprints`, and `scan_scope_signatures`
+are created by `init_db()`, and calling `init_db()` a second time against the same database
+raises no error and creates no duplicate tables
+**Maps to:** REMED-01, REMED-02
+
+**What to test:** The three Phase 179 tables are declared as SQLAlchemy models and wired into
+`init_db()` via `Base.metadata.create_all(engine, checkfirst=True)`, matching the existing
+`_ensure_*_table` pattern (not the column-only additive-migration registry). Re-running
+`init_db()` against an already-initialized database must be a no-op, not an error.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_remediation_item_model.py::test_init_db_creates_three_new_tables_idempotently -q
+.venv/bin/pytest tests/test_init_db_idempotent.py -q
+```
+
+**Pass Criteria:**
+- All tests pass.
+- `sqlalchemy.inspect(engine).get_table_names()` includes `remediation_items`,
+  `remediation_item_fingerprints`, and `scan_scope_signatures` after a single `init_db()` call.
+- A second `init_db()` call against the same file raises nothing and leaves the schema
+  unchanged.
+
+**Falsifiability:** turns red if a table is dropped from `Base.metadata`, if `init_db()`'s call
+site is removed, or if `checkfirst=True` is dropped and a second call raises
+`OperationalError: table already exists`.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_remediation_item_model.py::test_init_db_creates_three_new_tables_idempotently tests/test_init_db_idempotent.py -q` — 4 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (179-06 phase-close plan execution)
+**Notes:** Tables created via `_ensure_remediation_tables` / `_ensure_scan_scope_signatures_table`
+(Plan 01), NOT the column-only additive-migration registry.
+
+---
+
+### UAT-179-02: Multiple Plaintext-HTTP Endpoints Persist as One Item, One Join Row Each, Readable as an N-of-M Fraction
+
+**ID:** UAT-179-02
+**Title:** A scan of an estate with 8 plaintext-HTTP endpoints persists exactly one
+`plaintext-http-exposure` `RemediationItem` row and 8 `RemediationItemFingerprint` join rows,
+readable as the literal fraction `(0, 8)` via `item_progress()` — never a boolean, never silently
+vanishing when the last one is fixed
+**Maps to:** REMED-01
+
+**What to test:** The concrete defect this requirement fixes: today `_add_candidate` merges by
+title and persists nothing, so fixing 1 of 8 plaintext endpoints closes nothing and fixing the
+8th makes the item silently vanish with no closure record. `persist_remediation_snapshot()`
+writes items and join rows explicitly at scan time instead.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_remediation_persist.py::test_eight_plaintext_endpoints_persist_as_zero_of_eight -q
+.venv/bin/pytest tests/test_remediation_persist.py::test_fixing_one_of_eight_never_produced_by_this_module -q
+.venv/bin/pytest tests/test_remediation_item_model.py::test_item_progress_returns_fraction_not_boolean -q
+```
+
+**Pass Criteria:**
+- All three tests pass.
+- `item_progress(session, scan_run_id=..., slug="plaintext-http-exposure")` returns the literal
+  tuple `(0, 8)` for 8 untouched endpoints, not `True`/`False` and not `(8, 8)`.
+- Exactly 8 `RemediationItemFingerprint` rows exist, one per constituent finding.
+
+**Falsifiability:** turns red if join-row membership is recomputed at read time instead of
+written explicitly at scan time, or if `item_progress` collapses to a boolean.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_remediation_persist.py::test_eight_plaintext_endpoints_persist_as_zero_of_eight tests/test_remediation_persist.py::test_fixing_one_of_eight_never_produced_by_this_module tests/test_remediation_item_model.py::test_item_progress_returns_fraction_not_boolean -q` — 3 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (179-06 phase-close plan execution)
+**Notes:** `item_progress_zero_closed_never_reports_full` additionally proves 0-of-8 can never
+read as complete.
+
+---
+
+### UAT-179-03: No Persisted Row Is Ever `closed`, and Unmatched Findings Default to `not_observed`
+
+**ID:** UAT-179-03
+**Title:** `persist_remediation_snapshot()` never writes the literal state `closed` — that word
+belongs to Phase 180's closure computation — and any unmatched finding is silently unattached
+rather than defaulting an item to `closed`
+**Maps to:** REMED-03
+
+**What to test:** `not_observed` is the default persisted state (`DEFAULT_ITEM_STATE`), never
+derived from absence and never `closed`. This phase models and persists only; it must not be
+able to assert closure by omission.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_remediation_persist.py::test_no_written_row_has_closed_state -q
+.venv/bin/pytest tests/test_remediation_persist.py::test_persist_never_writes_closed_literal_in_source -q
+.venv/bin/pytest tests/test_remediation_persist.py::test_unmatched_finding_title_is_silently_unattached -q
+.venv/bin/pytest tests/test_remediation_item_model.py::test_remediation_item_state_not_null -q
+```
+
+**Pass Criteria:**
+- All tests pass.
+- No `RemediationItem` row written by this module ever has `state == "closed"`.
+- `grep -n '"closed"' quirk/intelligence/remediation_persist.py` finds no matches.
+- `state` is `nullable=False` with default `not_observed` on `RemediationItem`.
+
+**Falsifiability:** turns red if any code path writes `state="closed"`, or if an unmatched
+finding is used to flip an existing item's state instead of being silently unattached.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_remediation_persist.py::test_no_written_row_has_closed_state tests/test_remediation_persist.py::test_persist_never_writes_closed_literal_in_source tests/test_remediation_persist.py::test_unmatched_finding_title_is_silently_unattached -q` — 3 passed; `grep -n '"closed"' quirk/intelligence/remediation_persist.py` — no matches)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (179-06 phase-close plan execution)
+**Notes:** All four covering tests run and confirmed passing individually and together.
+
+---
+
+### UAT-179-04: A Scope-Signature Row Is Written Per `scan_run_id`, and a Changed Profile Changes the Digest While Discrete Columns Name What Differed
+
+**ID:** UAT-179-04
+**Title:** `persist_scope_signature()` writes one `scan_scope_signatures` row per `scan_run_id`
+with discrete columns and a SHA256 digest that are mutually consistent, and the digest is
+sensitive to profile, port scope, credential presence, extras, and sensor set independently
+**Maps to:** REMED-02
+
+**What to test:** The mechanics of the scope signature — one row per scan, digest computed over
+exactly the six discrete fields, and digest sensitivity to each field independently — as a
+substitute for a real two-scan `--profile quick` vs. `--profile deep` comparison against a live
+estate, which no fixture in this repository reproduces.
+
+**Steps:**
+```bash
+.venv/bin/pytest "tests/test_scan_scope_signature.py::test_digest_sensitivity_matrix_cfg_mutations[profile]" -q
+.venv/bin/pytest tests/test_scan_scope_signature.py::test_persist_scope_signature_round_trip_digest_matches -q
+.venv/bin/pytest tests/test_scan_scope_signature.py::test_digest_is_64_char_hex_and_stable_across_key_order -q
+```
+
+**Pass Criteria:**
+- All three tests pass.
+- Changing `cfg.intelligence.profile` alone changes the digest with every other field held
+  constant.
+- A round-trip test recomputes the digest from the read-back discrete columns and confirms it
+  matches the stored digest.
+
+**Falsifiability:** turns red if the digest stops being sensitive to profile, or if the stored
+digest and a digest recomputed from the stored discrete columns diverge.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_scan_scope_signature.py::test_digest_sensitivity_matrix_cfg_mutations*` and `tests/test_scan_scope_signature.py::test_persist_scope_signature_round_trip_digest_matches`, both executed 2026-09-02)
+**Date:** 2026-09-02  **Tester:** Automated substitute only (179-06 phase-close plan execution)
+**Notes:** The full manual scenario — running two real scans of the same estate under different
+`--profile` values and confirming closure is *refused* on the mismatch — is listed as
+manual-only in `179-VALIDATION.md` and additionally requires Phase 180's hard-refusal logic,
+which does not exist yet (this phase models and persists the signature only; it does not
+consume it for a refusal decision). The digest-sensitivity mechanics that Phase 180 will read
+are proven here; the refusal behavior itself is Phase 180's UAT series to disposition.
+
+---
+
+### UAT-179-05: Probe Health Records a Family UNHEALTHY When Its Evidence Column Is Empty Despite Exit 0 and NULL `scan_error` (TRIAGE-176-03 Shape)
+
+**ID:** UAT-179-05
+**Title:** `assess_probe_health()` derives family health from positive evidence, never from
+`scan_error IS NULL` or exit status — reproducing and closing the exact TRIAGE-176-03 failure
+mode (`ssh-audit` silently degraded to banner grabs for the life of the integration while the
+scan exited 0)
+**Maps to:** REMED-02
+
+**What to test:** A stubbed degraded `ssh-audit` probe (3 SSH endpoints, `ssh_audit_json is
+None`, `scan_error is None`, the `ssh_scanning` timing key present — the TRIAGE-176-03 shape)
+is recorded `unhealthy`, not `healthy`.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_scan_scope_signature.py::test_probe_health_positive_assertion -q
+.venv/bin/pytest tests/test_scan_scope_signature.py::test_probe_health_scan_error_none_alone_never_produces_healthy -q
+.venv/bin/pytest tests/test_scan_scope_signature.py::test_probe_health_grep_no_exit_status_or_scan_error_signal -q
+```
+
+**Pass Criteria:**
+- All three tests pass.
+- The degraded-probe fixture reads `unhealthy`.
+- `grep -nE "scan_error is None|returncode == 0|exit_code" quirk/intelligence/scope_signature.py`
+  finds no matches.
+
+**Falsifiability:** this case turns red if `assess_probe_health` is ever rewritten to use
+`scan_error is None` as a health signal — the exact regression this plan's mandatory negative
+control (179-04 SUMMARY) proved and reverted.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_scan_scope_signature.py::test_probe_health_positive_assertion tests/test_scan_scope_signature.py::test_probe_health_scan_error_none_alone_never_produces_healthy tests/test_scan_scope_signature.py::test_probe_health_grep_no_exit_status_or_scan_error_signal -q` — 3 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (179-06 phase-close plan execution)
+**Notes:** Plan 179-04's SUMMARY records the mandatory negative control run for real against a
+naive `scan_error is None`-based stub, reproducing TRIAGE-176-03 and observing the expected
+failure before reverting.
+
+---
+
+### UAT-179-06: `remediation_aliases` Loads From `config.yaml` Onto `AppConfig`, and a Malformed Entry Is Dropped Without Failing the Scan
+
+**ID:** UAT-179-06
+**Title:** `remediation_aliases: Dict[str, str]` hydrates from `config.yaml` following the
+`broker_credentials` precedent; non-string values, empty/whitespace keys or values, and
+non-mapping top-level shapes are dropped defensively rather than raising
+**Maps to:** REMED-03
+
+**What to test:** The operator-facing config surface REMED-03 uses instead of automated re-scan
+entity resolution — a human edits `remediation_aliases:` between engagements, and a malformed
+entry must never crash a scan.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_remediation_aliases_config.py -q
+```
+
+**Pass Criteria:**
+- All 10 tests pass, including the kitchen-sink case (`test_remediation_aliases_kitchen_sink`)
+  and every drop-case (dict/list values, `None` values, empty/whitespace keys and values,
+  non-mapping top-level shapes).
+- `AppConfig.remediation_aliases` defaults to `{}` when the key is absent.
+
+**Falsifiability:** turns red if a malformed `remediation_aliases:` entry raises instead of
+being dropped, or if the field stops defaulting to an empty dict.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_remediation_aliases_config.py -q` — 10 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (179-06 phase-close plan execution)
+**Notes:** `config_template.yaml` documents the section with a worked example, verified parseable
+via `yaml.safe_load` in Plan 05.
+
+---
+
+### UAT-179-07: The Sensor-Origin Closure Exclusion Is Stated in Operator-Facing Documentation
+
+**ID:** UAT-179-07
+**Title:** `docs/operators-guide.md` names the exact code path, the mechanical reason, and the
+observable consequence of excluding sensor-origin findings from closure tracking, under a
+findable heading rather than a buried footnote
+**Maps to:** REMED-02 (Sensor-Origin Coverage decision)
+
+**What to test:** `quirk/cli/console_cmd.py::_ingest_envelope` sets `sensor_id`/`segment` on
+ingested `CryptoEndpoint` rows but never sets `scan_run_id`, so a scope signature keyed on
+`scan_run_id` has zero coverage for sensor-pushed data. This is a documentation-only case: the
+limitation must be discoverable by an operator, not merely true in code.
+
+**Steps:**
+```bash
+grep -n "### Known limitation" docs/operators-guide.md
+sed -n '2178,2230p' docs/operators-guide.md
+grep -n "Remediation Coverage" .planning/ROADMAP.md
+```
+
+**Pass Criteria:**
+- `docs/operators-guide.md` contains a `### Known limitation — sensor-origin findings are
+  excluded from closure tracking` subsection under `## 15. Remediation Tracking Scope`.
+- The subsection names `_ingest_envelope`, states that `scan_run_id` is never set on
+  sensor-origin rows, and states the observable consequence (sensor-origin findings never
+  appear in burndown).
+- `.planning/ROADMAP.md`'s Backlog carries a corresponding `### Remediation Coverage
+  (post-v5.18)` follow-up entry.
+
+**Falsifiability:** turns red if the heading, the named code path, or the backlog follow-up
+entry is removed without a replacement.
+
+**Result:** - [x] PASS (2026-09-02 — `docs/operators-guide.md` line 2214 carries the named
+`### Known limitation` heading with `_ingest_envelope` cited; `.planning/ROADMAP.md` Backlog
+carries `### Remediation Coverage (post-v5.18)`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Manual grep verification (179-06 phase-close plan execution)
+**Notes:** Landed by Plan 05; re-verified directly against the live file during this close-out
+plan rather than assumed from the SUMMARY.
+
+---
+
+**Series 179 disposition.** 6 of 7 cases are `[x] PASS`, executed 2026-09-02 against the
+fixture-level regression suites landed by plans 179-01/02/03/04. `UAT-179-04` is `SKIP
+(DEFERRED)` — the digest-sensitivity mechanics it depends on are proven, but the full manual
+two-scan `--profile` comparison additionally requires Phase 180's not-yet-built hard-refusal
+logic and is out of this phase's scope. REMED-01/02/03 close by hand in `.planning/REQUIREMENTS.md`
+on this same phase-close plan (179-06) — see that file's traceability table for the evidence
+citation. ADVISORY-01 is a standing constraint across Phases 177-181 and is NOT dispositioned by
+this series — it remains open, machine-enforced by `tests/test_cve_score_guard.py`.
