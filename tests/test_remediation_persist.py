@@ -322,3 +322,33 @@ def test_run_scan_wires_remediation_persist_between_db_persist_and_reporting() -
     reporting_idx = source.index('"reporting"')
 
     assert db_persist_idx < remediation_idx < reporting_idx
+
+
+# ---------------------------------------------------------------------------
+# Plan 06 close-out addendum: `_SLUG_PRIORITY` is a second hand-maintained
+# table that mirrors REMEDIATION_KIND_SLUGS's inline priority comments with
+# nothing but a comment linking them (179-03 deviation, flagged in
+# 179-CONTEXT.md's addendum). This guard makes drift between the two key
+# sets fail loudly instead of silently defaulting `priority=None` for a slug
+# that was added to one table but not the other.
+# ---------------------------------------------------------------------------
+
+
+def test_slug_priority_key_set_matches_kind_slugs() -> None:
+    from quirk.intelligence.remediation import REMEDIATION_KIND_SLUGS
+    from quirk.intelligence.remediation_persist import _SLUG_PRIORITY
+
+    kind_slugs = set(REMEDIATION_KIND_SLUGS.values())
+    priority_slugs = set(_SLUG_PRIORITY.keys())
+
+    missing_priority = kind_slugs - priority_slugs
+    extra_priority = priority_slugs - kind_slugs
+
+    assert not missing_priority, (
+        f"slug(s) in REMEDIATION_KIND_SLUGS with no _SLUG_PRIORITY entry: "
+        f"{sorted(missing_priority)}"
+    )
+    assert not extra_priority, (
+        f"_SLUG_PRIORITY entry(ies) with no matching REMEDIATION_KIND_SLUGS "
+        f"slug: {sorted(extra_priority)}"
+    )
