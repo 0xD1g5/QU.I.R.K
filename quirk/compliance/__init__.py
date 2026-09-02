@@ -3,16 +3,22 @@
 Maintenance cadence: see docs/operators-guide.md §"Compliance Map Maintenance".
 
 Compliance refs are EAGERLY attached to every finding dict by
-quirk.engine.risk_engine._build_finding (Phase 49 D-02). Renderers and JSON
-exports consume the `compliance` field as already-attached data — DO NOT
-import COMPLIANCE_MAP into renderer code.
+quirk.engine.findings_evaluator._build_finding (Phase 49 D-02; hosted in
+the engine module that superseded the original Phase 49 host in Phase 72).
+Renderers and JSON exports consume the `compliance` field as already-
+attached data — DO NOT import COMPLIANCE_MAP into renderer code.
 
 Title normalization (Pitfall 1): COMPLIANCE_MAP keys are the LITERAL title
-strings emitted by risk_engine, parens preserved. The 7 f-string titles
-whose runtime form contains an interpolated value go through
-TITLE_PREFIX_ALIASES: a literal source-text prefix maps to a canonical
-COMPLIANCE_MAP (or UNMAPPED_TITLES) key. See _normalize_for_compliance in
-quirk/engine/risk_engine.py.
+strings emitted by the finding-producing sites, parens preserved. The 7
+f-string titles whose runtime form contains an interpolated value go
+through TITLE_PREFIX_ALIASES: a literal source-text prefix maps to a
+canonical COMPLIANCE_MAP (or UNMAPPED_TITLES) key. See
+normalize_finding_title in this module (Phase 178 IDENT-01 — the prior
+_normalize_for_compliance implementation in
+quirk/engine/findings_evaluator.py was collapsed into this single public
+function; the module hosting the title-emission sites was superseded in
+Phase 72 (see quirk/engine/findings_evaluator.py and
+quirk/dashboard/api/routes/scan.py).
 """
 from __future__ import annotations
 
@@ -96,7 +102,8 @@ def _iso(control: str) -> Dict[str, Any]:
 
 # Phase 49 Pitfall 1: f-string titles whose runtime form contains an
 # interpolated value. Each key is a LITERAL source-text PREFIX from
-# risk_engine.py; the value is the canonical key in COMPLIANCE_MAP (or
+# the title-emission site (quirk/engine/findings_evaluator.py); the value
+# is the canonical key in COMPLIANCE_MAP (or
 # UNMAPPED_TITLES) the runtime title resolves to.
 #
 # _normalize_for_compliance applies LONGEST-PREFIX-FIRST matching, so
@@ -126,13 +133,163 @@ TITLE_PREFIX_ALIASES: Dict[str, str] = {
 }
 
 
+def normalize_finding_title(
+    title: str, aliases: Dict[str, str] | None = None
+) -> str:
+    """Phase 178 IDENT-01: the ONE title normalizer in the codebase.
+
+    Collapses the three prior copies — the private
+    ``_normalize_for_compliance`` in ``quirk/engine/findings_evaluator.py``,
+    this module's own inline loop, and the ad-hoc reimplementation in
+    ``tests/fixtures/chaos_lab_findings.py`` — into a single public
+    function. Callers select WHICH policy table to apply via ``aliases``;
+    the function itself is policy-agnostic.
+
+    Matching is LONGEST-PREFIX-FIRST: the alias table is sorted by prefix
+    length, descending, so e.g. "Severely outdated Python cryptography
+    package (" wins over any shorter overlapping prefix. The table is
+    sorted INLINE on every call rather than cached, because ``aliases`` is
+    now a parameter (not a fixed module global) and both tables in this
+    module are 6-7 entries — O(n log n) on n<=7 per finding dispatch is
+    negligible (see threat register T-178-12). This is a deliberate
+    simplicity choice, not an oversight.
+
+    Args:
+        title: the raw, possibly-interpolated finding title.
+        aliases: the alias table to apply. Defaults to
+            ``TITLE_PREFIX_ALIASES`` (the COMPLIANCE policy) so every
+            existing compliance caller is behavior-identical. Pass
+            ``FINGERPRINT_TITLE_ALIASES`` for the IDENTITY policy — the
+            two tables deliberately differ (see T-178-01).
+
+    Returns:
+        The alias value on a prefix match; the title verbatim otherwise.
+    """
+    table = TITLE_PREFIX_ALIASES if aliases is None else aliases
+    for prefix in sorted(table, key=len, reverse=True):
+        if title.startswith(prefix):
+            return table[prefix]
+    return title
+
+
+# Phase 178 T-178-01: prefixes whose interpolated segment is a DISCRIMINATOR,
+# not volatile noise — {name} distinguishes genuinely different container
+# crypto library findings at the same host:port. The prefix mechanism can
+# only strip from the END of the matched prefix onward, so it cannot keep
+# {name} while dropping {version} — excluding the whole prefix from the
+# IDENTITY table is the only way to preserve {name} as a discriminator.
+# The COMPLIANCE table (TITLE_PREFIX_ALIASES) legitimately collapses these
+# same two prefixes — compliance framework mapping only cares "is this
+# finding class present", not "which library" — so the two policies
+# genuinely diverge here, on purpose.
+_IDENTITY_BEARING_PREFIXES: FrozenSet[str] = frozenset({
+    "Container image uses quantum-vulnerable crypto library (",
+    "Container image contains crypto library (",
+})
+
+
+# Phase 178 IDENT-01: the IDENTITY policy table consumed by
+# quirk.ticketing.base.TicketingChannel.compute_fingerprint (source site:
+# quirk/dashboard/api/routes/scan.py:200). DERIVED from TITLE_PREFIX_ALIASES
+# at import time (T-178-10) — NOT hand-maintained — so a future edit to the
+# compliance table cannot silently leave the identity table stale. Deriving
+# rather than hand-copying is the point: two independently-maintained
+# parallel tables is the exact drift defect this phase exists to fix.
+#
+# Two differences from TITLE_PREFIX_ALIASES:
+#   1. The two _IDENTITY_BEARING_PREFIXES entries are EXCLUDED — {name} is a
+#      discriminator for identity even though it is not for compliance.
+#   2. One NEW entry is ADDED: the cert-expiry title. This is the
+#      demonstrated daily-churn defect IDENT-01 fixes — days_to_expiry
+#      decrements every re-scan while the underlying certificate (and thus
+#      the underlying finding) has not changed at all.
+FINGERPRINT_TITLE_ALIASES: Dict[str, str] = {
+    prefix: canonical
+    for prefix, canonical in TITLE_PREFIX_ALIASES.items()
+    if prefix not in _IDENTITY_BEARING_PREFIXES
+}
+FINGERPRINT_TITLE_ALIASES["Certificate expiring in "] = "Certificate expiring soon"
+
+
+# Phase 178 IDENT-01: classification of all 22 `title=f"..."` interpolation
+# sites in the codebase (measured via `grep -rn 'title=f"' quirk/`). Keys are
+# the AST literal-only template — constant string parts joined, with each
+# FormattedValue (interpolated expression) dropped — matching the form
+# tests/fixtures/chaos_lab_findings.py produces.
+#
+# Classification rule (verbatim — apply this rule to any 23rd title added
+# later, do not eyeball it):
+#
+#   Normalize an interpolated segment out of the fingerprint ONLY when it is
+#   VOLATILE — it changes between re-scans while the underlying finding
+#   remains unremediated. PRESERVE it when it is a DISCRIMINATOR — two
+#   genuinely different findings at the same (host, port) can differ only in
+#   that segment. When neither is demonstrated, the default is PRESERVE: a
+#   false merge is unrecoverable, a false split is merely noisy.
+TITLE_IDENTITY_CLASS: Dict[str, str] = {
+    # scan.py:146 — ep.tls_version is stable for an unremediated endpoint.
+    "Legacy TLS version: ": "PRESERVE_IDENTITY",
+    # scan.py:200 — days_to_expiry decrements daily; THE demonstrated defect.
+    "Certificate expiring in  day(s)": "NORMALIZE",
+    # scan.py:307 — qs and cert_pubkey_alg both stable; also mid-string,
+    # unreachable by startswith (kept here for completeness of the 22-title
+    # inventory, not because the prefix mechanism could ever match it).
+    "Quantum- algorithm: ": "PRESERVE_IDENTITY",
+    # scan.py:350 — DISCRIMINATOR: service_detail is etype:{id}:{name}:{sev},
+    # one row per etype at one host:port.
+    "Kerberos weak etype: ": "PRESERVE_IDENTITY",
+    # scan.py:377 — alg stable.
+    "OIDC RS-family algorithm: ": "PRESERVE_IDENTITY",
+    # scan.py:412 — alg/size stable.
+    "Weak SAML signing certificate: -": "PRESERVE_IDENTITY",
+    # scan.py:459 — DISCRIMINATOR: a zone can hit several
+    # _DNSSEC_WEAK_MAP conditions.
+    "DNSSEC: ": "PRESERVE_IDENTITY",
+    # scan.py:620 — proto IS the resource identifier; also start-interpolated,
+    # unreachable by startswith.
+    " encryption posture": "NOT_IDENTITY_RELEVANT",
+    # scan.py:666 — bucket name IS the identity.
+    "S3 bucket ": "NOT_IDENTITY_RELEVANT",
+    # scan.py:686 — account/container ARE the identity.
+    "Azure Blob /": "NOT_IDENTITY_RELEVANT",
+    # scan.py:702 — namespace IS the identity.
+    "K8s secrets in namespace ": "NOT_IDENTITY_RELEVANT",
+    # scan.py:725 — provider IS the identity; start-interpolated.
+    " cluster etcd encryption": "NOT_IDENTITY_RELEVANT",
+    # findings_evaluator.py:166 — pre-existing alias "End-of-life "; one
+    # OpenSSL install per image, no discriminator.
+    "End-of-life  in container image": "NORMALIZE",
+    # findings_evaluator.py:181 — T-178-01: {name} is a DISCRIMINATOR;
+    # compliance may collapse it, identity must not.
+    "Container image uses quantum-vulnerable crypto library (@)": "PRESERVE_IDENTITY",
+    # findings_evaluator.py:203 — version only; package name baked into the
+    # literal.
+    "Severely outdated Python cryptography package () in container image": "NORMALIZE",
+    # findings_evaluator.py:219 — as above.
+    "Outdated Python cryptography package () in container image": "NORMALIZE",
+    # findings_evaluator.py:237 — as above.
+    "Outdated pyOpenSSL package () in container image": "NORMALIZE",
+    # findings_evaluator.py:254 — as above.
+    "Outdated libgcrypt () in container image": "NORMALIZE",
+    # findings_evaluator.py:266 — as #14 (T-178-01 discriminator).
+    "Container image contains crypto library (@)": "PRESERVE_IDENTITY",
+    # findings_evaluator.py:1026 — cert_subject names WHICH cert; a reissued
+    # cert is a genuinely different finding.
+    "Code-signing certificate expired: ": "PRESERVE_IDENTITY",
+    # findings_evaluator.py:1045 — as above.
+    "Code-signing certificate expiring within 90 days: ": "PRESERVE_IDENTITY",
+    # findings_evaluator.py:1080 — as above.
+    "Code-signing certificate uses weak algorithm: ": "PRESERVE_IDENTITY",
+}
+
+
 COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
     # ── PCI 4.2.1 + HIPAA §164.312(e)(1) family — plaintext / weak transit
     "Plaintext HTTP service detected": [
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
         _soc2("CC6.7"), _iso("8.26"),
     ],
-    # NB: parens preserved verbatim — risk_engine.py:464 emits this exact string.
+    # NB: parens preserved verbatim — findings_evaluator.py:553 emits this exact string.
     "Legacy TLS versions allowed (TLS 1.0/1.1)": [
         _pci("4.2.1"),
         _pci("4.2.1.1"),
@@ -194,7 +351,7 @@ COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
         _soc2("CC6.7"), _iso("8.26"),
     ],
-    # NB: parens preserved verbatim — risk_engine.py emits this exact string.
+    # NB: parens preserved verbatim — findings_evaluator.py:931 emits this exact string.
     "Plaintext Redis listener (no auth)": [
         _pci("4.2.1"),
         _pci("8.3.2"),
@@ -244,7 +401,7 @@ UNMAPPED_TITLES: FrozenSet[str] = frozenset({
     # Discovery-time observation; control implication only after follow-up scanner.
     "Unknown open service",
     # Informational baseline — container has crypto library; no defect implied.
-    # Canonical alias for risk_engine.py:190 f-string family.
+    # Canonical alias for findings_evaluator.py:266 f-string family.
     "Container image contains crypto library",
 })
 
@@ -374,4 +531,8 @@ __all__ = [
     "STALENESS_THRESHOLD_DAYS",
     "check_compliance_staleness",
     "status_report",
+    "normalize_finding_title",
+    "FINGERPRINT_TITLE_ALIASES",
+    "_IDENTITY_BEARING_PREFIXES",
+    "TITLE_IDENTITY_CLASS",
 ]
