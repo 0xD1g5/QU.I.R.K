@@ -58,6 +58,18 @@ class SampleFindingItem:
 
 
 @dataclass
+class SeverityTransitionItem:
+    """One (host, port, protocol) endpoint whose severity changed between two
+    sessions without its identity changing. Replaces the old severity-in-key
+    encoding (D-03) now that the match key is (host, port, protocol)."""
+    host: str
+    port: int
+    protocol: str
+    previous_severity: Optional[str]
+    current_severity: Optional[str]
+
+
+@dataclass
 class TrendReport:
     current_session_ts: Optional[datetime]
     previous_session_ts: Optional[datetime]
@@ -74,6 +86,9 @@ class TrendReport:
     scan_errors_resolved_count: int
     new_findings_sample: List[SampleFindingItem] = field(default_factory=list)
     resolved_findings_sample: List[SampleFindingItem] = field(default_factory=list)
+    severity_transitions: List[SeverityTransitionItem] = field(default_factory=list)
+    new_total: int = 0
+    resolved_total: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -131,15 +146,19 @@ def _bucket_for_severity(sev: str) -> Optional[str]:
     return _SEVERITY_BUCKET.get(sev)
 
 
-def _count_by_bucket(keys: Iterable[tuple]) -> dict:
-    """Count (host, port, protocol, severity) tuples by severity bucket.
+def _count_by_bucket(keys: Iterable[tuple], sev_map: dict) -> dict:
+    """Count (host, port, protocol) keys by severity bucket, looking severity
+    up per key in `sev_map`.
 
-    Returns a dict with keys "high", "medium", "low". INFO keys are silently
-    ignored (D-05).
+    Returns a dict with keys "high", "medium", "low". Keys whose severity is
+    None or INFO/unknown are silently ignored (D-05) — this is unchanged from
+    the old severity-in-key behaviour, only the lookup mechanism moved from
+    "read the 4th tuple element" to "look up in the map" since severity is no
+    longer part of the key.
     """
     counts: dict = {"high": 0, "medium": 0, "low": 0}
-    for _host, _port, _protocol, severity in keys:
-        bucket = _bucket_for_severity(severity)
+    for key in keys:
+        bucket = _bucket_for_severity(sev_map.get(key))
         if bucket is not None:
             counts[bucket] += 1
     return counts
@@ -152,12 +171,14 @@ def _sample_findings(
     """Return sample findings (max 5) whose match-key is in target_keys.
 
     Sort order: severity rank asc (CRITICAL=0 → first), then host asc, then port asc.
-    Caps at 5 (D-08). INFO severity endpoints are excluded because their keys
-    are not present in target_keys (they are never added to new_keys/resolved_keys).
+    Caps at 5 (D-08). Match key is (host, port, protocol) — severity is no
+    longer part of the key (see compute_trend_report's docstring); a row is
+    included whenever its endpoint identity is in target_keys, regardless of
+    its severity (including None).
     """
     matched = [
         ep for ep in endpoints
-        if (ep.host, ep.port, ep.protocol, ep.severity) in target_keys
+        if (ep.host, ep.port, ep.protocol) in target_keys
     ]
     matched.sort(
         key=lambda ep: (
@@ -203,19 +224,37 @@ def compute_trend_report(
     D-06: When previous_ts is None, returns null-delta single-session response.
     D-13: NULL scanned_at rows are excluded from all session fetches.
 
-    Match key for finding delta: (host, port, protocol, severity) — severity
-    included intentionally so a HIGH→MEDIUM transition surfaces as 1 HIGH
-    resolved + 1 MEDIUM new (D-03).
+    Match key for finding delta: (host, port, protocol). Severity is NOT part
+    of the key — it is carried alongside as a per-key map instead. Severity is
+    populated only by the three cloud connectors; measured against
+    output/quirk.db's crypto_endpoints table: 30 rows, 0 non-NULL severity. A
+    severity-in-key filter (`severity is not None`) on data shaped like that
+    empties both key sets before the key is ever consulted, so the delta was
+    empty on every real scan by construction — this is what IDENT-02 fixes.
 
-    Severity bucketing: CRITICAL/HIGH → "high", MEDIUM → "medium", LOW → "low",
-    INFO → excluded from counts and samples (D-05).
+    D-03's original intent — a HIGH→MEDIUM transition at an unchanged endpoint
+    should be visible as a partial-remediation signal, not silently disappear —
+    is now served by `severity_transitions` instead of by severity-in-key: for
+    every (host, port, protocol) present in both sessions whose severity
+    differs, one `SeverityTransitionItem(host, port, protocol,
+    previous_severity, current_severity)` is emitted, and that endpoint is
+    excluded from new_findings_sample/resolved_findings_sample (it did not
+    appear or disappear — it changed).
 
-    Scan error delta (D-04/D-05): rows with scan_error IS NOT NULL are excluded
-    from finding delta keys; counted separately as scan_errors_new_count /
-    scan_errors_resolved_count.
+    Severity bucketing (unchanged, D-05): CRITICAL/HIGH → "high", MEDIUM →
+    "medium", LOW → "low", INFO/None → excluded from counts and samples. Bucket
+    counts (new_high/new_medium/new_low/resolved_*) are therefore honestly
+    zero when severity is absent on every row. `new_total`/`resolved_total`
+    are the severity-agnostic counterparts — `len(new_keys)` /
+    `len(resolved_keys)` — and are the signal that stays non-zero even when
+    severity is entirely NULL.
 
-    Sample arrays (D-08): capped at 5, sorted by severity desc (CRITICAL first),
-    then host asc, then port asc.
+    Scan error delta (D-04/D-05, unchanged): rows with scan_error IS NOT NULL
+    are excluded from finding delta keys; counted separately as
+    scan_errors_new_count / scan_errors_resolved_count.
+
+    Sample arrays (D-08, unchanged): capped at 5, sorted by severity desc
+    (CRITICAL first), then host asc, then port asc.
 
     Accuracy note: Trend accuracy depends on consistent target configuration
     between scans. IP-addressed targets may produce phantom new/resolved
@@ -241,6 +280,8 @@ def compute_trend_report(
             resolved_low=0,
             scan_errors_new_count=0,
             scan_errors_resolved_count=0,
+            new_total=0,
+            resolved_total=0,
         )
 
     previous_eps = _fetch_session_endpoints(db, previous_ts)
@@ -261,24 +302,52 @@ def compute_trend_report(
         for ep in current_eps
         if ep.scan_error is not None
     }
-    current_keys = {
-        (ep.host, ep.port, ep.protocol, ep.severity)
+    # current_sev / previous_sev: key is (host, port, protocol) — severity is
+    # no longer part of the identity key, it is carried alongside as a map so
+    # severity_transitions can still be computed. NOTE: if two rows in the
+    # SAME session share a (host, port, protocol) with different severities
+    # (duplicate scan of the same endpoint within one session), the dict keeps
+    # whichever row was seen last — this is best-effort for multi-row
+    # endpoints and is not silently papered over; it is the same "last write
+    # wins" behaviour a plain set of keys would have had for membership.
+    current_sev = {
+        (ep.host, ep.port, ep.protocol): ep.severity
         for ep in current_eps
-        if ep.scan_error is None and ep.severity is not None
+        if ep.scan_error is None
     }
-    previous_keys = {
-        (ep.host, ep.port, ep.protocol, ep.severity)
+    previous_sev = {
+        (ep.host, ep.port, ep.protocol): ep.severity
         for ep in previous_eps
         if ep.scan_error is None
-        and ep.severity is not None
         and (ep.host, ep.port, ep.protocol) not in current_error_hosts
     }
+    current_keys = set(current_sev)
+    previous_keys = set(previous_sev)
 
     new_keys = current_keys - previous_keys
     resolved_keys = previous_keys - current_keys
 
-    new_counts = _count_by_bucket(new_keys)
-    resolved_counts = _count_by_bucket(resolved_keys)
+    # D-03's intent, replacing severity-in-key: endpoints present in BOTH
+    # sessions whose severity differs are reported once as a transition, not
+    # as 1 new + 1 resolved. Sorted by (host, port) for deterministic output
+    # (D-08's spirit).
+    severity_transitions = sorted(
+        (
+            SeverityTransitionItem(
+                host=key[0],
+                port=key[1],
+                protocol=key[2],
+                previous_severity=previous_sev[key],
+                current_severity=current_sev[key],
+            )
+            for key in (current_keys & previous_keys)
+            if current_sev[key] != previous_sev[key]
+        ),
+        key=lambda t: (t.host or "", t.port or 0),
+    )
+
+    new_counts = _count_by_bucket(new_keys, current_sev)
+    resolved_counts = _count_by_bucket(resolved_keys, previous_sev)
 
     # D-05: scan error count delta computed independently of finding delta.
     # Phase 41 / D-15: exclude category='missing_extra' so that "user did not
@@ -317,4 +386,7 @@ def compute_trend_report(
         scan_errors_resolved_count=scan_errors_resolved_count,
         new_findings_sample=new_samples,
         resolved_findings_sample=resolved_samples,
+        severity_transitions=severity_transitions,
+        new_total=len(new_keys),
+        resolved_total=len(resolved_keys),
     )

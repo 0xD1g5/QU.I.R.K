@@ -126,7 +126,15 @@ def test_resolved_findings_counted(db):
 
 
 def test_severity_change_surfaces(db):
-    """D-03: severity change surfaces as OLD resolved + NEW new."""
+    """D-03: severity change surfaces as a severity transition.
+
+    Plan 178-05: the match key dropped severity (host, port, protocol only),
+    so a HIGH->MEDIUM change at an unchanged endpoint no longer double-counts
+    as "1 HIGH resolved + 1 MEDIUM new" — that encoding produced a vacuous
+    delta on real (severity-NULL) data. D-03's signal moved to
+    report.severity_transitions: the endpoint is reported once, explicitly,
+    with both severities, and does not appear in resolved_high/new_medium.
+    """
     # Seed at PREV_TS: HIGH finding
     _make_ep(db, "a.example", 443, "TLS", "HIGH", scanned_at=PREV_TS)
     # Seed at CURR_TS: same host/port/protocol but MEDIUM (severity downgraded)
@@ -134,8 +142,15 @@ def test_severity_change_surfaces(db):
 
     report = compute_trend_report(CURR_TS, PREV_TS, db)
 
-    assert report.resolved_high == 1   # HIGH resolved
-    assert report.new_medium == 1      # MEDIUM new
+    assert report.resolved_high == 0   # no longer double-counted as resolved
+    assert report.new_medium == 0      # no longer double-counted as new
+
+    matching = [
+        t for t in report.severity_transitions
+        if t.host == "a.example" and t.port == 443 and t.protocol == "TLS"
+        and t.previous_severity == "HIGH" and t.current_severity == "MEDIUM"
+    ]
+    assert len(matching) == 1
 
 
 def test_scan_error_excluded_from_delta(db):

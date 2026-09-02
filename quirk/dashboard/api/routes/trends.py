@@ -193,11 +193,16 @@ def get_trends_timeline(
         score_dict = compute_readiness_score(evidence)
         sub = score_dict["subscores"]
         keys = [
-            (ep.host, ep.port, ep.protocol, ep.severity)
+            (ep.host, ep.port, ep.protocol)
             for ep in eps
             if ep.scan_error is None
         ]
-        counts = _count_by_bucket(keys)
+        sev_map = {
+            (ep.host, ep.port, ep.protocol): ep.severity
+            for ep in eps
+            if ep.scan_error is None
+        }
+        counts = _count_by_bucket(keys, sev_map)
         points.append(
             TrendSessionPoint(
                 session_ts=ts.isoformat(),

@@ -1,8 +1,9 @@
 """IDENT-02 non-vacuity + severity-transition guards for compute_trend_report().
 
-Phase 178 Plan 02 (Wave 1): these tests are written and run RED, BEFORE any change to
-`quirk/intelligence/trends.py`. Plan 178-05 (Wave 2) owns the fix and is bound to make
-these tests pass (the xfail(strict=True) markers force removal at that point).
+Phase 178 Plan 02 (Wave 1): these tests were written and run RED, BEFORE any change to
+`quirk/intelligence/trends.py`, gated by strict expected-failure markers that forced their
+removal once Plan 178-05 (Wave 2) landed the fix. Those markers are gone now — every test
+below is a plain, unconditional assertion.
 
 Measured production condition that motivates this file: `output/quirk.db`
 `crypto_endpoints` has 30 rows, 0 non-NULL severity. `compute_trend_report`'s match key
@@ -78,24 +79,14 @@ T1 = datetime(2026, 9, 1, 10, 0, 0)
 T2 = datetime(2026, 9, 2, 10, 0, 0)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "IDENT-02 RED: compute_trend_report filters severity is not None on both "
-        "sides, so the delta is empty by construction; Plan 178-05 removes this marker"
-    ),
-    strict=True,
-)
 def test_all_null_severity_delta_is_not_vacuous(db):
     """Session A (T1) seeds a.example:443/TLS and b.example:22/SSH. Session B (T2)
     seeds a.example:443/TLS (unchanged) and c.example:8443/TLS (new). EVERY row has
     severity=None and scan_error=None — the production-real condition.
 
     c.example:8443 must be named as NEW; b.example:22 must be named as RESOLVED;
-    a.example must appear in NEITHER list (it is unchanged across sessions).
-
-    RED today: current_keys and previous_keys are both built with a
-    `severity is not None` filter, so both sets are empty regardless of what rows
-    exist, and new_findings_sample / resolved_findings_sample are both [].
+    a.example must appear in NEITHER list (it is unchanged across sessions). Guards
+    against the match key or its filters ever excluding severity=None rows again.
     """
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T1, severity=None)
     _make_ep(db, "b.example", 22, "SSH", scanned_at=T1, severity=None)
@@ -117,20 +108,11 @@ def test_all_null_severity_delta_is_not_vacuous(db):
     assert ("a.example", 443) not in resolved_hosts_ports
 
 
-@pytest.mark.xfail(
-    reason=(
-        "IDENT-02 RED: compute_trend_report filters severity is not None on both "
-        "sides, so the delta is empty by construction; Plan 178-05 removes this marker"
-    ),
-    strict=True,
-)
 def test_all_null_severity_counts_are_reported_not_silently_zero(db):
     """Same fixture as test_all_null_severity_delta_is_not_vacuous. The report must
     expose a severity-agnostic count of new and resolved findings equal to 1 and 1
-    respectively — a field that does not exist yet (Plan 178-05 adds it).
-
-    RED today by AttributeError (TrendReport has no severity-agnostic total field),
-    which is the correct RED shape: the field itself is part of the fix's contract.
+    respectively (`new_total`/`resolved_total`), so the delta stays visible even
+    when severity is absent on every row.
     """
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T1, severity=None)
     _make_ep(db, "b.example", 22, "SSH", scanned_at=T1, severity=None)
@@ -143,13 +125,6 @@ def test_all_null_severity_counts_are_reported_not_silently_zero(db):
     assert report.resolved_total == 1
 
 
-@pytest.mark.xfail(
-    reason=(
-        "IDENT-02 RED: compute_trend_report filters severity is not None on both "
-        "sides, so the delta is empty by construction; Plan 178-05 removes this marker"
-    ),
-    strict=True,
-)
 def test_protocol_null_does_not_reintroduce_vacuity(db):
     """Closes RESEARCH.md Assumption A1: dropping severity from the match key must
     not simply move the vacuity one field to the right if `protocol` is also NULL on
@@ -159,8 +134,7 @@ def test_protocol_null_does_not_reintroduce_vacuity(db):
     Session B (T2): a.example:443 (unchanged) and c.example:8443 (new).
 
     c.example:8443 must be named as NEW; b.example:22 must be named as RESOLVED,
-    even with protocol=None on every row. RED today for the same reason as above:
-    severity is not None empties both key sets before protocol is ever consulted.
+    even with protocol=None on every row.
     """
     _make_ep(db, "a.example", 443, None, scanned_at=T1, severity=None)
     _make_ep(db, "b.example", 22, None, scanned_at=T1, severity=None)
@@ -188,17 +162,10 @@ def test_protocol_null_does_not_reintroduce_vacuity(db):
 # separately") REPLACES this encoding, it does not abandon it: the partial-
 # remediation signal must still be visible, just as an explicit transition record
 # rather than as a finding-identity change. These two tests pin that replacement
-# contract before Plan 178-05 implements it.
+# contract, which Plan 178-05 implements in quirk/intelligence/trends.py.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason=(
-        "IDENT-02 RED: TrendReport has no severity_transitions field yet; "
-        "Plan 178-05 adds it and removes this marker"
-    ),
-    strict=True,
-)
 def test_severity_transition_reported_once_not_as_new_plus_resolved(db):
     """a.example:443/TLS is present in BOTH sessions: severity=HIGH in session A,
     severity=MEDIUM in session B (same host/port/protocol — unchanged endpoint,
@@ -206,8 +173,6 @@ def test_severity_transition_reported_once_not_as_new_plus_resolved(db):
     naming (a.example, 443, TLS, previous="HIGH", current="MEDIUM"), and a.example
     must NOT appear in new_findings_sample nor resolved_findings_sample (it is a
     transition, not a new-plus-resolved pair).
-
-    RED today by AttributeError: report.severity_transitions does not exist yet.
     """
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T1, severity="HIGH")
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T2, severity="MEDIUM")
@@ -238,9 +203,9 @@ def test_severity_transition_reported_once_not_as_new_plus_resolved(db):
 def test_severity_bucket_counts_still_work_when_severity_is_populated(db):
     """Green regression guard: a mixed scenario with real severity strings on every
     row must keep producing the same new_high/resolved_low etc. bucket counts the
-    existing suite expects. This test is NOT marked xfail — it must stay green
-    through Plan 178-05's change, guarding against a regression of D-05 bucketing
-    while the match key is being fixed.
+    existing suite expects. This test was always a plain, unconditional assertion
+    (no expected-failure marker) — it must stay green through Plan 178-05's change,
+    guarding against a regression of D-05 bucketing while the match key is fixed.
     """
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T1, severity="HIGH")
     _make_ep(db, "b.example", 443, "TLS", scanned_at=T1, severity="LOW")
