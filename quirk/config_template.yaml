@@ -162,3 +162,11 @@ security:
 #   "rabbit.lab:15672":
 #     user: "admin"
 #     pass_env: "RABBIT_LAB_PASS"   # os.environ["RABBIT_LAB_PASS"] at scan time
+
+# -- Remediation aliases (Phase 179 / REMED-03) ----------------------------
+# Maps an old identity (from a prior engagement's scan) to its current identity,
+# so re-scan burndown can match findings across DHCP churn, hostname-vs-IP
+# drift, VIPs, and container reassignment. Edited by a human between
+# engagements — QU.I.R.K. never learns aliases automatically (D-10).
+# remediation_aliases:
+#   web01.corp.example: 10.0.0.15

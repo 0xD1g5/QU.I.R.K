@@ -423,6 +423,7 @@ class AppConfig:
     intelligence: IntelligenceCfg
     security: SecurityCfg = field(default_factory=SecurityCfg)             # Phase 57 / D-04
     broker_credentials: Dict[str, BrokerCredential] = field(default_factory=dict)  # Phase 57 / D-05
+    remediation_aliases: Dict[str, str] = field(default_factory=dict)  # Phase 179 / REMED-03 — operator-supplied re-scan aliases; human-edited only
 
 
 def _as_str_list(v: Any) -> List[str]:
@@ -544,6 +545,22 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
             pass_env=str(cred.get("pass_env", "")),
         )
 
+    # Phase 179 / REMED-03 / D-10: operator-supplied re-scan aliases (old identity ->
+    # current identity). Human-edited only in config.yaml — there is no runtime write
+    # path and no auto-learning; a wrong or malformed entry must never crash the scan
+    # or be silently trusted (ASVS V5 / T-179-07).
+    remediation_aliases_raw = raw.get("remediation_aliases")
+    remediation_aliases: Dict[str, str] = {}
+    if isinstance(remediation_aliases_raw, dict):
+        for alias_key, alias_value in remediation_aliases_raw.items():
+            if isinstance(alias_value, (dict, list)) or alias_value is None:
+                continue
+            coerced_key = str(alias_key).strip()
+            coerced_value = str(alias_value).strip()
+            if not coerced_key or not coerced_value:
+                continue
+            remediation_aliases[coerced_key] = coerced_value
+
     # Phase 139 SNMPV3-01 / D-01/D-02: per-host SNMPv3 USM credentials, keyed by bare
     # host. auth_key_env/priv_key_env are env-var NAMES only, never inline secrets.
     # D-02: reject any credential whose auth/priv protocol falls outside the
@@ -592,6 +609,7 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         intelligence=intelligence_cfg,
         security=security_cfg,
         broker_credentials=broker_credentials,
+        remediation_aliases=remediation_aliases,
     )
 
 
