@@ -101,25 +101,37 @@ this does.
 
 The foundation both readings need. Remediation tracking on a decaying key is worse than none.
 
-- [ ] **IDENT-01**: A finding's identity is stable across re-scans. The 22 `title=f"..."`
+- [x] **IDENT-01**: A finding's identity is stable across re-scans. The 22 `title=f"..."`
   interpolations are normalized out of the fingerprint input (the normalizer already exists —
   `TITLE_PREFIX_ALIASES`, `quirk/compliance/__init__.py:105-122` — but is not applied to it), with a
   regression test proving a cert-expiry finding keeps one fingerprint across a simulated day
-  boundary. Fixes the live daily-Jira-ticket defect.
+  boundary. Fixes the live daily-Jira-ticket defect. *Evidence: one `normalize_finding_title` in
+  the tree (was 3); `FINGERPRINT_TITLE_ALIASES` derived at import from `TITLE_PREFIX_ALIASES`;
+  day-boundary test passes with its strict xfail removed; 4 T-178-01 collision guards green;
+  AST guard bounds all 22 titles with a proven-RED negative control
+  (`tests/test_ticketing_fingerprint_stability.py`, `tests/test_compliance_title_join.py`,
+  Plans 178-01/04/06).*
 
-- [ ] **IDENT-02**: `compute_trend_report` either reports real movement or honestly reports that it
+- [x] **IDENT-02**: `compute_trend_report` either reports real movement or honestly reports that it
   cannot. Removing `severity` from the delta key is the likely fix, but note severity-in-key is
   deliberate (`trends.py:206-208`) — a HIGH→MEDIUM partial remediation currently reads as 1 closed +
   1 new. Whichever way it resolves, a test must prove the function is non-vacuous against seeded
   two-scan data; the current implementation passes its tests while being structurally incapable of
-  ever returning a non-empty delta.
+  ever returning a non-empty delta. *Evidence: match key is `(host, port, protocol)`,
+  `severity is not None` filter removed; `severity_transitions` preserves D-03's intent; 4
+  non-vacuity guards pass unmarked (`tests/test_trends_non_vacuity.py`); D-04/D-05/D-06/D-08/D-12/
+  D-13 all confirmed preserved (Plans 178-02/05).*
 
-- [ ] **IDENT-03**: The two disagreeing findings-derivation paths are reconciled or explicitly
+- [x] **IDENT-03**: The two disagreeing findings-derivation paths are reconciled or explicitly
   bounded. `quirk/engine/findings_evaluator.py` and the five `_derive_*_findings` functions in
   `quirk/dashboard/api/routes/scan.py` independently produce findings with their own f-string
   titles. Persisting only one guarantees the dashboard and reports disagree about what is resolved.
   Scope may be "prove they agree on identity" rather than "merge them" — merging is a design-judgment
-  refactor explicitly excluded from v5.16 as RVW-002.
+  refactor explicitly excluded from v5.16 as RVW-002. *Evidence: 2 of 3 shared conditions are
+  fingerprint-equal with zero code change; D-178-A (wording divergence) and D-178-B
+  (detection-coverage gap) bounded in `docs/reviews/178-derivation-path-divergence.md`; allowlist
+  negative control proven RED then restored; neither derivation path's title literals changed
+  (Plans 178-03/06).*
 
 ## Remediation Item Model (Phase 179)
 
@@ -206,9 +218,9 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | RELEASE-01 | Phase 177 | Complete — both root-cause halves fixed and evidenced (177-01 repo-root residue, 177-03 machine-wide orphan install), independent of RELEASE-02/03 shipping (2026-09-02) |
 | RELEASE-02 | Phase 177 | Complete — v5.18.0 shipped, run 33656116783 green on `push`, PyPI `latest: 5.18.0` (2026-09-02) |
 | RELEASE-03 | Phase 177 | Complete — real clean-venv PyPI install verified, Sigstore provenance verified via corrected endpoint, Series 177 all PASS (2026-09-02) |
-| IDENT-01 | Phase 178 | Pending |
-| IDENT-02 | Phase 178 | Pending |
-| IDENT-03 | Phase 178 | Pending |
+| IDENT-01 | Phase 178 | Complete — single normalizer, day-boundary stability + collision guards green, AST-bounded 22 titles (2026-09-02) |
+| IDENT-02 | Phase 178 | Complete — match key re-keyed to (host,port,protocol), non-vacuity proven on all-NULL-severity data, severity_transitions preserves D-03 (2026-09-02) |
+| IDENT-03 | Phase 178 | Complete — 2/3 shared conditions fingerprint-equal, 1 divergence bounded in writing (D-178-A/B), allowlist guard proven RED (2026-09-02) |
 | REMED-01 | Phase 179 | Pending |
 | REMED-02 | Phase 179 | Pending |
 | REMED-03 | Phase 179 | Pending |
