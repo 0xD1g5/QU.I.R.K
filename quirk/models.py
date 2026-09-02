@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, Float, ForeignKey, UniqueConstraint
 
 Base = declarative_base()
 
@@ -553,3 +553,132 @@ class HardwareDevice(Base):
     # pre-Phase-159 row" — never backfilled. True = check-in re-probe; NULL/False
     # = full scan.
     is_partial_scan          = Column(Boolean,     nullable=True)
+
+
+class RemediationItem(Base):
+    """Phase 179 REMED-01: per-scan snapshot of a remediation roadmap item.
+
+    One row per (slug, scan_run_id). ``slug`` is the stable kind-derived
+    identity (see quirk/intelligence/remediation.py::REMEDIATION_KIND_SLUGS)
+    — NEVER derived from title. ``title`` is a display field only and is
+    never part of the key: rewording a roadmap title must not re-key its
+    history (D-01, D-04).
+
+    No relationship() declarations and no ForeignKey — soft references only,
+    matching the project's existing scan_run_id / sensor_id convention (D-03).
+
+    Deviation from CONTEXT D-06's general nullable=True guidance: ``state``
+    is deliberately NOT NULL here. D-06 mirrors scan_run_id's precedent for
+    rows written *before* a column existed; this is a brand-new table with
+    no such rows. A NULL state would be indistinguishable from
+    not_observed, re-introducing the exact ambiguity REMED-03 exists to
+    remove. Everything else on this table stays nullable per D-06.
+
+    state values: open | closed | not_observed (see ITEM_STATES).
+    constituency values: fingerprint | severity | evidence_only.
+    phase values: NOW | NEXT | LATER.
+    """
+
+    __tablename__ = "remediation_items"
+    __table_args__ = (
+        UniqueConstraint("slug", "scan_run_id", name="uq_remediation_items_slug_scan_run"),
+    )
+
+    id                     = Column(Integer, primary_key=True, autoincrement=True)
+    slug                   = Column(String(64), nullable=False, index=True)   # stable kind ID (D-01) — never derived from title
+    scan_run_id            = Column(String(64), nullable=True, index=True)    # soft ref, no FK (D-03)
+    title                  = Column(Text, nullable=True)                      # display only — never part of the key (D-04)
+    phase                  = Column(String(8), nullable=True)                 # NOW | NEXT | LATER
+    priority                = Column(Integer, nullable=True)
+    constituency           = Column(String(16), nullable=True)                # fingerprint | severity | evidence_only — set by Plan 03
+    state                  = Column(String(16), nullable=False)               # open | closed | not_observed — NOT NULL, see class docstring
+    first_seen_scan_run_id = Column(String(64), nullable=True)
+    created_at             = Column(DateTime, nullable=True)
+
+
+class RemediationItemFingerprint(Base):
+    """Phase 179 REMED-01: join table of constituent findings for a RemediationItem.
+
+    One row per constituent finding, written explicitly at scan time (D-03;
+    Plan 03 does the writing). This is what makes "6 of 8 verified closed"
+    expressible: fixing 1 of 8 plaintext endpoints closes nothing, and
+    fixing the 8th does not make the item silently vanish with no closure
+    record.
+
+    No relationship() declarations and no ForeignKey — ``remediation_item_id``
+    and ``slug`` are soft references, matching the project's existing
+    scan_run_id / sensor_id convention (D-03). ``slug`` is denormalised here
+    (rather than requiring a join) so Phase 180 can query without a join.
+
+    Deviation from CONTEXT D-06's general nullable=True guidance: ``state``
+    and ``finding_fingerprint`` are deliberately NOT NULL here, for the same
+    reason as RemediationItem.state — see that class's docstring. A NULL
+    finding_fingerprint would make a row that silently passes a comparison
+    it never evaluated.
+
+    state values: open | closed | not_observed (see ITEM_STATES).
+    finding_fingerprint is the Phase 178 SHA256 hex from
+    TicketingChannel.compute_fingerprint — stable across re-scans because
+    compute_fingerprint normalises the title before hashing.
+    """
+
+    __tablename__ = "remediation_item_fingerprints"
+    __table_args__ = (
+        UniqueConstraint(
+            "scan_run_id", "slug", "finding_fingerprint",
+            name="uq_remediation_item_fp_scan_slug_fp",
+        ),
+    )
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    remediation_item_id = Column(Integer, nullable=True, index=True)      # soft ref, no FK (D-03)
+    slug                = Column(String(64), nullable=True, index=True)   # denormalised — Phase 180 can query without a join
+    scan_run_id         = Column(String(64), nullable=True, index=True)
+    finding_fingerprint = Column(String(64), nullable=False, index=True)  # Phase 178 SHA256 hex — NOT NULL, see class docstring
+    host                = Column(String(255), nullable=True)
+    port                = Column(Integer, nullable=True)
+    finding_title       = Column(Text, nullable=True)                     # display only
+    state               = Column(String(16), nullable=False)              # open | closed | not_observed — NOT NULL, see class docstring
+    observed_at         = Column(DateTime, nullable=True)
+
+
+class ScanScopeSignature(Base):
+    """Phase 179 REMED-02: one row per scan, capturing what the scan actually covered.
+
+    Keyed on scan_run_id (D-05) — the stored scan-session identity shared
+    with CryptoEndpoint.scan_run_id / ScanJob.scan_run_id /
+    ScanCheckpoint.scan_run_id. Written once, read by Phase 180's closure
+    comparison, which hard-refuses closure on any signature mismatch (no
+    override flag in this phase).
+
+    Content is stored as discrete columns AND a computed digest: the digest
+    makes mismatch detection cheap, the columns let the operator be told
+    *what* differed rather than just *that* something did.
+
+    ``credentials_present`` stores credential KIND names only (a canonical
+    JSON list of labels) — credential VALUES are never stored, only
+    presence (D-06, T-179-05).
+
+    ``probe_health_json`` is populated by Plan 04 (positively-asserted
+    per-probe-family health, never inferred from exit status —
+    TRIAGE-176-03 precedent).
+
+    Deviation from CONTEXT D-06's general nullable=True guidance:
+    ``scan_run_id`` and ``digest`` are deliberately NOT NULL here, for the
+    same reason as RemediationItem.state — see that class's docstring.
+    Everything else stays nullable per D-06.
+    """
+
+    __tablename__ = "scan_scope_signatures"
+
+    id                   = Column(Integer, primary_key=True, autoincrement=True)
+    scan_run_id          = Column(String(64), nullable=False, unique=True, index=True)
+    signature_version    = Column(String(16), nullable=True)
+    port_scope           = Column(Text, nullable=True)
+    profile              = Column(String(16), nullable=True)
+    extras_present       = Column(Text, nullable=True)   # canonical JSON list
+    credentials_present  = Column(Text, nullable=True)   # canonical JSON list of credential-KIND names only — never values (D-06, T-179-05)
+    sensor_set           = Column(Text, nullable=True)   # canonical JSON list
+    probe_health_json    = Column(Text, nullable=True)   # populated by Plan 04
+    digest               = Column(String(64), nullable=False)  # SHA256 of a canonical serialisation of the above
+    created_at           = Column(DateTime, nullable=True)
