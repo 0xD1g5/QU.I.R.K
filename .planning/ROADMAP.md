@@ -244,7 +244,7 @@ Plans:
 - [x] 179-02-PLAN.md — remediation_aliases: config section (broker_credentials precedent), defensive parsing, no auto-learning
 - [x] 179-03-PLAN.md — Scan-time item + fingerprint join-row persistence; ADVISORY-01 structural AST negative control
 - [x] 179-04-PLAN.md — Scope signature (discrete columns + SHA256 digest) and positively-asserted per-family probe health
-- [ ] 179-05-PLAN.md — Docs (config option + sensor-origin known limitation), roadmap follow-up, Obsidian sync
+- [x] 179-05-PLAN.md — Docs (config option + sensor-origin known limitation), roadmap follow-up, Obsidian sync
 - [ ] 179-06-PLAN.md — Series 179 UAT, hand-edited REMED close-out (ADVISORY-01 stays open), blocking full-suite gate
 
 ### Phase 180: Closure Verification
@@ -304,7 +304,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 |-------|----------------|--------|-----------|
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
-| 179. Remediation Item Model | 4/6 | In Progress|  |
+| 179. Remediation Item Model | 5/6 | In Progress|  |
 | 180. Closure Verification | 0/? | Not started | — |
 | 181. Surfacing | 0/? | Not started | — |
 

@@ -4,13 +4,13 @@ milestone: v5.18
 milestone_name: Migration Execution
 status: executing
 stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T21:21:47.179Z"
+last_updated: "2026-09-02T21:26:38.449Z"
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 48
-  completed_plans: 48
-  percent: 88
+  total_phases: 5
+  completed_phases: 2
+  total_plans: 20
+  completed_plans: 19
+  percent: 40
 ---
 
 # Project State
@@ -318,8 +318,19 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 179 (remediation-item-model) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
+
+**179-05 complete (2026-09-02):** Documentation-only plan. `remediation_aliases:` documented in
+`docs/configuration.md` (new section + Full Reference Configuration entry); remediation-tracking
+scope documented in `docs/operators-guide.md` §15, including a named "Known limitation" subsection
+stating that sensor-origin findings (`quirk/cli/console_cmd.py::_ingest_envelope` sets `sensor_id`/
+`segment` but never `scan_run_id`) are excluded from closure tracking because scope signatures are
+keyed on `scan_run_id`. Backlog follow-up logged in `.planning/ROADMAP.md` ("Remediation Coverage
+(post-v5.18)"). Vault `Digs` re-synced: both guides, a new Phase-179 phase note (`status: active`,
+plan 06 pending), hub wikilink added. Zero `quirk/` source changes. REMED-02/REMED-03 NOT marked
+complete (both span plan 06). **Next step:** Phase 179 Plan 06 — Series 179 UAT, hand-edited
+REMED-01/02/03 close-out (ADVISORY-01 stays open), blocking full-suite gate.
 pushed the three-component tag `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`, dereferencing
 to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated). `release.yml` run
 [33656116783](https://github.com/0xD1g5/QU.I.R.K./actions/runs/33656116783) fired on `event: push`
@@ -1129,7 +1140,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T21:20:53.555Z
+Last session: 2026-09-02T21:26:38.441Z
 Stopped at: Completed 177-06-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
