@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 176-04-PLAN.md
-last_updated: "2026-09-02T13:10:19.611Z"
+stopped_at: Completed 177-02-PLAN.md
+last_updated: "2026-09-02T13:20:31.785Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 7
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 177 (release-toolchain-repair) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 
 **v5.18 opened after a research pass, not on the HORIZON sketch.** The 3x sizing question the sketch
@@ -610,6 +610,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 176 P04 | ~1h | 3 tasks | 2 files |
 | Phase 176 P05 | 12min | 2 tasks | 2 files |
 | Phase 177 P01 | 8min | 3 tasks | 1 files |
+| Phase 177 P02 | 55min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -906,6 +907,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 176]: UAT-5-11 and UAT-6-08 dispositioned GAP for missing ssh-audit binary; LABRUN-01 flagged unmet for those two cases
 - [Phase 176-07]: Installed ssh-audit into .venv only (not pyproject.toml), zero-dependency, regression-free (full suite unchanged 1 failed/3772 passed) — Did not re-disposition UAT-5-11/UAT-6-08: actual re-run was blocked by an unresponsive Docker Desktop daemon; manufacturing a disposition from tool-presence alone would violate D-03/D-04
 - [Phase 177]: 177-01: Guard placed in existing tests/test_version.py per RESEARCH.md recommendation; purge scope limited to exactly the residue paths named in the plan, canonical quirk-scanner install untouched
+- [Phase 177]: 177-02 re-verified the firmware CVE catalog against live NVD REST API data (one published-date drift found and corrected, CVE-2017-12240) and pre-emptively re-verified the SNMP vendor PQC catalog (11-day runway, under the 14-day margin), correcting two dead vendor source_urls. All seven staleness catalogs plus the error-codes generator gate are green. RELEASE-02 remains open (spans plans 177-02/04/06/07).
 
 ### Pending Todos
 
@@ -1075,8 +1077,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T13:07:42.657Z
-Stopped at: Completed 176-04-PLAN.md
+Last session: 2026-09-02T13:20:31.778Z
+Stopped at: Completed 177-02-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
