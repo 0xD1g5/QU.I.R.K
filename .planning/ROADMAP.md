@@ -124,7 +124,7 @@ inward-facing cycles had broken the 2:1 capability/ops ratio.
 
 - [x] **Phase 177: Release Toolchain Repair** - The editable install works, the version bumps, and a real release finally ships covering both v5.16 and v5.17. Gating: nothing else in v5.18 reaches a user until this does. **Shipped 2026-09-02 — v5.18.0 is live on PyPI.**
 - [x] **Phase 178: Finding Identity Repair** - A finding keeps one identity across re-scans, the dead trend report either reports real movement or admits it cannot, and the two findings-derivation paths are reconciled or explicitly bounded. Gating: remediation tracking on a key that decays daily is worse than none. **Complete 2026-09-02 — IDENT-01/02/03 closed, ADVISORY-01 firewall proven held and left OPEN. Verification passed 12/12 (independent re-verification, including re-running the AST-guard negative control).**
-- [ ] **Phase 179: Remediation Item Model** - Roadmap items gain stable IDs joined to their constituent finding fingerprints, a scope signature that refuses closure across incomparable scans, and `not_observed` as an honest third state.
+- [ ] **Phase 179: Remediation Item Model** - Roadmap items gain stable IDs joined to their constituent finding fingerprints, a scope signature that refuses closure across incomparable scans, and `not_observed` as an honest third state. Plans 6/6 executed 2026-09-02; checkbox intentionally NOT flipped pending `179-VERIFICATION.md` (ARTIFACT-01 gate, `scripts/verify_phase_gates.py`) from the `gsd-verifier` subagent.
 - [ ] **Phase 180: Closure Verification** - Closure is machine-observed under a two-sided condition, never human-asserted; `resurfaced` is modelled explicitly; burndown is relative to a named target date rather than a single scalar.
 - [ ] **Phase 181: Surfacing** - Closure state emitted as CycloneDX VEX in the CBOM (zero new deps), plus advisory-only burndown in CLI/HTML/DOCX reports and on the dashboard.
 
@@ -245,7 +245,7 @@ Plans:
 - [x] 179-03-PLAN.md — Scan-time item + fingerprint join-row persistence; ADVISORY-01 structural AST negative control
 - [x] 179-04-PLAN.md — Scope signature (discrete columns + SHA256 digest) and positively-asserted per-family probe health
 - [x] 179-05-PLAN.md — Docs (config option + sensor-origin known limitation), roadmap follow-up, Obsidian sync
-- [ ] 179-06-PLAN.md — Series 179 UAT, hand-edited REMED close-out (ADVISORY-01 stays open), blocking full-suite gate
+- [x] 179-06-PLAN.md — Series 179 UAT, hand-edited REMED close-out (ADVISORY-01 stays open), blocking full-suite gate
 
 ### Phase 180: Closure Verification
 
@@ -304,7 +304,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 |-------|----------------|--------|-----------|
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
-| 179. Remediation Item Model | 5/6 | In Progress|  |
+| 179. Remediation Item Model | 6/6 | Complete   | 2026-09-02 |
 | 180. Closure Verification | 0/? | Not started | — |
 | 181. Surfacing | 0/? | Not started | — |
 

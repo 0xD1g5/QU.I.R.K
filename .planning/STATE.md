@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
-status: executing
-stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T21:26:38.449Z"
+status: verifying
+stopped_at: Completed 179-06-PLAN.md (phase close-out)
+last_updated: "2026-09-02T21:53:27.809Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 20
-  completed_plans: 19
-  percent: 40
+  completed_plans: 20
+  percent: 60
 ---
 
 # Project State
@@ -218,8 +218,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
-  existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute`
+  header if none existing; existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
   `.planning/milestones/v5.16-phases/170-traceability-documentation-runbook/170-02-SUMMARY.md`.
@@ -319,7 +319,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 Phase: 179 (remediation-item-model) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
 **179-05 complete (2026-09-02):** Documentation-only plan. `remediation_aliases:` documented in
 `docs/configuration.md` (new section + Full Reference Configuration entry); remediation-tracking
@@ -655,6 +655,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 179 P02 | 12min | 1 tasks | 3 files |
 | Phase 179 P03 | 50min | 3 tasks | 4 files |
 | Phase 179 P04 | 55min | 3 tasks | 3 files |
+| Phase 179 P06 | 90min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -971,6 +972,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 179]: remediation_persist.py never writes the literal word scoring anywhere, including prose, since the acceptance grep is a bare substring check
 - [Phase 179]: persist_remediation_snapshot wraps its entire body in try/except returning zeroed counters on failure - advisory bookkeeping must never fail a scan
 - [Phase ?]: database probe family uses tls_version as its evidence field (no dedicated scan_json column exists); all 13 probe families use protocol-set membership, no evidence-column-only fallback was needed
+- [Phase 179]: Phase 179 close-out: _SLUG_PRIORITY drift closed via falsifiable guard test (minimum-acceptable), not derivation
+- [Phase 179]: REMED-01/02/03 closed by hand with under-claiming completion notes; ADVISORY-01 confirmed still open (standing, Phases 177-181)
+- [Phase 179]: Phase 179 full-suite gate: reproduced carried DEFER-172-01 baseline exactly after fixing a real phase-179-caused UAT-179-07 format regression; 3803+74=3877 passed reconciles
 
 ### Pending Todos
 
@@ -1140,8 +1144,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T21:26:38.441Z
-Stopped at: Completed 177-06-PLAN.md
+Last session: 2026-09-02T21:53:27.798Z
+Stopped at: Completed 179-06-PLAN.md (phase close-out)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
