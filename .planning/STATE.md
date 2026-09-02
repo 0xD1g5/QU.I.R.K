@@ -4,13 +4,13 @@ milestone: v5.18
 milestone_name: Migration Execution
 status: executing
 stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T19:29:47.088Z"
+last_updated: "2026-09-02T20:58:22.260Z"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 14
-  completed_plans: 13
-  percent: 20
+  completed_phases: 2
+  total_plans: 20
+  completed_plans: 15
+  percent: 40
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 178 — finding-identity-repair
+**Current focus:** Phase 179 — remediation-item-model
 Plan 176-08 (user-directed, executed after the user hard-quit and relaunched a wedged Docker
 Desktop) closed both outstanding LABRUN-01 GAP cases against a live `core + ssh-weak` lab:
 `UAT-5-11` → **PASS**, `UAT-6-08` → **FAIL**. The FAIL exposed **TRIAGE-176-03**, a product defect
@@ -317,8 +317,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 178 (finding-identity-repair) — EXECUTING
-Plan: 7 of 7
+Phase: 179 (remediation-item-model) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
 pushed the three-component tag `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`, dereferencing
 to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated). `release.yml` run
@@ -640,6 +640,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 178 P03 | 25min | 2 tasks | 2 files |
 | Phase 178 P05 | 35min | 2 tasks | 6 files |
 | Phase 178 P06 | 40min | 3 tasks | 4 files |
+| Phase 179 P01 | 45min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1120,7 +1121,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T19:28:52.402Z
+Last session: 2026-09-02T20:57:43.646Z
 Stopped at: Completed 177-06-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
