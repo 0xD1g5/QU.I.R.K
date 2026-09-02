@@ -78,3 +78,24 @@ def test_cli_version_subprocess():
         pytest.fail("CLI --version returned non-zero")
     output = (result.stdout or "") + (result.stderr or "")
     assert TRUTH in output
+
+
+def test_single_distribution_provides_quirk():
+    """RELEASE-01: exactly one installed distribution may claim the `quirk`
+    top-level import package, and its version must equal pyproject.toml's
+    truth. A second, stale distribution (e.g. a leftover `quirk.egg-info/`
+    from a prior package-name migration) makes importlib.metadata.version()
+    calls against the WRONG dist name silently answer a stale version while
+    quirk.__version__ (which names `quirk-scanner` explicitly) stays correct
+    — this guard is what would have caught that drift.
+    """
+    import importlib.metadata as md
+
+    dists = sorted(set(md.packages_distributions().get("quirk", [])))
+    assert dists == [DIST_NAME], (
+        f"Expected exactly one distribution ({DIST_NAME!r}) to claim the "
+        f"'quirk' import package; found {dists!r}. A stale *.egg-info/ "
+        "directory or orphan editable install is present — see "
+        "docs/release-process.md's venv-only note."
+    )
+    assert md.version(DIST_NAME) == TRUTH
