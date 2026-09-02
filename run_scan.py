@@ -3609,6 +3609,30 @@ def main():
                 session.merge(ep)
             session.commit()
 
+    # Phase 179 Plan 03: write remediation items + constituent fingerprints
+    # explicitly at scan time (never recomputed at read time — that IS the
+    # defect this closes). Placed AFTER db_persist so endpoint rows and their
+    # scan_run_id stamps already exist, and BEFORE reporting so any future
+    # surface reads populated tables. Import is lazy so a partial install
+    # cannot break run_scan.py at import time, matching write_reports'
+    # collaborator-import style. Advisory bookkeeping: must never fail a scan.
+    with _phase_timer(run_stats, "remediation_persist") as _remediation_timer:
+        if not scan_run_id or not cfg.output.db_path:
+            # Phase 173 D-02: no phantom timings_sec key for a phase that did
+            # no real work.
+            _remediation_timer.mark_skipped()
+        else:
+            from quirk.intelligence.remediation_persist import persist_remediation_snapshot
+            _remediation_counters = persist_remediation_snapshot(
+                cfg.output.db_path, scan_run_id, endpoints, findings
+            )
+            logger.info(
+                "remediation_persist: items=%d fingerprints=%d skipped=%d",
+                _remediation_counters.get("items", 0),
+                _remediation_counters.get("fingerprints", 0),
+                _remediation_counters.get("skipped_findings", 0),
+            )
+
     proto_counts = Counter([getattr(e, "protocol", "UNKNOWN") for e in endpoints])
     err_counts = Counter([_error_category(getattr(e, "scan_error", "")) for e in endpoints if getattr(e, "scan_error", None)])
 
