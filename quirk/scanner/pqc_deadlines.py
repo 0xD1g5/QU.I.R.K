@@ -10,8 +10,9 @@ mirrors ``hw_cve.py``'s ``STALENESS_THRESHOLD_DAYS`` / ``*_TABLE_META`` /
 ``is_*_stale()`` triad exactly.
 
 Purpose: burndown "relative to a named target date" rather than a single scalar —
-an endpoint using RSA key exchange is late against 2030-12-31 while an RSA
-*signature* is late against 2031-12-31. One scalar cannot express that.
+an endpoint using RSA key exchange is late against the key_establishment deadline
+while an RSA *signature* is late against the digital_signature deadline (see
+``PQC_DEADLINES`` below for the literal dates). One scalar cannot express that.
 
 Cadence: 90 days, matching QRAMM and CMVP (the precedent for policy catalogs, not
 the 30-day CVE cadence or the 365-day static-registry cadence). EO 14412 and
