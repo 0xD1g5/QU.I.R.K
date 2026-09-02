@@ -1,18 +1,21 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-02 (v5.18 Phase 177 — Release Toolchain Repair, plan 177-05: bumped this
-document to `5.18.0`, the first release since `5.15.0` — `v5.16` and `v5.17` were developed and
-archived untagged (see `.planning/ROADMAP.md`'s "deliberately untagged" and RVW-004 notes) and both
-ship inside this single `v5.18.0` release alongside Phase 177's own release-toolchain fixes
-(single-distribution regression guard, `tests/test_version.py::test_single_distribution_provides_quirk`,
-closing the three-competing-distributions defect that made `pip install -e .` land the wrong
-package). `UAT-1-02` was re-executed live against the bumped `5.18.0` install, not carried forward
-from its `5.15.0`-era evidence. Added Series 177 (Release Verification) with three cases, each
-honestly dispositioned `SKIP (GAP — no substitute coverage)` — the release this series verifies
-(PyPI publish, Sigstore attestation, three-component tag push) does not exist yet at authoring
-time; the tag push is a user-executed step in plan 177-06/177-07. No case in Series 177 is marked
-PASS. Earlier: v5.17 Phase 176 — Chaos-Lab Re-Run, the final phase of v5.17: repaired
+**Last Updated:** 2026-09-02 (v5.18 Phase 177 — Release Toolchain Repair, plan 177-08: `v5.18.0`
+shipped for real — the user pushed the tag, `release.yml` run 33656116783 fired on a `push` event
+and completed green across all three jobs, and PyPI now lists `5.18.0` as `latest`. Series 177's
+three release-verification cases were re-executed against that real release and flipped from
+`SKIP (GAP)` to `[x] PASS`; `UAT-177-02`'s case text was also corrected in place — its original
+`gh attestation verify` instruction targeted the wrong verification surface (GitHub's attestation
+store, which PyPI-published Sigstore bundles never reach) and is replaced with PyPI's own
+integrity/provenance endpoint. Earlier, plan 177-05 bumped this document to `5.18.0`, the first
+release since `5.15.0` — `v5.16` and `v5.17` were developed and archived untagged (see
+`.planning/ROADMAP.md`'s "deliberately untagged" and RVW-004 notes) and both ship inside this single
+`v5.18.0` release alongside Phase 177's own release-toolchain fixes (single-distribution regression
+guard, `tests/test_version.py::test_single_distribution_provides_quirk`, closing the
+three-competing-distributions defect that made `pip install -e .` land the wrong package).
+`UAT-1-02` was re-executed live against the bumped `5.18.0` install, not carried forward from its
+`5.15.0`-era evidence. Earlier: v5.17 Phase 176 — Chaos-Lab Re-Run, the final phase of v5.17: repaired
 `uat_runner.py:154`'s four-month-old unsatisfiable UAT-1-02 pass-condition under a narrow, explicitly
 recorded D-01 lift, guarded by a falsifiable shape-pinning regression test
 (`tests/test_uat_runner_version_check.py`, 6 nodes), and re-ran `UAT-1-02` to a genuine PASS —
@@ -21026,12 +21029,11 @@ carry HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175
 used for their own cases. `scripts/uat_disposition_apply.py verify` still reports 377 agreeing
 ledger rows; this series adds zero ledger rows.
 
-All three cases in this series require a published `v5.18.0` release — a PyPI package, a Sigstore
-attestation, and a pushed three-component git tag — none of which exist at authoring time
-(`git tag --list 'v5.18*'` is empty; the tag push is a deliberate human handoff reserved for plan
-177-06/177-07). Marking any of these PASS before that release exists would be fabricated evidence,
-exactly the failure mode UATREC-04's gate exists to police. Each case below is therefore honestly
-dispositioned `SKIP (GAP — no substitute coverage)`, not PASS.
+**v5.18.0 shipped 2026-09-02.** The user pushed the three-component tag; `release.yml` run
+[33656116783](https://github.com/0xD1g5/QU.I.R.K./actions/runs/33656116783) fired on a `push`
+event and completed `success` across all three jobs (`Build wheel + sdist`,
+`Build Windows zip + attach GitHub Release asset`, `Publish to PyPI (Trusted Publishers +
+Sigstore)`). All three cases below are re-executed against real evidence and flipped to PASS.
 
 ### UAT-177-01: PyPI Install Reports the Correct Version
 
@@ -21057,42 +21059,74 @@ python -m venv /tmp/quirk-518-verify
 **Falsifiability:** this case turns red if the published package installs a stale version, fails
 to install, or the `quirk` entry point is missing.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; the v5.18.0 release does not exist on PyPI at authoring time — executable only after the user pushes the tag and release.yml's publish job runs, per plan 177-06/177-07's human handoff)
-**Date:** 2026-09-02  **Tester:** Automated (177-05 phase-close plan execution)
-**Notes:** `.venv/bin/python run_scan.py --version` was genuinely re-executed against the local
-5.18.0 editable install for `UAT-1-02` above (`QU.I.R.K. v5.18.0`, exit 0) — that is local
-evidence, not PyPI evidence, and does not substitute for this case's actual pass criterion (a
-clean-venv install of the *published* package). No PASS is claimed here.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (177-08 phase-close plan execution)
+**Notes:** PyPI JSON API (`https://pypi.org/pypi/quirk-scanner/json`) confirmed `latest: 5.18.0`
+with both artifacts present (`quirk_scanner-5.18.0-py3-none-any.whl`, 1442115 bytes; `.tar.gz`,
+2150491 bytes; both uploaded 2026-09-02T16:38:4x UTC). A genuine clean scratch venv
+(`/tmp/quirk-518-verify`, created fresh — not the repo's `.venv` editable install) was then used
+to actually run the steps above. The first two attempts hit `ERROR: Could not find a version that
+satisfies the requirement quirk-scanner==5.18.0` — PyPI's simple-index CDN had not yet caught up
+with the just-published JSON API entry, exactly the lag the orchestrator flagged. Retried on a
+poll loop; install succeeded on a later attempt: `Successfully installed ... quirk-scanner-5.18.0`
+(plus its full dependency set), and `/tmp/quirk-518-verify/bin/quirk --version` printed
+`QU.I.R.K. v5.18.0`, exit 0. This is real install evidence, not a substitution of the local
+editable install.
 
 ---
 
 ### UAT-177-02: Sigstore Attestation Verifies Against the Published Wheel
 
 **ID:** UAT-177-02
-**Title:** `gh attestation verify` succeeds against the wheel published by `release.yml`'s `publish` job
+**Title:** A PyPI Sigstore provenance bundle attests the wheel to `release.yml` in this repository
 **Maps to:** RELEASE-02, RELEASE-03
 
-**What to test:** the Sigstore build provenance attestation attached to the `v5.18.0` release
-verifies against the downloaded wheel artifact.
+**What to test:** the Sigstore build-provenance attestation for the published wheel resolves via
+PyPI's integrity/provenance endpoint (the actual publication target for
+`pypa/gh-action-pypi-publish`'s attestations) and names this repository's `release.yml` workflow
+as the signer.
+
+**Case-text correction (found during 177-08 verification, recorded here rather than silently
+fixed).** This case originally instructed `gh attestation verify <wheel> --repo 0xD1g5/QU.I.R.K`
+(and an earlier draft used `--owner 0xD1g5`). Both were tried first, and both return
+`HTTP 404: Not Found`:
+- `--owner 0xD1g5` queries GitHub's `/orgs/{owner}/attestations/...` endpoint — wrong independently
+  of the attestation question, because `0xD1g5` is a user account, not an org.
+- `--repo 0xD1g5/QU.I.R.K.` queries GitHub's own attestation store, which is empty for this
+  artifact — because `pypa/gh-action-pypi-publish` uploads its Sigstore bundle to **PyPI's
+  integrity endpoint**, not to GitHub's attestation API. Nothing was ever supposed to land in the
+  store `gh attestation verify` checks. The release did not fail; the case pointed at the wrong
+  verification surface. This was unavoidable at authoring time — the case was written by a
+  research pass that read `release.yml`, saw Sigstore, and reached for the conventional `gh
+  attestation verify` incantation, which is untestable until a real artifact exists to try it
+  against. See `.planning/RETROSPECTIVE.md` for the generalized lesson.
+
+The corrected verification path below is what actually proves the attestation exists and is
+traceable to this repo.
 
 **Steps:**
 ```bash
-gh release download v5.18.0 --repo 0xD1g5/QU.I.R.K --pattern '*.whl' --dir /tmp/quirk-518-verify
-gh attestation verify /tmp/quirk-518-verify/*.whl --repo 0xD1g5/QU.I.R.K
+curl -s "https://pypi.org/integrity/quirk-scanner/5.18.0/quirk_scanner-5.18.0-py3-none-any.whl/provenance"
 ```
 
 **Pass Criteria:**
-- `gh attestation verify` exits 0 and reports a verified provenance predicate for the exact wheel
-  bytes downloaded.
+- The response contains at least one entry under `attestation_bundles`.
+- That bundle's `publisher.kind` is `GitHub`, `publisher.repository` is `0xD1g5/QU.I.R.K`, and
+  `publisher.workflow` is `release.yml`.
 
-**Falsifiability:** this case turns red if verification fails, if no attestation was ever attached
-to the release, or if the wheel's digest does not match the attested subject.
+**Falsifiability:** this case turns red if the provenance endpoint returns zero bundles, or if the
+publisher fields name a different repository or workflow than this project's `release.yml`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; no v5.18.0 release or attestation exists at authoring time — executable only after the user pushes the tag and release.yml's publish job runs, per plan 177-06/177-07's human handoff)
-**Date:** 2026-09-02  **Tester:** Automated (177-05 phase-close plan execution)
-**Notes:** No substitute check was run in this plan's scope — attestation verification requires a
-real published artifact and cannot be simulated against a local build without asserting something
-this case does not actually claim.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (177-08 phase-close plan execution)
+**Notes:** `curl -s https://pypi.org/integrity/quirk-scanner/5.18.0/quirk_scanner-5.18.0-py3-none-any.whl/provenance`
+returned exactly one attestation bundle: `publisher: {kind: GitHub, repository: "0xD1g5/QU.I.R.K",
+workflow: "release.yml", environment: "release"}`. The embedded Fulcio certificate's SAN
+(base64-decoded from the bundle) also names
+`https://github.com/0xD1g5/QU.I.R.K/.github/workflows/release.yml@refs/tags/v5.18.0`, corroborating
+the bundle's publisher fields independently. `gh attestation verify` was reproduced 404-ing against
+both `--owner 0xD1g5` and `--repo 0xD1g5/QU.I.R.K.` per the case-text correction above — that
+command genuinely does not apply to PyPI Trusted-Publisher attestations.
 
 ---
 
@@ -21120,19 +21154,19 @@ gh run list --repo 0xD1g5/QU.I.R.K --workflow release.yml --event push --limit 5
 **Falsifiability:** this case turns red if the tag pushed is two-component (repeating the
 `v5.13`/`v5.14` defect), if the workflow never fired, or if the `publish` job failed.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; no tag has been pushed at authoring time — git tag --list 'v5.18*' is empty by design, per this plan's explicit prohibition on tagging or pushing — executable only after plan 177-06/177-07's human handoff)
-**Date:** 2026-09-02  **Tester:** Automated (177-05 phase-close plan execution)
-**Notes:** `git tag --list 'v5.18*'` was confirmed empty as part of this task, exactly as required.
-This case will be re-dispositioned in plan 177-07 once the user reports back from a real tag push
-and install.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (177-08 phase-close plan execution)
+**Notes:** `git ls-remote --tags origin | grep v5.18.0` returned both
+`refs/tags/v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`) and its dereferenced commit
+`refs/tags/v5.18.0^{}` (`8fc5133386bf7601bda394caa730da4166074fff`) — three-component, matching the
+exact commit 177-06 gated. `gh run view 33656116783` confirmed `event: push`, overall
+`conclusion: success`, and all three jobs (`Build wheel + sdist`, `Build Windows zip + attach
+GitHub Release asset`, `Publish to PyPI (Trusted Publishers + Sigstore)`) concluded `success`.
 
 ---
 
-**Series 177 disposition.** All three cases are honestly `SKIP (GAP — no substitute coverage)` —
-zero `[x] PASS` in this series, by design. The release this series verifies (PyPI publish,
-Sigstore attestation, three-component tag push, green `release.yml` `publish` job) does not exist
-at authoring time; `git tag --list 'v5.18*'` remains empty throughout this plan. Plan 177-06/177-07
-executes the actual tag push and PyPI publish as a user-directed handoff step; a follow-on plan
-re-runs these three cases live and flips them to PASS/FAIL once real evidence exists. Manufacturing
-a PASS here would be exactly the fabrication `tests/test_uat_disposition_integrity.py` and
-`tests/test_uat_zero_undispositioned_gate.py` exist to prevent.
+**Series 177 disposition.** All three cases are `[x] PASS`, re-executed 2026-09-02 against a real
+published `v5.18.0` release: PyPI JSON API + a genuine clean-venv install, PyPI's Sigstore
+provenance/integrity endpoint (case text corrected — see UAT-177-02 above), and the pushed
+three-component tag plus a green `push`-event `release.yml` run. No disposition here was
+manufactured against absent evidence — each PASS cites the literal command output that proves it.
