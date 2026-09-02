@@ -41,7 +41,7 @@ the unshaped sketch.
 Two milestones of user-visible fixes are unreleased. Nothing else in v5.18 ships to a user until
 this does.
 
-- [ ] **RELEASE-01**: The local editable install works — `pip install -e . --no-deps` succeeds and
+- [x] **RELEASE-01**: The local editable install works — `pip install -e . --no-deps` succeeds and
   `tests/test_extras_install_matrix` stops failing environmentally. **Measured 2026-09-02:**
   `.venv/bin/pip install -e . --no-deps` SUCCEEDS and `tests/test_extras_install_matrix.py` is
   3 passed, both before and after cleanup — the originally-written claim that a stale
@@ -185,7 +185,7 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | Requirement | Phase | Status |
 |---|---|---|
 | ADVISORY-01 | All (standing) | Pending |
-| RELEASE-01 | Phase 177 | Root cause corrected (177-01 + 177-03 done; closes on ship, Phase 177-06) |
+| RELEASE-01 | Phase 177 | Complete — both root-cause halves fixed and evidenced (177-01 repo-root residue, 177-03 machine-wide orphan install), independent of RELEASE-02/03 shipping (2026-09-02) |
 | RELEASE-02 | Phase 177 | Pending |
 | RELEASE-03 | Phase 177 | Pending |
 | IDENT-01 | Phase 178 | Pending |
