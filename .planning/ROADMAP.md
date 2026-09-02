@@ -271,7 +271,21 @@ single scalar.
      **Verification debt, carried honestly:** the research pass got HTTP 403 fetching the NSA
      CNSA 2.0 PDF; that date table is MEDIUM confidence from concurring secondary sources and
      **must be manually re-verified against the primary source before this phase ships.**
-**Plans**: TBD
+     **Debt cleared 2026-09-02:** re-verified against the primary source — Federal Register Vol. 91
+     No. 121, FR Doc 2026-12909 (EO 14412). CNSA 2.0 dates remain OMITTED and recorded as a known
+     gap (media.defense.gov returns HTTP 403 to non-browser agents).
+**Plans**: 8 plans in 7 waves
+
+Plans:
+
+- [ ] 180-01-PLAN.md — Wave 1 · CLOSE-01 · Close the estate-blind hole in the scope signature: target-set digest, `SCOPE_SIGNATURE_VERSION` 2.0.0, public `family_for_protocol()`, estate guard proven RED
+- [ ] 180-02-PLAN.md — Wave 1 · CLOSE-03 · EO 14412 deadline catalog with the 11-row `PKE` audit, 90-day staleness gate, CI wiring, and CLAUDE.md's eighth gated catalog
+- [ ] 180-03-PLAN.md — Wave 2 · CLOSE-02 · `resurfaced` as a fourth persisted state, `OPEN_LIKE_STATES`, and the append-only `remediation_closure_events` table
+- [ ] 180-04-PLAN.md — Wave 3 · CLOSE-01 · The two-sided closure computation in `quirk/intelligence/closure.py`, every refusal landing on `not_observed`, with no human-assert affordance
+- [ ] 180-05-PLAN.md — Wave 4 · CLOSE-02 · Resurface and re-closure transitions with retained history, and `closure_counts` (counted as open, reported separately)
+- [ ] 180-06-PLAN.md — Wave 5 · CLOSE-03, CLOSE-01 · Per-deadline burndown (2030 and 2031 separately, never a scalar) plus the `closure_verify` pipeline phase
+- [ ] 180-07-PLAN.md — Wave 6 · ADVISORY-01 · AST guard extended to `closure.py`/`burndown.py` with a real negative control; operators-guide §16 and report-interpretation §16 + Obsidian sync
+- [ ] 180-08-PLAN.md — Wave 7 · CLOSE-01, CLOSE-02, CLOSE-03 · Phase close-out: one foreground full suite, hand-edited requirement closure, Series 180 UAT, VALIDATION closed, vault synced
 
 ### Phase 181: Surfacing
 
