@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.15.0
+# QU.I.R.K. — v5.18.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -82,10 +82,24 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.15
+## What's New in v5.18
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
 
+- **v5.16 Review Drain & Gate Integrity** — every open finding from the 2026-08-24 third-party
+  functional review closed: the UAT corpus went from 377 undispositioned cases to zero across all
+  666, a CRITICAL evidence-injection vulnerability in the UAT tooling was found and fixed
+  mid-milestone, three screen-reader-blocking accessibility violations were fixed, and the
+  first-run command a new user is told to type now actually exists and works.
+- **v5.17 Defect Drain** — `--fuzz` now hard-refuses to run against non-interactive stdin before
+  issuing any request; the dashboard score matches the CLI score under every score profile; a
+  silent SSH-scanner degradation (banner-grab-only, `ssh_audit_json` always NULL) that had existed
+  since the ssh-audit integration shipped was found and fixed during a live chaos-lab re-run; and
+  nine UAT cases that recorded FAIL against correct product behavior were corrected.
+- **v5.18 Release Toolchain Repair (Phase 177)** — a package-name-migration residue that left
+  three distributions claiming the `quirk` import package is purged and now guarded by a
+  permanent regression test; this release is the mechanism proving the fix, shipping the two
+  prior milestones' work for the first time.
 - **Lifecycle Tail Drain (v5.15)** — opt-in email/webhook notifications when a monitored device drifts or crosses an EOL boundary; vendor PQC-status trend data surfaced across the CLI, HTML and DOCX reports and the `/hardware` dashboard tab; `--check-in` re-probes schedulable on a recurring cadence via `quirk schedule add --check-in`; and batch-granular discovery resume, so an interrupted scan re-probes only the unfinished 1024-host batches instead of starting the whole discovery stage over.
 
 - **Hardware Lifecycle Depth (v5.10)** — SNMPv3 auth+priv fingerprinting with a safe v2c/none fallback ladder; SNMP-confirmed bridge mitigation (`upstream_mitigated`, evidence-backed, never scored); OT/ICS fingerprinting for Modbus/TCP + BACnet/IP (opt-in, read-only, circuit-breakered) via a new `otics` chaos-lab profile; advisory-only firmware CVE correlation against fingerprinted hardware; a persistent dashboard scan-date badge, server-enforced trusted-targets allowlist, and Windows Authenticode signing CI mechanism.
