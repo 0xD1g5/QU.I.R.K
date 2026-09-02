@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T14:07:35.711Z"
+stopped_at: Completed 177-07-PLAN.md (v5.18.0 shipped 2026-09-02; Phase 177 closed)
+last_updated: "2026-09-02T17:00:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 0
+  completed_plans: 7
+  percent: 20
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 177 — release-toolchain-repair
+**Current focus:** Phase 177 — release-toolchain-repair — COMPLETE, v5.18.0 shipped 2026-09-02. Next: Phase 178 (finding-identity-repair).
 Plan 176-08 (user-directed, executed after the user hard-quit and relaunched a wedged Docker
 Desktop) closed both outstanding LABRUN-01 GAP cases against a live `core + ssh-weak` lab:
 `UAT-5-11` → **PASS**, `UAT-6-08` → **FAIL**. The FAIL exposed **TRIAGE-176-03**, a product defect
@@ -317,9 +317,28 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 177 (release-toolchain-repair) — EXECUTING
-Plan: 7 of 7
-Status: Ready to execute
+Phase: 178 (finding-identity-repair) — NEXT
+Status: Phase 177 COMPLETE — v5.18.0 SHIPPED to PyPI 2026-09-02 (not merely staged). The user
+pushed the three-component tag `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`, dereferencing
+to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated). `release.yml` run
+[33656116783](https://github.com/0xD1g5/QU.I.R.K./actions/runs/33656116783) fired on `event: push`
+and completed `conclusion: success` across all three jobs (`Build wheel + sdist`, `Build Windows
+zip + attach GitHub Release asset`, `Publish to PyPI (Trusted Publishers + Sigstore)`). PyPI JSON
+API confirms `latest: 5.18.0`, both the wheel (`quirk_scanner-5.18.0-py3-none-any.whl`, 1442115
+bytes) and sdist (`quirk_scanner-5.18.0.tar.gz`, 2150491 bytes) uploaded 2026-09-02T16:38:4x UTC.
+A genuine clean-venv install (not the repo's editable `.venv`) confirmed `pip install
+quirk-scanner==5.18.0` succeeds (after one CDN-lag retry) and `quirk --version` prints
+`QU.I.R.K. v5.18.0`, exit 0. The Sigstore build-provenance attestation resolves via PyPI's
+integrity endpoint with `publisher.repository: 0xD1g5/QU.I.R.K`, `publisher.workflow:
+release.yml` — `UAT-177-02`'s original `gh attestation verify` instruction was found to target
+the wrong store (GitHub's attestation API, which PyPI-published Sigstore bundles never reach) and
+was corrected in place. `docs/UAT-SERIES.md` Series 177 (`UAT-177-01/02/03`) all flipped to real
+`[x] PASS`. `.planning/REQUIREMENTS.md` RELEASE-01/02/03 all `[x]` complete; `ADVISORY-01`
+correctly left open (standing milestone-wide constraint spanning Phases 177-181).
+`.planning/ROADMAP.md` Phase 177 checklist + Progress table (`7/7 | Complete | 2026-09-02`) both
+flipped. `177-VERIFICATION.md` (4/4 truths verified) and `177-VALIDATION.md`
+(`nyquist_compliant: true`, `wave_0_complete: true`, 0 pending rows) written filesystem-only.
+**Next step:** Phase 178 (Finding Identity Repair) — IDENT-01/02/03.
 
 **v5.18 opened after a research pass, not on the HORIZON sketch.** The 3x sizing question the sketch
 posed did not survive re-measurement — it is 4-5x, and the two readings share no infrastructure.
