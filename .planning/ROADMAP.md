@@ -132,7 +132,16 @@ both v5.16 and v5.17 — so two milestones of user-visible fixes stop being invi
   3. Version-facing surfaces agree with what shipped: `README.md` badge and "What's New" (currently
      stops at v5.15), `docs/getting-started.md`, `docs/UAT-SERIES.md` header and UAT-1-02 pass
      criteria, and `CHANGELOG.md`. Obsidian vault counterparts re-synced per LIVE-03.
-**Plans**: TBD
+**Plans**: 7 plans in 5 waves
+
+Plans:
+- [ ] 177-01-PLAN.md — Wave 1 · RELEASE-01 · Add the single-distribution regression guard (proven RED), purge repo-root + `.venv` residue, prove the editable install clean
+- [ ] 177-02-PLAN.md — Wave 1 · RELEASE-02 · Re-verify the firmware CVE catalog against NVD and clear every pre-release staleness gate (`hw_cve.py` flipped STALE 2026-09-02)
+- [ ] 177-03-PLAN.md — Wave 2 · RELEASE-01 · Announced Homebrew-global orphan cleanup (user-gated), venv-only runbook note, RELEASE-01 evidence correction
+- [ ] 177-04-PLAN.md — Wave 2 · RELEASE-02, RELEASE-03 · Bump to 5.18.0 with the editable reinstall; hand-written CHANGELOG `[5.18.0]`; README banner + one What's New in v5.18
+- [ ] 177-05-PLAN.md — Wave 3 · RELEASE-03 · UAT-SERIES header/UAT-1-02 bump + Series 177; ROADMAP untagged notes reframed as history; Obsidian vault sync (LIVE-03)
+- [ ] 177-06-PLAN.md — Wave 4 · RELEASE-02, ADVISORY-01 · Full-suite phase gate, ADVISORY-01 score-firewall proof, pre-tag gate readiness table
+- [ ] 177-07-PLAN.md — Wave 5 · RELEASE-02, RELEASE-03 · `workflow_dispatch` no-publish dry-run (user-approved), then the three-component `v5.18.0` tag handoff — **the user pushes, Claude does not**
 
 ### Phase 178: Finding Identity Repair
 
