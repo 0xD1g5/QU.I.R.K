@@ -57,6 +57,15 @@ else.** Any other version literal anywhere in the tree is a regression.
 
 Step-by-step procedure for cutting a release. All steps are required.
 
+**Interpreter rule:** run every command in this runbook with `.venv/bin/python`,
+`.venv/bin/pytest`, or `.venv/bin/pip` — never bare `python3`/`pip`. On macOS, bare
+`python3` resolves to Homebrew's system interpreter, which has historically carried an
+orphan editable `quirk` install (from a renamed/relocated predecessor project) and
+answered a stale, phantom version from `importlib.metadata`. This is not a hypothetical:
+it produced a broken `/opt/homebrew/bin/quirk` shim that was first on `PATH` and crashed
+with `ModuleNotFoundError: No module named 'run_scan'` when invoked. See Phase 177 /
+RELEASE-01 for the full investigation and cleanup.
+
 1. **Verify CI is green on `main`.** Every required check (lint, unit tests,
    staleness gates, version-parity test) must be passing on the commit you
    intend to tag. If anything is red, fix it before proceeding.

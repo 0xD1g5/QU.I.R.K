@@ -42,11 +42,32 @@ Two milestones of user-visible fixes are unreleased. Nothing else in v5.18 ships
 this does.
 
 - [ ] **RELEASE-01**: The local editable install works — `pip install -e . --no-deps` succeeds and
-  `tests/test_extras_install_matrix` stops failing environmentally. The stale
-  `__editable__.quirk-4.0.0.pth` claims v4.0.0 against a 5.15.0 project and breaks pip's
-  build-backend.
-  *Evidence: 3 environmental failures in the v5.16 and v5.17 close baselines; carried in HORIZON
-  since 2026-08-28.*
+  `tests/test_extras_install_matrix` stops failing environmentally. **Measured 2026-09-02:**
+  `.venv/bin/pip install -e . --no-deps` SUCCEEDS and `tests/test_extras_install_matrix.py` is
+  3 passed, both before and after cleanup — the originally-written claim that a stale
+  `__editable__.quirk-4.0.0.pth` broke pip's build backend does NOT reproduce; that test uses
+  `pip install --dry-run` and never touches the build backend against real residue.
+  The real defect had two independent halves. (a) Inside the repo: package-name-migration
+  residue left three distributions claiming the `quirk` import package (`quirk` 4.4.0 from a
+  repo-root `quirk.egg-info/`, `qu-i-r-k` 4.10.0 from `qu_i_r_k.egg-info/` plus an orphan `.venv`
+  editable install, and the canonical `quirk-scanner` 5.15.0), visible only when cwd is the repo
+  root — which is why pytest saw it and CI never did. Fixed in Phase 177 Plan 01; guarded by
+  `tests/test_version.py::test_single_distribution_provides_quirk`. (b) Machine-wide, outside the
+  repo: an orphan Homebrew-global editable install at
+  `/opt/homebrew/lib/python3.14/site-packages/` — `__editable__.quirk-4.0.0.pth`,
+  `__editable___quirk_4_0_0_finder.py`, and `quirk-4.0.0.dist-info/`, plus a console-script shim
+  at `/opt/homebrew/bin/quirk` that was first on `PATH` — put a phantom v4.0.0 `quirk`
+  distribution in front of every bare-`python3` invocation on this machine. The finder's own
+  `MAPPING` pointed at `/Volumes/Digs-1TB/Development/quantum-apps/QuRisk/quirk`, a renamed/
+  relocated predecessor project whose directory no longer exists, and the shim itself crashed on
+  invocation with `ModuleNotFoundError: No module named 'run_scan'` — a broken shadow, not working
+  functionality. Removed in Phase 177 Plan 03, with the venv-only interpreter rule now documented
+  in `docs/release-process.md`. Neither half ever broke pip's build backend.
+  *Evidence: `.venv/bin/pytest tests/test_version.py -q` -> 7 passed (2026-09-02, post-cleanup);
+  `.venv/bin/pytest tests/test_extras_install_matrix.py -m slow -q` -> 3 passed (Plan 01,
+  2026-09-02); `ls /opt/homebrew/lib/python3.14/site-packages/ | grep -ci quirk` -> 0 and
+  `ls /opt/homebrew/bin/quirk` -> "No such file or directory" (Plan 03, 2026-09-02, user-approved
+  removal). Originally carried in HORIZON since 2026-08-28 on the now-corrected root cause.*
 
 - [ ] **RELEASE-02**: A real release ships covering v5.16 **and** v5.17. Version bumped in
   `pyproject.toml` with the editable reinstall done (a bump alone fails `tests/test_version.py`),
@@ -164,7 +185,7 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | Requirement | Phase | Status |
 |---|---|---|
 | ADVISORY-01 | All (standing) | Pending |
-| RELEASE-01 | Phase 177 | Partial (177-01 done; 177-03 pending) |
+| RELEASE-01 | Phase 177 | Root cause corrected (177-01 + 177-03 done; closes on ship, Phase 177-06) |
 | RELEASE-02 | Phase 177 | Pending |
 | RELEASE-03 | Phase 177 | Pending |
 | IDENT-01 | Phase 178 | Pending |
