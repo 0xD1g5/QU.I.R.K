@@ -1295,3 +1295,50 @@ almost entirely due to environment (Docker daemon) rather than complexity. Test 
 21. A requirement's own text is falsifiable — when the product deliberately contradicts it, close it as satisfied-by-override with an explicit do-not-"fix" warning rather than shipping a regression to satisfy the wording (v5.17 / SCOPE-01, built → shipped → reverted same day)
 22. A command name appearing in your own planning docs is not evidence it exists — `/gsd-verify-phase` propagated through STATE.md for ten phases before anyone ran it, leaving Phase 176 with no verification artifact and blocking the milestone audit
 23. Correcting test-case or UAT documentation is the highest-fabrication-risk work in the project — gate it on live re-execution and falsifiability proofs, never on reading (v5.17 Phase 175: all 12 case defects re-confirmed live before a character was edited)
+24. A verification step that cannot be executed when it is written is a hypothesis, and archived measurements are not evidence about the present — v5.18 Phase 177 hit this shape six separate times in one phase (see "Phase 177: six frozen-measurement defects" below), the highest single-phase density of this failure mode recorded to date
+
+### Phase 177: six frozen-measurement defects (v5.18 Migration Execution, in progress)
+
+Phase 177 (Release Toolchain Repair) surfaced six defects that are all one species — a frozen
+measurement outliving its accuracy — recorded together here because no single one of them would
+have justified a pattern entry, but six in one phase does:
+
+1. **RELEASE-01's root cause was falsified.** The requirement as originally written blamed a
+   stale `__editable__.quirk-4.0.0.pth` for breaking pip's build backend. Re-measurement (177-01)
+   found `tests/test_extras_install_matrix` uses `pip install --dry-run`, which never touches the
+   build backend at all — the real defect was three competing distributions all claiming the
+   `quirk` import package, invisible from `origin/main` because CI's clean checkout never
+   accumulated repo-root residue the way a long-lived local clone does.
+2. **A Homebrew-global orphan put a broken `quirk` first on `PATH`.** `/opt/homebrew/bin/quirk`
+   silently shadowed the venv-installed command, and its finder's `MAPPING` pointed at
+   `/Volumes/.../QuRisk/quirk` — a renamed/relocated predecessor project whose directory no longer
+   existed. The shim itself crashed with `ModuleNotFoundError` on invocation; it was a broken
+   shadow, not working functionality, and had gone unnoticed because nobody runs bare `python3`
+   on this project day to day.
+3. **v5.16's archived roadmap cited 325 undispositioned UAT cases; the true figure was 377**,
+   remeasured during v5.16 itself but never back-propagated to the milestone's own archived
+   summary — the fifth occurrence of a headline count failing re-measurement across this project
+   (see Top Lesson 19).
+4. **`hw_cve.py`'s firmware CVE catalog flipped STALE mid-phase** at its 30-day threshold boundary
+   — a catalog that was fresh at milestone open went stale before Phase 177 closed, purely from
+   elapsed wall-clock time. Re-verification (177-02) also caught one CVE's published date recorded
+   wrong (`CVE-2017-12240`, `2017-09-28` → `2017-09-29`).
+5. **All 33 accessibility baselines were generated on macOS but are enforced on Linux CI**, and
+   31 of the 33 had never actually been checked against the Linux runner before this phase's first
+   real push of v5.16/v5.17/Phase-177 content — three genuine (non-regression) baseline gaps
+   surfaced on the very first execution. Follow-up logged:
+   `.planning/todos/pending/a11y-baseline-environment-mismatch.md`.
+6. **`UAT-177-02`'s verification command was wrong at authoring time because it could not be
+   executed until the release existed.** The case instructed `gh attestation verify` against
+   GitHub's attestation API, but `pypa/gh-action-pypi-publish` uploads Sigstore attestations to
+   PyPI's own integrity store — a plausible-but-wrong incantation reached for by a research pass
+   that read `release.yml`, saw Sigstore, and had no real artifact to test the command against.
+   Corrected during 177-08 phase close-out once `v5.18.0` actually shipped and the command could
+   finally be tried.
+
+**The generalizable lesson (Top Lesson 24 above): a verification step that cannot be executed when
+it is written is a hypothesis, and archived measurements are not evidence about the present.**
+Every one of these six was written down once, believed, and carried forward unexamined until this
+phase's own work forced a live re-check. None were discovered by looking harder at the same
+document — each required running the actual command, re-deriving the actual date, or executing
+against a Linux runner for the first time.
