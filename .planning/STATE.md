@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
 status: completed
-stopped_at: Completed 176-04-PLAN.md
+stopped_at: Completed 176-08 (final addendum); milestone archived
 last_updated: "2026-09-02T01:18:49.491Z"
-last_activity: 2026-09-02 — Milestone v5.17 completed and archived
+last_activity: 2026-09-01 — Milestone v5.17 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -318,12 +318,30 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Milestone v5.17 complete
+Phase: Milestone v5.17 (Defect Drain) COMPLETE — archived 2026-09-01
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-02 — Milestone v5.17 completed and archived
+Status: Awaiting next milestone. Run `/gsd-new-milestone` to open v5.18.
+Last activity: 2026-09-01 — v5.17 archived (ROADMAP + REQUIREMENTS + audit → `.planning/milestones/v5.17-*`),
+`.planning/REQUIREMENTS.md` removed pending a fresh one, MILESTONES.md + PROJECT.md + RETROSPECTIVE.md updated.
+Not tagged — `pyproject.toml` remains `5.15.0`, same reason v5.16 was archived untagged.
 
-## v5.16 Phase Map (IN PROGRESS)
+**Top candidate for v5.18's opening scope:** the release-toolchain repair. Two milestones of
+user-visible fixes are sitting unshipped on `main` because a version bump requires
+`pip install -e . --no-deps` and the local editable install is broken by a stale
+`__editable__.quirk-4.0.0.pth`. See `TRIAGE-176-01`/`TRIAGE-176-02` in ROADMAP.md's Backlog for the
+other two ready-to-plan items.
+
+## v5.17 Phase Map (development complete 2026-09-01 — untagged)
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 172 | Fuzzing & Disclosure Safety | SAFE-01, SAFE-02, SAFE-03 | None (first, highest client-estate consequence) | ✅ Complete (2026-08-29; 6/6 plans, VERIFICATION passed). Argparse-time `--fuzz` non-TTY + budget-over-500 refusals with coded FUZZ-001/002 and exit 2; real URL-component redaction replacing truncation-only `_redact_preview`; docs==code drift gate proven to fail on perturbation. `UAT-94-05` judged a case defect and promoted to Phase 175 |
+| 173 | Scanner Scope & Config Correctness | SCOPE-01, SCOPE-02, SCOPE-03 | None (independent) | ✅ Complete (2026-08-29; 4/4 plans, VERIFICATION passed). SCOPE-02 `_PHASE_SKIPPED` sentinel + SCOPE-03 broker/smime/adcs missing-extra wiring shipped. **SCOPE-01's fix was built, shipped, live-verified, then reverted the same day** once shown to regress every real CLI config — closed as satisfied-by-override with user sign-off; its checkbox is deliberately `[ ]` (see `RECORD-01`) |
+| 174 | Dashboard & API Correctness | DASH-06, DASH-07, DASH-08 | None (independent) | ✅ Complete (2026-08-30; 5/5 plans, VERIFICATION passed, human-approved 2026-08-29). Per-session calibration scoring on `GET /api/scans`; empty-DB contract guarded; 14-item sidebar order derived live and locked bidirectionally to its docs. `UAT-8-07` carried forward to Phase 175 |
+| 175 | Case & Documentation Defect Correction | CASEFIX-01..05 | Phases 172/173/174 (inherits three carried-forward case-text corrections) | ✅ Complete (2026-08-30; 7/7 plans, VERIFICATION passed, user typed "approved"). Twelve case defects corrected with **zero product code changed**, all re-confirmed by live execution before editing; two left honestly DEFERRED; `UAT-94-09` added as the first redaction-regression detector, falsifiability proven against a neutered module |
+| 176 | Chaos-Lab Re-Run | LABRUN-01, LABRUN-02 | Nothing, but scheduled last so its defects could be triaged against an otherwise-complete milestone | ✅ Complete (2026-09-01; 6 plans + 2 user-directed addenda, VERIFICATION passed 15/15, 0 overrides). All 13 lab-down cases re-executed with the lab up — **final tally 10 PASS / 3 FAIL / 0 GAP**. `UAT-1-02`'s four-month false FAIL root-caused to `uat_runner.py:154` (`'4.2.0' in ver or 'quirk' in ver.lower()` — both disjuncts unsatisfiable). Plan 176-08 overturned 176-07's root cause and surfaced `TRIAGE-176-03`: **every SSH scan since the ssh-audit integration shipped had silently degraded to a banner grab with `ssh_audit_json` NULL** |
+
+## v5.16 Phase Map (development complete 2026-08-28 — untagged)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|

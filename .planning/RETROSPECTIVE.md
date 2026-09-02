@@ -885,6 +885,108 @@ existing precedent in the codebase to draw from.
 
 ---
 
+## Milestone: v5.17 — Defect Drain
+
+**Development complete:** 2026-09-01 (untagged) | **Phases:** 5 (172–176) | **Plans:** 28 + 2 addenda
+
+### What Was Built
+
+A drain of the defects v5.16's UAT corpus drain had surfaced, plus a proper re-run of the 13 cases
+that had failed only because the chaos lab was down. Phase 172 moved `--fuzz` safety to
+argparse-time refusal (non-TTY stdin, budget over 500) and replaced a truncation-only
+`_redact_preview` with real URL-component redaction. Phase 173 added a `_PHASE_SKIPPED` sentinel so
+`timings_sec` carries no key for phases that never ran, and gave broker/smime/adcs their
+missing-extra advisory wiring. Phase 174 fixed per-session calibration scoring on `GET /api/scans`,
+guarded the empty-DB contract, and locked the 14-item sidebar order bidirectionally to its docs.
+Phase 175 corrected twelve UAT case-text defects with **zero product code changed**. Phase 176
+brought the lab up (33 containers, 18 ports verified) and re-executed all 13 cases.
+
+### What Worked
+
+- **Re-measuring the inherited scope before opening.** v5.16 handed over "32 product FAILs" — a
+  ledger tally, not a defect count. Re-derivation from the ledger found 18 genuine defects, 13
+  lab-down artifacts, and 1 spurious. Scoping five phases against the unchecked number would have
+  committed the milestone to work that did not exist.
+
+- **Reverting a shipped fix the same day rather than defending it.** `SCOPE-01`'s literal
+  implementation was built, shipped, and live-verified — then shown to regress every real CLI
+  config (`ports_tls` is a required YAML key, so its "user narrowed the scan" precondition was
+  unconditionally true). It was reverted the same day and the requirement closed as
+  satisfied-by-override, with the real operator-facing gap closed in the docs instead.
+
+- **Treating the phase's own success criteria as falsifiable.** Phase 176's SC3 asserted "no such
+  literal exists in `uat_runner.py`". A `git show` proved it did:
+  `'4.2.0' in ver or 'quirk' in ver.lower()`, both disjuncts unsatisfiable against
+  `QU.I.R.K. v5.15.0` because the dots defeat the substring check. The phase corrected the premise
+  with evidence instead of inheriting it, and the independent verifier reproduced the correction
+  rather than accepting the summary.
+
+- **Re-running an investigation that already had an answer.** Plan 176-07 attributed two GAPs to a
+  missing `ssh-audit` binary and stopped. Installing it exposed `TRIAGE-176-03`:
+  `quirk/scanner/ssh_scanner.py` passed two positionals to a tool taking one `host:port`, so every
+  SSH scan since that integration shipped had silently degraded to a banner grab with
+  `ssh_audit_json` NULL. **The milestone's most valuable finding came from doubting its own
+  closed conclusion.**
+
+- **Verifying case defects by live execution before editing case text.** Phase 175 re-confirmed all
+  twelve pre-labelled case defects against a current checkout before touching a character, and
+  proved its new detector falsifiable by running it against a neutered module and watching it flip
+  RED. Correcting a UAT corpus is exactly where fabrication is cheapest and least visible.
+
+### What Was Inefficient
+
+- **A phantom command was followed for ten phases.** `.planning/STATE.md` had been instructing
+  `/gsd-verify-phase NN` since Phase 150. No such GSD skill exists — `NN-VERIFICATION.md` is
+  produced by the `gsd-verifier` subagent that `/gsd-execute-phase` spawns at its
+  `verify_phase_goal` step. Phase 176 consequently closed with no verification artifact, which then
+  blocked the milestone audit with two gaps that were both just the missing file. Cost: one blocked
+  audit plus a full close-time backfill. Corrected across 14 references at this close.
+
+- **Two phases (176-07, 176-08) were spent on what one should have been**, because Docker Desktop's
+  daemon was unresponsive when 176-07 tried the re-run. That was environmental, not planning —
+  but it did mean the ROADMAP carried a superseded tally (`9/13 PASS, 2 BACKLOG, 2 GAP`) and no
+  176-08 bullet at all until the milestone audit's DRIFT-01 caught it.
+
+- **`gsd-sdk query milestone.complete`'s auto-extracted accomplishments were unusable** — 29
+  entries including truncated fragments, a bare `"Waived:"`, and a stale
+  `"LABRUN-01 verdict: PARTIALLY MET"` that 176-08 had already superseded. The MILESTONES.md entry
+  had to be written by hand. This is a known, recurring cost of this command.
+
+### Patterns Established
+
+- **A misleadingly-named helper is a defect vector, not a style issue.** `_redact_preview` only
+  truncated; its byte-identical non-URL twin shared the name. That pairing is what let the original
+  disclosure bug survive review. The fix renamed the twin to `_truncate_preview` with zero body
+  change.
+
+- **Requirement text is falsifiable too.** `SCOPE-01` is now the reference case for closing a
+  requirement as satisfied-by-override, with an explicit `RECORD-01`-style warning against a future
+  cleanup pass "fixing" the unchecked box.
+
+- **Backfilling verification is legitimate; skipping it is not.** Dispatching `gsd-verifier`
+  directly against an already-executed phase produced a real 15/15 pass that re-derived every claim
+  independently.
+
+### Key Lessons
+
+1. **Never inherit a count.** Four for four now: 5→3 duplicate IDs, 16→230 stale references, 4→2
+   missing tests, and 32→18 defects. Every headline number on this project has failed
+   re-measurement. Re-derive before scoping.
+2. **A closed root cause is a hypothesis until something independent confirms it.** 176-07's
+   "missing binary" answer was correct *and* incomplete; accepting it would have shipped a live
+   scanner bug indefinitely.
+3. **A tool name that appears in your own planning docs is not evidence the tool exists.** Ten
+   phases of STATE.md entries propagated `/gsd-verify-phase` without anyone running it.
+4. **Correcting test/case documentation is the highest-fabrication-risk work there is** — it must
+   be gated on live re-execution and falsifiability proofs, not on reading.
+
+### Cost Observations
+
+107 commits over 5 days across 5 phases — a defect-drain cadence, not a feature cadence. Phase 175
+changed zero product code across 7 plans; Phase 176 needed 8 execution units for 2 requirements,
+almost entirely due to environment (Docker daemon) rather than complexity. Test suite ended at
+**3,802 passed / 1 failed** (the pre-existing `DEFER-172-01` node).
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -907,6 +1009,7 @@ existing precedent in the codebase to draw from.
 | v5.9 Documentation Audit & Living Docs System | 6 (incl. 138.1/138.2) | 10 | Docs-only milestone; first to embed permanent doc-hygiene governance (`CLAUDE.md` Per-Phase Checklist + Milestone-Boundary Template) rather than a one-time sweep; audit caught a real content-inversion bug (CORE-04) and a vault-staleness gap (LIVE-03), both closed by inserted gap-closure phases and independently re-verified; v5.7 row not authored at close — see MILESTONES.md |
 | v5.13 Continuous Hardware Lifecycle Monitoring | 3 | 17 | Tightest plan-to-commit ratio to date (65 commits/~1 day) — a scheduling/diffing/reporting layer over existing data, zero new deps, zero new lab profiles; same "alternate code path skips a terminal call" bug shape (CR-01) caught by code review in two consecutive phases (154, 155); v5.10/v5.12 rows not authored at close — see MILESTONES.md |
 | v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting | 4 | 16 | Milestone-spanning shared chokepoint (`persist_and_reconcile()`, Phase 158) extended cleanly by two later phases with zero duplicated logic; highest code-review-iteration density to date (2 of 4 phases hit the 3-iteration cap); 2 BLOCKER-severity bugs closed same-phase; VALIDATION.md row-status/pre-commit-hook gap recurred on 3 phases before being proactively avoided on the 4th |
+| v5.17 Defect Drain | 5 | 28 (+2 addenda) | First pure defect-drain milestone; scope re-measured from the ledger before opening (32 claimed FAILs → 18 genuine defects); Phase 175 changed ZERO product code across 7 plans; the milestone's most valuable finding (`TRIAGE-176-03`, every SSH scan silently degraded to a banner grab) came from re-running an investigation that already had a closed answer; v5.15/v5.16 rows not authored at close — see MILESTONES.md |
 
 ### Cumulative Quality
 
@@ -925,6 +1028,7 @@ existing precedent in the codebase to draw from.
 | v5.11 | ~2,600 collected | 95 targeted tests green across the milestone surface at close; ~102 pre-existing full-suite failures (version-locked assertions, Python 3.14 dev-env drift) confirmed unrelated and unchanged — aging since Phase 97, now carried as an explicit next-milestone stabilization candidate |
 | v5.13 | 115/115 targeted (not full-suite re-counted) | 115/115 targeted cross-boundary tests green at milestone-audit time (drift engine, retention purge, cadence floor, score-guard, HTML/DOCX drift rendering, frontend lifecycle-advisory-guard); full-suite baseline was 3,087 passed / 0 failed as of v5.12's Phase 150 CI gate, held green since; v5.10/v5.12 rows not authored at close |
 | v5.14 | 3,452 passed (full suite) | Full-suite re-run independently at every phase close and at milestone audit; grew from 3,369 (pre-milestone baseline) to 3,452 (+83 tests) across the milestone's 4 phases and their code-review fix cycles; 3 pre-existing failures (CMVP staleness, 2 macOS-local git-hook-integration ordering issues) confirmed unrelated and unchanged at every re-run, including the final milestone-audit pass |
+| v5.17 | 3,802 passed / 1 failed (full suite) | Grew from 3,766 (Phase 175 close) to 3,802 across the milestone; the single failure is the pre-existing `DEFER-172-01` `test_skip_registry` node, confirmed unchanged at every phase close. All 5 phases carry a VERIFICATION.md |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -946,3 +1050,8 @@ existing precedent in the codebase to draw from.
 16. Re-triage of deferred items must re-derive the evidence, not re-read the prior verdict — a correct conclusion resting on decayed facts (v5.11 / DRAIN-04) is invisible to every subsequent review
 17. A gate that blocks on literal document text (not a structured flag) will be tripped repeatedly until the tool that writes the flag also writes the text — v5.14 hit the same VALIDATION.md row-status/pre-commit-hook gap on 3 of 4 phases before the pattern was recognized and proactively avoided
 18. A milestone-spanning shared chokepoint pays for itself when 3+ phases in the same milestone need the same persistence path — design it for named future callers when the current phase's own scope already implies who they'll be (v5.14 Phase 158 → 159 → 160)
+19. Never inherit a headline count across a milestone boundary — re-derive it from the source data before scoping. Four for four have failed re-measurement (5→3 duplicate IDs, 16→230 stale references, 4→2 missing tests, 32→18 defects)
+20. A closed root cause is a hypothesis until something independent confirms it — v5.17's most valuable finding (`TRIAGE-176-03`, every SSH scan degraded to a banner grab) came from re-running an investigation that had already concluded
+21. A requirement's own text is falsifiable — when the product deliberately contradicts it, close it as satisfied-by-override with an explicit do-not-"fix" warning rather than shipping a regression to satisfy the wording (v5.17 / SCOPE-01, built → shipped → reverted same day)
+22. A command name appearing in your own planning docs is not evidence it exists — `/gsd-verify-phase` propagated through STATE.md for ten phases before anyone ran it, leaving Phase 176 with no verification artifact and blocking the milestone audit
+23. Correcting test-case or UAT documentation is the highest-fabrication-risk work in the project — gate it on live re-execution and falsifiability proofs, never on reading (v5.17 Phase 175: all 12 case defects re-confirmed live before a character was edited)
