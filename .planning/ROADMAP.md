@@ -122,7 +122,7 @@ inward-facing cycles had broken the 2:1 capability/ops ratio.
 ### Phases
 
 - [x] **Phase 177: Release Toolchain Repair** - The editable install works, the version bumps, and a real release finally ships covering both v5.16 and v5.17. Gating: nothing else in v5.18 reaches a user until this does. **Shipped 2026-09-02 — v5.18.0 is live on PyPI.**
-- [ ] **Phase 178: Finding Identity Repair** - A finding keeps one identity across re-scans, the dead trend report either reports real movement or admits it cannot, and the two findings-derivation paths are reconciled or explicitly bounded. Gating: remediation tracking on a key that decays daily is worse than none. **All 7 plans complete 2026-09-02 — IDENT-01/02/03 closed, ADVISORY-01 firewall proven held and left OPEN. Pending phase verification (VERIFICATION.md).**
+- [x] **Phase 178: Finding Identity Repair** - A finding keeps one identity across re-scans, the dead trend report either reports real movement or admits it cannot, and the two findings-derivation paths are reconciled or explicitly bounded. Gating: remediation tracking on a key that decays daily is worse than none. **Complete 2026-09-02 — IDENT-01/02/03 closed, ADVISORY-01 firewall proven held and left OPEN. Verification passed 12/12 (independent re-verification, including re-running the AST-guard negative control).**
 - [ ] **Phase 179: Remediation Item Model** - Roadmap items gain stable IDs joined to their constituent finding fingerprints, a scope signature that refuses closure across incomparable scans, and `not_observed` as an honest third state.
 - [ ] **Phase 180: Closure Verification** - Closure is machine-observed under a two-sided condition, never human-asserted; `resurfaced` is modelled explicitly; burndown is relative to a named target date rather than a single scalar.
 - [ ] **Phase 181: Surfacing** - Closure state emitted as CycloneDX VEX in the CBOM (zero new deps), plus advisory-only burndown in CLI/HTML/DOCX reports and on the dashboard.
@@ -291,7 +291,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
-| 178. Finding Identity Repair | 7/7 | Plans complete — pending verification | 2026-09-02 |
+| 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
 | 179. Remediation Item Model | 0/? | Not started | — |
 | 180. Closure Verification | 0/? | Not started | — |
 | 181. Surfacing | 0/? | Not started | — |
