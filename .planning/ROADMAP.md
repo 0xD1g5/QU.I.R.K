@@ -331,6 +331,23 @@ Not all of this is v5.18 scope — it is the open-item ledger the milestone inhe
 
 Items to be organized into future milestones. Organized by theme.
 
+### Remediation Coverage (post-v5.18)
+
+- **Sensor-origin findings are excluded from remediation closure tracking.** Sensor-pushed
+  `CryptoEndpoint` rows (`quirk/cli/console_cmd.py::_ingest_envelope`) carry `sensor_id` and
+  `segment` but never `scan_run_id`; Phase 179's scope signatures (which gate closure comparisons)
+  are keyed on `scan_run_id`, so sensor-origin findings have no signature and cannot be evaluated
+  for closure. This was a deliberate decision in Phase 179 (179-CONTEXT.md, "Sensor-Origin
+  Coverage") — documented in `docs/operators-guide.md` §15 and in
+  `quirk/intelligence/scope_signature.py::persist_scope_signature`'s docstring — not an oversight.
+  A future phase needs to decide either (a) extend the scope signature to a per-sensor / per-push
+  keying scheme that can carry the sensor's own port scope and profile, or (b) accept the exclusion
+  permanently and surface it explicitly in reports (e.g. a visible "N sensor-origin findings not
+  tracked for closure" line) rather than leaving it undocumented data absence. Note: the gap is
+  structurally invisible in local testing — the live dev DB has 30 rows, all with `scan_run_id`,
+  zero with `sensor_id` — so no local test run will ever trip over it; this must be caught by
+  reading the code path, not by observing a failure.
+
 ### Release & Verification Integrity (v5.12 candidates)
 
 Promoted into the v5.12 milestone and shipped 2026-08-14 (see `.planning/milestones/v5.12-ROADMAP.md`) — kept here for
