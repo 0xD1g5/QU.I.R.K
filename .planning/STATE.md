@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 180-02-PLAN.md
-last_updated: "2026-09-02T23:46:16.688Z"
+stopped_at: Completed 180-03-PLAN.md
+last_updated: "2026-09-02T23:52:57.216Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 28
-  completed_plans: 22
+  completed_plans: 23
   percent: 60
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 180 (closure-verification) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 
 **179-05 complete (2026-09-02):** Documentation-only plan. `remediation_aliases:` documented in
@@ -658,6 +658,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 179 P06 | 90min | 3 tasks | 6 files |
 | Phase 180 P01 | 15min | 3 tasks | 4 files |
 | Phase 180 P02 | 25min | 3 tasks | 5 files |
+| Phase 180 P03 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -980,6 +981,10 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 180]: D-13a: target_set_digest hashes cfg.targets (configured spec), not observed hosts — stable across same-estate rescan, discriminates across estates
 - [Phase 180]: D-13c: SCOPE_SIGNATURE_VERSION bumped to 2.0.0 so a pre-Phase-180 signature row can never compare equal to a post-Phase-180 row
 - [Phase 180]: 180-02: EO 14412 PQC deadline catalog (8th staleness gate, 90-day cadence); PKE ambiguity resolved per-slug via drift-guarded overlay reusing classify_algorithm(), CNSA 2.0 omitted (media.defense.gov 403)
+- [Phase 180]: D-20: resurfaced appended (not inserted) to ITEM_STATES so pre-existing tuple indices never shift
+- [Phase 180]: D-21: OPEN_LIKE_STATES named constant so a counter forgetting resurfaced fails visibly
+- [Phase 180]: D-22: CLOSURE_EVENT_TYPES allowlist lives in remediation.py, not models.py (mirrors T-155-03)
+- [Phase 180]: D-23: remediation_closure_events stores no host/port -- already on remediation_item_fingerprints
 
 ### Pending Todos
 
@@ -1149,8 +1154,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T23:46:16.681Z
-Stopped at: Completed 180-02-PLAN.md
+Last session: 2026-09-02T23:52:57.209Z
+Stopped at: Completed 180-03-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
