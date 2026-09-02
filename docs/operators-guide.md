@@ -2174,3 +2174,72 @@ the same host and port still produce two distinct tickets after this change, exa
 fingerprinting deliberately does NOT collapse findings that differ only in which library or
 package they name (T-178-01). Only the day-counting cert-expiry title was made fingerprint-stable;
 everything else that already deduplicated correctly continues to do so.
+
+## 15. Remediation Tracking Scope (v5.18+ — Phase 179)
+
+Phase 179 changed what a remediation item *is*. Previously, roadmap items were computed fresh on
+every scan from live evidence counters and existed only in memory — nothing was persisted, and
+progress could only ever be reported as a boolean (an item is either present in the current
+roadmap or it isn't). A remediation item is now a stable, kind-derived ID (e.g.
+`plaintext-http-exposure`) with its constituent findings recorded explicitly, per scan, in the
+database. That is what makes "6 of 8 verified closed" an expressible fact rather than an
+approximation — fixing 1 of 8 affected endpoints no longer reads as "nothing happened," and fixing
+the 8th no longer makes the item silently vanish with no closure record.
+
+Three things operators should understand about how this tracking behaves:
+
+- **A per-scan scope signature is recorded**, capturing what the scan actually covered — port
+  scope, `--profile`, which optional extras were enabled, whether credentials were supplied, and
+  which sensors contributed. Closure comparisons are refused outright when two scans' signatures
+  don't match, rather than silently comparing scans that covered different ground. A re-engagement
+  run with `--profile quick` cannot be misread as having verified — let alone closed — findings
+  that only a deeper prior scan actually covered.
+- **Probe health is asserted positively, per protocol family, not inferred from the scan exiting
+  cleanly.** A scan can exit 0 while a specific probe (SSH, TLS, JWT, etc.) silently produced no
+  usable evidence — this is precisely the failure mode a prior integration defect (TRIAGE-176-03)
+  demonstrated for SSH. Health is now derived from whether that family actually produced evidence,
+  not from the absence of an error.
+- **`not_observed` is a real, persisted third state — distinct from both `open` and `closed`.** An
+  item this scan did not see evidence for is recorded as `not_observed`, never inferred as
+  `closed`. A report reading "9 closed, 4 open, 12 not observed" is telling you something true and
+  useful: those 12 were not verified this scan, one way or the other. It does not mean nothing was
+  found there — it means the question wasn't answered this run (a narrower port scope, a disabled
+  connector, an unreachable host). Treat `not_observed` as "we did not check," never as "there's
+  nothing there."
+
+See `docs/configuration.md` §"Remediation Aliases" for the related `remediation_aliases:` config
+key, which lets an operator manually declare that two identities across engagements are the same
+asset — the human-in-the-loop mechanism this phase uses instead of automated re-scan matching.
+
+### Known limitation — sensor-origin findings are excluded from closure tracking
+
+**Closure tracking is scoped to CLI scans.** Findings pushed from a distributed sensor
+(`docs/operators-guide.md` §8, Distributed Sensor Deployment) arrive through a different ingestion
+path — `quirk/cli/console_cmd.py::_ingest_envelope` — which records `sensor_id` and `segment` on
+the resulting `CryptoEndpoint` row but does **not** set `scan_run_id`. The scope signature that
+gates closure comparisons is keyed on `scan_run_id`. A row with no `scan_run_id` therefore has no
+scope signature and no way to be evaluated for closure.
+
+**What this means in practice:** in a hybrid or fully distributed deployment, sensor-origin
+findings will never appear in remediation burndown or closure figures — not because nothing was
+found, and not because of a bug, but because sensor pushes were structurally excluded from this
+tracking mechanism by design decision (179-CONTEXT.md, "Sensor-Origin Coverage"). If you run a
+distributed sensor fleet and expect to see sensor-discovered findings close out over time, you
+will not — closure figures will only ever reflect CLI-scanned findings. This is worth knowing
+*before* you plan a distributed engagement around burndown reporting, not after you notice the
+number never moves.
+
+**CLI-scanned findings are unaffected** — everything described above in this section applies to
+them fully, regardless of whether the deployment also includes sensors elsewhere.
+
+**Why not synthesize a scope signature for sensor pushes?** A sensor envelope is not a scan — its
+port scope, `--profile`, and enabled extras were decided on the sensor at push time and are not
+reliably recoverable centrally. Fabricating a signature for it would produce something that looks
+structurally present but is semantically empty: it would pass the "scope signature exists"
+mismatch check without ever having actually evaluated whether the compared scans were comparable.
+That is worse than the current gap, because it would silently masquerade as a valid comparison
+instead of visibly declining to compare.
+
+A follow-up to revisit this — either by extending scope signatures to a per-sensor keying scheme,
+or by permanently accepting the exclusion and surfacing it in reports instead — is tracked in
+`.planning/ROADMAP.md` under `## Backlog` → "Remediation Coverage (post-v5.18)".

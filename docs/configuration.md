@@ -745,6 +745,48 @@ intelligence:
 
 ---
 
+## Remediation Aliases (v5.18+ — Phase 179)
+
+Maps an old identity (host or IP from a prior engagement's scan) to its current identity, so
+re-scan burndown can match findings that moved across DHCP churn, hostname-vs-IP drift, VIPs, and
+container reassignment. Without an alias, a finding that "moved" between the baseline scan and the
+re-scan reads as two unrelated findings — one still open on the old identity, one newly discovered
+on the new identity — rather than one finding whose progress you can track.
+
+| Key | Type | Default | Description |
+|-----|------|---------|--------------|
+| `remediation_aliases` | dict (string → string) | `{}` | Maps a prior-scan identity to its current identity, one entry per known rename/move |
+
+```yaml
+remediation_aliases:
+  web01.corp.example: 10.0.0.15
+  old-db-host.internal: db02.corp.example
+```
+
+**Parsing rules an operator can rely on:**
+
+- The top-level value must be a mapping. Any other shape — a list, a bare string, `null` — yields
+  an empty alias set rather than raising a config error; the scan proceeds with no aliases applied.
+- Individual entries are dropped, not fatal, when malformed: an entry whose value is itself a
+  nested `dict` or `list`, or whose value is `null`, is skipped.
+- Both the key and the value are coerced to strings and `.strip()`-ed. An entry that strips to an
+  empty key or empty value is dropped.
+- A dropped or skipped entry does not stop the scan and does not raise — it is silently absent
+  from the alias set, which is why the syntax above should be treated as exact rather than
+  approximate.
+
+**Two design constraints, because they are the reason this key exists rather than something
+automatic:**
+
+- QU.I.R.K. does **not** attempt automatic re-scan entity resolution. Matching purely on
+  `(host, port)` breaks on DHCP lease changes, hostname-vs-IP recording drift, load-balancer VIPs,
+  and container/pod churn between engagements — any of those would silently misattribute progress.
+- Aliases are **never** learned automatically. The only source of truth is this file, reviewed by
+  a human, and versioned alongside the rest of the scan config. If an identity isn't listed here,
+  QU.I.R.K. treats it as a new, unrelated identity — never as an assumed match.
+
+---
+
 ## Scan Profiles (`--profile` flag)
 
 The `--profile` flag applies a preset combination of timeouts and TLS enumeration depth. Profiles override the corresponding `scan` block keys at runtime — `config.yaml` is not modified.
@@ -1170,6 +1212,8 @@ intelligence:
   intelligence_version: "3.9.0"
   profile: "balanced"                   # lenient|balanced|strict
   calibration_overrides: {}
+
+remediation_aliases: {}
 ```
 
 ---
