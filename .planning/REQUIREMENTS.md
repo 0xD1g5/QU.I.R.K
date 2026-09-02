@@ -69,15 +69,33 @@ this does.
   `ls /opt/homebrew/bin/quirk` -> "No such file or directory" (Plan 03, 2026-09-02, user-approved
   removal). Originally carried in HORIZON since 2026-08-28 on the now-corrected root cause.*
 
-- [ ] **RELEASE-02**: A real release ships covering v5.16 **and** v5.17. Version bumped in
+- [x] **RELEASE-02**: A real release ships covering v5.16 **and** v5.17. Version bumped in
   `pyproject.toml` with the editable reinstall done (a bump alone fails `tests/test_version.py`),
   three-component tag, `release.yml` fires. Both prior milestones were archived untagged precisely
   because a wrong tag now cuts a real bad release rather than silently no-opping.
+  **Shipped 2026-09-02.** The user pushed `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`,
+  dereferencing to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated).
+  `release.yml` run [33656116783](https://github.com/0xD1g5/QU.I.R.K./actions/runs/33656116783)
+  fired on `event: push` and completed `conclusion: success` across all three jobs (`Build wheel +
+  sdist`, `Build Windows zip + attach GitHub Release asset`, `Publish to PyPI (Trusted Publishers +
+  Sigstore)`). *Evidence: `git ls-remote --tags origin | grep v5.18.0`, `gh run view 33656116783
+  --json event,conclusion,jobs`, `docs/UAT-SERIES.md` `UAT-177-03` PASS (2026-09-02).*
 
-- [ ] **RELEASE-03**: Version-facing surfaces reflect what shipped — `README.md` badge and
+- [x] **RELEASE-03**: Version-facing surfaces reflect what shipped — `README.md` badge and
   "What's New" (currently stops at v5.15, so two milestones are invisible), `docs/getting-started.md`,
   `docs/UAT-SERIES.md` header and UAT-1-02 criteria, `CHANGELOG.md`.
   *Evidence: milestone-boundary doc review 2026-09-01, Domain 1 — no drift, but no coverage either.*
+  **Shipped 2026-09-02.** PyPI JSON API confirms `latest: 5.18.0` with both the wheel
+  (`quirk_scanner-5.18.0-py3-none-any.whl`, 1442115 bytes) and sdist
+  (`quirk_scanner-5.18.0.tar.gz`, 2150491 bytes) present, uploaded 2026-09-02T16:38:4x UTC. A real
+  clean-venv install (`pip install quirk-scanner==5.18.0`, retried once past initial CDN lag) and
+  `quirk --version` both succeeded, printing `QU.I.R.K. v5.18.0`, exit 0. The Sigstore build
+  provenance attestation was independently confirmed via PyPI's integrity endpoint
+  (`publisher.repository: 0xD1g5/QU.I.R.K`, `publisher.workflow: release.yml`) — the
+  `gh attestation verify` command originally named in `UAT-177-02` 404s because
+  `pypa/gh-action-pypi-publish` uploads to PyPI's own store, not GitHub's; the case text was
+  corrected in place. *Evidence: `docs/UAT-SERIES.md` `UAT-177-01`/`UAT-177-02` PASS
+  (2026-09-02).*
 
 ## Finding Identity Repair (Phase 178) — gating Wave B
 
@@ -186,8 +204,8 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 |---|---|---|
 | ADVISORY-01 | All (standing) | Pending |
 | RELEASE-01 | Phase 177 | Complete — both root-cause halves fixed and evidenced (177-01 repo-root residue, 177-03 machine-wide orphan install), independent of RELEASE-02/03 shipping (2026-09-02) |
-| RELEASE-02 | Phase 177 | Pending |
-| RELEASE-03 | Phase 177 | Pending |
+| RELEASE-02 | Phase 177 | Complete — v5.18.0 shipped, run 33656116783 green on `push`, PyPI `latest: 5.18.0` (2026-09-02) |
+| RELEASE-03 | Phase 177 | Complete — real clean-venv PyPI install verified, Sigstore provenance verified via corrected endpoint, Series 177 all PASS (2026-09-02) |
 | IDENT-01 | Phase 178 | Pending |
 | IDENT-02 | Phase 178 | Pending |
 | IDENT-03 | Phase 178 | Pending |
