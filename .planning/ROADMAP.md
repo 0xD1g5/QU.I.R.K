@@ -107,6 +107,142 @@ inward-facing cycles had broken the 2:1 capability/ops ratio.
 - [ ] **Phase 180: Closure Verification** - Closure is machine-observed under a two-sided condition, never human-asserted; `resurfaced` is modelled explicitly; burndown is relative to a named target date rather than a single scalar.
 - [ ] **Phase 181: Surfacing** - Closure state emitted as CycloneDX VEX in the CBOM (zero new deps), plus advisory-only burndown in CLI/HTML/DOCX reports and on the dashboard.
 
+## Phase Details
+
+### Phase 177: Release Toolchain Repair
+
+**Goal**: The editable install works, the version bumps, and a real release finally ships covering
+both v5.16 and v5.17 — so two milestones of user-visible fixes stop being invisible.
+**Depends on**: Nothing (gating phase; nothing else in v5.18 reaches a user until this lands)
+**Requirements**: RELEASE-01, RELEASE-02, RELEASE-03, ADVISORY-01 (standing)
+**Success Criteria** (what must be TRUE):
+
+  1. `pip install -e . --no-deps` succeeds in a clean local environment and the three environmental
+     `tests/test_extras_install_matrix` failures present in both the v5.16 and v5.17 close baselines
+     are gone. The stale `__editable__.quirk-4.0.0.pth` — claiming v4.0.0 against a 5.15.0 project
+     and breaking pip's build backend — is removed, not worked around.
+
+  2. `pyproject.toml` carries a correct three-component version, `tests/test_version.py` passes
+     (which requires the editable reinstall, not the bump alone), a three-component tag is pushed,
+     and `release.yml` fires a real release run covering v5.16 **and** v5.17 content. No
+     two-component tag is created — that is the v5.13/v5.14/v5.9 silent-no-op defect, and
+     `release.yml`'s broadened `v[0-9]*` trigger now makes a malformed tag cut a bad release rather
+     than nothing.
+
+  3. Version-facing surfaces agree with what shipped: `README.md` badge and "What's New" (currently
+     stops at v5.15), `docs/getting-started.md`, `docs/UAT-SERIES.md` header and UAT-1-02 pass
+     criteria, and `CHANGELOG.md`. Obsidian vault counterparts re-synced per LIVE-03.
+**Plans**: TBD
+
+### Phase 178: Finding Identity Repair
+
+**Goal**: A finding keeps one identity across re-scans, the structurally-dead trend report either
+reports real movement or honestly admits it cannot, and the two findings-derivation paths are
+reconciled or explicitly bounded.
+**Depends on**: Phase 177 (release gate)
+**Requirements**: IDENT-01, IDENT-02, IDENT-03, ADVISORY-01 (standing)
+**Success Criteria** (what must be TRUE):
+
+  1. A cert-expiry finding keeps **one** fingerprint across a simulated day boundary. The 22
+     `title=f"..."` interpolations are normalized out of the fingerprint input using the existing
+     `TITLE_PREFIX_ALIASES` normalizer (`quirk/compliance/__init__.py:105-122`), which is currently
+     never applied to it. Fixes the live defect where `SHA256(host:port::title)` mints a fresh Jira
+     ticket every day despite a docstring claiming cross-scan stability.
+
+  2. `compute_trend_report` is proven non-vacuous against seeded two-scan data. Today it keys on
+     `(host, port, protocol, severity)` and filters `severity is not None` on both sides, while
+     severity is populated only by the three cloud connectors — 10,069 live endpoint rows, 0
+     non-NULL — so every scan reports 0 new / 0 resolved while passing its own tests. Removing
+     `severity` from the delta key is the likely fix, but severity-in-key is deliberate
+     (`trends.py:206-208`): a HIGH→MEDIUM partial remediation currently reads as 1 closed + 1 new.
+     Whichever way it resolves, the resolution is explicit and test-locked.
+
+  3. `quirk/engine/findings_evaluator.py` and the five `_derive_*_findings` functions in
+     `quirk/dashboard/api/routes/scan.py` are proven to agree on finding identity, or their
+     divergence is explicitly bounded and documented. Scope may be "prove they agree" rather than
+     "merge them" — merging is the design-judgment refactor excluded since v5.16 as RVW-002.
+**Plans**: TBD
+
+### Phase 179: Remediation Item Model
+
+**Goal**: Roadmap items gain stable IDs joined to their constituent finding fingerprints, a scope
+signature that refuses closure across incomparable scans, and `not_observed` as an honest third
+state.
+**Depends on**: Phase 178 (stable finding identity is the join key)
+**Requirements**: REMED-01, REMED-02, REMED-03, ADVISORY-01 (standing)
+**Success Criteria** (what must be TRUE):
+
+  1. A remediation item has a stable ID decoupled from its title and is persisted with the finding
+     fingerprints that constitute it. Progress is expressible as "6 of 8 verified closed", not a
+     boolean. Today `quirk/intelligence/roadmap.py` generates aggregate, template-titled candidates
+     from evidence counters and never persists them: fixing 1 of 8 plaintext endpoints closes
+     nothing, fixing the 8th makes the item silently vanish with no closure record, and rewording a
+     title silently re-keys its history.
+
+  2. A per-scan **scope signature** (port scope, profile, optional extras present, credential
+     presence, sensor set) is persisted, and closure computation hard-refuses when signatures
+     differ. A re-engagement run with `--profile quick` must not auto-generate an attestation
+     claiming dozens of false closures. Probe health must be positively asserted, not inferred from
+     "the scan exited 0" — the TRIAGE-176-03 shape, where `ssh-audit` silently degraded to banner
+     grabs for the life of the integration.
+
+  3. `not_observed` is a first-class third state alongside open and closed, and re-scan entity
+     resolution is explicitly **not** attempted — `(host, port)` breaks on DHCP, hostname-vs-IP,
+     VIPs, and container churn. Operator-supplied aliases carry that burden with the human in the
+     loop. "9 closed, 4 open, 12 not observed" is defensible; "21 closed" is a liability.
+**Plans**: TBD
+
+### Phase 180: Closure Verification
+
+**Goal**: Closure is machine-observed under a two-sided condition, never human-asserted;
+`resurfaced` is modelled explicitly; burndown is relative to a named target date rather than a
+single scalar.
+**Depends on**: Phase 179 (item model + scope signature)
+**Requirements**: CLOSE-01, CLOSE-02, CLOSE-03, ADVISORY-01 (standing)
+**Success Criteria** (what must be TRUE):
+
+  1. An item is marked closed only under a two-sided condition — detected by a previous scan AND
+     verified absent by the current one — and never when the scanner did not recheck that specific
+     item. This copies Qualys's explicit guardrail ("does not mark a QID closed if the scanner did
+     not recheck it"), which Tenable and Orca concur with. No human-asserted closure path exists.
+
+  2. `resurfaced` is a modelled state, not a re-derived new finding. Without it a regression reads
+     as new and the burndown counts the same item closing twice.
+
+  3. Burndown is computed **relative to a named target date**, not a single scalar. EO 14412
+     (2026-06-22) deadlines PQC key establishment at 2030-12-31 and digital signatures at
+     2031-12-31 *separately*. Deadlines live in a `last_verified` staleness-gated catalog with
+     `source_url` and a CI gate, following the 90-day QRAMM/CMVP cadence precedent.
+     **Verification debt, carried honestly:** the research pass got HTTP 403 fetching the NSA
+     CNSA 2.0 PDF; that date table is MEDIUM confidence from concurring secondary sources and
+     **must be manually re-verified against the primary source before this phase ships.**
+**Plans**: TBD
+
+### Phase 181: Surfacing
+
+**Goal**: Closure state emitted as CycloneDX VEX in the CBOM (zero new dependencies), plus
+advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
+**Depends on**: Phase 180 (closure state must exist before it can be surfaced)
+**Requirements**: SURF-01, SURF-02, SURF-03, ADVISORY-01 (standing)
+**Success Criteria** (what must be TRUE):
+
+  1. The CBOM emits a `vulnerabilities` array carrying closure state as CycloneDX VEX, using
+     `ImpactAnalysisState` (`resolved` / `not_affected` / `in_triage` / …) and
+     `VulnerabilityAnalysis(state, justification, responses, detail, first_issued, last_updated)` —
+     all confirmed present in the installed `cyclonedx-python-lib` 11.7.0, so **zero new
+     dependencies**. `protected_at_perimeter` maps onto the existing `upstream_mitigated`. The
+     builder emits no `vulnerabilities` array today, so this is new surface, and it is shaped to
+     absorb the CISA/NIST CBOM minimum-elements guidance due ≈2026-12-19. CDXA `declarations`
+     (signed attestations) stays deferred — no model module in 11.7.0.
+
+  2. Burndown appears in the CLI, HTML, and DOCX reports with **byte-identical captions** across
+     surfaces (the Phase 161 HWLC-19 pattern), advisory-only per ADVISORY-01.
+
+  3. Burndown appears on the dashboard, reusing the existing advisory-surface firewall tuple rather
+     than adding a parallel guard. `tests/test_cve_score_guard.py` is extended by name to cover the
+     new state, proving closure never reaches the quantum-readiness score.
+**Plans**: TBD
+
 ### Progress
 
 | Phase | Plans Complete | Status | Completed |
