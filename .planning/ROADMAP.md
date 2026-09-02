@@ -88,6 +88,7 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
 is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
+
 ## Current Milestone: v5.18 Migration Execution
 
 **Goal:** Close the loop. QUIRK detects, scores, and produces a prioritized remediation roadmap —
@@ -160,6 +161,7 @@ both v5.16 and v5.17 — so two milestones of user-visible fixes stop being invi
 **Plans**: 7 plans in 5 waves
 
 Plans:
+
 - [x] 177-01-PLAN.md — Wave 1 · RELEASE-01 · Add the single-distribution regression guard (proven RED), purge repo-root + `.venv` residue, prove the editable install clean
 - [x] 177-02-PLAN.md — Wave 1 · RELEASE-02 · Re-verify the firmware CVE catalog against NVD and clear every pre-release staleness gate (`hw_cve.py` flipped STALE 2026-09-02)
 - [x] 177-03-PLAN.md — Wave 2 · RELEASE-01 · Announced Homebrew-global orphan cleanup (user-gated), venv-only runbook note, RELEASE-01 evidence correction
@@ -198,6 +200,7 @@ reconciled or explicitly bounded.
 **Plans**: 7 plans in 4 waves
 
 Plans:
+
 - [x] 178-01-PLAN.md — IDENT-01 guards written RED first: day-boundary stability + T-178-01 fingerprint-collision
 - [x] 178-02-PLAN.md — IDENT-02 guards written RED first: severity-NULL non-vacuity + severity-transition contract
 - [x] 178-03-PLAN.md — IDENT-03 fingerprint-equality agreement tests + the written bounded-divergence record
@@ -236,10 +239,11 @@ state.
 **Plans**: 6 plans in 5 waves
 
 Plans:
+
 - [x] 179-01-PLAN.md — Three new tables via create_all(checkfirst=True) + the 14-entry kind-slug closed set and not_observed vocabulary
 - [x] 179-02-PLAN.md — remediation_aliases: config section (broker_credentials precedent), defensive parsing, no auto-learning
 - [x] 179-03-PLAN.md — Scan-time item + fingerprint join-row persistence; ADVISORY-01 structural AST negative control
-- [ ] 179-04-PLAN.md — Scope signature (discrete columns + SHA256 digest) and positively-asserted per-family probe health
+- [x] 179-04-PLAN.md — Scope signature (discrete columns + SHA256 digest) and positively-asserted per-family probe health
 - [ ] 179-05-PLAN.md — Docs (config option + sensor-origin known limitation), roadmap follow-up, Obsidian sync
 - [ ] 179-06-PLAN.md — Series 179 UAT, hand-edited REMED close-out (ADVISORY-01 stays open), blocking full-suite gate
 
@@ -300,7 +304,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 |-------|----------------|--------|-----------|
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
-| 179. Remediation Item Model | 3/6 | In Progress|  |
+| 179. Remediation Item Model | 4/6 | In Progress|  |
 | 180. Closure Verification | 0/? | Not started | — |
 | 181. Surfacing | 0/? | Not started | — |
 
@@ -311,12 +315,15 @@ Not all of this is v5.18 scope — it is the open-item ledger the milestone inhe
 
 - **TRIAGE-176-01 / TRIAGE-176-02** — two genuine defects surfaced by the Phase 176 chaos-lab
   re-run, explicitly triaged rather than absorbed. Each needs its own plan and tests.
+
 - Two `UAT-6-08` case-text corrections carried forward from plan 176-08.
 - **`DEFER-172-01`** — `tests/skip_registry.py` line-number drift across 5 files; still the sole
   failing node in the local full-suite baseline (`1 failed, 3802 passed`).
+
 - **a11y route coverage** — the a11y sweep does not cover `/hardware` or `/compare`
   (`.planning/todos/pending/a11y-route-coverage-gap.md`), the same two routes as the 2 pending
   visual scenarios in `158-HUMAN-UAT.md`. Triage them together.
+
 - **Windows Authenticode signing** (`UAT-143-03`) — engineering-complete, blocked on purchasing a
   certificate. Not engineering work.
 
