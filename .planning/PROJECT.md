@@ -204,6 +204,16 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Dashboard + report "what changed since last scan" surfacing — `GET /api/hardware/drift`, `CompareResponse.hardware_drift`, `LifecycleEventList` on `/hardware`/`/compare`, HTML/DOCX "Recent Lifecycle Changes" sections — structurally distinct from scored findings, zero `SCORE_WEIGHTS` references, machine-enforced — Phase 156
 - ✓ OT/ICS recurring-rescan safety rail — explicit `enable_recurring_otics` opt-in + hardcoded 168-hour cadence floor enforced at the sole scheduler dispatch chokepoint; `/gsd-secure-phase 156` SECURED 19/19 threats — Phase 156
 
+- ✓ Fuzzing safety rails — `--fuzz` on non-TTY stdin and `--fuzz-budget` > 500 both hard-abort at argparse time with coded FUZZ-001/FUZZ-002 errors and exit 2, before any config load; documented ceiling tied to the enforced constant by a drift gate proven to fail on perturbation — Phase 172 (SAFE-01, SAFE-02)
+- ✓ Disclosure safety on spec-parse failure — real URL-component redaction (`_redact_url_preview`) replaces truncation-only, with its misleadingly-named non-URL twin renamed `_truncate_preview` — Phase 172 (SAFE-03)
+- ✓ Honest run-stats for skipped phases — `_PHASE_SKIPPED` sentinel omits `timings_sec` keys for the 19 scanner phases that never ran, with an inversion guard proving ran-but-empty phases keep theirs — Phase 173 (SCOPE-02)
+- ✓ Missing-extra advisories for broker/smime/adcs — broker's gate now consults all three availability flags instead of SSLYZE alone; smime and adcs gained their first wiring, closing a silent exit-0 gap the existing source-grep tests were blind to — Phase 173 (SCOPE-03)
+- ✓ Dashboard scores track their own scan's calibration — `GET /api/scans` scores each session under its stored profile instead of defaulting every row to "balanced" — Phase 174 (DASH-06)
+- ✓ Dashboard empty state and sidebar order locked — empty-DB contract re-probed and guarded; the 14-item sidebar order derived live and locked bidirectionally to its documentation — Phase 174 (DASH-07, DASH-08)
+- ✓ UAT corpus case-defect correction — twelve cases whose own criteria were wrong against correct product behaviour corrected with zero product code changed, each independently re-confirmed by live execution first, two left honestly DEFERRED, plus `UAT-94-09` added as the first redaction-regression detector (falsifiability proven) — Phase 175 (CASEFIX-01..05)
+- ✓ Chaos-lab re-run carries true outcomes — all 13 lab-down cases re-executed with the lab up (33 containers, 18 ports verified), final tally 10 PASS / 3 FAIL / 0 GAP, every genuine defect explicitly triaged; surfaced `TRIAGE-176-03`, a live scanner bug degrading every SSH scan to a banner grab — Phase 176 (LABRUN-01)
+- ✓ `UAT-1-02` false-FAIL root-caused — `uat_runner.py:154` gated PASS on `'4.2.0' in ver or 'quirk' in ver.lower()`, both disjuncts unsatisfiable against `QU.I.R.K. v5.15.0`; fixed under a narrow lift with a shape-pinning regression test — Phase 176 (LABRUN-02)
+
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
 - [ ] Scan job queue (Celery + Redis or similar)
@@ -582,8 +592,71 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 - **SaaS multi-tenancy stays PARKED** — unchanged from v5.4; gated on a business-model signal that does not yet exist.
 - **Cadence:** v5.4 broke the 2:1 capability/ops rhythm deliberately; v5.5 is the owed stabilization/hardening breather. Numbering continues at **Phase 113**. Source of truth for forward outlook: `.planning/HORIZON.md`.
 - **Live human-UAT keeps catching real bugs** that automated verification (which injected matching in-memory rows) missed — the entire 999.85–89 set came from the post-ship live distributed E2E. Treat live E2E as a first-class gate this milestone.
-
 ## Current State
+
+**v5.17 Defect Drain — development complete and archived 2026-09-01.** All 5 phases (172–176),
+28 plans plus 2 user-directed addenda, 16/16 requirements satisfied, 107 commits over five days.
+All five phases carry a `NN-VERIFICATION.md`.
+
+The milestone drained the defects v5.16's UAT corpus drain had surfaced. **Its scope was
+re-measured from the ledger before opening rather than inherited:** v5.16's reported "32 product
+FAILs" was a ledger tally, not a defect count — re-measurement found **18 genuine defects** (9
+product bugs, 9 case/doc defects), 13 chaos-lab-down artifacts, and 1 spurious. That made it the
+fourth headline count on this project to fail re-measurement.
+
+**Shipped:** argparse-time refusal of `--fuzz` on a non-TTY and of `--fuzz-budget` over 500, plus
+real URL-component redaction on spec-parsing failures (172); a `_PHASE_SKIPPED` sentinel so
+`timings_sec` carries no key for phases that never ran, and missing-extra advisory wiring for
+broker/smime/adcs (173); per-session calibration scoring on `GET /api/scans`, an empty-DB contract
+guard, and a sidebar order locked bidirectionally to its docs (174); twelve UAT case-text
+corrections with zero product code changed, plus a new redaction detector proven falsifiable
+against a neutered module (175); and the 13 lab-down cases re-executed with the lab actually up,
+final tally **10 PASS / 3 FAIL / 0 GAP** (176).
+
+**The most valuable outcome was a bug nobody was looking for.** Phase 176's re-run blamed two
+remaining GAPs on a missing `ssh-audit` binary. Installing it exposed `TRIAGE-176-03`:
+`quirk/scanner/ssh_scanner.py` passed two positionals to a tool that takes one `host:port`, so
+**every SSH scan since that integration shipped had silently degraded to a banner grab with
+`ssh_audit_json` NULL**. A rubber-stamp re-run would have taken the PASS. Fixed with an
+argv-asserting regression test the pre-existing mocks never had.
+
+**Recurring lesson, now four milestones deep: the project's own records are the least reliable
+input.** v5.17 falsified its own premises repeatedly — the inherited defect count, `SCOPE-01`'s
+requirement text (its fix was built, shipped, live-verified, then reverted the same day once shown
+to regress every real CLI config), Phase 176's success criterion ("no such literal exists in
+`uat_runner.py`" — a `git show` proved it did), and plan 176-07's root cause (overturned by
+176-08). Every one of these was caught by re-deriving rather than re-reading.
+
+**Milestone audit** (`milestones/v5.17-MILESTONE-AUDIT.md`) initially scored `gaps_found` with two
+gaps, both of which were the same thing: Phase 176 had no `176-VERIFICATION.md`, so no independent
+verifier had re-derived its self-reported claims. Closed 2026-09-01 — `status: passed`, 15/15
+must-haves, 0 overrides — and recorded as a Resolution Addendum that leaves the original findings
+verbatim.
+
+**Test baseline at close:** `1 failed, 3802 passed`. The sole failure is the pre-existing
+`DEFER-172-01` `test_skip_registry` node.
+
+**Carried forward:** `TRIAGE-176-01`/`TRIAGE-176-02` (two genuine lab-re-run defects, explicitly
+triaged to ROADMAP.md's Backlog with evidence), two `UAT-6-08` case-text corrections,
+`DEFER-172-01`, a11y route coverage for `/hardware` and `/compare` (same surface as the 2 pending
+`158-HUMAN-UAT.md` scenarios — triage together), and Windows Authenticode signing, which is
+engineering-complete and blocked on a certificate purchase. Eight deferred items total, re-triaged
+2026-09-01 in STATE.md `## Deferred Items`.
+
+**Still unreleased.** `pyproject.toml` remains `5.15.0`. v5.16 and v5.17 are both archived
+untagged: a version bump alone fails `tests/test_version.py` without `pip install -e . --no-deps`,
+and the local editable install is broken by a stale `__editable__.quirk-4.0.0.pth`. Since
+`release.yml` now triggers on `v[0-9]*`, a wrong tag would fire a real release rather than
+silently no-op — so tagging is blocked behind that toolchain repair, not laziness. **This is the
+strongest candidate for v5.18's opening scope:** two milestones of user-visible fixes are sitting
+on `main` unshipped.
+
+**Next milestone:** not yet opened. `/gsd-new-milestone` will PM-review HORIZON.md and the
+carry-forward table before scoping.
+
+## v5.16 Outcome Record — development complete 2026-08-28, untagged
+
+*(The v5.16 goal and target features, as scoped at open, are recorded separately above.)*
 
 **v5.16 Review Drain & Gate Integrity — SHIPPED and archived 2026-08-28.** All 8 phases (164–171)
 complete, 47 plans, 24/24 requirements satisfied, 187 commits over three days.
@@ -862,9 +935,15 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | `HardwareDriftEvent.is_partial_scan` captured at insert time from the producing probe, not joined from current device state (v5.14 / 159 code-review WR-03 fix) | A current-state join lets a later scan silently flip an older event's badge — the exact class of staleness bug the phase was designed to prevent | ✓ Good — verified by the milestone's own iteration-3 re-review; the fix is provenance-correct and immune to subsequent scans |
 | Vendor-trend N-of-M window scoped to distinct devices via `vendor_fleet_snapshot()`, not raw scan history (v5.14 / 160-01) | A naive raw-history query would let one repeatedly-rescanned host (especially under Phase 159's check-in cadence) dominate the confirmation gate for its entire vendor | ✓ Good — caught by research *before* implementation, not by review after the fact; named regression test proves a single host cannot dominate |
 | Vendor-trend report/dashboard surfacing deferred to a future phase, backend/API shipped standalone (v5.14 / 160-CONTEXT.md locked scope) | ROADMAP itself flagged "how to bucket/summarize" as genuinely unresolved; locking a premature display design risked getting it wrong twice | — Pending — `GET /api/hardware/vendor-trends` has zero consumers today (confirmed by integration audit); revisit if vendor-trend visibility becomes a client ask |
+| Re-measure an inherited defect count from the ledger before opening a milestone, never from the prior milestone's prose (v5.17 open, 2026-08-28) | v5.16 reported "32 product FAILs" — a ledger tally, not a defect count. Scoping a milestone against it would have committed five phases to a number nobody had checked | ✓ Good — re-measurement found 18 genuine defects, 13 lab-down artifacts, 1 spurious. Fourth headline count on this project to fail re-measurement, after 5→3 duplicate IDs, 16→230 stale references, and 4→2 missing tests |
+| Revert `SCOPE-01`'s literal fix the same day it shipped, and close the requirement as satisfied-by-override rather than force it (v5.17 / 173-01, user sign-off 2026-08-29) | The requirement's own text asserted behaviour the product deliberately does not have (`standard`/`deep` auto-enable `enable_email`/`enable_broker` by design since Phase 32/33/72-D-02). The shipped fix regressed every real CLI config, because `ports_tls` is a required YAML key so "user narrowed the scan" was unconditionally true | ✓ Good — the real operator-facing gap (docs never said auto-enable is independent of `scan.ports_tls`) was closed in `docs/configuration.md` instead. Checkbox intentionally left `[ ]`; `RECORD-01` in the milestone audit warns against "fixing" it |
+| Treat a phase's own success criterion as falsifiable, not as ground truth (v5.17 / Phase 176 SC3) | The criterion asserted "no such literal exists in `uat_runner.py`". A `git show` proved it did — `'4.2.0' in ver or 'quirk' in ver.lower()`, both disjuncts unsatisfiable against `QU.I.R.K. v5.15.0` because the dots defeat the substring check | ✓ Good — the phase corrected the premise with evidence rather than inheriting it, and the independent verifier reproduced the correction rather than accepting the summary |
+| Re-run a "known cause" investigation instead of accepting its first answer (v5.17 / 176-07 → 176-08) | Plan 176-07 attributed two GAPs to a missing `ssh-audit` binary and stopped there | ✓ Good — installing the binary exposed `TRIAGE-176-03`: `ssh_scanner.py` passed two positionals to a tool taking one `host:port`, so **every SSH scan since that integration shipped** silently degraded to a banner grab with `ssh_audit_json` NULL. A rubber-stamp re-run would have taken the PASS |
+| Backfill a missing `NN-VERIFICATION.md` by dispatching `gsd-verifier` directly rather than skipping the gate (v5.17 close, 2026-09-01) | Phase 176's execute-phase run ended without the verifier, leaving the milestone audit blocked on two gaps that were both just the missing artifact. `/gsd-verify-phase` — the command STATE.md had been recommending for ten phases — does not exist | ✓ Good — the verifier passed 15/15 and independently re-derived every claim. The phantom command name was corrected across 14 references so it is not reinvented |
+| Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-08-19 — v5.15 milestone (Lifecycle Tail Drain) opened via `/gsd:new-milestone`*
+*Last updated: 2026-09-01 — v5.17 milestone (Defect Drain) closed and archived via `/gsd-complete-milestone`*
 
 ## Evolution
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.17
 milestone_name: Defect Drain
-status: executing
-stopped_at: Completed 176-08 (ssh-audit GAP closure re-run)
-last_updated: "2026-08-31T20:45:00.000Z"
-last_activity: 2026-08-31
+status: completed
+stopped_at: Completed 176-04-PLAN.md
+last_updated: "2026-09-02T01:18:49.491Z"
+last_activity: 2026-09-02 — Milestone v5.17 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 28
-  completed_plans: 29
+  completed_plans: 30
   percent: 100
 ---
 
@@ -219,7 +219,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**v5.17 milestone complete
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -318,16 +318,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 176 (chaos-lab-re-run) — EXECUTING
-Phase 175 closed (all 7 plans complete — see Phase Map). 176-01 closed: `uat_runner.py:154`'s
-UAT-1-02 pass-condition harness defect repaired under D-01's narrow, explicitly-recorded lift
-(`git diff --numstat uat_runner.py` = 1/1; no version bump); falsifiable shape-pinning regression
-test added and its RED/GREEN falsification demonstrated against a scratch copy. `176-HARNESS-LIFT.md`
-records the lift scope. UAT-1-02's disposition is NOT changed here — that is 176-02's job via the
-ledger.
-Plan: 5 of 6
-Status: Ready to execute
-Last activity: 2026-08-30
+Phase: Milestone v5.17 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-02 — Milestone v5.17 completed and archived
 
 ## v5.16 Phase Map (IN PROGRESS)
 
@@ -940,6 +934,36 @@ Found at Phase 172 close (2026-08-29):
 
 **Last re-triaged:** 2026-08-29 (Phase 172 close — see rows above)
 
+---
+
+Acknowledged and deferred at the **v5.17 milestone close (2026-09-01)**, per the pre-close
+`gsd-sdk query audit-open` sweep plus an explicit re-triage of every item carried in this section:
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | `260611-g0b-merge-healthcare-vertical-branch-into-ma` | missing — **known permanent false positive**, unchanged. Genuinely complete (PLAN + SUMMARY + merge commit all exist); misreported by the audit scanner at every close since v5.10. Do not re-investigate. |
+| todo | `.planning/todos/pending/a11y-route-coverage-gap.md` (medium) — a11y sweep does not cover `/hardware` or `/compare` | open — **deferred, not in v5.17 scope.** v5.17 was a defect drain scoped to fuzzing/disclosure, scanner scope, dashboard/API, case text, and the chaos-lab re-run; accessibility route coverage is unrelated. Note this is the *same surface* as the `uat_gap (158)` row below (`/hardware`, `/compare`) — the two should be triaged together into a future milestone rather than separately. |
+| test_isolation | `DEFER-172-01` — `tests/skip_registry.py` drift across 5 files, 8 stale/missing registry line numbers | open — **carried forward unchanged.** Still the sole failing node in the local full-suite baseline (`1 failed, 3802 passed` at Phase 176 close). Needs a housekeeping commit. Recorded in `.planning/phases/172-fuzzing-disclosure-safety/deferred-items.md`. |
+| test_isolation (macOS-only) | `DEFER-172-02` — 3 reproducible `Fatal Python error: Segmentation fault` reports in forked `tests/test_install_errors.py` children | open — **carried forward unchanged.** Does not fail any test; CI (Linux) unaffected. |
+| human-UAT (143) | `UAT-143-03` — Windows Authenticode production signing | **still engineering-complete, still blocked on procurement.** Unchanged since the v5.16 open; no v5.17 phase touched it. The remaining blocker is buying a real Authenticode certificate and loading it into GitHub Actions secrets — a purchasing decision. Re-triage at the v5.18 open. |
+| uat_gap (158) | `158-HUMAN-UAT.md` — 2 pending visual scenarios (`/hardware`, `/compare` rendering of sensor-pushed devices) | open — **carried forward unchanged**, explicitly not in v5.17 scope. HWLC-15 remains independently SATISFIED at code/test level. See the `todo` row above — same two routes. |
+| backlog (176) | `TRIAGE-176-01`, `TRIAGE-176-02` — genuine defects surfaced by the Phase 176 lab re-run | open — **explicitly triaged to the ROADMAP Backlog**, not absorbed silently (this is Phase 176 success-criterion 2 being satisfied, not a gap). Both need their own plans and tests. Candidates for the v5.18 opening scope. |
+| carried-forward (176) | 2 `UAT-6-08` case-text corrections identified during plan 176-08 | open — recorded under the ROADMAP Backlog's *UAT Case-Text Corrections Carried Forward* section, following the `UAT-94-05`/`UAT-36-05`/`UAT-8-07` precedent. |
+
+**Closed at this milestone (no longer deferred):**
+
+| Item | Resolution |
+|------|------------|
+| `TRIAGE-176-03` | **FIXED** in plan 176-08 — `quirk/scanner/ssh_scanner.py:27` passed two positionals to `ssh-audit`, which takes one `host:port`, so every SSH scan since the integration shipped silently degraded to a banner grab with `ssh_audit_json` NULL. Fixed with an argv-asserting regression test the pre-existing mocks never had. |
+| `LABRUN-01` / `LABRUN-02` verification gap | **CLOSED** — `176-VERIFICATION.md` created 2026-09-01, `status: passed`, 15/15 must-haves, 0 overrides. See the Resolution Addendum in `v5.17-MILESTONE-AUDIT.md`. |
+
+**Known deferred items at close: 8** (2 flagged by `audit-open`, 6 carried forward by explicit
+re-triage). Only one — the a11y/`/hardware`/`/compare` surface — is a genuine product gap; the rest
+are a scanner false positive, two test-hygiene items, a procurement block, and correctly-triaged
+Phase 176 backlog output.
+
+**Last re-triaged:** 2026-09-01 (v5.17 milestone close — see rows above)
+
 Acknowledged at Phase 161 plan-phase (2026-08-20):
 
 | Category | Item | Status |
@@ -1035,8 +1059,4 @@ rounds (141-09) on 2026-08-03 — no longer pending.
 
 ## Operator Next Steps
 
-- Close v5.15 with /gsd-complete-milestone — all three phases (161, 162, 163) are complete and verified
-- Then /gsd-new-milestone. Carry forward from the Phase 163 UAT: three unactioned findings recorded in
-  163-03-SUMMARY.md (duplicate stage rows when resuming an already-complete scan; blank Target column in
-  --list-resumable for --targets-file runs; the two order-dependent test_verify_phase_gates.py failures,
-  which are a cheap reproducer for RVW-017)
+- Start the next milestone with /gsd-new-milestone
