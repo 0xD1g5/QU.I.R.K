@@ -9,7 +9,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from quirk.compliance import COMPLIANCE_MAP, TITLE_PREFIX_ALIASES
+from quirk.compliance import COMPLIANCE_MAP, normalize_finding_title
 from quirk.reports.content_model import (
     ALGO_IMPACT_MAP,
     FALLBACK_QUANTUM_RISK,
@@ -27,24 +27,18 @@ _SEVERITY_RANK = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 # Phase 49 D-02 + Pitfall 1: canonical-key lookup for COMPLIANCE_MAP.
 # COMPLIANCE_MAP keys are the LITERAL emitted titles (parens preserved).
 # The 7 f-string titles whose runtime form contains an interpolated value
-# are mapped via TITLE_PREFIX_ALIASES (longest-prefix-first). Any title
-# not matching a known prefix is returned verbatim — fixed-string titles
-# (incl. those with parens like "Legacy TLS versions allowed (TLS 1.0/1.1)"
-# and "Plaintext Redis listener (no auth)") look up directly.
+# are mapped via quirk.compliance.normalize_finding_title (longest-prefix-
+# first, default TITLE_PREFIX_ALIASES table). Any title not matching a
+# known prefix is returned verbatim — fixed-string titles (incl. those
+# with parens like "Legacy TLS versions allowed (TLS 1.0/1.1)" and
+# "Plaintext Redis listener (no auth)") look up directly.
 #
-# Cache the prefixes sorted longest-first at module load. The prefix list
-# is small (currently 7 entries) so this is O(n) per lookup with n = 7.
-_COMPLIANCE_PREFIXES_LONGEST_FIRST = sorted(
-    TITLE_PREFIX_ALIASES, key=len, reverse=True
-)
-
-
-def _normalize_for_compliance(title: str) -> str:
-    """Phase 49 D-02: canonicalize finding titles for COMPLIANCE_MAP lookup."""
-    for prefix in _COMPLIANCE_PREFIXES_LONGEST_FIRST:
-        if title.startswith(prefix):
-            return TITLE_PREFIX_ALIASES[prefix]
-    return title
+# Phase 178 IDENT-01: the normalizer itself (formerly a private
+# compliance-only normalizer defined in this module) now lives in
+# quirk/compliance/__init__.py as the single public normalize_finding_title,
+# collapsing what were three separate copies (this module, an inline loop
+# in quirk/compliance/__init__.py, and an ad-hoc reimplementation in
+# tests/fixtures/chaos_lab_findings.py) into one.
 
 # (version_prefix, severity, eol_label)
 _OPENSSL_EOL: List[Tuple[str, str, str]] = [
@@ -139,7 +133,7 @@ def _build_finding(
         "check_id": check_id,
         "quantum_risk": quantum_risk,
         # Phase 49 D-02: eager compliance attachment via the chokepoint.
-        "compliance": COMPLIANCE_MAP.get(_normalize_for_compliance(title), []),
+        "compliance": COMPLIANCE_MAP.get(normalize_finding_title(title), []),
     }
 
 

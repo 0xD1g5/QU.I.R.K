@@ -14,32 +14,22 @@ protecting.
 
 Phase 72 D-05 / WR-10: file path was renamed risk_engine.py → findings_evaluator.py;
 the 2-line shim at the old path no longer contains _build_finding call sites.
+
+Phase 178 IDENT-01: this fixture's own ad-hoc `_normalize` reimplementation
+(the third of three duplicate copies) has been collapsed into the single
+public `quirk.compliance.normalize_finding_title`.
 """
 from __future__ import annotations
 
 import ast
 import pathlib
 
+from quirk.compliance import normalize_finding_title
+
 _RISK_ENGINE = (
     pathlib.Path(__file__).resolve().parents[2]
     / "quirk/engine/findings_evaluator.py"
 )
-
-
-def _normalize(title: str) -> str:
-    """Apply the SAME normalization quirk.engine.risk_engine._normalize_for_compliance
-    applies at runtime. Lazy-imports TITLE_PREFIX_ALIASES so this fixture is
-    collectable before quirk.compliance exists (RED state)."""
-    try:
-        from quirk.compliance import TITLE_PREFIX_ALIASES
-    except ImportError:
-        TITLE_PREFIX_ALIASES = {}
-    # Longest-prefix-first so "Severely outdated Python cryptography package ("
-    # wins over any shorter overlapping prefix.
-    for prefix in sorted(TITLE_PREFIX_ALIASES, key=len, reverse=True):
-        if title.startswith(prefix):
-            return TITLE_PREFIX_ALIASES[prefix]
-    return title
 
 
 def collect_emitted_titles() -> set[str]:
@@ -59,7 +49,7 @@ def collect_emitted_titles() -> set[str]:
             v = kw.value
             if isinstance(v, ast.Constant) and isinstance(v.value, str):
                 # Fixed-string title — preserve verbatim (incl. trailing parens).
-                titles.add(_normalize(v.value))
+                titles.add(normalize_finding_title(v.value))
             elif isinstance(v, ast.JoinedStr):
                 # f-string: build literal-only template (constants joined,
                 # FormattedValue parts dropped). The result is exactly the
@@ -68,5 +58,5 @@ def collect_emitted_titles() -> set[str]:
                 lit = "".join(
                     p.value for p in v.values if isinstance(p, ast.Constant)
                 )
-                titles.add(_normalize(lit))
+                titles.add(normalize_finding_title(lit))
     return titles

@@ -9,16 +9,16 @@ Renderers and JSON exports consume the `compliance` field as already-
 attached data — DO NOT import COMPLIANCE_MAP into renderer code.
 
 Title normalization (Pitfall 1): COMPLIANCE_MAP keys are the LITERAL title
-strings emitted by the finding-producing sites, parens preserved. The 7
-f-string titles whose runtime form contains an interpolated value go
-through TITLE_PREFIX_ALIASES: a literal source-text prefix maps to a
-canonical COMPLIANCE_MAP (or UNMAPPED_TITLES) key. See
+strings emitted by the finding-producing sites (quirk/engine/
+findings_evaluator.py and quirk/dashboard/api/routes/scan.py; the module
+hosting these sites was renamed away from its Phase 49 name in Phase 72),
+parens preserved. The 7 f-string titles whose runtime form contains an
+interpolated value go through TITLE_PREFIX_ALIASES: a literal source-text
+prefix maps to a canonical COMPLIANCE_MAP (or UNMAPPED_TITLES) key. See
 normalize_finding_title in this module (Phase 178 IDENT-01 — the prior
-_normalize_for_compliance implementation in
+private compliance-only normalizer implementation formerly in
 quirk/engine/findings_evaluator.py was collapsed into this single public
-function; the module hosting the title-emission sites was superseded in
-Phase 72 (see quirk/engine/findings_evaluator.py and
-quirk/dashboard/api/routes/scan.py).
+function).
 """
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def _iso(control: str) -> Dict[str, Any]:
 # is the canonical key in COMPLIANCE_MAP (or
 # UNMAPPED_TITLES) the runtime title resolves to.
 #
-# _normalize_for_compliance applies LONGEST-PREFIX-FIRST matching, so
+# normalize_finding_title applies LONGEST-PREFIX-FIRST matching, so
 # "Severely outdated Python cryptography package (" wins over any shorter
 # overlap. Order in this dict is informational only.
 TITLE_PREFIX_ALIASES: Dict[str, str] = {
@@ -138,8 +138,8 @@ def normalize_finding_title(
 ) -> str:
     """Phase 178 IDENT-01: the ONE title normalizer in the codebase.
 
-    Collapses the three prior copies — the private
-    ``_normalize_for_compliance`` in ``quirk/engine/findings_evaluator.py``,
+    Collapses the three prior copies — the private compliance-only
+    normalizer formerly in ``quirk/engine/findings_evaluator.py``,
     this module's own inline loop, and the ad-hoc reimplementation in
     ``tests/fixtures/chaos_lab_findings.py`` — into a single public
     function. Callers select WHICH policy table to apply via ``aliases``;
