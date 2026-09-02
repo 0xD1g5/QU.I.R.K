@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
-status: active
-stopped_at: v5.18 opened — no phase started
-last_updated: "2026-09-02T01:18:49.491Z"
-last_activity: 2026-09-01 — Milestone v5.18 (Migration Execution) opened, Phases 177-181
+status: executing
+stopped_at: Completed 176-04-PLAN.md
+last_updated: "2026-09-02T13:10:19.611Z"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 7
+  completed_plans: 1
   percent: 0
 ---
 
@@ -22,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 176 — chaos-lab-re-run — **all plans complete as of 2026-08-31.**
+**Current focus:** Phase 177 — release-toolchain-repair
 Plan 176-08 (user-directed, executed after the user hard-quit and relaunched a wedged Docker
 Desktop) closed both outstanding LABRUN-01 GAP cases against a live `core + ssh-weak` lab:
 `UAT-5-11` → **PASS**, `UAT-6-08` → **FAIL**. The FAIL exposed **TRIAGE-176-03**, a product defect
@@ -219,7 +218,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**v5.17 milestone complete
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute
   existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -318,29 +317,35 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: v5.18 Migration Execution — opened 2026-09-01, no phase started
-Plan: —
-Status: Ready to plan Phase 177. Run `/gsd-discuss-phase 177` (or `/gsd-autonomous`).
+Phase: 177 (release-toolchain-repair) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
 
 **v5.18 opened after a research pass, not on the HORIZON sketch.** The 3x sizing question the sketch
 posed did not survive re-measurement — it is 4-5x, and the two readings share no infrastructure.
 Full argument: `.planning/research/v5.18-sizing.md` and `v5.18-domain.md`.
 
 **Two live defects are Phase 178 prerequisites** (both verified independently before scoping):
+
 1. `compute_trend_report` is structurally dead — delta keys on `(host, port, protocol, severity)`
    and filters `severity is not None`, but severity is populated only by the three cloud connectors.
    Live DB: **10,069 endpoint rows, 0 non-NULL severity** → every scan reports 0 new / 0 resolved.
+
 2. Ticketing fingerprint `SHA256(host:port::title)` interpolates 22 titles including
    `f"Certificate expiring in {days_to_expiry} day(s)"` → **cert-expiry findings mint a fresh Jira
    ticket every day**, despite the docstring claiming stability across re-scans.
 
 **Locked decisions (do not re-litigate at phase CONTEXT time):**
+
 - **ADVISORY-01** — closure state never feeds the readiness score. Extends
   `tests/test_cve_score_guard.py`; does not amend it.
+
 - Closure is **machine-observed under a two-sided condition** (detected-by-previous AND
   verified-by-current), never human-asserted.
+
 - **No re-scan entity resolution** — operator-supplied aliases plus an honest `not_observed` third
   state. `(host, port)` breaks on DHCP, hostname-vs-IP, VIPs, and container churn.
+
 - Ticketing status readback is **out of scope** — it presumes a continuously-running control plane,
   which is the parked SaaS block.
 
@@ -604,6 +609,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 176 P03 | 15min | 3 tasks | 1 files |
 | Phase 176 P04 | ~1h | 3 tasks | 2 files |
 | Phase 176 P05 | 12min | 2 tasks | 2 files |
+| Phase 177 P01 | 8min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -899,6 +905,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 176]: UAT-5-13 and UAT-6-06 remain FAIL per D-03 -- each backed by a BACKLOG-triaged defect in 176-DEFECT-TRIAGE.md, not softened for a cleaner corpus
 - [Phase 176]: UAT-5-11 and UAT-6-08 dispositioned GAP for missing ssh-audit binary; LABRUN-01 flagged unmet for those two cases
 - [Phase 176-07]: Installed ssh-audit into .venv only (not pyproject.toml), zero-dependency, regression-free (full suite unchanged 1 failed/3772 passed) — Did not re-disposition UAT-5-11/UAT-6-08: actual re-run was blocked by an unresponsive Docker Desktop daemon; manufacturing a disposition from tool-presence alone would violate D-03/D-04
+- [Phase 177]: 177-01: Guard placed in existing tests/test_version.py per RESEARCH.md recommendation; purge scope limited to exactly the residue paths named in the plan, canonical quirk-scanner install untouched
 
 ### Pending Todos
 
@@ -1068,7 +1075,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-30T21:21:32.950Z
+Last session: 2026-09-02T13:07:42.657Z
 Stopped at: Completed 176-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

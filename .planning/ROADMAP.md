@@ -135,7 +135,7 @@ both v5.16 and v5.17 — so two milestones of user-visible fixes stop being invi
 **Plans**: 7 plans in 5 waves
 
 Plans:
-- [ ] 177-01-PLAN.md — Wave 1 · RELEASE-01 · Add the single-distribution regression guard (proven RED), purge repo-root + `.venv` residue, prove the editable install clean
+- [x] 177-01-PLAN.md — Wave 1 · RELEASE-01 · Add the single-distribution regression guard (proven RED), purge repo-root + `.venv` residue, prove the editable install clean
 - [ ] 177-02-PLAN.md — Wave 1 · RELEASE-02 · Re-verify the firmware CVE catalog against NVD and clear every pre-release staleness gate (`hw_cve.py` flipped STALE 2026-09-02)
 - [ ] 177-03-PLAN.md — Wave 2 · RELEASE-01 · Announced Homebrew-global orphan cleanup (user-gated), venv-only runbook note, RELEASE-01 evidence correction
 - [ ] 177-04-PLAN.md — Wave 2 · RELEASE-02, RELEASE-03 · Bump to 5.18.0 with the editable reinstall; hand-written CHANGELOG `[5.18.0]`; README banner + one What's New in v5.18
@@ -256,7 +256,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 177. Release Toolchain Repair | 0/? | Not started | — |
+| 177. Release Toolchain Repair | 1/7 | In Progress|  |
 | 178. Finding Identity Repair | 0/? | Not started | — |
 | 179. Remediation Item Model | 0/? | Not started | — |
 | 180. Closure Verification | 0/? | Not started | — |
