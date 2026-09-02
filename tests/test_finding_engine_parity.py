@@ -25,6 +25,7 @@ import pytest
 from quirk.dashboard.api.routes.scan import _derive_findings
 from quirk.engine.findings_evaluator import evaluate_endpoints
 from quirk.models import CryptoEndpoint
+from quirk.ticketing.base import TicketingChannel
 
 
 def _cfg():
@@ -62,6 +63,30 @@ _EXPIRED = _ep(
 
 _ALL = [_UNDERSIZED_RSA, _SELF_SIGNED, _EXPIRED]
 
+# IDENT-03: the three conditions both derivation paths are expected to detect,
+# named by (host, report_needle, dashboard_needle) so each side's title can be
+# resolved independently even where wording diverges (see 10.0.0.3 below).
+_SHARED_CONDITION_NEEDLES = [
+    ("10.0.0.1", "undersized RSA", "undersized RSA"),
+    ("10.0.0.2", "self-signed", "self-signed"),
+    ("10.0.0.3", "expired", "expired"),
+]
+
+# IDENT-03: known, bounded identity divergences between the report and
+# dashboard derivation paths. Each entry is a (report_title, dashboard_title)
+# pair whose fingerprints differ today by design, not by accident. Adding an
+# entry here without a corresponding section in
+# docs/reviews/178-derivation-path-divergence.md (and vice versa) is a drift
+# `test_no_unbounded_identity_divergence` is built to catch.
+_KNOWN_IDENTITY_DIVERGENCES = frozenset(
+    [
+        # D-178-A — docs/reviews/178-derivation-path-divergence.md
+        # Same condition (expired cert, 10.0.0.3:443), two fixed-string
+        # titles. Bounded, not fixed, per CONTEXT.md decision 12.
+        ("TLS certificate expired", "Certificate expired"),
+    ]
+)
+
 
 def _report_titles():
     return {
@@ -81,6 +106,12 @@ def _severity_for(mapping, host, needle):
     """Severity of the single finding on `host` whose title contains `needle`."""
     hits = [(k, v) for k, v in mapping.items() if k[0] == host and needle.lower() in k[2].lower()]
     return hits[0][1] if hits else None
+
+
+def _title_for(mapping, host, needle):
+    """Title of the single finding on `host` whose title contains `needle`."""
+    hits = [k[2] for k in mapping if k[0] == host and needle.lower() in k[2].lower()]
+    return hits[0] if hits else None
 
 
 class TestSeverityParity:
@@ -148,3 +179,95 @@ def test_no_shared_condition_diverges_in_severity():
         f"dashboard vs the report: "
         + "; ".join(f"{k[2]!r} dashboard={d} report={r}" for k, (d, r) in mismatched.items())
     )
+
+
+class TestIdentityParity:
+    """IDENT-03: the two derivation paths must agree on finding IDENTITY, not full
+    field parity. Identity means `TicketingChannel.compute_fingerprint` produces the
+    same value from both paths for the same underlying condition. Full field parity
+    (matching every attribute of a finding) would be the RVW-002 merge wearing a
+    disguise — that refactor stays excluded (v5.16). Where the two paths genuinely
+    diverge on identity, the divergence is enumerated in
+    docs/reviews/178-derivation-path-divergence.md and allowlisted below, not
+    silently reconciled.
+    """
+
+    def test_shared_condition_titles_yield_identical_fingerprints(self):
+        """The two AGREEING conditions must already fingerprint identically —
+        proven at the fingerprint layer, not just by string equality."""
+        report = _report_titles()
+        dash = _dashboard_titles()
+        for host, report_needle, dash_needle in _SHARED_CONDITION_NEEDLES:
+            report_title = _title_for(report, host, report_needle)
+            dash_title = _title_for(dash, host, dash_needle)
+            if report_title is None or dash_title is None:
+                continue
+            if (report_title, dash_title) in _KNOWN_IDENTITY_DIVERGENCES:
+                continue
+            report_fp = TicketingChannel.compute_fingerprint(
+                {"host": host, "port": 443, "title": report_title}
+            )
+            dash_fp = TicketingChannel.compute_fingerprint(
+                {"host": host, "port": 443, "title": dash_title}
+            )
+            assert report_fp == dash_fp, (
+                f"IDENT-03: {host} report title {report_title!r} and dashboard "
+                f"title {dash_title!r} produce different fingerprints, and this "
+                f"pair is not in _KNOWN_IDENTITY_DIVERGENCES"
+            )
+
+    def test_expired_certificate_divergence_is_bounded_not_silent(self):
+        """D-178-A: this documents reality, it does not demand a fix. The
+        expired-certificate condition at 10.0.0.3:443 fingerprints differently
+        across the two paths, and that divergence is bounded in writing."""
+        report = _report_titles()
+        dash = _dashboard_titles()
+        report_title = _title_for(report, "10.0.0.3", "expired")
+        dash_title = _title_for(dash, "10.0.0.3", "expired")
+        assert report_title == "TLS certificate expired"
+        assert dash_title == "Certificate expired"
+        report_fp = TicketingChannel.compute_fingerprint(
+            {"host": "10.0.0.3", "port": 443, "title": report_title}
+        )
+        dash_fp = TicketingChannel.compute_fingerprint(
+            {"host": "10.0.0.3", "port": 443, "title": dash_title}
+        )
+        assert report_fp != dash_fp, (
+            "IDENT-03: expired-certificate titles now fingerprint identically — "
+            "if this is intentional, remove the D-178-A allowlist entry and "
+            "update docs/reviews/178-derivation-path-divergence.md"
+        )
+        assert (report_title, dash_title) in _KNOWN_IDENTITY_DIVERGENCES, (
+            f"IDENT-03: {(report_title, dash_title)} diverges but is not in "
+            f"_KNOWN_IDENTITY_DIVERGENCES — see "
+            f"docs/reviews/178-derivation-path-divergence.md D-178-A"
+        )
+
+    def test_no_unbounded_identity_divergence(self):
+        """Catch-all: any shared condition whose fingerprints differ across the
+        two paths MUST be on the allowlist, or this fails. This is the guard
+        that makes a NEW, unbounded divergence loud instead of silent."""
+        report = _report_titles()
+        dash = _dashboard_titles()
+        unbounded = []
+        for host, report_needle, dash_needle in _SHARED_CONDITION_NEEDLES:
+            report_title = _title_for(report, host, report_needle)
+            dash_title = _title_for(dash, host, dash_needle)
+            if report_title is None or dash_title is None:
+                continue
+            report_fp = TicketingChannel.compute_fingerprint(
+                {"host": host, "port": 443, "title": report_title}
+            )
+            dash_fp = TicketingChannel.compute_fingerprint(
+                {"host": host, "port": 443, "title": dash_title}
+            )
+            if report_fp == dash_fp:
+                continue
+            if (report_title, dash_title) not in _KNOWN_IDENTITY_DIVERGENCES:
+                unbounded.append((host, report_title, dash_title))
+        assert not unbounded, (
+            "IDENT-03: unbounded identity divergence(s) found — add to "
+            "_KNOWN_IDENTITY_DIVERGENCES and "
+            "docs/reviews/178-derivation-path-divergence.md, or fix the "
+            f"underlying titles: {unbounded}"
+        )
