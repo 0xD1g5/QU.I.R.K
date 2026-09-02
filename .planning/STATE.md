@@ -4,12 +4,12 @@ milestone: v5.18
 milestone_name: Migration Execution
 status: executing
 stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T20:58:22.260Z"
+last_updated: "2026-09-02T21:02:10.338Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 40
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 179 (remediation-item-model) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 pushed the three-component tag `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`, dereferencing
 to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated). `release.yml` run
@@ -641,6 +641,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 178 P05 | 35min | 2 tasks | 6 files |
 | Phase 178 P06 | 40min | 3 tasks | 4 files |
 | Phase 179 P01 | 45min | 2 tasks | 4 files |
+| Phase 179 P02 | 12min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -952,6 +953,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 178-06]: AST guard: TITLE_IDENTITY_CLASS exactly equals the union of interpolated templates from both derivation paths; demonstrated failing via a real ZZZ probe injection/revert cycle.
 - [Phase 178-06]: TRIAGE-149 measured (not assumed): still XFAIL. Codesign titles correctly PRESERVE_IDENTITY; COMPLIANCE_MAP mapping gap remains, named as follow-up in docs/test-triage-149.md.
 - [Phase 178-06]: skip_registry.py: corrected one line-drift (test_compliance_title_join.py 20->23) caused by this plan's edits; no entries added/removed; DEFER-172-01 carried baseline unchanged.
+- [Phase 179]: remediation_aliases lives in config.yaml, not a DB table (D-10) — reviewable in version control, human-edited between engagements
 
 ### Pending Todos
 
@@ -1121,7 +1123,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T20:57:43.646Z
+Last session: 2026-09-02T21:01:28.070Z
 Stopped at: Completed 177-06-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
