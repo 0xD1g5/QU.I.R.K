@@ -368,3 +368,85 @@ def assess_probe_health(
     return result
 
 
+def persist_scope_signature(
+    db_path: str,
+    scan_run_id: Optional[str],
+    cfg: Any,
+    endpoints: Iterable[Any],
+    run_stats: Optional[Dict[str, Any]],
+) -> Optional[str]:
+    """Write ONE scan_scope_signatures row for `scan_run_id`, at scan COMPLETION.
+
+    Returns the digest that was written, or None if the write was skipped
+    (missing scan_run_id/db_path) or failed.
+
+    Written at scan completion rather than scan start: a scan that crashes
+    before producing endpoints then leaves NO signature row at all — the
+    honest outcome, because Phase 180 must treat a MISSING signature as
+    NOT-COMPARABLE, never as comparable-by-default. Do not call this
+    function speculatively before a scan has finished.
+
+    Idempotent under --resume-scan-id: scan_run_id is unique-indexed, so a
+    second call for the same scan_run_id UPDATEs the existing row in place
+    rather than inserting a duplicate (which would raise IntegrityError).
+
+    Sensor-origin limitation: this signature covers scan_run_id-bearing CLI
+    scans only. quirk/cli/console_cmd.py::_ingest_envelope (~line 565)
+    constructs CryptoEndpoint rows with sensor_id/segment set but NEVER sets
+    scan_run_id, so sensor-origin findings have no signature and are
+    excluded from closure by user decision (179-CONTEXT.md § Sensor-Origin
+    Coverage). Synthesising a scan_run_id per envelope was rejected: the
+    envelope is not a scan, and its port scope / profile / extras were
+    decided on the sensor and may not be recoverable — that would produce a
+    signature that is structurally present but semantically empty, which is
+    worse than an absent one, because it would pass a mismatch check it
+    never actually evaluated. Operator-facing documentation of this
+    limitation is Plan 05's responsibility; this function only records it.
+    """
+    if not scan_run_id or not db_path:
+        logger.warning(
+            "scope_signature: skipped — missing scan_run_id or db_path"
+        )
+        return None
+
+    try:
+        endpoint_list = list(endpoints)
+        with get_session(db_path) as session:
+            sig = build_scope_signature(cfg, session)
+            health = assess_probe_health(cfg, endpoint_list, run_stats)
+            digest = compute_signature_digest(sig)
+
+            existing = (
+                session.query(ScanScopeSignature)
+                .filter(ScanScopeSignature.scan_run_id == scan_run_id)
+                .one_or_none()
+            )
+            row = existing if existing is not None else ScanScopeSignature(
+                scan_run_id=scan_run_id
+            )
+
+            row.signature_version = sig["signature_version"]
+            row.port_scope = sig["port_scope"]
+            row.profile = sig["profile"]
+            row.extras_present = json.dumps(sig["extras_present"], sort_keys=True)
+            row.credentials_present = json.dumps(
+                sig["credentials_present"], sort_keys=True
+            )
+            row.sensor_set = json.dumps(sig["sensor_set"], sort_keys=True)
+            row.probe_health_json = json.dumps(health, sort_keys=True)
+            row.digest = digest
+            row.created_at = datetime.now(timezone.utc)
+
+            if existing is None:
+                session.add(row)
+            session.commit()
+
+        return digest
+    except Exception:
+        # Advisory bookkeeping layered on already-valid, already-persisted
+        # endpoint data — must never be able to fail the scan it attaches
+        # to (mirrors persist_remediation_snapshot's exception-guard style).
+        logger.exception(
+            "scope_signature: failed to persist for scan_run_id=%s", scan_run_id
+        )
+        return None

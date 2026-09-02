@@ -23,8 +23,9 @@ from quirk.intelligence.scope_signature import (
     assess_probe_health,
     build_scope_signature,
     compute_signature_digest,
+    persist_scope_signature,
 )
-from quirk.models import CryptoEndpoint, Sensor
+from quirk.models import CryptoEndpoint, ScanScopeSignature, Sensor
 
 SCAN_RUN_ID = "2026-09-02T00:00:00Z"
 
@@ -384,3 +385,79 @@ def test_probe_health_grep_no_exit_status_or_scan_error_signal():
     assert "exit_code" not in source
 
 
+# ---------------------------------------------------------------------------
+# Task 3: persist_scope_signature
+# ---------------------------------------------------------------------------
+
+
+def test_persist_scope_signature_round_trip_digest_matches(tmp_path):
+    import json
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    cfg = _cfg()
+    endpoints = [CryptoEndpoint(host="h1", port=22, protocol="SSH", ssh_audit_json=None)]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    written_digest = persist_scope_signature(db_path, SCAN_RUN_ID, cfg, endpoints, run_stats)
+    assert written_digest is not None
+
+    with get_session(db_path) as session:
+        row = (
+            session.query(ScanScopeSignature)
+            .filter(ScanScopeSignature.scan_run_id == SCAN_RUN_ID)
+            .one()
+        )
+        recomputed_sig = {
+            "signature_version": row.signature_version,
+            "port_scope": row.port_scope,
+            "profile": row.profile,
+            "extras_present": json.loads(row.extras_present),
+            "credentials_present": json.loads(row.credentials_present),
+            "sensor_set": json.loads(row.sensor_set),
+        }
+        recomputed_digest = compute_signature_digest(recomputed_sig)
+        assert recomputed_digest == row.digest
+        assert recomputed_digest == written_digest
+
+
+def test_persist_scope_signature_idempotent_under_resume(tmp_path):
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    cfg = _cfg()
+    endpoints = [CryptoEndpoint(host="h1", port=22, protocol="SSH")]
+    run_stats = _run_stats_with_timing("ssh_scanning")
+
+    persist_scope_signature(db_path, SCAN_RUN_ID, cfg, endpoints, run_stats)
+    persist_scope_signature(db_path, SCAN_RUN_ID, cfg, endpoints, run_stats)
+
+    with get_session(db_path) as session:
+        rows = (
+            session.query(ScanScopeSignature)
+            .filter(ScanScopeSignature.scan_run_id == SCAN_RUN_ID)
+            .all()
+        )
+    assert len(rows) == 1
+
+
+def test_persist_scope_signature_skips_without_scan_run_id_or_db_path(tmp_path):
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    cfg = _cfg()
+    assert persist_scope_signature(db_path, "", cfg, [], {}) is None
+    assert persist_scope_signature("", SCAN_RUN_ID, cfg, [], {}) is None
+
+
+def test_persist_scope_signature_docstring_mentions_scan_run_id_and_sensor():
+    import quirk.intelligence.scope_signature as mod
+
+    doc = mod.persist_scope_signature.__doc__ or ""
+    assert "scan_run_id" in doc
+    assert "sensor" in doc
+
+
+def test_run_scan_call_site_ordering_remediation_persist_then_scope_signature_then_reporting():
+    import run_scan
+
+    source = inspect.getsource(run_scan.main)
+    assert source.index("remediation_persist") < source.index("scope_signature") < source.index('"reporting"')

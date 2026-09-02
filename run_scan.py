@@ -3633,6 +3633,24 @@ def main():
                 _remediation_counters.get("skipped_findings", 0),
             )
 
+    # Phase 179 Plan 04: persist the scan's scope signature — port scope,
+    # profile, optional extras present, credential presence, sensor set, and
+    # per-family probe health — at scan COMPLETION, so Phase 180 can refuse
+    # closure across incomparable scans. Placed AFTER remediation_persist,
+    # BEFORE reporting (tests/test_scan_scope_signature.py pins this call-site
+    # ordering). A crashed scan writes no row at all: Phase 180 must treat a
+    # missing signature as not-comparable, never comparable-by-default. Lazy
+    # import mirrors remediation_persist's collaborator-import style.
+    with _phase_timer(run_stats, "scope_signature") as _scope_sig_timer:
+        if not scan_run_id or not cfg.output.db_path:
+            _scope_sig_timer.mark_skipped()
+        else:
+            from quirk.intelligence.scope_signature import persist_scope_signature
+            _scope_digest = persist_scope_signature(
+                cfg.output.db_path, scan_run_id, cfg, endpoints, run_stats
+            )
+            logger.info("scope_signature: digest=%s", _scope_digest)
+
     proto_counts = Counter([getattr(e, "protocol", "UNKNOWN") for e in endpoints])
     err_counts = Counter([_error_category(getattr(e, "scan_error", "")) for e in endpoints if getattr(e, "scan_error", None)])
 
