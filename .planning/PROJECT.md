@@ -341,9 +341,13 @@ pipeline v5.15 fixed.
   baseline, diff the failure list against a pre-phase worktree; do not assume the set is still two.
 - **Phase 165 corrected this milestone's own "291 violations" premise.** RVW-012's number was
   restated without re-measuring. Live measurement found **81**; after token-layer contrast fixes,
-  **1** remains (accepted, justified). The 291→81 gap is pure staleness — 72% were already phantoms,
-  including all three `button-name` screen-reader blockers, which were fixed before this milestone
-  began. Direct empirical input to Phase 170's record-drift work.
+  **1** remains (accepted, justified). The 291→81 gap is pure staleness — 72% were already phantoms.
+  **Corrected 2026-09-01 against `165-VERIFICATION.md`:** *two* of the three `button-name`
+  screen-reader blockers were phantoms (stale baselines predating existing `aria-label`s on
+  `findings.tsx`/`cbom.tsx`), not all three. The third, `ScanSelector.tsx:33`, was genuinely
+  unlabelled and was fixed in this milestone (`fbb478e`, `aria-label="Select scan"`) on
+  structural/textual merit rather than live axe evidence. Direct empirical input to Phase 170's
+  record-drift work.
 - **UAT-143-03 (Windows Authenticode)** is engineering-complete. The v5.15.0 release proved the
   mechanism end to end — the ephemeral-cert self-test passed and the production-signing step skipped
   cleanly as designed. The sole remaining blocker is procuring a real signing certificate, which is
@@ -679,8 +683,10 @@ saw a PASS, heading/result parity was preserved, and the fabricated ID was novel
 `[^)]*` annotation group matching newlines. Fixed in two layers with 8 regression tests that fail
 against the pre-fix code.
 
-Also shipped: first-run correctness (164), 291 accessibility violations converted from an
-accumulation into documented decisions with 3 screen-reader blockers fixed (165), e2e smoke +
+Also shipped: first-run correctness (164), 291 baselined accessibility violations converted from an
+accumulation into documented decisions — live re-measurement found only 81, of which 1 remains, and
+of the 3 claimed `button-name` blockers 2 were phantoms and 1 (`ScanSelector.tsx:33`) was genuinely
+fixed (165), e2e smoke +
 XXE-safe UAT XML parsing + a suite-wide macOS fork-after-Network.framework SIGSEGV fix (166), UAT
 format unification with mechanically-verified count parity (167), and a traceability tail that
 backfilled CHANGELOG v5.9–v5.14 — honestly marking v5.13/v5.14 developed-but-never-released — and

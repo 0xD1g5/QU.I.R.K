@@ -97,6 +97,177 @@ failure being the pre-existing `DEFER-172-01` `test_skip_registry` node.
 
 ---
 
+## v5.16 Review Drain & Gate Integrity (Development complete: 2026-08-28 — untagged)
+
+**Phases completed:** 8 phases (164-171), 47 plans
+**Git range:** `9b1f5a3b` → `41150ab9` — **187 commits in two days** (opened 2026-08-26)
+**Scope:** 145 tracked files (+9,770 / −2,462); much of the work landed in gitignored `.planning/` paths and is not in those counts
+**Requirements:** 24/24 complete, 0 orphans. All 8 phases verified `passed`.
+
+*(Entry authored retroactively 2026-09-01 from the v5.16 archives; not written at close.)*
+
+**What this milestone was:** closing every open finding from the 2026-08-24 third-party functional
+review, so QUIRK's own gating documents, accessibility baseline, and first-run path became as
+trustworthy as the scan pipeline v5.15 had fixed.
+
+**Key accomplishments:**
+
+- **The release-gate document went from 377 unrecorded cases to zero undispositioned across all
+  666** (168, 169), held there by a standing CI gate (`tests/test_uat_zero_undispositioned_gate.py`)
+  proven load-bearing by mutating a scratch corpus and confirming it names the offending case by ID
+  and line. Built on `scripts/uat_disposition_apply.py` (classify/apply/verify), a 377-row JSONL
+  ledger, and an anti-fabrication guard requiring every named substitute node to both resolve via
+  `pytest --collect-only` *and* pass.
+
+- **The substantive deliverable was the honest record, not the green gate.** Final dispositions: 202
+  PASS, 32 FAIL, 42 DEFERRED, 44 SKIP, **57 named coverage GAPs** — each stating what would be
+  needed to close it. `docs/uat-coverage-gaps.md` is the resulting worklist. A corpus reading 100%
+  PASS would have been worth nothing.
+
+- **First-run correctness (164).** `allow_abbrev=False` on all 10 parsers, because `--targets` was
+  prefix-matching `--targets-file` into an uncaught `FileNotFoundError`. Added a `TARGET` error
+  domain, fixed the dashboard empty state, and swept the repo for a documented invocation that
+  did not exist.
+
+- **Accessibility baseline made meaningful (165).** Replaced axe's CSS-selector-path baseline key —
+  which breaks on any UI refactor — with a per-route/per-rule count-budget schema carrying a ratchet
+  and a refusal to write `critical`-impact entries. Pinned `@axe-core/puppeteer` exactly.
+
+- **Gate robustness (166).** E2E smoke went from failing to **3.1s against a 180s budget**;
+  `uat_runner.py` migrated onto the hardened `xml_safe.parse_safely()` chokepoint with an AST import
+  gate; and a suite-wide macOS `fork()`-after-`Network.framework` SIGSEGV class was closed — **zero
+  fatal signals, down from 14 across 6 files**.
+
+- **Traceability tail (170).** CHANGELOG backfilled for v5.9.0–v5.14.0, honestly marking v5.13/v5.14
+  as developed-but-never-released, plus a large cross-phase reference repair (see Known Gaps for the
+  count caveat).
+
+**CRITICAL security finding — CR-01, caught by Phase 169's code review.** An `evidence` field
+containing a **JSON-escaped** `\n` (two ASCII bytes, valid JSONL, decoding to a real newline) could
+splice a fabricated, fully-`[x] PASS` UAT case into the gating document past **all three guards
+simultaneously**: the zero-undispositioned gate saw a PASS, heading/result parity was preserved
+(one heading, one result line added), and the fabricated ID was novel. Root cause was
+`CANONICAL_RESULT_RE`'s `[^)]*` annotation group — a negated character class matches newlines, and
+the pattern carried neither DOTALL nor MULTILINE, so it swallowed an entire injected block while the
+line still matched. Reproduced end-to-end: `apply` reported `applied 1 rewrite(s)`, exit 0, and
+`find_undispositioned_cases()` returned `[]`. Fixed in two layers (`9580ab09`) — reject CR/LF in
+evidence, and narrow the group to `[^)\n]*` so a multi-line render cannot satisfy the grammar even
+if layer 1 were bypassed — applied to all three lockstep copies of the regex, with
+`tests/test_uat_apply_injection_guard.py` (10 tests, **8 failing against the pre-fix code**).
+
+**Every count the 2026-08-24 review asserted failed re-measurement.** The symptoms held up; the
+numbers never did:
+
+| Claimed | Actual | What happened |
+|---|---|---|
+| 5 duplicate case IDs | **3** | The "5" was a tooling artifact — `grep -o '^### UAT-[0-9]*-[0-9]*'` truncates three-segment IDs, manufacturing phantom duplicates |
+| 4 genuinely-missing tests | **2** | GAP-02 and QRAMM-09 already had real coverage the review's search missed; they were annotated, not duplicated |
+| 16 stale references | **230** (headline) | Re-measurement went the other direction — see Known Gaps for the reconciliation caveat |
+| ~325 unrecorded cases | **377** | 299 in series 1-100, 78 in series 101-163 |
+| 291 a11y violations | **81** live pre-fix, **1** post-fix | The committed 291 baseline was stale — "the number RVW-012 restated without re-measuring"; 72% overstated before any remediation |
+
+### Known Gaps
+
+- **Milestone audit scored `gaps_found` with one gap, explicitly accepted by the user and carried to
+  v5.17: GATE-03's fork-safety forward-lock is an allowlist, not a sweep.**
+  `tests/test_cli_helper_usage.py::_COVERED_FILES` names 11 files; applying the gate's *own*
+  criterion across `tests/` finds **18 uncovered files with 38 offending call sites**. The
+  docstring claims protection "regardless of which subset of tests is run", which a hand-maintained
+  list cannot deliver. Latent and order-dependent — the full unfiltered suite passes with zero fatal
+  signals, and all 18 files predate the gate. Recorded in `HORIZON.md`, not ROADMAP Backlog.
+- **The "230 stale references" headline does not reconcile with its own component figures.**
+  REQUIREMENTS TRACE-05 records 68 broken lines across 25 files; `170-VERIFICATION.md:110` gives
+  `68 + 28 + 6 + 174`. ROADMAP, PROJECT.md, and HORIZON.md all state 230. No file derives 230 from
+  the components. Treat 230 as the headline the record uses, not as an audited figure.
+- **The "3 screen-reader blockers fixed" claim is looser than the phase record.**
+  `165-VERIFICATION.md` records 2 of the 3 `button-name` violations as **confirmed phantoms** (stale
+  baselines predating existing `aria-label`s); only `ScanSelector.tsx:33` was genuinely unlabelled,
+  and it was fixed "on structural/textual merit, not live axe evidence."
+- Seven further items carried forward in `HORIZON.md` — deliberately not in ROADMAP's Backlog,
+  because archived roadmaps swallow backlog items (`BACK-A11Y-01` was invisible for three months
+  that way). Chief among them: **closing the 57 UAT coverage GAPs** (its own milestone-sized effort)
+  and **actioning the 18 genuine product FAILs**, which became v5.17.
+- **Not tagged.** `pyproject.toml` remains `5.15.0`. Recorded deliberately in `03656097`.
+
+**Test baseline at close:** `pytest -q -m ""` → **3,684 passed, 4 failed, zero fatal signals.** The
+4 are `test_skip_registry::test_no_unregistered_skips` plus 3 environmental
+`test_extras_install_matrix` failures (a stale `__editable__.quirk-4.0.0.pth` breaks pip's
+build-backend locally; CI installs fresh), proven pre-existing by stash-and-reproduce.
+
+---
+
+## v5.15 Lifecycle Tail Drain (Shipped: 2026-08-26)
+
+**Phases completed:** 3 phases (161-163), 11 plans
+**Git range:** `23932695` (2026-08-20) → `87ad578e` (2026-08-26), release commit `09b13e32` — 63 commits in range, 7 days
+**Requirements:** 4/4 complete — none dropped, none deferred
+**Released:** tag `v5.15.0` — **the first published release since 5.12.0**
+
+*(Entry authored retroactively 2026-09-01 from the v5.15 archives; not written at close.)*
+
+**Key accomplishments:**
+
+- **Hardware lifecycle notifications (HWLC-14).** Opt-in email/webhook fan-out when a monitored
+  device crosses a CNSA 2.0 tier boundary or an EOL/EOS date, reusing the Phase 101 delivery layer
+  with no new channel or credential model. Wired as a never-raising terminal hook *inside*
+  `persist_and_reconcile()` so all four call sites fire it — deliberately not per-call-site, because
+  a per-site wiring "would be correct today and wrong on the addition of a fifth path."
+
+- **Vendor PQC trends got their first consumer (HWLC-19).** `GET /api/hardware/vendor-trends` had
+  shipped in v5.14 Phase 160 with zero consumers. v5.15 gave it a `/hardware` dashboard section plus
+  CLI, HTML, and DOCX report sections — advisory-only, with byte-identical captions enforced across
+  all three surfaces by test, and scoring isolation enforced by a single
+  `_VENDOR_TREND_SURFACE_MODULES` tuple covering six surfaces.
+
+- **Check-in scans on a cadence (HWLC-20).** `quirk schedule add --check-in` put HWLC-13's
+  lightweight re-probe on the existing scheduler, with `--target` optional for check-ins.
+
+- **Discovery batch checkpointing (DISC-08) — built, not tightened.** The roadmap assumed a
+  per-batch checkpoint layer existed and asked for it to be tightened. Verification against the tree
+  found none: `write_scan_checkpoint(..., "discovery", ...)` fired once after the whole loop. The
+  phase built the missing layer instead. A /16 interrupted at batch 60 of 64 now re-probes ~4,000
+  hosts on resume rather than ~65,000 — with no new table and no schema change.
+
+- **Release integrity closed (RVW-004).** `pyproject.toml` moved 5.12.0 → 5.15.0 with a
+  three-component tag. v5.13 and v5.14 had never published because their two-component tags missed
+  `release.yml`'s `v*.*.*` glob; that trigger is now `v[0-9]*`. The Windows Authenticode self-test
+  succeeded on a real tagged build and `quirk-windows-5.15.0.zip` (58.6 MB) attached — the first
+  Windows asset since v5.8.0.
+
+**Latent defect found: SCHED-02, live for ~3 months.** `_dispatch_schedule()` fell back to
+`schedule.profile or "balanced"` — a *score* profile value that `run_scan --profile` rejects. Every
+CLI-created schedule without an explicit profile died at argparse and was logged "failed" with no
+reason. It survived that long because the dispatched argv was reachable only through `Popen`; the
+fix extracted a pure `build_scan_argv()` so it could be tested without a subprocess. Fixed
+separately in `ac219e4` *before* Phase 162 built on it — the criterion was literally unverifiable
+when the phase began.
+
+**The human-UAT gate earned its cost.** Phase 163's blocking checkpoint caught a defect every
+automated criterion passed over: a resumed scan reported the correct endpoint count while silently
+under-reporting swept coverage (`1014 scanned / 1008 undetermined` versus `4034 / 4029` on a real
+/20), moving a client-facing Confidence score from 22 to 19/100. The criterion was right in intent
+("zero silently dropped hosts") and wrong in scope ("host/port inventory count"). The report did not
+look broken — it looked like a completed smaller engagement. An unplanned plan (163-04) was created
+in response, with four RED-verified regression tests.
+
+**Test baseline at close:** `3593 passed, 2 failed` — both `test_verify_phase_gates.py::test_hook_integration_*`,
+order-dependent (44 passed in isolation), a macOS subprocess SIGSEGV later root-caused and fixed in
+v5.16 Phase 166-05.
+
+### Known Gaps
+
+- Phase 162 was executed inline at the user's direction and left **no PLAN or SUMMARY artifacts** —
+  recorded deliberately in `162-VERIFICATION.md`, but the milestone's plan accounting for 162 is a
+  placeholder (`1/1`).
+- No `v5.15-MILESTONE-AUDIT.md` was produced.
+- True sub-batch (intra-batch) discovery resume explicitly deferred.
+- Two items promoted into v5.16: duplicate stage rows when resuming an already-complete scan, and
+  the blank `--list-resumable` Target column for `--targets-file` runs.
+- Vault hygiene failed at close (Phase-162 note absent, `_QUIRK-Hub.md` missing links, `Roadmap.md`
+  stale by 12 days) and was only repaired the next day at the v5.16 boundary review.
+
+---
+
 ## v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting (Shipped: 2026-08-19)
 
 **Phases completed:** 4 phases, 16 plans, 38 tasks

@@ -885,6 +885,242 @@ existing precedent in the codebase to draw from.
 
 ---
 
+## Milestone: v5.15 — Lifecycle Tail Drain
+
+**Shipped:** 2026-08-26 (tag `v5.15.0`) | **Phases:** 3 (161–163) | **Plans:** 11
+
+*(Section authored retroactively 2026-09-01 from the v5.15 archives — it was not written at close.
+Where the record is silent, this says so rather than reconstructing.)*
+
+### What Was Built
+
+Closed the hardware-lifecycle backlog tail and the discovery-checkpoint gap, and cut the first
+published release since 5.12.0. Phase 161 added opt-in tier-crossing / EOL notifications through the
+Phase 101 fan-out and gave v5.14's consumer-less `GET /api/hardware/vendor-trends` its first homes
+across dashboard, CLI, HTML, and DOCX. Phase 162 put HWLC-13's check-in re-probe on a cadence via
+`quirk schedule add --check-in`. Phase 163 built per-batch discovery checkpointing — a layer the
+roadmap had assumed already existed.
+
+### What Worked
+
+- **Wiring the hook into the chokepoint, not the call sites.** `161-PATTERNS.md` claimed two call
+  sites; a grep found four. That discrepancy is precisely why the notification hook went inside
+  `persist_and_reconcile()`. Checking the pattern doc instead of trusting it changed the design.
+
+- **Goal-backward verification caught a complete-but-unreachable feature.** Plan 161-01 built the
+  dispatcher and nothing called it — "the exact Phase 141 failure shape." Task completion alone
+  would have passed. The gap was closed by 161-04 and locked by a test that fails against the
+  161-01-only tree.
+
+- **Guards proven by negative proof, not by a green run.** Phase 161 injected a `SCORE_WEIGHTS`
+  violation and a scoring import, recorded the exact failure output of each, then reverted. Phase
+  162 did the same for SCHED-02. A guard nobody has watched fail is a guard nobody has tested.
+
+- **Fixing the blocker first, separately, before building on it.** SCHED-02 was fixed in its own
+  commit (`ac219e4`) because Phase 162's acceptance criterion was otherwise unverifiable — the
+  feature it was meant to schedule could not run at all.
+
+- **Scope correction landed before the build, not after.** The DISC-08 mismatch was caught during
+  `/gsd-discuss-phase 163` and the roadmap entry rewritten in place. The wasted premise cost a
+  discussion, not an implementation.
+
+- **Live-fire evidence over simulation.** Resume was proven on a real /20 — 4094 hosts, 4 batches,
+  `--cache` never passed — with cached batches replaying in under two seconds against 46s/189s/44s
+  live.
+
+### What Was Inefficient
+
+- **A requirement was written against a system that did not exist, and stayed wrong for six days.**
+  DISC-08 asked to tighten a per-batch checkpoint layer. There was none. Caught at discuss time
+  (2026-08-25), six days after the requirement was authored (2026-08-19).
+
+- **An entire unplanned plan (163-04) was needed after UAT** — it did not exist when Phase 163 was
+  planned. The bug it fixed had been introduced by 163-02 within the same phase.
+
+- **The original DISC-08 acceptance criterion was structurally incapable of catching that bug.** The
+  endpoint count was correct throughout; only coverage was wrong. A criterion naming the wrong
+  number cannot fail on the right one.
+
+- **Four consecutive correction commits to a UAT document that had never been dry-run** (`53e85e7`,
+  `00c77c9`, `e3d4d9c`, `ba010c8`) — invalid `run_scan.py` invocations, a missing required
+  `--config`, a `--db-path` silent no-op, and a /22 that is one batch and therefore cannot
+  demonstrate resume. One step was outright unexecutable: it told the operator to read a
+  `scan_run_id` an interrupted scan never prints.
+
+- **A feature sat committed, complete, and unreachable for four days** (161-01 on 2026-08-20 →
+  161-04 wiring on 2026-08-24).
+
+- **Two plan acceptance criteria were unsatisfiable as written** — a `grep -c` that counts lines
+  rather than occurrences, and a `pytest -x -q exits 0` criterion the repo does not meet in any
+  state.
+
+- **Phase 162 left no PLAN or SUMMARY artifacts**, having been executed inline at the user's
+  direction. Deliberate and recorded, but it makes the milestone's plan accounting for 162 a
+  placeholder.
+
+- **Vault hygiene failed at close** and was repaired the next day at the v5.16 boundary review, not
+  by the milestone that broke it.
+
+### Patterns Established
+
+- **Chokepoint hooks over per-call-site wiring** — put the trigger inside the shared helper so a
+  future call site cannot silently skip it.
+- **Advisory side effects must never be able to fail a scan** — wrapped in a helper that never
+  raises and never mutates its input, called as a terminal step. The broad `except` deliberately
+  absorbs `ImportError` so an uninstalled optional extra degrades to a logged warning.
+- **One named module tuple is the whole firewall**, rather than per-surface guard tests that can be
+  forgotten. Phase 161 collapsed Phase 160's separately-handled dashboard-route exclusion into it:
+  "a firewall split across places is a firewall with gaps."
+- **Testability is the root cause, not the symptom.** SCHED-02 survived three months because its
+  argv was reachable only through `Popen`.
+
+### Key Lessons
+
+1. **A human-UAT gate pays for itself when the automated criteria measure the wrong number.** Phase
+   163's checkpoint caught a coverage under-report that every green criterion passed over, and that
+   moved a client-facing score.
+2. **Verify goal-backward, not task-forward** — "the question is not 'did the plans execute' but 'is
+   the stated outcome now true'." Phase 161's dispatcher was complete and unreachable.
+3. **Dry-run a UAT document before an operator does.** Four correction commits for steps that could
+   not be executed as written.
+4. **A roadmap's description of existing code is a claim, not a fact** — verify it against the tree
+   before scoping work that depends on it.
+
+### Cost Observations
+
+63 commits in range over 7 days across 3 phases. Task counts were recorded for only 5 of 11 plans,
+and no milestone task total exists — one reason this section could not be authored from counts
+alone. No code-review artifacts exist for any v5.15 phase, so review-iteration density is
+**not measurable** for this milestone.
+
+## Milestone: v5.16 — Review Drain & Gate Integrity
+
+**Development complete:** 2026-08-28 (untagged) | **Phases:** 8 (164–171) | **Plans:** 47
+
+*(Section authored retroactively 2026-09-01 from the v5.16 archives — it was not written at close.
+Where the record disagrees with itself, this says so rather than picking a number.)*
+
+### What Was Built
+
+Closed every open finding from the 2026-08-24 third-party functional review. Phase 164 fixed
+first-run correctness — `allow_abbrev=False` on all 10 parsers, because `--targets` was
+prefix-matching `--targets-file` into an uncaught `FileNotFoundError` — and registered a `TARGET`
+error domain. Phase 165 replaced axe's CSS-selector-path baseline key with a per-route/per-rule
+count-budget schema carrying a ratchet. Phase 166 got E2E smoke passing (3.1s against a 180s
+budget), moved `uat_runner.py` onto the hardened `xml_safe.parse_safely()` chokepoint, and closed a
+suite-wide macOS `fork()`-after-`Network.framework` SIGSEGV class. Phases 167–169 normalized the UAT
+corpus to one canonical result format, then drained **377 unrecorded cases to zero undispositioned
+across all 666**, behind a standing CI gate. Phase 170 backfilled CHANGELOG v5.9–v5.14 and repaired
+cross-phase references; Phase 171 closed the resume UX tail.
+
+### What Worked
+
+- **Guards were proven to discriminate, not merely to pass.** The zero-undispositioned gate was
+  verified by mutating a scratch corpus and confirming it names the offending case by ID and line;
+  `tests/test_uat_series_format.py` was proven to FAIL against the pre-normalization document. This
+  is now the project's standing bar for a new gate.
+
+- **Guard independence was structural, not assumed.** The three UAT guard modules each carry their
+  own from-scratch parsing and import nothing from `scripts/` or from each other — so a shared
+  parser bug cannot make all four agree while all four are wrong.
+
+- **Independent recount as standing practice.** UATREC-03's totals were re-confirmed by a
+  from-scratch recount sharing zero code with the tool that produced them. `170-CONTEXT.md` states
+  the rule outright: "Every count this phase asserts should be measured, not inherited."
+
+- **Honest negative results were recorded rather than padded.** Phase 169's vitest dialect found
+  **zero** genuine substitutes among Phase 168's 31 series-7 dashboard GAPs — recorded as the
+  correct outcome, because the checking work was the deliverable, not a target conversion count.
+
+- **A requirement written from a backwards premise was corrected mid-flight.** GATE-02 instructed a
+  migration *to* `defusedxml`; Phase 166 established that Phase 87/DEP-02 had migrated *away* from
+  it and two CI gates forbid reintroducing it. The requirement was amended rather than obeyed.
+
+- **Phase ordering was validated by outcome** — 167 (format) had to precede 168/169 (drain), because
+  a normalized format is what makes drain completeness verifiable at all.
+
+### What Was Inefficient
+
+- **A CRITICAL security defect shipped in Phase 168's own tooling and survived a phase.**
+  `scripts/uat_disposition_apply.py` was authored in 168-01; `168-REVIEW.md` explicitly declined to
+  line-review it because it "carries no diff in this range." Phase 169's deep review caught CR-01 —
+  a JSON-escaped newline in an `evidence` field that splices a fabricated fully-PASS case past all
+  three guards at once. One phase of latency on a critical finding, caused by a review scoping rule
+  that skipped a file it had already seen.
+
+- **Three successive hand-enumerated slug lists each silently omitted work (Phase 170, TRACE-05).**
+  170-06 shipped 68 fixes; the closeout found it had missed the entire `38-identity-api-regression-fix`
+  family (28 references across 6 files, one not even in its declared `files_modified`); the verifier
+  then found 6 more across 3 files and returned `gaps_found` at 4/5. Only a derivation-based sweep
+  closed it — and that sweep found **174 further stale references across 90 files** that a fourth
+  enumeration would likely have kept missing. **Phase 170 is the only phase in the milestone that
+  required re-verification.**
+
+- **The GATE-03 fix was re-broken by a later phase in the same milestone.**
+  `test_uat_disposition_integrity.py` (168-02) used a raw spawn and reintroduced the exact macOS
+  fork SIGSEGV that Phase 166 had just eliminated — invisible until 168-09's mandatory full-suite
+  baseline run.
+
+- **An executor under-ran its own validation.** 170-07's coordinator independently ran all 11
+  automated `170-VALIDATION.md` rows — the executor had run 2 — and found row `170-06-01` genuinely
+  FAILED.
+
+- **Requirement bookkeeping was wrong in both directions.** `state.requirements.mark-complete` has no
+  per-phase granularity and **falsely flipped UATREC-03 to Complete twice mid-milestone** (both
+  caught and reverted); UATREC-01/02's traceability rows read `Pending` against checked `[x]` boxes
+  until the audit fixed them.
+
+- **A live AA-contrast failure escaped the automated a11y sweep entirely**, because
+  `tests/a11y/routes.json` covers 11 routes but not `/hardware` or `/compare`. The unit-level guard
+  added in response does not close the general blind spot — and that same route gap is still open
+  two milestones later.
+
+- **GATE-03 needed an unplanned mid-phase scope amendment** (166-05, user-directed) to generalize
+  `run_cli()` into `run_fork_safe()` across 6 more files.
+
+### Patterns Established
+
+- **Enumeration loses entries; derivation does not.** Established three times over in Phase 170, then
+  immediately found again in GATE-03's own 11-file allowlist. Any list a human must keep in sync with
+  a system file will drift — generate it from the file instead.
+- **A deferral must name a specific test, not infer coverage from a requirement-ID annotation** —
+  the review's own re-verification found annotation an unreliable proxy in both directions.
+- **Any test file that spawns a `pytest` subprocess must use `run_fork_safe` from the start**, now
+  enforced by an AST gate requiring `close_fds=False`.
+
+### Key Lessons
+
+1. **The review's symptoms held up; its counts failed re-measurement every single time.** 5→3
+   duplicate IDs, 4→2 missing tests, 16→230 stale references, ~325→377 unrecorded cases, 291→81→1
+   a11y violations. A symptom is an observation; a count is a measurement someone may not have made.
+2. **Enumeration loses entries where derivation does not** — the milestone's most-repeated failure,
+   and the one it then found in its own new gate.
+3. **A guard must be shown to discriminate, not merely to pass.**
+4. **The real deliverable is the honest record, not the green gate.** 57 named coverage GAPs and 32
+   FAILs were the outcome; a corpus reading 100% PASS would have been worth nothing.
+5. **A code review that skips a file because it "carries no diff in this range" can miss a critical
+   defect in tooling that range depends on.** CR-01 cost a phase of latency for exactly that reason.
+
+### Cost Observations
+
+**187 commits in two days across 8 phases and 47 plans** — by far the densest milestone in the
+project's history, and it shows in the failure modes: a critical defect in its own tooling, a
+regression of a fix made four phases earlier, and three enumeration misses in a single phase. Test
+suite ended at **3,684 passed / 4 failed, zero fatal signals**.
+
+### Two Claims This Record Does Not Support
+
+Authoring this section surfaced two figures the archives repeat but do not substantiate. Both are
+noted here so a future reader does not inherit them the way this milestone inherited the review's:
+
+- **"230 stale cross-phase references repaired"** appears in ROADMAP.md, PROJECT.md, and HORIZON.md,
+  but no file derives it. TRACE-05 records 68 broken lines across 25 files;
+  `170-VERIFICATION.md:110` gives `68 + 28 + 6 + 174`. The components do not sum to 230.
+- **"3 screen-reader blockers fixed"** is looser than `165-VERIFICATION.md`, which records 2 of the 3
+  `button-name` violations as **confirmed phantoms** — stale baselines predating existing
+  `aria-label`s. One (`ScanSelector.tsx:33`) was genuine and was fixed on structural merit rather
+  than live axe evidence.
+
 ## Milestone: v5.17 — Defect Drain
 
 **Development complete:** 2026-09-01 (untagged) | **Phases:** 5 (172–176) | **Plans:** 28 + 2 addenda
@@ -1009,7 +1245,9 @@ almost entirely due to environment (Docker daemon) rather than complexity. Test 
 | v5.9 Documentation Audit & Living Docs System | 6 (incl. 138.1/138.2) | 10 | Docs-only milestone; first to embed permanent doc-hygiene governance (`CLAUDE.md` Per-Phase Checklist + Milestone-Boundary Template) rather than a one-time sweep; audit caught a real content-inversion bug (CORE-04) and a vault-staleness gap (LIVE-03), both closed by inserted gap-closure phases and independently re-verified; v5.7 row not authored at close — see MILESTONES.md |
 | v5.13 Continuous Hardware Lifecycle Monitoring | 3 | 17 | Tightest plan-to-commit ratio to date (65 commits/~1 day) — a scheduling/diffing/reporting layer over existing data, zero new deps, zero new lab profiles; same "alternate code path skips a terminal call" bug shape (CR-01) caught by code review in two consecutive phases (154, 155); v5.10/v5.12 rows not authored at close — see MILESTONES.md |
 | v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting | 4 | 16 | Milestone-spanning shared chokepoint (`persist_and_reconcile()`, Phase 158) extended cleanly by two later phases with zero duplicated logic; highest code-review-iteration density to date (2 of 4 phases hit the 3-iteration cap); 2 BLOCKER-severity bugs closed same-phase; VALIDATION.md row-status/pre-commit-hook gap recurred on 3 phases before being proactively avoided on the 4th |
-| v5.17 Defect Drain | 5 | 28 (+2 addenda) | First pure defect-drain milestone; scope re-measured from the ledger before opening (32 claimed FAILs → 18 genuine defects); Phase 175 changed ZERO product code across 7 plans; the milestone's most valuable finding (`TRIAGE-176-03`, every SSH scan silently degraded to a banner grab) came from re-running an investigation that already had a closed answer; v5.15/v5.16 rows not authored at close — see MILESTONES.md |
+| v5.15 Lifecycle Tail Drain | 3 | 11 | First published release since 5.12.0 (tag `v5.15.0`, 3-component — v5.13/v5.14 had missed `release.yml`'s `v*.*.*` glob entirely); a blocking human-UAT gate caught a coverage under-report every automated criterion passed over; DISC-08's requirement was written against a checkpoint layer that did not exist, so the phase built it rather than tightening it; Phase 162 executed inline with no PLAN/SUMMARY artifacts (section authored retroactively 2026-09-01) |
+| v5.16 Review Drain & Gate Integrity | 8 | 47 | **Densest milestone to date — 187 commits in two days.** 377 unrecorded UAT cases driven to zero undispositioned across all 666 behind a standing CI gate; a CRITICAL injection (CR-01) shipped in its own tooling and survived one phase before a deep review caught it; three successive hand-enumerated slug lists each silently omitted work in a single phase; every count the source review asserted failed re-measurement (5→3, 4→2, 16→230, ~325→377, 291→81) (section authored retroactively 2026-09-01) |
+| v5.17 Defect Drain | 5 | 28 (+2 addenda) | First pure defect-drain milestone; scope re-measured from the ledger before opening (32 claimed FAILs → 18 genuine defects); Phase 175 changed ZERO product code across 7 plans; the milestone's most valuable finding (`TRIAGE-176-03`, every SSH scan silently degraded to a banner grab) came from re-running an investigation that already had a closed answer |
 
 ### Cumulative Quality
 
@@ -1028,6 +1266,8 @@ almost entirely due to environment (Docker daemon) rather than complexity. Test 
 | v5.11 | ~2,600 collected | 95 targeted tests green across the milestone surface at close; ~102 pre-existing full-suite failures (version-locked assertions, Python 3.14 dev-env drift) confirmed unrelated and unchanged — aging since Phase 97, now carried as an explicit next-milestone stabilization candidate |
 | v5.13 | 115/115 targeted (not full-suite re-counted) | 115/115 targeted cross-boundary tests green at milestone-audit time (drift engine, retention purge, cadence floor, score-guard, HTML/DOCX drift rendering, frontend lifecycle-advisory-guard); full-suite baseline was 3,087 passed / 0 failed as of v5.12's Phase 150 CI gate, held green since; v5.10/v5.12 rows not authored at close |
 | v5.14 | 3,452 passed (full suite) | Full-suite re-run independently at every phase close and at milestone audit; grew from 3,369 (pre-milestone baseline) to 3,452 (+83 tests) across the milestone's 4 phases and their code-review fix cycles; 3 pre-existing failures (CMVP staleness, 2 macOS-local git-hook-integration ordering issues) confirmed unrelated and unchanged at every re-run, including the final milestone-audit pass |
+| v5.15 | 3,593 passed / 2 failed (full suite) | Moved 3,520 → 3,569 → 3,593 across the three phases, the final delta accounting exactly for the 4 tests added; both failures are `test_verify_phase_gates.py::test_hook_integration_*`, order-dependent (44 passed in isolation) — a macOS subprocess SIGSEGV not root-caused until v5.16 Phase 166-05 |
+| v5.16 | 3,684 passed / 4 failed, zero fatal signals (full suite, `-m ""`) | `test_skip_registry::test_no_unregistered_skips` plus 3 environmental `test_extras_install_matrix` failures (stale `__editable__.quirk-4.0.0.pth` breaks pip's build-backend locally; CI installs fresh), proven pre-existing by stash-and-reproduce. Fatal signals went 14 → 0 across 6 files via GATE-03 |
 | v5.17 | 3,802 passed / 1 failed (full suite) | Grew from 3,766 (Phase 175 close) to 3,802 across the milestone; the single failure is the pre-existing `DEFER-172-01` `test_skip_registry` node, confirmed unchanged at every phase close. All 5 phases carry a VERIFICATION.md |
 
 ### Top Lessons (Verified Across Milestones)
