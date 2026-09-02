@@ -198,7 +198,7 @@ reconciled or explicitly bounded.
 **Plans**: 7 plans in 4 waves
 
 Plans:
-- [ ] 178-01-PLAN.md — IDENT-01 guards written RED first: day-boundary stability + T-178-01 fingerprint-collision
+- [x] 178-01-PLAN.md — IDENT-01 guards written RED first: day-boundary stability + T-178-01 fingerprint-collision
 - [ ] 178-02-PLAN.md — IDENT-02 guards written RED first: severity-NULL non-vacuity + severity-transition contract
 - [ ] 178-03-PLAN.md — IDENT-03 fingerprint-equality agreement tests + the written bounded-divergence record
 - [ ] 178-04-PLAN.md — Three normalizers collapse to one; all 22 titles classified; compute_fingerprint wired + docstring corrected
@@ -291,7 +291,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
-| 178. Finding Identity Repair | 0/? | Not started | — |
+| 178. Finding Identity Repair | 1/7 | In Progress|  |
 | 179. Remediation Item Model | 0/? | Not started | — |
 | 180. Closure Verification | 0/? | Not started | — |
 | 181. Surfacing | 0/? | Not started | — |
