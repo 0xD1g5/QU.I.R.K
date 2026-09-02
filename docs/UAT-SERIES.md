@@ -21021,7 +21021,7 @@ torn down; zero containers remain.
 
 ---
 
-## Series 177: Release Verification (v5.18.0)
+## Series 177: Release Verification (Phase 177 — v5.18)
 
 **Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
 `MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its three cases below

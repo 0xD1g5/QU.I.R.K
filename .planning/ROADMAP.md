@@ -30,9 +30,9 @@
 - ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
-- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **developed and archived untagged, shipped inside v5.18.0** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
-- 🚧 **v5.18 Migration Execution** — Phases 177–181 (in progress, opened 2026-09-01)
-- ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside v5.18.0**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
+- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
+- 🚧 **v5.18 Migration Execution** — Phases 177–181 (in progress, opened 2026-09-01; Phase 177 shipped `v5.18.0` to PyPI 2026-09-02)
+- ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -53,15 +53,19 @@ silent-no-op failure mode (below) is fixed, which is precisely why an incorrect 
 damage rather than nothing, and why the toolchain had to be repaired before tagging, not after.
 
 **Resolution: Phase 177 (Release Toolchain Repair) fixed the toolchain and both milestones' content
-ships together in the single `v5.18.0` release** — the local editable install works cleanly
-(single distribution, `tests/test_version.py::test_single_distribution_provides_quirk` guards
-against regression), `pyproject.toml` carries `5.18.0`, and `CHANGELOG.md`/`README.md` document
-v5.16 and v5.17's user-visible fixes (the first-run command, three screen-reader blockers, resume
-UX, the fuzzing/disclosure-safety hardening, scanner scope corrections, dashboard/API fixes, UAT
-case corrections, and the chaos-lab re-run findings) as shipping under that one version. The
-three-component `v5.18.0` tag push itself is a deliberate human handoff (plan 177-06/177-07) — see
-`docs/UAT-SERIES.md` Series 177 for the honestly-gapped release-verification cases pending that
-push.
+shipped together in the single `v5.18.0` release, published to PyPI 2026-09-02** — the local
+editable install works cleanly (single distribution,
+`tests/test_version.py::test_single_distribution_provides_quirk` guards against regression),
+`pyproject.toml` carries `5.18.0`, and `CHANGELOG.md`/`README.md` document v5.16 and v5.17's
+user-visible fixes (the first-run command, three screen-reader blockers, resume UX, the
+fuzzing/disclosure-safety hardening, scanner scope corrections, dashboard/API fixes, UAT case
+corrections, and the chaos-lab re-run findings) as shipping under that one version. The
+three-component `v5.18.0` tag push was a deliberate human handoff (plan 177-06/177-07) — the user
+pushed it 2026-09-02, `release.yml` run
+[33656116783](https://github.com/0xD1g5/QU.I.R.K./actions/runs/33656116783) fired on a `push` event
+and completed green across all three jobs (build, Windows package, PyPI publish). See
+`docs/UAT-SERIES.md` Series 177 for the release-verification cases, all re-executed to `[x] PASS`
+against the real published artifact.
 
 ### Release-integrity note (RVW-004, corrected 2026-08-25; resolution recorded 2026-09-02)
 
@@ -117,7 +121,7 @@ inward-facing cycles had broken the 2:1 capability/ops ratio.
 
 ### Phases
 
-- [ ] **Phase 177: Release Toolchain Repair** - The editable install works, the version bumps, and a real release finally ships covering both v5.16 and v5.17. Gating: nothing else in v5.18 reaches a user until this does.
+- [x] **Phase 177: Release Toolchain Repair** - The editable install works, the version bumps, and a real release finally ships covering both v5.16 and v5.17. Gating: nothing else in v5.18 reaches a user until this does. **Shipped 2026-09-02 — v5.18.0 is live on PyPI.**
 - [ ] **Phase 178: Finding Identity Repair** - A finding keeps one identity across re-scans, the dead trend report either reports real movement or admits it cannot, and the two findings-derivation paths are reconciled or explicitly bounded. Gating: remediation tracking on a key that decays daily is worse than none.
 - [ ] **Phase 179: Remediation Item Model** - Roadmap items gain stable IDs joined to their constituent finding fingerprints, a scope signature that refuses closure across incomparable scans, and `not_observed` as an honest third state.
 - [ ] **Phase 180: Closure Verification** - Closure is machine-observed under a two-sided condition, never human-asserted; `resurfaced` is modelled explicitly; burndown is relative to a named target date rather than a single scalar.
@@ -162,7 +166,7 @@ Plans:
 - [x] 177-04-PLAN.md — Wave 2 · RELEASE-02, RELEASE-03 · Bump to 5.18.0 with the editable reinstall; hand-written CHANGELOG `[5.18.0]`; README banner + one What's New in v5.18
 - [x] 177-05-PLAN.md — Wave 3 · RELEASE-03 · UAT-SERIES header/UAT-1-02 bump + Series 177; ROADMAP untagged notes reframed as history; Obsidian vault sync (LIVE-03)
 - [x] 177-06-PLAN.md — Wave 4 · RELEASE-02, ADVISORY-01 · Full-suite phase gate, ADVISORY-01 score-firewall proof, pre-tag gate readiness table
-- [ ] 177-07-PLAN.md — Wave 5 · RELEASE-02, RELEASE-03 · `workflow_dispatch` no-publish dry-run (user-approved), then the three-component `v5.18.0` tag handoff — **the user pushes, Claude does not**
+- [x] 177-07-PLAN.md — Wave 5 · RELEASE-02, RELEASE-03 · `workflow_dispatch` no-publish dry-run (user-approved), then the three-component `v5.18.0` tag handoff — **the user pushed 2026-09-02; `release.yml` run 33656116783 fired on `push` and completed green (Build wheel+sdist, Windows zip+asset, PyPI publish all `success`); Series 177 re-executed to real PASS and RELEASE-02/03 closed**
 
 ### Phase 178: Finding Identity Repair
 
@@ -277,7 +281,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 177. Release Toolchain Repair | 6/7 | In Progress|  |
+| 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
 | 178. Finding Identity Repair | 0/? | Not started | — |
 | 179. Remediation Item Model | 0/? | Not started | — |
 | 180. Closure Verification | 0/? | Not started | — |
