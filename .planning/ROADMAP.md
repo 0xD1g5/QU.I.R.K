@@ -278,7 +278,7 @@ single scalar.
 
 Plans:
 
-- [ ] 180-01-PLAN.md — Wave 1 · CLOSE-01 · Close the estate-blind hole in the scope signature: target-set digest, `SCOPE_SIGNATURE_VERSION` 2.0.0, public `family_for_protocol()`, estate guard proven RED
+- [x] 180-01-PLAN.md — Wave 1 · CLOSE-01 · Close the estate-blind hole in the scope signature: target-set digest, `SCOPE_SIGNATURE_VERSION` 2.0.0, public `family_for_protocol()`, estate guard proven RED
 - [ ] 180-02-PLAN.md — Wave 1 · CLOSE-03 · EO 14412 deadline catalog with the 11-row `PKE` audit, 90-day staleness gate, CI wiring, and CLAUDE.md's eighth gated catalog
 - [ ] 180-03-PLAN.md — Wave 2 · CLOSE-02 · `resurfaced` as a fourth persisted state, `OPEN_LIKE_STATES`, and the append-only `remediation_closure_events` table
 - [ ] 180-04-PLAN.md — Wave 3 · CLOSE-01 · The two-sided closure computation in `quirk/intelligence/closure.py`, every refusal landing on `not_observed`, with no human-assert affordance
@@ -319,7 +319,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
 | 179. Remediation Item Model | 6/6 | Complete | 2026-09-02 |
-| 180. Closure Verification | 0/? | Not started | — |
+| 180. Closure Verification | 1/8 | In Progress|  |
 | 181. Surfacing | 0/? | Not started | — |
 
 ### Carried into v5.18 from the v5.17 close
