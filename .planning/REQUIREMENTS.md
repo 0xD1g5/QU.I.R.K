@@ -135,21 +135,21 @@ The foundation both readings need. Remediation tracking on a decaying key is wor
 
 ## Remediation Item Model (Phase 179)
 
-- [ ] **REMED-01**: Remediation items have a stable ID decoupled from their title, joined to the
+- [x] **REMED-01**: Remediation items have a stable ID decoupled from their title, joined to the
   finding fingerprints that constitute them. Today `quirk/intelligence/roadmap.py` generates
   aggregate, template-titled candidates from evidence counters and never persists them: fixing 1 of
   8 plaintext endpoints closes nothing, fixing the 8th makes the item silently vanish with no
   closure record, and rewording a title silently re-keys its history. Progress must be expressible
   as "6 of 8 verified closed", not a boolean.
 
-- [ ] **REMED-02**: Closure is refused across incomparable scopes. A persisted **scope signature**
+- [x] **REMED-02**: Closure is refused across incomparable scopes. A persisted **scope signature**
   (port scope, profile, optional extras present, credential presence, sensor set) is recorded per
   scan, and closure computation hard-refuses when signatures differ. Without this, a re-engagement
   run with `--profile quick` would auto-generate an attestation claiming dozens of false closures.
   Positive probe health is required, not "the scan exited 0" — the TRIAGE-176-03 shape, where
   `ssh-audit` silently degraded to banner grabs for the life of the integration.
 
-- [ ] **REMED-03**: `not_observed` is a first-class third state alongside open and closed. Re-scan
+- [x] **REMED-03**: `not_observed` is a first-class third state alongside open and closed. Re-scan
   entity resolution is explicitly **not** attempted — `(host, port)` breaks on DHCP, hostname-vs-IP,
   VIPs, and container churn — so operator-supplied aliases carry that burden, with the human in the
   loop. "9 closed, 4 open, 12 not observed" is defensible; "21 closed" is a liability.
@@ -221,9 +221,9 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | IDENT-01 | Phase 178 | Complete — single normalizer, day-boundary stability + collision guards green, AST-bounded 22 titles (2026-09-02) |
 | IDENT-02 | Phase 178 | Complete — match key re-keyed to (host,port,protocol), non-vacuity proven on all-NULL-severity data, severity_transitions preserves D-03 (2026-09-02) |
 | IDENT-03 | Phase 178 | Complete — 2/3 shared conditions fingerprint-equal, 1 divergence bounded in writing (D-178-A/B), allowlist guard proven RED (2026-09-02) |
-| REMED-01 | Phase 179 | Pending |
-| REMED-02 | Phase 179 | Pending |
-| REMED-03 | Phase 179 | Pending |
+| REMED-01 | Phase 179 | Complete — `remediation_items` + `remediation_item_fingerprints` persisted at scan time via `persist_remediation_snapshot()`; kind-derived slug (never title) is the persistence key; 8-of-8 plaintext endpoints prove the `(0, 8)` fraction, never a boolean and never silently vanishing. Under-claimed by design: items and their constituency are persisted, but no closure is computed here — that is Phase 180's two-sided condition (2026-09-02) |
+| REMED-02 | Phase 179 | Complete — `scan_scope_signatures` row per `scan_run_id` (discrete columns + SHA256 digest, mutually consistent, digest sensitive to profile/port-scope/extras/credentials/sensor-set independently); probe health positively asserted across 13 families, proven against the TRIAGE-176-03 degraded-probe shape with a real RED-first negative control. Under-claimed by design: the signature is recorded but NOT compared — Phase 180 owns the hard-refusal decision, and there is no override flag in this phase. Sensor-origin findings are excluded by decision (`_ingest_envelope` never sets `scan_run_id`); documented in `docs/operators-guide.md` §15 and the ROADMAP backlog (2026-09-02) |
+| REMED-03 | Phase 179 | Complete — `not_observed` is `nullable=False`, default `not_observed`, and no code path in this phase ever writes `state="closed"` (grep-clean); `remediation_aliases: Dict[str, str]` loads from `config.yaml` following the `broker_credentials` precedent, with no auto-learning, and proven to survive `apply_profile` untouched (2026-09-02) |
 | CLOSE-01 | Phase 180 | Pending |
 | CLOSE-02 | Phase 180 | Pending |
 | CLOSE-03 | Phase 180 | Pending |
