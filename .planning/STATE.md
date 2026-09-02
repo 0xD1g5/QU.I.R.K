@@ -4,12 +4,12 @@ milestone: v5.18
 milestone_name: Migration Execution
 status: executing
 stopped_at: Completed 177-06-PLAN.md
-last_updated: "2026-09-02T21:02:10.338Z"
+last_updated: "2026-09-02T21:10:46.900Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 20
-  completed_plans: 16
+  completed_plans: 17
   percent: 40
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 179 (remediation-item-model) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 pushed the three-component tag `v5.18.0` (`a8058261ba20b3fd3a1fb24860e82d7683c6ff4d`, dereferencing
 to `8fc5133386bf7601bda394caa730da4166074fff` — the exact commit 177-06 gated). `release.yml` run
@@ -642,6 +642,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 178 P06 | 40min | 3 tasks | 4 files |
 | Phase 179 P01 | 45min | 2 tasks | 4 files |
 | Phase 179 P02 | 12min | 1 tasks | 3 files |
+| Phase 179 P03 | 50min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -954,6 +955,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 178-06]: TRIAGE-149 measured (not assumed): still XFAIL. Codesign titles correctly PRESERVE_IDENTITY; COMPLIANCE_MAP mapping gap remains, named as follow-up in docs/test-triage-149.md.
 - [Phase 178-06]: skip_registry.py: corrected one line-drift (test_compliance_title_join.py 20->23) caused by this plan's edits; no entries added/removed; DEFER-172-01 carried baseline unchanged.
 - [Phase 179]: remediation_aliases lives in config.yaml, not a DB table (D-10) — reviewable in version control, human-edited between engagements
+- [Phase 179]: priority is not returned by build_phased_roadmap; remediation_persist.py carries a duplicated _SLUG_PRIORITY table mirroring remediation.py's comment values
+- [Phase 179]: remediation_persist.py never writes the literal word scoring anywhere, including prose, since the acceptance grep is a bare substring check
+- [Phase 179]: persist_remediation_snapshot wraps its entire body in try/except returning zeroed counters on failure - advisory bookkeeping must never fail a scan
 
 ### Pending Todos
 
@@ -1123,7 +1127,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-02T21:01:28.070Z
+Last session: 2026-09-02T21:09:59.170Z
 Stopped at: Completed 177-06-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
