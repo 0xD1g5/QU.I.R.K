@@ -505,3 +505,304 @@ def test_human_assert_regex_negative_control():
     )
     violations = _scan_for_add_argument_violations(fixture_source)
     assert violations, "negative control fixture should have tripped the human-assert guard"
+
+
+# ---------------------------------------------------------------------------
+# CLOSE-02 (D-29..D-32): resurfaced
+#
+# A previously-`closed` fingerprint detected again becomes `resurfaced` — not
+# a brand-new finding, not silently folded back into `open`. It can close
+# again (a `reclosed` event, state `closed`), and the earlier `resurfaced`
+# event row is retained forever (append-only, per test_closure_events.py's
+# guard) so "closed once, regressed, closed again" stays legible. A scope
+# mismatch refuses resurfacing exactly like it refuses closing — the same
+# `scans_are_comparable` gate, never a second one.
+# ---------------------------------------------------------------------------
+
+
+def test_resurfaced_when_previously_closed_item_detected_again(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(
+        tmp_path,
+        prior_fingerprint_state="closed",
+        include_current_fingerprint=True,
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+
+    assert counters["resurfaced"] == 1
+    with get_session(db_path) as session:
+        current_row = _fp_row(session, scan_run_id=CURRENT_SCAN_ID)
+        assert current_row.state == "resurfaced"
+        assert current_row.state != "open"
+        assert current_row.state != "not_observed"
+
+        # The prior row itself is untouched — it stays a record of the
+        # ORIGINAL closure, not silently overwritten.
+        prior_row = _fp_row(session, scan_run_id=PRIOR_SCAN_ID)
+        assert prior_row.state == "closed"
+
+        events = _events(session, event_type="resurfaced")
+        assert len(events) == 1
+        assert events[0].from_state == "closed"
+        assert events[0].to_state == "resurfaced"
+        assert events[0].slug == SLUG
+        assert events[0].finding_fingerprint == FINGERPRINT
+
+
+def test_resurfaced_is_not_a_new_finding(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(
+        tmp_path,
+        prior_fingerprint_state="closed",
+        include_current_fingerprint=True,
+    )
+    compute_closure(db_path, CURRENT_SCAN_ID)
+
+    with get_session(db_path) as session:
+        current_row = _fp_row(session, scan_run_id=CURRENT_SCAN_ID)
+        prior_row = _fp_row(session, scan_run_id=PRIOR_SCAN_ID)
+        # Same fingerprint on both sides — the whole point is it is not re-keyed.
+        assert current_row.finding_fingerprint == prior_row.finding_fingerprint == FINGERPRINT
+
+
+def _seed_signature(session, *, scan_run_id, created_at, digest="digest-resurf", target_set_digest="tsd-resurf", probe_health=None):
+    session.add(
+        ScanScopeSignature(
+            scan_run_id=scan_run_id,
+            signature_version="2.0.0",
+            digest=digest,
+            target_set_digest=target_set_digest,
+            probe_health_json=json.dumps(probe_health if probe_health is not None else HEALTHY_TLS),
+            created_at=created_at,
+        )
+    )
+
+
+def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
+    """CLOSE-02 acceptance test: closed -> resurfaced -> reclosed, with the
+    resurfaced event row STILL PRESENT after the reclosure.
+    """
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    now = datetime.now(timezone.utc)
+    scan1, scan2, scan3, scan4 = "scan-r1", "scan-r2", "scan-r3", "scan-r4"
+
+    # Scan 1: fingerprint detected, open.
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan1, created_at=now - timedelta(days=4))
+        session.add(
+            RemediationItemFingerprint(
+                remediation_item_id=None,
+                slug=SLUG,
+                scan_run_id=scan1,
+                finding_fingerprint=FINGERPRINT,
+                host=HOST,
+                port=PORT,
+                finding_title="Plaintext HTTP service detected",
+                state="open",
+                observed_at=now - timedelta(days=4),
+            )
+        )
+        session.commit()
+
+    # Scan 2: rechecked, absent, healthy probe -> closes.
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
+        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
+        session.commit()
+    counters2 = compute_closure(db_path, scan2)
+    assert counters2["closed"] == 1
+
+    # Scan 3: detected again -> resurfaced.
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan3, created_at=now - timedelta(days=2))
+        session.add(
+            RemediationItemFingerprint(
+                remediation_item_id=None,
+                slug=SLUG,
+                scan_run_id=scan3,
+                finding_fingerprint=FINGERPRINT,
+                host=HOST,
+                port=PORT,
+                finding_title="Plaintext HTTP service detected",
+                state="not_observed",
+                observed_at=now - timedelta(days=2),
+            )
+        )
+        session.commit()
+    counters3 = compute_closure(db_path, scan3)
+    assert counters3["resurfaced"] == 1
+
+    with get_session(db_path) as session:
+        row3 = _fp_row(session, scan_run_id=scan3)
+        assert row3.state == "resurfaced"
+
+    # Scan 4: rechecked with a healthy probe, absent -> recloses.
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
+        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
+        session.commit()
+    counters4 = compute_closure(db_path, scan4)
+    assert counters4["reclosed"] == 1
+
+    with get_session(db_path) as session:
+        row3_after = _fp_row(session, scan_run_id=scan3)
+        assert row3_after.state == "closed"
+
+        events = (
+            session.query(RemediationClosureEvent)
+            .filter(
+                RemediationClosureEvent.slug == SLUG,
+                RemediationClosureEvent.finding_fingerprint == FINGERPRINT,
+            )
+            .order_by(RemediationClosureEvent.id.asc())
+            .all()
+        )
+        assert [e.event_type for e in events] == ["closed", "resurfaced", "reclosed"]
+        # The resurfaced row SURVIVES the later reclosure — never rewritten.
+        assert events[1].from_state == "closed"
+        assert events[1].to_state == "resurfaced"
+        assert events[2].from_state == "resurfaced"
+        assert events[2].to_state == "closed"
+
+
+def test_scope_mismatch_cannot_produce_resurfaced(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(
+        tmp_path,
+        prior_fingerprint_state="closed",
+        include_current_fingerprint=True,
+        current_digest="digest-mismatch",
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+
+    assert counters["refused_scope_mismatch"] == 1
+    assert counters.get("resurfaced", 0) == 0
+    with get_session(db_path) as session:
+        current_row = _fp_row(session, scan_run_id=CURRENT_SCAN_ID)
+        assert current_row.state == "not_observed"
+        assert _events(session, event_type="resurfaced") == []
+
+
+def test_missing_signature_cannot_produce_resurfaced(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(
+        tmp_path,
+        prior_fingerprint_state="closed",
+        include_current_fingerprint=True,
+        include_current_signature=False,
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+
+    assert counters["refused_missing_signature"] == 1
+    assert counters.get("resurfaced", 0) == 0
+    with get_session(db_path) as session:
+        assert _events(session, event_type="resurfaced") == []
+
+
+def test_resurfaced_counted_as_open_reported_separately(tmp_path):
+    from quirk.intelligence.closure import closure_counts
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    now = datetime.now(timezone.utc)
+    scan_run_id = "scan-counts-1"
+
+    counts_spec = {"open": 2, "resurfaced": 3, "closed": 4, "not_observed": 1}
+    with get_session(db_path) as session:
+        i = 0
+        for state, n in counts_spec.items():
+            for _ in range(n):
+                i += 1
+                session.add(
+                    RemediationItemFingerprint(
+                        remediation_item_id=None,
+                        slug=SLUG,
+                        scan_run_id=scan_run_id,
+                        finding_fingerprint=f"fp-count-{i:04d}",
+                        host=HOST,
+                        port=PORT,
+                        finding_title="Plaintext HTTP service detected",
+                        state=state,
+                        observed_at=now,
+                    )
+                )
+        session.commit()
+
+        result = closure_counts(session, scan_run_id=scan_run_id)
+
+    assert result == {
+        "open": 2,
+        "resurfaced": 3,
+        "closed": 4,
+        "not_observed": 1,
+        "open_like": 5,
+    }
+
+
+def test_item_progress_unchanged_by_resurfaced(tmp_path):
+    from quirk.intelligence.remediation import item_progress
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    now = datetime.now(timezone.utc)
+    scan_run_id = "scan-counts-2"
+
+    counts_spec = {"open": 2, "resurfaced": 3, "closed": 4, "not_observed": 1}
+    with get_session(db_path) as session:
+        i = 0
+        for state, n in counts_spec.items():
+            for _ in range(n):
+                i += 1
+                session.add(
+                    RemediationItemFingerprint(
+                        remediation_item_id=None,
+                        slug=SLUG,
+                        scan_run_id=scan_run_id,
+                        finding_fingerprint=f"fp-progress-{i:04d}",
+                        host=HOST,
+                        port=PORT,
+                        finding_title="Plaintext HTTP service detected",
+                        state=state,
+                        observed_at=now,
+                    )
+                )
+        session.commit()
+
+        result = item_progress(session, scan_run_id=scan_run_id, slug=SLUG)
+
+    assert result == (4, 10)
+
+
+def test_resurface_is_idempotent(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(
+        tmp_path,
+        prior_fingerprint_state="closed",
+        include_current_fingerprint=True,
+    )
+    first = compute_closure(db_path, CURRENT_SCAN_ID)
+    with get_session(db_path) as session:
+        first_state = _fp_row(session, scan_run_id=CURRENT_SCAN_ID).state
+        first_event_count = session.query(RemediationClosureEvent).filter(
+            RemediationClosureEvent.event_type == "resurfaced"
+        ).count()
+
+    second = compute_closure(db_path, CURRENT_SCAN_ID)
+    with get_session(db_path) as session:
+        second_state = _fp_row(session, scan_run_id=CURRENT_SCAN_ID).state
+        second_event_count = session.query(RemediationClosureEvent).filter(
+            RemediationClosureEvent.event_type == "resurfaced"
+        ).count()
+
+    assert first["resurfaced"] == 1
+    assert second["resurfaced"] == 0
+    assert first_state == second_state == "resurfaced"
+    assert first_event_count == second_event_count == 1
