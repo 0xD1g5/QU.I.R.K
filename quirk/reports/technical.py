@@ -36,12 +36,33 @@ def _service_detail(ep) -> str:
 # HTML, DOCX, CLI and the dashboard (note the em dash, U+2014).
 VENDOR_TREND_ADVISORY_CAPTION = "Advisory — vendor PQC status trends do not affect the readiness score."
 
+# Phase 181 SURF-02: locked advisory caption for the Remediation Burndown
+# section — byte-identical to html_renderer.BURNDOWN_ADVISORY_CAPTION and
+# docx_renderer._BURNDOWN_ADVISORY_CAPTION. Per-renderer duplication is the
+# established Phase 161 convention (see VENDOR_TREND_ADVISORY_CAPTION above),
+# NOT a shared constant in content_model.py — a parity test
+# (test_advisory_caption_is_identical_across_all_three_surfaces) fails loudly
+# if the three surfaces ever drift apart.
+BURNDOWN_ADVISORY_CAPTION = "Advisory - remediation burndown does not affect the readiness score."
+
+# Phase 181 SURF-02 / D-35/D-36: fixed bucket iteration order so per-deadline
+# sections are stable and `unmapped` is always rendered last, never omitted.
+_BURNDOWN_BUCKET_ORDER = ("key_establishment", "digital_signature", "unmapped")
+
 # Phase 161 HWLC-19: human-readable labels for VendorPqcTrendEvent.event_type
 # values. Unknown/future event types fall back to the raw value unchanged.
 _VENDOR_TREND_EVENT_TYPE_LABELS: Dict[str, str] = {"pqc_status_change": "PQC status change"}
 
 
-def build_tech_markdown(cfg, endpoints, findings, *, vendor_pqc_trends: List[dict] | None = None) -> str:
+def build_tech_markdown(
+    cfg,
+    endpoints,
+    findings,
+    *,
+    vendor_pqc_trends: List[dict] | None = None,
+    burndown: dict | None = None,
+    closure_refusal: dict | None = None,
+) -> str:
     """Build the CLI technical-findings markdown report.
 
     Phase 161 HWLC-19: `vendor_pqc_trends` is the first hardware-related
@@ -49,6 +70,11 @@ def build_tech_markdown(cfg, endpoints, findings, *, vendor_pqc_trends: List[dic
     parameter so every pre-existing three-positional-argument call site and
     test keeps working unmodified. Per D-09, device-level drift / EOL
     forecast backfill into this report is explicitly out of scope.
+
+    Phase 181 SURF-02: `burndown` and `closure_refusal` are likewise
+    keyword-only, `None`-defaulted parameters carrying the Plan 181-05
+    ExecContent payload — every pre-existing call site keeps working
+    unmodified.
     """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -171,6 +197,38 @@ def build_tech_markdown(cfg, endpoints, findings, *, vendor_pqc_trends: List[dic
             transition = f"{old_val} -> {new_val}"
             lines.append(
                 f"| {md_cell(t.get('vendor'))} | {md_cell(change)} | {md_cell(transition)} | {md_cell(t.get('detected_at'))} |"
+            )
+        lines.append("")
+
+    # === Remediation Burndown (Phase 181 SURF-02) ===
+    # Refusal branch emitted FIRST — a refused scan must never be presented as
+    # a measured (e.g. "zero closed") result, and emits no table at all.
+    if closure_refusal:
+        lines.append("## Remediation Burndown")
+        lines.append("")
+        lines.append(f"_{BURNDOWN_ADVISORY_CAPTION}_")
+        lines.append("")
+        lines.append(md_cell(closure_refusal.get("statement", "")))
+        lines.append("")
+    elif burndown:
+        lines.append("## Remediation Burndown")
+        lines.append("")
+        lines.append(f"_{BURNDOWN_ADVISORY_CAPTION}_")
+        lines.append("")
+        lines.append("| Bucket | Deadline | Standard | Open | Closed | Not Observed | Resurfaced |")
+        lines.append("|---|---|---|---:|---:|---:|---:|")
+        # D-36 / CLOSE-03: buckets overlap by design and are NEVER summed — no
+        # total row, no percentage, no sum across buckets. Computing one would
+        # recreate the single-scalar failure this milestone corrected.
+        for bucket_key in _BURNDOWN_BUCKET_ORDER:
+            bucket = burndown.get(bucket_key)
+            if bucket is None:
+                continue
+            deadline = bucket.get("date") or "No deadline mapped"
+            lines.append(
+                f"| {md_cell(bucket_key)} | {md_cell(deadline)} | {md_cell(bucket.get('standard'))} "
+                f"| {bucket.get('open', 0)} | {bucket.get('closed', 0)} | {bucket.get('not_observed', 0)} "
+                f"| {bucket.get('resurfaced', 0)} |"
             )
         lines.append("")
 
