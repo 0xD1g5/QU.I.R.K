@@ -144,7 +144,14 @@ survives package regeneration or its loss is detected.
   3. Loss of the local patch is detectable. The patched file is `.generated.cjs`, so regeneration
      silently reverts it — needs a re-apply check (the `bin/verify-reapply-patches.cjs` precedent)
      or an upstream fix.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 182-01-PLAN.md — argv/cwd contract lock-down + Bug A prose-survival fixture with negative control
+- [ ] 182-02-PLAN.md — Bug B preserve-unknown-keys merge in `syncStateFrontmatter`, RED-first on both ROADMAP paths
+- [ ] 182-03-PLAN.md — `gsd-local-patches/` + `gsd-pristine/` durability layer and loss-detection test
+- [ ] 182-04-PLAN.md — report-only corruption audit, CLAUDE.md operating rule, upstream filing
+- [ ] 182-05-PLAN.md — full suite, requirement closure, STATE.md record, UAT + Obsidian sync
 
 ### Phase 183: Fork-Safety Gate Derivation
 
