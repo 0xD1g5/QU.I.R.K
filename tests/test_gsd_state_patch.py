@@ -43,6 +43,11 @@ import pytest
 
 from tests.cli_helpers import run_fork_safe
 
+# Bug B (frontmatter reconstruction) is NOT patched by this plan -- Bug A
+# (the .generated.cjs anchored-regex fix) is the sole subject here. See
+# 182-CONTEXT.md decisions: Bug B's fix and its own fixtures are Wave 2's
+# scope (a different plan/file).
+
 # ---------------------------------------------------------------------------
 # Toolchain guard -- copies the VITEST_TOOLCHAIN_AVAILABLE idiom from
 # tests/test_uat_disposition_integrity.py exactly. The `Linux Full Suite` CI
@@ -153,3 +158,159 @@ def test_begin_phase_cwd_contract_is_honoured(tmp_path) -> None:
         "-- the argv contract silently retargeted the live project file"
     )
     assert after_mtime == before_mtime
+
+
+# ---------------------------------------------------------------------------
+# Bug A: prose-survival fixture + sensitivity-proving negative control.
+#
+# The known-good repro (verbatim from
+# .planning/reports/gsd-sdk-state-corruption-2026-09-03.md § Bug A):
+#   before: - [Phase 170]: archived files gained a `**Status:**Ready to
+#           execute` marker. Must not change.
+#   after (unpatched): - [Phase 170]: archived files gained a
+#           `**Status:**Executing Phase 901
+# The trailing "` marker. Must not change." clause is destroyed because the
+# unanchored bold-field regex matches **Status:** mid-sentence and consumes
+# the rest of the line.
+# ---------------------------------------------------------------------------
+
+PROSE_LINE = (
+    "- [Phase 170]: archived files gained a `**Status:**Ready to execute` "
+    "marker. Must not change."
+)
+
+_LOCAL_PATCH_MARKER = "LOCAL PATCH (2026-09-03)"
+
+# Fallback order for the pristine (pre-patch) source of
+# state-document.generated.cjs, per 182-CONTEXT.md addendum item 5: plan
+# 182-03 will populate gsd-pristine/ as the canonical location; until then
+# (and as a permanent fallback) the .bak sitting alongside the patched file
+# is the pristine copy taken at patch time.
+_PRISTINE_CANDIDATES = [
+    Path.home()
+    / ".claude"
+    / "gsd-pristine"
+    / "get-shit-done"
+    / "bin"
+    / "lib"
+    / "state-document.generated.cjs",
+    GSD_HOME / "bin" / "lib" / "state-document.generated.cjs.bak",
+]
+
+
+def _resolve_pristine_state_document() -> Path | None:
+    for candidate in _PRISTINE_CANDIDATES:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _fixture_state_md() -> str:
+    return f"""---
+gsd_state_version: 1.0
+milestone: v9.9
+status: verifying
+---
+
+## Accumulated Context
+
+{PROSE_LINE}
+
+## Current Position
+
+Phase: 900 (demo) — EXECUTING
+Status: Ready to execute
+"""
+
+
+@pytest.fixture(scope="session")
+def unpatched_gsd_tree(tmp_path_factory):
+    """A throwaway COPY of the whole GSD toolchain with
+    `state-document.generated.cjs` swapped for its pristine (pre-Bug-A-patch)
+    content -- reproducing the corruption in isolation, without ever writing
+    inside the real `~/.claude/get-shit-done/`.
+
+    Skips (does not fail) if no pristine source can be found, or if the
+    would-be pristine source is itself accidentally already patched -- a
+    negative control run against patched code would pass vacuously.
+    """
+    if not GSD_TOOLCHAIN_AVAILABLE:
+        pytest.skip(GSD_SKIP_REASON)
+
+    pristine_source = _resolve_pristine_state_document()
+    if pristine_source is None:
+        pytest.skip(
+            "no pristine copy of state-document.generated.cjs found at any "
+            f"of {[str(p) for p in _PRISTINE_CANDIDATES]} -- cannot run the "
+            "negative control without a known-unpatched baseline"
+        )
+
+    pristine_bytes = pristine_source.read_bytes()
+    if _LOCAL_PATCH_MARKER in pristine_bytes.decode("utf-8", errors="replace"):
+        pytest.skip(
+            f"{pristine_source} unexpectedly contains the "
+            f"{_LOCAL_PATCH_MARKER!r} marker -- it is not a pristine "
+            "pre-patch copy, so the negative control would run against "
+            "already-patched code and pass vacuously"
+        )
+
+    dest_root = tmp_path_factory.mktemp("unpatched_gsd_tree")
+    dest = dest_root / "get-shit-done"
+    shutil.copytree(GSD_HOME, dest)
+
+    target = dest / "bin" / "lib" / "state-document.generated.cjs"
+    target.write_bytes(pristine_bytes)
+    assert _LOCAL_PATCH_MARKER not in target.read_text(encoding="utf-8")
+
+    return dest
+
+
+@_GSD_SKIP
+def test_bug_a_prose_line_survives_begin_phase(tmp_path) -> None:
+    """Against the INSTALLED (patched) toolchain, a STATE.md prose line
+    containing `**Status:**` inside a code span survives `begin-phase`
+    byte-identical, AND the real `Status:` field under `## Current Position`
+    has moved -- proving the command genuinely ran and the survival is not
+    an accident of nothing happening."""
+    root = tmp_path
+    _seed_planning(root, _fixture_state_md())
+
+    proc = _run_begin_phase(GSD_TOOLS_CJS, root, phase=901, name="demo", plans=3)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+    after = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    assert PROSE_LINE in after
+    current_position = after.split("## Current Position")[1]
+    assert "Status: Ready to execute" not in current_position
+
+
+def test_bug_a_fixture_is_sensitive_to_the_unpatched_regex(
+    tmp_path, unpatched_gsd_tree
+) -> None:
+    """Negative control: the SAME fixture, run against a throwaway copy of
+    the toolchain whose state-document.generated.cjs is the pristine
+    (pre-Bug-A-patch) content, DOES corrupt the prose line -- proving the
+    prior test's pass is a real, sensitive assertion and not vacuous."""
+    root = tmp_path
+    _seed_planning(root, _fixture_state_md())
+
+    unpatched_tools_cjs = unpatched_gsd_tree / "bin" / "gsd-tools.cjs"
+    proc = _run_begin_phase(
+        unpatched_tools_cjs, root, phase=901, name="demo", plans=3
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+    after = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    assert PROSE_LINE not in after
+    accumulated_context = after.split("## Accumulated Context")[1].split(
+        "## Current Position"
+    )[0]
+    surviving_line = [
+        line for line in accumulated_context.splitlines() if line.strip()
+    ][0]
+    assert surviving_line.startswith("- [Phase 170]:"), (
+        "expected the corruption signature (line rewritten in place, not "
+        f"removed entirely); got: {surviving_line!r}"
+    )

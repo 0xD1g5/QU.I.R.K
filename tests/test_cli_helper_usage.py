@@ -81,6 +81,10 @@ _COVERED_FILES = [
     # by migrating to run_fork_safe and added here so a future direct
     # subprocess.run() reintroduced there is caught too.
     "tests/test_uat_runner_version_check.py",
+    # Phase 182-01: test_gsd_state_patch.py spawns `node` subprocesses
+    # against the GSD toolchain (installed and throwaway copies); added here
+    # from birth so a future direct subprocess.run() there is caught too.
+    "tests/test_gsd_state_patch.py",
 ]
 
 # Attribute names on a `subprocess` module reference that spawn a real
