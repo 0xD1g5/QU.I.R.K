@@ -147,7 +147,7 @@ survives package regeneration or its loss is detected.
 **Plans**: 5 plans
 
 Plans:
-- [ ] 182-01-PLAN.md — argv/cwd contract lock-down + Bug A prose-survival fixture with negative control
+- [x] 182-01-PLAN.md — argv/cwd contract lock-down + Bug A prose-survival fixture with negative control
 - [ ] 182-02-PLAN.md — Bug B preserve-unknown-keys merge in `syncStateFrontmatter`, RED-first on both ROADMAP paths
 - [ ] 182-03-PLAN.md — `gsd-local-patches/` + `gsd-pristine/` durability layer and loss-detection test
 - [ ] 182-04-PLAN.md — report-only corruption audit, CLAUDE.md operating rule, upstream filing
@@ -232,7 +232,7 @@ routes gain coverage.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 182. Tooling Integrity | 0/? | Not started | — |
+| 182. Tooling Integrity | 1/5 | In progress | — |
 | 183. Fork-Safety Gate Derivation | 0/? | Not started | — |
 | 184. Skip Registry Closure | 0/? | Not started | — |
 | 185. a11y Baseline Environment | 0/? | Not started | — |

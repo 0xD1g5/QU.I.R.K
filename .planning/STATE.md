@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
-status: planning
-stopped_at: v5.19 opened — no phase started
-last_updated: "2026-09-03T00:00:00.000Z"
+status: executing
+stopped_at: "Completed 182-01-PLAN.md"
+last_updated: "2026-09-03T13:30:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 5
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -21,7 +21,33 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 181 — surfacing
+**Current focus:** Phase 182 — tooling-integrity
+
+**182-01 complete (2026-09-03):** argv/cwd contract lock-down + Bug A prose-survival fixture with
+a sensitivity-proving negative control. Confirmed and documented the `state begin-phase` argv
+contract: `--cwd <path>` is a native global flag on `gsd-tools.cjs` (spliced before dispatch),
+not a `subprocess` `cwd` kwarg, so it composes cleanly with `tests/cli_helpers.py::run_fork_safe`'s
+no-`cwd`-kwarg rule; `--phase`/`--name`/`--plans` are named flags only, positionals silently
+no-op. `tests/test_gsd_state_patch.py` created (3 tests, all pass on this machine; skips honestly
+via `GSD_TOOLCHAIN_AVAILABLE` where `~/.claude/get-shit-done/` is absent, e.g. CI):
+`test_begin_phase_cwd_contract_is_honoured` proves the contract via a real subprocess run and
+asserts the repo's real `.planning/STATE.md` is byte- and mtime-unchanged;
+`test_bug_a_prose_line_survives_begin_phase` proves the installed (patched) toolchain leaves a
+`**Status:**`-in-prose STATE.md line byte-identical while the real `Status:` field under
+`## Current Position` genuinely moves; `test_bug_a_fixture_is_sensitive_to_the_unpatched_regex`
+is a negative control — a session-scoped `unpatched_gsd_tree` fixture copies the whole toolchain
+into a temp dir, swaps in the pristine pre-patch `state-document.generated.cjs` (falling back to
+the `.bak` since `gsd-pristine/` doesn't exist until 182-03), asserts the swap is genuinely
+unpatched (no `LOCAL PATCH (2026-09-03)` marker) before use, and reproduces the exact documented
+corruption signature (prose line rewritten in place, trailing clause destroyed). RED-proved by
+hand: with the marker guard temporarily disabled and the fixture pointed at the patched file
+instead of the `.bak`, the fixture's own defensive assertion fired and the test errored —
+confirming the guard is live, not tautological; reverted before commit, installed toolchain never
+mutated (`git diff` over `~/.claude/get-shit-done/` N/A — outside this repo, verified via `diff`
+against the committed `.bak`). `tests/test_gsd_state_patch.py` added to GATE-03's
+`_COVERED_FILES` in `tests/test_cli_helper_usage.py` (still all-green, 2 passed). No
+`subprocess.run` anywhere in the new file (`grep -c "subprocess\."` → 0). TOOL-01 spans plans
+01/03 — NOT marked complete in REQUIREMENTS.md. See `182-01-SUMMARY.md`.
 
 **181-08 complete (2026-09-02):** docs — report-interpretation.md and operators-guide.md section
 16 brought current with what Phase 181 actually ships. Deleted the now-false "None of this is
@@ -385,12 +411,16 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 181 (surfacing) — PLANS COMPLETE, AWAITING VERIFICATION
+Phase: 182 (tooling-integrity) — EXECUTING
+Plan: 1 of 5
+Status: 182-01 complete (argv/cwd contract + Bug A prose-survival fixture with negative control).
+Plans 182-02 through 182-05 not yet started.
+
+**Prior phase:** Phase 181 (surfacing) — PLANS COMPLETE, AWAITING VERIFICATION
 Plan: 9 of 9
 Status: All 9 plans of Phase 181 executed; ROADMAP's top-level Phase 181 checkbox deliberately
 left unchecked pending the verifier (ARTIFACT-01, `scripts/verify_phase_gates.py`, gated on
-`181-VERIFICATION.md`, not yet produced). This closes v5.18's engineering scope — no further
-phases are planned in this milestone as of this plan.
+`181-VERIFICATION.md`, not yet produced). This closed v5.18's engineering scope.
 
 **181-09 complete (2026-09-03):** Phase 181 close-out. One foreground full-suite run
 (`.venv/bin/pytest -q -m ""`, 406.83s) — `1 failed, 4014 passed, 42 skipped, 73 xfailed, 4
