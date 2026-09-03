@@ -320,7 +320,7 @@ Plans:
 - [x] 181-05-PLAN.md — `ExecContent.burndown` / `.closure_refusal` and their single-source writer helpers
 - [x] 181-06-PLAN.md — CLI / HTML / DOCX burndown sections with byte-identical captions
 - [x] 181-07-PLAN.md — ADVISORY-01 closing evidence: `tests/test_cve_score_guard.py` extension + negative control
-- [ ] 181-08-PLAN.md — `report-interpretation.md` §16 rewrite, `operators-guide.md` §16, Obsidian sync
+- [x] 181-08-PLAN.md — `report-interpretation.md` §16 rewrite, `operators-guide.md` §16, Obsidian sync
 - [ ] 181-09-PLAN.md — Phase close-out: foreground full suite, every UAT gate, Series 181, hand-closed requirements
 
 ### Progress

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-07-PLAN.md (ADVISORY-01 closing evidence in tests/test_cve_score_guard.py); 181-02/181-03/181-04/181-05/181-06 status tracked by sibling execution, not re-asserted here
-last_updated: "2026-09-03T04:10:00.000Z"
+stopped_at: Completed 181-08-PLAN.md (docs — report-interpretation.md/operators-guide.md section 16 rewritten for shipped closure surfacing, Obsidian vault synced); 181-02/181-03/181-04/181-05/181-06/181-07 status tracked by sibling execution, not re-asserted here
+last_updated: "2026-09-02T00:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 35
-  percent: 95
+  completed_plans: 36
+  percent: 97
 ---
 
 # Project State
@@ -22,6 +22,22 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 181 — surfacing
+
+**181-08 complete (2026-09-02):** docs — report-interpretation.md and operators-guide.md section
+16 brought current with what Phase 181 actually ships. Deleted the now-false "None of this is
+rendered yet" sentence from `docs/report-interpretation.md` outright (not appended to) and
+restructured section 16 into four subsections: where closure state appears (CLI/HTML/DOCX
+burndown, CBOM VEX, dashboard roadmap surface), reading the per-deadline burndown (no total, no
+percentage — CLOSE-03), reading the CBOM VEX state-mapping table (`not_observed` -> `IN_TRIAGE`
+given its own paragraph explaining why `NOT_AFFECTED` is never used), and when closure was not
+computed (refusal stated explicitly, must not be read as "nothing closed"). Extended
+`docs/operators-guide.md` section 16 with a "Where it surfaces" subsection, dashboard honest-
+absence behavior (explicit not-computed message, never a zero table, never a 500 via the reused
+advisory firewall), and a troubleshooting entry pointing at the five `refused_*` comparability
+axes — the pre-existing four-state model and no-closure-override material left intact. Both
+guides synced byte-clean (0 differing lines post-frontmatter) to vault `Digs` per LIVE-03.
+Commits `a2088efd`/`11e5a2eb`. SURF-02 spans plans 02/05/06/08/09, SURF-03 spans 04/08/09 —
+neither marked complete in REQUIREMENTS.md; both close in 181-09. See `181-08-SUMMARY.md`.
 
 **181-06 complete (2026-09-03):** burndown rendering across CLI markdown, HTML, and DOCX.
 `BURNDOWN_ADVISORY_CAPTION` / `_BURNDOWN_ADVISORY_CAPTION` added as three byte-identical
