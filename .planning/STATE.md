@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 180-08-PLAN.md; awaiting gsd-verifier for 180-VERIFICATION.md
-last_updated: "2026-09-02T21:00:00.000Z"
+stopped_at: Completed 181-01-PLAN.md (tests/test_cbom_vex.py, RED); next is 181-02-PLAN.md
+last_updated: "2026-09-02T00:00:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 28
-  completed_plans: 28
-  percent: 60
+  completed_phases: 4
+  total_plans: 37
+  completed_plans: 29
+  percent: 78
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 180 — closure-verification
+**Current focus:** Phase 181 — surfacing
 Plan 176-08 (user-directed, executed after the user hard-quit and relaunched a wedged Docker
 Desktop) closed both outstanding LABRUN-01 GAP cases against a live `core + ssh-weak` lab:
 `UAT-5-11` → **PASS**, `UAT-6-08` → **FAIL**. The FAIL exposed **TRIAGE-176-03**, a product defect
@@ -218,7 +218,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   points at the real `.planning/milestones/v4.7-phases/` directory per locked D-01 (no
   reconstructed ROADMAP/REQUIREMENTS docs); `.planning/v4.7-MILESTONE-AUDIT.md` relocated to
   `.planning/milestones/` alongside its siblings, with `HORIZON.md`'s citation updated. Four
-  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Ready to execute`
+  archived ROADMAP.md files (v4.10, v5.1, v5.12, v5.4) gained a `**Status:**Executing Phase 181
   header if none existing; existing header was re-verified, not duplicated. `.planning/REQUIREMENTS.md` gained a
   `## Declaration Format` section documenting the canonical `- [ ] **REQ-ID**: description` format
   for all future requirement entries (archive backfill explicitly out of scope). See
@@ -317,9 +317,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 180 (closure-verification) — PLANS COMPLETE, AWAITING VERIFIER
-Plan: 8 of 8 complete
-Status: All 8 plans executed and committed. `180-VALIDATION.md` closed
+Phase: 181 (surfacing) — EXECUTING
+Plan: 1 of 9
+Status: Executing Phase 181
 (`wave_0_complete: true`, 0 pending rows). CLOSE-01/02/03 hand-closed with cited evidence;
 ADVISORY-01 deliberately left OPEN (standing through Phase 181). Series 180 UAT authored.
 ROADMAP's `- [ ] **Phase 180: Closure Verification**` top-level checkbox intentionally NOT
