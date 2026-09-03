@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: "Completed 182-04-PLAN.md"
-last_updated: "2026-09-03T14:53:36.000Z"
+stopped_at: "Completed 182-05-PLAN.md"
+last_updated: "2026-09-03T18:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -21,7 +21,68 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 182 — tooling-integrity
+**Current focus:** Phase 182 — tooling-integrity (all 5 plans executed; awaiting `/gsd:verify-phase`)
+
+**182-05 complete (2026-09-03) — phase gate and close-out, with a load-bearing finding:**
+Full suite ran once in the foreground (`.venv/bin/pytest -q -m ""`, 406.85s): `1 failed, 4021
+passed, 42 skipped, 73 xfailed, 4 xpassed`. The single failure is the documented baseline
+`tests/test_skip_registry.py::test_no_unregistered_skips` (`DEFER-172-01`, Phase 184's); the
+symmetric difference against that baseline set is empty in both directions — nothing this phase
+touched regressed, and nothing Phase 184 owns was accidentally fixed. `tests/test_gsd_state_patch.py`
+(7 passed) and `tests/test_cli_helper_usage.py` (2 passed, GATE-03's count unchanged) both green.
+`182-VALIDATION.md`'s per-task map is filled with real plan/task IDs and `✅ green` statuses,
+`wave_0_complete: true`, Sign-Off boxes checked with an honest approval note.
+
+**The `state.*` verb demonstration (this plan's central purpose) found a live regression, not a
+clean retirement.** Per protocol: snapshotted `.planning/STATE.md` via `git show HEAD:`, then ran
+`node ~/.claude/get-shit-done/bin/gsd-tools.cjs state begin-phase --phase 182 --name
+tooling-integrity --plans 5 --cwd <repo-root>` against the real file. `git diff` showed BOTH
+hazards this task was built to catch: (1) frontmatter `status:` became a garbled fragment of a
+sentence — `` `-in-prose STATE.md line byte-identical while the real `Status:` field under" `` —
+lifted verbatim from a `` `**Status:**` ``-quoted clause at `.planning/STATE.md:82` (itself
+`182-05`'s own read-through of `test_bug_a_prose_line_survives_begin_phase`'s docstring); and (2)
+`stopped_at` reverted to a stale `Completed 180-07-PLAN.md` pulled from the archived `## Session
+Continuity` section, and `Plan: 4 of 5` in the body was reset to `Plan: 1 of 5`. Root cause,
+traced to source: `stateExtractField()` (`state-document.generated.cjs:29`) has the **same
+unanchored** `\*\*Field:\*\*[ \t]*(.+)` bold pattern that `stateReplaceField()` had before 182-01's
+patch — 182-01 patched only the write-side function, never this sibling read-side one — so
+`buildStateFrontmatter()`'s `stateExtractField(bodyContent, 'Status')` call matched the first
+`**Status:**` occurrence ANYWHERE in the body, not the real field, and (per `normalizeStateStatus`)
+a non-empty non-keyword match is written through raw rather than falling back to `'unknown'`. A
+second, related gap: the `Stopped At` extractor's session-scoping guard (upstream bug #2444)
+matches only the literal header `## Session`; this project's own convention is `## Session
+Continuity`, which the guard's `/##\s*Session\s*\n/i` pattern does not match, so it silently fell
+through to an unscoped full-body search. Frontmatter key-by-key comparison against
+`/tmp/state-before.md`: no key was dropped (`gsd_state_version`, `milestone`, `milestone_name`,
+`status`, `stopped_at`, `last_updated`, `progress.*` all present before and after) — Bug B's
+preserve-unknown-keys merge itself worked correctly; the corruption was in the *values* fed into
+it by the still-unpatched extractor, not in the merge. Per the plan's explicit hazard protocol:
+restored `.planning/STATE.md` from the snapshot immediately (`git status --porcelain
+.planning/STATE.md` confirmed clean before any commit), recorded the reproduction here and in
+`182-05-SUMMARY.md`, and fell back to hand-editing this very entry. **TOOL-01 is reopened in
+`REQUIREMENTS.md`** (write-side fixed and behaviourally tested; read-side still corrupts) and a
+new **TOOL-04** requirement is filed for the two read-side gaps — unowned, no phase assigned yet.
+The Phases 180-181 hand-edit-only workaround is NOT fully retired: the write path
+(`state begin-phase`'s field replacement) is safe, but reading `.planning/STATE.md` through
+`state.*` verbs to derive frontmatter is not, until `stateExtractField()` gets the same anchor fix
+and the session-scoping guard is generalized past the literal `## Session` string.
+
+Durability layer confirmed intact independent of this finding:
+`node ~/.claude/get-shit-done/bin/verify-reapply-patches.cjs --patches-dir
+~/.claude/gsd-local-patches --config-dir ~/.claude --json` → `{"checked":2,"failures":0}`, both
+`get-shit-done/bin/lib/state-document.generated.cjs` and `get-shit-done/bin/lib/state.cjs`
+`status: "ok"`. `tests/test_gsd_state_patch.py`'s 7 nodes are the mechanical guarantee for what
+IS patched (the write-side Bug A fix and the Bug B preserve-unknown-keys merge); they do not cover
+`stateExtractField()`, which is why this gap slipped past them. Upstream filing status unchanged
+from 182-04: https://github.com/open-gsd/gsd-core/issues/4243 (open-gsd/gsd-core, filed
+2026-09-03 14:51 UTC) — TOOL-04's two new findings are not yet added to that issue and should be
+appended as a follow-up comment before Phase 183+ picks up TOOL-04.
+
+TOOL-01/02/03 hand-closed in `.planning/REQUIREMENTS.md` per this plan's mandate (never
+`requirements mark-complete`): TOOL-01 reopened rather than checked, TOOL-02 and TOOL-03 checked
+(unaffected by this finding), TOOL-04 added and left open. `.planning/ROADMAP.md`'s Phase 182
+checkbox is deliberately untouched — ARTIFACT-01 gates that flip on `182-VERIFICATION.md`, which
+the orchestrator's verifier produces, not this plan.
 
 **182-04 complete (2026-09-03):** Report-only corruption audit, CLAUDE.md operating rule, and
 upstream filing. Audit (`.planning/reports/182-state-corruption-audit.md`, gitignored, on disk
