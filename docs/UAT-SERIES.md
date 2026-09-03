@@ -1,7 +1,18 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-02 (v5.18 Phase 180 — Closure Verification, plan 180-08: Series 180
+**Last Updated:** 2026-09-03 (v5.18 Phase 181 — Surfacing, plan 181-09: Series 181 added
+(UAT-181-01..10; 8 PASS, 2 SKIP-GAP) for SURF-01 (CBOM VEX — `not_observed`→`IN_TRIAGE` never
+`NOT_AFFECTED`, one entry per remediation item, refused/`unmapped` silence, no fabricated CVE
+identity, CycloneDX 1.6 schema validity), SURF-02 (byte-identical burndown captions across
+CLI/HTML/DOCX, per-deadline sections with `unmapped` visible and no aggregate, explicit refusal
+disclosure), SURF-03 (dashboard closure badge + burndown table on the existing roadmap surface, no
+new tab/endpoint/hook, advisory firewall never 500), and ADVISORY-01's close (guard extended
+18→24 nodes, four real RED-then-revert negative-control injections). `UAT-181-09` (third-party
+SBOM tooling ingesting the VEX array) and `UAT-181-10` (a consultant's eyeball read of the
+rendered burndown) are both SKIP (GAP — no substitute coverage). SURF-01, SURF-02, SURF-03, and
+ADVISORY-01 all closed by hand in `.planning/REQUIREMENTS.md`. Earlier: v5.18 Phase 180 —
+Closure Verification, plan 180-08: Series 180
 added (UAT-180-01..08; 7 PASS, 1 SKIP-GAP) for CLOSE-01 (estate-separation digest,
 two-sided/machine-observed closure, zero human-assert affordances, `closure_verify` pipeline
 wiring), CLOSE-02 (`resurfaced` fourth state, retained regression history across a database
@@ -21918,3 +21929,345 @@ CLOSE-01/02/03 close by hand in `.planning/REQUIREMENTS.md` on this same phase-c
 (180-08) — see that file's traceability table for the evidence citation. ADVISORY-01 is a
 standing constraint across Phases 177-181 and is NOT dispositioned by this series — it remains
 open, extended (not amended) by `tests/test_remediation_advisory_guard.py`'s now-5-module guard.
+
+## Series 181: Surfacing (Phase 181 — v5.18)
+
+**Scope:** SURF-01 (closure state emitted as CycloneDX VEX in the CBOM), SURF-02 (advisory-only
+burndown in the CLI/HTML/DOCX reports with byte-identical captions), SURF-03 (burndown on the
+dashboard, reusing the existing advisory firewall, no new tab), and ADVISORY-01's close (the
+standing constraint that has stood open since Phase 177 — this series records the closing
+evidence but the requirement's disposition itself lives in `.planning/REQUIREMENTS.md`).
+Closure COMPUTATION (the two-sided condition, `resurfaced`, per-deadline burndown) is Phase 180's
+and remains out of scope here — this series covers only whether that computed state is honestly
+surfaced to a client or operator without becoming a second path into the readiness score.
+
+### UAT-181-01: `not_observed` Never Publishes as a Safety Claim in the CBOM
+
+**ID:** UAT-181-01
+**Title:** `_VEX_STATE_MAP` maps `not_observed` to `ImpactAnalysisState.IN_TRIAGE`, never
+`NOT_AFFECTED` — proven three independent ways: identity assertion, a map-values membership check
+against the whole table, and a comment-stripped source scan of `quirk/cbom/builder.py`
+**Maps to:** SURF-01 (T-181-01, the phase's highest-severity failure mode)
+
+**What to test:** The one behavior that would publish an unverified safety claim into a
+machine-readable artifact a client may feed to their own tooling, if it regressed.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_cbom_vex.py::test_not_observed_maps_to_in_triage tests/test_cbom_vex.py::test_not_affected_is_absent_from_the_entire_state_map tests/test_cbom_vex.py::test_builder_source_never_names_not_affected -q
+```
+
+**Pass Criteria:** All 3 tests pass. `not_observed` items serialize with `analysis.state ==
+"in_triage"`. The literal string `NOT_AFFECTED` appears nowhere in `quirk/cbom/builder.py`'s
+non-comment source.
+
+**Falsifiability:** turns red if `_VEX_STATE_MAP["not_observed"]` is ever changed to
+`NOT_AFFECTED`, or if a new code path writes that mapping outside `_make_vex_entry`.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_cbom_vex.py::test_not_observed_maps_to_in_triage tests/test_cbom_vex.py::test_not_affected_is_absent_from_the_entire_state_map tests/test_cbom_vex.py::test_builder_source_never_names_not_affected -q` — 3 passed, re-run individually during this task)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plan 181-01 (RED spec) and Plan 181-03 (GREEN); Plan 181-03's SUMMARY records
+a real RED-then-revert negative control against this exact mapping.
+
+---
+
+### UAT-181-02: One VEX Entry Per Remediation Item, State Mapping Locked, Refused Scans and `unmapped` Emit Nothing, No Fabricated CVE Identity
+
+**ID:** UAT-181-02
+**Title:** `build_cbom(remediation_items=...)` emits exactly one `Vulnerability` per remediation
+ITEM (never per constituent fingerprint), keyed by slug; `closed`→`RESOLVED`,
+`open`/`resurfaced`→`EXPLOITABLE`; `resurfaced` is distinguished from `open` via
+`VulnerabilityAnalysis.detail`/`first_issued`/`last_updated`, not a separate enum state; a refused
+scan or an `unmapped`/unknown state returns `None` from `_make_vex_entry` and the CBOM carries no
+`vulnerabilities` key at all; no entry fabricates `id`/`source`/`ratings`/`affects`
+**Maps to:** SURF-01
+
+**What to test:** The full cardinality, mapping, silence, and no-fabrication contract locked by
+Plan 181-01's 15-test spec and proven end-to-end against a real database and the CycloneDX 1.6
+schema by Plan 181-03's 3 integration tests.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_cbom_vex.py -q
+```
+
+**Pass Criteria:** All 18 tests pass (15 unit + 3 end-to-end). Item cardinality is 1:1 with
+remediation items, not findings. `Vulnerability.id` is the slug — no `CVE-` prefix, `source is
+None`, `ratings`/`affects` empty. A scan-level refusal counter (e.g. `refused_scope_mismatch`)
+produces a CBOM with no `vulnerabilities` key.
+
+**Falsifiability:** turns red if cardinality shifts to per-fingerprint, if a refused scan or
+`unmapped` state emits an entry, or if any CVE-shaped identity is fabricated.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_cbom_vex.py -q` — 18 passed, re-run during this task)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plans 181-01/181-03. `quirk/reports/writer.py::_load_remediation_items`
+scopes to the current `scan_run_id` only — a second scan's items are proven absent in
+`TestEndToEnd`.
+
+---
+
+### UAT-181-03: The Emitted CBOM Still Validates Against the CycloneDX 1.6 Schema With the New Array
+
+**ID:** UAT-181-03
+**Title:** A CBOM carrying the new `vulnerabilities` array validates cleanly against
+`JsonStrictValidator(SchemaVersion.V1_6)` — the new surface does not break the pre-existing schema
+contract
+**Maps to:** SURF-01
+
+**What to test:** That adding a `vulnerabilities` array to a previously-vulnerabilities-free
+builder output does not regress schema validity, since `Vulnerability` has no `required` fields
+per the 1.6 schema.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_cbom_vex.py -k schema -q
+```
+
+**Pass Criteria:** Test passes; the schema-validation end-to-end test in `TestEndToEnd` confirms
+the emitted CBOM validates.
+
+**Falsifiability:** turns red if a future field addition to `Vulnerability`/`VulnerabilityAnalysis`
+violates the 1.6 schema's shape.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_cbom_vex.py -k schema -q` — 1 passed, 17 deselected)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plan 181-03. CBOM golden fixtures were NOT regenerated —
+`_normalize_bom_for_snapshot()` never serializes `vulnerabilities`, confirmed unchanged before and
+after.
+
+---
+
+### UAT-181-04: Burndown Advisory Captions Are Byte-Identical Across CLI, HTML, and DOCX
+
+**ID:** UAT-181-04
+**Title:** `BURNDOWN_ADVISORY_CAPTION` (html_renderer) and `_BURNDOWN_ADVISORY_CAPTION`
+(docx_renderer) — plus the `technical.py` module-level constant — are three independently
+duplicated string constants held byte-equal by a single parity test, mirroring the Phase 161
+HWLC-19 vendor-trend precedent, NOT a shared `content_model.py` constant
+**Maps to:** SURF-02
+
+**What to test:** The real caption-parity mechanism (181-CONTEXT.md's original description of a
+shared constant was itself retracted by its own addendum) with a real RED-then-revert negative
+control proving the gate can actually fail.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_burndown_render_sections.py::test_advisory_caption_is_identical_across_all_three_surfaces -q
+```
+
+**Pass Criteria:** Test passes; all three per-renderer caption constants are byte-identical.
+
+**Falsifiability:** turns red if any one of the three duplicated constants drifts from the other
+two — proven for real in Plan 181-06's SUMMARY (one-character injection into
+`_BURNDOWN_ADVISORY_CAPTION`, observed RED naming the exact drift, reverted, confirmed GREEN).
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_burndown_render_sections.py::test_advisory_caption_is_identical_across_all_three_surfaces -q` — 1 passed, re-run during this task)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plan 181-06; negative control transcript reproduced verbatim in
+`181-06-SUMMARY.md`.
+
+---
+
+### UAT-181-05: Per-Deadline Burndown Renders on All Three Surfaces, `unmapped` Always Visible, No Aggregate or Percentage Anywhere
+
+**ID:** UAT-181-05
+**Title:** CLI markdown, HTML, and DOCX each render 2030-12-31 (`key_establishment`) and
+2031-12-31 (`digital_signature`) as separate, overlapping-by-design sections; the `unmapped`
+bucket always renders, labelled "No deadline mapped", never omitted at zero count; no surface ever
+prints a `total`/`overall`/`aggregate`/`remediated` figure or a literal `%` character anywhere in
+the burndown section (CLOSE-03 — buckets overlap by design, so a sum would double-count)
+**Maps to:** SURF-02
+
+**What to test:** The core "one number is under-specified against the mandate" claim, surfaced
+concretely on the client-facing report rather than just computed in Phase 180.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_burndown_render_sections.py -k "PerDeadlineSections or no_aggregate" -q
+```
+
+**Pass Criteria:** All tests pass. Both deadline dates appear on all three surfaces. `unmapped`
+is present even when empty. Zero `%` characters and zero aggregate-total vocabulary anywhere in
+the rendered burndown section substring.
+
+**Falsifiability:** turns red if a bucket is silently summed, if `unmapped` is filtered when
+empty, or if any surface introduces a percentage/total figure.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_burndown_render_sections.py -k "PerDeadlineSections or no_aggregate" -q` — 4 passed, 12 deselected)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plan 181-06. The HTML renderer's burndown `<table>` deliberately omits its
+usual `width:100%` inline style — the only renderer table under this literal no-`%`-character
+constraint (documented in `181-06-SUMMARY.md`'s Decisions Made).
+
+---
+
+### UAT-181-06: A Refused Comparability Check Names the Differing Axis Explicitly, Never Presented as "Nothing Closed"
+
+**ID:** UAT-181-06
+**Title:** All 5 scan-level comparability-refusal reasons from `scans_are_comparable`'s
+`COMPARABILITY_REASONS` ladder render the same writer.py-computed `statement` verbatim on all
+three surfaces, checked first (before burndown), and none of `nothing closed`/`0 closed`/`no open
+items` ever appears when a refusal is rendered
+**Maps to:** SURF-02
+
+**What to test:** The false-negative twin of the false-closure risk — a refusal misread as a
+clean result would be worse than no report at all.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_burndown_render_sections.py -k "Refusal" -q
+```
+
+**Pass Criteria:** All tests pass, including the 5-way parametrization over every
+`COMPARABILITY_REASONS` refusal reason.
+
+**Falsifiability:** turns red if a refusal reason is added to `scans_are_comparable` without a
+matching axis phrase in `writer.py::_REFUSAL_AXIS`, or if any surface's refusal branch is ever
+skipped in favor of an empty/zero burndown table.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_burndown_render_sections.py -k "Refusal" -q` — 7 passed, 9 deselected)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plans 181-05 (single-computation `_closure_refusal_from_counters`) and
+181-06 (three-surface rendering, refusal branch checked first).
+
+---
+
+### UAT-181-07: Closure State and Burndown Render on the Existing Dashboard Roadmap Surface — No New Tab, No New Endpoint, No New Hook, Firewall Never Returns 500
+
+**ID:** UAT-181-07
+**Title:** `closure_state`/`slug` on `RoadmapNode` (joined by `slug_for_title()` on the raw title,
+never the generated display `node_id`) and a `ClosureBurndown` payload ride the existing
+`/api/scan/latest` response, rendered as a closure `Badge` and a "Remediation Burndown" `Table` on
+the existing `roadmap.tsx` page; the advisory-only `_derive_*` firewall is reused verbatim — a
+raise-injection proves the route returns 200 with `burndown: null`, never a 500
+**Maps to:** SURF-03
+
+**What to test:** That the dashboard follows the same honest-absence, never-a-parallel-guard
+pattern as every prior advisory surface (`vendor_pqc_trends`, `hardware_findings`), and that no
+new attack surface (route, hook, tab) was added to deliver it.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_dashboard_closure_burndown.py -q
+git status --porcelain quirk/dashboard/api/routes/ src/dashboard/src/hooks/
+```
+
+**Pass Criteria:** All 13 tests pass, including the raise-injection test observing status 200.
+`git status --porcelain` on both paths is empty in the final committed tree — no new route file,
+no new hook file.
+
+**Falsifiability:** turns red if the closure lookup key ever becomes the generated `node_id`
+instead of `slug_for_title()` on the raw title, if a lookup failure ever empties the whole
+roadmap instead of degrading gracefully, or if the route starts returning a non-200 on a closure
+lookup failure.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_dashboard_closure_burndown.py -q` — 13 passed; `git status --porcelain quirk/dashboard/api/routes/ src/dashboard/src/hooks/` — empty)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plan 181-04. `npm run build && npm run lint` both exited 0 per that plan's
+SUMMARY; not re-run in this task since no frontend file changed since 181-04/181-08.
+
+---
+
+### UAT-181-08: ADVISORY-01's Closing Evidence — Extended Guard Plus a Real Four-Injection Negative Control
+
+**ID:** UAT-181-08
+**Title:** `tests/test_cve_score_guard.py` grows from 18 to 24 passing nodes: a strict
+"no-SCORE_WEIGHTS-reference" guard over the four zero-scoring-dependency surfaces
+(`quirk.cbom.builder`, `quirk.reports.technical`, `quirk.reports.html_renderer`,
+`quirk.reports.docx_renderer`) plus an AST call-argument scan (with a `>= 1` call-count floor) over
+the two modules that legitimately call `compute_readiness_score`/`build_evidence_summary`
+(`quirk.reports.writer`, `quirk.dashboard.api.routes.scan`); all four prescribed negative-control
+injections were run for real, observed RED, and reverted
+**Maps to:** ADVISORY-01 (the requirement itself, hand-closed in this same plan, citing this case)
+
+**What to test:** That closure/burndown state reaches no scoring input anywhere in Phase 181's
+four new surfaces — the machine-enforced proof that finally closes a requirement that has stood
+open since Phase 177.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_cve_score_guard.py -q
+.venv/bin/pytest tests/test_remediation_advisory_guard.py -q
+```
+
+**Pass Criteria:** `test_cve_score_guard.py` → 24 passed. `test_remediation_advisory_guard.py` →
+4 passed, byte-unchanged from Phase 180 (its `quirk/intelligence/*`-scoped floor does not rise
+this phase, per 181-CONTEXT.md addendum §3).
+
+**Falsifiability:** turns red if any of the four burndown-surface modules gains a
+`SCORE_WEIGHTS` reference or a scoring import, or if `burndown`/`closure_refusal`/any of the 11
+forbidden Phase-181 closure names ever enters a
+`compute_readiness_score`/`build_evidence_summary` call's arguments — proven for real by Plan
+181-07's four independent RED-then-revert injections (a `closure_bonus` `SCORE_WEIGHTS` key, a
+`SCORE_WEIGHTS` reference added to `technical.py`, a `scoring` import added to `builder.py`, and a
+`burndown=None` argument added to writer.py's `build_evidence_summary` call — each produced the
+exact named failure and was reverted).
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_cve_score_guard.py -q` — 24 passed; `.venv/bin/pytest tests/test_remediation_advisory_guard.py -q` — 4 passed, both re-run during this task)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (181-09 phase-close plan execution)
+**Notes:** Landed by Plan 181-07; all four negative-control transcripts reproduced verbatim in
+`181-07-SUMMARY.md`. ADVISORY-01 closes here, in `.planning/REQUIREMENTS.md`, citing this case as
+its evidence.
+
+---
+
+### UAT-181-09: A Client's SBOM Tooling Ingests the CBOM VEX Array Without Error
+
+**ID:** UAT-181-09
+**Title:** A third-party SBOM/VEX consumer (e.g. Dependency-Track, a client's internal tooling)
+parses a QUIRK-generated CBOM's `vulnerabilities` array cleanly
+**Maps to:** SURF-01
+
+**What to test:** Schema validity (proven automated in UAT-181-03) is necessary but not
+sufficient — real third-party tooling can reject technically-valid-but-unusual shapes.
+
+**Pass Criteria:** N/A — requires third-party tooling not present in this repo.
+
+**Falsifiability:** N/A — manual-only, honestly recorded as a gap rather than fabricated.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage: schema validation against CycloneDX 1.6 is proven automated in UAT-181-03, but no actual third-party VEX/SBOM consumer is present in this repository to prove real-world ingestion.)
+**Date:** 2026-09-03  **Tester:** N/A — no substitute exists (181-09 phase-close plan execution)
+**Notes:** Per `181-VALIDATION.md`'s Manual-Only Verifications table. `GAP` is a valid PASSING
+disposition under `tests/test_uat_zero_undispositioned_gate.py` — it polices unrecorded cases, not
+uncovered ones.
+
+---
+
+### UAT-181-10: A Consultant Reading the Rendered Burndown Does Not Mistake `not_observed` for "Clean"
+
+**ID:** UAT-181-10
+**Title:** A human reviewing an HTML or DOCX report visually confirms that `not_observed`/
+`in_triage` state reads as "not yet verified," never as "no issues" or "clean"
+**Maps to:** SURF-02
+
+**What to test:** Render-parity tests in `tests/test_burndown_render_sections.py` assert field and
+label PRESENCE, not the report's overall visual impression on a first-time human reader — this is
+an explicit, project-standard limitation (see MEMORY: "Report render tests assert presence, not
+appearance").
+
+**Pass Criteria:** N/A — requires human visual/eyeball judgement of a rendered document.
+
+**Falsifiability:** N/A — manual-only, honestly recorded as a gap rather than fabricated.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage: label text and field presence are proven automated across all three surfaces, but whether the overall rendered document reads honestly to a first-time human reader is a visual/eyeball judgement no automated test can substitute for.)
+**Date:** 2026-09-03  **Tester:** N/A — no substitute exists (181-09 phase-close plan execution)
+**Notes:** Per `181-VALIDATION.md`'s Manual-Only Verifications table. `not_observed` is rendered
+as "Not verified this scan" on the dashboard (never "Clean"/"No issues") per T-181-15's mitigation
+— but confirming that reads honestly in context is a human judgement call.
+
+---
+
+**Series 181 disposition.** 8 of 10 cases are `[x] PASS`, each individually re-run during this
+close-out task (not inferred from any prior SUMMARY) plus the single foreground full-suite run
+this plan owns (`.venv/bin/pytest -q -m ""`, 406.83s;
+`1 failed, 4014 passed, 42 skipped, 73 xfailed, 4 xpassed`, sole failing node
+`tests/test_skip_registry.py::test_no_unregistered_skips` matching the `DEFER-172-01` baseline).
+`UAT-181-09` and `UAT-181-10` are both `SKIP (GAP — no substitute coverage)` — a client's own SBOM
+tooling ingesting the VEX array, and a consultant's eyeball read of the rendered burndown, per
+`181-VALIDATION.md`'s Manual-Only Verifications table; neither is deferred to an existing test
+node because none exists. SURF-01, SURF-02, SURF-03 close by hand in `.planning/REQUIREMENTS.md`
+on this same phase-close plan (181-09) — see that file's traceability table for the evidence
+citations. ADVISORY-01 closes here too, citing UAT-181-08's guard extension and negative control
+as its evidence — the first requirement in this milestone to close on an observed RED/GREEN
+negative control rather than the guard's mere existence.
