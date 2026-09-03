@@ -21,6 +21,8 @@ from cyclonedx.model.bom import Bom, BomMetaData
 from cyclonedx.model.bom_ref import BomRef
 from cyclonedx.model.component import Component, ComponentType
 from cyclonedx.model.dependency import Dependency
+from cyclonedx.model.impact_analysis import ImpactAnalysisState
+from cyclonedx.model.vulnerability import Vulnerability, VulnerabilityAnalysis
 from cyclonedx.model.crypto import (
     AlgorithmProperties,
     CertificateProperties,
@@ -519,12 +521,60 @@ def _sensor_prefix(ep) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Pass 5 — VEX emission from remediation items (Phase 181 SURF-01)
+# ---------------------------------------------------------------------------
+# T-181-01: a `not_observed` remediation item means "we did not verify" — it
+# must map to ImpactAnalysisState.IN_TRIAGE and never to the state that
+# asserts safety was established. That other state was never established
+# here, so routing to it would publish an unverified safety claim inside a
+# machine-readable artifact a client may feed straight into their own
+# vulnerability-management tooling, with no human reading QUIRK's caveats in
+# between. This map, and _make_vex_entry below, are the only places closure
+# state crosses that boundary — keep every route through here honest.
+_VEX_STATE_MAP: dict[str, ImpactAnalysisState] = {
+    "closed": ImpactAnalysisState.RESOLVED,
+    "open": ImpactAnalysisState.EXPLOITABLE,
+    "resurfaced": ImpactAnalysisState.EXPLOITABLE,
+    "not_observed": ImpactAnalysisState.IN_TRIAGE,
+}
+
+
+def _make_vex_entry(item: dict) -> Optional[Vulnerability]:
+    """Build one VEX Vulnerability entry from a remediation item dict, or
+    return None when the item's state is not in _VEX_STATE_MAP (unmapped or
+    unknown states emit nothing — an entry there would imply an assessment we
+    explicitly declined to perform).
+
+    The CycloneDX 1.6 JSON schema's definitions.vulnerability carries no
+    "required" key (verified against the schema itself, not merely the
+    Python constructor), so this minimal, honest entry is fully legal — no
+    CVE-shaped id, no source, no ratings are invented to satisfy it.
+    """
+    state = _VEX_STATE_MAP.get(item.get("state"))
+    if state is None:
+        return None
+
+    analysis = VulnerabilityAnalysis(
+        state=state,
+        detail=item.get("detail"),
+        first_issued=item.get("first_seen"),
+        last_updated=item.get("last_updated"),
+    )
+    return Vulnerability(
+        id=item["slug"],
+        description=item.get("title"),
+        analysis=analysis,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
 def build_cbom(
     endpoints: list[CryptoEndpoint],
     hw_devices: list[dict] | None = None,
+    remediation_items: list[dict] | None = None,
 ) -> Bom:
     """Convert a list of CryptoEndpoint scan results into a CycloneDX Bom.
 
@@ -533,12 +583,18 @@ def build_cbom(
     2. Pass 2 — build certificate components (one per TLS endpoint with cert info)
     3. Pass 3 — build protocol components (one per endpoint)
     4. Pass 4 (NEW, Phase 129): Hardware FIRMWARE components from hw_devices.
-    5. Assemble Bom with metadata
+    5. Pass 5 (NEW, Phase 181 SURF-01): VEX entries from remediation items.
+    6. Assemble Bom with metadata
 
     Args:
         endpoints: List of CryptoEndpoint ORM objects from a scan run.
         hw_devices: list of annotated hw_device dicts (from _detect_crypto_bridges()).
                     None or [] skips Pass 4 entirely (backward-compatible).
+        remediation_items: list of remediation item dicts (slug, title, state,
+                    first_seen, last_updated, detail) for the CURRENT scan
+                    only. None or [] skips Pass 5 entirely (backward-compatible)
+                    — a zero-item scan produces output identical to before
+                    this parameter existed.
 
     Returns:
         A CycloneDX Bom instance with CRYPTOGRAPHIC_ASSET components.
@@ -1196,8 +1252,20 @@ def build_cbom(
         if getattr(c, "type", None) == ComponentType.DEVICE and c.components
     ]
 
+    # ------------------------------------------------------------------ #
+    # Pass 5 — VEX entries from remediation items (Phase 181 SURF-01)    #
+    # Mirrors Pass 4's `if hw_devices:` gating idiom above.               #
+    # ------------------------------------------------------------------ #
+    vex_entries: list[Vulnerability] = []
+    if remediation_items:
+        for item in remediation_items:
+            entry = _make_vex_entry(item)
+            if entry is not None:
+                vex_entries.append(entry)
+
     return Bom(
         components=all_components,
         metadata=metadata,
         dependencies=[root_dep] + device_fw_deps,
+        vulnerabilities=vex_entries or None,
     )
