@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-06-PLAN.md (burndown rendering on CLI markdown/HTML/DOCX, SURF-02 partial — spans plans 02/05/06/08/09); 181-02/181-03/181-04/181-05 status tracked by sibling execution, not re-asserted here
-last_updated: "2026-09-03T03:23:00.000Z"
+stopped_at: Completed 181-07-PLAN.md (ADVISORY-01 closing evidence in tests/test_cve_score_guard.py); 181-02/181-03/181-04/181-05/181-06 status tracked by sibling execution, not re-asserted here
+last_updated: "2026-09-03T04:10:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 34
-  percent: 92
+  completed_plans: 35
+  percent: 95
 ---
 
 # Project State
@@ -370,8 +370,26 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 181 (surfacing) — EXECUTING
-Plan: 3 of 9
+Plan: 7 of 9
 Status: Executing Phase 181
+
+**181-07 complete (2026-09-03):** ADVISORY-01's closing machine-enforced evidence.
+`tests/test_cve_score_guard.py` extended (18 -> 24 passing nodes) with a two-tier guard:
+strict "no scoring reference" form over the four Phase 181 surfaces with no legitimate
+scoring dependency (`quirk.cbom.builder`, `quirk.reports.technical`,
+`quirk.reports.html_renderer`, `quirk.reports.docx_renderer` — `_BURNDOWN_SURFACE_MODULES`),
+plus an AST call-node-argument scan (`ast.get_source_segment`) with a `>= 1` call-count floor
+over the two modules that legitimately call `compute_readiness_score`/`build_evidence_summary`
+(`quirk.reports.writer`, `quirk.dashboard.api.routes.scan` — `_SCORE_COMPUTING_MODULES`),
+mirroring `executive.py`'s Phase 157 exclusion precedent. All four prescribed RED-then-revert
+negative-control injections were run for real in the working tree (closure_bonus SCORE_WEIGHTS
+key, SCORE_WEIGHTS reference in technical.py, scoring import in builder.py, burndown kwarg in
+writer.py's build_evidence_summary call) — each produced the exact named RED, each reverted,
+`git status --porcelain quirk/` confirmed empty. `tests/test_remediation_advisory_guard.py`
+is byte-unchanged (`git diff --stat` empty; that file's `quirk/intelligence/*`-scoped floor
+does not rise this phase per 181-CONTEXT.md addendum §3). No production source modified.
+ADVISORY-01 left `- [ ]` / Pending — hand-closed in 181-09, which cites this plan's SUMMARY as
+evidence. Commit `158a3d5d`. See `181-07-SUMMARY.md`. **Next step:** 181-08-PLAN.md.
 
 **181-03 complete (2026-09-02):** SURF-01 turned GREEN. `quirk/cbom/builder.py` gained Pass 5 —
 `_VEX_STATE_MAP` (`closed`→`RESOLVED`, `open`/`resurfaced`→`EXPLOITABLE`, `not_observed`→

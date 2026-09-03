@@ -319,7 +319,7 @@ Plans:
 - [x] 181-04-PLAN.md — Dashboard closure state + burndown on the existing roadmap surface (no new tab)
 - [x] 181-05-PLAN.md — `ExecContent.burndown` / `.closure_refusal` and their single-source writer helpers
 - [x] 181-06-PLAN.md — CLI / HTML / DOCX burndown sections with byte-identical captions
-- [ ] 181-07-PLAN.md — ADVISORY-01 closing evidence: `tests/test_cve_score_guard.py` extension + negative control
+- [x] 181-07-PLAN.md — ADVISORY-01 closing evidence: `tests/test_cve_score_guard.py` extension + negative control
 - [ ] 181-08-PLAN.md — `report-interpretation.md` §16 rewrite, `operators-guide.md` §16, Obsidian sync
 - [ ] 181-09-PLAN.md — Phase close-out: foreground full suite, every UAT gate, Series 181, hand-closed requirements
 
@@ -331,7 +331,7 @@ Plans:
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
 | 179. Remediation Item Model | 6/6 | Complete | 2026-09-02 |
 | 180. Closure Verification | 8/8 | Complete | 2026-09-02 |
-| 181. Surfacing | 5/9 | In progress | 2026-09-03 |
+| 181. Surfacing | 6/9 | In progress | 2026-09-03 |
 
 ### Carried into v5.18 from the v5.17 close
 
