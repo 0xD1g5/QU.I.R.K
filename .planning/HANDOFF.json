@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "paused_at": "2026-09-03T14:53:04.021233+00:00",
+  "paused_at": "2026-09-03T14:56:29.718458+00:00",
   "milestone": {
     "version": "v5.19",
     "name": "Drain & Tooling Integrity",
@@ -10,9 +10,9 @@
     "phase": "182-tooling-integrity",
     "phase_title": "Tooling Integrity",
     "plans_total": 5,
-    "plans_complete": 3,
-    "current_plan": "182-04",
-    "current_plan_state": "work done, SUMMARY.md not yet written",
+    "plans_complete": 4,
+    "current_plan": "182-05",
+    "current_plan_state": "not started \u2014 182-04 completed after the first handoff snapshot",
     "next_plan": "182-05 (phase gate + close-out)"
   },
   "completed_this_session": [
@@ -21,13 +21,9 @@
     "182-01: --cwd argv contract proven; Bug A prose-survival fixture + sensitivity negative control",
     "182-02: Bug B patched (preserve-unknown-keys + fs.existsSync guard) \u2014 verified end to end",
     "182-03: gsd-local-patches/ + gsd-pristine/ created; verifier reports checked:2 failures:0",
-    "182-04: corruption audit (report-only, 0 live instances), CLAUDE.md rule, upstream issue #4243 FILED"
+    "182-04 COMPLETE: report-only audit (0 new corruption), CLAUDE.md rule added, upstream issue #4243 filed, stale archived-repo references corrected in plan/context/report/CLAUDE.md"
   ],
   "remaining": {
-    "182-04": [
-      "Write 182-04-SUMMARY.md (untracked)",
-      "Hand-edit STATE.md + ROADMAP.md plan-progress to 4/5"
-    ],
     "182-05": [
       "Foreground full suite, 20+ min timeout",
       "Close TOOL-01/02/03 BY HAND",
@@ -71,9 +67,15 @@
   ],
   "background_processes": [],
   "files_modified_uncommitted": [],
-  "unpushed_commits": 12,
+  "unpushed_commits": 15,
   "verification": {
     "tests_green": "tests/test_gsd_state_patch.py + test_cli_helper_usage.py -> 9 passed",
     "upstream_issue": "https://github.com/open-gsd/gsd-core/issues/4243"
-  }
+  },
+  "handoff_corrections": [
+    {
+      "at": "2026-09-03T14:56:29.718458+00:00",
+      "note": "First handoff was written while 182-04's executor was still running and recorded 'SUMMARY not yet written'. The executor then completed the plan \u2014 SUMMARY.md (18,780 B), STATE.md, and ROADMAP 4/5 all landed. Corrected. This is the frozen-measurement pattern the phase documents, occurring in the phase's own handoff."
+    }
+  ]
 }
