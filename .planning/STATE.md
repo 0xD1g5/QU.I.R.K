@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 180-06-PLAN.md
-last_updated: "2026-09-03T00:23:48.419Z"
+stopped_at: Completed 180-07-PLAN.md
+last_updated: "2026-09-03T00:31:09.436Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
   percent: 60
 ---
 
@@ -318,7 +318,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 180 (closure-verification) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 
 **179-05 complete (2026-09-02):** Documentation-only plan. `remediation_aliases:` documented in
@@ -662,6 +662,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 180 P04 | 35min | 3 tasks | 2 files |
 | Phase 180 P05 | ~40min | 3 tasks | 2 files |
 | Phase 180 P06 | 35min | 3 tasks | 3 files |
+| Phase 180 P07 | 25min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -988,6 +989,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 180]: D-21: OPEN_LIKE_STATES named constant so a counter forgetting resurfaced fails visibly
 - [Phase 180]: D-22: CLOSURE_EVENT_TYPES allowlist lives in remediation.py, not models.py (mirrors T-155-03)
 - [Phase 180]: D-23: remediation_closure_events stores no host/port -- already on remediation_item_fingerprints
+- [Phase 180]: D-39/D-40: ADVISORY-01 AST guard extended to 5 modules (adds closure.py, burndown.py), checked floor raised 2->5, negative control re-run separately against both new modules — Phase 180 built the largest advisory closure surface in the project; an unguarded module would silently defeat ADVISORY-01's firewall
 
 ### Pending Todos
 
@@ -1157,8 +1159,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-03T00:23:48.412Z
-Stopped at: Completed 180-06-PLAN.md
+Last session: 2026-09-03T00:31:09.428Z
+Stopped at: Completed 180-07-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
