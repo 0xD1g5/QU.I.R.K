@@ -12,6 +12,23 @@ hardware_eol as one machine-enforced boundary.
 
 Phase 157 (T-157-05) extends the guard again to ``hardware_forecast`` — the
 new EOL/tier forecast narrative module — by name.
+
+Phase 181 (ADVISORY-01, plan 181-07) extends the guard a final time, to close
+out a requirement standing since Phase 177: remediation/closure/burndown
+state must never feed the quantum-readiness score. This is a DIFFERENT guard
+from ``tests/test_remediation_advisory_guard.py`` — that file is an AST
+import-walk scoped to ``quirk/intelligence/*`` by its own directory-anchor
+constant, and Phase 181 adds no module there, so its floor does not rise.
+Phase 181's new surfaces (VEX impact-state mapping in
+``quirk/cbom/builder.py``, and burndown rendering in ``quirk/reports/*`` and
+``quirk/dashboard/api/routes/scan.py``) land exactly in THIS file's existing
+report/CBOM/dashboard scope, following the same template as the Phase 155-160
+blocks above. Two of those surfaces — ``quirk/reports/writer.py`` and
+``quirk/dashboard/api/routes/scan.py`` — legitimately call
+``compute_readiness_score``/``build_evidence_summary`` (computing the score
+is part of their job, the same reason ``executive.py`` is excluded from the
+Phase 157 block above), so they are guarded at the AST call-argument level
+instead of by the strict "no scoring reference" form.
 """
 from __future__ import annotations
 
@@ -454,3 +471,234 @@ def test_no_vendor_trend_key_in_score_weights() -> None:
         f"SCORE_WEIGHTS must never contain vendor-trend-derived keys "
         f"(T-160-04): {bad_keys}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 181 (ADVISORY-01 / plan 181-07) — advisory-only firewall extended to
+# the closure/burndown surfaces.
+#
+# This is NOT the same guard file as tests/test_remediation_advisory_guard.py.
+# That file is an AST import-walk over quirk/intelligence/* (5 modules after
+# Phase 180). Phase 181 adds NO module under quirk/intelligence/, so that
+# file's floor does not rise and it is not touched by this plan. Phase 181's
+# new code lives in report, CBOM, and dashboard modules — exactly this file's
+# existing scope — so this is the file that closes ADVISORY-01.
+# ---------------------------------------------------------------------------
+
+# The four Phase 181 surfaces with NO legitimate scoring dependency. Adding a
+# new closure/burndown-rendering surface without adding it here is the
+# failure this guard exists to prevent.
+_BURNDOWN_SURFACE_MODULES = (
+    "quirk.cbom.builder",             # Plan 181-03 — VEX impact-state mapping
+    "quirk.reports.technical",        # Plan 181-06 — CLI burndown section
+    "quirk.reports.html_renderer",    # Plan 181-06 — HTML burndown section
+    "quirk.reports.docx_renderer",    # Plan 181-06 — DOCX burndown section
+)
+
+
+def _burndown_surface_sources():
+    """Yield (module_path, comment-stripped source) for every Phase 181
+    zero-scoring-dependency surface.
+
+    Sources are read through _strip_comment_lines() so an explanatory
+    comment naming SCORE_WEIGHTS can neither satisfy nor break the gate
+    (mirrors T-161-23 / T-181-22).
+    """
+    import importlib
+    import pathlib
+
+    for name in _BURNDOWN_SURFACE_MODULES:
+        module = importlib.import_module(name)
+        yield module.__file__, _strip_comment_lines(
+            pathlib.Path(module.__file__).read_text(encoding="utf-8")
+        )
+
+
+def test_no_closure_key_in_score_weights() -> None:
+    """No key in quirk.intelligence.scoring.SCORE_WEIGHTS contains the
+    substring 'closure', 'burndown', 'remediation', 'not_observed', or
+    'resurfaced' (case-insensitive). ADVISORY-01: closure state moving the
+    readiness score would let remediation activity change a client's score
+    with no cryptographic posture change."""
+    from quirk.intelligence.scoring import SCORE_WEIGHTS
+
+    bad_keys = [
+        k for k in SCORE_WEIGHTS
+        if any(
+            term in k.lower()
+            for term in ("closure", "burndown", "remediation", "not_observed", "resurfaced")
+        )
+    ]
+    assert bad_keys == [], (
+        f"SCORE_WEIGHTS must never contain closure/burndown-derived keys "
+        f"(ADVISORY-01): closure state moving the score would let "
+        f"remediation activity change a client's score with no "
+        f"cryptographic posture change: {bad_keys}"
+    )
+
+
+def test_burndown_surface_modules_have_no_score_weights_reference() -> None:
+    """No comment-stripped source of quirk.cbom.builder,
+    quirk.reports.technical, quirk.reports.html_renderer, or
+    quirk.reports.docx_renderer references SCORE_WEIGHTS (ADVISORY-01):
+    closure state moving the readiness score would let remediation activity
+    change a client's score with no cryptographic posture change."""
+    for module_path, source in _burndown_surface_sources():
+        assert "SCORE_WEIGHTS" not in source, (
+            f"{module_path} must never reference SCORE_WEIGHTS (ADVISORY-01): "
+            f"closure state moving the score would let remediation activity "
+            f"change a client's score with no cryptographic posture change"
+        )
+
+
+def test_burndown_surface_modules_do_not_import_scoring() -> None:
+    """No comment-stripped source of quirk.cbom.builder,
+    quirk.reports.technical, quirk.reports.html_renderer, or
+    quirk.reports.docx_renderer imports the scoring engine or the
+    readiness-assessment module (ADVISORY-01): closure state moving the
+    readiness score would let remediation activity change a client's score
+    with no cryptographic posture change."""
+    for module_path, source in _burndown_surface_sources():
+        for forbidden in ("quirk.intelligence.scoring", "quirk.assessment.readiness_score"):
+            assert forbidden not in source, (
+                f"{module_path} must never import {forbidden!r} (ADVISORY-01): "
+                f"closure state moving the score would let remediation "
+                f"activity change a client's score with no cryptographic "
+                f"posture change"
+            )
+
+
+def test_scoring_module_does_not_reference_closure_or_burndown() -> None:
+    """The comment-stripped source of quirk/intelligence/scoring.py
+    references none of compute_burndown, RemediationItem, closure, burndown
+    — the scoring module never reaches back toward the closure substrate
+    (ADVISORY-01): closure state moving the readiness score would let
+    remediation activity change a client's score with no cryptographic
+    posture change."""
+    import pathlib
+
+    import quirk.intelligence.scoring as scoring_module
+
+    source = _strip_comment_lines(pathlib.Path(scoring_module.__file__).read_text())
+    for forbidden in ("compute_burndown", "RemediationItem", "closure", "burndown"):
+        assert forbidden not in source, (
+            f"quirk/intelligence/scoring.py must never reference {forbidden!r} "
+            f"(ADVISORY-01): closure state moving the score would let "
+            f"remediation activity change a client's score with no "
+            f"cryptographic posture change"
+        )
+
+
+# The two Phase 181 surfaces that DO legitimately compute a score. The
+# strict "no scoring reference" form above cannot apply to these — they
+# legitimately import and call compute_readiness_score()/
+# build_evidence_summary() as part of their actual job (the same reason
+# executive.py is excluded from the Phase 157 block above). What is guarded
+# instead is the DATA PATH: no closure or burndown name may appear inside
+# the evidence-construction or score-computation call itself.
+_SCORE_COMPUTING_MODULES = (
+    "quirk.reports.writer",
+    "quirk.dashboard.api.routes.scan",
+)
+
+# Phase 181 names that must never reach a score input (ADVISORY-01).
+_PHASE_181_CLOSURE_NAMES = (
+    "burndown",
+    "closure_refusal",
+    "closure_counters",
+    "compute_burndown",
+    "_load_closure_burndown",
+    "_load_remediation_items",
+    "_derive_closure_burndown",
+    "remediation_items",
+    "closure_state",
+    "not_observed",
+    "resurfaced",
+)
+
+
+def test_closure_names_never_enter_the_score_call_path() -> None:
+    """For each of quirk.reports.writer and
+    quirk.dashboard.api.routes.scan, every compute_readiness_score(...) and
+    build_evidence_summary(...) call node's source segment contains none of
+    the Phase 181 closure/burndown names. Asserts at least one such call
+    node is found per module, so a refactor that renames or removes the
+    call fails loudly rather than passing vacuously (ADVISORY-01)."""
+    import ast
+    import importlib
+    import pathlib
+
+    for module_name in _SCORE_COMPUTING_MODULES:
+        module = importlib.import_module(module_name)
+        source = pathlib.Path(module.__file__).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        call_count = 0
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            func_name = None
+            if isinstance(func, ast.Name):
+                func_name = func.id
+            elif isinstance(func, ast.Attribute):
+                func_name = func.attr
+            if func_name not in ("compute_readiness_score", "build_evidence_summary"):
+                continue
+            call_count += 1
+            segment = ast.get_source_segment(source, node) or ""
+            for forbidden in _PHASE_181_CLOSURE_NAMES:
+                assert forbidden not in segment, (
+                    f"{module.__file__}: a compute_readiness_score/"
+                    f"build_evidence_summary call contains forbidden name "
+                    f"{forbidden!r} (ADVISORY-01): closure state moving the "
+                    f"readiness score would let remediation activity change "
+                    f"a client's score with no cryptographic posture "
+                    f"change: {segment!r}"
+                )
+
+        # Vacuous-pass guard: a rename or removal of the scoring call must
+        # fail loudly, not silently pass by finding nothing.
+        assert call_count >= 1, (
+            f"{module.__file__}: expected at least 1 compute_readiness_score/"
+            f"build_evidence_summary call node, found {call_count} — the "
+            f"guard cannot verify a call path that no longer exists "
+            f"(ADVISORY-01)"
+        )
+
+
+def test_exec_content_burndown_never_reaches_findings_evaluation() -> None:
+    """The comment-stripped source of quirk/reports/writer.py never passes
+    'burndown' or 'closure_refusal' into any call whose name contains
+    'finding' (ADVISORY-01): the absent severity key on burndown/closure
+    data is the structural mechanism that keeps it out of findings
+    evaluation; this asserts the mechanism is actually relied upon rather
+    than merely present."""
+    import ast
+    import importlib
+    import pathlib
+
+    module = importlib.import_module("quirk.reports.writer")
+    source = pathlib.Path(module.__file__).read_text(encoding="utf-8")
+    stripped_source = _strip_comment_lines(source)
+    tree = ast.parse(stripped_source)
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        func_name = None
+        if isinstance(func, ast.Name):
+            func_name = func.id
+        elif isinstance(func, ast.Attribute):
+            func_name = func.attr
+        if not func_name or "finding" not in func_name.lower():
+            continue
+        segment = ast.get_source_segment(stripped_source, node) or ""
+        for forbidden in ("burndown", "closure_refusal"):
+            assert forbidden not in segment, (
+                f"quirk/reports/writer.py: a call to {func_name!r} (contains "
+                f"'finding') contains forbidden name {forbidden!r} "
+                f"(ADVISORY-01): closure/burndown data must never reach "
+                f"findings evaluation: {segment!r}"
+            )
