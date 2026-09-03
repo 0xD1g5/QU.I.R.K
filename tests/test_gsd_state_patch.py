@@ -33,6 +33,18 @@ that line. Patched locally 2026-09-03 to
 ``^(\\s*\\*\\*Field:\\*\\*[ \\t]*)(.*)$`` with the ``/m`` flag. Because the
 fix lives in a ``.generated.cjs`` file, a future regeneration silently
 reverts it -- this test file is the durable guard against that.
+
+Bug B: ``syncStateFrontmatter`` (``state.cjs:898``) rebuilt frontmatter from a
+fixed schema (``buildStateFrontmatter``, ``state.cjs:749``) instead of
+merging it with the existing frontmatter it had already read and then
+discarded. This silently deleted ``stopped_at``, the whole ``progress:``
+block, and any unrecognized key on every ``begin-phase`` -- and, with no
+``ROADMAP.md`` present, additionally reset ``milestone``/``milestone_name``
+to invented defaults (``v1.0``/``milestone``). Patched locally 2026-09-03 in
+``state.cjs`` (ordinary source, not generated) with a preserve-unknown-keys
+merge: ``existingFm`` overlaid by ``derivedFm``'s non-null keys. See
+``state.cjs``'s own ``LOCAL PATCH (2026-09-03)`` comment for the full
+rationale, including the accepted T-182-10 trade-off.
 """
 from __future__ import annotations
 
@@ -40,13 +52,16 @@ import shutil
 from pathlib import Path
 
 import pytest
+import yaml
 
 from tests.cli_helpers import run_fork_safe
 
-# Bug B (frontmatter reconstruction) is NOT patched by this plan -- Bug A
-# (the .generated.cjs anchored-regex fix) is the sole subject here. See
-# 182-CONTEXT.md decisions: Bug B's fix and its own fixtures are Wave 2's
-# scope (a different plan/file).
+# Bug B (frontmatter reconstruction, state.cjs's syncStateFrontmatter) is
+# patched and fixture-tested below (Wave 2 / 182-02), alongside Bug A's
+# fixtures above (182-01). Both patches live in the same installed toolchain
+# and both are exercised in this one file per 182-CONTEXT.md's discretion
+# note ("whether the QUIRK-side detection test lives in a new file or
+# extends an existing tooling test").
 
 # ---------------------------------------------------------------------------
 # Toolchain guard -- copies the VITEST_TOOLCHAIN_AVAILABLE idiom from
@@ -314,3 +329,133 @@ def test_bug_a_fixture_is_sensitive_to_the_unpatched_regex(
         "expected the corruption signature (line rewritten in place, not "
         f"removed entirely); got: {surviving_line!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Bug B: preserve-unknown-keys round-trip fixture, parametrized over
+# ROADMAP.md presence -- the two paths have documented different symptoms
+# (see .planning/reports/gsd-sdk-state-corruption-2026-09-03.md § Bug B).
+# ---------------------------------------------------------------------------
+
+_BUG_B_SEED_FRONTMATTER = """---
+gsd_state_version: 1.0
+milestone: v9.9
+milestone_name: Demo Milestone
+status: verifying
+stopped_at: mid-flight marker
+my_custom_key: must-survive
+last_updated: "2026-09-03T00:00:00.000Z"
+progress:
+  total_phases: 7
+  completed_phases: 6
+  percent: 86
+---
+
+## Current Position
+
+Phase: 900 (demo) — EXECUTING
+Status: Ready to execute
+"""
+
+# Minimal ROADMAP.md whose heading matches the seeded `milestone: v9.9` so
+# `getMilestoneInfo` (bin/lib/core.cjs) re-derives milestone/milestone_name
+# from disk rather than falling through to invented defaults.
+_BUG_B_ROADMAP_MD = """# Roadmap
+
+## Roadmap v9.9: Demo Milestone
+
+🚧 In progress
+"""
+
+
+def _parse_frontmatter(state_md_text: str) -> dict:
+    """Parse the YAML frontmatter block of a STATE.md-shaped document using
+    the repo's already-vendored PyYAML (see quirk/config.py), rather than a
+    hand-rolled parser or raw substring matching -- so a key that survives
+    with a mangled value still fails an assertion on its parsed value."""
+    assert state_md_text.startswith("---"), (
+        f"expected a leading frontmatter block, got: {state_md_text[:80]!r}"
+    )
+    _, fm_block, _rest = state_md_text.split("---", 2)
+    parsed = yaml.safe_load(fm_block)
+    assert isinstance(parsed, dict), f"frontmatter did not parse to a dict: {parsed!r}"
+    return parsed
+
+
+@_GSD_SKIP
+@pytest.mark.parametrize("roadmap_present", [True, False])
+def test_bug_b_frontmatter_survives_begin_phase(tmp_path, roadmap_present) -> None:
+    """A round-trip fixture proving Bug B's preserve-unknown-keys merge:
+    `stopped_at`, the whole `progress:` block, and a NOVEL custom key (never
+    part of any schema) all survive `state begin-phase` unchanged, on BOTH
+    ROADMAP.md paths -- because the two paths have documented different
+    symptoms (see gsd-sdk-state-corruption-2026-09-03.md). When no
+    ROADMAP.md is present, `milestone`/`milestone_name` must NOT reset to
+    the invented defaults `v1.0`/`milestone`. When one IS present, the
+    re-derived milestone value must still win over the stale existing one
+    -- proving the merge direction (derivedFm overlays existingFm) is
+    correct, not merely that nothing was touched."""
+    root = tmp_path
+    roadmap_md = _BUG_B_ROADMAP_MD if roadmap_present else None
+    _seed_planning(root, _BUG_B_SEED_FRONTMATTER, roadmap_md=roadmap_md)
+
+    before = _parse_frontmatter(
+        (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+    )
+    assert before["stopped_at"] == "mid-flight marker"
+    assert before["progress"]["total_phases"] == 7
+
+    proc = _run_begin_phase(GSD_TOOLS_CJS, root, phase=901, name="demo", plans=3)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+    after = _parse_frontmatter(after_text)
+
+    # Test 1: stopped_at survives.
+    assert after.get("stopped_at") == "mid-flight marker", (
+        f"stopped_at was dropped by begin-phase (got: {after.get('stopped_at')!r})"
+    )
+
+    # Test 2: the whole progress: block survives with every seeded sub-key.
+    after_progress = after.get("progress")
+    assert after_progress is not None, (
+        f"progress block was dropped by begin-phase entirely (frontmatter: {after!r})"
+    )
+    assert after_progress.get("total_phases") == 7, (
+        f"progress.total_phases was lost or mutated (got: {after_progress!r})"
+    )
+    assert after_progress.get("completed_phases") == 6, (
+        f"progress.completed_phases was lost or mutated (got: {after_progress!r})"
+    )
+    assert after_progress.get("percent") == 86, (
+        f"progress.percent was lost or mutated (got: {after_progress!r})"
+    )
+
+    # Test 3: a never-schema'd custom key survives -- proving generality,
+    # not special-casing of the two named fields above.
+    assert after.get("my_custom_key") == "must-survive", (
+        f"my_custom_key (a novel, never-schema'd key) was dropped by "
+        f"begin-phase (got: {after.get('my_custom_key')!r})"
+    )
+
+    if not roadmap_present:
+        # Test 4: without a ROADMAP.md, the invented defaults must NOT appear.
+        assert after.get("milestone") != "v1.0", (
+            f"milestone was reset to the invented default 'v1.0' with no "
+            f"ROADMAP.md present (got: {after.get('milestone')!r})"
+        )
+        assert after.get("milestone_name") != "milestone", (
+            f"milestone_name was reset to the invented default 'milestone' "
+            f"with no ROADMAP.md present (got: {after.get('milestone_name')!r})"
+        )
+    else:
+        # Test 5: with a ROADMAP.md, re-derivation still wins over the stale
+        # existing value -- proving the merge does not freeze old data.
+        assert after.get("milestone") == "v9.9", (
+            f"milestone should be re-derived from ROADMAP.md as 'v9.9' "
+            f"(got: {after.get('milestone')!r})"
+        )
+        assert after.get("milestone_name") == "Demo Milestone", (
+            f"milestone_name should be re-derived from ROADMAP.md as "
+            f"'Demo Milestone' (got: {after.get('milestone_name')!r})"
+        )
