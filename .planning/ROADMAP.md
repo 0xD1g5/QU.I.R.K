@@ -310,7 +310,18 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
   3. Burndown appears on the dashboard, reusing the existing advisory-surface firewall tuple rather
      than adding a parallel guard. `tests/test_cve_score_guard.py` is extended by name to cover the
      new state, proving closure never reaches the quantum-readiness score.
-**Plans**: TBD
+**Plans**: 9 plans
+
+Plans:
+- [ ] 181-01-PLAN.md — Wave 0: `tests/test_cbom_vex.py` — VEX spec, leading with `not_observed` → `IN_TRIAGE`
+- [ ] 181-02-PLAN.md — Wave 0: `tests/test_burndown_render_sections.py` — caption parity, no aggregate, refusal disclosure
+- [ ] 181-03-PLAN.md — CBOM VEX Pass 5 in `builder.py`, `_load_remediation_items()`, `closure_counters` threading
+- [ ] 181-04-PLAN.md — Dashboard closure state + burndown on the existing roadmap surface (no new tab)
+- [ ] 181-05-PLAN.md — `ExecContent.burndown` / `.closure_refusal` and their single-source writer helpers
+- [ ] 181-06-PLAN.md — CLI / HTML / DOCX burndown sections with byte-identical captions
+- [ ] 181-07-PLAN.md — ADVISORY-01 closing evidence: `tests/test_cve_score_guard.py` extension + negative control
+- [ ] 181-08-PLAN.md — `report-interpretation.md` §16 rewrite, `operators-guide.md` §16, Obsidian sync
+- [ ] 181-09-PLAN.md — Phase close-out: foreground full suite, every UAT gate, Series 181, hand-closed requirements
 
 ### Progress
 
