@@ -55,10 +55,27 @@ This module must NEVER reach the quantum-readiness weighting module
 ``tests/test_remediation_advisory_guard.py`` enforces the former with an
 AST-level guard.
 
-``resurfaced`` detection is Plan 05's responsibility, NOT this module's — Plan 05 reads
-and writes ``RESURFACED_STATE``/``OPEN_LIKE_STATES`` from ``quirk/intelligence/remediation.py``
-on top of what this module establishes. Pipeline wiring into ``run_scan.py`` is Plan 06's
-responsibility, NOT this module's — nothing here is called from the scan pipeline yet.
+CLOSE-02 (Plan 05, D-29..D-32) — ``resurfaced``/``reclosed``: a fingerprint whose most
+recent PERSISTED row says ``closed`` and that is detected again in the CURRENT scan
+becomes ``resurfaced``, never a brand-new finding and never silently folded back into
+``open``. D-29 rejects reading ``RemediationClosureEvent`` as an input to this decision —
+the event table is a RECORD of what happened, never a second source of truth an in-place
+row read has to agree with; the transition reads the persisted fingerprint row only. A
+``resurfaced`` fingerprint can close again through the identical two-sided condition that
+governs a first closure; the resulting STATE is ``closed`` (D-30 — there is no fifth
+``ITEM_STATES`` member for "closed after a regression"), but the EVENT written is
+``reclosed``, so the retained event sequence (``closed`` -> ``resurfaced`` -> ``reclosed``,
+each row APPENDED and never rewritten — see ``tests/test_closure_events.py``'s append-only
+guard) is what keeps the regression legible to a downstream reader. D-31: the resurface
+path consumes the SAME ``scans_are_comparable`` verdict already computed for the whole
+``compute_closure`` call — a scope mismatch or missing signature refuses resurfacing in
+BOTH directions, exactly like it refuses closing; there is deliberately no second gate.
+``closure_counts`` (D-32) is the single function that reports ``resurfaced`` separately
+AND folds it into ``open_like`` (reading ``OPEN_LIKE_STATES``, never an inline literal),
+so the two facts cannot drift apart across callers.
+
+Pipeline wiring into ``run_scan.py`` is Plan 06's responsibility, NOT this module's —
+nothing here is called from the scan pipeline yet.
 """
 from __future__ import annotations
 
@@ -67,8 +84,15 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
+from sqlalchemy import func
+
 from quirk.db import get_session
-from quirk.intelligence.remediation import CLOSURE_EVENT_TYPES
+from quirk.intelligence.remediation import (
+    CLOSURE_EVENT_TYPES,
+    ITEM_STATES,
+    OPEN_LIKE_STATES,
+    RESURFACED_STATE,
+)
 from quirk.intelligence.scope_signature import SCOPE_SIGNATURE_VERSION, family_for_protocol
 from quirk.models import (
     CryptoEndpoint,
@@ -97,9 +121,12 @@ COMPARABILITY_REASONS: Tuple[str, ...] = (
 _HEALTHY_STATUS = "healthy"
 _CLOSED_STATE = "closed"
 _TWO_SIDED_REASON = "two_sided_verified"
+_RESURFACE_REASON = "detected_after_closure"
 
 _COUNTER_KEYS: Tuple[str, ...] = (
     "closed",
+    "resurfaced",
+    "reclosed",
     "items_closed",
     "refused_no_prior",
     "refused_missing_signature",
@@ -284,12 +311,13 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 .filter(CryptoEndpoint.scan_run_id == scan_run_id)
                 .all()
             }
-            current_fingerprints = {
-                (row.slug, row.finding_fingerprint)
+            current_fp_rows: Dict[Tuple[Any, Any], RemediationItemFingerprint] = {
+                (row.slug, row.finding_fingerprint): row
                 for row in session.query(RemediationItemFingerprint)
                 .filter(RemediationItemFingerprint.scan_run_id == scan_run_id)
                 .all()
             }
+            current_fingerprints = set(current_fp_rows.keys())
 
             prior_rows = (
                 session.query(RemediationItemFingerprint)
@@ -327,21 +355,74 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     counters["refused_probe"] += 1
                     continue
 
-                # All five clauses hold — close it.
+                # All five clauses hold — close it. D-30: a fingerprint whose
+                # from_state is RESURFACED_STATE closes to the SAME state
+                # ("closed" — no fifth ITEM_STATES member), but the EVENT
+                # written is "reclosed" so the earlier regression stays
+                # legible in the retained event sequence.
                 from_state = row.state
                 row.state = _CLOSED_STATE
+                event_type = "reclosed" if from_state == RESURFACED_STATE else "closed"
                 _write_closure_event(
                     session,
                     slug=row.slug,
                     finding_fingerprint=row.finding_fingerprint,
                     scan_run_id=scan_run_id,
                     prior_scan_run_id=prior_scan_run_id,
-                    event_type="closed",
+                    event_type=event_type,
                     from_state=from_state,
                     to_state=_CLOSED_STATE,
                     reason=_TWO_SIDED_REASON,
                 )
-                counters["closed"] += 1
+                counters[event_type] += 1
+
+            # CLOSE-02 (D-29): resurface detection. Evaluated on the CURRENT
+            # scan's OWN fingerprint rows (a fresh row exists only when the
+            # finding was actually detected again this scan), using the SAME
+            # `comparable` verdict already established above (D-31 — no
+            # second gate). For each key detected this scan, read the most
+            # recently PERSISTED row for that exact (slug, finding_fingerprint)
+            # — not the event log (D-29 rejects replaying
+            # RemediationClosureEvent as a decision input; the event table is
+            # a record, never an input). If that persisted state was
+            # "closed", the reappearance is a regression, not a new finding:
+            # the CURRENT row becomes RESURFACED_STATE and one "resurfaced"
+            # event is appended. Idempotent: a current row already at
+            # RESURFACED_STATE or "closed" is left alone on a re-run.
+            for (fp_slug, fp_fingerprint), current_row in current_fp_rows.items():
+                if current_row.state in (RESURFACED_STATE, _CLOSED_STATE):
+                    counters["unchanged"] += 1
+                    continue
+
+                latest_prior_row = (
+                    session.query(RemediationItemFingerprint)
+                    .filter(
+                        RemediationItemFingerprint.slug == fp_slug,
+                        RemediationItemFingerprint.finding_fingerprint == fp_fingerprint,
+                        RemediationItemFingerprint.scan_run_id != scan_run_id,
+                    )
+                    .order_by(
+                        RemediationItemFingerprint.observed_at.desc(),
+                        RemediationItemFingerprint.id.desc(),
+                    )
+                    .first()
+                )
+                if latest_prior_row is None or latest_prior_row.state != _CLOSED_STATE:
+                    continue
+
+                current_row.state = RESURFACED_STATE
+                _write_closure_event(
+                    session,
+                    slug=fp_slug,
+                    finding_fingerprint=fp_fingerprint,
+                    scan_run_id=scan_run_id,
+                    prior_scan_run_id=latest_prior_row.scan_run_id,
+                    event_type="resurfaced",
+                    from_state=_CLOSED_STATE,
+                    to_state=RESURFACED_STATE,
+                    reason=_RESURFACE_REASON,
+                )
+                counters["resurfaced"] += 1
 
             # D-27: item-level rollup. A RemediationItem becomes closed only when it
             # has at least one constituent fingerprint (at the prior scan) and EVERY
@@ -377,3 +458,30 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             "closure: failed to compute closure for scan_run_id=%s", scan_run_id
         )
         return _zero_counters()
+
+
+def closure_counts(session: Any, *, scan_run_id: str) -> Dict[str, int]:
+    """Return state counts for `scan_run_id`'s fingerprint rows, plus `open_like`.
+
+    D-32: this is the SINGLE function that reports `resurfaced` separately AND folds
+    it into `open_like` (summed from `OPEN_LIKE_STATES`, never an inline literal) — two
+    callers computing "counted as open" and "reported separately" from the same pass
+    means they cannot disagree. Every member of `ITEM_STATES` is always present in the
+    result, seeded to zero when absent, so a consumer can never mistake "absent" for
+    "not applicable" (T-180-31) — this never returns a sparse dict or a single scalar.
+    """
+    counts: Dict[str, int] = {state: 0 for state in ITEM_STATES}
+    rows = (
+        session.query(
+            RemediationItemFingerprint.state,
+            func.count(RemediationItemFingerprint.id),
+        )
+        .filter(RemediationItemFingerprint.scan_run_id == scan_run_id)
+        .group_by(RemediationItemFingerprint.state)
+        .all()
+    )
+    for state, count in rows:
+        if state in counts:
+            counts[state] = count
+    counts["open_like"] = sum(counts[state] for state in OPEN_LIKE_STATES)
+    return counts
