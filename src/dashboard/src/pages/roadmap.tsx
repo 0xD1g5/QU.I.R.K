@@ -6,7 +6,41 @@ import type { RoadmapNode } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageSpinner } from "@/components/PageSpinner"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
+
+// Phase 181 SURF-03: closure_state labels. `not_observed` is deliberately
+// "Not verified this scan" — never "Clean" or "No issues" — so this label
+// cannot be read as a safety claim about an item that was simply not
+// compared this run.
+const CLOSURE_STATE_LABEL: Record<string, string> = {
+  open: "Open",
+  closed: "Closed",
+  not_observed: "Not verified this scan",
+  resurfaced: "Resurfaced",
+}
+
+const CLOSURE_STATE_COLOR: Record<string, string> = {
+  open: "hsl(0, 72%, 51%)",
+  closed: "hsl(142, 71%, 45%)",
+  not_observed: "hsl(240, 5%, 46%)",
+  resurfaced: "hsl(38, 92%, 50%)",
+}
+
+// Mirrors quirk/scanner/pqc_deadlines.py bucket labels; "unmapped" gets an
+// explicit human label rather than being dropped from the burndown table.
+const BURNDOWN_BUCKET_LABEL: Record<string, string> = {
+  key_establishment: "Key Establishment",
+  digital_signature: "Digital Signature",
+  unmapped: "Unmapped",
+}
 
 // Register dagre layout (DAG directed graph — per D-16).
 // D-24 (IN-02): log via console.error and re-throw genuine failures so
@@ -40,6 +74,7 @@ export function RoadmapPage() {
   const [selected, setSelected] = useState<RoadmapNode | null>(null)
 
   const nodes = useMemo(() => data?.roadmap?.nodes ?? [], [data])
+  const burndown = data?.burndown ?? null
 
   // Build nodesByPhase lookup for detail panel
   const nodeById = useMemo(() => {
@@ -253,6 +288,17 @@ export function RoadmapPage() {
             <Badge className="text-xs text-white" style={{ background: PHASE_COLORS[selected.phase] ?? "hsl(240 5% 46%)" }}>
               {PHASE_LABEL[selected.phase] ?? selected.timeframe}
             </Badge>
+            {/* Phase 181 SURF-03: closure badge is omitted entirely when
+                closure_state is null, rather than showing an "Unknown" chip —
+                null means "no persisted lookup available", not "unknown state". */}
+            {selected.closure_state && (
+              <Badge
+                className="text-xs text-white ml-1.5"
+                style={{ background: CLOSURE_STATE_COLOR[selected.closure_state] ?? "hsl(240 5% 46%)" }}
+              >
+                {CLOSURE_STATE_LABEL[selected.closure_state] ?? selected.closure_state}
+              </Badge>
+            )}
             {selected.why && (
               <p className="text-xs leading-relaxed text-muted-foreground">{selected.why}</p>
             )}
@@ -267,6 +313,59 @@ export function RoadmapPage() {
           style={{ width: "100%", height: "calc(100vh - 220px)", minHeight: 400 }}
         />
         <p className="text-xs text-muted-foreground mt-1.5 text-center">Click any node to inspect · Scroll to zoom · Drag to pan</p>
+      </div>
+
+      {/* Phase 181 SURF-03: Remediation Burndown — extends this existing
+          roadmap surface rather than adding a new tab, since closure is a
+          property of the roadmap items already displayed above. Table, not
+          a chart: this repo forbids conditionally mounting/unmounting chart
+          series children, and a table sidesteps that trap entirely while
+          being the more honest presentation for buckets that overlap by
+          design (see quirk/intelligence/burndown.py D-36). */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+        <h2 style={{ fontSize: 16, fontWeight: 600 }}>Remediation Burndown</h2>
+        <p className="text-xs text-muted-foreground">
+          Advisory — remediation closure state and burndown do not affect the readiness score.
+        </p>
+        {!burndown || burndown.unavailable_reason ? (
+          <p className="text-sm text-muted-foreground">
+            {burndown?.unavailable_reason ?? "Closure state was not computed for this scan."}
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Deadline</TableHead>
+                <TableHead>Standard</TableHead>
+                <TableHead className="text-right">Fingerprints</TableHead>
+                <TableHead className="text-right">Open</TableHead>
+                <TableHead className="text-right">Closed</TableHead>
+                <TableHead className="text-right">Not Verified</TableHead>
+                <TableHead className="text-right">Resurfaced</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* unmapped is rendered like any other bucket, never filtered
+                  out — some algorithms map to no deadline and the table
+                  should say so rather than implying complete coverage. No
+                  column here is ever summed across rows (D-36). */}
+              {burndown.buckets.map((bucket) => (
+                <TableRow key={bucket.bucket}>
+                  <TableCell className="font-medium">
+                    {BURNDOWN_BUCKET_LABEL[bucket.bucket] ?? bucket.bucket}
+                    {bucket.date ? ` (${bucket.date})` : " — No deadline mapped"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{bucket.standard ?? "—"}</TableCell>
+                  <TableCell className="text-right">{bucket.fingerprints}</TableCell>
+                  <TableCell className="text-right">{bucket.open}</TableCell>
+                  <TableCell className="text-right">{bucket.closed}</TableCell>
+                  <TableCell className="text-right">{bucket.not_observed}</TableCell>
+                  <TableCell className="text-right">{bucket.resurfaced}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   )

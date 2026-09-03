@@ -74,6 +74,10 @@ export interface RoadmapNode {
   timeframe: string
   why?: string
   phase: string
+  // Phase 181 SURF-03 — persisted closure state, joined by slug (never by
+  // the display `id` above, which has no stable identity across responses).
+  closure_state?: string | null
+  slug?: string | null
 }
 
 export interface RoadmapEdge {
@@ -85,6 +89,27 @@ export interface RoadmapEdge {
 export interface RoadmapData {
   nodes: RoadmapNode[]
   edges: RoadmapEdge[]
+}
+
+// ---- Closure Burndown (Phase 181 SURF-03) ----
+// Mirrors quirk/dashboard/api/schemas.py BurndownBucket/ClosureBurndown
+// field for field. Deliberately NO total/percent/severity/host/port field.
+
+export interface BurndownBucket {
+  bucket: string // "key_establishment" | "digital_signature" | "unmapped"
+  date?: string | null
+  standard?: string | null
+  fingerprints: number
+  open: number
+  closed: number
+  not_observed: number
+  resurfaced: number
+  open_like: number
+}
+
+export interface ClosureBurndown {
+  buckets: BurndownBucket[]
+  unavailable_reason?: string | null
 }
 
 export interface ScanMeta {
@@ -322,6 +347,7 @@ export interface ScanLatestResponse {
   hardware_findings: HardwareFinding[]  // Phase 128 HWCOMPAT-07
   hardware_devices: HardwareComponent[]  // Phase 134 CBOM-02
   partial_failures?: PartialFailureEntry[]  // Phase 67 RESUME-02
+  burndown?: ClosureBurndown | null  // Phase 181 SURF-03
 }
 
 export interface SampleFinding {
