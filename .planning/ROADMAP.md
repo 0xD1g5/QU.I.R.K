@@ -282,7 +282,7 @@ Plans:
 - [x] 180-02-PLAN.md — Wave 1 · CLOSE-03 · EO 14412 deadline catalog with the 11-row `PKE` audit, 90-day staleness gate, CI wiring, and CLAUDE.md's eighth gated catalog
 - [x] 180-03-PLAN.md — Wave 2 · CLOSE-02 · `resurfaced` as a fourth persisted state, `OPEN_LIKE_STATES`, and the append-only `remediation_closure_events` table
 - [x] 180-04-PLAN.md — Wave 3 · CLOSE-01 · The two-sided closure computation in `quirk/intelligence/closure.py`, every refusal landing on `not_observed`, with no human-assert affordance
-- [ ] 180-05-PLAN.md — Wave 4 · CLOSE-02 · Resurface and re-closure transitions with retained history, and `closure_counts` (counted as open, reported separately)
+- [x] 180-05-PLAN.md — Wave 4 · CLOSE-02 · Resurface and re-closure transitions with retained history, and `closure_counts` (counted as open, reported separately)
 - [ ] 180-06-PLAN.md — Wave 5 · CLOSE-03, CLOSE-01 · Per-deadline burndown (2030 and 2031 separately, never a scalar) plus the `closure_verify` pipeline phase
 - [ ] 180-07-PLAN.md — Wave 6 · ADVISORY-01 · AST guard extended to `closure.py`/`burndown.py` with a real negative control; operators-guide §16 and report-interpretation §16 + Obsidian sync
 - [ ] 180-08-PLAN.md — Wave 7 · CLOSE-01, CLOSE-02, CLOSE-03 · Phase close-out: one foreground full suite, hand-edited requirement closure, Series 180 UAT, VALIDATION closed, vault synced
@@ -319,7 +319,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 | 177. Release Toolchain Repair | 7/7 | Complete | 2026-09-02 |
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
 | 179. Remediation Item Model | 6/6 | Complete | 2026-09-02 |
-| 180. Closure Verification | 4/8 | In Progress|  |
+| 180. Closure Verification | 5/8 | In Progress|  |
 | 181. Surfacing | 0/? | Not started | — |
 
 ### Carried into v5.18 from the v5.17 close
