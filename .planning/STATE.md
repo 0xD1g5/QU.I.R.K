@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-03-PLAN.md (CBOM VEX emission, SURF-01 GREEN — spans plans 01/03/09); 181-02/181-04 status tracked by sibling execution, not re-asserted here
-last_updated: "2026-09-02T00:00:00.000Z"
+stopped_at: Completed 181-05-PLAN.md (ExecContent.burndown/closure_refusal data layer, SURF-02 partial — spans plans 02/05/06/08/09); 181-02/181-03/181-04 status tracked by sibling execution, not re-asserted here
+last_updated: "2026-09-03T03:16:56.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 32
-  percent: 86
+  completed_plans: 33
+  percent: 89
 ---
 
 # Project State
@@ -22,6 +22,24 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 181 — surfacing
+
+**181-05 complete (2026-09-03):** burndown/refusal data layer. `ExecContent` gains `burndown`
+and `closure_refusal` — both `field(default_factory=dict)`, both documented with the same
+no-`severity`/`host`/`port` advisory contract as `eol_forecast`/`vendor_pqc_trends`. `writer.py`
+gains `_REFUSAL_AXIS` (all five `_SCAN_LEVEL_REFUSAL_KEYS` mapped to distinct axis phrases),
+`_closure_refusal_from_counters()` (builds `"Closure not computed: {axis}."` from the pipeline's
+already-computed `closure_counters`, never a second comparability evaluation — `writer.py` still
+never calls `scans_are_comparable`/`compute_closure`), and `_load_closure_burndown()` (one
+non-fatal `compute_burndown()` read). `write_reports()` forces `burndown` empty whenever
+`closure_refusal` is populated so a refused scan can never present a table. `_scan_run_id`
+derivation hoisted to one definition, reused by both the new loader and the pre-existing CBOM
+call site. Renderers (`technical.py`/`html_renderer.py`/`docx_renderer.py`) deliberately
+untouched — that is 181-06's job; 13 of the 16 tests in `tests/test_burndown_render_sections.py`
+correctly remain RED pending that wave, 3 pass now. New `tests/test_burndown_writer_load.py`:
+18/18 pass, including 5 parametrized refusal-axis cases and 3 end-to-end `write_reports()`
+integration tests against a real SQLite DB proving refused/computed payloads are mutually
+exclusive. Commits `90c57856`/`ec9968be`. SURF-02 spans plans 02/05/06/08/09 — NOT marked
+complete in REQUIREMENTS.md. See `181-05-SUMMARY.md`.
 
 **181-04 complete (2026-09-02):** dashboard closure state + burndown surfacing. `_derive_roadmap()`
 now joins roadmap items to persisted `RemediationItem` rows via `slug_for_title()` (never the
