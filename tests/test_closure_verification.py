@@ -427,3 +427,81 @@ def test_compute_closure_is_idempotent(tmp_path):
     assert first_event_count == second_event_count == 1
     assert second["closed"] == 0  # already closed — idempotent re-run writes nothing new
 
+
+
+
+# ---------------------------------------------------------------------------
+# CLOSE-01 (D-28): no human-assert affordance
+# ---------------------------------------------------------------------------
+_FORBIDDEN_ARG_RE = re.compile(r"(?i)(force|manual|assert|mark|override).*(clos|remediat)")
+_ANY_CLOSE_OPTION_RE = re.compile(r"(?i)clos")
+_ADD_ARGUMENT_RE = re.compile(r"add_argument\(\s*([^)]*)\)")
+
+
+def _strip_comments_and_docstrings(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _scan_for_add_argument_violations(text: str):
+    cleaned = _strip_comments_and_docstrings(text)
+    violations = []
+    for match in _ADD_ARGUMENT_RE.finditer(cleaned):
+        call_args = match.group(1)
+        if _FORBIDDEN_ARG_RE.search(call_args) or _ANY_CLOSE_OPTION_RE.search(call_args):
+            violations.append(call_args)
+    return violations
+
+
+def test_no_human_assert_closure_affordance_in_cli():
+    files = [Path("run_scan.py")]
+    cli_dir = Path("quirk/cli")
+    if cli_dir.exists():
+        files.extend(sorted(cli_dir.rglob("*.py")))
+
+    violations = []
+    for f in files:
+        if not f.exists():
+            continue
+        violations.extend(
+            f"{f}: {v}" for v in _scan_for_add_argument_violations(f.read_text(encoding="utf-8"))
+        )
+
+    assert violations == [], f"human-assert closure affordance found: {violations}"
+
+
+def test_no_human_assert_closure_key_in_config():
+    config_source = _strip_comments_and_docstrings(Path("quirk/config.py").read_text(encoding="utf-8"))
+    attr_pattern = re.compile(r"(?i)\b\w*(clos|resurfac)\w*\b")
+    hits = attr_pattern.findall(config_source)
+    assert hits == [], f"closure/resurface-named attribute found in quirk/config.py: {hits}"
+
+    env_pattern = re.compile(r"(?i)QUIRK_[A-Z0-9_]*CLOS[A-Z0-9_]*")
+    env_hits = []
+    for f in sorted(Path("quirk").rglob("*.py")):
+        text = _strip_comments_and_docstrings(f.read_text(encoding="utf-8"))
+        found = env_pattern.findall(text)
+        if found:
+            env_hits.extend(f"{f}: {h}" for h in found)
+    assert env_hits == [], f"closure-named env var found: {env_hits}"
+
+
+def test_compute_closure_accepts_no_state_argument():
+    from quirk.intelligence.closure import compute_closure
+
+    assert tuple(inspect.signature(compute_closure).parameters) == ("db_path", "scan_run_id")
+
+
+def test_human_assert_regex_negative_control():
+    """A guard that can only pass is not a guard — prove it can fail."""
+    fixture_source = (
+        'parser.add_argument("--force-closed", dest="force_closed", '
+        'help="Manually mark a remediation item as closed")\n'
+    )
+    violations = _scan_for_add_argument_violations(fixture_source)
+    assert violations, "negative control fixture should have tripped the human-assert guard"
