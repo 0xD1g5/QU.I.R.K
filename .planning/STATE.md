@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-01-PLAN.md (tests/test_cbom_vex.py, RED); next is 181-02-PLAN.md
+stopped_at: Completed 181-02-PLAN.md (tests/test_burndown_render_sections.py, RED); next is 181-03-PLAN.md
 last_updated: "2026-09-02T00:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 29
-  percent: 78
+  completed_plans: 30
+  percent: 81
 ---
 
 # Project State
@@ -318,8 +318,29 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 181 (surfacing) — EXECUTING
-Plan: 1 of 9
+Plan: 2 of 9
 Status: Executing Phase 181
+
+**181-02 complete (2026-09-02):** `tests/test_burndown_render_sections.py` (16 tests, 444 lines)
+written as the RED-first executable spec for SURF-02's burndown report surface, before any
+renderer/payload code exists. Locks: caption parity via THREE independently-duplicated
+per-renderer string constants (`html_renderer.BURNDOWN_ADVISORY_CAPTION`,
+`docx_renderer._BURNDOWN_ADVISORY_CAPTION`, a `technical.py` module string) held equal by a
+test mirroring `test_vendor_trend_render_sections.py` exactly — NOT the shared-constant
+mechanism 181-CONTEXT.md's Decisions section originally described (that text was already
+retracted by its own `<addendum>`; the plan's mechanism-correction block made this explicit).
+The refusal statement is specced as single-computation data (one fixture string asserted
+byte-identical across all three surfaces), deliberately distinct from the duplicated captions.
+Per-deadline sections (2030-12-31, 2031-12-31) with `unmapped` visible and NO aggregate/
+percentage anywhere (CLOSE-03); a refused scan renders its `statement` verbatim on every
+surface and names the differing axis, parametrized over all five `scans_are_comparable`
+reasons. All 16 tests fail RED for the correct reason (`TypeError` on `ExecContent`'s not-yet-
+added `burndown`/`closure_refusal` kwargs, or `ImportError` on `render_burndown_section` /
+the caption constants); zero `quirk/` source changes. SURF-02 NOT marked complete (spans
+plans 02/05/06/08/09). Single commit `85b6c9cc` (all three tasks share one file, no
+meaningful intermediate collectable state, matching the 181-01 precedent). **Next step:**
+181-03-PLAN.md.
+
 (`wave_0_complete: true`, 0 pending rows). CLOSE-01/02/03 hand-closed with cited evidence;
 ADVISORY-01 deliberately left OPEN (standing through Phase 181). Series 180 UAT authored.
 ROADMAP's `- [ ] **Phase 180: Closure Verification**` top-level checkbox intentionally NOT
