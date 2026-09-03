@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-02 (v5.18 Phase 179 — Remediation Item Model, plan 179-06: Series 179
+**Last Updated:** 2026-09-02 (v5.18 Phase 180 — Closure Verification, plan 180-08: Series 180
+added (UAT-180-01..08; 7 PASS, 1 SKIP-GAP) for CLOSE-01 (estate-separation digest,
+two-sided/machine-observed closure, zero human-assert affordances, `closure_verify` pipeline
+wiring), CLOSE-02 (`resurfaced` fourth state, retained regression history across a database
+reopen), and CLOSE-03 (EO 14412 deadline catalog, per-deadline overlapping burndown, no scalar).
+`UAT-180-08` (a real second engagement against a genuinely remediated estate) is SKIP (GAP — no
+substitute coverage) — no fixture reproduces genuine remediation across two real, time-separated
+scans. CLOSE-01, CLOSE-02, CLOSE-03 closed by hand in `.planning/REQUIREMENTS.md`; ADVISORY-01
+remains open (standing constraint, Phases 177-181), its AST guard extended to 5 modules. Earlier:
+v5.18 Phase 179 — Remediation Item Model, plan 179-06: Series 179
 added (UAT-179-01..07; 6 PASS, 1 SKIP-DEFERRED) for REMED-01 slug-keyed items joined to finding
 fingerprints as an N-of-M fraction, REMED-02 per-scan scope signatures + positively-asserted
 probe health (the TRIAGE-176-03 shape closed), and REMED-03 `not_observed` as a first-class
@@ -21599,3 +21608,317 @@ logic and is out of this phase's scope. REMED-01/02/03 close by hand in `.planni
 on this same phase-close plan (179-06) — see that file's traceability table for the evidence
 citation. ADVISORY-01 is a standing constraint across Phases 177-181 and is NOT dispositioned by
 this series — it remains open, machine-enforced by `tests/test_cve_score_guard.py`.
+
+---
+
+## Series 180: Closure Verification (Phase 180 — v5.18)
+
+**Scope:** CLOSE-01 (machine-observed, two-sided closure computation), CLOSE-02 (`resurfaced` as
+a fourth persisted state with retained regression history), CLOSE-03 (per-deadline burndown
+against the EO 14412 catalog, never a scalar). Consumes Phase 179's substrate
+(`remediation_items`, `remediation_item_fingerprints`, `scan_scope_signatures`, probe health,
+`not_observed`) and produces closure state. Surfacing (CycloneDX VEX, CLI/HTML/DOCX burndown,
+dashboard) is explicitly out of scope — that is Phase 181. ADVISORY-01 remains a standing
+constraint across Phases 177-181 and is NOT dispositioned by this series.
+
+### UAT-180-01: Two Different Client Estates Under the Same Profile No Longer Collide on One Digest
+
+**ID:** UAT-180-01
+**Title:** `target_set_digest` (a SHA256 over the canonicalised, sorted target spec) separates
+two otherwise-identical-profile scans of different host/CIDR sets, and `SCOPE_SIGNATURE_VERSION`
+2.0.0 makes a pre-Phase-180 signature row structurally non-comparable to a post-Phase-180 row
+**Maps to:** CLOSE-01 (REMED-02 addendum — the estate-blind hole found in Phase 180 research)
+
+**What to test:** The literal defect the addendum records: `a.example.com` and `b.example.net`
+under an otherwise identical config produced the identical digest `e319b7...41dfcf` before the
+fix. `target_set_digest` closes that hole.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_scan_scope_signature.py -k estate -q
+.venv/bin/pytest tests/test_scan_scope_signature.py::test_signature_version_is_two_zero_zero -q
+```
+
+**Pass Criteria:**
+- All tests pass.
+- Two configs differing only in `cfg.targets` (fqdns or CIDRs) produce different
+  `target_set_digest` values and different overall signature digests.
+- `SCOPE_SIGNATURE_VERSION == "2.0.0"`.
+
+**Falsifiability:** turns red if `target_set_digest` is dropped from `_DIGEST_FIELDS`, or if the
+version bump is reverted, re-opening the collision.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_scan_scope_signature.py -k estate -q tests/test_scan_scope_signature.py::test_signature_version_is_two_zero_zero -q` — 4 passed, both commands run individually per Task 1's own verification, see `180-08-SUMMARY.md`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 01; RED-proof of the collision itself is recorded verbatim in
+`180-01-SUMMARY.md`.
+
+---
+
+### UAT-180-02: The EO 14412 Deadline Catalog Carries Exactly Four Verified Dates and Fails Its Own Staleness Gate After 90 Days
+
+**ID:** UAT-180-02
+**Title:** `quirk/scanner/pqc_deadlines.py`'s `PQC_DEADLINES` catalog carries the four dates
+verified against Federal Register Vol. 91 No. 121 (FR Doc 2026-12909), with `last_verified` +
+`source_url`, and `is_pqc_deadlines_stale()` trips strictly past 90 days
+**Maps to:** CLOSE-03
+
+**What to test:** The catalog contents, the 90-day cadence (matching QRAMM/CMVP precedent), and
+the strict `age > threshold` boundary — the eighth staleness-gated catalog CLAUDE.md now lists.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_pqc_deadline_staleness.py -q
+grep -n "pqc_deadline" CLAUDE.md .github/workflows/python-staleness.yml
+```
+
+**Pass Criteria:**
+- All 4 staleness tests pass.
+- CLAUDE.md's Staleness Review Cadence names `quirk/scanner/pqc_deadlines.py` as the eighth
+  gated file; `python-staleness.yml` runs `test_pqc_deadline_staleness.py`.
+- `PQC_DEADLINES` has exactly 4 keys: `key_establishment` (2030-12-31, FIPS 203),
+  `digital_signature` (2031-12-31, FIPS 186-5), `nist_subset` (2027-12-31), `far_contractor`
+  (2030-12-31).
+
+**Falsifiability:** turns red if a date literal drifts from the catalog, if the threshold is
+loosened past 90 days, or if the CI/CLAUDE.md wiring is removed.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_pqc_deadline_staleness.py -q` — 4 passed; `grep -n "pqc_deadline" CLAUDE.md .github/workflows/python-staleness.yml` — both files list it)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 02. CNSA 2.0 dates remain a documented omission
+(`media.defense.gov` 403s to non-browser agents) — not silently filled from secondary sources.
+
+---
+
+### UAT-180-03: `resurfaced` Is a Fourth Persisted State and the Closure-Event Table Is Append-Only
+
+**ID:** UAT-180-03
+**Title:** `ITEM_STATES` widens from three to four members (`resurfaced` added, never inserted
+mid-tuple), `OPEN_LIKE_STATES` names the counted-as-open grouping, and
+`remediation_closure_events` is a real, append-only table wired into `init_db()`
+**Maps to:** CLOSE-02
+
+**What to test:** The vocabulary/schema layer CLOSE-02 needs before any closure decision can be
+written — proven RED first (the pre-existing exact-tuple equality test failed on the fourth
+member; the event table did not exist).
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_remediation_item_model.py -k "item_states or open_like" -q
+.venv/bin/pytest tests/test_closure_events.py -q
+```
+
+**Pass Criteria:**
+- All tests pass.
+- `ITEM_STATES == ("open", "closed", "not_observed", "resurfaced")`.
+- `OPEN_LIKE_STATES == ("open", "resurfaced")`.
+- `remediation_closure_events` exists after `init_db()` and a source-scan guard (with a negative
+  control) confirms no code path ever `UPDATE`s or `DELETE`s a row in it.
+
+**Falsifiability:** turns red if a state is inserted out of append order (shifting existing
+indices), or if a write site mutates an existing closure-event row.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_remediation_item_model.py -k "item_states or open_like" -q tests/test_closure_events.py -q` — 15 passed total across both invocations)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 03. The append-only guard's negative control is recorded verbatim in
+`180-03-SUMMARY.md`.
+
+---
+
+### UAT-180-04: An Item Closes Only Under the Two-Sided Condition, Never on Absence Alone, and No Human-Assert Path Exists Anywhere
+
+**ID:** UAT-180-04
+**Title:** `compute_closure()` closes a fingerprint only when it was present in a scope-comparable
+prior scan AND the current scan positively rechecked its host:port with a healthy probe and did
+not find it; a `no_targets`/`not_run` probe yields `not_observed`, never `closed`; and a
+mechanical, falsifiable source scan proves zero closure-override affordances exist in the CLI,
+config, or `compute_closure`'s own signature
+**Maps to:** CLOSE-01
+
+**What to test:** The requirement's central Qualys-guardrail behavior, plus D-28's absence-of-
+affordance proof — the two properties this phase exists to guarantee together.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_closure_verification.py::test_two_sided_condition -q
+.venv/bin/pytest tests/test_closure_verification.py::test_unrechecked_never_closes -q
+.venv/bin/pytest tests/test_closure_verification.py -k human_assert -q
+grep -rniE "force.?clos|mark.?clos|assert.?clos|manual.?clos" run_scan.py quirk/ | grep -vE "^[^:]+:[0-9]+:\s*#"
+```
+
+**Pass Criteria:**
+- All tests pass (>= 3 human-assert tests, per the plan's own acceptance bar).
+- The manual grep gate returns zero output — no `force-close`/`mark-close`/`assert-close`/
+  `manual-close` affordance exists anywhere, in code or in prose.
+- Every refusal path (missing signature, version gap, digest mismatch, unhealthy probe, absent
+  endpoint) lands on `not_observed`, never a fifth "refused" state.
+
+**Falsifiability:** turns red if any refusal path is silently promoted to `closed`, or if a CLI
+flag / config key / `compute_closure` parameter is added that lets a human assert closure.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_closure_verification.py::test_two_sided_condition tests/test_closure_verification.py::test_unrechecked_never_closes -q` — 2 passed; `-k human_assert -q` — 3 passed, 13 deselected; manual grep gate — zero output)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 04. The manual grep gate was re-run verbatim during this close-out
+plan, not assumed from the SUMMARY.
+
+---
+
+### UAT-180-05: A Closed Item Detected Again Resurfaces, Can Close a Second Time, and the Full `["closed", "resurfaced", "reclosed"]` History Survives a Database Reopen
+
+**ID:** UAT-180-05
+**Title:** The four-scan regression sequence — open, closed, resurfaced, reclosed — is detected
+correctly at each step, `closure_counts()` reports `resurfaced` separately while folding it into
+`open_like`, and the event history is durable (queried through a fresh `get_session()` after
+every prior session is closed, not read from an in-memory object graph)
+**Maps to:** CLOSE-02
+
+**What to test:** CLOSE-02's central regression-visibility guarantee — the exact scenario D-19
+exists to make representable.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_closure_verification.py::test_resurfaced_can_close_again_and_history_is_retained -q
+.venv/bin/pytest tests/test_closure_verification.py::test_resurfaced_event_survives_a_database_reopen -q
+.venv/bin/pytest tests/test_closure_verification.py -k "resurface or closure_counts" -q
+```
+
+**Pass Criteria:**
+- All tests pass.
+- Querying `RemediationClosureEvent` for `(slug, finding_fingerprint)` after the four-scan
+  sequence returns exactly `["closed", "resurfaced", "reclosed"]`, in that order.
+- `closure_counts()` reports `resurfaced` as its own key and folds it into `open_like`, never into
+  `closed`.
+
+**Falsifiability:** turns red if a resurface event is dropped, if `reclosed` collapses into
+`closed` in the event log (losing the regression signal), or if the retention check only passes
+against an in-memory session rather than a reopened one.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_closure_verification.py::test_resurfaced_can_close_again_and_history_is_retained tests/test_closure_verification.py::test_resurfaced_event_survives_a_database_reopen -q` — 2 passed; `-k "resurface or closure_counts" -q` — 8 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 05. The four-scan sequence is reproduced verbatim in
+`180-05-SUMMARY.md`.
+
+---
+
+### UAT-180-06: Burndown Reports 2030 and 2031 Separately With Overlapping Buckets, an Always-Present `unmapped` Bucket, No Scalar, and `closure_verify` Actually Runs on Every CLI Scan
+
+**ID:** UAT-180-06
+**Title:** `compute_burndown()` returns per-deadline dicts (`key_establishment` at 2030-12-31,
+`digital_signature` at 2031-12-31, plus `unmapped`) that can overlap without deduplication, never
+a single scalar total; and the new `closure_verify` pipeline phase in `run_scan.py` (ordered after
+`scope_signature`, before `reporting`) actually invokes `compute_closure()` on real CLI scans
+**Maps to:** CLOSE-03, CLOSE-01
+
+**What to test:** The requirement's core "one number is under-specified against the mandate"
+claim, made concrete — plus the wiring gap CLOSE-01 would otherwise have (a closure model that
+exists but is never invoked).
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_closure_burndown.py -q
+grep -n "closure_verify" run_scan.py
+```
+
+**Pass Criteria:**
+- All tests pass.
+- An endpoint late against both dates (e.g. RSA key exchange AND an RSA signature) is counted in
+  both `key_establishment` and `digital_signature`, not deduplicated.
+- `unmapped` is present even at zero counts.
+- No top-level key is a scalar (`total`/`score`/`percent`) — every value is itself a mapping.
+- `closure_verify` appears exactly once in `run_scan.py`, ordered strictly between
+  `scope_signature` and `reporting`.
+
+**Falsifiability:** turns red if a bucket is deduplicated against another, if `unmapped` is
+omitted when empty, or if `closure_verify` is removed from the pipeline (silently reverting
+CLOSE-01 to "the model exists but nothing calls it").
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_closure_burndown.py -q` — 10 passed; `grep -n "closure_verify" run_scan.py` — exactly one block, ordered after `scope_signature` and before `reporting`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 06. `compute_burndown` itself is deliberately NOT called from the
+pipeline (D-38) — it is a pure read-time aggregation with nothing to persist; Phase 181 is the
+first consumer.
+
+---
+
+### UAT-180-07: ADVISORY-01's AST Guard Now Covers `closure.py` and `burndown.py`, Proven by a Real Negative Control Against Each Module Separately
+
+**ID:** UAT-180-07
+**Title:** `_GUARDED_MODULES` grows from 3 to 5 entries (adding the two new Phase 180 modules),
+the checked floor rises to `>= 5` with a named-modules assertion message, and the negative control
+was re-run for real — twice, independently — proving the guard actually catches a forbidden
+`import quirk.intelligence.scoring` in each new module, not just the three pre-existing ones
+**Maps to:** ADVISORY-01 (guard extension only — the requirement itself remains standing)
+
+**What to test:** That extending a guard's *scope* is distinct from closing a *requirement* — the
+guard now reaches the two new advisory-surface modules, but ADVISORY-01 itself stays open per
+D-45.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_remediation_advisory_guard.py -q
+grep -c "_GUARDED_MODULES" tests/test_remediation_advisory_guard.py
+```
+
+**Pass Criteria:**
+- All tests pass.
+- `_GUARDED_MODULES` lists `remediation.py`, `remediation_persist.py`, `scope_signature.py`,
+  `closure.py`, `burndown.py` — 5 entries.
+- `test_guarded_modules_all_exist` fails loudly if any guarded module is permanently missing.
+- `.planning/REQUIREMENTS.md`'s `ADVISORY-01` bullet is still `- [ ]` after this phase.
+
+**Falsifiability:** turns red if a guarded module is silently dropped from the tuple, if the
+checked floor is lowered without cause, or if ADVISORY-01 is checked off in this phase.
+
+**Result:** - [x] PASS (2026-09-02 `.venv/bin/pytest tests/test_remediation_advisory_guard.py -q` — 4 passed; `grep -c "_GUARDED_MODULES" tests/test_remediation_advisory_guard.py` >= 1; `grep -cE "^- \[ \] \*\*ADVISORY-01\*\*" .planning/REQUIREMENTS.md` — 1, confirmed still open by this same close-out plan)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-02  **Tester:** Automated (180-08 phase-close plan execution)
+**Notes:** Landed by Plan 07. Both negative-control transcripts (one per new module, each an
+independent injection/RED/revert cycle) are recorded verbatim in `180-07-SUMMARY.md`.
+
+---
+
+### UAT-180-08: A Real Second Engagement Against a Genuinely Remediated Estate Reports True Closures
+
+**ID:** UAT-180-08
+**Title:** Re-scanning the same estate months later, after real remediation work, produces
+`closed` states that match what an operator independently knows was actually fixed, and every
+unrechecked item still reads `not_observed`
+**Maps to:** CLOSE-01
+
+**What to test:** The one behavior no fixture in this repository can reproduce — genuine
+remediation over a real time gap against a changing estate, as `180-VALIDATION.md`'s
+Manual-Only Verifications table names explicitly.
+
+**Steps:** Operator re-scans a previously-scanned estate after a real remediation window;
+confirms the `closed` items match what was actually fixed, and that anything not rechecked this
+scan reads `not_observed`, never `closed`.
+
+**Pass Criteria:** N/A — no automated substitute exists. This is the one Phase 180 behavior that
+requires two real, time-separated engagements against a genuinely changing environment.
+
+**Falsifiability:** N/A — manual-only, honestly recorded as a gap rather than fabricated.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage: no fixture in this
+repository reproduces genuine remediation across two real, time-separated scans of a changing
+estate. The two-sided condition's mechanics are fully proven automated — see UAT-180-04 and
+UAT-180-05 — but the end-to-end "did the operator's remediation actually get detected as closed"
+claim can only be verified against a live client engagement.)
+**Date:** 2026-09-02  **Tester:** N/A — no substitute exists (180-08 phase-close plan execution)
+**Notes:** Per D-46, `GAP` is a valid PASSING disposition under
+`tests/test_uat_zero_undispositioned_gate.py` — it polices unrecorded cases, not uncovered ones.
+This is the phase's one honest limit: the closure computation is real and machine-observed, but
+its truth against a genuinely remediated estate has not yet been checked against a live re-scan.
+
+---
+
+**Series 180 disposition.** 7 of 8 cases are `[x] PASS`, executed 2026-09-02 in the single
+foreground full-suite run this close-out plan owns (`.venv/bin/pytest -q -m ""`, 400.20s;
+`1 failed, 3943 passed, 42 skipped, 73 xfailed, 4 xpassed`, sole failing node
+`tests/test_skip_registry.py::test_no_unregistered_skips` matching the `DEFER-172-01` baseline)
+plus each case's own targeted command, re-run individually during this plan rather than assumed
+from the six prior SUMMARY files. `UAT-180-08` is `SKIP (GAP — no substitute coverage)` — the
+one behavior that genuinely requires two real, time-separated scans against a changing estate,
+which no fixture reproduces; it is not deferred to an existing test node because none exists.
+CLOSE-01/02/03 close by hand in `.planning/REQUIREMENTS.md` on this same phase-close plan
+(180-08) — see that file's traceability table for the evidence citation. ADVISORY-01 is a
+standing constraint across Phases 177-181 and is NOT dispositioned by this series — it remains
+open, extended (not amended) by `tests/test_remediation_advisory_guard.py`'s now-5-module guard.
