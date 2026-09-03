@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-02-PLAN.md (tests/test_burndown_render_sections.py, RED); next is 181-03-PLAN.md
+stopped_at: Completed 181-04-PLAN.md (dashboard closure state + burndown surfacing, SURF-03 partial — spans plans 04/08/09); 181-02/181-03 status tracked by sibling execution, not re-asserted here
 last_updated: "2026-09-02T00:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 30
-  percent: 81
+  completed_plans: 31
+  percent: 84
 ---
 
 # Project State
@@ -22,6 +22,21 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 181 — surfacing
+
+**181-04 complete (2026-09-02):** dashboard closure state + burndown surfacing. `_derive_roadmap()`
+now joins roadmap items to persisted `RemediationItem` rows via `slug_for_title()` (never the
+display `node_id`), and a new `_derive_closure_burndown()` projects `compute_burndown()` into
+`/api/scan/latest` via `burndown`, both behind the reused `_derive_hardware_findings` advisory
+firewall (log, return empty/None, never 500 — proven by a raise-injection test observing HTTP
+200). Zero fingerprint rows yield `unavailable_reason`, never a zero-filled table; `unmapped` is
+always rendered. Frontend: closure `Badge` (`not_observed` → "Not verified this scan", never
+"Clean") in the existing roadmap node detail panel, plus a "Remediation Burndown" `Table` beneath
+the existing graph, reading `data?.burndown` from the existing `useScanData()` hook — no new
+endpoint, no new hook, no new tab, no chart. `npm run build`/`npm run lint` both exit 0. 13 new
+tests in `tests/test_dashboard_closure_burndown.py`, all passing; `tests/ -k dashboard` still
+144 passed. Commits `e37d78c9`/`5cd4bd59`/`4de6ed34`. SURF-03 spans plans 04/08/09 — NOT marked
+complete in REQUIREMENTS.md yet. See `181-04-SUMMARY.md`.
+
 Plan 176-08 (user-directed, executed after the user hard-quit and relaunched a wedged Docker
 Desktop) closed both outstanding LABRUN-01 GAP cases against a live `core + ssh-weak` lab:
 `UAT-5-11` → **PASS**, `UAT-6-08` → **FAIL**. The FAIL exposed **TRIAGE-176-03**, a product defect

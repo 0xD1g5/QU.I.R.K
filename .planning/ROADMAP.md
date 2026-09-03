@@ -316,7 +316,7 @@ Plans:
 - [x] 181-01-PLAN.md — Wave 0: `tests/test_cbom_vex.py` — VEX spec, leading with `not_observed` → `IN_TRIAGE`
 - [x] 181-02-PLAN.md — Wave 0: `tests/test_burndown_render_sections.py` — caption parity, no aggregate, refusal disclosure
 - [ ] 181-03-PLAN.md — CBOM VEX Pass 5 in `builder.py`, `_load_remediation_items()`, `closure_counters` threading
-- [ ] 181-04-PLAN.md — Dashboard closure state + burndown on the existing roadmap surface (no new tab)
+- [x] 181-04-PLAN.md — Dashboard closure state + burndown on the existing roadmap surface (no new tab)
 - [ ] 181-05-PLAN.md — `ExecContent.burndown` / `.closure_refusal` and their single-source writer helpers
 - [ ] 181-06-PLAN.md — CLI / HTML / DOCX burndown sections with byte-identical captions
 - [ ] 181-07-PLAN.md — ADVISORY-01 closing evidence: `tests/test_cve_score_guard.py` extension + negative control
@@ -331,7 +331,7 @@ Plans:
 | 178. Finding Identity Repair | 7/7 | Complete | 2026-09-02 |
 | 179. Remediation Item Model | 6/6 | Complete | 2026-09-02 |
 | 180. Closure Verification | 8/8 | Complete | 2026-09-02 |
-| 181. Surfacing | 2/9 | In progress | 2026-09-02 |
+| 181. Surfacing | 3/9 | In progress | 2026-09-02 |
 
 ### Carried into v5.18 from the v5.17 close
 
