@@ -775,7 +775,7 @@ def render_burndown_section(burndown: dict, closure_refusal: dict | None) -> str
         '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">'
         "Remediation Burndown</h2>"
         f"{caption_html}"
-        '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+        '<table style="border-collapse:collapse;font-size:13px">'
         "<thead><tr>"
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Bucket</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Deadline</th>'

@@ -125,6 +125,22 @@ _VENDOR_TREND_EVENT_TYPE_LABELS = {
 }
 
 # ---------------------------------------------------------------------------
+# Phase 181 SURF-02: "Remediation Burndown" subsection. Caption is byte-
+# identical to html_renderer.BURNDOWN_ADVISORY_CAPTION and to technical.py's
+# BURNDOWN_ADVISORY_CAPTION — kept as a per-renderer duplicate per the
+# convention documented above, with a parity test that fails loudly on
+# drift (test_advisory_caption_is_identical_across_all_three_surfaces).
+# ---------------------------------------------------------------------------
+
+_BURNDOWN_ADVISORY_CAPTION = (
+    "Advisory - remediation burndown does not affect the readiness score."
+)
+
+# D-35/D-36: fixed bucket iteration order so unmapped is always rendered,
+# never omitted.
+_BURNDOWN_BUCKET_ORDER = ("key_establishment", "digital_signature", "unmapped")
+
+# ---------------------------------------------------------------------------
 # Phase 157 D-04/D-05/HWLC-18: forward-looking EOL/tier forecast subsection,
 # a sibling of the drift section above, one heading level down (level 3 vs the
 # drift section's level 2). Guarded independently of hardware_drift_events so
@@ -712,6 +728,46 @@ def render_docx_report(
             _row[3].text = str(_e.get("detected_at", ""))
         # Advisory-only: no cell shading — this table carries no severity color.
         _set_col_widths(trend_tbl, [1.6, 1.4, 1.6, 1.4])
+
+    # ---- Remediation burndown (Phase 181 SURF-02) ----
+    # SEPARATE guard from the drift, forecast, and vendor-trend blocks above —
+    # a run with no hardware data at all still renders the burndown.
+    _burndown = getattr(exec_content, "burndown", {}) if exec_content else {}
+    _closure_refusal = getattr(exec_content, "closure_refusal", {}) if exec_content else {}
+    if _burndown or _closure_refusal:
+        doc.add_heading("Remediation Burndown", level=2)
+        # UNCONDITIONAL — the advisory qualifier appears in every rendered
+        # format, never conditional on which other caveats happen to fire.
+        doc.add_paragraph(_BURNDOWN_ADVISORY_CAPTION, style="Normal")
+        if _closure_refusal:
+            # Refusal branch emitted FIRST — a refused scan is never
+            # presented as a measured (e.g. "zero closed") result, and
+            # emits no table at all.
+            doc.add_paragraph(str(_closure_refusal.get("statement", "")), style="Normal")
+        else:
+            burndown_tbl = doc.add_table(rows=1, cols=7)
+            _set_table_style(burndown_tbl)
+            burndown_hdr = burndown_tbl.rows[0].cells
+            for _i, _h in enumerate(
+                ["Bucket", "Deadline", "Standard", "Open", "Closed", "Not Observed", "Resurfaced"]
+            ):
+                burndown_hdr[_i].text = _h
+            for _bucket_key in _BURNDOWN_BUCKET_ORDER:
+                _bucket = _burndown.get(_bucket_key)
+                if _bucket is None:
+                    continue
+                _row = burndown_tbl.add_row().cells
+                _row[0].text = _bucket_key
+                _row[1].text = str(_bucket.get("date") or "No deadline mapped")
+                _row[2].text = str(_bucket.get("standard") or "—")
+                _row[3].text = str(_bucket.get("open", 0))
+                _row[4].text = str(_bucket.get("closed", 0))
+                _row[5].text = str(_bucket.get("not_observed", 0))
+                _row[6].text = str(_bucket.get("resurfaced", 0))
+            # D-36 / CLOSE-03: buckets overlap by design and are NEVER summed
+            # — no total row, no percentage, no sum across buckets.
+            # Advisory-only: no cell shading — this table carries no severity color.
+            _set_col_widths(burndown_tbl, [1.4, 1.0, 1.3, 0.7, 0.7, 1.0, 1.0])
 
     # ---------------------------------------------------------------------------
     # Save document
