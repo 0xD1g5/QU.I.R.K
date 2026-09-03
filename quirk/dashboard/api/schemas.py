@@ -343,11 +343,54 @@ class RoadmapNode(BaseModel):
     timeframe: str   # 0-30 days / 31-90 days / 90+ days
     why: Optional[str] = None
     phase: Optional[str] = None   # NOW / NEXT / LATER
+    # Phase 181 SURF-03: persisted closure state, joined by slug (never by
+    # the display `id` above, which is regenerated per-response and has no
+    # stable identity). None when the item has no db-backed lookup available
+    # (no db/scan_run_id supplied) or its title maps to no known slug.
+    closure_state: Optional[str] = None   # open | closed | not_observed | resurfaced
+    slug: Optional[str] = None            # the slug_for_title() join key, or None
 
 
 class RoadmapData(BaseModel):
     nodes: List[RoadmapNode]
     edges: List[RoadmapEdge]
+
+
+# ---- Closure Burndown (Phase 181 SURF-03) ----
+
+
+class BurndownBucket(BaseModel):
+    """One per-deadline burndown bucket (mirrors quirk.intelligence.burndown).
+
+    D-36 (burndown.py): buckets OVERLAP by design and are NEVER summed — a
+    fingerprint late against both the key-establishment and digital-signature
+    deadlines is counted in both. Deliberately NO `total`, NO `percent`, NO
+    `severity`, NO `host`, NO `port` field: any aggregate here would
+    re-introduce the single-scalar failure CLOSE-03 eliminated, and a
+    host/port/severity field would pull this advisory-only payload back
+    toward the findings/scoring chokepoint.
+    """
+    bucket: str                       # "key_establishment" | "digital_signature" | "unmapped"
+    date: Optional[str] = None        # "2030-12-31" | "2031-12-31" | None for unmapped
+    standard: Optional[str] = None
+    fingerprints: int = 0
+    open: int = 0
+    closed: int = 0
+    not_observed: int = 0
+    resurfaced: int = 0
+    open_like: int = 0
+
+
+class ClosureBurndown(BaseModel):
+    """GET /api/scan/latest `burndown` field (Phase 181 SURF-03).
+
+    Advisory-only, read-only projection of `compute_burndown()`. When no
+    `RemediationItemFingerprint` rows exist for the scan, `buckets` is empty
+    and `unavailable_reason` explains why — never a zero-filled table, which
+    would misread as "nothing to remediate" rather than "not measured".
+    """
+    buckets: List[BurndownBucket] = []
+    unavailable_reason: Optional[str] = None
 
 
 # ---- Scan Summary ----
@@ -387,6 +430,7 @@ class ScanLatestResponse(BaseModel):
     hardware_findings: List[HardwareFinding] = []  # Phase 128 HWCOMPAT-07
     hardware_devices: List[HardwareComponent] = []   # Phase 134 CBOM-02
     partial_failures: List[PartialFailureEntry] = []  # Phase 67 RESUME-02
+    burndown: Optional[ClosureBurndown] = None        # Phase 181 SURF-03
 
 
 class ScanSession(BaseModel):

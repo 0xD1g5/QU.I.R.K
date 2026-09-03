@@ -22,8 +22,10 @@ from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 from quirk.engine.findings_evaluator import _chain_verified
 from quirk.scanner.hardware_tier import TIER_ORDER as _TIER_ORDER  # Phase 155 D-04: shared tier ordering
 from quirk.dashboard.api.schemas import (
+    BurndownBucket,
     CbomComponent,
     CertItem,
+    ClosureBurndown,
     CompareEndpoint,
     CompareFinding,
     CompareResponse,
@@ -49,7 +51,14 @@ from quirk.dashboard.api.schemas import (
 )
 from quirk.cbom.bridge import _confirm_upstream_mitigation, _detect_crypto_bridges
 from quirk.dashboard.api.routes.hardware_drift import build_device_lookup, serialize_drift_event
-from quirk.models import CryptoEndpoint, HardwareDevice, HardwareDriftEvent, ScanJob
+from quirk.models import (
+    CryptoEndpoint,
+    HardwareDevice,
+    HardwareDriftEvent,
+    RemediationItem,
+    RemediationItemFingerprint,
+    ScanJob,
+)
 from quirk.models_util import latest_successful_hardware_devices
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
@@ -1087,8 +1096,23 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     ]
 
 
-def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
-    """Build migration roadmap graph from build_phased_roadmap()."""
+def _derive_roadmap(
+    evidence: dict,
+    scoring: dict,
+    db: Optional[Session] = None,
+    scan_run_id: Optional[str] = None,
+) -> RoadmapData:
+    """Build migration roadmap graph from build_phased_roadmap().
+
+    Phase 181 SURF-03: `db`/`scan_run_id` are optional so every existing
+    two-argument call site and test keeps working — with neither supplied,
+    every node's `closure_state`/`slug` stay None exactly as before this
+    phase. When both are supplied, each node's RAW title (before any
+    truncation into the display `id`) is resolved through
+    `slug_for_title()` and joined against the scan's persisted
+    `RemediationItem` rows. The generated `node_id` above is NEVER used as a
+    lookup key — it has no stable identity across responses.
+    """
     try:
         from quirk.intelligence.roadmap import build_phased_roadmap
         roadmap = build_phased_roadmap(evidence, scoring)
@@ -1097,6 +1121,23 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
 
     nodes: list[RoadmapNode] = []
     edges: list[RoadmapEdge] = []
+
+    # Phase 181 SURF-03: fetch all closure state for this scan ONCE, before
+    # the loop, rather than one query per node. A lookup failure here
+    # degrades to "no closure state attached" (empty map) — it must never
+    # turn into an empty roadmap or an exception crossing this function.
+    state_by_slug: dict[str, str] = {}
+    if db is not None and scan_run_id:
+        try:
+            rows = (
+                db.query(RemediationItem)
+                .filter(RemediationItem.scan_run_id == scan_run_id)
+                .all()
+            )
+            state_by_slug = {row.slug: row.state for row in rows if row.slug}
+        except Exception:
+            logger.exception("_derive_roadmap: closure state lookup failed (advisory-only, skipping)")
+            state_by_slug = {}
 
     # build_phased_roadmap returns {"items": [...each with "phase"/"title"/"why"/"timeframe"...], ...}
     items_list = roadmap.get("items", []) if isinstance(roadmap, dict) else []
@@ -1108,12 +1149,25 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
         phase_key = str(item.get("phase", "NOW"))
         title = str(item.get("title", ""))
         node_id = f"{phase_key}-{title[:20].replace(' ', '-').lower()}"
+
+        slug: Optional[str] = None
+        closure_state: Optional[str] = None
+        try:
+            from quirk.intelligence.remediation import slug_for_title
+            slug = slug_for_title(title)
+        except Exception:
+            slug = None
+        if slug:
+            closure_state = state_by_slug.get(slug)
+
         nodes.append(RoadmapNode(
             id=node_id,
             title=title,
             timeframe=item.get("timeframe") or timeframe_map.get(phase_key, phase_key),
             why=str(item.get("why", "")),
             phase=phase_key,
+            closure_state=closure_state,
+            slug=slug,
         ))
 
     # Add phase-to-phase ordering edges (connect last NOW → first NEXT, last NEXT → first LATER)
@@ -1124,6 +1178,61 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
             edges.append(RoadmapEdge(source=src_items[-1].id, target=tgt_items[0].id, reason="Phase dependency"))
 
     return RoadmapData(nodes=nodes, edges=edges)
+
+
+def _derive_closure_burndown(db: Session, scan_run_id: Optional[str]) -> Optional[ClosureBurndown]:
+    """Build the per-deadline closure burndown payload for `scan_run_id`.
+
+    Advisory-only (Phase 181 SURF-03) — wrapped in try/except so any DB or
+    aggregation error is non-fatal and returns None, reusing the
+    `_derive_hardware_findings` firewall idiom rather than a parallel guard.
+
+    `compute_burndown` ALWAYS returns all three buckets, even when zero
+    `RemediationItemFingerprint` rows exist for the scan (D-35, burndown.py)
+    — so an explicit row-existence check here is what prevents a
+    zero-filled table being rendered as if it were a measured clean result.
+    Zero rows yields `unavailable_reason` and an empty bucket list instead.
+    """
+    try:
+        if not scan_run_id:
+            return ClosureBurndown(
+                buckets=[],
+                unavailable_reason="Closure state was not computed for this scan.",
+            )
+
+        fingerprint_count = (
+            db.query(RemediationItemFingerprint)
+            .filter(RemediationItemFingerprint.scan_run_id == scan_run_id)
+            .count()
+        )
+        if fingerprint_count == 0:
+            return ClosureBurndown(
+                buckets=[],
+                unavailable_reason="Closure state was not computed for this scan.",
+            )
+
+        from quirk.intelligence.burndown import compute_burndown
+        raw = compute_burndown(db, scan_run_id=scan_run_id)
+
+        buckets = [
+            BurndownBucket(
+                bucket=bucket_name,
+                date=bucket_data.get("date"),
+                standard=bucket_data.get("standard"),
+                fingerprints=bucket_data.get("fingerprints", 0),
+                open=bucket_data.get("open", 0),
+                closed=bucket_data.get("closed", 0),
+                not_observed=bucket_data.get("not_observed", 0),
+                resurfaced=bucket_data.get("resurfaced", 0),
+                open_like=bucket_data.get("open_like", 0),
+            )
+            # Preserve `unmapped` — it is never filtered out (D-35).
+            for bucket_name, bucket_data in raw.items()
+        ]
+        return ClosureBurndown(buckets=buckets)
+    except Exception:
+        logger.exception("_derive_closure_burndown failed (advisory-only, skipping)")
+        return None
 
 
 def _fetch_session_endpoints_1s(db: Session, ts: datetime) -> list[CryptoEndpoint]:
@@ -1543,9 +1652,16 @@ def get_latest_scan(
 
     cbom_components = _derive_cbom(endpoints)
     hardware_devices = _derive_hw_components(db, latest_ts)   # Phase 134 CBOM-02
-    roadmap = _derive_roadmap(evidence, score_raw)
 
     response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
+
+    # Phase 181 SURF-03: closure/burndown data is scan-scoped via
+    # CryptoEndpoint.scan_run_id, which for any scan written since RVW-003
+    # IS response_scan_id (see _fetch_session_endpoints_by_id). Reusing that
+    # same value here (rather than the unrelated `_checkpoint_scan_run_id`
+    # derived below for partial_failures) keeps this join on the convention
+    # `quirk/intelligence/closure.py` writes against.
+    roadmap = _derive_roadmap(evidence, score_raw, db=db, scan_run_id=response_scan_id)
 
     # Phase 67 RESUME-02: load partial_failures from scan_checkpoints.
     # CR-02: response_scan_id is MAX(scanned_at) (tz-naive ISO), but scan_checkpoints
@@ -1594,6 +1710,7 @@ def get_latest_scan(
         hardware_findings=_derive_hardware_findings(db, latest_ts),  # Phase 128 HWCOMPAT-07
         hardware_devices=hardware_devices,                     # Phase 134 CBOM-02
         partial_failures=partial_failures,                     # Phase 67 RESUME-02
+        burndown=_derive_closure_burndown(db, response_scan_id),  # Phase 181 SURF-03
     )
 
 
