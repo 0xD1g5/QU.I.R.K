@@ -19,6 +19,7 @@ into run_scan.py is Plan 06's responsibility, NOT this file's.
 """
 from __future__ import annotations
 
+import ast
 import inspect
 import json
 import re
@@ -806,3 +807,168 @@ def test_resurface_is_idempotent(tmp_path):
     assert second["resurfaced"] == 0
     assert first_state == second_state == "resurfaced"
     assert first_event_count == second_event_count == 1
+
+
+# ---------------------------------------------------------------------------
+# CLOSE-02 Task 3: durability, "the event table is not a decision input", and
+# a scalar-shape guard.
+# ---------------------------------------------------------------------------
+
+
+def test_closure_counts_never_returns_a_scalar(tmp_path):
+    from quirk.intelligence.closure import closure_counts
+    from quirk.intelligence.remediation import ITEM_STATES
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    now = datetime.now(timezone.utc)
+    scan_run_id = "scan-scalar-shape"
+
+    with get_session(db_path) as session:
+        session.add(
+            RemediationItemFingerprint(
+                remediation_item_id=None,
+                slug=SLUG,
+                scan_run_id=scan_run_id,
+                finding_fingerprint="fp-only-one",
+                host=HOST,
+                port=PORT,
+                finding_title="Plaintext HTTP service detected",
+                state="open",
+                observed_at=now,
+            )
+        )
+        session.commit()
+
+        result = closure_counts(session, scan_run_id=scan_run_id)
+
+    assert set(result.keys()) == set(ITEM_STATES) | {"open_like"}
+    assert result["open"] == 1
+    assert result["closed"] == 0
+    assert result["resurfaced"] == 0
+    assert result["not_observed"] == 0
+
+
+def test_resurfaced_event_survives_a_database_reopen(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    now = datetime.now(timezone.utc)
+    scan1, scan2, scan3, scan4 = "scan-reopen-1", "scan-reopen-2", "scan-reopen-3", "scan-reopen-4"
+
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan1, created_at=now - timedelta(days=4))
+        session.add(
+            RemediationItemFingerprint(
+                remediation_item_id=None,
+                slug=SLUG,
+                scan_run_id=scan1,
+                finding_fingerprint=FINGERPRINT,
+                host=HOST,
+                port=PORT,
+                finding_title="Plaintext HTTP service detected",
+                state="open",
+                observed_at=now - timedelta(days=4),
+            )
+        )
+        session.commit()
+
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
+        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
+        session.commit()
+    compute_closure(db_path, scan2)
+
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan3, created_at=now - timedelta(days=2))
+        session.add(
+            RemediationItemFingerprint(
+                remediation_item_id=None,
+                slug=SLUG,
+                scan_run_id=scan3,
+                finding_fingerprint=FINGERPRINT,
+                host=HOST,
+                port=PORT,
+                finding_title="Plaintext HTTP service detected",
+                state="not_observed",
+                observed_at=now - timedelta(days=2),
+            )
+        )
+        session.commit()
+    compute_closure(db_path, scan3)
+
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
+        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
+        session.commit()
+    compute_closure(db_path, scan4)
+
+    # Close every prior session and open a FRESH one — the durability claim is that
+    # the history is on disk, not an artifact of an in-memory object graph.
+    with get_session(db_path) as session:
+        events = (
+            session.query(RemediationClosureEvent)
+            .filter(
+                RemediationClosureEvent.slug == SLUG,
+                RemediationClosureEvent.finding_fingerprint == FINGERPRINT,
+            )
+            .order_by(RemediationClosureEvent.id.asc())
+            .all()
+        )
+        assert [e.event_type for e in events] == ["closed", "resurfaced", "reclosed"]
+
+
+# ---------------------------------------------------------------------------
+# D-29: the event table is a RECORD, never an INPUT to a transition decision.
+# ---------------------------------------------------------------------------
+def _compute_closure_reads_closure_event_table(source: str) -> bool:
+    """AST-walk `source`, return True iff the `compute_closure` function body
+    contains a `query(...)` call referencing `RemediationClosureEvent` anywhere
+    in its argument chain — an AST walk, not a substring scan, so a docstring's
+    prose mention of the model name (as this module's own docstring has) can
+    never produce a false positive.
+    """
+    tree = ast.parse(source)
+    target = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "compute_closure":
+            target = node
+            break
+    if target is None:
+        return False
+
+    for node in ast.walk(target):
+        if isinstance(node, ast.Call):
+            func = node.func
+            is_query_call = (
+                isinstance(func, ast.Attribute) and func.attr == "query"
+            )
+            if not is_query_call:
+                continue
+            for arg in node.args:
+                for sub in ast.walk(arg):
+                    if isinstance(sub, ast.Name) and sub.id == "RemediationClosureEvent":
+                        return True
+    return False
+
+
+def test_no_transition_reads_the_event_table():
+    source = Path("quirk/intelligence/closure.py").read_text(encoding="utf-8")
+    assert not _compute_closure_reads_closure_event_table(source), (
+        "compute_closure must decide transitions from persisted fingerprint "
+        "state only (D-29) — it must never query RemediationClosureEvent"
+    )
+
+    # Negative control: prove the AST walk CAN detect a real violation.
+    fixture_source = (
+        "def compute_closure(db_path, scan_run_id):\n"
+        "    with get_session(db_path) as session:\n"
+        "        prior = session.query(RemediationClosureEvent).filter(\n"
+        "            RemediationClosureEvent.slug == 'x'\n"
+        "        ).all()\n"
+        "        return prior\n"
+    )
+    assert _compute_closure_reads_closure_event_table(fixture_source), (
+        "negative control fixture should have tripped the D-29 AST-walk guard"
+    )
