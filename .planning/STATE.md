@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-08-PLAN.md (docs — report-interpretation.md/operators-guide.md section 16 rewritten for shipped closure surfacing, Obsidian vault synced); 181-02/181-03/181-04/181-05/181-06/181-07 status tracked by sibling execution, not re-asserted here
-last_updated: "2026-09-02T00:00:00.000Z"
+stopped_at: Completed 181-09-PLAN.md (phase close-out — foreground full suite, every UAT gate by name, Series 181, four requirements hand-closed including ADVISORY-01); phase checkbox left unchecked for the verifier per ARTIFACT-01
+last_updated: "2026-09-03T00:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 36
-  percent: 97
+  completed_plans: 37
+  percent: 100
 ---
 
 # Project State
@@ -385,9 +385,35 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 181 (surfacing) — EXECUTING
-Plan: 7 of 9
-Status: Executing Phase 181
+Phase: 181 (surfacing) — PLANS COMPLETE, AWAITING VERIFICATION
+Plan: 9 of 9
+Status: All 9 plans of Phase 181 executed; ROADMAP's top-level Phase 181 checkbox deliberately
+left unchecked pending the verifier (ARTIFACT-01, `scripts/verify_phase_gates.py`, gated on
+`181-VERIFICATION.md`, not yet produced). This closes v5.18's engineering scope — no further
+phases are planned in this milestone as of this plan.
+
+**181-09 complete (2026-09-03):** Phase 181 close-out. One foreground full-suite run
+(`.venv/bin/pytest -q -m ""`, 406.83s) — `1 failed, 4014 passed, 42 skipped, 73 xfailed, 4
+xpassed`, sole failing node `tests/test_skip_registry.py::test_no_unregistered_skips` matching
+the `DEFER-172-01` baseline exactly (failing-node SET comparison, never counts). Docker daemon
+was PAUSED throughout (`docker desktop status` — `paused`), disclosed per the plan's requirement
+since a paused daemon changes `test_chaos_lab_idempotency.py`'s collected item count at
+collection time. All six UAT gates run individually by name (`test_uat_zero_undispositioned_gate`,
+`test_uat_disposition_integrity`, `test_uat_series_format`, `test_uat_apply_injection_guard`,
+`test_uat_db_integration`, `test_uat_runner_version_check`) — all green (54 passed combined). All
+nine CLAUDE.md staleness gates plus the Phase 180 PQC deadline gate green, zero STALE (60 + 4
+passed). Series 181 added to `docs/UAT-SERIES.md` — 10 cases, 8 PASS + 2 SKIP(GAP), each
+command individually re-run during this plan, synced byte-clean to vault `Digs`. SURF-01,
+SURF-02, SURF-03, and **ADVISORY-01** (standing since Phase 177) all hand-closed in
+`REQUIREMENTS.md` with named evidence — ADVISORY-01's citation names Plan 181-07's four real
+RED-then-revert negative-control injections explicitly, not just the guard's existence.
+`181-VALIDATION.md` closed: `wave_0_complete: true`, all 12 Per-Task Verification Map rows
+flipped to `✅ green`, Approval: approved. ROADMAP's Phase 181 `**Plans**` list already carried
+all 9 entries from prior plans' edits; Progress table row updated to `9/9`; **top-level phase
+checkbox deliberately left unchecked** — ARTIFACT-01 gates it on a not-yet-produced
+`181-VERIFICATION.md`. No `gsd-sdk state.*`/`roadmap.*` verb and no `requirements mark-complete`
+was invoked anywhere in this plan — every edit above was by hand. See `181-09-SUMMARY.md`.
+**This is the final plan of milestone v5.18** — no further phase is currently planned.
 
 **181-07 complete (2026-09-03):** ADVISORY-01's closing machine-enforced evidence.
 `tests/test_cve_score_guard.py` extended (18 -> 24 passing nodes) with a two-tier guard:

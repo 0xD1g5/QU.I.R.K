@@ -29,12 +29,33 @@ the unshaped sketch.
 
 ## Standing constraint (applies to every requirement below)
 
-- [ ] **ADVISORY-01**: Remediation/closure state is **advisory-only and never feeds the
+- [x] **ADVISORY-01**: Remediation/closure state is **advisory-only and never feeds the
   quantum-readiness score.** Decided at the milestone boundary (2026-09-01), not deferred to phase
   CONTEXT. `tests/test_cve_score_guard.py` machine-enforces this firewall and was extended by name
-  in Phases 142/155/157; this milestone extends it again rather than amending it. A re-scan that
-  genuinely finds an endpoint fixed already moves the score through normal detection — no second
-  path into the score is created, so tracking state cannot inflate a client deliverable.
+  in Phases 142/155/157/180/181; this milestone extends it again rather than amending it. A
+  re-scan that genuinely finds an endpoint fixed already moves the score through normal detection
+  — no second path into the score is created, so tracking state cannot inflate a client
+  deliverable. **Closed 2026-09-03 (Phase 181, plan 181-09):** `tests/test_cve_score_guard.py`
+  extended 18→24 passing nodes by Plan 181-07 (`158a3d5d`) — a strict "no `SCORE_WEIGHTS`
+  reference" guard over the four zero-scoring-dependency surfaces
+  (`quirk.cbom.builder`, `quirk.reports.technical`, `quirk.reports.html_renderer`,
+  `quirk.reports.docx_renderer`) plus an AST call-argument scan with a `>= 1` call-count floor
+  over the two modules that legitimately call `compute_readiness_score`/`build_evidence_summary`
+  (`quirk.reports.writer`, `quirk.dashboard.api.routes.scan`). **Negative control (the evidence
+  that converts this from belief to proof):** four injections were applied directly to the
+  working tree, each observed RED for the exact named reason, then reverted — (1) a
+  `closure_bonus` key added to `SCORE_WEIGHTS` in `quirk/intelligence/scoring.py` →
+  `test_no_closure_key_in_score_weights` FAILED; (2) a `SCORE_WEIGHTS`-referencing line added to
+  `quirk/reports/technical.py` → `test_burndown_surface_modules_have_no_score_weights_reference`
+  FAILED; (3) `import quirk.intelligence.scoring` added to `quirk/cbom/builder.py` →
+  `test_burndown_surface_modules_do_not_import_scoring` FAILED; (4) `burndown=None` added as an
+  argument to `writer.py`'s `build_evidence_summary(...)` call →
+  `test_closure_names_never_enter_the_score_call_path` FAILED naming the exact call source. All
+  four reverted (`git status --porcelain quirk/` empty), confirmed GREEN at 24 passed. Full
+  transcripts verbatim in `181-07-SUMMARY.md`; re-verified independently in this plan
+  (`.venv/bin/pytest tests/test_cve_score_guard.py -q` → 24 passed 2026-09-03).
+  `tests/test_remediation_advisory_guard.py` (the separate `quirk/intelligence/*`-scoped AST
+  guard) is byte-unchanged — its floor stays at 5 modules, confirmed again this plan (4 passed).
 
 ## Release Toolchain Repair (Phase 177) — gating Wave A
 
@@ -197,19 +218,47 @@ The foundation both readings need. Remediation tracking on a decaying key is wor
 
 ## Surfacing (Phase 181)
 
-- [ ] **SURF-01**: Closure state is emitted as **CycloneDX VEX** in the CBOM.
+- [x] **SURF-01**: Closure state is emitted as **CycloneDX VEX** in the CBOM.
   `ImpactAnalysisState` (`resolved` / `not_affected` / `in_triage` / …) and
   `VulnerabilityAnalysis(state, justification, responses, detail, first_issued, last_updated)` are
   confirmed present in the installed `cyclonedx-python-lib` 11.7.0 — **zero new dependencies**.
   QUIRK's builder currently emits no `vulnerabilities` array, so this is new surface.
   `protected_at_perimeter` maps cleanly onto the existing `upstream_mitigated`.
   *Explicitly deferred:* CDXA `declarations` (signed attestations) has no model module in 11.7.0.
+  **Closed 2026-09-03 (Phase 181, plans 181-01/181-03/181-09):** `quirk/cbom/builder.py` Pass 5 —
+  `_VEX_STATE_MAP` (`closed`→`RESOLVED`, `open`/`resurfaced`→`EXPLOITABLE`,
+  `not_observed`→`IN_TRIAGE`, `NOT_AFFECTED` absent from non-comment source by three independent
+  gates) and `_make_vex_entry`/`build_cbom(remediation_items=...)`. One VEX entry per remediation
+  item (never per fingerprint), keyed by slug; refused scans and the `unmapped` bucket emit
+  nothing; no fabricated CVE id/source/ratings/affects; emitted CBOM validates against CycloneDX
+  1.6 (`JsonStrictValidator`). Evidence: `tests/test_cbom_vex.py` — 18/18 passed (re-verified this
+  plan). CBOM golden fixtures deliberately NOT regenerated — `_normalize_bom_for_snapshot()` never
+  serializes `vulnerabilities`.
 
-- [ ] **SURF-02**: Burndown appears in the CLI, HTML, and DOCX reports, advisory-only per
+- [x] **SURF-02**: Burndown appears in the CLI, HTML, and DOCX reports, advisory-only per
   ADVISORY-01, with byte-identical captions across surfaces (the Phase 161 HWLC-19 pattern).
+  **Closed 2026-09-03 (Phase 181, plans 181-02/181-05/181-06/181-08/181-09):**
+  `ExecContent.burndown`/`.closure_refusal` (no `severity`/`host`/`port` key, `writer.py`) plus
+  `BURNDOWN_ADVISORY_CAPTION`/`_BURNDOWN_ADVISORY_CAPTION` — three independently duplicated
+  per-renderer constants held byte-equal by `test_advisory_caption_is_identical_across_all_three_surfaces`,
+  proven with a real RED-then-revert negative control (181-06-SUMMARY.md). Per-deadline sections
+  (2030-12-31/2031-12-31) render with `unmapped` visible, zero aggregate/percentage anywhere; a
+  refusal states the differing axis verbatim on all three surfaces, never presentable as "nothing
+  closed". Evidence: `tests/test_burndown_render_sections.py` — 16/34 collected, all passing
+  (re-verified this plan via targeted subsets: caption parity 1/1, per-deadline+no-aggregate 4/4,
+  refusal 7/7).
 
-- [ ] **SURF-03**: Burndown appears on the dashboard, reusing the existing advisory-surface firewall
+- [x] **SURF-03**: Burndown appears on the dashboard, reusing the existing advisory-surface firewall
   tuple rather than adding a parallel guard.
+  **Closed 2026-09-03 (Phase 181, plans 181-04/181-08/181-09):** `closure_state`/`slug` on
+  `RoadmapNode` (joined by `slug_for_title()` on the raw title, never the generated `node_id`) and
+  a `ClosureBurndown` payload ride the existing `/api/scan/latest` response, reusing the
+  advisory-only `_derive_*` firewall verbatim — a raise-injection proves the route returns 200
+  with `burndown: null`, never a 500. No new endpoint, hook, or tab; rendered as a closure `Badge`
+  + "Remediation Burndown" `Table` on the existing `roadmap.tsx`. `not_observed` renders as "Not
+  verified this scan", never "Clean". Evidence: `tests/test_dashboard_closure_burndown.py` —
+  13/13 passed (re-verified this plan); `git status --porcelain quirk/dashboard/api/routes/
+  src/dashboard/src/hooks/` empty (no new route/hook file).
 
 ## Out of scope (v5.18)
 
@@ -233,7 +282,7 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 
 | Requirement | Phase | Status |
 |---|---|---|
-| ADVISORY-01 | All (standing) | Pending |
+| ADVISORY-01 | All (standing) | Complete — closed Phase 181 plan 181-09; guard extended 18->24 nodes (181-07, commit 158a3d5d), four real RED-then-revert negative-control injections (2026-09-03) |
 | RELEASE-01 | Phase 177 | Complete — both root-cause halves fixed and evidenced (177-01 repo-root residue, 177-03 machine-wide orphan install), independent of RELEASE-02/03 shipping (2026-09-02) |
 | RELEASE-02 | Phase 177 | Complete — v5.18.0 shipped, run 33656116783 green on `push`, PyPI `latest: 5.18.0` (2026-09-02) |
 | RELEASE-03 | Phase 177 | Complete — real clean-venv PyPI install verified, Sigstore provenance verified via corrected endpoint, Series 177 all PASS (2026-09-02) |
@@ -246,6 +295,6 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | CLOSE-01 | Phase 180 | Complete (Phase 180) |
 | CLOSE-02 | Phase 180 | Complete (Phase 180) |
 | CLOSE-03 | Phase 180 | Complete (Phase 180) |
-| SURF-01 | Phase 181 | Pending |
-| SURF-02 | Phase 181 | Pending |
-| SURF-03 | Phase 181 | Pending |
+| SURF-01 | Phase 181 | Complete — CBOM VEX Pass 5, not_observed->IN_TRIAGE, 18/18 tests (2026-09-03) |
+| SURF-02 | Phase 181 | Complete — CLI/HTML/DOCX burndown, byte-identical captions, no aggregate (2026-09-03) |
+| SURF-03 | Phase 181 | Complete — dashboard closure badge + burndown, existing advisory firewall, no new endpoint (2026-09-03) |
