@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-05-PLAN.md (ExecContent.burndown/closure_refusal data layer, SURF-02 partial — spans plans 02/05/06/08/09); 181-02/181-03/181-04 status tracked by sibling execution, not re-asserted here
-last_updated: "2026-09-03T03:16:56.000Z"
+stopped_at: Completed 181-06-PLAN.md (burndown rendering on CLI markdown/HTML/DOCX, SURF-02 partial — spans plans 02/05/06/08/09); 181-02/181-03/181-04/181-05 status tracked by sibling execution, not re-asserted here
+last_updated: "2026-09-03T03:23:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 33
-  percent: 89
+  completed_plans: 34
+  percent: 92
 ---
 
 # Project State
@@ -22,6 +22,25 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 181 — surfacing
+
+**181-06 complete (2026-09-03):** burndown rendering across CLI markdown, HTML, and DOCX.
+`BURNDOWN_ADVISORY_CAPTION` / `_BURNDOWN_ADVISORY_CAPTION` added as three byte-identical
+per-renderer constants (technical.py, html_renderer.py public; docx_renderer.py private),
+held equal by `test_advisory_caption_is_identical_across_all_three_surfaces`, mirroring the
+Phase 161 HWLC-19 vendor-trend precedent (per-renderer duplication, not a shared constant).
+`render_burndown_section()` added to html_renderer.py and wired into `render_html_report()` /
+`report.html.j2`. `build_tech_markdown()` gains keyword-only `burndown`/`closure_refusal`
+params. `render_docx_report()` gains a SEPARATE-guarded burndown subsection with an
+unconditional caption paragraph. All three surfaces: refusal branch emitted FIRST (prints
+writer.py's single-computed `statement` verbatim, no table), fixed three-bucket iteration
+order (`key_establishment`, `digital_signature`, `unmapped`) with `unmapped` always visible as
+"No deadline mapped", zero aggregate/total/percentage. Caption-parity gate verified reachable
+with a real RED-then-revert negative control (recorded in `181-06-SUMMARY.md`). All 34 cases
+in `tests/test_burndown_render_sections.py` (16 test functions incl. 5 parametrized) now pass
+— the entire Plan 181-02 file is GREEN. `grep -c "Closure not computed: "` across `quirk/`
+stays exactly 1 (writer.py). No `severity` key added. Commits `744b00c8`/`5c07af82`/`df3da3ed`.
+SURF-02 spans plans 02/05/06/08/09 — NOT marked complete in REQUIREMENTS.md. See
+`181-06-SUMMARY.md`.
 
 **181-05 complete (2026-09-03):** burndown/refusal data layer. `ExecContent` gains `burndown`
 and `closure_refusal` — both `field(default_factory=dict)`, both documented with the same
