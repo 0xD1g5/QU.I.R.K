@@ -128,7 +128,7 @@ since they were first recorded.
 **Goal**: The GSD `state.*` verbs stop silently corrupting `STATE.md`, and the local fix either
 survives package regeneration or its loss is detected.
 **Depends on**: Nothing (gating — STATE.md is what every future session reads as project history)
-**Requirements**: TOOL-01, TOOL-02, TOOL-03
+**Requirements**: TOOL-01, TOOL-02, TOOL-03, TOOL-04
 **Success Criteria** (what must be TRUE):
 
   1. A `STATE.md` containing `**Status:**` inside prose survives `state begin-phase` byte-identical,
