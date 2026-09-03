@@ -2,7 +2,14 @@
 
 **Reported:** 2026-09-03
 **Package:** `@gsd-build/sdk` 1.42.3 (delegates to `~/.claude/get-shit-done/bin/gsd-tools.cjs`)
-**Repo:** `gsd-build/get-shit-done`, `sdk/` directory
+**Repo (stale — DO NOT FILE HERE):** `gsd-build/get-shit-done`, `sdk/` directory — confirmed
+`isArchived: true` on 2026-09-03. This was the plan's originally-stated target, sourced from
+stale package metadata; it is a dead redirect stub, not an active repo.
+**Repo (live, filed here):** `open-gsd/gsd-core` — confirmed `isArchived: false`, actively
+receiving `bug`/`confirmed-bug` issues daily as of the filing date.
+**Filed upstream:** **https://github.com/open-gsd/gsd-core/issues/4243** — 2026-09-03, via
+`gh issue create --repo open-gsd/gsd-core`, under the `0xD1g5` GitHub identity. See "Fix as
+applied locally" below for the full submitted content.
 **Observed in:** 9 occurrences across 3 milestones' phases (QU.I.R.K. v5.18, Phases 179–181)
 **Severity:** silent data corruption in the file every session treats as project history
 
@@ -135,6 +142,13 @@ instructed to hand-edit STATE.md instead of invoking `state.*` / `roadmap.*` ver
 now behaviourally tested. See "Fix as applied locally" below. The hand-edit-only instruction above
 is retired on the reporting machine as of this update — kept here verbatim as the historical
 record of what was true when this report was first filed.
+
+**Update (2026-09-03, filed):** this report was filed upstream at
+**https://github.com/open-gsd/gsd-core/issues/4243**, against the live successor repo
+`open-gsd/gsd-core` — not `gsd-build/get-shit-done` named above, which is archived (confirmed
+`isArchived: true`) and is a dead redirect stub, not the active repo. Any future re-verification
+of this report's target should resolve `open-gsd/gsd-core` fresh rather than trusting either name
+recorded here as permanent.
 
 ---
 
