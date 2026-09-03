@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 181-04-PLAN.md (dashboard closure state + burndown surfacing, SURF-03 partial — spans plans 04/08/09); 181-02/181-03 status tracked by sibling execution, not re-asserted here
+stopped_at: Completed 181-03-PLAN.md (CBOM VEX emission, SURF-01 GREEN — spans plans 01/03/09); 181-02/181-04 status tracked by sibling execution, not re-asserted here
 last_updated: "2026-09-02T00:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 37
-  completed_plans: 31
-  percent: 84
+  completed_plans: 32
+  percent: 86
 ---
 
 # Project State
@@ -333,8 +333,27 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 181 (surfacing) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Executing Phase 181
+
+**181-03 complete (2026-09-02):** SURF-01 turned GREEN. `quirk/cbom/builder.py` gained Pass 5 —
+`_VEX_STATE_MAP` (`closed`→`RESOLVED`, `open`/`resurfaced`→`EXPLOITABLE`, `not_observed`→
+`IN_TRIAGE`, `NOT_AFFECTED` absent from non-comment source by three independent gates) and
+`_make_vex_entry`/`build_cbom(remediation_items=...)` gated like Pass 4's `hw_devices` idiom.
+`quirk/reports/writer.py` gained `_load_remediation_items` (current-`scan_run_id`-scoped,
+refuses to emit when any of the 5 scan-level `_SCAN_LEVEL_REFUSAL_KEYS` counters is non-zero;
+per-item `refused_probe`/`refused_absent_endpoint` do NOT suppress) and a keyword-only
+`closure_counters=None` on `write_reports`; `run_scan.py` threads its already-computed
+`_closure_counters` through rather than having writer.py recompute closure (`grep compute_closure`
+in writer.py's non-comment source returns 0). All 15 of Plan 181-01's RED tests now pass, plus
+3 new end-to-end tests against a real SQLite DB and the CycloneDX 1.6 schema
+(`tests/test_cbom_vex.py` now 18/18 green). RED-then-revert negative control run for real:
+flipping `not_observed`→`NOT_AFFECTED` produced 4 failing nodes across the independent gates;
+reverted with `builder.py` diff empty. CBOM golden fixtures NOT regenerated (`_normalize_bom_for_
+snapshot()` never touches `vulnerabilities`; fixture dir clean before/after).
+`tests/ -k "cbom or report or writer"` → 396 passed. Commits `baedbfa5`/`d87a9131`/`fb9c47f0`.
+SURF-01 NOT marked complete (spans plans 01/03/09). See `181-03-SUMMARY.md`. **Next step:**
+181-05-PLAN.md (or next plan in wave sequence).
 
 **181-02 complete (2026-09-02):** `tests/test_burndown_render_sections.py` (16 tests, 444 lines)
 written as the RED-first executable spec for SURF-02's burndown report surface, before any

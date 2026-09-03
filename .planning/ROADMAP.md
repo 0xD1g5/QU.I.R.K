@@ -315,7 +315,7 @@ advisory-only burndown in the CLI, HTML, and DOCX reports and on the dashboard.
 Plans:
 - [x] 181-01-PLAN.md — Wave 0: `tests/test_cbom_vex.py` — VEX spec, leading with `not_observed` → `IN_TRIAGE`
 - [x] 181-02-PLAN.md — Wave 0: `tests/test_burndown_render_sections.py` — caption parity, no aggregate, refusal disclosure
-- [ ] 181-03-PLAN.md — CBOM VEX Pass 5 in `builder.py`, `_load_remediation_items()`, `closure_counters` threading
+- [x] 181-03-PLAN.md — CBOM VEX Pass 5 in `builder.py`, `_load_remediation_items()`, `closure_counters` threading
 - [x] 181-04-PLAN.md — Dashboard closure state + burndown on the existing roadmap surface (no new tab)
 - [ ] 181-05-PLAN.md — `ExecContent.burndown` / `.closure_refusal` and their single-source writer helpers
 - [ ] 181-06-PLAN.md — CLI / HTML / DOCX burndown sections with byte-identical captions
