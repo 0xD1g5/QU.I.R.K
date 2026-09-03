@@ -3651,6 +3651,46 @@ def main():
             )
             logger.info("scope_signature: digest=%s", _scope_digest)
 
+    # Phase 180 Plan 06 (CLOSE-01): compute two-sided closure for this scan
+    # against its selected prior scan. Placed AFTER scope_signature because
+    # closure READS the row that block just wrote (the scope signature is
+    # written at scan COMPLETION, and closure needs both the current scan's
+    # endpoints and its own just-persisted signature to establish
+    # comparability) — and BEFORE reporting, so any future surface (Phase
+    # 181) reads populated closure state. A missing or incomparable
+    # signature makes the scan NOT-COMPARABLE and yields `not_observed`
+    # counters, never an error (see quirk/intelligence/closure.py's
+    # comparability ladder). This is advisory bookkeeping layered on
+    # already-persisted scan data and must NEVER be able to fail a scan —
+    # mirrors remediation_persist's and scope_signature's collaborator-import
+    # and mark_skipped() style exactly. The read-time burndown aggregation
+    # (see quirk/intelligence/burndown.py) is intentionally NOT called here
+    # (D-38) — it has nothing to persist, and calling it during the scan
+    # would compute a value nothing consumes until Phase 181 wires a
+    # surface to it.
+    with _phase_timer(run_stats, "closure_verify") as _closure_timer:
+        if not scan_run_id or not cfg.output.db_path:
+            # Phase 173 D-02: no phantom timings_sec key for a phase that did
+            # no real work.
+            _closure_timer.mark_skipped()
+        else:
+            try:
+                from quirk.intelligence.closure import compute_closure
+                _closure_counters = compute_closure(cfg.output.db_path, scan_run_id)
+                logger.info(
+                    "closure_verify: closed=%d resurfaced=%d reclosed=%d refused=%d",
+                    _closure_counters.get("closed", 0),
+                    _closure_counters.get("resurfaced", 0),
+                    _closure_counters.get("reclosed", 0),
+                    sum(
+                        v
+                        for k, v in _closure_counters.items()
+                        if k.startswith("refused_")
+                    ),
+                )
+            except Exception:  # noqa: BLE001 — must never fail a scan
+                logger.exception("closure_verify: failed to compute closure for scan_run_id=%s", scan_run_id)
+
     proto_counts = Counter([getattr(e, "protocol", "UNKNOWN") for e in endpoints])
     err_counts = Counter([_error_category(getattr(e, "scan_error", "")) for e in endpoints if getattr(e, "scan_error", None)])
 
