@@ -156,25 +156,44 @@ The foundation both readings need. Remediation tracking on a decaying key is wor
 
 ## Closure Verification (Phase 180)
 
-- [ ] **CLOSE-01**: Closure is **machine-observed, never human-asserted**, under a two-sided
+- [x] **CLOSE-01**: Closure is **machine-observed, never human-asserted**, under a two-sided
   condition: detected by a previous scan AND verified absent by the current one. Never mark closed
   if the scanner did not recheck that specific item. Unanimous across Tenable, Qualys, and Orca;
   Qualys's explicit "does not mark a QID closed if the scanner did not recheck it" is the guardrail
   being copied.
+  > **Evidence:** `180-01-SUMMARY.md` (estate-separation `target_set_digest`, `SCOPE_SIGNATURE_VERSION`
+  > 2.0.0) + `180-04-SUMMARY.md` (`quirk/intelligence/closure.py`'s two-sided `compute_closure()`) +
+  > `180-06-SUMMARY.md` (`closure_verify` pipeline phase actually invoking it on every CLI scan).
+  > `tests/test_closure_verification.py::test_two_sided_condition`,
+  > `::test_unrechecked_never_closes`, and the four `test_*human_assert*`/source-scan tests proving
+  > zero closure-override affordances exist anywhere in the codebase — all green in the 2026-09-02
+  > foreground full-suite run (180-08).
 
-- [ ] **CLOSE-02**: `resurfaced` is modelled explicitly. Every comparable tool has this state;
+- [x] **CLOSE-02**: `resurfaced` is modelled explicitly. Every comparable tool has this state;
   without it a regression reads as a new finding and the burndown counts the same item closing
   twice.
+  > **Evidence:** `180-03-SUMMARY.md` (`resurfaced` as a 4th `ITEM_STATES` member, `OPEN_LIKE_STATES`,
+  > the append-only `remediation_closure_events` table) + `180-05-SUMMARY.md` (the resurface/reclose
+  > transitions and `closure_counts()`).
+  > `tests/test_closure_verification.py::test_resurfaced_can_close_again_and_history_is_retained`
+  > and `::test_resurfaced_event_survives_a_database_reopen` prove the four-scan sequence
+  > `["closed", "resurfaced", "reclosed"]` survives a fresh DB reopen — both green 2026-09-02.
 
-- [ ] **CLOSE-03**: Burndown is **relative to a named target date**, not a single scalar. EO 14412
+- [x] **CLOSE-03**: Burndown is **relative to a named target date**, not a single scalar. EO 14412
   (2026-06-22) deadlines PQC key establishment at **2030-12-31** and digital signatures at
   **2031-12-31** *separately*, so one readiness number is under-specified against the mandate.
   Deadlines live in a `last_verified` staleness-gated catalog with `source_url` and a CI gate — the
   90-day QRAMM/CMVP cadence is the precedent, and EO 14412 plus OMB M-26-15 invalidated the prior
   consensus inside a 3-day window.
-  > **Verification debt, carried honestly:** the research pass got **HTTP 403** fetching the NSA
-  > CNSA 2.0 PDF. That date table is MEDIUM confidence from concurring secondary sources and
-  > **must be manually re-verified against the primary source before shipping.**
+  > **Verification debt resolved, 2026-09-02, against the primary source:** Federal Register Vol.
+  > 91 No. 121 (FR Doc 2026-12909), fetched directly. The CNSA 2.0 PDF (`media.defense.gov`)
+  > remains a recorded omission — it 403s to non-browser agents — and is deliberately excluded from
+  > the catalog rather than filled from secondary sources.
+  > **Evidence:** `180-02-SUMMARY.md` (`quirk/scanner/pqc_deadlines.py`, the 8th staleness-gated
+  > catalog, `deadline_for_algorithm()`) + `180-06-SUMMARY.md` (`quirk/intelligence/burndown.py`'s
+  > `compute_burndown()`, per-deadline overlapping buckets, no scalar, `unmapped` bucket always
+  > present). `tests/test_closure_burndown.py::test_burndown_reports_two_dates_separately` and
+  > `tests/test_pqc_deadline_staleness.py` (4 tests) — all green 2026-09-02.
 
 ## Surfacing (Phase 181)
 
@@ -224,9 +243,9 @@ Not scoped, but SURF-01's VEX surface should be built so a schema shift is absor
 | REMED-01 | Phase 179 | Complete — `remediation_items` + `remediation_item_fingerprints` persisted at scan time via `persist_remediation_snapshot()`; kind-derived slug (never title) is the persistence key; 8-of-8 plaintext endpoints prove the `(0, 8)` fraction, never a boolean and never silently vanishing. Under-claimed by design: items and their constituency are persisted, but no closure is computed here — that is Phase 180's two-sided condition (2026-09-02) |
 | REMED-02 | Phase 179 | Complete — `scan_scope_signatures` row per `scan_run_id` (discrete columns + SHA256 digest, mutually consistent, digest sensitive to profile/port-scope/extras/credentials/sensor-set independently); probe health positively asserted across 13 families, proven against the TRIAGE-176-03 degraded-probe shape with a real RED-first negative control. Under-claimed by design: the signature is recorded but NOT compared — Phase 180 owns the hard-refusal decision, and there is no override flag in this phase. Sensor-origin findings are excluded by decision (`_ingest_envelope` never sets `scan_run_id`); documented in `docs/operators-guide.md` §15 and the ROADMAP backlog (2026-09-02) |
 | REMED-03 | Phase 179 | Complete — `not_observed` is `nullable=False`, default `not_observed`, and no code path in this phase ever writes `state="closed"` (grep-clean); `remediation_aliases: Dict[str, str]` loads from `config.yaml` following the `broker_credentials` precedent, with no auto-learning, and proven to survive `apply_profile` untouched (2026-09-02) |
-| CLOSE-01 | Phase 180 | Pending |
-| CLOSE-02 | Phase 180 | Pending |
-| CLOSE-03 | Phase 180 | Pending |
+| CLOSE-01 | Phase 180 | Complete (Phase 180) |
+| CLOSE-02 | Phase 180 | Complete (Phase 180) |
+| CLOSE-03 | Phase 180 | Complete (Phase 180) |
 | SURF-01 | Phase 181 | Pending |
 | SURF-02 | Phase 181 | Pending |
 | SURF-03 | Phase 181 | Pending |

@@ -285,7 +285,7 @@ Plans:
 - [x] 180-05-PLAN.md — Wave 4 · CLOSE-02 · Resurface and re-closure transitions with retained history, and `closure_counts` (counted as open, reported separately)
 - [x] 180-06-PLAN.md — Wave 5 · CLOSE-03, CLOSE-01 · Per-deadline burndown (2030 and 2031 separately, never a scalar) plus the `closure_verify` pipeline phase
 - [x] 180-07-PLAN.md — Wave 6 · ADVISORY-01 · AST guard extended to `closure.py`/`burndown.py` with a real negative control; operators-guide §16 and report-interpretation §16 + Obsidian sync
-- [ ] 180-08-PLAN.md — Wave 7 · CLOSE-01, CLOSE-02, CLOSE-03 · Phase close-out: one foreground full suite, hand-edited requirement closure, Series 180 UAT, VALIDATION closed, vault synced
+- [x] 180-08-PLAN.md — Wave 7 · CLOSE-01, CLOSE-02, CLOSE-03 · Phase close-out: one foreground full suite, hand-edited requirement closure, Series 180 UAT, VALIDATION closed, vault synced
 
 ### Phase 181: Surfacing
 

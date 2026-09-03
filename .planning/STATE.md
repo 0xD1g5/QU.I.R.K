@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.18
 milestone_name: Migration Execution
 status: executing
-stopped_at: Completed 180-07-PLAN.md
-last_updated: "2026-09-03T00:31:09.436Z"
+stopped_at: Completed 180-08-PLAN.md; awaiting gsd-verifier for 180-VERIFICATION.md
+last_updated: "2026-09-02T21:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 28
-  completed_plans: 27
+  completed_plans: 28
   percent: 60
 ---
 
@@ -317,9 +317,38 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 180 (closure-verification) — EXECUTING
-Plan: 8 of 8
-Status: Ready to execute
+Phase: 180 (closure-verification) — PLANS COMPLETE, AWAITING VERIFIER
+Plan: 8 of 8 complete
+Status: All 8 plans executed and committed. `180-VALIDATION.md` closed
+(`wave_0_complete: true`, 0 pending rows). CLOSE-01/02/03 hand-closed with cited evidence;
+ADVISORY-01 deliberately left OPEN (standing through Phase 181). Series 180 UAT authored.
+ROADMAP's `- [ ] **Phase 180: Closure Verification**` top-level checkbox intentionally NOT
+flipped — `scripts/verify_phase_gates.py` (ARTIFACT-01) blocks that until the orchestrator's
+`gsd-verifier` subagent produces `180-VERIFICATION.md`, which this plan does not own.
+
+**180-08 (this close-out, 2026-09-02):** One foreground `.venv/bin/pytest -q -m ""` run (400.20s,
+Docker daemon NOT running locally so `test_chaos_lab_idempotency.py`'s Docker-profile-parametrized
+cases collected at reduced count — failing-node SET was compared, never the raw pass count):
+`1 failed, 3943 passed, 42 skipped, 73 xfailed, 4 xpassed`. Sole failing node
+`tests/test_skip_registry.py::test_no_unregistered_skips`, matching the `DEFER-172-01` baseline
+exactly — same node ID Phase 179 recorded. No new node failed; nothing was fixed, nothing was
+added to `tests/skip_registry.py` (`git diff --stat` on that file is empty for this plan).
+CLOSE-01/02/03 hand-closed in `.planning/REQUIREMENTS.md` with per-requirement evidence citations
+naming the SUMMARY files and specific test nodes; ADVISORY-01 verified still `- [ ]` / `Pending`.
+`docs/UAT-SERIES.md` gained Series 180 (honestly dispositioned, includes a `GAP — no substitute
+coverage` case per D-46 for the one manual-only verification `180-VALIDATION.md` names). Vault
+synced: `UAT-Series.md`, a new Phase-180 phase note, `Roadmap.md`, `Requirements.md`, hub wikilink.
+**This phase's honest record:** seven plans landed cleanly with zero Rule-4 architectural
+deviations, but the phase as a whole surfaced one genuine design gap mid-execution (180-05 found
+that 180-04's closing path mutates a fingerprint row's state in place without re-tagging its
+`scan_run_id`, so resurface detection had to key off "the most recent OTHER persisted row for this
+`(slug, finding_fingerprint)`" rather than the top-level `prior_scan_run_id` — documented as a
+deliberate implementation decision, not a defect, and proven correct by a four-scan retention
+test). No STATE.md corruption was observed during this plan's own edits (hand-edited throughout,
+no `gsd-sdk state.*` verb invoked) — the "seven corruptions across 179-180" pattern the plan
+brief warns about was avoided here by following that brief's own advice. **Next step:** orchestrator
+dispatches `gsd-verifier` to produce `180-VERIFICATION.md`; only then may ROADMAP's Phase 180
+checkbox be flipped and Phase 181 (Surfacing) begin.
 
 **179-05 complete (2026-09-02):** Documentation-only plan. `remediation_aliases:` documented in
 `docs/configuration.md` (new section + Full Reference Configuration entry); remediation-tracking
