@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-03 (v5.18 Phase 181 — Surfacing, plan 181-09: Series 181 added
+**Last Updated:** 2026-09-03 (v5.19 Phase 182 — Tooling Integrity, plan 182-05: Series 182 added
+(UAT-182-01; 1 PASS) for TOOL-01/02/03 (`gsd-sdk`/`gsd-tools` `state.*` verb corruption fixes).
+TOOL-01 reopened rather than closed — the live `state begin-phase` demonstration this plan is
+built around reproduced a genuine, unpatched second instance of the Bug A defect class in the
+read-side `stateExtractField()` function, caught and reverted before commit; see `182-05-SUMMARY.md`
+and `.planning/REQUIREMENTS.md`'s TOOL-01/TOOL-04 entries. TOOL-02 and TOOL-03 close by hand.
+Earlier: v5.18 Phase 181 — Surfacing, plan 181-09: Series 181 added
 (UAT-181-01..10; 8 PASS, 2 SKIP-GAP) for SURF-01 (CBOM VEX — `not_observed`→`IN_TRIAGE` never
 `NOT_AFFECTED`, one entry per remediation item, refused/`unmapped` silence, no fabricated CVE
 identity, CycloneDX 1.6 schema validity), SURF-02 (byte-identical burndown captions across
@@ -22271,3 +22277,74 @@ on this same phase-close plan (181-09) — see that file's traceability table fo
 citations. ADVISORY-01 closes here too, citing UAT-181-08's guard extension and negative control
 as its evidence — the first requirement in this milestone to close on an observed RED/GREEN
 negative control rather than the guard's mere existence.
+
+---
+
+## Series 182: Tooling Integrity (Phase 182 — v5.19)
+
+**Scope:** TOOL-01 (`gsd-sdk`/`gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`),
+TOOL-02 (`begin-phase`'s frontmatter reconstruction preserves unknown keys instead of discarding
+them), TOOL-03 (the local patch survives a GSD update, or its loss is detected). This series
+covers the developer-tooling guarantee itself, not an end-user-facing scanner feature — the
+"client" here is a future GSD executor session reading `.planning/STATE.md`.
+
+### UAT-182-01: `state begin-phase` Leaves `**Status:**`-Bearing Prose Byte-Identical and Preserves `stopped_at`/`progress`/Unknown Frontmatter Keys
+
+**ID:** UAT-182-01
+**Title:** The write-side Bug A patch (`stateReplaceField()`, anchored bold-field regex) and the
+Bug B patch (`syncStateFrontmatter()`, preserve-unknown-keys merge) hold under a real `state
+begin-phase` invocation: a `.planning/STATE.md` prose line containing a `**Status:**` code span
+stays byte-identical while the real `Status:` field under `## Current Position` genuinely moves;
+`stopped_at`, the whole `progress:` block, and a novel custom frontmatter key all survive,
+parametrized over `ROADMAP.md` present/absent
+**Maps to:** TOOL-01 (write-side only — see the Result note below for the read-side gap this UAT
+does NOT cover), TOOL-02
+
+**What to test:** The exact defect class that corrupted `.planning/STATE.md` nine times across
+Phases 179-181 (unanchored regex eating trailing prose; frontmatter reconstructed from a fixed
+schema instead of merged), proven with a behavioural fixture against a throwaway toolchain copy —
+not a presence-only "the patch text exists" check.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_gsd_state_patch.py -q
+```
+
+**Pass Criteria:** All 7 nodes pass (or honestly skip via `GSD_TOOLCHAIN_AVAILABLE` where
+`~/.claude/get-shit-done/` is absent, e.g. CI): prose survival, frontmatter survival with AND
+without `ROADMAP.md`, unknown-custom-key survival, patch durability, and patch-loss detection.
+
+**Falsifiability:** turns red if either local patch is reverted (proven directly by
+`test_patch_loss_is_actually_detected`'s negative control, which swaps in the pristine pre-patch
+file and asserts the test suite catches it).
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py -q` — 7 passed, re-run during 182-05 phase-close)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (182-05 phase-close plan execution)
+**Notes:** DEFERRED — covered by `tests/test_gsd_state_patch.py`. **Important scope caveat found
+during this same phase-close plan (182-05):** this UAT's fixtures exercise the toolchain against
+throwaway temp-directory copies and correctly prove the write-side (`stateReplaceField`) and the
+Bug B merge are fixed. They do **not** cover `stateExtractField()`, a sibling read-side function
+with the identical unanchored-regex defect that 182-01's patch never touched. Running `state
+begin-phase` against the REAL `.planning/STATE.md` during 182-05 reproduced live corruption via
+that unpatched function (a `**Status:**`-quoted sentence elsewhere in the body was read as the
+live Status value) plus a session-scoping guard that only matches the literal header `## Session`
+and silently falls through on this project's own `## Session Continuity` convention. The write was
+caught by 182-05's own diff-inspection protocol and reverted before commit — see
+`.planning/REQUIREMENTS.md`'s TOOL-01 (reopened) and TOOL-04 (new, filed) entries, and
+`182-05-SUMMARY.md`, for the full reproduction. This UAT's `PASS` disposition is honest for what
+it actually tests (the write-side and the merge); it is not a certification that `state.*` verbs
+are safe to read the live file with in general.
+
+---
+
+**Series 182 disposition.** 1 of 1 case is `[x] PASS`, individually re-run during this close-out
+plan (182-05), plus the single foreground full-suite run this plan owns
+(`.venv/bin/pytest -q -m ""`, 406.85s; `1 failed, 4021 passed, 42 skipped, 73 xfailed, 4 xpassed`,
+sole failing node `tests/test_skip_registry.py::test_no_unregistered_skips` matching the
+`DEFER-172-01` baseline). TOOL-02 and TOOL-03 close by hand in `.planning/REQUIREMENTS.md` on this
+same phase-close plan (182-05). **TOOL-01 does NOT close** — the live `state begin-phase`
+demonstration this plan is built around found a genuine, reproduced regression in a function
+(`stateExtractField()`) the original patch never touched; TOOL-01 stays open and a new TOOL-04 is
+filed for the two read-side gaps. This is the honest outcome the phase's own name ("Tooling
+Integrity") commits it to: a series that quietly marked TOOL-01 `PASS` after finding this would be
+the exact "check a box to satisfy the gate" pattern the UAT corpus integrity gate exists to catch.
