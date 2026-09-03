@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: "Completed 182-03-PLAN.md"
-last_updated: "2026-09-03T14:43:24.000Z"
+stopped_at: "Completed 182-04-PLAN.md"
+last_updated: "2026-09-03T14:53:36.000Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -22,6 +22,29 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 182 — tooling-integrity
+
+**182-04 complete (2026-09-03):** Report-only corruption audit, CLAUDE.md operating rule, and
+upstream filing. Audit (`.planning/reports/182-state-corruption-audit.md`, gitignored, on disk
+only) scanned the current STATE.md plus all 41 commits touching it since the v5.18 milestone
+opened for the Bug A signature: zero live unclosed instances in the current file; history confirms
+exactly the already-documented STATE.md:289 recurrence (Phase 180 repaired, Phase 181
+re-corrupted across 28 consecutive commits, restored 2026-09-03 by `3a6d2bf0`) and no new
+candidate. `[Phase ?]` placeholders (59, counted) explicitly excluded as pre-existing content.
+`git status --porcelain .planning/STATE.md` empty throughout — nothing rewritten. `CLAUDE.md`
+(gitignored, on disk only) gained `## GSD \`state.*\` Verb Integrity (TOOL-01/02/03)`: both bugs,
+both patches, the behavioural test as the mechanical guarantee (not diff-every-write), the
+`gsd-local-patches/`/`gsd-pristine/` durability layer, and an explicit retirement of the Phases
+180-181 hand-edit-only workaround. Upstream filing: discovered mid-task that the plan's stated
+target `gsd-build/get-shit-done` is **archived** (`isArchived: true`, dead redirect stub); filed
+instead against the live successor `open-gsd/gsd-core` — **issue
+https://github.com/open-gsd/gsd-core/issues/4243**, filed 2026-09-03 under GitHub identity
+`0xD1g5`, after a blocking checkpoint the user resolved as `post-issue` with the corrected target.
+Report body scrubbed of local absolute paths and project-identifying strings before posting.
+Report (`gsd-sdk-state-corruption-2026-09-03.md`, force-tracked, commits `20120d4f`/`64904373`)
+now carries the "Fix as applied locally" section (both final diffs, two locking fixture shapes),
+the T-182-10 trade-off stated in prose ("a stale key is recoverable, silently deleted project
+history is not"), and the `getMilestoneInfo` fabricated-fallback finding (a merge defends against
+absent values, never fabricated ones). TOOL-01/02/03 NOT marked complete — closes in 182-05.
 
 **182-03 complete (2026-09-03):** `gsd-local-patches/` + `gsd-pristine/` durability layer, seeded
 outside the repo at `~/.claude/gsd-local-patches/` and `~/.claude/gsd-pristine/` in the exact
@@ -435,9 +458,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 182 (tooling-integrity) — EXECUTING
-Plan: 3 of 5
-Status: 182-03 complete (gsd-local-patches/gsd-pristine durability layer + loss-detection test).
-Plans 182-04 and 182-05 not yet started.
+Plan: 4 of 5
+Status: 182-04 complete (report-only corruption audit, CLAUDE.md operating rule, upstream filing
+— open-gsd/gsd-core#4243). Plan 182-05 not yet started.
 
 **182-02 complete (2026-09-03):** Bug B preserve-unknown-keys fix. Patched `syncStateFrontmatter`
 in `~/.claude/get-shit-done/bin/lib/state.cjs` (ordinary source, not generated) so `begin-phase`
