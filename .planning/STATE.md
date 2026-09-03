@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: "Completed 182-01-PLAN.md"
-last_updated: "2026-09-03T13:30:00.000Z"
+stopped_at: "Completed 182-02-PLAN.md"
+last_updated: "2026-09-03T14:35:17.000Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
-  percent: 20
+  completed_plans: 2
+  percent: 40
 ---
 
 # Project State
@@ -412,9 +412,29 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 182 (tooling-integrity) — EXECUTING
-Plan: 1 of 5
-Status: 182-01 complete (argv/cwd contract + Bug A prose-survival fixture with negative control).
-Plans 182-02 through 182-05 not yet started.
+Plan: 2 of 5
+Status: 182-02 complete (Bug B preserve-unknown-keys frontmatter merge). Plans 182-03 through
+182-05 not yet started.
+
+**182-02 complete (2026-09-03):** Bug B preserve-unknown-keys fix. Patched `syncStateFrontmatter`
+in `~/.claude/get-shit-done/bin/lib/state.cjs` (ordinary source, not generated) so `begin-phase`
+no longer silently deletes `stopped_at`, the `progress:` block, or unrecognized frontmatter keys.
+Took `state.cjs.bak` (75028 bytes, byte-identical pre-patch) before editing; restore via
+`cp state.cjs.bak state.cjs`. Fix: overlay `existingFm` with `derivedFm`'s own keys (never
+null/undefined per `buildStateFrontmatter`'s omission semantics), `progress` merged one level
+deeper. Discovered during GREEN that the plan's assumed single-overlay shape was incomplete:
+`getMilestoneInfo` (`core.cjs`) does NOT follow the omission convention — with no `ROADMAP.md` it
+returns its own invented fallback (`v1.0`/`milestone`) as a real truthy value, not null — so added
+one guarded branch keeping `existingFm.milestone`/`milestone_name` when `ROADMAP.md` is absent
+from disk. `tests/test_gsd_state_patch.py` extended with
+`test_bug_b_frontmatter_survives_begin_phase`, parametrized over `roadmap_present`; RED-proved
+(both parametrizations failed with the documented symptoms) before the patch, GREEN after (5
+passed, same node IDs). Bug A's fixtures and GATE-03 unaffected (still all green). `state json`/
+`state validate` smoke-tested against a throwaway `--cwd`, both exit 0. T-182-10 trade-off (a
+body-removed key persists until overwritten) stated in prose in the patch comment. TOOL-02 NOT
+marked complete — closes in 182-05. No in-repo commit for the out-of-repo `state.cjs` edit itself
+(mirrors 182-01's Bug A precedent); only the test file (`5f6897f2`) is committed. See
+`182-02-SUMMARY.md`.
 
 **Prior phase:** Phase 181 (surfacing) — PLANS COMPLETE, AWAITING VERIFICATION
 Plan: 9 of 9
