@@ -459,3 +459,178 @@ def test_bug_b_frontmatter_survives_begin_phase(tmp_path, roadmap_present) -> No
             f"milestone_name should be re-derived from ROADMAP.md as "
             f"'Demo Milestone' (got: {after.get('milestone_name')!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# Durability layer: gsd-local-patches/ + gsd-pristine/ (182-03).
+#
+# Bug A's fix lives in state-document.generated.cjs, a *generated* file --
+# a future regeneration of the toolchain silently reverts it with no error,
+# no warning, and no trace beyond the missing behaviour itself. The
+# gsd-local-patches/ + gsd-pristine/ trees (seeded outside this repo, at
+# ~/.claude/gsd-local-patches/ and ~/.claude/gsd-pristine/, per the Task 1
+# checkpoint approved 2026-09-03) are what verify-reapply-patches.cjs
+# resolves to detect that loss deterministically -- see that script's own
+# header comment (bug #2969) for why this replaced trusting an LLM's
+# free-text "verified: yes" reporting.
+#
+# Bug B's fix lives in ordinary source (state.cjs's syncStateFrontmatter) and
+# is NOT regeneration-fragile -- it is registered in the same patch set for
+# update-time re-apply (so a future `/gsd:update --reapply` can locate and
+# reinstate it), but it does NOT need a redundant durability guard here. The
+# behavioural fixtures in plan 182-02 (test_bug_b_frontmatter_survives_begin_phase,
+# above) are what protect Bug B; this section is scoped to Bug A only.
+#
+# Retirement condition (per 182-CONTEXT.md "If upstream fixes it, REMOVE the
+# local patch"): once gsd-build/get-shit-done lands the anchored-regex fix
+# upstream and an operator `/gsd:update` picks it up, the local patch at
+# ~/.claude/get-shit-done/bin/lib/state-document.generated.cjs is REMOVED
+# (not left stacked on top of the upstream fix), gsd-local-patches/ and
+# gsd-pristine/ are cleared of that entry, and the two tests below are
+# replaced by a single assertion that the upstream-shipped regex is already
+# anchored -- i.e. that the local patch is no longer necessary rather than
+# merely redundant. Do not treat this durability layer as permanent
+# furniture; it exists only until upstream catches up.
+# ---------------------------------------------------------------------------
+
+GSD_LOCAL_PATCHES_DIR = Path.home() / ".claude" / "gsd-local-patches"
+GSD_PRISTINE_DIR = Path.home() / ".claude" / "gsd-pristine"
+VERIFY_REAPPLY_SCRIPT = GSD_HOME / "bin" / "verify-reapply-patches.cjs"
+
+_PATCH_RELPATH = "get-shit-done/bin/lib/state-document.generated.cjs"
+
+GSD_PATCHES_AVAILABLE = (
+    GSD_LOCAL_PATCHES_DIR.is_dir() and VERIFY_REAPPLY_SCRIPT.is_file()
+)
+GSD_PATCHES_SKIP_REASON = (
+    "gsd-local-patches durability layer unavailable in this environment "
+    f"({GSD_LOCAL_PATCHES_DIR} present: {GSD_LOCAL_PATCHES_DIR.is_dir()}, "
+    f"{VERIFY_REAPPLY_SCRIPT} present: {VERIFY_REAPPLY_SCRIPT.is_file()}) -- "
+    "CI provisions neither the seeded patches directory nor the operator's "
+    "~/.claude/get-shit-done/ toolchain, so this leg is honestly skipped "
+    "there rather than faked. Run on an operator machine with the 182-03 "
+    "durability layer seeded to exercise it."
+)
+
+_GSD_PATCHES_SKIP = pytest.mark.skipif(
+    not (GSD_TOOLCHAIN_AVAILABLE and GSD_PATCHES_AVAILABLE),
+    reason=GSD_PATCHES_SKIP_REASON,
+)
+
+
+def _run_verify_reapply(
+    *, patches_dir: Path, config_dir: Path, pristine_dir: Path
+):
+    """Invoke verify-reapply-patches.cjs through run_fork_safe -- argv[0] is
+    the shutil.which('node') resolution, every path is absolute, and no cwd
+    kwarg is ever passed (per this file's binding no-raw-subprocess /
+    no-cwd-kwarg convention)."""
+    assert NODE_PATH is not None
+    argv = [
+        NODE_PATH,
+        str(VERIFY_REAPPLY_SCRIPT),
+        "--patches-dir",
+        str(patches_dir),
+        "--config-dir",
+        str(config_dir),
+        "--pristine-dir",
+        str(pristine_dir),
+        "--json",
+    ]
+    return run_fork_safe(argv, timeout=30)
+
+
+@_GSD_PATCHES_SKIP
+def test_local_patches_are_durable() -> None:
+    """Run verify-reapply-patches.cjs against the seeded gsd-local-patches/ +
+    gsd-pristine/ trees (both patches registered by 182-03) and assert a
+    clean gate. On failure, the assertion message includes the verifier's
+    full JSON report -- naming WHICH line went missing in WHICH file, not
+    just that something did -- and distinguishes exit 2 (structurally wrong
+    directories) from exit 1 (a patch was genuinely lost), because those two
+    failure classes point a reader to entirely different fixes."""
+    proc = _run_verify_reapply(
+        patches_dir=GSD_LOCAL_PATCHES_DIR,
+        config_dir=GSD_HOME.parent,
+        pristine_dir=GSD_PRISTINE_DIR,
+    )
+
+    if proc.returncode == 2:
+        pytest.fail(
+            "verify-reapply-patches.cjs exited 2 (usage/structural error) -- "
+            "the gsd-local-patches/gsd-pristine layout is wrong, not merely "
+            f"that a patch was lost. stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        )
+
+    assert proc.returncode == 0, (
+        "verify-reapply-patches.cjs exited 1 -- at least one locally-patched "
+        "line is missing from the installed toolchain file (a real content "
+        f"loss, e.g. from a regeneration). Full JSON report:\n{proc.stdout}"
+    )
+
+
+def test_patch_loss_is_actually_detected(tmp_path) -> None:
+    """Negative control: build a throwaway config-dir COPY of just the two
+    installed files, overwrite the copy's state-document.generated.cjs with
+    the PRISTINE (pre-Bug-A-patch) content -- simulating a regeneration that
+    silently reverted the patch in place -- and assert the verifier now
+    reports a non-zero exit when pointed at that copy as --config-dir. The
+    real gsd-local-patches/ backup (unmodified, still holding the patched
+    content) supplies the "what should be there" side of the comparison, so
+    this exercises the exact same userAdded-lines diff the durability gate
+    runs in production -- just against a deliberately-reverted installed
+    file. This proves test_local_patches_are_durable's pass above is a real,
+    sensitive assertion rather than a gate that can only ever pass. Writes
+    only under tmp_path; the real ~/.claude/ trees are never touched."""
+    if not (GSD_TOOLCHAIN_AVAILABLE and GSD_PATCHES_AVAILABLE):
+        pytest.skip(GSD_PATCHES_SKIP_REASON)
+
+    pristine_path = GSD_PRISTINE_DIR / _PATCH_RELPATH
+    installed_path = GSD_HOME / "bin" / "lib" / "state-document.generated.cjs"
+    other_installed_path = GSD_HOME / "bin" / "lib" / "state.cjs"
+    if not pristine_path.is_file():
+        pytest.skip(
+            f"pristine baseline not found at {pristine_path} -- cannot run "
+            "the negative control without a known-unpatched copy to "
+            "simulate a regeneration reverting the patch"
+        )
+    pristine_content = pristine_path.read_bytes()
+    assert _LOCAL_PATCH_MARKER not in pristine_content.decode(
+        "utf-8", errors="replace"
+    ), (
+        f"{pristine_path} unexpectedly contains {_LOCAL_PATCH_MARKER!r} -- "
+        "it is not a genuine pristine copy, so the negative control would "
+        "run against already-patched content and pass vacuously"
+    )
+
+    # Mirror only the two relPath entries under a throwaway --config-dir,
+    # then simulate the regeneration by overwriting ONE of them (the
+    # generated file) with pristine content -- the other (state.cjs) is
+    # copied through unmodified, since Bug B is durable and out of scope
+    # for this negative control.
+    fake_config_dir = tmp_path / "config-dir-copy"
+    fake_target = fake_config_dir / _PATCH_RELPATH
+    fake_other = fake_config_dir / "get-shit-done/bin/lib/state.cjs"
+    fake_target.parent.mkdir(parents=True, exist_ok=True)
+    fake_other.parent.mkdir(parents=True, exist_ok=True)
+    fake_target.write_bytes(pristine_content)
+    fake_other.write_bytes(other_installed_path.read_bytes())
+    assert _LOCAL_PATCH_MARKER not in fake_target.read_text(encoding="utf-8")
+    # Sanity: the REAL installed file is untouched by any of the above.
+    assert _LOCAL_PATCH_MARKER in installed_path.read_text(encoding="utf-8")
+
+    proc = _run_verify_reapply(
+        patches_dir=GSD_LOCAL_PATCHES_DIR,
+        config_dir=fake_config_dir,
+        pristine_dir=GSD_PRISTINE_DIR,
+    )
+
+    assert proc.returncode != 0, (
+        "expected a non-zero exit when the installed file is reverted to "
+        "pristine content (simulating a regeneration silently undoing Bug "
+        f"A's fix), but got exit 0. stdout:\n{proc.stdout}"
+    )
+    assert proc.returncode == 1, (
+        "expected exit 1 (user-added lines missing) specifically, not exit "
+        f"2 (structural error) -- got {proc.returncode}. stdout:\n{proc.stdout}"
+    )
