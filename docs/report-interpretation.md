@@ -905,3 +905,19 @@ the trend counts described above; it affects only the title text a consultant se
 ---
 
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*
+
+## 16. Remediation Closure State (Phase 180)
+
+Phase 180 computes and persists a machine-observed closure state — `open`, `closed`,
+`not_observed`, or `resurfaced` — for every tracked remediation item, alongside a per-deadline
+burndown aggregation against the Executive Order 14412 dates. **None of this is rendered yet.** It
+does not appear in the CLI summary, the HTML report, the DOCX report, the dashboard, or as
+CycloneDX VEX entries in the CBOM. If you are reading this report and looking for a "closed" or
+"verified fixed" indicator, it is not here — it is not that the feature is broken, it is that
+Phase 180 built the computation and Phase 181 surfaces it.
+
+The state is real and queryable now, through the database, even though no report surface renders
+it yet. If your engagement needs closure figures today, see `docs/operators-guide.md` §16 for the
+full model: what each of the four states means, why an item reads `not_observed` instead of
+`closed`, why `resurfaced` is reported separately from ordinary open items, and the documented
+limits (sensor-origin exclusion, `evidence_only` items, and the `unmapped` burndown bucket).

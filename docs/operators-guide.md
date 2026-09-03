@@ -2243,3 +2243,119 @@ instead of visibly declining to compare.
 A follow-up to revisit this — either by extending scope signatures to a per-sensor keying scheme,
 or by permanently accepting the exclusion and surfacing it in reports instead — is tracked in
 `.planning/ROADMAP.md` under `## Backlog` → "Remediation Coverage (post-v5.18)".
+
+## 16. Closure Verification (v5.18+ — Phase 180)
+
+Phase 179 gave a remediation item a stable identity and a per-scan record. Phase 180 adds the
+piece that identity was missing: a machine-observed decision about whether that item is actually
+fixed, computed from two consecutive comparable scans rather than asserted by anyone.
+
+### The four states
+
+A finding's closure state is always one of exactly four values (`quirk/intelligence/remediation.py`
+`ITEM_STATES`):
+
+- **`open`** — the finding was rechecked this scan and is still present.
+- **`closed`** — the finding was present in a comparable prior scan and the current scan positively
+  rechecked that same host:port with a healthy probe and did not find it there.
+- **`not_observed`** — the question was not answered this scan, one way or the other. See the
+  troubleshooting list below for the specific reasons this happens.
+- **`resurfaced`** — an item that was previously `closed` has come back. It is counted as open for
+  reporting purposes, but reported as its own line rather than folded silently into `open`, and its
+  closure history is retained rather than discarded.
+
+**Absence alone never closes an item.** A host that stops appearing in a scan — because it was
+decommissioned, because the target list shrank, because a segment of the network was unreachable —
+is not evidence anything was fixed. Closure requires the current scan to have positively rechecked
+that specific host:port and found the finding gone, not merely to have not seen it. This mirrors
+the guardrail vulnerability scanners such as Qualys, Tenable, and Orca already apply: a scanner
+does not mark a finding closed unless it recheck that exact target.
+
+### Why an item reads `not_observed` — troubleshooting
+
+If a client or colleague asks "why does this say `not_observed` instead of `closed`?", the answer
+is always one of:
+
+- **No comparable prior scan exists.** This is the first scan of this estate, or no prior scan's
+  scope signature matches closely enough to compare against.
+- **The scope signature is missing or mismatched.** Port scope, `--profile`, enabled optional
+  extras, credential presence, sensor set, or the target set itself differ between the two scans —
+  see `docs/operators-guide.md` §15 for what a scope signature captures. Two scans covering
+  different ground are never treated as comparable, no matter how similar the counts look.
+  Comparability now also depends on the **target set** — two different estates scanned with the
+  same profile are not comparable, even if every other scope dimension matches, which is why the
+  target-set digest exists.
+- **The relevant probe family was unhealthy.** A specific protocol family (SSH, TLS, JWT, etc.) was
+  `no_targets`, `not_run`, or `unhealthy` for the finding's host:port. A scan can exit cleanly while
+  one probe family silently produced no usable evidence — probe health is asserted positively per
+  family, never inferred from a clean exit.
+- **No endpoint was rechecked at that host:port.** The current scan simply did not touch that
+  address this run.
+
+Treat `not_observed` as **"we did not verify"**, never as **"nothing was found."** These read
+almost identically in a report, and the difference matters: telling a client "12 items came back
+clean" when the true state is "we did not check 12 items this run" is the exact misreading this
+state exists to prevent.
+
+### There is no closure override
+
+**No flag, config key, or CLI option can mark an item closed.** This is deliberate (CLOSE-01), not
+an oversight — an operator under client pressure to "just mark it fixed" has nothing to reach for,
+because nothing exists. If a finding needs to be closed, the only path is a rescan that positively
+observes it gone under comparable scope.
+
+### `resurfaced`
+
+A `resurfaced` item was `closed` on a prior scan and has now been rechecked and found present
+again. It counts toward `open`-style totals (so "how many open items do we have" stays accurate),
+but it is reported as its own category — a report reading "2 open + 1 resurfaced" tells you
+something "3 open" does not: one of those three was believed fixed and did not hold. The event
+history behind a resurfaced item is retained, so a later re-closure is traceable against the full
+sequence rather than looking like a first-time fix.
+
+### The EO 14412 deadline catalog
+
+Burndown is computed per named deadline, never as one number. The catalog lives in
+`quirk/scanner/pqc_deadlines.py` (`PQC_DEADLINES`) — this guide does not restate the dates as an
+independent fact; it points at that module because a client challenging a date needs one source of
+truth, not two that can drift apart. As of this writing that catalog carries:
+
+- **Key establishment** — December 31, 2030 (FIPS 203 / ML-KEM), for HVAs and high-impact systems.
+- **Digital signatures** — December 31, 2031 (FIPS 186-5 / DSS), for HVAs and high-impact systems.
+- **NIST-owned/operated subset** — December 31, 2027, an earlier deadline for a narrower system
+  set.
+
+Source: Federal Register Vol. 91 No. 121 (2026-06-25), FR Doc 2026-12909, Executive Order 14412.
+The catalog is re-verified on a 90-day cadence against that `source_url`, the same cadence as the
+QRAMM and CMVP catalogs described at the top of this file.
+
+**CNSA 2.0 dates are a deliberate, documented omission, not a gap that was missed.**
+`media.defense.gov` returns HTTP 403 to non-browser user agents, so no CNSA 2.0 date literal has
+been added anywhere in the codebase. Do not fill this in from a secondary source — a
+transcription error in a compliance-adjacent date is the exact failure class this catalog exists to
+prevent. If CNSA 2.0 dates become genuinely needed, they must be re-sourced directly and added with
+the same `source_url` discipline the EO 14412 dates already follow.
+
+### Documented limits
+
+Three things burndown and closure will never do, by design:
+
+- **Sensor-origin findings are excluded from closure tracking.** See §15's "Known limitation"
+  above — closure is scoped to CLI scans; findings arriving through the distributed sensor
+  ingestion path never carry the scope signature closure comparison requires.
+- **`evidence_only` items can never close.** Closure operates per constituent finding fingerprint;
+  an item with zero constituent fingerprints has nothing to positively recheck, so it can never
+  transition out of `not_observed`.
+- **Findings whose only algorithm evidence lives in a JSON blob land in the `unmapped` burndown
+  bucket**, not silently outside the count. `compute_burndown` reads only a matched endpoint's
+  declared columns (certificate public-key algorithm, certificate signature algorithm, cipher
+  suite); it deliberately does not re-implement the CBOM builder's protocol-specific JSON parsing a
+  second time, so evidence that only exists in a blob resolves to `unmapped` rather than to a
+  fabricated deadline. `unmapped` is reported, never dropped.
+
+> **Client Conversation — Closure:**
+> "This report's `not_observed` count is not 'nothing found' — it means we didn't recheck those
+> items this run, usually because this scan's scope differed from the prior one, or a probe family
+> came back unhealthy. Nothing here can be marked closed by a flag; a finding only closes when we
+> positively recheck it and it's gone. And a `resurfaced` item means something we believed fixed
+> came back — that's reported separately from ordinary open items so it isn't lost in the count."
