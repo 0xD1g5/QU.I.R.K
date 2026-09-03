@@ -53,6 +53,7 @@ def _seed_two_scans(
     tmp_path,
     *,
     include_prior_signature=True,
+    include_current_signature=True,
     prior_signature_version="2.0.0",
     prior_target_set_digest="tsd-a",
     prior_digest="digest-a",
@@ -86,16 +87,17 @@ def _seed_two_scans(
                     created_at=p_created,
                 )
             )
-        session.add(
-            ScanScopeSignature(
-                scan_run_id=CURRENT_SCAN_ID,
-                signature_version=current_signature_version,
-                digest=current_digest,
-                target_set_digest=current_target_set_digest,
-                probe_health_json=json.dumps(current_probe_health if current_probe_health is not None else HEALTHY_TLS),
-                created_at=now,
+        if include_current_signature:
+            session.add(
+                ScanScopeSignature(
+                    scan_run_id=CURRENT_SCAN_ID,
+                    signature_version=current_signature_version,
+                    digest=current_digest,
+                    target_set_digest=current_target_set_digest,
+                    probe_health_json=json.dumps(current_probe_health if current_probe_health is not None else HEALTHY_TLS),
+                    created_at=now,
+                )
             )
-        )
 
         if include_prior_fingerprint:
             session.add(
@@ -231,9 +233,17 @@ def test_digest_mismatch_refuses(tmp_path):
 
 
 def test_missing_signature_is_not_comparable(tmp_path):
+    """A MISSING signature is NOT-COMPARABLE, never comparable-by-default.
+
+    Prior-scan selection is drawn from ScanScopeSignature itself (D-25's key link), so a
+    prior scan candidate always HAS a signature by construction. The realistic path to
+    this refusal is the CURRENT scan's own signature being absent — e.g. scope-signature
+    persistence failed independently of remediation persistence (both are advisory
+    bookkeeping that can fail without failing the scan).
+    """
     from quirk.intelligence.closure import compute_closure
 
-    db_path = _seed_two_scans(tmp_path, include_prior_signature=False)
+    db_path = _seed_two_scans(tmp_path, include_current_signature=False)
     counters = compute_closure(db_path, CURRENT_SCAN_ID)
 
     assert counters["closed"] == 0
@@ -305,9 +315,14 @@ def test_prior_scan_selection_orders_by_created_at_desc(tmp_path):
 
 
 def test_prior_scan_selection_does_not_use_trends_helper():
+    """closure.py's module docstring MUST explain why trends.py's helper is not used
+    (T-180-22) — so this checks for actual IMPORT/CALL usage, not the prose mention.
+    """
     source = Path("quirk/intelligence/closure.py").read_text(encoding="utf-8")
-    assert "from quirk.dashboard.api.routes.trends" not in source
-    assert "_list_session_timestamps" not in source
+    assert not re.search(r"^\s*(from|import)\s+quirk\.dashboard", source, re.MULTILINE)
+    assert "_list_session_timestamps(" not in source
+    assert "import quirk.dashboard" not in source
+    assert "trends._list_session_timestamps" not in source
 
 
 def test_item_state_requires_all_fingerprints_closed(tmp_path):
