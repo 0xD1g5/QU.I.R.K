@@ -906,18 +906,91 @@ the trend counts described above; it affects only the title text a consultant se
 
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*
 
-## 16. Remediation Closure State (Phase 180)
+## 16. Remediation Closure State (Phase 180-181)
 
 Phase 180 computes and persists a machine-observed closure state — `open`, `closed`,
 `not_observed`, or `resurfaced` — for every tracked remediation item, alongside a per-deadline
-burndown aggregation against the Executive Order 14412 dates. **None of this is rendered yet.** It
-does not appear in the CLI summary, the HTML report, the DOCX report, the dashboard, or as
-CycloneDX VEX entries in the CBOM. If you are reading this report and looking for a "closed" or
-"verified fixed" indicator, it is not here — it is not that the feature is broken, it is that
-Phase 180 built the computation and Phase 181 surfaces it.
+burndown aggregation against the Executive Order 14412 dates. Phase 181 renders that state: it now
+appears in the CLI summary, the HTML report, the DOCX report, the dashboard, and as CycloneDX VEX
+entries in the CBOM. For the full four-state model — what each state means, why an item reads
+`not_observed` instead of `closed`, why `resurfaced` is reported separately, and the documented
+limits (sensor-origin exclusion, `evidence_only` items, the `unmapped` burndown bucket) — see
+`docs/operators-guide.md` §16, which this section does not repeat.
 
-The state is real and queryable now, through the database, even though no report surface renders
-it yet. If your engagement needs closure figures today, see `docs/operators-guide.md` §16 for the
-full model: what each of the four states means, why an item reads `not_observed` instead of
-`closed`, why `resurfaced` is reported separately from ordinary open items, and the documented
-limits (sensor-origin exclusion, `evidence_only` items, and the `unmapped` burndown bucket).
+### Where closure state appears
+
+- The CLI markdown, HTML, and DOCX reports each carry a **"Remediation Burndown"** section, with a
+  byte-identical advisory caption across all three: *"Advisory - remediation burndown does not
+  affect the readiness score."* The caption is duplicated once per renderer by design (matching
+  this repo's existing vendor-trend precedent) and held equal by a test — it is not a single shared
+  string, but the three copies can never legitimately drift apart.
+- The CBOM carries a `vulnerabilities` array — CycloneDX VEX — with one entry per remediation item.
+- The dashboard shows closure state on the roadmap items it already displays; see "The dashboard
+  surface" below.
+
+### Reading the burndown
+
+The burndown is reported **per deadline**, never as one number. Each of the two Executive Order
+14412 dates — key establishment (2030-12-31) and digital signatures (2031-12-31) — gets its own
+section with its own counts of `open`, `closed`, `not_observed`, and `resurfaced` items against
+that deadline. The `unmapped` bucket — items whose only algorithm evidence could not be matched to
+either deadline — is shown in every section, never hidden.
+
+**There is deliberately no total and no "% remediated."** An endpoint using RSA key exchange can be
+late against the key-establishment deadline while an RSA signature on the same endpoint is late
+against the digital-signature deadline — the same underlying finding can appear in both buckets.
+Summing across deadlines would double-count it. Read each deadline's figures on their own terms; do
+not add them together, and do not look for a single readiness-style burndown scalar, because one
+does not exist and will not be added — CLOSE-03 eliminated it deliberately.
+
+### Reading the CBOM VEX entries
+
+Each remediation item's closure state maps to a CycloneDX `ImpactAnalysisState` as follows:
+
+| Closure state | VEX `analysis.state` |
+|---|---|
+| `closed` | `RESOLVED` (serialized in the CBOM JSON as `resolved`) |
+| `open` | `EXPLOITABLE` (`exploitable`) |
+| `resurfaced` | `EXPLOITABLE` (`exploitable`, with `detail`/`first_issued`/`last_updated` distinguishing it from ordinary `open`) |
+| `not_observed` | `IN_TRIAGE` (serialized in the CBOM JSON as `in_triage`) |
+
+**`not_observed` maps to `IN_TRIAGE` — serialized as `in_triage` in the CBOM's JSON —
+never to `NOT_AFFECTED` (`not_affected`).** `not_affected` is a CycloneDX state
+that asserts the item was assessed and found not to affect the product — that assertion was never
+established for a `not_observed` item; the whole point of `not_observed` is that we did not verify
+one way or the other this scan. `in_triage` is the honest reading of "we did not verify," and this
+matters more in the CBOM than anywhere else in this guide: the CBOM is a machine-readable artifact
+a client may feed directly into their own vulnerability-management tooling without a human present
+to add the caveat. A wrong mapping here does not just mislead a reader of prose — it plants an
+incorrect safety claim (`not_affected`) inside a downstream automated pipeline.
+
+**A refused scan and the `unmapped` bucket produce no VEX entry at all** — not an `IN_TRIAGE` entry,
+nothing. Emitting an entry for either would imply an assessment was made for items we explicitly
+declined to compare (a refused scan) or could not classify against a deadline (`unmapped`). The
+refusal itself is stated in the report's burndown section instead — see "When closure was not
+computed" below — never silently absorbed into the CBOM as a blank `IN_TRIAGE` row.
+
+**No VEX entry carries a CVE id, a source, ratings, or a host/port.** These are non-CVE remediation
+items, not vulnerabilities in the CycloneDX-source sense — the CycloneDX 1.6 schema's
+`definitions.vulnerability` has no required fields, so a minimal, honest entry (an `id` that is the
+item's slug, a description, and the analysis block above) is fully legal without fabricating any of
+that data. The item slug is the correlation key back to the report's roadmap and burndown sections.
+
+### When closure was not computed
+
+If the current scan's scope does not match a comparable prior scan closely enough, closure is
+**refused**, not silently skipped. The report states this explicitly and names the differing
+axis — for example "Closure not computed: scan scope differs from the prior scan." — rather than
+omitting the section. **This must not be read as "nothing closed."** An omitted or all-zero-looking
+burndown section would be the false-negative twin of the false-closure risk this whole model exists
+to prevent: a consultant reading silence as "no progress" is just as wrong as reading it as
+"everything's fine." When you see a refusal statement, the honest response is "we don't have a
+comparable answer this run," not "0 closed."
+
+> **Client Conversation — Remediation Burndown:**
+> "This burndown section is per deadline, not a single number — we deliberately don't add a
+> 'percent remediated' headline, because the two Executive Order deadlines can both apply to the
+> same finding and a total would double-count it. And if you see an item marked `not_observed`,
+> that means we didn't verify it this run, not that it's clean — the CBOM reflects that same
+> distinction as `IN_TRIAGE`, never as 'not affected,' because we never assert something is safe
+> without having actually rechecked it."
