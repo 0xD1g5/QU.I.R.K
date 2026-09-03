@@ -113,6 +113,86 @@ _SCAN_LEVEL_REFUSAL_KEYS: tuple = (
     "refused_scope_mismatch",
 )
 
+# Phase 181 Plan 05 (SURF-02): one axis phrase per _SCAN_LEVEL_REFUSAL_KEYS
+# entry, naming the dimension that differed. Adding a sixth scan-level
+# refusal reason to quirk/intelligence/closure.py::_COUNTER_KEYS requires a
+# phrase here — Plan 181-02's parametrized
+# test_refusal_names_the_differing_axis will fail loudly if one is missing,
+# rather than the report silently rendering an empty axis.
+_REFUSAL_AXIS: Dict[str, str] = {
+    "refused_no_prior": "no comparable prior scan exists",
+    "refused_missing_signature": (
+        "a scope signature is missing on one side of the comparison"
+    ),
+    "refused_signature_version_gap": (
+        "the scope signature version differs between the two scans"
+    ),
+    "refused_missing_target_set_digest": "the target-set digest is absent",
+    "refused_scope_mismatch": "scan scope differs from the prior scan",
+}
+
+
+def _closure_refusal_from_counters(closure_counters: Optional[Dict[str, Any]]) -> dict:
+    """Phase 181 Plan 05 (SURF-02): build the closure-refusal disclosure from the
+    pipeline's already-computed `closure_counters` — NEVER from a second
+    comparability evaluation. writer.py must never call `scans_are_comparable`
+    or `compute_closure`; a second derivation could diverge from the one the
+    pipeline already computed, which is the defect class this milestone has
+    corrected repeatedly.
+
+    Returns `{}` when `closure_counters` is falsy, or when none of the five
+    `_SCAN_LEVEL_REFUSAL_KEYS` counters are non-zero (per-item refusals such
+    as `refused_probe` already resolve to `not_observed` and are not a
+    scan-level refusal). Otherwise resolves the FIRST non-zero scan-level key
+    in `_SCAN_LEVEL_REFUSAL_KEYS` order and returns
+    `{"refused": True, "reason_key": <key>, "axis": <phrase>, "statement": <sentence>}`
+    where the sentence is built here, in exactly one place, so it cannot
+    drift between the three renderers that will print it verbatim (Plan
+    181-06).
+    """
+    if not closure_counters:
+        return {}
+
+    for key in _SCAN_LEVEL_REFUSAL_KEYS:
+        if closure_counters.get(key):
+            axis = _REFUSAL_AXIS[key]
+            return {
+                "refused": True,
+                "reason_key": key,
+                "axis": axis,
+                "statement": f"Closure not computed: {axis}.",
+            }
+
+    return {}
+
+
+def _load_closure_burndown(db_path, scan_run_id) -> dict:
+    """Phase 181 Plan 05 (SURF-02): one non-fatal read of `compute_burndown()`'s
+    per-deadline bucket aggregate, unmodified — never a closure recomputation.
+
+    Returns `{}` immediately when either argument is falsy, and `{}` on any
+    read failure (broad except-log-return-{} guard, mirroring
+    `_load_vendor_pqc_trends`'s idiom). Callers are responsible for forcing
+    this to `{}` when the scan was refused (a refused scan renders its
+    refusal, never a table) — this function itself does not know about
+    refusal state.
+    """
+    if not db_path or not scan_run_id:
+        return {}
+
+    try:
+        from quirk.db import get_session as _get_session
+        from quirk.intelligence.burndown import compute_burndown as _compute_burndown
+
+        with _get_session(db_path) as _burndown_sess:
+            return _compute_burndown(_burndown_sess, scan_run_id=scan_run_id)
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "remediation burndown section skipped (non-fatal)", exc_info=True
+        )
+        return {}
+
 
 def _load_remediation_items(db_path, scan_run_id, closure_counters=None) -> list:
     """Phase 181 SURF-01: load current-scan RemediationItem rows for VEX emission.
@@ -288,6 +368,15 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
 
     stamp = _utc_stamp()
     report_start = time.perf_counter()
+
+    # Phase 181 SURF-01/SURF-02: write_reports has never carried a scan_run_id
+    # parameter, so it is derived once here from the endpoints already in
+    # hand rather than recomputed from the database — reused below by both
+    # the burndown loader and the CBOM VEX remediation-items loader.
+    _scan_run_id = next(
+        (getattr(e, "scan_run_id", None) for e in (endpoints or []) if getattr(e, "scan_run_id", None)),
+        None,
+    )
 
     # 1) Findings JSON (raw)
     findings_path = os.path.join(outdir, f"findings-{stamp}.json")
@@ -531,6 +620,20 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # no second database read.
     exec_content.vendor_pqc_trends = vendor_pqc_trends
 
+    # Phase 181 Plan 05 (SURF-02): the refusal disclosure is derived from the
+    # pipeline's already-computed closure_counters — never a second
+    # comparability evaluation. A refused scan renders its refusal, never a
+    # burndown table, so the loader is only invoked when closure was NOT
+    # refused (mutually exclusive payloads).
+    _closure_refusal = _closure_refusal_from_counters(closure_counters)
+    _burndown = (
+        {}
+        if _closure_refusal
+        else _load_closure_burndown(getattr(cfg.output, "db_path", None), _scan_run_id)
+    )
+    exec_content.closure_refusal = _closure_refusal
+    exec_content.burndown = _burndown
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — one shared computation
     # feeds markdown/HTML/DOCX/terminal summary; no renderer recomputes this.
     _undetermined_count, _undetermined_breakdown = _compute_undetermined_hosts(endpoints)
@@ -603,13 +706,8 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # WR-03 (Phase 129): guard against AttributeError if ExecContent was constructed
     # without hardware_devices (e.g. unit tests or future backward-compat paths).
     _hw_for_cbom = getattr(exec_content, "hardware_devices", None) or []
-    # Phase 181 SURF-01: write_reports has never carried a scan_run_id
-    # parameter, so it is derived here from the endpoints already in hand
-    # rather than recomputed from the database.
-    _scan_run_id = next(
-        (getattr(e, "scan_run_id", None) for e in (endpoints or []) if getattr(e, "scan_run_id", None)),
-        None,
-    )
+    # Phase 181 SURF-01: _scan_run_id derived once at the top of write_reports
+    # (see above) and reused here — never recomputed.
     cbom = build_cbom(
         endpoints,
         hw_devices=_confirm_upstream_mitigation(_detect_crypto_bridges(_hw_for_cbom)),
