@@ -31,6 +31,7 @@
 - ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
 - ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
+- 🚧 **v5.19 Drain & Tooling Integrity** — Phases 182–186 (in progress, opened 2026-09-03)
 - ✅ **v5.18 Migration Execution** — Phases 177–181, 37 plans (shipped 2026-09-03 as `v5.18.0`, first PyPI release since 5.12.0; carries v5.16 + v5.17 content) → `.planning/milestones/v5.18-ROADMAP.md`
 - ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
 
@@ -89,21 +90,146 @@ is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
 
-## Backlog` below and STATE.md `## Deferred Items` (re-triaged 2026-09-01).
+## Current Milestone: v5.19 Drain & Tooling Integrity
 
-- **TRIAGE-176-01 / TRIAGE-176-02** — two genuine defects surfaced by the Phase 176 chaos-lab
-  re-run, explicitly triaged rather than absorbed. Each needs its own plan and tests.
+**Goal:** Close the carried items from v5.18 and repair three enumerations that have drifted from
+the criteria they claim to enforce. Ops cycle — small and evidence-scoped, not a v4.8-scale drain.
 
-- Two `UAT-6-08` case-text corrections carried forward from plan 176-08.
-- **`DEFER-172-01`** — `tests/skip_registry.py` line-number drift across 5 files; still the sole
-  failing node in the local full-suite baseline (`1 failed, 3802 passed`).
+**Phase Numbering:** Continues from v5.18's last phase (181). Integer phases only.
 
-- **a11y route coverage** — the a11y sweep does not cover `/hardware` or `/compare`
-  (`.planning/todos/pending/a11y-route-coverage-gap.md`), the same two routes as the 2 pending
-  visual scenarios in `158-HUMAN-UAT.md`. Triage them together.
+> [!important] Three of the five workstreams are ONE defect class
+> **A hand-maintained enumeration that has drifted from the criterion it claims to enforce.**
+> GATE-03's allowlist (14 listed, 21 unlisted files with 35 call sites), `skip_registry.py`'s
+> line-keyed entries (10 unregistered skips), and the 33 a11y baselines (generated on macOS,
+> enforced on Linux, 31 never checked against the runner). The remedy each time is **derivation, or
+> a guard against the enumeration's own criterion** — Phase 178's derived-alias-table precedent —
+> not a longer list.
 
-- **Windows Authenticode signing** (`UAT-143-03`) — engineering-complete, blocked on purchasing a
-  certificate. Not engineering work.
+> [!warning] `DEFER-172-01` grew during v5.18
+> It absorbed `test_closure_burndown.py:296` (Phase 180) unnoticed, because the node was already
+> red. A permanently-failing test is where new failures hide — it is what made Phase 180's genuine
+> second failure hard to distinguish. Deferring it a fourth time compounds that.
+
+**Every item re-measured at the boundary (2026-09-03)** rather than inherited. Two had drifted
+since they were first recorded.
+
+### Phases
+
+- [ ] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
+- [ ] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 14-entry allowlist, with the 35 unlisted call sites each migrated or explicitly grandfathered.
+- [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: 10 unregistered skips each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
+- [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
+- [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
+
+## Phase Details
+
+### Phase 182: Tooling Integrity
+
+**Goal**: The GSD `state.*` verbs stop silently corrupting `STATE.md`, and the local fix either
+survives package regeneration or its loss is detected.
+**Depends on**: Nothing (gating — STATE.md is what every future session reads as project history)
+**Requirements**: TOOL-01, TOOL-02, TOOL-03
+**Success Criteria** (what must be TRUE):
+
+  1. A `STATE.md` containing `**Status:**` inside prose survives `state begin-phase` byte-identical,
+     while the real field still updates. Bug A is root-caused to `stateReplaceField()`'s unanchored
+     bold pattern at `bin/lib/state-document.generated.cjs:42`; the fix is verified, and a
+     regression fixture locks it.
+
+  2. `stopped_at` and the `progress:` block survive `begin-phase`. Bug B rebuilds frontmatter from a
+     fixed schema rather than preserving it — reproduced both with and without `ROADMAP.md`
+     present. Either patched locally with a preserve-unknown-keys pass, or hand-editing becomes the
+     documented protocol with the upstream report landed.
+
+  3. Loss of the local patch is detectable. The patched file is `.generated.cjs`, so regeneration
+     silently reverts it — needs a re-apply check (the `bin/verify-reapply-patches.cjs` precedent)
+     or an upstream fix.
+**Plans**: TBD
+
+### Phase 183: Fork-Safety Gate Derivation
+
+**Goal**: GATE-03 derives its file set from its own criterion instead of enumerating it.
+**Depends on**: Nothing
+**Requirements**: DRIFT-01
+**Success Criteria** (what must be TRUE):
+
+  1. `tests/test_cli_helper_usage.py` walks the repo against the gate's own criterion rather than
+     reading `_COVERED_FILES`. **Measured 2026-09-03:** 14 files listed, **21 unlisted files with
+     35 direct `subprocess.*` call sites**. HORIZON recorded 11/18/38 at the v5.16 audit — the drift
+     has grown, which is the argument for derivation over a longer list.
+
+  2. Each of the 35 unlisted call sites is decided: migrated to `run_fork_safe`, or given the
+     kwargs, or **explicitly grandfathered with a reason** — never silently.
+
+  3. The gate is proven falsifiable: a synthetic unsafe `subprocess.run(` is added, the gate goes
+     RED naming it, and the injection is reverted.
+**Plans**: TBD
+
+### Phase 184: Skip Registry Closure
+
+**Goal**: `DEFER-172-01` closes, and the registry stops re-breaking on unrelated line shifts.
+**Depends on**: Nothing
+**Requirements**: DRIFT-02
+**Success Criteria** (what must be TRUE):
+
+  1. `tests/test_skip_registry.py::test_no_unregistered_skips` **passes** — the first fully green
+     full suite since v5.17. **Measured 2026-09-03: 10 unregistered skips**, four in
+     `test_uat_disposition_integrity.py`, one new from v5.18 (`test_closure_burndown.py:296`).
+
+  2. Every skip is registered with a real justification **or deleted** per Phase 41 D-01/D-04.
+     None is registered merely to quiet the gate — an honest deletion beats a fabricated reason.
+
+  3. The `(file, LINENO)` keying is re-decided. Line-number keying is why this node re-breaks on
+     edits to unrelated code in the same file; content-addressing or a marker-based key removes
+     that. If keying is kept, the reason is written down.
+**Plans**: TBD
+
+### Phase 185: a11y Baseline Environment
+
+**Goal**: a11y baselines are generated in the environment that enforces them, and the two uncovered
+routes gain coverage.
+**Depends on**: Nothing
+**Requirements**: DRIFT-03
+**Success Criteria** (what must be TRUE):
+
+  1. Baselines are regenerated via `--update-baselines` on a **Linux CI runner**, not locally.
+     All 33 were generated on macOS in one batch on 2026-08-27 while the gate runs on Linux;
+     **31 have never been checked against the runner**. Phase 177 hit this as three separate false
+     regressions on `/data-at-rest` and hand-patched the counts — that is the workaround being
+     replaced.
+
+  2. `/hardware` and `/compare` are covered by the a11y sweep, closing
+     `.planning/todos/pending/a11y-route-coverage-gap.md`.
+
+  3. The 2 pending visual scenarios in `158-HUMAN-UAT.md` — the same two routes — are triaged
+     alongside, not separately.
+**Plans**: TBD
+
+### Phase 186: Carried Defect Drain
+
+**Goal**: The two chaos-lab defects carried from v5.17 are closed with their own plans and tests.
+**Depends on**: Nothing
+**Requirements**: TRIAGE-01, TRIAGE-02
+**Success Criteria** (what must be TRUE):
+
+  1. `TRIAGE-176-01` is fixed with a regression test that fails against the pre-fix code.
+
+  2. `TRIAGE-176-02` likewise. Both were surfaced by the Phase 176 chaos-lab re-run and explicitly
+     triaged rather than absorbed — each needs its own plan, not a shared one.
+
+  3. If either turns out to be a case-text defect rather than a product defect (as `UAT-6-08` did
+     in Phase 176), that is reported and dispositioned rather than forced into a code change.
+**Plans**: TBD
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 182. Tooling Integrity | 0/? | Not started | — |
+| 183. Fork-Safety Gate Derivation | 0/? | Not started | — |
+| 184. Skip Registry Closure | 0/? | Not started | — |
+| 185. a11y Baseline Environment | 0/? | Not started | — |
+| 186. Carried Defect Drain | 0/? | Not started | — |
 
 ## Backlog
 

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.18
-milestone_name: Migration Execution
-status: executing
-stopped_at: Completed 181-09-PLAN.md (phase close-out — foreground full suite, every UAT gate by name, Series 181, four requirements hand-closed including ADVISORY-01); phase checkbox left unchecked for the verifier per ARTIFACT-01
+milestone: v5.19
+milestone_name: Drain & Tooling Integrity
+status: planning
+stopped_at: v5.19 opened — no phase started
 last_updated: "2026-09-03T00:00:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 37
-  completed_plans: 37
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
