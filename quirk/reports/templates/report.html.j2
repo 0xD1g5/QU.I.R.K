@@ -515,6 +515,9 @@
        inside the drift or forecast blocks, so catalog-level vendor trends render
        on a run with zero device drift events and no EOL forecast #}
     {% if vendor_trend_section %}{{ vendor_trend_section | safe }}{% endif %}
+    {# Phase 181 SURF-02: remediation burndown — a sibling section, independent
+       of hardware/drift/forecast/vendor-trend data availability #}
+    {% if burndown_section %}{{ burndown_section | safe }}{% endif %}
   </section>
 
   <!-- ===== TECHNICAL APPENDIX ===== -->

@@ -508,6 +508,20 @@ VENDOR_TREND_ADVISORY_CAPTION = (
     "Advisory — vendor PQC status trends do not affect the readiness score."
 )
 
+# Phase 181 SURF-02: LOCKED caption copy for the "Remediation Burndown"
+# section, byte-identical to quirk/reports/technical.py's
+# BURNDOWN_ADVISORY_CAPTION and to docx_renderer._BURNDOWN_ADVISORY_CAPTION.
+# Per-renderer duplication is the established Phase 161 convention (see
+# VENDOR_TREND_ADVISORY_CAPTION above) — NOT a shared constant in
+# content_model.py; a parity test fails loudly if the three surfaces drift.
+BURNDOWN_ADVISORY_CAPTION = (
+    "Advisory - remediation burndown does not affect the readiness score."
+)
+
+# Phase 181 SURF-02 / D-35/D-36: fixed bucket iteration order so per-deadline
+# sections are stable and `unmapped` is always rendered last, never omitted.
+_BURNDOWN_BUCKET_ORDER = ("key_establishment", "digital_signature", "unmapped")
+
 # Phase 161 HWLC-19 — verbatim display labels for vendor-scoped trend events.
 _VENDOR_TREND_EVENT_TYPE_LABELS: Dict[str, str] = {
     "pqc_status_change": "PQC status change",
@@ -699,6 +713,83 @@ def render_vendor_trend_section(events: list) -> str:
     )
 
 
+def render_burndown_section(burndown: dict, closure_refusal: dict | None) -> str:
+    """Generate the HTML "Remediation Burndown" section (Phase 181 SURF-02).
+
+    Pure function, sibling to render_vendor_trend_section. The refusal branch
+    is emitted FIRST — a refused scan is never presented as a measured (e.g.
+    "zero closed") result, and emits no ``<table>`` at all. Otherwise, iterates
+    the three fixed buckets (key_establishment, digital_signature, unmapped)
+    in order — `unmapped` is always rendered, labelled "No deadline mapped"
+    rather than omitted or blanked.
+
+    D-36 / CLOSE-03: buckets overlap by design and are never summed — no
+    total row, no percentage anywhere in this function.
+
+    Every interpolated value is html.escape()'d without exception, matching
+    render_vendor_trend_section's contract.
+    """
+    if not burndown and not closure_refusal:
+        return ""
+
+    caption_html = (
+        f'<p class="burndown-advisory-caption" style="font-size:12px;color:#888;'
+        f'margin-bottom:8px">{_html.escape(BURNDOWN_ADVISORY_CAPTION)}</p>'
+    )
+
+    if closure_refusal:
+        statement = _html.escape(str(closure_refusal.get("statement", "")))
+        return (
+            '<section class="burndown-section" style="margin:24px 0;'
+            'border-left:4px solid #2b8a86;padding-left:12px">'
+            '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">'
+            "Remediation Burndown</h2>"
+            f"{caption_html}"
+            f'<p class="burndown-refusal-statement">{statement}</p>'
+            "</section>"
+        )
+
+    rows_html = []
+    for bucket_key in _BURNDOWN_BUCKET_ORDER:
+        bucket = burndown.get(bucket_key)
+        if bucket is None:
+            continue
+        deadline = _html.escape(str(bucket.get("date") or "No deadline mapped"))
+        standard = _html.escape(str(bucket.get("standard") or "—"))
+        rows_html.append(
+            "<tr>"
+            f"<td>{_html.escape(bucket_key)}</td>"
+            f"<td>{deadline}</td>"
+            f"<td>{standard}</td>"
+            f"<td>{bucket.get('open', 0)}</td>"
+            f"<td>{bucket.get('closed', 0)}</td>"
+            f"<td>{bucket.get('not_observed', 0)}</td>"
+            f"<td>{bucket.get('resurfaced', 0)}</td>"
+            "</tr>"
+        )
+    rows_joined = "\n".join(rows_html)
+
+    return (
+        '<section class="burndown-section" style="margin:24px 0;'
+        'border-left:4px solid #2b8a86;padding-left:12px">'
+        '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">'
+        "Remediation Burndown</h2>"
+        f"{caption_html}"
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+        "<thead><tr>"
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Bucket</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Deadline</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Standard</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Open</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Closed</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Not Observed</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Resurfaced</th>'
+        "</tr></thead>"
+        f"<tbody>{rows_joined}</tbody>"
+        "</table></section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -819,6 +910,15 @@ def render_html_report(
     _vendor_trends_for_render = getattr(exec_content, "vendor_pqc_trends", []) if exec_content is not None else []
     vendor_trend_section = render_vendor_trend_section(_vendor_trends_for_render)
 
+    # Phase 181 SURF-02: remediation burndown section (advisory-only).
+    # getattr guard so an older ExecContent instance without the field
+    # cannot raise.
+    _burndown_for_render = getattr(exec_content, "burndown", {}) if exec_content is not None else {}
+    _closure_refusal_for_render = (
+        getattr(exec_content, "closure_refusal", {}) if exec_content is not None else {}
+    )
+    burndown_section = render_burndown_section(_burndown_for_render, _closure_refusal_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -860,6 +960,8 @@ def render_html_report(
         eol_forecast_section=eol_forecast_section,
         # Phase 161 HWLC-19: vendor PQC trend section (pre-rendered HTML string)
         vendor_trend_section=vendor_trend_section,
+        # Phase 181 SURF-02: remediation burndown section (pre-rendered HTML string)
+        burndown_section=burndown_section,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,
