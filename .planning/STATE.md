@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: "Completed 182-02-PLAN.md"
-last_updated: "2026-09-03T14:35:17.000Z"
+stopped_at: "Completed 182-03-PLAN.md"
+last_updated: "2026-09-03T14:43:24.000Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
-  percent: 40
+  completed_plans: 3
+  percent: 60
 ---
 
 # Project State
@@ -22,6 +22,29 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 182 — tooling-integrity
+
+**182-03 complete (2026-09-03):** `gsd-local-patches/` + `gsd-pristine/` durability layer, seeded
+outside the repo at `~/.claude/gsd-local-patches/` and `~/.claude/gsd-pristine/` in the exact
+`~/.claude`-relative layout `verify-reapply-patches.cjs` resolves (`get-shit-done/bin/lib/state.cjs`
+and `get-shit-done/bin/lib/state-document.generated.cjs`, full post-edit snapshots, not diffs).
+`backup-meta.json` written with `pristine_hashes` (SHA-256 per relPath), matching the shape
+`reapply-patches.md`'s `jq` lookup expects. `verify-reapply-patches.cjs --json` exits 0 against
+the seeded trees; precise diff mode confirmed engaged via `computeUserAddedLines` (6 required
+lines for the Bug A hunk — single-digit, not the over-broad fallback). `tests/test_gsd_state_patch.py`
+extended with a second skip guard (`GSD_PATCHES_AVAILABLE`) and two tests:
+`test_local_patches_are_durable` (verifier exits 0 against the seeded trees, distinguishes exit 1
+vs exit 2 in its failure message) and `test_patch_loss_is_actually_detected` (negative control —
+simulates a regeneration reverting Bug A's fix by reverting a throwaway `--config-dir` copy to
+pristine content, asserts exit 1). The negative control's first implementation reverted the wrong
+side of the diff (patches-dir backup instead of the installed-file copy) and produced a genuine
+false pass — caught by running it before committing, fixed, re-verified non-zero. Loss-detection
+scoped to Bug A only (regeneration-fragile); Bug B (`state.cjs`, ordinary source) is durable and
+relies on 182-02's behavioural fixtures instead. Honest-skip path observed by temporarily
+renaming `gsd-local-patches/` — both tests SKIP with a reason naming it, directory restored
+immediately after. Neither patched file was re-edited (byte-copied only). `tests/test_gsd_state_patch.py`
+whole-file green (7 passed); `tests/test_cli_helper_usage.py` green (2 passed);
+`grep -c "subprocess\."` → 0. TOOL-01/TOOL-03 span plans 01/02/03/05 — NOT marked complete in
+REQUIREMENTS.md, close in 182-05. See `182-03-SUMMARY.md`.
 
 **182-01 complete (2026-09-03):** argv/cwd contract lock-down + Bug A prose-survival fixture with
 a sensitivity-proving negative control. Confirmed and documented the `state begin-phase` argv
@@ -412,9 +435,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 182 (tooling-integrity) — EXECUTING
-Plan: 2 of 5
-Status: 182-02 complete (Bug B preserve-unknown-keys frontmatter merge). Plans 182-03 through
-182-05 not yet started.
+Plan: 3 of 5
+Status: 182-03 complete (gsd-local-patches/gsd-pristine durability layer + loss-detection test).
+Plans 182-04 and 182-05 not yet started.
 
 **182-02 complete (2026-09-03):** Bug B preserve-unknown-keys fix. Patched `syncStateFrontmatter`
 in `~/.claude/get-shit-done/bin/lib/state.cjs` (ordinary source, not generated) so `begin-phase`
