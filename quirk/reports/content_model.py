@@ -112,6 +112,27 @@ class ExecContent:
     # vendor-scoped, not device-scoped.
     vendor_pqc_trends: List[dict] = field(default_factory=list)
 
+    # Phase 181 Plan 05 (SURF-02): advisory-only per-deadline remediation
+    # burndown, populated by writer.py's _load_closure_burndown() from a
+    # single `compute_burndown()` read; never routed through
+    # `_build_finding()` / findings_evaluator.py. Deliberately carries no
+    # `severity`, `host`, or `port` key — a payload with no severity
+    # structurally cannot enter the findings chokepoint that feeds scoring;
+    # the absent key is the mechanism, not decoration. Buckets are
+    # per-deadline and overlap by design (D-36); there is no aggregate
+    # total anywhere in this field.
+    burndown: dict = field(default_factory=dict)
+
+    # Phase 181 Plan 05 (SURF-02): advisory-only closure-refusal disclosure,
+    # populated by writer.py's _closure_refusal_from_counters() from the
+    # pipeline's already-computed `closure_counters` — never from a second
+    # comparability evaluation (writer.py never calls `scans_are_comparable`
+    # or `compute_closure`). Never routed through `_build_finding()` /
+    # findings_evaluator.py; deliberately carries no `severity`, `host`, or
+    # `port` key, matching `burndown`'s contract above. An EMPTY dict means
+    # closure WAS computed — it does NOT mean "unknown" or "not yet run".
+    closure_refusal: dict = field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # D-04: Ordering dicts for within-bucket priority sort
