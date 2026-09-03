@@ -21897,11 +21897,7 @@ requires two real, time-separated engagements against a genuinely changing envir
 
 **Falsifiability:** N/A — manual-only, honestly recorded as a gap rather than fabricated.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage: no fixture in this
-repository reproduces genuine remediation across two real, time-separated scans of a changing
-estate. The two-sided condition's mechanics are fully proven automated — see UAT-180-04 and
-UAT-180-05 — but the end-to-end "did the operator's remediation actually get detected as closed"
-claim can only be verified against a live client engagement.)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage: no fixture reproduces genuine remediation across two real, time-separated scans of a changing estate; the two-sided condition's mechanics are proven automated in UAT-180-04/UAT-180-05, but the end-to-end claim needs a live client engagement.)
 **Date:** 2026-09-02  **Tester:** N/A — no substitute exists (180-08 phase-close plan execution)
 **Notes:** Per D-46, `GAP` is a valid PASSING disposition under
 `tests/test_uat_zero_undispositioned_gate.py` — it polices unrecorded cases, not uncovered ones.
