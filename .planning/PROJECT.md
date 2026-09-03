@@ -1,5 +1,26 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
+## Current State (updated 2026-09-03)
+
+**Shipped:** `v5.18.0` on PyPI — first published release since 5.12.0, carrying v5.16
+(Review Drain & Gate Integrity) and v5.17 (Defect Drain) content alongside v5.18's own.
+
+**v5.18 Migration Execution** closed the loop: QUIRK now tracks remediation items to completion
+across re-scans and shows movement against the roadmap, not only against the score. Closure is
+machine-observed under a two-sided condition and never human-asserted; `resurfaced` is modelled
+explicitly; burndown is per-deadline (EO 14412: key establishment 2030-12-31, digital signatures
+2031-12-31, separately) rather than a single scalar; and closure state is surfaced as CycloneDX
+VEX in the CBOM plus advisory-only burndown in the CLI/HTML/DOCX reports and on the dashboard.
+
+**Standing constraint, now machine-enforced:** closure state is advisory-only and never feeds the
+quantum-readiness score (ADVISORY-01), guarded across intelligence, report, CBOM, and dashboard
+surfaces.
+
+**Carried into the next milestone:** the a11y baseline environment mismatch (33 baselines generated
+on macOS, enforced on Linux CI), sensor-origin findings excluded from closure, `DEFER-172-01`
+skip-registry line drift, and TRIAGE-176-01/02.
+
+
 ## What This Is
 
 QU.I.R.K. is a consulting-grade cryptographic inventory scanner and readiness assessment platform

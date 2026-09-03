@@ -970,3 +970,4 @@ Local tag `v5.4.0`.
 - SSH algorithm parsing added to _derive_cbom() in scan.py: kex/key/enc/mac sections from ssh_audit_json now produce classified CbomComponent entries in the dashboard CBOM viewer, closing GAP-INT-03
 
 ---
+- **v5.18 Migration Execution** — shipped 2026-09-03 as `v5.18.0` (first PyPI release since 5.12.0; carries v5.16 + v5.17 content). Phases 177–181, 37 plans, 142 commits. Closure tracking end to end: stable finding identity, remediation item model, machine-observed closure with `resurfaced`, per-deadline burndown, CycloneDX VEX. 16/16 requirements; audit passed, 0 blockers.
