@@ -252,3 +252,222 @@ def test_entry_carries_no_host_or_port():
     # on the entry is a title the consultant already publishes elsewhere.
     assert list(entry.affects) == []
     assert entry.description == item["title"]
+
+
+# ---------------------------------------------------------------------------
+# TestEndToEnd — Plan 181-03 Task 3: real database, real write_reports,
+# real CycloneDX 1.6 schema validation. Closes Pitfall 2: a helper that
+# silently returns empty in production while unit tests calling it with
+# explicit arguments pass green.
+# ---------------------------------------------------------------------------
+
+import glob
+import json
+import os
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from quirk.models import CryptoEndpoint, RemediationItem
+
+CURRENT_SCAN_RUN_ID = "2026-09-02T00:00:00Z"
+OTHER_SCAN_RUN_ID = "2026-08-01T00:00:00Z"
+
+
+def _e2e_endpoint(scan_run_id, host="example.com", port=443):
+    return CryptoEndpoint(
+        host=host, port=port, protocol=None,
+        tls_version="TLSv1.2",
+        cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+        cert_sig_alg="sha256WithRSAEncryption",
+        cert_subject="CN=example.com", cert_issuer="CN=Example CA",
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+        scan_run_id=scan_run_id,
+    )
+
+
+def _e2e_cfg(tmp_path, db_path):
+    return SimpleNamespace(
+        output=SimpleNamespace(directory=str(tmp_path), db_path=db_path),
+        assessment=SimpleNamespace(
+            name="Test Assessment",
+            report_owner="Test Owner",
+            data_classification="Internal",
+            timezone="UTC",
+        ),
+        intelligence=SimpleNamespace(
+            profile="balanced",
+            calibration_overrides=None,
+        ),
+    )
+
+
+def _stub_evidence(endpoints, findings):
+    return {
+        "total_endpoints": len(endpoints),
+        "tls_endpoints": len(endpoints),
+        "ssh_endpoints": 0,
+        "http_endpoints": 0,
+        "expired_certs": 0,
+        "expiring_soon_certs": 0,
+        "weak_ciphers": 0,
+        "vulns_by_severity": {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0},
+        "findings_count": len(findings or []),
+        "scan_error_rate": 0.0,
+    }
+
+
+def _stub_score(evidence, **kwargs):
+    return {
+        "score": 55,
+        "subscores": {"inventory": 50, "cipher": 50, "certificate": 50, "protocol": 50},
+        "drivers": [{"reason": "Test driver", "impact": -5}],
+    }
+
+
+def _stub_confidence(evidence):
+    return {"confidence_score": 70, "factor_breakdown": {}}
+
+
+def _stub_roadmap(evidence, score):
+    return {"items": [{"title": "Test Action", "why": "Because testing", "timeframe": "NOW"}]}
+
+
+def _stub_waves(findings):
+    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
+
+
+def _seed_db(db_path):
+    from quirk.db import get_session, init_db
+
+    init_db(db_path)
+    with get_session(db_path) as session:
+        session.add_all(
+            [
+                RemediationItem(
+                    slug="plaintext-http-exposure",
+                    scan_run_id=CURRENT_SCAN_RUN_ID,
+                    title="Eliminate plaintext HTTP exposure",
+                    state="open",
+                    created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+                ),
+                RemediationItem(
+                    slug="weak-tls-cipher-suite",
+                    scan_run_id=CURRENT_SCAN_RUN_ID,
+                    title="Replace weak TLS cipher suite",
+                    state="closed",
+                    created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+                ),
+                RemediationItem(
+                    slug="ssh-host-key-rsa1024",
+                    scan_run_id=CURRENT_SCAN_RUN_ID,
+                    title="Rotate weak SSH host key",
+                    state="not_observed",
+                    created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+                ),
+                # Different scan — must not leak into the current CBOM.
+                RemediationItem(
+                    slug="other-scan-item",
+                    scan_run_id=OTHER_SCAN_RUN_ID,
+                    title="Item belonging to an earlier scan",
+                    state="open",
+                    created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        session.commit()
+
+
+def _patched_write_reports():
+    return (
+        patch("quirk.reports.writer.categorize_waves", side_effect=_stub_waves),
+        patch("quirk.reports.writer.build_phased_roadmap", side_effect=_stub_roadmap),
+        patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence),
+        patch("quirk.reports.writer.compute_readiness_score", side_effect=_stub_score),
+        patch("quirk.reports.writer.build_evidence_summary", side_effect=_stub_evidence),
+    )
+
+
+def _run_write_reports(cfg, endpoints, findings=None, closure_counters=None):
+    from quirk.reports.writer import write_reports
+
+    patchers = _patched_write_reports()
+    with patchers[0], patchers[1], patchers[2], patchers[3], patchers[4]:
+        write_reports(
+            cfg, endpoints, findings or [], closure_counters=closure_counters
+        )
+
+
+def _latest_cbom_json(tmp_path):
+    json_files = sorted(glob.glob(os.path.join(str(tmp_path), "cbom-*.cdx.json")))
+    assert json_files, f"no cbom-*.cdx.json produced in {tmp_path}"
+    return json_files[-1]
+
+
+class TestEndToEnd:
+    """Real SQLite database, real write_reports(), real CycloneDX 1.6 schema
+    validation — the integration gap Pitfall 2 names: a helper that silently
+    returns empty in production while unit tests calling it with explicit
+    arguments pass green."""
+
+    def test_current_scan_items_emitted_other_scan_item_absent(self, tmp_path):
+        db_path = str(tmp_path / "quirk.db")
+        _seed_db(db_path)
+        cfg = _e2e_cfg(tmp_path, db_path)
+        endpoints = [_e2e_endpoint(CURRENT_SCAN_RUN_ID)]
+
+        _run_write_reports(cfg, endpoints)
+
+        cbom_json = json.loads(pathlib.Path(_latest_cbom_json(tmp_path)).read_text())
+        vulns = cbom_json.get("vulnerabilities", [])
+
+        assert len(vulns) == 3, f"expected 3 current-scan items, got: {vulns}"
+        slugs = {v["id"] for v in vulns}
+        assert slugs == {
+            "plaintext-http-exposure",
+            "weak-tls-cipher-suite",
+            "ssh-host-key-rsa1024",
+        }
+        # The scan-scoping decision, made explicit rather than assumed.
+        assert "other-scan-item" not in slugs
+
+        not_observed_entry = next(
+            v for v in vulns if v["id"] == "ssh-host-key-rsa1024"
+        )
+        assert not_observed_entry["analysis"]["state"] == "in_triage"
+
+        raw_text = pathlib.Path(_latest_cbom_json(tmp_path)).read_text()
+        assert "not_affected" not in raw_text
+
+    def test_refused_scan_produces_no_vulnerabilities_key_end_to_end(self, tmp_path):
+        db_path = str(tmp_path / "quirk.db")
+        _seed_db(db_path)
+        cfg = _e2e_cfg(tmp_path, db_path)
+        endpoints = [_e2e_endpoint(CURRENT_SCAN_RUN_ID)]
+
+        _run_write_reports(
+            cfg, endpoints, closure_counters={"refused_scope_mismatch": 1}
+        )
+
+        cbom_json = json.loads(pathlib.Path(_latest_cbom_json(tmp_path)).read_text())
+        assert "vulnerabilities" not in cbom_json
+
+    def test_emitted_cbom_validates_against_1_6_schema(self, tmp_path):
+        from cyclonedx.schema import SchemaVersion
+        from cyclonedx.validation.json import JsonStrictValidator
+
+        db_path = str(tmp_path / "quirk.db")
+        _seed_db(db_path)
+        cfg = _e2e_cfg(tmp_path, db_path)
+        endpoints = [_e2e_endpoint(CURRENT_SCAN_RUN_ID)]
+
+        _run_write_reports(cfg, endpoints)
+
+        raw_text = pathlib.Path(_latest_cbom_json(tmp_path)).read_text()
+        cbom_json = json.loads(raw_text)
+        assert "vulnerabilities" in cbom_json and cbom_json["vulnerabilities"]
+
+        validator = JsonStrictValidator(SchemaVersion.V1_6)
+        err = validator.validate_str(raw_text)
+        assert err is None, f"CycloneDX 1.6 schema validation failed: {err}"
