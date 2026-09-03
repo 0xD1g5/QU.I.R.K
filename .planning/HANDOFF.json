@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "paused_at": "2026-09-03T14:53:04.021233+00:00",
+  "milestone": {
+    "version": "v5.19",
+    "name": "Drain & Tooling Integrity",
+    "phases": "182-186"
+  },
+  "position": {
+    "phase": "182-tooling-integrity",
+    "phase_title": "Tooling Integrity",
+    "plans_total": 5,
+    "plans_complete": 3,
+    "current_plan": "182-04",
+    "current_plan_state": "work done, SUMMARY.md not yet written",
+    "next_plan": "182-05 (phase gate + close-out)"
+  },
+  "completed_this_session": [
+    "v5.18 Migration Execution shipped, audited (0 blockers), archived; v5.18.0 live on PyPI",
+    "v5.19 opened: HORIZON rationale logged, 8 requirements, phases 182-186, roadmap parsing fixed",
+    "182-01: --cwd argv contract proven; Bug A prose-survival fixture + sensitivity negative control",
+    "182-02: Bug B patched (preserve-unknown-keys + fs.existsSync guard) \u2014 verified end to end",
+    "182-03: gsd-local-patches/ + gsd-pristine/ created; verifier reports checked:2 failures:0",
+    "182-04: corruption audit (report-only, 0 live instances), CLAUDE.md rule, upstream issue #4243 FILED"
+  ],
+  "remaining": {
+    "182-04": [
+      "Write 182-04-SUMMARY.md (untracked)",
+      "Hand-edit STATE.md + ROADMAP.md plan-progress to 4/5"
+    ],
+    "182-05": [
+      "Foreground full suite, 20+ min timeout",
+      "Close TOOL-01/02/03 BY HAND",
+      "Series 182 UAT, honest dispositions",
+      "Demonstrate the state.* verbs are safe again (retire the hand-edit workaround)",
+      "182-VALIDATION.md wave_0_complete: true"
+    ],
+    "phase_close": [
+      "Spawn gsd-verifier for 182-VERIFICATION.md",
+      "Then flip ROADMAP checkbox (ARTIFACT-01 blocks until it exists)",
+      "Push 12 unpushed commits"
+    ]
+  },
+  "decisions": [
+    "T-182-10 ACCEPTED (user-confirmed): preserve-unknown-keys means a key the body legitimately removed now persists until overwritten. A stale key is recoverable; silently deleted history is not.",
+    "Upstream target CORRECTED: gsd-build/get-shit-done is archived -> open-gsd/gsd-core. Filed as #4243.",
+    "Corruption audit is REPORT-ONLY \u2014 the regex is over-broad and cannot distinguish corruption from legitimate prose quoting **Field:**.",
+    "The state.* verbs are NOT banned; the Phases 180-181 hand-edit workaround retires once 182-05 demonstrates safety."
+  ],
+  "human_actions_pending": [
+    "Optional: run `gsd-update --reapply` at a convenient time and confirm verify-reapply-patches.cjs reports both hunks intact. This is the only proof the durability layer survives a real regeneration \u2014 it cannot be safely triggered mid-milestone.",
+    "Optional: watch open-gsd/gsd-core#4243. If upstream fixes it, REMOVE the local patches rather than leaving them stacked, and flip the detection test to assert the upstream fix."
+  ],
+  "blocking_constraints": [
+    {
+      "severity": "blocking",
+      "constraint": "Do NOT use gsd-sdk/gsd-tools state.* or roadmap.* verbs to edit STATE.md until 182-05 demonstrates they are safe. They corrupted STATE.md nine times across Phases 179-181. Both bugs are now patched locally but the retirement of the hand-edit workaround is DEMONSTRATED in 182-05, not assumed. Hand-edit and git diff after."
+    },
+    {
+      "severity": "blocking",
+      "constraint": "Every subprocess spawn goes through tests/cli_helpers.py::run_fork_safe with the native --cwd flag. NEVER a raw subprocess.run, NEVER a cwd kwarg. GATE-03 baseline is 21 unlisted files / 35 real call sites; Phase 183 was scoped against that number and must not inherit a larger one."
+    },
+    {
+      "severity": "advisory",
+      "constraint": "DEFER-172-01 (10 unregistered skips) is the sole expected full-suite failure and belongs to Phase 184. Do not fix it here and do not add to it."
+    },
+    {
+      "severity": "advisory",
+      "constraint": "The ~59 [Phase ?] placeholders in STATE.md's accumulated-notes section are pre-existing content, NOT corruption. STATE.md:289 was corrupted twice and restored 2026-09-03 (commit 3a6d2bf0) \u2014 do not re-flag it."
+    }
+  ],
+  "background_processes": [],
+  "files_modified_uncommitted": [],
+  "unpushed_commits": 12,
+  "verification": {
+    "tests_green": "tests/test_gsd_state_patch.py + test_cli_helper_usage.py -> 9 passed",
+    "upstream_issue": "https://github.com/open-gsd/gsd-core/issues/4243"
+  }
+}
