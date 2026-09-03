@@ -2244,11 +2244,44 @@ A follow-up to revisit this — either by extending scope signatures to a per-se
 or by permanently accepting the exclusion and surfacing it in reports instead — is tracked in
 `.planning/ROADMAP.md` under `## Backlog` → "Remediation Coverage (post-v5.18)".
 
-## 16. Closure Verification (v5.18+ — Phase 180)
+## 16. Closure Verification (v5.18+ — Phase 180-181)
 
 Phase 179 gave a remediation item a stable identity and a per-scan record. Phase 180 adds the
 piece that identity was missing: a machine-observed decision about whether that item is actually
-fixed, computed from two consecutive comparable scans rather than asserted by anyone.
+fixed, computed from two consecutive comparable scans rather than asserted by anyone. Phase 181
+surfaces that decision to the operator and the client — this section covers where it now appears
+and how the dashboard behaves when there is nothing to show.
+
+### Where it surfaces
+
+Closure state and the remediation burndown are now visible on every report surface:
+
+- **CLI markdown, HTML, and DOCX reports** each render a "Remediation Burndown" section, per
+  deadline, with a shared advisory caption held byte-identical across all three renderers by a
+  test — see `docs/report-interpretation.md` §16 for how to read it with a client.
+- **The CBOM** carries a `vulnerabilities` array (CycloneDX VEX), one entry per remediation item,
+  with `not_observed` mapped to `in_triage` — never `not_affected`. See
+  `docs/report-interpretation.md` §16 for the full state-mapping table.
+- **The dashboard** shows closure state directly on the **existing roadmap items** it already
+  displays, joined by the item's slug — **there is no new tab.** A closure `Badge` appears in the
+  roadmap node detail panel (omitted entirely when no closure state is attached), and a
+  "Remediation Burndown" table is rendered beneath the existing roadmap graph.
+
+### Dashboard behavior when closure data is absent
+
+A scan that has no persisted closure data — no prior comparable scan, a freshly initialized
+database, or a scan that predates Phase 179 — shows an **explicit "closure state was not computed
+for this scan" message**, never a table of zeros and never a burndown row that reads as "0
+closed." An operator seeing an empty panel must not report "all clear"; the panel is telling you
+closure was not computed, not that nothing needs fixing.
+
+**Any closure lookup failure degrades the panel to empty and is logged — the endpoint never returns a 500.**
+The dashboard's `/api/scan/latest` response reuses the same advisory-only
+firewall pattern already used for vendor PQC trends and hardware findings: the lookup runs inside
+its own try/except, a failure is logged via `logger.exception(...)`, and the response falls back
+to an empty/`null` burndown or closure field rather than raising. This means an advisory-surface
+failure can never take down the score view or the rest of the roadmap mid-presentation — the worst
+case is a missing badge or an empty burndown block, not a broken page.
 
 ### The four states
 
@@ -2296,6 +2329,21 @@ Treat `not_observed` as **"we did not verify"**, never as **"nothing was found."
 almost identically in a report, and the difference matters: telling a client "12 items came back
 clean" when the true state is "we did not check 12 items this run" is the exact misreading this
 state exists to prevent.
+
+### Troubleshooting — "the burndown block is empty / says not computed"
+
+This is the same comparability gap as the `not_observed` troubleshooting list above, surfaced at
+the whole-scan level instead of the per-item level. Check, in order:
+
+- **No comparable prior scan exists** — this is the first scan of this estate, or nothing prior
+  matches closely enough.
+- **The scope signature differs** — port scope, `--profile`, enabled optional extras, credential
+  presence, sensor set, **or the target set** — the five axes named verbatim in the report's
+  refusal statement (e.g. "Closure not computed: scan scope differs from the prior scan.").
+
+The report and dashboard both state the refusal explicitly rather than showing an all-zero table —
+if you see the refusal message, the fix is to rerun with a scope that matches the prior scan you
+want to compare against, not to look for a hidden toggle.
 
 ### There is no closure override
 
