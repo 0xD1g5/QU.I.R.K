@@ -3668,6 +3668,10 @@ def main():
     # (D-38) — it has nothing to persist, and calling it during the scan
     # would compute a value nothing consumes until Phase 181 wires a
     # surface to it.
+    # Phase 181 SURF-01: initialized here so write_reports() always receives
+    # either the computed dict or None (closure phase skipped/failed) — never
+    # an undefined name.
+    _closure_counters = None
     with _phase_timer(run_stats, "closure_verify") as _closure_timer:
         if not scan_run_id or not cfg.output.db_path:
             # Phase 173 D-02: no phantom timings_sec key for a phase that did
@@ -3714,7 +3718,13 @@ def main():
         logger.info("Resuming: reports stage was completed — re-running to regenerate output files.")
     with _phase_timer(run_stats, "reporting"):
         try:
-            write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
+            # Phase 181 SURF-01: the already-computed closure result is
+            # threaded through rather than having writer.py re-derive it — a
+            # second derivation risks a second, divergent closure result,
+            # the defect class this milestone has already corrected three
+            # times (three normalizer copies, two alias tables,
+            # _SLUG_PRIORITY).
+            write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints, closure_counters=_closure_counters)
         except ReportCongruenceError as exc:
             # D-06 fail-closed halt: the executive headline contradicts the findings
             # (e.g. a healthy band alongside a CRITICAL). Surface a clean, actionable

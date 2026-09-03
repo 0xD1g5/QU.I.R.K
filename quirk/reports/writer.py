@@ -98,6 +98,79 @@ def _load_vendor_pqc_trends(db_path, limit: int = 50) -> list:
         return []
 
 
+# Phase 181 SURF-01: these five closure_counters keys are set to 1 for the
+# WHOLE scan when comparability fails (no prior scan, missing/version-gapped
+# signature, missing target-set digest, or scope mismatch) — see
+# quirk/intelligence/closure.py::COMPARABILITY_REASONS / compute_closure.
+# `refused_probe` and `refused_absent_endpoint` are deliberately NOT included
+# here: those are per-item increments that already resolve to `not_observed`
+# (published as IN_TRIAGE), not scan-level refusals.
+_SCAN_LEVEL_REFUSAL_KEYS: tuple = (
+    "refused_no_prior",
+    "refused_missing_signature",
+    "refused_signature_version_gap",
+    "refused_missing_target_set_digest",
+    "refused_scope_mismatch",
+)
+
+
+def _load_remediation_items(db_path, scan_run_id, closure_counters=None) -> list:
+    """Phase 181 SURF-01: load current-scan RemediationItem rows for VEX emission.
+
+    Returns `[]` (never raises) when: `scan_run_id` is falsy, `db_path` is
+    missing, any `_SCAN_LEVEL_REFUSAL_KEYS` counter in `closure_counters` is
+    non-zero, or the database read fails for any reason. A scan whose closure
+    was refused has no verified state to publish — the refusal belongs in the
+    report, not the CBOM.
+
+    Mirrors `_load_vendor_pqc_trends`'s structure: lazy imports, one
+    `get_session` block, broad except-log-return-[] guard.
+    """
+    if not scan_run_id or not db_path:
+        return []
+
+    if closure_counters:
+        for key in _SCAN_LEVEL_REFUSAL_KEYS:
+            if closure_counters.get(key):
+                return []
+
+    try:
+        from quirk.db import get_session as _get_session
+        from quirk.models import RemediationItem as _RemediationItem
+
+        with _get_session(db_path) as _sess:
+            _rows = (
+                _sess.query(_RemediationItem)
+                .filter(_RemediationItem.scan_run_id == scan_run_id)
+                .all()
+            )
+            items = []
+            for _row in _rows:
+                if _row.state == "resurfaced":
+                    detail = (
+                        f"Previously closed; re-detected as of scan {scan_run_id}"
+                    )
+                else:
+                    detail = None
+                items.append(
+                    {
+                        "slug": _row.slug,
+                        "title": _row.title,
+                        "state": _row.state,
+                        "first_seen": _row.created_at,
+                        "last_updated": _row.created_at,
+                        "detail": detail,
+                    }
+                )
+            return items
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "remediation VEX items skipped (non-fatal)", exc_info=True
+        )
+        return []
+
+
 def _unique_hosts(hosts) -> set:
     """Deduplicate hosts, filtering falsy entries (None, '').
 
@@ -207,7 +280,7 @@ def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=None):
+def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=None, closure_counters=None):
     # D-15 (Phase 47 / Plan 03): error_endpoints is passed through to write_cbom_files
     # so schema-validation failures can be recorded as coverage_gap WARN findings.
     outdir = cfg.output.directory
@@ -530,9 +603,19 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # WR-03 (Phase 129): guard against AttributeError if ExecContent was constructed
     # without hardware_devices (e.g. unit tests or future backward-compat paths).
     _hw_for_cbom = getattr(exec_content, "hardware_devices", None) or []
+    # Phase 181 SURF-01: write_reports has never carried a scan_run_id
+    # parameter, so it is derived here from the endpoints already in hand
+    # rather than recomputed from the database.
+    _scan_run_id = next(
+        (getattr(e, "scan_run_id", None) for e in (endpoints or []) if getattr(e, "scan_run_id", None)),
+        None,
+    )
     cbom = build_cbom(
         endpoints,
         hw_devices=_confirm_upstream_mitigation(_detect_crypto_bridges(_hw_for_cbom)),
+        remediation_items=_load_remediation_items(
+            getattr(cfg.output, "db_path", None), _scan_run_id, closure_counters
+        ),
     )
     cbom_json_path, cbom_xml_path = write_cbom_files(
         cbom, outdir, stamp, error_endpoints=error_endpoints
