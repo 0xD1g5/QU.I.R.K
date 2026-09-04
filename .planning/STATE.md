@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.1-04-PLAN.md
-last_updated: "2026-09-04T21:05:00.000Z"
+stopped_at: Completed 184.1-05-PLAN.md (phase 184.1 complete)
+last_updated: "2026-09-04T21:30:00.000Z"
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 20
-  completed_plans: 19
-  percent: 25
+  completed_plans: 20
+  percent: 38
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.1 — coverage-metric-correctness (SCORE-01). Executing 5 plans in 4 waves.
+**Current focus:** Phase 184.1 — coverage-metric-correctness (SCORE-01) — COMPLETE (5/5 plans, 2026-09-04). Next: Phase 184.2 — Out-of-the-Box Scanning Posture.
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -408,6 +408,24 @@ Phase 174 phase-list checkbox is deliberately left unflipped, reserved for the `
 per this repo's pre-commit gate and Phase 172/173 precedent; the plan tally row is updated to
 `5/5 | Complete | 2026-08-29`. Next step: the `gsd-verifier` phase-goal pass for Phase 174, then Phase 175 (Case &
 Documentation Defect Correction).
+
+## Decisions Carried Forward (Phase 184.1)
+
+Phase 184.1 (Coverage Metric Correctness, SCORE-01) complete 2026-09-04, 5/5 plans. `coverage_ratio`
+now reads `assessed_crypto_count / assessable_endpoint_count` (evidence-derived, not a protocol
+allowlist), excluding `ADVISORY` and `CLOSED` from the denominator (D-06/D-07 — `CLOSED` is the
+order-of-magnitude correction, 9,023 vs 562 rows) and `UNKNOWN`/`scan_error` from the numerator only
+(D-05/D-09, deliberate double penalty with `unknown_ratio`/`scan_error_ratio`). A zero-assessable
+denominator returns the pre-existing `NO_DATA` shape via an independent second short-circuit (D-10).
+`compute_confidence()` now carries `CONFIDENCE_FORMULA_VERSION = "2.0.0"` on all three return paths;
+its absence in a report means pre-184.1 (D-15). `_PROTOCOL_KEYS`, `protocol_counts`, and the
+readiness score are byte-unchanged (D-03 — deferred to its own future phase). Exclusion set guarded
+by a run-time source scan (`tests/test_evidence_protocol_disposition.py`, D-11) rather than a
+comment. `docs/report-interpretation.md` §17 documents all four confidence factors together (D-16)
+and is synced to vault `Digs`; `docs/UAT-SERIES.md` gained Series 184.1 (3 PASS). ROADMAP SC-2/SC-3
+and REQUIREMENTS SCORE-01 amended in-flight (D-07 widening, D-13 false-premise correction).
+`184.1-VALIDATION.md` closed `nyquist_compliant: true`. Next: Phase 184.2 (Out-of-the-Box Scanning
+Posture, depends on 184.1's coverage definition).
 
 ## Decisions Carried Forward (Phase 175)
 

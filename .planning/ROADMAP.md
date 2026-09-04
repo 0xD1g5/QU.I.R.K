@@ -312,7 +312,7 @@ Plans:
 - [x] 184.1-02-PLAN.md — Rewire coverage_ratio, NO_DATA guard, CONFIDENCE_FORMULA_VERSION, D-19 re-derivation
 - [x] 184.1-03-PLAN.md — Run-time protocol-literal source scan guarding the exclusion set (D-11)
 - [x] 184.1-04-PLAN.md — Exact-value regression fixture (D-18) and the readiness-score non-movement proof (D-03)
-- [ ] 184.1-05-PLAN.md — Confidence-factor documentation, Obsidian sync, UAT-SERIES, validation close-out
+- [x] 184.1-05-PLAN.md — Confidence-factor documentation, Obsidian sync, UAT-SERIES, validation close-out
 
 
 ### Phase 184.2: Out-of-the-Box Scanning Posture

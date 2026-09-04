@@ -120,7 +120,7 @@ rather than inherited from its original report — two had drifted since they we
   **never registered merely to quiet the gate**. The registry keys on `(file, LINENO)`, so also
   decide whether that keying survives or becomes content-addressed.
 
-- [ ] **SCORE-01**: `coverage_ratio` measures assessment coverage, not protocol composition.
+- [x] **SCORE-01**: `coverage_ratio` measures assessment coverage, not protocol composition.
   **Measured 2026-09-04 against a live 20-endpoint chaos-lab scan** (`scan_run_id
   2026-09-04T15:28:54`): `quirk/intelligence/confidence.py:90` computes
   `(tls_count + ssh_count) / endpoints`, so **8 endpoints whose cryptography QUIRK successfully
@@ -239,7 +239,7 @@ rather than inherited from its original report — two had drifted since they we
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | TBD | Pending |
-| SCORE-01 | TBD | Pending |
+| SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05 | Complete |
 | SCORE-02 | TBD | Pending |
 | SCORE-03 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |
