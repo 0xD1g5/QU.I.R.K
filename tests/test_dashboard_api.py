@@ -1,18 +1,14 @@
 """Dashboard API tests — Wave 0 stubs (RED state).
 Test IDs match .planning/phases/05-web-dashboard/05-VALIDATION.md verification map.
 """
-import subprocess
-import sys
 import pytest
+
+from tests.cli_helpers import run_cli
 
 
 def test_serve_command():
     """UI-01: quirk serve subcommand exists in run_scan.py and exits 0 for --help."""
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "serve", "--help"],
-        capture_output=True,
-        text=True,
-    )
+    result = run_cli(["serve", "--help"], timeout=30)
     assert result.returncode == 0
     assert "--port" in result.stdout
     assert "--host" in result.stdout

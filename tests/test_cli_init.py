@@ -3,14 +3,13 @@
 Phase 58 — HARDEN-API-04: path-traversal fuzz corpus for quirk init --output.
 The 50+ parametrized cases are the permanent regression gate for CR-01.
 """
-import subprocess
-import sys
 import os
 import tempfile
 
 import pytest
 
 from quirk.cli.init_cmd import run_init
+from tests.cli_helpers import run_cli
 
 
 # ---------------------------------------------------------------------------
@@ -138,10 +137,7 @@ def test_init_rejects_traversal_paths(bad_path, capsys, tmp_path, monkeypatch):
 def test_init_creates_config(tmp_path):
     """quirk init must create a config.yaml in the specified output path."""
     out = str(tmp_path / "config.yaml")
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "init", "--output", out],
-        capture_output=True, text=True,
-    )
+    result = run_cli(["init", "--output", out], timeout=30)
     assert result.returncode == 0, f"quirk init exited {result.returncode}: {result.stderr}"
     assert os.path.exists(out), f"config.yaml not created at {out}"
     content = open(out).read()
@@ -165,16 +161,10 @@ def test_init_no_overwrite(tmp_path):
     """quirk init must not silently overwrite an existing config.yaml."""
     out = str(tmp_path / "config.yaml")
     # First run — creates file
-    subprocess.run(
-        [sys.executable, "run_scan.py", "init", "--output", out],
-        capture_output=True, text=True,
-    )
+    run_cli(["init", "--output", out], timeout=30)
     first_mtime = os.path.getmtime(out)
     # Second run — should warn and not overwrite
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "init", "--output", out],
-        capture_output=True, text=True,
-    )
+    result = run_cli(["init", "--output", out], timeout=30)
     second_mtime = os.path.getmtime(out)
     output = result.stdout + result.stderr
     assert "already exists" in output.lower() or "not overwriting" in output.lower(), (
