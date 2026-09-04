@@ -52,7 +52,7 @@ connectors:
 
 output:
   directory: "output"
-  db_path: "output/quirk.db"
+  db_path: "quirk-output/quirk.db"   # canonical — matches dashboard/doctor/console resolution (Phase 74 D-05)
 
 intelligence:
   intelligence_version: "3.9.0"

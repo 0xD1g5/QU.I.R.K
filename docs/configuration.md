@@ -691,12 +691,12 @@ Controls where QU.I.R.K. writes reports, CBOM files, and its internal database.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `directory` | string | `"output"` | Directory for reports, CBOM files, and logs |
-| `db_path` | string | `"output/quirk.db"` | SQLite database path for scan results |
+| `db_path` | string | `"./quirk-output/quirk.db"` | SQLite database path for scan results. **Canonical path** (Phase 74 D-05) — the dashboard, `quirk doctor`, and `quirk console` all resolve here when `QUIRK_DB_PATH` is unset. Pointing `db_path` elsewhere means the scanner writes one database while the dashboard reads another. |
 
 ```yaml
 output:
   directory: "output"
-  db_path: "output/quirk.db"
+  db_path: "./quirk-output/quirk.db"
 ```
 
 ---
@@ -1206,7 +1206,7 @@ connectors:
 
 output:
   directory: "output"
-  db_path: "output/quirk.db"
+  db_path: "./quirk-output/quirk.db"
 
 intelligence:
   intelligence_version: "3.9.0"

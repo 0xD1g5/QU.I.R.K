@@ -42,7 +42,7 @@ scan:
 # -- Output ----------------------------------------------------------------
 output:
   directory: "./quirk-output"     # Where to write reports, CBOM, and findings JSON
-  db_path: "./quirk.db"           # SQLite database path
+  db_path: "./quirk-output/quirk.db"   # SQLite database path (canonical — Phase 74 D-05)
 
 # -- Connectors ------------------------------------------------------------
 # Enable optional connectors to scan cloud KMS, JWT endpoints, containers, or source code.
