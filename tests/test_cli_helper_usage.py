@@ -217,6 +217,25 @@ def _find_offenders_in_repo_file(relative_path: Path) -> list[str]:
     return _find_offenders(relative_path, label)
 
 
+def _validate_grandfather_ledger(ledger: dict[str, str]) -> list[str]:
+    """Return a list of problem descriptions for *ledger* -- a blank reason,
+    or a key naming a file that no longer exists under _REPO_ROOT. Empty
+    return means the ledger is clean. Extracted as its own helper so both
+    the real (empty) _GRANDFATHERED and synthetic stale/blank test ledgers
+    go through identical validation logic (see
+    test_grandfathered_entries_are_current)."""
+    problems: list[str] = []
+    for relpath, reason in ledger.items():
+        if not reason.strip():
+            problems.append(f"{relpath}: blank grandfather reason")
+        if not (_REPO_ROOT / relpath).exists():
+            problems.append(
+                f"{relpath}: grandfathered but no longer exists on disk -- "
+                "remove the stale entry"
+            )
+    return problems
+
+
 def test_no_direct_crash_exposed_subprocess_spawn_in_covered_files() -> None:
     """Forward-locking gate: no direct
     subprocess.run/Popen/check_output/call call (attribute or bare-name
@@ -254,6 +273,131 @@ def test_no_direct_crash_exposed_subprocess_spawn_in_covered_files() -> None:
         f"genuinely not applicable (do not add one reflexively just to satisfy "
         f"this assertion). See "
         f".planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md."
+    )
+
+
+def test_grandfathered_entries_are_current() -> None:
+    """Every `_GRANDFATHERED` key must still exist on disk and carry a
+    non-blank reason, so the exception set cannot silently rot or grow
+    (Phase 183 CONTEXT.md D-04/D-05).
+
+    `_GRANDFATHERED` ships EMPTY -- so looping over the real ledger alone is
+    vacuous and would pass forever without exercising either failure mode
+    against real data. The synthetic cases below are therefore load-bearing,
+    not decorative: they run the identical `_validate_grandfather_ledger`
+    helper against a deliberately stale key and a deliberately blank reason
+    and assert each is caught.
+    """
+    real_problems = _validate_grandfather_ledger(_GRANDFATHERED)
+    assert not real_problems, real_problems
+
+    stale_key_problems = _validate_grandfather_ledger(
+        {"tests/does_not_exist.py": "a reason that would otherwise be fine"}
+    )
+    assert stale_key_problems, (
+        "_validate_grandfather_ledger failed to flag a _GRANDFATHERED key "
+        "naming a file that does not exist on disk -- the empty real ledger "
+        "gives this failure mode zero real-data coverage, so this synthetic "
+        "case is the only proof it works"
+    )
+    assert any("no longer exists on disk" in p for p in stale_key_problems)
+
+    blank_reason_problems = _validate_grandfather_ledger({"tests/cli_helpers.py": "  "})
+    assert blank_reason_problems, (
+        "_validate_grandfather_ledger failed to flag a blank (whitespace-only) "
+        "_GRANDFATHERED reason -- the empty real ledger gives this failure mode "
+        "zero real-data coverage, so this synthetic case is the only proof it "
+        "works"
+    )
+    assert any("blank grandfather reason" in p for p in blank_reason_problems)
+
+
+def test_gate_catches_synthetic_unsafe_spawn(tmp_path: Path) -> None:
+    """Permanent self-test (Phase 183 CONTEXT.md D-06): write a synthetic
+    unsafe `subprocess.run(` into a tmp_path file, run the detector against
+    it directly, and assert it goes RED naming the offender's file and line
+    -- both independently-flaggable reasons (carries cwd=, missing
+    close_fds=False), since either condition alone defeats posix_spawn
+    selection.
+    """
+    fake_file = tmp_path / "test_synthetic_unsafe.py"
+    fake_file.write_text(
+        "import subprocess\n"
+        "subprocess.run(['ls'], cwd='/tmp')\n"
+    )
+    offenders = _find_offenders(fake_file, "test_synthetic_unsafe.py")
+
+    assert offenders, "gate failed to flag a synthetic unsafe spawn"
+    assert any(
+        "test_synthetic_unsafe.py:2: carries cwd=..." == o for o in offenders
+    ), offenders
+    assert any(
+        "test_synthetic_unsafe.py:2: missing explicit close_fds=False" == o
+        for o in offenders
+    ), offenders
+
+
+def test_new_unlisted_file_is_caught_without_list_edit(tmp_path: Path) -> None:
+    """Proves the DERIVATION property itself, not just the detector (Phase
+    183 CONTEXT.md D-06 second self-test): point the real
+    `_derive_test_files` glob at a throwaway `tmp_path` root containing a
+    brand-new, never-seen file name with an unsafe spawn, and confirm it is
+    caught with NO edit to any list, anywhere, of any kind.
+
+    This test MUST go through `_derive_test_files(root=tmp_path)` -- calling
+    `_find_offenders` directly on a hand-supplied path (as test
+    `test_gate_catches_synthetic_unsafe_spawn` above does) would silently
+    reduce this to a duplicate of that test and would no longer prove the
+    glob-derivation mechanism works at all.
+    """
+    (tmp_path / "test_never_seen_before.py").write_text(
+        "import subprocess\nsubprocess.run(['ls'])\n"
+    )
+
+    offenders: list[str] = []
+    for file_path in _derive_test_files(root=tmp_path):
+        relative_label = str(file_path.relative_to(tmp_path))
+        offenders.extend(_find_offenders(file_path, relative_label))
+
+    assert offenders, "derivation missed a brand-new file with no ledger entry"
+    assert any("test_never_seen_before.py" in o for o in offenders), offenders
+
+
+def test_bare_name_subprocess_import_is_detected(tmp_path: Path) -> None:
+    """Forward-locking proof (Phase 183 CONTEXT.md D-03): a bare-name call
+    reachable via `from subprocess import run` (including an `as` alias)
+    must be flagged exactly like the attribute form -- otherwise changing an
+    import line would silently bypass the whole gate. Zero real call sites
+    use this form anywhere in this repo today, so a synthetic fixture is the
+    only possible proof (183-RESEARCH.md "State of the Art").
+
+    The negative half is equally required: a same-named function imported
+    from an unrelated module (`from myapp import run`) must NOT be flagged,
+    proving the detector cross-references the actual `subprocess` import
+    rather than matching on the bare name alone (183-RESEARCH.md Pitfall 1).
+    """
+    positive_file = tmp_path / "test_bare_positive.py"
+    positive_file.write_text(
+        "from subprocess import run\nrun(['ls'])\n"
+    )
+    positive_offenders = _find_offenders(positive_file, "test_bare_positive.py")
+    assert positive_offenders, "bare-name `run` imported from subprocess was not flagged"
+
+    aliased_file = tmp_path / "test_bare_aliased.py"
+    aliased_file.write_text(
+        "from subprocess import run as _r\n_r(['ls'])\n"
+    )
+    aliased_offenders = _find_offenders(aliased_file, "test_bare_aliased.py")
+    assert aliased_offenders, "aliased bare-name `run as _r` was not flagged"
+
+    negative_file = tmp_path / "test_bare_negative.py"
+    negative_file.write_text(
+        "from myapp import run\nrun(['ls'])\n"
+    )
+    negative_offenders = _find_offenders(negative_file, "test_bare_negative.py")
+    assert not negative_offenders, (
+        f"false positive: `from myapp import run` (unrelated to subprocess) "
+        f"was flagged: {negative_offenders}"
     )
 
 
