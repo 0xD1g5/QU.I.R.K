@@ -82,12 +82,14 @@ GSD_TOOLCHAIN_AVAILABLE = (
     and GSD_HOME.is_dir()
     and GSD_TOOLS_CJS.is_file()
     and GSD_STATE_DOC.is_file()
+    and GSD_STATE_LIB.is_file()
 )
 GSD_SKIP_REASON = (
     "GSD toolchain unavailable in this environment (node on PATH: "
     f"{NODE_PATH is not None}, {GSD_HOME} present: {GSD_HOME.is_dir()}, "
     f"{GSD_TOOLS_CJS} present: {GSD_TOOLS_CJS.is_file()}, "
-    f"{GSD_STATE_DOC} present: {GSD_STATE_DOC.is_file()}) -- the Linux Full "
+    f"{GSD_STATE_DOC} present: {GSD_STATE_DOC.is_file()}, "
+    f"{GSD_STATE_LIB} present: {GSD_STATE_LIB.is_file()}) -- the Linux Full "
     "Suite CI job does not provision `~/.claude/get-shit-done/`, so this leg "
     "is honestly skipped there rather than faked. Run these tests on an "
     "operator machine with GSD installed to exercise them."
@@ -459,6 +461,234 @@ def test_bug_b_frontmatter_survives_begin_phase(tmp_path, roadmap_present) -> No
             f"milestone_name should be re-derived from ROADMAP.md as "
             f"'Demo Milestone' (got: {after.get('milestone_name')!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# TOOL-04 (182-06): full-command regression test at the boundary the safety
+# claim is actually made about -- `state begin-phase` itself, not
+# `stateReplaceField` in isolation. This is what 182-05's live demonstration
+# against the real .planning/STATE.md found: `stateExtractField()` (the READ
+# side, sibling of the already-patched `stateReplaceField`) carries the
+# identical unanchored `**Field:**` defect, and the `## Session` scoping
+# guard silently fails open on this project's own `## Session Continuity`
+# header. Both feed `buildStateFrontmatter()` on every `begin-phase` call, so
+# a test that only exercises `stateReplaceField` (as test_bug_a_* above does)
+# cannot see this class of corruption -- it lives one call deeper, in the
+# read path that turns body text back into frontmatter.
+# ---------------------------------------------------------------------------
+
+STOPPED_AT_PROSE_LINE = (
+    "- [Phase 171]: an archived note recorded `**Stopped At:** "
+    "stale-archived-value` verbatim."
+)
+FOCUS_PROSE_LINE = (
+    "- [Phase 172]: a note quoted `**Current focus:** do-not-rewrite-this` "
+    "while explaining the field."
+)
+# A fourth decoy, deliberately not Status/Stopped At/Current focus/Last
+# Activity/Total Phases -- every one of those is EITHER normalized away
+# (normalizeStateStatus() collapses any string containing "ready to
+# execute" to the single keyword "executing", masking a Status-based
+# discriminator entirely) OR itself rewritten by cmdStateBeginPhase's own
+# stateReplaceField calls before frontmatter derivation runs (Last
+# Activity, Current focus, Total Phases's sibling body fields are all
+# written unconditionally or on first-time execution, entangling the
+# write-side fix with the read-side one under test). Discovered
+# empirically while proving this file's own negative control RED -- see
+# 182-06-SUMMARY.md. `Paused At` is never written by `begin-phase` and is
+# not normalized, so it isolates the bare `stateExtractField()` anchoring
+# defect cleanly: absent legitimately (no real `**Paused At:**` field
+# exists in this fixture), it must stay absent from frontmatter after a
+# patched extraction, and must NOT pick up a decoy quoted elsewhere in
+# body prose.
+PAUSED_AT_PROSE_LINE = (
+    "- [Phase 174]: a note incorrectly quoted `**Paused At:** "
+    "waiting-for-review` while summarizing an unrelated phase."
+)
+
+
+def _full_command_state_md() -> str:
+    return f"""---
+gsd_state_version: 1.0
+milestone: v9.9
+milestone_name: Demo Milestone
+status: verifying
+stopped_at: "Completed 900-01-PLAN.md"
+my_custom_key: must-survive
+progress:
+  total_phases: 7
+  completed_phases: 6
+  percent: 86
+---
+
+**Current focus:** Phase 900 — demo
+
+## Accumulated Context
+
+{PROSE_LINE}
+{STOPPED_AT_PROSE_LINE}
+{FOCUS_PROSE_LINE}
+{PAUSED_AT_PROSE_LINE}
+
+## Current Position
+
+Phase: 900 (demo) — EXECUTING
+Status: Ready to execute
+
+## Session Continuity
+
+**Stopped At:** Completed 900-01-PLAN.md
+"""
+
+
+@_GSD_SKIP
+def test_begin_phase_does_not_read_body_prose_as_machine_fields(tmp_path) -> None:
+    """Command-boundary regression test for TOOL-04. Runs the INSTALLED
+    (patched) toolchain's full `state begin-phase` command -- not
+    `stateReplaceField` in isolation -- against a fixture shaped like the
+    real `.planning/STATE.md`, and asserts the resulting frontmatter is
+    derived from the real machine fields, not from body prose that merely
+    quotes a field name inside a code span."""
+    root = tmp_path
+    _seed_planning(root, _full_command_state_md())
+
+    proc = _run_begin_phase(GSD_TOOLS_CJS, root, phase=901, name="demo", plans=3)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+    after = _parse_frontmatter(after_text)
+
+    # Assertion 1: status is not the **Status:**-quoting prose sentence.
+    status = after.get("status") or ""
+    assert "marker" not in status, (
+        f"frontmatter status was read from body prose quoting **Status:** "
+        f"instead of the real Status field (got: {status!r})"
+    )
+    assert "Must not change" not in status, (
+        f"frontmatter status leaked the prose sentence's trailing clause "
+        f"(got: {status!r})"
+    )
+
+    # Assertion 2: stopped_at is not the out-of-section prose decoy.
+    stopped_at = after.get("stopped_at") or ""
+    assert "stale-archived-value" not in stopped_at, (
+        f"frontmatter stopped_at was read from an out-of-section "
+        f"**Stopped At:** prose decoy instead of the real "
+        f"## Session Continuity value (got: {stopped_at!r})"
+    )
+
+    # Assertion 3: stopped_at IS sourced from ## Session Continuity.
+    assert "900-01-PLAN.md" in stopped_at, (
+        f"frontmatter stopped_at was not derived from the "
+        f"## Session Continuity section's real value (got: {stopped_at!r})"
+    )
+
+    # Assertion 4: all three prose decoys survive byte-identical -- the
+    # write side did not regress while the read side was being fixed.
+    assert PROSE_LINE in after_text, (
+        "the **Status:**-quoting prose line did not survive begin-phase "
+        "byte-identical"
+    )
+    assert STOPPED_AT_PROSE_LINE in after_text, (
+        "the **Stopped At:**-quoting prose line did not survive begin-phase "
+        "byte-identical"
+    )
+    assert FOCUS_PROSE_LINE in after_text, (
+        "the **Current focus:**-quoting prose line did not survive "
+        "begin-phase byte-identical"
+    )
+    assert PAUSED_AT_PROSE_LINE in after_text, (
+        "the **Paused At:**-quoting prose line did not survive "
+        "begin-phase byte-identical"
+    )
+
+    # Assertion 4c: no `**Paused At:**` field legitimately exists in this
+    # fixture, so paused_at must stay absent -- not picked up from the
+    # PAUSED_AT_PROSE_LINE decoy quoted elsewhere in the body.
+    paused_at = after.get("paused_at")
+    assert paused_at is None, (
+        f"frontmatter paused_at was read from a body prose decoy quoting "
+        f"**Paused At:** instead of staying absent (got: {paused_at!r})"
+    )
+
+    # Assertion 4b: the REAL **Current focus:** line genuinely moved --
+    # proving assertion 4 is survival under a live rewrite, not survival
+    # because nothing happened.
+    focus_lines = [
+        line for line in after_text.splitlines()
+        if line.startswith("**Current focus:**")
+    ]
+    assert focus_lines, "no line starting with **Current focus:** found after begin-phase"
+    assert "Phase 901" in focus_lines[0], (
+        f"the real **Current focus:** line did not move to Phase 901 "
+        f"(got: {focus_lines[0]!r})"
+    )
+
+    # Assertion 5: Bug B's preserve-unknown-keys merge still holds on this
+    # richer fixture.
+    assert after.get("my_custom_key") == "must-survive", (
+        f"my_custom_key was dropped by begin-phase (got: "
+        f"{after.get('my_custom_key')!r})"
+    )
+    progress = after.get("progress") or {}
+    assert progress.get("total_phases") == 7
+    assert progress.get("completed_phases") == 6
+    assert "percent" in progress
+
+
+def test_full_command_fixture_is_sensitive_to_the_unpatched_extractor(
+    tmp_path, unpatched_gsd_tree
+) -> None:
+    """RED-proving negative control for the test above: the SAME fixture,
+    run against a throwaway copy of the toolchain whose
+    `state-document.generated.cjs` is pristine (pre-patch) content, DOES
+    corrupt `paused_at` -- proving the positive test above is a sensitive
+    assertion, not one that can only ever pass.
+
+    The discriminator is `paused_at`, not `status`. Empirically (see
+    182-06-SUMMARY.md), `status` cannot discriminate here:
+    `normalizeStateStatus()` collapses ANY string containing the phrase
+    "ready to execute" -- which both the real Status field and the reused
+    `PROSE_LINE` decoy contain -- down to the single keyword "executing"
+    regardless of which occurrence the (patched or unpatched) extractor
+    picks up. A field like `Last Activity` is a worse choice too: it is
+    unconditionally rewritten by `cmdStateBeginPhase` itself before
+    frontmatter derivation ever runs, and reverting the WHOLE
+    `state-document.generated.cjs` file (what `unpatched_gsd_tree` does)
+    reverts `stateReplaceField` right along with `stateExtractField` --
+    so an unanchored *write* lands on the decoy line instead of the real
+    field, entangling the write-side regression with the read-side one
+    this control means to isolate. `paused_at` is never written by
+    `begin-phase` and is never normalized, so it isolates the bare
+    `stateExtractField()` anchoring defect cleanly.
+
+    `unpatched_gsd_tree` restores only `state-document.generated.cjs` (the
+    `stateExtractField`/`stateReplaceField` file); `state.cjs` -- which
+    carries the session-scoping guard and the Current-focus rewrite -- stays
+    at whatever is currently installed. This control therefore isolates the
+    `stateExtractField` extractor defect specifically; the session-guard
+    defect is exercised by assertions 2 and 3 in the test above, against the
+    installed tree.
+    """
+    root = tmp_path
+    _seed_planning(root, _full_command_state_md())
+
+    unpatched_tools_cjs = unpatched_gsd_tree / "bin" / "gsd-tools.cjs"
+    proc = _run_begin_phase(
+        unpatched_tools_cjs, root, phase=901, name="demo", plans=3
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+    after = _parse_frontmatter(after_text)
+
+    paused_at = str(after.get("paused_at") or "")
+    assert "waiting-for-review" in paused_at, (
+        f"expected the unpatched extractor to read the "
+        f"**Paused At:**-quoting prose decoy as the live value (got: "
+        f"{paused_at!r}) -- if this assertion fails, the fixture no "
+        f"longer reproduces the defect class 182-05 observed live"
+    )
 
 
 # ---------------------------------------------------------------------------
