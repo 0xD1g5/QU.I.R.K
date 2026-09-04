@@ -280,9 +280,14 @@ def build_exec_markdown(
     _formula_version = conf_raw.get("confidence_formula_version")
     if _formula_version:
         lines.append(f"- **confidence_formula_version:** {_formula_version}")
+    # 184.1 / SC-4 / D-16: this caption must describe the CURRENT coverage_ratio
+    # definition. coverage_pct is derived from factor_breakdown["coverage_ratio"]
+    # above, which since Phase 184.1 is assessed_crypto_count / assessable_endpoint_count
+    # — NOT the pre-184.1 "TLS+SSH successful / total in-scope endpoints". Keep this
+    # wording in sync with docs/report-interpretation.md's coverage_ratio row.
     lines.append(
         f"- **Coverage:** {coverage_pct}% "
-        "(TLS+SSH successful / total in-scope endpoints)"
+        "(crypto-bearing endpoints assessed / assessable endpoints)"
     )
     lines.append(
         f"- **TLS Enumeration Coverage:** {tls_enum_coverage_pct}% "
