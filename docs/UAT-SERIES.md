@@ -1,7 +1,12 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-04 (v5.19 Phase 184.1 — Coverage Metric Correctness, plan
+**Last Updated:** 2026-09-04 (v5.19 Phase 184.1 — Coverage Metric Correctness, plans
+184.1-06/184.1-07 gap closure: `UAT-184.1-01` corrected to exercise the three shipped
+emitted-artifact surfaces (`intelligence-{stamp}.json`, executive markdown, `/api/scan`)
+instead of only the isolated `compute_confidence()` function, closing the SC-3 gap
+`184.1-VERIFICATION.md` found — the marker was inert on every consumer until plan 184.1-06 wired
+it. Earlier: 2026-09-04 (v5.19 Phase 184.1 — Coverage Metric Correctness, plan
 184.1-05: Series 184.1 added (UAT-184.1-01..03; 3 PASS) for SCORE-01 — the
 `confidence_formula_version` marker on all three `compute_confidence()` return paths, the
 documented four-factor confidence section (`docs/report-interpretation.md` §17) covering
@@ -22486,28 +22491,43 @@ actually assessed (D-01/D-02/D-04/D-05/D-06/D-07/D-08/D-09/D-10), a dedicated
 ### UAT-184.1-01: A generated report's confidence section reports `confidence_formula_version: "2.0.0"`
 
 **ID:** UAT-184.1-01
-**Title:** `compute_confidence()` returns the dedicated formula-version marker on every code path.
-**Maps to:** SCORE-01 (D-12, D-14)
+**Title:** The `confidence_formula_version` marker reaches all three shipped emitted-artifact
+surfaces — `intelligence-{stamp}.json`, the executive summary markdown, and the `/api/scan`
+response — not only `compute_confidence()`'s in-memory return value.
+**Maps to:** SCORE-01 (D-12, D-14, D-15)
 
-**What to test:** That `confidence_formula_version` appears with value `"2.0.0"` on all three
-`compute_confidence()` return paths — the normal-score path, the `endpoints == 0` NO_DATA path, and
-the `assessable_endpoints == 0` NO_DATA path — so a report generated after this phase always
-carries the marker regardless of which branch produced it.
+**What to test:** That a real generated report and API response, not just the isolated
+`compute_confidence()` function, actually carry the marker. Specifically: (1) the written
+`intelligence-{stamp}.json` report file has `confidence.confidence_formula_version == "2.0.0"`;
+(2) the generated executive markdown's `## Confidence & Coverage` section contains the literal
+bullet `- **confidence_formula_version:** 2.0.0`; (3) a live `/api/scan` HTTP response body has
+`confidence.confidence_formula_version == "2.0.0"`.
 
 **Steps:**
 ```bash
-.venv/bin/pytest -q tests/test_intelligence_confidence.py -k "formula_version" -v
+.venv/bin/pytest -q tests/test_confidence_formula_version_surfaces.py -v
 ```
 
-**Pass Criteria:** All formula-version assertions pass; `confidence_formula_version == "2.0.0"` on
-every return path exercised.
+**Pass Criteria:** 3 passed, 0 skipped — one test per surface, each asserting against the emitted
+artifact (written JSON file / generated markdown string / HTTP response body), never against
+`compute_confidence()`'s return dict directly.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-04  **Tester:** Automated (184.1-05 plan execution)
-**Notes:** Verified against the live `quirk/intelligence/confidence.py` source (plan 184.1-02):
-`CONFIDENCE_FORMULA_VERSION = "2.0.0"` is set as a module constant and included in the dict
-returned by all three code paths (the `endpoints == 0` short-circuit, the `assessable_endpoints ==
-0` short-circuit added by D-10, and the normal scoring path).
+**Date:** 2026-09-04  **Tester:** Automated (184.1-07 plan execution)
+**Notes:** This case previously ran a filtered invocation of `test_intelligence_confidence.py`
+(selecting only the `formula_version`-named cases) and passed `[x] PASS` on 2026-09-04 under plan
+184.1-05 — but that command exercises only `compute_confidence()` in isolation. `184.1-VERIFICATION.md` (SC-3) found the
+feature was inert on every shipped surface at that same moment: `quirk/reports/writer.py`'s
+compat `conf` dict dropped the field before it reached `intelligence-{stamp}.json`,
+`quirk/reports/executive.py` never referenced it in generated markdown, and
+`quirk/dashboard/api/schemas.py`'s `ConfidenceData` had no field for it at all, so `/api/scan`
+never returned it — this was independently flagged as CR-01 in `184.1-REVIEW.md` and never fixed
+before verification caught it. A unit test on the producing function cannot detect a consumer
+that silently drops the field; only a test against the emitted artifact can. Plan `184.1-06`
+wired all three consumers and added `tests/test_confidence_formula_version_surfaces.py`
+(one emitted-artifact test per surface); this case's command was replaced with that suite so a
+future regression that re-drops the field on any one surface fails this UAT case, not just an
+internal unit test.
 
 ---
 
@@ -22575,9 +22595,11 @@ shape as the pre-existing `endpoints == 0` path.
 
 ---
 
-**Series 184.1 disposition.** 3 of 3 cases are `[x] PASS` as of plan 184.1-05: `UAT-184.1-01`
-(formula-version marker on all three return paths), `UAT-184.1-02` (section 17 documents all four
-factors, the rating bands, and D-15's absence rule), `UAT-184.1-03` (the D-10 degenerate-
-denominator NO_DATA case). No `SKIP`/`GAP` dispositions were needed — all three cases are directly
-executable against the repository's own pytest suite and the committed documentation, with no
-Docker or live-DB dependency.
+**Series 184.1 disposition.** 3 of 3 cases are `[x] PASS` as of plan 184.1-07: `UAT-184.1-01`
+(formula-version marker reaches all three shipped emitted-artifact surfaces — corrected under
+184.1-07 after 184.1-VERIFICATION.md's SC-3 gap found the original command detected only the
+producing function, not the consumers that were silently dropping the field), `UAT-184.1-02`
+(section 17 documents all four factors, the rating bands, and D-15's absence rule), `UAT-184.1-03`
+(the D-10 degenerate-denominator NO_DATA case). No `SKIP`/`GAP` dispositions were needed — all
+three cases are directly executable against the repository's own pytest suite and the committed
+documentation, with no Docker or live-DB dependency.
