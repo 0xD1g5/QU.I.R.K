@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Planned 184.1-06/07 gap-closure plans (SC-3 unclosed; phase NOT complete)
-last_updated: "2026-09-04T21:45:00.000Z"
+stopped_at: Completed 184.1-06-PLAN.md (SC-3 code+test wiring); 184.1-07 (docs/UAT/vault close-out) remains
+last_updated: "2026-09-04T22:32:25.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 25
 ---
 
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.1 — coverage-metric-correctness (SCORE-01) — NOT complete. Verification returned `gaps_found`: 4 of 5 Success Criteria verified, **SC-3 failed**. `confidence_formula_version` is computed correctly but dropped by all three consumers (`reports/writer.py`'s compat dict, `reports/executive.py`'s markdown, `ConfidenceData`/`routes/scan.py`), so the marker reaches no shipped surface and `docs/report-interpretation.md`'s D-15 absence rule is currently FALSE against every report QUIRK emits. Gap-closure plans `184.1-06` (wave 5, code + emitted-artifact tests) and `184.1-07` (wave 6, docs/UAT/vault/close-out) are planned and checker-passed. Next: `/gsd-execute-phase 184.1` — waves 5-6 only.
+**Current focus:** Phase 184.1 — coverage-metric-correctness (SCORE-01) — NOT complete. `184.1-06` (wave 5, code + emitted-artifact tests) is now DONE: `confidence_formula_version` is threaded through all three shipped consumers (`reports/writer.py`'s compat dict, `reports/executive.py`'s markdown, `ConfidenceData`/`routes/scan.py`) and locked by `tests/test_confidence_formula_version_surfaces.py` (3 passed, falsifiability spot-checked). The 28-test confidence/evidence group and the 95-test D-03 non-movement scoring group both stayed green. `184.1-07` (wave 6, docs/UAT/vault/close-out — including correcting UAT-184.1-01 and REQUIREMENTS.md SCORE-01) still remains before the phase can be re-verified. Next: `/gsd-execute-phase 184.1` — wave 6 only.
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
