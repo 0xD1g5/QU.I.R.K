@@ -22,15 +22,15 @@ rather than inherited from its original report — two had drifted since they we
 
 ## Tooling Integrity (GSD state corruption)
 
-- [ ] **TOOL-01**: `gsd-sdk` / `gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`.
+- [x] **TOOL-01**: `gsd-sdk` / `gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`.
   **Bug A** (root-caused, patched locally 2026-09-03): `stateReplaceField()`'s bold pattern at
   `bin/lib/state-document.generated.cjs:42` lacks a `^` anchor and `/m`, so `**Field:**` matches
   mid-prose and `(.*)` eats the rest of the line. The plain-text branch below it is correctly
   anchored — only the bold branch was wrong.
   *Evidence: 9 corruptions across Phases 179-181; reproduced in isolation; fix verified.*
-  **NOT closed — reopened 2026-09-03 (182-05):** the live phase-close demonstration of
-  `state begin-phase` against the real `.planning/STATE.md` reproduced a **second, unpatched**
-  instance of the same defect class in the sibling read function `stateExtractField()`
+  **Reopened 2026-09-03 (182-05):** the live phase-close demonstration of `state begin-phase`
+  against the real `.planning/STATE.md` reproduced a **second, unpatched** instance of the same
+  defect class in the sibling read function `stateExtractField()`
   (`bin/lib/state-document.generated.cjs:29`), which has an unanchored `**Field:**` bold pattern
   that 182-01's patch never touched (the patch only fixed the write-side `stateReplaceField()`).
   This let a `` `**Status:**` ``-in-prose sentence at `.planning/STATE.md:82` (itself part of this
@@ -40,12 +40,21 @@ rather than inherited from its original report — two had drifted since they we
   `Stopped At` extractor's session-scoping guard (upstream bug #2444) requires the literal header
   `## Session`; this project's convention is `## Session Continuity`, which does not match, so the
   guard fell through to an unscoped full-body search and picked up a stale
-  `Stopped at: Completed 180-07-PLAN.md` line from the archived `## Session Continuity` section
-  instead of the current value. Both hazards were caught by the pre/post-write diff inspection
-  mandated by 182-05's own protocol; the write was reverted before commit
-  (`git status --porcelain .planning/STATE.md` confirmed clean afterward). See
-  `182-05-SUMMARY.md` for the full reproduction. Filed as **TOOL-04** below; TOOL-01 stays open
-  until `stateExtractField()` is patched to match `stateReplaceField()`'s anchor fix.
+  `Stopped at:` line from the archived `## Session Continuity` section instead of the current
+  value. Both hazards were caught by the pre/post-write diff inspection mandated by 182-05's own
+  protocol; the write was reverted before commit (`git status --porcelain .planning/STATE.md`
+  confirmed clean afterward). See `182-05-SUMMARY.md` for the full reproduction. Filed as
+  **TOOL-04** below.
+  **Closed 2026-09-04 (182-06):** `stateExtractField()` anchored to
+  `` ^\s*\*\*${escaped}:\*\*[ \t]*(.+)$ ``/`im` — the exact anchor fix `stateReplaceField()`
+  already had — proven RED against the installed, pre-patch toolchain via a full-COMMAND
+  regression test (`test_begin_phase_does_not_read_body_prose_as_machine_fields`, run against a
+  fixture shaped like this real file, not just the function in isolation) before the patch, then
+  GREEN after. **Re-demonstrated 2026-09-04 (182-08):** the live `state begin-phase` verb was run
+  again against this real, live `.planning/STATE.md` (the same file, the same command, the same
+  hazard-detection protocol as the 182-05 reproduction) and the diff came back clean against both
+  named corruption signatures — no garbled bold-field prose, no dropped frontmatter key. See
+  `182-08-SUMMARY.md` for the full diff and key-by-key frontmatter comparison.
 
 - [x] **TOOL-02**: **Bug B** — `begin-phase` rebuilds frontmatter from a fixed schema instead of
   preserving it. `stopped_at` and the entire `progress:` block are **deleted** even with
@@ -59,7 +68,7 @@ rather than inherited from its original report — two had drifted since they we
   is `.generated.cjs` — regeneration silently reverts it. Needs either a re-apply check (there is a
   `verify-reapply-patches.cjs` precedent in `bin/`) or an upstream fix landed.
 
-- [ ] **TOOL-04** (new 2026-09-03, discovered during 182-05's live `state begin-phase`
+- [x] **TOOL-04** (new 2026-09-03, discovered during 182-05's live `state begin-phase`
   demonstration): two unpatched read-side defects in
   `bin/lib/state-document.generated.cjs`/`bin/lib/state.cjs` still silently corrupt
   `.planning/STATE.md`, independent of the TOOL-01 write-side (`stateReplaceField`) fix.
@@ -73,6 +82,21 @@ rather than inherited from its original report — two had drifted since they we
   an archived section. *Evidence: reproduced live against the real `.planning/STATE.md` during
   182-05; see `182-05-SUMMARY.md` for the full diff and root-cause trace. The corrupted write was
   caught pre-commit and reverted — no data was actually lost.*
+  **Closed 2026-09-04 (182-06, 182-07):** 182-06 anchored `stateExtractField()` (item (a)) and
+  widened the session-scoping guard in `buildStateFrontmatter()` to
+  `` ^##\s+Session\b[^\n]*\n([\s\S]*?)(?=\n##|$) ``/`im` (item (b)), plus anchored `focusPattern`
+  inside `cmdStateBeginPhase` itself — a write-path instance the plan's own hand-derived
+  orientation list missed and a plan reviewer found. 182-07 then enumerated every remaining
+  `**Field:**`-shaped bold-field construct in both files via a run-time source scan (not a
+  hand-written list) locked by `test_bold_field_regex_class_is_fully_dispositioned`, anchored the
+  one remaining write-path instance found that way (`boldProgressPattern` in
+  `cmdStateUpdateProgress`), and dispositioned the scan's one new, previously-undocumented find
+  (`cmdStateGet`'s `boldPattern`) `accepted-read-only` since it only ever reaches stdout display,
+  never a STATE.md write. All four write-path instances are anchored; the durability layer
+  (`gsd-local-patches/`/`gsd-pristine/`) is re-seeded so none of it silently reverts.
+  **Re-demonstrated 2026-09-04 (182-08):** the live verb was re-run against this real,
+  live `.planning/STATE.md` and the diff came back clean against both named hazard signatures.
+  See `182-06-SUMMARY.md`, `182-07-SUMMARY.md`, and `182-08-SUMMARY.md`.
 
 ## Enumeration Drift (the shared defect class)
 
@@ -123,10 +147,10 @@ rather than inherited from its original report — two had drifted since they we
 
 | Requirement | Phase | Status |
 |---|---|---|
-| TOOL-01 | 182-01, 182-03 | Reopened 2026-09-03 (182-05) — write-side fixed, read-side gap found |
+| TOOL-01 | 182-01, 182-03, 182-06 | Complete (re-closed 2026-09-04, 182-08 re-demonstration clean) |
 | TOOL-02 | 182-02 | Complete |
 | TOOL-03 | 182-03, 182-04 | Complete |
-| TOOL-04 | TBD (found 182-05; unowned) | Open |
+| TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
 | DRIFT-01 | TBD | Pending |
 | DRIFT-02 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |
