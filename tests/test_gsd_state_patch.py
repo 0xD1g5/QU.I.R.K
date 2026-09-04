@@ -48,6 +48,7 @@ rationale, including the accepted T-182-10 trade-off.
 """
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -688,6 +689,269 @@ def test_full_command_fixture_is_sensitive_to_the_unpatched_extractor(
         f"**Paused At:**-quoting prose decoy as the live value (got: "
         f"{paused_at!r}) -- if this assertion fails, the fixture no "
         f"longer reproduces the defect class 182-05 observed live"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Defect-class enumeration gate (182-07, TOOL-04 gap-closure).
+#
+# 182-01 root-caused "unanchored bold-field regex, where the sibling
+# plain-text branch is already anchored" and patched ONE instance. 182-06
+# found a SECOND instance (stateExtractField, the read-side twin) and a
+# THIRD (focusPattern) -- both missed by the first pass's hand-derived
+# enumeration. This gate exists so the fourth instance is never found by a
+# corruption report either.
+#
+# BINDING DESIGN CONSTRAINT: the occurrence set below is GENERATED AT RUN
+# TIME by scanning the installed source with Path.read_text() -- it is never
+# seeded from a list written into this file. `_BOLD_FIELD_DISPOSITIONS`
+# supplies a disposition ("anchored" or "accepted-read-only") for whatever
+# the scan finds; it must never supply the occurrences themselves. A gate
+# fed by a hand-written occurrence list is a hand-maintained allowlist
+# wearing a test's clothes -- which is the exact shape of defect this phase
+# has now hit three times. Keying is by (relative file path, the literal
+# field-name text between the bold markers, the enclosing function name) --
+# NEVER by line number (tests/test_skip_registry.py's `(file, LINENO)`
+# keying is the documented cautionary example: it breaks on every line
+# shift and is a phase-184-owned baseline failure this repo already lives
+# with).
+#
+# TWO ESCAPING CONVENTIONS ARE IN PLAY, and a scan for only one is blind to
+# half the toolchain: `state.cjs` writes plain regex literals, where the
+# construct is `\*\*Field:\*\*` (four raw characters -- backslash, asterisk,
+# backslash, asterisk). `state-document.generated.cjs` builds patterns as
+# template-literal strings passed to `new RegExp()`, where every backslash
+# is itself escaped, so the identical construct is
+# `\\*\\*${escaped}:\\*\\*` (six raw characters). Verified by direct
+# execution 2026-09-03: `grep -c '\\*\\*' state-document.generated.cjs`
+# (single-backslash form) returns 0; `grep -c '\\\\*\\\\*'
+# state-document.generated.cjs` (double-backslash form) returns 2. A scan
+# matching only the single-backslash convention silently misses
+# `stateExtractField` and `stateReplaceField` -- the two ORIGINAL sites of
+# this entire defect class -- while still reporting a green, plausible
+# result. `_MARK4`/`_MARK6` below match both.
+# ---------------------------------------------------------------------------
+
+_BOLD_FIELD_SCAN_RELPATHS = (
+    "bin/lib/state.cjs",
+    "bin/lib/state-document.generated.cjs",
+)
+
+# Plain regex-literal convention: \*\*Field:\*\* (4 raw chars per marker).
+_MARK4 = "\\*\\*"
+# Template-literal-string convention: \\*\\*${expr}:\\*\\* (6 raw chars).
+_MARK6 = "\\\\*\\\\*"
+
+_FUNCTION_DECL_RE = re.compile(r"^\s*function\s+(\w+)\s*\(")
+_VAR_NAME_RE = re.compile(r"\b(?:const|let|var)\s+(\w+)\s*=")
+
+
+def _enclosing_function_name(lines: list[str], occurrence_idx: int) -> str:
+    """Scan backward from `occurrence_idx` for the nearest `function NAME(`
+    declaration. Text-based, not line-number-based -- it identifies WHICH
+    function an occurrence lives in, so two textually-identical template
+    patterns (e.g. `stateExtractField` and `stateReplaceField`, which both
+    literally read `${escaped}` between the markers) still get distinct
+    ledger keys without resorting to a line number."""
+    for i in range(occurrence_idx, -1, -1):
+        m = _FUNCTION_DECL_RE.match(lines[i])
+        if m:
+            return m.group(1)
+    return "<module-scope>"
+
+
+def _has_m_flag(line: str) -> bool:
+    """True if the regex constructed on this line carries the `m` flag,
+    under either the `new RegExp(pattern, 'im')` convention or the
+    `/pattern/im` literal convention. Both forms place their flags
+    immediately before the statement's trailing punctuation, so anchoring
+    the check to end-of-line avoids being confused by parentheses inside
+    the pattern body itself (e.g. a capture group)."""
+    m = re.search(r"['\"]([a-z]+)['\"]\)\s*;?\s*$", line)
+    if m:
+        return "m" in m.group(1)
+    m = re.search(r"/([a-z]+)\s*;\s*$", line)
+    if m:
+        return "m" in m.group(1)
+    return False
+
+
+def _scan_bold_field_occurrences() -> list[dict]:
+    """Generate the occurrence set by reading the two installed,
+    STATE.md-owning lib files line by line. Lines whose stripped form
+    starts with `//` are skipped -- prose in a comment quoting a pattern
+    (this very docstring block above, if it lived in the .cjs file, would
+    be exactly that trap) must not count as an occurrence."""
+    occurrences: list[dict] = []
+    for relpath in _BOLD_FIELD_SCAN_RELPATHS:
+        abs_path = GSD_HOME / relpath
+        text = abs_path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        for idx, line in enumerate(lines):
+            if line.strip().startswith("//"):
+                continue
+            for mark, convention in ((_MARK4, "4-char (regex-literal)"), (_MARK6, "6-char (template-literal)")):
+                pattern = re.compile(re.escape(mark) + r"([^\n:]*):" + re.escape(mark))
+                for m in pattern.finditer(line):
+                    var_match = _VAR_NAME_RE.search(line)
+                    occurrences.append(
+                        {
+                            "relpath": relpath,
+                            "line_no": idx + 1,
+                            "line": line,
+                            "field_text": m.group(1),
+                            "function": _enclosing_function_name(lines, idx),
+                            "convention": convention,
+                            "var_name": var_match.group(1) if var_match else "<unnamed>",
+                        }
+                    )
+    return occurrences
+
+
+# Ledger: (relpath, literal field-name text, enclosing function) ->
+# (disposition, reason). "anchored" occurrences must carry `^` and the `/m`
+# flag on the SAME line; "accepted-read-only" occurrences carry a written
+# reason instead of a code change.
+_BOLD_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
+    ("bin/lib/state-document.generated.cjs", "${escaped}", "stateExtractField"): (
+        "anchored",
+        "TOOL-04 read-side twin of Bug A -- anchored 182-06. Lives in a "
+        "*generated* file, so it is also registered in the "
+        "gsd-local-patches/ durability layer.",
+    ),
+    ("bin/lib/state-document.generated.cjs", "${escaped}", "stateReplaceField"): (
+        "anchored",
+        "Bug A, the original write-side instance of this defect class -- "
+        "anchored 182-01.",
+    ),
+    ("bin/lib/state.cjs", "Current focus", "cmdStateBeginPhase"): (
+        "anchored",
+        "182-06 Edit C: the in-command Current-focus rewrite inside "
+        "cmdStateBeginPhase, a write path -- anchored and made newline-safe.",
+    ),
+    ("bin/lib/state.cjs", "Progress", "cmdStateUpdateProgress"): (
+        "anchored",
+        "T-182-25 / TOOL-04: the third write-path instance of this defect "
+        "class, boldProgressPattern inside updateProgress's "
+        "readModifyWriteStateMd callback -- anchored by 182-07 Task 2. "
+        "Ledgered here as 'anchored' BEFORE that patch lands so this gate "
+        "can be proven RED against the still-unpatched source; see "
+        "182-07-SUMMARY.md for the verbatim RED/GREEN transcript.",
+    ),
+    ("bin/lib/state.cjs", "Last Date", "cmdStateSnapshot"): (
+        "accepted-read-only",
+        "T-182-29: feeds `state json`'s session object for console/report "
+        "display only. Cannot write STATE.md. Scoped one level up by the "
+        "## Session section guard (182-06 Edit B), but the field-level "
+        "match itself is unanchored; the blast radius is a wrong displayed "
+        "value, not a corrupted file.",
+    ),
+    ("bin/lib/state.cjs", "Stopped At", "cmdStateSnapshot"): (
+        "accepted-read-only",
+        "T-182-29: same session-display read path as Last Date immediately "
+        "above -- see that entry's reason.",
+    ),
+    ("bin/lib/state.cjs", "Resume File", "cmdStateSnapshot"): (
+        "accepted-read-only",
+        "T-182-29: same session-display read path as Last Date above -- "
+        "see that entry's reason.",
+    ),
+    ("bin/lib/state.cjs", "${fieldEscaped}", "cmdStateGet"): (
+        "accepted-read-only",
+        "NEW SITE found by this plan's run-time scan, absent from the "
+        "plan's hand-derived orientation list -- itself a live instance of "
+        "the exact failure mode ('a hand-derived enumeration read as "
+        "complete while being partial') that motivates generating the "
+        "occurrence set at run time instead of trusting a list. Backs the "
+        "read-only `state get <field>` CLI command: the match result is "
+        "only ever passed to output() for stdout display, never written "
+        "back to STATE.md. Same accepted blast-radius class as T-182-29's "
+        "other read-only sites: a wrong value shown for a manually-invoked "
+        "diagnostic command, not a corruption vector. Recorded here rather "
+        "than silently patched so the call to leave it alone can be "
+        "overturned deliberately by a future session.",
+    ),
+}
+
+
+@_GSD_SKIP
+def test_bold_field_regex_class_is_fully_dispositioned() -> None:
+    """Enumerate every `**Field:**`-shaped regex construction in the two
+    STATE.md-owning libs (state.cjs, state-document.generated.cjs) BY
+    SCANNING THE INSTALLED SOURCE AT RUN TIME, and assert each one carries
+    an explicit, matching disposition in `_BOLD_FIELD_DISPOSITIONS`.
+
+    Three independent failure modes are asserted against, each closing a
+    gap this phase hit in practice:
+      1. An occurrence with no ledger entry -- an unlisted defect-class
+         member, the TOOL-04 shape itself.
+      2. A ledger entry with no matching occurrence -- a stale allowlist
+         row, which is how a gate quietly stops gating anything.
+      3. Zero occurrences collected from state-document.generated.cjs
+         specifically -- the convention-blindness failure mode: a scan
+         written for only the plain regex-literal convention cannot see
+         that file's template-literal-string patterns at all, and would
+         otherwise surface as a confusing "stale ledger row" failure on
+         (2) instead of naming its real, upstream cause.
+    """
+    occurrences = _scan_bold_field_occurrences()
+
+    generated_hits = [
+        o
+        for o in occurrences
+        if o["relpath"] == "bin/lib/state-document.generated.cjs"
+    ]
+    if not generated_hits:
+        pytest.fail(
+            "the run-time scan collected ZERO bold-field occurrences from "
+            "state-document.generated.cjs. That file uses the "
+            "template-literal-string escaping convention "
+            "(`\\\\*\\\\*${expr}:\\\\*\\\\*`, six raw characters), not the "
+            "plain regex-literal convention "
+            "(`\\*\\*Field:\\*\\*`, four raw characters) that state.cjs "
+            "uses. A scan matching only the four-character marker is BLIND "
+            "to this file and would silently orphan its ledger rows "
+            "(stateExtractField, stateReplaceField) rather than fail here "
+            "with the real cause. Fix the scan's marker set (_MARK4/_MARK6), "
+            "not the ledger."
+        )
+
+    matched_keys: set[tuple[str, str, str]] = set()
+    for occ in occurrences:
+        key = (occ["relpath"], occ["field_text"], occ["function"])
+        assert key in _BOLD_FIELD_DISPOSITIONS, (
+            f"undispositioned bold-field construction found by the "
+            f"run-time scan: file={occ['relpath']!r} "
+            f"pattern=`**{occ['field_text']}:**` (variable "
+            f"{occ['var_name']!r}, function {occ['function']!r}, line "
+            f"{occ['line_no']}, {occ['convention']} convention). "
+            f"Disposition it deliberately in _BOLD_FIELD_DISPOSITIONS as "
+            f"'anchored' or 'accepted-read-only' with a written reason -- "
+            f"do not add it reflexively just to satisfy this assertion."
+        )
+        matched_keys.add(key)
+        disposition, reason = _BOLD_FIELD_DISPOSITIONS[key]
+        assert reason.strip(), f"ledger entry {key} has an empty reason"
+
+        if disposition == "anchored":
+            assert "^" in occ["line"], (
+                f"{key} (variable {occ['var_name']!r}, line "
+                f"{occ['line_no']}) is ledgered 'anchored' but its line "
+                f"has no `^` anchor: {occ['line']!r}"
+            )
+            assert _has_m_flag(occ["line"]), (
+                f"{key} (variable {occ['var_name']!r}, line "
+                f"{occ['line_no']}) is ledgered 'anchored' but its regex "
+                f"does not carry the /m flag: {occ['line']!r}"
+            )
+        elif disposition != "accepted-read-only":
+            pytest.fail(f"unknown disposition {disposition!r} for {key}")
+
+    stale = set(_BOLD_FIELD_DISPOSITIONS) - matched_keys
+    assert not stale, (
+        "ledger entries with no matching occurrence in the installed "
+        "source -- a stale allowlist row is how a gate quietly stops "
+        f"gating anything: {sorted(stale)}"
     )
 
 
