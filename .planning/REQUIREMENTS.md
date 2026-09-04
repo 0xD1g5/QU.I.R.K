@@ -100,14 +100,18 @@ rather than inherited from its original report — two had drifted since they we
 
 ## Enumeration Drift (the shared defect class)
 
-- [ ] **DRIFT-01**: `tests/test_cli_helper_usage.py`'s GATE-03 fork-safety check derives its file
-  set instead of enumerating it. **Measured 2026-09-03:** the allowlist names **14** files while
-  **21 unlisted files carry 35 direct `subprocess.*` call sites**. The docstring claims protection
-  "regardless of which subset of tests is run" — a hand-maintained list cannot deliver that.
-  Decide per site whether it migrates to `run_fork_safe` or gains the kwargs, and **grandfather
-  explicitly rather than silently**.
-  *Note: HORIZON recorded this as 11 files / 18 / 38 sites at the v5.16 audit — it has drifted
-  further since, which is itself the argument for derivation.*
+- [x] **DRIFT-01**: `tests/test_cli_helper_usage.py`'s GATE-03 fork-safety check derives its file
+  set instead of enumerating it. **Measured 2026-09-03, corrected 2026-09-04 at Phase 183 close:**
+  the allowlist named 14 files (of 15 `_COVERED_FILES` entries) while the true unlisted set was
+  **18 files carrying 28 direct `subprocess.*` call sites** (the planning-time 21/35 figure was
+  itself stale). The docstring claims protection "regardless of which subset of tests is run" —
+  a hand-maintained list cannot deliver that. **COMPLETE:** all 28 sites migrated to
+  `run_fork_safe`/`run_cli` (Phase 183, plans 01-04); the gate itself rewritten to derive its file
+  set via `Path.glob("tests/**/*.py")` at test-run time instead of reading `_COVERED_FILES`, with
+  bare-name `subprocess` import detection added and 4 permanent, mutation-killed falsifiability
+  self-tests (Phase 183, plan 05). `_GRANDFATHERED` ships empty — zero sites needed grandfathering.
+  *Note: HORIZON recorded this as 11 files / 18 / 38 sites at the v5.16 audit — it had drifted
+  further since, which was itself the argument for derivation over a longer list.*
 
 - [ ] **DRIFT-02**: `DEFER-172-01` closed — `tests/test_skip_registry.py::test_no_unregistered_skips`
   passes. **Measured 2026-09-03: 10 unregistered skips**, four of them in
@@ -151,7 +155,7 @@ rather than inherited from its original report — two had drifted since they we
 | TOOL-02 | 182-02 | Complete |
 | TOOL-03 | 182-03, 182-04 | Complete |
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
-| DRIFT-01 | TBD | Pending |
+| DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |

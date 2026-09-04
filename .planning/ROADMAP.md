@@ -99,7 +99,9 @@ the criteria they claim to enforce. Ops cycle — small and evidence-scoped, not
 
 > [!important] Three of the five workstreams are ONE defect class
 > **A hand-maintained enumeration that has drifted from the criterion it claims to enforce.**
-> GATE-03's allowlist (14 listed, 21 unlisted files with 35 call sites), `skip_registry.py`'s
+> GATE-03's allowlist (14 listed; a planning-time measurement of the unlisted set was later
+> corrected at Phase 183 close to the true figures: 18 unlisted files / 28 call sites),
+> `skip_registry.py`'s
 > line-keyed entries (10 unregistered skips), and the 33 a11y baselines (generated on macOS,
 > enforced on Linux, 31 never checked against the runner). The remedy each time is **derivation, or
 > a guard against the enumeration's own criterion** — Phase 178's derived-alias-table precedent —
@@ -116,7 +118,7 @@ since they were first recorded.
 ### Phases
 
 - [x] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
-- [ ] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 14-entry allowlist, with the 35 unlisted call sites each migrated or explicitly grandfathered.
+- [x] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 14-entry allowlist, with the 28 unlisted call sites each migrated or explicitly grandfathered.
 - [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: 10 unregistered skips each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
@@ -172,24 +174,38 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. `tests/test_cli_helper_usage.py` walks the repo against the gate's own criterion rather than
-     reading `_COVERED_FILES`. **Measured 2026-09-03:** 14 files listed, **21 unlisted files with
-     35 direct `subprocess.*` call sites**. HORIZON recorded 11/18/38 at the v5.16 audit — the drift
-     has grown, which is the argument for derivation over a longer list.
+     reading `_COVERED_FILES`. **Measured 2026-09-03, corrected 2026-09-04 at phase close:**
+     `_COVERED_FILES` held 15 entries (14 of them already fully migrated), and there were **18
+     unlisted `tests/` files carrying 28 non-compliant direct spawn sites** (30 spawn sites total
+     under `tests/`, 2 of them already compliant). The prior planning-time figure (recorded above
+     under "Three of the five workstreams are ONE defect class") was itself stale — it was
+     re-measured and corrected twice more during execution (independently by the planner and by
+     the AST re-enumeration in plan 183-05's Task 3) before landing on 18 files / 28 sites.
+     HORIZON recorded 11/18/38 at the v5.16 audit, which was staler still. The correction is
+     evidence for this phase's own thesis — a hand-maintained count drifts even inside a single
+     phase — not an embarrassment to bury.
 
-  2. Each of the 35 unlisted call sites is decided: migrated to `run_fork_safe`, or given the
-     kwargs, or **explicitly grandfathered with a reason** — never silently.
+  2. Each of the 28 unlisted call sites is decided: migrated to `run_fork_safe`, or given the
+     kwargs, or **explicitly grandfathered with a reason** — never silently. **All 28 were
+     migrated**; the derived gate's `_GRANDFATHERED` ledger ships empty (zero grandfathering was
+     needed).
 
   3. The gate is proven falsifiable: a synthetic unsafe `subprocess.run(` is added, the gate goes
-     RED naming it, and the injection is reverted.
-**Plans**: 6 plans
+     RED naming it, and the injection is reverted. **Met by permanent self-tests, not a one-off
+     manual inject-and-revert** — plan 183-05 added 4 permanent, mutation-killed falsifiability
+     self-tests (synthetic unsafe spawn, new-unlisted-file derivation proof, bare-name
+     positive/negative, grandfather-ledger integrity) that run on every test invocation going
+     forward, *in addition to* performing the manual inject-and-revert once against the real tree
+     as a live proof (183-05-SUMMARY.md "Live Falsification Against the Real Tree").
+**Plans**: 6 plans (all complete)
 
 Plans:
-- [ ] 183-01-PLAN.md — Extend `run_cli` with `env=`; migrate the 9 cosmetic-`cwd` sites (errors_cmd, install_errors, error_codes_freshness, cve_staleness) + CI-parity proof
-- [ ] 183-02-PLAN.md — Migrate the 6 trivial `sys.executable` sites (cli_init, cli_version, dashboard_api, version)
-- [ ] 183-03-PLAN.md — Migrate the 7 `pip install --dry-run` sites (extras_install_matrix, 5x install_all_*, snmp_scanner_contract)
-- [ ] 183-04-PLAN.md — Migrate the 6 load-bearing-`cwd` / bare-name sites (chaos_lab_idempotency, distributed_topology, doc_command_forms)
-- [ ] 183-05-PLAN.md — Rewrite the gate: derive from `tests/**/*.py`, delete `_COVERED_FILES`, add bare-name detection, empty `_GRANDFATHERED`, 4 permanent falsifiability self-tests
-- [ ] 183-06-PLAN.md — Full-suite failing-node-SET verification, CI parity, `close_fds` scoping, ROADMAP count correction, VALIDATION/REQUIREMENTS/Obsidian close-out
+- [x] 183-01-PLAN.md — Extend `run_cli` with `env=`; migrate the 9 cosmetic-`cwd` sites (errors_cmd, install_errors, error_codes_freshness, cve_staleness) + CI-parity proof
+- [x] 183-02-PLAN.md — Migrate the 6 trivial `sys.executable` sites (cli_init, cli_version, dashboard_api, version)
+- [x] 183-03-PLAN.md — Migrate the 7 `pip install --dry-run` sites (extras_install_matrix, 5x install_all_*, snmp_scanner_contract)
+- [x] 183-04-PLAN.md — Migrate the 6 load-bearing-`cwd` / bare-name sites (chaos_lab_idempotency, distributed_topology, doc_command_forms)
+- [x] 183-05-PLAN.md — Rewrite the gate: derive from `tests/**/*.py`, delete `_COVERED_FILES`, add bare-name detection, empty `_GRANDFATHERED`, 4 permanent falsifiability self-tests
+- [x] 183-06-PLAN.md — Full-suite failing-node-SET verification, CI parity, `close_fds` scoping, ROADMAP count correction, VALIDATION/REQUIREMENTS/Obsidian close-out
 
 ### Phase 184: Skip Registry Closure
 
