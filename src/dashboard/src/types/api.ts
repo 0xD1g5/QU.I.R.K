@@ -17,6 +17,8 @@ export interface ScoreData {
 export interface ConfidenceData {
   confidence_score: number
   confidence_rating: string
+  // 184.1-06 / SC-3 / D-12: optional to mirror the Pydantic Optional[str] = None field.
+  confidence_formula_version?: string
   factor_breakdown: Record<string, unknown>
 }
 

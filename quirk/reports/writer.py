@@ -421,6 +421,13 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     conf = {
         "confidence": conf_raw.get("confidence_score", 0),
         "confidence_factors": conf_raw.get("factor_breakdown", {}),
+        # 184.1-06 / SC-3 / D-12 / D-15: thread the formula-version marker through
+        # the compat dict. D-15's documented absence-means-pre-184.1 rule is only
+        # true if the marker actually reaches intelligence-{stamp}.json — dropping
+        # it here (as the compat wrapper did before this fix) makes that rule false
+        # against every report QUIRK ships. Uses the canonical key name so a client
+        # reading the JSON sees the exact field name the docs describe.
+        "confidence_formula_version": conf_raw.get("confidence_formula_version"),
     }
     # roadmap_raw["items"] is a list of dicts; keep the list for markdown helpers
     roadmap_items = roadmap_raw.get("items", [])

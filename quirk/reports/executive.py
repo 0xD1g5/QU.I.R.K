@@ -272,6 +272,14 @@ def build_exec_markdown(
     lines.append(
         f"- **Confidence:** **{conf_raw['confidence_rating']}** ({conf_raw['confidence_score']}/100)"
     )
+    # 184.1-06 / SC-3 / D-12 / D-15: emit the formula-version marker so a client
+    # reading this exec summary can tell which confidence formula produced the
+    # number. D-15's rule is stated in terms of the field NAME being present or
+    # absent, so the literal string must appear, not only the value. Omit the
+    # bullet entirely rather than render "None" when the value is missing.
+    _formula_version = conf_raw.get("confidence_formula_version")
+    if _formula_version:
+        lines.append(f"- **confidence_formula_version:** {_formula_version}")
     lines.append(
         f"- **Coverage:** {coverage_pct}% "
         "(TLS+SSH successful / total in-scope endpoints)"

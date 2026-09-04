@@ -40,6 +40,10 @@ class ScoreData(BaseModel):
 class ConfidenceData(BaseModel):
     confidence_score: int
     confidence_rating: str  # HIGH / MEDIUM / LOW / VERY_LOW / NO_DATA
+    # 184.1-06 / SC-3 / D-12: optional-with-default keeps the model backward
+    # compatible for callers that do not supply it; None on the compute-failure
+    # fallback path (an unmarked response on failure is honest, per D-15).
+    confidence_formula_version: Optional[str] = None
     factor_breakdown: Optional[Dict[str, Any]] = None
 
 

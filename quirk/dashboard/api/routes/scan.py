@@ -1609,7 +1609,14 @@ def get_latest_scan(
         from quirk.intelligence.confidence import compute_confidence
         confidence_raw = compute_confidence(evidence)
     except Exception:
-        confidence_raw = {"confidence_score": 0, "confidence_rating": "NO_DATA", "factor_breakdown": {}}
+        # 184.1-06 / D-15: no version string invented on the failure path — an
+        # unmarked response on a compute failure is honest.
+        confidence_raw = {
+            "confidence_score": 0,
+            "confidence_rating": "NO_DATA",
+            "confidence_formula_version": None,
+            "factor_breakdown": {},
+        }
 
     subscores_raw = score_raw.get("subscores", {})
     score = ScoreData(
@@ -1629,6 +1636,9 @@ def get_latest_scan(
     confidence = ConfidenceData(
         confidence_score=confidence_raw.get("confidence_score", 0),
         confidence_rating=confidence_raw.get("confidence_rating", "NO_DATA"),
+        # 184.1-06 / SC-3 / D-12: pass the formula-version marker through to the
+        # HTTP response so a client can tell which formula produced this score.
+        confidence_formula_version=confidence_raw.get("confidence_formula_version"),
         factor_breakdown=confidence_raw.get("factor_breakdown", {}),
     )
 
