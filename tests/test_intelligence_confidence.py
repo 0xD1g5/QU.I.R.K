@@ -94,21 +94,96 @@ class ConfidenceTests(unittest.TestCase):
         self.assertGreater(evidence["assessed_crypto_count"], 0)
         self.assertGreater(evidence["assessable_endpoint_count"], 0)
 
+    def test_coverage_ratio_uses_evidence_derived_counters(self) -> None:
+        """Phase 184.1 SCORE-01: coverage_ratio == assessed_crypto_count / assessable_endpoint_count,
+        not (tls_count + ssh_count) / endpoints. _evidence() carries 9 assessed / 10 assessable
+        (see its docstring), which is 0.9 under the new formula versus 0.7 under the old one
+        (6 TLS + 1 SSH = 7 / 10 endpoints) — a value that would only agree by coincidence.
+        """
+        result = compute_confidence(_evidence())
+        self.assertEqual(result["factor_breakdown"]["coverage_ratio"]["value"], 0.9)
+
+    def test_confidence_formula_version_present(self) -> None:
+        """D-12/D-14: every compute_confidence result carries the dedicated formula-version
+        marker (distinct from the three drifting intelligence_version values elsewhere in the
+        codebase), so a client asking why the score moved gets a checkable answer."""
+        result = compute_confidence(_evidence())
+        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+
+    def test_confidence_formula_version_present_on_no_data(self) -> None:
+        """D-15: absence of confidence_formula_version means a report predates Phase 184.1 —
+        that rule is only reliable if the marker is present on EVERY return path, including
+        the pre-existing endpoints == 0 NO_DATA short-circuit."""
+        result = compute_confidence({"totals": {"endpoints": 0}})
+        self.assertEqual(result["confidence_rating"], "NO_DATA")
+        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+
+    def test_zero_assessable_endpoints_returns_no_data(self) -> None:
+        """D-10: totals.endpoints > 0 but assessable_endpoint_count == 0 (e.g. a port sweep that
+        found nothing open plus one ADVISORY row) must return the NO_DATA shape rather than
+        awarding partial coverage points — the same phantom-points defect CR-01 guards against.
+        Distinct from test_zero_endpoints, which covers totals.endpoints == 0 itself.
+        """
+        result = compute_confidence(
+            {
+                "totals": {"endpoints": 5},
+                "assessed_crypto_count": 0,
+                "assessable_endpoint_count": 0,
+            }
+        )
+        self.assertEqual(result["confidence_score"], 0)
+        self.assertEqual(result["confidence_rating"], "NO_DATA")
+        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+
+    def test_all_plaintext_http_yields_full_coverage(self) -> None:
+        """D-08: coverage answers "did we assess it", not "is it good". An evidence set whose
+        assessed endpoints are entirely plaintext HTTP still yields coverage_ratio == 1.0 —
+        high coverage plus a poor readiness score is the correct reading of a fully-plaintext
+        estate, since plaintext is penalised separately via plaintext_http_count in
+        scoring.py, and keeping the two orthogonal is what makes confidence meaningful.
+        """
+        evidence = {
+            "totals": {"endpoints": 4},
+            "protocol_counts": {"HTTP": 4},
+            "assessed_crypto_count": 4,
+            "assessable_endpoint_count": 4,
+            "scan_error": {"count": 0, "rate": 0.0},
+        }
+        result = compute_confidence(evidence)
+        self.assertEqual(result["factor_breakdown"]["coverage_ratio"]["value"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
 
 
 def test_zero_tls_produces_no_enum_coverage_bonus():
-    """SCORE-03 regression guard (D-08): tls_count=0 must yield 0.0 tls_enum_coverage_ratio points."""
+    """SCORE-03 regression guard (D-08): tls_count=0 must yield 0.0 tls_enum_coverage_ratio points.
+
+    Phase 184.1 SCORE-01 (D-19: old-arithmetic classification): this fixture predates the
+    184.1-02 coverage rewrite and originally omitted assessed_crypto_count /
+    assessable_endpoint_count entirely. Under the new formula that omission defaults both
+    to 0, which now trips the D-10 degenerate-denominator NO_DATA branch — and NO_DATA's
+    factor_breakdown also zeroes tls_enum_coverage_ratio, so the assertions below kept
+    passing for the wrong reason (NO_DATA collision, not the CR-01 guard this test is
+    named for). Explicit counters are added here so the test again exercises the real
+    CR-01 branch: SSH is the only assessed-crypto protocol in this fixture (assessed
+    count 3, carried over 1:1 from the old ssh_count arithmetic), and no ADVISORY/CLOSED
+    rows are present so the denominator stays at totals.endpoints (10).
+    """
     from quirk.intelligence.confidence import compute_confidence
 
     evidence = {
         "totals": {"endpoints": 10},
         "protocol_counts": {"TLS": 0, "SSH": 3, "UNKNOWN": 2},
+        "assessed_crypto_count": 3,
+        "assessable_endpoint_count": 10,
         # Deliberately omit tls_enum_coverage_ratio and tls_enum_coverage_pct
     }
     result = compute_confidence(evidence)
+    assert result["confidence_rating"] != "NO_DATA", (
+        "fixture must exercise the CR-01 TLS-enum guard, not the D-10 NO_DATA branch"
+    )
     factor = result["factor_breakdown"]["tls_enum_coverage_ratio"]
     assert factor["value"] == 0.0, f"Expected ratio 0.0, got {factor['value']}"
     assert factor["points"] == 0.0, (
