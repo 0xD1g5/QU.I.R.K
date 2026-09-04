@@ -396,3 +396,70 @@ def test_trends_ignores_checkin_rows():
     after = client2.get("/api/trends").json()
 
     assert before == after
+
+
+# ---------------------------------------------------------------------------
+# Regression: GET /api/trends must not 500 when severity is NULL.
+#
+# quirk/models.py declares CryptoEndpoint.severity as nullable=True, and only
+# the cloud connectors (aws/azure/k8s) ever write it -- TLS, SSH, container,
+# email and source endpoints leave it NULL, which is CORRECT rather than
+# missing data. quirk/intelligence/trends.py::_sample_findings deliberately
+# includes such rows ("regardless of its severity (including None)", D-03).
+#
+# SampleFinding in schemas.py nonetheless declared `severity: str`, so pydantic
+# rejected None and the whole response 500'd against any database whose
+# endpoints came from non-cloud scanners. Found against a real 10,069-endpoint
+# scan DB in which 100% of rows had severity IS NULL.
+#
+# tests/test_trends_non_vacuity.py already covers NULL severity at the DOMAIN
+# layer; the defect lived in the seam between that layer and the API schema,
+# which no test crossed -- every other seeded API test above sets an explicit
+# severity. This test crosses it.
+# ---------------------------------------------------------------------------
+
+def test_trends_does_not_500_when_severity_is_null():
+    """A NULL-severity endpoint must appear in new_findings_sample with
+    severity None, not blow up response validation."""
+    from quirk.models import CryptoEndpoint
+
+    client, SessionFactory = _make_uat31_client_and_session()
+    db = SessionFactory()
+    try:
+        # Previous session: one NULL-severity endpoint.
+        db.add(CryptoEndpoint(
+            host="prev.example", port=443, protocol="TLS",
+            severity=None, scanned_at=_PREV_TS_UAT31,
+        ))
+        # Current session: prev.example resolved, new.example arrives. Both
+        # NULL-severity, exactly as a TLS-only scan produces.
+        db.add(CryptoEndpoint(
+            host="new.example", port=443, protocol="TLS",
+            severity=None, scanned_at=_CURR_TS_UAT31,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.get("/api/trends")
+    assert resp.status_code == 200, (
+        "GET /api/trends must tolerate NULL severity -- CryptoEndpoint.severity "
+        "is nullable=True and only cloud connectors populate it. "
+        f"Got {resp.status_code}: {resp.text}"
+    )
+
+    data = resp.json()
+    new_hosts = {s["host"] for s in data["new_findings_sample"]}
+    resolved_hosts = {s["host"] for s in data["resolved_findings_sample"]}
+    assert "new.example" in new_hosts, (
+        "The NULL-severity endpoint must still be sampled -- _sample_findings "
+        f"includes rows regardless of severity (D-03). Got: {data['new_findings_sample']}"
+    )
+    assert "prev.example" in resolved_hosts, (
+        f"NULL-severity resolved endpoint missing. Got: {data['resolved_findings_sample']}"
+    )
+    for sample in data["new_findings_sample"] + data["resolved_findings_sample"]:
+        assert sample["severity"] is None, (
+            "severity must round-trip as null, not be coerced to a string "
+            f"placeholder. Got: {sample!r}"
+        )

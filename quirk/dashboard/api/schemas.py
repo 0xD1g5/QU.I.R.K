@@ -448,10 +448,24 @@ class ScanSession(BaseModel):
 # Trend Analysis (Phase 31)
 
 class SampleFinding(BaseModel):
+    """Mirrors quirk.intelligence.trends.SampleFindingItem.
+
+    ``severity`` is Optional because ``CryptoEndpoint.severity`` is
+    ``nullable=True`` (models.py) and is written ONLY by the cloud connectors
+    (aws/azure/k8s) — TLS, SSH, container, email, and source endpoints leave it
+    NULL, which is correct rather than missing data. ``_sample_findings`` in
+    quirk/intelligence/trends.py deliberately includes such rows: "a row is
+    included whenever its endpoint identity is in target_keys, regardless of
+    its severity (including None)" (D-03). Declaring this ``str`` made the
+    schema stricter than the contract it mirrors and 500'd GET /api/trends on
+    any database whose endpoints came from non-cloud scanners. Sibling model
+    SeverityTransitionResponse below already had this right.
+    """
+
     host: str
     port: int
     protocol: str
-    severity: str
+    severity: Optional[str] = None
 
 
 class SeverityTransitionResponse(BaseModel):
