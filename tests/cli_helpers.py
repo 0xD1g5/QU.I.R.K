@@ -126,7 +126,12 @@ def run_fork_safe(
     )
 
 
-def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess:
+def run_cli(
+    args: list[str],
+    *,
+    timeout: int = 30,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
     """Run ``run_scan.py`` as a real subprocess, fork-safely, on macOS.
 
     Thin wrapper over ``run_fork_safe`` that prepends
@@ -142,8 +147,13 @@ def run_cli(args: list[str], *, timeout: int = 30) -> subprocess.CompletedProces
             ``subprocess.TimeoutExpired``. Default 30; callers needing more
             headroom (e.g. db-migrate CLI tests) should pass a larger value
             explicitly.
+        env: optional environment mapping to pass through to the child.
+            When ``None`` (the default), the child inherits this process's
+            environment as usual.
 
     Returns:
         The completed subprocess, with ``capture_output=True, text=True``.
     """
-    return run_fork_safe([sys.executable, str(_RUN_SCAN), *args], timeout=timeout)
+    return run_fork_safe(
+        [sys.executable, str(_RUN_SCAN), *args], timeout=timeout, env=env
+    )
