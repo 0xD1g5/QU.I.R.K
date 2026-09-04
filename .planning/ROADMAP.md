@@ -305,7 +305,7 @@ Plans:
   5. A regression test locks the intended semantics against real protocol mixes, including at least
      one STARTTLS variant and one `ADVISORY` row, so the next refactor cannot quietly narrow it
      back.
-**Plans**: 5 plans
+**Plans**: 7 plans (5 original + 2 gap closure for SC-3)
 
 Plans:
 - [x] 184.1-01-PLAN.md — Evidence-layer counters, Wave 0 fixture hardening, ROADMAP/REQUIREMENTS amendments (D-07, D-13)
@@ -313,6 +313,8 @@ Plans:
 - [x] 184.1-03-PLAN.md — Run-time protocol-literal source scan guarding the exclusion set (D-11)
 - [x] 184.1-04-PLAN.md — Exact-value regression fixture (D-18) and the readiness-score non-movement proof (D-03)
 - [x] 184.1-05-PLAN.md — Confidence-factor documentation, Obsidian sync, UAT-SERIES, validation close-out
+- [ ] 184.1-06-PLAN.md — GAP CLOSURE (SC-3): thread `confidence_formula_version` through writer.py, executive.py, and ConfidenceData/`/api/scan`; per-surface emitted-artifact tests
+- [ ] 184.1-07-PLAN.md — GAP CLOSURE (SC-3): make the D-15 absence rule checkable, correct UAT-184.1-01, Obsidian sync, REQUIREMENTS/VALIDATION close-out
 
 
 ### Phase 184.2: Out-of-the-Box Scanning Posture
