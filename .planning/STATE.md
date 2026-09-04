@@ -46,12 +46,24 @@ site (absolute `env["COMPOSE_FILE"]`), so CLAUDE.md's Chaos Lab Maintenance casc
 count 15 -> 22 (+7) with none removed — pure line drift against `(file, LINENO)` keying. Deferred to
 Phase 184 by explicit decision; it is direct evidence for that phase's thesis, not a regression.
 
-**Known gap, deliberately recorded rather than implied away:** Docker was unavailable for the
-entire phase, so `test_chaos_lab_idempotency` collected 0 parametrized cases (healthy Docker gives
-~29). Its migration is AST-verified but NOT execution-verified. Documented in
-`183-VALIDATION.md`'s Manual-Only Verifications; Phase 185 is the likely closer. All 5 macOS
+**That gap is now CLOSED (2026-09-04, same day).** Docker Desktop turned out to be *manually
+paused*, not down — a state where the CLI still works (`docker compose config --profiles` parses
+YAML locally and listed all 29 profiles) while `docker ps`/`docker info` return "Docker Desktop is
+manually paused", and `docker desktop start` reports "already running" because pause is a separate
+state the CLI cannot clear. Only the Whale menu / Dashboard clears it. Once unpaused,
+`test_chaos_lab_idempotency` collection went **2 -> 30 cases** and the file ran green against real
+containers: `29 passed, 1 skipped in 589.25s`. Plan 183-04's absolute-`env["COMPOSE_FILE"]`
+substitution for `cwd=LAB_DIR` is therefore execution-verified, not merely AST-verified. The 1 skip
+is `kerberos` on macOS — pre-existing and intentional (BACK-89, `*:88` vs the system KDC,
+`lab.sh` excludes it identically), not a migration artifact. All 5 macOS
 fork-SIGSEGV xfail markers XPASSed in the clean run and were nonetheless RETAINED — one quiet run
 is weak evidence against an intermittent, load-dependent crash.
+
+**Docker-paused diagnostic, worth not re-deriving:** a paused Docker Desktop is NOT the same as an
+absent one. `shutil.which("docker")` succeeds, `docker compose config --profiles` succeeds (pure
+local YAML parse), so profile discovery works and the suite looks healthy — but the daemon guard
+fails and every parametrized body skips. The tell is a collection count of 2 instead of 30. Check
+`docker ps`, never `which docker`, before trusting chaos-lab coverage.
 
 **Analysis trap discovered while verifying 183 — do not re-learn it:** `pytest -rX` prints each
 xfail's REASON STRING, and this repo's fork-SIGSEGV xfail reasons literally contain the words
