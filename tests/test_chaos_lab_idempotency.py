@@ -64,6 +64,16 @@ def profiles() -> list[str]:
 def _up(profile: str):
     env = os.environ.copy()
     env["PROFILE_ARGS"] = f"--profile {profile}"
+    # lab.sh's COMPOSE_FILE default ("docker-compose.yml") is relative and
+    # was previously resolved against cwd=LAB_DIR. run_fork_safe never
+    # passes cwd, so pin COMPOSE_FILE to an absolute path explicitly rather
+    # than adding a `cd` inside lab.sh -- lab.sh's `.env` sourcing is
+    # deliberately cwd-relative and load-bearing (tested by
+    # tests/test_lab_profile_args_precedence.py's CLI-wins-over-.env
+    # precedence check, which relies on invoking lab.sh from a cwd with no
+    # `.env` present); anchoring the whole script to its own directory would
+    # silently defeat that test by always sourcing quantum-chaos-enterprise-lab/.env.
+    env["COMPOSE_FILE"] = str(COMPOSE)
     return run_fork_safe(
         [str(LAB_DIR / "lab.sh"), "up"],
         timeout=300,
@@ -72,9 +82,12 @@ def _up(profile: str):
 
 
 def _down() -> None:
+    env = os.environ.copy()
+    env["COMPOSE_FILE"] = str(COMPOSE)
     run_fork_safe(
         [str(LAB_DIR / "lab.sh"), "down"],
         timeout=120,
+        env=env,
     )
 
 
