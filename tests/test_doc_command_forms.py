@@ -23,10 +23,12 @@ lab.sh), not just `.py` files under one directory.
 from __future__ import annotations
 
 import re
-import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -113,11 +115,11 @@ def _is_allowed_line(path: str, line_text: str) -> bool:
 
 def test_no_nonexistent_command_forms() -> None:
     """No unallowlisted tracked file instructs a nonexistent quirk invocation."""
-    result = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
+    git = shutil.which("git")
+    if not git:
+        pytest.skip("git binary not available")
+    result = run_fork_safe(
+        [git, "-C", str(REPO_ROOT), "ls-files", "-z"],
         timeout=30,
     )
     assert result.returncode == 0, (

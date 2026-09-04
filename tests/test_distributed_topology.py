@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
 from pathlib import Path
 
 import yaml
+
+from tests.cli_helpers import run_fork_safe
 
 # ---------------------------------------------------------------------------
 # Constants — all paths rooted at the repo root via __file__ resolution.
@@ -43,13 +44,13 @@ def test_distributed_compose_file_exists():
 # Skipped on machines without the docker binary (live run is human-UAT).
 # ---------------------------------------------------------------------------
 def test_config_validates():
-    if not shutil.which("docker"):
+    docker = shutil.which("docker")
+    if not docker:
         import pytest
         pytest.skip("docker binary not available — skipping config validation")
-    result = subprocess.run(
-        ["docker", "compose", "-f", str(DIST_COMPOSE), "config"],
-        capture_output=True,
-        text=True,
+    result = run_fork_safe(
+        [docker, "compose", "-f", str(DIST_COMPOSE), "config"],
+        timeout=60,
     )
     assert result.returncode == 0, (
         f"docker compose config failed:\n{result.stderr}"
