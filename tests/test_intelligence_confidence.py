@@ -152,6 +152,77 @@ class ConfidenceTests(unittest.TestCase):
         result = compute_confidence(evidence)
         self.assertEqual(result["factor_breakdown"]["coverage_ratio"]["value"], 1.0)
 
+    def test_d18_exact_value_regression_matches_live_scan_mix(self) -> None:
+        """Phase 184.1 SCORE-01 D-18: an exact-value lock on coverage_ratio, the first this
+        codebase has ever had. Every other test in this file (and every scoring test in the
+        repo) asserts relative comparisons (assertLess/assertGreater between two computed
+        scores); none pins a literal, so a regression that shifts the formula by a fixed
+        multiplier would sail through untested. This test closes that gap.
+
+        Composition mirrors scan_run_id 2026-09-04T15:28:54 (re-measured live against the
+        project's local scan database per 184.1-CONTEXT.md's §Specific Ideas — 20 endpoints,
+        coverage 8/20 = 0.40 under the OLD tls_count-plus-ssh_count formula):
+            6 TLS, 2 SSH, 2 SMTP-STARTTLS, 1 SMTPS, 1 IMAPS, 1 IMAP-STARTTLS, 1 POP3S,
+            1 POP3-STARTTLS, 1 KERBEROS, 2 HTTP, 1 UNKNOWN, 1 ADVISORY   (= 20 rows)
+        Plus rows the live scan did NOT have, added specifically to exercise D-05 (scan_error)
+        and D-07 (CLOSED):
+            2 CLOSED, 1 additional TLS row carrying a truthy scan_error   (= 3 more rows)
+        Total endpoints = 23.
+
+        Hand-derived arithmetic (this is a hand-built evidence dict — build_evidence_summary
+        is NOT invoked here; Task 2's end-to-end module exercises that side):
+            assessable_endpoint_count = 23 total - 1 ADVISORY (D-06) - 2 CLOSED (D-07) = 20
+            assessed_crypto_count     = 20 assessable - 1 UNKNOWN (D-09) - 1 scan_error (D-05)
+                                       = 18
+                                       (the 2 SMTP-STARTTLS, 1 SMTPS, 1 IMAPS, 1 IMAP-STARTTLS,
+                                       1 POP3S, 1 POP3-STARTTLS all stay IN the numerator per
+                                       D-04 even though _PROTOCOL_KEYS can't see their protocol
+                                       names, and the 2 plaintext HTTP rows stay in per D-08)
+            coverage_ratio = 18 / 20 = 0.9
+
+        This fixture is a snapshot: it will not notice a brand-new protocol appearing in
+        _NON_ASSET_PROTOCOLS or _PROTOCOL_KEYS tomorrow — that is
+        tests/test_evidence_protocol_disposition.py's (D-11's) job, a run-time source scan
+        with no snapshot to go stale. The two are complementary by design, not redundant: this
+        test locks the ARITHMETIC for a known mix; that test locks the CLASSIFICATION of every
+        protocol literal in the source tree.
+        """
+        evidence = {
+            "totals": {"endpoints": 23, "findings": 0},
+            # Only TLS/SSH/UNKNOWN are read by compute_confidence's protocol_counts lookups;
+            # the email/STARTTLS protocols are included here for readability only and are NOT
+            # read by confidence.py — that invisibility is exactly what D-02 routes around via
+            # assessed_crypto_count / assessable_endpoint_count instead of protocol_counts.
+            "protocol_counts": {
+                "TLS": 7,  # 6 healthy + 1 carrying scan_error
+                "SSH": 2,
+                "SMTP-STARTTLS": 2,
+                "SMTPS": 1,
+                "IMAPS": 1,
+                "IMAP-STARTTLS": 1,
+                "POP3S": 1,
+                "POP3-STARTTLS": 1,
+                "KERBEROS": 1,
+                "HTTP": 2,
+                "UNKNOWN": 1,
+                "ADVISORY": 1,
+                "CLOSED": 2,
+            },
+            "assessed_crypto_count": 18,
+            "assessable_endpoint_count": 20,
+            "scan_error": {"count": 1, "rate": 0.0435},
+            "tls_enum_coverage_ratio": 1.0,
+        }
+        result = compute_confidence(evidence)
+
+        # coverage_ratio = 18 / 20 = 0.9 exactly.
+        self.assertEqual(result["factor_breakdown"]["coverage_ratio"]["value"], 0.9)
+        # score lands in the >=85 HIGH band (computed: 31.5 coverage + 28.695 scan_error +
+        # 14.3478... unknown + 20.0 tls_enum = 94.5428..., rounds to 95).
+        self.assertEqual(result["confidence_score"], 95)
+        self.assertEqual(result["confidence_rating"], "HIGH")
+        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+
 
 if __name__ == "__main__":
     unittest.main()
