@@ -13,25 +13,27 @@ from __future__ import annotations
 
 import os
 import platform
-import subprocess
+import shutil
 import time
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 LAB_DIR = (
     Path(__file__).resolve().parent.parent / "quantum-chaos-enterprise-lab"
 )
 COMPOSE = LAB_DIR / "docker-compose.yml"
 
+_DOCKER = shutil.which("docker")
+
 
 def _docker_available() -> bool:
+    if not _DOCKER:
+        return False
     try:
-        r = subprocess.run(
-            ["docker", "info"],
-            capture_output=True,
-            timeout=5,
-        )
+        r = run_fork_safe([_DOCKER, "info"], timeout=5)
         return r.returncode == 0
     except Exception:
         return False
@@ -47,10 +49,8 @@ pytestmark = [
 
 
 def _discover_profiles() -> list[str]:
-    r = subprocess.run(
-        ["docker", "compose", "-f", str(COMPOSE), "config", "--profiles"],
-        capture_output=True,
-        text=True,
+    r = run_fork_safe(
+        [_DOCKER, "compose", "-f", str(COMPOSE), "config", "--profiles"],
         check=True,
     )
     return sorted({line.strip() for line in r.stdout.splitlines() if line.strip()})
@@ -61,24 +61,19 @@ def profiles() -> list[str]:
     return _discover_profiles()
 
 
-def _up(profile: str) -> subprocess.CompletedProcess:
+def _up(profile: str):
     env = os.environ.copy()
     env["PROFILE_ARGS"] = f"--profile {profile}"
-    return subprocess.run(
-        ["./lab.sh", "up"],
-        cwd=LAB_DIR,
-        capture_output=True,
-        text=True,
+    return run_fork_safe(
+        [str(LAB_DIR / "lab.sh"), "up"],
         timeout=300,
         env=env,
     )
 
 
 def _down() -> None:
-    subprocess.run(
-        ["./lab.sh", "down"],
-        cwd=LAB_DIR,
-        capture_output=True,
+    run_fork_safe(
+        [str(LAB_DIR / "lab.sh"), "down"],
         timeout=120,
     )
 

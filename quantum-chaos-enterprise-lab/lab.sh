@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Anchor relative paths (.env, COMPOSE_FILE default, distributed compose file)
+# to this script's own directory rather than the caller's cwd. Required since
+# Phase 183-04 migrated callers (e.g. tests/test_chaos_lab_idempotency.py) to
+# invoke this script by absolute path via run_fork_safe(), which never passes
+# a `cwd` kwarg -- so ./lab.sh's relative-path assumptions must be self-anchored.
+cd "$(dirname "$0")"
+
 _PROFILE_ARGS_OVERRIDE="${PROFILE_ARGS:-}"   # snapshot CLI value BEFORE .env can overwrite it (Phase 52 DEBT-02)
 
 if [[ -f ".env" ]]; then
