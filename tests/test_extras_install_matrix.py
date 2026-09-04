@@ -15,11 +15,12 @@ several seconds; CI invokes `pytest -m slow` separately.
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -45,7 +46,7 @@ def _resolved_packages(extras: str, tmp_path: Path) -> dict[str, str]:
         "-e",
         f"{REPO_ROOT}[{extras}]",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+    result = run_fork_safe(cmd, timeout=240)
     if result.returncode != 0:
         pytest.fail(
             f"pip install --dry-run -e <repo>[{extras}] FAILED "

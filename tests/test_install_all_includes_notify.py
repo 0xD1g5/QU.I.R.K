@@ -23,11 +23,12 @@ Conflict-check note (recorded per PLAN 101-01):
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -56,12 +57,7 @@ def test_install_all_includes_notify(tmp_path: Path) -> None:
         f"{REPO_ROOT}[all]",
     ]
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=180,
-    )
+    result = run_fork_safe(cmd, timeout=180)
 
     assert result.returncode == 0, (
         "pip install --dry-run -e <repo>[all] FAILED. "
