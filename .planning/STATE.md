@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.1-03-PLAN.md
-last_updated: "2026-09-04T20:18:54.469Z"
+stopped_at: Completed 184.1-04-PLAN.md
+last_updated: "2026-09-04T21:05:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 25
 ---
 
@@ -640,10 +640,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 - **Phase 168 starts from 666 cases, all with a result block, most undispositioned.** Structural
   parity is done; recording outcomes is UATREC-03 and was deliberately left untouched here.
 
+- **184.1-04 complete (2026-09-04):** `coverage_ratio` now has its first-ever literal-value lock
+  (D-18, `tests/test_intelligence_confidence.py::test_d18_exact_value_regression_matches_live_scan_mix`
+  — coverage_ratio 0.9, score 95, HIGH) and an end-to-end proof (`tests/test_evidence_coverage_regression.py`,
+  new) that real `CryptoEndpoint` objects carrying `SMTP-STARTTLS`/etc. reach the numerator while
+  `protocol_counts` and `compute_readiness_score` stay pinned and unmoved (coverage_ratio 0.7143,
+  score 98). Eleven-file D-03 scoring group: 95 passed before and after, `git diff --stat` empty —
+  zero production-code changes this plan. Full `-m ""` suite run was skipped after ~10 min of
+  near-zero CPU progress consistent with the documented Docker-collection-hang gotcha; targeted
+  verification (22 + 99 tests, zero skips) was run to completion instead. See
+  `184.1-04-SUMMARY.md` for the full arithmetic and before/after evidence.
+
 ## Current Position
 
 Phase: 184.1 (coverage-metric-correctness) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
