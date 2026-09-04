@@ -1,12 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-03 (v5.19 Phase 182 — Tooling Integrity, plan 182-05: Series 182 added
-(UAT-182-01; 1 PASS) for TOOL-01/02/03 (`gsd-sdk`/`gsd-tools` `state.*` verb corruption fixes).
-TOOL-01 reopened rather than closed — the live `state begin-phase` demonstration this plan is
-built around reproduced a genuine, unpatched second instance of the Bug A defect class in the
-read-side `stateExtractField()` function, caught and reverted before commit; see `182-05-SUMMARY.md`
-and `.planning/REQUIREMENTS.md`'s TOOL-01/TOOL-04 entries. TOOL-02 and TOOL-03 close by hand.
+**Last Updated:** 2026-09-03 (v5.19 Phase 182 — Tooling Integrity, plan 182-09 phase-gate
+close-out: Series 182 extended to 3 cases, all `[x] PASS` — `UAT-182-01`'s Notes corrected now
+that the read-side gap it once disclosed is closed (182-06/182-07), `UAT-182-02` added for the
+command-boundary guarantee that earns that correction, `UAT-182-03` added for the run-time
+bold-field enumeration gate. TOOL-01 and TOOL-04, reopened/filed at plan 182-05 after a live
+regression, are now both closed by hand with a second clean live re-demonstration (182-08); see
+`182-06-SUMMARY.md` through `182-09-SUMMARY.md` and `.planning/REQUIREMENTS.md`. Earlier: v5.19
+Phase 182, plan 182-05: Series 182 first added (UAT-182-01; 1 PASS) for TOOL-01/02/03
+(`gsd-sdk`/`gsd-tools` `state.*` verb corruption fixes); TOOL-01 reopened, TOOL-04 filed, at that
+same close-out. TOOL-02 and TOOL-03 closed by hand at 182-05.
 Earlier: v5.18 Phase 181 — Surfacing, plan 181-09: Series 181 added
 (UAT-181-01..10; 8 PASS, 2 SKIP-GAP) for SURF-01 (CBOM VEX — `not_observed`→`IN_TRIAGE` never
 `NOT_AFFECTED`, one entry per remediation item, refused/`unmapped` silence, no fabricated CVE
@@ -22284,9 +22288,12 @@ negative control rather than the guard's mere existence.
 
 **Scope:** TOOL-01 (`gsd-sdk`/`gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`),
 TOOL-02 (`begin-phase`'s frontmatter reconstruction preserves unknown keys instead of discarding
-them), TOOL-03 (the local patch survives a GSD update, or its loss is detected). This series
-covers the developer-tooling guarantee itself, not an end-user-facing scanner feature — the
-"client" here is a future GSD executor session reading `.planning/STATE.md`.
+them), TOOL-03 (the local patch survives a GSD update, or its loss is detected), and TOOL-04
+(the read-side twin of the write-side defect class — `stateExtractField()`, the Stopped-At
+session-scoping guard, and two further write-path bold-field regexes found across the gap-closure
+waves 182-06/182-07, closed by a run-time-generated enumeration gate rather than a hand-written
+list). This series covers the developer-tooling guarantee itself, not an end-user-facing scanner
+feature — the "client" here is a future GSD executor session reading `.planning/STATE.md`.
 
 ### UAT-182-01: `state begin-phase` Leaves `**Status:**`-Bearing Prose Byte-Identical and Preserves `stopped_at`/`progress`/Unknown Frontmatter Keys
 
@@ -22297,8 +22304,8 @@ begin-phase` invocation: a `.planning/STATE.md` prose line containing a `**Statu
 stays byte-identical while the real `Status:` field under `## Current Position` genuinely moves;
 `stopped_at`, the whole `progress:` block, and a novel custom frontmatter key all survive,
 parametrized over `ROADMAP.md` present/absent
-**Maps to:** TOOL-01 (write-side only — see the Result note below for the read-side gap this UAT
-does NOT cover), TOOL-02
+**Maps to:** TOOL-01 (write-side only — see `UAT-182-02` for the command-boundary/read-side
+guarantee), TOOL-02
 
 **What to test:** The exact defect class that corrupted `.planning/STATE.md` nine times across
 Phases 179-181 (unanchored regex eating trailing prose; frontmatter reconstructed from a fixed
@@ -22310,41 +22317,152 @@ not a presence-only "the patch text exists" check.
 .venv/bin/pytest tests/test_gsd_state_patch.py -q
 ```
 
-**Pass Criteria:** All 7 nodes pass (or honestly skip via `GSD_TOOLCHAIN_AVAILABLE` where
-`~/.claude/get-shit-done/` is absent, e.g. CI): prose survival, frontmatter survival with AND
-without `ROADMAP.md`, unknown-custom-key survival, patch durability, and patch-loss detection.
+**Pass Criteria:** All 7 of this case's originally-scoped nodes pass (or honestly skip via
+`GSD_TOOLCHAIN_AVAILABLE` where `~/.claude/get-shit-done/` is absent, e.g. CI): prose survival,
+frontmatter survival with AND without `ROADMAP.md`, unknown-custom-key survival, patch durability,
+and patch-loss detection.
 
 **Falsifiability:** turns red if either local patch is reverted (proven directly by
 `test_patch_loss_is_actually_detected`'s negative control, which swaps in the pristine pre-patch
 file and asserts the test suite catches it).
 
-**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py -q` — 7 passed, re-run during 182-05 phase-close)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-03  **Tester:** Automated (182-05 phase-close plan execution)
-**Notes:** DEFERRED — covered by `tests/test_gsd_state_patch.py`. **Important scope caveat found
-during this same phase-close plan (182-05):** this UAT's fixtures exercise the toolchain against
-throwaway temp-directory copies and correctly prove the write-side (`stateReplaceField`) and the
-Bug B merge are fixed. They do **not** cover `stateExtractField()`, a sibling read-side function
-with the identical unanchored-regex defect that 182-01's patch never touched. Running `state
-begin-phase` against the REAL `.planning/STATE.md` during 182-05 reproduced live corruption via
-that unpatched function (a `**Status:**`-quoted sentence elsewhere in the body was read as the
-live Status value) plus a session-scoping guard that only matches the literal header `## Session`
-and silently falls through on this project's own `## Session Continuity` convention. The write was
-caught by 182-05's own diff-inspection protocol and reverted before commit — see
-`.planning/REQUIREMENTS.md`'s TOOL-01 (reopened) and TOOL-04 (new, filed) entries, and
-`182-05-SUMMARY.md`, for the full reproduction. This UAT's `PASS` disposition is honest for what
-it actually tests (the write-side and the merge); it is not a certification that `state.*` verbs
-are safe to read the live file with in general.
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py -q` — 7 passed, re-run during 182-05 phase-close; 10 passed as of 182-09 phase-gate close-out, reflecting 182-06/182-07's additions)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03 (182-05); updated 2026-09-03 (182-09)  **Tester:** Automated (182-05 phase-close plan execution; corrected 182-09 phase-gate close-out)
+**Notes:** This case's `PASS` is honest for what it actually tests — the write-side
+(`stateReplaceField`) and the Bug B frontmatter merge — and that scope has not changed. **The
+read-side gap this case's Notes previously disclosed as open has since been closed.** When this
+case was first written (182-05), a live `state begin-phase` run against the real
+`.planning/STATE.md` reproduced genuine corruption via `stateExtractField()`, a sibling read-side
+function with the identical unanchored-regex defect that 182-01's write-side patch never touched,
+plus a session-scoping guard that matched only the literal header `## Session` and silently fell
+through on this project's own `## Session Continuity` convention. That was true then; it is false
+now. The gap-closure waves closed it: 182-06 anchored `stateExtractField()`, widened the
+session-scoping guard to `## Session Continuity` (and other header variants), and — caught only at
+plan review, not by the original hand-derived patch list — also anchored a third instance,
+`focusPattern` inside `cmdStateBeginPhase` itself. 182-07 then enumerated every remaining
+`**Field:**`-shaped regex construction in both STATE.md-owning libraries via a run-time source
+scan (rather than trusting a written list a second time) and anchored the fourth instance it found,
+`boldProgressPattern` inside `cmdStateUpdateProgress`; the same scan surfaced a fifth site,
+`cmdStateGet`'s `boldPattern`, correctly dispositioned accepted-read-only rather than patched. 182-08
+then re-ran this exact live demonstration against the real `.planning/STATE.md` a second time and
+the diff came back clean against both named corruption signatures. See `UAT-182-02` for the
+command-boundary case that actually proves this, and `182-06-SUMMARY.md`/`182-07-SUMMARY.md`/
+`182-08-SUMMARY.md` for the full trace. Separately, per `182-REVIEW.md` IN-02: this Notes section
+previously opened with the words "DEFERRED — covered by", a prefix
+`tests/test_uat_disposition_integrity.py`'s `DEFERRED_COVERED_PREFIXES` reserves for `SKIP`
+dispositions; this case is and remains `PASS`, so that opener has been removed and replaced with
+plain prose.
+
+### UAT-182-02: `state begin-phase` Leaves Frontmatter and Prose Uncorrupted at the Command Boundary, Against a Fixture Exercising Every Named Hazard at Once
+
+**ID:** UAT-182-02
+**Title:** The full `state begin-phase` command — not just its constituent `stateReplaceField()`/
+`stateExtractField()` functions in isolation — run against a `.planning/STATE.md`-shaped document
+containing a sentence quoting `**Status:**`, a `## Session Continuity` section, an out-of-section
+`**Stopped At:**` decoy, and a sentence quoting `**Current focus:**`, leaves frontmatter `status`
+and `stopped_at` uncorrupted and leaves all three prose sentences byte-identical, while the real
+`Status:` and `**Current focus:**` fields under the document's real sections still update.
+**Maps to:** TOOL-01, TOOL-04
+
+**What to test:** This is the command-boundary guarantee UAT-182-01 could not make: UAT-182-01's
+fixtures exercised `stateReplaceField()`/`stateExtractField()` in isolation and correctly proved
+each function's own regex is anchored, but 182-05's live incident was a full-command reproduction
+— the corrupting read happened inside `cmdStateBeginPhase`'s own orchestration of those functions,
+against a document shape (multiple simultaneous prose decoys, a real `## Session Continuity`
+section) no per-function fixture exercised. This case runs the INSTALLED toolchain's full command,
+not a call to one function.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_gsd_state_patch.py::test_begin_phase_does_not_read_body_prose_as_machine_fields -x -q
+```
+
+**Pass Criteria:** The node passes: resulting frontmatter `status` is not corrupted by the
+`**Status:**`-quoting prose decoy, and `stopped_at` is not corrupted by the out-of-section
+`**Stopped At:**` decoy or read from a stale archived `## Session Continuity`-adjacent value.
+
+**Falsifiability:** turns red if any of `stateExtractField()`'s anchor, the session-scoping guard's
+header-matching regex, or `focusPattern`'s anchor regresses — proven directly by this same test
+file's dedicated negative control (`test_full_command_fixture_is_sensitive_to_the_unpatched_extractor`),
+which re-runs the identical fixture against the pristine, unpatched toolchain tree and asserts the
+positive test's own assertions fail there.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py -q` — 10 passed, including this node and its negative control, both run and confirmed during 182-09 phase-gate close-out)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (182-06 plan execution; re-verified 182-09 phase-gate close-out)
+**Notes:** Proven RED-before-patch in 182-06 (verbatim RED: `stopped_at` read from the
+out-of-section `**Stopped At:**` prose decoy — `1 failed, 8 passed`), then GREEN after 182-06's
+three edits (`9 passed`), and unaffected by 182-07's separate `boldProgressPattern` anchor
+(`10 passed`). This is a command-boundary guarantee, not a blanket "the tool is safe to call
+anytime" claim — see the standing operational caveat below for what it does not cover.
+
+**Standing caveat (not a defect this case's `PASS` disputes, but a real operational hazard
+discovered live during 182-08): `state begin-phase` is NOT idempotent against a phase that is
+already in progress.** Re-running it against a `STATE.md` already partway through its plan count
+resets `progress.percent` to `0` and rewrites `## Current Position`'s `Plan:` line back to
+`Plan: 1 of N`, flattening `**Current focus:**` — independent of, and not caught by, either named
+corruption signature this case (or `UAT-182-01`) tests for, because neither is a regex-anchoring
+or dropped-key defect. "Safe" in this series means the corruption-signature class is closed, not
+that the command is correct to invoke mid-phase; `CLAUDE.md`'s clause (f) records the same caveat
+for any future session reading it.
+
+### UAT-182-03: Every Bold-Field Regex in the Two STATE.md-Owning Libraries Is Dispositioned From a Run-Time Scan, Not a Hand-Written List
+
+**ID:** UAT-182-03
+**Title:** `test_bold_field_regex_class_is_fully_dispositioned` generates its occurrence set by
+scanning the installed `state.cjs`/`state-document.generated.cjs` source at run time (both the
+4-char regex-literal and 6-char template-literal escaping conventions) and asserts every
+occurrence has a matching, non-empty-reason ledger entry, and every ledger entry matches a real
+occurrence (no stale rows).
+**Maps to:** TOOL-04
+
+**What to test:** Whether the defect class this phase studies (a hand-derived enumeration reading
+as complete while being partial) is closed by generating the occurrence set from source rather
+than trusting a written list a second, third, or fourth time. Three successive hand-derived
+enumerations in this phase — 182-01's original patch scope, 182-06's own planner draft, and
+182-07's own `<interfaces>` orientation list — each independently missed at least one instance of
+this exact defect class before the run-time scan itself found `cmdStateGet`'s previously
+undocumented `boldPattern` site.
+
+**Steps:**
+```bash
+.venv/bin/pytest tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned -x -q
+```
+
+**Pass Criteria:** The node passes with the installed toolchain's current source, confirming all
+eight ledgered occurrences (four anchored write-path instances, four accepted-read-only instances
+across both files) remain correctly dispositioned and no new, undispositioned occurrence has
+appeared since 182-07.
+
+**Falsifiability:** turns red if a new `**Field:**`-shaped construct is added to either file
+without a ledger entry (a stale-omission), if an existing ledger row's disposition goes stale (an
+`"anchored"` row whose regex loses its `^`/`/m`), or if a ledger row no longer matches any real
+occurrence (a stale-surplus row) — proven directly by 182-07's own RED-before-patch demonstration,
+which ledgered `boldProgressPattern` `"anchored"` while it was still unpatched and watched the gate
+fail with the exact site, function, and line number named.
+
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned -x -q` — 1 passed, run during 182-09 phase-gate close-out)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-03  **Tester:** Automated (182-07 plan execution; re-verified 182-09 phase-gate close-out)
+**Notes:** This case is honestly executable here (not a `SKIP`) — the gate is a standing pytest
+node in the repository's own test suite, not a manual or environment-gated procedure. Ran directly
+during this close-out plan rather than deferred; `10 passed` in the full `test_gsd_state_patch.py`
+module confirms it is not regressed by 182-08's live re-demonstration.
 
 ---
 
-**Series 182 disposition.** 1 of 1 case is `[x] PASS`, individually re-run during this close-out
-plan (182-05), plus the single foreground full-suite run this plan owns
-(`.venv/bin/pytest -q -m ""`, 406.85s; `1 failed, 4021 passed, 42 skipped, 73 xfailed, 4 xpassed`,
+**Series 182 disposition.** 3 of 3 cases are `[x] PASS` as of this close-out (182-09): `UAT-182-01`
+(write-side + Bug B merge, corrected to state the read-side gap it once disclosed is now closed),
+`UAT-182-02` (new — the command-boundary guarantee that actually earns that correction, RED-proved
+before GREEN, with the clause-(f) non-idempotence caveat recorded so the series does not overclaim
+safety), and `UAT-182-03` (new — the run-time enumeration gate that replaced a third hand-derived
+list after it also proved partial). This close-out's own single foreground full-suite run
+(`.venv/bin/pytest -q -m ""`, 412.52s; `1 failed, 4024 passed, 42 skipped, 73 xfailed, 4 xpassed`,
 sole failing node `tests/test_skip_registry.py::test_no_unregistered_skips` matching the
-`DEFER-172-01` baseline). TOOL-02 and TOOL-03 close by hand in `.planning/REQUIREMENTS.md` on this
-same phase-close plan (182-05). **TOOL-01 does NOT close** — the live `state begin-phase`
-demonstration this plan is built around found a genuine, reproduced regression in a function
-(`stateExtractField()`) the original patch never touched; TOOL-01 stays open and a new TOOL-04 is
-filed for the two read-side gaps. This is the honest outcome the phase's own name ("Tooling
-Integrity") commits it to: a series that quietly marked TOOL-01 `PASS` after finding this would be
-the exact "check a box to satisfy the gate" pattern the UAT corpus integrity gate exists to catch.
+`DEFER-172-01` baseline, both directions of the symmetric difference against 182-05's documented
+baseline empty) confirms none of this regressed anything else. TOOL-01 and TOOL-04 — reopened and
+filed respectively at 182-05 after this series' own predecessor UAT case surfaced a live
+regression — are now both closed by hand in `.planning/REQUIREMENTS.md`, re-demonstrated clean by
+182-08's second live run. TOOL-02 and TOOL-03 closed by hand at 182-05, untouched since. This is
+the same phase closing out the exact defect shape it studies: a true statement (UAT-182-01's
+original Notes) left in place past its expiry is itself an instance of the record-integrity failure
+this phase exists to fix, corrected here rather than left standing for a future session to
+rediscover.
