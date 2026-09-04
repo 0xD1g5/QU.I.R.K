@@ -99,10 +99,13 @@ the criteria they claim to enforce. Ops cycle — small and evidence-scoped, not
 
 > [!important] Three of the five workstreams are ONE defect class
 > **A hand-maintained enumeration that has drifted from the criterion it claims to enforce.**
-> GATE-03's allowlist (14 listed; a planning-time measurement of the unlisted set was later
+> GATE-03's allowlist (**15** listed, not the 14 first recorded here — 14 of those 15 were already
+> fully migrated and held zero spawns; a planning-time measurement of the unlisted set was later
 > corrected at Phase 183 close to the true figures: 18 unlisted files / 28 call sites),
-> `skip_registry.py`'s
-> line-keyed entries (10 unregistered skips), and the 33 a11y baselines (generated on macOS,
+> `skip_registry.py`'s line-keyed entries (**22 unregistered skips as of 2026-09-04**, not the 10
+> first recorded here — 15 of them predate Phase 183, and 7 more were added by Phase 183's own
+> line-shifting migrations, which is itself the clearest possible demonstration of why
+> `(file, LINENO)` keying is the defect), and the 33 a11y baselines (generated on macOS,
 > enforced on Linux, 31 never checked against the runner). The remedy each time is **derivation, or
 > a guard against the enumeration's own criterion** — Phase 178's derived-alias-table precedent —
 > not a longer list.
@@ -115,11 +118,18 @@ the criteria they claim to enforce. Ops cycle — small and evidence-scoped, not
 **Every item re-measured at the boundary (2026-09-03)** rather than inherited. Two had drifted
 since they were first recorded.
 
+> [!caution] That boundary re-measurement was itself wrong, and stayed wrong for a phase
+> Both GATE-03 figures above (allowlist size, and the unlisted-set count) and the
+> `skip_registry.py` figure were re-measured on 2026-09-03 and STILL landed stale — corrected only
+> on 2026-09-04 by re-running the counts during and after Phase 183. Treat every enumeration in
+> this document as a claim with a date attached, not a fact: re-run the count before planning
+> against it. That is the milestone's own thesis applied to the milestone's own prose.
+
 ### Phases
 
 - [x] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
-- [x] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 14-entry allowlist, with the 28 unlisted call sites each migrated or explicitly grandfathered.
-- [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: 10 unregistered skips each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
+- [x] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 15-entry allowlist, with the 28 unlisted call sites each migrated (all 28; zero grandfathered).
+- [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
@@ -215,8 +225,21 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. `tests/test_skip_registry.py::test_no_unregistered_skips` **passes** — the first fully green
-     full suite since v5.17. **Measured 2026-09-03: 10 unregistered skips**, four in
-     `test_uat_disposition_integrity.py`, one new from v5.18 (`test_closure_burndown.py:296`).
+     full suite since v5.17. **Re-measured 2026-09-04: 22 unregistered skips** (the "10" recorded
+     here on 2026-09-03 was already stale when written). Composition, so the planner does not have
+     to re-derive it — but re-run the count anyway, it has drifted twice:
+     `test_gsd_state_patch.py` x5 (new in Phase 182), `test_snmp_scanner_contract.py` x4,
+     `test_uat_disposition_integrity.py` x4, and one each in `test_chaos_lab_idempotency.py`,
+     `test_cli_init.py`, `test_closure_burndown.py:296` (the v5.18 arrival),
+     `test_credential_leakage.py`, `test_doc_command_forms.py`, `test_identity_surface.py`,
+     `test_saml_scanner.py`, `test_target_cli.py`, `test_uat_runner_version_check.py`.
+
+     **7 of the 22 are pure line drift caused by Phase 183** (`test_snmp_scanner_contract.py` x4,
+     `test_chaos_lab_idempotency.py`, `test_cli_init.py`, `test_doc_command_forms.py`): those skips
+     did not change, their line numbers moved, and `(file, LINENO)` keying stopped matching them.
+     Deferred here by explicit decision at Phase 183's close. This is the strongest available
+     evidence for success criterion 3 — an unrelated refactor in the same file re-broke the gate,
+     which is a gate measuring the wrong thing.
 
   2. Every skip is registered with a real justification **or deleted** per Phase 41 D-01/D-04.
      None is registered merely to quiet the gate — an honest deletion beats a fabricated reason.
