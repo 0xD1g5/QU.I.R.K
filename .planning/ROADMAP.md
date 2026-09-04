@@ -130,6 +130,8 @@ since they were first recorded.
 - [x] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
 - [x] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 15-entry allowlist, with the 28 unlisted call sites each migrated (all 28; zero grandfathered).
 - [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
+- [ ] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so 92 sessions of trend history stay comparable. Gating: this metric decides the confidence rating on every client deliverable.
+- [ ] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
@@ -247,6 +249,65 @@ Plans:
   3. The `(file, LINENO)` keying is re-decided. Line-number keying is why this node re-breaks on
      edits to unrelated code in the same file; content-addressing or a marker-based key removes
      that. If keying is kept, the reason is written down.
+**Plans**: TBD
+
+### Phase 184.1: Coverage Metric Correctness
+
+**Goal**: `coverage_ratio` measures whether QUIRK assessed the crypto it found, not what fraction of endpoints happened to be TLS or SSH.
+**Depends on**: Nothing
+**Requirements**: SCORE-01
+**Success Criteria** (what must be TRUE):
+
+  1. `quirk/intelligence/confidence.py`'s `coverage_ratio` counts every crypto-bearing protocol it
+     successfully assessed, not just `TLS` and `SSH`. **Measured 2026-09-04** against
+     `scan_run_id 2026-09-04T15:28:54` (20 endpoints): 8 assessed crypto endpoints were excluded —
+     SMTP-STARTTLS x2, SMTPS, IMAPS, IMAP-STARTTLS, POP3S, POP3-STARTTLS, KERBEROS. Re-measure
+     before planning; do not inherit this count.
+
+  2. `ADVISORY` pseudo-endpoints are excluded from the denominator. They are scanner self-reports
+     (`liveness-prepass`, missing-extra notices), not scanned assets, so emitting one currently
+     lowers the coverage score of the very scan that emitted it.
+
+  3. The scoring change is **versioned, not silent**: `intelligence.intelligence_version` is
+     bumped, and the phase decides explicitly — in writing — whether the 92 historical sessions
+     behind `/api/trends` are recomputed or flagged as pre-change. A client comparing two reports
+     across the boundary must be able to be told why the number moved. **Locked at capture: no
+     forward-only silent change.**
+
+  4. `coverage_ratio` is defined in operator-facing documentation. It currently appears in NO doc —
+     `docs/report-interpretation.md` never mentions it — and carries no code comment justifying the
+     restriction, unlike the adjacent `CR-01` guard. A metric that decides a client-facing
+     confidence rating must be explainable without reading the source.
+
+  5. A regression test locks the intended semantics against real protocol mixes, including at least
+     one STARTTLS variant and one `ADVISORY` row, so the next refactor cannot quietly narrow it
+     back.
+**Plans**: TBD
+
+### Phase 184.2: Out-of-the-Box Scanning Posture
+
+**Goal**: A newly generated config scans a defensible baseline, and every connector that ships off says why.
+**Depends on**: Phase 184.1 (its coverage definition determines what a "defensible baseline" is measured against)
+**Requirements**: SCORE-02
+**Success Criteria** (what must be TRUE):
+
+  1. Every `enable_*` key in `quirk/config_template.yaml` is either `true`, or ships `false`/commented
+     **with a one-line reason in the template itself**. **Measured 2026-09-04:**
+     `grep -c '^\s*enable_[a-z]*: true'` returns **0** — nothing is enabled, and nothing explains
+     why. Silence is the defect; the decision may legitimately be "off", but not unstated.
+
+  2. Connectors requiring targets to be meaningful (`enable_jwt`, `enable_container`,
+     `enable_source`) are dispositioned honestly — enabling them with empty target lists produces
+     noise, not coverage, so "off with a reason" is a valid and possibly correct outcome here.
+
+  3. Template/working-config drift is closed: this repo's `config.yaml` enables Kerberos, SAML and
+     DNSSEC that the template does not. Either the template adopts them or the divergence is
+     recorded as lab-specific. This is the same drift class as the `db_path` split fixed in
+     `87cff201`, where three configs declared three different values.
+
+  4. A test asserts the template parses, and that every `enable_*` key present in `config.yaml` is
+     either present in the template or listed as a documented lab-only exception — so the next
+     hand-tune cannot silently diverge again.
 **Plans**: TBD
 
 ### Phase 185: a11y Baseline Environment

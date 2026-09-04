@@ -120,6 +120,49 @@ rather than inherited from its original report — two had drifted since they we
   **never registered merely to quiet the gate**. The registry keys on `(file, LINENO)`, so also
   decide whether that keying survives or becomes content-addressed.
 
+- [ ] **SCORE-01**: `coverage_ratio` measures assessment coverage, not protocol composition.
+  **Measured 2026-09-04 against a live 20-endpoint chaos-lab scan** (`scan_run_id
+  2026-09-04T15:28:54`): `quirk/intelligence/confidence.py:90` computes
+  `(tls_count + ssh_count) / endpoints`, so **8 endpoints whose cryptography QUIRK successfully
+  assessed are excluded from coverage** — SMTP-STARTTLS x2, SMTPS, IMAPS, IMAP-STARTTLS, POP3S,
+  POP3-STARTTLS, KERBEROS. `ADVISORY` pseudo-endpoints (scanner self-reports such as
+  `liveness-prepass`, not scanned assets) sit in the denominator, so every advisory emitted
+  mathematically lowers coverage.
+
+  Impact is not cosmetic: 8/20 = 0.40 -> 14.0 of 35 points -> confidence **77 MEDIUM**. Counting
+  all crypto-bearing protocols gives 16/20 = 0.80 -> 28.0 points -> **91 HIGH**; also excluding
+  ADVISORY from the denominator gives 16/19 = 0.84 -> 29.5 -> **92 HIGH**. Same evidence, same
+  scan, different client-facing confidence rating.
+
+  The restriction is **undocumented**: no comment in `confidence.py` justifies it (contrast the
+  adjacent `CR-01` comment, which carefully explains the TLS-enum bonus guard), and no
+  operator-facing doc defines `coverage_ratio` at all — `docs/report-interpretation.md` never
+  mentions it.
+
+  **Locked at capture (2026-09-04): recompute + version.** The formula feeds `/api/trends`, which
+  compares 92 historical sessions. Bump `intelligence.intelligence_version` and decide explicitly
+  whether historical sessions are recomputed or flagged as pre-change, so trend deltas never
+  silently mix two formulas. A step change in a client's score across two reports must be
+  explainable.
+
+- [ ] **SCORE-02**: the shipped config template enables a defensible out-of-the-box scanning
+  baseline, and template/working-config drift is closed. **Measured 2026-09-04:**
+  `grep -c '^\s*enable_[a-z]*: true' quirk/config_template.yaml` returns **0** — every connector
+  ships `false` or commented out (`enable_aws`, `enable_azure`, `enable_jwt`, `enable_container`,
+  `enable_source` explicit `false`; kerberos/saml/dnssec/gcp/db commented). A new user generating a
+  config gets TLS/SSH port scanning only.
+
+  This compounds SCORE-01: the narrowest possible default surface, scored by a metric that only
+  rewards that same narrow surface, so nothing signals what is missing. This repo's own
+  `config.yaml` enables Kerberos, SAML and DNSSEC — hand-tuned for the chaos lab and never
+  propagated back to the template, the same drift class as the `db_path` divergence fixed in
+  `87cff201`.
+
+  Decide per connector whether "enabled by default" is meaningful (JWT/container/source require
+  targets to do anything, so enabling them without targets may be noise rather than coverage) and
+  either enable it, or state in the template why it ships off. Silence is what this requirement
+  removes.
+
 - [ ] **DRIFT-03**: a11y baselines are generated in the environment that enforces them. **33
   baselines were generated on macOS on 2026-08-27 in a single batch; the gate runs on Linux CI;
   31 have never been checked against the runner.** Regenerate via `--update-baselines` on a Linux
@@ -157,6 +200,8 @@ rather than inherited from its original report — two had drifted since they we
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | TBD | Pending |
+| SCORE-01 | TBD | Pending |
+| SCORE-02 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |
 | TRIAGE-02 | TBD | Pending |
