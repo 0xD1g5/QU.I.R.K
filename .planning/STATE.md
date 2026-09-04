@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
-status: executing
-stopped_at: Completed 184.1-07-PLAN.md (docs/UAT/vault close-out); phase 184.1 ready for re-verification
-last_updated: "2026-09-04T23:15:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 184.1 complete (7/7) — ready to discuss Phase 184.2
+last_updated: 2026-09-04T23:19:18.321Z
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 22
   completed_plans: 22
-  percent: 27
+  percent: 38
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.1 — coverage-metric-correctness (SCORE-01) — all 7 plans complete, awaiting phase re-verification. `184.1-07` (wave 6, docs/UAT/vault close-out) closed the SC-3 gap's documentation half: `docs/report-interpretation.md`'s D-15 rule now names the three exact surfaces carrying `confidence_formula_version` (JSON path, executive markdown bullet, `/api/scan` field); `UAT-184.1-01` now exercises `tests/test_confidence_formula_version_surfaces.py` (3 passed) instead of the isolated `compute_confidence()` unit test that could not detect the gap; `REQUIREMENTS.md` SCORE-01 and `184.1-VALIDATION.md` hand-annotated with the gap-closure record (checkbox unchanged, now accurate); all three Obsidian vault counterparts (Report-Interpretation.md, UAT-Series.md, Phase-184.1 note) re-synced. Next: orchestrator runs code review, regression gate, and re-verification for phase 184.1.
+**Current focus:** Phase 184.2 — out of the box scanning posture
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,9 +671,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.1 (coverage-metric-correctness) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
+Phase: 184.2
+Plan: Not started
+Status: Ready to plan
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
 diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`

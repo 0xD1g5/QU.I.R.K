@@ -275,6 +275,32 @@ def test_uat_series_has_entry_false_for_nonexistent_phase(vpg):
     assert vpg.uat_series_has_entry(text, "999999") is False
 
 
+def test_uat_series_has_entry_true_for_decimal_phase_184_1(vpg):
+    """Regression: decimal (gap-closure) phases were unmatchable.
+
+    The matcher's series-number pattern was `\\d+:`, which consumed "184" from
+    `## Series 184.1:` and then required a colon where a dot stood. Every X.Y
+    phase therefore failed this gate no matter how correctly its Series heading
+    was written — surfaced at Phase 184.1's close, when the gate blocked a
+    commit against a heading that was present and well-formed.
+
+    Reads the REAL corpus rather than a fixture so the test cannot pass against
+    a synthetic heading while the shipped document still fails.
+    """
+    text = REAL_UAT_SERIES_PATH.read_text(encoding="utf-8")
+    assert vpg.uat_series_has_entry(text, "184.1") is True
+
+
+def test_uat_series_has_entry_does_not_confuse_decimal_with_integer_phase(vpg):
+    """A `## Series 184.1: ... (Phase 184.1 ...)` heading must NOT satisfy a
+    query for integer phase "184". Widening the series-number pattern to allow
+    a decimal must not also widen which PHASE a heading answers for, or a
+    gap-closure series would silently discharge its parent phase's gate."""
+    text = "## Series 184.1: Coverage Metric Correctness (Phase 184.1 — v5.19)\n"
+    assert vpg.uat_series_has_entry(text, "184.1") is True
+    assert vpg.uat_series_has_entry(text, "184") is False
+
+
 # ---------------------------------------------------------------------------
 # load_phase_plan_files_modified()
 # ---------------------------------------------------------------------------

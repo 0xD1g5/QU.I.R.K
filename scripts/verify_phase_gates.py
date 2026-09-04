@@ -129,9 +129,24 @@ def user_facing_plan_match(files_modified: list[str]) -> bool:
 
 def uat_series_has_entry(uat_series_text: str, phase_num: str) -> bool:
     """Pure. True if docs/UAT-SERIES.md has a `## Series N: ... (Phase
-    {phase_num}` heading for this phase number."""
+    {phase_num}` heading for this phase number.
+
+    The series number accepts a decimal suffix (`## Series 184.1:`) because
+    gap-closure phases are numbered X.Y and carry their own series. The
+    original `\\d+:` could not match past the dot, so it matched "184" and then
+    demanded a colon it would never find — meaning NO decimal phase could ever
+    satisfy this gate. Caught at Phase 184.1's close, the first decimal phase
+    to reach one; the gate blocked a commit whose Series heading was present
+    and correctly formatted.
+
+    Separately, `\\b` alone let a query for integer phase "184" be satisfied by
+    a `(Phase 184.1 ...)` heading, since a word boundary sits between "4" and
+    ".". That fail-open predates the decimal fix above and is closed here with
+    `(?!\\.\\d)`: a gap-closure series must not discharge its parent phase's gate.
+    """
     pattern = re.compile(
-        rf"^## Series \d+:.*\(Phase {re.escape(phase_num)}\b", re.MULTILINE
+        rf"^## Series \d+(?:\.\d+)*:.*\(Phase {re.escape(phase_num)}\b(?!\.\d)",
+        re.MULTILINE,
     )
     return pattern.search(uat_series_text or "") is not None
 
