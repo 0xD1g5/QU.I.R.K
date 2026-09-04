@@ -283,7 +283,15 @@ Plans:
   5. A regression test locks the intended semantics against real protocol mixes, including at least
      one STARTTLS variant and one `ADVISORY` row, so the next refactor cannot quietly narrow it
      back.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 184.1-01-PLAN.md — Evidence-layer counters, Wave 0 fixture hardening, ROADMAP/REQUIREMENTS amendments (D-07, D-13)
+- [ ] 184.1-02-PLAN.md — Rewire coverage_ratio, NO_DATA guard, CONFIDENCE_FORMULA_VERSION, D-19 re-derivation
+- [ ] 184.1-03-PLAN.md — Run-time protocol-literal source scan guarding the exclusion set (D-11)
+- [ ] 184.1-04-PLAN.md — Exact-value regression fixture (D-18) and the readiness-score non-movement proof (D-03)
+- [ ] 184.1-05-PLAN.md — Confidence-factor documentation, Obsidian sync, UAT-SERIES, validation close-out
+
 
 ### Phase 184.2: Out-of-the-Box Scanning Posture
 
