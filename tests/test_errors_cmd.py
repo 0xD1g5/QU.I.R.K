@@ -1,10 +1,6 @@
 """Phase 68 UX-01: unit/integration tests for quirk/cli/errors_cmd.py."""
 from __future__ import annotations
 
-import subprocess
-import sys
-from pathlib import Path
-
 import pytest
 
 from quirk.cli.errors_cmd import (
@@ -14,8 +10,7 @@ from quirk.cli.errors_cmd import (
     _normalize_code,
 )
 from quirk.errors import ERROR_REGISTRY
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from tests.cli_helpers import run_cli
 
 
 def test_dump_md_starts_with_header():
@@ -58,29 +53,23 @@ def test_filtered_entries_case_insensitive_domain():
 
 @pytest.mark.slow
 def test_lookup_single_known_returns_zero():
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "errors", "QRK-INSTALL-001"],
-        capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
-    )
+    # run_cli() never passes a cwd kwarg (required for the fork-safety fix
+    # -- see tests/cli_helpers.py); run_scan.py is resolved to an absolute
+    # path internally instead of relying on cwd for a relative lookup.
+    result = run_cli(["errors", "QRK-INSTALL-001"], timeout=15)
     assert result.returncode == 0, result.stderr
     assert "QRK-INSTALL-001" in (result.stdout + result.stderr)
 
 
 @pytest.mark.slow
 def test_lookup_single_unknown_exits_nonzero():
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "errors", "BOGUS-999"],
-        capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
-    )
+    result = run_cli(["errors", "BOGUS-999"], timeout=15)
     assert result.returncode != 0
 
 
 @pytest.mark.slow
 def test_dump_md_subprocess_matches_helper():
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "errors", "--dump-md"],
-        capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
-    )
+    result = run_cli(["errors", "--dump-md"], timeout=15)
     assert result.returncode == 0
     # subprocess stdout has a trailing newline from print()
     assert result.stdout.rstrip("\n") == _dump_markdown().rstrip("\n")
@@ -88,10 +77,7 @@ def test_dump_md_subprocess_matches_helper():
 
 @pytest.mark.slow
 def test_domain_filter_subprocess():
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "errors", "--domain", "SCHED"],
-        capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
-    )
+    result = run_cli(["errors", "--domain", "SCHED"], timeout=15)
     assert result.returncode == 0
     combined = result.stdout + result.stderr
     assert "SCHED-001" in combined

@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import datetime
 import os
-import subprocess
-import sys
-from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_cli
 
 
 # ---------------- CVE-02: table shape ----------------
@@ -80,19 +79,12 @@ def test_cve_staleness_boundary_31_days_is_stale() -> None:
 
 # ---------------- CVE-02/D-10: CLI smoke tests ----------------
 
-def _run_scan_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "run_scan.py"
-
-
 def test_cve_status_cli_smoke_fresh() -> None:
     """Subprocess `python run_scan.py cve status` exits 0 (FRESH) with the
     current CVE_TABLE_META, when not overridden."""
     env = dict(os.environ)
     env.pop("QUIRK_CI_STALENESS_OVERRIDE_DATE", None)
-    result = subprocess.run(
-        [sys.executable, str(_run_scan_path()), "cve", "status"],
-        capture_output=True, text=True, timeout=15, env=env,
-    )
+    result = run_cli(["cve", "status"], timeout=15, env=env)
     assert result.returncode == 0, (
         f"exit={result.returncode} stdout={result.stdout!r} "
         f"stderr={result.stderr!r}"
@@ -110,10 +102,7 @@ def test_cve_status_cli_smoke_stale_via_override() -> None:
 
     env = dict(os.environ)
     env["QUIRK_CI_STALENESS_OVERRIDE_DATE"] = fake_today
-    result = subprocess.run(
-        [sys.executable, str(_run_scan_path()), "cve", "status"],
-        capture_output=True, text=True, timeout=15, env=env,
-    )
+    result = run_cli(["cve", "status"], timeout=15, env=env)
     assert result.returncode == 1, (
         f"expected exit=1 (STALE), got exit={result.returncode}; "
         f"stdout={result.stdout!r} stderr={result.stderr!r}"

@@ -5,9 +5,9 @@ a generator and its committed output.
 """
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
+
+from tests.cli_helpers import run_cli
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ERROR_CODES_MD = REPO_ROOT / "docs" / "error-codes.md"
@@ -22,10 +22,7 @@ def test_error_codes_md_exists():
 
 def test_error_codes_md_is_current():
     """docs/error-codes.md must match `quirk errors --dump-md` output."""
-    result = subprocess.run(
-        [sys.executable, "run_scan.py", "errors", "--dump-md"],
-        capture_output=True, text=True, cwd=REPO_ROOT, timeout=15,
-    )
+    result = run_cli(["errors", "--dump-md"], timeout=15)
     assert result.returncode == 0, (
         f"quirk errors --dump-md failed: stdout={result.stdout!r} stderr={result.stderr!r}"
     )

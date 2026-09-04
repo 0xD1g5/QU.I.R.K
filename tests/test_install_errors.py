@@ -10,11 +10,12 @@ from __future__ import annotations
 import os
 import re
 import socket
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_cli, run_fork_safe
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 QRK_FORMAT = re.compile(r"\[QRK-[A-Z]+-[A-Z0-9-]+\] .+\. Fix: .+")
@@ -108,10 +109,7 @@ def test_port_conflict_format():
     holder.bind(("127.0.0.1", port))
     holder.listen(1)
     try:
-        result = subprocess.run(
-            [sys.executable, "run_scan.py", "serve", "--port", str(port)],
-            capture_output=True, text=True, timeout=20, cwd=REPO_ROOT,
-        )
+        result = run_cli(["serve", "--port", str(port)], timeout=20)
     finally:
         holder.close()
 
@@ -147,9 +145,10 @@ def test_dashboard_missing_uvicorn_format():
         "builtins.__import__ = _block\n"
         "from quirk.dashboard import server  # noqa: F401\n"
     )
-    result = subprocess.run(
+    result = run_fork_safe(
         [sys.executable, "-c", script],
-        capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
+        timeout=15,
+        env={**os.environ, "PYTHONPATH": str(REPO_ROOT)},
     )
     combined = (result.stdout or "") + (result.stderr or "")
     assert "QRK-INSTALL-002" in combined, (
