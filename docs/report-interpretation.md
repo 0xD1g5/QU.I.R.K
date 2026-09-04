@@ -994,3 +994,119 @@ comparable answer this run," not "0 closed."
 > that means we didn't verify it this run, not that it's clean — the CBOM reflects that same
 > distinction as `IN_TRIAGE`, never as 'not affected,' because we never assert something is safe
 > without having actually rechecked it."
+
+---
+
+## 17. Confidence Rating and Its Four Factors (Phase 184.1, SCORE-01)
+
+### What the confidence rating is not
+
+The confidence rating measures how much QUIRK trusts its own assessment of the estate — not
+whether the estate's cryptography is good. A HIGH confidence rating paired with a poor readiness
+score is not a contradiction; it is the correct reading of a fully-plaintext estate we assessed
+completely. We are confident in the assessment, and the assessment is bad news. The readiness
+score and the confidence rating are deliberately orthogonal: coverage answers "did we assess it,"
+never "is it good." Plaintext HTTP, for example, counts as fully assessed for confidence purposes
+and is penalized separately, on the readiness score, via `plaintext_http_count`.
+
+### The four factors
+
+`compute_confidence()` (`quirk/intelligence/confidence.py`) produces a 0-100 `confidence_score`
+from four weighted factors:
+
+| Factor | Weight | Numerator | Denominator |
+|--------|--------|-----------|-------------|
+| `coverage_ratio` | 0.35 | `assessed_crypto_count` — endpoints QUIRK actually assessed | `assessable_endpoint_count` — endpoints that were real scan targets |
+| `scan_error_ratio` | 0.30 | endpoints whose probe errored | all endpoints |
+| `unknown_ratio` | 0.15 | endpoints classified `UNKNOWN` | all endpoints |
+| `tls_enum_coverage_ratio` | 0.20 | TLS cipher/version enumeration actually completed | TLS endpoints found |
+
+**`coverage_ratio` (weight 0.35).** Both the numerator (`assessed_crypto_count`) and denominator
+(`assessable_endpoint_count`) are emitted by `build_evidence_summary`
+(`quirk/intelligence/evidence.py`), not derived from the fixed-key `protocol_counts` dict —
+`protocol_counts` is blind to six email/STARTTLS protocols (SMTP-STARTTLS, SMTPS, IMAPS,
+IMAP-STARTTLS, POP3S, POP3-STARTTLS) and would silently under-count them. The rules:
+
+- **`ADVISORY` and `CLOSED` leave the denominator entirely — they are not scanned assets.**
+  `ADVISORY` rows are scanner self-reports (a liveness pre-pass notice, a missing-extra notice,
+  `broker_scanner.py`'s cleartext/credential advisories), not endpoints QUIRK probed. `CLOSED`
+  rows are TIMEOUT/REFUSED/UNREACHABLE probe outcomes, already filtered out of the client-facing
+  technical inventory by `quirk/reports/technical.py:88`. Neither belongs in a ratio meant to
+  answer "of the assets we tried to assess, how many did we succeed on."
+- **`UNKNOWN` endpoints and endpoints whose probe errored (`scan_error`) leave the numerator but
+  stay in the denominator.** They were real scan targets we tried and failed to assess, which is
+  exactly what should lower coverage.
+- **Plaintext `HTTP` counts as assessed.** We successfully determined the endpoint uses no
+  encryption at all — that is a completed assessment, not a gap in one.
+- **An endpoint reached but whose crypto handshake never completed also counts as assessed** — for
+  example, an SMTP-STARTTLS host that advertised the port but never offered STARTTLS. That is a
+  genuine assessment result, usually a HIGH-severity finding, and excluding it would mean the
+  worst-posture hosts quietly lower confidence in the very scan that found them.
+
+**`scan_error_ratio` (weight 0.30).** Numerator: endpoints whose probe raised a scan error, as a
+fraction of all endpoints. Points awarded scale with `(1 - scan_error_ratio)` — fewer errors,
+more points.
+
+**`unknown_ratio` (weight 0.15).** Numerator: endpoints classified `UNKNOWN`, as a fraction of all
+endpoints. Points awarded scale with `(1 - unknown_ratio)`.
+
+**`tls_enum_coverage_ratio` (weight 0.20).** Measures how completely TLS cipher/version
+enumeration finished across TLS endpoints. Guarded by the `CR-01` rule below.
+
+### The deliberate double penalty
+
+An endpoint whose probe errored costs the score twice by design: once by leaving
+`coverage_ratio`'s numerator (it was not assessed), and again through `scan_error_ratio` (it is
+counted as an error). The same double-counting applies to `UNKNOWN` endpoints, once through
+`coverage_ratio`'s numerator and once through `unknown_ratio`. This is intentional, not an
+oversight — the two factors measure related but distinct things (assessment completeness and
+error rate), and "why was my errored endpoint counted twice" is expected to be the first question
+this metric generates from a reader who has not seen this section.
+
+### CR-01: the TLS-enumeration guard
+
+`tls_enum_coverage_ratio` defaults to a vacuous `1.0` when a scan has zero TLS endpoints — there
+is nothing to enumerate, so completeness is trivially total. To prevent a zero-TLS scan from
+earning a phantom +20 points for enumeration it never performed, the CR-01 guard withholds the
+entire `tls_enum_coverage_ratio` bonus whenever `tls_count == 0`, regardless of the ratio's
+computed value.
+
+### Rating bands
+
+| Score | Rating |
+|-------|--------|
+| 85 and above | HIGH |
+| 65 and above | MEDIUM |
+| 40 and above | LOW |
+| below 40 | VERY_LOW |
+
+### `NO_DATA`
+
+`confidence_rating` is `NO_DATA` (with `confidence_score: 0`) in two distinct cases, neither of
+which awards a partial score:
+
+1. **Zero endpoints.** The scan found nothing to report on at all.
+2. **Zero assessable endpoints.** The scan found endpoints (`totals.endpoints > 0`), but every one
+   of them was excluded from the coverage denominator — for example, a port sweep that found
+   nothing open plus a single `ADVISORY` notice. Awarding up to 35 coverage points for a scan that
+   assessed nothing would be the same phantom-points defect the CR-01 guard exists to prevent for
+   TLS enumeration, so this case reuses the same `NO_DATA` shape rather than computing a partial
+   score from zero real data.
+
+### D-15: absence of the formula-version marker means the report predates Phase 184.1
+
+Every `compute_confidence()` result produced from Phase 184.1 onward carries a
+`confidence_formula_version` field, currently `"2.0.0"`. **A report or API response carrying no
+`confidence_formula_version` field predates Phase 184.1 and was produced under the older formula**,
+in which `coverage_ratio` counted only TLS and SSH endpoints (`protocol_counts["TLS"] +
+protocol_counts["SSH"]`) against every endpoint in the scan, including advisories and closed
+ports — the exact inversion this phase corrects.
+
+Confidence is never persisted: every report surface (`reports/writer.py`, `reports/executive.py`,
+the `/api/scan` route) recomputes `compute_confidence()` fresh from the endpoints stored for that
+scan run, at render time. There is no stored confidence value anywhere in the database. This means
+re-running a report against an old scan's stored endpoints yields the new-formula number
+immediately — no backfill, no migration, no reissue of already-delivered reports. When a client
+asks why a confidence rating moved between two reports of the same estate, the answer is always
+readable from the reports themselves: the older one has no `confidence_formula_version` field, the
+newer one reads `"2.0.0"`, and this section names exactly what changed between them.
