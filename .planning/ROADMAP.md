@@ -115,7 +115,7 @@ since they were first recorded.
 
 ### Phases
 
-- [ ] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
+- [x] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
 - [ ] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 14-entry allowlist, with the 35 unlisted call sites each migrated or explicitly grandfathered.
 - [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: 10 unregistered skips each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
@@ -144,14 +144,25 @@ survives package regeneration or its loss is detected.
   3. Loss of the local patch is detectable. The patched file is `.generated.cjs`, so regeneration
      silently reverts it — needs a re-apply check (the `bin/verify-reapply-patches.cjs` precedent)
      or an upstream fix.
-**Plans**: 5 plans
+
+  4. *(added 2026-09-04 — TOOL-04, discovered by 182-05's live demonstration, not present at
+     planning time.)* The defect is closed as a **class**, not as two instances. The read-side
+     `stateExtractField()` twin is anchored alongside the write side; the guarantee is tested at the
+     **`state begin-phase` command boundary**, not only at the function level; and the enumeration
+     that proves completeness **generates its occurrence set from the installed source at run time**
+     rather than from a hand-written list — which is what caught a site the hand-written list missed.
+**Plans**: 9 plans (5 planned + 4 gap-closure, added after 182-05's live demonstration reopened TOOL-01)
 
 Plans:
 - [x] 182-01-PLAN.md — argv/cwd contract lock-down + Bug A prose-survival fixture with negative control
 - [x] 182-02-PLAN.md — Bug B preserve-unknown-keys merge in `syncStateFrontmatter`, RED-first on both ROADMAP paths
 - [x] 182-03-PLAN.md — `gsd-local-patches/` + `gsd-pristine/` durability layer and loss-detection test
 - [x] 182-04-PLAN.md — report-only corruption audit, CLAUDE.md operating rule, upstream filing
-- [ ] 182-05-PLAN.md — full suite, requirement closure, STATE.md record, UAT + Obsidian sync
+- [x] 182-05-PLAN.md — full suite, requirement closure, STATE.md record, UAT + Obsidian sync — **its live verb demonstration falsified the retirement claim and opened TOOL-04**
+- [x] 182-06-PLAN.md — read-side `stateExtractField()` anchored + `## Session` guard widened, locked by a full-command regression test proven RED first
+- [x] 182-07-PLAN.md — bold-field defect-class enumeration gate with a run-time-generated occurrence set; anchored `boldProgressPattern`
+- [x] 182-08-PLAN.md — live re-demonstration on the real `STATE.md` (clean), TOOL-01/04 hand-closed, CLAUDE.md clause (e) retracted after the proof, upstream comment posted
+- [x] 182-09-PLAN.md — phase gate: full suite set-compared to baseline, VALIDATION rows, UAT Series 182, Obsidian sync
 
 ### Phase 183: Fork-Safety Gate Derivation
 
