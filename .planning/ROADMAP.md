@@ -130,7 +130,7 @@ since they were first recorded.
 - [x] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
 - [x] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 15-entry allowlist, with the 28 unlisted call sites each migrated (all 28; zero grandfathered).
 - [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
-- [ ] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so 92 sessions of trend history stay comparable. Gating: this metric decides the confidence rating on every client deliverable.
+- [ ] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so a client can be told why the confidence number moved (there is no historical confidence data to migrate — every live surface recomputes from stored endpoints). Gating: this metric decides the confidence rating on every client deliverable.
 - [ ] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed.
 - [ ] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
@@ -265,15 +265,37 @@ Plans:
      SMTP-STARTTLS x2, SMTPS, IMAPS, IMAP-STARTTLS, POP3S, POP3-STARTTLS, KERBEROS. Re-measure
      before planning; do not inherit this count.
 
-  2. `ADVISORY` pseudo-endpoints are excluded from the denominator. They are scanner self-reports
-     (`liveness-prepass`, missing-extra notices), not scanned assets, so emitting one currently
-     lowers the coverage score of the very scan that emitted it.
+  2. `ADVISORY` pseudo-endpoints are excluded from the denominator, and so is `CLOSED`. `ADVISORY`
+     rows are scanner self-reports (`liveness-prepass`, missing-extra notices), not scanned assets,
+     so emitting one currently lowers the coverage score of the very scan that emitted it.
+     **Widened per phase decision D-07, deliberately, not scope creep**: `CLOSED`
+     originates in `quirk/scanner/fingerprint.py` for TIMEOUT / REFUSED / UNREACHABLE probes, and
+     `quirk/reports/technical.py:88` already filters it out of the inventory the client reads, so
+     excluding it from coverage aligns the metric with what the client is actually shown. This is
+     the larger correction by an order of magnitude: **re-verified live on 2026-09-04** against
+     `./quirk-output/quirk.db`, all-time `CLOSED` = 9,023 rows versus `ADVISORY` = 562 of 10,127
+     total rows. Any port-range scan is mostly `CLOSED`.
 
-  3. The scoring change is **versioned, not silent**: `intelligence.intelligence_version` is
-     bumped, and the phase decides explicitly — in writing — whether the 92 historical sessions
-     behind `/api/trends` are recomputed or flagged as pre-change. A client comparing two reports
-     across the boundary must be able to be told why the number moved. **Locked at capture: no
-     forward-only silent change.**
+  3. The scoring change is **versioned, not silent**: `compute_confidence()` returns a dedicated
+     formula-version marker (`CONFIDENCE_FORMULA_VERSION`), and its absence in a previously
+     delivered report means that report is pre-184.1 by definition — this rule is stated
+     explicitly in `docs/report-interpretation.md`. **There is no historical confidence data to
+     migrate** — this success criterion previously asserted the formula feeds `/api/trends` and
+     that the historical scan sessions behind it needed a recompute-vs-flag decision; that premise
+     is verified false. `quirk/intelligence/trends.py` and `quirk/dashboard/api/routes/trends.py` call
+     `compute_readiness_score` exclusively and contain zero occurrences of `confidence`. All three
+     live `compute_confidence()` call sites (`quirk/reports/writer.py:397`,
+     `quirk/reports/executive.py:131`, `quirk/dashboard/api/routes/scan.py:1610`) call
+     `build_evidence_summary(endpoints, findings)` fresh immediately beforehand, so re-running a
+     report against an old scan already yields the new number because every surface recomputes.
+     `quirk/models.py` has no `confidence_score` or `confidence_rating` column to migrate. A client
+     comparing two reports across the boundary is told why the number moved via the formula-version
+     marker and the documentation, not via a backfill. This success criterion does **not** require
+     bumping `intelligence.intelligence_version`: per D-12 that config value is one of three
+     drifting values (`quirk/config.py:348`, `quirk/dashboard/api/routes/jobs.py:138`,
+     `quirk/reports/writer.py:291`), none of which means "which scoring formula produced this", and
+     reconciling them is deferred to its own phase. **Locked at capture: no forward-only silent
+     change.**
 
   4. `coverage_ratio` is defined in operator-facing documentation. It currently appears in NO doc —
      `docs/report-interpretation.md` never mentions it — and carries no code comment justifying the

@@ -139,11 +139,22 @@ rather than inherited from its original report — two had drifted since they we
   operator-facing doc defines `coverage_ratio` at all — `docs/report-interpretation.md` never
   mentions it.
 
-  **Locked at capture (2026-09-04): recompute + version.** The formula feeds `/api/trends`, which
-  compares 92 historical sessions. Bump `intelligence.intelligence_version` and decide explicitly
-  whether historical sessions are recomputed or flagged as pre-change, so trend deltas never
-  silently mix two formulas. A step change in a client's score across two reports must be
-  explainable.
+  **Locked at capture (2026-09-04): versioned, not silent.** `compute_confidence()` returns a
+  dedicated formula-version marker (`CONFIDENCE_FORMULA_VERSION`); a report without one is
+  pre-184.1 by definition, and this rule is stated explicitly in `docs/report-interpretation.md`.
+  **There is no historical confidence data to migrate.** The premise that the formula feeds
+  `/api/trends` and compares stored historical scan sessions is verified false:
+  `quirk/intelligence/trends.py` and `quirk/dashboard/api/routes/trends.py` call
+  `compute_readiness_score` exclusively and contain zero occurrences of `confidence`; all three
+  live `compute_confidence()` call sites (`quirk/reports/writer.py:397`,
+  `quirk/reports/executive.py:131`, `quirk/dashboard/api/routes/scan.py:1610`) call
+  `build_evidence_summary(endpoints, findings)` fresh immediately beforehand, so re-running a
+  report against an old scan already yields the new number because every surface recomputes; and
+  `quirk/models.py` has no `confidence_score` or `confidence_rating` column. This lock does not
+  require bumping `intelligence.intelligence_version` — per D-12 that config value is one of three
+  drifting values, none of which means "which scoring formula produced this," and reconciling them
+  is deferred to its own phase. A step change in a client's score across two reports is
+  explainable via the formula-version marker and the documentation, not via a backfill.
 
 - [ ] **SCORE-02**: the shipped config template enables a defensible out-of-the-box scanning
   baseline, and template/working-config drift is closed. **Measured 2026-09-04:**
