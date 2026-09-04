@@ -132,6 +132,7 @@ since they were first recorded.
 - [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
 - [ ] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so 92 sessions of trend history stay comparable. Gating: this metric decides the confidence rating on every client deliverable.
 - [ ] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed.
+- [ ] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
@@ -308,6 +309,44 @@ Plans:
   4. A test asserts the template parses, and that every `enable_*` key present in `config.yaml` is
      either present in the template or listed as a documented lab-only exception — so the next
      hand-tune cannot silently diverge again.
+**Plans**: TBD
+
+### Phase 184.3: Timestamp Correctness
+
+**Goal**: A timestamp means the same instant in the database, the API payload, and the rendered UI.
+**Depends on**: Nothing
+**Requirements**: SCORE-03
+**Success Criteria** (what must be TRUE):
+
+  1. The API serializes an unambiguous instant. **Measured 2026-09-04:**
+     `GET /api/scans` returns `"scanned_at": "2026-09-04T15:28:56.218111"` — no offset, no `Z`.
+     Per ECMAScript, an offset-less date-time string is parsed as LOCAL, so
+     `new Date(scannedAt)` reads a UTC clock value as local time. Decide and apply one convention
+     (offset-bearing ISO-8601 is the obvious candidate) rather than leaving it implicit.
+
+  2. The 4-hour skew is gone, proven by a test that would have caught it. **Reproduced
+     2026-09-04:** a scan that ran at 11:12:58 EDT rendered as `Last scan: Sep 4, 2026 3:13 PM`
+     via `ScanDateBadge.tsx:6`. `ScanDateBadge.test.tsx` asserts the label format and nothing about
+     timezone, so the existing suite is blind to it — the new test must fail against today's code.
+
+  3. The internal contradiction is resolved: `scan_run_id` on the same row IS timezone-aware
+     (`2026-09-04T15:28:54.125544+00:00`) while `scanned_at` is naive, and scan logs stamp `Z`.
+     One row currently carries three conventions. Pick one and say so in writing.
+
+  4. All **15** frontend files calling `new Date(` on API timestamps are audited — not just
+     `ScanDateBadge`. Re-derive the list; do not inherit it. Any that render a backend timestamp
+     carry the same defect, and a fix applied to one component while siblings keep the bug is the
+     enumeration-drift failure this milestone exists to remove.
+
+  5. The **2** remaining `datetime.utcnow()` call sites are migrated. The API is deprecated and
+     scheduled for removal; on this repo's Python 3.14 it raises `DeprecationWarning` under
+     `-W error::DeprecationWarning` (verified 2026-09-04). Note the house pattern is deliberately
+     `datetime.now(timezone.utc).replace(tzinfo=None)` to store naive UTC — if that pattern
+     survives, criterion 1 must compensate at the serialization boundary; if it does not, the DB
+     migration is part of this phase's scope. Decide explicitly.
+
+  6. Report surfaces (`/print`, PDF/DOCX export) are checked too — a deliverable handed to a client
+     is where a wrong timestamp does real damage, and it renders through the same path.
 **Plans**: TBD
 
 ### Phase 185: a11y Baseline Environment

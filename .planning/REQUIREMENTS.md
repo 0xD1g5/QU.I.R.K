@@ -163,6 +163,34 @@ rather than inherited from its original report — two had drifted since they we
   either enable it, or state in the template why it ships off. Silence is what this requirement
   removes.
 
+- [ ] **SCORE-03**: timestamps mean the same thing end to end. **Measured and reproduced
+  2026-09-04.** The backend stores **naive UTC** — `datetime.now(timezone.utc).replace(tzinfo=None)`
+  is the deliberate house pattern (`merge/scan.py:186`, `otics_cadence.py:61`,
+  `notify/dispatcher.py` x5) — and the API serializes it **without an offset**:
+  `"scanned_at": "2026-09-04T15:28:56.218111"`. Per ECMAScript, a date-time string with no offset
+  is parsed as **local time**, so `new Date(scannedAt)` in
+  `src/dashboard/src/components/ScanDateBadge.tsx:6` renders a UTC clock reading as if it were
+  local. Demonstrated: a scan that ran at **11:12:58 EDT** displays as **"Last scan: Sep 4, 2026
+  3:13 PM"** — a **4-hour** skew, confirmed by running both parses side by side.
+
+  The codebase already contradicts itself on this: the sibling `scan_run_id` on the very same row
+  IS timezone-aware (`2026-09-04T15:28:54.125544+00:00`), and scan logs stamp `[15:29:52Z]`. So
+  one row carries an offset, an adjacent column does not, and the UI silently mis-renders the one
+  that does not.
+
+  **Blast radius: 15 frontend files** call `new Date(` on API timestamps
+  (`sensors`, `scan-history`, `motion`, `schedules`, `certificates`, `executive`, `print`,
+  `trends`, `compare`, `hardware`, `LifecycleEventList`, `ScanDateBadge`, ...). Any of them
+  rendering a naive backend timestamp shows the same skew. `ScanDateBadge.test.tsx` asserts the
+  label format but nothing about timezone, so the existing test suite cannot catch this.
+
+  Also in scope: **2 remaining `datetime.utcnow()` call sites**. That API is deprecated and
+  scheduled for removal; on this repo's Python 3.14 it raises `DeprecationWarning` under
+  `-W error::DeprecationWarning`, verified 2026-09-04.
+
+  Fixing this is a **client-credibility** issue, not cosmetic: a report timestamped four hours off
+  cannot be reconciled against a client's own logs during an engagement.
+
 - [ ] **DRIFT-03**: a11y baselines are generated in the environment that enforces them. **33
   baselines were generated on macOS on 2026-08-27 in a single batch; the gate runs on Linux CI;
   31 have never been checked against the runner.** Regenerate via `--update-baselines` on a Linux
@@ -202,6 +230,7 @@ rather than inherited from its original report — two had drifted since they we
 | DRIFT-02 | TBD | Pending |
 | SCORE-01 | TBD | Pending |
 | SCORE-02 | TBD | Pending |
+| SCORE-03 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |
 | TRIAGE-02 | TBD | Pending |
