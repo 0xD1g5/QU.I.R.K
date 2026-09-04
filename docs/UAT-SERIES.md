@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-03 (v5.19 Phase 182 — Tooling Integrity, plan 182-09 phase-gate
+**Last Updated:** 2026-09-04 (v5.19 Phase 184.1 — Coverage Metric Correctness, plan
+184.1-05: Series 184.1 added (UAT-184.1-01..03; 3 PASS) for SCORE-01 — the
+`confidence_formula_version` marker on all three `compute_confidence()` return paths, the
+documented four-factor confidence section (`docs/report-interpretation.md` §17) covering
+`coverage_ratio`/`scan_error_ratio`/`unknown_ratio`/`tls_enum_coverage_ratio` and D-15's
+absence-means-pre-change rule, and the D-10 degenerate-denominator `NO_DATA` case. Earlier:
+2026-09-03 (v5.19 Phase 182 — Tooling Integrity, plan 182-09 phase-gate
 close-out: Series 182 extended to 3 cases, all `[x] PASS` — `UAT-182-01`'s Notes corrected now
 that the read-side gap it once disclosed is closed (182-06/182-07), `UAT-182-02` added for the
 command-boundary guarantee that earns that correction, `UAT-182-03` added for the run-time
@@ -22466,3 +22472,112 @@ the same phase closing out the exact defect shape it studies: a true statement (
 original Notes) left in place past its expiry is itself an instance of the record-integrity failure
 this phase exists to fix, corrected here rather than left standing for a future session to
 rediscover.
+
+---
+
+## Series 184.1: Coverage Metric Correctness (Phase 184.1 — v5.19)
+
+**Scope:** SCORE-01 — `coverage_ratio`'s numerator/denominator corrected to reflect endpoints
+actually assessed (D-01/D-02/D-04/D-05/D-06/D-07/D-08/D-09/D-10), a dedicated
+`confidence_formula_version` marker so a moved score is explainable across the change boundary
+(D-12/D-14/D-15), and operator-facing documentation of all four confidence factors together
+(D-16/D-17).
+
+### UAT-184.1-01: A generated report's confidence section reports `confidence_formula_version: "2.0.0"`
+
+**ID:** UAT-184.1-01
+**Title:** `compute_confidence()` returns the dedicated formula-version marker on every code path.
+**Maps to:** SCORE-01 (D-12, D-14)
+
+**What to test:** That `confidence_formula_version` appears with value `"2.0.0"` on all three
+`compute_confidence()` return paths — the normal-score path, the `endpoints == 0` NO_DATA path, and
+the `assessable_endpoints == 0` NO_DATA path — so a report generated after this phase always
+carries the marker regardless of which branch produced it.
+
+**Steps:**
+```bash
+.venv/bin/pytest -q tests/test_intelligence_confidence.py -k "formula_version" -v
+```
+
+**Pass Criteria:** All formula-version assertions pass; `confidence_formula_version == "2.0.0"` on
+every return path exercised.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-04  **Tester:** Automated (184.1-05 plan execution)
+**Notes:** Verified against the live `quirk/intelligence/confidence.py` source (plan 184.1-02):
+`CONFIDENCE_FORMULA_VERSION = "2.0.0"` is set as a module constant and included in the dict
+returned by all three code paths (the `endpoints == 0` short-circuit, the `assessable_endpoints ==
+0` short-circuit added by D-10, and the normal scoring path).
+
+---
+
+### UAT-184.1-02: `docs/report-interpretation.md` section 17 documents all four confidence factors and the rating bands
+
+**ID:** UAT-184.1-02
+**Title:** Confidence-rating documentation exists as a single section covering `coverage_ratio`,
+`scan_error_ratio`, `unknown_ratio`, `tls_enum_coverage_ratio`, their weights, the HIGH/MEDIUM/
+LOW/VERY_LOW rating bands, and D-15's absence-means-pre-change rule.
+**Maps to:** SCORE-01 (D-15, D-16, D-17)
+
+**What to test:** That an operator can read one section of the client-facing report guide and
+explain every input to the confidence rating without reading source code, including why an errored
+or unknown endpoint is penalized twice by design, and can tell from a report alone which formula
+version produced it.
+
+**Steps:**
+```bash
+grep -c '^## 17\.' docs/report-interpretation.md
+grep -q "coverage_ratio" docs/report-interpretation.md && \
+  grep -q "scan_error_ratio" docs/report-interpretation.md && \
+  grep -q "unknown_ratio" docs/report-interpretation.md && \
+  grep -q "tls_enum_coverage_ratio" docs/report-interpretation.md && \
+  grep -q "confidence_formula_version" docs/report-interpretation.md && echo DOC_OK
+```
+
+**Pass Criteria:** `grep -c '^## 17\.'` returns `1`; all four factor names, all four weights
+(`0.35`, `0.30`, `0.15`, `0.20`), all four rating bands (`HIGH`, `MEDIUM`, `LOW`, `VERY_LOW`) and
+their thresholds (`85`, `65`, `40`) appear in the section; `ADVISORY` and `CLOSED` are both named
+as denominator exclusions; the errored-endpoint double penalty is stated as intentional.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-04  **Tester:** Automated (184.1-05 plan execution)
+**Notes:** Section 17 added at end of `docs/report-interpretation.md`, synced verbatim to
+`20_Dev-Work/QUIRK/Guides/Report-Interpretation.md` in vault `Digs` in the same plan.
+
+---
+
+### UAT-184.1-03: A scan whose endpoints are all `CLOSED`/`ADVISORY` yields `NO_DATA`, not a partial score
+
+**ID:** UAT-184.1-03
+**Title:** `assessable_endpoint_count == 0` with `totals.endpoints > 0` reuses the `NO_DATA`
+short-circuit rather than computing coverage points from zero real data.
+**Maps to:** SCORE-01 (D-10)
+
+**What to test:** The D-10 degenerate-denominator case — e.g. a port sweep that found nothing
+open plus one `ADVISORY` notice — returns `confidence_score: 0` and `confidence_rating:
+"NO_DATA"`, not a partial score computed with a zero-valued `coverage_ratio` numerator against a
+zero denominator (which would otherwise divide by zero or silently award phantom points).
+
+**Steps:**
+```bash
+.venv/bin/pytest -q tests/test_intelligence_confidence.py -k "no_data or assessable" -v
+```
+
+**Pass Criteria:** The zero-assessable-endpoint case asserts `confidence_rating == "NO_DATA"` and
+`confidence_score == 0`, distinct from but structurally identical to the pre-existing
+`endpoints == 0` short-circuit.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-04  **Tester:** Automated (184.1-05 plan execution)
+**Notes:** Confirmed against `quirk/intelligence/confidence.py`'s second short-circuit (added by
+plan 184.1-02, directly above the CR-01 guard) — it returns the identical zero-factor-breakdown
+shape as the pre-existing `endpoints == 0` path.
+
+---
+
+**Series 184.1 disposition.** 3 of 3 cases are `[x] PASS` as of plan 184.1-05: `UAT-184.1-01`
+(formula-version marker on all three return paths), `UAT-184.1-02` (section 17 documents all four
+factors, the rating bands, and D-15's absence rule), `UAT-184.1-03` (the D-10 degenerate-
+denominator NO_DATA case). No `SKIP`/`GAP` dispositions were needed — all three cases are directly
+executable against the repository's own pytest suite and the committed documentation, with no
+Docker or live-DB dependency.
