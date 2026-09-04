@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184.1 context gathered
-last_updated: "2026-09-04T19:12:37.747Z"
+stopped_at: Completed 184.1-01-PLAN.md
+last_updated: "2026-09-04T20:02:33.396Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 25
 ---
 
@@ -21,8 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 183 — fork-safety-gate-derivation COMPLETE (6 of 6 plans; DRIFT-01 closed,
-gsd-verifier passed 3/3, ROADMAP checkbox flipped). Next: Phase 184 — Skip Registry Closure.
+**Current focus:** Phase 184.1 — coverage-metric-correctness (SCORE-01). Executing 5 plans in 4 waves.
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -643,8 +642,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 183 (fork-safety-gate-derivation) — COMPLETE
-Plan: 6 of 6
+Phase: 184.1 (coverage-metric-correctness) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
@@ -1134,6 +1133,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 180 P05 | ~40min | 3 tasks | 2 files |
 | Phase 180 P06 | 35min | 3 tasks | 3 files |
 | Phase 180 P07 | 25min | 3 tasks | 3 files |
+| Phase 184.1 P01 | 26min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1461,6 +1461,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 180]: D-22: CLOSURE_EVENT_TYPES allowlist lives in remediation.py, not models.py (mirrors T-155-03)
 - [Phase 180]: D-23: remediation_closure_events stores no host/port -- already on remediation_item_fingerprints
 - [Phase 180]: D-39/D-40: ADVISORY-01 AST guard extended to 5 modules (adds closure.py, burndown.py), checked floor raised 2->5, negative control re-run separately against both new modules — Phase 180 built the largest advisory closure surface in the project; an unguarded module would silently defeat ADVISORY-01's firewall
+- [Phase 184.1]: 184.1-01: coverage counters evidence-derived (D-01/D-02); ADVISORY+CLOSED excluded from denominator (D-06/D-07); ROADMAP SC-3/REQUIREMENTS SCORE-01 no longer assert /api/trends historical migration (D-13)
 
 ### Pending Todos
 
@@ -1630,8 +1631,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-04T18:38:20.340Z
-Stopped at: Phase 184.1 context gathered
+Last session: 2026-09-04T20:02:33.386Z
+Stopped at: Completed 184.1-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
