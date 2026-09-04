@@ -314,7 +314,7 @@ Plans:
 - [x] 184.1-04-PLAN.md — Exact-value regression fixture (D-18) and the readiness-score non-movement proof (D-03)
 - [x] 184.1-05-PLAN.md — Confidence-factor documentation, Obsidian sync, UAT-SERIES, validation close-out
 - [x] 184.1-06-PLAN.md — GAP CLOSURE (SC-3): thread `confidence_formula_version` through writer.py, executive.py, and ConfidenceData/`/api/scan`; per-surface emitted-artifact tests
-- [ ] 184.1-07-PLAN.md — GAP CLOSURE (SC-3): make the D-15 absence rule checkable, correct UAT-184.1-01, Obsidian sync, REQUIREMENTS/VALIDATION close-out
+- [x] 184.1-07-PLAN.md — GAP CLOSURE (SC-3): make the D-15 absence rule checkable, correct UAT-184.1-01, Obsidian sync, REQUIREMENTS/VALIDATION close-out
 
 
 ### Phase 184.2: Out-of-the-Box Scanning Posture
