@@ -22,6 +22,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.cli_helpers import run_fork_safe
+
 
 # ---------------------------------------------------------------------------
 # Contract 1 — snmp_scanner module surface (SNMP-01)
@@ -389,7 +391,6 @@ def test_install_all_excludes_pysnmp(tmp_path: "Path") -> None:  # type: ignore[
     must install quirk[hw] explicitly in their environment.
     """
     import json
-    import subprocess
     from pathlib import Path as _Path
 
     REPO_ROOT = _Path(__file__).resolve().parent.parent
@@ -409,12 +410,7 @@ def test_install_all_excludes_pysnmp(tmp_path: "Path") -> None:  # type: ignore[
         f"{REPO_ROOT}[all]",
     ]
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=180,
-    )
+    result = run_fork_safe(cmd, timeout=180)
 
     assert result.returncode == 0, (
         "pip install --dry-run -e <repo>[all] FAILED. "
