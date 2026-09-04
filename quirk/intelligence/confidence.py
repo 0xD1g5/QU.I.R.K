@@ -10,6 +10,13 @@ CONFIDENCE_WEIGHTS: Dict[str, float] = {
     "tls_enum_coverage_ratio": 0.20,
 }
 
+# Phase 184.1 SCORE-01: identifies which scoring formula produced a given
+# compute_confidence() result. A report/API payload missing this key predates
+# Phase 184.1 (the old tls_count-plus-ssh_count coverage formula). Deliberately
+# separate from the three drifting intelligence_version values in config.py,
+# jobs.py, and reports/writer.py — none of those answer "which formula" (D-12).
+CONFIDENCE_FORMULA_VERSION = "2.0.0"
+
 _LOGGER = logging.getLogger(__name__)
 _KNOWN_CONFIDENCE_KEYS = frozenset(CONFIDENCE_WEIGHTS.keys())
 
@@ -72,6 +79,8 @@ def compute_confidence(
     tls_count = max(0, _as_int(protocol_counts.get("TLS", 0)))
     ssh_count = max(0, _as_int(protocol_counts.get("SSH", 0)))
     unknown_count = max(0, _as_int(protocol_counts.get("UNKNOWN", 0)))
+    assessed_crypto_count = max(0, _as_int(evidence.get("assessed_crypto_count", 0)))
+    assessable_endpoints = max(0, _as_int(evidence.get("assessable_endpoint_count", 0)))
 
     scan_error_ratio = _clamp(_as_float(scan_error.get("rate", 0.0)), 0.0, 1.0)
 
@@ -79,6 +88,7 @@ def compute_confidence(
         return {
             "confidence_score": 0,
             "confidence_rating": "NO_DATA",
+            "confidence_formula_version": CONFIDENCE_FORMULA_VERSION,
             "factor_breakdown": {
                 "coverage_ratio": {"value": 0.0, "weight": w["coverage_ratio"], "points": 0.0},
                 "scan_error_ratio": {"value": 0.0, "weight": w["scan_error_ratio"], "points": 0.0},
@@ -87,7 +97,38 @@ def compute_confidence(
             },
         }
 
-    coverage_ratio = _clamp((tls_count + ssh_count) / endpoints, 0.0, 1.0)
+    # D-10: a second, independent degenerate-denominator case the original
+    # `endpoints == 0` short-circuit above cannot see. ADVISORY/CLOSED exclusion
+    # (_NON_ASSET_PROTOCOLS, evidence.py) can drive assessable_endpoint_count to 0
+    # while totals.endpoints > 0 — e.g. a port sweep that found nothing open plus
+    # one advisory. Awarding up to 35 coverage points for a scan that assessed
+    # nothing is the same phantom-points defect the CR-01 guard below exists to
+    # prevent, so this reuses the NO_DATA shape rather than computing a partial score.
+    if assessable_endpoints == 0:
+        return {
+            "confidence_score": 0,
+            "confidence_rating": "NO_DATA",
+            "confidence_formula_version": CONFIDENCE_FORMULA_VERSION,
+            "factor_breakdown": {
+                "coverage_ratio": {"value": 0.0, "weight": w["coverage_ratio"], "points": 0.0},
+                "scan_error_ratio": {"value": 0.0, "weight": w["scan_error_ratio"], "points": 0.0},
+                "unknown_ratio": {"value": 0.0, "weight": w["unknown_ratio"], "points": 0.0},
+                "tls_enum_coverage_ratio": {"value": 0.0, "weight": w["tls_enum_coverage_ratio"], "points": 0.0},
+            },
+        }
+
+    # CR-02: coverage_ratio used to count protocol composition (tls_count plus ssh_count),
+    # not assessment success, so every non-TLS/SSH crypto endpoint QUIRK successfully
+    # assessed (SMTP-STARTTLS, IMAPS, POP3S, etc.) silently lowered the client's
+    # confidence rating even though those endpoints were fully assessed.
+    # The numerator and denominator are now emitted by build_evidence_summary, which
+    # sees the raw ep.protocol string before _PROTOCOL_KEYS filtering, so the six
+    # email/STARTTLS protocols protocol_counts is blind to are counted correctly here.
+    # ADVISORY and CLOSED are non-assets and leave the denominator per D-06/D-07;
+    # UNKNOWN and scan_error rows leave the numerator but stay in the denominator per
+    # D-05/D-09, deliberately overlapping the separate unknown_ratio/scan_error_ratio
+    # penalties below — one failed probe costs the score twice, by design.
+    coverage_ratio = _clamp(assessed_crypto_count / assessable_endpoints, 0.0, 1.0)
     unknown_ratio = _clamp(unknown_count / endpoints, 0.0, 1.0)
 
     tls_enum_coverage_ratio = _as_float(evidence.get("tls_enum_coverage_ratio", -1.0))
@@ -117,6 +158,7 @@ def compute_confidence(
     return {
         "confidence_score": score,
         "confidence_rating": rating,
+        "confidence_formula_version": CONFIDENCE_FORMULA_VERSION,
         "factor_breakdown": {
             "coverage_ratio": {
                 "value": round(coverage_ratio, 4),
