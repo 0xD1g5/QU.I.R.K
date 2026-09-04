@@ -1102,11 +1102,34 @@ in which `coverage_ratio` counted only TLS and SSH endpoints (`protocol_counts["
 protocol_counts["SSH"]`) against every endpoint in the scan, including advisories and closed
 ports — the exact inversion this phase corrects.
 
+**Where to actually look.** The marker is emitted on exactly three shipped surfaces, and nowhere
+else — the absence rule above applies *to those three surfaces only*; a client reading some other
+artifact (for example a raw DB row, or a surface this phase does not touch) should not infer a
+formula version from its absence there:
+
+1. **`intelligence-{stamp}.json`** (the report bundle's intelligence file, written by
+   `quirk/reports/writer.py`) — the field lives at JSON path
+   `confidence.confidence_formula_version`.
+2. **The executive summary markdown** — in the `## Confidence & Coverage` section, the field
+   appears as a literal bullet: `- **confidence_formula_version:** {value}` (emitted by
+   `quirk/reports/executive.py`; the bullet is omitted entirely when the value is falsy).
+3. **The `/api/scan` JSON response** — the field lives at the same JSON path,
+   `confidence.confidence_formula_version`, and is `null`/absent only when the confidence
+   computation itself failed (the exception fallback in `quirk/dashboard/api/routes/scan.py`
+   explicitly sets it to `None` rather than inventing a version string).
+
+The value is a **scoring-formula version**, deliberately independent of the product version and
+of the three separately-drifting `intelligence_version` values (`quirk/config.py`,
+`quirk/dashboard/api/routes/jobs.py`, `quirk/reports/writer.py`) — per D-12, reconciling those
+three is its own future phase's work, and `confidence_formula_version` must never be "reconciled"
+against them; they answer a different question.
+
 Confidence is never persisted: every report surface (`reports/writer.py`, `reports/executive.py`,
 the `/api/scan` route) recomputes `compute_confidence()` fresh from the endpoints stored for that
 scan run, at render time. There is no stored confidence value anywhere in the database. This means
 re-running a report against an old scan's stored endpoints yields the new-formula number
 immediately — no backfill, no migration, no reissue of already-delivered reports. When a client
 asks why a confidence rating moved between two reports of the same estate, the answer is always
-readable from the reports themselves: the older one has no `confidence_formula_version` field, the
-newer one reads `"2.0.0"`, and this section names exactly what changed between them.
+readable from the reports themselves: the older one has no `confidence_formula_version` field on
+any of the three surfaces above, the newer one reads `"2.0.0"` on all three, and this section names
+exactly what changed between them.
