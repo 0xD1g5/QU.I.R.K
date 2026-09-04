@@ -369,7 +369,16 @@ def run_nmap_discovery(
         ) from e
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(
-            f"Nmap discovery timed out after {timeout_seconds}s. Consider reducing scope or increasing --nmap-timeout."
+            f"Nmap discovery timed out after {timeout_seconds}s. This budget is "
+            f"derived from the batch size by discovery_timeout_for_batch() "
+            f"(min({_DISCOVERY_TIMEOUT_CEILING_SECONDS}, "
+            f"{_DISCOVERY_TIMEOUT_BASE_SECONDS} + "
+            f"{_DISCOVERY_TIMEOUT_PER_HOST_SECONDS} * batch_size) seconds) — "
+            f"the --nmap-timeout flag is deprecated and has NO effect on it "
+            f"(Phase 146 DISC-05). To fix: reduce discovery scope so batches "
+            f"are smaller, or raise the _DISCOVERY_TIMEOUT_* constants in "
+            f"quirk/discovery/nmap_provider.py if real-world timing warrants "
+            f"it. See docs/operators-guide.md section 11.4."
         ) from e
 
     if proc.returncode != 0:

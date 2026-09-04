@@ -944,7 +944,7 @@ security:
 | `--progress` | `false` | Show tqdm progress bars |
 | `--discovery` | `builtin` | Discovery mode: `builtin` or `nmap` |
 | `--nmap-path` | `nmap` | Path to nmap executable |
-| `--nmap-timeout` | `1800` | Nmap discovery timeout in seconds |
+| `--nmap-timeout` | `1800` | **Deprecated — has no effect** (Phase 146 DISC-05). Chunked discovery derives its per-batch budget from `discovery_timeout_for_batch()` = `min(300, 30 + 0.26 × batch_size)` seconds; no code path reads this flag. To change the budget, reduce discovery scope or adjust the `_DISCOVERY_TIMEOUT_*` constants in `quirk/discovery/nmap_provider.py`. See operators-guide.md §11.4. |
 | `--nmap-extra-args` | `""` | Extra nmap arguments (pass as quoted string) |
 | `--safe-mode` | `false` | Reduce concurrency and increase timeouts for fragile networks |
 | `--rate-limit` | `0.0` | Targets per second rate limit (0 = disabled) |
