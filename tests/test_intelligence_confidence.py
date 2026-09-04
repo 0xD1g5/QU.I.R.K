@@ -11,6 +11,13 @@ def _evidence() -> dict:
     return {
         "totals": {"endpoints": 10, "findings": 4},
         "protocol_counts": {"TLS": 6, "HTTP": 2, "SSH": 1, "UNKNOWN": 1},
+        # Phase 184.1 SCORE-01: protocol_counts is 6 TLS + 2 HTTP + 1 SSH + 1 UNKNOWN
+        # over totals.endpoints == 10. Under the new rules 6 TLS + 2 HTTP (D-08 keeps
+        # plaintext HTTP in the numerator) + 1 SSH = 9 assessed; the 1 UNKNOWN is
+        # excluded from the numerator but stays in the denominator (D-09); no
+        # ADVISORY/CLOSED rows, so the denominator remains 10.
+        "assessed_crypto_count": 9,
+        "assessable_endpoint_count": 10,
         "scan_error": {"count": 1, "rate": 0.1},
         "tls_enum_coverage_ratio": 1.0,
         "plaintext_http_count": 2,
@@ -44,6 +51,10 @@ class ConfidenceTests(unittest.TestCase):
         heavily_penalized = {
             "totals": {"endpoints": 10, "findings": 4},
             "protocol_counts": {"TLS": 1, "HTTP": 8, "SSH": 1, "UNKNOWN": 0},
+            # Phase 184.1 SCORE-01: 1 TLS + 8 HTTP (D-08) + 1 SSH = 10 assessed;
+            # no UNKNOWN/ADVISORY/CLOSED rows, so denominator also remains 10.
+            "assessed_crypto_count": 10,
+            "assessable_endpoint_count": 10,
             "scan_error": {"count": 5, "rate": 0.5},
             "tls_enum_coverage_ratio": 1.0,
             "plaintext_http_count": 8,
@@ -68,6 +79,20 @@ class ConfidenceTests(unittest.TestCase):
 
         self.assertEqual(conf_a, conf_b)
         self.assertNotEqual(score_a, score_b)
+
+    def test_evidence_fixture_carries_assessed_counters(self) -> None:
+        """Phase 184.1 SCORE-01 false-negative guard: _evidence() must carry both new
+        coverage counter keys with non-zero values. Without this guard, a future edit
+        could silently drop assessed_crypto_count / assessable_endpoint_count back out
+        of the fixture and re-arm the exact false negative this plan exists to avoid —
+        compute_confidence defaults missing keys to 0, so coverage_ratio would compute
+        0/10 = 0.0 without any test noticing (relative-comparison tests would still pass).
+        """
+        evidence = _evidence()
+        self.assertIn("assessed_crypto_count", evidence)
+        self.assertIn("assessable_endpoint_count", evidence)
+        self.assertGreater(evidence["assessed_crypto_count"], 0)
+        self.assertGreater(evidence["assessable_endpoint_count"], 0)
 
 
 if __name__ == "__main__":
