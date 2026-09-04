@@ -156,6 +156,17 @@ rather than inherited from its original report — two had drifted since they we
   is deferred to its own phase. A step change in a client's score across two reports is
   explainable via the formula-version marker and the documentation, not via a backfill.
 
+  **Gap found and closed (2026-09-04, plans 184.1-06/07):** `184.1-VERIFICATION.md` found the
+  formula-version marker above was inert on every shipped surface — `quirk/reports/writer.py`'s
+  compat `conf` dict, `quirk/reports/executive.py`'s generated markdown, and
+  `quirk/dashboard/api/schemas.py`'s `ConfidenceData` all dropped the field before it reached a
+  client (independently flagged as CR-01 in `184.1-REVIEW.md`, never previously fixed). Plan
+  `184.1-06` wired all three consumers and locked each with a dedicated emitted-artifact test in
+  `tests/test_confidence_formula_version_surfaces.py`; plan `184.1-07` made
+  `docs/report-interpretation.md`'s D-15 rule name the three exact surfaces and corrected
+  `UAT-184.1-01` to exercise those emitted artifacts instead of `compute_confidence()` in
+  isolation. SC-3 is now genuinely satisfied, not merely locked at capture.
+
 - [ ] **SCORE-02**: the shipped config template enables a defensible out-of-the-box scanning
   baseline, and template/working-config drift is closed. **Measured 2026-09-04:**
   `grep -c '^\s*enable_[a-z]*: true' quirk/config_template.yaml` returns **0** — every connector
