@@ -10,12 +10,13 @@ Originally Phase 37 INFRA-01 (which pinned all surfaces to a 4.4.0 literal in
 the opposite direction); flipped in Phase 84-01 to honor modern PEP 621 +
 importlib.metadata packaging practice.
 """
-import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 _PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
 _PROJECT = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))["project"]
@@ -66,12 +67,7 @@ def test_distribution_name_is_canonical():
 )
 def test_cli_version_subprocess():
     try:
-        result = subprocess.run(
-            [sys.executable, "-m", "run_scan", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = run_fork_safe([sys.executable, "-m", "run_scan", "--version"], timeout=10)
     except Exception as exc:
         pytest.fail(f"CLI --version not invokable: {exc}")
     if result.returncode != 0:
