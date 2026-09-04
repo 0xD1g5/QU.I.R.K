@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: "Completed 182-09-PLAN.md"
-last_updated: "2026-09-04T00:38:28.851Z"
+stopped_at: "Completed 183-06-PLAN.md — Phase 183 CLOSED (6 of 6)"
+last_updated: "2026-09-04T02:34:00.401Z"
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  completed_phases: 2
+  total_plans: 15
+  completed_plans: 15
+  percent: 40
 ---
 
 # Project State
@@ -21,7 +21,54 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 182 — tooling-integrity COMPLETE (9 of 9 plans; TOOL-01/02/03/04 all closed, gsd-verifier passed 4/4, ROADMAP checkbox flipped). Next: Phase 183 — Fork-Safety Gate Derivation.
+**Current focus:** Phase 183 — fork-safety-gate-derivation COMPLETE (6 of 6 plans; DRIFT-01 closed,
+gsd-verifier passed 3/3, ROADMAP checkbox flipped). Next: Phase 184 — Skip Registry Closure.
+
+**183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
+`tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
+`tests/**/*.py` and AST-walks at test-run time, so a newly-added test file with an unsafe spawn is
+caught with **no list edit of any kind** — proven by a permanent self-test, not asserted. All 28
+direct `subprocess` spawn sites across 18 test files were migrated to
+`tests/cli_helpers.py::run_cli` / `::run_fork_safe`; `_GRANDFATHERED` ships `{}` because nothing
+needed grandfathering. Detection was extended to bare-name `from subprocess import run` calls —
+forward-locking only, since zero such calls exist, so it is provable ONLY by a synthetic fixture.
+Full suite: `1 failed, 4028 passed, 0 fatal signals`, failing-node SET identical to the pre-phase
+baseline (`{test_skip_registry}`).
+
+**Two findings from 183 worth carrying forward.** (1) Plan 183-04's pre-authorized fix was WRONG
+and the codebase said so: adding `cd "$(dirname "$0")"` to `lab.sh` to make it cwd-independent
+silently broke `tests/test_lab_profile_args_precedence.py`, which deliberately runs `lab.sh` from a
+`tmp_path` with no `.env` to prove CLI `PROFILE_ARGS` beats `.env` — the anchor made it always
+source the real committed `.env`. Caught by a `grep -rn "lab\.sh" tests/` regression sweep, not by
+the failing test being expected. `lab.sh` was reverted byte-identical and the fix moved to the call
+site (absolute `env["COMPOSE_FILE"]`), so CLAUDE.md's Chaos Lab Maintenance cascade did NOT fire.
+(2) This phase's migrations shifted line numbers, raising `test_skip_registry`'s unregistered-skip
+count 15 -> 22 (+7) with none removed — pure line drift against `(file, LINENO)` keying. Deferred to
+Phase 184 by explicit decision; it is direct evidence for that phase's thesis, not a regression.
+
+**Known gap, deliberately recorded rather than implied away:** Docker was unavailable for the
+entire phase, so `test_chaos_lab_idempotency` collected 0 parametrized cases (healthy Docker gives
+~29). Its migration is AST-verified but NOT execution-verified. Documented in
+`183-VALIDATION.md`'s Manual-Only Verifications; Phase 185 is the likely closer. All 5 macOS
+fork-SIGSEGV xfail markers XPASSed in the clean run and were nonetheless RETAINED — one quiet run
+is weak evidence against an intermittent, load-dependent crash.
+
+**Analysis trap discovered while verifying 183 — do not re-learn it:** `pytest -rX` prints each
+xfail's REASON STRING, and this repo's fork-SIGSEGV xfail reasons literally contain the words
+"Fatal Python error" and "SIGSEGV". A naive `grep -c` for crash signatures on that output reports
+5 crashes in a run with ZERO. Any automated fatal-signal check on this repo's pytest output must
+exclude `^XPASS`/`^XFAIL` lines.
+
+**TOOL-05 (found and patched 2026-09-04, mid-phase — see CLAUDE.md clause (h)):** `gsd-sdk`
+resolves to `~/.npm/_npx/<hash>/node_modules/get-shit-done-cc/sdk/dist/`, a SECOND install entirely
+separate from the `~/.claude/get-shit-done/bin/lib/` one Phase 182 patched. It still carried both
+TOOL-04 defects and corrupted this very file on a real `state.begin-phase` call — the
+`` `**Status:**` ``-in-prose sentence lost its closing backtick, `stopped_at` regressed two plans.
+The pre-image/signature-diff protocol caught it before commit; STATE.md was restored
+byte-identical. 15 sites anchored, 8 dispositioned `accepted-read-only`; snapshots at
+`~/.claude/gsd-npx-sdk-patches/`. **`tests/test_gsd_state_patch.py` does NOT cover that install,
+and npx cache dirs are content-addressed — a GSD version bump silently discards all 15 patches.**
+Extending 182-07's enumeration gate to scan BOTH install paths is unfinished work, not done.
 
 **182-08 (complete, 2026-09-04) — live `state begin-phase` re-demonstration against the real
 `.planning/STATE.md`, verified clean this time.** Per the hazard protocol (pre-image, named-flag
@@ -584,9 +631,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 182 (tooling-integrity) — EXECUTING
-Plan: 8 of 9
-Status: 182-06 and 182-07 complete (TOOL-04 read-side/enumeration-gate patches); 182-08 executing
+Phase: 183 (fork-safety-gate-derivation) — COMPLETE
+Plan: 6 of 6
+Status: Phase 183 closed 2026-09-04; DRIFT-01 complete; verifier passed 3/3. Next: Phase 184.
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
 diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`
@@ -1571,8 +1618,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-04T00:38:18.000Z
-Stopped at: Completed 182-07-PLAN.md
+Last session: 2026-09-04T02:34:00.000Z
+Stopped at: Completed 183-06-PLAN.md — Phase 183 CLOSED (6 of 6)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
