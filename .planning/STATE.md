@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.1-01-PLAN.md
-last_updated: "2026-09-04T20:02:33.396Z"
+stopped_at: Completed 184.1-02-PLAN.md
+last_updated: "2026-09-04T20:10:07.236Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 20
-  completed_plans: 16
+  completed_plans: 17
   percent: 25
 ---
 
@@ -643,7 +643,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.1 (coverage-metric-correctness) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
@@ -1134,6 +1134,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 180 P06 | 35min | 3 tasks | 3 files |
 | Phase 180 P07 | 25min | 3 tasks | 3 files |
 | Phase 184.1 P01 | 26min | 3 tasks | 4 files |
+| Phase 184.1 P02 | 24min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1462,6 +1463,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 180]: D-23: remediation_closure_events stores no host/port -- already on remediation_item_fingerprints
 - [Phase 180]: D-39/D-40: ADVISORY-01 AST guard extended to 5 modules (adds closure.py, burndown.py), checked floor raised 2->5, negative control re-run separately against both new modules — Phase 180 built the largest advisory closure surface in the project; an unguarded module would silently defeat ADVISORY-01's firewall
 - [Phase 184.1]: 184.1-01: coverage counters evidence-derived (D-01/D-02); ADVISORY+CLOSED excluded from denominator (D-06/D-07); ROADMAP SC-3/REQUIREMENTS SCORE-01 no longer assert /api/trends historical migration (D-13)
+- [Phase ?]: 184.1-02: coverage_ratio rewired onto assessed_crypto_count/assessable_endpoint_count (D-01/D-02); D-10 adds independent NO_DATA branch; CONFIDENCE_FORMULA_VERSION=2.0.0 stamped on all return paths (D-12/D-14); every D-19 test expectation re-derived individually
 
 ### Pending Todos
 
@@ -1631,8 +1633,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-04T20:02:33.386Z
-Stopped at: Completed 184.1-01-PLAN.md
+Last session: 2026-09-04T20:10:07.228Z
+Stopped at: Completed 184.1-02-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
