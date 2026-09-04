@@ -250,7 +250,7 @@ rather than inherited from its original report — two had drifted since they we
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | TBD | Pending |
-| SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05 | Complete |
+| SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
 | SCORE-02 | TBD | Pending |
 | SCORE-03 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |

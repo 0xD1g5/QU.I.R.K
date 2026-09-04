@@ -19,6 +19,12 @@ turn exactly the corresponding named test in this file RED:
   - reverting quirk/dashboard/api/schemas.py's field or
     quirk/dashboard/api/routes/scan.py's pass-through ->
     test_api_scan_response_carries_formula_version RED
+  - restoring the pre-184.1 "(TLS+SSH successful / ...)" Coverage caption in
+    quirk/reports/executive.py ->
+    test_exec_markdown_coverage_caption_is_not_protocol_scoped RED
+    (added after the phase code-review gate found CR-02; each leg above was
+    verified by actually performing the revert and confirming exactly one
+    named test failed, not by assertion)
 
 No Docker, no live DB, no network — this phase's tests must not degrade to an
 honest skip (184.1-VALIDATION.md Known CI Degradation). All three tests build
@@ -122,6 +128,57 @@ def test_exec_markdown_carries_formula_version() -> None:
         "must name the confidence_formula_version field so a client can tell which "
         "formula produced the number."
     )
+
+
+def test_exec_markdown_coverage_caption_is_not_protocol_scoped() -> None:
+    """184.1 / CR-02 regression guard.
+
+    The `Coverage:` bullet's percentage is derived from
+    `factor_breakdown["coverage_ratio"]`, which Phase 184.1 redefined as
+    `assessed_crypto_count / assessable_endpoint_count`. Its caption, however,
+    kept the pre-184.1 wording "(TLS+SSH successful / total in-scope endpoints)"
+    — a correct number under a false label, in the client-facing artifact that
+    SC-4 / D-16 exist to make self-explanatory. Found by the phase code-review
+    gate as CR-02, two lines from the bullet 184.1-06 had just added.
+
+    This asserts a DERIVED property rather than blocklisting the one known bad
+    string: post-184.1 `coverage_ratio` is protocol-agnostic by construction, so
+    any protocol name appearing in the Coverage caption is a stale-formula smell
+    regardless of how it is phrased. A blocklist would only catch the exact
+    wording we already fixed — the same enumeration weakness this phase's D-11
+    scan and the project's GSD-toolchain gates were rebuilt to avoid.
+
+    Scoped to the `- **Coverage:**` line only: the sibling
+    `- **TLS Enumeration Coverage:**` bullet names TLS legitimately, because that
+    metric genuinely is TLS-specific.
+    """
+    cfg = _make_cfg("/unused")
+    endpoints = _endpoints_fixture()
+    findings: list = []
+
+    md = build_exec_markdown(cfg, endpoints, findings)
+
+    coverage_lines = [
+        line for line in md.splitlines() if line.startswith("- **Coverage:**")
+    ]
+    assert len(coverage_lines) == 1, (
+        "Expected exactly one '- **Coverage:**' bullet in the executive markdown; "
+        f"found {len(coverage_lines)}. If the report layout changed, update this "
+        "guard rather than deleting it — CR-02 was a caption that outlived its "
+        f"formula. Lines: {coverage_lines!r}"
+    )
+    caption = coverage_lines[0]
+
+    for protocol in ("TLS", "SSH"):
+        assert protocol not in caption, (
+            f"CR-02 regression: the Coverage caption names the protocol "
+            f"{protocol!r}, but post-184.1 coverage_ratio counts every "
+            f"crypto-bearing protocol QUIRK successfully assessed, not a fixed "
+            f"protocol pair. The percentage would be right and the label wrong — "
+            f"exactly the defect Phase 184.1 was opened to eliminate. Keep this "
+            f"caption in sync with docs/report-interpretation.md's coverage_ratio "
+            f"row. Offending line: {caption!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
