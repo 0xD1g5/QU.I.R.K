@@ -6,7 +6,18 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
 from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
 
-EVIDENCE_SCHEMA_VERSION = "1.0.0"
+EVIDENCE_SCHEMA_VERSION = "1.1.0"
+
+# Phase 184.1 SCORE-01 D-06/D-07 — protocols that are not scanned assets and must be
+# excluded from both the coverage numerator (assessed_crypto_count) and denominator
+# (assessable_endpoint_count). ADVISORY rows are scanner self-reports (liveness-prepass,
+# missing-extra notices, broker_scanner.py cleartext/credential advisories), not scanned
+# endpoints. CLOSED originates in quirk/scanner/fingerprint.py for TIMEOUT / REFUSED /
+# UNREACHABLE probes and is already filtered out of the client-facing inventory by
+# quirk/reports/technical.py:88. This set is guarded at test-run time by
+# tests/test_evidence_protocol_disposition.py, not by this comment — a new protocol
+# literal must be classified there before it can be trusted here.
+_NON_ASSET_PROTOCOLS = frozenset({"ADVISORY", "CLOSED"})
 
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
@@ -90,6 +101,13 @@ def build_evidence_summary(
     scan_error_count = 0
     mtls_targets: Set[Tuple[str, int]] = set()
 
+    # Phase 184.1 SCORE-01 D-01/D-02 — coverage-ratio inputs. Denominator is real scan
+    # targets only (excludes ADVISORY/CLOSED per D-06/D-07); numerator additionally
+    # excludes UNKNOWN and scan_error rows (D-05/D-09) but keeps reached-but-no-crypto
+    # rows such as a failed SMTP-STARTTLS handshake (D-04) and plaintext HTTP (D-08).
+    assessed_crypto_count = 0
+    assessable_endpoint_count = 0
+
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
     dnssec_weak_algo_count = 0
@@ -158,6 +176,12 @@ def build_evidence_summary(
         scan_error = getattr(ep, "scan_error", None)
         if scan_error:
             scan_error_count += 1
+
+        # Phase 184.1 SCORE-01 D-01/D-02/D-05/D-06/D-07/D-09 — coverage counters.
+        if proto not in _NON_ASSET_PROTOCOLS:
+            assessable_endpoint_count += 1
+            if proto != "UNKNOWN" and not scan_error:
+                assessed_crypto_count += 1
 
         blocker = str(getattr(ep, "tls_blocker_reason", "") or "")
         if blocker == "MTLS_REQUIRED":
@@ -435,6 +459,8 @@ def build_evidence_summary(
             "findings": len(finding_list),
         },
         "protocol_counts": protocol_counts,
+        "assessed_crypto_count": assessed_crypto_count,
+        "assessable_endpoint_count": assessable_endpoint_count,
         "plaintext_http_count": len(plaintext_http_targets),
         "http_on_tls_port_count": len(http_on_tls_port_targets),
         "mtls_present_count": len(mtls_targets),
