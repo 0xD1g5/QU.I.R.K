@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: "Completed 182-05-PLAN.md"
-last_updated: "2026-09-03T18:00:00.000Z"
+stopped_at: "Completed 182-07-PLAN.md"
+last_updated: "2026-09-04T00:38:28.851Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 9
-  completed_plans: 5
-  percent: 56
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -21,7 +21,73 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 182 — tooling-integrity (5 of 9 plans complete; executing gap-closure plans 182-06 through 182-09 for TOOL-04)
+**Current focus:** Phase 182 — tooling-integrity (7 of 9 plans complete; executing 182-08, gap-closure record and CLAUDE.md retraction)
+
+**182-08 (in progress, 2026-09-04) — live `state begin-phase` re-demonstration against the real
+`.planning/STATE.md`, verified clean this time.** Per the hazard protocol (pre-image, named-flag
+invocation with explicit `--cwd`, post-write diff inspected key-by-key against both corruption
+signatures from 182-05): ran
+`node ~/.claude/get-shit-done/bin/gsd-tools.cjs state begin-phase --phase 182 --name
+tooling-integrity --plans 9 --cwd <repo-root>` against the live file, after first hand-repairing
+the stale `## Session Continuity` line — two plans behind, still naming the Phase 180 era —
+to the true value (182-07's plan) — 182-06's guard fix made that section genuinely machine-read, so a
+stale value in it is now load-bearing in a way it was not before this phase. Neither corruption
+signature fired: (a) no `` `**Field:**` `` code span lost its closing backtick or trailing clause
+anywhere in the diff — the `` `**Status:**` ``-in-prose sentence from `182-01`'s test docstring
+(the exact sentence that got lifted into frontmatter during 182-05's reproduction) is confirmed
+byte-identical before and after; (b) every frontmatter key present before the write
+(`gsd_state_version`, `milestone`, `milestone_name`, `status`, `stopped_at`, `last_updated`,
+`progress.*` — all 5 sub-keys) is present after, compared key-by-key, not eyeballed. `status`
+(`executing`) was untouched. The write DID change `stopped_at`'s quoting (cosmetic YAML
+scalar-style change only, same string value) and `last_updated` (expected, legitimate), and
+recomputed `progress.completed_plans` from 5 to 7 — correct, since plans 182-06 and 182-07 had
+completed since the frontmatter was last hand-set — but computed `progress.percent` as `0`
+instead of `78`, and reset the body `## Current Position` to `Plan: 1 of 9` /
+`Status: Executing Phase 182` and `**Current focus:**` to a bare one-liner, all because
+`begin-phase` treats every invocation as the start of a phase, with no case for "this phase is
+already 7/9 plans in." **This is a genuine, distinct behavior worth naming for a future session:
+`begin-phase` is not idempotent against an in-progress phase — it does not corrupt the two
+regex-anchoring hazards this phase closed, but it does blindly reset position/percent state on
+every call.** Neither symptom matches either of the two named corruption signatures (no garbled
+bold-field prose, no dropped frontmatter key), so per the plan's explicit hazard-protocol
+definition this is a CLEAN demonstration, not a restore-and-hand-edit trigger — the percent/
+position values were then hand-corrected as part of writing this very entry, which is what the
+task's own instructions call for regardless of demonstration outcome. `stateExtractField()`
+correctly declined to read the `**Status:**`-in-prose decoy this time (`status` frontmatter value
+unchanged, `executing`), confirming 182-06's anchoring fix
+(`stateExtractField()` — `^\s*\*\*${escaped}:\*\*[ \t]*(.+)$`/`im`) holds against the live file, not
+just the fixture. `.venv/bin/pytest tests/test_gsd_state_patch.py -q` re-run immediately after the
+live write: `10 passed` — the 182-07 baseline, unaffected.
+
+The four TOOL-04-class defect instances closed across 182-06/182-07, named explicitly (not
+summarized): (1) `stateExtractField()` (`state-document.generated.cjs:29`) — the read-side twin of
+Bug A, unanchored `` \*\*${escaped}:\*\*[ \t]*(.+) `` with no `^`/`/m`, anchored 182-06; (2) the
+`## Session` scoping guard in `buildStateFrontmatter()` (`state.cjs` ~line 762) —
+`/##\s*Session\s*\n/i` failed to match this project's own `## Session Continuity` header,
+silently widening the Stopped-At search to the whole document, widened 182-06 to
+`/^##\s+Session\b[^\n]*\n([\s\S]*?)(?=\n##|$)/im`; (3) `focusPattern` inside `cmdStateBeginPhase`
+itself (`state.cjs` ~line 1175) — a write-path instance the planner's own hand-derived
+`<interfaces>` orientation list MISSED, found by a 182-06 plan reviewer who distrusted that list
+rather than by a corruption report, anchored to `^(\s*\*\*Current focus:\*\*[ \t]*).*$`/`im`; (4)
+`boldProgressPattern` inside `cmdStateUpdateProgress` (`state.cjs` ~line 426) — found not by
+anyone noticing a corrupted file but by 182-07's run-time-generated enumeration gate
+(`test_bold_field_regex_class_is_fully_dispositioned` in `tests/test_gsd_state_patch.py`), which
+scans the installed source for every `**Field:**`-shaped construct at test-run time rather than
+trusting a written list — the same gate also surfaced a fifth, previously-undocumented site,
+`cmdStateGet`'s `boldPattern`, dispositioned `accepted-read-only` since it only ever reaches
+`output()`, never a STATE.md write. Two of these four were found by mechanisms other than a human
+noticing a corrupted file (the enumeration gate, and a reviewer distrusting a hand-derived list);
+that is the mechanical guarantee this phase actually earned, not the fact that a unit test went
+green. `test_gsd_state_patch.py`'s full-command regression test
+(`test_begin_phase_does_not_read_body_prose_as_machine_fields`) is the guarantee that matters —
+it exercises the `begin-phase` COMMAND against a fixture shaped like this real file, not just the
+patched functions in isolation, which is the distinction the original "safe again" retraction
+(later corrected) got wrong. The `gsd-local-patches/`/`gsd-pristine/` durability re-seed (182-06:
+`state.cjs` grown to 72 required lines; 182-07: grown again to 86) and
+`verify-reapply-patches.cjs`'s `{"checked":2,"failures":0}` result mean none of this reverts
+silently on a GSD toolchain regeneration. The Phases 180-181 hand-edit-only workaround is retired
+by this demonstration — see `CLAUDE.md`'s retracted clause (e), rewritten in Task 2 of this same
+plan only after this diff was confirmed clean.
 
 **182-05 complete (2026-09-03) — phase gate and close-out, with a load-bearing finding:**
 Full suite ran once in the foreground (`.venv/bin/pytest -q -m ""`, 406.85s): `1 failed, 4021
@@ -519,9 +585,17 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 182 (tooling-integrity) — EXECUTING
-Plan: 4 of 5
-Status: 182-04 complete (report-only corruption audit, CLAUDE.md operating rule, upstream filing
-— open-gsd/gsd-core#4243). Plan 182-05 not yet started.
+Plan: 8 of 9
+Status: 182-06 and 182-07 complete (TOOL-04 read-side/enumeration-gate patches); 182-08 executing
+— live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
+TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
+diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`
+demonstration (single-line plain-text field replace, not the bold-field defect class) — the
+demonstration run originally left this line reading "Executing Phase 182" with the old
+182-05-era continuation sentence ("— open-gsd/gsd-core#4243). Plan 182-05 not yet started.")
+dangling below it, unattached and no longer true; both lines are hand-corrected here as part of
+finishing this entry, per this task's own instruction to write the phase record regardless of
+what the tool's one-line-scoped replace left behind.
 
 **182-02 complete (2026-09-03):** Bug B preserve-unknown-keys fix. Patched `syncStateFrontmatter`
 in `~/.claude/get-shit-done/bin/lib/state.cjs` (ordinary source, not generated) so `begin-phase`
@@ -1497,8 +1571,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-03T00:31:09.428Z
-Stopped at: Completed 180-07-PLAN.md
+Last session: 2026-09-04T00:38:18.000Z
+Stopped at: Completed 182-07-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
