@@ -181,7 +181,15 @@ Plans:
 
   3. The gate is proven falsifiable: a synthetic unsafe `subprocess.run(` is added, the gate goes
      RED naming it, and the injection is reverted.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 183-01-PLAN.md — Extend `run_cli` with `env=`; migrate the 9 cosmetic-`cwd` sites (errors_cmd, install_errors, error_codes_freshness, cve_staleness) + CI-parity proof
+- [ ] 183-02-PLAN.md — Migrate the 6 trivial `sys.executable` sites (cli_init, cli_version, dashboard_api, version)
+- [ ] 183-03-PLAN.md — Migrate the 7 `pip install --dry-run` sites (extras_install_matrix, 5x install_all_*, snmp_scanner_contract)
+- [ ] 183-04-PLAN.md — Migrate the 6 load-bearing-`cwd` / bare-name sites (chaos_lab_idempotency, distributed_topology, doc_command_forms)
+- [ ] 183-05-PLAN.md — Rewrite the gate: derive from `tests/**/*.py`, delete `_COVERED_FILES`, add bare-name detection, empty `_GRANDFATHERED`, 4 permanent falsifiability self-tests
+- [ ] 183-06-PLAN.md — Full-suite failing-node-SET verification, CI parity, `close_fds` scoping, ROADMAP count correction, VALIDATION/REQUIREMENTS/Obsidian close-out
 
 ### Phase 184: Skip Registry Closure
 
