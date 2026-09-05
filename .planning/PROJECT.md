@@ -34,6 +34,49 @@ SCORE-02 closed. The widened port default was confirmed against the live chaos l
 coverage gain (15 ports gained including a CRITICAL expired certificate; one port lost with
 nothing listening on it), not assumed neutral from source.
 
+**Phase 184.3 complete (2026-09-05) — timestamps now denote the same instant end to end.**
+The API stamps an explicit `+00:00` at the serialization boundary and nowhere else
+(`quirk/dashboard/api/_timestamp_utils.py`: `stamp_utc_iso()` plus the `UTCDateTime` annotated
+Pydantic type on 10 response fields, with 8 hand-rolled `.isoformat()` route sites routed through
+the same helper). The database keeps storing naive UTC by deliberate decision (D-01) — migrating
+~80 call sites to aware storage would turn every naive-vs-aware bound comparison in `routes/scan.py`
+into a `TypeError`, so the fix lives at the boundary, on the serialization direction only. The
+frontend renders through one display-policy module (`src/dashboard/src/lib/datetime.ts`), the sole
+permitted `new Date(`-with-an-argument call site, with a visible zone label; `/print` and the four
+Python report renderers instead emit labeled fixed UTC (D-13), and reports now carry a
+`Scan Completed` instant distinct from `Generated` — a distinction that did not previously exist,
+and whose absence had a cover row *labeled* "Scan Date" silently rendering report-build time.
+`datetime.utcnow()` is gone from `quirk/`. Requirement SCORE-03 closed.
+
+**What made it stick:** two run-time source-scan gates that re-derive their occurrence set from
+source on every run rather than consulting a maintained list — `tests/test_timestamp_serialization_gate.py`
+(18 tests) and `src/dashboard/src/components/__tests__/new-date-argument-guard.test.ts` (15 tests).
+The backend gate justified itself on first execution by finding an undispositioned identity
+`.isoformat()` at `scan.py:1319` that the *previous plan's* hand-derived enumeration had missed with
+the file open. That is the CLAUDE.md TOOL-04 failure class recurring inside a single phase, and it
+is the strongest available argument for derivation over enumeration. Caveat recorded honestly in the
+gate's own preamble: the vitest gate is not CI-enforced, because the `Linux Full Suite` job installs
+no Node for `src/dashboard/` — CI substitute-checks it by file existence, not execution.
+
+**One human-verify leg deferred, not passed.** The live certificate calendar-day-shift check is
+vacuous against available data: every certificate in the local DB expires at 15:17 UTC, and a
+calendar-day shift can only manifest for instants inside the local-offset window around midnight.
+It would report success whether the code were correct or broken. Dispositioned `DEFERRED` citing
+`src/dashboard/src/lib/__tests__/datetime.test.ts:39`, which pins the real boundary under
+`America/New_York`. A check that cannot fail is not evidence.
+
+**Surfaced by that human gate, deliberately not fixed here:** the dashboard certificate view renders
+**failed TLS handshakes as phantom certificate rows** — `routes/scan.py:1656-1669` filters on
+`protocol == "TLS"` alone with no `cert_subject`/`scan_error` gate, so timed-out and reset handshakes
+appear with em-dashes in every column and suppress the honest "no certificates discovered" empty
+state. 44 of 237 TLS rows DB-wide (18.6%), and the same unfiltered array feeds `print.tsx` — so the
+phantoms reach a client deliverable. It dates to Phase 5, not to this phase (verified: all 35
+`184.3-*` commits touch zero files under `quirk/scanner/`, and the filter is byte-unchanged). It
+stayed hidden because `_cert_expiry_key` sorts NULL expiries to `datetime.max`, pushing phantoms
+below the fold whenever real certificates coexisted — invisible under exactly the conditions the
+project normally tests. Tracked at
+`.planning/todos/pending/dashboard-cert-view-phantom-tls-rows.md`.
+
 **Surfaced by that lab run, deliberately not fixed here:** a scan scoring >=55 with even one
 CRITICAL finding produces **no report artefacts at all** — `_rating()` has no CRITICAL floor
 while the reporting congruence guard requires zero CRITICAL for EXCELLENT/GOOD/MODERATE. It is a
