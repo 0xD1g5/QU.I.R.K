@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-01-PLAN.md
-last_updated: "2026-09-05T17:34:07.643Z"
+stopped_at: Completed 184.3-02-PLAN.md
+last_updated: "2026-09-05T17:38:38.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 29
+  completed_plans: 30
   percent: 50
 ---
 
@@ -672,8 +672,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 2 of 11
-Status: Ready to execute
+Plan: 3 of 11
+Status: 184.3-02 complete — UTCDateTime stamping contract live in quirk/dashboard/api/schemas.py,
+all 10 Pydantic datetime fields re-typed, offset proven on the wire via a real TestClient GET
+/api/scans request with a demonstrated non-vacuous failure mode. Path (b) — the ~15 hand-rolled
+.isoformat() route sites — is 184.3-03's job, not yet started. See 184.3-02-SUMMARY.md.
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
 diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`
