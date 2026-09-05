@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-07-PLAN.md
-last_updated: "2026-09-05T18:10:48.000Z"
+stopped_at: Completed 184.3-09-PLAN.md
+last_updated: "2026-09-05T18:45:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 36
+  completed_plans: 37
   percent: 53
 ---
 
@@ -672,10 +672,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 9 of 11 complete (02, 03, 04, 05, 06, 07, 08 done; 09-11 not yet started — 08 is wave 1,
+Plan: 8 of 11 complete (02, 03, 04, 05, 06, 07, 08, 09 done; 10-11 not yet started — 08 is wave 1,
 depends_on: [], executed independently of/in parallel with the serialization-boundary and
 frontend-consumer-migration work)
-Status: 184.3-07 complete (2026-09-05) — the ten remaining page-level timestamp sites
+Status: 184.3-09 complete (2026-09-05) — `tests/test_timestamp_serialization_gate.py`, the
+run-time AST source-scan gate over `quirk/dashboard/api/**` (bare-datetime Pydantic fields,
+unrouted `.isoformat()` calls) and `quirk/reports/**` (unlabeled `strftime()` calls, D-16), with
+a validated 6-entry `_DISPOSITIONS` ledger and 18 passing tests (4 real-gate + 14 synthetic
+`tmp_path` self-tests). The gate's own run-time scan found and fenced a third undispositioned
+`scan.py` identity site (`:1319`, `list_scans()`'s legacy grouping-key fallback) that plan 03's
+hand-derived enumeration missed — closed in-place with the same inline "identity, not instant"
+comment convention, per CLAUDE.md's TOOL-04 doctrine. Live revert-and-observe against
+`schemas.py` confirmed the gate fails with the expected message before restoring. See
+184.3-09-SUMMARY.md.
+
+Previously, 184.3-07 complete (2026-09-05) — the ten remaining page-level timestamp sites
 (scan-history, compare, schedules, trends, executive, print, sensors, certificates, motion,
 hardware) migrated onto `lib/datetime.ts`, leaving zero production `new Date(argument)` call
 sites anywhere in `src/dashboard/src` outside the module itself. `lib/datetime.ts` gained a new

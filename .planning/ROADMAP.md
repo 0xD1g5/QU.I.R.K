@@ -445,7 +445,7 @@ Plans:
 - [x] 184.3-06-PLAN.md — 5 component sites migrated; `ScanDateBadge` TZ-pinned proof + net-new `ScanSelector.test.tsx` (D-10, SC-2, SC-4)
 - [x] 184.3-07-PLAN.md — 10 page sites migrated; `/print` aligned to labeled UTC; date-only fields dispositioned (D-13)
 - [x] 184.3-08-PLAN.md — labeled-UTC scan instant added to the executive/technical/HTML/DOCX paths, distinct from `generated_at` (D-16b)
-- [ ] 184.3-09-PLAN.md — pytest AST source-scan gate over `quirk/dashboard/api/**` + `quirk/reports/**` with a validated disposition ledger (D-03, D-05, D-16)
+- [x] 184.3-09-PLAN.md — pytest AST source-scan gate over `quirk/dashboard/api/**` + `quirk/reports/**` with a validated disposition ledger (D-03, D-05, D-16)
 - [ ] 184.3-10-PLAN.md — vitest run-time source scan for argument-bearing `new Date(` (D-09)
 - [ ] 184.3-11-PLAN.md — `docs/report-interpretation.md` §18 + `CONVENTIONS.md` §Timestamps, Obsidian syncs, UAT Series 184.3, phase note, VALIDATION sign-off (D-07, D-15)
 
