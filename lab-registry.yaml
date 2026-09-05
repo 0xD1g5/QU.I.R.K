@@ -1,3 +1,15 @@
+# quirk-lab-config: true
+#
+# This file is the repo's chaos-lab working config for the container-
+# registry profile -- it is NOT the shipped default. `quirk/config_template.yaml`
+# is the shipped default; `quirk init` copies that file verbatim with no
+# branching (Phase 184.2 D-13). Any connector divergence from the template
+# below must be listed in this file's own exception list with a reason, or
+# tests/test_config_connector_drift.py's D-13 gate fails.
+#
+# lab-only connector exceptions:
+#   container_targets: points at the chaos lab's local container registry's three vulnerable images on 127.0.0.1:20005 (registry profile, Phase 33)
+
   assessment:                                                                                                                                                                  
     name: "Chaos Lab — Registry Scan"                                                                                                                                          
     report_owner: "Security Team"                                                                                                                                              
