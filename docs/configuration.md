@@ -35,7 +35,7 @@ Controls connection timeouts, concurrency, port selection, and TLS enumeration d
 |-----|------|---------|-------------|
 | `timeout_seconds` | int | `5` | Global connection timeout in seconds |
 | `concurrency` | int | `200` | Maximum parallel workers (global cap) |
-| `ports_tls` | list[int] | `[443,8443,9443,10443,11443,12443,8444,8000,2222,5555]` | Ports probed for TLS/HTTP/SSH |
+| `ports_tls` | list[int] | `[443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]` | Ports probed for TLS/HTTP/SSH — the 17-port `CONSULTING_TLS_PORTS` list, shared with the CLI wizard and the dashboard's "Common TLS ports" scope (Phase 184.2, D-04). See below for the D-05 note on 5432/3306/8200. |
 | `include_sni` | bool | `true` | Send SNI extension in TLS handshakes |
 | `tls_enum_mode` | string | `"fast"` | TLS enumeration depth: `off`, `fast`, `deep` |
 | `fingerprint_timeout_seconds` | int | `2` | Per-target fingerprint timeout |
@@ -53,7 +53,7 @@ Controls connection timeouts, concurrency, port selection, and TLS enumeration d
 scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443, 8443, 9443, 10443, 11443, 12443, 8444, 8000, 2222, 5555]
+  ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]
   include_sni: true
   tls_enum_mode: fast   # off|fast|deep
   fingerprint_timeout_seconds: 2
@@ -267,23 +267,38 @@ targets:
 
 ## Connectors Block
 
-Enables optional scanner extensions for cloud infrastructure, API endpoints, containers, and source code. All connectors are disabled by default.
+Enables optional scanner extensions for cloud infrastructure, API endpoints, containers, and
+source code. **As of v5.19 (Phase 184.2), not all connectors default to `false`.** The shipped
+`quirk/config_template.yaml` — which `quirk init` copies verbatim, with no wizard or branching —
+carries all 25 `enable_*` flags live, each with an inline machine-checked reason tag. Seven ship
+`true` out of the box: `enable_jwt`, `enable_container`, `enable_source`, `enable_dnssec`,
+`enable_saml` (all target-guarded and inert until you populate their `*_targets` list), plus
+`enable_email` and `enable_broker` (already scanning by default via the `standard` profile's
+auto-enable — see below). The remaining 18 ship `false` with a stated reason. See "Connector
+disposition and reason tags" immediately below for the full 25-key table.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `enable_aws` | bool | `false` | Enable AWS cloud connector (ACM, KMS, CloudFront, ELBv2) |
 | `enable_azure` | bool | `false` | Enable Azure cloud connector (Key Vault, App Gateway) |
-| `enable_windows_adcs` | bool | `false` | Windows AD CS connector (stub — not implemented in v3.9) |
-| `enable_jwt` | bool | `false` | Enable JWT/REST API scanner |
-| `enable_container` | bool | `false` | Enable container/binary crypto scanner |
-| `enable_source` | bool | `false` | Enable source code scanner |
-| `enable_codesign` | bool | `false` | Enable code-signing certificate inventory (LDAP `userCertificate` + TLS EKU) |
+| `enable_adcs` | bool | `false` | AD CS LDAP connector — inventories certificates issued by an Active Directory Certificate Services CA. Shipped since Phase 80; requires `quirk[adcs]` (ldap3). |
+| `adcs_targets` | list[string] | `[]` | LDAP URLs for AD CS discovery (e.g. `ldap://dc.corp.com:389`) |
+| `adcs_search_base` | string | `null` | LDAP search base DN (e.g. `dc=corp,dc=com`) |
+| `adcs_user` | string | `null` | LDAP bind username (no example value shipped — do not template credential-shaped strings into a client config) |
+| `adcs_password` | string | `null` | LDAP bind password — set via environment variable reference in real use, never inline |
+| `adcs_timeout` | int | `10` | Per-connection timeout (seconds) for AD CS LDAP queries |
+| `enable_jwt` | bool | `true` | Enable JWT/REST API scanner (target-guarded — inert until `jwt_targets` is populated) |
+| `enable_container` | bool | `true` | Enable container/binary crypto scanner (target-guarded — inert until `container_targets` is populated) |
+| `enable_source` | bool | `true` | Enable source code scanner (target-guarded — inert until `source_targets` is populated) |
+| `enable_codesign` | bool | `false` | Enable code-signing certificate inventory (LDAP `userCertificate` + TLS EKU). **Not a connector toggle** — driven entirely by the `--inventory-code-signing` CLI flag; this key changes zero scan behavior on its own. |
 | `codesign_targets` | list[string] | `[]` | LDAP URLs for code-signing certificate discovery (e.g. `ldap://dc.corp.com:389`) |
 | `codesign_search_base` | string | `null` | LDAP search base DN for `userCertificate` discovery (e.g. `dc=corp,dc=com`) |
 | `codesign_timeout` | int | `10` | Per-connection timeout (seconds) for code-signing LDAP queries |
 | `enable_modbus` | bool | `false` | Enable Modbus/TCP OT/ICS fingerprinting (port 502, must be observed open); requires `quirk-scanner[hw]` extras. See `docs/operators-guide.md` §9.4 for the safety model. |
 | `enable_bacnet` | bool | `false` | Enable BACnet/IP OT/ICS fingerprinting (47808/UDP); requires `quirk-scanner[hw]` extras. See `docs/operators-guide.md` §9.4 for the safety model. |
-| `enable_recurring_otics` | bool | `false` | Opt-in required before a *recurring* (scheduled) run may probe Modbus/BACnet. Gates recurring probing only — a one-off, operator-initiated scan with `enable_modbus`/`enable_bacnet` set is unaffected and needs no new flag. See [OT/ICS Recurring-Scan Cadence Floor](#ot-ics-recurring-scan-cadence-floor-v513-phase-156) below. |
+| `enable_recurring_otics` | bool | `false` | **Not a connector toggle** — a scheduler safety gate for recurring Modbus/BACnet probing, not a scanner enable by itself. Opt-in required before a *recurring* (scheduled) run may probe Modbus/BACnet. Gates recurring probing only — a one-off, operator-initiated scan with `enable_modbus`/`enable_bacnet` set is unaffected and needs no new flag. See [OT/ICS Recurring-Scan Cadence Floor](#ot-ics-recurring-scan-cadence-floor-v513-phase-156) below. |
+| `enable_nmap` | bool | `false` | **Not a connector toggle** — a discovery driver, not a scan connector. Driven by the `--discovery nmap` CLI flag / the dashboard's nmap checkbox, either of which overwrites this value at scan start; it is not a durable config-file control. |
+| `enable_authenticated_mode` | bool | `false` | **Not a connector toggle** — driven by the credential CLI flags (see "Authenticated Scanning" below); the scheduler rejects any recurring config where this is `true`. |
 | `aws_region` | string | `"us-east-1"` | AWS region for cloud connector |
 | `aws_profile` | string | `null` | AWS named profile; `null` uses the default credential chain |
 | `azure_subscription_id` | string | `null` | Azure subscription UUID |
@@ -292,11 +307,114 @@ Enables optional scanner extensions for cloud infrastructure, API endpoints, con
 | `allow_insecure_jwks` | bool | `false` | Disable TLS cert verification for JWKS fetches. Use only for internal/dev endpoints with self-signed certs. When `true`, a `HIGH` advisory finding (`ADVISORY_JWKS_VERIFY_DISABLED`) is emitted for every JWKS URL fetched. |
 | `container_targets` | list[string] | `[]` | Docker image refs for container scanner |
 | `source_targets` | list[string] | `[]` | Git repo paths or URLs for source scanner |
-| `codesign_targets` | list[string] | `[]` | LDAP URLs for code-signing certificate discovery (e.g. `ldap://dc.corp.com:389`) |
-| `codesign_search_base` | string | `null` | LDAP search base DN for `userCertificate` discovery (e.g. `dc=corp,dc=com`) |
-| `codesign_timeout` | int | `10` | Per-connection timeout in seconds for code-signing LDAP queries |
 
 > **Note:** See [Connector Guides](connectors/) for per-connector credential setup and least-privilege templates.
+
+### Connector disposition and reason tags (D-06, Phase 184.2)
+
+Every `enable_*` line in the shipped `quirk/config_template.yaml` carries an inline, closed-vocabulary
+reason tag as a trailing YAML comment, e.g.:
+
+```yaml
+enable_aws: false  # off: requires-credentials - needs AWS_ACCESS_KEY_ID or an IAM profile; a bare true attempts SDK client construction and credential lookup
+enable_jwt: true   # on: requires-targets - armed but inert until jwt_targets is populated below; the scan short-circuits on an empty target list
+```
+
+The tag always follows an `on:` or `off:` prefix that must agree with the flag's actual boolean
+value, and is one of five closed strings:
+
+- **`requires-credentials`** — the connector attempts real work the moment it is `true` (SDK
+  client construction, credential lookup, an authenticated API call). It ships `false` until you
+  supply the credentials it names.
+- **`requires-targets`** — the connector is target-guarded: with an empty `*_targets` list the
+  scan short-circuits and does nothing, so shipping it `true` is safe. It only starts scanning
+  once you populate its target list.
+- **`requires-extra-install`** — the connector needs an optional `pip install quirk[...]` extra
+  that is not bundled in `quirk-scanner[all]`. Setting the flag `true` without the extra installed
+  does not fail the scan; it emits a non-fatal `missing_extra` advisory finding instead (Phase 45
+  INSTALL-02).
+- **`probes-live-equipment`** — the connector sends unsolicited protocol traffic at OT/ICS
+  equipment that can disrupt production plant hardware. It requires explicit, informed opt-in.
+- **`not-a-connector`** — the field exists on `ConnectorsCfg` but does not gate a scanner by
+  itself; something else (a CLI flag, a scheduler safety check) actually drives the behavior. The
+  detail names that real driver.
+
+This vocabulary is machine-checked by `tests/test_config_connector_drift.py`, which fails if any
+`enable_*` line uses a tag outside this set, has a stale `on:`/`off:` prefix, or is missing a
+substantive (non-trivial) detail — so this table cannot silently rot out of sync with the shipped
+template.
+
+### Full 25-key connector disposition table
+
+| Field | Ships | Tag | Why |
+|-------|-------|-----|-----|
+| `enable_jwt` | `true` | `requires-targets` | target-guarded, inert until `jwt_targets` set |
+| `enable_container` | `true` | `requires-targets` | target-guarded, inert until `container_targets` set |
+| `enable_source` | `true` | `requires-targets` | target-guarded, inert until `source_targets` set |
+| `enable_dnssec` | `true` | `requires-targets` | target-guarded, no extras install needed at all |
+| `enable_saml` | `true` | `requires-targets` | target-guarded, inert until `saml_targets` set |
+| `enable_email` | `true` | `requires-targets` | already on via the `standard` profile; written explicitly so `false` now actually takes effect |
+| `enable_broker` | `true` | `requires-targets` | same as email; `broker_azure_namespaces`/`broker_sqs_regions` scope what gets probed |
+| `enable_kerberos` | `false` | `requires-extra-install` | `quirk[identity]` (impacket) is not in `[all]`; downgrades `cryptography` and breaks the TLS scanner |
+| `enable_smime` | `false` | `requires-extra-install` | target-guarded like the identity connectors, but shipped off because `quirk[adcs]` (ldap3) is not installed by default |
+| `enable_adcs` | `false` | `requires-extra-install` | ldap3 via `quirk[adcs]`; same pre-gate shape as S/MIME |
+| `enable_snmp` | `false` | `requires-extra-install` | needs `quirk[hw]` (pysnmp) plus a community string or v3 USM credentials |
+| `enable_aws` | `false` | `requires-credentials` | needs AWS credentials or an IAM profile |
+| `enable_azure` | `false` | `requires-credentials` | needs an Azure subscription id plus Key Vault URLs |
+| `enable_gcp` | `false` | `requires-credentials` | needs a GCP project id, application default credentials, and `quirk[cloud]` |
+| `enable_db` | `false` | `requires-credentials` | needs a scanner DB user/password; the default TLS port list already probes 5432/3306 at the TLS layer (D-05) |
+| `enable_s3` | `false` | `requires-credentials` | needs AWS credentials; requires `quirk[cloud]` |
+| `enable_blob` | `false` | `requires-credentials` | needs Azure storage credentials; requires `quirk[cloud]` |
+| `enable_k8s` | `false` | `requires-credentials` | needs kubeconfig or in-cluster credentials; requires `quirk[cloud]` |
+| `enable_vault` | `false` | `requires-credentials` | needs `VAULT_TOKEN`/`VAULT_ADDR`; the default TLS port list already probes 8200 at the TLS layer (D-05) |
+| `enable_modbus` | `false` | `probes-live-equipment` | unsolicited OT/ICS probing can disrupt production plant equipment |
+| `enable_bacnet` | `false` | `probes-live-equipment` | same rationale as Modbus |
+| `enable_nmap` | `false` | `not-a-connector` | driven by the `--discovery nmap` CLI flag, which overwrites this value at scan start |
+| `enable_authenticated_mode` | `false` | `not-a-connector` | driven by the credential CLI flags; the scheduler rejects any recurring config where this is `true` |
+| `enable_recurring_otics` | `false` | `not-a-connector` | a scheduler safety gate for recurring Modbus/BACnet probing, not a scanner toggle by itself |
+| `enable_codesign` | `false` | `not-a-connector` | driven entirely by the `--inventory-code-signing` CLI flag |
+
+Four fields are `not-a-connector`: `enable_nmap`, `enable_authenticated_mode`,
+`enable_recurring_otics`, and `enable_codesign` — real config fields whose values do not by
+themselves drive any scanner. Each is named above with the CLI flag or mechanism that actually
+controls its behavior.
+
+### Default TLS port list (D-04, widened v5.19 / Phase 184.2)
+
+The shipped template's `scan.ports_tls` now defaults to the same 17-port `CONSULTING_TLS_PORTS`
+list the CLI wizard and the dashboard's "Common TLS ports" scope already used — previously the
+template alone stayed on a narrower 3-port list whose third entry was itself a typo for `4433`:
+
+```
+443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200
+```
+
+To narrow this for a specific engagement, edit `scan.ports_tls` in your `config.yaml` directly —
+there is no separate CLI flag for it (the dashboard's port-scope selector, described later in this
+document, is a dashboard-only control and does not affect CLI-driven scans).
+
+**D-05 clarification:** `5432` (PostgreSQL), `3306` (MySQL), and `8200` (Vault) are already probed
+at the **TLS layer** by this port list, even though the credentialed `db` and `vault` connectors
+ship `false`. This is deliberate, not a contradiction — the TLS scanner still reports on the
+certificate/cipher posture of a database or Vault listener bound to those ports; only the
+*credentialed* connectors (which would additionally query the service for schema/secrets-level
+data) require you to opt in separately.
+
+### Per-surface connector coverage (D-16, recorded 2026-09-04 — deferred, not closed)
+
+Measured for Phase 184.2 as the starting baseline for a proposed future CLI↔UI configuration
+parity phase (not yet in `ROADMAP.md`):
+
+| Surface | Connector coverage |
+|---------|---------------------|
+| Config template (`quirk/config_template.yaml`) | 25 connector flags, all dispositioned |
+| CLI wizard (`quirk/interactive.py`) | 5 — `jwt`, `container`, `source`, `aws`, `azure` |
+| Dashboard New Scan (`src/dashboard/src/pages/scan-new.tsx`) | 0 connector toggles; 1 non-connector toggle (`enable_nmap`, a discovery driver — see the `not-a-connector` disposition above) |
+
+This is a real, measured gap between what the config file can express and what either the CLI
+wizard or the dashboard's New Scan page can set interactively. **Closing it is out of scope for
+this phase** — it is recorded here only as the quantified starting point for whichever future
+phase takes on CLI↔UI configuration parity.
 
 ### SNMPv3 Credentials (Phase 139, `[hw]` extras)
 
@@ -1167,7 +1285,7 @@ assessment:
 scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443, 8443, 9443, 10443, 11443, 12443, 8444, 8000, 2222, 5555]
+  ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]
   include_sni: true
   tls_enum_mode: fast                   # off|fast|deep
   fingerprint_timeout_seconds: 2
@@ -1186,10 +1304,15 @@ targets:
 connectors:
   enable_aws: false
   enable_azure: false
-  enable_windows_adcs: false
-  enable_jwt: false
-  enable_container: false
-  enable_source: false
+  enable_adcs: false
+  adcs_targets: []
+  adcs_search_base: null
+  adcs_user: null
+  adcs_password: null
+  adcs_timeout: 10
+  enable_jwt: true
+  enable_container: true
+  enable_source: true
   aws_region: "us-east-1"
   aws_profile: null
   azure_subscription_id: null

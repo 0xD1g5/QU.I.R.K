@@ -35,6 +35,37 @@ another file. The config has six top-level blocks: `assessment`, `scan`, `target
 by optional extras — enabling a flag whose extra is missing does **not** fail the run;
 it emits a `missing_extra` advisory finding (Phase 45 INSTALL-02).
 
+### 2.0 What a stock install scans out of the box (v5.19 — Phase 184.2)
+
+Running `quirk init` then `quirk --config config.yaml` with no further edits scans more than
+"nothing" — five connectors ship **armed but inert**, two ship **actively scanning**, and
+everything else ships **off with a stated reason**:
+
+- **Five target-guarded connectors are armed but inert:** `enable_jwt`, `enable_container`,
+  `enable_source`, `enable_dnssec`, `enable_saml` all ship `true`, but each short-circuits on an
+  empty target list — they do nothing until you populate `jwt_targets`, `container_targets`,
+  `source_targets`, `dnssec_targets`, or `saml_targets` respectively.
+- **Email and broker connectors (`enable_email`, `enable_broker`) are on.** This was already true
+  before this phase — the `standard` profile (the CLI default) auto-enables both whenever they
+  are unset — but it was previously unstated in the shipped config file itself. Writing them
+  explicitly as `true` in the template does not change scan behavior; it makes the value
+  authoritative, so setting either to `false` now genuinely disables it (previously it did not).
+- **Everything else ships `false`**, each with an inline reason: credentials required (AWS,
+  Azure, GCP, database, S3, Blob, Kubernetes, Vault), an optional extras package required
+  (Kerberos, S/MIME, AD CS, SNMP), or the connector probes live OT/ICS equipment and needs
+  explicit opt-in (Modbus, BACnet).
+- **The default TLS port list widened from 3 ports to 17** — `scan.ports_tls` now matches the
+  same `CONSULTING_TLS_PORTS` set the CLI wizard and the dashboard's "Common TLS ports" scope
+  already used. This means a stock scan now also TLS-probes ports commonly used by PostgreSQL,
+  MySQL, and Vault (5432, 3306, 8200) — at the TLS layer only, independent of whether the
+  credentialed `db`/`vault` connectors are enabled.
+
+**To narrow the out-of-the-box posture for an engagement:** edit `connectors.enable_email` /
+`enable_broker` to `false` if you don't want those probed, and edit `scan.ports_tls` directly to
+shrink the port list. See [`docs/configuration.md`](configuration.md) § "Connectors Block" for
+the full 25-key disposition table (which flag means what, and why it ships the value it does) and
+§ "Default TLS port list" for the complete 17-port list.
+
 ### 2.1 Generate a starter config — `quirk init`
 
 Run `quirk init` to scaffold a starter `config.yaml` in the current directory. The
