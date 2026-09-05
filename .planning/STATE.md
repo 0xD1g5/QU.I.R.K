@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-03-PLAN.md
+stopped_at: Completed 184.3-06-PLAN.md
 last_updated: "2026-09-05T17:58:31.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 34
-  percent: 51
+  completed_plans: 35
+  percent: 52
 ---
 
 # Project State
@@ -672,10 +672,20 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 7 of 11 complete (02, 03, 04, 05, 08 done; 06, 07, 09-11 not yet started — 08 is wave 1,
+Plan: 8 of 11 complete (02, 03, 04, 05, 06, 08 done; 07, 09-11 not yet started — 08 is wave 1,
 depends_on: [], executed independently of/in parallel with the serialization-boundary and
 frontend-consumer-migration work)
-Status: 184.3-03 complete (2026-09-05) — all 8 hand-rolled `.isoformat()` route call sites
+Status: 184.3-06 complete (2026-09-05) — the five component-level timestamp sites
+(ScanDateBadge, ScanSelector, VendorTrendRow, LifecycleEventList, LifecycleEventRow) migrated
+onto `lib/datetime.ts`; `ScanDateBadge.test.tsx` rewritten with a TZ-pinned SC-2 wall-clock proof
+(revert-and-fail demonstrated live: reverting to the old `toLocale*` body fails the new test with
+"expected ... to contain 'EDT'"); `ScanSelector.test.tsx` is net-new, closing the SC-4 sibling-
+drift gap with a TZ-pinned test that opens the Radix listbox via user-event and asserts rendered
+option text. Full frontend suite 33 files/208 tests passing, lint/build both exit 0. No a11y
+baseline named as stale (grep found no baseline referencing ScanDateBadge/ScanSelector by name).
+See 184.3-06-SUMMARY.md.
+
+Previously, 184.3-03 complete (2026-09-05) — all 8 hand-rolled `.isoformat()` route call sites
 (serialization path (b): hardware_drift.py, jobs.py, qramm.py, schedules.py, trends.py, scan.py)
 now route through `stamp_utc_iso` from plan 02's `_timestamp_utils.py`; `scan.py`'s two identity
 sites (`:1350` prefix-LIKE key, `:1671` `response_scan_id`) left byte-unchanged with an in-place
