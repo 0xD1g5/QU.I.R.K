@@ -1316,6 +1316,13 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
                 continue
         # Phase 75-02 D-05 (WR-05): legacy keys stay parsed-datetime derived
         # (microsecond-truncated) rather than TZ-fragile strftime strings.
+        # identity, not instant (SCORE-03/D-05): this key becomes
+        # ScanSession.scan_id below for pre-scan_run_id rows — must stay
+        # byte-unchanged, never routed through stamp_utc_iso. Found by
+        # 184.3-09's run-time source-scan gate; plan 03's hand-derived
+        # enumeration of scan.py identity sites did not include it
+        # (CLAUDE.md TOOL-04 precedent — a hand-derived list is not a
+        # safeguard).
         key = row_run_id or row_ts.replace(microsecond=0).isoformat(sep=" ")
         prev = groups.get(key)
         if prev is None:
