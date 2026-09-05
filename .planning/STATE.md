@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
-status: complete
-stopped_at: Phase 184.3 complete and verified (11 of 11 plans)
-last_updated: "2026-09-05T21:07:15.000Z"
+status: planning
+stopped_at: Phase 184.4 added to roadmap, awaiting discuss-phase
+last_updated: "2026-09-05T21:23:25.000Z"
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 5
   total_plans: 39
   completed_plans: 39
-  percent: 63
+  percent: 56
 ---
 
 # Project State

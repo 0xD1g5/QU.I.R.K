@@ -133,6 +133,7 @@ since they were first recorded.
 - [x] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so a client can be told why the confidence number moved (there is no historical confidence data to migrate — every live surface recomputes from stored endpoints). Gating: this metric decides the confidence rating on every client deliverable. (completed 2026-09-04)
 - [x] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed. (completed 2026-09-05)
 - [x] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **COMPLETE (2026-09-05). All 11 plans done; verified 6/6 success criteria, all evidence DERIVED at verification time — see 184.3-VERIFICATION.md. 1 of 5 human-verify checks (live cert calendar-day-shift) DEFERRED with cited substitute coverage (datetime.test.ts:39) — vacuous against available data, see 184.3-VALIDATION.md.**
+- [ ] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable.
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
@@ -448,6 +449,51 @@ Plans:
 - [x] 184.3-09-PLAN.md — pytest AST source-scan gate over `quirk/dashboard/api/**` + `quirk/reports/**` with a validated disposition ledger (D-03, D-05, D-16)
 - [x] 184.3-10-PLAN.md — vitest run-time source scan for argument-bearing `new Date(` (D-09)
 - [x] 184.3-11-PLAN.md — `docs/report-interpretation.md` §18 + `CONVENTIONS.md` §Timestamps, Obsidian syncs, UAT Series 184.3, phase note, VALIDATION sign-off (D-07, D-15)
+
+### Phase 184.4: Rating Band Severity Floor
+
+**Goal**: A successful scan always yields a report. The readiness band and the report congruence guard stop asserting contradictory invariants.
+**Depends on**: Nothing
+**Requirements**: (to be assigned during discuss-phase — supersedes BACK-89)
+**Success Criteria** (what must be TRUE):
+
+  1. A scan scoring >= 85 with one open CRITICAL finding **produces a report**. **Reproduced
+     2026-09-05** (Phase 184.2 UAT-184.2-05, chaos lab, `127.0.0.1`): score 89/100 EXCELLENT with a
+     CRITICAL `TLS certificate expired` on port 9443 halted with
+     `Report generation halted: executive headline 'EXCELLENT' is inconsistent with 1 CRITICAL
+     finding(s).` The scan succeeded and `findings-*.json` / `technical-findings-*.md` were written;
+     only the exec-headline path died, taking HTML/PDF/DOCX/CBOM/scorecard with it.
+
+  2. The fix is on the PRODUCER, not the guard. `_check_congruence()`
+     (`quirk/reports/content_model.py:469`) must NOT be weakened or removed — Phase 98 built it
+     fail-closed deliberately (`tests/test_congruence_guard.py`, TRANS-03 / D-06) so a
+     "GOOD over 7 CRITICAL" headline is structurally impossible. `_rating()`
+     (`quirk/intelligence/scoring.py:95`) gains a severity floor so the guard becomes **unreachable
+     in normal operation rather than load-bearing**.
+
+  3. The two contracts are proven to agree, not assumed to. A test walks the full band x severity
+     matrix and asserts every band `_rating()` can emit is one `_check_congruence()` accepts.
+     Derived from the two modules' own thresholds at run time — not a hand-copied table that can
+     drift, per this project's standing derive-don't-enumerate rule.
+
+  4. Severity's existing score contribution is understood and stated. `scoring.py:155` already folds
+     `HIGH + CRITICAL` into a weighted, per-category-capped agility input, but the contribution
+     cannot cross a band threshold (hence 89/100 with a CRITICAL open). The phase decides whether
+     the floor replaces, supplements, or re-weights that path — and says which, rather than
+     stacking a second mechanism silently.
+
+  5. Not a regression from Phase 184.2, and the roadmap says so. A client with an expired
+     certificate on plain 443 hits the identical wall under the old 3-port `[443, 8443, 4443]`
+     default; 184.2's widening only raises the encounter rate. That phase's six plans touch neither
+     scoring nor reporting.
+
+  6. BACK-89 is closed by reference. Its investigation questions (a)-(d) at
+     `.planning/milestones/v5.0-ROADMAP.md:845` are answered or explicitly dispositioned, and the
+     empty backlog dir `.planning/backlog/999.82-executive-summary-score-vs-severity-consistency/`
+     is resolved — it went unseen for ~3.5 months because it was cited by no REQUIREMENTS file and
+     never reached `HORIZON.md`.
+
+**Source**: `.planning/todos/pending/rating-band-critical-floor-halts-reports.md`
 
 ### Phase 185: a11y Baseline Environment
 
