@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-05-PLAN.md
-last_updated: "2026-09-05T17:47:15.000Z"
+stopped_at: Completed 184.3-08-PLAN.md
+last_updated: "2026-09-05T17:53:15.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 32
+  completed_plans: 33
   percent: 50
 ---
 
@@ -672,9 +672,22 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 5 of 11 complete (02, 04, 05 done; 03, 06-11 not yet started — 04 and 05 are wave 1,
-depends_on: [], executed independently of/in parallel with the serialization-boundary work)
-Status: 184.3-05 complete — src/dashboard/src/lib/datetime.ts created, the single module owning
+Plan: 6 of 11 complete (02, 04, 05, 08 done; 03, 06, 07, 09-11 not yet started — 08 is wave 1,
+depends_on: [], executed independently of/in parallel with the serialization-boundary and
+frontend-consumer-migration work)
+Status: 184.3-08 complete — a labeled-UTC "Scan completed" field added to all four report
+renderer paths (executive markdown, technical markdown, HTML, DOCX), derived once in
+quirk/reports/writer.py (_scan_completed_at, MAX of endpoint.scanned_at) and distinct from the
+pre-existing generated_at ("Generated") field. Shared SCAN_COMPLETED_AT_UNKNOWN marker/formatter
+means a report with no derivable scan instant never silently substitutes the render time
+(T-184.3-30). DOCX's ambiguous "Date:" label retired to "Generated:" (T-184.3-31); a matching
+pre-existing HTML cover-block mislabel ("Scan Date" showing generated_at) found and fixed the same
+way (Rule 1 auto-fix, not in the plan's stated interfaces). 6 new tests across
+test_html_report.py/test_docx_report.py/test_report_render_parity.py, all selectable via
+`-k timestamp`. Plan 11 owes docs/report-interpretation.md coverage of this new field. See
+184.3-08-SUMMARY.md.
+
+184.3-05 complete — src/dashboard/src/lib/datetime.ts created, the single module owning
 frontend timestamp display policy (D-08): toDate/formatScanDateTime/formatDateTimeShort/
 formatInstantDate/formatDateOnly/formatRelative, built on Intl.DateTimeFormat with
 timeZoneName: "short" for D-12's zone label and a hard-coded timeZone: "UTC" in formatDateOnly for
