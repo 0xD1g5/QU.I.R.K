@@ -11,6 +11,7 @@ all inspector calls below.
 import pathlib
 import unittest
 
+import yaml
 from sqlalchemy import create_engine
 from sqlalchemy import inspect as sa_inspect
 
@@ -247,49 +248,59 @@ class TestIdentityInfra(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def test_config_template_has_identity_section(self):
-        """quirk/config_template.yaml must contain a commented identity
-        connectors subsection with all six identity fields.
+        """quirk/config_template.yaml must contain an identity connectors
+        subsection: the three enable_* flags (kerberos, saml, dnssec) are
+        LIVE, D-06-tagged YAML per Phase 184.2's D-07 one-dialect rule --
+        `enable_kerberos` ships False (no `quirk[identity]` in `quirk[all]`),
+        `enable_saml`/`enable_dnssec` ship True (target-guarded, Group B).
+        Their `*_targets` sub-keys remain commented examples underneath.
 
-        RED because: config_template.yaml currently ends after the
-        intelligence section; no identity block exists.
+        Dialect-aware: parses the `connectors:` mapping via `yaml.safe_load`
+        for the enable_* values (a substring-`in`-source check cannot tell a
+        live key from a commented one, which is precisely the blindness
+        Phase 184.2 removes) and keeps a text-level check only for the
+        still-commented `*_targets` example lines.
         """
-        source = pathlib.Path("quirk/config_template.yaml").read_text(encoding="utf-8")
+        template_path = pathlib.Path("quirk/config_template.yaml")
+        source = template_path.read_text(encoding="utf-8")
+        data = yaml.safe_load(source)
+        connectors = data["connectors"]
 
-        self.assertIn(
-            "enable_kerberos",
-            source,
-            "config_template.yaml missing enable_kerberos -- "
-            "add identity connectors section per D-09",
+        self.assertIs(
+            connectors["enable_kerberos"],
+            False,
+            "config_template.yaml enable_kerberos must be False -- "
+            "quirk[identity] (impacket) is not installed by quirk[all]",
         )
-        self.assertIn(
-            "enable_saml",
-            source,
-            "config_template.yaml missing enable_saml -- "
-            "add identity connectors section per D-09",
+        self.assertIs(
+            connectors["enable_saml"],
+            True,
+            "config_template.yaml enable_saml must be True -- "
+            "target-guarded Group B connector per D-01/D-17",
         )
-        self.assertIn(
-            "enable_dnssec",
-            source,
-            "config_template.yaml missing enable_dnssec -- "
-            "add identity connectors section per D-09",
+        self.assertIs(
+            connectors["enable_dnssec"],
+            True,
+            "config_template.yaml enable_dnssec must be True -- "
+            "target-guarded Group B connector per D-01/D-17",
         )
         self.assertIn(
             "kerberos_targets",
             source,
-            "config_template.yaml missing kerberos_targets -- "
-            "add identity connectors section per D-09",
+            "config_template.yaml missing the commented kerberos_targets "
+            "example sub-key",
         )
         self.assertIn(
             "saml_targets",
             source,
-            "config_template.yaml missing saml_targets -- "
-            "add identity connectors section per D-09",
+            "config_template.yaml missing the commented saml_targets "
+            "example sub-key",
         )
         self.assertIn(
             "dnssec_targets",
             source,
-            "config_template.yaml missing dnssec_targets -- "
-            "add identity connectors section per D-09",
+            "config_template.yaml missing the commented dnssec_targets "
+            "example sub-key",
         )
 
 
