@@ -132,7 +132,7 @@ since they were first recorded.
 - [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
 - [x] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so a client can be told why the confidence number moved (there is no historical confidence data to migrate — every live surface recomputes from stored endpoints). Gating: this metric decides the confidence rating on every client deliverable. (completed 2026-09-04)
 - [x] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed. (completed 2026-09-05)
-- [ ] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs.
+- [ ] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **All 11 plans complete (2026-09-05); 1 of 5 human-verify checks DEFERRED with cited substitute coverage — see 184.3-VALIDATION.md. Checkbox intentionally left unflipped pending a NN-VERIFICATION.md phase-close report (gsd-verifier), per this repo's ARTIFACT-01/02/03 phase-close gate.**
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
@@ -447,7 +447,7 @@ Plans:
 - [x] 184.3-08-PLAN.md — labeled-UTC scan instant added to the executive/technical/HTML/DOCX paths, distinct from `generated_at` (D-16b)
 - [x] 184.3-09-PLAN.md — pytest AST source-scan gate over `quirk/dashboard/api/**` + `quirk/reports/**` with a validated disposition ledger (D-03, D-05, D-16)
 - [x] 184.3-10-PLAN.md — vitest run-time source scan for argument-bearing `new Date(` (D-09)
-- [ ] 184.3-11-PLAN.md — `docs/report-interpretation.md` §18 + `CONVENTIONS.md` §Timestamps, Obsidian syncs, UAT Series 184.3, phase note, VALIDATION sign-off (D-07, D-15)
+- [x] 184.3-11-PLAN.md — `docs/report-interpretation.md` §18 + `CONVENTIONS.md` §Timestamps, Obsidian syncs, UAT Series 184.3, phase note, VALIDATION sign-off (D-07, D-15)
 
 ### Phase 185: a11y Baseline Environment
 

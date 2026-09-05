@@ -185,7 +185,7 @@ rather than inherited from its original report — two had drifted since they we
   either enable it, or state in the template why it ships off. Silence is what this requirement
   removes.
 
-- [ ] **SCORE-03**: timestamps mean the same thing end to end. **Measured and reproduced
+- [x] **SCORE-03**: timestamps mean the same thing end to end. **Measured and reproduced
   2026-09-04.** The backend stores **naive UTC** — `datetime.now(timezone.utc).replace(tzinfo=None)`
   is the deliberate house pattern (`merge/scan.py:186`, `otics_cadence.py:61`,
   `notify/dispatcher.py` x5) — and the API serializes it **without an offset**:
@@ -215,6 +215,24 @@ rather than inherited from its original report — two had drifted since they we
 
   Fixing this is a **client-credibility** issue, not cosmetic: a report timestamped four hours off
   cannot be reconciled against a client's own logs during an engagement.
+
+  **Closed 2026-09-05 (Phase 184.3, plans 184.3-01 through 184.3-11).** API responses carry an
+  explicit `+00:00` offset (`UTCDateTime`/`stamp_utc_iso()`,
+  `quirk/dashboard/api/_timestamp_utils.py`); `quirk/` has zero `datetime.utcnow()` calls and the
+  36 `tests/` sites are migrated; the frontend routes every timestamp render through
+  `src/dashboard/src/lib/datetime.ts`; `/print` and all four report renderers state a labeled-UTC
+  scan instant (`Scan Completed`) distinct from the render instant (`Generated`); two run-time
+  source-scan gates (`tests/test_timestamp_serialization_gate.py`,
+  `new-date-argument-guard.test.ts`) lock the convention in. The 184.3-11 Task 3 human-verify
+  checkpoint confirmed 4 of 5 cross-surface behaviors live (dashboard badge, scan selector,
+  `/print`, report exports). The 5th — a live certificate-expiry calendar-day comparison — is
+  **DEFERRED**, not fixed: the live DB's certificates all expire midday UTC, which makes that
+  specific manual check vacuous by construction regardless of correctness; substitute coverage is
+  the real, executing, TZ-pinned test at `src/dashboard/src/lib/__tests__/datetime.test.ts:39`. A
+  separate, pre-existing, out-of-phase-scope defect (dashboard certificate view renders phantom
+  rows for failed TLS handshakes, `quirk/dashboard/api/routes/scan.py:1656-1669`) was found during
+  this closure and is tracked separately in STATE.md Deferred Items — not part of this
+  requirement's scope and not blocking its closure.
 
 - [ ] **DRIFT-03**: a11y baselines are generated in the environment that enforces them. **33
   baselines were generated on macOS on 2026-08-27 in a single batch; the gate runs on Linux CI;
@@ -255,7 +273,7 @@ rather than inherited from its original report — two had drifted since they we
 | DRIFT-02 | TBD | Pending |
 | SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
 | SCORE-02 | 184.2-01, 184.2-02, 184.2-03, 184.2-04, 184.2-05, 184.2-06 | Complete |
-| SCORE-03 | TBD | Pending |
+| SCORE-03 | 184.3-01, 184.3-02, 184.3-03, 184.3-04, 184.3-05, 184.3-06, 184.3-07, 184.3-08, 184.3-09, 184.3-10, 184.3-11 | Complete (closed 2026-09-05; 1 manual leg DEFERRED with cited substitute coverage) |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |
 | TRIAGE-02 | TBD | Pending |

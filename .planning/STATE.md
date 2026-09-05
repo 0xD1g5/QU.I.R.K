@@ -671,10 +671,17 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 9 of 11 complete (02, 03, 04, 05, 06, 07, 08, 09, 10 done; 11 not yet started — 08 is wave 1,
-depends_on: [], executed independently of/in parallel with the serialization-boundary and
-frontend-consumer-migration work)
+Phase: 184.3 (timestamp-correctness) — ALL PLANS COMPLETE (2026-09-05), AWAITING VERIFICATION (NN-VERIFICATION.md not yet produced by gsd-verifier; ROADMAP.md phase checkbox intentionally left unflipped per this repo's ARTIFACT-01/02/03 phase-close gate)
+Plan: 11 of 11 complete (01-11 all done). 184.3-11's Task 3 blocking human-verify checkpoint
+confirmed 4 of 5 cross-surface manual steps live (dashboard badge, scan selector, `/print`, report
+exports); the 5th (live cert-expiry calendar-day check) is DEFERRED with cited substitute coverage
+(`src/dashboard/src/lib/__tests__/datetime.test.ts:39`) since the live DB's certificates all expire
+midday UTC, making that specific manual check vacuous by construction. `184.3-VALIDATION.md` is
+signed off (`nyquist_compliant: true`, `status: complete`). SCORE-03 closed by hand in
+REQUIREMENTS.md (not via `requirements mark-complete`), with the deferred leg named in the
+requirement text. A separate, pre-existing, out-of-phase-scope defect (dashboard certificate view
+renders phantom rows for failed TLS handshakes) was found during the gate and recorded in Deferred
+Items above, not fixed.
 Status: 184.3-10 complete (2026-09-05) — `src/dashboard/src/components/__tests__/new-date-argument-guard.test.ts`,
 the vitest run-time source-scan gate (the frontend twin of plan 09's pytest gate) over
 `src/dashboard/src/**/*.{ts,tsx}` for argument-bearing `new Date(` calls. No-argument clock reads
@@ -1678,6 +1685,14 @@ Found at Phase 172 close (2026-08-29):
 **Last re-triaged:** 2026-08-29 (Phase 172 close — see rows above)
 
 ---
+
+Found at Phase 184.3 close (2026-09-05), during plan 184.3-11's Task 3 human-verify gate:
+
+| Category | Item | Status |
+|----------|------|--------|
+| defect (184.3) | Dashboard certificate view renders phantom rows for failed TLS handshakes — `quirk/dashboard/api/routes/scan.py:1656-1669`'s `CertItem` filter is `ep.protocol.upper() == "TLS"` only, with no `cert_subject`/`scan_error` gate | open — **pre-existing, not a 184.3 regression** (verified: all `184.3-*` commits touch zero files under `quirk/scanner/`; the filter `git blame`s to Phase 5, `922809cb`). 44 of 237 `protocol='TLS'` rows DB-wide (18.6%) have `scan_error` set and all `cert_*` NULL; these render as em-dash certificate rows, suppressing the honest "No TLS certificates discovered" empty state (`certificates.tsx:29-33`) whenever a real cert coexists, and reach the `/print` client deliverable via the same unfiltered array (`print.tsx:453` → `PrintCerts`). `_cert_expiry_key` maps NULL expiry to `datetime.max`, sorting phantoms to the bottom, which is why this stayed hidden. Suggested fix: gate on `and (ep.cert_subject or ep.cert_not_after)`, and surface excluded endpoints separately as "TLS ports probed, no certificate retrieved" via a `tls_blocker_reason` field. Not fixed in Phase 184.3 (out of scope — no `184.3-*` plan touches the scanner or this route filter). Candidate for a future phase. |
+| uat_gap (184.3) | 184.3-11 Task 3's live certificate-expiry calendar-day manual check could not be performed against the live DB (all certs expire midday UTC, making the check vacuous by construction even if completed) | **closed via honest DEFERRED disposition, not a gap** — `UAT-184.3-07` in `docs/UAT-SERIES.md` cites the real, currently-passing substitute test `src/dashboard/src/lib/__tests__/datetime.test.ts:39`, which exercises the exact midnight-UTC boundary the live check exists to catch. `184.3-VALIDATION.md` signed off (`nyquist_compliant: true`) on this basis. No further action needed unless the live DB later gains a certificate expiring near a local-midnight boundary, at which point the live check becomes performable and should be run. |
+| measurement-methodology | Grouping `crypto_endpoints` by `scanned_at` fragments every scan run (4,989 distinct values vs 4 distinct `scan_run_id`s; 10,069 of 10,143 rows predate the `scan_run_id` column) and produces false "zero endpoints" readings for the newest scan | note for future ad hoc analysis — `quirk/dashboard/api/routes/scan.py:1316` already groups by `scan_run_id` first; any future manual DB query or analysis script should do the same. Not a defect in shipped code, purely an investigation-methodology note. |
 
 Acknowledged and deferred at the **v5.17 milestone close (2026-09-01)**, per the pre-close
 `gsd-sdk query audit-open` sweep plus an explicit re-triage of every item carried in this section:
