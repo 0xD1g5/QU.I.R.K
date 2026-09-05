@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-09-PLAN.md
+stopped_at: Completed 184.3-10-PLAN.md
 last_updated: "2026-09-05T18:45:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 37
+  completed_plans: 38
   percent: 53
 ---
 
@@ -672,10 +672,22 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 8 of 11 complete (02, 03, 04, 05, 06, 07, 08, 09 done; 10-11 not yet started — 08 is wave 1,
+Plan: 9 of 11 complete (02, 03, 04, 05, 06, 07, 08, 09, 10 done; 11 not yet started — 08 is wave 1,
 depends_on: [], executed independently of/in parallel with the serialization-boundary and
 frontend-consumer-migration work)
-Status: 184.3-09 complete (2026-09-05) — `tests/test_timestamp_serialization_gate.py`, the
+Status: 184.3-10 complete (2026-09-05) — `src/dashboard/src/components/__tests__/new-date-argument-guard.test.ts`,
+the vitest run-time source-scan gate (the frontend twin of plan 09's pytest gate) over
+`src/dashboard/src/**/*.{ts,tsx}` for argument-bearing `new Date(` calls. No-argument clock reads
+are auto-exempt by argument count; `lib/datetime.ts` is exempt by identity; any other
+argument-bearing site needs the `DISPOSITION_MARKER` comment or a validated `DISPOSITIONS` ledger
+entry — currently empty. 15 tests (4 real-tree + 11 synthetic) all green; full frontend suite
+34 files/225 tests passing; lint exits 0; no hard-coded file list. Live revert-and-restore against
+`ScanDateBadge.tsx` confirmed the gate fails and names the exact file:line before restoring
+byte-identical. This gate is NOT CI-enforced (`VITEST_TOOLCHAIN_AVAILABLE` is False in the
+`Linux Full Suite` job — Node/npm is never installed for `src/dashboard/`), stated explicitly in
+the file's preamble. See 184.3-10-SUMMARY.md.
+
+Previously, 184.3-09 complete (2026-09-05) — `tests/test_timestamp_serialization_gate.py`, the
 run-time AST source-scan gate over `quirk/dashboard/api/**` (bare-datetime Pydantic fields,
 unrouted `.isoformat()` calls) and `quirk/reports/**` (unlabeled `strftime()` calls, D-16), with
 a validated 6-entry `_DISPOSITIONS` ledger and 18 passing tests (4 real-gate + 14 synthetic
@@ -1760,8 +1772,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-05T17:34:07.634Z
-Stopped at: Completed 184.3-01-PLAN.md
+Last session: 2026-09-05T18:50:00.000Z
+Stopped at: Completed 184.3-10-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
