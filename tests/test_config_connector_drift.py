@@ -42,12 +42,15 @@ edits anywhere.
 """
 from __future__ import annotations
 
+import ast
 import dataclasses
 import subprocess
 from pathlib import Path
 
 import yaml
 
+import quirk.dashboard.api.routes.jobs
+import quirk.interactive
 from quirk.config import ConnectorsCfg
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -296,3 +299,161 @@ def test_new_unlisted_config_file_is_caught_without_list_edit(tmp_path: Path) ->
     assert problems, "derivation missed a brand-new file with no ledger entry"
     assert any("enable_totally_new_bogus" in p for p in problems), problems
 
+
+# ---------------------------------------------------------------------------
+# D-15: AST checks on the two programmatic config generators.
+# ---------------------------------------------------------------------------
+
+_CONNECTORS_DICT_TARGET_NAMES = {"connectors_block", "connectors"}
+
+
+def _scan_connector_ast(
+    tree: ast.AST, label: str, known_keys: set[str]
+) -> tuple[int, list[str]]:
+    """Walk *tree* (an `ast.parse` result) and return
+    `(occurrence_count, problems)` where *occurrence_count* is the number of
+    connector-key-shaped constructs found (regardless of validity) and
+    *problems* names every one that is NOT a real `ConnectorsCfg` field.
+
+    Three node shapes are checked, all via `ast.walk` -- never a regex over
+    source text, since `enable_` legitimately appears in docstrings/comments
+    in both target files and would false-positive on a text scan:
+
+    1. `ConnectorsCfg(...)` call sites -- every `ast.keyword.arg` (ALL
+       kwargs, not just `enable_*` ones -- a stale `container_target` typo
+       is the same bug class as a stale `enable_*` typo).
+    2. Dict literals assigned to a name in `{"connectors_block",
+       "connectors"}` -- every `ast.Constant` string key.
+    3. `<obj>.connectors.<attr> = ...` attribute assignments -- the `<attr>`
+       name (catches `quirk/interactive.py`'s
+       `cfg.connectors.enable_nmap = ...` post-construction write).
+    """
+    occurrences = 0
+    problems: list[str] = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            func = node.func
+            is_connectors_cfg_call = (
+                isinstance(func, ast.Name) and func.id == "ConnectorsCfg"
+            ) or (isinstance(func, ast.Attribute) and func.attr == "ConnectorsCfg")
+            if is_connectors_cfg_call:
+                for kw in node.keywords:
+                    if kw.arg is None:  # **kwargs spread -- nothing to name
+                        continue
+                    occurrences += 1
+                    if kw.arg not in known_keys:
+                        problems.append(
+                            f"{label}:{node.lineno}: ConnectorsCfg(...) kwarg "
+                            f"{kw.arg!r} is not a real ConnectorsCfg field"
+                        )
+
+        if isinstance(node, ast.Assign):
+            if isinstance(node.value, ast.Dict):
+                target_names = {
+                    t.id for t in node.targets if isinstance(t, ast.Name)
+                }
+                if target_names & _CONNECTORS_DICT_TARGET_NAMES:
+                    for key_node in node.value.keys:
+                        if isinstance(key_node, ast.Constant) and isinstance(
+                            key_node.value, str
+                        ):
+                            occurrences += 1
+                            if key_node.value not in known_keys:
+                                problems.append(
+                                    f"{label}:{node.lineno}: dict literal key "
+                                    f"{key_node.value!r} assigned to "
+                                    f"{'/'.join(sorted(target_names))} is not "
+                                    "a real ConnectorsCfg field"
+                                )
+
+            for target in node.targets:
+                if (
+                    isinstance(target, ast.Attribute)
+                    and isinstance(target.value, ast.Attribute)
+                    and target.value.attr == "connectors"
+                ):
+                    occurrences += 1
+                    if target.attr not in known_keys:
+                        problems.append(
+                            f"{label}:{node.lineno}: attribute assignment "
+                            f".connectors.{target.attr} is not a real "
+                            "ConnectorsCfg field"
+                        )
+
+    return occurrences, problems
+
+
+def _generator_modules() -> dict[str, Path]:
+    """The two programmatic config generators, derived from importable
+    module objects (not string paths) so a module move is caught at import
+    time rather than passing vacuously against a missing file."""
+    return {
+        "quirk/interactive.py": Path(quirk.interactive.__file__),
+        "quirk/dashboard/api/routes/jobs.py": Path(
+            quirk.dashboard.api.routes.jobs.__file__
+        ),
+    }
+
+
+def test_connector_ast_usage_in_generators_matches_real_fields() -> None:
+    """Every `ConnectorsCfg(...)` kwarg, every connectors dict-literal key,
+    and every `.connectors.<attr>` assignment in the two programmatic config
+    generators must name a real `ConnectorsCfg` field.
+
+    Convention-blindness guard: fails if either source file yields ZERO
+    occurrences -- a scan that cannot see its own target must not read as a
+    pass.
+    """
+    known_keys = _connector_field_names()
+    zero_occurrence_files: list[str] = []
+    all_problems: list[str] = []
+
+    for label, path in _generator_modules().items():
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=label)
+        occurrences, problems = _scan_connector_ast(tree, label, known_keys)
+        if occurrences == 0:
+            zero_occurrence_files.append(label)
+        all_problems.extend(problems)
+
+    assert not zero_occurrence_files, (
+        f"the AST scan collected ZERO connector occurrences from: "
+        f"{zero_occurrence_files} -- a scan that cannot see its own target "
+        "must not silently read as a pass. Check the node-shape predicates "
+        "in _scan_connector_ast against the current source."
+    )
+    assert not all_problems, all_problems
+
+
+def test_ast_gate_catches_synthetic_bogus_connectorscfg_kwarg() -> None:
+    """Self-test: a synthetic `ConnectorsCfg(enable_totally_bogus=True)` call
+    is reported by the same checking function used against the real
+    files."""
+    tree = ast.parse("cfg = ConnectorsCfg(enable_totally_bogus=True)\n")
+    occurrences, problems = _scan_connector_ast(
+        tree, "synthetic.py", _connector_field_names()
+    )
+    assert occurrences >= 1
+    assert any("enable_totally_bogus" in p for p in problems), problems
+
+
+def test_ast_gate_catches_synthetic_bogus_dict_literal_key() -> None:
+    """Self-test: a synthetic `connectors_block = {"enable_nope": False}` is
+    reported by the same checking function used against the real files."""
+    tree = ast.parse('connectors_block = {"enable_nope": False}\n')
+    occurrences, problems = _scan_connector_ast(
+        tree, "synthetic.py", _connector_field_names()
+    )
+    assert occurrences >= 1
+    assert any("enable_nope" in p for p in problems), problems
+
+
+def test_ast_gate_catches_synthetic_bogus_attribute_assignment() -> None:
+    """Self-test: a synthetic `cfg.connectors.enable_totally_fake = True` is
+    reported by the same checking function used against the real files."""
+    tree = ast.parse("cfg.connectors.enable_totally_fake = True\n")
+    occurrences, problems = _scan_connector_ast(
+        tree, "synthetic.py", _connector_field_names()
+    )
+    assert occurrences >= 1
+    assert any("enable_totally_fake" in p for p in problems), problems
