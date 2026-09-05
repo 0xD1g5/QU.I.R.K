@@ -441,7 +441,7 @@ Plans:
 - [x] 184.3-02-PLAN.md — `UTCDateTime` stamping contract in `quirk/dashboard/api/_timestamp_utils.py` + all 10 Pydantic datetime fields (D-01, D-02, D-03a)
 - [ ] 184.3-03-PLAN.md — the 8 hand-rolled `.isoformat()` route sites routed through the helper; 2 identity keys fenced off (D-03b, D-05)
 - [x] 184.3-04-PLAN.md — repo-wide `datetime.utcnow()` gate over `quirk/` + 35 `tests/` call-site migrations (D-04)
-- [ ] 184.3-05-PLAN.md — `src/dashboard/src/lib/datetime.ts` display-policy module + TZ-pinned unit tests (D-08, D-12, D-13)
+- [x] 184.3-05-PLAN.md — `src/dashboard/src/lib/datetime.ts` display-policy module + TZ-pinned unit tests (D-08, D-12, D-13)
 - [ ] 184.3-06-PLAN.md — 5 component sites migrated; `ScanDateBadge` TZ-pinned proof + net-new `ScanSelector.test.tsx` (D-10, SC-2, SC-4)
 - [ ] 184.3-07-PLAN.md — 10 page sites migrated; `/print` aligned to labeled UTC; date-only fields dispositioned (D-13)
 - [ ] 184.3-08-PLAN.md — labeled-UTC scan instant added to the executive/technical/HTML/DOCX paths, distinct from `generated_at` (D-16b)

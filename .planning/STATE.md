@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-04-PLAN.md
-last_updated: "2026-09-05T18:15:00.000Z"
+stopped_at: Completed 184.3-05-PLAN.md
+last_updated: "2026-09-05T17:47:15.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 31
+  completed_plans: 32
   percent: 50
 ---
 
@@ -672,9 +672,18 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 4 of 11 complete (02, 04 done; 03, 05-11 not yet started — 04 is wave 1, depends_on: [],
-executed independently of the serialization-boundary work)
-Status: 184.3-02 complete — UTCDateTime stamping contract live in quirk/dashboard/api/schemas.py,
+Plan: 5 of 11 complete (02, 04, 05 done; 03, 06-11 not yet started — 04 and 05 are wave 1,
+depends_on: [], executed independently of/in parallel with the serialization-boundary work)
+Status: 184.3-05 complete — src/dashboard/src/lib/datetime.ts created, the single module owning
+frontend timestamp display policy (D-08): toDate/formatScanDateTime/formatDateTimeShort/
+formatInstantDate/formatDateOnly/formatRelative, built on Intl.DateTimeFormat with
+timeZoneName: "short" for D-12's zone label and a hard-coded timeZone: "UTC" in formatDateOnly for
+the date-only calendar-day-shift guard. Proven under TZ=America/New_York and TZ=UTC pinned vitest
+tests (11/11 passing); toDate is the sole Date-constructor-with-argument call site
+(grep -c "new Date(" = 1), setting up plan 10's future source-scan gate. No consumer migration —
+that is plans 06/07's job. See 184.3-05-SUMMARY.md.
+
+184.3-02 complete — UTCDateTime stamping contract live in quirk/dashboard/api/schemas.py,
 all 10 Pydantic datetime fields re-typed, offset proven on the wire via a real TestClient GET
 /api/scans request with a demonstrated non-vacuous failure mode. Path (b) — the ~15 hand-rolled
 .isoformat() route sites — is 184.3-03's job, not yet started. See 184.3-02-SUMMARY.md.
