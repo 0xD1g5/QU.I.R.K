@@ -1,12 +1,10 @@
 import { useScanList } from "@/hooks/useScanList"
 import { Calendar } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { formatScanDateTime } from "@/lib/datetime"
 
 function formatBadgeLabel(scannedAt: string): string {
-  const date = new Date(scannedAt)
-  const formatted = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-  return `Last scan: ${formatted} ${time}`
+  return `Last scan: ${formatScanDateTime(scannedAt)}`
 }
 
 export function ScanDateBadge() {

@@ -7,12 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { formatScanDateTime } from "@/lib/datetime"
 
 function formatScanLabel(scannedAt: string, totalEndpoints: number): string {
-  const date = new Date(scannedAt)
-  const formatted = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-  return `${formatted} ${time} · ${totalEndpoints} ep`
+  return `${formatScanDateTime(scannedAt)} · ${totalEndpoints} ep`
 }
 
 export function ScanSelector() {

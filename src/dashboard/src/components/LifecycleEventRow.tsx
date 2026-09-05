@@ -9,6 +9,7 @@ import {
   Minus,
 } from "lucide-react"
 import type { HardwareDriftEventItem } from "@/types/api"
+import { formatInstantDate } from "@/lib/datetime"
 
 // Phase 156 HWLC-10/11 — one lifecycle event's row anatomy, per
 // 156-UI-SPEC.md §Event row anatomy. Left-to-right: type icon, event-type
@@ -101,7 +102,7 @@ export function LifecycleEventRow({
       </div>
 
       <div className="text-xs text-muted-foreground font-data shrink-0">
-        {new Date(event.detected_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
+        {formatInstantDate(event.detected_at)}
       </div>
     </div>
   )

@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { LifecycleEventRow } from "@/components/LifecycleEventRow"
+import { formatInstantDate } from "@/lib/datetime"
 
 // Phase 156 HWLC-10/11 — "Recent Lifecycle Changes" section, per
 // 156-UI-SPEC.md §Section anatomy. Structurally and visually distinct from
@@ -47,9 +48,7 @@ export function LifecycleEventList({
 }: LifecycleEventListProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
 
-  const lastScanLabel = lastScanDate
-    ? new Date(lastScanDate).toLocaleDateString("en-US", { dateStyle: "medium" })
-    : "the previous scan"
+  const lastScanLabel = lastScanDate ? formatInstantDate(lastScanDate) : "the previous scan"
 
   return (
     <Card className="border-l-4 border-l-[hsl(180_37%_47%)]">

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react"
 import { ShieldCheck } from "lucide-react"
 import type { VendorPqcTrendEventItem } from "@/types/api"
+import { formatInstantDate } from "@/lib/datetime"
 
 // Phase 161 HWLC-19 — one vendor PQC trend event's row anatomy, mirroring
 // LifecycleEventRow's flex-row layout (type icon, eyebrow label, identity,
@@ -42,7 +43,7 @@ export function VendorTrendRow({ event }: { event: VendorPqcTrendEventItem }) {
       </div>
 
       <div className="text-xs text-muted-foreground font-data shrink-0">
-        {new Date(event.detected_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
+        {formatInstantDate(event.detected_at)}
       </div>
     </div>
   )
