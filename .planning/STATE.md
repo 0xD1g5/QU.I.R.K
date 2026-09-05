@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184.2 planned (6 plans, checker passed)
-last_updated: "2026-09-05T01:11:03.090Z"
+stopped_at: Phase 184.2 executing (plan 1 of 6)
+last_updated: "2026-09-05T01:20:38.256Z"
 progress:
   total_phases: 8
   completed_phases: 3
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.2 — out of the box scanning posture
+**Current focus:** Phase 184.2 — out-of-the-box-scanning-posture
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,9 +671,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.2
-Plan: Not started
-Status: Ready to execute
+Phase: 184.2 (out-of-the-box-scanning-posture) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 184.2
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
 diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`
