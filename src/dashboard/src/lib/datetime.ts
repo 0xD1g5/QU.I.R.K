@@ -124,6 +124,24 @@ export function formatDateOnly(value: DateInput): string {
 }
 
 /**
+ * "09/04, 11:12" — compact numeric date+time with NO zone label, for dense chart-axis ticks
+ * (plan 184.3-07 Task 1). A zone token on every tick of a recharts `XAxis` is noise, not
+ * disambiguating information, so this deliberately omits the D-12 zone label that
+ * `formatScanDateTime`/`formatDateTimeShort` always carry. Returns `EMPTY_PLACEHOLDER` for
+ * null/undefined/unparseable input.
+ */
+export function formatAxisTick(value: DateInput): string {
+  const d = toDate(value)
+  if (!d) return EMPTY_PLACEHOLDER
+  return new Intl.DateTimeFormat(DEFAULT_LOCALE, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d)
+}
+
+/**
  * "just now" / "5 min ago" / "3 days ago" — falls back to `formatInstantDate` beyond ~30 days.
  * `now` defaults to the current clock reading (via `Date.now()`, not the Date constructor —
  * exempt from the D-09 no-argument-constructor gate regardless). Returns `EMPTY_PLACEHOLDER` for

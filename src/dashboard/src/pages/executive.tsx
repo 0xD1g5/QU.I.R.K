@@ -1,4 +1,5 @@
 import { useScanData } from "@/hooks/useScanData"
+import { formatInstantDate } from "@/lib/datetime"
 import { fetchApi } from "@/lib/api"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -201,7 +202,7 @@ export function ExecutivePage() {
   }))
 
   const scanDate = meta.scanned_at
-    ? new Date(meta.scanned_at).toLocaleDateString("en-US", { dateStyle: "medium" })
+    ? formatInstantDate(meta.scanned_at)
     : "Unknown"
 
   return (

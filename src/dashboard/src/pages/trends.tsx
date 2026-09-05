@@ -1,4 +1,5 @@
 import { useTrendsData } from "@/hooks/useTrendsData"
+import { formatDateTimeShort, formatAxisTick } from "@/lib/datetime"
 import { useTimelineData } from "@/hooks/useTimelineData"
 import type { SampleFinding } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
@@ -96,10 +97,7 @@ function SampleTable({ items }: { items: SampleFinding[] }) {
 }
 
 function formatTs(iso: string | null): string {
-  if (!iso) return "—"
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return "—"
-  return d.toLocaleString()
+  return formatDateTimeShort(iso)
 }
 
 export function TrendsPage() {
@@ -169,10 +167,7 @@ export function TrendsPage() {
             <LineChart data={chartDataAsc} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
               <XAxis
                 dataKey="session_ts"
-                tickFormatter={(v: string) => new Date(v).toLocaleString([], {
-                  month: "2-digit", day: "2-digit",
-                  hour: "2-digit", minute: "2-digit",
-                })}
+                tickFormatter={(v: string) => formatAxisTick(v)}
               />
               <YAxis domain={[0, 100]} tickCount={6} />
               <ChartTooltip
@@ -181,7 +176,7 @@ export function TrendsPage() {
                   const row = props.payload[0].payload as TimelineRow
                   return (
                     <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
-                      <div className="mb-1 font-medium">{new Date(row.session_ts).toLocaleString()}</div>
+                      <div className="mb-1 font-medium">{formatDateTimeShort(row.session_ts)}</div>
                       {props.payload.map((entry) => (
                         <div key={entry.dataKey} className="flex items-center gap-2">
                           <span className="inline-block h-2 w-2 rounded-sm" style={{ background: entry.color }} />

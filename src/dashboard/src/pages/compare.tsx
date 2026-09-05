@@ -1,6 +1,7 @@
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { useCompareData } from "@/hooks/useCompareData"
+import { formatDateTimeShort } from "@/lib/datetime"
 import { PageSpinner } from "@/components/PageSpinner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -112,12 +113,12 @@ export function ComparePage() {
         <CardContent className="grid grid-cols-2 gap-4 py-4 relative">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Scan A</p>
-            <p className="text-sm">{new Date(data.scan_a.scanned_at).toLocaleString()}</p>
+            <p className="text-sm">{formatDateTimeShort(data.scan_a.scanned_at)}</p>
             <p className="text-2xl font-semibold font-data">{data.scan_a.score}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Scan B</p>
-            <p className="text-sm">{new Date(data.scan_b.scanned_at).toLocaleString()}</p>
+            <p className="text-sm">{formatDateTimeShort(data.scan_b.scanned_at)}</p>
             <p className="text-2xl font-semibold font-data">{data.scan_b.score}</p>
           </div>
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">

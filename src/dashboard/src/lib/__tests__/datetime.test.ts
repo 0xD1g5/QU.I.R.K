@@ -14,6 +14,7 @@ import {
   formatDateTimeShort,
   formatInstantDate,
   formatDateOnly,
+  formatAxisTick,
   formatRelative,
   EMPTY_PLACEHOLDER,
 } from "../datetime"
@@ -104,5 +105,23 @@ describe("datetime.ts — formatDateTimeShort", () => {
     const out = formatDateTimeShort("2026-09-04T15:12:58+00:00")
     expect(out).toContain("11:12")
     expect(out).toMatch(/EDT/)
+  })
+})
+
+describe("datetime.ts — formatAxisTick (plan 184.3-07, dense chart-axis ticks)", () => {
+  beforeEach(() => vi.stubEnv("TZ", "America/New_York"))
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("renders a compact numeric date+time with NO zone label", () => {
+    const out = formatAxisTick("2026-09-04T15:12:58+00:00")
+    expect(out).toContain("11:12")
+    expect(out).not.toContain("3:12")
+    expect(out).not.toMatch(/EDT|UTC/)
+  })
+
+  it("returns the em-dash placeholder for null/undefined/unparseable input", () => {
+    expect(formatAxisTick(null)).toBe(EMPTY_PLACEHOLDER)
+    expect(formatAxisTick(undefined)).toBe(EMPTY_PLACEHOLDER)
+    expect(formatAxisTick("not-a-date")).toBe(EMPTY_PLACEHOLDER)
   })
 })

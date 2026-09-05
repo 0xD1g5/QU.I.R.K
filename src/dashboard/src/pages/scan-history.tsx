@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useScanList } from "@/hooks/useScanList"
+import { formatDateTimeShort } from "@/lib/datetime"
 import type { ScanSession } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -94,11 +95,11 @@ export function ScanHistoryPage() {
                     onCheckedChange={(checked: boolean | "indeterminate") =>
                       handleCheck(s.scan_id, checked === true)
                     }
-                    aria-label={`Select scan from ${new Date(s.scanned_at).toLocaleString()}`}
+                    aria-label={`Select scan from ${formatDateTimeShort(s.scanned_at)}`}
                   />
                 </TableCell>
                 <TableCell className="text-sm">
-                  {new Date(s.scanned_at).toLocaleString()}
+                  {formatDateTimeShort(s.scanned_at)}
                 </TableCell>
                 <TableCell className="text-sm">
                   {s.target ?? <span className="text-muted-foreground">—</span>}

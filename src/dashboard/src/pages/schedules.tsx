@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { useSchedules, type Schedule } from "@/hooks/useSchedules"
+import { formatDateTimeShort } from "@/lib/datetime"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -215,7 +216,7 @@ export function SchedulesPage() {
                   <TableCell className="py-3">
                     {schedule.next_run_at ? (
                       <span className="font-mono text-sm text-muted-foreground">
-                        {new Date(schedule.next_run_at).toLocaleString()}
+                        {formatDateTimeShort(schedule.next_run_at)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -225,7 +226,7 @@ export function SchedulesPage() {
                     <div className="flex flex-col gap-1">
                       {schedule.last_run_at ? (
                         <span className="font-mono text-sm text-muted-foreground">
-                          {new Date(schedule.last_run_at).toLocaleString()}
+                          {formatDateTimeShort(schedule.last_run_at)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
