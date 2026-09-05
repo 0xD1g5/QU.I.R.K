@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-02-PLAN.md
-last_updated: "2026-09-05T17:38:38.000Z"
+stopped_at: Completed 184.3-04-PLAN.md
+last_updated: "2026-09-05T18:15:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 30
+  completed_plans: 31
   percent: 50
 ---
 
@@ -672,11 +672,35 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 3 of 11
+Plan: 4 of 11 complete (02, 04 done; 03, 05-11 not yet started — 04 is wave 1, depends_on: [],
+executed independently of the serialization-boundary work)
 Status: 184.3-02 complete — UTCDateTime stamping contract live in quirk/dashboard/api/schemas.py,
 all 10 Pydantic datetime fields re-typed, offset proven on the wire via a real TestClient GET
 /api/scans request with a demonstrated non-vacuous failure mode. Path (b) — the ~15 hand-rolled
 .isoformat() route sites — is 184.3-03's job, not yet started. See 184.3-02-SUMMARY.md.
+
+**184.3-04 complete (2026-09-05):** repo-wide `datetime.utcnow()` gate + `tests/` migration
+(SCORE-03, D-04). `tests/test_qramm_router.py::test_no_utcnow_in_qramm_module` (scoped to
+`quirk/qramm/` only) renamed to `test_no_utcnow_anywhere_in_quirk`, rooted at the live
+`quirk.__file__` package path and scanned recursively. Deviation (Rule 1): the plan's
+directed text/comment-line filter (`line.lstrip().startswith("#")`) does not strip module
+docstrings, so widening the scan past `quirk/qramm/` would false-positive on the two Phase 51
+DEBT-01 documentation lines in `quirk/cli/qramm_cmd.py:9` / `quirk/cli/cve_cmd.py:10` (both
+contain the literal substring `"datetime.utcnow()"` as prose, verified directly). Replaced with
+an AST-based scan (`_find_utcnow_call_sites`, `ast.Call` nodes with `func.attr == "utcnow"`),
+which excludes docstring/comment text categorically with no allowlist. Proven non-vacuous via a
+synthetic `tmp_path` offender test and a live revert-then-restore against
+`quirk/cli/qramm_cmd.py` (failure message named the exact injected file:line, reverted clean).
+All 35 real `datetime.utcnow()` call sites across the 11 owned `tests/` files were migrated
+(re-derived at execution time, matched the plan's table exactly), each replaced per-site by
+reading the surrounding usage: DB-bound values got `datetime.now(timezone.utc)
+.replace(tzinfo=None)` (naive-UTC house pattern, D-01); formatted-string/relative-offset-only
+values got plain `datetime.now(timezone.utc)`. `tests/test_dashboard_api.py` (plan 02, owns 1
+site) and `quantum-chaos-enterprise-lab/jwt/**` (4 sites, deliberate weak scan targets, D-04)
+untouched — confirmed via `git diff --stat tests/` (11 files only) and
+`grep -rc "utcnow()" quantum-chaos-enterprise-lab/jwt/*/main.py` (still 1 each). 11-file targeted
+suite: 107 passed, 8 xfailed, unchanged before/after. Commits `935cddb3` (Task 1),
+`90717fa0` (Task 2). See `184.3-04-SUMMARY.md`.
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
 diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`
