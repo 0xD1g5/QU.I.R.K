@@ -371,22 +371,69 @@ Plans:
 
   3. The internal contradiction is resolved: `scan_run_id` on the same row IS timezone-aware
      (`2026-09-04T15:28:54.125544+00:00`) while `scanned_at` is naive, and scan logs stamp `Z`.
-     One row currently carries three conventions. Pick one and say so in writing.
+     One row currently carries three conventions.
 
-  4. All **15** frontend files calling `new Date(` on API timestamps are audited — not just
+     **Re-derived 2026-09-05 (D-06):** "pick one" is unsatisfiable while `scan_run_id` remains a
+     join key — the convention is one per FIELD KIND, not one per row. Every field denoting an
+     **instant** serializes as offset-bearing ISO-8601 with a literal `+00:00` suffix. **Identity
+     keys** (`scan_id`, `scan_run_id`) stay opaque, byte-exact strings, never parsed or
+     reformatted client-side, because they are join keys matched by `==` and prefix `LIKE` against
+     already-stored values and their failure mode is a silent empty result set, not an exception.
+     The exemption set is produced by the run-time source scan carrying an explicit
+     `identity, not instant` disposition, not by a hand-written allowlist. The original "one row
+     currently carries three conventions" observation was correct — "pick one" is what does not
+     survive contact with `scan_run_id`'s role as a join key.
+
+  4. All frontend files calling `new Date(` on API timestamps are audited — not just
      `ScanDateBadge`. Re-derive the list; do not inherit it. Any that render a backend timestamp
      carry the same defect, and a fix applied to one component while siblings keep the bug is the
      enumeration-drift failure this milestone exists to remove.
 
-  5. The **2** remaining `datetime.utcnow()` call sites are migrated. The API is deprecated and
+     **Re-derived 2026-09-05 (D-11):** drop the literal number. Restate as: every file the
+     run-time source scan identifies as calling `new Date(` with an argument under
+     `src/dashboard/src/` is audited. Measured 2026-09-05: 15 non-test source files carry 21
+     argument-bearing call sites, plus `src/dashboard/src/pages/__tests__/sensors-loading.test.tsx`
+     which the gate excludes structurally. This reconciles against CONTEXT.md D-11's figure of
+     **16** — both numbers are correct and measure different things: 16 non-test files call
+     `new Date(` at all, but `QRAMMProvider.tsx` makes only no-argument clock reads and is
+     auto-exempt under D-09, leaving 15 files / 21 argument-bearing sites as this criterion's true
+     audit scope. That the count shifts depending on whether one counts files or argument-bearing
+     call sites is itself why the criterion must stop naming a number — a criterion naming a count
+     is itself a stale enumeration, the exact failure the criterion exists to prevent.
+
+  5. Remaining `datetime.utcnow()` call sites are migrated. The API is deprecated and
      scheduled for removal; on this repo's Python 3.14 it raises `DeprecationWarning` under
      `-W error::DeprecationWarning` (verified 2026-09-04). Note the house pattern is deliberately
      `datetime.now(timezone.utc).replace(tzinfo=None)` to store naive UTC — if that pattern
      survives, criterion 1 must compensate at the serialization boundary; if it does not, the DB
-     migration is part of this phase's scope. Decide explicitly.
+     migration is part of this phase's scope.
+
+     **Re-derived 2026-09-05 (D-04):** `quirk/` contains **zero** `datetime.utcnow()` calls. The
+     two occurrences the original criterion counted are COMMENTS documenting the Phase 51 DEBT-01
+     ban at `quirk/cli/qramm_cmd.py:9` and `quirk/cli/cve_cmd.py:10` — not calls. Restate as: the
+     zero is locked by generalizing the existing QRAMM-scoped source scan (`tests/test_qramm_router.py:523`)
+     to all of `quirk/`, and the real occurrences live in `tests/`: 38 textual occurrences across
+     13 files, of which **36 across 12 files are actual calls** to be migrated to
+     `datetime.now(timezone.utc)` — the other 2 are the existing gate's own docstring and assertion
+     literal in `tests/test_qramm_router.py:523,531`, which are not calls. RESEARCH.md's own
+     "38 across 13" figure is itself one enumeration hop stale, and naming why is the point of the
+     criterion. `quantum-chaos-enterprise-lab/jwt/`'s 4 sites are deliberately out of scope (scan
+     targets, not product code). D-01 selects this criterion's stated branch: the naive-UTC storage
+     pattern survives, and criterion 1 compensates at the serialization boundary.
 
   6. Report surfaces (`/print`, PDF/DOCX export) are checked too — a deliverable handed to a client
      is where a wrong timestamp does real damage, and it renders through the same path.
+
+     **Re-derived 2026-09-05 (D-16a):** `quirk/reports/` renders NO scan timestamp at all today —
+     the only client-facing timestamp in the executive, technical, HTML and DOCX paths is
+     `generated_at` (`executive.py:125`, `technical.py:79`, `docx_renderer.py:367`,
+     `html_renderer.py:935`), which is report-BUILD time and already carries an explicit `UTC`
+     label via the `"%Y-%m-%d %H:%M UTC"` format string. The criterion as written was trivially
+     satisfied while concealing a real gap: a deliverable states when the DOCUMENT was produced
+     and never when the SCAN ran, so a client cannot reconcile it against their own logs. Restate
+     as: report output states BOTH the scan instant and the render instant, each zone-labeled and
+     unmistakably distinguishable from the other, on the executive, technical, HTML and DOCX
+     paths, with `/print` aligned to the same labeled-UTC form.
 **Plans**: 11 plans
 
 Plans:
