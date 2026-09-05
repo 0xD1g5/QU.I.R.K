@@ -8,13 +8,17 @@ shared-cache collisions in test_dashboard_trends.py).
 """
 from __future__ import annotations
 
+import ast
+import pathlib
 import uuid
-from typing import Tuple
+from typing import List, Tuple
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
+
+import quirk
 
 
 def _make_qramm_client() -> Tuple[TestClient, object]:
@@ -517,15 +521,85 @@ def test_list_questions_returns_120():
     assert numbers == list(range(1, 121))
 
 
-# ---------- DEBT-01 zero-warning gate (Plan 05 also covers this) ----------
+# ---------- DEBT-01 / SCORE-03 zero-utcnow gate (Phase 184.3 D-04) ----------
+#
+# Generalized 2026-09-05 from the QRAMM-only `test_no_utcnow_in_qramm_module`
+# gate (Phase 51 DEBT-01) to cover all of quirk/, per SCORE-03/D-04. quirk/'s
+# `datetime.utcnow()` count was independently VERIFIED zero on 2026-09-05; this
+# gate exists so that zero is locked derivationally (a run-time, package-
+# rooted, recursive AST scan) rather than remaining true by coincidence.
+#
+# Deviation from the plan as literally written (Rule 1 - bug, recorded in
+# 184.3-04-SUMMARY.md): the plan directed keeping the original text/comment-
+# stripping filter (`line.lstrip().startswith("#")`) unchanged. That filter
+# only strips lines beginning with a literal "#", so widening the scan root
+# to all of quirk/ (which the plan also directs) causes it to false-positive
+# on the two Phase 51 DEBT-01 *documentation* comments living inside module
+# DOCSTRINGS (not "#"-comments) at quirk/cli/qramm_cmd.py:9 and
+# quirk/cli/cve_cmd.py:10 -- both literally contain the substring
+# "datetime.utcnow()" as prose. Verified directly: the old filter leaves
+# "utcnow()" in `non_comment` for both files. An AST-based scan (matching
+# only genuine `ast.Call` nodes whose callee attribute is `utcnow`) excludes
+# docstring/comment/string-literal text categorically, with no allowlist and
+# no per-file exemption -- matching this phase's anti-allowlist gate design
+# (see threat T-184.3-12).
 
-def test_no_utcnow_in_qramm_module():
-    """DEBT-01: zero datetime.utcnow() in QRAMM module sources."""
-    import pathlib
-    import quirk.qramm
-    pkg_root = pathlib.Path(quirk.qramm.__file__).parent
-    for py in pkg_root.glob("*.py"):
-        text = py.read_text(encoding="utf-8")
-        # Filter comments before counting
-        non_comment = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
-        assert "utcnow()" not in non_comment, f"{py} contains datetime.utcnow()"
+
+def _find_utcnow_call_sites(root: pathlib.Path) -> List[str]:
+    """Recursively scan `root` for real `datetime.utcnow()` call sites.
+
+    Uses AST parsing rather than text/comment stripping so that docstrings,
+    comments, and string literals that merely mention "utcnow()" (e.g. the
+    Phase 51 DEBT-01 documentation comments in quirk/cli/qramm_cmd.py and
+    quirk/cli/cve_cmd.py) are never misidentified as real calls -- only a
+    genuine `ast.Call` node whose callee attribute is `utcnow` is reported.
+    Collects ALL offending sites before returning, so a caller can report a
+    multi-site regression in one assertion rather than one offender per run.
+    """
+    offenders: List[str] = []
+    for py in sorted(root.rglob("*.py")):
+        try:
+            text = py.read_text(encoding="utf-8")
+            tree = ast.parse(text, filename=str(py))
+        except (SyntaxError, UnicodeDecodeError):  # pragma: no cover - defensive
+            continue
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "utcnow"
+            ):
+                offenders.append(f"{py}:{node.lineno}")
+    return offenders
+
+
+def test_no_utcnow_anywhere_in_quirk():
+    """DEBT-01 / SCORE-03 (D-04): zero real `datetime.utcnow()` call sites
+    anywhere under quirk/. Generalizes the former QRAMM-only
+    `test_no_utcnow_in_qramm_module` gate (Phase 51) to the whole package,
+    per Phase 184.3's SCORE-03 requirement. quirk/'s zero was VERIFIED
+    2026-09-05 -- this gate locks that zero derivationally (root resolved
+    from the live imported `quirk` package at test-run time, scanned
+    recursively) instead of trusting it stays true by coincidence.
+    """
+    pkg_root = pathlib.Path(quirk.__file__).parent
+    offenders = _find_utcnow_call_sites(pkg_root)
+    assert not offenders, (
+        "datetime.utcnow() call(s) found under quirk/ (forbidden per DEBT-01 "
+        "and SCORE-03 -- use datetime.now(timezone.utc) instead):\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_utcnow_gate_detects_synthetic_offender(tmp_path):
+    """Non-vacuousness self-test: proves `_find_utcnow_call_sites` actually
+    detects a real `datetime.utcnow()` call rather than merely reporting
+    "no offenders" because nothing was scanned."""
+    offender_file = tmp_path / "synthetic_offender.py"
+    offender_file.write_text(
+        "from datetime import datetime\n\nx = datetime.utcnow()\n",
+        encoding="utf-8",
+    )
+    offenders = _find_utcnow_call_sites(tmp_path)
+    assert len(offenders) == 1
+    assert "synthetic_offender.py" in offenders[0]
