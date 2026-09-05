@@ -10,6 +10,11 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+# SCORE-03 / D-03a: the single stamping contract that attaches a UTC offset
+# to every instant-bearing field at the JSON serialization boundary only —
+# see quirk/dashboard/api/_timestamp_utils.py for the full rationale.
+from ._timestamp_utils import UTCDateTime
+
 
 class HealthResponse(BaseModel):
     status: str  # "ok"
@@ -84,7 +89,7 @@ class CertItem(BaseModel):
     port: int
     cert_subject: Optional[str] = None
     cert_issuer: Optional[str] = None
-    cert_not_after: Optional[datetime] = None
+    cert_not_after: Optional[UTCDateTime] = None
     cert_pubkey_alg: Optional[str] = None
     cert_pubkey_size: Optional[int] = None
     quantum_safety: Optional[str] = None   # Safe / At Risk / Vulnerable / Unknown
@@ -319,8 +324,8 @@ class VendorPqcTrendEventItem(BaseModel):
     event_type: str
     old_value: Optional[str] = None
     new_value: Optional[str] = None
-    detected_at: datetime
-    confirmed_at: Optional[datetime] = None
+    detected_at: UTCDateTime
+    confirmed_at: Optional[UTCDateTime] = None
 
 
 class VendorPqcTrendResponse(BaseModel):
@@ -415,7 +420,7 @@ class PartialFailureEntry(BaseModel):
 
 class ScanMeta(BaseModel):
     scan_id: str          # ISO timestamp of most recent scan
-    scanned_at: Optional[datetime] = None
+    scanned_at: Optional[UTCDateTime] = None
     total_endpoints: int
     total_findings: int
 
@@ -439,7 +444,7 @@ class ScanLatestResponse(BaseModel):
 
 class ScanSession(BaseModel):
     scan_id: str          # ISO timestamp string (matches ScanMeta.scan_id)
-    scanned_at: datetime
+    scanned_at: UTCDateTime
     total_endpoints: int
     # Phase 66 UI-HIST-01 additions — all Optional/default for backward compat with ScanSelector
     score: int = 0
@@ -484,8 +489,8 @@ class SeverityTransitionResponse(BaseModel):
 
 
 class TrendReportResponse(BaseModel):
-    current_session_ts: Optional[datetime] = None
-    previous_session_ts: Optional[datetime] = None
+    current_session_ts: Optional[UTCDateTime] = None
+    previous_session_ts: Optional[UTCDateTime] = None
     current_score: Optional[int] = None
     previous_score: Optional[int] = None
     score_delta: Optional[int] = None
@@ -525,7 +530,7 @@ def _zero_subscores() -> "SubScores":
 
 class CompareScanSummary(BaseModel):
     scan_id: str
-    scanned_at: datetime
+    scanned_at: UTCDateTime
     score: int
     subscores: SubScores = Field(default_factory=_zero_subscores)
 
@@ -652,7 +657,7 @@ class SensorRegistryItem(BaseModel):
     sensor_id: str
     segment: str
     sensor_version: Optional[str] = None
-    last_push_at: Optional[datetime] = None
+    last_push_at: Optional[UTCDateTime] = None
     status: str  # "current" | "stale" | "unknown"
 
 
@@ -664,7 +669,7 @@ class SensorRegistryResponse(BaseModel):
 class MergeLatestData(BaseModel):
     """Payload inside MergeLatestResponse when a merge_run row exists."""
     scan_id: Optional[str] = None
-    merged_at: Optional[datetime] = None
+    merged_at: Optional[UTCDateTime] = None
     score: Optional[int] = None
     endpoint_count: int = 0
     sensor_count: int = 0
