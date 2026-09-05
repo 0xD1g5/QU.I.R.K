@@ -2,13 +2,18 @@
 
 **Version:** 5.18.0
 **Last Updated:** 2026-09-05 (v5.19 Phase 184.3 — Timestamp Correctness, plan 184.3-11
-documentation/UAT/validation close-out: Series 184.3 added (UAT-184.3-01..06; 6 PASS) for SCORE-03
-— API `+00:00` offsets on real routes, badge/selector zone-labeled render (TZ-pinned), `/print`
-fixed-UTC source presence (D-13), all four report paths render both `Scan Completed` and
-`Generated` distinctly with a negative unknown-marker test, a calendar-day-shift regression test
-for date-only fields, and both run-time source-scan gates (backend AST, frontend regex) proven
-non-vacuous by live revert-then-restore. Three cases additionally await a pending human
-cross-surface visual confirmation tracked in `184.3-VALIDATION.md`. Earlier: v5.19 Phase 184.2 —
+documentation/UAT/validation close-out: Series 184.3 added (UAT-184.3-01..07; 6 PASS, 1 SKIP/
+DEFERRED) for SCORE-03 — API `+00:00` offsets on real routes, badge/selector zone-labeled render
+(TZ-pinned, human-confirmed live), `/print` fixed-UTC (D-13, human-confirmed live), all four report
+paths render both `Scan Completed` and `Generated` distinctly with a negative unknown-marker test
+(human-confirmed live against a real generated report), a calendar-day-shift regression test for
+date-only fields, and both run-time source-scan gates (backend AST, frontend regex) proven
+non-vacuous by live revert-then-restore. The 184.3-11 Task 3 human-verify checkpoint confirmed 4 of
+5 manual steps live; the 5th (live cert-expiry calendar-day check) is `DEFERRED` with a cited,
+currently-passing substitute test (`UAT-184.3-07`) since the live DB fixtures make that specific
+check vacuous by construction. A separate, pre-existing, out-of-phase-scope dashboard
+certificate-view defect (phantom rows for failed TLS handshakes) was found during this gate and
+recorded, not fixed. Earlier: v5.19 Phase 184.2 —
 Out-of-the-Box Scanning Posture, plan
 184.2-06 phase-gate close-out: Series 184.2 added (UAT-184.2-01..05; 5 PASS) for SCORE-02 — all
 25 `enable_*` connector flags live and D-06-tagged in the shipped template, the derived D-09/D-10/
@@ -22911,11 +22916,12 @@ cd src/dashboard && npx vitest run \
 vacuous mount.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-05  **Tester:** Automated (184.3-06 plan execution)
+**Date:** 2026-09-05  **Tester:** Automated (184.3-06 plan execution) + Human (184.3-11 Task 3 gate)
 **Notes:** 184.3-06-SUMMARY.md records the revert-and-observe-failure check was executed (not
 assumed) for `ScanDateBadge.test.tsx`. Live confirmation that the rendered badge matches the
-*operator's own* wall clock in a real browser is a separate, pending human check — see
-`184.3-VALIDATION.md`'s Manual-Only Verifications.
+*operator's own* wall clock in a real browser, and that the scan selector shows the same instant
+and zone as the badge, was performed at the 184.3-11 Task 3 human-verify checkpoint and **PASSED**
+— see `184.3-VALIDATION.md`'s Manual-Only Verifications.
 
 ---
 
@@ -22942,13 +22948,14 @@ grep -n "D-13" src/dashboard/src/pages/print.tsx
 comment are both present at the scan-date render site.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-05  **Tester:** Automated (184.3-07 plan execution, source inspection)
+**Date:** 2026-09-05  **Tester:** Automated (184.3-07 plan execution, source inspection) + Human
+(184.3-11 Task 3 gate)
 **Notes:** No dedicated vitest render test exists for `/print`'s scan-date output; this case is a
 source-presence check, not a rendered-DOM assertion. Live visual agreement between `/print` and the
-PDF/DOCX/HTML exports for the same real scan is tracked as a pending human check in
-`184.3-VALIDATION.md`'s Manual-Only Verifications — `docs/report-interpretation.md`'s note on this
-repo's render tests asserting presence, not appearance, is exactly why this case does not claim
-more than source presence.
+PDF/DOCX/HTML exports for the same real scan was confirmed at the 184.3-11 Task 3 human-verify
+checkpoint and **PASSED** — see `184.3-VALIDATION.md`'s Manual-Only Verifications —
+`docs/report-interpretation.md`'s note on this repo's render tests asserting presence, not
+appearance, is exactly why this case's own automated steps do not claim more than source presence.
 
 ---
 
@@ -22982,13 +22989,18 @@ python -m pytest tests/test_html_report.py tests/test_docx_report.py \
 `test_scan_completed_timestamp_unknown_not_substituted_with_generated_time`.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-05  **Tester:** Automated (184.3-08 plan execution)
+**Date:** 2026-09-05  **Tester:** Automated (184.3-08 plan execution) + Human (184.3-11 Task 3 gate)
 **Notes:** The DOCX cover's ambiguous `Date:` label was renamed to `Generated:` (T-184.3-31) and
 the HTML cover block's pre-existing `Scan Date` mislabel (a Rule 1 auto-fix found during Task 2,
 not named in the plan's own `<interfaces>` block) was corrected to `Generated` with a new `Scan
 Completed` row added above it — see 184.3-08-SUMMARY.md. Live visual confirmation that the `Scan
-Completed` value matches what `/print` shows for the same scan is a pending human check tracked in
-`184.3-VALIDATION.md`'s Manual-Only Verifications.
+Completed` value matches what `/print` shows for the same scan, and that both PDF/DOCX/HTML exports
+show distinct `Scan Completed`/`Generated` values each ending in `UTC`, was confirmed at the
+184.3-11 Task 3 human-verify checkpoint and **PASSED**. Corroborating artifact:
+`output/jobs/c07d2520-2a8c-4e88-9d8f-e804c0640f1e/report-20260905-202556.html` (generated
+2026-09-05 16:25:56 local, after this plan's 13:51-13:54 local commits) — contains both `Scan
+Completed` (cover block) and `Scan completed | 2026-09-05 20:25 UTC` (summary table) alongside
+`Generated`, grep-verified. See `184.3-VALIDATION.md`'s Manual-Only Verifications.
 
 ---
 
@@ -23059,16 +23071,62 @@ overstated, per CLAUDE.md's requirement.
 
 ---
 
-**Series 184.3 disposition.** 6 of 6 cases are `[x] PASS`, all proven via the automated pytest/
-vitest suites and direct source inspection (grep) rather than a live browser session: `UAT-184.3-01`
-(API `+00:00` offsets on real routes), `UAT-184.3-02` (badge/selector TZ-pinned zone-labeled
-render), `UAT-184.3-03` (`/print` fixed-UTC source presence), `UAT-184.3-04` (all four report paths
-render both `Scan Completed` and `Generated`, distinctly, with a negative unknown-marker test),
-`UAT-184.3-05` (calendar-day-shift regression test for date-only fields), `UAT-184.3-06` (both
-source-scan gates proven non-vacuous by live revert-then-restore). No `SKIP`/`GAP` dispositions
-were needed. Three of the six cases (`UAT-184.3-02`, `UAT-184.3-03`, `UAT-184.3-04`) additionally
-require a live, cross-surface *visual* confirmation this document does not claim to provide —
-`docs/report-interpretation.md` §18 and this repo's render-tests-assert-presence-not-appearance
-gotcha are exactly why. That confirmation is tracked as the pending 184.3-11 Task 3 human-
-verification checkpoint, recorded separately in `184.3-VALIDATION.md`'s Manual-Only Verifications
-table — not duplicated or pre-empted here.
+### UAT-184.3-07: Live certificate expiry calendar-day check — DEFERRED, substitute coverage cited
+
+**ID:** UAT-184.3-07
+**Title:** A live, human comparison of a certificate's expiry date on the dashboard certificates
+page against the same certificate's expiry in an HTML export, to confirm no calendar-day shift.
+**Maps to:** SCORE-03 (D-13 date-only carve-out)
+
+**What to test:** The one behavior in this series that requires a live human comparison rather
+than an automated proxy — this is the 184.3-11 Task 3 human-verify checkpoint's fifth step.
+
+**Steps:** Open the certificates page, note a certificate expiry date; compare to the same
+certificate's expiry in the HTML export for the same scan.
+
+**Pass Criteria:** the same calendar day in both surfaces.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-05  **Tester:** Human (184.3-11 Task 3 gate)
+**Notes:** **DEFERRED — covered by `src/dashboard/src/lib/__tests__/datetime.test.ts:39`**
+("formatDateOnly renders Jan 1, 2027 (not Dec 31, 2026) for a date-only field — the
+calendar-day-shift regression the fixed-UTC policy prevents"), a TZ-pinned (`America/New_York`)
+executing test asserting the exact midnight-UTC boundary case, backed by `formatDateOnly`'s
+hard-coded `timeZone: "UTC"` at `src/dashboard/src/lib/datetime.ts:122`. Two independent reasons
+this case could not be PASS'd live: (1) the human could not locate certificate expiry detail in
+the sessions available to them; (2) even if completed, the live check would have been **vacuous by
+construction** — every certificate in the live `quirk-output/quirk.db` expires at 15:17 UTC (11:17
+EDT), the same calendar day under any US time zone, so the live check could not have distinguished
+a correct `formatDateOnly` from a broken one regardless of outcome. Re-running the chaos lab would
+not fix this — those fixtures always expire midday. The cited test IS a real, currently-passing,
+executing test, not merely a file-existence check, and it specifically exercises the boundary this
+manual check exists to catch. See `184.3-VALIDATION.md`'s Manual-Only Verifications for the full
+disposition and the separate, pre-existing dashboard-certificate-view defect this investigation
+also surfaced (not a Phase 184.3 regression, not fixed in this phase).
+
+---
+
+**Series 184.3 disposition.** 6 of 7 cases are `[x] PASS`, one (`UAT-184.3-07`) is an honest
+`[x] SKIP` with a `DEFERRED` disposition and a real, currently-passing substitute test cited — not
+an uncovered gap. Six PASS cases proven via the automated pytest/vitest suites and direct source
+inspection (grep), then corroborated by the 184.3-11 Task 3 human-verify checkpoint where a live
+visual confirmation was additionally required: `UAT-184.3-01` (API `+00:00` offsets on real
+routes), `UAT-184.3-02` (badge/selector TZ-pinned zone-labeled render, human-confirmed live),
+`UAT-184.3-03` (`/print` fixed-UTC source presence, human-confirmed live), `UAT-184.3-04` (all four
+report paths render both `Scan Completed` and `Generated`, distinctly, with a negative
+unknown-marker test, human-confirmed live against a real generated report), `UAT-184.3-05`
+(calendar-day-shift regression test for date-only fields — the automated substitute, distinct from
+`UAT-184.3-07`'s live check), `UAT-184.3-06` (both source-scan gates proven non-vacuous by live
+revert-then-restore). The 184.3-11 Task 3 human-verify checkpoint confirmed steps 1-4 (dashboard
+badge, scan selector, `/print`, and the four report exports) and could not confirm step 5 (cert
+expiry calendar-day check) for the reasons recorded in `UAT-184.3-07` above — recorded in full in
+`184.3-VALIDATION.md`'s Manual-Only Verifications table, not duplicated here.
+
+A separate, pre-existing product defect — unrelated to Phase 184.3 — was found and verified while
+investigating `UAT-184.3-07`: the dashboard certificate view (`quirk/dashboard/api/routes/scan.py:
+1656-1669`) renders phantom certificate rows for endpoints whose TLS handshake failed (44 of 237
+`protocol='TLS'` rows DB-wide, 18.6%), suppressing the honest empty state and reaching the `/print`
+client deliverable via the same unfiltered array. Verified NOT a 184.3 regression (all `184.3-*`
+commits touch zero files under `quirk/scanner/`; the filter `git blame`s to Phase 5). Recorded in
+STATE.md Deferred Items and `184.3-VALIDATION.md` — not fixed in this phase, not a Series 184.3
+failure.
