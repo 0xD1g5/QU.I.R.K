@@ -45,11 +45,14 @@ everything else ships **off with a stated reason**:
   `enable_source`, `enable_dnssec`, `enable_saml` all ship `true`, but each short-circuits on an
   empty target list — they do nothing until you populate `jwt_targets`, `container_targets`,
   `source_targets`, `dnssec_targets`, or `saml_targets` respectively.
-- **Email and broker connectors (`enable_email`, `enable_broker`) are on.** This was already true
-  before this phase — the `standard` profile (the CLI default) auto-enables both whenever they
-  are unset — but it was previously unstated in the shipped config file itself. Writing them
-  explicitly as `true` in the template does not change scan behavior; it makes the value
-  authoritative, so setting either to `false` now genuinely disables it (previously it did not).
+- **Email and broker connectors (`enable_email`, `enable_broker`) are on, and unlike the five
+  above they are NOT inert.** Both scan every host in the general `targets:` block — there is no
+  dedicated email or broker target list gating them (`broker_azure_namespaces` /
+  `broker_sqs_regions` *add* cloud-broker probes rather than narrowing the host sweep). This was
+  already true before this phase: the `standard` profile (the CLI default) auto-enables both
+  whenever they are unset, and an explicit `false` has always been respected via the
+  `_user_set_fields` mechanism (Phase 72 D-02/WR-11). What changed here is only that the value is
+  now stated in the shipped config file instead of being implied by the profile.
 - **Everything else ships `false`**, each with an inline reason: credentials required (AWS,
   Azure, GCP, database, S3, Blob, Kubernetes, Vault), an optional extras package required
   (Kerberos, S/MIME, AD CS, SNMP), or the connector probes live OT/ICS equipment and needs

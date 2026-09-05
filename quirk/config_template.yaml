@@ -128,10 +128,10 @@ connectors:
   # vault_transit_mount: "transit"  # default transit mount path
   # vault_tls_verify: true          # set false for self-signed HTTPS Vault
   # -- Email scanner (Phase 32) --
-  enable_email: true  # on: requires-targets - already on by default via the standard profile; written explicitly so the value is authoritative and false actually takes effect
+  enable_email: true  # on: requires-targets - scans every host in the general `targets:` block above (NOT a dedicated email target list); already on by default via the standard profile, written explicitly so the value is authoritative
   # -- Broker scanner (optional, requires: pip install quirk[kafka,redis]) --
   # Broker scanner (Phase 33 — D-10/D-01)
-  enable_broker: true  # on: requires-targets - same as email above; broker_azure_namespaces / broker_sqs_regions scope what actually gets probed
+  enable_broker: true  # on: requires-targets - like email, scans every host in the general `targets:` block above; broker_azure_namespaces / broker_sqs_regions ADD cloud-broker probes, they do not narrow the host sweep
   # Azure Service Bus namespaces — repeatable; produces probes against {namespace}.servicebus.windows.net:5671
   # broker_azure_namespaces: []
   # AWS SQS regions — repeatable; produces probes against sqs.{region}.amazonaws.com:443

@@ -353,8 +353,8 @@ template.
 | `enable_source` | `true` | `requires-targets` | target-guarded, inert until `source_targets` set |
 | `enable_dnssec` | `true` | `requires-targets` | target-guarded, no extras install needed at all |
 | `enable_saml` | `true` | `requires-targets` | target-guarded, inert until `saml_targets` set |
-| `enable_email` | `true` | `requires-targets` | already on via the `standard` profile; written explicitly so `false` now actually takes effect |
-| `enable_broker` | `true` | `requires-targets` | same as email; `broker_azure_namespaces`/`broker_sqs_regions` scope what gets probed |
+| `enable_email` | `true` | `requires-targets` | scans every host in the general `targets:` block, not a dedicated email target list; already on via the `standard` profile, written explicitly so the value is authoritative |
+| `enable_broker` | `true` | `requires-targets` | like email, scans every host in the general `targets:` block; `broker_azure_namespaces`/`broker_sqs_regions` add cloud-broker probes rather than narrowing the host sweep |
 | `enable_kerberos` | `false` | `requires-extra-install` | `quirk[identity]` (impacket) is not in `[all]`; downgrades `cryptography` and breaks the TLS scanner |
 | `enable_smime` | `false` | `requires-extra-install` | target-guarded like the identity connectors, but shipped off because `quirk[adcs]` (ldap3) is not installed by default |
 | `enable_adcs` | `false` | `requires-extra-install` | ldap3 via `quirk[adcs]`; same pre-gate shape as S/MIME |
