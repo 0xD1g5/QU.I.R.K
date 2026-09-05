@@ -14,6 +14,7 @@ from quirk.dashboard.api.middleware.auth import require_auth
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 # RVW-002: share the report engine's tri-state chain-verification logic rather
@@ -504,7 +505,7 @@ def _derive_motion_findings(endpoints) -> list[MotionFinding]:
         tls_version = getattr(ep, "tls_version", None) or None
         cipher_suite = getattr(ep, "cipher_suite", None) or None
         cert_dt = getattr(ep, "cert_not_after", None)
-        cert_iso = cert_dt.isoformat() if cert_dt else None
+        cert_iso = stamp_utc_iso(cert_dt)
 
         plaintext = proto in BROKER_PLAIN
         starttls_warning = (port == 25 and proto == "SMTP-STARTTLS")
@@ -832,7 +833,7 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
             confidence = getattr(d, "confidence", "unknown") or "unknown"
             fp_method = getattr(d, "fingerprint_method", "unknown") or "unknown"
             eol_raw = getattr(d, "eol_date", None)
-            eol_iso = eol_raw.isoformat() if eol_raw is not None else None
+            eol_iso = stamp_utc_iso(eol_raw)
             host = getattr(d, "host", "") or ""
             port = getattr(d, "port", 0) or 0
 
@@ -1344,6 +1345,8 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             .first()
         )
         if job is None:
+            # identity, not instant (SCORE-03/D-05): prefix LIKE key against
+            # stored scan_run_id strings — must stay byte-unchanged, never stamped.
             ts_prefix = ts.isoformat()[:19]  # e.g. "2026-05-14T11:51:54"
             job = (
                 db.query(ScanJob)
@@ -1663,6 +1666,8 @@ def get_latest_scan(
     cbom_components = _derive_cbom(endpoints)
     hardware_devices = _derive_hw_components(db, latest_ts)   # Phase 134 CBOM-02
 
+    # identity, not instant (SCORE-03/D-05): scan_id the UI round-trips back via
+    # useScanData.ts:31 — must stay byte-unchanged, never stamped.
     response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
 
     # Phase 181 SURF-03: closure/burndown data is scan-scoped via
