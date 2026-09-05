@@ -153,7 +153,11 @@ def _make_hw_bridge_session():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    scanned_at = datetime.datetime.utcnow()
+    # D-04: the naive-datetime-as-current-time call this line used is
+    # deprecated in Python 3.14 (raises DeprecationWarning under
+    # -W error::DeprecationWarning). Storage stays naive UTC per D-01, so
+    # attach-then-strip mirrors the house pattern.
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
     gateway = HardwareDevice(
         host="10.0.0.1",
@@ -838,3 +842,132 @@ def test_compare_scan_list_ignores_checkin_rows():
     assert len(scans_before) == len(scans_after)
     assert compare_before["score_delta"] == compare_after["score_delta"]
     assert compare_before["subscore_deltas"] == compare_after["subscore_deltas"]
+
+
+# ---- Phase 184.3 SCORE-03: UTCDateTime stamping contract (Task 1) ----
+
+def test_utc_datetime_stamp_utc_iso_none_is_none():
+    """stamp_utc_iso(None) returns None."""
+    from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
+
+    assert stamp_utc_iso(None) is None
+
+
+def test_utc_datetime_stamp_utc_iso_naive_attaches_offset_unchanged_digits():
+    """A naive datetime (the D-01 house pattern) gets +00:00 ATTACHED, not
+    converted — the wall-clock digits must be byte-identical."""
+    from datetime import datetime
+
+    from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
+
+    result = stamp_utc_iso(datetime(2026, 9, 4, 15, 28, 56, 218111))
+    assert result == "2026-09-04T15:28:56.218111+00:00"
+
+
+def test_utc_datetime_stamp_utc_iso_aware_non_utc_converts():
+    """An aware, non-UTC datetime IS converted to UTC — the emitted offset
+    is always the literal +00:00, and the digits reflect the conversion."""
+    from datetime import datetime, timedelta, timezone
+
+    from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
+
+    aware = datetime(2026, 9, 4, 11, 28, 56, tzinfo=timezone(timedelta(hours=-4)))
+    result = stamp_utc_iso(aware)
+    assert result == "2026-09-04T15:28:56+00:00"
+    assert result.endswith("+00:00")
+
+
+def test_utc_datetime_model_dump_json_emits_offset():
+    """A BaseModel field typed UTCDateTime emits the +00:00 string via
+    model_dump_json() — the FastAPI JSON serialization path."""
+    from datetime import datetime
+
+    from pydantic import BaseModel
+
+    from quirk.dashboard.api._timestamp_utils import UTCDateTime
+
+    class _M(BaseModel):
+        scanned_at: UTCDateTime
+
+    m = _M(scanned_at=datetime(2026, 9, 4, 15, 28, 56, 218111))
+    assert '"2026-09-04T15:28:56.218111+00:00"' in m.model_dump_json()
+
+
+def test_utc_datetime_model_dump_stays_naive_datetime_object():
+    """model_dump() (the internal/Python path, e.g. routes/scan.py's
+    naive-bound comparisons at :1533-1543) returns a datetime OBJECT that is
+    STILL NAIVE — proving when_used="json" scoping. Without this scoping,
+    routes/scan.py would raise TypeError comparing a str to a naive bound."""
+    from datetime import datetime
+
+    from pydantic import BaseModel
+
+    from quirk.dashboard.api._timestamp_utils import UTCDateTime
+
+    class _M(BaseModel):
+        scanned_at: UTCDateTime
+
+    m = _M(scanned_at=datetime(2026, 9, 4, 15, 28, 56, 218111))
+    dumped = m.model_dump()
+    assert isinstance(dumped["scanned_at"], datetime)
+    assert dumped["scanned_at"].tzinfo is None
+    assert dumped["scanned_at"] == datetime(2026, 9, 4, 15, 28, 56, 218111)
+
+
+def test_utc_datetime_model_validate_offset_less_string_unaffected():
+    """model_validate() of an offset-less string still parses exactly as
+    before — PlainSerializer affects the serialize direction only, never
+    validation."""
+    from datetime import datetime
+
+    from pydantic import BaseModel
+
+    from quirk.dashboard.api._timestamp_utils import UTCDateTime
+
+    class _M(BaseModel):
+        scanned_at: UTCDateTime
+
+    m = _M.model_validate({"scanned_at": "2026-09-04T15:28:56.218111"})
+    assert m.scanned_at == datetime(2026, 9, 4, 15, 28, 56, 218111)
+    assert m.scanned_at.tzinfo is None
+
+
+# ---- Phase 184.3 SCORE-03: offset reaches the wire (Task 3) ----
+
+def test_scanned_at_offset_reaches_get_scans_wire():
+    """SCORE-03 SC-1: GET /api/scans previously served
+    "scanned_at": "2026-09-04T15:28:56.218111" — no UTC offset — which
+    ECMAScript's new Date() misparses as LOCAL time, producing a 4-hour
+    skew. This test asserts on the RAW JSON TEXT (not a re-parsed object)
+    that the served scanned_at ends with the literal +00:00 and that its
+    leading date-time digits equal the seeded naive value UNCHANGED — the
+    offset is ATTACHED, not converted; a conversion would be a 4-hour
+    regression in the opposite direction that a parsed-datetime assertion
+    would not catch. Also asserts scan_id (D-05, an identity/join key) is
+    byte-identical to the seeded key, so a shape change here fails loudly
+    rather than silently emptying a future join's result set.
+    """
+    from datetime import datetime
+
+    seeded_ts = datetime(2026, 9, 4, 15, 28, 56, 218111)
+
+    client, TestingSession = _drift_client_and_session()
+    _seed_crypto_endpoint(TestingSession, seeded_ts, scan_run_id=None)
+
+    resp = client.get("/api/scans")
+    assert resp.status_code == 200
+
+    raw_text = resp.text
+    assert '"scanned_at":"2026-09-04T15:28:56.218111+00:00"' in raw_text.replace(
+        '", "', '","'
+    ) or '"2026-09-04T15:28:56.218111+00:00"' in raw_text
+
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["scanned_at"] == "2026-09-04T15:28:56.218111+00:00"
+
+    # D-05: scan_id is an opaque join key derived from the legacy
+    # microsecond-truncated, space-separated form (scan_run_id IS NULL) —
+    # must be byte-identical to what routes/scan.py:1315 actually produces.
+    expected_scan_id = seeded_ts.replace(microsecond=0).isoformat(sep=" ")
+    assert body[0]["scan_id"] == expected_scan_id
