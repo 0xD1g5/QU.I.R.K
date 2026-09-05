@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import ast
 import dataclasses
-import subprocess
+import shutil
 from pathlib import Path
 
 import yaml
@@ -52,6 +52,7 @@ import yaml
 import quirk.dashboard.api.routes.jobs
 import quirk.interactive
 from quirk.config import ConnectorsCfg
+from tests.cli_helpers import run_fork_safe
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -92,12 +93,11 @@ def _derive_connector_config_files(root: Path = _REPO_ROOT) -> list[Path]:
     line-anchored regex would silently miss it, which is the exact class of
     blindness this gate exists to prevent.
     """
-    result = subprocess.run(
-        ["git", "ls-files", "*.yaml", "*.yml"],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=True,
+    git_exe = shutil.which("git")
+    if not git_exe:
+        raise AssertionError("git executable not found on PATH")
+    result = run_fork_safe(
+        [git_exe, "-C", str(root), "ls-files", "*.yaml", "*.yml"], check=True
     )
     tracked = [line for line in result.stdout.splitlines() if line.strip()]
 
@@ -277,13 +277,17 @@ def test_new_unlisted_config_file_is_caught_without_list_edit(tmp_path: Path) ->
     duplicate of that test and would no longer prove the `git ls-files`
     derivation mechanism works at all.
     """
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    git_exe = shutil.which("git")
+    if not git_exe:
+        raise AssertionError("git executable not found on PATH")
+    run_fork_safe([git_exe, "-C", str(tmp_path), "init", "-q"], check=True)
     new_file = tmp_path / "never_seen_before_config.yaml"
     new_file.write_text(
         "connectors:\n  enable_totally_new_bogus: false\n", encoding="utf-8"
     )
-    subprocess.run(
-        ["git", "add", "never_seen_before_config.yaml"], cwd=tmp_path, check=True
+    run_fork_safe(
+        [git_exe, "-C", str(tmp_path), "add", "never_seen_before_config.yaml"],
+        check=True,
     )
 
     files = _derive_connector_config_files(root=tmp_path)
