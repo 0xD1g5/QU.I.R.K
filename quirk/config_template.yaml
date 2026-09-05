@@ -34,7 +34,7 @@ targets:
 
 # -- Scan configuration ----------------------------------------------------
 scan:
-  ports_tls: [443, 8443, 4443]    # TLS ports to probe
+  ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]    # TLS ports to probe — the same 17-port CONSULTING_TLS_PORTS list quirk/interactive.py's CLI wizard and the dashboard's "Common TLS ports" scope already default to
   timeout_seconds: 10              # Connection timeout in seconds
   concurrency: 20                  # Concurrent scan workers
   include_sni: true                # Include SNI in TLS handshake
@@ -46,34 +46,60 @@ output:
 
 # -- Connectors ------------------------------------------------------------
 # Enable optional connectors to scan cloud KMS, JWT endpoints, containers, or source code.
+#
+# Every enable_* flag below is LIVE (none are commented out) and carries an
+# inline disposition tag of the form `# on|off: <reason-tag> - <detail>` so a
+# generated config states, for every connector, whether it will scan and why
+# (Phase 184.2 D-06/D-07/D-08). The reason-tag vocabulary is closed:
+# requires-credentials, requires-targets, requires-extra-install,
+# probes-live-equipment, not-a-connector. Target/credential sub-keys below
+# each flag remain commented examples — only the enable_* line itself is
+# live YAML.
 connectors:
-  enable_aws: false
-  aws_region: "us-east-1"
-  aws_profile: "default"
-  enable_azure: false
-  azure_subscription_id: ""
-  azure_keyvault_urls: []
-  enable_jwt: false
-  jwt_targets: []
-  enable_container: false
-  container_targets: []
-  enable_source: false
-  source_targets: []
+  enable_aws: false  # off: requires-credentials - needs AWS_ACCESS_KEY_ID or an IAM profile; a bare true attempts SDK client construction and credential lookup
+  # aws_region: "us-east-1"
+  # aws_profile: "default"
+  enable_azure: false  # off: requires-credentials - needs an Azure subscription id plus Key Vault URLs configured below
+  # azure_subscription_id: ""
+  # azure_keyvault_urls: []
+  enable_jwt: true  # on: requires-targets - armed but inert until jwt_targets is populated below; the scan short-circuits on an empty target list
+  # jwt_targets: []
+  enable_container: true  # on: requires-targets - armed but inert until container_targets is populated below; the scan short-circuits on an empty target list
+  # container_targets: []
+  enable_source: true  # on: requires-targets - armed but inert until source_targets is populated below; the scan short-circuits on an empty target list
+  # source_targets: []
   # -- Identity connectors (optional, requires: pip install quirk[identity]) --
-  # enable_kerberos: false
+  enable_kerberos: false  # off: requires-extra-install - quirk[identity] (impacket) is not installed by quirk[all]; it downgrades cryptography and breaks the TLS scanner
   # kerberos_targets:
   #   - "kdc.example.com"       # KDC hostname or IP (port 88, TCP with UDP fallback)
-  # enable_saml: false
+  enable_saml: true  # on: requires-targets - armed but inert until saml_targets is populated below; the scan short-circuits on an empty target list
   # saml_targets:
   #   - "https://idp.example.com/metadata.xml"  # SAML IdP metadata URL
-  # enable_dnssec: false
+  enable_dnssec: true  # on: requires-targets - armed but inert until dnssec_targets is populated below; needs no extras install to run at all
   # dnssec_targets:
   #   - "example.com"           # Domain name for DNSKEY / DS record queries
+  # -- S/MIME LDAP discovery scanner (optional, requires: pip install quirk[adcs]) --
+  enable_smime: false  # off: requires-extra-install - target-guarded like the identity connectors above, but shipped off because quirk[adcs] (ldap3) is not installed by default
+  # smime_targets: []
+  # smime_search_base: null
+  # smime_timeout: 10
+  # -- AD CS LDAP scanner (optional, requires: pip install quirk[adcs]) --
+  enable_adcs: false  # off: requires-extra-install - ldap3 via quirk[adcs]; the same pre-gate shape as the S/MIME connector directly above
+  # adcs_targets: []
+  # adcs_search_base: null
+  # adcs_user: null
+  # adcs_password: null
+  # adcs_timeout: 10
+  # -- Code-signing certificate inventory (driven by --inventory-code-signing) --
+  enable_codesign: false  # off: not-a-connector - driven entirely by the --inventory-code-signing CLI flag; this key changes zero scan behavior on its own
+  # codesign_targets: []
+  # codesign_search_base: null
+  # codesign_timeout: 10
   # -- GCP connector (optional, requires: pip install quirk[cloud]) --
-  # enable_gcp: false
+  enable_gcp: false  # off: requires-credentials - needs a GCP project id plus application default credentials, and quirk[cloud]
   # gcp_project_id: "my-gcp-project"
   # -- Database connector (optional, requires: pip install quirk[db]) --
-  # enable_db: false
+  enable_db: false  # off: requires-credentials - needs a scanner DB user and password; the default TLS port list already probes 5432 and 3306 at the TLS layer
   # pg_targets:
   #   - "localhost:5432"       # host:port of PostgreSQL instance
   # pg_scanner_user: "quirk_scanner"
@@ -83,11 +109,11 @@ connectors:
   # mysql_scanner_user: "quirk_scanner"
   # mysql_scanner_password: ""
   # -- Object storage connectors (optional, requires: pip install quirk[cloud]) --
-  # enable_s3: false
+  enable_s3: false  # off: requires-credentials - needs AWS credentials; requires quirk[cloud]
   # aws_endpoint_url: null            # override for MinIO/LocalStack testing
-  # enable_blob: false
+  enable_blob: false  # off: requires-credentials - needs Azure storage credentials; requires quirk[cloud]
   # -- Kubernetes secrets inspection (optional, requires: pip install quirk[cloud]) --
-  # enable_k8s: false
+  enable_k8s: false  # off: requires-credentials - needs kubeconfig or in-cluster credentials; requires quirk[cloud]
   # k8s_provider: ""              # "eks" | "gke" | "aks"
   # k8s_cluster_name: ""          # name of the managed cluster (single)
   # k8s_namespace: "default"      # namespace for secret type enumeration (K8S-02)
@@ -96,20 +122,24 @@ connectors:
   # gke_clusters: []              # [{name: my-gke, location: us-central1}]
   # aks_clusters: []              # [{name: my-aks, resource_group: rg}]
   # -- HashiCorp Vault connector (optional, requires: pip install quirk[cloud]) --
-  # enable_vault: false
+  enable_vault: false  # off: requires-credentials - needs VAULT_TOKEN and VAULT_ADDR; the default TLS port list already probes 8200 at the TLS layer
   # vault_addr: "http://localhost:8200"
   # vault_token: null               # defaults to VAULT_TOKEN env var
   # vault_transit_mount: "transit"  # default transit mount path
   # vault_tls_verify: true          # set false for self-signed HTTPS Vault
+  # -- Email scanner (Phase 32) --
+  enable_email: true  # on: requires-targets - already on by default via the standard profile; written explicitly so the value is authoritative and false actually takes effect
   # -- Broker scanner (optional, requires: pip install quirk[kafka,redis]) --
   # Broker scanner (Phase 33 — D-10/D-01)
-  # enable_broker: false
+  enable_broker: true  # on: requires-targets - same as email above; broker_azure_namespaces / broker_sqs_regions scope what actually gets probed
   # Azure Service Bus namespaces — repeatable; produces probes against {namespace}.servicebus.windows.net:5671
   # broker_azure_namespaces: []
   # AWS SQS regions — repeatable; produces probes against sqs.{region}.amazonaws.com:443
   # broker_sqs_regions: []
+  # -- Authenticated scanning mode (driven by credential CLI flags) --
+  enable_authenticated_mode: false  # off: not-a-connector - driven by the credential CLI flags; the scheduler rejects any recurring config where this is true
   # -- SNMP hardware fingerprinting (Phase 133 / 139, optional, requires: pip install quirk[hw]) --
-  # enable_snmp: false
+  enable_snmp: false  # off: requires-extra-install - needs quirk[hw] (pysnmp) plus a community string or v3 USM credentials configured below
   # snmp_community: "public"    # v1/v2c community string
   # Phase 139 SNMPV3-01 / D-01/D-02: per-host SNMPv3 USM credentials.
   # Keyed by BARE HOST (not host:port). auth_key_env/priv_key_env are the NAMES of
@@ -124,10 +154,15 @@ connectors:
   #     priv_key_env: "SNMP_V3_PRIV_KEY"    # os.environ["SNMP_V3_PRIV_KEY"] at scan time
   #     auth_protocol: "SHA256"             # richer allowlist honored, not narrowed to base SHA
   #     priv_protocol: "AES256"
+  # -- OT/ICS protocol fingerprinting (Phase 141, optional, requires: pip install quirk[hw]) --
+  enable_modbus: false  # off: probes-live-equipment - unsolicited OT/ICS probing can disrupt production plant equipment; explicit opt-in only
+  enable_bacnet: false  # off: probes-live-equipment - same rationale as the Modbus connector directly above; explicit opt-in only
   # OT/ICS recurring-probe safety gate (Phase 156 / HWLC-12): opt-in for SCHEDULED
   # Modbus/BACnet probing; a 168h (7-day) minimum cron cadence floor is enforced
   # regardless — see docs/configuration.md
-  enable_recurring_otics: false
+  enable_recurring_otics: false  # off: not-a-connector - a scheduler safety gate for recurring Modbus/BACnet probing, not a scanner toggle by itself
+  # -- Nmap discovery (driven by --discovery nmap) --
+  enable_nmap: false  # off: not-a-connector - driven by the --discovery nmap CLI flag, which overwrites this value at scan start; not a config-file control
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
