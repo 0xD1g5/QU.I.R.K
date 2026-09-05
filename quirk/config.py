@@ -1,10 +1,15 @@
 import dataclasses
+import logging
 import os
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import yaml
+
+# Phase 184.2 D-14: module-level logger for the unknown-connector-key warning
+# in config_from_dict (mirrors quirk/intelligence/confidence.py's idiom).
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -498,7 +503,19 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         exclude_ips=_as_str_list(targets_raw.get("exclude_ips")),
     )
 
-    conn_raw = {k: v for k, v in (raw.get("connectors") or {}).items()
+    _raw_connectors = raw.get("connectors") or {}
+    # Phase 184.2 D-14: warn (never raise) on each connector key the loader is
+    # about to silently drop, so a typo'd key produces a visible signal instead
+    # of an invisibly narrower scan. Same _KNOWN_CONNECTOR_KEYS frozenset the
+    # filter below uses — loader and gate can never disagree about what a valid
+    # key is. T-184.2-03: log the KEY only, never the value — connectors:
+    # legitimately holds vault_token / *_scanner_password / adcs_password /
+    # SNMPv3 credential structures.
+    for _unknown_key in sorted(set(_raw_connectors) - _KNOWN_CONNECTOR_KEYS):
+        _LOGGER.warning(
+            "%r is not a recognized connector option — ignored", _unknown_key,
+        )
+    conn_raw = {k: v for k, v in _raw_connectors.items()
                 if k in _KNOWN_CONNECTOR_KEYS}
     # Coerce broker list fields through _as_str_list to guard against scalar YAML values
     # (T-33-03: user-supplied namespace/region strings must be proper lists before hostname construction)
