@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-06-PLAN.md
-last_updated: "2026-09-05T17:58:31.000Z"
+stopped_at: Completed 184.3-07-PLAN.md
+last_updated: "2026-09-05T18:10:48.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 35
-  percent: 52
+  completed_plans: 36
+  percent: 53
 ---
 
 # Project State
@@ -672,10 +672,25 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 8 of 11 complete (02, 03, 04, 05, 06, 08 done; 07, 09-11 not yet started — 08 is wave 1,
+Plan: 9 of 11 complete (02, 03, 04, 05, 06, 07, 08 done; 09-11 not yet started — 08 is wave 1,
 depends_on: [], executed independently of/in parallel with the serialization-boundary and
 frontend-consumer-migration work)
-Status: 184.3-06 complete (2026-09-05) — the five component-level timestamp sites
+Status: 184.3-07 complete (2026-09-05) — the ten remaining page-level timestamp sites
+(scan-history, compare, schedules, trends, executive, print, sensors, certificates, motion,
+hardware) migrated onto `lib/datetime.ts`, leaving zero production `new Date(argument)` call
+sites anywhere in `src/dashboard/src` outside the module itself. `lib/datetime.ts` gained a new
+`formatAxisTick` export (zone-label-free, for trends.tsx's dense recharts XAxis ticks). `/print`
+now renders `formatScanDateTime(meta.scanned_at, { timeZone: "UTC" })` — labeled fixed UTC,
+matching the Python renderers' `"%Y-%m-%d %H:%M UTC"` convention (D-13) — instead of unlabeled
+browser-local. `cert_not_after`/`eol_date` (4 sites: print, certificates, motion, hardware) are
+dispositioned, not fixed, via `formatDateOnly` plus an inline `date-only, not an instant`
+comment — both fields remain `Optional[str]` in schemas.py, out of this phase's backend scope.
+Full frontend suite 33 files/210 tests passing, lint/build both exit 0. a11y: only 3 of the 10
+touched pages (certificates, motion, trends) have a committed baseline; all three currently record
+zero axe violations and this plan's changes are text-node-only, so no baseline is expected stale
+(not independently re-verified per D-15 — `--update-baselines` not run). See 184.3-07-SUMMARY.md.
+
+Previously, 184.3-06 complete (2026-09-05) — the five component-level timestamp sites
 (ScanDateBadge, ScanSelector, VendorTrendRow, LifecycleEventList, LifecycleEventRow) migrated
 onto `lib/datetime.ts`; `ScanDateBadge.test.tsx` rewritten with a TZ-pinned SC-2 wall-clock proof
 (revert-and-fail demonstrated live: reverting to the old `toLocale*` body fails the new test with
