@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
-status: planning
+status: executing
 stopped_at: Phase 184.4 context gathered
-last_updated: "2026-09-05T23:12:32.310Z"
+last_updated: "2026-09-05T23:55:26.062Z"
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 39
+  total_plans: 49
   completed_plans: 39
   percent: 56
 ---
@@ -670,6 +670,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `184.1-04-SUMMARY.md` for the full arithmetic and before/after evidence.
 
 ## Current Position
+
+Phase: 184.4 (rating-band-severity-floor) — PLANNED, ready to execute (2026-09-05). 10 plans across 6 waves; plan-checker returned VERIFICATION PASSED with 0 blockers and 2 warnings, both closed before this record was written. Requirements SCORE-04 / SCORE-05 adopted and covered; all of D-01..D-13 cited in plan `must_haves.truths`.
+Plan: 0 of 10 executed.
+
+Prior phase (retained for history):
 
 Phase: 184.3 (timestamp-correctness) — COMPLETE and VERIFIED (2026-09-05). 184.3-VERIFICATION.md: 6/6 success criteria MET, all evidence DERIVED at verification time. Full backend suite failing-node set unchanged from baseline ({test_skip_registry.py::test_no_unregistered_skips}); vitest 34 files / 225 tests green. ROADMAP.md phase checkbox flipped.
 Plan: 11 of 11 complete (01-11 all done). 184.3-11's Task 3 blocking human-verify checkpoint
