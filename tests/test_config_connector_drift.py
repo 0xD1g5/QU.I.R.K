@@ -794,3 +794,338 @@ def test_armed_extras_hazard_guard_is_caught() -> None:
     problems = _armed_extras_hazard_problems(tagged)
     assert problems, "D-18 guard failed to catch a synthetic armed-hazard field"
     assert any(hazardous_field in p for p in problems), problems
+
+
+# ---------------------------------------------------------------------------
+# D-13: marker-driven exception gate for lab configs that legitimately
+# diverge from the template (config.yaml, lab-registry.yaml as of
+# 2026-09-04). Reuses `_derive_connector_config_files()` for the file set --
+# no path literal, no second derivation -- and reads the exception list from
+# each file's own raw text, since `yaml.safe_load` discards comments.
+#
+# Comment grammar (documented here so a future editor can add an exception
+# without reading the parser below):
+#
+#   # quirk-lab-config: true
+#       Marker line, exact text, anywhere in the file. Declares this
+#       tracked config a chaos-lab working config rather than a shipped
+#       default. Required on any derived config file whose connectors:
+#       block diverges from quirk/config_template.yaml's.
+#
+#   # lab-only connector exceptions:
+#       Header line. Every line immediately following it (no gaps) that
+#       matches "#   <connector-key>: <reason>" is parsed as one exception
+#       entry; the first line that does not match that shape ends the
+#       block.
+#
+#   #   <connector-key>: <reason text>
+#       One entry per divergent key. <reason text> may be empty in the
+#       raw text (to exercise the empty-reason failure mode below) but a
+#       real entry must carry non-empty prose naming the chaos-lab profile
+#       or host the divergent value points at.
+#
+# A key counts as "divergent" for a given file when it is present in that
+# file's parsed connectors: block with a value that differs from (or is
+# simply absent from) the template's parsed connectors: block -- computed
+# fresh against the CURRENT template on every run, never a snapshot, which
+# is what makes the stale-entry direction below meaningful as the template
+# evolves.
+# ---------------------------------------------------------------------------
+
+_LAB_CONFIG_MARKER_RE = re.compile(r"^\s*#\s*quirk-lab-config:\s*true\s*$", re.MULTILINE)
+_EXCEPTION_HEADER_RE = re.compile(r"^\s*#\s*lab-only connector exceptions:\s*$")
+_EXCEPTION_ENTRY_RE = re.compile(r"^\s*#\s+([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)$")
+
+
+def _has_lab_config_marker(text: str) -> bool:
+    return bool(_LAB_CONFIG_MARKER_RE.search(text))
+
+
+def _parse_lab_exceptions(text: str) -> dict[str, str]:
+    """Return `{connector_key: reason}` parsed from the `# lab-only
+    connector exceptions:` comment block in *text*. A key with an empty
+    reason is still returned (with `reason == ""`) so the empty-reason
+    failure mode below has something real to catch -- swallowing it here
+    would silently convert an "empty reason" bug into an "undeclared
+    divergence" bug instead."""
+    lines = text.splitlines()
+    exceptions: dict[str, str] = {}
+    in_block = False
+    for line in lines:
+        if _EXCEPTION_HEADER_RE.match(line):
+            in_block = True
+            continue
+        if not in_block:
+            continue
+        match = _EXCEPTION_ENTRY_RE.match(line)
+        if match:
+            key, reason = match.group(1), match.group(2).strip()
+            exceptions[key] = reason
+        else:
+            in_block = False
+    return exceptions
+
+
+def _template_connectors_block() -> dict:
+    """Parse `quirk/config_template.yaml`'s `connectors:` block fresh on
+    every call -- never cached, never a snapshot -- so the D-13 gate always
+    diffs against the CURRENT template, which is what makes a stale
+    exception entry a meaningful failure as the template evolves."""
+    path = _REPO_ROOT / "quirk" / "config_template.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    connectors = data.get("connectors") if isinstance(data, dict) else None
+    return connectors if isinstance(connectors, dict) else {}
+
+
+def _file_connectors_block(path: Path) -> dict:
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    connectors = data.get("connectors") if isinstance(data, dict) else None
+    return connectors if isinstance(connectors, dict) else {}
+
+
+def _divergent_connector_keys(file_connectors: dict, template_connectors: dict) -> dict:
+    """Return the subset of *file_connectors* whose key is absent from, or
+    whose value differs from, *template_connectors*."""
+    return {
+        key: value
+        for key, value in file_connectors.items()
+        if key not in template_connectors or template_connectors[key] != value
+    }
+
+
+def _lab_exception_problems_for_file(
+    path: Path, label: str, template_connectors: dict
+) -> list[str]:
+    """Return D-13 problem strings for *path*: undeclared divergence, a
+    stale exception entry, an empty-reason entry, or a divergent file
+    carrying no `quirk-lab-config: true` marker at all. Empty return means
+    the file is either template-identical or its divergence is fully and
+    correctly declared."""
+    file_connectors = _file_connectors_block(path)
+    divergent = _divergent_connector_keys(file_connectors, template_connectors)
+    text = path.read_text(encoding="utf-8")
+    exceptions = _parse_lab_exceptions(text)
+
+    if not divergent and not exceptions:
+        # Nothing diverges and nothing is declared -- template-identical
+        # (or empty) file, nothing for D-13 to say.
+        return []
+
+    if divergent and not _has_lab_config_marker(text):
+        return [
+            f"{label}: diverges from quirk/config_template.yaml on "
+            f"{sorted(divergent)} but carries no 'quirk-lab-config: true' "
+            "marker -- either make this file match the template or declare "
+            "it lab-only with a reasoned exception entry for each key (D-13)"
+        ]
+
+    problems: list[str] = []
+    for key in sorted(set(divergent) | set(exceptions)):
+        is_divergent = key in divergent
+        has_exception = key in exceptions
+        if is_divergent and not has_exception:
+            problems.append(
+                f"{label}: connector key {key!r} diverges from the template "
+                f"(template={template_connectors.get(key)!r}, "
+                f"file={file_connectors.get(key)!r}) but is not listed in "
+                "this file's lab-only connector exceptions (D-13)"
+            )
+        elif is_divergent and has_exception and not exceptions[key].strip():
+            problems.append(
+                f"{label}: lab-only connector exception {key!r} has an "
+                "empty reason -- every exception entry must carry a "
+                "non-empty reason (D-13)"
+            )
+        elif not is_divergent and has_exception:
+            problems.append(
+                f"{label}: lab-only connector exception {key!r} is stale -- "
+                "its value now matches quirk/config_template.yaml (or the "
+                "key no longer appears in this file); remove the exception "
+                "entry (D-13)"
+            )
+    return problems
+
+
+def test_lab_only_connector_divergence_is_fully_declared() -> None:
+    """D-13 main gate: every derived non-template config's connector
+    divergence from the template must be declared, with a reason, in that
+    file's own `quirk-lab-config: true` exception list -- or the gate
+    fails naming the file and key.
+
+    Convention-blindness guard: fails loudly if the derived file set or
+    field set comes back implausibly small, matching the sibling D-09/D-10
+    gate's guard above.
+    """
+    template_connectors = _template_connectors_block()
+    assert len(template_connectors) >= 20, (
+        f"_template_connectors_block() returned only {len(template_connectors)} "
+        "keys -- implausibly small; the template parse itself may be broken. "
+        "An empty diff here must not be trusted."
+    )
+
+    files = _derive_connector_config_files()
+    assert len(files) >= 2, (
+        f"_derive_connector_config_files() found only {len(files)} file(s) -- "
+        "implausibly small; an empty diff here must not be trusted."
+    )
+
+    template_path = _REPO_ROOT / "quirk" / "config_template.yaml"
+    problems: list[str] = []
+    for path in files:
+        if path == template_path:
+            continue
+        label = str(path.relative_to(_REPO_ROOT))
+        problems.extend(
+            _lab_exception_problems_for_file(path, label, template_connectors)
+        )
+
+    assert not problems, problems
+
+
+def test_at_least_one_derived_file_declares_lab_only_divergence() -> None:
+    """Positive-existence lock, derived at run time with no path literal:
+    at least one non-template config discovered by
+    `_derive_connector_config_files()` carries the `quirk-lab-config: true`
+    marker plus a non-empty exception list. This guards against silently
+    losing both known lab declarations at once (the main gate above would
+    still pass if every lab config quietly stopped diverging from the
+    template, which is not the failure this test exists to catch)."""
+    template_path = _REPO_ROOT / "quirk" / "config_template.yaml"
+    marked = [
+        path
+        for path in _derive_connector_config_files()
+        if path != template_path
+        and _has_lab_config_marker(path.read_text(encoding="utf-8"))
+        and _parse_lab_exceptions(path.read_text(encoding="utf-8"))
+    ]
+    assert marked, (
+        "no derived config file carries a quirk-lab-config marker with a "
+        "non-empty exception list -- expected at least one lab-only config "
+        "declared under D-13"
+    )
+
+
+def test_undeclared_divergence_is_caught(tmp_path: Path) -> None:
+    """Self-test: a file with a real connector divergence and NO marker at
+    all is reported as unmarked, naming the divergent key."""
+    bogus = tmp_path / "no_marker.yaml"
+    bogus.write_text(
+        "connectors:\n  enable_kerberos: true\n", encoding="utf-8"
+    )
+    template_connectors = {"enable_kerberos": False}
+
+    problems = _lab_exception_problems_for_file(
+        bogus, "no_marker.yaml", template_connectors
+    )
+
+    assert problems, "gate failed to flag an unmarked divergent file"
+    assert any("no 'quirk-lab-config: true' marker" in p for p in problems), problems
+
+
+def test_undeclared_divergence_with_marker_but_no_entry_is_caught(tmp_path: Path) -> None:
+    """Self-test: a marked file with a divergence that has NO corresponding
+    exception entry is reported by key."""
+    bogus = tmp_path / "marked_undeclared.yaml"
+    bogus.write_text(
+        "# quirk-lab-config: true\n"
+        "connectors:\n  enable_kerberos: true\n",
+        encoding="utf-8",
+    )
+    template_connectors = {"enable_kerberos": False}
+
+    problems = _lab_exception_problems_for_file(
+        bogus, "marked_undeclared.yaml", template_connectors
+    )
+
+    assert problems, "gate failed to flag an undeclared divergent key"
+    assert any("enable_kerberos" in p and "not listed" in p for p in problems), problems
+
+
+def test_stale_exception_entry_is_caught(tmp_path: Path) -> None:
+    """Self-test: an exception entry naming a key whose value now matches
+    the template is reported as stale."""
+    bogus = tmp_path / "stale.yaml"
+    bogus.write_text(
+        "# quirk-lab-config: true\n"
+        "# lab-only connector exceptions:\n"
+        "#   enable_kerberos: no longer actually divergent\n"
+        "connectors:\n  enable_kerberos: false\n",
+        encoding="utf-8",
+    )
+    template_connectors = {"enable_kerberos": False}
+
+    problems = _lab_exception_problems_for_file(
+        bogus, "stale.yaml", template_connectors
+    )
+
+    assert problems, "gate failed to flag a stale exception entry"
+    assert any("stale" in p and "enable_kerberos" in p for p in problems), problems
+
+
+def test_empty_reason_exception_entry_is_caught(tmp_path: Path) -> None:
+    """Self-test: a marker plus a divergent key listed with an EMPTY
+    reason fails; the same file with a real reason passes."""
+    empty_reason = tmp_path / "empty_reason.yaml"
+    empty_reason.write_text(
+        "# quirk-lab-config: true\n"
+        "# lab-only connector exceptions:\n"
+        "#   enable_kerberos:\n"
+        "connectors:\n  enable_kerberos: true\n",
+        encoding="utf-8",
+    )
+    template_connectors = {"enable_kerberos": False}
+
+    problems = _lab_exception_problems_for_file(
+        empty_reason, "empty_reason.yaml", template_connectors
+    )
+    assert problems, "gate failed to flag an empty-reason exception entry"
+    assert any("empty reason" in p for p in problems), problems
+
+    with_reason = tmp_path / "with_reason.yaml"
+    with_reason.write_text(
+        "# quirk-lab-config: true\n"
+        "# lab-only connector exceptions:\n"
+        "#   enable_kerberos: chaos lab kerberos profile, samba-dc on 127.0.0.1\n"
+        "connectors:\n  enable_kerberos: true\n",
+        encoding="utf-8",
+    )
+    clean_problems = _lab_exception_problems_for_file(
+        with_reason, "with_reason.yaml", template_connectors
+    )
+    assert not clean_problems, clean_problems
+
+
+def test_new_unlisted_divergent_file_is_caught_without_list_edit(tmp_path: Path) -> None:
+    """Proves the DERIVATION property itself for D-13, mirroring the D-09/
+    D-10 derivation self-test above: point `_derive_connector_config_files`
+    at a throwaway git repo containing a brand-new, never-seen YAML file
+    with a divergent, unmarked connectors block, and confirm the D-13 gate
+    catches it via the real file-set derivation -- not a hand-supplied
+    path -- with zero list edits anywhere."""
+    git_exe = shutil.which("git")
+    if not git_exe:
+        raise AssertionError("git executable not found on PATH")
+    run_fork_safe([git_exe, "-C", str(tmp_path), "init", "-q"], check=True)
+    new_file = tmp_path / "never_seen_lab_config.yaml"
+    new_file.write_text(
+        "connectors:\n  enable_kerberos: true\n", encoding="utf-8"
+    )
+    run_fork_safe(
+        [git_exe, "-C", str(tmp_path), "add", "never_seen_lab_config.yaml"],
+        check=True,
+    )
+
+    files = _derive_connector_config_files(root=tmp_path)
+    assert any(p.name == "never_seen_lab_config.yaml" for p in files), files
+
+    template_connectors = {"enable_kerberos": False}
+    problems: list[str] = []
+    for path in files:
+        problems.extend(
+            _lab_exception_problems_for_file(
+                path, path.name, template_connectors
+            )
+        )
+
+    assert problems, "derivation missed a brand-new divergent, unmarked file"
+    assert any("enable_kerberos" in p for p in problems), problems
