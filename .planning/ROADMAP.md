@@ -348,7 +348,7 @@ Plans:
 - [x] 184.2-02-PLAN.md — derived drift-gate foundation: run-time file-set derivation (D-10), AST checks on the two config generators (D-15), `enable_windows_adcs` reconciled in `docs/sample-config.yaml` (D-12)
 - [x] 184.2-03-PLAN.md — template rewrite to one dialect with 25 tagged dispositions + 17-port `CONSULTING_TLS_PORTS` default; D-09 completeness, D-06 vocabulary and D-18 advisory-pre-gate gates
 - [x] 184.2-04-PLAN.md — marker-driven lab-only declarations for `config.yaml` and `lab-registry.yaml` with a computed exception list and its gate (D-13, SC-3/SC-4)
-- [ ] 184.2-05-PLAN.md — `docs/configuration.md` + `docs/operators-guide.md` posture/vocabulary/coverage-gap documentation and Obsidian sync
+- [x] 184.2-05-PLAN.md — `docs/configuration.md` + `docs/operators-guide.md` posture/vocabulary/coverage-gap documentation and Obsidian sync
 - [ ] 184.2-06-PLAN.md — Series 184.2 UAT, chaos-lab port-widening human verification, Obsidian phase note, VALIDATION sign-off
 
 ### Phase 184.3: Timestamp Correctness
