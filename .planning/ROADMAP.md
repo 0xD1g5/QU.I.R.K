@@ -387,7 +387,20 @@ Plans:
 
   6. Report surfaces (`/print`, PDF/DOCX export) are checked too — a deliverable handed to a client
      is where a wrong timestamp does real damage, and it renders through the same path.
-**Plans**: TBD
+**Plans**: 11 plans
+
+Plans:
+- [ ] 184.3-01-PLAN.md — amend ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where measurement falsified the premise (D-04, D-06, D-11, D-16a)
+- [ ] 184.3-02-PLAN.md — `UTCDateTime` stamping contract in `quirk/dashboard/api/_timestamp_utils.py` + all 10 Pydantic datetime fields (D-01, D-02, D-03a)
+- [ ] 184.3-03-PLAN.md — the 8 hand-rolled `.isoformat()` route sites routed through the helper; 2 identity keys fenced off (D-03b, D-05)
+- [ ] 184.3-04-PLAN.md — repo-wide `datetime.utcnow()` gate over `quirk/` + 35 `tests/` call-site migrations (D-04)
+- [ ] 184.3-05-PLAN.md — `src/dashboard/src/lib/datetime.ts` display-policy module + TZ-pinned unit tests (D-08, D-12, D-13)
+- [ ] 184.3-06-PLAN.md — 5 component sites migrated; `ScanDateBadge` TZ-pinned proof + net-new `ScanSelector.test.tsx` (D-10, SC-2, SC-4)
+- [ ] 184.3-07-PLAN.md — 10 page sites migrated; `/print` aligned to labeled UTC; date-only fields dispositioned (D-13)
+- [ ] 184.3-08-PLAN.md — labeled-UTC scan instant added to the executive/technical/HTML/DOCX paths, distinct from `generated_at` (D-16b)
+- [ ] 184.3-09-PLAN.md — pytest AST source-scan gate over `quirk/dashboard/api/**` + `quirk/reports/**` with a validated disposition ledger (D-03, D-05, D-16)
+- [ ] 184.3-10-PLAN.md — vitest run-time source scan for argument-bearing `new Date(` (D-09)
+- [ ] 184.3-11-PLAN.md — `docs/report-interpretation.md` §18 + `CONVENTIONS.md` §Timestamps, Obsidian syncs, UAT Series 184.3, phase note, VALIDATION sign-off (D-07, D-15)
 
 ### Phase 185: a11y Baseline Environment
 
