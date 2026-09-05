@@ -1,7 +1,15 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-05 (v5.19 Phase 184.2 — Out-of-the-Box Scanning Posture, plan
+**Last Updated:** 2026-09-05 (v5.19 Phase 184.3 — Timestamp Correctness, plan 184.3-11
+documentation/UAT/validation close-out: Series 184.3 added (UAT-184.3-01..06; 6 PASS) for SCORE-03
+— API `+00:00` offsets on real routes, badge/selector zone-labeled render (TZ-pinned), `/print`
+fixed-UTC source presence (D-13), all four report paths render both `Scan Completed` and
+`Generated` distinctly with a negative unknown-marker test, a calendar-day-shift regression test
+for date-only fields, and both run-time source-scan gates (backend AST, frontend regex) proven
+non-vacuous by live revert-then-restore. Three cases additionally await a pending human
+cross-surface visual confirmation tracked in `184.3-VALIDATION.md`. Earlier: v5.19 Phase 184.2 —
+Out-of-the-Box Scanning Posture, plan
 184.2-06 phase-gate close-out: Series 184.2 added (UAT-184.2-01..05; 5 PASS) for SCORE-02 — all
 25 `enable_*` connector flags live and D-06-tagged in the shipped template, the derived D-09/D-10/
 D-15 drift gate proven against three separate live falsifications, `enable_adcs` reachability
@@ -22834,3 +22842,233 @@ real coverage cost). No `SKIP`/`GAP` dispositions were needed. A pre-existing, o
 scoring/reporting defect surfaced during the widened lab run (EXCELLENT headline vs a CRITICAL
 finding halting report generation) is recorded in UAT-184.2-05's Notes and filed at
 `.planning/todos/pending/rating-band-critical-floor-halts-reports.md` — not a Series 184.2 failure.
+
+---
+
+## Series 184.3: Timestamp Correctness (Phase 184.3 — v5.19)
+
+**Scope:** SCORE-03 — every timestamp QU.I.R.K. reports denotes the same instant end to end: the
+API stamps `+00:00` at the serialization boundary, the frontend renders through one display-policy
+module with a visible zone label, `/print` and the four Python renderers all state a labeled-UTC
+scan instant distinct from the render instant (`Scan Completed` vs `Generated`), `datetime.utcnow()`
+is gone from `quirk/`, and two run-time source-scan gates keep it that way. Cases below are proven
+via the automated test suite and source inspection; the additional cross-surface *visual*
+confirmation (dashboard badge matching the operator's own wall clock; `/print` vs PDF/DOCX/HTML
+agreement; a live certificate expiry date not shifting) is tracked separately as the plan
+184.3-11 Task 3 human-verification checkpoint and recorded in
+`184.3-VALIDATION.md`'s Manual-Only Verifications table, not duplicated here.
+
+### UAT-184.3-01: `GET /api/scans` and other dashboard routes serialize `+00:00`-suffixed instants
+
+**ID:** UAT-184.3-01
+**Title:** Every `UTCDateTime`-typed API response field carries an explicit `+00:00` offset on the
+raw wire JSON — never a bare, offset-less ISO string a client could misread as local time.
+**Maps to:** SCORE-03 (D-01, D-02, D-03a)
+
+**What to test:** That the 4-hour-skew defect this phase measured (a naive ISO string parsed as
+local time by a downstream client) cannot recur — proven against real route responses, not just
+the serializer in isolation.
+
+**Steps:**
+```bash
+python -m pytest tests/test_timestamp_route_serialization.py -q -v
+```
+
+**Pass Criteria:** all cases pass, including `test_jobs_route_timestamps_carry_offset_and_leading_
+digits_unchanged`, `test_jobs_route_none_timestamps_serialize_as_json_null`, and
+`test_schedules_route_timestamps_carry_offset` — each asserting the literal `+00:00` substring on
+raw JSON text from a real route, with the pre-offset digits unchanged.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.3-02/184.3-03 plan execution)
+**Notes:** `scan_id`/`scan_run_id` are proven byte-unchanged across the same route responses —
+identity keys are never offset-stamped.
+
+---
+
+### UAT-184.3-02: The dashboard badge and scan selector render through one zone-labeled formatter, TZ-pinned
+
+**ID:** UAT-184.3-02
+**Title:** `ScanDateBadge` and `ScanSelector` both route through `formatScanDateTime`
+(`src/dashboard/src/lib/datetime.ts`), which applies `timeZoneName: "short"`; a `vi.stubEnv("TZ",
+"America/New_York")`-pinned test proves the rendered wall-clock digits and zone abbreviation are
+correct, and FAILS against the pre-fix code.
+**Maps to:** SCORE-03 (D-08, D-10, D-12)
+
+**What to test:** That the original defect (a raw `new Date(...).toLocaleString()` silently
+applying the machine's own zone with no visible label) is closed at both sibling sites, not just
+one — `ScanSelector` had zero test coverage before this phase.
+
+**Steps:**
+```bash
+cd src/dashboard && npx vitest run \
+  src/components/__tests__/ScanDateBadge.test.tsx \
+  src/components/__tests__/ScanSelector.test.tsx
+```
+
+**Pass Criteria:** all cases pass under the TZ-pinned environment; `ScanSelector.test.tsx` seeds
+2+ sessions (clearing the component's early-return guards) and asserts on rendered DOM text, not a
+vacuous mount.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.3-06 plan execution)
+**Notes:** 184.3-06-SUMMARY.md records the revert-and-observe-failure check was executed (not
+assumed) for `ScanDateBadge.test.tsx`. Live confirmation that the rendered badge matches the
+*operator's own* wall clock in a real browser is a separate, pending human check — see
+`184.3-VALIDATION.md`'s Manual-Only Verifications.
+
+---
+
+### UAT-184.3-03: `/print` states the scan instant as fixed, labeled UTC — not browser-local
+
+**ID:** UAT-184.3-03
+**Title:** `/print`'s scan date deliberately diverges from the rest of the browser-local dashboard
+(D-13): it calls `formatScanDateTime(meta.scanned_at, { timeZone: "UTC" })`, matching the four
+Python renderers' `"%Y-%m-%d %H:%M UTC"` convention, so a `/print` view and an exported report of
+the same scan state the same instant regardless of which machine renders either one.
+**Maps to:** SCORE-03 (D-13)
+
+**What to test:** That the fixed-UTC override is actually present in source, not merely intended —
+this is the one page-level site deliberately exempted from the browser-local convention the rest
+of the dashboard follows.
+
+**Steps:**
+```bash
+grep -n 'formatScanDateTime(meta.scanned_at, { timeZone: "UTC" })' src/dashboard/src/pages/print.tsx
+grep -n "D-13" src/dashboard/src/pages/print.tsx
+```
+
+**Pass Criteria:** both greps match — the fixed-`UTC` override call and its D-13 disposition
+comment are both present at the scan-date render site.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.3-07 plan execution, source inspection)
+**Notes:** No dedicated vitest render test exists for `/print`'s scan-date output; this case is a
+source-presence check, not a rendered-DOM assertion. Live visual agreement between `/print` and the
+PDF/DOCX/HTML exports for the same real scan is tracked as a pending human check in
+`184.3-VALIDATION.md`'s Manual-Only Verifications — `docs/report-interpretation.md`'s note on this
+repo's render tests asserting presence, not appearance, is exactly why this case does not claim
+more than source presence.
+
+---
+
+### UAT-184.3-04: HTML, DOCX, executive and technical reports render both `Scan Completed` and `Generated`, distinctly labeled
+
+**ID:** UAT-184.3-04
+**Title:** All four report output paths render a `Scan Completed`/`Scan completed` field distinct
+from the pre-existing `Generated`/`Generated:` field, each ending in `UTC`, sourced from
+`CryptoEndpoint.scanned_at` and derived once in `quirk/reports/writer.py`; a report with no
+derivable scan instant renders the explicit `SCAN_COMPLETED_AT_UNKNOWN` marker
+(`"Unknown (no scan instant available)"`) rather than silently substituting the render time.
+**Maps to:** SCORE-03 (D-16, T-184.3-29, T-184.3-30, T-184.3-31)
+
+**What to test:** That the gap this phase found — reports previously stated only when the
+*document* was built, never when the *scan* ran, and the HTML cover block's `Scan Date` row was
+actively mislabeled (it rendered `generated_at`) — is closed across all four surfaces, with a
+negative test proving no silent fallback to render time.
+
+**Steps:**
+```bash
+python -m pytest tests/test_html_report.py tests/test_docx_report.py \
+  tests/test_report_render_parity.py -k timestamp -q -v
+```
+
+**Pass Criteria:** all cases pass, including
+`test_html_report_renders_scan_completed_timestamp`,
+`test_html_report_scan_completed_timestamp_unknown_marker`,
+`test_docx_renders_scan_completed_timestamp`,
+`test_docx_scan_completed_timestamp_unknown_marker`,
+`test_scan_completed_timestamp_parity_across_all_four_renderers`, and
+`test_scan_completed_timestamp_unknown_not_substituted_with_generated_time`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.3-08 plan execution)
+**Notes:** The DOCX cover's ambiguous `Date:` label was renamed to `Generated:` (T-184.3-31) and
+the HTML cover block's pre-existing `Scan Date` mislabel (a Rule 1 auto-fix found during Task 2,
+not named in the plan's own `<interfaces>` block) was corrected to `Generated` with a new `Scan
+Completed` row added above it — see 184.3-08-SUMMARY.md. Live visual confirmation that the `Scan
+Completed` value matches what `/print` shows for the same scan is a pending human check tracked in
+`184.3-VALIDATION.md`'s Manual-Only Verifications.
+
+---
+
+### UAT-184.3-05: A certificate expiry / hardware EOL date never shifts a calendar day across time zones
+
+**ID:** UAT-184.3-05
+**Title:** `formatDateOnly` (`src/dashboard/src/lib/datetime.ts`) hard-codes `timeZone: "UTC"` with
+no override parameter, so `cert_not_after`/`eol_date` — calendar DATES, not instants — render the
+same calendar day regardless of the browser's own time zone.
+**Maps to:** SCORE-03 (D-13 date-only carve-out, T-184.3-17, T-184.3-25)
+
+**What to test:** The specific regression this convention exists to prevent: under a UTC-negative
+zone (e.g. America/New_York), midnight UTC on a given date is still the *previous* calendar day
+locally, so a naive local-zone render would show a certificate expiring one day earlier than the
+stored value.
+
+**Steps:**
+```bash
+cd src/dashboard && npx vitest run src/lib/__tests__/datetime.test.ts -t "formatDateOnly renders Jan 1, 2027"
+grep -rc "date-only, not an instant" src/dashboard/src/pages/
+```
+
+**Pass Criteria:** the TZ-pinned test passes (`formatDateOnly("2027-01-01")` contains `Jan 1, 2027`,
+not `Dec 31, 2026`, under a pinned `America/New_York` environment); the disposition-comment grep
+returns `4` (print.tsx, certificates.tsx, motion.tsx, hardware.tsx).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.3-05/184.3-07 plan execution)
+**Notes:** `cert_not_after`/`eol_date` remain `Optional[str]` API fields, deliberately out of this
+phase's backend `+00:00` instant-stamping scope (they are dates, not instants) — 184.3-09's gate
+disposition ledger documents `schemas.py:cert_not_after` as `date-only, not an instant (out of
+scope)`.
+
+---
+
+### UAT-184.3-06: The two run-time source-scan gates keep the convention from drifting, and are proven non-vacuous
+
+**ID:** UAT-184.3-06
+**Title:** `tests/test_timestamp_serialization_gate.py` (backend, AST) and
+`src/dashboard/src/components/__tests__/new-date-argument-guard.test.ts` (frontend, regex) both
+regenerate their occurrence set from source at run time — never a hand-written file list — and
+both are proven to actually fail via a live revert-then-restore against real source, not just
+synthetic fixtures.
+**Maps to:** SCORE-03 (D-03, D-09, CLAUDE.md TOOL-04)
+
+**What to test:** That "the gate could have caught the original defect" is a demonstrated fact,
+not an assumption — both gates are shown failing with the exact offending file:line when a real
+site is reverted to the pre-fix pattern, then restored byte-identical.
+
+**Steps:**
+```bash
+python -m pytest tests/test_timestamp_serialization_gate.py -q
+cd src/dashboard && npx vitest run src/components/__tests__/new-date-argument-guard.test.ts
+```
+
+**Pass Criteria:** both gates pass (18/18 backend, 15/15 frontend) against the current tree.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.3-09/184.3-10 plan execution)
+**Notes:** Backend gate's own run-time scan found and fenced a real undispositioned identity site
+(`scan.py:1319`) that plan 03's hand-derived enumeration missed — see 184.3-09-SUMMARY.md. Frontend
+gate's live-failure proof named the exact offending file:line
+(`components/ScanDateBadge.tsx:7`) on a temporary revert — see 184.3-10-SUMMARY.md. The frontend
+gate is **not** CI-enforced today: the `Linux Full Suite` CI job never installs Node for
+`src/dashboard/`, so in CI it substitute-checks by file existence only
+(`VITEST_TOOLCHAIN_AVAILABLE` gap, `docs/uat-coverage-gaps.md`) — this is stated here, not
+overstated, per CLAUDE.md's requirement.
+
+---
+
+**Series 184.3 disposition.** 6 of 6 cases are `[x] PASS`, all proven via the automated pytest/
+vitest suites and direct source inspection (grep) rather than a live browser session: `UAT-184.3-01`
+(API `+00:00` offsets on real routes), `UAT-184.3-02` (badge/selector TZ-pinned zone-labeled
+render), `UAT-184.3-03` (`/print` fixed-UTC source presence), `UAT-184.3-04` (all four report paths
+render both `Scan Completed` and `Generated`, distinctly, with a negative unknown-marker test),
+`UAT-184.3-05` (calendar-day-shift regression test for date-only fields), `UAT-184.3-06` (both
+source-scan gates proven non-vacuous by live revert-then-restore). No `SKIP`/`GAP` dispositions
+were needed. Three of the six cases (`UAT-184.3-02`, `UAT-184.3-03`, `UAT-184.3-04`) additionally
+require a live, cross-surface *visual* confirmation this document does not claim to provide —
+`docs/report-interpretation.md` §18 and this repo's render-tests-assert-presence-not-appearance
+gotcha are exactly why. That confirmation is tracked as the pending 184.3-11 Task 3 human-
+verification checkpoint, recorded separately in `184.3-VALIDATION.md`'s Manual-Only Verifications
+table — not duplicated or pre-empted here.
