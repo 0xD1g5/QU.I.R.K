@@ -471,3 +471,203 @@ def test_disposition_ledger_is_valid() -> None:
     )
     problems = _validate_disposition_ledger(_DISPOSITIONS)
     assert not problems, problems
+
+
+# ---------------------------------------------------------------------------
+# Synthetic self-tests: prove every detector, and the ledger validator, CAN
+# fail. The real source tree is clean by construction of the plans that
+# preceded this one -- a currently-green run against it proves nothing on
+# its own. Every self-test below calls the SAME module-level function the
+# real gate tests call above; none reimplements detection logic.
+# ---------------------------------------------------------------------------
+def test_field_detector_flags_bare_datetime(tmp_path: Path) -> None:
+    fake = tmp_path / "fake_schemas.py"
+    fake.write_text(
+        "from datetime import datetime\n"
+        "from pydantic import BaseModel\n\n"
+        "class Foo(BaseModel):\n"
+        "    scanned_at: datetime\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_field_offenders(tree, "fake_schemas.py", {})
+    assert offenders, "bare datetime field was not flagged"
+    assert any(
+        "fake_schemas.py:5" in o and "Foo.scanned_at" in o for o in offenders
+    ), offenders
+
+
+def test_field_detector_flags_optional_bare_datetime(tmp_path: Path) -> None:
+    """The Optional[datetime] case -- the one that catches a detector that
+    only understands the bare ast.Name annotation form."""
+    fake = tmp_path / "fake_schemas_optional.py"
+    fake.write_text(
+        "from datetime import datetime\n"
+        "from typing import Optional\n"
+        "from pydantic import BaseModel\n\n"
+        "class Foo(BaseModel):\n"
+        "    scanned_at: Optional[datetime] = None\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_field_offenders(tree, "fake_schemas_optional.py", {})
+    assert offenders, "Optional[datetime] field was not flagged"
+    assert any("Foo.scanned_at" in o for o in offenders), offenders
+
+
+def test_field_detector_flags_binop_none_datetime(tmp_path: Path) -> None:
+    """The `datetime | None` case -- ast.BinOp/ast.BitOr form."""
+    fake = tmp_path / "fake_schemas_binop.py"
+    fake.write_text(
+        "from datetime import datetime\n"
+        "from pydantic import BaseModel\n\n"
+        "class Foo(BaseModel):\n"
+        "    scanned_at: datetime | None = None\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_field_offenders(tree, "fake_schemas_binop.py", {})
+    assert offenders, "datetime | None field was not flagged"
+    assert any("Foo.scanned_at" in o for o in offenders), offenders
+
+
+def test_field_detector_allows_utc_datetime_and_optional(tmp_path: Path) -> None:
+    fake = tmp_path / "fake_schemas_ok.py"
+    fake.write_text(
+        "from typing import Optional\n"
+        "from pydantic import BaseModel\n"
+        "from ._timestamp_utils import UTCDateTime\n\n"
+        "class Foo(BaseModel):\n"
+        "    scanned_at: UTCDateTime\n"
+        "    maybe_at: Optional[UTCDateTime] = None\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_field_offenders(tree, "fake_schemas_ok.py", {})
+    assert not offenders, offenders
+
+
+def test_field_detector_identity_field_cannot_be_exempted_by_ledger(
+    tmp_path: Path,
+) -> None:
+    """RESEARCH.md Pitfall 2 regression guard: scan_id typed datetime is
+    reported even when a ledger entry names exactly that key. An identity
+    key may be exempt from carrying an offset, never from being an
+    identity key."""
+    fake = tmp_path / "fake_schemas_identity.py"
+    fake.write_text(
+        "from datetime import datetime\n"
+        "from pydantic import BaseModel\n\n"
+        "class Foo(BaseModel):\n"
+        "    scan_id: datetime\n"
+    )
+    tree = ast.parse(fake.read_text())
+    ledger_that_should_not_help = {
+        "fake_schemas_identity.py:scan_id": "an attempted illegitimate disposition"
+    }
+    offenders = _find_field_offenders(
+        tree, "fake_schemas_identity.py", ledger_that_should_not_help
+    )
+    assert offenders, (
+        "a scan_id field typed datetime was suppressed by a ledger entry -- "
+        "identity fields must be forward-locked regardless of the ledger"
+    )
+    assert any("Foo.scan_id" in o and "identity key" in o for o in offenders), offenders
+
+
+def test_isoformat_detector_flags_bare_call(tmp_path: Path) -> None:
+    fake = tmp_path / "fake_route.py"
+    fake.write_text("def handler(x):\n    return x.isoformat()\n")
+    tree = ast.parse(fake.read_text())
+    offenders = _find_isoformat_offenders(
+        tree, fake.read_text().splitlines(), "fake_route.py", {}
+    )
+    assert offenders, "bare .isoformat() call was not flagged"
+    assert any("fake_route.py:2" in o for o in offenders), offenders
+
+
+def test_isoformat_detector_allows_inline_comment_disposition(tmp_path: Path) -> None:
+    fake = tmp_path / "fake_route_dispositioned.py"
+    fake.write_text(
+        "def handler(x):\n"
+        "    # identity, not instant (SCORE-03/D-05): a synthetic fixture\n"
+        "    return x.isoformat()\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_isoformat_offenders(
+        tree, fake.read_text().splitlines(), "fake_route_dispositioned.py", {}
+    )
+    assert not offenders, offenders
+
+
+def test_isoformat_detector_allows_ledger_disposition_by_function_name(
+    tmp_path: Path,
+) -> None:
+    fake = tmp_path / "fake_route_ledger.py"
+    fake.write_text("def handler(x):\n    return x.isoformat()\n")
+    tree = ast.parse(fake.read_text())
+    ledger = {"fake_route_ledger.py:handler": "identity, not instant -- synthetic"}
+    offenders = _find_isoformat_offenders(
+        tree, fake.read_text().splitlines(), "fake_route_ledger.py", ledger
+    )
+    assert not offenders, offenders
+
+
+def test_strftime_detector_flags_missing_zone_token(tmp_path: Path) -> None:
+    fake = tmp_path / "fake_renderer.py"
+    fake.write_text(
+        "def render(d):\n    return d.strftime('%Y-%m-%d %H:%M')\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_strftime_offenders(
+        tree, fake.read_text().splitlines(), "fake_renderer.py", {}
+    )
+    assert offenders, "strftime() call with no zone token was not flagged"
+    assert any("fake_renderer.py:2" in o for o in offenders), offenders
+
+
+def test_strftime_detector_allows_utc_labeled_format(tmp_path: Path) -> None:
+    fake = tmp_path / "fake_renderer_ok.py"
+    fake.write_text(
+        "def render(d):\n    return d.strftime('%Y-%m-%d %H:%M UTC')\n"
+    )
+    tree = ast.parse(fake.read_text())
+    offenders = _find_strftime_offenders(
+        tree, fake.read_text().splitlines(), "fake_renderer_ok.py", {}
+    )
+    assert not offenders, offenders
+
+
+def test_ledger_validator_flags_blank_reason() -> None:
+    problems = _validate_disposition_ledger(
+        {"quirk/dashboard/api/schemas.py:scan_id": "   "}
+    )
+    assert problems, "blank disposition reason was not flagged"
+    assert any("blank disposition reason" in p for p in problems), problems
+
+
+def test_ledger_validator_flags_stale_missing_file() -> None:
+    problems = _validate_disposition_ledger(
+        {"quirk/dashboard/api/this_file_does_not_exist.py:x": "a fine reason"}
+    )
+    assert problems, "a ledger key naming a nonexistent file was not flagged"
+    assert any("no longer exists on disk" in p for p in problems), problems
+
+
+def test_ledger_validator_flags_stale_anchor() -> None:
+    problems = _validate_disposition_ledger(
+        {
+            "quirk/dashboard/api/schemas.py:this_identifier_will_never_exist_xyz": (
+                "a fine reason, but a stale anchor"
+            )
+        }
+    )
+    assert problems, "a ledger key with a stale anchor was not flagged"
+    assert any("no longer found in" in p for p in problems), problems
+
+
+def test_derive_source_files_uses_rglob_not_a_written_list(tmp_path: Path) -> None:
+    """Proves the derivation mechanism itself: a brand-new, never-seen file
+    dropped into a throwaway root is picked up by _derive_source_files with
+    zero edits to any list, anywhere."""
+    (tmp_path / "never_seen_before.py").write_text(
+        "class Foo:\n    scanned_at: 'datetime'\n"
+    )
+    discovered = _derive_source_files(tmp_path)
+    assert any(p.name == "never_seen_before.py" for p in discovered), discovered
