@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.3-08-PLAN.md
-last_updated: "2026-09-05T17:53:15.000Z"
+stopped_at: Completed 184.3-03-PLAN.md
+last_updated: "2026-09-05T17:58:31.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 39
-  completed_plans: 33
-  percent: 50
+  completed_plans: 34
+  percent: 51
 ---
 
 # Project State
@@ -672,10 +672,19 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.3 (timestamp-correctness) — EXECUTING
-Plan: 6 of 11 complete (02, 04, 05, 08 done; 03, 06, 07, 09-11 not yet started — 08 is wave 1,
+Plan: 7 of 11 complete (02, 03, 04, 05, 08 done; 06, 07, 09-11 not yet started — 08 is wave 1,
 depends_on: [], executed independently of/in parallel with the serialization-boundary and
 frontend-consumer-migration work)
-Status: 184.3-08 complete — a labeled-UTC "Scan completed" field added to all four report
+Status: 184.3-03 complete (2026-09-05) — all 8 hand-rolled `.isoformat()` route call sites
+(serialization path (b): hardware_drift.py, jobs.py, qramm.py, schedules.py, trends.py, scan.py)
+now route through `stamp_utc_iso` from plan 02's `_timestamp_utils.py`; `scan.py`'s two identity
+sites (`:1350` prefix-LIKE key, `:1671` `response_scan_id`) left byte-unchanged with an in-place
+`identity, not instant (SCORE-03/D-05)` comment for plan 09's source-scan gate. New
+`tests/test_timestamp_route_serialization.py` (4 tests) proves both directions, including a
+`scan_id` round-trip asserting a non-empty (row count > 0) filtered result. See
+184.3-03-SUMMARY.md.
+
+Previously, 184.3-08 complete — a labeled-UTC "Scan completed" field added to all four report
 renderer paths (executive markdown, technical markdown, HTML, DOCX), derived once in
 quirk/reports/writer.py (_scan_completed_at, MAX of endpoint.scanned_at) and distinct from the
 pre-existing generated_at ("Generated") field. Shared SCAN_COMPLETED_AT_UNKNOWN marker/formatter
@@ -698,8 +707,8 @@ that is plans 06/07's job. See 184.3-05-SUMMARY.md.
 
 184.3-02 complete — UTCDateTime stamping contract live in quirk/dashboard/api/schemas.py,
 all 10 Pydantic datetime fields re-typed, offset proven on the wire via a real TestClient GET
-/api/scans request with a demonstrated non-vacuous failure mode. Path (b) — the ~15 hand-rolled
-.isoformat() route sites — is 184.3-03's job, not yet started. See 184.3-02-SUMMARY.md.
+/api/scans request with a demonstrated non-vacuous failure mode. Path (b) — the hand-rolled
+.isoformat() route sites — was closed by 184.3-03 (complete, see above). See 184.3-02-SUMMARY.md.
 
 **184.3-04 complete (2026-09-05):** repo-wide `datetime.utcnow()` gate + `tests/` migration
 (SCORE-03, D-04). `tests/test_qramm_router.py::test_no_utcnow_in_qramm_module` (scoped to
