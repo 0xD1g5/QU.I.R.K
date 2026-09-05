@@ -48,7 +48,7 @@ def _session(tmp_path):
 
 def test_purge_deletes_rows_older_than_retention_window(tmp_path):
     session = _session(tmp_path)
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     old_row = _make_device("10.0.0.5", 22, now - datetime.timedelta(days=400))
     fresh_row = _make_device("10.0.0.5", 22, now)
     session.add(old_row)
@@ -69,7 +69,7 @@ def test_purge_deletes_rows_older_than_retention_window(tmp_path):
 
 def test_purge_is_scoped_to_batch_host_port(tmp_path):
     session = _session(tmp_path)
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     old_a = _make_device("10.0.0.5", 22, now - datetime.timedelta(days=400))
     old_b = _make_device("10.0.0.6", 22, now - datetime.timedelta(days=400))
     session.add(old_a)
@@ -91,7 +91,7 @@ def test_purge_is_scoped_to_batch_host_port(tmp_path):
 @pytest.mark.parametrize("bad_retention", [0, -1, "abc"])
 def test_purge_skips_on_nonpositive_retention(tmp_path, bad_retention):
     session = _session(tmp_path)
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     old_row = _make_device("10.0.0.5", 22, now - datetime.timedelta(days=400))
     session.add(old_row)
     session.commit()
@@ -108,7 +108,7 @@ def test_purge_skips_on_nonpositive_retention(tmp_path, bad_retention):
 
 def test_purge_with_empty_batch_is_noop(tmp_path):
     session = _session(tmp_path)
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     old_row = _make_device("10.0.0.5", 22, now - datetime.timedelta(days=400))
     session.add(old_row)
     session.commit()
@@ -122,7 +122,7 @@ def test_purge_with_empty_batch_is_noop(tmp_path):
 
 def test_purge_and_insert_share_one_transaction(tmp_path):
     session = _session(tmp_path)
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     old_row = _make_device("10.0.0.5", 22, now - datetime.timedelta(days=400))
     session.add(old_row)
     session.commit()

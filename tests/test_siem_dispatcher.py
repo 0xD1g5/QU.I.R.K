@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -40,7 +40,7 @@ def _make_run(db_path, scan_output_path=None):
         profile=None,
         enabled=True,
         last_run_at=None,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     with get_session(db_path) as db:
         db.add(scan)
@@ -48,7 +48,7 @@ def _make_run(db_path, scan_output_path=None):
         scan_id = scan.id
         run = ScheduledRun(
             schedule_id=scan_id,
-            dispatched_at=datetime.utcnow(),
+            dispatched_at=datetime.now(timezone.utc).replace(tzinfo=None),
             status="completed",
             scan_output_path=scan_output_path,
             scan_id=None,

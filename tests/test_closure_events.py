@@ -101,7 +101,7 @@ def test_item_progress_does_not_count_resurfaced_as_closed(tmp_path) -> None:
                     port=80,
                     finding_title="Plaintext HTTP service detected",
                     state=state,
-                    observed_at=datetime.datetime.utcnow(),
+                    observed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
                 )
             )
         session.commit()

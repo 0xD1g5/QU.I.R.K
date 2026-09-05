@@ -72,7 +72,7 @@ def test_hardware_device_phase154_identity_columns_roundtrip() -> None:
         pqc_status="unsupported",
         confidence="high",
         fingerprint_method="ssh_banner",
-        scanned_at=datetime.datetime.utcnow(),
+        scanned_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
         ssh_host_key_fingerprint="SHA256:abc123",
         match_confidence="high",
         probe_status="success",
@@ -108,7 +108,7 @@ def test_hardware_device_create_in_sqlite() -> None:
         pqc_status="unsupported",
         confidence="high",
         fingerprint_method="ssh_banner",
-        scanned_at=datetime.datetime.utcnow(),
+        scanned_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
     )
     session.add(device)
     session.commit()

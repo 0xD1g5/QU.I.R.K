@@ -121,7 +121,7 @@ def test_remediation_item_roundtrip(tmp_path) -> None:
             priority=10,
             constituency="fingerprint",
             state="not_observed",
-            created_at=datetime.datetime.utcnow(),
+            created_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
         )
         session.add(row)
         session.commit()
@@ -320,7 +320,7 @@ def test_item_progress_returns_fraction_not_boolean(tmp_path) -> None:
                     port=80,
                     finding_title="Plaintext HTTP service detected",
                     state=state,
-                    observed_at=datetime.datetime.utcnow(),
+                    observed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
                 )
             )
         session.commit()
@@ -350,7 +350,7 @@ def test_item_progress_zero_closed_never_reports_full(tmp_path) -> None:
                     scan_run_id=scan_run_id,
                     finding_fingerprint=f"exp-{i}",
                     state="open",
-                    observed_at=datetime.datetime.utcnow(),
+                    observed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
                 )
             )
         session.commit()

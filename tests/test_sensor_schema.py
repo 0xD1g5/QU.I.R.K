@@ -388,7 +388,7 @@ def test_pre_v54_legacy_rows_have_null_sensor_id(tmp_path: Path) -> None:
 
 def test_cascade_delete_removes_sensor_tokens(tmp_path: Path) -> None:
     """D-04 / MODEL-03: deleting a sensors row must cascade to sensor_tokens."""
-    from datetime import datetime  # noqa: WPS433
+    from datetime import datetime, timezone  # noqa: WPS433
     from quirk.models import Sensor, SensorToken  # noqa: WPS433
     from sqlalchemy.orm import Session  # noqa: WPS433
 
@@ -398,13 +398,13 @@ def test_cascade_delete_removes_sensor_tokens(tmp_path: Path) -> None:
     sensor = Sensor(
         sensor_id="aaaaaaaa-0000-0000-0000-000000000001",
         segment="lab",
-        enrolled_at=datetime.utcnow(),
+        enrolled_at=datetime.now(timezone.utc).replace(tzinfo=None),
         expected_cadence_minutes=60,
     )
     token = SensorToken(
         sensor_id="aaaaaaaa-0000-0000-0000-000000000001",
         token_hash="a" * 64,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     session.add(sensor)
     session.add(token)
@@ -423,7 +423,7 @@ def test_cascade_delete_removes_sensor_tokens(tmp_path: Path) -> None:
 
 def test_cascade_delete_removes_sensor_pushes(tmp_path: Path) -> None:
     """D-04 / MODEL-04: deleting a sensors row must cascade to sensor_pushes."""
-    from datetime import datetime  # noqa: WPS433
+    from datetime import datetime, timezone  # noqa: WPS433
     from quirk.models import Sensor, SensorPush  # noqa: WPS433
     from sqlalchemy.orm import Session  # noqa: WPS433
 
@@ -433,13 +433,13 @@ def test_cascade_delete_removes_sensor_pushes(tmp_path: Path) -> None:
     sensor = Sensor(
         sensor_id="bbbbbbbb-0000-0000-0000-000000000002",
         segment="lab",
-        enrolled_at=datetime.utcnow(),
+        enrolled_at=datetime.now(timezone.utc).replace(tzinfo=None),
         expected_cadence_minutes=60,
     )
     push = SensorPush(
         payload_id="p" * 64,
         sensor_id="bbbbbbbb-0000-0000-0000-000000000002",
-        received_at=datetime.utcnow(),
+        received_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     session.add(sensor)
     session.add(push)
@@ -526,7 +526,7 @@ def test_score_stable_across_migration(tmp_path: Path) -> None:
 
 def test_sensor_push_payload_id_unique_constraint_enforced(tmp_path: Path) -> None:
     """MODEL-04 / D-07: inserting a duplicate payload_id must raise an error."""
-    from datetime import datetime  # noqa: WPS433
+    from datetime import datetime, timezone  # noqa: WPS433
     from sqlalchemy.exc import IntegrityError  # noqa: WPS433
     from quirk.models import Sensor, SensorPush  # noqa: WPS433
     from sqlalchemy.orm import Session  # noqa: WPS433
@@ -537,7 +537,7 @@ def test_sensor_push_payload_id_unique_constraint_enforced(tmp_path: Path) -> No
     sensor = Sensor(
         sensor_id="cccccccc-0000-0000-0000-000000000003",
         segment="lab",
-        enrolled_at=datetime.utcnow(),
+        enrolled_at=datetime.now(timezone.utc).replace(tzinfo=None),
         expected_cadence_minutes=60,
     )
     session.add(sensor)
@@ -546,7 +546,7 @@ def test_sensor_push_payload_id_unique_constraint_enforced(tmp_path: Path) -> No
     push1 = SensorPush(
         payload_id="unique-payload-id-0000000000000000000000000000000000000000000001",
         sensor_id="cccccccc-0000-0000-0000-000000000003",
-        received_at=datetime.utcnow(),
+        received_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     session.add(push1)
     session.commit()
@@ -554,7 +554,7 @@ def test_sensor_push_payload_id_unique_constraint_enforced(tmp_path: Path) -> No
     push2 = SensorPush(
         payload_id="unique-payload-id-0000000000000000000000000000000000000000000001",
         sensor_id="cccccccc-0000-0000-0000-000000000003",
-        received_at=datetime.utcnow(),
+        received_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     session.add(push2)
     with pytest.raises(IntegrityError):

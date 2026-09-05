@@ -100,7 +100,7 @@ def _build_envelope(
     depends on), or pass a list (possibly empty) to include it.
     """
     if pushed_at is None:
-        pushed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        pushed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if payload_id is None:
         payload_id = str(uuid.uuid4())
     env: dict = {
@@ -309,7 +309,7 @@ def test_push_422_replay_window(monkeypatch):
     raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_REPLAY)
 
     stale_pushed_at = (
-        datetime.utcnow() - timedelta(minutes=30)
+        datetime.now(timezone.utc) - timedelta(minutes=30)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
     env = _build_envelope(sensor_id=_SENSOR_REPLAY, pushed_at=stale_pushed_at)
     body = _compress(env)
@@ -346,7 +346,7 @@ def test_push_200_accepted(monkeypatch):
         "host": "10.0.0.1",
         "port": 443,
         "protocol": "TLS",
-        "scanned_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "scanned_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "tls_version": "TLSv1.3",
         "cipher_suite": "TLS_AES_256_GCM_SHA384",
         "cert_subject": "CN=test",
@@ -445,7 +445,7 @@ def test_audit_row_written(monkeypatch):
     _seed_sensor(TestingSession, sensor_id=_SENSOR_AUDIT_STALE)
     raw_token_stale = _seed_token(TestingSession, sensor_id=_SENSOR_AUDIT_STALE)
     stale_pushed_at = (
-        datetime.utcnow() - timedelta(minutes=30)
+        datetime.now(timezone.utc) - timedelta(minutes=30)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
     env_fail = _build_envelope(sensor_id=_SENSOR_AUDIT_STALE, pushed_at=stale_pushed_at)
     body_fail = _compress(env_fail)

@@ -75,7 +75,7 @@ def test_writer_projection_carries_otics_keys(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{db_path}")
     Session = sessionmaker(bind=engine)
     session = Session()
-    scanned_at = datetime.datetime.utcnow()
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     session.add(HardwareDevice(
         host="10.0.5.5",
         port=502,
@@ -132,7 +132,7 @@ def test_merge_projection_carries_otics_keys(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
     Session = sessionmaker(bind=engine)
     session = Session()
-    scanned_at = datetime.datetime.utcnow()
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     session.add(HardwareDevice(
         host="10.0.5.6",
         port=502,
@@ -190,7 +190,7 @@ def _make_dashboard_session():
     m.Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
-    scanned_at = datetime.datetime.utcnow()
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     device = HardwareDevice(
         host="10.0.5.7",
         port=502,
@@ -288,8 +288,8 @@ def _seed_last_known_good_rows(session, unmapped_ok: bool = False) -> datetime.d
     `latest_ts` argument some projection functions accept for signature parity
     (the functions themselves derive their own anchor from the DB).
     """
-    older_success_ts = datetime.datetime.utcnow() - datetime.timedelta(minutes=5)
-    newer_failed_ts = datetime.datetime.utcnow()
+    older_success_ts = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None) - datetime.timedelta(minutes=5)
+    newer_failed_ts = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
     session.add(HardwareDevice(
         host=_LKG_HOST,
@@ -387,7 +387,7 @@ def test_merge_projection_shows_last_known_good_not_failed_row(tmp_path, monkeyp
         host=_LKG_HOST,
         port=_LKG_PORT,
         protocol="SSH",
-        scanned_at=datetime.datetime.utcnow(),
+        scanned_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
     ))
     session.commit()
     session.close()
@@ -474,7 +474,7 @@ def test_null_probe_status_excluded_from_dashboard_projection():
     m.Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
-    scanned_at = datetime.datetime.utcnow()
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     session.add(HardwareDevice(
         host="10.0.9.20",
         port=22,
@@ -512,7 +512,7 @@ def test_snmp_only_device_creation_sets_probe_status_success():
     m.Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
-    scanned_at = datetime.datetime.utcnow()
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     # Same construction shape as run_scan.py's SNMP-only new-row branch.
     session.add(HardwareDevice(
         host="10.0.9.30",

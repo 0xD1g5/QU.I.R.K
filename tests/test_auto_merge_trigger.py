@@ -85,7 +85,7 @@ def _build_envelope(
 ) -> dict:
     """Build a minimal valid wire envelope dict."""
     if pushed_at is None:
-        pushed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        pushed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if payload_id is None:
         payload_id = str(uuid.uuid4())
     return {
