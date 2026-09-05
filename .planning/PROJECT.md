@@ -1,6 +1,6 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-03)
+## Current State (updated 2026-09-05)
 
 **Shipped:** `v5.18.0` on PyPI — first published release since 5.12.0, carrying v5.16
 (Review Drain & Gate Integrity) and v5.17 (Defect Drain) content alongside v5.18's own.
@@ -19,6 +19,32 @@ surfaces.
 **Carried into the next milestone:** the a11y baseline environment mismatch (33 baselines generated
 on macOS, enforced on Linux CI), sensor-origin findings excluded from closure, `DEFER-172-01`
 skip-registry line drift, and TRIAGE-176-01/02.
+
+**Phase 184.2 complete (2026-09-05) — the shipped config now states its scanning posture.**
+`quirk/config_template.yaml` carries all 25 connector flags as live, disposition-tagged YAML
+(7 ship `true`, was 0 live `true` with 11 flags absent entirely), and `ports_tls` is the 17-port
+`CONSULTING_TLS_PORTS` list rather than a 3-port default containing the `4443` typo. Silence was
+the defect: shipping a connector "off" is a legitimate decision, shipping it *unstated* is not.
+Template/working-config drift is closed by declaration rather than regeneration — `config.yaml`
+and `lab-registry.yaml` carry in-file chaos-lab-only markers with enumerated exception lists, and
+a gate reads those markers. Every obligation in that gate is derived at run time from
+`dataclasses.fields()` and `git ls-files`, with no hardcoded path or field list; the derivation
+immediately found a fourth config file the planning docs had not anticipated. Requirement
+SCORE-02 closed. The widened port default was confirmed against the live chaos lab as a strict
+coverage gain (15 ports gained including a CRITICAL expired certificate; one port lost with
+nothing listening on it), not assumed neutral from source.
+
+**Surfaced by that lab run, deliberately not fixed here:** a scan scoring >=55 with even one
+CRITICAL finding produces **no report artefacts at all** — `_rating()` has no CRITICAL floor
+while the reporting congruence guard requires zero CRITICAL for EXCELLENT/GOOD/MODERATE. It is a
+re-discovery of BACK-89 (filed 2026-05-21, invisible for ~3.5 months, and escalated from P2 to a
+hard blocker in the interim by Phase 98's guard). Tracked at
+`.planning/todos/pending/rating-band-critical-floor-halts-reports.md`, scheduled as its own phase.
+
+**Also carried forward:** 57 of 92 `BACK-*` items are referenced by no requirements file and only
+3 appear in `HORIZON.md`, so "closed" and "never tracked" are currently indistinguishable in that
+ledger. A reconciliation phase plus a run-time derived gate is queued at
+`.planning/todos/pending/backlog-reconciliation-and-derived-gate.md`.
 
 
 ## What This Is
