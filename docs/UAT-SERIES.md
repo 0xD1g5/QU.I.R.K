@@ -22778,12 +22778,17 @@ verification in the phase requiring a live estate and a human comparison, not a 
 
 **Steps:**
 ```bash
-cd quantum-chaos-enterprise-lab && ./lab.sh all && ./lab.sh status
+cd quantum-chaos-enterprise-lab && ./lab.sh all && ./lab.sh status   # must list running containers
 cd ..
-# narrow (pre-change) run
-python run_scan.py --config <scratch-3-port-config> --db-path output-narrow/quirk.db
-# widened (shipped) run
-python run_scan.py --config quirk/config_template.yaml --db-path output-widened/quirk.db
+# Derive BOTH configs from config.yaml (the chaos-lab working config), changing
+# only scan.ports_tls, output.directory and output.db_path. Set db_path INSIDE
+# the config -- run_scan.py's --db-path is for job-progress writes, not the scan
+# DB (run_scan.py:1368), and pointing it at an uninitialised file silently
+# records zero checkpoints.
+#   narrow  : ports_tls: [443, 8443, 4443]              -> output-narrow/
+#   widened : ports_tls: <17-port CONSULTING_TLS_PORTS> -> output-widened/
+python run_scan.py --config <narrow-config.yaml>
+python run_scan.py --config <widened-config.yaml>
 ```
 
 **Pass Criteria:** the widened run's endpoint set is a superset (or near-superset with any loss
@@ -22811,7 +22816,11 @@ expired cert on plain port 443 hits the same wall under the old 3-port default, 
 keyed on finding severity, not port count. Filed separately at
 `.planning/todos/pending/rating-band-critical-floor-halts-reports.md`; none of this phase's six
 plans touch `quirk/intelligence/scoring.py` or `quirk/reports/content_model.py`, so it is out of
-scope for this phase and not fixed here.
+scope for this phase and not fixed here. **Validity signal:** a first attempt on
+2026-09-05 ran with the chaos lab down and was vacuous -- `tls_candidates: 0` and every port
+CLOSED in both runs, a false-positive PASS risk. A valid run requires `tls_candidates > 0` in
+`run-stats-*.json`; that check is what distinguishes the real comparison recorded above from an
+empty one, and it was verified before this disposition was recorded.
 
 ---
 
