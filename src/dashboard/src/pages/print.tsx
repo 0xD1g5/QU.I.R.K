@@ -4,6 +4,7 @@ import { useQRAMMPrintData } from "@/hooks/useQRAMMPrintData"
 import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/api"
 import type { QRAMMScoreResponse, QRAMMComplianceMapRow } from "@/types/api"
 import { extractCN } from "@/lib/cert-parse"
+import { formatScanDateTime, formatDateOnly } from "@/lib/datetime"
 
 const FRAMEWORK_DISPLAY: Record<string, string> = {
   NIST_PQC: "NIST PQC Standards",
@@ -87,8 +88,11 @@ function PrintCerts({ certs }: { certs: CertItem[] }) {
       <tbody>
         {certs.map((c, i) => {
           const subjectCN = extractCN(c.cert_subject)
+          // cert_not_after is date-only, not an instant (schemas.py Optional[str]; SCORE-03
+          // Pitfall 1) — dispositioned out of this phase's backend fix, formatted in fixed UTC
+          // via formatDateOnly so the calendar day cannot shift.
           const expiry = c.cert_not_after
-            ? new Date(c.cert_not_after).toLocaleDateString("en-US", { dateStyle: "medium" })
+            ? formatDateOnly(c.cert_not_after)
             : "—"
           const qsClass = c.quantum_safety ? `qs-${c.quantum_safety.replace(" ", "-")}` : ""
           return (
@@ -368,8 +372,12 @@ export function PrintPage() {
   if (!data) return null
 
   const { meta, score, confidence, findings, certificates, cbom_components, roadmap } = data
+  // D-13: /print is a client deliverable and must not depend on which laptop rendered it — the
+  // four Python renderers already emit "%Y-%m-%d %H:%M UTC" (quirk/reports/executive.py,
+  // technical.py), so this fixes the zone to UTC and adds the label rather than following the
+  // browser's ambient zone the interactive dashboard uses.
   const scanDate = meta.scanned_at
-    ? new Date(meta.scanned_at).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatScanDateTime(meta.scanned_at, { timeZone: "UTC" })
     : "Unknown"
 
   return (
