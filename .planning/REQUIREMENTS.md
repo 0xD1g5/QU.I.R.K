@@ -189,26 +189,29 @@ rather than inherited from its original report — two had drifted since they we
   2026-09-04.** The backend stores **naive UTC** — `datetime.now(timezone.utc).replace(tzinfo=None)`
   is the deliberate house pattern (`merge/scan.py:186`, `otics_cadence.py:61`,
   `notify/dispatcher.py` x5) — and the API serializes it **without an offset**:
-  `"scanned_at": "2026-09-04T15:28:56.218111"`. Per ECMAScript, a date-time string with no offset
-  is parsed as **local time**, so `new Date(scannedAt)` in
-  `src/dashboard/src/components/ScanDateBadge.tsx:6` renders a UTC clock reading as if it were
-  local. Demonstrated: a scan that ran at **11:12:58 EDT** displays as **"Last scan: Sep 4, 2026
-  3:13 PM"** — a **4-hour** skew, confirmed by running both parses side by side.
+  `"scanned_at": "2026-09-04T15:28:56.218111"`. Per ECMAScript, a no-offset date-time string is
+  parsed as **local time**, so `new Date(scannedAt)` in
+  `src/dashboard/src/components/ScanDateBadge.tsx:6` renders a UTC clock as local. Demonstrated: a
+  scan that ran at **11:12:58 EDT** displays as **"Last scan: Sep 4, 2026 3:13 PM"** — a
+  **4-hour** skew.
 
-  The codebase already contradicts itself on this: the sibling `scan_run_id` on the very same row
-  IS timezone-aware (`2026-09-04T15:28:54.125544+00:00`), and scan logs stamp `[15:29:52Z]`. So
-  one row carries an offset, an adjacent column does not, and the UI silently mis-renders the one
-  that does not.
+  The codebase contradicts itself: sibling `scan_run_id` on the same row IS timezone-aware
+  (`2026-09-04T15:28:54.125544+00:00`), and scan logs stamp `[15:29:52Z]` — one row carries an
+  offset, an adjacent column does not.
 
-  **Blast radius: 15 frontend files** call `new Date(` on API timestamps
-  (`sensors`, `scan-history`, `motion`, `schedules`, `certificates`, `executive`, `print`,
-  `trends`, `compare`, `hardware`, `LifecycleEventList`, `ScanDateBadge`, ...). Any of them
-  rendering a naive backend timestamp shows the same skew. `ScanDateBadge.test.tsx` asserts the
-  label format but nothing about timezone, so the existing test suite cannot catch this.
+  **Blast radius: every file the run-time source scan identifies** as calling `new Date(` on API
+  timestamps (`sensors`, `scan-history`, `motion`, `schedules`, `certificates`, `executive`,
+  `print`, `trends`, `compare`, `hardware`, `ScanDateBadge`, ...); the existing suite is blind to it.
 
-  Also in scope: **2 remaining `datetime.utcnow()` call sites**. That API is deprecated and
-  scheduled for removal; on this repo's Python 3.14 it raises `DeprecationWarning` under
-  `-W error::DeprecationWarning`, verified 2026-09-04.
+  **Re-derived 2026-09-05:** `quirk/` has **zero** `datetime.utcnow()` calls — the two occurrences
+  originally counted here are comments (Phase 51 DEBT-01 ban, `qramm_cmd.py:9`, `cve_cmd.py:10`),
+  not calls. Real target: `tests/` — **36 actual call sites across 12 files** (38 textual
+  occurrences across 13 files; two are the existing gate's own docstring/assertion literal at
+  `tests/test_qramm_router.py:523,531`, not calls). Locked by generalizing the existing
+  QRAMM-scoped source scan to all of `quirk/`.
+
+  Report output must also state the scan instant alongside the render instant, each zone-labeled,
+  per the D-16a widening — see ROADMAP.md SC-6.
 
   Fixing this is a **client-credibility** issue, not cosmetic: a report timestamped four hours off
   cannot be reconciled against a client's own logs during an engagement.
