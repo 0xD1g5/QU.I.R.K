@@ -461,3 +461,336 @@ def test_ast_gate_catches_synthetic_bogus_attribute_assignment() -> None:
     )
     assert occurrences >= 1
     assert any("enable_totally_fake" in p for p in problems), problems
+
+
+# ---------------------------------------------------------------------------
+# Phase 184.2 Plan 03: D-09 completeness gate, D-06 vocabulary gate, D-18
+# advisory-pre-gate guard, and port parity -- all against the single shipped
+# template `quirk/config_template.yaml`. Reuses `_connector_field_names()`
+# above; introduces no second field-set derivation.
+# ---------------------------------------------------------------------------
+
+import re
+
+from quirk.interactive import CONSULTING_TLS_PORTS
+from quirk.util.optional_extra import REGISTRY
+
+_TEMPLATE_PATH = _REPO_ROOT / "quirk" / "config_template.yaml"
+
+# D-06's closed reason-tag vocabulary. This is a user decision specifying a
+# CLOSED SET of five strings -- not a hand-maintained enumeration of code
+# sites -- so writing it down here does not repeat the "written list with no
+# proof" defect CLAUDE.md's GSD state.* clause (e) warns against; the *set
+# membership* of any given tag is what the gate below verifies at run time.
+_D06_VOCABULARY = frozenset(
+    {
+        "requires-credentials",
+        "requires-targets",
+        "requires-extra-install",
+        "probes-live-equipment",
+        "not-a-connector",
+    }
+)
+
+# Matches one D-06-tagged live `enable_*` line, e.g.:
+#   enable_aws: false  # off: requires-credentials - needs AWS_ACCESS_KEY_ID...
+# The tag lives inside a YAML comment, which `yaml.safe_load` discards, so a
+# text-level regex scan is required -- this is not recoverable from the
+# parsed document.
+_TAGGED_LINE_RE = re.compile(
+    r"^[ \t]+(enable_[a-zA-Z0-9_]+):[ \t]+(true|false)[ \t]{2}#[ \t]"
+    r"(on|off):[ \t]([a-z-]+)[ \t]-[ \t](.+)$",
+    re.MULTILINE,
+)
+
+
+def _enable_field_names() -> set[str]:
+    """Return only the `enable_*`-prefixed `ConnectorsCfg` fields (25 as of
+    this plan) -- the D-09/D-06/D-18 gates below are scoped to enable flags
+    only, unlike `_connector_field_names()` above which also covers
+    target/credential sub-keys for the D-09/D-10 file-wide key gate."""
+    return {k for k in _connector_field_names() if k.startswith("enable_")}
+
+
+def _parse_tagged_lines(text: str) -> dict[str, tuple[bool, str, str, str]]:
+    """Return `{field_name: (bool_value, prefix, tag, detail)}` for every
+    D-06-tagged live `enable_*` line found via `_TAGGED_LINE_RE`. Pure
+    function over raw text so both the real template and synthetic strings
+    in the self-tests below go through identical parsing logic."""
+    out: dict[str, tuple[bool, str, str, str]] = {}
+    for m in _TAGGED_LINE_RE.finditer(text):
+        key, value_str, prefix, tag, detail = m.groups()
+        out[key] = (value_str == "true", prefix, tag, detail.strip())
+    return out
+
+
+def _completeness_problems(known_keys: set[str], tagged: dict) -> list[str]:
+    """D-09: every real `ConnectorsCfg` `enable_*` field must have a live,
+    D-06-tagged template key. A field with no tagged key fails, naming the
+    field -- this is what lets a synthetic planted field be caught with zero
+    edits to any enumerated list (see the self-test below)."""
+    missing = sorted(known_keys - set(tagged))
+    return [
+        f"{name}: no live, D-06-tagged quirk/config_template.yaml key found "
+        "for this ConnectorsCfg field (D-09)"
+        for name in missing
+    ]
+
+
+def _vocabulary_problems(tagged: dict) -> list[str]:
+    """D-06: prefix/value agreement, closed-vocabulary tag membership, and a
+    minimum detail length/word-count for every tagged line."""
+    problems: list[str] = []
+    for key, (value, prefix, tag, detail) in tagged.items():
+        expected_prefix = "on" if value else "off"
+        if prefix != expected_prefix:
+            problems.append(
+                f"{key}: tag prefix {prefix!r} disagrees with boolean value "
+                f"{value!r} (expected {expected_prefix!r}) -- a stale tag on "
+                "a flipped value is a failure, not a formatting nit"
+            )
+        if tag not in _D06_VOCABULARY:
+            problems.append(
+                f"{key}: tag {tag!r} is not one of D-06's closed vocabulary "
+                f"{sorted(_D06_VOCABULARY)}"
+            )
+        if len(detail) < 30 or len(detail.split()) < 5:
+            problems.append(
+                f"{key}: detail {detail!r} is shorter than the required "
+                "30 characters / 5 whitespace-separated words"
+            )
+    return problems
+
+
+def _armed_extras_hazard_problems(tagged: dict) -> list[str]:
+    """D-18: no field shipping `true` in the template may appear in any
+    `optional_extra.REGISTRY` entry's `enabled_attrs` -- that would emit
+    INSTALL-001 on a stock default scan. The hazard set is unioned from
+    REGISTRY at test-run time, never hardcoded (so a future extra registered
+    against a currently-armed connector fails immediately, with no edit to
+    this test)."""
+    hazardous_attrs: set[str] = set()
+    for entry in REGISTRY:
+        hazardous_attrs.update(entry.enabled_attrs)
+    problems: list[str] = []
+    for key, (value, _prefix, _tag, _detail) in tagged.items():
+        if value and key in hazardous_attrs:
+            problems.append(
+                f"{key}: ships true in the template but appears in "
+                "optional_extra.REGISTRY's enabled_attrs -- would emit "
+                "INSTALL-001 on every stock default scan (D-18)"
+            )
+    return problems
+
+
+# `_NOT_A_CONNECTOR` is a disposition LEDGER, not a skip list: every entry
+# names the real driver for a field that is NOT an armed connector (D-08's
+# not-a-connector set is four, not three, per D-20). Checked in BOTH
+# directions below -- a bare membership skip is exactly the "written list
+# with no proof" defect CLAUDE.md's GSD state.* clause (e) warns against.
+_NOT_A_CONNECTOR: dict[str, str] = {
+    "enable_nmap": (
+        "driven by the --discovery nmap CLI flag (run_scan.py), which "
+        "overwrites this attribute at scan start"
+    ),
+    "enable_authenticated_mode": (
+        "driven by the credential CLI flags (run_scan.py); the scheduler "
+        "rejects configs where this is true (QRK-SCHED-AUTH-001)"
+    ),
+    "enable_recurring_otics": (
+        "a scheduler safety gate for recurring Modbus/BACnet probing with a "
+        "168h cadence floor, not a scanner toggle itself"
+    ),
+    "enable_codesign": (
+        "driven by the --inventory-code-signing CLI flag (run_scan.py); "
+        "setting this key changes zero scan behavior (D-20)"
+    ),
+}
+
+
+def _not_a_connector_problems(known_keys: set[str], tagged: dict) -> list[str]:
+    """Bidirectional ledger check: every ledger key must be a real field with
+    a non-empty driver pointer (stale-entry direction), and every template
+    field tagged `not-a-connector` must have a ledger entry (completeness
+    direction)."""
+    problems: list[str] = []
+    for field, driver in _NOT_A_CONNECTOR.items():
+        if field not in known_keys:
+            problems.append(
+                f"_NOT_A_CONNECTOR entry {field!r} is not a real "
+                "ConnectorsCfg field -- stale ledger entry"
+            )
+        if not driver.strip():
+            problems.append(
+                f"_NOT_A_CONNECTOR entry {field!r} has a blank driver pointer"
+            )
+    for key, (_value, _prefix, tag, _detail) in tagged.items():
+        if key in _NOT_A_CONNECTOR and tag != "not-a-connector":
+            problems.append(
+                f"{key}: ledgered in _NOT_A_CONNECTOR but the template tag "
+                f"is {tag!r}, not 'not-a-connector'"
+            )
+        if tag == "not-a-connector" and key not in _NOT_A_CONNECTOR:
+            problems.append(
+                f"{key}: template tags this 'not-a-connector' but there is "
+                "no _NOT_A_CONNECTOR ledger entry naming its real driver"
+            )
+    return problems
+
+
+def test_template_connectors_are_complete_tagged_and_hazard_free() -> None:
+    """The single combined D-09/D-06/D-18/not-a-connector-ledger gate against
+    the real, shipped `quirk/config_template.yaml`.
+
+    Convention-blindness guard: fails loudly if the field set or the tagged-
+    line scan comes back implausibly small -- an empty diff must never be
+    silently readable as "everything is fine" when a regex or derivation is
+    broken.
+    """
+    known_keys = _enable_field_names()
+    assert len(known_keys) >= 20, (
+        f"_connector_field_names() returned only {len(known_keys)} fields -- "
+        "implausibly small; the dataclasses.fields() derivation may be broken."
+    )
+
+    text = _TEMPLATE_PATH.read_text(encoding="utf-8")
+    tagged = _parse_tagged_lines(text)
+    assert len(tagged) > 0, (
+        "the D-06 tagged-line regex matched ZERO lines in "
+        "quirk/config_template.yaml -- a scan that cannot see its own target "
+        "must not silently read as a pass; check _TAGGED_LINE_RE against "
+        "the current template formatting"
+    )
+
+    problems: list[str] = []
+    problems.extend(_completeness_problems(known_keys, tagged))
+    problems.extend(_vocabulary_problems(tagged))
+    problems.extend(_armed_extras_hazard_problems(tagged))
+    problems.extend(_not_a_connector_problems(known_keys, tagged))
+    assert not problems, problems
+
+
+def test_ports_tls_matches_consulting_tls_ports() -> None:
+    """Port parity: `scan.ports_tls` in the shipped template must equal
+    `CONSULTING_TLS_PORTS` (quirk/interactive.py) by value AND order, so a
+    future edit to either surface without the other fails immediately. No
+    literal 17-port list is written in this test."""
+    data = yaml.safe_load(_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    assert data["scan"]["ports_tls"] == list(CONSULTING_TLS_PORTS), (
+        data["scan"]["ports_tls"]
+    )
+
+
+def test_not_a_connector_ledger_has_exactly_four_entries() -> None:
+    """Locks D-20's corrected arithmetic: the not-a-connector set is four
+    fields, not the original three-field claim D-08 made before the D-20
+    amendment."""
+    assert len(_NOT_A_CONNECTOR) == 4, _NOT_A_CONNECTOR
+    assert set(_NOT_A_CONNECTOR) == {
+        "enable_nmap",
+        "enable_authenticated_mode",
+        "enable_recurring_otics",
+        "enable_codesign",
+    }, _NOT_A_CONNECTOR
+    for field, driver in _NOT_A_CONNECTOR.items():
+        assert driver.strip(), f"{field}: blank driver pointer"
+
+
+def test_not_a_connector_ledger_stale_entry_is_caught() -> None:
+    """Self-test proving the stale-entry direction: a ledger key naming a
+    field that is not a real ConnectorsCfg field is caught, and a ledger
+    entry with a blank driver pointer is caught."""
+    known_keys = _enable_field_names()
+    problems = _not_a_connector_problems(
+        known_keys, {}
+    )
+    # The real ledger is clean against real fields.
+    assert not problems, problems
+
+    stale = {"enable_totally_made_up": "no such field exists"}
+    orig = dict(_NOT_A_CONNECTOR)
+    try:
+        _NOT_A_CONNECTOR.clear()
+        _NOT_A_CONNECTOR.update(stale)
+        stale_problems = _not_a_connector_problems(known_keys, {})
+        assert stale_problems, "failed to flag a stale ledger key"
+        assert any("stale ledger entry" in p for p in stale_problems), stale_problems
+
+        _NOT_A_CONNECTOR.clear()
+        _NOT_A_CONNECTOR.update({"enable_nmap": "   "})
+        blank_problems = _not_a_connector_problems(known_keys, {})
+        assert blank_problems, "failed to flag a blank driver pointer"
+        assert any("blank driver pointer" in p for p in blank_problems), blank_problems
+    finally:
+        _NOT_A_CONNECTOR.clear()
+        _NOT_A_CONNECTOR.update(orig)
+
+
+def test_planted_connector_field_is_caught_without_list_edit() -> None:
+    """Derivation self-test: a synthetic `enable_planted_field` added to the
+    real known-keys set (simulating a new `ConnectorsCfg` field with no
+    dispositioned template entry) is reported by name by the same
+    `_completeness_problems` function used against the real template --
+    zero edits to any enumerated list."""
+    known_keys = _enable_field_names() | {"enable_planted_field"}
+    text = _TEMPLATE_PATH.read_text(encoding="utf-8")
+    tagged = _parse_tagged_lines(text)
+
+    problems = _completeness_problems(known_keys, tagged)
+    assert problems, "completeness check failed to catch a synthetic unlisted field"
+    assert any("enable_planted_field" in p for p in problems), problems
+
+
+def test_out_of_vocabulary_tag_is_caught() -> None:
+    """Self-test: a tag outside the closed D-06 vocabulary is reported by
+    name, naming both the offending key and the tag."""
+    tagged = _parse_tagged_lines(
+        "  enable_fake: true  # on: requires-magic - "
+        "some detail text that is long enough to pass the length check\n"
+    )
+    assert tagged, "test fixture line failed to match _TAGGED_LINE_RE"
+
+    problems = _vocabulary_problems(tagged)
+    assert problems, "vocabulary check failed to catch an out-of-vocabulary tag"
+    assert any("enable_fake" in p and "requires-magic" in p for p in problems), problems
+
+
+def test_stale_prefix_disagreement_is_caught() -> None:
+    """Self-test: a `true` value tagged with an `off:` prefix is caught."""
+    tagged = _parse_tagged_lines(
+        "  enable_fake: true  # off: requires-targets - "
+        "some detail text that is long enough to pass the length check\n"
+    )
+    problems = _vocabulary_problems(tagged)
+    assert problems
+    assert any("enable_fake" in p and "disagrees" in p for p in problems), problems
+
+
+def test_short_detail_is_caught() -> None:
+    """Self-test: a detail shorter than 30 characters / 5 words is caught."""
+    tagged = _parse_tagged_lines(
+        "  enable_fake: false  # off: requires-credentials - too short\n"
+    )
+    problems = _vocabulary_problems(tagged)
+    assert problems
+    assert any("enable_fake" in p and "shorter than" in p for p in problems), problems
+
+
+def test_armed_extras_hazard_guard_is_caught() -> None:
+    """Self-test: a template field shipping true that also appears in some
+    REGISTRY entry's enabled_attrs is caught -- proves the D-18 guard logic
+    against a synthetic hazard rather than only against today's real
+    (currently hazard-free) template."""
+    real_entry = REGISTRY[0]
+    hazardous_field = real_entry.enabled_attrs[0]
+    tagged = {
+        hazardous_field: (
+            True,
+            "on",
+            "requires-targets",
+            "synthetic hazard case for the D-18 self-test only",
+        )
+    }
+    problems = _armed_extras_hazard_problems(tagged)
+    assert problems, "D-18 guard failed to catch a synthetic armed-hazard field"
+    assert any(hazardous_field in p for p in problems), problems
