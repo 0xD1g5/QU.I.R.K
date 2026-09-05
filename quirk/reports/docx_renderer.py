@@ -294,6 +294,8 @@ def render_docx_report(
     cfg: Any,
     findings: List[dict],
     exec_content: "Any | None" = None,
+    *,
+    scan_completed_at: "datetime | None" = None,
 ) -> bool:
     """Write a structural Word DOCX report to *path*.
 
@@ -311,6 +313,13 @@ def render_docx_report(
     exec_content : ExecContent | None
         Shared content model built by build_exec_content(). When None, falls back
         to empty narrative/roadmap/score sections (D-10 single pipeline).
+    scan_completed_at : datetime | None
+        SCORE-03 / D-16b (Phase 184.3): naive-UTC scan instant (CryptoEndpoint.
+        scanned_at, derived once in writer.py). `render_docx_report` receives no
+        `endpoints`, so this is the ONLY way the scan instant reaches the DOCX
+        path — it cannot be derived locally. Rendered in the cover metadata
+        paragraph via the shared `format_scan_completed_at` helper, which never
+        falls back to `generated_at`.
     """
     # T-100-DEP: lazy import — MUST stay inside the function body.
     # Never import docx at module level (optional-extra import trap).
@@ -365,6 +374,11 @@ def render_docx_report(
     report_owner = getattr(getattr(cfg, "assessment", None), "report_owner", "")
     data_classification = getattr(getattr(cfg, "assessment", None), "data_classification", "")
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    # SCORE-03 / D-16b (Phase 184.3): local import avoids a circular import
+    # (writer.py imports this module at load time).
+    from quirk.reports.writer import format_scan_completed_at
+
+    scan_completed_label = format_scan_completed_at(scan_completed_at)
 
     # ---------------------------------------------------------------------------
     # Build Document
@@ -400,7 +414,8 @@ def render_docx_report(
 
     # 4. Metadata line — Normal
     doc.add_paragraph(
-        f"Report Owner: {report_owner}  |  Date: {generated_at}"
+        f"Report Owner: {report_owner}  |  Scan Completed: {scan_completed_label}"
+        f"  |  Generated: {generated_at}"
         f"  |  Classification: {data_classification}",
         style="Normal",
     )

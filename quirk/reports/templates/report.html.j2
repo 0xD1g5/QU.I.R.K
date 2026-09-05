@@ -348,7 +348,11 @@
         <span class="cover-meta-value">{{ report_owner | sanitize }}</span>
       </div>
       <div class="cover-meta-row">
-        <span class="cover-meta-label">Scan Date</span>
+        <span class="cover-meta-label">Scan Completed</span>
+        <span class="cover-meta-value">{{ scan_completed_at }}</span>
+      </div>
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Generated</span>
         <span class="cover-meta-value">{{ generated_at }}</span>
       </div>
       <div class="cover-meta-row">
@@ -369,6 +373,7 @@
       <tr><td>Report owner</td><td>{{ report_owner | sanitize }}</td></tr>
       <tr><td>Data classification</td><td>{{ data_classification | sanitize }}</td></tr>
       <tr><td>Generated</td><td>{{ generated_at }}</td></tr>
+      <tr><td>Scan completed</td><td>{{ scan_completed_at }}</td></tr>
       {# Phase 146 D-08/D-09/D-10 (DISC-07): undetermined-host disclosure. Both values are
          QUIRK-computed integers from the shared ExecContent field — no sanitize needed;
          row labels are plain literal text. #}

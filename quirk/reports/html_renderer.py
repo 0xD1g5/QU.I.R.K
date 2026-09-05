@@ -800,6 +800,7 @@ def render_html_report(
     roadmap_items: List[Dict[str, Any]],
     *,
     exec_content: "ExecContent | None" = None,
+    scan_completed_at: "datetime | None" = None,
 ) -> None:
     """Render a self-contained HTML report to *path*.
 
@@ -808,7 +809,15 @@ def render_html_report(
     D-03 / Phase 98: exec_content carries the shared narrative/risks/roadmap/subscores
     built by writer.py. When provided, the template context sources exec_content fields
     for narrative, top_risks, roadmap sections, and subscores (D-07 — extend, not rebuild).
+
+    SCORE-03 / D-16b (Phase 184.3): scan_completed_at is the naive-UTC scan instant
+    (CryptoEndpoint.scanned_at, derived once in writer.py), rendered by the template as
+    a "Scan Completed" row distinct from the pre-existing generated_at ("Generated") rows.
     """
+    # SCORE-03 / D-16b (Phase 184.3): local import avoids a circular import
+    # (writer.py imports this module at load time).
+    from quirk.reports.writer import format_scan_completed_at
+
     env = Environment(
         loader=FileSystemLoader(_TEMPLATES_DIR),
         autoescape=select_autoescape(["html", "j2"]),
@@ -933,6 +942,9 @@ def render_html_report(
         report_owner=getattr(getattr(cfg, "assessment", None), "report_owner", ""),
         data_classification=getattr(getattr(cfg, "assessment", None), "data_classification", "CONFIDENTIAL"),
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        # SCORE-03 / D-16b (Phase 184.3): shared helper renders the explicit
+        # unknown marker rather than ever falling back to generated_at above.
+        scan_completed_at=format_scan_completed_at(scan_completed_at),
         total_score=total_score,
         score_band=band,
         score_color=_score_color(band),
