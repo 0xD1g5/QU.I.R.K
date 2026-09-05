@@ -167,7 +167,7 @@ rather than inherited from its original report — two had drifted since they we
   `UAT-184.1-01` to exercise those emitted artifacts instead of `compute_confidence()` in
   isolation. SC-3 is now genuinely satisfied, not merely locked at capture.
 
-- [ ] **SCORE-02**: the shipped config template enables a defensible out-of-the-box scanning
+- [x] **SCORE-02**: the shipped config template enables a defensible out-of-the-box scanning
   baseline, and template/working-config drift is closed. **Measured 2026-09-04:**
   `grep -c '^\s*enable_[a-z]*: true' quirk/config_template.yaml` returns **0** — every connector
   ships `false` or commented out (`enable_aws`, `enable_azure`, `enable_jwt`, `enable_container`,
@@ -251,7 +251,7 @@ rather than inherited from its original report — two had drifted since they we
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | TBD | Pending |
 | SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
-| SCORE-02 | TBD | Pending |
+| SCORE-02 | 184.2-01, 184.2-02, 184.2-03, 184.2-04, 184.2-05, 184.2-06 | Complete |
 | SCORE-03 | TBD | Pending |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |
