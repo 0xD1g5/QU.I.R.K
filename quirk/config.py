@@ -265,6 +265,17 @@ class ConnectorsCfg:
     smime_targets: list = field(default_factory=list)
     smime_search_base: Optional[str] = None
     smime_timeout: int = 10
+    # Phase 184.2 D-11: AD CS LDAP scanner enable flag + target sub-keys. The
+    # scanner (Phase 80 ADCS-01) and its run_scan.py guard/pre-gate already
+    # existed; enable_adcs was never a ConnectorsCfg field, so the guard at
+    # run_scan.py:3284 was permanently unreachable and the key was silently
+    # dropped by the connectors filter.
+    enable_adcs: bool = False
+    adcs_targets: list = field(default_factory=list)
+    adcs_search_base: Optional[str] = None
+    adcs_user: Optional[str] = None
+    adcs_password: Optional[str] = None
+    adcs_timeout: int = 10
     # Phase 95 CSIGN-01: Code-signing certificate inventory via LDAP userCertificate
     # filtered to CodeSigning EKU (OID 1.3.6.1.5.5.7.3.3). Opt-in via CLI flag.
     enable_codesign: bool = False
