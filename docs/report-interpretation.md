@@ -1133,3 +1133,62 @@ asks why a confidence rating moved between two reports of the same estate, the a
 readable from the reports themselves: the older one has no `confidence_formula_version` field on
 any of the three surfaces above, the newer one reads `"2.0.0"` on all three, and this section names
 exactly what changed between them.
+
+---
+
+## 18. Timestamps and Time Zones (Phase 184.3, SCORE-03)
+
+### Every timestamp is UTC, and says so
+
+Every timestamp QU.I.R.K. reports denotes a single, unambiguous instant in UTC. API payloads
+(`GET /api/scans` and every other dashboard route that returns a datetime field) carry an
+explicit `+00:00` offset — `"2026-09-04T15:28:56.218111+00:00"`, never a bare
+`"2026-09-04T15:28:56.218111"` — so a downstream tool parsing that string cannot mistake it for
+local time. Before this phase, the offset was missing: a client's own tooling (and, in the
+dashboard's case, the browser's own `Date` parser) read a naive ISO string as *local* time,
+producing a skew of however many hours the reader's machine sits from UTC. That defect is what
+this section, and the two source-scan gates named below, now permanently close.
+
+Two client-visible surfaces apply that UTC instant differently, deliberately:
+
+- **The interactive dashboard** shows times in *your browser's* local time zone, with the zone
+  abbreviation always visible next to the value (for example `Sep 4, 2026 11:12 AM EDT`). This is
+  the one surface that is not fixed-UTC — it is meant to match the wall clock of the person
+  looking at the screen, and the visible zone label is what lets you reconcile a screenshot
+  against your own clock without guessing which time zone produced it.
+- **`/print` and the PDF / DOCX / HTML report exports** all show the scan instant as fixed,
+  labeled UTC — `2026-09-04 15:28 UTC` — regardless of which machine or time zone generated the
+  export. This means the same scan, exported any way, from any machine, states the same instant.
+  `/print` was deliberately aligned to this fixed-UTC convention in this phase specifically so
+  that a client comparing a live `/print` view against a delivered PDF/DOCX/HTML report sees the
+  identical stated time — it does not follow the browser-local rule the rest of the interactive
+  dashboard follows.
+
+### `Scan Completed` vs `Generated`
+
+Every report (executive markdown, technical markdown, HTML, and DOCX) states two distinct
+instants, each labeled `UTC` and each under a label that cannot be confused with the other:
+
+- **`Scan Completed`** (`Scan completed:` in the markdown reports) is when the evidence was
+  actually collected — derived from the scanned endpoints' own `scanned_at` values, not from when
+  the document was produced.
+- **`Generated`** (`Generated:` in the DOCX cover and the markdown reports; the HTML cover block's
+  matching row was itself corrected this phase from an inaccurate `Scan Date` label, which had
+  been silently showing the document-build time rather than any scan instant) is when the
+  *document* was built.
+
+A gap between these two values is expected and normal — a report is very often produced some time
+after the scan it describes ran, whether minutes or days later. If the scan instant cannot be
+determined for a particular report (for example, no endpoint carries a `scanned_at` value), every
+report path shows the same explicit marker, `Unknown (no scan instant available)`, rather than
+silently substituting the document's build time — a report never claims to know when a scan ran if
+it does not.
+
+### Calendar dates are not instants
+
+Certificate expiry (`cert_not_after`) and hardware end-of-life (`eol_date`) are calendar DATES,
+not instants: they carry no time-of-day and no zone label anywhere they are rendered. They are
+computed and displayed in UTC specifically so that the calendar day itself cannot shift depending
+on which time zone happens to render it — an expiry date one day either side of midnight UTC
+would otherwise appear to move by a day depending on the reader's local offset, which is worse
+than useless for a compliance deadline.
