@@ -8,6 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { formatDateOnly } from "@/lib/datetime"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -79,9 +80,9 @@ function EmailTable({ findings }: { findings: MotionFinding[] }) {
                   {f.plaintext_exposed ? "" : (f.cipher_suite ?? "")}
                 </TableCell>
                 <TableCell className="text-sm">
-                  {f.cert_not_after
-                    ? new Date(f.cert_not_after).toLocaleDateString("en-US", { dateStyle: "medium" })
-                    : ""}
+                  {/* cert_not_after is date-only, not an instant (schemas.py Optional[str];
+                      SCORE-03 Pitfall 1) — dispositioned out of this phase's backend fix. */}
+                  {f.cert_not_after ? formatDateOnly(f.cert_not_after) : ""}
                 </TableCell>
                 <TableCell className="text-sm">{f.quantum_risk ?? ""}</TableCell>
                 <TableCell className="text-sm">

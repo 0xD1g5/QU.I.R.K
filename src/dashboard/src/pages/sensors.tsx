@@ -7,12 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
+import { toDate } from "@/lib/datetime"
 
 // Relative time helper — no date library dependency
 function relativeTime(isoString: string | null | undefined): string {
   if (!isoString) return "Never"
-  const then = new Date(isoString).getTime()
-  if (isNaN(then)) return "Never"
+  const then = toDate(isoString)?.getTime()
+  if (then === undefined || isNaN(then)) return "Never"
   const diffMs = Date.now() - then
   // Clamp negative deltas (sensor clock slightly ahead of console) to "Just now"
   // so a future timestamp never renders as "−N seconds ago" (WR-01).

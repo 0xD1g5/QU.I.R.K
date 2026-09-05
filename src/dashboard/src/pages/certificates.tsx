@@ -8,6 +8,7 @@ import { AlertTriangle } from "lucide-react"
 import { CertificatesSkeleton } from "./certificates.skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
 import { extractCN } from "@/lib/cert-parse"
+import { toDate, formatDateOnly } from "@/lib/datetime"
 
 const QS_BADGE: Record<string, string> = {
   Safe: "bg-[hsl(142_71%_45%)] text-white",
@@ -49,7 +50,11 @@ export function CertificatesPage() {
           </TableHeader>
           <TableBody>
             {certs.map((cert, i) => {
-              const expiry = cert.cert_not_after ? new Date(cert.cert_not_after) : null
+              // cert_not_after is date-only, not an instant (schemas.py Optional[str]; SCORE-03
+              // Pitfall 1) — dispositioned out of this phase's backend fix. toDate() here is only
+              // for daysToExpiry arithmetic; formatDateOnly (below, fixed UTC) is used for display
+              // so the calendar day cannot shift.
+              const expiry = toDate(cert.cert_not_after)
               const daysToExpiry = expiry ? Math.floor((expiry.getTime() - now.getTime()) / 86400000) : null
               const expiryClass = daysToExpiry !== null
                 ? daysToExpiry < 0 ? "text-[hsl(0_72%_51%)]"
@@ -69,7 +74,7 @@ export function CertificatesPage() {
                   <TableCell className="text-sm">{issuerCN}</TableCell>
                   <TableCell className={`text-sm ${expiryClass} flex items-center gap-1`}>
                     {(daysToExpiry !== null && daysToExpiry < 30) && <AlertTriangle className="h-3 w-3" />}
-                    {expiry ? expiry.toLocaleDateString("en-US", { dateStyle: "medium" }) : "—"}
+                    {expiry ? formatDateOnly(cert.cert_not_after) : "—"}
                   </TableCell>
                   <TableCell className="text-xs font-mono">
                     {cert.cert_pubkey_alg ?? "—"}

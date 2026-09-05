@@ -10,6 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { formatDateOnly } from "@/lib/datetime"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { LifecycleEventList } from "@/components/LifecycleEventList"
 import { VendorTrendList } from "@/components/VendorTrendList"
@@ -289,9 +290,9 @@ export function HardwarePage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {f.eol_date
-                        ? new Date(f.eol_date).toLocaleDateString("en-US", { dateStyle: "medium" })
-                        : "—"}
+                      {/* eol_date is date-only, not an instant (schemas.py Optional[str];
+                          SCORE-03 Pitfall 1) — dispositioned out of this phase's backend fix. */}
+                      {f.eol_date ? formatDateOnly(f.eol_date) : "—"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {METHOD_LABEL[f.fingerprint_method] ?? f.fingerprint_method}
