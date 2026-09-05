@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
-status: planning
-stopped_at: Phase 184.3 planned (11 plans, 4 waves)
-last_updated: "2026-09-05T17:35:00.000Z"
+status: executing
+stopped_at: Completed 184.3-01-PLAN.md
+last_updated: "2026-09-05T17:34:07.643Z"
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 28
-  completed_plans: 28
+  total_plans: 39
+  completed_plans: 29
   percent: 50
 ---
 
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.3 — timestamp correctness
+**Current focus:** Phase 184.3 — timestamp-correctness
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,9 +671,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.3
-Plan: 0 of 11
-Status: Planned — ready to execute
+Phase: 184.3 (timestamp-correctness) — EXECUTING
+Plan: 2 of 11
+Status: Ready to execute
 — live `state begin-phase` re-demonstration verified clean against the real STATE.md, TOOL-01/
 TOOL-04 hand-closed in REQUIREMENTS.md, CLAUDE.md's clause (e) retracted only after the clean
 diff. Note: the `Status:` line above was itself just rewritten by this task's own `begin-phase`
@@ -1165,6 +1165,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 184.1 P01 | 26min | 3 tasks | 4 files |
 | Phase 184.1 P02 | 24min | 2 tasks | 2 files |
 | Phase 184.1 P03 | 22min | 1 tasks | 1 files |
+| Phase 184.3 P01 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1495,6 +1496,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 184.1]: 184.1-01: coverage counters evidence-derived (D-01/D-02); ADVISORY+CLOSED excluded from denominator (D-06/D-07); ROADMAP SC-3/REQUIREMENTS SCORE-01 no longer assert /api/trends historical migration (D-13)
 - [Phase ?]: 184.1-02: coverage_ratio rewired onto assessed_crypto_count/assessable_endpoint_count (D-01/D-02); D-10 adds independent NO_DATA branch; CONFIDENCE_FORMULA_VERSION=2.0.0 stamped on all return paths (D-12/D-14); every D-19 test expectation re-derived individually
 - [Phase 184.1]: D-11: exclusion set {ADVISORY, CLOSED} guarded by a run-time source scan — tests/test_evidence_protocol_disposition.py regenerates its occurrence set from quirk/scanner/**, cbom/writer.py, optional_extra.py at every test run, classifying 46 real occurrences via a content-keyed disposition ledger; follows the TOOL-04/182-07 precedent
+- [Phase ?]: 184.3-01: amended ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where 2026-09-05 measurement falsified the premise (D-04/D-06/D-11/D-16a)
 
 ### Pending Todos
 
@@ -1664,8 +1666,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-05T16:31:21.620Z
-Stopped at: Phase 184.3 context gathered
+Last session: 2026-09-05T17:34:07.634Z
+Stopped at: Completed 184.3-01-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

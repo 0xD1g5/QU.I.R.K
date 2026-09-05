@@ -437,7 +437,7 @@ Plans:
 **Plans**: 11 plans
 
 Plans:
-- [ ] 184.3-01-PLAN.md — amend ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where measurement falsified the premise (D-04, D-06, D-11, D-16a)
+- [x] 184.3-01-PLAN.md — amend ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where measurement falsified the premise (D-04, D-06, D-11, D-16a)
 - [ ] 184.3-02-PLAN.md — `UTCDateTime` stamping contract in `quirk/dashboard/api/_timestamp_utils.py` + all 10 Pydantic datetime fields (D-01, D-02, D-03a)
 - [ ] 184.3-03-PLAN.md — the 8 hand-rolled `.isoformat()` route sites routed through the helper; 2 identity keys fenced off (D-03b, D-05)
 - [ ] 184.3-04-PLAN.md — repo-wide `datetime.utcnow()` gate over `quirk/` + 35 `tests/` call-site migrations (D-04)
