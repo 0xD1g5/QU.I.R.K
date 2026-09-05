@@ -219,3 +219,42 @@ def test_bridge_badge_label_maps_status_to_verbatim_labels():
     assert _bridge_badge_label({"bridge_status": "upstream_mitigated"}) == "SNMP-confirmed"
     assert _bridge_badge_label({}) == "—"
     assert _bridge_badge_label({"bridge_status": None}) == "—"
+
+
+def test_docx_renders_scan_completed_timestamp(tmp_path):
+    """SCORE-03 / D-16b (Phase 184.3): DOCX cover paragraph text contains both
+    the scan instant and the generated instant, under distinct labels."""
+    from datetime import datetime
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+
+    path = str(tmp_path / "report_scan_completed.docx")
+    scan_instant = datetime(2026, 9, 4, 15, 28, 56)
+    result = render_docx_report(
+        path=path, cfg=_make_minimal_cfg(), findings=[], scan_completed_at=scan_instant,
+    )
+    assert result is True
+    doc = Document(path)
+    meta_text = "\n".join(p.text for p in doc.paragraphs)
+    assert "2026-09-04 15:28 UTC" in meta_text
+    assert "Scan Completed:" in meta_text
+    assert "Generated:" in meta_text
+    # T-184.3-31: the ambiguous "Date:" label is retired
+    assert "Date:" not in meta_text
+
+
+def test_docx_scan_completed_timestamp_unknown_marker(tmp_path):
+    """SCORE-03 / D-16b: no derivable scan instant renders the explicit
+    unknown marker in the DOCX cover paragraph, never the generated time."""
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+    from quirk.reports.writer import SCAN_COMPLETED_AT_UNKNOWN
+
+    path = str(tmp_path / "report_scan_unknown.docx")
+    result = render_docx_report(
+        path=path, cfg=_make_minimal_cfg(), findings=[], scan_completed_at=None,
+    )
+    assert result is True
+    doc = Document(path)
+    meta_text = "\n".join(p.text for p in doc.paragraphs)
+    assert SCAN_COMPLETED_AT_UNKNOWN in meta_text

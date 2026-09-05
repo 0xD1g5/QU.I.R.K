@@ -279,3 +279,80 @@ def test_bridge_status_content_model_parity_html_docx(tmp_path):
         assert label in docx_text, f"{label!r} missing from DOCX"
     assert _BRIDGE_CAVEAT_TEXT in html, "caveat missing from HTML"
     assert _BRIDGE_CAVEAT_TEXT in docx_text, "caveat missing from DOCX"
+
+
+def test_scan_completed_timestamp_parity_across_all_four_renderers(tmp_path):
+    """SCORE-03 / D-16b (Phase 184.3): the HTML, DOCX, executive-markdown, and
+    technical-markdown renderers all agree on the same formatted scan instant
+    string for the same input, and each also still carries the pre-existing
+    render (generated_at) instant, each ending in the literal token UTC."""
+    from datetime import datetime
+    from docx import Document
+
+    from quirk.reports.docx_renderer import render_docx_report
+    from quirk.reports.html_renderer import render_html_report
+    from quirk.reports.executive import build_exec_markdown
+    from quirk.reports.technical import build_tech_markdown
+
+    scan_instant = datetime(2026, 9, 4, 15, 28, 56)
+    expected_label = "2026-09-04 15:28 UTC"
+    cfg = _make_minimal_cfg()
+    # build_exec_markdown/build_tech_markdown's legacy (exec_content=None)
+    # path computes score_raw locally and needs cfg.intelligence.
+    cfg.intelligence = SimpleNamespace(profile="balanced", calibration_overrides=None)
+
+    html_path = str(tmp_path / "report_parity.html")
+    render_html_report(
+        path=html_path, cfg=cfg, endpoints=[], findings=[],
+        score={"total": 50, "subscores": {}, "drivers": []},
+        conf={"confidence": 60, "confidence_factors": {}},
+        roadmap_items=[],
+        scan_completed_at=scan_instant,
+    )
+    html_text = open(html_path).read()
+
+    docx_path = str(tmp_path / "report_parity.docx")
+    render_docx_report(path=docx_path, cfg=cfg, findings=[], scan_completed_at=scan_instant)
+    doc = Document(docx_path)
+    docx_text = "\n".join(p.text for p in doc.paragraphs)
+
+    exec_md = build_exec_markdown(cfg, [], [], scan_completed_at=scan_instant)
+    tech_md = build_tech_markdown(cfg, [], [], scan_completed_at=scan_instant)
+
+    for surface_name, text in (
+        ("html", html_text),
+        ("docx", docx_text),
+        ("exec_md", exec_md),
+        ("tech_md", tech_md),
+    ):
+        assert expected_label in text, f"{surface_name} missing scan instant {expected_label!r}"
+        assert "UTC" in text, f"{surface_name} missing UTC token"
+
+
+def test_scan_completed_timestamp_unknown_not_substituted_with_generated_time():
+    """SCORE-03 / D-16b: with no derivable scan instant, all four renderers emit
+    the shared unknown marker in the scan-instant position — never the
+    generated (render) time. Regression guard for T-184.3-30."""
+    from quirk.reports.executive import build_exec_markdown
+    from quirk.reports.technical import build_tech_markdown
+    from quirk.reports.writer import SCAN_COMPLETED_AT_UNKNOWN
+
+    cfg = _make_minimal_cfg()
+    cfg.intelligence = SimpleNamespace(profile="balanced", calibration_overrides=None)
+
+    exec_md = build_exec_markdown(cfg, [], [], scan_completed_at=None)
+    tech_md = build_tech_markdown(cfg, [], [], scan_completed_at=None)
+
+    for surface_name, text in (("exec_md", exec_md), ("tech_md", tech_md)):
+        assert SCAN_COMPLETED_AT_UNKNOWN in text, f"{surface_name} missing unknown marker"
+        # The scan-completed line itself must not carry a bare generated-time
+        # substitution: extract the "Scan completed:" line and assert it is
+        # exactly the unknown marker, not a UTC-stamped instant.
+        scan_line = next(
+            line for line in text.splitlines() if "Scan completed:" in line
+        )
+        assert SCAN_COMPLETED_AT_UNKNOWN in scan_line
+        assert scan_line.count("UTC") == 0, (
+            f"{surface_name}: scan-completed line unexpectedly contains a UTC "
+            f"timestamp instead of the unknown marker: {scan_line!r}"
+        )

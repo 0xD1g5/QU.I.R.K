@@ -250,3 +250,45 @@ def test_bridge_badge_label_maps_status_to_verbatim_labels():
     assert _bridge_badge_label({"bridge_status": "upstream_mitigated"}) == "SNMP-confirmed"
     assert _bridge_badge_label({}) == ""
     assert _bridge_badge_label({"bridge_status": None}) == ""
+
+
+def test_html_report_renders_scan_completed_timestamp(tmp_path):
+    """SCORE-03 / D-16b (Phase 184.3): HTML report renders a zone-labeled scan
+    instant, distinct from the report-generation instant, when provided."""
+    from datetime import datetime
+    from quirk.reports.html_renderer import render_html_report
+
+    cfg = _make_minimal_cfg()
+    scan_instant = datetime(2026, 9, 4, 15, 28, 56)
+    out = str(tmp_path / "report-scan-completed.html")
+    render_html_report(
+        path=out, cfg=cfg, endpoints=[], findings=[],
+        score={"total": 50, "subscores": {}, "drivers": []},
+        conf={"confidence": 60, "confidence_factors": {}},
+        roadmap_items=[],
+        scan_completed_at=scan_instant,
+    )
+    content = open(out).read()
+    scan_label = "2026-09-04 15:28 UTC"
+    assert scan_label in content, "Expected formatted scan instant in HTML output"
+    assert "Scan Completed" in content or "Scan completed" in content
+    assert "Generated" in content
+
+
+def test_html_report_scan_completed_timestamp_unknown_marker(tmp_path):
+    """SCORE-03 / D-16b: a report with no derivable scan instant renders the
+    explicit unknown marker, never the render (generated_at) time in its place."""
+    from quirk.reports.html_renderer import render_html_report
+    from quirk.reports.writer import SCAN_COMPLETED_AT_UNKNOWN
+
+    cfg = _make_minimal_cfg()
+    out = str(tmp_path / "report-scan-unknown.html")
+    render_html_report(
+        path=out, cfg=cfg, endpoints=[], findings=[],
+        score={"total": 50, "subscores": {}, "drivers": []},
+        conf={"confidence": 60, "confidence_factors": {}},
+        roadmap_items=[],
+        scan_completed_at=None,
+    )
+    content = open(out).read()
+    assert SCAN_COMPLETED_AT_UNKNOWN in content
