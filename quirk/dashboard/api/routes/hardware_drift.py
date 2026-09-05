@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
 
+from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.schemas import (
@@ -91,7 +92,7 @@ def serialize_drift_event(
         old_value=row.old_value,
         new_value=row.new_value,
         direction=direction,
-        detected_at=row.detected_at.isoformat(),
+        detected_at=stamp_utc_iso(row.detected_at),
         vendor=vendor,
         model=model,
         is_partial_scan=bool(getattr(row, "is_partial_scan", False)),
@@ -147,7 +148,7 @@ def get_hardware_drift(
 
     return HardwareDriftResponse(
         has_prior_scan=has_prior_scan,
-        latest_scan_at=latest_ts.isoformat(),
+        latest_scan_at=stamp_utc_iso(latest_ts),
         latest_events=latest_events,
         historical_events=historical_events,
         historical_truncated=historical_truncated,

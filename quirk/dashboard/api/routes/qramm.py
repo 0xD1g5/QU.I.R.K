@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
 from quirk.models import QRAMMAnswer, QRAMMProfile, QRAMMSession
 from quirk.qramm.compliance_map import (
@@ -244,7 +245,7 @@ def _now_iso() -> datetime:
 
 
 def _iso_str(dt: Optional[datetime]) -> Optional[str]:
-    return dt.isoformat() if dt is not None else None
+    return stamp_utc_iso(dt)
 
 
 def _get_session_or_404(db: Session, session_id: int) -> QRAMMSession:

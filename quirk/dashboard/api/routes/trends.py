@@ -18,6 +18,7 @@ from quirk.dashboard.api.middleware.auth import require_auth
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.schemas import (
     FindingCounts,
@@ -70,9 +71,9 @@ def _list_session_timestamps(db: Session) -> List[datetime]:
                 continue
         # Legacy key preserves millisecond precision by truncating microseconds
         # to a whole millisecond — the same bucket the strftime %f key produced.
-        key = row_run_id or row_ts.replace(
+        key = row_run_id or stamp_utc_iso(row_ts.replace(
             microsecond=(row_ts.microsecond // 1000) * 1000
-        ).isoformat()
+        ))
         prev = earliest.get(key)
         if prev is None or row_ts < prev:
             earliest[key] = row_ts
@@ -218,7 +219,7 @@ def get_trends_timeline(
         counts = _count_by_bucket(keys, sev_map)
         points.append(
             TrendSessionPoint(
-                session_ts=ts.isoformat(),
+                session_ts=stamp_utc_iso(ts),
                 score=int(score_dict["score"]),
                 subscores=sub,
                 finding_counts=FindingCounts(

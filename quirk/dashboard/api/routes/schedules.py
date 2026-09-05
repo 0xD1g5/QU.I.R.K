@@ -9,6 +9,9 @@ Four endpoint families:
 Per CONTEXT.md D-04: first writable dashboard route — auth + CSRF at router level.
 Per CONTEXT.md D-06: next_run_at computed on-the-fly via croniter, never stored.
 Per RESEARCH.md Pitfall 1: all datetimes tz-naive UTC (datetime.now(timezone.utc).replace(tzinfo=None)).
+  Phase 184.3 D-03b: the offset is now attached on the way out via stamp_utc_iso(), so naive-UTC
+  storage and an offset-bearing wire format are not in contradiction — the offset is a
+  serialization-boundary concern only.
 Per RESEARCH.md Pitfall 3 / T-63-16: IntegrityError → fixed 409 message, never stringified.
 SQLite FK cascade: explicit ScheduledRun delete before ScheduledScan delete.
 """
@@ -25,6 +28,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
@@ -80,7 +84,7 @@ def _utcnow_naive() -> datetime:
 
 
 def _iso(dt: Optional[datetime]) -> Optional[str]:
-    return dt.isoformat() if dt else None
+    return stamp_utc_iso(dt)
 
 
 def _compute_next_run(s: ScheduledScan) -> Optional[datetime]:

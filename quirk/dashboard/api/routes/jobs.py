@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from quirk.errors import format_error
 from sqlalchemy.orm import Session
 
+from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db, _default_db_path
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
@@ -172,8 +173,8 @@ def _to_response(row: ScanJob) -> JobStatusResponse:
         job_id=row.job_id,
         status=row.status,
         current_stage=row.current_stage,
-        started_at=row.started_at.isoformat() if row.started_at else None,
-        completed_at=row.completed_at.isoformat() if row.completed_at else None,
+        started_at=stamp_utc_iso(row.started_at),
+        completed_at=stamp_utc_iso(row.completed_at),
         scan_run_id=row.scan_run_id,
         error_message=row.error_message,
         stage_index=_stage_index(row.current_stage, row.status),
