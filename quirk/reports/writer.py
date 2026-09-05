@@ -295,6 +295,29 @@ def _utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
+# SCORE-03 / D-16b (Phase 184.3): the shared "unknown scan instant" marker. A
+# report must never silently substitute the render time for a missing scan
+# instant — every renderer that formats scan_completed_at uses this ONE
+# literal so "unknown" reads identically across CLI/HTML/DOCX rather than
+# "Unknown" in one path and blank in another.
+SCAN_COMPLETED_AT_UNKNOWN = "Unknown (no scan instant available)"
+
+
+def format_scan_completed_at(value: Optional[datetime]) -> str:
+    """Format a naive-UTC scan instant with the existing labeled-UTC convention.
+
+    Per D-01, `CryptoEndpoint.scanned_at` is stored naive UTC, so it is
+    stamped with an explicit "UTC" label at render time exactly as
+    `generated_at` already is — no new timestamp format is introduced
+    (SC-3 / D-06: one convention per field kind). Returns the shared
+    SCAN_COMPLETED_AT_UNKNOWN marker when no scan instant is available;
+    never falls back to the render time (T-184.3-30).
+    """
+    if value is None:
+        return SCAN_COMPLETED_AT_UNKNOWN
+    return value.strftime("%Y-%m-%d %H:%M UTC")
+
+
 def _json_dump(path: str, obj: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2, sort_keys=True, default=str)
@@ -378,6 +401,18 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         None,
     )
 
+    # SCORE-03 / D-16b (Phase 184.3): the scan instant is derived once here,
+    # following the same "derive once, reuse" idiom as _scan_run_id above,
+    # and threaded to all four renderers below. MAX (not first) of every
+    # non-None scanned_at — the scan instant is when collection FINISHED,
+    # and endpoints are not guaranteed ordered. None when no endpoint carries
+    # a scanned_at; format_scan_completed_at() renders the explicit unknown
+    # marker rather than ever falling back to the render (generated_at) time.
+    _scanned_at_values = [
+        getattr(e, "scanned_at", None) for e in (endpoints or []) if getattr(e, "scanned_at", None)
+    ]
+    _scan_completed_at = max(_scanned_at_values) if _scanned_at_values else None
+
     # 1) Findings JSON (raw)
     findings_path = os.path.join(outdir, f"findings-{stamp}.json")
     _json_dump(findings_path, findings)
@@ -388,7 +423,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # post-score, further down) — exactly one database read per run, and the
     # CLI report keeps its documented no-score-dependency property.
     vendor_pqc_trends = _load_vendor_pqc_trends(getattr(cfg.output, "db_path", None))
-    tech_md = build_tech_markdown(cfg, endpoints, findings, vendor_pqc_trends=vendor_pqc_trends)
+    tech_md = build_tech_markdown(
+        cfg, endpoints, findings, vendor_pqc_trends=vendor_pqc_trends, scan_completed_at=_scan_completed_at
+    )
     tech_path = os.path.join(outdir, f"technical-findings-{stamp}.md")
     with open(tech_path, "w", encoding="utf-8") as f:
         f.write(tech_md)
@@ -648,7 +685,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     exec_content.undetermined_hosts_breakdown = _undetermined_breakdown
 
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
-    exec_md = build_exec_markdown(cfg, endpoints, findings, exec_content=exec_content)
+    exec_md = build_exec_markdown(
+        cfg, endpoints, findings, exec_content=exec_content, scan_completed_at=_scan_completed_at
+    )
     exec_path = os.path.join(outdir, f"executive-summary-{stamp}.md")
     with open(exec_path, "w", encoding="utf-8") as f:
         f.write(exec_md)
@@ -672,6 +711,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         conf=conf,
         roadmap_items=roadmap_items,
         exec_content=exec_content,  # D-03: shared content for narrative/risks/roadmap/subscores
+        scan_completed_at=_scan_completed_at,  # SCORE-03 / D-16b
     )
 
     pdf_path = os.path.join(outdir, f"report-{stamp}.pdf")
@@ -689,6 +729,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             cfg=cfg,
             findings=findings,
             exec_content=exec_content,
+            scan_completed_at=_scan_completed_at,  # SCORE-03 / D-16b
         )
     except Exception as e:
         import sys as _sys

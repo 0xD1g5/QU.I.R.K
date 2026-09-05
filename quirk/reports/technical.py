@@ -62,6 +62,7 @@ def build_tech_markdown(
     vendor_pqc_trends: List[dict] | None = None,
     burndown: dict | None = None,
     closure_refusal: dict | None = None,
+    scan_completed_at: "datetime | None" = None,
 ) -> str:
     """Build the CLI technical-findings markdown report.
 
@@ -75,13 +76,24 @@ def build_tech_markdown(
     keyword-only, `None`-defaulted parameters carrying the Plan 181-05
     ExecContent payload — every pre-existing call site keeps working
     unmodified.
+
+    SCORE-03 / D-16b (Phase 184.3): `scan_completed_at` is the naive-UTC
+    scan instant (from `CryptoEndpoint.scanned_at`, derived once in
+    writer.py), rendered as a `Scan completed:` line distinct from the
+    pre-existing `Generated:` (report-build) line. Formatted via
+    `quirk.reports.writer.format_scan_completed_at`, which renders the
+    shared unknown marker rather than ever falling back to the render time.
     """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    # Local import to avoid a circular import (writer.py imports this module
+    # at module load time).
+    from quirk.reports.writer import format_scan_completed_at
 
     lines: List[str] = []
     lines.append(f"# Technical Findings — {cfg.assessment.name}")
     lines.append("")
     lines.append(f"- **Generated:** {now}")
+    lines.append(f"- **Scan completed:** {format_scan_completed_at(scan_completed_at)}")
     lines.append("")
 
     # === Service Inventory ===

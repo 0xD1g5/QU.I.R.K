@@ -118,10 +118,19 @@ def build_exec_markdown(
     findings,
     *,
     exec_content: "ExecContent | None" = None,
+    scan_completed_at: "datetime | None" = None,
 ) -> str:
     # D-03 / Phase 98: exec_content carries shared narrative/risks/roadmap from writer.py seam.
     # When provided, narrative/risks/roadmap are sourced from exec_content (D-03 guarantee).
     # When None (backward-compat), compute locally — legacy path without the shared model.
+    #
+    # SCORE-03 / D-16b (Phase 184.3): scan_completed_at is the naive-UTC scan
+    # instant (CryptoEndpoint.scanned_at, derived once in writer.py),
+    # rendered as a "Scan completed:" line distinct from the report-build
+    # "Generated:" line below. Local import avoids a circular import
+    # (writer.py imports this module at load time).
+    from quirk.reports.writer import format_scan_completed_at
+
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     evidence = build_evidence_summary(endpoints, findings)
@@ -172,6 +181,7 @@ def build_exec_markdown(
     lines.append("")
     lines.append("## Executive Summary")
     lines.append(f"- **Generated:** {now}")
+    lines.append(f"- **Scan completed:** {format_scan_completed_at(scan_completed_at)}")
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
     lines.append("")
