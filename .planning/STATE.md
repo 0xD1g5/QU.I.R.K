@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 06/7 complete, wave 6 of 7 done
-last_updated: "2026-09-06T21:15:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 07/7 complete, all tasks done, awaiting 184-VERIFICATION.md
+last_updated: "2026-09-06T22:10:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 55
-  percent: 71
+  completed_plans: 56
+  percent: 72
 ---
 
 # Project State
@@ -22,6 +22,35 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 184 — Skip Registry Closure
+
+**184-07 (complete, 2026-09-06) — Phase close-out: anti-accumulator verification, failing-node SET comparison, docs, UAT Series 184, Obsidian, DRIFT-02 closed.**
+Verified by grep (not assertion) that the gate cannot be silenced by CI config: `continue-on-error:
+true` at `.github/workflows/python-ci.yml:37` belongs to the unrelated `windows-packaging-spike`
+job, not `Linux Full Suite`; zero `.github/` paths touched across the phase's commits;
+`test_skip_registry.py` carries zero `ALLOWED_SKIPS` entries of its own. Full suite
+(`python -m pytest -q -m ""`) -> 4259 passed, 58 skipped, 72 xfailed, 5 xpassed, 0 failed, Docker
+healthy, zero fatal signals — failing-node SET is **empty**, diffed against the 184-01 baseline SET
+(2 `test_chaos_lab_idempotency` nodes + `test_skip_registry`, all now passing). **Narrow
+attribution:** only `test_skip_registry` leaving the failing set is attributable to this phase —
+`git diff --name-only aecbbfd1..HEAD` touches zero paths under the chaos lab, `docker-compose.yml`,
+or `lab.sh`; the 2 `test_chaos_lab_idempotency` nodes left the set for environmental reasons
+(their parametrize list is computed at collection time from `docker compose config --profiles`,
+unrelated to this phase's changes). Updated `CONTRIBUTING.md` (qualname key, bidirectional gate,
+importorskip auto-allow) and `docs/test-triage-149.md` (56 stale `skip_registry.py:<lineno>`
+citations replaced with `(file, qualname)` keys, 3 annotated as no-longer-applicable). Added Series
+184 to `docs/UAT-SERIES.md` (2 PASS, 1 honest GAP at `docs/uat-coverage-gaps.md` item 16 —
+line-insertion has no dedicated self-test, substitute-covered by the 184-04 drift-twin
+re-derivation evidence and this plan's own human checkpoint). Synced the Obsidian phase note and
+UAT-Series.md. DRIFT-02 flipped `[x]` by hand (never via `requirements mark-complete`) with
+concrete entry-count evidence (198 -> 192 -> 176 -> 188 -> 180). `184-VALIDATION.md` closed,
+`nyquist_compliant: true`, zero pending-glyph table rows. Task 5's human checkpoint (drift
+immunity + gate-still-bites + reason-honesty spot-check + vault note) approved by the developer,
+corroborated by orchestrator-run CLI evidence (10-blank-line insertion stayed green; rename went
+RED in both directions naming both the unregistered new qualname and the orphaned old entry; 3
+reason strings accepted; vault note confirmed present, 7396 bytes). **Known traceability defect
+recorded, not corrected:** commits `9ad9e270` and `eb2e04f0` (plan 184-05) used scope form
+`184.5` instead of `184-05` — `git log --grep="184-05"` misses both; history is not rewritten.
+See `184-07-SUMMARY.md`.
 
 **184-06 (complete, 2026-09-06) — Gate made rot-proof: importorskip derivation + bidirectional orphan check + 3 falsifiability self-tests.**
 Added `_optional_extra_modules()` (reads `pyproject.toml`'s `[project.optional-dependencies]` at
