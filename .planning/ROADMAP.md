@@ -278,7 +278,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 184-06-PLAN.md — Narrow importorskip derivation, bidirectional rot check, three permanent falsifiability self-tests (D-04/D-05/D-07/D-12)
+- [x] 184-06-PLAN.md — Narrow importorskip derivation, bidirectional rot check, three permanent falsifiability self-tests (D-04/D-05/D-07/D-12)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 

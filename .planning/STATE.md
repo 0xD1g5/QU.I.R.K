@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 05/7 complete, wave 5 of 7 done
-last_updated: "2026-09-06T20:00:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 06/7 complete, wave 6 of 7 done
+last_updated: "2026-09-06T21:15:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 54
-  percent: 70
+  completed_plans: 55
+  percent: 71
 ---
 
 # Project State
@@ -22,6 +22,20 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 184 — Skip Registry Closure
+
+**184-06 (complete, 2026-09-06) — Gate made rot-proof: importorskip derivation + bidirectional orphan check + 3 falsifiability self-tests.**
+Added `_optional_extra_modules()` (reads `pyproject.toml`'s `[project.optional-dependencies]` at
+test-run time via `tomllib`) — the one D-05-sanctioned derivation, auto-allowing `pytest.
+importorskip("<mod>")` sites whose module maps to a declared extra with NO registry entry. Retired
+5 `tests/skip_registry.py` entries this covers for free (impacket, playwright/pypdf, 3x
+python-docx). Made the gate bidirectional (D-07): `_find_orphan_entries()` flags any registry entry
+resolving to no live skip site, sharing `_allowed()`'s exact comparison logic so a regression to
+one half breaks both (verified live orphan count: 0). Added a non-empty-reason assertion. Added 3
+permanent falsifiability self-tests (D-12 a/b/c) proving the gate goes RED on a synthetic
+unregistered skip, a synthetic orphan entry, and an enclosing-test rename — a mutation-check
+experiment (reverting `_allowed()` to filename-only comparison) confirmed all three fail under the
+mutation and pass after a byte-identical revert. `python -m pytest tests/test_skip_registry.py -q`
+→ **22 passed** (up from 7). See `184-06-SUMMARY.md`.
 
 **184-05 (complete, 2026-09-06) — All 13 never-registered skips disposed; gate green since v5.17.**
 `tests/test_skip_registry.py::test_no_unregistered_skips` now **passes** (0 violations, 7 passed) —
