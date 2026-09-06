@@ -128,6 +128,16 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
 # let that removal be silently forgotten; strict=True makes forgetting it
 # impossible to miss. Removed by plan 184.4-04.
 # ---------------------------------------------------------------------------
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "Phase 184.4 D-13: pre-fix quirk.intelligence.scoring._rating() has no "
+        "severity floor, so a score >= 85 with an open CRITICAL still emits "
+        "EXCELLENT and quirk.reports.content_model._check_congruence() halts "
+        "report generation with ReportCongruenceError. This xfail is removed by "
+        "plan 184.4-04 once the severity floor caps the band to FAIR."
+    ),
+)
 def test_high_score_with_one_critical_still_produces_a_report(tmp_path):
     """D-13: score >= 85 with one open CRITICAL must still produce a report.
 
