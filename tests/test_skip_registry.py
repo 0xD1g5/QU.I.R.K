@@ -417,6 +417,13 @@ def _find_skip_occurrences(
     ``import pytest`` elsewhere) as the recognized base name(s), so an
     aliased skip construct is visible to this walk exactly like an
     unaliased one.
+
+    WR-01: a file under ``root`` that fails to parse (``SyntaxError``) or
+    read (``OSError``) is a loud gate failure, not a silently-dropped file
+    -- a parse failure previously excluded that file from BOTH halves of
+    the gate (unregistered-skip detection and orphan detection), which is
+    exactly the vacuous-pass hazard this gate exists to close everywhere
+    else in this module.
     """
     if optional_modules is None:
         optional_modules = _optional_extra_modules()
@@ -429,8 +436,12 @@ def _find_skip_occurrences(
         try:
             source = py_file.read_text(encoding="utf-8")
             tree = ast.parse(source, filename=str(py_file))
-        except (SyntaxError, OSError):
-            continue
+        except (SyntaxError, OSError) as exc:
+            pytest.fail(
+                f"Could not parse {py_file} while scanning for skip markers "
+                f"(WR-01: a file that fails to parse must fail the gate "
+                f"loudly, not be silently excluded): {exc}"
+            )
 
         pytest_names = _pytest_import_names(tree)
         if not pytest_names:
