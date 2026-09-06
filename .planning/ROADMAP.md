@@ -270,7 +270,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 184-04-PLAN.md — Verify the 9 drift twins re-resolve for free, then re-derive and purge the orphan set in D-08's fixed order
+- [x] 184-04-PLAN.md — Verify the 9 drift twins re-resolve for free, then re-derive and purge the orphan set in D-08's fixed order
 
 **Wave 5** *(blocked on Wave 4 completion)*
 

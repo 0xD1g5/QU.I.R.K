@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 03/7 complete, wave 3 of 7 done
-last_updated: "2026-09-06T18:35:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 04/7 complete, wave 4 of 7 done
+last_updated: "2026-09-06T19:10:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 52
-  percent: 68
+  completed_plans: 53
+  percent: 69
 ---
 
 # Project State
@@ -696,7 +696,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184 (Skip Registry Closure) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
+184-04 (complete, 2026-09-06) — Verified the D-10 drift hypothesis live: all 9 pure-line-drift
+entries re-resolved for free under the qualname key, derived programmatically from the plan-01
+baseline + the pre-transform (lineno-keyed) registry revision, with byte-identical reason strings
+and zero new entries. Then re-derived the orphan set AFTER the re-key (ledger keys minus the
+gate's own `_find_skip_occurrences()` walk, never inherited from the pre-key 25-entry measurement
+per D-08) and purged all 16 `UNRESOLVED:<lineno>` candidates — every one confirmed to resolve to
+no skip site anywhere in `tests/` (11 `test_jobs_api.py` Phase-65 stubs superseded by real
+implementations — verified via grep showing zero skip markers remain in that file; 1
+`test_qramm_model_stale.py` inline `pytest.param(marks=...)` AST-walker blind spot; 2
+`test_qramm_staleness.py` + 2 `test_vault_connector.py` SIGSEGV-cluster skips already removed by
+Phase 166). 192 → 176 entries. `grep -c "UNRESOLVED:"` now 0. Gate violations unchanged at 13,
+exactly the never-registered bucket Plan 05 disposes. Two commits: `976e22a1` (purge) and
+`c29512be` (docstring fix to drop a literal `UNRESOLVED:` substring the purge commit's own prose
+had left behind, which the acceptance grep still matched). See `184-04-SUMMARY.md`.
 184-03 (complete, 2026-09-06) — `tests/skip_registry.py` re-keyed from `(file, lineno)` to
 `(file, test_qualname)` for all 198 entries via a reviewed, non-committed transform script that
 reuses the gate's own `_find_skip_occurrences()`/`_enclosing_qualname()`. 4 D-02 shared-qualname
