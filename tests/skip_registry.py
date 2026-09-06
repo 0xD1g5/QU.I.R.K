@@ -31,11 +31,22 @@ category, reason)`` to ``(file, test_qualname, category, reason)`` by a
 reviewed script; every reason string survived byte-identical except the 4
 D-02 collapse groups (several skip sites in one test sharing one qualname),
 where the surviving entry's reason was joined from its collapsed sites'
-reasons, separated by "; ", verbatim. 16 entries whose recorded line no
-longer resolves to any skip site (within a generous +/-20 line search) are
-kept, not deleted, keyed ``"UNRESOLVED:<original_lineno>"`` -- they are
-Plan 04's purge-candidate input per D-08's re-key-then-purge ordering, not
-evidence of a currently-broken gate.
+reasons, separated by "; ", verbatim. 16 entries whose recorded line did not
+resolve to any skip site (within a generous +/-20 line search) were kept,
+not deleted, keyed ``"UNRESOLVED:<original_lineno>"`` as Plan 04's
+purge-candidate input, per D-08's re-key-then-purge ordering.
+
+Phase 184 Plan 04 re-derived the orphan set post-re-key (inverting the
+gate's own walk: ledger keys minus live occurrence keys) and purged all 16
+``UNRESOLVED:`` entries -- every one was confirmed to genuinely resolve to
+no skip site anywhere in ``tests/`` (11 ``test_jobs_api.py`` Phase 65 stubs
+superseded by real implementations, 1 ``test_qramm_model_stale.py`` inline
+``pytest.param(marks=...)`` AST-walker blind spot, 2 ``test_qramm_staleness.py``
+and 2 ``test_vault_connector.py`` SIGSEGV-cluster skips already removed by
+Phase 166 / earlier reconciliation). Each purged entry's verbatim reason
+string is recorded in ``184-04-SUMMARY.md``, not merely deleted. No
+``UNRESOLVED:`` data entry remains; the string appears here only as the
+convention's own name.
 """
 
 ALLOWED_SKIPS = [
@@ -62,21 +73,8 @@ ALLOWED_SKIPS = [
     ("test_uat_db_integration.py", "test_mysql_ssl_off_produces_high_finding", "live_infra", "Requires MySQL chaos lab (database profile)"),
     ("test_uat_db_integration.py", "test_postgres_finding_includes_host_and_port", "live_infra", "Requires PostgreSQL chaos lab (database profile)"),
     ("test_uat_db_integration.py", "test_mysql_finding_includes_host_and_port", "live_infra", "Requires MySQL chaos lab (database profile)"),
-    ("test_vault_connector.py", "UNRESOLVED:455", "live_infra", "Requires Vault-30 chaos lab (vault profile)"),
     ("test_tls_scanner_chain_verified.py", "test_sslyze_success_chain_verified_true", "optional_extra", "sslyze is [motion]; Phase 46 TLS-FIND-06"),
     ("test_tls_scanner_chain_verified.py", "test_sslyze_success_chain_verified_false", "optional_extra", "sslyze is [motion]; Phase 46 TLS-FIND-06"),
-    # Phase 65 Plan 01 stubs — replaced by real implementations in Plans 03/04
-    ("test_jobs_api.py", "UNRESOLVED:44", "live_infra", "Phase 65 Plan 03 stub — POST /api/jobs row insert"),
-    ("test_jobs_api.py", "UNRESOLVED:48", "live_infra", "Phase 65 Plan 03 stub — @file rejection"),
-    ("test_jobs_api.py", "UNRESOLVED:52", "live_infra", "Phase 65 Plan 03 stub — empty targets validation"),
-    ("test_jobs_api.py", "UNRESOLVED:56", "live_infra", "Phase 65 Plan 03 stub — auth dependency wiring"),
-    ("test_jobs_api.py", "UNRESOLVED:60", "live_infra", "Phase 65 Plan 03 stub — CSRF dependency wiring"),
-    ("test_jobs_api.py", "UNRESOLVED:64", "live_infra", "Phase 65 Plan 03 stub — GET /api/jobs/{id} response shape"),
-    ("test_jobs_api.py", "UNRESOLVED:68", "live_infra", "Phase 65 Plan 03 stub — 404 on unknown job_id"),
-    ("test_jobs_api.py", "UNRESOLVED:72", "live_infra", "Phase 65 Plan 03 stub — GET auth dependency"),
-    ("test_jobs_api.py", "UNRESOLVED:76", "live_infra", "Phase 65 Plan 03 stub — stage_index computation"),
-    ("test_jobs_api.py", "UNRESOLVED:80", "live_infra", "Phase 65 Plan 03 stub — DELETE SIGTERM + cancelled"),
-    ("test_jobs_api.py", "UNRESOLVED:84", "live_infra", "Phase 65 Plan 04 stub — lifespan _recover_stale_jobs"),
 
     # Phase 149 D-04: registered pre-existing drift
     ("test_aws_connector.py", "test_scan_s3_propagates_build_endpoint_exception", "optional_extra", "boto3 not installed"),
@@ -195,12 +193,6 @@ ALLOWED_SKIPS = [
     # Phase 149 Plan 08: Cluster 9 Group C (QRAMM subsystem failures) — see docs/test-triage-149.md
     ("test_qramm_evidence_bridge.py", "test_no_risk_engine_import", "pre_existing_triage_149", "TRIAGE-149: cross-test sys.modules pollution (test_findings_evaluator_dedupe.py::test_dedupe_via_risk_engine_shim_works imports quirk.engine.risk_engine before this file runs alphabetically in full-suite order), not a real QRAMM-12 import-graph violation; see docs/test-triage-149.md#qramm-evidence-bridge-risk-engine-sys-modules-pollution"),
     ("test_qramm_evidence_bridge.py", "test_unconfirmed_excluded_from_score", "pre_existing_triage_149", "TRIAGE-149: genuine API-contract drift — POST .../score now 422s (DASHBOARD-011) when zero QRAMMAnswer rows have answer_value set, before the unconfirmed-exclusion scoring logic under test ever runs; see docs/test-triage-149.md#qramm-evidence-bridge-score-422-unconfirmed"),
-    # NOTE: this marker is inline (pytest.param(marks=pytest.mark.xfail(...))), not a
-    # function/class decorator, so tests/test_skip_registry.py's AST walker (which only
-    # inspects FunctionDef/AsyncFunctionDef/ClassDef.decorator_list) does not detect it and
-    # this entry is not required for the meta-gate to pass. Registered anyway for ledger
-    # completeness and audit-trail consistency with the other 3 Group C entries.
-    ("test_qramm_model_stale.py", "UNRESOLVED:52", "pre_existing_triage_149", "TRIAGE-149: stale fixture — boundary date (2026-08-04) hardcoded against QRAMM_MODEL['last_verified']=='2026-05-05' at test-authoring time; last_verified has since been re-verified/bumped forward (currently 2026-08-11) by the CLAUDE.md 90-day staleness cadence, so the fixture date is now on the wrong side of the boundary; see docs/test-triage-149.md#qramm-model-stale-boundary-drift"),
     ("test_qramm_models.py", "TestInitDbQRAMMTables.test_ensure_qramm_tables_called_after_phase46", "pre_existing_triage_149", "TRIAGE-149: stale assertion strategy — Phase 85-01 LAUNCH-04 replaced init_db()'s named per-migration call chain with a generic _ADDITIVE_MIGRATIONS loop, so the literal '_PHASE46_COLUMNS' no longer appears in init_db's function source text; the actual ordering invariant (Phase 46 columns before _ensure_qramm_tables) is still upheld in _ADDITIVE_MIGRATIONS' declared order; see docs/test-triage-149.md#qramm-models-init-db-phase46-ordering-stale-grep"),
 
     # Phase 149 Plan 09: Cluster 9 Group D1 (CLI/compliance/posture failures, first half) — see docs/test-triage-149.md
@@ -228,10 +220,7 @@ ALLOWED_SKIPS = [
     # docs/test-triage-149.md's Reconciliation section.
     ("test_posture_scorefix125.py", "test_gcp_kms_403_emits_scan_error", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): googleapiclient/google not installed in this sandbox — same optional_extra gap class as Cluster 7's test_gcs_reuse.py; Plan 09 found this passing because googleapiclient happened to be installed in that plan's sandbox, so gcp_connector.py's _GcpHttpError isinstance-gated 403 handling was reachable there. POSTURE-02's fix itself is not regressed. See docs/test-triage-149.md#reconciliation-gcp-googleapiclient-extras-gap"),
     ("test_posture_scorefix125.py", "test_gcp_sql_403_emits_scan_error", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): same googleapiclient/google optional_extra gap as test_gcp_kms_403_emits_scan_error; see docs/test-triage-149.md#reconciliation-gcp-googleapiclient-extras-gap"),
-    ("test_qramm_staleness.py", "UNRESOLVED:90", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): intermittent SIGSEGV (exit=-11) reproducible under full-suite (`pytest -q -m \"\"`) load in this subprocess.run() spawn — confirmed via 'Fatal Python error: Segmentation fault' crash dumps inside CPython's fork/exec path at this exact call site across repeat full-suite runs (never in isolation). Plan 08 flagged this pair as a HIGH-PRIORITY re-verification item if it resurfaced; it has, and the trigger is now identified as systemic macOS fork()-under-load instability, shared with 4 other subprocess-spawning tests. See docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
-    ("test_qramm_staleness.py", "UNRESOLVED:120", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): same macOS fork()-under-load SIGSEGV as test_qramm_status_cli_smoke_fresh; see docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
     ("test_sensor_windows_smoke.py", "TestCleanShutdownOnKeyboardInterrupt.test_keyboard_interrupt_in_run_sensor_exits_130", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): same macOS fork()-under-load SIGSEGV cluster — this run's crash dump showed the segfault inside subprocess spawning itself (subprocess.py _execute_child via _run_child_script), killing the pytest runner process. Plan 10 flagged this test as a second independent HIGH-PRIORITY SIGSEGV item; reconciliation now attributes both this and Plan 08's QRAMM pair to the same systemic cause, not two independent subsystem-specific crashes. See docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
-    ("test_vault_connector.py", "UNRESOLVED:299", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): same macOS fork()-under-load SIGSEGV cluster — the `openssl req -new -x509 -sha1` subprocess spawned by _make_test_pem_rsa crashes with returncode=-11. Supersedes Plan 06's 'OpenSSL SHA1 cert generation' environment-dependent hypothesis: SHA1 cert generation itself works fine (this test passes standalone); the actual trigger is fork() instability under full-suite load. See docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
     ("test_version.py", "test_cli_version_subprocess", "pre_existing_triage_149", "TRIAGE-149 (Plan 11): same macOS fork()-under-load SIGSEGV cluster as test_qramm_staleness.py — 'Fatal Python error: Segmentation fault' crash dump at this exact subprocess.run() call site. Not a CLI --version regression (Cluster 3's pip install -e . fix remains correct and necessary, just not sufficient to prevent this separate, load-dependent crash). See docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
 
     # Phase 149 code review (CR-01): Plan 11's reconciliation sweep missed one orphaned
