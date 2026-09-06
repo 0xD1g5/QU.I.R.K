@@ -170,6 +170,7 @@ survives package regeneration or its loss is detected.
 **Plans**: 9 plans (5 planned + 4 gap-closure, added after 182-05's live demonstration reopened TOOL-01)
 
 Plans:
+
 - [x] 182-01-PLAN.md — argv/cwd contract lock-down + Bug A prose-survival fixture with negative control
 - [x] 182-02-PLAN.md — Bug B preserve-unknown-keys merge in `syncStateFrontmatter`, RED-first on both ROADMAP paths
 - [x] 182-03-PLAN.md — `gsd-local-patches/` + `gsd-pristine/` durability layer and loss-detection test
@@ -214,6 +215,7 @@ Plans:
 **Plans**: 6 plans (all complete)
 
 Plans:
+
 - [x] 183-01-PLAN.md — Extend `run_cli` with `env=`; migrate the 9 cosmetic-`cwd` sites (errors_cmd, install_errors, error_codes_freshness, cve_staleness) + CI-parity proof
 - [x] 183-02-PLAN.md — Migrate the 6 trivial `sys.executable` sites (cli_init, cli_version, dashboard_api, version)
 - [x] 183-03-PLAN.md — Migrate the 7 `pip install --dry-run` sites (extras_install_matrix, 5x install_all_*, snmp_scanner_contract)
@@ -254,12 +256,32 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 184-01-PLAN.md — Amend the falsified DRIFT-02 measurement, capture the pre-change failing-node SET, enumerate every consumer of the registry entry shape
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 184-02-PLAN.md — Re-key the gate to `(file, test_qualname)`, delete `LINE_TOLERANCE`, land it RED-first (D-01/D-02/D-03/D-06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 184-03-PLAN.md — Scripted mechanical transform of all 198 registry entries with reason strings preserved byte-identical (D-14)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 184-04-PLAN.md — Verify the 9 drift twins re-resolve for free, then re-derive and purge the orphan set in D-08's fixed order
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 184-05-PLAN.md — Dispose of the never-registered skips: register with source-derived reasons, delete dead scaffolding, fix the lying reason string (D-09)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 184-06-PLAN.md — Narrow importorskip derivation, bidirectional rot check, three permanent falsifiability self-tests (D-04/D-05/D-07/D-12)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 184-07-PLAN.md — Close-out: anti-accumulator verification, failing-node SET comparison, docs, UAT Series 184, Obsidian, DRIFT-02 (D-11/D-13)
 
 ### Phase 184.1: Coverage Metric Correctness
@@ -318,6 +340,7 @@ Plans:
 **Plans**: 7 plans (5 original + 2 gap closure for SC-3)
 
 Plans:
+
 - [x] 184.1-01-PLAN.md — Evidence-layer counters, Wave 0 fixture hardening, ROADMAP/REQUIREMENTS amendments (D-07, D-13)
 - [x] 184.1-02-PLAN.md — Rewire coverage_ratio, NO_DATA guard, CONFIDENCE_FORMULA_VERSION, D-19 re-derivation
 - [x] 184.1-03-PLAN.md — Run-time protocol-literal source scan guarding the exclusion set (D-11)
@@ -325,7 +348,6 @@ Plans:
 - [x] 184.1-05-PLAN.md — Confidence-factor documentation, Obsidian sync, UAT-SERIES, validation close-out
 - [x] 184.1-06-PLAN.md — GAP CLOSURE (SC-3): thread `confidence_formula_version` through writer.py, executive.py, and ConfidenceData/`/api/scan`; per-surface emitted-artifact tests
 - [x] 184.1-07-PLAN.md — GAP CLOSURE (SC-3): make the D-15 absence rule checkable, correct UAT-184.1-01, Obsidian sync, REQUIREMENTS/VALIDATION close-out
-
 
 ### Phase 184.2: Out-of-the-Box Scanning Posture
 
@@ -354,6 +376,7 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
+
 - [x] 184.2-01-PLAN.md — `enable_adcs` reachability (6 ConnectorsCfg fields) + D-14 non-fatal, value-redacting unknown-connector-key warning
 - [x] 184.2-02-PLAN.md — derived drift-gate foundation: run-time file-set derivation (D-10), AST checks on the two config generators (D-15), `enable_windows_adcs` reconciled in `docs/sample-config.yaml` (D-12)
 - [x] 184.2-03-PLAN.md — template rewrite to one dialect with 25 tagged dispositions + 17-port `CONSULTING_TLS_PORTS` default; D-09 completeness, D-06 vocabulary and D-18 advisory-pre-gate gates
@@ -447,6 +470,7 @@ Plans:
 **Plans**: 11 plans
 
 Plans:
+
 - [x] 184.3-01-PLAN.md — amend ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where measurement falsified the premise (D-04, D-06, D-11, D-16a)
 - [x] 184.3-02-PLAN.md — `UTCDateTime` stamping contract in `quirk/dashboard/api/_timestamp_utils.py` + all 10 Pydantic datetime fields (D-01, D-02, D-03a)
 - [x] 184.3-03-PLAN.md — the 8 hand-rolled `.isoformat()` route sites routed through the helper; 2 identity keys fenced off (D-03b, D-05)
@@ -551,6 +575,7 @@ Plans:
 **Plans**: 10 plans
 
 Plans:
+
 - [x] 184.4-01-PLAN.md — write SCORE-04/SCORE-05 into REQUIREMENTS.md + ROADMAP, record the SC #5 non-regression finding, close BACK-89 (a)-(d) and resolve the 999.82 backlog dir
 - [x] 184.4-02-PLAN.md — RED-first D-13 regression: score >= 85 + one CRITICAL `TLS certificate expired`, proven to fail against pre-fix code (D-13)
 - [x] 184.4-03-PLAN.md — `quirk/severity_bands.py` stdlib-only shared threshold + allowance + cap-reason module; `content_model.py` sourced from it (D-04, D-02)
