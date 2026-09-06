@@ -150,7 +150,7 @@ const summary = []
 // ledger reflects the same default-variant entries the freshness test byte-compares against.
 const writtenBaselinesByRoute = []
 
-for (const { slug, path: routePath } of ROUTES) {
+for (const { slug, path: routePath, contentMarker } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
   console.log(`[a11y] Scanning ${slug} (${url})...`)
 
@@ -172,6 +172,30 @@ for (const { slug, path: routePath } of ROUTES) {
     summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'NAV_ERR' })
     await page.close()
     continue
+  }
+
+  // D-14 content-marker check — a route can declare an optional `contentMarker` CSS
+  // selector in routes.json. This is checked here, AFTER navigation and BEFORE both the
+  // axe scan and (in --update-baselines mode) any writeFileSync, so a route that renders
+  // empty under the fixture harness fails loudly instead of producing a hollow baseline
+  // or a hollow-but-passing diff. Restricted to the DEFAULT variant only (skipped for
+  // VARIANT === 'empty'/'loading'): D-13's `empty` variant is intentionally empty and
+  // `loading` intentionally shows a skeleton, so enforcing a content marker there would
+  // contradict the fixture's own purpose — D-14 only asks that the DEFAULT variant render
+  // real content. Uses a plain CSS selector via Puppeteer's standard `page.$()` support
+  // (RESEARCH.md Assumption A3 flags `text=` pseudo-selector support as unconfirmed for
+  // the pinned puppeteer-core 24.43.1 — a CSS selector is always available).
+  if (contentMarker && VARIANT === 'default') {
+    const found = await page.waitForSelector(contentMarker, { timeout: 5_000 }).catch(() => null)
+    if (!found) {
+      console.error(
+        `[a11y] FAIL [${slug}]: content marker "${contentMarker}" not found — route rendered empty`,
+      )
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'FAIL' })
+      await page.close()
+      continue
+    }
   }
 
   // Run axe with WCAG 2A/2AA tags
