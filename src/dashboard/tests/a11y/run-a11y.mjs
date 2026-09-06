@@ -208,7 +208,8 @@ for (const { slug, path: routePath, contentMarker } of ROUTES) {
 
   if (UPDATE_BASELINES) {
     // Write baseline snapshot: per-(route, rule) count budget (D-01), no selectors stored
-    // (D-02), justifications carried forward from the previous file (D-06).
+    // (D-02), justifications carried forward from the previous file (165-CONTEXT.md D-06,
+    // and — for the merge-not-rewrite property this carry-forward implements — Phase 185 D-05).
     const previous = existsSync(baselinePath)
       ? JSON.parse(readFileSync(baselinePath, 'utf8'))
       : null

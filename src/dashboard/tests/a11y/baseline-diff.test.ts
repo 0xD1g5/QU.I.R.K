@@ -14,6 +14,19 @@ import {
 // ratchet (any decrease below baseline fails, not passes silently), must refuse
 // `critical`-impact violations regardless of baseline contents, must cap evidence samples,
 // and must never synthesize a justification. See 165-CONTEXT.md D-01/D-02/D-06/D-13/D-14.
+//
+// NOTE ON DECISION-NUMBER COLLISION: the describe block below titled "justification
+// carry-forward and" followed by "enforcement" and a "(D-06)" suffix cites 165-CONTEXT.md's
+// D-06 (a Phase 165 decision about never synthesizing a justification) — that citation is
+// correct in its own frame and the block is NOT renamed. It is unrelated to Phase 185's OWN
+// D-06 (the no-tolerance-band,
+// exact-integer count-pinning decision) and unrelated to Phase 185's D-05 (regeneration
+// merges rather than rewrites, preserving human-written justification text across a
+// recompute of counts). Phase 185 D-05 names the exact carry-forward behavior
+// `buildBaselineEntries()` already implements below (see the
+// `describe("justification carry-forward across regeneration (Phase 185 D-05)")` block) — it
+// was verified ALREADY IMPLEMENTED against current `main`, not built new. A future reader must
+// not repeat 185-CONTEXT.md's own error of concluding this merge still needs to be written.
 
 function makeViolation({ id, impact = "serious", count = 1, target, tags = [], html }) {
   return {
@@ -195,6 +208,85 @@ describe("justification carry-forward and enforcement (D-06)", () => {
       "color-contrast",
       "scrollable-region-focusable",
     ])
+  })
+})
+
+describe("justification carry-forward across regeneration (Phase 185 D-05)", () => {
+  it("carries a real human-written justification forward when the count changes", () => {
+    const violation = makeViolation({ id: "color-contrast", count: 7 })
+    const previousEntries = [
+      makeBaselineEntry({
+        rule: "color-contrast",
+        count: 3,
+        justification:
+          "Phase 156 D-07 HWLC-11 advisory firewall raw hsl() literals; see lifecycle-advisory-guard.test.ts.",
+      }),
+    ]
+    const { entries } = buildBaselineEntries("hardware", [violation], { previousEntries })
+    const entry = entries.find(e => e.rule === "color-contrast")
+    expect(entry.count).toBe(7)
+    expect(entry.justification).toBe(
+      "Phase 156 D-07 HWLC-11 advisory firewall raw hsl() literals; see lifecycle-advisory-guard.test.ts.",
+    )
+  })
+
+  it("does not carry a placeholder justification forward across a regeneration", () => {
+    const violation = makeViolation({ id: "color-contrast", count: 5 })
+    const previousEntries = [
+      makeBaselineEntry({ rule: "color-contrast", count: 2, justification: "TBD" }),
+    ]
+    const { entries } = buildBaselineEntries("hardware", [violation], { previousEntries })
+    expect(entries.find(e => e.rule === "color-contrast").justification).toBe("")
+  })
+
+  it("drops a rule absent from the new live run rather than carrying it forward as a zero-count entry", () => {
+    // Verified, intended behavior per 185-05-PLAN.md <interfaces>: `entries` is built strictly
+    // from the live `byRule` map, so a rule present only in `previousEntries` disappears. A
+    // decrease to zero is the strongest decrease (D-04) and a `count: 0` placeholder entry
+    // would have nothing left to justify. This test locks that so a future "helpful" change
+    // to preserve zero-count entries fails loudly.
+    const violation = makeViolation({ id: "color-contrast", count: 4 })
+    const previousEntries = [
+      makeBaselineEntry({ rule: "color-contrast", count: 4, justification: "still present" }),
+      makeBaselineEntry({
+        rule: "scrollable-region-focusable",
+        count: 2,
+        justification: "no longer triggered on this route",
+      }),
+    ]
+    const { entries } = buildBaselineEntries("hardware", [violation], { previousEntries })
+    expect(entries.map(e => e.rule)).toEqual(["color-contrast"])
+    expect(entries.find(e => e.rule === "scrollable-region-focusable")).toBeUndefined()
+  })
+
+  it("does not leak a justification across baseline files for different variants of the same route", () => {
+    // The (route, rule) carry-forward Map is built fresh from whatever `previousEntries` the
+    // caller passes in per call — run-a11y.mjs reads a DIFFERENT baseline file per variant
+    // (baseline-hardware-default.json vs baseline-hardware-empty.json), so a justification
+    // written on the default-variant file must not appear when regenerating the empty-variant
+    // file unless that file's OWN previous entries already carried it.
+    const violation = makeViolation({ id: "color-contrast", count: 1 })
+
+    const defaultPrevious = [
+      makeBaselineEntry({
+        rule: "color-contrast",
+        count: 1,
+        justification: "Written against baseline-hardware-default.json only.",
+      }),
+    ]
+    const { entries: defaultEntries } = buildBaselineEntries("hardware", [violation], {
+      previousEntries: defaultPrevious,
+    })
+    expect(defaultEntries[0].justification).toBe(
+      "Written against baseline-hardware-default.json only.",
+    )
+
+    // Regenerating the EMPTY variant's own file passes that file's own (empty) previous
+    // entries — the default variant's justification text must not leak in.
+    const { entries: emptyEntries } = buildBaselineEntries("hardware", [violation], {
+      previousEntries: [],
+    })
+    expect(emptyEntries[0].justification).toBe("")
   })
 })
 
