@@ -105,7 +105,23 @@ def cap_band_for_severity(numeric_band: str, critical_count: int) -> str:
     trend delta in the suite — a regression wearing a cleanup's clothes.
     Anyone reading this function and concluding the agility path is now
     redundant is wrong, and this comment is where they will read that.
+
+    Raises `ValueError` for a `numeric_band` outside `BAND_ORDER` (184.4
+    WR-03). This is deliberately FAIL-FAST rather than a silent clamp to
+    "POOR": this module is the new single source of truth, and an
+    unrecognized band always means a caller bug (every in-tree call site
+    derives `numeric_band` from `band_for_score()` immediately beforehand).
+    A silent fallback would emit a plausible-looking band and mask that bug
+    all the way into a delivered report. The check runs BEFORE the
+    `critical_count <= 0` early return so an invalid band is rejected
+    identically whether or not any CRITICAL finding happens to be open —
+    otherwise validation coverage would depend on scan contents.
     """
+    if numeric_band not in BAND_ORDER:
+        raise ValueError(
+            f"numeric_band {numeric_band!r} not in BAND_ORDER {BAND_ORDER}"
+        )
+
     if critical_count <= 0:
         return numeric_band
 

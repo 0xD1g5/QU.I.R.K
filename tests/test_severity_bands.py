@@ -95,6 +95,39 @@ def test_cap_band_no_graduated_ladder(critical_count, numeric_band, expected_cap
 
 
 # ---------------------------------------------------------------------------
+# 4b. Unknown-band input is rejected fail-fast (184.4 WR-03).
+#
+# cap_band_for_severity() used to reach BAND_ORDER.index() unguarded, so an
+# unrecognized band surfaced as a bare `ValueError: 'X' is not in list` from
+# list.index() deep inside scoring -- a traceback that names neither the
+# offending value's origin nor the table it failed against. The contract is
+# now an explicit, descriptive ValueError, and it must fire regardless of
+# critical_count (validation coverage must not depend on scan contents).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("critical_count", [0, 1, 7])
+def test_cap_band_rejects_unknown_band(critical_count):
+    with pytest.raises(ValueError) as excinfo:
+        cap_band_for_severity("NOT_A_BAND", critical_count)
+
+    message = str(excinfo.value)
+    # The message must name the bad value AND the table it was checked
+    # against -- the pre-fix list.index() error named neither usefully.
+    assert "NOT_A_BAND" in message
+    assert "BAND_ORDER" in message
+
+
+def test_cap_band_accepts_every_real_band_at_zero_and_nonzero_critical():
+    """Guard against the WR-03 validation being over-tight: every member of
+    BAND_ORDER must still pass validation. Derived from BAND_ORDER at run
+    time so adding a band cannot silently skip this check."""
+    for band in BAND_ORDER:
+        for critical_count in (0, 1, 7):
+            # Must not raise.
+            cap_band_for_severity(band, critical_count)
+
+
+# ---------------------------------------------------------------------------
 # 5. D-13 reproduction numbers.
 # ---------------------------------------------------------------------------
 
