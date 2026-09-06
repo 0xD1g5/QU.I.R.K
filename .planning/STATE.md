@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.4 — rating-band-severity-floor — COMPLETE. Next: Phase 184 (Skip Registry Closure) or Phase 185 (a11y Baseline Environment), per operator direction.
+**Current focus:** Phase 184.4 — rating-band-severity-floor — all 10 plans done, pending 184.4-VERIFICATION.md (a separate gsd-verifier step). Next: Phase 184 (Skip Registry Closure) or Phase 185 (a11y Baseline Environment), per operator direction.
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,7 +671,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.4 (rating-band-severity-floor) — COMPLETE (2026-09-05)
+Phase: 184.4 (rating-band-severity-floor) — ALL PLANS DONE (2026-09-05), pending 184.4-VERIFICATION.md
 Plan: 10 of 10 complete (184.4-01 through 184.4-10 all done).
 184.4-10 closed the phase's documentation obligations: extended `docs/report-interpretation.md`
 (§19, the severity floor — band-vs-score, the FAIR-only cap, why the score does not drop, all six
@@ -1915,7 +1915,7 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-09-05T22:30:00.000Z
-Stopped at: Completed 184.4-10-PLAN.md (phase 184.4 COMPLETE)
+Stopped at: Completed 184.4-10-PLAN.md (all 10 plans done; phase verification pending)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
