@@ -454,7 +454,7 @@ Plans:
 
 **Goal**: A successful scan always yields a report. The readiness band and the report congruence guard stop asserting contradictory invariants.
 **Depends on**: Nothing
-**Requirements**: (to be assigned during discuss-phase — supersedes BACK-89)
+**Requirements**: SCORE-04, SCORE-05 (supersedes BACK-89)
 **Success Criteria** (what must be TRUE):
 
   1. A scan scoring >= 85 with one open CRITICAL finding **produces a report**. **Reproduced
@@ -485,7 +485,15 @@ Plans:
   5. Not a regression from Phase 184.2, and the roadmap says so. A client with an expired
      certificate on plain 443 hits the identical wall under the old 3-port `[443, 8443, 4443]`
      default; 184.2's widening only raises the encounter rate. That phase's six plans touch neither
-     scoring nor reporting.
+     scoring nor reporting. **Verified 2026-09-05 (184.4-01):** the `files_modified` frontmatter of
+     all six `184.2-*-PLAN.md` files (`184.2-01` .. `184.2-06`) was read directly. Their combined
+     file set is `quirk/config.py`, `docs/sample-config.yaml`, `quirk/config_template.yaml`,
+     `config.yaml`, `lab-registry.yaml`, `docs/configuration.md`, `docs/operators-guide.md`,
+     `docs/UAT-SERIES.md`, plus test/Obsidian/validation files — zero of which are
+     `quirk/intelligence/scoring.py` or anything under `quirk/reports/`. An expired certificate
+     served on plain 443 reaches `_rating()` and `_check_congruence()` by the identical code path
+     under the old 3-port default, so this halt predates Phase 184.2; the widening changed
+     encounter rate only, confirming the claim as written rather than merely restating it.
 
   6. BACK-89 is closed by reference. Its investigation questions (a)-(d) at
      `.planning/milestones/v5.0-ROADMAP.md:845` are answered or explicitly dispositioned, and the
