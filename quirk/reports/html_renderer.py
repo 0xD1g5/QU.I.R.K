@@ -833,6 +833,12 @@ def render_html_report(
         # independently here means a future severity change to coverage_gap cannot silently
         # reintroduce a split between the counting basis used here and the one
         # `_count_severities()` (content_model.py) uses inside assert_congruent() below.
+        # 184.4 WR-02: the "can never be CRITICAL" clause above is no longer merely
+        # documented — `tests/test_coverage_gap_severity_invariant.py` enforces it at
+        # run time (behavioural INFO check on the emitter, a differential proving the
+        # two CRITICAL counting bases agree, and a source scan that fails on any new,
+        # undispositioned coverage_gap site). Do not weaken that gate to make a new
+        # emitter pass; state the new emitter's severity in its ledger entry instead.
         numeric_band = band_for_score(total_score)
         _critical_count = sum(
             1 for f in (findings or [])
