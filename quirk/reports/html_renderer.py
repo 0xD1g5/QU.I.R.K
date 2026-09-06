@@ -12,6 +12,7 @@ from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
 from quirk.reports.content_model import ExecContent, assert_congruent  # D-03 / Phase 98: shared content model
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: NVD link helper
+from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reason  # Phase 184.4 D-05
 
 
 # Phase 78 / HARDEN-04: PDF metadata constants. Title flows from HTML <title>;
@@ -19,18 +20,6 @@ from quirk.scanner import hw_cve  # Phase 142 CVE-01: NVD link helper
 # not honor <meta name="author">.
 PDF_TITLE = "QU.I.R.K. Cryptographic Readiness Report"
 PDF_AUTHOR = "QU.I.R.K. Scanner"
-
-
-def _score_band(total: int) -> str:
-    if total >= 85:
-        return "EXCELLENT"
-    if total >= 70:
-        return "GOOD"
-    if total >= 55:
-        return "MODERATE"
-    if total >= 35:
-        return "FAIR"
-    return "POOR"
 
 
 def _score_color(band: str) -> str:
@@ -827,13 +816,30 @@ def render_html_report(
 
     # WR-04: when exec_content is present, source the band/total from the guarded model
     # (score_band is what _check_congruence validated) instead of recomputing locally —
-    # avoids a duplicated-source-of-truth hazard if _rating()/_score_band() thresholds drift.
+    # avoids a duplicated-source-of-truth hazard if the numeric/severity band thresholds drift.
     if exec_content is not None:
         total_score = exec_content.score_total
         band = exec_content.score_band
+        # Phase 184.4 D-09: mirror the shared model's cap reason on the primary path.
+        rating_cap_reason = score.get("rating_cap_reason")
     else:
         total_score = score.get("score", 0)  # WR-06: canonical key is "score", not "total"
-        band = _score_band(total_score)
+        # Phase 184.4 D-05: severity-aware band via the shared module — the old
+        # severity-blind band helper is deleted outright. Cap using CRITICAL findings counted directly from
+        # `findings`, NOT from the `sev_counts` display tally built below (which skips
+        # `category == "coverage_gap"`, Phase 45 / D-07). This is inert today because
+        # coverage_gap findings are emitted at INFO severity
+        # (quirk/scanner/findings_evaluator.py:445) and can never be CRITICAL, but counting
+        # independently here means a future severity change to coverage_gap cannot silently
+        # reintroduce a split between the counting basis used here and the one
+        # `_count_severities()` (content_model.py) uses inside assert_congruent() below.
+        numeric_band = band_for_score(total_score)
+        _critical_count = sum(
+            1 for f in (findings or [])
+            if str(f.get("severity", "INFO")).upper() == "CRITICAL"
+        )
+        band = cap_band_for_severity(numeric_band, _critical_count)
+        rating_cap_reason = cap_reason(numeric_band, band, _critical_count, total_score)
 
     # Severity counts
     sev_counts: Dict[str, int] = {}
@@ -948,6 +954,7 @@ def render_html_report(
         total_score=total_score,
         score_band=band,
         score_color=_score_color(band),
+        rating_cap_reason=rating_cap_reason,  # Phase 184.4 D-09
         confidence=conf.get("confidence", 0),
         sev_counts=sev_counts,
         drivers=score.get("drivers", []),
