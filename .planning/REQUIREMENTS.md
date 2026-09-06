@@ -114,11 +114,18 @@ rather than inherited from its original report — two had drifted since they we
   further since, which was itself the argument for derivation over a longer list.*
 
 - [ ] **DRIFT-02**: `DEFER-172-01` closed — `tests/test_skip_registry.py::test_no_unregistered_skips`
-  passes. **Measured 2026-09-03: 10 unregistered skips**, four of them in
-  `test_uat_disposition_integrity.py`, one new from v5.18 (`test_closure_burndown.py:296`).
+  passes. **Originally measured 2026-09-03 as 10 unregistered skips** — already stale when
+  written. Re-measured 22 on 2026-09-04 and again 22 (with different membership) on 2026-09-06 at
+  Phase 184 planning time. **Re-measured live at 184-01 execution time (2026-09-06): 22
+  unregistered skips**,
+  membership recorded verbatim in `184-01-SUMMARY.md`'s "Pre-change baseline" section — the count
+  has drifted twice and is re-derived here rather than inherited from any planning document.
   Each skip is either registered with a real justification or deleted per Phase 41 D-01/D-04 —
-  **never registered merely to quiet the gate**. The registry keys on `(file, LINENO)`, so also
-  decide whether that keying survives or becomes content-addressed.
+  **never registered merely to quiet the gate**. The registry's keying question is now decided:
+  the key becomes `(file, test_qualname)` per 184-CONTEXT.md D-01 (the AST-derived dotted path of
+  the construct's enclosing `ClassDef`/`FunctionDef` chain), with content-addressing (a hash of
+  normalized source) explicitly rejected per D-03 — a typo fix in a reason string would re-break
+  the gate, a worse failure mode than line drift.
 
 - [x] **SCORE-01**: `coverage_ratio` measures assessment coverage, not protocol composition.
   **Measured 2026-09-04 against a live 20-endpoint chaos-lab scan** (`scan_run_id
