@@ -542,7 +542,7 @@ Plans:
 **Plans**: 10 plans
 
 Plans:
-- [ ] 184.4-01-PLAN.md — write SCORE-04/SCORE-05 into REQUIREMENTS.md + ROADMAP, record the SC #5 non-regression finding, close BACK-89 (a)-(d) and resolve the 999.82 backlog dir
+- [x] 184.4-01-PLAN.md — write SCORE-04/SCORE-05 into REQUIREMENTS.md + ROADMAP, record the SC #5 non-regression finding, close BACK-89 (a)-(d) and resolve the 999.82 backlog dir
 - [ ] 184.4-02-PLAN.md — RED-first D-13 regression: score >= 85 + one CRITICAL `TLS certificate expired`, proven to fail against pre-fix code (D-13)
 - [ ] 184.4-03-PLAN.md — `quirk/severity_bands.py` stdlib-only shared threshold + allowance + cap-reason module; `content_model.py` sourced from it (D-04, D-02)
 - [ ] 184.4-04-PLAN.md — the fix: severity floor on `_rating()`/`compute_readiness_score()` + `rating_cap_reason`; compat-path guard test converted to a mocked producer (D-01, D-02, D-03, D-06, D-09)
