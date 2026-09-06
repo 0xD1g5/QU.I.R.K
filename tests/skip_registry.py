@@ -288,4 +288,13 @@ ALLOWED_SKIPS = [
     ("test_audit_ledger_zero_open.py",       54, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
     ("test_audit_ledger_zero_open.py",       76, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
     ("test_extras_concurrency_expander.py", 260, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
+
+    # ------------------------------------------------------------------
+    # Phase 184.4 code-review fix (WR-01): the DOCX end-to-end assertion
+    # that a capped ExecContent still renders its cap-reason paragraph with
+    # NO cap-reason keyword available. python-docx is an optional reporting
+    # extra, matching the existing test_report_render_undetermined_hosts.py
+    # entries above.
+    # ------------------------------------------------------------------
+    ("test_exec_content_model.py",          703, "optional_extra", "python-docx not installed"),
 ]
