@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-01-PLAN.md
-last_updated: "2026-09-06T00:11:17.000Z"
+stopped_at: Completed 184.4-02-PLAN.md
+last_updated: "2026-09-06T00:39:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 40
-  percent: 57
+  completed_plans: 41
+  percent: 58
 ---
 
 # Project State
@@ -672,10 +672,16 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 1 of 10 complete (184.4-01 done). SCORE-04/SCORE-05 now real requirement IDs in
-REQUIREMENTS.md; ROADMAP.md's Phase 184.4 block names them and carries a verified SC #5
-non-regression finding plus SC #6's BACK-89 (a)-(d) dispositions. BACK-89 closed by reference;
-the empty 999.82 backlog dir now carries a RESOLVED.md marker. See `184.4-01-SUMMARY.md`.
+Plan: 2 of 10 complete (184.4-01, 184.4-02 done). 184.4-02 wrote and proved RED (against
+unmodified pre-fix code) the D-13 end-to-end regression `tests/test_score_severity_floor_regression.py`
+— drives the REAL `compute_readiness_score()` through `write_reports()`, fails with the exact
+observed `ReportCongruenceError` string (`executive headline 'EXCELLENT' is inconsistent with 1
+CRITICAL finding(s)`), verbatim evidence captured in `184.4-02-SUMMARY.md`, then fenced with
+`xfail(strict=True)` so Waves 2-3 keep a green suite until plan 184.4-04's severity floor lands.
+Prior: SCORE-04/SCORE-05 now real requirement IDs in REQUIREMENTS.md; ROADMAP.md's Phase 184.4
+block names them and carries a verified SC #5 non-regression finding plus SC #6's BACK-89 (a)-(d)
+dispositions. BACK-89 closed by reference; the empty 999.82 backlog dir now carries a RESOLVED.md
+marker. See `184.4-01-SUMMARY.md` and `184.4-02-SUMMARY.md`.
 
 Prior phase (retained for history):
 
