@@ -400,3 +400,179 @@ def test_compute_undetermined_hosts_empty_and_none():
 
     assert _compute_undetermined_hosts(None) == (0, {"discovery_exception": 0, "liveness_skip": 0})
     assert _compute_undetermined_hosts([]) == (0, {"discovery_exception": 0, "liveness_skip": 0})
+
+
+# ---------------------------------------------------------------------------
+# Phase 184.4-06 — rating_cap_reason presence/absence/missing-key contract
+# (D-09, D-10). See quirk/reports/executive.py (CLI markdown, both branches)
+# and quirk/reports/writer.py (compat score dict threaded to DOCX/scorecard/
+# intelligence.json/terminal summary).
+# ---------------------------------------------------------------------------
+
+
+def _cli_cfg():
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        assessment=SimpleNamespace(
+            name="t", report_owner="o", data_classification="c", timezone="UTC"
+        ),
+        intelligence=SimpleNamespace(profile="balanced", calibration_overrides={}),
+    )
+
+
+def _cli_endpoints():
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    return [
+        SimpleNamespace(
+            host=f"10.0.0.{i}",
+            port=443,
+            protocol="TLS",
+            scanned_at=datetime.now(timezone.utc),
+            scan_error=None,
+        )
+        for i in range(1, 5)
+    ]
+
+
+def _capped_score_raw() -> dict:
+    return {
+        "score": 89,
+        "rating": "FAIR",
+        "rating_cap_reason": (
+            "Band capped at FAIR: 1 CRITICAL finding(s) open (score 89/100)."
+        ),
+        "subscores": {k: 25 for k in _SIX_PILLAR_KEYS},
+        "drivers": [],
+    }
+
+
+def test_cli_markdown_compat_branch_renders_cap_reason_when_capped():
+    """WR-05 compat path (exec_content=None): capped score dict -> cap-reason text present."""
+    from unittest.mock import patch
+
+    from quirk.reports.executive import build_exec_markdown
+
+    score_raw = _capped_score_raw()
+    with patch(
+        "quirk.reports.executive.compute_readiness_score", return_value=score_raw
+    ):
+        md = build_exec_markdown(_cli_cfg(), _cli_endpoints(), [], exec_content=None)
+    assert "Band capped at FAIR" in md
+
+
+def test_cli_markdown_compat_branch_absent_when_uncapped():
+    """WR-05 compat path: rating_cap_reason is None -> no cap-reason text at all."""
+    from unittest.mock import patch
+
+    from quirk.reports.executive import build_exec_markdown
+
+    score_raw = {**_capped_score_raw(), "rating": "EXCELLENT", "rating_cap_reason": None}
+    with patch(
+        "quirk.reports.executive.compute_readiness_score", return_value=score_raw
+    ):
+        md = build_exec_markdown(_cli_cfg(), _cli_endpoints(), [], exec_content=None)
+    assert "Cap reason" not in md
+    assert "Band capped" not in md
+
+
+def test_cli_markdown_compat_branch_missing_key_does_not_raise():
+    """Pre-184.4 shaped score dict with NO rating_cap_reason key at all.
+
+    This is the backward-compatibility case a `[...]`-style direct key read
+    would break (KeyError) — only the `.get()` idiom in executive.py protects
+    it. Must render cleanly with no cap-reason text.
+    """
+    from unittest.mock import patch
+
+    from quirk.reports.executive import build_exec_markdown
+
+    score_raw = _capped_score_raw()
+    score_raw["rating"] = "FAIR"
+    del score_raw["rating_cap_reason"]
+    assert "rating_cap_reason" not in score_raw
+
+    with patch(
+        "quirk.reports.executive.compute_readiness_score", return_value=score_raw
+    ):
+        md = build_exec_markdown(_cli_cfg(), _cli_endpoints(), [], exec_content=None)
+    assert "Cap reason" not in md
+    assert "Band capped" not in md
+
+
+def test_cli_markdown_exec_content_branch_renders_cap_reason_when_capped():
+    """Primary exec_content path: capped score dict -> cap-reason text present."""
+    from unittest.mock import patch
+
+    from quirk.reports.executive import build_exec_markdown
+
+    score_raw = _capped_score_raw()
+    crit = {
+        "severity": "CRITICAL",
+        "host": "10.0.0.9",
+        "port": 443,
+        "title": "Quantum-vulnerable key exchange",
+        "category": "tls",
+        "description": "d",
+        "recommendation": "r",
+        "compliance": [],
+    }
+    exec_content = build_exec_content(score_raw, [crit], [])
+    with patch(
+        "quirk.reports.executive.compute_readiness_score", return_value=score_raw
+    ):
+        md = build_exec_markdown(
+            _cli_cfg(), _cli_endpoints(), [crit], exec_content=exec_content
+        )
+    assert "Band capped at FAIR" in md
+
+
+def test_cli_markdown_exec_content_branch_absent_when_uncapped():
+    """Primary exec_content path: rating_cap_reason is None -> no cap-reason text."""
+    from unittest.mock import patch
+
+    from quirk.reports.executive import build_exec_markdown
+
+    score_raw = {**_capped_score_raw(), "rating": "EXCELLENT", "rating_cap_reason": None}
+    exec_content = build_exec_content(score_raw, [], [])
+    with patch(
+        "quirk.reports.executive.compute_readiness_score", return_value=score_raw
+    ):
+        md = build_exec_markdown(
+            _cli_cfg(), _cli_endpoints(), [], exec_content=exec_content
+        )
+    assert "Cap reason" not in md
+    assert "Band capped" not in md
+
+
+def test_writer_compat_dict_carries_rating_cap_reason_through():
+    """The writer.py compat score dict must carry rating_cap_reason from score_raw
+    through to every consumer that reads it (D-09/D-10) — proven here via
+    `_scorecard_markdown`, one of those consumers, matching the exact compat
+    dict shape `write_reports` builds (`total`/`subscores`/`drivers`/
+    `rating_cap_reason`).
+    """
+    from types import SimpleNamespace
+
+    from quirk.reports.writer import _scorecard_markdown
+
+    cfg = SimpleNamespace(
+        assessment=SimpleNamespace(report_owner="o", data_classification="c")
+    )
+    conf = {"confidence": 80}
+
+    capped_compat = {
+        "total": 89,
+        "subscores": {},
+        "drivers": [],
+        "rating_cap_reason": "Band capped at FAIR: 1 CRITICAL finding(s) open (score 89/100).",
+    }
+    uncapped_compat = {**capped_compat, "rating_cap_reason": None}
+
+    capped_md = _scorecard_markdown(cfg, capped_compat, conf, [], [])
+    uncapped_md = _scorecard_markdown(cfg, uncapped_compat, conf, [], [])
+
+    assert "Band capped at FAIR" in capped_md
+    assert "Cap reason" not in uncapped_md
