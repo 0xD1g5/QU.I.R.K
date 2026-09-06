@@ -501,6 +501,43 @@ Plans:
      is resolved — it went unseen for ~3.5 months because it was cited by no REQUIREMENTS file and
      never reached `HORIZON.md`.
 
+     **BACK-89 closed by reference to Phase 184.4 (2026-09-05).** The row appears TWICE in
+     `.planning/milestones/v5.0-ROADMAP.md` (lines 845 and 847) — confirmed byte-identical on
+     read; this is one item, not two.
+
+     (a) **What the Overall Readiness gauge represents:** resolved against the real, current code
+         path — `compute_readiness_score()` in `quirk/intelligence/scoring.py`, recomputed on
+         every read at `quirk/dashboard/api/routes/scan.py:1613-1614`, never cached or stale. The
+         BACK-89 pointer `quirk/api/score.py::compute_overall_score` no longer exists
+         (`test ! -f quirk/api/score.py` confirms; the only live `compute_overall_score` in the
+         codebase is `quirk/qramm/scoring.py`'s unrelated QRAMM maturity function, consumed by
+         `quirk/dashboard/api/routes/qramm.py` — a different subsystem entirely). Answering about
+         the cited function would answer about code that is gone.
+
+     (b) **Why "Medium Confidence" sits beside a maxed score:** `compute_confidence()`
+         (`quirk/intelligence/confidence.py`) is a wholly separate scale from the readiness score —
+         confidence measures assessment coverage, not risk. SCORE-01 (Phase 184.1) already closed
+         the coverage-ratio half of this apparent contradiction: a scan can legitimately score high
+         on readiness while carrying only medium confidence if the coverage ratio over assessable
+         endpoints is partial. The two numbers were never meant to move together.
+
+     (c) **Should the score be deducted by severity counts:** **No.** Per D-01/D-03
+         (`184.4-CONTEXT.md`), the floor caps the **band**, not the **number** — the existing
+         `agility_high_impact_ratio` weighted contribution (`scoring.py:155,217`, weight `14.0`)
+         already folds `HIGH + CRITICAL` into the score and is left untouched. Deducting the score
+         further by raw severity counts would double-count the same signal through two mechanisms
+         and re-baseline every existing scoring fixture and trend delta — a regression wearing a
+         cleanup's clothes.
+
+     (d) **Redesign the label/annotation:** **Yes**, delivered as the structured cap-reason key
+         (D-09) rendered on every headline surface including the React dashboard (D-10) — CLI exec
+         summary, HTML/PDF, DOCX, and the Executive page gauge all state explicitly when and why a
+         band was capped, rather than presenting an uncapped number beside contradictory severity
+         bars with no explanation.
+
+     Backlog closure: see
+     `.planning/backlog/999.82-executive-summary-score-vs-severity-consistency/RESOLVED.md`.
+
 **Source**: `.planning/todos/pending/rating-band-critical-floor-halts-reports.md`
 **Plans**: 10 plans
 
