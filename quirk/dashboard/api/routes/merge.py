@@ -86,6 +86,9 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
     per_segment_scores: Dict[str, int] = {}
     for seg, eps in segment_eps.items():
         try:
+            # D-07 (184.4): intentionally findings-less — per_segment_scores
+            # (MergeLatestData.per_segment_scores) is a Dict[str, int]; only the
+            # numeric score is ever assigned into it below, never a rating/band.
             evidence = build_evidence_summary(eps, findings=None)
             result = compute_readiness_score(evidence)
             per_segment_scores[seg] = int(result["score"]) if result.get("score") is not None else 0
@@ -107,6 +110,10 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
     live_score: int = latest_run.score if latest_run.score is not None else 0
     if endpoints:
         try:
+            # D-07 (184.4): intentionally findings-less — only overall_result["score"]
+            # is read below into live_score (int); MergeLatestData carries no
+            # rating/band field, so this evidence's severity counts are never
+            # consulted for a band anywhere on this response.
             overall_evidence = build_evidence_summary(endpoints, findings=None)
             overall_result = compute_readiness_score(overall_evidence)
             live_score = int(overall_result["score"]) if overall_result.get("score") is not None else 0

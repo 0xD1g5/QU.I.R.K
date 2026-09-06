@@ -225,6 +225,13 @@ def merge_scan(
         }
 
     # 4. Option A: ONE call over the FULL UNION (MERGE-02 — never average per-segment)
+    # D-07 (184.4): intentionally findings-less — this scores the merged union for
+    # the numeric `score`/`subscores`/`drivers` persisted on MergeRun.score and
+    # returned to callers (quirk/cli/sensor_cmd.py, dashboard sensor.py). The
+    # `rating` this call produces is passed through the return dict but has no
+    # DB column (MergeRun has no rating field) and no schema consumer ever reads
+    # it — MergeLatestData (dashboard/api/schemas.py) exposes only `score` and
+    # `per_segment_scores`, both ints. No band is ever rendered from this call.
     evidence = build_evidence_summary(union, findings=None)
     score_result = compute_readiness_score(evidence, profile=profile, weights=weights)
 

@@ -203,6 +203,10 @@ def get_trends_timeline(
         eps = _fetch_session_endpoints(db, ts)
         if not eps:
             continue
+        # D-07 (184.4): intentionally findings-less — TrendSessionPoint (schemas.py)
+        # exposes only `score` (int) and `subscores` (SubScores, all ints) from
+        # this evidence/score_dict; it has no rating/band field, so this timeline
+        # point can never render a severity-blind band.
         evidence = build_evidence_summary(eps)
         score_dict = compute_readiness_score(evidence)
         sub = score_dict["subscores"]

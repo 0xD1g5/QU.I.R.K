@@ -204,6 +204,10 @@ def _score_for_session(endpoints: List[CryptoEndpoint]) -> int:
     Returns score as int (compute_readiness_score always returns int via
     total_score = int(...) — confirmed in scoring.py).
     """
+    # D-07 (184.4): intentionally findings-less — the only consumer of this
+    # function's return value is `return score_dict["score"]` immediately below;
+    # no caller of _score_for_session() ever reads a rating/band from it, so a
+    # severity-blind evidence summary here can never diverge from a report band.
     evidence = build_evidence_summary(endpoints)
     score_dict = compute_readiness_score(evidence)
     return score_dict["score"]
