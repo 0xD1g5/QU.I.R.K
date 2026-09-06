@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184.4 context gathered
-last_updated: "2026-09-06T00:07:20.806Z"
+stopped_at: Completed 184.4-01-PLAN.md
+last_updated: "2026-09-06T00:11:17.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 39
-  percent: 56
+  completed_plans: 40
+  percent: 57
 ---
 
 # Project State
@@ -672,7 +672,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 1 of 10
+Plan: 1 of 10 complete (184.4-01 done). SCORE-04/SCORE-05 now real requirement IDs in
+REQUIREMENTS.md; ROADMAP.md's Phase 184.4 block names them and carries a verified SC #5
+non-regression finding plus SC #6's BACK-89 (a)-(d) dispositions. BACK-89 closed by reference;
+the empty 999.82 backlog dir now carries a RESOLVED.md marker. See `184.4-01-SUMMARY.md`.
 
 Prior phase (retained for history):
 
