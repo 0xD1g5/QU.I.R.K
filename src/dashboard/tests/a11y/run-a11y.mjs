@@ -12,12 +12,21 @@
  *   VITE_A11Y_FIXTURE_VARIANT    — optional: "empty" or "loading"
  *   PUPPETEER_EXECUTABLE_PATH    — fallback Chrome path if system Chrome not found
  *
- * Deliberately-unpinned and indirectly-pinned inputs (D-04, A11Y-05) — named here rather
- * than hidden, since both decide what axe reports on a given run:
- *   - The Chrome binary is resolved via `puppeteer.launch({ channel: 'chrome' })`, falling
- *     back to `PUPPETEER_EXECUTABLE_PATH`. It is NOT version pinned. This is a deliberate,
- *     named residual risk, mitigated (not eliminated) by D-01's count-budget key tolerating
- *     rendering jitter across Chrome versions.
+ * Chrome-pinning status (Phase 185 D-06/D-07/D-08/D-09; supersedes Phase 165 D-04's
+ * jitter-tolerance justification, named here rather than hidden):
+ *   - In CI, the Chrome binary used for the a11y gate and baseline regeneration is PINNED
+ *     to a concrete version (`chrome-version: '152.0.7977.82'`) in
+ *     `.github/workflows/dashboard-quality.yml` per Phase 185 D-07, mechanically guarded
+ *     by `pinned-deps.test.ts` per D-09 so it cannot silently drift back to a floating
+ *     channel or disagree between jobs.
+ *   - Locally, this harness still resolves Chrome via
+ *     `puppeteer.launch({ channel: 'chrome' })`, falling back to
+ *     `PUPPETEER_EXECUTABLE_PATH`, and remains DELIBERATELY unpinned per D-08 — local runs
+ *     are diagnostic-only after Phase 185 and are never the source of a committed
+ *     baseline, so contributors are not required to obtain a specific Chrome build.
+ *   - No jitter-tolerance claim is made for either path: D-06 keeps exact-integer
+ *     baseline counts with no tolerance band. The CI pin above is what makes that
+ *     zero-tolerance comparison sound, not a rendering-jitter allowance.
  *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
  *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */

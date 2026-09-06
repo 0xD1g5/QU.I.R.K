@@ -44,7 +44,8 @@ jobs:
         id: setup-chrome
         uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce  # v1.7.3
         with:
-          chrome-version: stable
+          # Phase 185 D-07 -- pinned from run 34066331311 (2026-09-06); supersedes 165-CONTEXT.md D-04's unpinned-Chrome residual risk. D-06 keeps exact counts with no jitter tolerance, so the pin replaces that mitigation.
+          chrome-version: '152.0.7977.82'
 
       - name: Run axe + console sweep (happy fixture)
         run: npm run a11y:check
@@ -88,7 +89,8 @@ jobs:
         id: setup-chrome
         uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce  # v1.7.3
         with:
-          chrome-version: stable  # TEMPORARY - pinned to a concrete version by plan 185-02 (D-07); see 185-01 Task 2
+          # Phase 185 D-07 -- pinned from run 34066331311 (2026-09-06); supersedes 165-CONTEXT.md D-04's unpinned-Chrome residual risk. D-06 keeps exact counts with no jitter tolerance, so the pin replaces that mitigation.
+          chrome-version: '152.0.7977.82'
 
       - name: Record resolved Chrome version
         run: '"${{ steps.setup-chrome.outputs.chrome-path }}" --version'
@@ -153,7 +155,8 @@ jobs:
         id: setup-chrome
         uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce  # v1.7.3
         with:
-          chrome-version: stable
+          # Phase 185 D-07 -- pinned from run 34066331311 (2026-09-06); supersedes 165-CONTEXT.md D-04's unpinned-Chrome residual risk. D-06 keeps exact counts with no jitter tolerance, so the pin replaces that mitigation.
+          chrome-version: '152.0.7977.82'
 
       - name: Run E2E smoke (route walk + scan lifecycle)
         run: npm run e2e:smoke
