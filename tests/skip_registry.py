@@ -297,4 +297,14 @@ ALLOWED_SKIPS = [
     # entries above.
     # ------------------------------------------------------------------
     ("test_exec_content_model.py",          703, "optional_extra", "python-docx not installed"),
+    # ------------------------------------------------------------------
+    # Phase 184.4 code-review fix (IN-02): the DOCX surface must name the
+    # readiness band as its own "Rating: {band}" field — it was the only one
+    # of the six render surfaces silent about the band, so an UNCAPPED report
+    # stated no band anywhere. Both assertions do a live python-docx
+    # round-trip read of the written file, so they carry the same
+    # optional-extra importorskip as the WR-01 entry directly above.
+    # ------------------------------------------------------------------
+    ("test_exec_content_model.py",          809, "optional_extra", "python-docx not installed"),
+    ("test_exec_content_model.py",          860, "optional_extra", "python-docx not installed"),
 ]

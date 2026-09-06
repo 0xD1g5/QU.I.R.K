@@ -781,3 +781,114 @@ def test_only_one_place_reads_rating_cap_reason_off_score_raw():
     assert len(offenders["content_model.py"]) == 1, (
         f"expected exactly ONE score_raw read of the key: {offenders!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 184.4 IN-02 — the DOCX surface must name the readiness band itself.
+#
+# The DOCX was the only one of the six render surfaces that never stated the
+# band as its own field. The CLI writes "**Rating:** **{band}**", the HTML
+# template writes <div class="score-band">{{ score_band }}</div>, the dashboard
+# renders a badge — the DOCX wrote only the raw "raw_sum / 1.5 = score / 100"
+# rollup. So an UNCAPPED DOCX report stated no band anywhere, and a CAPPED one
+# named it only incidentally, inside the cap-reason sentence
+# ("Band capped at FAIR: ...").
+#
+# That incidental mention is why this needs an UNCAPPED assertion specifically:
+# a test that only checked a capped report would have passed before this fix.
+# ---------------------------------------------------------------------------
+
+
+def test_docx_names_the_band_even_when_uncapped():
+    """IN-02: an uncapped DOCX report must state its own rating band.
+
+    This is the case that was broken: with no cap, the pre-fix document had no
+    occurrence of the band name at all. Asserted against a live python-docx
+    round-trip read of the written file, not against the renderer's inputs.
+    """
+    pytest.importorskip("docx")
+
+    import tempfile
+    from pathlib import Path
+
+    from docx import Document
+
+    from quirk.reports.content_model import build_exec_content
+    from quirk.reports.docx_renderer import render_docx_report
+
+    # An uncapped, genuinely favourable score — the band must come from the
+    # producer's own value, so assert against exec_content.score_band rather
+    # than a hardcoded literal that could drift from the band table.
+    uncapped = build_exec_content(
+        score_raw={
+            **_capped_score_raw(),
+            "score": 92,
+            "rating": "EXCELLENT",
+            "rating_cap_reason": None,
+        },
+        findings=[],
+        roadmap_items=[],
+    )
+    assert uncapped.rating_cap_reason is None, "fixture is not actually uncapped"
+    band = uncapped.score_band
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / "uncapped.docx")
+        assert render_docx_report(
+            path=path, cfg=_cli_cfg(), findings=[], exec_content=uncapped
+        )
+        text = "\n".join(p.text for p in Document(path).paragraphs)
+
+    assert f"Rating: {band}" in text, (
+        "an uncapped DOCX report does not name its readiness band anywhere "
+        f"(expected a 'Rating: {band}' paragraph). This is IN-02: the DOCX was "
+        f"the only surface silent about the band. Got: {text!r}"
+    )
+    # The band must not arrive via the cap-reason sentence, which is absent here.
+    assert "Cap reason" not in text
+
+
+def test_docx_names_both_the_capped_band_and_the_cap_reason():
+    """IN-02 companion: a capped report states the CAPPED band as its own
+    Rating field AND still carries the cap-reason sentence.
+
+    The band field must show the post-cap band (what the reader is actually
+    being told their posture is), not the pre-cap numeric band — otherwise the
+    document would contradict itself, which is the BACK-89 failure mode this
+    phase exists to close.
+    """
+    pytest.importorskip("docx")
+
+    import tempfile
+    from pathlib import Path
+
+    from docx import Document
+
+    from quirk.reports.content_model import build_exec_content
+    from quirk.reports.docx_renderer import render_docx_report
+
+    capped = build_exec_content(
+        score_raw=_capped_score_raw(), findings=[], roadmap_items=[]
+    )
+    assert capped.rating_cap_reason, "fixture is not actually capped"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / "capped.docx")
+        assert render_docx_report(
+            path=path, cfg=_cli_cfg(), findings=[], exec_content=capped
+        )
+        text = "\n".join(p.text for p in Document(path).paragraphs)
+
+    assert f"Rating: {capped.score_band}" in text, (
+        f"capped DOCX does not name its band as a field. Got: {text!r}"
+    )
+    assert "Band capped at FAIR" in text, (
+        f"capped DOCX lost its cap-reason sentence. Got: {text!r}"
+    )
+    # Self-consistency: the score_raw fixture is capped to FAIR, so the Rating
+    # field must agree with the band named inside the cap sentence rather than
+    # reporting the uncapped band the raw score alone would have produced.
+    assert "Rating: FAIR" in text, (
+        "the Rating field reports a different band than the cap-reason "
+        f"sentence — the document contradicts itself. Got: {text!r}"
+    )

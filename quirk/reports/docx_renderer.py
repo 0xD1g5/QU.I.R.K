@@ -585,6 +585,21 @@ def render_docx_report(
 
     # ---- Score Breakdown section ----
     doc.add_heading("Score Breakdown", level=1)
+    # IN-02 (184.4 review): state the readiness band as its own field. Until now
+    # the DOCX was the only one of the six surfaces (CLI markdown, HTML/PDF,
+    # dashboard, scorecard, intelligence JSON, DOCX) that never named the band:
+    # an UNCAPPED DOCX report reported the raw rollup arithmetic and nothing
+    # else, so the same scan read as e.g. "GOOD" everywhere but here. A CAPPED
+    # report only named it incidentally, inside the cap-reason sentence.
+    #
+    # Sourced from the shared model's score_band, the same value the CLI's
+    # "**Rating:** **{band}**" and the HTML template's <div class="score-band">
+    # render, so this is a new surface for an existing value and not a seventh
+    # derivation (D-03 / 184.4 WR-01). getattr keeps the exec_content=None
+    # legacy path working, where no band exists to state.
+    score_band = getattr(exec_content, "score_band", None)
+    if score_band:
+        doc.add_paragraph(f"Rating: {score_band}", style="Normal")
     # Rollup formula sentence
     doc.add_paragraph(
         f"{raw_sum} ÷ 1.5 = {score_total} / 100",
