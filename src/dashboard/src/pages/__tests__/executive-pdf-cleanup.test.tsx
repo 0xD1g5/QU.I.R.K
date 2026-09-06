@@ -6,12 +6,16 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
 // on unmount. If the user navigates away mid-download the timer must not fire
 // after unmount and the blob URL must be revoked.
 
+// SCORE-04 / D-09/D-10 (184.4): mutable so tests can drive the capped vs.
+// uncapped scenario; undefined (default) documents the uncapped case.
+let scanDataRatingCapReason: string | undefined = undefined
+
 vi.mock("@/hooks/useScanData", () => ({
   useScanData: () => ({
     data: {
       meta: { scan_id: "1", scanned_at: "2026-05-15T00:00:00Z", total_endpoints: 0, total_findings: 0 },
       score: {
-        score: 50, rating: "Moderate",
+        score: 50, rating: "Moderate", rating_cap_reason: scanDataRatingCapReason,
         subscores: { hygiene: 0, modern_tls: 0, identity_trust: 0, agility_signals: 0, data_at_rest: 0, data_in_motion: 0 },
         drivers: [],
       },
@@ -46,6 +50,7 @@ beforeEach(() => {
   fetchApiMock.mockReset()
   revokeSpy.mockReset()
   createSpy.mockClear()
+  scanDataRatingCapReason = undefined
   vi.stubGlobal("URL", {
     createObjectURL: createSpy,
     revokeObjectURL: revokeSpy,
@@ -103,5 +108,22 @@ describe("ExecutivePage — D-06 (WR-05) PDF cleanup", () => {
     // Unmount afterwards — blob URL ref already cleared, so no second call.
     unmount()
     expect(revokeSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("ExecutivePage — SCORE-04 / D-09/D-10 (184.4) rating cap reason", () => {
+  it("renders the cap reason when the band was capped", async () => {
+    scanDataRatingCapReason = "Band capped at FAIR: 1 CRITICAL finding open (score 89/100)"
+    const { ExecutivePage } = await import("@/pages/executive")
+    render(<ExecutivePage />)
+    expect(screen.getByText(/Band capped at FAIR/i)).toBeInTheDocument()
+  })
+
+  it("does not render a cap reason element when the band was not capped", () => {
+    scanDataRatingCapReason = undefined
+    return import("@/pages/executive").then(({ ExecutivePage }) => {
+      const { container } = render(<ExecutivePage />)
+      expect(container.querySelector(".rating-cap-reason")).toBeNull()
+    })
   })
 })

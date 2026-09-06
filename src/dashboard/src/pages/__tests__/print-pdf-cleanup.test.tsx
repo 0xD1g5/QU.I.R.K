@@ -21,11 +21,13 @@ vi.mock("@/hooks/useQRAMMPrintData", () => ({
   useQRAMMPrintData: () => qrammReturn,
 }))
 
-function makeScanFixture() {
+// SCORE-04 / D-09/D-10 (184.4): optional capReason param — undefined (default)
+// documents the uncapped case, a string documents the capped case.
+function makeScanFixture(capReason?: string) {
   return {
     meta: { scan_id: "1", scanned_at: "2026-05-15T00:00:00Z", total_endpoints: 0, total_findings: 0 },
     score: {
-      score: 50, rating: "Moderate",
+      score: 50, rating: "Moderate", rating_cap_reason: capReason,
       subscores: { hygiene: 0, modern_tls: 0, identity_trust: 0, agility_signals: 0, data_at_rest: 0, data_in_motion: 0 },
       drivers: [],
     },
@@ -79,5 +81,23 @@ describe("PrintPage — D-03 (WR-07) data-ready sentinel guards QRAMM error", ()
     expect(document.body.getAttribute("data-ready")).toBe("true")
     unmount()
     expect(document.body.getAttribute("data-ready")).toBeNull()
+  })
+})
+
+describe("PrintPage — SCORE-04 / D-09/D-10 (184.4) rating cap reason", () => {
+  it("renders the cap reason when the band was capped", async () => {
+    scanDataReturn = { data: makeScanFixture("Band capped at FAIR: 1 CRITICAL finding open (score 89/100)"), loading: false, error: null }
+    qrammReturn = { scoreResult: null, complianceRows: null, loading: false, error: null }
+    const { PrintPage } = await import("@/pages/print")
+    render(<PrintPage />)
+    expect(screen.getByText(/Band capped at FAIR/i)).toBeInTheDocument()
+  })
+
+  it("does not render a cap reason element when the band was not capped", async () => {
+    scanDataReturn = { data: makeScanFixture(), loading: false, error: null }
+    qrammReturn = { scoreResult: null, complianceRows: null, loading: false, error: null }
+    const { PrintPage } = await import("@/pages/print")
+    const { container } = render(<PrintPage />)
+    expect(container.querySelector(".score-cap-reason")).toBeNull()
   })
 })

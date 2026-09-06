@@ -26,6 +26,9 @@ function makeScanResponse(scanId: string) {
     score: {
       score: 0,
       rating: "Unknown",
+      // SCORE-04 / D-09/D-10 (184.4): field intentionally absent here, documenting
+      // the uncapped default case — rating_cap_reason is optional/undefined when
+      // the band was not capped by an open CRITICAL finding.
       subscores: {
         hygiene: 0,
         modern_tls: 0,
