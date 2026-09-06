@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Tuple
 
+from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reason
+
 # SCORE_WEIGHTS invariant (D-04, WR-06 — Phase 73 documentation, NOT normalization)
 # ----------------------------------------------------------------------------
 # These values are ABSOLUTE per-ratio coefficients, NOT probabilities, NOT
@@ -94,15 +96,16 @@ def _clamp(v: float, lo: float, hi: float) -> float:
 
 
 def _rating(score: int) -> str:
-    if score >= 85:
-        return "EXCELLENT"
-    if score >= 70:
-        return "GOOD"
-    if score >= 55:
-        return "MODERATE"
-    if score >= 35:
-        return "FAIR"
-    return "POOR"
+    """Numeric-only band lookup (Phase 184.4 D-01/D-04).
+
+    This is now the NUMERIC-ONLY band: it reflects the score alone and knows
+    nothing about severity. Severity-based capping (a CRITICAL finding
+    floors the emitted band at FAIR) happens one layer up, in
+    `compute_readiness_score()`, via `quirk.severity_bands.cap_band_for_severity()`.
+    If you are looking for "why doesn't a CRITICAL finding change what this
+    function returns", it doesn't — read `compute_readiness_score()` instead.
+    """
+    return band_for_score(score)
 
 
 def _apply_weighted_impacts(
@@ -152,6 +155,12 @@ def compute_readiness_score(
 
     unknown_count = max(0, _as_int(protocol_counts.get("UNKNOWN", 0)))
     legacy_tls_count = max(0, _as_int(sev.get("LOW", 0)))
+    # Phase 184.4 D-03: this CRITICAL count also feeds the severity band cap
+    # applied to `rating` below (near `total_score = ...`). That cap moves the
+    # BAND; this ratio moves the NUMBER — they are orthogonal, not a double
+    # count. Do NOT remove CRITICAL from `high_impact` to "avoid overlap".
+    # See the cap site below and `quirk/severity_bands.py::cap_band_for_severity()`
+    # for the full rationale.
     high_impact = max(0, _as_int(sev.get("HIGH", 0)) + _as_int(sev.get("CRITICAL", 0)))
 
     expired_count = max(0, _as_int(cert_obs.get("expired_count", 0)))
@@ -289,7 +298,19 @@ def compute_readiness_score(
         (hygiene_score + modern_tls_score + identity_trust_score +
          agility_score + dar_score + motion_score) / 1.5
     ))
-    rating = _rating(total_score)
+    numeric_band = _rating(total_score)
+
+    # Phase 184.4 D-01/D-02/D-03/D-06/D-09: severity floor on the BAND only.
+    # The number (`total_score`) never moves here. Any open CRITICAL finding
+    # caps the emitted band at FAIR (never a graduated ladder — see
+    # `cap_band_for_severity()`). This is orthogonal to, and does NOT
+    # double-count, the `high_impact`/`agility_high_impact_ratio` contribution
+    # above (D-03): that path already moved `total_score` down; this path
+    # only changes the label attached to it. `critical_count` is read from
+    # the `sev` mapping already in scope above (D-06) — no new parameter.
+    critical_count = max(0, _as_int(sev.get("CRITICAL", 0)))
+    rating = cap_band_for_severity(numeric_band, critical_count)
+    rating_cap_reason = cap_reason(numeric_band, rating, critical_count, total_score)
 
     all_drivers: List[Tuple[str, int]] = (
         hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers + dar_drivers + motion_drivers
@@ -300,6 +321,7 @@ def compute_readiness_score(
     return {
         "score": total_score,
         "rating": rating,
+        "rating_cap_reason": rating_cap_reason,
         "subscores": {
             "hygiene": hygiene_score,
             "modern_tls": modern_tls_score,
