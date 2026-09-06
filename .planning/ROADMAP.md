@@ -133,7 +133,7 @@ since they were first recorded.
 - [x] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so a client can be told why the confidence number moved (there is no historical confidence data to migrate — every live surface recomputes from stored endpoints). Gating: this metric decides the confidence rating on every client deliverable. (completed 2026-09-04)
 - [x] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed. (completed 2026-09-05)
 - [x] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **COMPLETE (2026-09-05). All 11 plans done; verified 6/6 success criteria, all evidence DERIVED at verification time — see 184.3-VERIFICATION.md. 1 of 5 human-verify checks (live cert calendar-day-shift) DEFERRED with cited substitute coverage (datetime.test.ts:39) — vacuous against available data, see 184.3-VALIDATION.md.**
-- [ ] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable. **All 10 plans done (2026-09-05).** SCORE-04/SCORE-05 both complete; BACK-89 closed by reference (all 4 investigation questions answered); docs/UAT/Obsidian close-out in 184.4-10 — see `184.4-VALIDATION.md` (all 11 automated rows green, `nyquist_compliant: true`) and `184.4-10-SUMMARY.md`. Two manual-only checks (live chaos-lab re-verification, cross-surface visual placement) DEFERRED with cited substitute coverage — no chaos-lab/browser access in the close-out session. **Checkbox awaits `184.4-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184.4-10's scope).
+- [x] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable. **All 10 plans done (2026-09-05).** SCORE-04/SCORE-05 both complete; BACK-89 closed by reference (all 4 investigation questions answered); docs/UAT/Obsidian close-out in 184.4-10 — see `184.4-VALIDATION.md` (all 11 automated rows green, `nyquist_compliant: true`) and `184.4-10-SUMMARY.md`. Two manual-only checks (live chaos-lab re-verification, cross-surface visual placement) DEFERRED with cited substitute coverage — no chaos-lab/browser access in the close-out session. **Checkbox awaits `184.4-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184.4-10's scope). (completed 2026-09-06)
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
@@ -551,7 +551,7 @@ Plans:
 - [x] 184.4-07-PLAN.md — the 3 severity-blind `build_evidence_summary()` sites fixed, the 5 remaining dispositioned with verified reasons (D-07, D-08)
 - [x] 184.4-08-PLAN.md — dashboard: `ScoreData.rating_cap_reason` across Pydantic + TS, rendered on `executive.tsx`/`print.tsx`, vitest + `npm run build` + `npm run lint` (D-10)
 - [x] 184.4-09-PLAN.md — the three run-time-derived gates: band x severity matrix walk, AST band-producer scan, AST call-site disposition scan (D-11, D-12)
-- [ ] 184.4-10-PLAN.md — `docs/report-interpretation.md` + `docs/operators-guide.md` + Obsidian syncs, UAT Series 184.4, VALIDATION map TBD fill, phase note
+- [x] 184.4-10-PLAN.md — `docs/report-interpretation.md` + `docs/operators-guide.md` + Obsidian syncs, UAT Series 184.4, VALIDATION map TBD fill, phase note
 
 ### Phase 185: a11y Baseline Environment
 
@@ -572,6 +572,18 @@ routes gain coverage.
 
   3. The 2 pending visual scenarios in `158-HUMAN-UAT.md` — the same two routes — are triaged
      alongside, not separately.
+
+  4. The Severity Breakdown chart tooltip is legible. Reported by the operator 2026-09-06 with a
+     screenshot: the series line (`count : 2`) renders dark-on-dark and is effectively invisible,
+     while the label (`HIGH`) above it is legible. Root cause verified at
+     `src/dashboard/src/pages/executive.tsx:385-388` — `contentStyle` forces a dark panel and
+     `labelStyle` lightens the LABEL, but no `itemStyle` is set, so the series text keeps
+     Recharts' dark default. Fix the color AND add an automated contrast assertion over rendered
+     chart tooltips: this phase is the a11y-baseline phase, and a contrast defect found by a human
+     hovering a bar is exactly what a baseline should have caught. Also consider driving all three
+     tooltip colors from shared tokens — the bug exists because two of three related colors were
+     set by hand and the third was forgotten. See
+     `.planning/backlog/999.94-chart-tooltip-count-illegible/IDEA.md`.
 **Plans**: TBD
 
 ### Phase 186: Carried Defect Drain
