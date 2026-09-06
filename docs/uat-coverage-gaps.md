@@ -240,6 +240,12 @@ discoveries from Plans 03-08 that Phase 170's traceability work needs to act on:
     historical instance of the exact property this GAP describes, just not captured as a
     standing, re-runnable self-test. Disposition: `GAP`, not fabricated `PASS` — see
     `184-07-SUMMARY.md`. The manual-only insertion check in `184-VALIDATION.md`'s Manual-Only
-    Verifications table (insert 10 blank lines above a skip in `tests/test_chaos_storage.py`,
-    confirm the gate stays green) is the human-executed substitute for this specific scenario
-    until a standing self-test is written; writing one remains open follow-up work.
+    Verifications table (insert 10 blank lines above a registered skip, confirm the gate stays
+    green) is the human-executed substitute for this specific scenario; it ran during 184-07's
+    Task 5 checkpoint (2026-09-06) against `tests/test_audit_ledger_zero_open.py` — the actual
+    file used, not `test_chaos_storage.py` as the plan's template instructions named — with the
+    gate confirmed GREEN before and after a byte-identical revert, and was approved by the
+    developer. That single live run is still not a standing, re-runnable self-test (the exact
+    distinction D-12 draws for the phase's *other* falsifiability claims), so the disposition
+    stays `GAP`, not `PASS`; writing a permanent parametrized self-test for this scenario remains
+    open follow-up work.

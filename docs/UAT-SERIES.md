@@ -23460,6 +23460,17 @@ captured as a re-runnable test. A fabricated PASS is not written here; the human
 checkpoint (Task 5 of this plan) is the substitute verification until a standing self-test for
 this specific scenario is written.
 
+**Checkpoint update (2026-09-06):** the human-executed substitute above ran and was approved.
+Orchestrator-run CLI evidence: 10 blank lines inserted at the top of
+`tests/test_audit_ledger_zero_open.py` (shifting every line number in the file); the gate stayed
+GREEN (`python -m pytest tests/test_skip_registry.py -q` -> 22 passed); the file was restored
+byte-identical (`cmp -s` clean). The developer typed "approved". This disposition **stays GAP,
+not PASS** — a live, corroborated inject-and-revert against one file is the exact one-time
+manual check D-12 replaced with permanent self-tests for the phase's *other* falsifiability
+claims; it is real evidence the property holds today, not a standing, re-runnable proof it holds
+on every future change. See `184-VALIDATION.md`'s Manual-Only Verifications table for the full
+disposition record.
+
 ---
 
 ### UAT-184-03: The bidirectional half fires — a stale registry entry fails the build
