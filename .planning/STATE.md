@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 planned (7 plans, 7 waves) — ready to execute
-last_updated: 2026-09-06T17:50:19.000Z
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 01/7 complete, wave 1 of 7 done
+last_updated: "2026-09-06T18:20:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 49
-  percent: 67
+  completed_plans: 50
+  percent: 68
 ---
 
 # Project State
@@ -21,7 +21,19 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184 — skip registry closure (planned, ready to execute)
+**Current focus:** Phase 184 — Skip Registry Closure
+
+**184-01 (complete, 2026-09-06) — DRIFT-02's stale premise corrected; D-13 baseline captured.**
+`tests/test_skip_registry.py::test_no_unregistered_skips` re-measured live: 22 violations
+(matches 184-CONTEXT.md's planning-time figure exactly, same day). `REQUIREMENTS.md` DRIFT-02
+rewritten to record the full drift history (10 -> 22 -> 22-different-membership -> 22, re-derived
+not inherited) and the keying decision as taken ((file, test_qualname), content-addressing
+rejected). Consumer inventory of `ALLOWED_SKIPS` found **zero PROGRAMMATIC readers outside
+`_allowed()`** — plan 03's arity change has a fully bounded blast radius. **Finding for plan 07's
+D-13 comparison:** the live full-suite failing-node SET is `{test_skip_registry,
+test_chaos_lab_idempotency[pki], test_chaos_lab_idempotency[registry]}` — 2 more than the
+documented `{test_skip_registry}`-only baseline, with Docker confirmed healthy. Not actioned here
+(out of scope for this plan); carried forward as a SET, not a count, per D-13.
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,8 +683,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 185
-Plan: Not started
+Phase: 184 (Skip Registry Closure) — EXECUTING
+Plan: 1 of 7
 184.4-10 closed the phase's documentation obligations: extended `docs/report-interpretation.md`
 (§19, the severity floor — band-vs-score, the FAIR-only cap, why the score does not drop, all six
 render surfaces) and `docs/operators-guide.md` (§17, the fixed halt-on-generate defect), synced
