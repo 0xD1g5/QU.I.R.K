@@ -33,20 +33,22 @@ D-02 collapse groups (several skip sites in one test sharing one qualname),
 where the surviving entry's reason was joined from its collapsed sites'
 reasons, separated by "; ", verbatim. 16 entries whose recorded line did not
 resolve to any skip site (within a generous +/-20 line search) were kept,
-not deleted, keyed ``"UNRESOLVED:<original_lineno>"`` as Plan 04's
-purge-candidate input, per D-08's re-key-then-purge ordering.
+not deleted, keyed with an ``UNRESOLVED`` sentinel prefix plus the original
+line number, as Plan 04's purge-candidate input, per D-08's
+re-key-then-purge ordering.
 
 Phase 184 Plan 04 re-derived the orphan set post-re-key (inverting the
 gate's own walk: ledger keys minus live occurrence keys) and purged all 16
-``UNRESOLVED:`` entries -- every one was confirmed to genuinely resolve to
-no skip site anywhere in ``tests/`` (11 ``test_jobs_api.py`` Phase 65 stubs
-superseded by real implementations, 1 ``test_qramm_model_stale.py`` inline
-``pytest.param(marks=...)`` AST-walker blind spot, 2 ``test_qramm_staleness.py``
-and 2 ``test_vault_connector.py`` SIGSEGV-cluster skips already removed by
+``UNRESOLVED``-sentinel entries -- every one was confirmed to genuinely
+resolve to no skip site anywhere in ``tests/`` (11 ``test_jobs_api.py``
+Phase 65 stubs superseded by real implementations, 1
+``test_qramm_model_stale.py`` inline ``pytest.param(marks=...)``
+AST-walker blind spot, 2 ``test_qramm_staleness.py`` and 2
+``test_vault_connector.py`` SIGSEGV-cluster skips already removed by
 Phase 166 / earlier reconciliation). Each purged entry's verbatim reason
 string is recorded in ``184-04-SUMMARY.md``, not merely deleted. No
-``UNRESOLVED:`` data entry remains; the string appears here only as the
-convention's own name.
+``UNRESOLVED``-sentinel data entry remains; the term appears here only as
+the (now-retired) convention's own name.
 """
 
 ALLOWED_SKIPS = [
