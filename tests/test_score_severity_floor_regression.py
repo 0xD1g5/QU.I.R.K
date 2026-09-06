@@ -153,7 +153,33 @@ def test_high_score_with_one_critical_still_produces_a_report(tmp_path):
     endpoints = _clean_endpoints()
     findings = _reproduction_findings()
 
+    # CBOM and PDF are mocked for the same reason: this regression exists to prove
+    # the SEVERITY FLOOR lets the report be produced at all, not to exercise CBOM
+    # serialization or headless-Chromium rendering. Both are unrelated I/O on the
+    # write_reports() path.
+    #
+    # The PDF mock is specifically load-bearing for suite-order independence.
+    # OBSERVED (Phase 184.4 close-out): this test passed in isolation and in a
+    # two-file run with test_html_report.py, but FAILED under a full `-m "not slow"`
+    # suite run with:
+    #     AttributeError: 'PlaywrightContextManager' object has no attribute '_playwright'
+    # raised from inside `sync_playwright()` on the real `render_pdf_report()` call.
+    # Some earlier test in the full suite leaves Playwright's import/driver state
+    # broken for the rest of the session. Because the failure surfaces as an
+    # AttributeError, it escapes `render_pdf_report()`'s ImportError-only graceful-
+    # degradation guard.
+    #
+    # NOT YET IDENTIFIED: which test does the polluting. A two-file repro against the
+    # most obvious suspect (test_html_report.py::test_pdf_graceful_degradation, which
+    # poisons sys.modules["playwright"] and reloads writer) did NOT reproduce it, so
+    # that hypothesis is explicitly unconfirmed — do not repeat it as fact.
+    #
+    # Either way this is a suite-hygiene / PDF-robustness issue, NOT a severity-floor
+    # defect: the floor logic under test is unaffected. Do not remove this mock to
+    # "make the test more end-to-end" without first identifying and fixing the
+    # polluter, or this test will resume failing only in full-suite runs.
     with patch("quirk.reports.writer.build_cbom", return_value={}), \
+         patch("quirk.reports.writer.render_pdf_report", return_value=False), \
          patch(
              "quirk.reports.writer.write_cbom_files",
              return_value=("/tmp/a.json", "/tmp/a.xml"),
