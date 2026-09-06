@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-04-PLAN.md
-last_updated: "2026-09-05T00:00:00.000Z"
+stopped_at: Completed 184.4-05-PLAN.md
+last_updated: "2026-09-05T00:30:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 43
+  completed_plans: 44
   percent: 58
 ---
 
@@ -672,7 +672,19 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 4 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04 done). 184.4-04 is the keystone
+Plan: 5 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05 done). 184.4-05 deleted
+`quirk/reports/html_renderer.py::_score_band()` outright (D-05, zero remaining references in that
+file) and made the HTML backward-compat fallback path severity-aware: it now computes
+`band_for_score()` then `cap_band_for_severity()` from `quirk.severity_bands`, counting CRITICAL
+directly from `findings` (not the coverage_gap-skipping `sev_counts` display tally) so the counting
+basis matches `_count_severities()` inside the preserved `assert_congruent()` backstop. Structured
+`rating_cap_reason` is threaded into the template context on both branches, and `report.html.j2`
+renders it beside the score card (unsanitized, justified in-template) when a cap applies and
+nothing when it does not. Three new tests (16 -> 19 in `tests/test_html_report.py`): a deletion
+proof, a fallback-path non-halt regression (score 89 + 1 CRITICAL, previously would have raised
+`ReportCongruenceError`), and a capped/uncapped presence-absence check on `class="score-cap-reason"`.
+Collateral sweep: 444 passed / 10 skipped / 1 unrelated xfail. See `184.4-05-SUMMARY.md`.
+184.4-04 is the keystone
 fix: `_rating()` in `quirk/intelligence/scoring.py` now delegates to
 `severity_bands.band_for_score()` (numeric-only band), and `compute_readiness_score()` applies the
 severity floor at the call site — any CRITICAL >= 1 caps the emitted `rating` to FAIR via

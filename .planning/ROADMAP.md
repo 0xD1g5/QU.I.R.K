@@ -546,7 +546,7 @@ Plans:
 - [x] 184.4-02-PLAN.md — RED-first D-13 regression: score >= 85 + one CRITICAL `TLS certificate expired`, proven to fail against pre-fix code (D-13)
 - [x] 184.4-03-PLAN.md — `quirk/severity_bands.py` stdlib-only shared threshold + allowance + cap-reason module; `content_model.py` sourced from it (D-04, D-02)
 - [x] 184.4-04-PLAN.md — the fix: severity floor on `_rating()`/`compute_readiness_score()` + `rating_cap_reason`; compat-path guard test converted to a mocked producer (D-01, D-02, D-03, D-06, D-09)
-- [ ] 184.4-05-PLAN.md — `html_renderer.py::_score_band()` deleted, fallback path made severity-aware, cap reason rendered in `report.html.j2` (D-05)
+- [x] 184.4-05-PLAN.md — `html_renderer.py::_score_band()` deleted, fallback path made severity-aware, cap reason rendered in `report.html.j2` (D-05)
 - [ ] 184.4-06-PLAN.md — cap reason on the CLI exec summary, DOCX and scorecard; compat-dict threading (D-09, D-10)
 - [ ] 184.4-07-PLAN.md — the 3 severity-blind `build_evidence_summary()` sites fixed, the 5 remaining dispositioned with verified reasons (D-07, D-08)
 - [ ] 184.4-08-PLAN.md — dashboard: `ScoreData.rating_cap_reason` across Pydantic + TS, rendered on `executive.tsx`/`print.tsx`, vitest + `npm run build` + `npm run lint` (D-10)
