@@ -621,12 +621,29 @@ routes gain coverage.
 **Plans**: 7 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 185-01-PLAN.md — Add the permanent workflow_dispatch Linux baseline-regeneration job; derive the Chrome pin from a live run (D-01, D-03)
-- [ ] 185-02-PLAN.md — Pin Chrome in both a11y jobs, guard it in pinned-deps.test.ts, reword the superseded Phase 165 D-04 records (D-07, D-08, D-09)
 - [ ] 185-03-PLAN.md — Fix the Severity Breakdown tooltip (itemStyle + tokens + theme-aware) and add a static WCAG contrast guard (ROADMAP SC-4)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 185-02-PLAN.md — Pin Chrome in both a11y jobs, guard it in pinned-deps.test.ts, reword the superseded Phase 165 D-04 records (D-07, D-08, D-09)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 185-04-PLAN.md — Fixture middleware, fixture data, and the contentMarker sweep check so /hardware and /compare render real content (D-14)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 185-05-PLAN.md — Land routes.json entries with six Linux-generated baselines in one commit after D-04 triage (D-02, D-04, D-05, D-06, D-11, D-12, D-13)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 185-06-PLAN.md — Operator-led execution of the two pending 158-HUMAN-UAT scenarios (D-15)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 185-07-PLAN.md — Docs, Obsidian sync, UAT Series 185, todo closure, DRIFT-03 hand verification (D-10)
 
 ### Phase 186: Carried Defect Drain
