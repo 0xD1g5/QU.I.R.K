@@ -382,9 +382,18 @@ export function ExecutivePage() {
             <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 32 }}>
               <XAxis type="number" tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="severity" tick={{ fontSize: 12 }} width={72} />
+              {/* Phase 185 D-tooltip: deliberately theme-aware. All three colors are
+                  token-driven (--popover / --popover-foreground / --border) rather than
+                  hand-set literals, so a future fourth related color cannot be silently
+                  forgotten the way `itemStyle` was on 2026-09-06 (series text rendered
+                  dark-on-dark). See executive-tooltip-contrast-guard.test.ts. */}
               <Tooltip
-                contentStyle={{ background: "hsl(240 6% 10%)", border: "1px solid hsl(240 6% 17%)" }}
-                labelStyle={{ color: "hsl(0 0% 95%)" }}
+                contentStyle={{
+                  background: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                }}
+                labelStyle={{ color: "hsl(var(--popover-foreground))" }}
+                itemStyle={{ color: "hsl(var(--popover-foreground))" }}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry) => (
