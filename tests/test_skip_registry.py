@@ -1,4 +1,5 @@
-"""Phase 41 D-03: CI gate meta-test that fails when an unregistered
+"""Phase 41 D-03 (module origin); Phase 184 D-01/D-02/D-03/D-06 (key
+redesign): CI gate meta-test that fails when an unregistered
 ``pytest.skip`` / ``pytest.importorskip`` / ``@pytest.mark.skipif`` /
 ``@pytest.mark.skip`` / ``@pytest.mark.xfail``
 is encountered in tests/.
@@ -9,13 +10,41 @@ looking for:
   - Decorator nodes whose func resolves to ``pytest.mark.skipif``,
     ``pytest.mark.skip``, or ``pytest.mark.xfail``
 
-For each occurrence, check ``(filename, node.lineno)`` against
-``tests.skip_registry.ALLOWED_SKIPS`` with a +/-2 line tolerance to absorb
-minor edits. Any unregistered occurrence is a violation.
+Key: ``(file, test_qualname)``, not ``(file, LINENO)``.
+--------------------------------------------------------
+The registry key is the dotted ``ClassDef``/``FunctionDef``/``AsyncFunctionDef``
+ancestor chain enclosing the skip construct (e.g. ``"TestFoo.test_bar"``), or
+the literal ``"<module>"`` for module-scope skips -- derived from the AST by
+``_enclosing_qualname()``, never read off a line number. ``(file, LINENO)``
+keying is DELETED here, not deprecated or kept alongside it: Phase 183
+changed no skip and the unrelated-line-drift violation count went 15 -> 22
+anyway, which is a gate measuring the wrong coordinate. There is no
+positional-tolerance constant anywhere in this file -- a tolerance window is
+a confession that the key is wrong (Phase 184 CONTEXT.md D-01).
 
-NOTE: At creation time (Wave 0 of Phase 41) some D-04 deletions have NOT yet
-happened, so this test will FAIL initially. That is correct — Plan 05 deletes
-the stale skips identified in 41-RESEARCH.md and turns this gate green.
+A justification belongs to the test, not to a line.
+-----------------------------------------------------
+Several skip sites inside one test collapse to a single ``(file, qualname)``
+key and share one reason string that must honestly cover all of them (D-02).
+
+Rejected alternatives (D-03), recorded here so this is not re-litigated:
+  - content-addressing the skip construct (a hash of its normalized source):
+    a typo fix in a reason string would re-break the gate -- a worse failure
+    mode than line drift.
+  - per-file keying (Phase 183's ``_COVERED_FILES`` shape): too coarse. One
+    file can carry both an OS-conditional skip and unrelated stubs, and one
+    file-level reason covering both is how fabricated justifications get
+    written.
+
+Derivation, not a bigger list (D-06).
+--------------------------------------
+The "derive it, don't enumerate it" mandate this phase satisfies is carried
+by this structural key plus the bidirectional rot-check landing in a later
+plan (registry entries that resolve to no skip site), in the lineage of
+``FINGERPRINT_TITLE_ALIASES`` in ``quirk/compliance/__init__.py`` -- not by
+the narrow ``pytest.importorskip``-from-``pyproject.toml`` auto-allow (D-05),
+which covers only a small slice of sites and is a separate, much smaller
+carve-out.
 
 This file itself contains the strings ``pytest.skip`` / ``pytest.importorskip``
 / ``pytest.mark.skipif`` only as identifiers being matched on — it is excluded
@@ -31,16 +60,16 @@ import pytest
 from tests.skip_registry import ALLOWED_SKIPS
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
-LINE_TOLERANCE = 2
 
 # Files exempt from the walk: the registry itself and this gate test.
 EXEMPT_FILES = {"skip_registry.py", "test_skip_registry.py"}
 
 
-def _allowed(filename: str, lineno: int) -> bool:
-    """Return True iff (filename, lineno) is in ALLOWED_SKIPS within +/-LINE_TOLERANCE."""
-    for entry_file, entry_line, _category, _reason in ALLOWED_SKIPS:
-        if entry_file == filename and abs(entry_line - lineno) <= LINE_TOLERANCE:
+def _allowed(filename: str, qualname: str) -> bool:
+    """Return True iff (filename, qualname) is a registered entry in
+    ALLOWED_SKIPS. No positional tolerance -- the key is structural."""
+    for entry_file, entry_qualname, _category, _reason in ALLOWED_SKIPS:
+        if entry_file == filename and entry_qualname == qualname:
             return True
     return False
 
@@ -167,16 +196,21 @@ def test_enclosing_qualname_derives_the_ancestor_chain(source: str, expected: st
     assert _enclosing_qualname(tree, target) == expected
 
 
-@pytest.mark.skip_registry_gate
-def test_no_unregistered_skips() -> None:
-    """Every pytest skip-style marker in tests/ must be in ALLOWED_SKIPS.
+def _find_skip_occurrences(
+    root: pathlib.Path = TESTS_DIR,
+) -> list[tuple[str, str, str, int]]:
+    """Walk every ``root/*.py`` file (except EXEMPT_FILES) and return every
+    skip-style occurrence as ``(filename, qualname, kind, lineno)``.
 
-    Initial Wave 0 state: this test FAILS until Plan 05 deletes the stale
-    skips listed in 41-RESEARCH.md "Skip-Marker Triage Table" (D-04).
+    Pure function of ``root`` -- parameterized so self-tests can point it at
+    a ``tmp_path`` fixture instead of the real tests/ directory, following
+    ``tests/test_cli_helper_usage.py``'s ``_derive_test_files()`` discipline.
+    ``lineno`` is retained only for human-readable failure messages; it does
+    not participate in registry matching.
     """
-    violations: list[tuple[str, int, str]] = []
+    occurrences: list[tuple[str, str, str, int]] = []
 
-    for py_file in sorted(TESTS_DIR.rglob("*.py")):
+    for py_file in sorted(root.rglob("*.py")):
         if py_file.name in EXEMPT_FILES:
             continue
         try:
@@ -188,10 +222,10 @@ def test_no_unregistered_skips() -> None:
         for node in ast.walk(tree):
             # 1. Direct calls: pytest.skip(...) / pytest.importorskip(...)
             if _is_pytest_skip_call(node):
-                if not _allowed(py_file.name, node.lineno):
-                    func = node.func
-                    attr = func.attr if isinstance(func, ast.Attribute) else "?"
-                    violations.append((py_file.name, node.lineno, f"pytest.{attr}"))
+                func = node.func
+                attr = func.attr if isinstance(func, ast.Attribute) else "?"
+                qualname = _enclosing_qualname(tree, node)
+                occurrences.append((py_file.name, qualname, f"pytest.{attr}", node.lineno))
 
             # 2. Decorators on functions/classes: @pytest.mark.{skipif,skip,xfail}(...)
             decorators: list[ast.AST] = []
@@ -200,17 +234,32 @@ def test_no_unregistered_skips() -> None:
             for deco in decorators:
                 for mark_name in ("skipif", "skip", "xfail"):
                     if _is_pytest_mark_decorator(deco, mark_name):
-                        if not _allowed(py_file.name, deco.lineno):
-                            violations.append(
-                                (py_file.name, deco.lineno, f"@pytest.mark.{mark_name}")
-                            )
+                        qualname = _enclosing_qualname(tree, deco)
+                        occurrences.append(
+                            (py_file.name, qualname, f"@pytest.mark.{mark_name}", deco.lineno)
+                        )
+
+    return occurrences
+
+
+@pytest.mark.skip_registry_gate
+def test_no_unregistered_skips() -> None:
+    """Every pytest skip-style marker in tests/ must be in ALLOWED_SKIPS,
+    keyed by ``(file, qualname)`` per Phase 184 D-01."""
+    violations = [
+        occurrence
+        for occurrence in _find_skip_occurrences()
+        if not _allowed(occurrence[0], occurrence[1])
+    ]
 
     if violations:
         formatted = "\n".join(
-            f"  {fname}:{lineno} [{kind}]" for fname, lineno, kind in violations
+            f"  {fname}:{qualname} [{kind}] (line {lineno})"
+            for fname, qualname, kind, lineno in violations
         )
         pytest.fail(
             "Unregistered skip markers found (add to tests/skip_registry.py "
-            "ALLOWED_SKIPS or delete the marker per Phase 41 D-01/D-04):\n"
+            "ALLOWED_SKIPS by (file, qualname) or delete the marker per "
+            "Phase 184 D-01/D-09):\n"
             f"{formatted}"
         )
