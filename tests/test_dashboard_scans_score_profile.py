@@ -39,6 +39,8 @@ from sqlalchemy.orm import sessionmaker
 
 from quirk.dashboard.api.app import create_app
 from quirk.dashboard.api.deps import get_db
+from quirk.dashboard.api.routes.scan import _derive_findings, _derive_identity_findings
+from quirk.dashboard.api.schemas import FindingItem
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.models import Base, CryptoEndpoint, ScanJob
@@ -76,6 +78,36 @@ def _seed_session(TestingSession, scanned_at: datetime, endpoints: list[dict]):
         for ep in endpoints:
             db.add(CryptoEndpoint(scanned_at=scanned_at, **ep))
         db.commit()
+    finally:
+        db.close()
+
+
+def _reference_evidence_for(TestingSession, scan_run_id: str) -> dict:
+    """184.4-07 (D-07): list_scans() now derives findings (incl. identity) per
+    session before scoring -- the reference computation must build its evidence
+    the same way, over the REAL ORM rows (not a synthetic stand-in), so this
+    stays a same-contract comparison rather than a stale pre-fix one."""
+    db = TestingSession()
+    try:
+        eps = (
+            db.query(CryptoEndpoint)
+            .filter(CryptoEndpoint.scan_run_id == scan_run_id)
+            .all()
+        )
+        findings = _derive_findings(eps)
+        for idf in _derive_identity_findings(eps):
+            findings.append(FindingItem(
+                host=idf.host,
+                port=idf.port,
+                severity=idf.severity,
+                title=idf.title,
+                protocol=idf.protocol,
+                description=idf.description,
+                remediation=idf.remediation,
+                quantum_risk=idf.quantum_risk,
+                source=idf.source,
+            ))
+        return build_evidence_summary(eps, [f.model_dump() for f in findings])
     finally:
         db.close()
 
@@ -198,16 +230,7 @@ def test_list_scans_score_agrees_with_reference_scoring():
     items = {item["scan_id"]: item for item in resp.json()}
     assert run_id in items
 
-    class _Ep:
-        """Minimal attribute-bearing stand-in matching what build_evidence_summary reads
-        off a CryptoEndpoint row -- constructed from the exact same kwargs seeded above."""
-
-    ep_obj = _Ep()
-    for k, v in ep_kwargs.items():
-        setattr(ep_obj, k, v)
-    setattr(ep_obj, "scanned_at", ts)
-
-    reference_evidence = build_evidence_summary([ep_obj])
+    reference_evidence = _reference_evidence_for(Session, run_id)
     reference_score = int(
         compute_readiness_score(reference_evidence, profile="strict")["score"]
     )
@@ -253,15 +276,7 @@ def test_list_scans_cli_scan_still_null_and_balanced():
         f"Expected calibration=None for CLI scan; got {item.get('calibration')!r}"
     )
 
-    class _Ep:
-        pass
-
-    ep_obj = _Ep()
-    for k, v in ep_kwargs.items():
-        setattr(ep_obj, k, v)
-    setattr(ep_obj, "scanned_at", ts)
-
-    reference_evidence = build_evidence_summary([ep_obj])
+    reference_evidence = _reference_evidence_for(Session, run_id)
     reference_score = int(
         compute_readiness_score(reference_evidence, profile=None)["score"]
     )

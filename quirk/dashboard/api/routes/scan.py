@@ -1378,7 +1378,29 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         # ScanJob-less (CLI-launched) sessions, which is the intended balanced fallback.
         score = 0
         if eps:
-            evidence = build_evidence_summary(eps)
+            # D-07 (184.4): derive findings (including identity/IDENT-02/IDENT-04)
+            # the same way the correct sibling at :1571-1593 does, so this
+            # dashboard-history score sees the same CRITICAL severities the
+            # report would — excluding identity here would under-count
+            # CRITICALs on KERBEROS/SAML/DNSSEC endpoints and reproduce a
+            # second, narrower BACK-89 divergence.
+            session_findings = _derive_findings(eps)
+            session_identity_findings = _derive_identity_findings(eps)
+            for idf in session_identity_findings:
+                session_findings.append(FindingItem(
+                    host=idf.host,
+                    port=idf.port,
+                    severity=idf.severity,
+                    title=idf.title,
+                    protocol=idf.protocol,
+                    description=idf.description,
+                    remediation=idf.remediation,
+                    quantum_risk=idf.quantum_risk,
+                    source=idf.source,
+                ))
+            evidence = build_evidence_summary(
+                eps, [f.model_dump() for f in session_findings]
+            )
             score_dict = compute_readiness_score(evidence, profile=calibration)
             score = int(score_dict["score"])
 
@@ -1786,8 +1808,13 @@ def compare_scans(
 
     # Scores + subscores (D-07)
     # compute_readiness_score returns subscores as a plain dict — use dict access
-    evidence_a = build_evidence_summary(eps_a)
-    evidence_b = build_evidence_summary(eps_b)
+    # 184.4-07 (D-07): derive findings PER SIDE so each side's band reflects its
+    # own severity — a shared or swapped findings list here would make the
+    # comparison lie in a way a mere non-None check would not catch.
+    findings_a = _derive_findings(eps_a)
+    findings_b = _derive_findings(eps_b)
+    evidence_a = build_evidence_summary(eps_a, [f.model_dump() for f in findings_a])
+    evidence_b = build_evidence_summary(eps_b, [f.model_dump() for f in findings_b])
     sd_a = compute_readiness_score(evidence_a)
     sd_b = compute_readiness_score(evidence_b)
     score_a = int(sd_a["score"])
