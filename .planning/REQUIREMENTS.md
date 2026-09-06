@@ -234,6 +234,22 @@ rather than inherited from its original report — two had drifted since they we
   this closure and is tracked separately in STATE.md Deferred Items — not part of this
   requirement's scope and not blocking its closure.
 
+- [ ] **SCORE-04**: the readiness band carries a CRITICAL severity floor; a successful scan with
+  open CRITICAL findings always produces a report. Covering decisions: D-01, D-02, D-03, D-06,
+  D-07, D-09, D-10, D-13 (`.planning/phases/184.4-rating-band-severity-floor/184.4-CONTEXT.md`).
+  **Measured 2026-09-04, Phase 184.2 UAT-184.2-05, chaos lab, target `127.0.0.1`:** score 89/100
+  EXCELLENT with one CRITICAL `TLS certificate expired` open on port 9443, halting with
+  `Report generation halted: executive headline 'EXCELLENT' is inconsistent with 1 CRITICAL
+  finding(s). Review findings before generating the report.` This supersedes BACK-89
+  (`.planning/milestones/v5.0-ROADMAP.md`, filed 2026-05-21).
+
+- [ ] **SCORE-05**: exactly one band producer exists, its thresholds are shared with the
+  congruence guard, and agreement plus completeness are proven by run-time-derived gates.
+  Covering decisions: D-04, D-05, D-11, D-12. Two band producers exist today and must converge to
+  one: `quirk/intelligence/scoring.py`'s `_rating()` (thresholds 85/70/55/35) and
+  `quirk/reports/html_renderer.py`'s `_score_band()` (the same thresholds, restated); the
+  consumer table is `_BAND_CRITICAL_THRESHOLD` at `quirk/reports/content_model.py:469`.
+
 - [ ] **DRIFT-03**: a11y baselines are generated in the environment that enforces them. **33
   baselines were generated on macOS on 2026-08-27 in a single batch; the gate runs on Linux CI;
   31 have never been checked against the runner.** Regenerate via `--update-baselines` on a Linux
@@ -274,6 +290,8 @@ rather than inherited from its original report — two had drifted since they we
 | SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
 | SCORE-02 | 184.2-01, 184.2-02, 184.2-03, 184.2-04, 184.2-05, 184.2-06 | Complete |
 | SCORE-03 | 184.3-01, 184.3-02, 184.3-03, 184.3-04, 184.3-05, 184.3-06, 184.3-07, 184.3-08, 184.3-09, 184.3-10, 184.3-11 | Complete (closed 2026-09-05; 1 manual leg DEFERRED with cited substitute coverage) |
+| SCORE-04 | 184.4-02, 184.4-04, 184.4-06, 184.4-07, 184.4-08 | Pending |
+| SCORE-05 | 184.4-03, 184.4-05, 184.4-09 | Pending |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |
 | TRIAGE-02 | TBD | Pending |
