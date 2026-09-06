@@ -244,6 +244,14 @@ def build_exec_markdown(
         # WR-03 / IN-01: raw_sum from shared model (identical to HTML surface).
         lines.append("")
         lines.append(f"**Rollup:** {exec_content.raw_sum} ÷ 1.5 = **{exec_content.score_total} / 100**")
+        # D-09 / 184.4-06: annotate a capped band beside the arithmetic that would
+        # otherwise contradict it (BACK-89 in mirror image). Structured value from
+        # quirk.severity_bands.cap_reason() via compute_readiness_score() — never
+        # re-derived or re-worded here. .get() so a pre-184.4 score dict renders
+        # nothing rather than raising.
+        _rating_cap_reason = score_raw.get("rating_cap_reason")
+        if _rating_cap_reason:
+            lines.append(f"**Cap reason:** {_rating_cap_reason}")
     else:
         # Backward-compat path: exec_content not available (external callers only).
         # writer.py always passes exec_content, so this path is legacy only.
@@ -264,6 +272,11 @@ def build_exec_markdown(
         raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
         lines.append("")
         lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
+        # D-09 / 184.4-06: same cap-reason annotation as the exec_content branch,
+        # so both surfaces agree (see comment above).
+        _rating_cap_reason = score_raw.get("rating_cap_reason")
+        if _rating_cap_reason:
+            lines.append(f"**Cap reason:** {_rating_cap_reason}")
     lines.append("")
 
     # EXEC-02 / D-03 / Phase 98: Priority Business Risks from shared content model.
