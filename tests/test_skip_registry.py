@@ -743,3 +743,49 @@ def test_renaming_the_enclosing_test_makes_a_registered_skip_red(tmp_path: pathl
 
     assert len(renamed_violations) == 1
     assert renamed_violations[0][1] == "test_renamed_name"
+
+
+def test_aliased_pytest_import_skip_is_visible_to_the_gate(tmp_path: pathlib.Path) -> None:
+    """Phase 184-08 CR-01 falsifiability: a synthetic, unregistered
+    ``@pytest.mark.skipif`` decorated via an ALIASED pytest import (mirroring
+    the real ``test_vault_connector.py`` construct that motivated CR-01,
+    ``import pytest as _pytest_uat``) must be detected by the REAL
+    ``_find_skip_occurrences()`` called directly against ``root=tmp_path``,
+    the same way an unaliased skip construct is detected. Demonstrated live
+    (evidence in 184-07-SUMMARY.md's Gap Closure section) to fail against
+    the pre-CR-01 ``base.id == "pytest"``-hardcoded implementation and pass
+    against the fixed one -- this test is the permanent lock for that
+    mutation, not a one-time manual check."""
+    synthetic_file = tmp_path / "test_aliased_import_fixture.py"
+    synthetic_file.write_text(
+        "import pytest as _aliased\n\n\n"
+        "@_aliased.mark.skipif(True, reason='synthetic alias probe')\n"
+        "def test_synthetic_aliased():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+    occurrences = _find_skip_occurrences(root=tmp_path)
+    violations = [o for o in occurrences if not _allowed(o[0], o[1])]
+
+    assert len(violations) == 1
+    fname, qualname, kind, _lineno = violations[0]
+    assert fname == "test_aliased_import_fixture.py"
+    assert qualname == "test_synthetic_aliased"
+    assert kind == "@pytest.mark.skipif"
+
+
+def test_unparseable_file_fails_the_gate_loudly(tmp_path: pathlib.Path) -> None:
+    """Phase 184-08 WR-01 falsifiability: a file under ``root`` that is not
+    valid Python must make the REAL ``_find_skip_occurrences()`` raise
+    (via ``pytest.fail``) rather than silently excluding that file from
+    detection, per Phase 184-08's fix. Demonstrated live (evidence in
+    184-07-SUMMARY.md's Gap Closure section) to pass silently with zero
+    violations reported against the pre-WR-01-fix ``except: continue``
+    implementation, and to raise against the fixed one."""
+    unparseable_file = tmp_path / "test_unparseable_fixture.py"
+    unparseable_file.write_text(
+        "def test_broken(:\n    pass\n",  # deliberately invalid syntax
+        encoding="utf-8",
+    )
+    with pytest.raises(pytest.fail.Exception, match="Could not parse"):
+        _find_skip_occurrences(root=tmp_path)
