@@ -466,13 +466,14 @@ _NARRATIVE_LEAD_FALLBACK = (
 
 # Threshold: number of CRITICAL findings allowed per headline band.
 # None = no restriction (FAIR/POOR can coexist with any severity mix).
-_BAND_CRITICAL_THRESHOLD: Dict[str, Optional[int]] = {
-    "EXCELLENT": 0,   # D-06: zero CRITICAL allowed with EXCELLENT
-    "GOOD": 0,        # D-06: zero CRITICAL allowed with GOOD
-    "MODERATE": 0,    # D-06: zero CRITICAL allowed with MODERATE — per RESEARCH Pattern 2
-    "FAIR": None,     # D-06: no restriction — FAIR can coexist with CRITICAL
-    "POOR": None,     # D-06: no restriction — POOR can coexist with CRITICAL
-}
+#
+# Phase 184.4 D-04: the VALUES now live in quirk/severity_bands.py — the
+# single stdlib-only shared module also read by quirk/intelligence/scoring.py
+# and quirk/reports/html_renderer.py. The module-local name
+# `_BAND_CRITICAL_THRESHOLD` is kept as an alias (not renamed) because
+# `_check_congruence()` below and existing tests reference it by that name;
+# the guard's semantics are UNCHANGED, only the source of the numbers moved.
+from quirk.severity_bands import BAND_CRITICAL_ALLOWANCE as _BAND_CRITICAL_THRESHOLD
 
 
 class ReportCongruenceError(ValueError):
