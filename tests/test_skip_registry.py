@@ -232,19 +232,50 @@ def _is_reason_blank(entry: tuple[str, str, str, str]) -> bool:
     return not entry[3].strip()
 
 
-def _is_pytest_skip_call(node: ast.AST) -> bool:
-    """True if ``node`` is a Call to ``pytest.skip`` or ``pytest.importorskip``."""
+def _pytest_import_names(tree: ast.Module) -> set[str]:
+    """Return every local name the ``pytest`` module object is bound to in
+    this module: ``"pytest"`` for a plain ``import pytest``, and/or the
+    alias for each ``import pytest as X``. Derived by walking the module's
+    own ``Import`` nodes at parse time -- never a hand-maintained list of
+    alias strings (CR-01: a hardcoded ``base.id == "pytest"`` check is
+    blind to ``import pytest as _pytest_uat``, the exact vacuous-pass
+    hazard this phase's gate exists to close). Returns an empty set if the
+    module never imports ``pytest`` directly (e.g. only
+    ``from pytest import mark``, which is not currently used anywhere in
+    this tree per CR-01's fix note -- ``from pytest import ...`` forms are
+    out of scope here and would need a separate resolver if one appears)."""
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "pytest":
+                    names.add(alias.asname or "pytest")
+    return names
+
+
+def _is_pytest_skip_call(node: ast.AST, pytest_names: set[str] = frozenset({"pytest"})) -> bool:
+    """True if ``node`` is a Call to ``pytest.skip`` or
+    ``pytest.importorskip``, where ``pytest`` may be bound to any name in
+    ``pytest_names`` (default: the literal ``"pytest"``, for callers -- the
+    fixture-only ``_find_target_node`` and the parametrized qualname tests
+    -- that don't resolve aliases; the real gate walk in
+    ``_find_skip_occurrences`` always passes the module's actual resolved
+    names via ``_pytest_import_names``)."""
     if not isinstance(node, ast.Call):
         return False
     func = node.func
     if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
-        if func.value.id == "pytest" and func.attr in {"skip", "importorskip"}:
+        if func.value.id in pytest_names and func.attr in {"skip", "importorskip"}:
             return True
     return False
 
 
-def _is_pytest_mark_decorator(node: ast.AST, mark_name: str) -> bool:
-    """True if ``node`` is ``@pytest.mark.<mark_name>(...)`` (called or bare)."""
+def _is_pytest_mark_decorator(
+    node: ast.AST, mark_name: str, pytest_names: set[str] = frozenset({"pytest"})
+) -> bool:
+    """True if ``node`` is ``@pytest.mark.<mark_name>(...)`` (called or
+    bare), where ``pytest`` may be bound to any name in ``pytest_names``
+    (default: the literal ``"pytest"``; see ``_is_pytest_skip_call``)."""
     # Decorator can be either a Call (with args) or a plain Attribute access.
     target = node.func if isinstance(node, ast.Call) else node
     if isinstance(target, ast.Attribute) and target.attr == mark_name:
@@ -252,7 +283,7 @@ def _is_pytest_mark_decorator(node: ast.AST, mark_name: str) -> bool:
         inner = target.value
         if isinstance(inner, ast.Attribute) and inner.attr == "mark":
             base = inner.value
-            if isinstance(base, ast.Name) and base.id == "pytest":
+            if isinstance(base, ast.Name) and base.id in pytest_names:
                 return True
     return False
 
@@ -296,13 +327,14 @@ def _find_target_node(tree: ast.Module) -> ast.AST:
     gate walk uses, so the fixture and the gate agree on what a "skip
     construct" is.
     """
+    pytest_names = _pytest_import_names(tree) or {"pytest"}
     for node in ast.walk(tree):
-        if _is_pytest_skip_call(node):
+        if _is_pytest_skip_call(node, pytest_names):
             return node
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             for deco in node.decorator_list:
                 for mark_name in ("skipif", "skip", "xfail"):
-                    if _is_pytest_mark_decorator(deco, mark_name):
+                    if _is_pytest_mark_decorator(deco, mark_name, pytest_names):
                         return deco
     raise AssertionError("no skip-related node found in fixture source")
 
@@ -377,6 +409,14 @@ def _find_skip_occurrences(
     ``optional_modules`` defaults to ``_optional_extra_modules()`` (the real
     pyproject.toml, read once per call); self-tests can pass an explicit set
     to avoid re-reading the real file.
+
+    CR-01: ``pytest``'s local binding is resolved per-file via
+    ``_pytest_import_names()`` rather than assumed to be the literal
+    ``"pytest"`` -- a module that does ``import pytest as X`` is walked
+    using ``{"X"}`` (or ``{"pytest"}`` if the module also does a plain
+    ``import pytest`` elsewhere) as the recognized base name(s), so an
+    aliased skip construct is visible to this walk exactly like an
+    unaliased one.
     """
     if optional_modules is None:
         optional_modules = _optional_extra_modules()
@@ -392,9 +432,16 @@ def _find_skip_occurrences(
         except (SyntaxError, OSError):
             continue
 
+        pytest_names = _pytest_import_names(tree)
+        if not pytest_names:
+            # This module never binds `pytest` to any local name -- it
+            # cannot contain a pytest.skip/importorskip Call or
+            # pytest.mark.* decorator, so there is nothing to walk for.
+            continue
+
         for node in ast.walk(tree):
             # 1. Direct calls: pytest.skip(...) / pytest.importorskip(...)
-            if _is_pytest_skip_call(node):
+            if _is_pytest_skip_call(node, pytest_names):
                 func = node.func
                 attr = func.attr if isinstance(func, ast.Attribute) else "?"
                 if attr == "importorskip" and _is_auto_allowed_importorskip(
@@ -410,7 +457,7 @@ def _find_skip_occurrences(
                 decorators = list(node.decorator_list)
             for deco in decorators:
                 for mark_name in ("skipif", "skip", "xfail"):
-                    if _is_pytest_mark_decorator(deco, mark_name):
+                    if _is_pytest_mark_decorator(deco, mark_name, pytest_names):
                         qualname = _enclosing_qualname(tree, deco)
                         occurrences.append(
                             (py_file.name, qualname, f"@pytest.mark.{mark_name}", deco.lineno)
