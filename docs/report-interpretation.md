@@ -21,6 +21,11 @@ The Quantum-Readiness Score is a single integer from 0 to 100. It summarizes you
 > **Client Conversation — Quantum-Readiness Score:**
 > "Your score of [X] puts you in the [RATING] band. In practical terms, this means [plain-English for that band]. The score reflects four dimensions: how clean your network is from a cryptographic hygiene standpoint, whether your TLS is up to modern standards, how trustworthy your certificates are, and how well-positioned you are to migrate algorithms when the time comes. We'll walk through each dimension."
 
+**The table above shows the band a score maps to when no open CRITICAL finding is present.** A
+scan with at least one open CRITICAL finding always shows a band of `FAIR` or `POOR`, regardless of
+what this table alone would suggest — see §19, "The Severity Floor," for why, and for the worked
+example of a 89/100 score reading `FAIR` rather than `EXCELLENT`.
+
 ---
 
 ## 3. The Four Subscores
@@ -1192,3 +1197,104 @@ computed and displayed in UTC specifically so that the calendar day itself canno
 on which time zone happens to render it — an expiry date one day either side of midnight UTC
 would otherwise appear to move by a day depending on the reader's local offset, which is worse
 than useless for a compliance deadline.
+
+---
+
+## 19. The Severity Floor: Band and Score Are Two Different Things (Phase 184.4, SCORE-04/SCORE-05)
+
+### The band and the number can disagree, on purpose
+
+Before Phase 184.4, a scan could score 89/100 — comfortably inside the 85–100 `EXCELLENT` range —
+while still carrying one open CRITICAL finding, such as an expired TLS certificate. Report
+generation halted in that situation with:
+
+```
+Report generation halted: executive headline 'EXCELLENT' is inconsistent with 1 CRITICAL
+finding(s). Review findings before generating the report.
+```
+
+The number was correct. The label was the problem: no consultant can defensibly call an estate
+with an open expired certificate `EXCELLENT`. Phase 184.4 fixed this by giving the **band** — not
+the score — a severity floor: **any open CRITICAL finding caps the band at `FAIR`**, no matter how
+high the underlying number is. The worked example from the reproduction that motivated this phase:
+
+> A scan scores **89/100** with one open CRITICAL finding (`TLS certificate expired`, port 9443)
+> and one open HIGH finding (`TLS certificate is self-signed`, port 10443). The report now shows
+> **score: 89**, **band: FAIR** — and generates successfully, with the cap explained beside the
+> headline (see below). Before this phase, the same scan halted report generation entirely.
+
+### The cap is graduated to exactly one step: `FAIR`, never `POOR`
+
+The floor is deliberately narrow. Any `critical_count >= 1` caps `EXCELLENT`/`GOOD`/`MODERATE` down
+to `FAIR` — never further, and never based on *how many* CRITICALs are open. There is no ladder
+where 2 open CRITICALs read differently from 7, and no separate tier for HIGH-severity counts.
+`FAIR`'s narrative ("significant exposure to quantum-era threats") is defensible for an otherwise
+strong estate with a single lapsed control; `POOR`'s ("critically deficient gaps") is not, and
+would overstate the finding. A scan whose *number* already lands it in `FAIR` or `POOR` is
+unaffected by the floor — it was never going to read more favorably than that regardless of
+CRITICAL findings.
+
+### Why the number does not drop when the band caps
+
+This is the question this section exists to pre-empt: **"why is my score still 89 if there's a
+CRITICAL finding?"**
+
+The floor caps the *band* only. The numeric score is untouched, and the reason is not an oversight
+— CRITICAL findings already move the score today, through a separate, existing mechanism: the
+agility subscore's high-impact ratio. Every CRITICAL (and HIGH) finding is folded into a
+`high_impact` count that reduces the agility subscore in proportion to how many findings out of the
+total are high-impact. That path is unchanged by this phase and is not re-weighted or removed. The
+band's severity floor and the score's high-impact ratio are two independent mechanisms acting on
+two different outputs of the same input — they are not double-counting the same penalty, and
+removing CRITICAL findings from the score's high-impact calculation to "avoid overlap" would
+actually *raise* every CRITICAL-bearing scan's score, which is the opposite of what a floor is for.
+
+The practical reason the existing high-impact ratio alone could never have closed this gap: it is
+diluted by the total finding count, and each scoring category is capped before the four subscores
+are combined. A single CRITICAL finding out of several dozen findings moves the total score by a
+point or two — nowhere near enough to cross the 15-to-30-point gap between adjacent bands. That
+structural fact is exactly why a 89/100 `EXCELLENT` scan with one open CRITICAL was possible in the
+first place, and why the fix had to act on the band directly rather than trying to make the score
+move further.
+
+### The cap reason: what it says, and where it appears
+
+Whenever the band is capped, every report surface shows a short, structured explanation alongside
+the headline — not a synthetic scoring driver, not buried in a table, but directly beside the
+score/band pair itself:
+
+```
+Band capped at FAIR: 1 CRITICAL finding(s) open (score 89/100).
+```
+
+This string (the `rating_cap_reason` field, internally) is built only from static band names and
+integers — never from a finding's title or description — so it appears verbatim and identically
+across every renderer. It renders on **all six** report/dashboard surfaces:
+
+1. **CLI executive summary** (markdown) — a `**Cap reason:**` line directly beneath the Rollup
+   arithmetic line (`**Rollup:** 150 ÷ 1.5 = 89 / 100`).
+2. **HTML report / PDF export** — a labeled block beside the score card, before the Score Drivers
+   list.
+3. **DOCX report** — a paragraph beside the Score Breakdown Rollup line.
+4. **Scorecard** (the condensed markdown summary) — a `- **Cap reason:**` line beside the score
+   headline.
+5. **CLI terminal summary table** — a `Cap reason` row, shown only when the band is capped.
+6. **Dashboard Executive page and print page** — the same string rendered beside the readiness
+   headline, next to the confidence badge.
+
+### What the absence of a cap reason means
+
+If a report shows **no** cap reason anywhere, that is a positive statement, not missing data: it
+means the band was not capped — either there is no open CRITICAL finding, or the score's own band
+was already `FAIR` or `POOR` before any floor was applied. A report generated before Phase 184.4
+shipped also shows no cap reason (the field is simply absent from older score data), which renders
+identically to "not capped" rather than raising an error.
+
+> **Client Conversation — The Severity Floor:**
+> "Your report shows a band of FAIR alongside a score of 89. That's not a mistake — the number
+> reflects your overall posture across all four scoring dimensions, but the band is deliberately
+> capped whenever an open CRITICAL finding exists, like the expired certificate we found on port
+> 9443. We do this because a single unresolved critical issue shouldn't be labeled 'excellent' even
+> if the rest of the estate scores well. The 'Cap reason' line beside the headline explains exactly
+> why — once that CRITICAL finding is remediated, the band will reflect the underlying score again
+> on your next scan."

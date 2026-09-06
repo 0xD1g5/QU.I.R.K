@@ -2441,3 +2441,49 @@ Three things burndown and closure will never do, by design:
 > came back unhealthy. Nothing here can be marked closed by a flag; a finding only closes when we
 > positively recheck it and it's gone. And a `resurfaced` item means something we believed fixed
 > came back — that's reported separately from ordinary open items so it isn't lost in the count."
+
+---
+
+## 17. Rating Band Severity Floor (Phase 184.4, SCORE-04/SCORE-05)
+
+### What changed for operators
+
+A scan with an open **CRITICAL** finding — for example, an expired TLS certificate — now
+**completes report generation successfully** instead of halting. Before this phase, a scan whose
+numeric score placed it in `EXCELLENT`, `GOOD`, or `MODERATE` while a CRITICAL finding remained
+open would fail every report-writing path (CLI, HTML/PDF, DOCX) with:
+
+```
+Report generation halted: executive headline 'EXCELLENT' is inconsistent with 1 CRITICAL
+finding(s). Review findings before generating the report.
+```
+
+If you have seen this error in the field, it is fixed: the readiness **band** shown in the report
+now automatically floors to `FAIR` whenever at least one CRITICAL finding is open, so it never
+disagrees with the findings the report is also showing. The numeric score itself is unaffected —
+see `docs/report-interpretation.md` §19, "The Severity Floor," for the full client-facing
+explanation of why the number and the band can differ, and the exact worked example (89/100
+scoring `FAIR`, not `EXCELLENT`).
+
+### Where operators will see it
+
+- **CLI**, **HTML/PDF**, **DOCX**, and the **scorecard** all show a short `Cap reason` annotation
+  beside the score/band headline whenever the band has been capped — never elsewhere in the
+  document, and never present at all when the band is uncapped.
+- **The dashboard Executive page and the print page** — the same screen the original defect
+  (BACK-89) was filed against — now show the cap reason beside the readiness headline, next to the
+  confidence badge. This closes the dashboard's copy of the same halt-on-generate defect: the
+  dashboard's own scan-scoring path previously computed the band without seeing the scan's
+  findings at all, which could show an uncapped `EXCELLENT` on the dashboard for the same scan
+  whose exported report showed `FAIR` — those two views now always agree.
+- No configuration change, migration, or re-scan is required. Historical scan sessions pick up the
+  corrected band automatically the next time their report or dashboard view is rendered, because
+  the band is recomputed at render time rather than stored.
+
+### Troubleshooting
+
+If you still see `Report generation halted` on a current QU.I.R.K. version, that indicates a scan
+whose evidence was assembled without its findings list attached to the scoring call — verify you
+are running a version that includes Phase 184.4 (`v5.19` or later) and, if the error persists,
+capture the full evidence/findings payload for the scan and file it, since every production call
+site that renders a band is now required to pass its findings to the scorer.
