@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-05-PLAN.md
-last_updated: "2026-09-05T00:30:00.000Z"
+stopped_at: Completed 184.4-06-PLAN.md
+last_updated: "2026-09-05T01:15:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 44
-  percent: 58
+  completed_plans: 45
+  percent: 60
 ---
 
 # Project State
@@ -672,7 +672,22 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 5 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05 done). 184.4-05 deleted
+Plan: 6 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06 done).
+184.4-06 rendered the D-09 structured `rating_cap_reason` on the CLI, DOCX, scorecard, and
+terminal-summary headline surfaces, closing D-10's remaining non-dashboard surfaces.
+`quirk/reports/executive.py`'s `build_exec_markdown` now appends a `**Cap reason:**` line
+immediately after the Phase 88 `**Rollup:**` arithmetic line on BOTH the exec_content branch and
+the WR-05 compat branch (sourced via `score_raw.get("rating_cap_reason")`, so a pre-184.4 score
+dict renders nothing rather than raising) — proven with an adjacency demonstration in
+`184.4-06-SUMMARY.md`, not a presence-only assertion. `quirk/reports/writer.py`'s compat `score`
+dict gained `rating_cap_reason` (with a comment naming the `total`/`score` key divergence, WR-06),
+threaded via grep-enumerated consumers to `render_docx_report` (new `rating_cap_reason` keyword
+param — `ExecContent` does not carry this field, matching the `scan_completed_at` precedent),
+`_scorecard_markdown`, the `intelligence-{stamp}.json` `score` object, and the Rich terminal
+summary table. `tests/test_exec_content_model.py` grew from 11 to 17 tests covering
+presence/absence/missing-key on both CLI branches plus the writer compat dict, zero `MagicMock`.
+Collateral sweep: 471 passed / 10 skipped / 1 unrelated xfail. See `184.4-06-SUMMARY.md`.
+184.4-05 deleted
 `quirk/reports/html_renderer.py::_score_band()` outright (D-05, zero remaining references in that
 file) and made the HTML backward-compat fallback path severity-aware: it now computes
 `band_for_score()` then `cap_band_for_severity()` from `quirk.severity_bands`, counting CRITICAL
