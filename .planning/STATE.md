@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-07-PLAN.md
-last_updated: "2026-09-05T21:15:00.000Z"
+stopped_at: Completed 184.4-08-PLAN.md
+last_updated: "2026-09-05T21:20:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 46
-  percent: 61
+  completed_plans: 47
+  percent: 62
 ---
 
 # Project State
@@ -672,7 +672,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 7 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06, 184.4-07 done).
+Plan: 8 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06, 184.4-07, 184.4-08 done).
+184.4-08 added `rating_cap_reason` to the Pydantic `ScoreData` model (`quirk/dashboard/api/schemas.py`)
+and its TypeScript mirror (`src/dashboard/src/types/api.ts`), fixed the one field-by-field `ScoreData(`
+construction site that would otherwise silently drop it (`quirk/dashboard/api/routes/scan.py:1660`,
+`get_latest_scan()`), and rendered the cap reason on BOTH `print.tsx` (beneath the existing rating
+label) and `executive.tsx` (new conditional annotation beside the confidence badge — this page had no
+prior rating text to append to) — closing BACK-89's originally-filed dashboard surface. Extended vitest
+coverage with capped-presence/uncapped-absence assertions in both page test files (229 passed, up from
+225), then rebuilt (`npm run build`) and linted (`npm run lint`) the production bundle, both exit 0 —
+the rebuilt `quirk/dashboard/static/` assets are staged in the same commit as the `.tsx` changes so the
+change actually ships. `ScoreGauge.tsx`'s unrelated `_gaugeColor()` 0.8/0.5-fraction threshold mismatch
+(vs. the backend's 85/70/55/35 `severity_bands.py` bands) was explicitly left untouched (D-02 scope) and
+recorded as a durable backlog entry, `.planning/backlog/999.92-scoregauge-threshold-mismatch-frontend/IDEA.md`.
+SCORE-04 flipped to `[x]` complete in REQUIREMENTS.md — verified all five spanning plans
+(184.4-02/04/06/07/08) each delivered a genuine, distinct part before flipping. See `184.4-08-SUMMARY.md`.
 184.4-07 fixed the three severity-blind `build_evidence_summary()` call sites in
 `quirk/dashboard/api/routes/scan.py` (list_scans's per-session score, and both sides of
 `compare_scans`) so they derive real findings (TLS + identity for list_scans; per-side TLS-only for
