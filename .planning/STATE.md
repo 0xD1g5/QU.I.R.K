@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 07/7 complete, all tasks done, awaiting 184-VERIFICATION.md
-last_updated: "2026-09-06T22:10:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 07/7 complete, gap closure 184-08 (CR-01/WR-01) complete, awaiting 184-VERIFICATION.md
+last_updated: "2026-09-06T22:40:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
@@ -22,6 +22,23 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 184 — Skip Registry Closure
+
+**184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
+`184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
+hardcoded `base.id == "pytest"`, so `import pytest as X` sites were invisible to the gate's walk.
+Fixed via `_pytest_import_names()`, deriving the local-name set from each module's own AST `Import`
+nodes at run time (never a hand-maintained alias list). Alias resolution surfaced 2 previously-invisible
+skip sites (`test_vault_connector.py::test_vault_live_uat_30_01_five_findings`,
+`test_cross_surface_parity.py::test_docx_narrative_parity`), both now honestly registered
+(`live_infra`, `optional_extra`). Also fixed WR-01: `_find_skip_occurrences()` no longer swallows
+`SyntaxError`/`OSError` per file with `except: continue` — an unparseable file now fails the gate
+loudly via `pytest.fail()`. Both fixes locked by 2 new falsifiability self-tests, each demonstrated
+live to fail under its protected mutation and restore byte-identical (md5
+`4120de5bae713dca6f9c1ab13f141cbb`) after revert. `tests/test_skip_registry.py -q` -> 24 passed.
+Full suite -> 4261 passed, 0 failed, failing-node SET empty (identical to 184-07's baseline; the
++2 passed count is the 2 new self-tests). WR-02/WR-03/IN-01/IN-02 from the same review remain open,
+not part of this gap closure's scope. See `184-07-SUMMARY.md`'s "Gap Closure (post-review,
+CR-01/WR-01)" section.
 
 **184-07 (complete, 2026-09-06) — Phase close-out: anti-accumulator verification, failing-node SET comparison, docs, UAT Series 184, Obsidian, DRIFT-02 closed.**
 Verified by grep (not assertion) that the gate cannot be silenced by CI config: `continue-on-error:
