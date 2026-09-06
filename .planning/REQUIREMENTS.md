@@ -243,7 +243,7 @@ rather than inherited from its original report — two had drifted since they we
   finding(s). Review findings before generating the report.` This supersedes BACK-89
   (`.planning/milestones/v5.0-ROADMAP.md`, filed 2026-05-21).
 
-- [ ] **SCORE-05**: exactly one band producer exists, its thresholds are shared with the
+- [x] **SCORE-05**: exactly one band producer exists, its thresholds are shared with the
   congruence guard, and agreement plus completeness are proven by run-time-derived gates.
   Covering decisions: D-04, D-05, D-11, D-12. Two band producers exist today and must converge to
   one: `quirk/intelligence/scoring.py`'s `_rating()` (thresholds 85/70/55/35) and
@@ -291,7 +291,7 @@ rather than inherited from its original report — two had drifted since they we
 | SCORE-02 | 184.2-01, 184.2-02, 184.2-03, 184.2-04, 184.2-05, 184.2-06 | Complete |
 | SCORE-03 | 184.3-01, 184.3-02, 184.3-03, 184.3-04, 184.3-05, 184.3-06, 184.3-07, 184.3-08, 184.3-09, 184.3-10, 184.3-11 | Complete (closed 2026-09-05; 1 manual leg DEFERRED with cited substitute coverage) |
 | SCORE-04 | 184.4-02, 184.4-04, 184.4-06, 184.4-07, 184.4-08 | Complete |
-| SCORE-05 | 184.4-03, 184.4-05, 184.4-09 | Pending |
+| SCORE-05 | 184.4-03, 184.4-05, 184.4-09 | Complete |
 | DRIFT-03 | TBD | Pending |
 | TRIAGE-01 | TBD | Pending |
 | TRIAGE-02 | TBD | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-08-PLAN.md
-last_updated: "2026-09-05T21:20:00.000Z"
+stopped_at: Completed 184.4-09-PLAN.md
+last_updated: "2026-09-05T22:10:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 47
+  completed_plans: 48
   percent: 62
 ---
 
@@ -672,7 +672,22 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 8 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06, 184.4-07, 184.4-08 done).
+Plan: 9 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06, 184.4-07, 184.4-08, 184.4-09 done).
+184.4-09 built the three run-time-derived gates D-11/D-12 require: `tests/test_band_severity_matrix_gate.py`
+(the band x severity matrix walk, deriving both probe points and the CRITICAL-count range from
+`quirk.severity_bands`'s own tables — never a hand-copied 85/70/55/35/None table), `tests/test_band_producer_scan_gate.py`
+(an AST scan of `quirk/**/*.py` for any function that can return a band literal, keyed off
+`BAND_ORDER` rather than re-typed strings), and `tests/test_evidence_summary_dispositions_gate.py`
+(an AST scan requiring every `build_evidence_summary()` call site to be dispositioned, keeping
+`findings` optional per D-08). The producer scan surfaced a real, previously-undocumented false
+positive — `quirk/notify/payload.py::_score_to_band()`, an unrelated drift-notification severity
+scale that happens to share the literal `"GOOD"` — now dispositioned in that gate's ledger rather
+than special-cased in the detector. All three gates were proven to actually fire (not just pass
+vacuously): the matrix walk was proven live by pointing a hostile `_BAND_CRITICAL_THRESHOLD` copy
+at the real `_check_congruence()` (16 named failures), and both AST gates were proven by removing
+a real ledger entry and observing the exact offending file:line reported, then restoring
+byte-identical. SCORE-05 flipped to `[x]` complete — all three spanning plans (184.4-03/05/09)
+verified landed. See `184.4-09-SUMMARY.md`.
 184.4-08 added `rating_cap_reason` to the Pydantic `ScoreData` model (`quirk/dashboard/api/schemas.py`)
 and its TypeScript mirror (`src/dashboard/src/types/api.ts`), fixed the one field-by-field `ScoreData(`
 construction site that would otherwise silently drop it (`quirk/dashboard/api/routes/scan.py:1660`,

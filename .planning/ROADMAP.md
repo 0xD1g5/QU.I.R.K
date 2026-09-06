@@ -550,7 +550,7 @@ Plans:
 - [x] 184.4-06-PLAN.md — cap reason on the CLI exec summary, DOCX and scorecard; compat-dict threading (D-09, D-10)
 - [x] 184.4-07-PLAN.md — the 3 severity-blind `build_evidence_summary()` sites fixed, the 5 remaining dispositioned with verified reasons (D-07, D-08)
 - [x] 184.4-08-PLAN.md — dashboard: `ScoreData.rating_cap_reason` across Pydantic + TS, rendered on `executive.tsx`/`print.tsx`, vitest + `npm run build` + `npm run lint` (D-10)
-- [ ] 184.4-09-PLAN.md — the three run-time-derived gates: band x severity matrix walk, AST band-producer scan, AST call-site disposition scan (D-11, D-12)
+- [x] 184.4-09-PLAN.md — the three run-time-derived gates: band x severity matrix walk, AST band-producer scan, AST call-site disposition scan (D-11, D-12)
 - [ ] 184.4-10-PLAN.md — `docs/report-interpretation.md` + `docs/operators-guide.md` + Obsidian syncs, UAT Series 184.4, VALIDATION map TBD fill, phase note
 
 ### Phase 185: a11y Baseline Environment
