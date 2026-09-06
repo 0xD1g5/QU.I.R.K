@@ -1,8 +1,22 @@
 """Phase 41 D-02: Central allowed-skip registry.
 
-Each entry: (file_relative_to_tests_dir, line_number, category, reason)
+Each entry: (file_relative_to_tests_dir, test_qualname, category, reason)
+
+``test_qualname`` (Phase 184 D-01) is the dotted enclosing
+``ClassDef``/``FunctionDef``/``AsyncFunctionDef`` ancestor chain of the skip
+construct (e.g. ``"TestFoo.test_bar"``), or the literal ``"<module>"`` for
+module-scope skips -- derived by ``tests/test_skip_registry.py``'s
+``_enclosing_qualname()``. This replaces the pre-Phase-184 ``line_number``
+key, which re-broke on any unrelated line shift in the same file; there is no
+positional-tolerance constant anywhere in the gate.
+
 category in {"optional_extra", "live_infra", "pre_existing_triage_149",
-"ci_extras_gap", "gitignored_planning_dir"}
+"ci_extras_gap", "gitignored_planning_dir", "environment_subprocess_signal"}
+-- "environment_subprocess_signal" admits a skip whose only justification is
+a macOS full-suite subprocess dying to SIGSEGV before it produced any result
+to assert on (not a known-broken test); CI/Linux always takes the real
+assertion branch. ("environment_capability" is a Phase 184 Plan 05 addition,
+not yet in use here.)
 
 Per CONTEXT.md D-01..D-05: stale skips are deleted; optional-extra and
 live-infra skips are registered here so the meta-test gate (test_skip_registry.py)
@@ -11,6 +25,17 @@ can validate that no NEW unregistered skip slips into the suite.
 Plan 05 deletes the stale skips identified in 41-RESEARCH.md "Skip-Marker
 Triage Table" (D-04). Until Plan 05 lands, the meta-test will fail — that
 is the intended behavior and the validation that D-04 deletions worked.
+
+Phase 184 Plan 03 re-keyed every entry above from ``(file, line_number,
+category, reason)`` to ``(file, test_qualname, category, reason)`` by a
+reviewed script; every reason string survived byte-identical except the 4
+D-02 collapse groups (several skip sites in one test sharing one qualname),
+where the surviving entry's reason was joined from its collapsed sites'
+reasons, separated by "; ", verbatim. 16 entries whose recorded line no
+longer resolves to any skip site (within a generous +/-20 line search) are
+kept, not deleted, keyed ``"UNRESOLVED:<original_lineno>"`` -- they are
+Plan 04's purge-candidate input per D-08's re-key-then-purge ordering, not
+evidence of a currently-broken gate.
 """
 
 ALLOWED_SKIPS = [
@@ -57,24 +82,19 @@ ALLOWED_SKIPS = [
     ("test_aws_connector.py", "test_scan_s3_propagates_build_endpoint_exception", "optional_extra", "boto3 not installed"),
     ("test_cbom_vault_consistency.py", "test_regenerate_vault_golden", "live_infra", "Fixture regen guard (REGEN_CBOM_FIXTURES=1)"),
     ("test_chaos_lab_idempotency.py", "test_profile_re_up_is_idempotent", "live_infra", "macOS *:88 collides with system KDC; requires LAB_INCLUDE_KERBEROS=1 (BACK-89)"),
-    ("test_cmvp_refresh.py", "<module>", "optional_extra", "bs4 not installed"),
-    ("test_cmvp_refresh.py", "<module>", "optional_extra", "httpx not installed"),
+    ("test_cmvp_refresh.py", "<module>", "optional_extra", 'bs4 not installed; httpx not installed'),
     ("test_credential_leakage.py", "test_sentinel_not_in_dashboard_api_json", "live_infra", "Defensive guard: dashboard_client get_db override not configured"),
     ("test_db_migrate_cli.py", "_ensure_run_scan_importable", "optional_extra", "run_scan not importable in minimal dev env (optional reporting deps missing)"),
     ("test_distributed_topology.py", "test_config_validates", "live_infra", "Requires docker binary"),
     ("test_identity_scanner_hardening.py", "_kerb_mod", "optional_extra", "impacket not installed"),
     ("test_jobs_api.py", "test_get_job_reconciles_real_zombie", "live_infra", "Linux-only /proc zombie-reconciliation check"),
     ("test_jwt_scanner.py", "<module>", "optional_extra", "httpx not installed"),
-    ("test_pdf_metadata_constants.py", "<module>", "optional_extra", "playwright.sync_api not installed"),
-    ("test_pdf_metadata_constants.py", "<module>", "optional_extra", "pypdf not installed"),
+    ("test_pdf_metadata_constants.py", "<module>", "optional_extra", 'playwright.sync_api not installed; pypdf not installed'),
     ("test_pdf_metadata_constants.py", "_render_or_skip", "optional_extra", "Playwright Chromium runtime not available"),
     ("test_pqc_discriminator.py", "TestPqcDiscriminatorPositive.test_probe_detects_oqs_nginx", "live_infra", "Requires oqs-nginx chaos-lab profile"),
     ("test_pqc_discriminator.py", "TestPqcDiscriminatorPositive.test_probe_detects_negotiated_group_string", "live_infra", "Requires oqs-nginx chaos-lab profile"),
-    ("test_report_injection_hardening.py", "test_script_payload_in_cert_cn_is_escaped_in_pdf", "optional_extra", "playwright.sync_api not installed"),
-    ("test_report_injection_hardening.py", "test_script_payload_in_cert_cn_is_escaped_in_pdf", "optional_extra", "pypdf not installed"),
-    ("test_report_injection_hardening.py", "test_script_payload_in_cert_cn_is_escaped_in_pdf", "optional_extra", "Playwright Chromium binary not available"),
-    ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", "python-docx not installed"),
-    ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", "python-docx not installed"),
+    ("test_report_injection_hardening.py", "test_script_payload_in_cert_cn_is_escaped_in_pdf", "pre_existing_triage_149", 'playwright.sync_api not installed; pypdf not installed; Playwright Chromium binary not available; TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_report_injection_hardeningpy-test_script_payload_in_cert_cn_is_escaped_in_pdf'),
+    ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", 'python-docx not installed'),
     ("test_report_render_undetermined_hosts.py", "test_cross_surface_parity_undetermined_count", "optional_extra", "python-docx not installed"),
     ("test_scheduler_cmd.py", "test_signal_sets_stop_flag", "live_infra", "SIGTERM not supported on Windows"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v2c_happy_path_parses_last_octet_ip", "optional_extra", "pysnmp not installed"),
@@ -115,7 +135,6 @@ ALLOWED_SKIPS = [
     ("test_report_injection_hardening.py", "test_script_payload_in_cert_cn_is_escaped_in_html", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_report_injection_hardeningpy-test_script_payload_in_cert_cn_is_escaped_in_html"),
     ("test_report_injection_hardening.py", "test_javascript_url_in_finding_recommendation_stripped", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_report_injection_hardeningpy-test_javascript_url_in_finding_recommendation_stripped"),
     ("test_report_injection_hardening.py", "test_db_stored_raw_payload_preserved", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_report_injection_hardeningpy-test_db_stored_raw_payload_preserved"),
-    ("test_report_injection_hardening.py", "test_script_payload_in_cert_cn_is_escaped_in_pdf", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_report_injection_hardeningpy-test_script_payload_in_cert_cn_is_escaped_in_pdf"),
     ("test_pdf_metadata_constants.py", "test_pdf_title_is_constant", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_title_is_constant"),
     ("test_pdf_metadata_constants.py", "test_pdf_author_is_constant", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_author_is_constant"),
     ("test_pdf_metadata_constants.py", "test_pdf_renders_with_locked_context", "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_renders_with_locked_context"),
