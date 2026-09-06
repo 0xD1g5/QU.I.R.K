@@ -79,6 +79,25 @@ class ExecContent:
     # TRANS-03 / D-06: severity counts computed once; feeds congruence guard + both renderers
     sev_counts: Dict[str, int]  # {"CRITICAL": n, "HIGH": n, ...}
 
+    # Phase 184.4 D-09 / WR-01: structured cap-reason sentence produced by
+    # quirk.severity_bands.cap_reason() inside compute_readiness_score().
+    # `None` means the band was NOT capped — every renderer treats falsy as
+    # "render nothing", so absence is the uncapped signal, not an error.
+    #
+    # WR-01: this field exists so `rating_cap_reason` stops being the ONE
+    # score-derived value that bypassed this dataclass. It previously reached
+    # six renderer call sites as six independent `.get("rating_cap_reason")`
+    # reads off three different dicts (`score_raw`, writer.py's compat `score`
+    # dict, and a bespoke `render_docx_report` keyword) — each one a place a
+    # refactor could silently drop the key while every test still passed.
+    # `build_exec_content()` now performs the ONLY read of
+    # `score_raw["rating_cap_reason"]` in the codebase; writer.py's compat
+    # dict is fed FROM here rather than re-deriving from score_raw, so the
+    # scorecard/intelligence-JSON surfaces stay downstream of this one value.
+    # Defaulted so every pre-existing ExecContent(...) construction in the
+    # test suite keeps working unmodified.
+    rating_cap_reason: Optional[str] = None
+
     # Phase 128 D-08: hardware advisory — populated by writer.py from HardwareDevice rows
     # Advisory-only; never routed through _build_finding() / findings_evaluator.py (D-08 DISPOSITION).
     hardware_devices: List[dict] = field(default_factory=list)
@@ -730,6 +749,11 @@ def build_exec_content(
         subscores=subscores,
         raw_sum=raw_sum,
         sev_counts=sev_counts,
+        # WR-01: the ONE read of score_raw["rating_cap_reason"] in the
+        # codebase. Every renderer now reads exec_content.rating_cap_reason.
+        # `.get()` so a pre-184.4-shaped score dict yields None rather than
+        # raising — absence and None both mean "not capped".
+        rating_cap_reason=score_raw.get("rating_cap_reason"),
     )
 
 

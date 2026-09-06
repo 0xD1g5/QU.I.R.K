@@ -602,3 +602,182 @@ def test_writer_compat_dict_carries_rating_cap_reason_through():
 
     assert "Band capped at FAIR" in capped_md
     assert "Cap reason" not in uncapped_md
+
+
+# ---------------------------------------------------------------------------
+# Phase 184.4 WR-01 — rating_cap_reason lives on the shared ExecContent model.
+#
+# Before this fix, rating_cap_reason was the ONE score-derived value that
+# bypassed ExecContent: six renderer call sites each re-fetched it with their
+# own `.get("rating_cap_reason")` off three different dicts (score_raw, the
+# writer.py compat `score` dict, and a bespoke render_docx_report keyword).
+# writer.py's own comment named that hazard but the chosen mitigation was to
+# document the trap rather than close it, violating content_model.py's stated
+# D-03 contract ("neither re-derives content from raw inputs").
+#
+# These tests lock the closure: ONE derivation in build_exec_content(), with
+# every renderer reading exec_content.rating_cap_reason.
+# ---------------------------------------------------------------------------
+
+
+def test_exec_content_carries_rating_cap_reason_from_score_raw():
+    """build_exec_content() populates the field from score_raw."""
+    from quirk.reports.content_model import build_exec_content
+
+    score_raw = _capped_score_raw()
+    exec_content = build_exec_content(
+        score_raw=score_raw, findings=[], roadmap_items=[]
+    )
+
+    assert exec_content.rating_cap_reason == score_raw["rating_cap_reason"]
+
+
+def test_exec_content_rating_cap_reason_is_none_when_uncapped():
+    """An explicitly-None cap reason stays None — the uncapped signal."""
+    from quirk.reports.content_model import build_exec_content
+
+    score_raw = {**_capped_score_raw(), "rating_cap_reason": None}
+    exec_content = build_exec_content(
+        score_raw=score_raw, findings=[], roadmap_items=[]
+    )
+
+    assert exec_content.rating_cap_reason is None
+
+
+def test_exec_content_rating_cap_reason_defaults_when_key_absent():
+    """A pre-184.4-shaped score dict (no rating_cap_reason key at all) must
+    yield None rather than raising — absence and None both mean 'not capped'."""
+    from quirk.reports.content_model import build_exec_content
+
+    score_raw = _capped_score_raw()
+    del score_raw["rating_cap_reason"]
+    assert "rating_cap_reason" not in score_raw
+
+    exec_content = build_exec_content(
+        score_raw=score_raw, findings=[], roadmap_items=[]
+    )
+    assert exec_content.rating_cap_reason is None
+
+
+def test_exec_content_construction_without_rating_cap_reason_still_works():
+    """The field is defaulted, so every pre-existing ExecContent(...) keyword
+    construction in the suite keeps working unmodified."""
+    from quirk.reports.content_model import ExecContent
+
+    result = ExecContent(
+        narrative_lead="lead",
+        narrative_drivers=[],
+        top_risks=[],
+        roadmap_items=[],
+        score_total=0,
+        score_band="FAIR",
+        subscores={},
+        raw_sum=0,
+        sev_counts={},
+    )
+    assert result.rating_cap_reason is None
+
+
+def test_render_docx_report_no_longer_takes_a_bespoke_cap_reason_kwarg():
+    """WR-01: the `rating_cap_reason` keyword parameter is GONE from
+    render_docx_report — the DOCX surface reads exec_content like every other
+    score-derived value. Asserted against the real signature so re-adding the
+    bespoke parameter (recreating the six-call-site divergence) fails here."""
+    import inspect
+
+    from quirk.reports.docx_renderer import render_docx_report
+
+    params = inspect.signature(render_docx_report).parameters
+    assert "rating_cap_reason" not in params, (
+        "render_docx_report grew a bespoke rating_cap_reason parameter again; "
+        "it must read exec_content.rating_cap_reason instead (184.4 WR-01)."
+    )
+    # exec_content is the seam it must use, so it had better still be there.
+    assert "exec_content" in params
+
+
+def test_docx_renders_cap_reason_sourced_from_exec_content():
+    """End-to-end for the DOCX surface: with NO cap-reason keyword available,
+    a capped exec_content must still produce the cap-reason paragraph, and an
+    uncapped one must produce none."""
+    docx = pytest.importorskip("docx")  # noqa: F841
+
+    import tempfile
+    from pathlib import Path
+
+    from quirk.reports.content_model import build_exec_content
+    from quirk.reports.docx_renderer import render_docx_report
+
+    capped = build_exec_content(
+        score_raw=_capped_score_raw(), findings=[], roadmap_items=[]
+    )
+    uncapped = build_exec_content(
+        score_raw={**_capped_score_raw(), "rating_cap_reason": None},
+        findings=[],
+        roadmap_items=[],
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        capped_path = str(Path(tmp) / "capped.docx")
+        uncapped_path = str(Path(tmp) / "uncapped.docx")
+
+        assert render_docx_report(
+            path=capped_path, cfg=_cli_cfg(), findings=[], exec_content=capped
+        )
+        assert render_docx_report(
+            path=uncapped_path, cfg=_cli_cfg(), findings=[], exec_content=uncapped
+        )
+
+        from docx import Document
+
+        capped_text = "\n".join(p.text for p in Document(capped_path).paragraphs)
+        uncapped_text = "\n".join(p.text for p in Document(uncapped_path).paragraphs)
+
+    assert "Band capped at FAIR" in capped_text, (
+        "the DOCX cap-reason paragraph vanished once the bespoke keyword was "
+        f"removed — exec_content sourcing is broken. Got: {capped_text!r}"
+    )
+    assert "Cap reason" not in uncapped_text
+
+
+def test_only_one_place_reads_rating_cap_reason_off_score_raw():
+    """The WR-01 invariant as a source gate: `score_raw`-rooted reads of
+    rating_cap_reason must be confined to build_exec_content() (the single
+    derivation) plus executive.py's legacy exec_content-is-None branch, which
+    has no shared model available and is unreachable from the shipped pipeline
+    (writer.py always passes exec_content).
+
+    Scanned from the source tree at run time rather than asserted from a
+    written list, so a NEW renderer re-deriving the key off score_raw fails
+    here instead of quietly recreating the divergence WR-01 closed.
+    """
+    from pathlib import Path
+
+    reports_dir = Path(__file__).resolve().parent.parent / "quirk" / "reports"
+    needle = 'score_raw.get("rating_cap_reason")'
+
+    offenders = {}
+    for path in sorted(reports_dir.rglob("*.py")):
+        # Count only real reads, not the prose in comments/docstrings that
+        # explains why this gate exists.
+        hits = [
+            line.strip()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if needle in line and not line.strip().startswith("#")
+        ]
+        if hits:
+            offenders[path.name] = hits
+
+    assert set(offenders) <= {"content_model.py", "executive.py"}, (
+        "a renderer re-derives rating_cap_reason from score_raw instead of "
+        f"reading exec_content.rating_cap_reason: {offenders!r}"
+    )
+    # Guard against the scan going vacuous (e.g. the needle string changing).
+    assert "content_model.py" in offenders, (
+        "the single authoritative read in build_exec_content() was not found "
+        "— this gate is scanning for the wrong pattern and would pass "
+        "vacuously."
+    )
+    assert len(offenders["content_model.py"]) == 1, (
+        f"expected exactly ONE score_raw read of the key: {offenders!r}"
+    )

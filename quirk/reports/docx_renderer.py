@@ -296,7 +296,6 @@ def render_docx_report(
     exec_content: "Any | None" = None,
     *,
     scan_completed_at: "datetime | None" = None,
-    rating_cap_reason: "str | None" = None,
 ) -> bool:
     """Write a structural Word DOCX report to *path*.
 
@@ -321,14 +320,17 @@ def render_docx_report(
         path — it cannot be derived locally. Rendered in the cover metadata
         paragraph via the shared `format_scan_completed_at` helper, which never
         falls back to `generated_at`.
-    rating_cap_reason : str | None
-        D-09/D-10 (Phase 184.4): structured cap-reason sentence from
-        `score_raw.get("rating_cap_reason")`, threaded through the writer.py
-        compat dict. `ExecContent` does not carry this field (it is sourced
-        from `score_raw` directly on every surface — see html_renderer.py's
-        primary-path idiom), so it is passed as its own keyword parameter,
-        mirroring `scan_completed_at`'s "no other way to reach this function"
-        precedent. `None` when the band was not capped; renders nothing.
+
+    Notes
+    -----
+    D-09/D-10 (Phase 184.4): the structured cap-reason sentence is read from
+    `exec_content.rating_cap_reason`. It used to arrive as its own
+    `rating_cap_reason` keyword parameter threaded from writer.py's compat
+    dict; 184.4 WR-01 removed that parameter because `ExecContent` now carries
+    the field, making this function consistent with how it already sources
+    score_total/score_band/subscores. Unlike `scan_completed_at` — which
+    genuinely has no other route into this function — the cap reason always
+    had one. `None`/absent means the band was not capped and nothing renders.
     """
     # T-100-DEP: lazy import — MUST stay inside the function body.
     # Never import docx at module level (optional-extra import trap).
@@ -591,6 +593,9 @@ def render_docx_report(
     # D-09/D-10 (Phase 184.4): cap-reason annotation beside the rollup, matching
     # the CLI/HTML surfaces (quirk/reports/executive.py, report.html.j2). Renders
     # nothing when the band was not capped.
+    # 184.4 WR-01: getattr keeps the exec_content=None fallback path (and any
+    # pre-184.4 ExecContent-shaped stub) working — absent means uncapped.
+    rating_cap_reason = getattr(exec_content, "rating_cap_reason", None)
     if rating_cap_reason:
         doc.add_paragraph(f"Cap reason: {rating_cap_reason}", style="Normal")
     # Score Decomposition table (same as executive summary decomp)

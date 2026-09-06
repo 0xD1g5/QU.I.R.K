@@ -821,7 +821,11 @@ def render_html_report(
         total_score = exec_content.score_total
         band = exec_content.score_band
         # Phase 184.4 D-09: mirror the shared model's cap reason on the primary path.
-        rating_cap_reason = score.get("rating_cap_reason")
+        # 184.4 WR-01: sourced from exec_content, not the `score` dict — this is
+        # the D-03 seam every other score-derived value on this path already uses
+        # (total_score/band above), so the key cannot be dropped by a compat-dict
+        # refactor without also breaking score_total/score_band.
+        rating_cap_reason = exec_content.rating_cap_reason
     else:
         total_score = score.get("score", 0)  # WR-06: canonical key is "score", not "total"
         # Phase 184.4 D-05: severity-aware band via the shared module — the old

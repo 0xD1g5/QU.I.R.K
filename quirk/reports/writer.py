@@ -461,11 +461,17 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # added key like rating_cap_reason is easy to drop here silently. Any
     # future key added to score_raw that must reach DOCX/scorecard has to be
     # added to this dict explicitly — nothing here is derived automatically.
+    #
+    # 184.4 WR-01: `rating_cap_reason` is now fed FROM exec_content rather than
+    # re-read from score_raw. The trap named above is real and unchanged for
+    # other keys, but this key is no longer a second, parallel derivation: the
+    # scorecard and intelligence-JSON surfaces that read it off this dict are
+    # now strictly downstream of the shared model's single value.
     score = {
         "total": score_raw["score"],
         "subscores": score_raw["subscores"],
         "drivers": [d["reason"] for d in score_raw.get("drivers", [])],
-        "rating_cap_reason": score_raw.get("rating_cap_reason"),
+        "rating_cap_reason": exec_content.rating_cap_reason,
     }
     conf = {
         "confidence": conf_raw.get("confidence_score", 0),
@@ -745,7 +751,8 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             findings=findings,
             exec_content=exec_content,
             scan_completed_at=_scan_completed_at,  # SCORE-03 / D-16b
-            rating_cap_reason=score.get("rating_cap_reason"),  # D-09 / D-10 (184.4-06)
+            # 184.4 WR-01: no rating_cap_reason kwarg — render_docx_report now
+            # reads it off exec_content like every other score-derived value.
         )
     except Exception as e:
         import sys as _sys
@@ -815,9 +822,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     summary_table.add_row("HIGH findings", f"[orange1]{high_count}[/orange1]" if high_count else "0")
     summary_table.add_row("MEDIUM findings", f"[yellow]{medium_count}[/yellow]" if medium_count else "0")
     summary_table.add_row("Readiness score", f"[bold]{total_score}/100[/bold]")
-    # D-09 / D-10 (184.4-06): terminal summary is another consumer of `score`;
-    # conditional row, absent when the band was not capped.
-    _cap_reason_row = score.get("rating_cap_reason")
+    # D-09 / D-10 (184.4-06): conditional row, absent when the band was not
+    # capped. 184.4 WR-01: read from the shared model rather than the compat
+    # `score` dict — this function already uses exec_content for the
+    # undetermined-hosts row above, so both come from the same seam.
+    _cap_reason_row = exec_content.rating_cap_reason
     if _cap_reason_row:
         summary_table.add_row("Cap reason", _cap_reason_row)
     summary_table.add_row("Confidence", f"{total_conf}/100")

@@ -247,9 +247,11 @@ def build_exec_markdown(
         # D-09 / 184.4-06: annotate a capped band beside the arithmetic that would
         # otherwise contradict it (BACK-89 in mirror image). Structured value from
         # quirk.severity_bands.cap_reason() via compute_readiness_score() — never
-        # re-derived or re-worded here. .get() so a pre-184.4 score dict renders
-        # nothing rather than raising.
-        _rating_cap_reason = score_raw.get("rating_cap_reason")
+        # re-derived or re-worded here.
+        # 184.4 WR-01: read from the shared model, not score_raw, so this surface
+        # shares the D-03 seam with score_total/score_band/subscores/raw_sum
+        # instead of re-fetching the key independently. None when uncapped.
+        _rating_cap_reason = exec_content.rating_cap_reason
         if _rating_cap_reason:
             lines.append(f"**Cap reason:** {_rating_cap_reason}")
     else:
@@ -274,6 +276,12 @@ def build_exec_markdown(
         lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
         # D-09 / 184.4-06: same cap-reason annotation as the exec_content branch,
         # so both surfaces agree (see comment above).
+        # 184.4 WR-01: this branch reads score_raw by necessity — it is the
+        # legacy path taken only when exec_content is None (external callers;
+        # writer.py always passes one), so the shared model is unavailable
+        # here. This is the one remaining score_raw read of the key outside
+        # build_exec_content(), and it is unreachable from the shipped
+        # pipeline.
         _rating_cap_reason = score_raw.get("rating_cap_reason")
         if _rating_cap_reason:
             lines.append(f"**Cap reason:** {_rating_cap_reason}")
