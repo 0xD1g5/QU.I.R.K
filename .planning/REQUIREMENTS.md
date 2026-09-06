@@ -22,7 +22,12 @@ rather than inherited from its original report — two had drifted since they we
 
 ## Tooling Integrity (GSD state corruption)
 
-- [x] **TOOL-01**: `gsd-sdk` / `gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`.
+- [ ] **TOOL-01**: `gsd-sdk` / `gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`.
+  **REOPENED 2026-09-06 (Phase 185 planning) — see TOOL-05 below.** The sentence beginning "The
+  plain-text branch below it is correctly anchored" is **FALSE as a safety claim** and is retained
+  verbatim only as the record of what was believed. The plain branch *is* anchored; anchoring was
+  never sufficient, because that branch is **unscoped** and matches body prose document-wide. Do
+  not re-close TOOL-01 on the strength of the bold-branch fixes alone.
   **Bug A** (root-caused, patched locally 2026-09-03): `stateReplaceField()`'s bold pattern at
   `bin/lib/state-document.generated.cjs:42` lacks a `^` anchor and `/m`, so `**Field:**` matches
   mid-prose and `(.*)` eats the rest of the line. The plain-text branch below it is correctly
@@ -97,6 +102,37 @@ rather than inherited from its original report — two had drifted since they we
   **Re-demonstrated 2026-09-04 (182-08):** the live verb was re-run against this real,
   live `.planning/STATE.md` and the diff came back clean against both named hazard signatures.
   See `182-06-SUMMARY.md`, `182-07-SUMMARY.md`, and `182-08-SUMMARY.md`.
+
+- [ ] **TOOL-05** (new 2026-09-06, discovered during Phase 185 planning by a live
+  `gsd-sdk query state.planned-phase` run): `stateReplaceField()`'s **plain-field fallback** at
+  `~/.npm/_npx/4db0de1f85c3165e/node_modules/get-shit-done-cc/sdk/dist/query/state-document.js:26`
+  is **unscoped**, and deterministically destroys `STATE.md` body prose. This is a distinct defect
+  from TOOL-01/TOOL-04: those were *unanchored* `**Field:**` patterns fixed by adding `^…$`/`im`.
+  This one is already anchored — it searches the whole document body and rewrites the first
+  line-initial `Status:` it finds anywhere, with no notion of field-region versus narrative.
+  Because this project's `STATE.md` has no `**Status:**` bold field and no plain `Status:` field in
+  `## Current Position`, the bold path always misses and the fallback always lands on the same
+  narrative sentence in the "Prior phase (retained for history)" block. That line has now been
+  destroyed **8 times** across `state.planned-phase`, `state.begin-phase`, and `phase.complete` —
+  it is deterministic for this repo, not intermittent.
+  *Aggravating tell:* the verb returns `{"updated": ["Status"]}`, which reads as a minimal safe
+  write but is the opposite — its other targets (`Total Plans in Phase`, `Last Activity`,
+  `Last Activity Description`, `state-mutation.js:959-978`) do not exist in this document and
+  silently no-op, so the corruption is the *only* thing it successfully wrote.
+  *Why the standing guard misses it:* `tests/test_gsd_state_patch.py`'s run-time source scan
+  regenerates its occurrence set from source (the right design) but scans only the
+  `~/.claude/get-shit-done/bin/lib/` paths, and only for `**Field:**`-shaped constructs. This site
+  is in a different install and is not bold-shaped — invisible on both axes. There is no ledger
+  entry for it under `~/.claude/gsd-npx-sdk-patches/`.
+  *Evidence: live corruption caught and reverted byte-identical during Phase 185 planning
+  (2026-09-06); pre-image md5 `27c1b7828897a894ca322e9ac84731ef` restored and verified. Root cause
+  read directly from installed source. Full narrative and proposed fix shapes in
+  `.planning/todos/pending/gsd-state-plain-field-fallback-unscoped.md`.*
+  **Acceptance:** the fallback either scopes to a real field region or fails closed with `null`;
+  the run-time source scan is extended to cover the npx install AND bare `Field:` constructs; the
+  durability layer is seeded; and the fix is proven at the command boundary and then
+  re-demonstrated live against the real `.planning/STATE.md` per CLAUDE.md §(e) — a green
+  function-level test is explicitly not sufficient.
 
 ## Enumeration Drift (the shared defect class)
 
@@ -314,10 +350,11 @@ rather than inherited from its original report — two had drifted since they we
 
 | Requirement | Phase | Status |
 |---|---|---|
-| TOOL-01 | 182-01, 182-03, 182-06 | Complete (re-closed 2026-09-04, 182-08 re-demonstration clean) |
+| TOOL-01 | 182-01, 182-03, 182-06 | **REOPENED 2026-09-06** — bold-branch fixes hold, but the plain-field fallback is unscoped; see TOOL-05 |
 | TOOL-02 | 182-02 | Complete |
 | TOOL-03 | 182-03, 182-04 | Complete |
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
+| TOOL-05 | Unassigned | Open (found 2026-09-06 during Phase 185 planning) |
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | 184-01, 184-02, 184-03, 184-04, 184-05, 184-06, 184-07 | Complete |
 | SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
