@@ -181,8 +181,10 @@ def test_pattern_matches_live_version_banner(status_line: str) -> None:
     """
     if not QUIRK_BIN.exists():
         pytest.skip(
-            "quirk entry point not present at .venv/bin/quirk -- environment "
-            "has no built venv. Registered per skip-registry conventions."
+            "quirk entry point not present at .venv/bin/quirk -- this "
+            "environment has no built venv, so there is no live CLI binary "
+            "to invoke and the version-banner assertion has nothing to run "
+            "against. A skip here is not a pass."
         )
     pattern = _extract_pattern_literal(status_line)
     result = run_fork_safe([str(QUIRK_BIN), "--version"], timeout=10)

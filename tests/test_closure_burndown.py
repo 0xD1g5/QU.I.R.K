@@ -292,8 +292,6 @@ def _has_parallel_alg_deadline_dict(source: str) -> bool:
 
 def test_burndown_uses_classify_algorithm_only(tmp_path):
     burndown_path = Path(__file__).resolve().parent.parent / "quirk" / "intelligence" / "burndown.py"
-    if not burndown_path.exists():
-        pytest.skip("burndown.py not yet created (Task 1 is RED-only)")
     source = burndown_path.read_text()
     assert _uses_only_deadline_for_algorithm(source), (
         "burndown.py calls classify_algorithm() directly — it must dispatch "
