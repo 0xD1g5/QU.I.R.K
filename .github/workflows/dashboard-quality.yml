@@ -9,6 +9,7 @@ on:
       - '.github/workflows/dashboard-quality.yml'
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   a11y:
@@ -59,6 +60,62 @@ jobs:
         run: npm run a11y:check:loading
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+  a11y-regenerate-baselines:
+    name: Regenerate a11y Baselines (Linux, manual)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: src/dashboard
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dashboard
+        run: npm run build
+
+      - name: Install Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce  # v1.7.3
+        with:
+          chrome-version: stable  # TEMPORARY - pinned to a concrete version by plan 185-02 (D-07); see 185-01 Task 2
+
+      - name: Record resolved Chrome version
+        run: '"${{ steps.setup-chrome.outputs.chrome-path }}" --version'
+
+      - name: Regenerate baselines (default fixture)
+        run: npm run a11y:baseline
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+      - name: Regenerate baselines (empty fixture)
+        run: npm run a11y:baseline:empty
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+      - name: Regenerate baselines (loading fixture)
+        run: npm run a11y:baseline:loading
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+      - name: Upload regenerated baselines
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: a11y-baselines-${{ github.run_id }}
+          path: |
+            src/dashboard/tests/a11y/baseline-*.json
+            src/dashboard/tests/a11y/ACCEPTED-VIOLATIONS.md
+          if-no-files-found: error
 
   e2e-smoke:
     name: E2E Smoke (real server + committed bundle)
