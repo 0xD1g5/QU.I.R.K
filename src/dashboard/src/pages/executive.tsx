@@ -339,6 +339,15 @@ export function ExecutivePage() {
                   : confidence.confidence_rating === "VERY_LOW" ? "Very Low Confidence"
                   : "No Data"}
               </Badge>
+              {/* SCORE-04 / D-09/D-10 (184.4): band-cap reason annotation on the
+                  readiness headline — the exact surface BACK-89 was filed against.
+                  score.rating_cap_reason is None/undefined when the band was NOT
+                  capped, so this renders nothing in the common case. */}
+              {score.rating_cap_reason && (
+                <span className="rating-cap-reason mt-1 text-xs text-muted-foreground text-center max-w-[180px]">
+                  {score.rating_cap_reason}
+                </span>
+              )}
             </div>
             <ScoreGauge score={score.subscores.hygiene} label="Hygiene" size={120} maxValue={25} />
             <ScoreGauge score={score.subscores.modern_tls} label="Modern TLS" size={120} maxValue={25} />

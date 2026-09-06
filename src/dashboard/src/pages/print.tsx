@@ -410,6 +410,11 @@ export function PrintPage() {
             <div className="score-item">
               <div className="score-number">{score.score}</div>
               <div className="score-label">Overall Readiness ({score.rating})</div>
+              {/* SCORE-04 / D-09/D-10 (184.4): band-cap reason, shown when the
+                  band was capped by an open CRITICAL finding (BAND severity floor). */}
+              {score.rating_cap_reason && (
+                <div className="score-cap-reason">{score.rating_cap_reason}</div>
+              )}
             </div>
             <div className="score-item">
               <div className="score-number">{score.subscores.hygiene}</div>
