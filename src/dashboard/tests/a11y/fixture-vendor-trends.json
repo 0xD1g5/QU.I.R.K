@@ -1,0 +1,13 @@
+{
+  "events": [
+    {
+      "vendor": "Cisco",
+      "event_type": "pqc_status_change",
+      "old_value": "unsupported",
+      "new_value": "partial",
+      "detected_at": "2026-04-28T10:00:00Z",
+      "confirmed_at": "2026-04-29T10:00:00Z"
+    }
+  ],
+  "truncated": false
+}

@@ -17,8 +17,16 @@
       "data_in_motion": 70
     },
     "drivers": [
-      { "id": "weak-cipher", "impact": -10, "description": "Weak cipher suites detected on 2 endpoints" },
-      { "id": "no-ear", "impact": -8, "description": "Database encryption at rest not confirmed" }
+      {
+        "id": "weak-cipher",
+        "impact": -10,
+        "description": "Weak cipher suites detected on 2 endpoints"
+      },
+      {
+        "id": "no-ear",
+        "impact": -8,
+        "description": "Database encryption at rest not confirmed"
+      }
     ]
   },
   "confidence": {
@@ -96,28 +104,38 @@
       "type": "signature",
       "key_size": 2048,
       "quantum_safety": "At Risk",
-      "source_systems": ["chaos-lab.local:443", "chaos-lab.local:8443"]
+      "source_systems": [
+        "chaos-lab.local:443",
+        "chaos-lab.local:8443"
+      ]
     },
     {
       "algorithm": "AES-256-GCM",
       "type": "cipher",
       "key_size": 256,
       "quantum_safety": "Safe",
-      "source_systems": ["chaos-lab.local:443"]
+      "source_systems": [
+        "chaos-lab.local:443"
+      ]
     },
     {
       "algorithm": "SHA-256",
       "type": "hash",
       "key_size": null,
       "quantum_safety": "Safe",
-      "source_systems": ["chaos-lab.local:443", "chaos-lab.local:22"]
+      "source_systems": [
+        "chaos-lab.local:443",
+        "chaos-lab.local:22"
+      ]
     },
     {
       "algorithm": "RC4",
       "type": "cipher",
       "key_size": 128,
       "quantum_safety": "Vulnerable",
-      "source_systems": ["chaos-lab.local:8443"]
+      "source_systems": [
+        "chaos-lab.local:8443"
+      ]
     }
   ],
   "roadmap": {
@@ -152,9 +170,21 @@
       }
     ],
     "edges": [
-      { "source": "disable-tls10", "target": "remove-rc4", "reason": "Both are TLS hygiene fixes; address together" },
-      { "source": "remove-rc4", "target": "upgrade-ssh-keys", "reason": "Complete cipher hygiene before key upgrades" },
-      { "source": "upgrade-ssh-keys", "target": "pqc-migration", "reason": "Foundation for post-quantum readiness" }
+      {
+        "source": "disable-tls10",
+        "target": "remove-rc4",
+        "reason": "Both are TLS hygiene fixes; address together"
+      },
+      {
+        "source": "remove-rc4",
+        "target": "upgrade-ssh-keys",
+        "reason": "Complete cipher hygiene before key upgrades"
+      },
+      {
+        "source": "upgrade-ssh-keys",
+        "target": "pqc-migration",
+        "reason": "Foundation for post-quantum readiness"
+      }
     ]
   },
   "identity_findings": [
@@ -247,6 +277,44 @@
       "kms_key_id": null,
       "public_access": false,
       "versioning": true
+    }
+  ],
+  "hardware_findings": [
+    {
+      "host": "chaos-lab.local",
+      "port": 22,
+      "severity": "HIGH",
+      "title": "Legacy SSH Host Key Algorithm",
+      "description": "Device advertises ssh-rsa host key algorithm without ssh-ed25519 support.",
+      "remediation": "Upgrade firmware to a release supporting Ed25519 host keys.",
+      "quantum_risk": "At Risk",
+      "vendor": "Cisco",
+      "model": "Catalyst 3850",
+      "pqc_status": "unsupported",
+      "remediation_tier": "Tier 1",
+      "confidence": "high",
+      "fingerprint_method": "ssh_banner",
+      "eol_date": "2027-01-31",
+      "snmp_version": "v3 auth+priv",
+      "bridge_status": null
+    },
+    {
+      "host": "10.0.0.5",
+      "port": 443,
+      "severity": "MEDIUM",
+      "title": "Vendor Management Interface PQC Status Unclear",
+      "description": "HTTP management console does not disclose PQC roadmap.",
+      "remediation": "Contact vendor for PQC support timeline.",
+      "quantum_risk": "Unknown",
+      "vendor": "Siemens",
+      "model": "SCALANCE X208",
+      "pqc_status": "partial",
+      "remediation_tier": "Tier 2",
+      "confidence": "medium",
+      "fingerprint_method": "http_mgmt",
+      "eol_date": null,
+      "snmp_version": "v2c",
+      "bridge_status": "upstream_mitigated"
     }
   ]
 }

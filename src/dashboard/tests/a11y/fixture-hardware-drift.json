@@ -1,0 +1,33 @@
+{
+  "has_prior_scan": true,
+  "latest_scan_at": "2026-04-30T12:00:00Z",
+  "latest_events": [
+    {
+      "host": "chaos-lab.local",
+      "port": 22,
+      "event_type": "tier_crossing",
+      "old_value": "Tier 2",
+      "new_value": "Tier 1",
+      "direction": "worsened",
+      "detected_at": "2026-04-30T12:00:00Z",
+      "vendor": "Cisco",
+      "model": "Catalyst 3850",
+      "is_partial_scan": false
+    }
+  ],
+  "historical_events": [
+    {
+      "host": "10.0.0.5",
+      "port": 443,
+      "event_type": "upstream_mitigated_change",
+      "old_value": "none",
+      "new_value": "upstream_mitigated",
+      "direction": "improved",
+      "detected_at": "2026-04-23T09:00:00Z",
+      "vendor": "Siemens",
+      "model": "SCALANCE X208",
+      "is_partial_scan": true
+    }
+  ],
+  "historical_truncated": false
+}

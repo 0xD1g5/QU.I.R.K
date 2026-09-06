@@ -1,0 +1,79 @@
+{
+  "scan_a": {
+    "scan_id": "2026-04-23T09:00:00.000000",
+    "scanned_at": "2026-04-23T09:00:00Z",
+    "score": 55,
+    "subscores": {
+      "hygiene": 50,
+      "modern_tls": 65,
+      "identity_trust": 55,
+      "agility_signals": 45,
+      "data_at_rest": 60,
+      "data_in_motion": 65
+    }
+  },
+  "scan_b": {
+    "scan_id": "2026-04-30T12:00:00.000000",
+    "scanned_at": "2026-04-30T12:00:00Z",
+    "score": 62,
+    "subscores": {
+      "hygiene": 55,
+      "modern_tls": 70,
+      "identity_trust": 60,
+      "agility_signals": 50,
+      "data_at_rest": 65,
+      "data_in_motion": 70
+    }
+  },
+  "score_delta": 7,
+  "subscore_deltas": {
+    "hygiene": 5,
+    "modern_tls": 5,
+    "identity_trust": 5,
+    "agility_signals": 5,
+    "data_at_rest": 5,
+    "data_in_motion": 5
+  },
+  "added_findings": [
+    {
+      "host": "chaos-lab.local",
+      "protocol": "SMTP",
+      "severity": "HIGH",
+      "description": "SMTP server does not offer or enforce STARTTLS upgrade."
+    }
+  ],
+  "removed_findings": [
+    {
+      "host": "chaos-lab.local",
+      "protocol": "HTTP",
+      "severity": "HIGH",
+      "description": "Deprecated cipher suite removed after remediation."
+    }
+  ],
+  "endpoints_only_in_a": [
+    "chaos-lab.local:8080"
+  ],
+  "endpoints_only_in_b": [
+    "chaos-lab.local:9443"
+  ],
+  "changed_endpoints": [
+    {
+      "host": "chaos-lab.local:443",
+      "reason": "TLS version upgraded from 1.0 to 1.2"
+    }
+  ],
+  "hardware_drift": [
+    {
+      "host": "chaos-lab.local",
+      "port": 22,
+      "event_type": "tier_crossing",
+      "old_value": "Tier 2",
+      "new_value": "Tier 1",
+      "direction": "worsened",
+      "detected_at": "2026-04-30T12:00:00Z",
+      "vendor": "Cisco",
+      "model": "Catalyst 3850",
+      "is_partial_scan": false
+    }
+  ]
+}
