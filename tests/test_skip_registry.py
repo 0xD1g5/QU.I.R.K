@@ -70,6 +70,103 @@ def _is_pytest_mark_decorator(node: ast.AST, mark_name: str) -> bool:
     return False
 
 
+def _enclosing_qualname(tree: ast.Module, target: ast.AST) -> str:
+    """Return the dotted ``ClassDef``/``FunctionDef``/``AsyncFunctionDef``
+    ancestor chain enclosing ``target`` (e.g. ``"TestFoo.test_bar"``), or the
+    literal ``"<module>"`` when the chain is empty.
+
+    Built via a parent-pointer walk over ``tree``, not a backward line-text
+    scan -- Python's AST already gives exact nesting, unlike the text-scan
+    technique tests/test_gsd_state_patch.py needs for un-parsed JS. A pure
+    function of ``(tree, target)`` with no module-global state, so it can be
+    called directly against ``tmp_path`` fixtures in self-tests.
+
+    A decorator node's chain includes the ``FunctionDef``/``ClassDef`` it
+    decorates: the decorator lives in that node's ``decorator_list``, so the
+    parent-pointer walk finds it there -- not ``"<module>"``, which would
+    otherwise collide with genuine module-scope skips (Phase 184 CONTEXT.md
+    D-01, T-184-04).
+    """
+    parents: dict[int, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[id(child)] = parent
+
+    chain: list[str] = []
+    node: ast.AST = target
+    while id(node) in parents:
+        node = parents[id(node)]
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            chain.append(node.name)
+    return ".".join(reversed(chain)) if chain else "<module>"
+
+
+def _find_target_node(tree: ast.Module) -> ast.AST:
+    """Locate the single skip-related node in a small test fixture: either a
+    ``pytest.skip``/``pytest.importorskip`` Call, or the first
+    ``@pytest.mark.{skip,skipif,xfail}`` decorator. Test-only helper for the
+    parametrized cases below -- reuses the same detector functions the real
+    gate walk uses, so the fixture and the gate agree on what a "skip
+    construct" is.
+    """
+    for node in ast.walk(tree):
+        if _is_pytest_skip_call(node):
+            return node
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            for deco in node.decorator_list:
+                for mark_name in ("skipif", "skip", "xfail"):
+                    if _is_pytest_mark_decorator(deco, mark_name):
+                        return deco
+    raise AssertionError("no skip-related node found in fixture source")
+
+
+@pytest.mark.parametrize(
+    "source,expected",
+    [
+        pytest.param(
+            "import pytest\n\n\ndef test_bar():\n    pytest.skip('x')\n",
+            "test_bar",
+            id="module-scope-function",
+        ),
+        pytest.param(
+            "import pytest\n\n\nclass TestFoo:\n    def test_bar(self):\n        pytest.skip('x')\n",
+            "TestFoo.test_bar",
+            id="class-scoped-method",
+        ),
+        pytest.param(
+            "import pytest\n\n\ndef test_bar():\n    def inner():\n        pytest.skip('x')\n    inner()\n",
+            "test_bar.inner",
+            id="nested-function",
+        ),
+        pytest.param(
+            "import pytest\n\npytest.importorskip('foo')\n",
+            "<module>",
+            id="module-scope-no-enclosing-def",
+        ),
+        pytest.param(
+            "import pytest\n\n\nasync def test_baz():\n    pytest.skip('x')\n",
+            "test_baz",
+            id="async-function",
+        ),
+        pytest.param(
+            "import pytest\n\n\n@pytest.mark.skip(reason='x')\ndef test_bar():\n    pass\n",
+            "test_bar",
+            id="decorator-keys-to-decorated-function",
+        ),
+    ],
+)
+def test_enclosing_qualname_derives_the_ancestor_chain(source: str, expected: str) -> None:
+    """Phase 184 CONTEXT.md D-01: the registry key is a structural qualname
+    chain derived from the AST, not a line number. Locks
+    ``_enclosing_qualname()``'s behavior across module scope, class scope,
+    nested functions, async defs, and the decorator case (T-184-04: a
+    decorator must key to the construct it decorates, not to ``<module>``).
+    """
+    tree = ast.parse(source)
+    target = _find_target_node(tree)
+    assert _enclosing_qualname(tree, target) == expected
+
+
 @pytest.mark.skip_registry_gate
 def test_no_unregistered_skips() -> None:
     """Every pytest skip-style marker in tests/ must be in ALLOWED_SKIPS.
