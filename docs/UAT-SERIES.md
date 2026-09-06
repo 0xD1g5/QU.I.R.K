@@ -23303,7 +23303,7 @@ synthetic evidence fixture — `184.4-VALIDATION.md`'s Manual-Only Verifications
 exact check.
 
 **Steps:** Start the chaos lab TLS profile (`./lab.sh up` with the TLS profile enabled), run
-`quirk scan 127.0.0.1` with the shipped port defaults, confirm the score/band/artifact set as
+`quirk --config config-lab-core.yaml` (the chaos lab's own config, targeting `127.0.0.1`) with the shipped port defaults, confirm the score/band/artifact set as
 described above.
 
 **Pass Criteria:** score approx. 89/100, band `FAIR`, all five artifact types generate with a
