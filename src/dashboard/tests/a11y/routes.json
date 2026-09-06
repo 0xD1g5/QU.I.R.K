@@ -9,5 +9,7 @@
   { "slug": "roadmap",       "path": "/roadmap" },
   { "slug": "trends",        "path": "/trends" },
   { "slug": "qramm",            "path": "/qramm" },
-  { "slug": "qramm-assessment", "path": "/qramm/assessment" }
+  { "slug": "qramm-assessment", "path": "/qramm/assessment" },
+  { "slug": "hardware", "path": "/hardware", "contentMarker": "table tbody tr" },
+  { "slug": "compare",  "path": "/compare?a=1&b=2", "contentMarker": ".font-data" }
 ]

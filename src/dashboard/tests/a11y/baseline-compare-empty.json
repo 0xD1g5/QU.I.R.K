@@ -1,0 +1,20 @@
+{
+  "route": "compare",
+  "generated": "2026-09-06T23:42:38.350Z",
+  "entries": [
+    {
+      "rule": "color-contrast",
+      "count": 2,
+      "impact": "serious",
+      "wcag": [
+        "1.4.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
+      "justification": "D-11 — Phase 156 HWLC-11 advisory firewall (justified in the ledger, NOT fixed). This route renders hardware-lifecycle/vendor risk badges using raw hsl() Tailwind arbitrary-value literals (bg-[hsl(24_95%_53%)] and/or bg-[hsl(142_71%_45%)]) that deliberately bypass the app's semantic score-color design tokens. Per Phase 156 D-07, these literals implement a mechanical firewall between the advisory-only hardware lifecycle / vendor PQC trend section and the app's scored-finding visual language, so an advisory badge can never be visually confused with a real CBOM/QRAMM scored finding (see 156-UI-SPEC.md §Color). That firewall is enforced by two guard tests that pin these exact literals in a FORBIDDEN_PALETTE array and fail if either is retuned toward the app's contrast-compliant palette: src/dashboard/src/components/__tests__/lifecycle-advisory-guard.test.ts (hsl(24 95% 53%) at line 16, hsl(142 71% 45%) at line 18) and src/dashboard/src/components/__tests__/vendor-trend-advisory-guard.test.ts (hsl(24 95% 53%) at line 18, hsl(142 71% 45%) at line 20). Tokenizing or adjusting either literal to satisfy color-contrast would deliberately break both currently-passing guard tests. Per D-11 this violation is accepted here and tracked in this ledger, not fixed; the raw hsl() literals are left unchanged — confirmed by an empty git diff on both component files.",
+      "samples": [
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(24_95%_53%)] text-white font-semibold text-xs\">HIGH</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(24_95%_53%)] text-white font-semibold text-xs\">HIGH</div>"
+      ]
+    }
+  ]
+}

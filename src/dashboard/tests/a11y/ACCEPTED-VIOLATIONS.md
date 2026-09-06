@@ -8,13 +8,48 @@ D-07: impact and WCAG criterion are properties of the *rule*, not the node, so e
 recorded once per (route, rule) pair below. Each row carries a `count`, which is what makes
 the grand total below mechanically reconstructible from this ledger alone.
 
-Totals: 1 route(s), 1 (route, rule) entries, 2 accepted violation node(s).
+Totals: 3 route(s), 4 (route, rule) entries, 8 accepted violation node(s).
+
+## compare
+
+| Rule | Count | Impact | WCAG | Justification |
+|------|-------|--------|------|---------------|
+| color-contrast | 2 | serious | 1.4.3 | D-11 — Phase 156 HWLC-11 advisory firewall (justified in the ledger, NOT fixed). This route renders hardware-lifecycle/vendor risk badges using raw hsl() Tailwind arbitrary-value literals (bg-[hsl(24_95%_53%)] and/or bg-[hsl(142_71%_45%)]) that deliberately bypass the app's semantic score-color design tokens. Per Phase 156 D-07, these literals implement a mechanical firewall between the advisory-only hardware lifecycle / vendor PQC trend section and the app's scored-finding visual language, so an advisory badge can never be visually confused with a real CBOM/QRAMM scored finding (see 156-UI-SPEC.md §Color). That firewall is enforced by two guard tests that pin these exact literals in a FORBIDDEN_PALETTE array and fail if either is retuned toward the app's contrast-compliant palette: src/dashboard/src/components/__tests__/lifecycle-advisory-guard.test.ts (hsl(24 95% 53%) at line 16, hsl(142 71% 45%) at line 18) and src/dashboard/src/components/__tests__/vendor-trend-advisory-guard.test.ts (hsl(24 95% 53%) at line 18, hsl(142 71% 45%) at line 20). Tokenizing or adjusting either literal to satisfy color-contrast would deliberately break both currently-passing guard tests. Per D-11 this violation is accepted here and tracked in this ledger, not fixed; the raw hsl() literals are left unchanged — confirmed by an empty git diff on both component files. |
+
+<details><summary>color-contrast evidence samples (2)</summary>
+
+- `<div class="inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(24_95%_53%)] text-white font-semibold text-xs">HIGH</div>`
+- `<div class="inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(24_95%_53%)] text-white font-semibold text-xs">HIGH</div>`
+
+</details>
 
 ## data-at-rest
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
 | scrollable-region-focusable | 2 | serious | 2.1.1, 2.1.3 | Category (b) — design/scope decision beyond this ops milestone. The shadcn Table wrapper (src/dashboard/src/components/ui/table.tsx:9, `<div class="relative w-full overflow-auto">`) that renders data-at-rest's findings table has no tabIndex/role on the scrolling container, so a keyboard user cannot focus and scroll it independently of page scroll. Fixing this correctly means adding focus + ARIA landmark handling to a component shared by every table across the app (findings, identity, certificates, roadmap, etc.), which is a focus-order change with app-wide blast radius. 165-CONTEXT.md's phase boundary explicitly excludes 'keyboard-navigation or focus-order audits' from this milestone's scope. Blocker: requires a dedicated keyboard-accessibility pass across components/ui/table.tsx's consumers, not a single-route token/aria edit — tracked as follow-up work, not accepted as permanent debt. Count-pinning addendum (Phase 177-07, 2026-09-02): `src/dashboard/src/pages/data-at-rest.tsx` renders four separate `<Table>` instances (lines 69, 117, 177, 215), each wrapped by the same shadcn `overflow-auto` container this justification describes. `scrollable-region-focusable` only fires on a container that is *actually overflowing* at render time, which is a function of viewport, font metrics, and rendered row widths — not of markup — so the count on this route is inherently render-dependent, not a fixed structural constant. The 2026-08-27 baseline froze `count: 1` from one particular CI render; the 2026-09-02 GitHub-hosted `Dashboard Quality` run (first-ever execution of this a11y suite against this `main` history — v5.16/v5.17 were developed but never pushed until this phase) observed `count: 2` with zero intervening changes to this page, `components/ui/table.tsx`, or any `tests/a11y/` fixture since the baseline was authored (`git log --since=2026-08-27` on all three is empty). This is a baseline-fragility finding, not a regression — tracked as a follow-up to replace the exact-count pin with a tolerance/range, or to fix `table.tsx` directly so the rule zeroes app-wide. |
+
+<details><summary>scrollable-region-focusable evidence samples (2)</summary>
+
+- `<div class="relative w-full overflow-auto">`
+- `<div class="relative w-full overflow-auto">`
+
+</details>
+
+## hardware
+
+| Rule | Count | Impact | WCAG | Justification |
+|------|-------|--------|------|---------------|
+| color-contrast | 3 | serious | 1.4.3 | D-11 — Phase 156 HWLC-11 advisory firewall (justified in the ledger, NOT fixed). This route renders hardware-lifecycle/vendor risk badges using raw hsl() Tailwind arbitrary-value literals (bg-[hsl(24_95%_53%)] and/or bg-[hsl(142_71%_45%)]) that deliberately bypass the app's semantic score-color design tokens. Per Phase 156 D-07, these literals implement a mechanical firewall between the advisory-only hardware lifecycle / vendor PQC trend section and the app's scored-finding visual language, so an advisory badge can never be visually confused with a real CBOM/QRAMM scored finding (see 156-UI-SPEC.md §Color). That firewall is enforced by two guard tests that pin these exact literals in a FORBIDDEN_PALETTE array and fail if either is retuned toward the app's contrast-compliant palette: src/dashboard/src/components/__tests__/lifecycle-advisory-guard.test.ts (hsl(24 95% 53%) at line 16, hsl(142 71% 45%) at line 18) and src/dashboard/src/components/__tests__/vendor-trend-advisory-guard.test.ts (hsl(24 95% 53%) at line 18, hsl(142 71% 45%) at line 20). Tokenizing or adjusting either literal to satisfy color-contrast would deliberately break both currently-passing guard tests. Per D-11 this violation is accepted here and tracked in this ledger, not fixed; the raw hsl() literals are left unchanged — confirmed by an empty git diff on both component files. |
+
+<details><summary>color-contrast evidence samples (3)</summary>
+
+- `<div class="inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(142_71%_45%)] text-white font-semibold text-xs">high</div>`
+- `<div class="inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(142_71%_45%)] text-white font-semibold text-xs">v3 auth+priv</div>`
+- `<div class="inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(24_95%_53%)] text-white font-semibold text-xs">Tier 2</div>`
+
+</details>
+| scrollable-region-focusable | 1 | serious | 2.1.1, 2.1.3 | Category (b) — design/scope decision beyond this ops milestone; this is /hardware's own instance of the same pre-existing, already-accepted app-wide gap described in the data-at-rest baseline (Phase 165/177), not a new defect. The /hardware route renders its table(s) via the shared shadcn Table wrapper (src/dashboard/src/components/ui/table.tsx:9, `<div class="relative w-full overflow-auto">`), which has no tabIndex/role on the scrolling container, so a keyboard user cannot focus and scroll it independently of page scroll. Fixing this correctly requires the same app-wide focus-order change already described on data-at-rest's entry — adding focus + ARIA landmark handling to a component shared by every table consumer (findings, identity, certificates, roadmap, data-at-rest, and now hardware) — which 165-CONTEXT.md's phase boundary explicitly excludes ('keyboard-navigation or focus-order audits') from this milestone's scope. Tracked as the same follow-up work as the data-at-rest entry, not accepted as separate permanent debt. |
 
 <details><summary>scrollable-region-focusable evidence samples (1)</summary>
 
