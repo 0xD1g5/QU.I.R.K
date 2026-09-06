@@ -717,6 +717,38 @@ EO 14412 deadlines key establishment (2030-12-31) and signatures (2031-12-31) se
 
 ## Current State
 
+**v5.19 Phase 184.4 Rating Band Severity Floor — complete 2026-09-06 (SCORE-04, SCORE-05).** A scan
+scoring >= 55 with one open CRITICAL finding used to halt report generation entirely, emitting zero
+artifacts — a complete, successful scan that yielded nothing handable to a client. The readiness
+band now carries a CRITICAL severity floor: any CRITICAL >= 1 caps the band to FAIR while leaving
+the numeric score byte-identical, and a structured `rating_cap_reason` explains the cap on all six
+render surfaces (HTML/PDF, CLI, DOCX, scorecard, intelligence JSON, React dashboard).
+
+**The phase's real lesson is about duplicated producers, not about scoring.** The defect survived
+~3.5 months as BACK-89 partly because TWO functions independently derived a band — `_rating()` in
+scoring and `_score_band()` in the HTML renderer — while a third function, `_check_congruence()`,
+asserted what bands were legal. Fixing the arithmetic in one place would have left the others free
+to disagree again. So the fix collapsed the producers to one (`_score_band()` deleted outright,
+thresholds moved into a stdlib-only `quirk/severity_bands.py` that both `intelligence` and
+`reports` read), and then made the collapse durable with an AST gate that regenerates the set of
+band-producing functions from source at every test run. That gate immediately found a fourth,
+previously-undocumented scale nobody had listed (`quirk/notify/payload.py::_score_to_band()`) —
+which is the argument for run-time derivation over a written list, made concrete.
+
+**Verified live, not only in tests.** The operator re-ran the original chaos-lab reproduction on
+2026-09-06: 86/100 — still above the EXCELLENT threshold of 85, so the floor demonstrably fired on
+a real scan and every report artifact generated. Two things were found by that human pass that no
+test caught: the `config-lab-core.yaml` example in `docs/chaos-lab.md` cannot load at all (missing
+required `scan.concurrency` / `scan.ports_tls`, stale since those fields lost their defaults), and
+the Severity Breakdown chart tooltip renders its series text dark-on-dark. Both are recorded as
+durable backlog entries (999.93, 999.94) rather than prose, with the tooltip routed to Phase 185's
+a11y work; neither was in scope here.
+
+**Standing note:** PROJECT.md's `## Current Milestone` header still reads v5.18 while STATE.md
+tracks v5.19 — pre-existing drift for a milestone-boundary pass to reconcile, not a phase-close
+edit. Phases 184.2 and 184.3 completed between 184.1 and this entry without a PROJECT.md pass;
+their detail lives in their own SUMMARY/VERIFICATION artifacts.
+
 **v5.19 Phase 184.1 Coverage Metric Correctness — complete 2026-09-04 (SCORE-01).** `coverage_ratio` now counts every crypto-bearing protocol QUIRK successfully assessed, not the TLS+SSH share of endpoints, and the change is versioned via `confidence_formula_version` so a client can be told why a confidence number moved.
 
 **The phase is most useful as a case study in where a metric change actually leaks.** It failed its first verification on SC-3: `compute_confidence()` returned the version marker correctly, but three independent allowlists — `reports/writer.py`'s compat dict, `ConfidenceData`'s Pydantic schema, and `executive.py`'s markdown — each dropped it before any client saw it. Every test passed throughout, because they asserted the function's return value rather than the emitted artifact. That also made `docs/report-interpretation.md`'s documented absence-means-pre-184.1 rule false against every report QUIRK shipped. Gap-closure plans 06/07 wired all three surfaces and moved the assertions onto written JSON, generated markdown, and the HTTP response body.
@@ -1076,7 +1108,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-04 — v5.19 Phase 184.1 (Coverage Metric Correctness) completed via `/gsd-execute-phase`*
+*Last updated: 2026-09-06 — v5.19 Phase 184.4 (Rating Band Severity Floor) completed via `/gsd-execute-phase`, human UAT confirmed via `/gsd-verify-work`*
 
 ## Evolution
 
