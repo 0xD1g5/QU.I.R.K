@@ -1377,6 +1377,8 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         # "balanced" inside compute_readiness_score(). `calibration` is None for
         # ScanJob-less (CLI-launched) sessions, which is the intended balanced fallback.
         score = 0
+        rating = ""
+        rating_cap_reason = None
         if eps:
             # D-07 (184.4): derive findings (including identity/IDENT-02/IDENT-04)
             # the same way the correct sibling at :1571-1593 does, so this
@@ -1403,6 +1405,8 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             )
             score_dict = compute_readiness_score(evidence, profile=calibration)
             score = int(score_dict["score"])
+            rating = score_dict.get("rating", "")
+            rating_cap_reason = score_dict.get("rating_cap_reason")
 
         # Finding counts (D-03). Phase 178 IDENT-02: _count_by_bucket's signature
         # changed from (keys) to (keys, sev_map) since severity is no longer
@@ -1437,6 +1441,8 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
                     medium=counts.get("medium", 0),
                     low=counts.get("low", 0),
                 ),
+                rating=rating,
+                rating_cap_reason=rating_cap_reason,
             )
         )
     return sessions
@@ -1888,22 +1894,30 @@ def compare_scans(
         hardware_drift = []
 
     return CompareResponse(
-        scan_a=CompareScanSummary(scan_id=a, scanned_at=ts_a, score=score_a, subscores=SubScores(
-            hygiene=int(sub_a.get("hygiene", 0)),
-            modern_tls=int(sub_a.get("modern_tls", 0)),
-            identity_trust=int(sub_a.get("identity_trust", 0)),
-            agility_signals=int(sub_a.get("agility_signals", 0)),
-            data_at_rest=int(sub_a.get("data_at_rest", 0)),
-            data_in_motion=int(sub_a.get("data_in_motion", 0)),
-        )),
-        scan_b=CompareScanSummary(scan_id=b, scanned_at=ts_b, score=score_b, subscores=SubScores(
-            hygiene=int(sub_b.get("hygiene", 0)),
-            modern_tls=int(sub_b.get("modern_tls", 0)),
-            identity_trust=int(sub_b.get("identity_trust", 0)),
-            agility_signals=int(sub_b.get("agility_signals", 0)),
-            data_at_rest=int(sub_b.get("data_at_rest", 0)),
-            data_in_motion=int(sub_b.get("data_in_motion", 0)),
-        )),
+        scan_a=CompareScanSummary(
+            scan_id=a, scanned_at=ts_a, score=score_a, subscores=SubScores(
+                hygiene=int(sub_a.get("hygiene", 0)),
+                modern_tls=int(sub_a.get("modern_tls", 0)),
+                identity_trust=int(sub_a.get("identity_trust", 0)),
+                agility_signals=int(sub_a.get("agility_signals", 0)),
+                data_at_rest=int(sub_a.get("data_at_rest", 0)),
+                data_in_motion=int(sub_a.get("data_in_motion", 0)),
+            ),
+            rating=sd_a.get("rating", ""),
+            rating_cap_reason=sd_a.get("rating_cap_reason"),
+        ),
+        scan_b=CompareScanSummary(
+            scan_id=b, scanned_at=ts_b, score=score_b, subscores=SubScores(
+                hygiene=int(sub_b.get("hygiene", 0)),
+                modern_tls=int(sub_b.get("modern_tls", 0)),
+                identity_trust=int(sub_b.get("identity_trust", 0)),
+                agility_signals=int(sub_b.get("agility_signals", 0)),
+                data_at_rest=int(sub_b.get("data_at_rest", 0)),
+                data_in_motion=int(sub_b.get("data_in_motion", 0)),
+            ),
+            rating=sd_b.get("rating", ""),
+            rating_cap_reason=sd_b.get("rating_cap_reason"),
+        ),
         score_delta=score_a - score_b,
         subscore_deltas=subscore_deltas,
         added_findings=added_findings,

@@ -971,3 +971,164 @@ def test_scanned_at_offset_reaches_get_scans_wire():
     # must be byte-identical to what routes/scan.py:1315 actually produces.
     expected_scan_id = seeded_ts.replace(microsecond=0).isoformat(sep=" ")
     assert body[0]["scan_id"] == expected_scan_id
+
+
+# ---------------------------------------------------------------------------
+# Phase 184.4-07 Task 3: route-level coverage proving the dashboard band
+# matches the report band for the three sites fixed in Task 1.
+#
+# Reuses the same reproduction shape as tests/test_score_severity_floor_
+# regression.py's D-13 fixture (score >= 85 with one open CRITICAL), but
+# expressed as real CryptoEndpoint DB rows (rather than injected findings)
+# so it exercises _derive_findings()/_derive_identity_findings() the same
+# way list_scans()/compare_scans() do post-fix. Plain dicts/ORM rows only —
+# no MagicMock(spec=...) anywhere in this file.
+# ---------------------------------------------------------------------------
+
+def _floor_clean_endpoint_kwargs(i: int, now, scan_run_id: str) -> dict:
+    """A single clean TLS endpoint: fresh ECDSA cert, TLS 1.3, no weak ciphers."""
+    from datetime import timedelta
+
+    return dict(
+        host=f"clean{i}.floor.example.com",
+        port=443,
+        protocol="TLS",
+        scan_error=None,
+        tls_version="TLSv1.3",
+        cipher_suite="TLS_AES_256_GCM_SHA384",
+        tls_weak_ciphers_present=False,
+        tls_legacy_suites_present=False,
+        cert_pubkey_alg="ECDSA",
+        cert_pubkey_size=256,
+        cert_not_after=now + timedelta(days=200),
+        cert_subject="CN=clean",
+        cert_issuer="CN=CA",
+        tls_supported_versions="TLSv1.3",
+        scan_run_id=scan_run_id,
+    )
+
+
+def _floor_critical_endpoint_kwargs(now, scan_run_id: str) -> dict:
+    """One endpoint with an EXPIRED certificate — _derive_findings() (scan.py)
+    synthesizes a CRITICAL 'Certificate expired' finding from this shape,
+    matching the D-13 reproduction (Phase 184.2 UAT-184.2-05) without
+    inventing a new one."""
+    from datetime import timedelta
+
+    kwargs = _floor_clean_endpoint_kwargs(999, now, scan_run_id)
+    kwargs["host"] = "critical.floor.example.com"
+    kwargs["cert_not_after"] = now - timedelta(days=5)
+    return kwargs
+
+
+def test_list_scans_high_score_with_one_critical_returns_fair_and_cap_reason():
+    """184.4-07 Task 3: /api/scans (the list_scans site fixed in Task 1) must
+    return rating='FAIR' (not 'EXCELLENT') and a non-null rating_cap_reason
+    for a session scoring >= 85 with one open CRITICAL finding -- proving the
+    dashboard history band agrees with what a report for the same scan would
+    show. Pre-fix (findings-less build_evidence_summary(eps)) this would
+    have scored severity-blind and stayed EXCELLENT."""
+    from datetime import datetime, timezone
+
+    client, TestingSession = _drift_client_and_session()
+    now = datetime.now(timezone.utc)
+    run_id = now.isoformat()
+    for i in range(5):
+        _seed_crypto_endpoint(
+            TestingSession, now, **_floor_clean_endpoint_kwargs(i, now, run_id)
+        )
+    _seed_crypto_endpoint(
+        TestingSession, now, **_floor_critical_endpoint_kwargs(now, run_id)
+    )
+
+    resp = client.get("/api/scans")
+    assert resp.status_code == 200
+    items = {item["scan_id"]: item for item in resp.json()}
+    assert run_id in items
+    item = items[run_id]
+
+    assert item["score"] >= 85, (
+        f"Fixture must reproduce the documented score >= 85 EXCELLENT-before-cap "
+        f"precondition; got {item['score']!r}."
+    )
+    assert item["rating"] == "FAIR", (
+        f"/api/scans rating {item['rating']!r} must be FAIR (capped), not the "
+        "raw EXCELLENT a severity-blind evidence summary would have produced."
+    )
+    assert item.get("rating_cap_reason"), (
+        "/api/scans must carry a non-null rating_cap_reason when the band is capped."
+    )
+
+
+def test_list_scans_no_critical_returns_uncapped_null_reason():
+    """184.4-07 Task 3: an uncapped session's rating_cap_reason is null/absent."""
+    from datetime import datetime, timezone
+
+    client, TestingSession = _drift_client_and_session()
+    now = datetime.now(timezone.utc)
+    run_id = now.isoformat()
+    for i in range(5):
+        _seed_crypto_endpoint(
+            TestingSession, now, **_floor_clean_endpoint_kwargs(i, now, run_id)
+        )
+
+    resp = client.get("/api/scans")
+    assert resp.status_code == 200
+    items = {item["scan_id"]: item for item in resp.json()}
+    item = items[run_id]
+
+    assert item["rating"] != "FAIR"
+    assert item.get("rating_cap_reason") in (None, ""), (
+        f"Uncapped session must have a null/absent rating_cap_reason; got "
+        f"{item.get('rating_cap_reason')!r}."
+    )
+
+
+def test_compare_scans_caps_only_the_side_carrying_the_critical():
+    """184.4-07 Task 3: /compare (the two compare_scans sites fixed in Task 1)
+    must derive findings PER SIDE -- side A (with the CRITICAL) comes back
+    FAIR/capped, side B (clean) comes back uncapped and DIFFERENT from side A.
+    A shared or swapped findings list between the two sides would make both
+    sides agree, which this test is specifically designed to catch."""
+    from datetime import datetime, timedelta, timezone
+
+    client, TestingSession = _drift_client_and_session()
+    now = datetime.now(timezone.utc)
+    ts_a = now
+    ts_b = now - timedelta(minutes=10)
+    run_id_a = ts_a.isoformat()
+    run_id_b = ts_b.isoformat()
+
+    for i in range(5):
+        _seed_crypto_endpoint(
+            TestingSession, ts_a, **_floor_clean_endpoint_kwargs(i, now, run_id_a)
+        )
+    _seed_crypto_endpoint(
+        TestingSession, ts_a, **_floor_critical_endpoint_kwargs(now, run_id_a)
+    )
+    for i in range(5):
+        _seed_crypto_endpoint(
+            TestingSession, ts_b, **_floor_clean_endpoint_kwargs(i, now, run_id_b)
+        )
+
+    resp = client.get(_compare_url(ts_a, ts_b))
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["scan_a"]["rating"] == "FAIR", (
+        f"Side A carries the CRITICAL and must be capped to FAIR; got "
+        f"{body['scan_a']['rating']!r}."
+    )
+    assert body["scan_a"].get("rating_cap_reason"), (
+        "Side A must carry a non-null rating_cap_reason."
+    )
+    assert body["scan_b"]["rating"] != "FAIR", (
+        f"Side B is clean and must NOT be capped; got {body['scan_b']['rating']!r}."
+    )
+    assert not body["scan_b"].get("rating_cap_reason"), (
+        "Side B (clean) must have a null/absent rating_cap_reason."
+    )
+    assert body["scan_a"]["rating"] != body["scan_b"]["rating"], (
+        "Side A and side B must return DIFFERENT bands -- identical bands here "
+        "would indicate a shared or swapped per-side findings list."
+    )

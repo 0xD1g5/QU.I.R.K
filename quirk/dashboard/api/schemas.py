@@ -452,6 +452,12 @@ class ScanSession(BaseModel):
     calibration: Optional[str] = None
     target: Optional[str] = None
     finding_counts: "FindingCounts" = Field(default_factory=lambda: FindingCounts())
+    # SCORE-04 / D-07 (184.4-07): the session-history rating and its optional cap
+    # reason, mirroring ScoreData.rating / ScoreData.rating_cap_reason (D-09).
+    # `rating` defaults to "" (not a real band) for pre-fix rows that somehow
+    # bypass scoring; `rating_cap_reason` absent/None means NOT capped.
+    rating: str = ""
+    rating_cap_reason: Optional[str] = None
 
 
 # Trend Analysis (Phase 31)
@@ -533,6 +539,12 @@ class CompareScanSummary(BaseModel):
     scanned_at: UTCDateTime
     score: int
     subscores: SubScores = Field(default_factory=_zero_subscores)
+    # SCORE-04 / D-07 (184.4-07): per-side rating + optional cap reason, so
+    # /compare can prove the two sides' bands independently — a shared or
+    # swapped findings basis between sides would otherwise be invisible to
+    # any test that only checks the numeric score_delta.
+    rating: str = ""
+    rating_cap_reason: Optional[str] = None
 
 
 class SubscoreDelta(BaseModel):
