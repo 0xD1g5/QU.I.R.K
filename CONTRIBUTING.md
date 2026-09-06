@@ -72,8 +72,29 @@ infrastructure not available in CI or a local dev sandbox.
 Every skip or xfail marker in the suite must be registered in `tests/skip_registry.py`.
 This is enforced by `tests/test_skip_registry.py::test_no_unregistered_skips`, an
 AST-walking meta-gate that fails the build if a new, unregistered skip/xfail slips in.
-If you add a skip or xfail marker, register it in `tests/skip_registry.py` with a
-category and a reason in the same change.
+
+**Entries are keyed by `(file, test_qualname)`, not by line number** (Phase 184). The
+qualname is the AST-derived dotted path of the construct's enclosing
+`ClassDef`/`FunctionDef` chain — the literal `<module>` is used for module-scope skips.
+This means moving a skip within its file, or adding/removing unrelated lines above it,
+never re-breaks the gate; only a real change (renaming the test, deleting it, or adding
+a genuinely new, unregistered skip) does. If you add a skip or xfail marker, register it
+in `tests/skip_registry.py` with the test's `(file, qualname)`, a category, and a reason
+in the same change.
+
+The gate is **bidirectional**: a registry entry whose `(file, qualname)` no longer
+resolves to a real skip site — because you deleted the skip, renamed the test, or the
+test itself was removed — is itself a violation. Deleting or renaming a skipped test
+requires removing or re-keying its registry entry in the same change; leaving a stale
+entry behind fails the build.
+
+A `pytest.importorskip("<mod>")` whose module maps to a package declared in a
+`[project.optional-dependencies]` group in `pyproject.toml` is auto-allowed and needs
+**no registry entry at all** — the gate checks this against `pyproject.toml` at
+test-run time, so if the module stops being declared as an extra, the gate will ask you
+to add one. Every other skip/xfail construct (a plain `pytest.skip`, `@pytest.mark.skip`,
+`@pytest.mark.skipif`, `@pytest.mark.xfail`, or an `importorskip` on a module not
+declared as an optional extra) still needs an explicit entry.
 
 Do not treat a specific passed/skipped/xfailed count as a target — those numbers drift
 as the suite grows and tests get triaged. The only fixed target is 0 failed.
