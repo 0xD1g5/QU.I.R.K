@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-06-PLAN.md
-last_updated: "2026-09-05T01:15:00.000Z"
+stopped_at: Completed 184.4-07-PLAN.md
+last_updated: "2026-09-05T21:15:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 45
-  percent: 60
+  completed_plans: 46
+  percent: 61
 ---
 
 # Project State
@@ -672,7 +672,23 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 6 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06 done).
+Plan: 7 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06, 184.4-07 done).
+184.4-07 fixed the three severity-blind `build_evidence_summary()` call sites in
+`quirk/dashboard/api/routes/scan.py` (list_scans's per-session score, and both sides of
+`compare_scans`) so they derive real findings (TLS + identity for list_scans; per-side TLS-only for
+compare_scans) before scoring — closing the exact BACK-89-shaped gap where the dashboard could show
+an uncapped EXCELLENT while the report for the same scan shows FAIR. The 5 remaining
+findings-less sites (`quirk/merge/scan.py:228`, `quirk/dashboard/api/routes/merge.py:89,113`,
+`quirk/intelligence/trends.py:207`, `quirk/dashboard/api/routes/trends.py:206`) were each traced to
+their real consumer (not assumed) and confirmed genuinely score-only — none renders a band anywhere
+— and now carry a `# D-07 (184.4): intentionally findings-less` disposition comment for plan
+184.4-09's AST gate to key on. `quirk/intelligence/evidence.py`'s signature is untouched (D-08).
+Also added `rating`/`rating_cap_reason` to `ScanSession`/`CompareScanSummary`
+(`quirk/dashboard/api/schemas.py`, outside the plan's declared file list — Rule 2, necessary for
+Task 3's own acceptance criteria to be checkable at all) and three new route-level tests
+(`tests/test_dashboard_api.py`, 50 -> 53) proving `/api/scans` and `/compare` return `FAIR` +
+non-null `rating_cap_reason` when capped, and different bands per side of a comparison. See
+`184.4-07-SUMMARY.md`.
 184.4-06 rendered the D-09 structured `rating_cap_reason` on the CLI, DOCX, scorecard, and
 terminal-summary headline surfaces, closing D-10's remaining non-dashboard surfaces.
 `quirk/reports/executive.py`'s `build_exec_markdown` now appends a `**Cap reason:**` line
@@ -1856,8 +1872,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-05T23:12:32.298Z
-Stopped at: Phase 184.4 context gathered
+Last session: 2026-09-05T21:15:00.000Z
+Stopped at: Completed 184.4-07-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
