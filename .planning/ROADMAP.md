@@ -618,7 +618,16 @@ routes gain coverage.
      tooltip colors from shared tokens — the bug exists because two of three related colors were
      set by hand and the third was forgotten. See
      `.planning/backlog/999.94-chart-tooltip-count-illegible/IDEA.md`.
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 185-01-PLAN.md — Add the permanent workflow_dispatch Linux baseline-regeneration job; derive the Chrome pin from a live run (D-01, D-03)
+- [ ] 185-02-PLAN.md — Pin Chrome in both a11y jobs, guard it in pinned-deps.test.ts, reword the superseded Phase 165 D-04 records (D-07, D-08, D-09)
+- [ ] 185-03-PLAN.md — Fix the Severity Breakdown tooltip (itemStyle + tokens + theme-aware) and add a static WCAG contrast guard (ROADMAP SC-4)
+- [ ] 185-04-PLAN.md — Fixture middleware, fixture data, and the contentMarker sweep check so /hardware and /compare render real content (D-14)
+- [ ] 185-05-PLAN.md — Land routes.json entries with six Linux-generated baselines in one commit after D-04 triage (D-02, D-04, D-05, D-06, D-11, D-12, D-13)
+- [ ] 185-06-PLAN.md — Operator-led execution of the two pending 158-HUMAN-UAT scenarios (D-15)
+- [ ] 185-07-PLAN.md — Docs, Obsidian sync, UAT Series 185, todo closure, DRIFT-03 hand verification (D-10)
 
 ### Phase 186: Carried Defect Drain
 
