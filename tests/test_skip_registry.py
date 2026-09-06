@@ -81,6 +81,15 @@ the ledger key the same way a real skip site is), so a regression to one
 half's matching logic breaks both halves together rather than leaving one
 half silently unguarded.
 
+No xfail, no allowlist, no continue-on-error, ever (D-11).
+--------------------------------------------------------------
+This node carries no xfail, no allowlist, and no ``continue-on-error``,
+ever: ``DEFER-172-01`` absorbed a new failure during v5.18 with nobody
+noticing, because the node was already red -- a permanently-red node is
+where new failures go to hide. It rides the ``Linux Full Suite`` CI job
+(``pytest -q -m ""``, no ``continue-on-error``) as it already does; no new
+CI wiring is needed or wanted.
+
 This file itself contains the strings ``pytest.skip`` / ``pytest.importorskip``
 / ``pytest.mark.skipif`` only as identifiers being matched on — it is excluded
 from the walk, along with ``tests/skip_registry.py``.
@@ -594,3 +603,85 @@ def test_orphan_detection_flags_a_ledger_entry_that_resolves_to_nothing(case_id:
         raise AssertionError(f"unhandled case_id: {case_id}")
 
 
+def test_synthetic_unregistered_skip_makes_the_gate_red(tmp_path: pathlib.Path) -> None:
+    """Phase 184 CONTEXT.md D-12(a): falsifiability is proven by a
+    permanent self-test, not a one-time manual inject-and-revert. A
+    synthetic, unregistered ``pytest.skip`` written into a ``tmp_path``
+    test file -- reusing the name of a REAL registered file
+    (test_broker_scanner_kafka.py) so this self-test is sensitive to a
+    filename-only matching regression, not just a "new file" regression --
+    must make the REAL detector (``_find_skip_occurrences`` called directly
+    against ``root=tmp_path``, matched by the REAL ``_allowed()``) report
+    exactly one violation naming the offending test and file. Never a
+    duplicate re-implementation of the walk."""
+    synthetic_file = tmp_path / "test_broker_scanner_kafka.py"
+    synthetic_file.write_text(
+        "import pytest\n\n\ndef test_synthetic():\n"
+        "    pytest.skip('injected for falsifiability proof')\n",
+        encoding="utf-8",
+    )
+    occurrences = _find_skip_occurrences(root=tmp_path)
+    violations = [o for o in occurrences if not _allowed(o[0], o[1])]
+
+    assert len(violations) == 1
+    fname, qualname, kind, _lineno = violations[0]
+    assert fname == "test_broker_scanner_kafka.py"
+    assert qualname == "test_synthetic"
+    assert kind == "pytest.skip"
+
+
+def test_synthetic_orphan_entry_makes_the_bidirectional_half_red() -> None:
+    """Phase 184 CONTEXT.md D-12(b): a synthetic ledger entry that resolves
+    to no real skip site must be reported as an orphan by the REAL detector
+    pair -- ``_find_skip_occurrences()`` against the real tests/ tree,
+    matched by the REAL ``_find_orphan_entries()``, never a duplicate
+    re-implementation. The orphan entry reuses a REAL file that DOES have a
+    real occurrence (test_broker_scanner_kafka.py) under a fabricated
+    qualname, so this self-test is sensitive to a filename-only matching
+    regression, not merely to an unrecognized filename."""
+    orphan_entry = (
+        "test_broker_scanner_kafka.py",
+        "TestNothing.test_nothing",
+        "optional_extra",
+        "injected for falsifiability proof",
+    )
+    ledger = list(ALLOWED_SKIPS) + [orphan_entry]
+
+    orphans = _find_orphan_entries(_find_skip_occurrences(), ledger)
+
+    assert orphan_entry in orphans
+
+
+def test_renaming_the_enclosing_test_makes_a_registered_skip_red(tmp_path: pathlib.Path) -> None:
+    """Phase 184 CONTEXT.md D-12(c): the registry key is the qualname, not
+    merely the file -- proving this requires showing that a RENAME alone
+    (no change to the skip construct itself) flips the violation outcome.
+    This is intended behaviour, not a defect: renaming a test is a real
+    change to what is being skipped, and the registered justification
+    deserves re-review under the new name rather than silently carrying
+    over to a differently-named test that nobody actually re-reviewed."""
+    ledger = [("test_rename_fixture.py", "test_original_name", "optional_extra", "synthetic")]
+
+    original_dir = tmp_path / "original"
+    original_dir.mkdir()
+    (original_dir / "test_rename_fixture.py").write_text(
+        "import pytest\n\n\ndef test_original_name():\n    pytest.skip('x')\n",
+        encoding="utf-8",
+    )
+    original_occurrences = _find_skip_occurrences(root=original_dir)
+    original_violations = [
+        o for o in original_occurrences if not _allowed(o[0], o[1], ledger)
+    ]
+    assert original_violations == []
+
+    renamed_dir = tmp_path / "renamed"
+    renamed_dir.mkdir()
+    (renamed_dir / "test_rename_fixture.py").write_text(
+        "import pytest\n\n\ndef test_renamed_name():\n    pytest.skip('x')\n",
+        encoding="utf-8",
+    )
+    renamed_occurrences = _find_skip_occurrences(root=renamed_dir)
+    renamed_violations = [o for o in renamed_occurrences if not _allowed(o[0], o[1], ledger)]
+
+    assert len(renamed_violations) == 1
+    assert renamed_violations[0][1] == "test_renamed_name"
