@@ -11,12 +11,21 @@ key, which re-broke on any unrelated line shift in the same file; there is no
 positional-tolerance constant anywhere in the gate.
 
 category in {"optional_extra", "live_infra", "pre_existing_triage_149",
-"ci_extras_gap", "gitignored_planning_dir", "environment_subprocess_signal"}
+"ci_extras_gap", "gitignored_planning_dir", "environment_subprocess_signal",
+"environment_capability"}
 -- "environment_subprocess_signal" admits a skip whose only justification is
 a macOS full-suite subprocess dying to SIGSEGV before it produced any result
 to assert on (not a known-broken test); CI/Linux always takes the real
-assertion branch. ("environment_capability" is a Phase 184 Plan 05 addition,
-not yet in use here.)
+assertion branch. "environment_capability" (Phase 184 Plan 05) admits a skip
+whose only justification is that the executing environment lacks a specific
+capability the test's assertions require -- an installed toolchain, a
+non-root euid, a binary on PATH, a built entry point -- so the test has
+nothing to assert against; distinct from "optional_extra" (a declared Python
+packaging extra checked against pyproject.toml) and from "live_infra"
+(external services the chaos lab provides). A skip in this category is never
+evidence the underlying behaviour was exercised -- see the
+``test_gsd_state_patch.py`` and ``test_uat_disposition_integrity.py``
+entries below for what that means in practice.
 
 Per CONTEXT.md D-01..D-05: stale skips are deleted; optional-extra and
 live-infra skips are registered here so the meta-test gate (test_skip_registry.py)
@@ -316,4 +325,118 @@ ALLOWED_SKIPS = [
     # ------------------------------------------------------------------
     ("test_exec_content_model.py", "test_docx_names_the_band_even_when_uncapped", "optional_extra", "python-docx not installed"),
     ("test_exec_content_model.py", "test_docx_names_both_the_capped_band_and_the_cap_reason", "optional_extra", "python-docx not installed"),
+
+    # ------------------------------------------------------------------
+    # Phase 184 Plan 05 (DRIFT-02): the 13 genuinely-never-registered
+    # "environment_capability" skips -- CLAUDE.md's GSD Verb Integrity
+    # section and the "CI marker semantics gotcha" both apply. Each reason
+    # is derived from the guard condition and enclosing test read directly
+    # in the source file at the time of registration, not copied from
+    # 184-CONTEXT.md's planning-time index.
+    # ------------------------------------------------------------------
+    (
+        "test_gsd_state_patch.py",
+        "unpatched_gsd_tree",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False in this environment (node on PATH "
+        "and ~/.claude/get-shit-done/bin/lib/{state-document.generated.cjs,"
+        "state.cjs} all present) -- the Linux Full Suite CI job does not "
+        "provision ~/.claude/get-shit-done/, so this fixture's three guard "
+        "skips (no toolchain at all; no pristine pre-Bug-A-patch source "
+        "found; the would-be pristine source is itself already patched, "
+        "which would make the negative control pass vacuously) are honest "
+        "and a skip here is not a pass -- run on an operator machine with "
+        "GSD installed to actually exercise the Bug-A corruption "
+        "reproduction this fixture builds.",
+    ),
+    (
+        "test_gsd_state_patch.py",
+        "test_patch_loss_is_actually_detected",
+        "environment_capability",
+        "GSD_PATCHES_AVAILABLE is False (the gsd-local-patches/ durability "
+        "layer and verify-reapply-patches.cjs are not both present) or the "
+        "pristine baseline for state-document.generated.cjs is missing, so "
+        "this negative control -- which proves the patch-durability gate is "
+        "sensitive by simulating a regeneration reverting the Bug-A patch -- "
+        "has nothing to diff against. CI provisions neither the seeded "
+        "patches directory nor the operator toolchain, so both skips here "
+        "are honest and a skip is not a pass; see CLAUDE.md's GSD `state.*` "
+        "Verb Integrity section for why this durability check exists.",
+    ),
+    (
+        "test_uat_disposition_integrity.py",
+        "test_vitest_non_vacuity_passing_substitute_is_not_flagged",
+        "environment_capability",
+        "VITEST_TOOLCHAIN_AVAILABLE is False (npm not on PATH and/or "
+        "src/dashboard/node_modules absent) -- the Linux Full Suite CI job "
+        "never installs the dashboard's Node toolchain. This is the "
+        "documented, non-blocking gap tracked in docs/uat-coverage-gaps.md "
+        "(item 12): the vitest substitute-execution leg only "
+        "existence-checks in CI rather than actually running, so this "
+        "positive-control skip does not mean the passing-substitute "
+        "behaviour was exercised there.",
+    ),
+    (
+        "test_uat_disposition_integrity.py",
+        "test_vitest_non_vacuity_skipped_substitute_is_flagged",
+        "environment_capability",
+        "VITEST_TOOLCHAIN_AVAILABLE is False in this environment for the "
+        "same reason as the sibling non-vacuity tests in this file -- CI "
+        "does not install npm/node_modules under src/dashboard/. Per "
+        "docs/uat-coverage-gaps.md (item 12), this is a documented, "
+        "non-blocking gap: the vitest 'a skip must never count as coverage' "
+        "constraint mirror only existence-checks in CI, it is not executed.",
+    ),
+    (
+        "test_uat_disposition_integrity.py",
+        "test_vitest_non_vacuity_failing_substitute_is_flagged",
+        "environment_capability",
+        "VITEST_TOOLCHAIN_AVAILABLE is False in this environment for the "
+        "same reason as the sibling non-vacuity tests in this file -- CI "
+        "does not install npm/node_modules under src/dashboard/. Per "
+        "docs/uat-coverage-gaps.md (item 12), this is a documented, "
+        "non-blocking gap: the vitest failing-substitute detection leg only "
+        "existence-checks in CI, it is not executed.",
+    ),
+    (
+        "test_uat_disposition_integrity.py",
+        "test_vitest_substitute_nodes_pass",
+        "environment_capability",
+        "VITEST_TOOLCHAIN_AVAILABLE is False in this environment -- CI does "
+        "not install npm/node_modules under src/dashboard/. Per "
+        "docs/uat-coverage-gaps.md (item 12), this is a documented, "
+        "non-blocking gap: the vitest analogue of the real-document "
+        "substitute-node pass proof only existence-checks in CI rather than "
+        "actually running every named vitest substitute.",
+    ),
+    (
+        "test_target_cli.py",
+        "test_unreadable_targets_file_emits_target_003_exit_2",
+        "environment_capability",
+        "os.geteuid() == 0 in this environment -- root bypasses the "
+        "0o000-mode-bit denial this test relies on to produce an unreadable "
+        "file, so there is nothing to assert TARGET-003/exit-2 against. "
+        "Skipped only when running as root; a non-root CI runner exercises "
+        "this test for real.",
+    ),
+    (
+        "test_doc_command_forms.py",
+        "test_no_nonexistent_command_forms",
+        "environment_capability",
+        "git is not on PATH in this environment, so `git ls-files` (used to "
+        "enumerate every tracked file for the nonexistent-command-form "
+        "scan) cannot run. This gate requires a git checkout to enumerate "
+        "tracked files; any environment with git available exercises it "
+        "for real.",
+    ),
+    (
+        "test_uat_runner_version_check.py",
+        "test_pattern_matches_live_version_banner",
+        "environment_capability",
+        "QUIRK_BIN (.venv/bin/quirk) does not exist in this environment -- "
+        "this environment has no built venv, so there is no live CLI binary "
+        "to invoke and the version-banner regex has nothing to run against. "
+        "A skip here is not a pass; run against a real `pip install -e .` "
+        "venv to exercise this test.",
+    ),
 ]
