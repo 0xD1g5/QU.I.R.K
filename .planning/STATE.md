@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-02-PLAN.md
-last_updated: "2026-09-06T00:39:00.000Z"
+stopped_at: Completed 184.4-03-PLAN.md
+last_updated: "2026-09-06T00:20:28.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 41
+  completed_plans: 42
   percent: 58
 ---
 
@@ -672,12 +672,22 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 2 of 10 complete (184.4-01, 184.4-02 done). 184.4-02 wrote and proved RED (against
-unmodified pre-fix code) the D-13 end-to-end regression `tests/test_score_severity_floor_regression.py`
-— drives the REAL `compute_readiness_score()` through `write_reports()`, fails with the exact
-observed `ReportCongruenceError` string (`executive headline 'EXCELLENT' is inconsistent with 1
-CRITICAL finding(s)`), verbatim evidence captured in `184.4-02-SUMMARY.md`, then fenced with
-`xfail(strict=True)` so Waves 2-3 keep a green suite until plan 184.4-04's severity floor lands.
+Plan: 3 of 10 complete (184.4-01, 184.4-02, 184.4-03 done). 184.4-03 created the stdlib-only
+`quirk/severity_bands.py` (BAND_ORDER, BAND_THRESHOLDS, BAND_CRITICAL_ALLOWANCE, band_for_score(),
+cap_band_for_severity() — D-01/D-02 cap-to-FAIR, no graduated ladder — and cap_reason() per D-09),
+rewired `quirk/reports/content_model.py`'s `_BAND_CRITICAL_THRESHOLD` to alias
+`BAND_CRITICAL_ALLOWANCE` with `_check_congruence()`/`assert_congruent()` bodies byte-identical
+(verified via scoped `git diff`), and added `tests/test_severity_bands.py` (38 tests: boundary
+walk, full 0-100 cross-check against the pre-existing `scoring._rating()`, no-graduated-ladder at
+critical_count {1,2,7}, D-13's 89+1-CRITICAL→FAIR reproduction, `cap_reason()` shape, and two
+`ast.parse`-at-runtime import-boundary gates). 55/55 and 64/64 combined targeted suites pass. See
+`184.4-03-SUMMARY.md`.
+184.4-02 wrote and proved RED (against unmodified pre-fix code) the D-13 end-to-end regression
+`tests/test_score_severity_floor_regression.py` — drives the REAL `compute_readiness_score()`
+through `write_reports()`, fails with the exact observed `ReportCongruenceError` string (`executive
+headline 'EXCELLENT' is inconsistent with 1 CRITICAL finding(s)`), verbatim evidence captured in
+`184.4-02-SUMMARY.md`, then fenced with `xfail(strict=True)` so Waves 2-3 keep a green suite until
+plan 184.4-04's severity floor lands.
 Prior: SCORE-04/SCORE-05 now real requirement IDs in REQUIREMENTS.md; ROADMAP.md's Phase 184.4
 block names them and carries a verified SC #5 non-regression finding plus SC #6's BACK-89 (a)-(d)
 dispositions. BACK-89 closed by reference; the empty 999.82 backlog dir now carries a RESOLVED.md
