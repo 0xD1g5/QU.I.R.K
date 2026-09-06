@@ -113,7 +113,7 @@ rather than inherited from its original report — two had drifted since they we
   *Note: HORIZON recorded this as 11 files / 18 / 38 sites at the v5.16 audit — it had drifted
   further since, which was itself the argument for derivation over a longer list.*
 
-- [ ] **DRIFT-02**: `DEFER-172-01` closed — `tests/test_skip_registry.py::test_no_unregistered_skips`
+- [x] **DRIFT-02**: `DEFER-172-01` closed — `tests/test_skip_registry.py::test_no_unregistered_skips`
   passes. **Originally measured 2026-09-03 as 10 unregistered skips** — already stale when
   written. Re-measured 22 on 2026-09-04 and again 22 (with different membership) on 2026-09-06 at
   Phase 184 planning time. **Re-measured live at 184-01 execution time (2026-09-06): 22
@@ -126,6 +126,32 @@ rather than inherited from its original report — two had drifted since they we
   the construct's enclosing `ClassDef`/`FunctionDef` chain), with content-addressing (a hash of
   normalized source) explicitly rejected per D-03 — a typo fix in a reason string would re-break
   the gate, a worse failure mode than line drift.
+  **COMPLETE (2026-09-06).** All 198 original entries re-keyed to `(file, test_qualname)`
+  (184-03); `LINE_TOLERANCE` deleted. 4 D-02 shared-qualname collapse groups applied
+  (198 -> 192 entries). 16 post-re-key orphans re-derived and purged with a cited audit trail
+  (192 -> 176 entries; 184-04). The 13 genuinely-never-registered sites disposed by honest
+  per-site judgement (184-05): 1 dead-scaffolding skip deleted
+  (`test_closure_burndown.py:296` — the guarded module had existed for 4 days), 1
+  self-contradicting reason string corrected, 12 registered under a new `environment_capability`
+  category (13 sites collapsed to 12 entries per D-02) with reasons read from their guard
+  conditions at registration time (176 -> 188 entries). The gate made bidirectional (D-07: a
+  registry entry resolving to no live skip site is itself a violation) and the single
+  D-05-sanctioned `pytest.importorskip`-vs-`pyproject.toml` derivation retired 5 entries needing
+  no registry row (188 -> 180 entries; 184-06). Three permanent D-12 falsifiability self-tests
+  (synthetic unregistered skip, synthetic orphan entry, renamed-test detection) added and
+  mutation-verified: all three fail under a deliberate `_allowed()` mutation and pass after a
+  verified byte-identical revert. Final live ledger: **180 entries, 0 orphans, 0 blank reasons**
+  (184-06-SUMMARY.md). Anti-accumulator guarantee grep-verified at close (184-07): no
+  `continue-on-error` on `Linux Full Suite` (the `continue-on-error: true` at
+  `.github/workflows/python-ci.yml:37` belongs to the unrelated `windows-packaging-spike` job),
+  no new `.github/` wiring across the phase's commits, `test_skip_registry.py` itself carries
+  zero `ALLOWED_SKIPS` entries. Full suite's failing-node SET is **empty**
+  (`python -m pytest -q -m ""` -> 4259 passed, 58 skipped, 72 xfailed, 5 xpassed, 0 failed,
+  0 fatal signals, Docker healthy) — diffed against the 184-01 baseline SET (2
+  `test_chaos_lab_idempotency` nodes + `test_skip_registry` itself, all now passing; "newly
+  failing" empty) — the first fully green full suite since v5.17. `CONTRIBUTING.md` and
+  `docs/test-triage-149.md` (56 stale line-number citations) updated to describe the key the gate
+  actually uses. See `184-01` through `184-07` SUMMARY.md files.
 
 - [x] **SCORE-01**: `coverage_ratio` measures assessment coverage, not protocol composition.
   **Measured 2026-09-04 against a live 20-endpoint chaos-lab scan** (`scan_run_id
@@ -293,7 +319,7 @@ rather than inherited from its original report — two had drifted since they we
 | TOOL-03 | 182-03, 182-04 | Complete |
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
-| DRIFT-02 | TBD | Pending |
+| DRIFT-02 | 184-01, 184-02, 184-03, 184-04, 184-05, 184-06, 184-07 | Complete |
 | SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
 | SCORE-02 | 184.2-01, 184.2-02, 184.2-03, 184.2-04, 184.2-05, 184.2-06 | Complete |
 | SCORE-03 | 184.3-01, 184.3-02, 184.3-03, 184.3-04, 184.3-05, 184.3-06, 184.3-07, 184.3-08, 184.3-09, 184.3-10, 184.3-11 | Complete (closed 2026-09-05; 1 manual leg DEFERRED with cited substitute coverage) |

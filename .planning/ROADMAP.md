@@ -129,7 +129,7 @@ since they were first recorded.
 
 - [x] **Phase 182: Tooling Integrity** - The GSD `state.*` verbs stop silently corrupting STATE.md, and the local fix survives a package regeneration or its loss is detected. Gating: STATE.md is what every future session reads as project history.
 - [x] **Phase 183: Fork-Safety Gate Derivation** - GATE-03 derives its file set from its own criterion instead of a 15-entry allowlist, with the 28 unlisted call sites each migrated (all 28; zero grandfathered).
-- [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it.
+- [ ] **Phase 184: Skip Registry Closure** - `DEFER-172-01` closes: **22** unregistered skips (measured 2026-09-04 — 15 pre-existing plus 7 that Phase 183's migrations shifted onto new lines) each registered with a real justification or deleted, and the `(file, LINENO)` keying re-decided so line drift stops re-breaking it. **All 7 plans done (2026-09-06).** Gate re-keyed to `(file, test_qualname)`, made bidirectional, 180-entry final ledger with 0 orphans; full suite's failing-node SET is empty — the first fully green full suite since v5.17. See `184-07-SUMMARY.md`. **Checkbox awaits `184-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184-07's scope).
 - [x] **Phase 184.1: Coverage Metric Correctness** - `coverage_ratio` stops excluding crypto-bearing protocols it successfully assessed, and the score change is versioned so a client can be told why the confidence number moved (there is no historical confidence data to migrate — every live surface recomputes from stored endpoints). Gating: this metric decides the confidence rating on every client deliverable. (completed 2026-09-04)
 - [x] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed. (completed 2026-09-05)
 - [x] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **COMPLETE (2026-09-05). All 11 plans done; verified 6/6 success criteria, all evidence DERIVED at verification time — see 184.3-VERIFICATION.md. 1 of 5 human-verify checks (live cert calendar-day-shift) DEFERRED with cited substitute coverage (datetime.test.ts:39) — vacuous against available data, see 184.3-VALIDATION.md.**
@@ -282,7 +282,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 184-07-PLAN.md — Close-out: anti-accumulator verification, failing-node SET comparison, docs, UAT Series 184, Obsidian, DRIFT-02 (D-11/D-13)
+- [x] 184-07-PLAN.md — Close-out: anti-accumulator verification, failing-node SET comparison, docs, UAT Series 184, Obsidian, DRIFT-02 (D-11/D-13)
 
 ### Phase 184.1: Coverage Metric Correctness
 
