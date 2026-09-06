@@ -13,6 +13,11 @@ function a11yFixture(): Plugin {
     const scanFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8')
     const trendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8')
     const qrammFixtureRaw = JSON.parse(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-qramm.json'), 'utf8')) as Record<string, unknown>
+    // Phase 185 D-14 — /hardware and /compare fixtures (plan 185-04). Loaded lazily here
+    // alongside the fixtures above, same WR-05 rationale.
+    const hardwareDriftFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-hardware-drift.json'), 'utf8')
+    const vendorTrendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-vendor-trends.json'), 'utf8')
+    const compareFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-compare.json'), 'utf8')
     const noCache = (r: ServerResponse) => r.setHeader('Cache-Control', 'no-store')
     return (req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
       const variant = process.env.VITE_A11Y_FIXTURE_VARIANT
@@ -54,6 +59,66 @@ function a11yFixture(): Plugin {
         }
         noCache(res); res.setHeader('Content-Type', 'application/json')
         res.end(trendsFixture)
+        return
+      }
+      // Phase 185 D-14 — /hardware and /compare fixtures (plan 185-04). Both new hardware
+      // prefixes are independent (no shared prefix) but kept adjacent per this file's
+      // existing longest-prefix-first convention, above any future broader /api/hardware match.
+      if (req.url?.startsWith('/api/hardware/vendor-trends')) {
+        if (variant === 'empty') {
+          noCache(res); res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ events: [], truncated: false }))
+          return
+        }
+        if (variant === 'loading') {
+          setTimeout(() => {
+            noCache(res); res.setHeader('Content-Type', 'application/json')
+            res.end(vendorTrendsFixture)
+          }, 3000)
+          return
+        }
+        noCache(res); res.setHeader('Content-Type', 'application/json')
+        res.end(vendorTrendsFixture)
+        return
+      }
+      if (req.url?.startsWith('/api/hardware/drift')) {
+        if (variant === 'empty') {
+          noCache(res); res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({
+            has_prior_scan: false,
+            latest_scan_at: null,
+            latest_events: [],
+            historical_events: [],
+            historical_truncated: false,
+          }))
+          return
+        }
+        if (variant === 'loading') {
+          setTimeout(() => {
+            noCache(res); res.setHeader('Content-Type', 'application/json')
+            res.end(hardwareDriftFixture)
+          }, 3000)
+          return
+        }
+        noCache(res); res.setHeader('Content-Type', 'application/json')
+        res.end(hardwareDriftFixture)
+        return
+      }
+      if (req.url?.startsWith('/api/compare')) {
+        if (variant === 'empty') {
+          noCache(res); res.setHeader('Content-Type', 'application/json')
+          res.end('{}')
+          return
+        }
+        if (variant === 'loading') {
+          setTimeout(() => {
+            noCache(res); res.setHeader('Content-Type', 'application/json')
+            res.end(compareFixture)
+          }, 3000)
+          return
+        }
+        noCache(res); res.setHeader('Content-Type', 'application/json')
+        res.end(compareFixture)
         return
       }
       // QRAMM API fixtures — matched in specificity order (longest prefix first)
