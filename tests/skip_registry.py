@@ -436,4 +436,35 @@ ALLOWED_SKIPS = [
         "A skip here is not a pass; run against a real `pip install -e .` "
         "venv to exercise this test.",
     ),
+
+    # Phase 184-08 (CR-01 gap closure): these two sites were always live
+    # skip constructs but were invisible to the pre-fix gate because each
+    # module binds `pytest` to an alias (`import pytest as X`) rather than
+    # the literal name `pytest`, which the walker's `base.id == "pytest"`
+    # check could not see. Registering both here now that the alias-blind
+    # spot is closed; see 184-07-SUMMARY.md's "Gap Closure" section for the
+    # detection evidence.
+    (
+        "test_vault_connector.py",
+        "test_vault_live_uat_30_01_five_findings",
+        "live_infra",
+        "Requires the vault-30 chaos lab profile (port 28200) up via "
+        "`docker compose --profile vault up -d` plus "
+        "QUIRK_VAULT_INTEGRATION=1 set; closes Phase 30 HUMAN-UAT. Import "
+        "aliased as `_pytest_uat` in this module (surfaced by CR-01's "
+        "alias-resolution fix, not a new skip construct).",
+    ),
+    (
+        "test_cross_surface_parity.py",
+        "test_docx_narrative_parity",
+        "optional_extra",
+        "python-docx (the `docx` extras group) not installed. Written as a "
+        "conditional `pytest.skip(...)` call gated on "
+        "`render_docx_report(...)` returning False, not as "
+        "`pytest.importorskip('docx')`, so D-05's importorskip auto-allow "
+        "does not apply even though the underlying reason is the same "
+        "declared extra. Import aliased as `_pytest` in this function "
+        "(surfaced by CR-01's alias-resolution fix, not a new skip "
+        "construct).",
+    ),
 ]
