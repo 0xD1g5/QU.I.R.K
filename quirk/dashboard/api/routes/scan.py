@@ -1660,6 +1660,10 @@ def get_latest_scan(
     score = ScoreData(
         score=score_raw.get("score", 0),
         rating=score_raw.get("rating", "POOR"),
+        # SCORE-04 / D-09/D-10 (184.4): pass the cap reason through; None means
+        # not capped. Field-by-field construction means an omission here would
+        # silently drop it (RESEARCH Pitfall 1) — do not remove.
+        rating_cap_reason=score_raw.get("rating_cap_reason"),
         subscores=SubScores(
             hygiene=subscores_raw.get("hygiene", 0),
             modern_tls=subscores_raw.get("modern_tls", 0),

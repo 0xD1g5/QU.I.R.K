@@ -38,6 +38,12 @@ class SubScores(BaseModel):
 class ScoreData(BaseModel):
     score: int
     rating: str  # EXCELLENT / GOOD / MODERATE / FAIR / POOR
+    # SCORE-04 / D-09/D-10 (184.4): structured cap-reason from
+    # compute_readiness_score()'s rating_cap_reason key, mirroring the
+    # confidence_formula_version precedent immediately below. None means the
+    # band was NOT capped — an absent reason is a positive statement, not
+    # missing data.
+    rating_cap_reason: Optional[str] = None
     subscores: SubScores
     drivers: List[Dict[str, Any]]
 

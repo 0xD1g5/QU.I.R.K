@@ -10,6 +10,9 @@ export interface SubScores {
 export interface ScoreData {
   score: number
   rating: string
+  // SCORE-04 / D-09/D-10 (184.4): optional to mirror the Pydantic Optional[str] = None
+  // field. Absent/undefined means the band was NOT capped.
+  rating_cap_reason?: string
   subscores: SubScores
   drivers: Record<string, unknown>[]
 }
