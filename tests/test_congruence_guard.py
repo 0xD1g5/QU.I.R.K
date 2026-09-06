@@ -290,11 +290,46 @@ def test_assert_congruent_allows_healthy_band_without_critical():
 def test_markdown_compat_path_is_fail_closed():
     """WR-05: build_exec_markdown with exec_content=None must still run the D-06 guard.
 
-    The compat path computes its own score_raw; we force an EXCELLENT band over a
-    CRITICAL finding via calibration so the guard must fire on the legacy path too.
+    Phase 184.4: this test breaks BY DESIGN under the real producer and is
+    converted here to a mocked `compute_readiness_score`, on purpose — read
+    this docstring before touching it again.
+
+    Before Phase 184.4, this fixture (4 clean endpoints + 1 CRITICAL finding)
+    forced an incongruent band through the REAL scorer: the severity-blind
+    `_rating()` computed EXCELLENT despite the open CRITICAL, which
+    `_check_congruence()` correctly rejected. Phase 184.4's severity floor
+    (plan 184.4-04, `quirk/intelligence/scoring.py`) means
+    `compute_readiness_score()` can no longer construct that incongruent
+    band at all — the same fixture now legitimately scores FAIR, which the
+    guard correctly ACCEPTS, so `pytest.raises` would never fire and this
+    test would silently stop testing anything.
+
+    The test's INTENT is still valid and still needs coverage: proving the
+    WR-05 backward-compat path (`exec_content=None`) still invokes the D-06
+    `assert_congruent()` guard. So `compute_readiness_score` is patched at
+    the `quirk.reports.executive` import namespace with a PLAIN DICT literal
+    (never a spec'd mock object — in this project unset spec attributes
+    auto-vivify into unique truthy child mocks, so a spec'd mock silently
+    rots as the score dict grows) that sets `rating="EXCELLENT"` — a value
+    the real producer can no longer emit alongside a CRITICAL finding, but a
+    legitimate mocked value for proving the compat path still CALLS the
+    guard with whatever `compute_readiness_score` gives it.
+
+    `_check_congruence()` itself is NOT modified by this test or by this
+    plan — see `git diff quirk/reports/content_model.py` on this plan's
+    commit, which is empty.
+
+    Explicitly forbidden alternatives (do not take these shortcuts): do not
+    delete this test, do not mark it as a skipped test, and do not "fix" it by
+    relaxing `_check_congruence()` or `_BAND_CRITICAL_THRESHOLD`. Every OTHER
+    test in this file that calls `_check_congruence()` / `assert_congruent()`
+    directly with hand-constructed band/severity dicts remains the correct
+    and sufficient direct coverage of the guard and must not be touched.
     """
     from types import SimpleNamespace
     from datetime import datetime, timezone
+    from unittest.mock import patch
+
     from quirk.reports.executive import build_exec_markdown
 
     cfg = SimpleNamespace(
@@ -306,5 +341,19 @@ def test_markdown_compat_path_is_fail_closed():
     crit = {"severity": "CRITICAL", "host": "10.0.0.9", "port": 443,
             "title": "Quantum-vulnerable key exchange", "category": "tls",
             "description": "d", "recommendation": "r", "compliance": []}
-    with _pytest.raises(ReportCongruenceError):
-        build_exec_markdown(cfg, eps, [crit], exec_content=None)
+
+    # Plain dict literal, not a spec'd mock object — see docstring.
+    mock_score_raw = {
+        "score": 89,
+        "rating": "EXCELLENT",
+        "rating_cap_reason": None,
+        "subscores": {
+            "hygiene": 25, "modern_tls": 25, "identity_trust": 25,
+            "agility_signals": 25, "data_at_rest": 25, "data_in_motion": 25,
+        },
+        "drivers": [],
+    }
+
+    with patch("quirk.reports.executive.compute_readiness_score", return_value=mock_score_raw):
+        with _pytest.raises(ReportCongruenceError):
+            build_exec_markdown(cfg, eps, [crit], exec_content=None)
