@@ -88,13 +88,13 @@ def _reproduction_findings() -> list:
 
 
 def test_regression_fixture_reproduces_the_documented_defect_conditions():
-    """Unconditional, never-xfailed guard on the fixture's own preconditions.
+    """Unconditional guard on the fixture's own preconditions.
 
     Asserts only that the fixture reproduces the documented defect
     conditions (a CRITICAL `TLS certificate expired` finding present, and a
     real numeric score >= 85) without invoking `write_reports` at all, so
-    the fixture cannot silently drift out from under the xfailed test below
-    while the xfail marker hides a fixture-shape regression.
+    the fixture cannot silently drift out from under the regression test
+    below.
     """
     endpoints = _clean_endpoints()
     findings = _reproduction_findings()
@@ -120,24 +120,12 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
 # ---------------------------------------------------------------------------
 # The D-13 RED-first regression.
 #
-# strict=True is required, not incidental: with strict=True, this test
-# reports XFAIL (suite stays green) while the producer is unfixed across
-# Waves 2-3, and reports a hard FAILURE the instant the severity-floor fix
-# (plan 184.4-04) makes it pass — which is exactly the signal that the
-# `xfail` marker below must now be deleted. A plain non-strict xfail would
-# let that removal be silently forgotten; strict=True makes forgetting it
-# impossible to miss. Removed by plan 184.4-04.
+# Plan 184.4-04 landed the severity floor (quirk/intelligence/scoring.py):
+# compute_readiness_score() now caps the band to FAIR for any CRITICAL >= 1
+# via quirk.severity_bands.cap_band_for_severity(), so this test is GREEN.
+# The strict=True marker that used to fence this test has been
+# deleted per D-13 / plan 184.4-04's own reason string.
 # ---------------------------------------------------------------------------
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Phase 184.4 D-13: pre-fix quirk.intelligence.scoring._rating() has no "
-        "severity floor, so a score >= 85 with an open CRITICAL still emits "
-        "EXCELLENT and quirk.reports.content_model._check_congruence() halts "
-        "report generation with ReportCongruenceError. This xfail is removed by "
-        "plan 184.4-04 once the severity floor caps the band to FAIR."
-    ),
-)
 def test_high_score_with_one_critical_still_produces_a_report(tmp_path):
     """D-13: score >= 85 with one open CRITICAL must still produce a report.
 
@@ -196,6 +184,10 @@ def test_high_score_with_one_critical_still_produces_a_report(tmp_path):
         f"Expected the severity-floor-capped band to be exactly 'FAIR' per D-02 "
         f"(least-destructive band the congruence guard accepts for CRITICAL >= 1), "
         f"got {score_raw['rating']!r}."
+    )
+    assert score_raw["rating_cap_reason"] and "FAIR" in score_raw["rating_cap_reason"], (
+        "Expected a non-empty structured rating_cap_reason naming FAIR (D-09), got "
+        f"{score_raw.get('rating_cap_reason')!r}."
     )
 
     # Assertion 3: the executive markdown artifact WAS written — the exact

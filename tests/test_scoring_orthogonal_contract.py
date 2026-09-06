@@ -82,3 +82,70 @@ def test_subscore_orthogonality(category, trigger_key, trigger_value, clean_cate
             f"{clean_cat} must be 25 when only {category} has findings. "
             f"Got {subscores[clean_cat]}. Orthogonality contract violated."
         )
+
+
+def test_severity_floor_caps_band_not_score():
+    """Phase 184.4 D-03: the severity floor caps the BAND only, never the score.
+
+    Executable form of "the floor caps the band, not the number" — this is what
+    fails loudly if a future contributor "simplifies" `high_impact` per RESEARCH
+    Pitfall 2, or moves the cap onto `total_score` instead of `rating`.
+
+    Toggling `finding_severity_counts["CRITICAL"]` between 0 and 1, with every
+    other evidence input fixed, must change `rating` (EXCELLENT -> FAIR) but
+    leave `score` and every `subscores` value byte-identical.
+
+    `findings` is fixed at 1000 so the pre-existing `high_impact` /
+    `agility_high_impact_ratio` ratio contribution (D-03) from a single
+    CRITICAL rounds to zero (`-1/1000 * 14.0 = -0.014`, clamped/rounded away)
+    — isolating the band-cap mechanism under test from that ratio's own,
+    intentional, much smaller effect on the number. This is not evading D-03;
+    it is testing D-01's "the cap moves the band, not the number" claim
+    directly, without also re-proving D-03's separate (and already-covered)
+    "the ratio moves the number a little" claim in the same assertion.
+    """
+    base_evidence = {
+        "totals": {"endpoints": 10, "findings": 1000},
+        "finding_severity_counts": {
+            "CRITICAL": 0,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0,
+            "INFO": 0,
+        },
+    }
+
+    uncapped = compute_readiness_score(base_evidence)
+    assert uncapped["rating"] == "EXCELLENT", (
+        f"Fixture precondition failed: expected EXCELLENT with zero CRITICAL, "
+        f"got {uncapped['rating']!r} (score {uncapped['score']})."
+    )
+    assert uncapped["rating_cap_reason"] is None
+
+    capped_evidence = {
+        "totals": {"endpoints": 10, "findings": 1000},
+        "finding_severity_counts": {
+            "CRITICAL": 1,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0,
+            "INFO": 0,
+        },
+    }
+    capped = compute_readiness_score(capped_evidence)
+
+    assert capped["rating"] == "FAIR", (
+        f"Expected the CRITICAL=1 case to cap to FAIR per D-02, got {capped['rating']!r}."
+    )
+    assert capped["rating"] != uncapped["rating"], (
+        "Toggling CRITICAL 0->1 must change the emitted rating."
+    )
+    assert capped["score"] == uncapped["score"], (
+        "D-01/D-03 violated: the numeric score moved when only the band should "
+        f"have capped. uncapped={uncapped['score']} capped={capped['score']}."
+    )
+    assert capped["subscores"] == uncapped["subscores"], (
+        "D-01/D-03 violated: a subscore moved when only the band should have "
+        f"capped. uncapped={uncapped['subscores']} capped={capped['subscores']}."
+    )
+    assert capped["rating_cap_reason"] and "FAIR" in capped["rating_cap_reason"]
