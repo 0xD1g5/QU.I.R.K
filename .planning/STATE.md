@@ -4,7 +4,7 @@ milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
 stopped_at: Phase 184.4 context gathered
-last_updated: "2026-09-05T23:55:26.062Z"
+last_updated: "2026-09-06T00:07:20.806Z"
 progress:
   total_phases: 9
   completed_phases: 5
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.3 — timestamp-correctness
+**Current focus:** Phase 184.4 — rating-band-severity-floor
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,8 +671,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.4 (rating-band-severity-floor) — PLANNED, ready to execute (2026-09-05). 10 plans across 6 waves; plan-checker returned VERIFICATION PASSED with 0 blockers and 2 warnings, both closed before this record was written. Requirements SCORE-04 / SCORE-05 adopted and covered; all of D-01..D-13 cited in plan `must_haves.truths`.
-Plan: 0 of 10 executed.
+Phase: 184.4 (rating-band-severity-floor) — EXECUTING
+Plan: 1 of 10
 
 Prior phase (retained for history):
 
