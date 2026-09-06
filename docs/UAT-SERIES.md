@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-05 (v5.19 Phase 184.3 — Timestamp Correctness, plan 184.3-11
+**Last Updated:** 2026-09-05 (v5.19 Phase 184.4 — Rating Band Severity Floor, plan 184.4-10
+phase-gate close-out: Series 184.4 added (UAT-184.4-01..06; 4 PASS, 2 SKIP/DEFERRED) for
+SCORE-04/SCORE-05 — a scan scoring >=85 with one open CRITICAL now completes report generation
+across HTML/PDF/DOCX/CBOM/scorecard rather than halting, the band reads `FAIR` alongside the
+original score with a visible cap reason on all six render surfaces (CLI, HTML/PDF, DOCX,
+scorecard, terminal, dashboard), the dashboard Executive/print pages (the original BACK-89 filed
+surface) render the cap reason, and a clean scan shows no cap reason anywhere. Both manual-only
+rows from `184.4-VALIDATION.md` (live chaos-lab re-verification, cross-surface visual placement)
+are `DEFERRED` with cited, currently-passing substitute automated coverage — this executor session
+has no live chaos-lab or browser access, matching the documented gap this series records rather
+than asserting a live check that did not happen. Earlier: v5.19 Phase 184.3 — Timestamp Correctness, plan 184.3-11
 documentation/UAT/validation close-out: Series 184.3 added (UAT-184.3-01..07; 6 PASS, 1 SKIP/
 DEFERRED) for SCORE-03 — API `+00:00` offsets on real routes, badge/selector zone-labeled render
 (TZ-pinned, human-confirmed live), `/print` fixed-UTC (D-13, human-confirmed live), all four report
@@ -23130,3 +23140,235 @@ client deliverable via the same unfiltered array. Verified NOT a 184.3 regressio
 commits touch zero files under `quirk/scanner/`; the filter `git blame`s to Phase 5). Recorded in
 STATE.md Deferred Items and `184.3-VALIDATION.md` — not fixed in this phase, not a Series 184.3
 failure.
+
+
+---
+
+## Series 184.4: Rating Band Severity Floor (Phase 184.4 — v5.19)
+
+**Scope:** SCORE-04/SCORE-05 — a readiness band that carries a CRITICAL severity floor so
+`_rating()` can never emit a band `_check_congruence()` rejects, closing BACK-89's
+halt-on-generate defect by reference. The numeric score is untouched; only the band is capped
+(to `FAIR`, never further). Cases below are proven via the automated pytest/vitest suite and
+direct source inspection; the two additional cross-checks that require a live chaos-lab
+target or a human eyeballing rendered pages are tracked in `184.4-VALIDATION.md`'s Manual-Only
+Verifications table and DEFERRED here with cited, currently-passing substitute coverage — this
+close-out session has no live chaos-lab or browser access available to it.
+
+### UAT-184.4-01: A scan scoring >= 85 with one open CRITICAL produces a full artifact set instead of halting
+
+**ID:** UAT-184.4-01
+**Title:** The exact BACK-89/D-13 reproduction (89/100, one CRITICAL `TLS certificate expired`,
+one HIGH `TLS certificate is self-signed`) is driven through the real `write_reports()` pipeline
+and produces HTML, PDF, DOCX, CBOM, and scorecard artifacts rather than raising
+`ReportCongruenceError`.
+**Maps to:** SCORE-04 (D-01, D-02, D-03, D-06, D-07, D-13)
+
+**What to test:** That the defect this phase closes — report generation halting entirely on a
+high-scoring scan with an open CRITICAL finding — cannot recur, proven end-to-end through the
+real production call chain (`build_evidence_summary` -> `compute_readiness_score` ->
+`build_exec_content` -> `write_reports`), not just at the unit level.
+
+**Steps:**
+```bash
+python -m pytest tests/test_score_severity_floor_regression.py -q -v
+```
+
+**Pass Criteria:** all cases pass; the regression's `xfail` marker (used during Waves 1-2 to keep
+the suite green before the producer fix landed) has been removed, so the test now fails loudly
+(not silently xpasses) if the floor regresses.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.4-02/184.4-04 plan execution)
+**Notes:** 184.4-04-SUMMARY.md records the `xfail(strict=True)` marker's removal was the exact
+commit that flipped this regression from RED to GREEN — a real state transition, not a
+re-authored assertion.
+
+---
+
+### UAT-184.4-02: The band reads FAIR with the original score and a visible cap reason on all six render surfaces
+
+**ID:** UAT-184.4-02
+**Title:** CLI executive summary, HTML/PDF, DOCX, the scorecard, the terminal summary table, and
+the dashboard Executive/print pages all render the identical, structured `rating_cap_reason`
+string (`"Band capped at FAIR: N CRITICAL finding(s) open (score S/100)."`) beside the score/band
+headline whenever the band is capped, and render nothing when it is not.
+**Maps to:** SCORE-04 (D-09, D-10)
+
+**What to test:** That D-10's "all headline surfaces, including the dashboard" requirement is met
+literally — six independent renderers, not a subset — with presence proven capped and absence
+proven uncapped on each.
+
+**Steps:**
+```bash
+python -m pytest tests/test_exec_content_model.py tests/test_html_report.py -q -v
+cd src/dashboard && npx vitest run \
+  src/pages/__tests__/executive-pdf-cleanup.test.tsx \
+  src/pages/__tests__/print-pdf-cleanup.test.tsx
+```
+
+**Pass Criteria:** all cases pass. The Python suite covers CLI (both the `exec_content` and WR-05
+compat branches), HTML/PDF, DOCX (via a live `python-docx` round-trip read), the scorecard, and
+the terminal summary table. The vitest suite covers the dashboard Executive page
+(`.rating-cap-reason`) and print page (`.score-cap-reason`), each proven present-when-capped and
+absent-when-not via `querySelector`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.4-05/184.4-06/184.4-08 plan execution)
+**Notes:** Re-run live during this close-out: `105 passed` (Python severity-floor/exec-content/
+html-report suite) and `9 passed` (vitest executive/print cap-reason suite), zero failures.
+184.4-06-SUMMARY.md's post-completion addendum additionally hardened the CLI assertions from
+presence-only to line-adjacency (the `**Cap reason:**` line must immediately follow the
+`**Rollup:**` line), closing this repo's standing render-test weakness
+(`feedback_report_render_tests_presence_not_appearance`) on this exact surface.
+
+---
+
+### UAT-184.4-03: The dashboard Executive page shows the cap reason — the original BACK-89 surface
+
+**ID:** UAT-184.4-03
+**Title:** `ScoreData.rating_cap_reason` (Pydantic + TypeScript mirror) is populated from the
+dashboard's own scan-scoring path and rendered on `executive.tsx`, the exact screen BACK-89 was
+filed against.
+**Maps to:** SCORE-04 (D-09, D-10); closes BACK-89 by reference
+
+**What to test:** That closing BACK-89 "by reference" is not a paper closure — the field reaches
+the dashboard schema, the one production `ScoreData(` construction site populates it, and the
+React component renders it, with a rebuilt/linted production bundle actually shipping the change
+(FastAPI serves pre-built statics; an unbuilt `.tsx` edit ships nothing).
+
+**Steps:**
+```bash
+grep -n "rating_cap_reason" quirk/dashboard/api/schemas.py quirk/dashboard/api/routes/scan.py
+grep -n "rating_cap_reason\|rating-cap-reason" src/dashboard/src/pages/executive.tsx
+cd src/dashboard && npx vitest run src/pages/__tests__/executive-pdf-cleanup.test.tsx
+```
+
+**Pass Criteria:** both greps match (schema field + population at the one production construction
+site; render site in `executive.tsx`); the vitest file passes.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.4-08 plan execution)
+**Notes:** 184.4-08-SUMMARY.md records `npm run build && npm run lint` were both run and the
+resulting bundle (`quirk/dashboard/static/`) was committed alongside the source change — the
+mandatory pair per CONTEXT.md D-10's "known cost." The out-of-scope `ScoreGauge.tsx` frontend
+threshold mismatch found along the way was recorded as a durable backlog entry
+(`.planning/backlog/999.92-scoregauge-threshold-mismatch-frontend/`), not fixed in this phase.
+
+---
+
+### UAT-184.4-04: A clean scan (no open CRITICAL) shows no cap reason anywhere
+
+**ID:** UAT-184.4-04
+**Title:** The negative case: a scan with zero open CRITICAL findings renders identically to a
+pre-184.4 report on every surface — no `rating_cap_reason` key present with a truthy value, no
+`Cap reason` / `Band capped` text anywhere in CLI, HTML/PDF, DOCX, scorecard, terminal, or
+dashboard output.
+**Maps to:** SCORE-04 (D-09); the "absence means not capped, not missing data" contract
+
+**What to test:** That the cap-reason mechanism is genuinely conditional, not a feature that
+always renders something — a false positive here would misrepresent every uncapped scan as
+capped, or vice versa.
+
+**Steps:**
+```bash
+python -m pytest tests/test_exec_content_model.py tests/test_html_report.py -k "uncapped or absent or not_capped" -q -v
+cd src/dashboard && npx vitest run \
+  src/pages/__tests__/executive-pdf-cleanup.test.tsx \
+  src/pages/__tests__/print-pdf-cleanup.test.tsx -t "does not render"
+```
+
+**Pass Criteria:** all matched cases pass, asserting the absence of the cap-reason element/text on
+an uncapped fixture.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-05  **Tester:** Automated (184.4-05/184.4-06/184.4-08 plan execution)
+**Notes:** `tests/test_exec_content_model.py` additionally covers a score dict *missing* the
+`rating_cap_reason` key entirely (pre-184.4 data shape) rendering identically to the explicit-`None`
+uncapped case, with no exception — the backward-compatibility case D-09 exists to guarantee.
+
+---
+
+### UAT-184.4-05: Live chaos-lab re-verification of the original reproduction — DEFERRED, substitute coverage cited
+
+**ID:** UAT-184.4-05
+**Title:** A live scan against the chaos lab's TLS profile at `127.0.0.1` with the shipped 17-port
+`CONSULTING_TLS_PORTS` default, confirming an approximately 89/100 score with a CRITICAL `TLS
+certificate expired` on port 9443, and that HTML/PDF/DOCX/CBOM/scorecard **all** generate with a
+`FAIR` band and a visible cap reason.
+**Maps to:** SCORE-04 (D-13)
+
+**What to test:** The one behavior in this series that needs real scanner output rather than a
+synthetic evidence fixture — `184.4-VALIDATION.md`'s Manual-Only Verifications table names this
+exact check.
+
+**Steps:** Start the chaos lab TLS profile (`./lab.sh up` with the TLS profile enabled), run
+`quirk scan 127.0.0.1` with the shipped port defaults, confirm the score/band/artifact set as
+described above.
+
+**Pass Criteria:** score approx. 89/100, band `FAIR`, all five artifact types generate with a
+visible cap reason.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-05  **Tester:** N/A — no live chaos-lab environment available to this close-out
+session
+**Notes:** **DEFERRED — covered by `tests/test_score_severity_floor_regression.py`**, which drives
+the identical reproduction (same CRITICAL/HIGH finding pair, same score range, same real
+`write_reports()` call chain) through synthetic `SimpleNamespace` TLS endpoint fixtures rather than
+a live chaos-lab target. 184.4-02-SUMMARY.md records the fixture's score (91/100, safely above the
+85 EXCELLENT threshold) was verified empirically via a scratch call before the test was written,
+not guessed or hard-coded to the reproduction's literal 89. The gap between this substitute and a
+genuinely live run is the same class of gap `184.3-VALIDATION.md` documented for its own
+chaos-lab-dependent manual row: an executing, currently-passing test proves the mechanism; it does
+not prove the live scanner probes still reach the lab's TLS ports unmodified. No chaos-lab
+container was available in this execution environment to close that specific gap live.
+
+---
+
+### UAT-184.4-06: Visual placement of the cap reason on each headline surface — DEFERRED, substitute coverage cited
+
+**ID:** UAT-184.4-06
+**Title:** A human confirms, by eye, that the cap reason on each of the CLI exec summary, HTML
+report, DOCX, scorecard, and dashboard Executive page appears adjacent to the band/score headline
+and reads as an annotation rather than a scoring driver.
+**Maps to:** SCORE-04 (D-09, D-10)
+
+**What to test:** This project's render tests assert field/column presence, not visual order or
+appearance (`feedback_report_render_tests_presence_not_appearance`) — a passing automated test does
+not, by itself, prove the string reads correctly beside the Phase 88 rollup line to a human reader.
+
+**Steps:** Open a capped scan's CLI exec summary, HTML report, DOCX, scorecard, and dashboard
+Executive page; confirm the cap reason appears immediately beside the band/score headline on each.
+
+**Pass Criteria:** the cap reason reads as an annotation on the headline, not a scoring driver, on
+all five surfaces.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-05  **Tester:** N/A — no interactive browser/terminal session available to this
+close-out session to perform a human visual check
+**Notes:** **DEFERRED — covered by the line-adjacency regression tests added in
+`tests/test_exec_content_model.py`** (`test_cli_markdown_compat_branch_renders_cap_reason_when_
+capped` and `test_cli_markdown_exec_content_branch_renders_cap_reason_when_capped`, hardened per
+184.4-06-SUMMARY.md's post-completion addendum to assert the `**Cap reason:**` line is the line
+immediately following `**Rollup:**`, not merely present somewhere in the document) and by the HTML
+render test's positional placement (`report.html.j2`'s `score-cap-reason` block sits 56 lines
+before the Score Drivers list, per 184.4-05-SUMMARY.md). These are the closest automated proxy for
+"reads as an annotation, not a driver" that this project's presence-based render-test convention
+supports; they do not replace an actual human read of the rendered page, which
+`184.4-VALIDATION.md`'s Manual-Only Verifications table records as not performed live in this
+close-out.
+
+---
+
+**Series 184.4 disposition.** 4 of 6 cases are `[x] PASS`, proven via the automated pytest/vitest
+suite and direct source inspection: `UAT-184.4-01` (the exact BACK-89 reproduction completes report
+generation), `UAT-184.4-02` (cap reason present on all six render surfaces when capped),
+`UAT-184.4-03` (the dashboard Executive page — BACK-89's original filed surface — renders it, with
+a rebuilt/linted production bundle), and `UAT-184.4-04` (a clean scan shows no cap reason
+anywhere, including the pre-184.4 missing-key backward-compatibility case). Two cases
+(`UAT-184.4-05`, `UAT-184.4-06`) are honest `[x] SKIP`s with `DEFERRED` dispositions and real,
+currently-passing substitute tests cited — not uncovered gaps — because this close-out session had
+no live chaos-lab environment or interactive browser/terminal session available to it to perform
+the two manual-only checks `184.4-VALIDATION.md` names. Both deferred checks remain open items for
+a future session with that access; see `184.4-VALIDATION.md`'s Manual-Only Verifications table for
+the full disposition record.
