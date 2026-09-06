@@ -296,6 +296,7 @@ def render_docx_report(
     exec_content: "Any | None" = None,
     *,
     scan_completed_at: "datetime | None" = None,
+    rating_cap_reason: "str | None" = None,
 ) -> bool:
     """Write a structural Word DOCX report to *path*.
 
@@ -320,6 +321,14 @@ def render_docx_report(
         path — it cannot be derived locally. Rendered in the cover metadata
         paragraph via the shared `format_scan_completed_at` helper, which never
         falls back to `generated_at`.
+    rating_cap_reason : str | None
+        D-09/D-10 (Phase 184.4): structured cap-reason sentence from
+        `score_raw.get("rating_cap_reason")`, threaded through the writer.py
+        compat dict. `ExecContent` does not carry this field (it is sourced
+        from `score_raw` directly on every surface — see html_renderer.py's
+        primary-path idiom), so it is passed as its own keyword parameter,
+        mirroring `scan_completed_at`'s "no other way to reach this function"
+        precedent. `None` when the band was not capped; renders nothing.
     """
     # T-100-DEP: lazy import — MUST stay inside the function body.
     # Never import docx at module level (optional-extra import trap).
@@ -579,6 +588,11 @@ def render_docx_report(
         f"{raw_sum} ÷ 1.5 = {score_total} / 100",
         style="Normal",
     )
+    # D-09/D-10 (Phase 184.4): cap-reason annotation beside the rollup, matching
+    # the CLI/HTML surfaces (quirk/reports/executive.py, report.html.j2). Renders
+    # nothing when the band was not capped.
+    if rating_cap_reason:
+        doc.add_paragraph(f"Cap reason: {rating_cap_reason}", style="Normal")
     # Score Decomposition table (same as executive summary decomp)
     score_breakdown_tbl = doc.add_table(rows=1, cols=3)
     _set_table_style(score_breakdown_tbl)

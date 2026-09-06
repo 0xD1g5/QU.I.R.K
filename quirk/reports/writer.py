@@ -331,6 +331,11 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
     lines.append(f"## Score\n- **Readiness Score:** **{score.get('total')} / 100**\n- **Confidence:** **{conf.get('confidence')} / 100**\n")
+    # D-09 / D-10 (184.4-06): scorecard headline surface — conditional, beside
+    # the score headline, matching the CLI/HTML/DOCX idiom. None when uncapped.
+    _rating_cap_reason = score.get("rating_cap_reason")
+    if _rating_cap_reason:
+        lines.append(f"- **Cap reason:** {_rating_cap_reason}\n")
 
     # D-07 / SCORE-XPARENCY-01: subscore decomposition block
     _SUBSCORE_LABELS = [
@@ -450,10 +455,17 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     )
 
     # Compat wrappers: map intelligence schema to writer's internal format
+    # NOTE (184.4-06 / D-09 / D-10): the compat dict's band-carrying key is
+    # "total" while the canonical producer key is "score" — that historic
+    # divergence (Pitfall 1 / WR-06, html_renderer.py:835) is exactly why an
+    # added key like rating_cap_reason is easy to drop here silently. Any
+    # future key added to score_raw that must reach DOCX/scorecard has to be
+    # added to this dict explicitly — nothing here is derived automatically.
     score = {
         "total": score_raw["score"],
         "subscores": score_raw["subscores"],
         "drivers": [d["reason"] for d in score_raw.get("drivers", [])],
+        "rating_cap_reason": score_raw.get("rating_cap_reason"),
     }
     conf = {
         "confidence": conf_raw.get("confidence_score", 0),
@@ -482,6 +494,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             "total": score.get("total"),
             "subscores": score.get("subscores"),
             "drivers": score.get("drivers"),
+            # D-09 / D-10 (184.4-06): threaded through so intelligence-{stamp}.json
+            # does not silently drop the key another consumer of `score` carries.
+            "rating_cap_reason": score.get("rating_cap_reason"),
         },
         "confidence": conf,
         "roadmap": roadmap_raw,
@@ -730,6 +745,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             findings=findings,
             exec_content=exec_content,
             scan_completed_at=_scan_completed_at,  # SCORE-03 / D-16b
+            rating_cap_reason=score.get("rating_cap_reason"),  # D-09 / D-10 (184.4-06)
         )
     except Exception as e:
         import sys as _sys
@@ -799,6 +815,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     summary_table.add_row("HIGH findings", f"[orange1]{high_count}[/orange1]" if high_count else "0")
     summary_table.add_row("MEDIUM findings", f"[yellow]{medium_count}[/yellow]" if medium_count else "0")
     summary_table.add_row("Readiness score", f"[bold]{total_score}/100[/bold]")
+    # D-09 / D-10 (184.4-06): terminal summary is another consumer of `score`;
+    # conditional row, absent when the band was not capped.
+    _cap_reason_row = score.get("rating_cap_reason")
+    if _cap_reason_row:
+        summary_table.add_row("Cap reason", _cap_reason_row)
     summary_table.add_row("Confidence", f"{total_conf}/100")
     summary_table.add_row("Platform version", PLATFORM_VERSION)
     _console.print(summary_table)
