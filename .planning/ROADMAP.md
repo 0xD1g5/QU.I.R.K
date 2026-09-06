@@ -258,11 +258,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 184-01-PLAN.md — Amend the falsified DRIFT-02 measurement, capture the pre-change failing-node SET, enumerate every consumer of the registry entry shape
+- [x] 184-01-PLAN.md — Amend the falsified DRIFT-02 measurement, capture the pre-change failing-node SET, enumerate every consumer of the registry entry shape
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 184-02-PLAN.md — Re-key the gate to `(file, test_qualname)`, delete `LINE_TOLERANCE`, land it RED-first (D-01/D-02/D-03/D-06)
+- [x] 184-02-PLAN.md — Re-key the gate to `(file, test_qualname)`, delete `LINE_TOLERANCE`, land it RED-first (D-01/D-02/D-03/D-06)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

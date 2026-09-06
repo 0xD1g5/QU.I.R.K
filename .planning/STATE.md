@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 01/7 complete, wave 1 of 7 done
-last_updated: "2026-09-06T18:20:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 02/7 complete, wave 2 of 7 done
+last_updated: "2026-09-06T19:10:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 50
+  completed_plans: 51
   percent: 68
 ---
 
@@ -22,6 +22,18 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 184 — Skip Registry Closure
+
+**184-02 (complete, 2026-09-06) — Gate re-keyed to (file, qualname); deliberately left RED.**
+`tests/test_skip_registry.py::_allowed()` now compares a structural `(file, qualname)` key derived
+by a new `_enclosing_qualname()` AST parent-pointer walker, instead of `(file, LINENO)` with a
+`+/-2` tolerance — `LINE_TOLERANCE` is deleted outright. The occurrence-finding half of the walk
+was extracted into `_find_skip_occurrences(root=TESTS_DIR)`, a pure detector reusable by future
+self-tests. `ast.walk`, all five construct kinds, and `EXEMPT_FILES` are unchanged. The module
+docstring now records D-01/D-02/D-03/D-06 and the two rejected key designs. **The gate is
+deliberately RED at plan close** (195 offenders, up from plan 01's 22) because `tests/skip_registry.py`
+itself is still line-keyed — this is the falsification evidence that the 195-count jump is a
+property of the key, not of any skip marker (zero markers edited). Plan 03 re-keys the registry
+data itself and is expected to turn this green.
 
 **184-01 (complete, 2026-09-06) — DRIFT-02's stale premise corrected; D-13 baseline captured.**
 `tests/test_skip_registry.py::test_no_unregistered_skips` re-measured live: 22 violations
