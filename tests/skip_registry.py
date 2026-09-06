@@ -95,10 +95,16 @@ ALLOWED_SKIPS = [
     ("test_credential_leakage.py", "test_sentinel_not_in_dashboard_api_json", "live_infra", "Defensive guard: dashboard_client get_db override not configured"),
     ("test_db_migrate_cli.py", "_ensure_run_scan_importable", "optional_extra", "run_scan not importable in minimal dev env (optional reporting deps missing)"),
     ("test_distributed_topology.py", "test_config_validates", "live_infra", "Requires docker binary"),
-    ("test_identity_scanner_hardening.py", "_kerb_mod", "optional_extra", "impacket not installed"),
+    # Phase 184 Plan 06 (D-05): "test_identity_scanner_hardening.py" :
+    # "_kerb_mod" (was: "impacket not installed") and "test_pdf_metadata_
+    # constants.py" : "<module>" (was: 'playwright.sync_api not installed;
+    # pypdf not installed') were RETIRED here -- both are bare
+    # `pytest.importorskip(...)` sites whose modules map to declared
+    # [project.optional-dependencies] groups (identity / dashboard), so the
+    # narrow derivation now auto-allows them with no registry entry. See
+    # 184-06-SUMMARY.md for the retirement record.
     ("test_jobs_api.py", "test_get_job_reconciles_real_zombie", "live_infra", "Linux-only /proc zombie-reconciliation check"),
     ("test_jwt_scanner.py", "<module>", "optional_extra", "httpx not installed"),
-    ("test_pdf_metadata_constants.py", "<module>", "optional_extra", 'playwright.sync_api not installed; pypdf not installed'),
     ("test_pdf_metadata_constants.py", "_render_or_skip", "optional_extra", "Playwright Chromium runtime not available"),
     ("test_pqc_discriminator.py", "TestPqcDiscriminatorPositive.test_probe_detects_oqs_nginx", "live_infra", "Requires oqs-nginx chaos-lab profile"),
     ("test_pqc_discriminator.py", "TestPqcDiscriminatorPositive.test_probe_detects_negotiated_group_string", "live_infra", "Requires oqs-nginx chaos-lab profile"),
@@ -307,25 +313,16 @@ ALLOWED_SKIPS = [
     ("test_audit_ledger_zero_open.py", "test_deferred_and_wontfix_rows_have_rationale", "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
     ("test_extras_concurrency_expander.py", "test_audit_rows_flipped_to_phase_71", "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
 
-    # ------------------------------------------------------------------
-    # Phase 184.4 code-review fix (WR-01): the DOCX end-to-end assertion
-    # that a capped ExecContent still renders its cap-reason paragraph with
-    # NO cap-reason keyword available. python-docx is an optional reporting
-    # extra, matching the existing test_report_render_undetermined_hosts.py
-    # entries above.
-    # ------------------------------------------------------------------
-    ("test_exec_content_model.py", "test_docx_renders_cap_reason_sourced_from_exec_content", "optional_extra", "python-docx not installed"),
-    # ------------------------------------------------------------------
-    # Phase 184.4 code-review fix (IN-02): the DOCX surface must name the
-    # readiness band as its own "Rating: {band}" field — it was the only one
-    # of the six render surfaces silent about the band, so an UNCAPPED report
-    # stated no band anywhere. Both assertions do a live python-docx
-    # round-trip read of the written file, so they carry the same
-    # optional-extra importorskip as the WR-01 entry directly above.
-    # ------------------------------------------------------------------
-    ("test_exec_content_model.py", "test_docx_names_the_band_even_when_uncapped", "optional_extra", "python-docx not installed"),
-    ("test_exec_content_model.py", "test_docx_names_both_the_capped_band_and_the_cap_reason", "optional_extra", "python-docx not installed"),
-
+    # Phase 184 Plan 06 (D-05): the three test_exec_content_model.py DOCX
+    # entries that used to live here (test_docx_renders_cap_reason_sourced_
+    # from_exec_content, test_docx_names_the_band_even_when_uncapped,
+    # test_docx_names_both_the_capped_band_and_the_cap_reason -- reasons
+    # were all verbatim "python-docx not installed") were RETIRED, not
+    # deleted-and-forgotten: each site is a bare `pytest.importorskip("docx")`
+    # whose module maps to the "docx" optional-dependencies group (via
+    # python-docx>=1.1.0), so the narrow importorskip-vs-pyproject.toml
+    # derivation in tests/test_skip_registry.py now auto-allows them with no
+    # registry entry. See 184-06-SUMMARY.md for the retirement record.
     # ------------------------------------------------------------------
     # Phase 184 Plan 05 (DRIFT-02): the 13 genuinely-never-registered
     # "environment_capability" skips -- CLAUDE.md's GSD Verb Integrity
