@@ -251,7 +251,16 @@ Plans:
   3. The `(file, LINENO)` keying is re-decided. Line-number keying is why this node re-breaks on
      edits to unrelated code in the same file; content-addressing or a marker-based key removes
      that. If keying is kept, the reason is written down.
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 184-01-PLAN.md — Amend the falsified DRIFT-02 measurement, capture the pre-change failing-node SET, enumerate every consumer of the registry entry shape
+- [ ] 184-02-PLAN.md — Re-key the gate to `(file, test_qualname)`, delete `LINE_TOLERANCE`, land it RED-first (D-01/D-02/D-03/D-06)
+- [ ] 184-03-PLAN.md — Scripted mechanical transform of all 198 registry entries with reason strings preserved byte-identical (D-14)
+- [ ] 184-04-PLAN.md — Verify the 9 drift twins re-resolve for free, then re-derive and purge the orphan set in D-08's fixed order
+- [ ] 184-05-PLAN.md — Dispose of the never-registered skips: register with source-derived reasons, delete dead scaffolding, fix the lying reason string (D-09)
+- [ ] 184-06-PLAN.md — Narrow importorskip derivation, bidirectional rot check, three permanent falsifiability self-tests (D-04/D-05/D-07/D-12)
+- [ ] 184-07-PLAN.md — Close-out: anti-accumulator verification, failing-node SET comparison, docs, UAT Series 184, Obsidian, DRIFT-02 (D-11/D-13)
 
 ### Phase 184.1: Coverage Metric Correctness
 
