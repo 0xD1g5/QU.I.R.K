@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-05 (v5.19 Phase 184.4 — Rating Band Severity Floor, plan 184.4-10
+**Last Updated:** 2026-09-06 (v5.19 Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
+close-out: Series 184 added (UAT-184-01..03; 2 PASS, 1 SKIP/GAP) for DRIFT-02 — the skip-registry
+meta-gate is re-keyed from `(file, LINENO)` to `(file, test_qualname)`, made bidirectional, and
+the full suite's failing-node set is empty for the first time since v5.17. Earlier: 2026-09-05
+(v5.19 Phase 184.4 — Rating Band Severity Floor, plan 184.4-10
 phase-gate close-out: Series 184.4 added (UAT-184.4-01..06; 4 PASS, 2 SKIP/DEFERRED) for
 SCORE-04/SCORE-05 — a scan scoring >=85 with one open CRITICAL now completes report generation
 across HTML/PDF/DOCX/CBOM/scorecard rather than halting, the band reads `FAIR` alongside the
@@ -23372,3 +23376,123 @@ no live chaos-lab environment or interactive browser/terminal session available 
 the two manual-only checks `184.4-VALIDATION.md` names. Both deferred checks remain open items for
 a future session with that access; see `184.4-VALIDATION.md`'s Manual-Only Verifications table for
 the full disposition record.
+
+---
+
+## Series 184: Skip Registry Closure (Phase 184 — v5.19)
+
+**Placement note:** this section is appended after Series 184.4 rather than inserted before
+Series 184.1, out of numeric order. The document is ordered by completion chronology, not by
+phase-number sort order — Phase 184 (a bare-numbered phase, decided and executed after its own
+sub-phases 184.1-184.4 had already closed) completed last among the four. Do not "fix" this
+into numeric order; doing so would misrepresent when each series' evidence was actually gathered.
+
+**Scope:** DRIFT-02 — the skip-registry meta-gate (`tests/test_skip_registry.py::
+test_no_unregistered_skips`) is re-keyed from `(file, LINENO)` to `(file, test_qualname)`, made
+bidirectional (a stale registry entry is itself a violation), and proven rot-proof by three
+permanent falsifiability self-tests, closing `DEFER-172-01`. Cases below are proven via the
+automated pytest suite and a full-suite failing-node SET comparison against the plan-01 baseline;
+one case (line-insertion specifically) has no dedicated automated node and is honestly disposed
+`GAP` rather than a fabricated `PASS`.
+
+### UAT-184-01: The gate passes and the full suite's failing-node set is empty
+
+**ID:** UAT-184-01
+**Title:** `tests/test_skip_registry.py::test_no_unregistered_skips` passes, and
+`python -m pytest -q -m ""` (the CI-equivalent Linux Full Suite invocation) produces a
+failing-node SET with zero members — the first fully green full suite since v5.17.
+**Maps to:** DRIFT-02 (D-01, D-07, D-11, D-13)
+
+**What to test:** That closing the gate's 22 baseline violations did not merely relocate the
+problem, and that no unrelated regression was introduced across the whole suite while doing it.
+
+**Steps:**
+```bash
+python -m pytest tests/test_skip_registry.py -q
+python -m pytest -q -m ""
+```
+
+**Pass Criteria:** `test_skip_registry.py` exits 0. The full-suite run's `FAILED` node set is
+empty — compared as a SET against the 184-01-SUMMARY.md baseline (`test_chaos_lab_idempotency.py::
+test_profile_re_up_is_idempotent[pki]`, `[registry]`, and `test_skip_registry.py::
+test_no_unregistered_skips`, all 3 failing under a healthy Docker daemon), never as a raw pass
+count.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Automated (184-07 plan execution)
+**Notes:** `tests/test_skip_registry.py -q` -> 22 passed, 0 failed. Full suite ->
+`4259 passed, 58 skipped, 72 xfailed, 5 xpassed, 0 failed` in 979.14s, Docker healthy
+(`docker info` exit 0, matching plan-01's recorded healthy state so the comparison is
+interpretable per D-13). `grep -E "^FAILED"` against the full-suite output returns 0 lines — the
+failing-node SET is empty. Diffed against the plan-01 baseline SET: all 3 baseline members
+(the 2 chaos-lab idempotency nodes and `test_skip_registry`) moved to "now passing"; "newly
+failing" is empty; "failing in both" is empty. Zero fatal-signal lines
+(`Fatal Python error`/`Segmentation fault`/`exit=-11`) in the full-suite output. See
+184-07-SUMMARY.md's Task 1 section for the full three-set breakdown this case is drawn from.
+
+---
+
+### UAT-184-02: Line drift no longer re-breaks the gate — GAP, substitute coverage cited
+
+**ID:** UAT-184-02
+**Title:** Inserting blank lines above a registered skip leaves the gate green.
+**Maps to:** DRIFT-02 (D-01, D-06)
+
+**What to test:** The property the phase exists to deliver — an edit to unrelated code in the
+same file must not re-break the gate the way `(file, LINENO)` keying did across Phase 183.
+
+**Steps:** No dedicated automated node exists for the literal "insert blank lines, re-run the
+gate" scenario. `test_enclosing_qualname_derives_the_ancestor_chain` proves the underlying
+mechanism (AST ancestor-chain qualname derivation is structural, not positional) but does not
+itself parametrize over line insertion. Manual verification steps are in `184-VALIDATION.md`'s
+Manual-Only Verifications table and this plan's own checkpoint task.
+
+**Pass Criteria:** N/A — disposed `GAP`, not scored PASS/FAIL by an automated run.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-06  **Tester:** N/A — no automated node covers this scenario specifically
+**Notes:** **GAP — no substitute coverage for the literal line-insertion scenario**, recorded at
+`docs/uat-coverage-gaps.md` item 16. The closest real evidence is historical, not a standing
+self-test: Plan 184-04's live re-derivation of the 9 real drift-twin entries showed their
+recorded line numbers moved by 4-8 lines across Phase 183's edits and re-resolved for free under
+the qualname key with zero registry changes — the exact property this case describes, just not
+captured as a re-runnable test. A fabricated PASS is not written here; the human-executed
+checkpoint (Task 5 of this plan) is the substitute verification until a standing self-test for
+this specific scenario is written.
+
+---
+
+### UAT-184-03: The bidirectional half fires — a stale registry entry fails the build
+
+**ID:** UAT-184-03
+**Title:** A registry entry whose `(file, qualname)` resolves to no live skip site makes the
+gate red, naming the stale entry.
+**Maps to:** DRIFT-02 (D-07, D-12b)
+
+**What to test:** That the registry cannot silently rot the way it did before Phase 184 — where
+25 orphaned entries accumulated unnoticed because the pre-184 gate only checked one direction.
+
+**Steps:**
+```bash
+python -m pytest tests/test_skip_registry.py::test_synthetic_orphan_entry_makes_the_bidirectional_half_red -v
+```
+
+**Pass Criteria:** The self-test passes, proving a synthetic orphan ledger entry is detected and
+named by the gate's bidirectional check.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Automated (184-07 plan execution, citing the 184-06 self-test)
+**Notes:** `python -m pytest tests/test_skip_registry.py -v -k test_synthetic_orphan_entry_makes_the_bidirectional_half_red` -> 1 passed. This is a permanent, standing self-test (D-12b), not a
+one-time manual inject-and-revert — it runs on every CI invocation of `Linux Full Suite` and every
+local run of `tests/test_skip_registry.py`. The real ledger itself carries 0 orphans today,
+verified independently in 184-06-SUMMARY.md's Verification section.
+
+---
+
+**Series 184 disposition.** 2 of 3 cases are `[x] PASS`, proven via the automated pytest suite and
+a full-suite failing-node SET comparison against the plan-01 baseline (`UAT-184-01`, `UAT-184-03`).
+One case (`UAT-184-02`) is an honest `[x] SKIP` with a `GAP` disposition and a real, currently-cited
+substitute (the historical drift-twin re-derivation evidence plus this plan's own human checkpoint)
+— not a fabricated PASS, and not silently converted into PASS to satisfy the corpus gate. See
+`docs/uat-coverage-gaps.md` item 16 for the full gap record and `184-VALIDATION.md`'s Manual-Only
+Verifications table for the substitute human check.

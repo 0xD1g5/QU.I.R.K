@@ -225,3 +225,21 @@ discoveries from Plans 03-08 that Phase 170's traceability work needs to act on:
     is true" was, and zero genuine substitutes exist today. Writing the missing vitest tests
     themselves remains out of scope (see "Closing the 54 GAPs by writing the missing tests" in
     169-CONTEXT.md's Deferred Ideas) and is the actual, still-open follow-up work.
+16. **`UAT-184-02` — no automated node exercises "insert blank lines above a registered skip,
+    gate stays green" as a literal line-insertion scenario** (184-07). Three permanent
+    self-tests exist for the skip-registry gate (`test_synthetic_unregistered_skip_makes_the_
+    gate_red`, `test_synthetic_orphan_entry_makes_the_bidirectional_half_red`,
+    `test_renaming_the_enclosing_test_makes_a_registered_skip_red`), plus
+    `test_enclosing_qualname_derives_the_ancestor_chain`, which proves qualname derivation is
+    structural (AST ancestor-chain-based) rather than positional — the same structural property
+    that makes line insertion a no-op for the gate — but none of the four parametrizes over
+    inserting blank lines above a real skip site and re-running the gate. Plan 184-04's live
+    re-derivation of the 9 real drift-twin entries (`184-CONTEXT.md`'s D-10 bucket) is the
+    closest evidence: those entries' recorded line numbers moved by 4-8 lines across Phase 183's
+    edits and re-resolved for free under the qualname key with zero registry changes — a real,
+    historical instance of the exact property this GAP describes, just not captured as a
+    standing, re-runnable self-test. Disposition: `GAP`, not fabricated `PASS` — see
+    `184-07-SUMMARY.md`. The manual-only insertion check in `184-VALIDATION.md`'s Manual-Only
+    Verifications table (insert 10 blank lines above a skip in `tests/test_chaos_storage.py`,
+    confirm the gate stays green) is the human-executed substitute for this specific scenario
+    until a standing self-test is written; writing one remains open follow-up work.
