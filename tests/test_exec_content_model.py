@@ -450,7 +450,16 @@ def _capped_score_raw() -> dict:
 
 
 def test_cli_markdown_compat_branch_renders_cap_reason_when_capped():
-    """WR-05 compat path (exec_content=None): capped score dict -> cap-reason text present."""
+    """WR-05 compat path (exec_content=None): capped score dict -> cap-reason text present,
+    ADJACENT to the Rollup line (D-09's literal requirement, not just present anywhere).
+
+    Index-based adjacency, not a substring-order heuristic: this repo has a documented
+    standing weakness where render tests assert presence, not order/appearance
+    (feedback_report_render_tests_presence_not_appearance) — a future refactor that
+    moved the cap-reason line to the bottom of the document would still pass a bare
+    `in md` check. Split into lines and assert the line immediately following the one
+    starting with `**Rollup:**` starts with `**Cap reason:**`.
+    """
     from unittest.mock import patch
 
     from quirk.reports.executive import build_exec_markdown
@@ -461,6 +470,13 @@ def test_cli_markdown_compat_branch_renders_cap_reason_when_capped():
     ):
         md = build_exec_markdown(_cli_cfg(), _cli_endpoints(), [], exec_content=None)
     assert "Band capped at FAIR" in md
+
+    lines = md.split("\n")
+    rollup_idx = next(i for i, ln in enumerate(lines) if ln.startswith("**Rollup:**"))
+    assert lines[rollup_idx + 1].startswith("**Cap reason:**"), (
+        "Cap reason line must be immediately adjacent to the Rollup line (D-09), "
+        f"got: {lines[rollup_idx + 1]!r}"
+    )
 
 
 def test_cli_markdown_compat_branch_absent_when_uncapped():
@@ -503,7 +519,10 @@ def test_cli_markdown_compat_branch_missing_key_does_not_raise():
 
 
 def test_cli_markdown_exec_content_branch_renders_cap_reason_when_capped():
-    """Primary exec_content path: capped score dict -> cap-reason text present."""
+    """Primary exec_content path: capped score dict -> cap-reason text present,
+    ADJACENT to the Rollup line (D-09's literal requirement — see docstring on the
+    compat-branch twin of this test for the full rationale and index-based method).
+    """
     from unittest.mock import patch
 
     from quirk.reports.executive import build_exec_markdown
@@ -527,6 +546,13 @@ def test_cli_markdown_exec_content_branch_renders_cap_reason_when_capped():
             _cli_cfg(), _cli_endpoints(), [crit], exec_content=exec_content
         )
     assert "Band capped at FAIR" in md
+
+    lines = md.split("\n")
+    rollup_idx = next(i for i, ln in enumerate(lines) if ln.startswith("**Rollup:**"))
+    assert lines[rollup_idx + 1].startswith("**Cap reason:**"), (
+        "Cap reason line must be immediately adjacent to the Rollup line (D-09), "
+        f"got: {lines[rollup_idx + 1]!r}"
+    )
 
 
 def test_cli_markdown_exec_content_branch_absent_when_uncapped():
