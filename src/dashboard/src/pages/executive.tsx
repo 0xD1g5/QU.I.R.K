@@ -344,7 +344,7 @@ export function ExecutivePage() {
                   score.rating_cap_reason is None/undefined when the band was NOT
                   capped, so this renders nothing in the common case. */}
               {score.rating_cap_reason && (
-                <span className="rating-cap-reason mt-1 text-xs text-muted-foreground text-center max-w-[180px]">
+                <span className="score-cap-reason mt-1 text-xs text-muted-foreground text-center max-w-[180px]">
                   {score.rating_cap_reason}
                 </span>
               )}

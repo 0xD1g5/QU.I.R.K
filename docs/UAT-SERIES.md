@@ -23210,7 +23210,7 @@ cd src/dashboard && npx vitest run \
 **Pass Criteria:** all cases pass. The Python suite covers CLI (both the `exec_content` and WR-05
 compat branches), HTML/PDF, DOCX (via a live `python-docx` round-trip read), the scorecard, and
 the terminal summary table. The vitest suite covers the dashboard Executive page
-(`.rating-cap-reason`) and print page (`.score-cap-reason`), each proven present-when-capped and
+(`.score-cap-reason`) and print page (`.score-cap-reason`), each proven present-when-capped and
 absent-when-not via `querySelector`.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
@@ -23240,7 +23240,7 @@ React component renders it, with a rebuilt/linted production bundle actually shi
 **Steps:**
 ```bash
 grep -n "rating_cap_reason" quirk/dashboard/api/schemas.py quirk/dashboard/api/routes/scan.py
-grep -n "rating_cap_reason\|rating-cap-reason" src/dashboard/src/pages/executive.tsx
+grep -n "rating_cap_reason\|score-cap-reason" src/dashboard/src/pages/executive.tsx
 cd src/dashboard && npx vitest run src/pages/__tests__/executive-pdf-cleanup.test.tsx
 ```
 

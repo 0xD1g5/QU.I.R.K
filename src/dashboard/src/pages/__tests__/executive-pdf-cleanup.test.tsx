@@ -115,15 +115,22 @@ describe("ExecutivePage — SCORE-04 / D-09/D-10 (184.4) rating cap reason", () 
   it("renders the cap reason when the band was capped", async () => {
     scanDataRatingCapReason = "Band capped at FAIR: 1 CRITICAL finding open (score 89/100)"
     const { ExecutivePage } = await import("@/pages/executive")
-    render(<ExecutivePage />)
+    const { container } = render(<ExecutivePage />)
     expect(screen.getByText(/Band capped at FAIR/i)).toBeInTheDocument()
+    // IN-01 (184.4 review): the cap-reason element must carry the class name
+    // standardized across print.tsx and report.html.j2. Without this positive
+    // assertion the sibling absence-check below passes for ANY class name,
+    // so a rename could silently desynchronize the surfaces again.
+    const el = container.querySelector(".score-cap-reason")
+    expect(el).not.toBeNull()
+    expect(el).toHaveTextContent(/Band capped at FAIR/i)
   })
 
   it("does not render a cap reason element when the band was not capped", () => {
     scanDataRatingCapReason = undefined
     return import("@/pages/executive").then(({ ExecutivePage }) => {
       const { container } = render(<ExecutivePage />)
-      expect(container.querySelector(".rating-cap-reason")).toBeNull()
+      expect(container.querySelector(".score-cap-reason")).toBeNull()
     })
   })
 })

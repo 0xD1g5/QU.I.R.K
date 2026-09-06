@@ -89,8 +89,14 @@ describe("PrintPage — SCORE-04 / D-09/D-10 (184.4) rating cap reason", () => {
     scanDataReturn = { data: makeScanFixture("Band capped at FAIR: 1 CRITICAL finding open (score 89/100)"), loading: false, error: null }
     qrammReturn = { scoreResult: null, complianceRows: null, loading: false, error: null }
     const { PrintPage } = await import("@/pages/print")
-    render(<PrintPage />)
+    const { container } = render(<PrintPage />)
     expect(screen.getByText(/Band capped at FAIR/i)).toBeInTheDocument()
+    // IN-01 (184.4 review): see the matching comment in
+    // executive-pdf-cleanup.test.tsx — pins the shared class name positively
+    // so the absence-check below is not vacuous.
+    const el = container.querySelector(".score-cap-reason")
+    expect(el).not.toBeNull()
+    expect(el).toHaveTextContent(/Band capped at FAIR/i)
   })
 
   it("does not render a cap reason element when the band was not capped", async () => {
