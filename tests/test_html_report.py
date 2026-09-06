@@ -292,3 +292,74 @@ def test_html_report_scan_completed_timestamp_unknown_marker(tmp_path):
     )
     content = open(out).read()
     assert SCAN_COMPLETED_AT_UNKNOWN in content
+
+
+# Phase 184.4 D-05 / SCORE-04 / SCORE-05: severity-aware fallback band + cap-reason render.
+
+def test_score_band_deleted_no_second_band_producer():
+    """D-05: `_score_band()` must not exist on html_renderer — it was a second live band
+    producer feeding the same congruence guard as `quirk/severity_bands.py`. If this
+    assertion fails, someone reintroduced a severity-blind band helper here; route through
+    `quirk/severity_bands.py` instead (band_for_score / cap_band_for_severity)."""
+    import quirk.reports.html_renderer as html_renderer
+    assert not hasattr(html_renderer, "_score_band"), (
+        "_score_band() was a second live band producer feeding the same congruence guard "
+        "as quirk/severity_bands.py and must not be reintroduced — route through "
+        "quirk/severity_bands.py instead."
+    )
+
+
+def test_fallback_path_severity_aware_no_halt(tmp_path):
+    """D-05: the exec_content=None (backward-compat) path must compute a severity-aware
+    band BEFORE calling assert_congruent(), so a high score with an open CRITICAL finding
+    no longer halts report generation on this route — the html_renderer-path twin of the
+    D-13 regression. Pre-fix, this raised ReportCongruenceError."""
+    from quirk.reports.html_renderer import render_html_report
+    from quirk.reports.content_model import ReportCongruenceError
+
+    cfg = _make_minimal_cfg()
+    out = str(tmp_path / "report-fallback-critical.html")
+    findings = [{"severity": "CRITICAL", "category": "cert_expired", "title": "TLS certificate expired"}]
+    try:
+        render_html_report(
+            path=out, cfg=cfg, endpoints=[], findings=findings,
+            score={"score": 89, "subscores": {}, "drivers": []},
+            conf={"confidence": 80, "confidence_factors": {}},
+            roadmap_items=[],
+        )
+    except ReportCongruenceError as exc:  # pragma: no cover - failure path
+        pytest.fail(f"Fallback path halted on a severity-aware-capable band: {exc}")
+    content = open(out).read()
+    assert "FAIR" in content
+
+
+def test_cap_reason_renders_when_capped_and_absent_when_not(tmp_path):
+    """Presence-only assertion (this project's render tests assert field/column presence,
+    not visual order — see 184.4-VALIDATION.md for the manual placement check). The
+    cap-reason CSS class and reason string must appear for a capped render and must be
+    absent for an uncapped one, so a renderer that always emits the block would fail."""
+    from quirk.reports.html_renderer import render_html_report
+
+    cfg = _make_minimal_cfg()
+
+    capped_out = str(tmp_path / "report-capped.html")
+    render_html_report(
+        path=capped_out, cfg=cfg, endpoints=[],
+        findings=[{"severity": "CRITICAL", "category": "cert_expired", "title": "TLS certificate expired"}],
+        score={"score": 89, "subscores": {}, "drivers": []},
+        conf={"confidence": 80, "confidence_factors": {}},
+        roadmap_items=[],
+    )
+    capped_content = open(capped_out).read()
+    assert 'class="score-cap-reason"' in capped_content
+    assert "Band capped at FAIR" in capped_content
+
+    uncapped_out = str(tmp_path / "report-uncapped.html")
+    render_html_report(
+        path=uncapped_out, cfg=cfg, endpoints=[], findings=[],
+        score={"score": 89, "subscores": {}, "drivers": []},
+        conf={"confidence": 80, "confidence_factors": {}},
+        roadmap_items=[],
+    )
+    uncapped_content = open(uncapped_out).read()
+    assert 'class="score-cap-reason"' not in uncapped_content
