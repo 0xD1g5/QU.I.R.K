@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 02/7 complete, wave 2 of 7 done
-last_updated: "2026-09-06T19:10:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 03/7 complete, wave 3 of 7 done
+last_updated: "2026-09-06T18:35:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 51
+  completed_plans: 52
   percent: 68
 ---
 
@@ -696,7 +696,19 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184 (Skip Registry Closure) — EXECUTING
-Plan: 1 of 7
+Plan: 3 of 7
+184-03 (complete, 2026-09-06) — `tests/skip_registry.py` re-keyed from `(file, lineno)` to
+`(file, test_qualname)` for all 198 entries via a reviewed, non-committed transform script that
+reuses the gate's own `_find_skip_occurrences()`/`_enclosing_qualname()`. 4 D-02 shared-qualname
+collapses applied (198 → 192 entries); reason-string fidelity proven byte-identical outside those
+4 collapse deltas via a `Counter` multiset comparison. 16 entries kept `UNRESOLVED:<lineno>`
+(candidate orphans — test_jobs_api.py ×11 Phase-65 stubs, test_qramm_model_stale.py ×1 inline-marks
+blind spot, test_qramm_staleness.py ×2, test_vault_connector.py ×2 — Plan 04's purge input, per D-08
+ordering, not deleted here). Module docstring rewritten to document the new shape and the
+previously-undocumented `environment_subprocess_signal` category. Gate violations: 195 (plan 02 RED)
+→ 13, exactly `184-CONTEXT.md`'s "genuinely never registered" bucket (Plan 05's disposition input).
+Two atomic commits: `f9399152` (Task 1, mechanical re-key) and `f0647720` (Task 2, collapses +
+docstring). See `184-03-SUMMARY.md`.
 184.4-10 closed the phase's documentation obligations: extended `docs/report-interpretation.md`
 (§19, the severity floor — band-vs-score, the FAIR-only cap, why the score does not drop, all six
 render surfaces) and `docs/operators-guide.md` (§17, the fixed halt-on-generate defect), synced

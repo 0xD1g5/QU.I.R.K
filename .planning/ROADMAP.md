@@ -266,7 +266,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 184-03-PLAN.md — Scripted mechanical transform of all 198 registry entries with reason strings preserved byte-identical (D-14)
+- [x] 184-03-PLAN.md — Scripted mechanical transform of all 198 registry entries with reason strings preserved byte-identical (D-14)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
