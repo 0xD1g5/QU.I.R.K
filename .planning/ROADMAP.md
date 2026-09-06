@@ -274,7 +274,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 184-05-PLAN.md — Dispose of the never-registered skips: register with source-derived reasons, delete dead scaffolding, fix the lying reason string (D-09)
+- [x] 184-05-PLAN.md — Dispose of the never-registered skips: register with source-derived reasons, delete dead scaffolding, fix the lying reason string (D-09)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 

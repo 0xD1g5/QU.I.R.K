@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 04/7 complete, wave 4 of 7 done
-last_updated: "2026-09-06T19:10:00.000Z"
+stopped_at: Phase 184 executing (7 plans, 7 waves) — plan 05/7 complete, wave 5 of 7 done
+last_updated: "2026-09-06T20:00:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 56
-  completed_plans: 53
-  percent: 69
+  completed_plans: 54
+  percent: 70
 ---
 
 # Project State
@@ -22,6 +22,20 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 184 — Skip Registry Closure
+
+**184-05 (complete, 2026-09-06) — All 13 never-registered skips disposed; gate green since v5.17.**
+`tests/test_skip_registry.py::test_no_unregistered_skips` now **passes** (0 violations, 7 passed) —
+the first fully green run of this node since v5.17. `test_closure_burndown.py:296`'s dead
+scaffolding skip (guarding on `quirk/intelligence/burndown.py`, which has existed since
+2026-09-02) was deleted outright; the test now runs for real (10 passed). Deleted
+`test_uat_runner_version_check.py:183`'s self-contradicting reason string ("Registered per
+skip-registry conventions" while unregistered) before registering it for real. Registered the
+remaining 12 sites (13 skip sites collapse to 12 entries under D-02: `test_gsd_state_patch.py`'s 5
+sites collapse to 2 entries per enclosing qualname) under a new `environment_capability` category,
+each reason derived from the guard condition and enclosing test read directly in source at
+registration time — not copied from `184-CONTEXT.md`'s planning-time index. Docstring category set
+verified programmatically equal to the data's category set (7 categories). See
+`184-05-SUMMARY.md`.
 
 **184-02 (complete, 2026-09-06) — Gate re-keyed to (file, qualname); deliberately left RED.**
 `tests/test_skip_registry.py::_allowed()` now compares a structural `(file, qualname)` key derived
