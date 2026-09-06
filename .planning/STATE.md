@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-03-PLAN.md
-last_updated: "2026-09-06T00:20:28.000Z"
+stopped_at: Completed 184.4-04-PLAN.md
+last_updated: "2026-09-05T00:00:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 49
-  completed_plans: 42
+  completed_plans: 43
   percent: 58
 ---
 
@@ -672,7 +672,25 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 3 of 10 complete (184.4-01, 184.4-02, 184.4-03 done). 184.4-03 created the stdlib-only
+Plan: 4 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04 done). 184.4-04 is the keystone
+fix: `_rating()` in `quirk/intelligence/scoring.py` now delegates to
+`severity_bands.band_for_score()` (numeric-only band), and `compute_readiness_score()` applies the
+severity floor at the call site — any CRITICAL >= 1 caps the emitted `rating` to FAIR via
+`cap_band_for_severity()` (reading `critical_count` from the already-in-scope `sev` mapping, D-06 —
+no new parameter) and adds a structured `rating_cap_reason` key (D-09). Proved byte-identical
+`score`/`subscores` before and after via an empirical `git stash` pre/post comparison (97/97,
+identical subscores, only `rating` and the new key changed). D-03's `high_impact`/
+`agility_high_impact_ratio` contribution and the `total_score` rollup are untouched (comments
+added, no expression changed). The D-13 regression flipped from `strict=True` xfail to green (xfail
+deleted, original 3 assertions intact, 1 assertion added); D-03 orthogonality made executable
+(`test_severity_floor_caps_band_not_score`, toggling CRITICAL 0->1 at findings=1000 to isolate the
+band-cap from the ratio's own small effect); `test_markdown_compat_path_is_fail_closed` converted
+to a mocked `compute_readiness_score` at the `quirk.reports.executive` namespace since the real
+scorer can no longer construct an incongruent band for that fixture — `_check_congruence()`/
+`content_model.py` untouched (empty `git diff`). Collateral sweep: 441 passed / 10 skipped / 1
+unrelated xfail across scoring+congruence+executive+writer+report test files. See
+`184.4-04-SUMMARY.md`.
+184.4-03 created the stdlib-only
 `quirk/severity_bands.py` (BAND_ORDER, BAND_THRESHOLDS, BAND_CRITICAL_ALLOWANCE, band_for_score(),
 cap_band_for_severity() — D-01/D-02 cap-to-FAIR, no graduated ladder — and cap_reason() per D-09),
 rewired `quirk/reports/content_model.py`'s `_BAND_CRITICAL_THRESHOLD` to alias
