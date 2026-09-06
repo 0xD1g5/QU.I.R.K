@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Completed 184.4-09-PLAN.md
-last_updated: "2026-09-05T22:10:00.000Z"
+stopped_at: Completed 184.4-10-PLAN.md
+last_updated: "2026-09-05T22:30:00.000Z"
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 49
-  completed_plans: 48
-  percent: 62
+  completed_plans: 49
+  percent: 63
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 184.4 — rating-band-severity-floor
+**Current focus:** Phase 184.4 — rating-band-severity-floor — COMPLETE. Next: Phase 184 (Skip Registry Closure) or Phase 185 (a11y Baseline Environment), per operator direction.
 
 **183 (complete, 2026-09-04) — GATE-03 now DERIVES its file set instead of enumerating it.**
 `tests/test_cli_helper_usage.py`'s 15-entry `_COVERED_FILES` list is deleted; the gate globs
@@ -671,8 +671,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 184.4 (rating-band-severity-floor) — EXECUTING
-Plan: 9 of 10 complete (184.4-01, 184.4-02, 184.4-03, 184.4-04, 184.4-05, 184.4-06, 184.4-07, 184.4-08, 184.4-09 done).
+Phase: 184.4 (rating-band-severity-floor) — COMPLETE (2026-09-05)
+Plan: 10 of 10 complete (184.4-01 through 184.4-10 all done).
+184.4-10 closed the phase's documentation obligations: extended `docs/report-interpretation.md`
+(§19, the severity floor — band-vs-score, the FAIR-only cap, why the score does not drop, all six
+render surfaces) and `docs/operators-guide.md` (§17, the fixed halt-on-generate defect), synced
+both to the Obsidian vault (`Digs`). Added Series 184.4 to `docs/UAT-SERIES.md` (6 cases: 4 PASS
+via live automated re-run, 2 SKIP/DEFERRED — live chaos-lab re-verification and cross-surface
+visual placement, both with cited currently-passing substitute coverage since this close-out
+session had no chaos-lab or interactive-browser access). Filled every `TBD` cell in
+`184.4-VALIDATION.md`'s Per-Task Verification Map with real task IDs, re-ran all 11 automated
+commands live (all green), flipped `nyquist_compliant: true`. Wrote the Obsidian phase note at
+`Phases/Phase-184.4-Rating-Band-Severity-Floor.md`. Both SCORE-04 and SCORE-05 confirmed complete
+in `REQUIREMENTS.md` (already flipped by plans 184.4-08/184.4-09, verified not re-flipped here).
+See `184.4-10-SUMMARY.md`.
+184.4-09 built the three run-time-derived gates D-11/D-12 require: `tests/test_band_severity_matrix_gate.py`
 184.4-09 built the three run-time-derived gates D-11/D-12 require: `tests/test_band_severity_matrix_gate.py`
 (the band x severity matrix walk, deriving both probe points and the CRITICAL-count range from
 `quirk.severity_bands`'s own tables — never a hand-copied 85/70/55/35/None table), `tests/test_band_producer_scan_gate.py`
@@ -1901,8 +1914,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-05T21:15:00.000Z
-Stopped at: Completed 184.4-07-PLAN.md
+Last session: 2026-09-05T22:30:00.000Z
+Stopped at: Completed 184.4-10-PLAN.md (phase 184.4 COMPLETE)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
