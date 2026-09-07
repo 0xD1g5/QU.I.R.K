@@ -22,7 +22,7 @@ the emitted offset is always ``+00:00``.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Annotated, Optional
 
 from pydantic import PlainSerializer
@@ -39,12 +39,23 @@ def stamp_utc_iso(value: Optional[datetime]) -> Optional[str]:
       naive-local storage).
     - Aware, non-UTC input IS converted to UTC via ``astimezone`` so the
       emitted offset is always the literal ``+00:00`` D-02 selected.
-    - A non-datetime input (defensive only — mirrors the existing
+    - A ``datetime.date`` that is NOT a ``datetime.datetime`` (e.g. a SQL
+      ``DATE``-typed column such as ``HardwareDevice.eol_date``) has
+      ``.isoformat()`` but no ``.tzinfo`` — it carries no time-of-day/offset
+      concept at all, so it is returned via its own ``.isoformat()``
+      unchanged rather than being run through the offset-attachment logic
+      below (which would raise ``AttributeError`` on the missing
+      ``.tzinfo``). ``datetime`` IS-A ``date`` in Python, so this check must
+      come before the generic non-datetime fallback and must explicitly
+      exclude ``datetime`` instances.
+    - A non-datetime, non-date input (defensive only — mirrors the existing
       ``hasattr(value, "isoformat")`` guard at ``routes/scan.py:1666``) is
       returned via ``str()`` unchanged rather than raising.
     """
     if value is None:
         return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value.isoformat()
     if not hasattr(value, "isoformat"):
         return str(value)
     if value.tzinfo is None:
