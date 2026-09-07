@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 186 planned (6 plans)
-last_updated: 2026-09-07T03:09:31.035Z
+stopped_at: Phase 186 complete (7 of 7 plans, verified 2026-09-07)
+last_updated: 2026-09-07T04:15:00.000Z
 progress:
   total_phases: 9
-  completed_phases: 7
-  total_plans: 69
-  completed_plans: 56
-  percent: 78
+  completed_phases: 8
+  total_plans: 70
+  completed_plans: 63
+  percent: 90
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 185 — a11y baseline environment
+**Current focus:** Phase 186 complete — next up Phase 185 (a11y baseline environment), the last phase of v5.19
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -769,8 +769,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 185
-Plan: 0 of 7 (planned 2026-09-06, not started)
+Phase: 186 (carried-defect-drain) — COMPLETE (2026-09-07)
+Plan: 7 of 7
 184-04 (complete, 2026-09-06) — Verified the D-10 drift hypothesis live: all 9 pure-line-drift
 entries re-resolved for free under the qualname key, derived programmatically from the plan-01
 baseline + the pre-transform (lineno-keyed) registry revision, with byte-identical reason strings
