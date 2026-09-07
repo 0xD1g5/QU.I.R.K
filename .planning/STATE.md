@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.20
 milestone_name: Release & Correctness Drain
-status: planning
-last_updated: "2026-09-07T18:45:00.340Z"
+status: executing
+last_updated: "2026-09-07T20:30:00.000Z"
 last_activity: 2026-09-07
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---
@@ -1591,7 +1591,7 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-09-07 (resumed)
-Stopped at: v5.20 milestone boundary complete (HANDOFF.json consumed); Phase 187 not started — next is discuss/plan Phase 187
+Stopped at: Phase 187 planned (5 plans, 5 sequential waves, checker passed) — executing
 Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
