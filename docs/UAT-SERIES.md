@@ -1,7 +1,12 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-06 (v5.19 Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
+**Last Updated:** 2026-09-07 (Phase 186 Plan 05 — TRIAGE-176-01/02 UAT closure: UAT-6-06's
+`PLAINTEXT_HTTP`/`HTTP_EXPOSURE` pass criteria (identifiers absent from `quirk/`, invented by the
+case author) rewritten to name the product's real finding title `"Plaintext HTTP service
+detected"`, and UAT-6-07's `HTTP_ON_TLS_LIKE_PORT` corrected to `"HTTP on TLS-designated port"`,
+per D-09; both case-text corrections documented in the UAT-6-08 disposition shape. Dispositions
+pending Task 2's live chaos-lab re-run. Earlier: 2026-09-06 (v5.19 Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
 close-out: Series 184 added (UAT-184-01..03; 2 PASS, 1 SKIP/GAP) for DRIFT-02 — the skip-registry
 meta-gate is re-keyed from `(file, LINENO)` to `(file, test_qualname)`, made bidirectional, and
 the full suite's failing-node set is empty for the first time since v5.17. Earlier: 2026-09-05
@@ -2917,9 +2922,21 @@ Each finding object contains:
 **Expected:** Plaintext HTTP exposure flagged as HIGH severity.
 
 **Pass Criteria:**
-- Finding type: `PLAINTEXT_HTTP` or `HTTP_EXPOSURE`
+- Finding title is exactly `"Plaintext HTTP service detected"`
+- Finding title is NOT `"HTTP on TLS-designated port"` (that title is TRIAGE-176-02's
+  TLS-designated-port case, UAT-6-07 — this criterion is the one that actually distinguishes
+  the two, since pre-fix both ports produced the identical title)
 - Severity: HIGH or CRITICAL
 - Finding includes remediation guidance
+
+**[D-09 case-text defect, corrected 2026-09-07]:** `PLAINTEXT_HTTP` and `HTTP_EXPOSURE` — the
+identifiers this case originally required — appear nowhere in `quirk/` (grepped, zero hits), are
+absent from `expected_results_v4.md`, and were invented by the case author rather than lost by the
+product. QU.I.R.K. findings are identified by title string, not by a machine-readable type/code
+field (see `186-CONTEXT.md` "Established Patterns"). The criteria above have been corrected in
+Phase 186 to name the title the product actually emits, per D-09. This is ROADMAP success
+criterion 3 being satisfied: a case-text defect reported and dispositioned, not forced into a code
+change.
 
 **Result:** - [ ] PASS  - [x] FAIL (2026-08-30 FAIL -- no PLAINTEXT_HTTP or HTTP_EXPOSURE finding type exists in quirk/; port 8000 and port 8444 findings are byte-identical once both are in ports_tls, product classification gap in findings_evaluator.py, BACKLOG TRIAGE-176-02, see 176-LABRUN-EVIDENCE.md UAT-6-06)  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
@@ -2939,8 +2956,13 @@ Each finding object contains:
 
 **Pass Criteria:**
 - Protocol: `HTTP`
-- Finding type references `HTTP_ON_TLS_LIKE_PORT`
+- Finding title is exactly `"HTTP on TLS-designated port"`
 - Severity: HIGH
+
+**[D-09 case-text defect, corrected 2026-09-07]:** `HTTP_ON_TLS_LIKE_PORT` — the identifier this
+case originally required — appears nowhere in `quirk/`; the product's real title for this
+condition is `"HTTP on TLS-designated port"` (`quirk/engine/findings_evaluator.py`). Corrected in
+Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 
 **Result:** - [x] PASS (2026-08-30 port 8444 HTTP on TLS-designated port finding confirmed HIGH severity with remediation, see 176-LABRUN-EVIDENCE.md UAT-6-07)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
