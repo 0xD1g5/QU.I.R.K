@@ -1,5 +1,8 @@
 ---
 type: todo
+status: resolved
+resolves_phase: "186.1"
+resolved: 2026-09-07
 created: 2026-09-06
 source: phase-185 planning (live corruption during `gsd-sdk query state.planned-phase`)
 priority: high
@@ -94,6 +97,30 @@ bold-shaped, so it is invisible on both axes.
 new `_npx/<hash>/` directory and silently drops every patch. Re-resolve
 `readlink -f "$(which gsd-sdk)"` before trusting any of the above.
 
-**Standing workaround until patched:** pre-image `.planning/STATE.md` before any mutating state
-verb and read the FULL diff hunk-by-hunk. Any hunk outside the frontmatter block is guilty until
-proven intended — signature greps and arithmetic sanity-checks both pass clean on this defect.
+## Disposition (Phase 186.1, 2026-09-07)
+
+**RESOLVED.** The fallback is now scoped, not failed-closed: the searchable region is the leading
+contiguous field-shaped run immediately after a known heading, not the whole heading-to-next-heading
+span (186.1-03 for the npx install, 186.1-04 for the `~/.claude` install). The run-time source scan
+was extended on two axes at once — install set and construct shape (bold + bare) — and found 29
+bare-field sites, not the 6 this todo and prior rounds hypothesized (186.1-02). The durability layer
+was re-seeded for all four patched files in both homes (186.1-05).
+
+**This retirement rests on 186.1-06's live six-run re-demonstration** — three verbs (`state
+.planned-phase`, `state.begin-phase`, `phase.complete`) x two entry points (`gsd-sdk` npx,
+`gsd-tools.cjs`), each run under a pre-image sha1 + full-diff + restore + post-restore sha1
+protocol against the REAL, tracked `.planning/STATE.md` — not on the green pytest suite alone.
+CLAUDE.md clause (e) records a prior retirement that was falsified the same day because it rested
+on a green function-level test; this closure explicitly does not repeat that reasoning shape. The
+transcript is `186.1-06-SUMMARY.md`.
+
+**Standing workaround is retired accordingly** — the pre-image + full-diff-review discipline from
+CLAUDE.md §(e)/(h) remains the general safeguard for any *future* GSD toolchain change (e.g. an
+npx cache-directory version bump, which silently creates a new, unpatched install with no signal),
+but it is no longer required as a workaround for THIS specific defect on this machine, in the
+verbs and installs 186.1-06 exercised.
+
+**Not resolved by this todo or this phase — filed separately as a distinct, SEMANTIC defect
+class:** `phase.complete`'s premature-completion bug and `state.planned-phase`'s misleading
+`updated: []` return value, both found live during 186.1-06. See
+`.planning/todos/pending/gsd-phase-complete-premature-completion.md`.
