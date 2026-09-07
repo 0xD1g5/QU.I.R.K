@@ -43,6 +43,20 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 | todo: gsd-state-bold-field-search-unscoped-latent | medium | Dormant bold-branch scoping risk, deliberately unfixed with stated reason | `.planning/todos/pending/` |
 | todo: backlog-reconciliation-and-derived-gate | high | Steps 1–2 executed 2026-09-07 (this ledger); **step 3 (derived gate) still open** | `.planning/todos/pending/` |
 
+**Completeness patch (2026-09-07, same day):** a PM spot-question ("are items marked months ago
+forgotten?") caught four v5.16-era carried-forward rows and one standing worklist that the initial
+ledger missed — verified still-open via `v5.17-REQUIREMENTS.md:271` (recorded there as deferred,
+absent from v5.19's requirement set):
+
+| Item | Priority | What it is | Source / notes |
+|---|---|---|---|
+| Unanchored vitest `-t` substring matching | P3 | Cross-test bleed risk when substitutes run batched | Phase 169 review WARNING; carried since v5.16 |
+| `cmd_classify` never prunes orphaned ledger rows | P3 | Latent; data-loss half fixed in 169-01 | Phase 169 review WARNING; carried since v5.16 |
+| Vitest `-m slow` leg doesn't execute in CI | P3 | `Linux Full Suite` installs no Node; vitest substitutes existence-checked only | Phase 169; `docs/uat-coverage-gaps.md` tracks it; `dashboard-quality.yml` may be the home |
+| Persist the literal scan target at start | P3 | Record user intent rather than reconstructing; not a bug fix | Phase 171 D-02 alternative |
+| **`docs/uat-coverage-gaps.md` worklist** | P2 (aggregate) | The 57+ UAT coverage GAPs (milestone-sized test-writing effort); still ACCUMULATING — Phase 184 added item 16 | Phases 168/169; the file is its own worklist — this row exists so the ledger points at it |
+| Phase 158 human-UAT (2 visual scenarios) + UAT-143-03 Windows Authenticode cert | P3 / blocked | Standing carry-forward, opportunistic-only / blocked on procuring a production signing certificate | Also listed in PROJECT.md "Standing carry-forward" — mirrored here for one-stop visibility |
+
 **Watch item (rescued from STATE.md's pre-v5.20 Current Position, where it lived only in narrative):**
 CISA/NIST CBOM minimum-elements guidance is due ≈**2026-12-19** under EO 14412's 180-day tasking — a
 schema-risk event for the CBOM. Not scoped anywhere; SURF-01's VEX surface was built to absorb a
