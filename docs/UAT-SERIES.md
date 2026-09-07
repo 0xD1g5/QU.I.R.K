@@ -1735,7 +1735,7 @@ All of these services show status `Up` or `running`:
 - TLS certificate has Keycloak-related subject
 - TLS version ≥ 1.2
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-30 FAIL -- certs/keycloak.crt is byte-identical to certs/modern.crt, CN=modern.chaos.local not Keycloak-identifying; lab fixture defect, not a product defect, BACKLOG TRIAGE-176-01, see 176-LABRUN-EVIDENCE.md UAT-5-13)  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-07 live re-run, plan 186-05, D-10 -- supersedes the 2026-08-30 FAIL. TRIAGE-176-01 plan 186-01 regenerated certs/keycloak.crt with a distinct subject. Brought up --profile identity, waited 20s, then re-ran all three steps verbatim: curl -sk https://127.0.0.1:15449/ returned HTTP/1.1 302 Found -- Keycloak's nginx TLS proxy responding, Location: https://127.0.0.1/admin/; openssl s_client -connect 127.0.0.1:15449 piped to openssl x509 -noout -subject returned subject=C=US, ST=NY, L=Lab, O=ChaosLab, OU=Server, CN=keycloak.chaos.local -- Keycloak-identifying, not modern.chaos.local; TLS protocol negotiated was TLSv1.3, which is >=1.2. All three criteria met. See 186-05-SUMMARY.md.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2938,7 +2938,7 @@ Phase 186 to name the title the product actually emits, per D-09. This is ROADMA
 criterion 3 being satisfied: a case-text defect reported and dispositioned, not forced into a code
 change.
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-08-30 FAIL -- no PLAINTEXT_HTTP or HTTP_EXPOSURE finding type exists in quirk/; port 8000 and port 8444 findings are byte-identical once both are in ports_tls, product classification gap in findings_evaluator.py, BACKLOG TRIAGE-176-02, see 176-LABRUN-EVIDENCE.md UAT-6-06)  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-07 live re-run, plan 186-05, D-10 -- against the corrected criteria above, supersedes the 2026-08-30 FAIL. TRIAGE-176-02 plan 186-03 fixed the classifier. Brought up the core profile, which is always-on, with scan.tls_designated_ports: [8444] configured, ran a full scan via quirk --config lab-core.yaml --profile standard, and read findings-*.json for port 8000: title "Plaintext HTTP service detected", severity HIGH, non-empty recommendation. Title is NOT "HTTP on TLS-designated port" -- confirmed via crypto_endpoints DB row 127.0.0.1 8000 HTTP. See 186-05-SUMMARY.md for the verbatim finding object.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2964,7 +2964,7 @@ case originally required — appears nowhere in `quirk/`; the product's real tit
 condition is `"HTTP on TLS-designated port"` (`quirk/engine/findings_evaluator.py`). Corrected in
 Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 
-**Result:** - [x] PASS (2026-08-30 port 8444 HTTP on TLS-designated port finding confirmed HIGH severity with remediation, see 176-LABRUN-EVIDENCE.md UAT-6-07)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-07 live re-run, plan 186-05, D-10 -- against the corrected criteria above; re-confirms the 2026-08-30 PASS, now with scan.tls_designated_ports: [8444] per D-08 as the config surface that drives it, not the pre-fix ports_tls coincidence. Same scan as UAT-6-06's re-run: port 8444's finding read title "HTTP on TLS-designated port", severity HIGH; crypto_endpoints DB row 127.0.0.1 8444 HTTP confirms protocol HTTP, not TLS. This is the regression guard the 8444 override exists to protect, and it holds. See 186-05-SUMMARY.md for the verbatim finding object.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
