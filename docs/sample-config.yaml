@@ -8,6 +8,7 @@ scan:
   timeout_seconds: 1
   concurrency: 20
   ports_tls: [22, 443, 8443]
+  tls_designated_ports: []
   include_sni: false
   tls_enum_mode: fast
   fingerprint_timeout_seconds: 1

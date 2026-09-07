@@ -35,6 +35,7 @@ targets:
 # -- Scan configuration ----------------------------------------------------
 scan:
   ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]    # TLS ports to probe — the same 17-port CONSULTING_TLS_PORTS list quirk/interactive.py's CLI wizard and the dashboard's "Common TLS ports" scope already default to
+  tls_designated_ports: []         # Operator override: ports that should be classified "HTTP on TLS-designated port" (not "Plaintext HTTP service detected") when plaintext HTTP is found there, in addition to the well-known TLS set (443, 8443, 9443, 10443, 4433, 5001). Empty by default — changes nothing for an existing config. Distinct from ports_tls above, which is the list of ports the scanner PROBES, not a TLS-designation signal.
   timeout_seconds: 10              # Connection timeout in seconds
   concurrency: 20                  # Concurrent scan workers
   include_sni: true                # Include SNI in TLS handshake
