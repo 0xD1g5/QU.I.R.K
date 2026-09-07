@@ -911,6 +911,217 @@ See: `quantum-chaos-enterprise-lab/expected_results_segmented_network.md`
 
 ---
 
+### 3.25 smime Profile (v4.10 — Phase 79)
+
+The `smime` profile ships an OpenLDAP instance (`smime-openldap`) seeded by an idempotent
+sidecar (`smime-seed`) with three users carrying `userSMIMECertificate` attributes — alice
+(RSA-1024/SHA-1, weak), bob (RSA-1024/SHA-256, weak key size only), and carol (RSA-2048/SHA-256,
+safe). Plain LDAP only on host port **38900** — LDAPS is intentionally deferred (D-79-R9).
+
+| Port  | Service        | Image                                   | Expected Finding                | Severity |
+|-------|----------------|------------------------------------------|----------------------------------|----------|
+| 38900 | smime-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | S/MIME weak cert (alice, RSA-1024/SHA-1) | HIGH |
+| 38900 | smime-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | S/MIME weak cert (bob, RSA-1024/SHA-256)  | HIGH |
+| 38900 | smime-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | carol — no finding (RSA-2048, safe)       | (none)   |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile smime" ./lab.sh up
+```
+
+Add to your config.yaml:
+
+```yaml
+connectors:
+  enable_smime: true
+  smime_targets:
+    - "ldap://localhost:38900"
+  smime_search_base: dc=quirk,dc=lab
+```
+
+**Expected scanner findings:** 2 HIGH findings (alice, bob); 0 from carol. Findings appear in the
+Identity tab (`source="smime"`). No IMAP traffic, no mailbox access (privacy invariant, enforced
+by the SMIME-08 AST gate). Idempotent — the seed sidecar uses `ldapadd -c` and swallows exit code
+68 (`LDAP_ALREADY_EXISTS`) on subsequent runs.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-smime`
+
+---
+
+### 3.26 adcs Profile (v4.10 — Phase 80)
+
+The `adcs` profile ships an OpenLDAP instance (`adcs-openldap`) seeded by an idempotent sidecar
+(`adcs-seed`) with a deliberately misconfigured AD CS Configuration partition: an RSA-1024/SHA-1
+CA signing cert (`QuirkLabCA`) plus three certificate templates (`BadTemplate-ESC1`,
+`BadTemplate-ESC4`, `SafeTemplate`). Plain LDAP only on host port **38910** (chosen to avoid
+`smime`'s 38900, `ldaps`'s 636, and `kerberos`'s 389). Authenticated SIMPLE bind is supported for
+real-AD parity; anonymous bind is permitted inside the lab.
+
+| Port  | Service       | Image                                   | Expected Finding                          | Severity |
+|-------|---------------|------------------------------------------|--------------------------------------------|----------|
+| 38910 | adcs-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | QuirkLabCA weak CA signing algorithm (RSA-1024/SHA-1) | HIGH |
+| 38910 | adcs-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | BadTemplate-ESC1 misconfiguration          | HIGH     |
+| 38910 | adcs-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | BadTemplate-ESC4 (ADCS-COVERAGE-GAP)       | LOW      |
+| 38910 | adcs-openldap | bitnamilegacy/openldap:2.6.10-debian-12-r4 | ESC5/ESC7/ESC8 (ADCS-COVERAGE-GAP, one each) | LOW    |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile adcs" ./lab.sh up
+```
+
+**Scanner validation:** documented gap — there is no `--adcs-target` CLI flag and
+`ConnectorsCfg` does not declare `enable_adcs`/`adcs_targets`/`adcs_search_base` fields, so
+`config.yaml` cannot enable it either; the ADCS scanner is exercised via
+`tests/test_adcs_no_writes.py` / `tests/test_adcs_ast_gate.py` instead of a live scan.
+
+**Expected findings:** 1 HIGH weak-signing (QuirkLabCA), 1 HIGH ESC1 (BadTemplate-ESC1), 0 from
+SafeTemplate, and exactly 4 LOW ADCS-COVERAGE-GAP findings (one per non-LDAP-observable ESC
+class: ESC4, ESC5, ESC7, ESC8). Findings appear in the Identity tab (`source="adcs"`,
+`protocol="ADCS"`). No certificate enrollment, no CSR generation, no LDAP modify/add/delete
+operations (privacy invariant, enforced by ADCS-09). Idempotent — the seed sidecar uses
+`ldapadd -c` and swallows exit code 68.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-adcs`
+
+---
+
+### 3.27 postgres-tls Profile (v5.0 — Phase 89 LAB-01)
+
+The `postgres-tls` profile ships a standalone PostgreSQL 16.6 instance with STARTTLS forced to
+weak, non-PFS RSA key-exchange ciphers (`AES128-SHA:AES256-SHA`, TLS 1.2 only) and a self-signed
+RSA-2048 certificate — a dedicated target for sslyze's `POSTGRES` STARTTLS probe, separate from
+the `database` profile's plaintext-only `postgres-ssl-off` target.
+
+| Port  | Service       | Image        | Expected Finding                                              | Severity |
+|-------|---------------|--------------|-----------------------------------------------------------------|----------|
+| 39432 | postgres-tls  | postgres:16.6 | Weak cipher suite on database TLS endpoint (AES128-SHA/AES256-SHA, no PFS) | HIGH |
+| 39432 | postgres-tls  | postgres:16.6 | RSA-2048 certificate (quantum-vulnerable), `CN=postgres-tls.chaos.local` | MEDIUM |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile postgres-tls" ./lab.sh up
+```
+
+**Expected scanner findings:** sslyze `ProtocolWithOpportunisticTlsEnum.POSTGRES` probe on 39432
+returns 1 HIGH weak-cipher-suite finding and 1 MEDIUM RSA-2048 certificate finding.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-postgres-tls`
+
+---
+
+### 3.28 redis-tls Profile (v5.0 — Phase 89 LAB-02)
+
+The `redis-tls` profile ships a standalone Redis 7.4.1 instance with a TLS listener forced to
+weak 3DES/RSA ciphers (`DES-CBC3-SHA:AES128-SHA:AES256-SHA`, TLS 1.2 only) alongside a plaintext
+listener — a dedicated broker-scanner target separate from the `broker` profile's combined
+Kafka/RabbitMQ/Redis stack.
+
+| Port  | Service    | Image             | Expected Finding                                     | Severity |
+|-------|------------|-------------------|--------------------------------------------------------|----------|
+| 39380 | redis-tls  | redis:7.4.1-alpine | Weak cipher suite on broker TLS endpoint (3DES+RSA-KX) | HIGH     |
+| 39379 | redis-tls  | redis:7.4.1-alpine | Redis plaintext listener (no authentication)           | HIGH     |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile redis-tls" ./lab.sh up
+```
+
+**Expected scanner findings:** `broker_scanner.py`'s Redis-TLS probe returns 1 HIGH weak-cipher
+finding on port 39380 and 1 HIGH plaintext-listener finding on port 39379.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-redis-tls`
+
+---
+
+### 3.29 kafka-tls Profile (v5.0 — Phase 89 LAB-04)
+
+The `kafka-tls` profile ships a standalone Kafka broker (`apache/kafka:3.9.0`) with an SSL
+listener forced to weak, non-PFS RSA key-exchange ciphers (`TLS_RSA_WITH_AES_128/256_CBC_SHA`,
+TLS 1.2 only) and a self-signed RSA-2048 certificate, alongside a plaintext listener — a
+dedicated broker-scanner target separate from the `broker` profile's combined stack.
+
+| Port  | Service    | Image              | Expected Finding                                                | Severity |
+|-------|------------|--------------------|---------------------------------------------------------------------|----------|
+| 39092 | kafka-tls  | apache/kafka:3.9.0 | Kafka plaintext listener detected                                | HIGH     |
+| 39093 | kafka-tls  | apache/kafka:3.9.0 | Weak cipher suite on broker TLS endpoint (RSA-KX, no PFS)        | HIGH     |
+| 39093 | kafka-tls  | apache/kafka:3.9.0 | RSA-2048 certificate (quantum-vulnerable), `CN=kafka-tls.chaos.local` | MEDIUM |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile kafka-tls" ./lab.sh up
+```
+
+**Expected scanner findings:** `broker_scanner.py`'s Kafka probe returns 1 HIGH
+plaintext-listener finding on port 39092, and 1 HIGH weak-cipher + 1 MEDIUM RSA-2048-certificate
+finding on port 39093.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-kafka-tls`
+
+---
+
+### 3.30 oqs-nginx Profile (v5.0 — Phase 90 PQC-01)
+
+The `oqs-nginx` profile ships a digest-pinned `openquantumsafe/nginx` image serving TLS 1.3 with
+an X25519MLKEM768 hybrid key-exchange and an ML-DSA-65 certificate — the chaos lab's agility
+ceiling anchor, used for the D-04 before/after PQC-readiness demo. Binds `127.0.0.1:39444` only.
+
+| Port  | Service    | Image                                   | Expected Finding                                                        | Severity |
+|-------|------------|-------------------------------------------|-----------------------------------------------------------------------------|----------|
+| 39444 | oqs-nginx  | openquantumsafe/nginx (sha256-pinned)     | Negotiated group `X25519MLKEM768` (NamedGroup 4588); peer sig type `ML-DSA-65` | Informational (agility signal) |
+| 39444 | oqs-nginx  | openquantumsafe/nginx (sha256-pinned)     | ML-DSA-65 certificate (post-quantum signature algorithm) — quantum-safe cert chain, no classical RSA/ECDSA fallback | Informational (agility signal) |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile oqs-nginx" ./lab.sh up
+```
+
+> **Loopback bind note:** like all lab profiles, `oqs-nginx` binds `127.0.0.1:39444`; live scans
+> need `--allow-internal-targets`. Host OpenSSL >= 3.5 is required for the hybrid handshake.
+
+**Expected scanner findings:** the agility scoring path records this endpoint's hybrid
+key-exchange and PQC signature as a quantum-readiness positive signal (clamped agility score of
+25 in the v5.0 before/after demo).
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-oqs-nginx`
+
+---
+
+### 3.31 grpc-tls Profile (v5.0 — Phase 89 LAB-05)
+
+The `grpc-tls` profile ships a minimal Go gRPC server (`grpc-go`, ALPN `h2`) with a self-signed
+RSA-2048 certificate and Go's default TLS 1.2+ configuration (modern ECDHE-RSA / forward-secret
+cipher suites — no weak-cipher finding expected here, only the RSA-2048 certificate finding).
+D-03 empirical gate confirmed sslyze negotiates the ALPN `h2` endpoint successfully via a direct
+TLS probe.
+
+| Port  | Service   | Image                                | Expected Finding                                                       | Severity |
+|-------|-----------|----------------------------------------|----------------------------------------------------------------------------|----------|
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.23-alpine) | RSA-2048 certificate (quantum-vulnerable), `CN=grpc-tls.chaos.local`     | MEDIUM |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.23-alpine) | TLS 1.2/1.3 ciphers — Go defaults (ECDHE-RSA, forward secrecy)          | Informational |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile grpc-tls" ./lab.sh up
+```
+
+`labs/grpc-tls/certs/grpc-tls.{key,crt}` are auto-generated on first `up` — no manual
+cert-generation step is required (same gitignored-certs shape as the `email` profile).
+
+**Expected scanner findings:** sslyze's direct TLS probe on 39443 returns 1 MEDIUM RSA-2048
+certificate finding; TLS 1.2/1.3 cipher enumeration is informational only (Go's defaults are
+modern, forward-secret).
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-grpc-tls`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
@@ -1010,6 +1221,15 @@ All lab ports across all profiles, sorted by port number:
 | 20100 | fuzz-target              | fuzz-target      | HSTS_MISSING HIGH / ALG_CONFUSION CRITICAL |
 | 502   | otics-modbus             | otics            | modbus_vendor=Schneider Electric, modbus_model=M221 |
 | 47808/udp | otics-bacnet         | otics            | bacnet_vendor=5 (Johnson Controls), bacnet_model=FX16 |
+| 38900 | smime-openldap           | smime            | S/MIME weak cert (alice, bob) HIGH        |
+| 38910 | adcs-openldap            | adcs             | ADCS weak CA signing / ESC1 HIGH          |
+| 39092 | kafka-tls (PLAINTEXT)    | kafka-tls        | Kafka plaintext listener detected HIGH    |
+| 39093 | kafka-tls (SSL)          | kafka-tls        | Weak cipher suite on broker TLS endpoint HIGH |
+| 39379 | redis-tls (plaintext)    | redis-tls        | Redis plaintext listener (no auth) HIGH   |
+| 39380 | redis-tls (TLS)          | redis-tls        | Weak cipher suite on broker TLS endpoint HIGH |
+| 39432 | postgres-tls             | postgres-tls     | Weak cipher suite on database TLS endpoint HIGH |
+| 39443 | grpc-tls                 | grpc-tls         | RSA-2048 certificate (quantum-vulnerable) MEDIUM |
+| 39444 | oqs-nginx                | oqs-nginx        | X25519MLKEM768 hybrid + ML-DSA-65 cert (agility signal) |
 
 ---
 
