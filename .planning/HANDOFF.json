@@ -1,81 +1,38 @@
 {
-  "version": 1,
-  "paused_at": "2026-09-03T14:56:29.718458+00:00",
-  "milestone": {
-    "version": "v5.19",
-    "name": "Drain & Tooling Integrity",
-    "phases": "182-186"
-  },
-  "position": {
-    "phase": "182-tooling-integrity",
-    "phase_title": "Tooling Integrity",
-    "plans_total": 5,
-    "plans_complete": 4,
-    "current_plan": "182-05",
-    "current_plan_state": "not started \u2014 182-04 completed after the first handoff snapshot",
-    "next_plan": "182-05 (phase gate + close-out)"
-  },
-  "completed_this_session": [
-    "v5.18 Migration Execution shipped, audited (0 blockers), archived; v5.18.0 live on PyPI",
-    "v5.19 opened: HORIZON rationale logged, 8 requirements, phases 182-186, roadmap parsing fixed",
-    "182-01: --cwd argv contract proven; Bug A prose-survival fixture + sensitivity negative control",
-    "182-02: Bug B patched (preserve-unknown-keys + fs.existsSync guard) \u2014 verified end to end",
-    "182-03: gsd-local-patches/ + gsd-pristine/ created; verifier reports checked:2 failures:0",
-    "182-04 COMPLETE: report-only audit (0 new corruption), CLAUDE.md rule added, upstream issue #4243 filed, stale archived-repo references corrected in plan/context/report/CLAUDE.md"
+  "version": "1.0",
+  "timestamp": "2026-09-07T19:26:50.830Z",
+  "phase": "187",
+  "phase_name": "Release v5.19",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "context": "milestone_boundary",
+  "completed_tasks": [
+    {"id": 1, "name": "Milestone-boundary doc review (3 domains) — version drift PASS, coverage gaps PASS, 3 stale Obsidian notes re-synced (_QUIRK-Hub.md, vault Roadmap.md, vault Requirements.md)", "status": "done"},
+    {"id": 2, "name": "Backlog reconciliation audit — all 92 BACK-* IDs classified with evidence; report at .planning/reports/backlog-reconciliation-2026-09-07.md", "status": "done"},
+    {"id": 3, "name": "HORIZON.md promoted to canonical Open-Item Ledger (+ completeness patch after PM spot-check caught 4 missed v5.16 carried-forward rows + uat-coverage-gaps worklist pointer + rescued CBOM-guidance watch item)", "status": "done", "commit": "7129cfa, 53bf8ec1"},
+    {"id": 4, "name": "Milestone v5.20 Release & Correctness Drain opened — PROJECT.md updated, STATE.md reset via state.milestone-switch under pre-image + signature-diff protocol (clean)", "status": "done", "commit": "9f57e3de"},
+    {"id": 5, "name": "REQUIREMENTS.md created — 10 reqs: REL-01, SCORE-06/07, TRIAGE-03..09", "status": "done", "commit": "55a78651, b5c491cc"},
+    {"id": 6, "name": "ROADMAP.md — 4 phases (187-190) approved by user, roadmapper writes diff-verified clean", "status": "done", "commit": "b5c491cc"},
+    {"id": 7, "name": "v5.17-v5.19 phase dirs archived by mv to milestones/vX-phases/ (phases.clear SKIPPED — would have deleted only copies); 9 tracked files recorded as git renames", "status": "done"}
   ],
-  "remaining": {
-    "182-05": [
-      "Foreground full suite, 20+ min timeout",
-      "Close TOOL-01/02/03 BY HAND",
-      "Series 182 UAT, honest dispositions",
-      "Demonstrate the state.* verbs are safe again (retire the hand-edit workaround)",
-      "182-VALIDATION.md wave_0_complete: true"
-    ],
-    "phase_close": [
-      "Spawn gsd-verifier for 182-VERIFICATION.md",
-      "Then flip ROADMAP checkbox (ARTIFACT-01 blocks until it exists)",
-      "Push 12 unpushed commits"
-    ]
-  },
+  "remaining_tasks": [
+    {"id": 8, "name": "Phase 187: Release v5.19 (REL-01) — discuss/plan/execute", "status": "not_started"},
+    {"id": 9, "name": "Phase 188: Scoring Integrity (SCORE-06/07)", "status": "not_started"},
+    {"id": 10, "name": "Phase 189: Config Correctness Drain (TRIAGE-03/04/05/08/09 incl. backlog derived gate)", "status": "not_started"},
+    {"id": 11, "name": "Phase 190: Scanner Port & Protocol Drain (TRIAGE-06/07)", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
   "decisions": [
-    "T-182-10 ACCEPTED (user-confirmed): preserve-unknown-keys means a key the body legitimately removed now persists until overwritten. A stale key is recoverable; silently deleted history is not.",
-    "Upstream target CORRECTED: gsd-build/get-shit-done is archived -> open-gsd/gsd-core. Filed as #4243.",
-    "Corruption audit is REPORT-ONLY \u2014 the regex is over-broad and cannot distinguish corruption from legitimate prose quoting **Field:**.",
-    "The state.* verbs are NOT banned; the Phases 180-181 hand-edit workaround retires once 182-05 demonstrates safety."
+    {"decision": "HORIZON.md Open-Item Ledger is the single canonical open-item source; archived roadmap backlog tables and .planning/backlog/ dirs are historical archives only", "rationale": "BACK-89 precedent: invisible 3.5 months, drifted P2 to P1; 'closed' and 'never-tracked' both render as absence in the old scheme", "phase": "boundary"},
+    {"decision": "v5.20 scoped small (release + scoring + correctness riders); UX set, phantom certs, 999.96, Exposure Map arc all deferred to ledger", "rationale": "User-as-PM chose 'smaller: release + scoring only' core plus all audit-surfaced riders", "phase": "boundary"},
+    {"decision": "TRIAGE-09 (derived backlog gate) pulled into Phase 189 after initially being deferred", "rationale": "User fixation on items-not-forgotten; the gate is the mechanical guarantee — hand-checking already missed 4 rows this same day", "phase": "189"},
+    {"decision": "Research pass skipped for v5.20", "rationale": "Every item pre-researched with file:line evidence; scoring-formula design deferred to Phase 188 discuss/plan", "phase": "boundary"}
   ],
-  "human_actions_pending": [
-    "Optional: run `gsd-update --reapply` at a convenient time and confirm verify-reapply-patches.cjs reports both hunks intact. This is the only proof the durability layer survives a real regeneration \u2014 it cannot be safely triggered mid-milestone.",
-    "Optional: watch open-gsd/gsd-core#4243. If upstream fixes it, REMOVE the local patches rather than leaving them stacked, and flip the detection test to assert the upstream fix."
-  ],
-  "blocking_constraints": [
-    {
-      "severity": "blocking",
-      "constraint": "Do NOT use gsd-sdk/gsd-tools state.* or roadmap.* verbs to edit STATE.md until 182-05 demonstrates they are safe. They corrupted STATE.md nine times across Phases 179-181. Both bugs are now patched locally but the retirement of the hand-edit workaround is DEMONSTRATED in 182-05, not assumed. Hand-edit and git diff after."
-    },
-    {
-      "severity": "blocking",
-      "constraint": "Every subprocess spawn goes through tests/cli_helpers.py::run_fork_safe with the native --cwd flag. NEVER a raw subprocess.run, NEVER a cwd kwarg. GATE-03 baseline is 21 unlisted files / 35 real call sites; Phase 183 was scoped against that number and must not inherit a larger one."
-    },
-    {
-      "severity": "advisory",
-      "constraint": "DEFER-172-01 (10 unregistered skips) is the sole expected full-suite failure and belongs to Phase 184. Do not fix it here and do not add to it."
-    },
-    {
-      "severity": "advisory",
-      "constraint": "The ~59 [Phase ?] placeholders in STATE.md's accumulated-notes section are pre-existing content, NOT corruption. STATE.md:289 was corrupted twice and restored 2026-09-03 (commit 3a6d2bf0) \u2014 do not re-flag it."
-    }
-  ],
-  "background_processes": [],
-  "files_modified_uncommitted": [],
-  "unpushed_commits": 15,
-  "verification": {
-    "tests_green": "tests/test_gsd_state_patch.py + test_cli_helper_usage.py -> 9 passed",
-    "upstream_issue": "https://github.com/open-gsd/gsd-core/issues/4243"
-  },
-  "handoff_corrections": [
-    {
-      "at": "2026-09-03T14:56:29.718458+00:00",
-      "note": "First handoff was written while 182-04's executor was still running and recorded 'SUMMARY not yet written'. The executor then completed the plan \u2014 SUMMARY.md (18,780 B), STATE.md, and ROADMAP 4/5 all landed. Corrected. This is the frozen-measurement pattern the phase documents, occurring in the phase's own handoff."
-    }
-  ]
+  "uncommitted_files": ["config-lab-core.yaml (untracked repo root — repro artifact for 999.93/TRIAGE-03, do not delete)", "output-narrow/", "output-widened/"],
+  "next_action": "/gsd-discuss-phase 187 (or /gsd-plan-phase 187, or /gsd-autonomous for the whole milestone). Phase 187 = cut v5.19.0 tag + publish; bump surfaces: pyproject.toml, README, CHANGELOG.md, UAT-1-02 + UAT-SERIES header; run pip install -e . --no-deps for test_version.py",
+  "context_notes": "Clean milestone-boundary pause; nothing mid-flight. Phases 189/190 are independent (both gate only on 187) and can parallelize. Remember: phase.complete verb is UNSAFE on this machine (semantic defect class); all closes hand-written under pre-image + signature-diff protocol."
 }
