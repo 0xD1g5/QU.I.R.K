@@ -48,8 +48,10 @@ rationale, including the accepted T-182-10 trade-off.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
+import warnings
 from pathlib import Path
 
 import pytest
@@ -737,24 +739,138 @@ _BOLD_FIELD_SCAN_RELPATHS = (
     "bin/lib/state-document.generated.cjs",
 )
 
+# ---------------------------------------------------------------------------
+# Install axis (186.1-02 / TOOL-05, D-06/D-07): a SECOND install of the same
+# defect class exists -- the npx `gsd-sdk` package, resolved dynamically
+# from wherever `gsd-sdk` currently sits on PATH, NEVER from a hardcoded
+# content-addressed cache hash (CLAUDE.md GSD state.* Verb Integrity clause
+# (h)(2): the npx cache directory name rotates silently on every
+# `get-shit-done-cc` version bump). This mirrors -- rather than imports --
+# `tests/test_gsd_state_plain_field.py`'s `_resolve_npx_sdk_dist()`; that
+# sibling module already imports FROM this one (`GSD_HOME`,
+# `GSD_TOOLCHAIN_AVAILABLE`, ...), so importing back here would be circular.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_npx_sdk_dist() -> Path | None:
+    """Resolve the npx `get-shit-done-cc` install's `sdk/dist` directory
+    dynamically: `shutil.which("gsd-sdk")` -> `os.path.realpath` -> walk
+    parents until a directory named `dist` whose parent is `sdk` is found.
+    Returns `None` (never a guessed/hardcoded path) if any step fails."""
+    which_path = shutil.which("gsd-sdk")
+    if which_path is None:
+        return None
+    real = Path(os.path.realpath(which_path))
+    for candidate in [real, *real.parents]:
+        if candidate.name == "dist" and candidate.parent.name == "sdk":
+            return candidate
+    return None
+
+
+_NPX_SDK_DIST = _resolve_npx_sdk_dist()
+
+GSD_SDK_AVAILABLE = bool(
+    NODE_PATH is not None
+    and _NPX_SDK_DIST is not None
+    and _NPX_SDK_DIST.is_dir()
+    and (_NPX_SDK_DIST / "query" / "state.js").is_file()
+    and (_NPX_SDK_DIST / "query" / "state-document.js").is_file()
+)
+
+if NODE_PATH is None:
+    _npx_sdk_skip_check = "node not on PATH"
+elif shutil.which("gsd-sdk") is None:
+    _npx_sdk_skip_check = "`gsd-sdk` not on PATH (shutil.which returned None)"
+elif _NPX_SDK_DIST is None or not _NPX_SDK_DIST.is_dir():
+    _npx_sdk_skip_check = (
+        "resolved `gsd-sdk`'s realpath but could not walk it to a sdk/dist "
+        "directory"
+    )
+elif not (_NPX_SDK_DIST / "query" / "state.js").is_file():
+    _npx_sdk_skip_check = f"resolved sdk/dist at {_NPX_SDK_DIST} but query/state.js is missing"
+elif not (_NPX_SDK_DIST / "query" / "state-document.js").is_file():
+    _npx_sdk_skip_check = (
+        f"resolved sdk/dist at {_NPX_SDK_DIST} but query/state-document.js is missing"
+    )
+else:
+    _npx_sdk_skip_check = "available"
+
+GSD_SDK_SKIP_REASON = (
+    f"npx `gsd-sdk` install unavailable in this environment ({_npx_sdk_skip_check}) "
+    "-- the Linux Full Suite CI job does not provision an npx-installed "
+    "get-shit-done-cc, so the npx leg of the field-scan gate is honestly "
+    "skipped there rather than faked. IMPORTANT: a skip is not a pass -- "
+    "the npx install was NOT scanned and is NOT proven clean when this "
+    "reason fires. Run on an operator machine with `gsd-sdk` on PATH to "
+    "actually exercise it."
+)
+
+# Two-axis scan registry (D-07): each entry names an install, its resolved
+# root (may be `None`/unavailable), and the install-relative paths owning
+# STATE.md field logic. `relpaths` are already textually distinct across
+# installs (`bin/lib/...` vs `query/...`), so no extra key component is
+# needed in the occurrence/ledger tuples below.
+_FIELD_SCAN_INSTALLS: tuple[dict, ...] = (
+    {
+        "install_id": "cjs",
+        "root": GSD_HOME,
+        "available": GSD_TOOLCHAIN_AVAILABLE,
+        "skip_reason": GSD_SKIP_REASON,
+        "relpaths": ("bin/lib/state.cjs", "bin/lib/state-document.generated.cjs"),
+    },
+    {
+        "install_id": "npx",
+        "root": _NPX_SDK_DIST,
+        "available": GSD_SDK_AVAILABLE,
+        "skip_reason": GSD_SDK_SKIP_REASON,
+        "relpaths": ("query/state.js", "query/state-document.js"),
+    },
+)
+
 # Plain regex-literal convention: \*\*Field:\*\* (4 raw chars per marker).
 _MARK4 = "\\*\\*"
 # Template-literal-string convention: \\*\\*${expr}:\\*\\* (6 raw chars).
 _MARK6 = "\\\\*\\\\*"
 
-_FUNCTION_DECL_RE = re.compile(r"^\s*function\s+(\w+)\s*\(")
+# `bin/lib/*.cjs` declares functions as `function NAME(...)`. The npx
+# install's `query/*.js` files use ES module syntax instead -- either
+# `export function NAME(...)` or `export const NAME = async (...) => {...}`
+# (e.g. `stateGet` in `query/state.js`) -- so the enclosing-function finder
+# must recognize both declaration shapes or every npx occurrence collapses
+# to the useless `<module-scope>` bucket and silently loses its ledger key.
+#
+# BOTH regexes are anchored to COLUMN ZERO (no leading `\s*` before the
+# keyword) deliberately -- verified necessary, not a stylistic choice: a
+# permissive `^\s*const\s+(\w+)\s*=\s*\(` regex matches `state.cjs`'s own
+# `const fmScalar = (key) => {...}` (line ~660), a helper arrow function
+# declared INSIDE `cmdStateSnapshot`'s body. Backward-scanning from the
+# "Last Date"/"Stopped At"/"Resume File" bold occurrences further down that
+# same function, a column-permissive regex hits `fmScalar` FIRST and
+# misattributes all three to it -- silently changing three pre-existing,
+# already-dispositioned ledger keys the moment the arrow-const shape was
+# added, rather than only adding new npx keys. Top-level declarations in
+# both installs sit at column 0 (confirmed: `grep -n '^function \|^export '`
+# against both files), so anchoring to column 0 recognizes the new npx
+# shapes without perturbing any existing .cjs attribution.
+_FUNCTION_DECL_RE = re.compile(r"^(?:export\s+)?function\s+(\w+)\s*\(")
+_ARROW_CONST_DECL_RE = re.compile(r"^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?\(")
 _VAR_NAME_RE = re.compile(r"\b(?:const|let|var)\s+(\w+)\s*=")
 
 
 def _enclosing_function_name(lines: list[str], occurrence_idx: int) -> str:
-    """Scan backward from `occurrence_idx` for the nearest `function NAME(`
-    declaration. Text-based, not line-number-based -- it identifies WHICH
-    function an occurrence lives in, so two textually-identical template
-    patterns (e.g. `stateExtractField` and `stateReplaceField`, which both
-    literally read `${escaped}` between the markers) still get distinct
-    ledger keys without resorting to a line number."""
+    """Scan backward from `occurrence_idx` for the nearest function-shaped
+    declaration -- `function NAME(`, `export function NAME(`, or
+    `export const NAME = (...)`/`export const NAME = async (...)`. Text-based,
+    not line-number-based -- it identifies WHICH function an occurrence
+    lives in, so two textually-identical template patterns (e.g.
+    `stateExtractField` and `stateReplaceField`, which both literally read
+    `${escaped}` between the markers) still get distinct ledger keys
+    without resorting to a line number."""
     for i in range(occurrence_idx, -1, -1):
         m = _FUNCTION_DECL_RE.match(lines[i])
+        if m:
+            return m.group(1)
+        m = _ARROW_CONST_DECL_RE.match(lines[i])
         if m:
             return m.group(1)
     return "<module-scope>"
@@ -766,45 +882,73 @@ def _has_m_flag(line: str) -> bool:
     `/pattern/im` literal convention. Both forms place their flags
     immediately before the statement's trailing punctuation, so anchoring
     the check to end-of-line avoids being confused by parentheses inside
-    the pattern body itself (e.g. a capture group)."""
-    m = re.search(r"['\"]([a-z]+)['\"]\)\s*;?\s*$", line)
+    the pattern body itself (e.g. a capture group).
+
+    The npx install's `LOCAL PATCH` annotations are trailing INLINE `//`
+    comments on the SAME line as the code (e.g. `..., 'im'); // LOCAL
+    PATCH (2026-09-03, TOOL-05): anchored to line start -- ...`) -- a
+    different convention from the `.cjs` install's own-line-above comments.
+    A trailing `//` comment is stripped before the end-of-line checks below
+    so this genuinely new npx line shape isn't misread as un-flagged;
+    verified this strip does not corrupt any `.cjs` line, since none of
+    that install's occurrence lines carry an inline trailing comment."""
+    code_part = re.split(r"\s//", line, maxsplit=1)[0]
+    m = re.search(r"['\"]([a-z]+)['\"]\)\s*;?\s*$", code_part)
     if m:
         return "m" in m.group(1)
-    m = re.search(r"/([a-z]+)\s*;\s*$", line)
+    # `/pattern/im` literal convention. `)?` handles a call like
+    # `sessionSection.match(/pattern/im)` whose statement continues on the
+    # NEXT line (e.g. `|| sessionSection.match(...)`) and therefore has no
+    # trailing `;` on THIS line at all -- verified against npx
+    # `query/state.js`'s multi-line `||`-chained match() calls.
+    m = re.search(r"/([a-z]+)\)?\s*;?\s*$", code_part)
     if m:
         return "m" in m.group(1)
     return False
 
 
 def _scan_bold_field_occurrences() -> list[dict]:
-    """Generate the occurrence set by reading the two installed,
-    STATE.md-owning lib files line by line. Lines whose stripped form
+    """Generate the occurrence set by reading BOTH installs' STATE.md-owning
+    lib files line by line (D-07 install axis). Lines whose stripped form
     starts with `//` are skipped -- prose in a comment quoting a pattern
     (this very docstring block above, if it lived in the .cjs file, would
-    be exactly that trap) must not count as an occurrence."""
+    be exactly that trap) must not count as an occurrence.
+
+    An install whose root is unresolvable (`available` False in
+    `_FIELD_SCAN_INSTALLS`) contributes zero occurrences and is silently
+    excluded HERE -- callers that need to report the skip honestly (a skip
+    is not a pass) do so via `_FIELD_SCAN_INSTALLS`'s own `available`/
+    `skip_reason` fields, not by this function raising or skipping."""
     occurrences: list[dict] = []
-    for relpath in _BOLD_FIELD_SCAN_RELPATHS:
-        abs_path = GSD_HOME / relpath
-        text = abs_path.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        for idx, line in enumerate(lines):
-            if line.strip().startswith("//"):
+    for entry in _FIELD_SCAN_INSTALLS:
+        if not entry["available"]:
+            continue
+        root = entry["root"]
+        for relpath in entry["relpaths"]:
+            abs_path = root / relpath
+            if not abs_path.is_file():
                 continue
-            for mark, convention in ((_MARK4, "4-char (regex-literal)"), (_MARK6, "6-char (template-literal)")):
-                pattern = re.compile(re.escape(mark) + r"([^\n:]*):" + re.escape(mark))
-                for m in pattern.finditer(line):
-                    var_match = _VAR_NAME_RE.search(line)
-                    occurrences.append(
-                        {
-                            "relpath": relpath,
-                            "line_no": idx + 1,
-                            "line": line,
-                            "field_text": m.group(1),
-                            "function": _enclosing_function_name(lines, idx),
-                            "convention": convention,
-                            "var_name": var_match.group(1) if var_match else "<unnamed>",
-                        }
-                    )
+            text = abs_path.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            for idx, line in enumerate(lines):
+                if line.strip().startswith("//"):
+                    continue
+                for mark, convention in ((_MARK4, "4-char (regex-literal)"), (_MARK6, "6-char (template-literal)")):
+                    pattern = re.compile(re.escape(mark) + r"([^\n:]*):" + re.escape(mark))
+                    for m in pattern.finditer(line):
+                        var_match = _VAR_NAME_RE.search(line)
+                        occurrences.append(
+                            {
+                                "install": entry["install_id"],
+                                "relpath": relpath,
+                                "line_no": idx + 1,
+                                "line": line,
+                                "field_text": m.group(1),
+                                "function": _enclosing_function_name(lines, idx),
+                                "convention": convention,
+                                "var_name": var_match.group(1) if var_match else "<unnamed>",
+                            }
+                        )
     return occurrences
 
 
@@ -871,6 +1015,63 @@ _BOLD_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
         "than silently patched so the call to leave it alone can be "
         "overturned deliberately by a future session.",
     ),
+    # --- npx `gsd-sdk` install (186.1-02, D-06/D-07 install-axis extension) ---
+    # These three bold-field constructions in `sdk/dist/query/*.js` already
+    # carry a `LOCAL PATCH (2026-09-03, TOOL-05): anchored to line start`
+    # comment -- part of the 15-site npx patch set CLAUDE.md clause (h)
+    # documents (`~/.claude/gsd-npx-sdk-patches/`). They were invisible to
+    # this gate before 186.1-02 because the scan only ever read `GSD_HOME`.
+    ("query/state-document.js", "${escaped}", "stateExtractField"): (
+        "anchored",
+        "npx twin of the .cjs stateExtractField bold branch -- already "
+        "anchored per the 15-site npx patch set (CLAUDE.md clause (h)). "
+        "Newly visible to this gate only as of 186.1-02's install-axis "
+        "extension; not a new patch.",
+    ),
+    ("query/state-document.js", "${escaped}", "stateReplaceField"): (
+        "anchored",
+        "npx twin of the .cjs stateReplaceField bold branch (Bug A's "
+        "original write-side instance) -- already anchored per the 15-site "
+        "npx patch set (CLAUDE.md clause (h)). Newly visible to this gate "
+        "only as of 186.1-02's install-axis extension; not a new patch.",
+    ),
+    ("query/state.js", "Last Date", "stateSnapshot"): (
+        "anchored",
+        "npx twin of `cmdStateSnapshot`'s Last Date read -- but UNLIKE the "
+        ".cjs twin (ledgered 'accepted-read-only' below because its match "
+        "is genuinely unanchored, `/\\*\\*Last Date:\\*\\*\\s*(.+)/i`, no "
+        "`^`, no `/m`), this npx line IS anchored "
+        "(`^\\s*\\*\\*Last Date:\\*\\*[ \\t]*(.+)$`, `/im`) per the 15-site "
+        "npx patch set (CLAUDE.md clause (h)). Two installs implementing "
+        "the same read genuinely differ here; each is ledgered to match "
+        "its own actual code, not to match its sibling.",
+    ),
+    ("query/state.js", "Stopped At", "stateSnapshot"): (
+        "anchored",
+        "npx twin of `cmdStateSnapshot`'s Stopped At read -- see the Last "
+        "Date entry immediately above for the anchored-vs-unanchored "
+        "install divergence.",
+    ),
+    ("query/state.js", "Resume File", "stateSnapshot"): (
+        "anchored",
+        "npx twin of `cmdStateSnapshot`'s Resume File read -- see the Last "
+        "Date entry above for the anchored-vs-unanchored install "
+        "divergence.",
+    ),
+    ("query/state.js", "${fieldEscaped}", "stateGet"): (
+        "anchored",
+        "npx twin of `cmdStateGet`'s bold branch -- already anchored per "
+        "the 15-site npx patch set (CLAUDE.md clause (h)). Unlike the "
+        ".cjs twin (ledgered 'accepted-read-only' below because its match "
+        "result only ever reaches stdout via output()), this branch's "
+        "regex itself is anchored/newline-safe regardless of the "
+        "read-only blast radius, and the npx patch set recorded it as "
+        "'anchored' rather than 'accepted-read-only' -- both dispositions "
+        "would be defensible for a read-only site; this ledger follows "
+        "the npx patch set's own recorded choice rather than overriding "
+        "it. Newly visible to this gate only as of 186.1-02's install-axis "
+        "extension; not a new patch.",
+    ),
 }
 
 
@@ -881,7 +1082,7 @@ def test_bold_field_regex_class_is_fully_dispositioned() -> None:
     SCANNING THE INSTALLED SOURCE AT RUN TIME, and assert each one carries
     an explicit, matching disposition in `_BOLD_FIELD_DISPOSITIONS`.
 
-    Three independent failure modes are asserted against, each closing a
+    Four independent failure modes are asserted against, each closing a
     gap this phase hit in practice:
       1. An occurrence with no ledger entry -- an unlisted defect-class
          member, the TOOL-04 shape itself.
@@ -893,15 +1094,29 @@ def test_bold_field_regex_class_is_fully_dispositioned() -> None:
          that file's template-literal-string patterns at all, and would
          otherwise surface as a confusing "stale ledger row" failure on
          (2) instead of naming its real, upstream cause.
+      4. (186.1-02, D-07) Zero occurrences collected from the npx install
+         when it is resolvable -- the install-axis counterpart of (3): a
+         scan hardcoded to `GSD_HOME` is blind to `query/*.js` entirely,
+         which is exactly how this defect class's fourth instance
+         (186.1-01's `updateCurrentPositionFields` finding) stayed
+         invisible to a gate that only ever looked at one install.
     """
     occurrences = _scan_bold_field_occurrences()
+
+    # Availability is read from `_FIELD_SCAN_INSTALLS` itself (not the
+    # standalone GSD_TOOLCHAIN_AVAILABLE/GSD_SDK_AVAILABLE module constants)
+    # so that a test-time monkeypatch of the registry -- e.g. simulating a
+    # rotated npx hash by flipping the npx entry's `available` to False --
+    # actually changes this function's behaviour, which is exactly what the
+    # D-07 skip-semantics inversion check (186.1-02 Task 1) exercises.
+    installs_by_id = {e["install_id"]: e for e in _FIELD_SCAN_INSTALLS}
 
     generated_hits = [
         o
         for o in occurrences
         if o["relpath"] == "bin/lib/state-document.generated.cjs"
     ]
-    if not generated_hits:
+    if installs_by_id["cjs"]["available"] and not generated_hits:
         pytest.fail(
             "the run-time scan collected ZERO bold-field occurrences from "
             "state-document.generated.cjs. That file uses the "
@@ -914,6 +1129,24 @@ def test_bold_field_regex_class_is_fully_dispositioned() -> None:
             "(stateExtractField, stateReplaceField) rather than fail here "
             "with the real cause. Fix the scan's marker set (_MARK4/_MARK6), "
             "not the ledger."
+        )
+
+    npx_hits = [o for o in occurrences if o["install"] == "npx"]
+    if installs_by_id["npx"]["available"] and not npx_hits:
+        pytest.fail(
+            "the run-time scan collected ZERO bold-field occurrences from "
+            "the resolvable npx `gsd-sdk` install (query/state.js, "
+            "query/state-document.js). This is the install-axis "
+            "counterpart of the convention-blindness failure above: a scan "
+            "hardcoded to GSD_HOME cannot see this install at all. Fix "
+            "_FIELD_SCAN_INSTALLS' npx entry, not the ledger."
+        )
+    if not installs_by_id["npx"]["available"]:
+        warnings.warn(
+            RuntimeWarning(
+                "npx `gsd-sdk` install SKIPPED for this gate run: "
+                f"{installs_by_id['npx']['skip_reason']}"
+            )
         )
 
     matched_keys: set[tuple[str, str, str]] = set()
@@ -947,7 +1180,24 @@ def test_bold_field_regex_class_is_fully_dispositioned() -> None:
         elif disposition != "accepted-read-only":
             pytest.fail(f"unknown disposition {disposition!r} for {key}")
 
-    stale = set(_BOLD_FIELD_DISPOSITIONS) - matched_keys
+    # A ledger row belonging to a currently-unavailable install is an
+    # honest skip, not a stale row -- excluded here the same way the
+    # per-install occurrence counts above are. `relpath` alone identifies
+    # the owning install (the two installs' relpaths are textually
+    # disjoint: `bin/lib/...` vs `query/...`).
+    relpath_to_install = {
+        relpath: entry["install_id"]
+        for entry in _FIELD_SCAN_INSTALLS
+        for relpath in entry["relpaths"]
+    }
+    unavailable_installs = {
+        entry["install_id"] for entry in _FIELD_SCAN_INSTALLS if not entry["available"]
+    }
+    stale = {
+        key
+        for key in set(_BOLD_FIELD_DISPOSITIONS) - matched_keys
+        if relpath_to_install.get(key[0]) not in unavailable_installs
+    }
     assert not stale, (
         "ledger entries with no matching occurrence in the installed "
         "source -- a stale allowlist row is how a gate quietly stops "
