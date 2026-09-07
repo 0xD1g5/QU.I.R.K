@@ -135,7 +135,7 @@ since they were first recorded.
 - [x] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **COMPLETE (2026-09-05). All 11 plans done; verified 6/6 success criteria, all evidence DERIVED at verification time — see 184.3-VERIFICATION.md. 1 of 5 human-verify checks (live cert calendar-day-shift) DEFERRED with cited substitute coverage (datetime.test.ts:39) — vacuous against available data, see 184.3-VALIDATION.md.**
 - [x] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable. **All 10 plans done (2026-09-05).** SCORE-04/SCORE-05 both complete; BACK-89 closed by reference (all 4 investigation questions answered); docs/UAT/Obsidian close-out in 184.4-10 — see `184.4-VALIDATION.md` (all 11 automated rows green, `nyquist_compliant: true`) and `184.4-10-SUMMARY.md`. Two manual-only checks (live chaos-lab re-verification, cross-surface visual placement) DEFERRED with cited substitute coverage — no chaos-lab/browser access in the close-out session. **Checkbox awaits `184.4-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184.4-10's scope). (completed 2026-09-06)
 - [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
-- [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
+- [x] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
 ## Phase Details
 
@@ -660,26 +660,28 @@ Plans:
 
   3. If either turns out to be a case-text defect rather than a product defect (as `UAT-6-08` did
      in Phase 176), that is reported and dispositioned rather than forced into a code change.
-**Plans**: 6 plans
+**Plans**: 7 plans (186-06 was originally the sixth and final plan; a seventh, chaos-lab-doc-only
+plan was added mid-phase at user request)
 
 Plans:
 **Wave 1**
 
-- [ ] 186-01-PLAN.md — TRIAGE-176-01: fix gen-certs.sh, regenerate keycloak.crt as CN=keycloak.chaos.local, tighten the oracle, RED→GREEN regression test (D-01..D-06, D-13)
-- [ ] 186-02-PLAN.md — Shared WELL_KNOWN_TLS_PORTS constant reconciling the two divergent lists, plus the ScanCfg.tls_designated_ports override field (D-07, D-08)
+- [x] 186-01-PLAN.md — TRIAGE-176-01: fix gen-certs.sh, regenerate keycloak.crt as CN=keycloak.chaos.local, tighten the oracle, RED→GREEN regression test (D-01..D-06, D-13)
+- [x] 186-02-PLAN.md — Shared WELL_KNOWN_TLS_PORTS constant reconciling the two divergent lists, plus the ScanCfg.tls_designated_ports override field (D-07, D-08)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 186-03-PLAN.md — TRIAGE-176-02: replace the ports_tls read in _postprocess_findings with the designation set, three RED→GREEN tests, node-set blast-radius diff (D-06, D-07, D-08, D-12)
+- [x] 186-03-PLAN.md — TRIAGE-176-02: replace the ports_tls read in _postprocess_findings with the designation set, three RED→GREEN tests, node-set blast-radius diff (D-06, D-07, D-08, D-12)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 186-04-PLAN.md — Document tls_designated_ports in template, sample, configuration.md and operators-guide.md, and sync both guides to the Digs vault (D-08, D-11)
-- [ ] 186-05-PLAN.md — Rewrite UAT-6-06/6-07 case text to the product's real titles, live-lab re-run of UAT-5-13/6-06/6-07, D-11 score and compliance delta (D-09, D-10, D-11)
+- [x] 186-04-PLAN.md — Document tls_designated_ports in template, sample, configuration.md and operators-guide.md, and sync both guides to the Digs vault (D-08, D-11)
+- [x] 186-05-PLAN.md — Rewrite UAT-6-06/6-07 case text to the product's real titles, live-lab re-run of UAT-5-13/6-06/6-07, D-11 score and compliance delta (D-09, D-10, D-11)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 186-06-PLAN.md — File the two deferred items as backlog IDs, Obsidian phase note, UAT-SERIES vault sync, hand-verified ROADMAP/REQUIREMENTS close (D-09)
+- [x] 186-06-PLAN.md — File the two deferred items as backlog IDs, Obsidian phase note, UAT-SERIES vault sync, hand-verified ROADMAP/REQUIREMENTS close (D-09)
+- [x] 186-07-PLAN.md — Added mid-phase at user request: close a 7-profile/9-port `docs/chaos-lab.md` documentation drift gap against `docker-compose.yml`, guarded by a new run-time source-scan pytest gate (no TRIAGE requirement; testing/docs subsystem)
 
 ### Progress
 
@@ -689,7 +691,7 @@ Plans:
 | 183. Fork-Safety Gate Derivation | 0/? | Not started | — |
 | 184. Skip Registry Closure | 7/7 | Complete    | 2026-09-06 |
 | 185. a11y Baseline Environment | 0/? | Not started | — |
-| 186. Carried Defect Drain | 0/6 | Planned | — |
+| 186. Carried Defect Drain | 7/7 | Complete    | 2026-09-07 |
 
 ## Backlog
 
@@ -711,6 +713,47 @@ Items to be organized into future milestones. Organized by theme.
   structurally invisible in local testing — the live dev DB has 30 rows, all with `scan_run_id`,
   zero with `sensor_id` — so no local test run will ever trip over it; this must be caught by
   reading the code path, not by observing a failure.
+
+### Findings Model & Reporting (Phase 186 carry-forward)
+
+- **No machine-readable `finding_type` identifier on findings.** QU.I.R.K. findings are matched
+  everywhere by their title string as a literal — `quirk/intelligence/remediation.py:81-82`,
+  `quirk/intelligence/scoring.py:193`, `quirk/intelligence/evidence.py:435-436`,
+  `quirk/compliance/__init__.py:288`, and `quirk/engine/findings_evaluator.py:320` all match on
+  literal title text, plus roughly eight test files. `_build_finding()` in
+  `quirk/engine/findings_evaluator.py` is the single construction seam where a stable
+  `finding_type` key would be added. `TRIAGE-176-02` (Phase 186) surfaced this as a genuine
+  architectural weakness — the classifier bug it fixed exists precisely because there is no
+  stable type signal, only a mutable title string — but a schema migration touching five product
+  modules and ~8 test files is its own phase, not a carried-defect drain. `186-CONTEXT.md`'s D-09
+  deliberately dispositioned the vocabulary (rewrote UAT case text to name real titles) rather
+  than implementing this, for that reason.
+  *Evidence: `.planning/phases/186-carried-defect-drain/186-CONTEXT.md` (`<deferred>`),
+  `186-03-SUMMARY.md`.*
+
+- **Report-generation headline-vs-severity warning, uninvestigated for a second phase running.**
+  `Report generation halted: executive headline 'GOOD' is inconsistent with 1 CRITICAL
+  finding(s)` reproduced identically across both scan configs during Phase 176's UAT-6-06/07/08
+  live chaos-lab runs (`176-DEFECT-TRIAGE.md`, flagged "for visibility only", explicitly not
+  investigated). Phase 186 re-ran the same UAT cases live (plan 186-05) and did not re-trigger or
+  further diagnose it — it remains unactioned. Working hypothesis, still untested: the consistency
+  check may be miscalibrated for a lab-fixture-heavy target set, where all chaos-lab certs are
+  deliberately weak, so a CRITICAL expired-cert finding alongside a GOOD/EXCELLENT headline may be
+  a scoring-vs-headline mismatch rather than a real inconsistency. Filed with an ID now because
+  this is the **second** phase in which it has been noted and not actioned — it must not evaporate
+  a third time.
+  *Evidence: `.planning/phases/176-chaos-lab-re-run/176-DEFECT-TRIAGE.md`,
+  `.planning/phases/186-carried-defect-drain/186-CONTEXT.md` (`<deferred>`).*
+
+  No further new deferred item was found in `186-05-SUMMARY.md`'s live re-run: the D-11
+  compliance-attachment-before-rewrite discrepancy it recorded (compliance controls are computed
+  once against a finding's pre-rewrite title in `_build_finding()` and never recomputed when
+  `_postprocess_findings()` later rewrites the title, so compliance mappings do not move
+  pre/post-fix, contradicting `186-CONTEXT.md`'s D-11 premise) was explicitly reported as
+  observed evidence only, per that plan's own scope, and is not filed here as a fresh backlog
+  item — a future phase should re-derive it from `186-05-SUMMARY.md` directly if
+  compliance-mapping fidelity on post-processed findings becomes a priority, rather than treating
+  this note as a restatement of it.
 
 ### Release & Verification Integrity (v5.12 candidates)
 

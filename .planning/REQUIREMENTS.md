@@ -330,10 +330,17 @@ rather than inherited from its original report — two had drifted since they we
 
 ## Carried Defects
 
-- [ ] **TRIAGE-01**: `TRIAGE-176-01` closed — surfaced by the Phase 176 chaos-lab re-run and
-  explicitly triaged rather than absorbed. Needs its own plan and tests.
+- [x] **TRIAGE-01**: `TRIAGE-176-01` closed — surfaced by the Phase 176 chaos-lab re-run and
+  explicitly triaged rather than absorbed. Fixed in 186-01 (generator-provenanced `keycloak.crt`
+  regeneration, CN=keycloak.chaos.local), closed on the UAT side in 186-05 (`UAT-5-13` PASS, live
+  re-run 2026-09-07).
 
-- [ ] **TRIAGE-02**: `TRIAGE-176-02` closed — same origin, same treatment.
+- [x] **TRIAGE-02**: `TRIAGE-176-02` closed — same origin, same treatment. Fixed in 186-02/186-03
+  (shared `WELL_KNOWN_TLS_PORTS` constant + `ScanCfg.tls_designated_ports` operator override,
+  wired into `findings_evaluator.py`'s classifier), documented in 186-04, closed on the UAT side
+  in 186-05 (`UAT-6-06`/`UAT-6-07` PASS, live re-run 2026-09-07). Note: 186-05 found that
+  `186-CONTEXT.md`'s D-11 premise about dropped compliance-control mappings does not hold in this
+  codebase as measured — this is a labeling-defect fix, not a compliance-coverage fix.
 
 ## Out of scope (v5.19)
 
@@ -363,5 +370,5 @@ rather than inherited from its original report — two had drifted since they we
 | SCORE-04 | 184.4-02, 184.4-04, 184.4-06, 184.4-07, 184.4-08 | Complete |
 | SCORE-05 | 184.4-03, 184.4-05, 184.4-09 | Complete |
 | DRIFT-03 | TBD | Pending |
-| TRIAGE-01 | 186-01, 186-05, 186-06 | Pending |
-| TRIAGE-02 | 186-02, 186-03, 186-04, 186-05, 186-06 | Pending |
+| TRIAGE-01 | 186-01, 186-05, 186-06 | Complete |
+| TRIAGE-02 | 186-02, 186-03, 186-04, 186-05, 186-06 | Complete |
