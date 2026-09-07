@@ -908,10 +908,51 @@ None currently — the standing DISC-08 boundary item above was promoted into v5
 
 ### Phase 186.1: Close gap: TOOL-01/TOOL-05 — scope the plain-field fallback (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** `stateReplaceField()`'s plain-field fallback — and its read-side twin
+`stateExtractField()` — stop rewriting/reading `STATE.md` body prose. The fallback is anchored to
+line start but scoped to nothing, so it rewrites the FIRST document line beginning `Status:`, which
+in this repo is narrative prose at `.planning/STATE.md:944` (destroyed 8 times across
+`state.planned-phase`, `state.begin-phase`, and `phase.complete`). Fixed in BOTH installs
+(`~/.claude/get-shit-done/bin/lib/` and the npx-cached `get-shit-done-cc/sdk/dist/`), locked by a
+command-boundary regression test proven RED pre-patch, and re-demonstrated live against the real
+`.planning/STATE.md`.
+**Requirements**: TOOL-01, TOOL-05
 **Depends on:** Phase 186
 **Plans:** 0 plans
+
+**Success Criteria** (what must be TRUE):
+
+  1. The plain-field fallback searches only an explicitly enumerated, run-time-derived
+     field-bearing region and returns `null` when the field is absent from it — never falling
+     through to a document-wide search. Applied to BOTH the write side (`stateReplaceField`) and
+     the read side (`stateExtractField`), in BOTH installs. (D-01, D-02, D-05)
+
+  2. The standing run-time source-scan guard
+     (`tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned`) is
+     extended on both axes — both installs (npx path resolved dynamically via
+     `readlink -f "$(which gsd-sdk)"`, never by hash) and both construct shapes (`**Field:**` bold
+     AND bare line-initial `Field:`). It stays a run-time regeneration, never a checked-in list.
+     Honest-skip with a named reason when an install is unresolvable; a resolvable install with an
+     undispositioned site is a hard failure. (D-06, D-07)
+
+  3. A command-boundary regression test — running the real verb via `gsd-sdk query` AND via
+     `gsd-tools.cjs` against a fixture shaped like the real `STATE.md` — is demonstrated RED
+     against the pre-patch install, then GREEN after. A green function-level test is not
+     sufficient. (D-09)
+
+  4. All three implicated verbs (`state.planned-phase`, `state.begin-phase`, `phase.complete`) are
+     re-demonstrated live against the real `.planning/STATE.md` under the pre-image + FULL
+     hunk-by-hunk diff protocol, then restored byte-identical. (D-10)
+
+  5. The durability layer is re-seeded for both installs in their separate homes
+     (`~/.claude/gsd-local-patches/` and `~/.claude/gsd-npx-sdk-patches/`), with full post-edit
+     snapshots, mirrored pristine baselines, `LOCAL PATCH (2026-09-07, TOOL-05)` markers, and
+     ledger rows. (D-12)
+
+  6. The false rationale in `REQUIREMENTS.md` TOOL-01 ("the plain-text branch below it is correctly
+     anchored") is corrected at the summary level — the TOOL-01 traceability row and CLAUDE.md §(h)
+     both name the plain-field **scoping** class alongside the bold-field **anchoring** class — and
+     the defect is filed upstream as a comment on issue #4243. (D-13, D-14)
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 186.1 to break down)
