@@ -363,5 +363,5 @@ rather than inherited from its original report — two had drifted since they we
 | SCORE-04 | 184.4-02, 184.4-04, 184.4-06, 184.4-07, 184.4-08 | Complete |
 | SCORE-05 | 184.4-03, 184.4-05, 184.4-09 | Complete |
 | DRIFT-03 | TBD | Pending |
-| TRIAGE-01 | TBD | Pending |
-| TRIAGE-02 | TBD | Pending |
+| TRIAGE-01 | 186-01, 186-05, 186-06 | Pending |
+| TRIAGE-02 | 186-02, 186-03, 186-04, 186-05, 186-06 | Pending |

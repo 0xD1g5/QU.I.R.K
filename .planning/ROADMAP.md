@@ -663,11 +663,22 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 186-01-PLAN.md — TRIAGE-176-01: fix gen-certs.sh, regenerate keycloak.crt as CN=keycloak.chaos.local, tighten the oracle, RED→GREEN regression test (D-01..D-06, D-13)
 - [ ] 186-02-PLAN.md — Shared WELL_KNOWN_TLS_PORTS constant reconciling the two divergent lists, plus the ScanCfg.tls_designated_ports override field (D-07, D-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 186-03-PLAN.md — TRIAGE-176-02: replace the ports_tls read in _postprocess_findings with the designation set, three RED→GREEN tests, node-set blast-radius diff (D-06, D-07, D-08, D-12)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 186-04-PLAN.md — Document tls_designated_ports in template, sample, configuration.md and operators-guide.md, and sync both guides to the Digs vault (D-08, D-11)
 - [ ] 186-05-PLAN.md — Rewrite UAT-6-06/6-07 case text to the product's real titles, live-lab re-run of UAT-5-13/6-06/6-07, D-11 score and compliance delta (D-09, D-10, D-11)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 186-06-PLAN.md — File the two deferred items as backlog IDs, Obsidian phase note, UAT-SERIES vault sync, hand-verified ROADMAP/REQUIREMENTS close (D-09)
 
 ### Progress
@@ -678,7 +689,7 @@ Plans:
 | 183. Fork-Safety Gate Derivation | 0/? | Not started | — |
 | 184. Skip Registry Closure | 7/7 | Complete    | 2026-09-06 |
 | 185. a11y Baseline Environment | 0/? | Not started | — |
-| 186. Carried Defect Drain | 0/? | Not started | — |
+| 186. Carried Defect Drain | 0/6 | Planned | — |
 
 ## Backlog
 
