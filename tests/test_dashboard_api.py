@@ -877,6 +877,23 @@ def test_utc_datetime_stamp_utc_iso_aware_non_utc_converts():
     assert result.endswith("+00:00")
 
 
+def test_utc_datetime_stamp_utc_iso_date_only_does_not_raise():
+    """A plain datetime.date (e.g. a SQL DATE column like
+    HardwareDevice.eol_date) has .isoformat() but NO .tzinfo — the
+    ``value.tzinfo is None`` guard below the hasattr check crashed with
+    AttributeError before this fix (regression from db293448, found during
+    Phase 185 UAT-158-01 setup). The documented contract at the top of
+    ``stamp_utc_iso`` says non-datetime input is "returned via str()
+    unchanged rather than raising" — a bare .isoformat() call is the more
+    correct behavior for a date and is what this test locks in."""
+    from datetime import date
+
+    from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
+
+    result = stamp_utc_iso(date(2027, 3, 15))
+    assert result == "2027-03-15"
+
+
 def test_utc_datetime_model_dump_json_emits_offset():
     """A BaseModel field typed UTCDateTime emits the +00:00 string via
     model_dump_json() — the FastAPI JSON serialization path."""
