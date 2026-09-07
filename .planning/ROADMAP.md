@@ -697,7 +697,7 @@ Plans:
 | 184.4 Rating Band Severity Floor | 10/10 | Complete | 2026-09-06 |
 | 185. a11y Baseline Environment | 7/7 | Complete | 2026-09-06 |
 | 186. Carried Defect Drain | 7/7 | Complete | 2026-09-07 |
-| 186.1 Close gap: TOOL-01/TOOL-05 | 0/? | Not started | — |
+| 186.1 Close gap: TOOL-01/TOOL-05 | 0/7 | Planned | — |
 
 ## Backlog
 
@@ -955,10 +955,32 @@ command-boundary regression test proven RED pre-patch, and re-demonstrated live 
      the defect is filed upstream as a comment on issue #4243. (D-13, D-14)
 
 Plans:
+
+**Wave 1**
 - [ ] 186.1-01-PLAN.md — Wave 0 harness: gsd-sdk invocation, adjacency fixtures, per-verb negative controls, pre-patch RED transcript
 - [ ] 186.1-02-PLAN.md — Extend the guard scan on both axes (2 installs x bold+bare shapes) and disposition all six bare-field sites
+
+**Wave 2** *(blocked on Wave 1)*
 - [ ] 186.1-03-PLAN.md — Scope + fail-close the plain fallback in the npx install, read and write side, GREEN via gsd-sdk
+
+**Wave 3** *(blocked on Wave 2)*
 - [ ] 186.1-04-PLAN.md — Same fix in the .cjs install, GREEN via gsd-tools.cjs
+
+**Wave 4** *(blocked on Wave 3)*
 - [ ] 186.1-05-PLAN.md — Re-seed durability in both homes, correct the npx README, add the npx durability check
+
+**Wave 5** *(blocked on Wave 4)* — `autonomous: false`
 - [ ] 186.1-06-PLAN.md — Live re-demonstration: 3 verbs x 2 entry points against the real STATE.md
+
+**Wave 6** *(blocked on Wave 5)* — `autonomous: false`
 - [ ] 186.1-07-PLAN.md — Record correction (REQUIREMENTS.md, CLAUDE.md), upstream comment, todo closure, UAT + Obsidian
+
+Cross-cutting constraints (appear in 2+ plans' `must_haves.truths`):
+- Every fix, scan, and durability artifact covers **both** installs — the `.cjs` install and the
+  dynamically-resolved npx `sdk/dist` (D-06, CLAUDE.md §(h)(1)).
+- Every regression fixture is demonstrated **RED against a pre-patch install before** its patch
+  lands, at the **command boundary**, not the function level (D-09, CLAUDE.md §(e)).
+- The guard scan stays a **run-time regeneration** from installed source — never a checked-in list
+  of known sites (D-07).
+- `.planning/STATE.md`'s narrative `Status:` lines stay **verbatim** — the suite must go green by
+  fixing the code, never by removing the trigger (D-08).

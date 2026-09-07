@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: v5.19 audit = gaps_found; Phase 186.1 inserted to close TOOL-01/TOOL-05 (2026-09-07)
-last_updated: 2026-09-07T04:15:00.000Z
+stopped_at: Phase 186.1 PLANNED (7 plans, 6 waves) — ready to execute (2026-09-07)
+last_updated: 2026-09-07T15:00:00.000Z
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
-  total_plans: 70
+  total_plans: 77
   completed_plans: 70
-  percent: 100
+  percent: 90
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 186.1 — close the v5.19 milestone-audit gap (`.planning/v5.19-MILESTONE-AUDIT.md`, status `gaps_found`): TOOL-01 unsatisfied, TOOL-05 orphaned. Root cause located — `plainPattern` in `state-document.js` is anchored to line start but scoped to nothing. Next: /gsd-discuss-phase 186.1
+**Current focus:** Phase 186.1 — PLANNED 2026-09-07, 7 plans across 6 waves, ready to execute. Closes the v5.19 milestone-audit gap (`.planning/v5.19-MILESTONE-AUDIT.md`, status `gaps_found`): TOOL-01 unsatisfied, TOOL-05 orphaned. Root cause confirmed against installed source — the plain-field fallback in `state-document.js` is anchored to line start but scoped to nothing, so it rewrites the first body line beginning `Status:`. Research also found `phase.complete` is an independent third code path (`phase-lifecycle.js:1004-1141`), that a literal `## Section`-scoped region does NOT protect this file (decoys share the `## Current Position` span with no blank-line boundary), and 6 bare plain-field sites across the two installs rather than 2. NOTE: `state.planned-phase` was NOT run to record this — it is one of the three unpatched verbs this phase fixes; STATE.md was hand-edited. Next: /gsd-execute-phase 186.1
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -776,9 +776,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 186 (carried-defect-drain) — COMPLETE (2026-09-07)
-Plan: 7 of 7
-Milestone: v5.19 — 9 phases complete, 70/70 plans; audit `gaps_found`, Phase 186.1 inserted (not started)
+Phase: 186.1 (close-gap-tool-01-tool-05-scope-the-plain-field-fallback) — PLANNED (2026-09-07)
+Plan: 0 of 7
+Milestone: v5.19 — 9 phases complete, 70/70 plans; Phase 186.1 planned (7 plans, 6 waves), not started
 184-04 (complete, 2026-09-06) — Verified the D-10 drift hypothesis live: all 9 pure-line-drift
 entries re-resolved for free under the qualname key, derived programmatically from the plan-01
 baseline + the pre-transform (lineno-keyed) registry revision, with byte-identical reason strings
