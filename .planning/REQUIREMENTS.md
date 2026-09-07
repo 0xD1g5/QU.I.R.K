@@ -51,13 +51,17 @@ of 2026-09-07) and `.planning/reports/backlog-reconciliation-2026-09-07.md`. No 
 - [ ] **TRIAGE-08**: BACK-51 (migration-planner dual categorization) is dispositioned with recorded
       evidence — one targeted check; a "no user-visible duality remains" verdict closes it without
       code. [BACK-51, UNCERTAIN in audit]
+- [ ] **TRIAGE-09**: A derived CI gate enumerates every BACK-*/999.* ID from the archived roadmaps
+      and backlog at run time (never a hand-written list) and fails when any ID is neither
+      closed-with-evidence nor listed in HORIZON.md's Open-Item Ledger. Keys on title+ID (BACK-68
+      names two unrelated items); counts requirement-section-heading citations as closure. Closes
+      the reconciliation todo's step 3. [todo: backlog-reconciliation-and-derived-gate]
 
 ## Deferred (tracked in HORIZON.md Open-Item Ledger — not in v5.20)
 
 - **999.100** Executive Verdict layer (implemented on `origin/UX-Updates`, flag-gated)
 - **999.96** Ten connectors unreachable from dashboard + silent skip observability
 - **todo: dashboard-cert-view-phantom-tls-rows** — phantom certs reach the client PDF
-- **Backlog derived gate** (reconciliation todo step 3)
 - **999.98 → 999.99** SPKI fingerprint → Quantum Exposure Map (milestone-sized arc)
 - **999.101/BACK-07, 999.102/BACK-88-drawer, BACK-01, BACK-03, BACK-08** — UX/presentation set
 - **GSD tooling todos** — `phase.complete` semantic class, `planned-phase` misleading return,
@@ -78,12 +82,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REL-01 | — | Pending |
-| SCORE-06 | — | Pending |
-| SCORE-07 | — | Pending |
-| TRIAGE-03 | — | Pending |
-| TRIAGE-04 | — | Pending |
-| TRIAGE-05 | — | Pending |
-| TRIAGE-06 | — | Pending |
-| TRIAGE-07 | — | Pending |
-| TRIAGE-08 | — | Pending |
+| REL-01 | Phase 187 | Pending |
+| SCORE-06 | Phase 188 | Pending |
+| SCORE-07 | Phase 188 | Pending |
+| TRIAGE-03 | Phase 189 | Pending |
+| TRIAGE-04 | Phase 189 | Pending |
+| TRIAGE-05 | Phase 189 | Pending |
+| TRIAGE-06 | Phase 190 | Pending |
+| TRIAGE-07 | Phase 190 | Pending |
+| TRIAGE-08 | Phase 189 | Pending |
+| TRIAGE-09 | Phase 189 | Pending |

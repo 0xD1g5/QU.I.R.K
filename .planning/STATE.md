@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-09-07T18:45:00.340Z"
 last_activity: 2026-09-07
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -798,10 +798,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 187 (Release v5.19) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-09-07 — Milestone v5.20 started
+Status: Roadmap created — 4 phases (187-190), 10/10 requirements mapped
+Last activity: 2026-09-07 — Milestone v5.20 roadmap created
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 

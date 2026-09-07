@@ -91,12 +91,127 @@ including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
 
 
-## Current Milestone
+## Current Milestone: v5.20 Release & Correctness Drain
 
-None — v5.19 archived 2026-09-07. Run `/gsd-new-milestone` to open the next one.
+**Goal:** Ship v5.19's content as a real release, then make the score and the scanners stop
+overstating — no unassessed domain scores full marks, no probe silently fails, no config silently
+no-ops.
 
-Fresh `REQUIREMENTS.md` is created as part of that flow (the v5.19 file is archived at
-`.planning/milestones/v5.19-REQUIREMENTS.md`).
+**Phase Numbering:** Continues from v5.19's last phase (186.1). Integer phases only — v5.20 starts
+at Phase 187.
+
+**Structure rationale:** REL-01 is a gating first wave per the v5.18 precedent (release before
+feature work). SCORE-06 and SCORE-07 are grouped as a deliberate scoring-integrity phase —
+SCORE-06 changes historical numbers and needs a recorded migration/communication decision, not a
+drive-by. The six TRIAGE items split into two small drain phases: config correctness
+(TRIAGE-03/04/05/08) versus scanner port/protocol work (TRIAGE-06 broker, TRIAGE-07 Modbus).
+
+### Phases
+
+- [ ] **Phase 187: Release v5.19** - Operator can `pip install quirk-scanner==5.19.0`; the
+  `v5.19.0` tag is cut with every bump surface updated in the same change. Gating — nothing else
+  in this milestone should ship ahead of the release it depends on for a clean version baseline.
+- [ ] **Phase 188: Scoring Integrity** - A zero-evidence domain no longer contributes a full
+  25/25 subscore, and the frontend/backend severity-band divergence closes for good.
+- [ ] **Phase 189: Config Correctness Drain** - Documented and sample configs behave exactly as
+  documented; no port field silently no-ops on a quoted YAML value; the backlog derived gate makes
+  ledger completeness mechanical.
+- [ ] **Phase 190: Scanner Port & Protocol Drain** - Broker scanning honors operator-specified
+  ports and Modbus fingerprinting activates end-to-end.
+
+## Phase Details
+
+### Phase 187: Release v5.19
+
+**Goal**: Ship v5.19's development-complete content as a real, installable release.
+**Depends on**: Nothing (gating — first wave, per the v5.18 precedent of releasing before feature
+work)
+**Requirements**: REL-01
+**Success Criteria** (what must be TRUE):
+
+  1. `pip install quirk-scanner==5.19.0` succeeds from a clean environment against a published
+     PyPI release.
+  2. The `v5.19.0` release workflow is green end to end, including the Windows sensor asset
+     attached to the GitHub release.
+  3. All bump surfaces show `5.19.0` consistently: `pyproject.toml`, README heading/What's New,
+     `CHANGELOG.md` entry, `docs/UAT-SERIES.md` UAT-1-02 pass criteria + document header.
+  4. `tests/test_version.py` passes after an editable reinstall (`pip install -e . --no-deps`).
+
+**Plans**: TBD
+
+### Phase 188: Scoring Integrity
+
+**Goal**: The readiness score stops overstating unassessed domains, and the frontend and backend
+agree on what a severity band means.
+**Depends on**: Phase 187
+**Requirements**: SCORE-06, SCORE-07
+**Success Criteria** (what must be TRUE):
+
+  1. A readiness-score domain with zero collected evidence no longer contributes a full 25/25
+     subscore — the full 71-container chaos lab can no longer score 96/100 on the strength of
+     domains it never assessed.
+  2. The formula change ships with a recorded migration/communication decision documenting that
+     historical scores move, not a silent drive-by.
+  3. Dashboard `ScoreGauge.tsx` band thresholds derive from the same single producer as
+     `quirk/scoring/severity_bands.py`.
+  4. A test fails if either side's band thresholds drift from the other, closing v5.19 SCORE-05's
+     deferred frontend half.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 189: Config Correctness Drain
+
+**Goal**: Documented and sample configs behave exactly as documented — no field silently no-ops.
+**Depends on**: Phase 187
+**Requirements**: TRIAGE-03, TRIAGE-04, TRIAGE-05, TRIAGE-08, TRIAGE-09
+**Success Criteria** (what must be TRUE):
+
+  1. The `docs/chaos-lab.md` example config loads verbatim against the current config schema,
+     guarded by a drift gate consistent with the project's existing pattern.
+  2. A quoted YAML port value (e.g. `"8444"`) on any scan-config port-list field is coerced to int
+     or rejected loudly at load time — never silently ignored — across every port field, not one
+     field patched in isolation.
+  3. The port-22-in-`ports_tls` question in `docs/sample-config.yaml` is resolved, with the
+     decision (removed, or kept with rationale) recorded where the reconciliation audit can see
+     it.
+  4. BACK-51's migration-planner dual-categorization concern is dispositioned with recorded
+     evidence, closing with or without a code change.
+
+  5. A derived CI gate re-enumerates every BACK-*/999.* ID from the archived roadmaps at run
+     time and fails when any ID is neither closed-with-evidence nor listed in HORIZON.md's
+     Open-Item Ledger (title+ID keyed; heading-citation closure honored).
+
+**Plans**: TBD
+
+### Phase 190: Scanner Port & Protocol Drain
+
+**Goal**: Broker and Modbus scanning work end-to-end against operator-configured or lab-mapped
+targets instead of silently no-oping.
+**Depends on**: Phase 187
+**Requirements**: TRIAGE-06, TRIAGE-07
+**Success Criteria** (what must be TRUE):
+
+  1. The broker scanner (Kafka/RabbitMQ/Redis) accepts operator-specified ports instead of
+     hardcoded defaults.
+  2. The broker scanner correctly probes the chaos lab's mapped ports (29092/25671/26380) end to
+     end.
+  3. Modbus fingerprinting's Step-4 gate is satisfiable, and a live or lab Modbus target produces
+     hardware fingerprint output.
+  4. If any chaos-lab profile/port mapping changed as part of this phase, `lab.sh`,
+     `expected_results_*.md`, and `docs/chaos-lab.md` are updated in the same change per CLAUDE.md's
+     Chaos Lab Maintenance rule.
+
+**Plans**: TBD
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 187. Release v5.19 | 0/? | Not started | - |
+| 188. Scoring Integrity | 0/? | Not started | - |
+| 189. Config Correctness Drain | 0/? | Not started | - |
+| 190. Scanner Port & Protocol Drain | 0/? | Not started | - |
 
 ## Backlog
 
