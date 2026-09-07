@@ -1464,6 +1464,22 @@ _ADDITIONAL_SITE_REASON = (
     "coincidence papered over -- see `_classify_field_scope`'s docstring."
 )
 
+_NPX_186_1_03_SCOPED_REASON = (
+    "Fourth defect-class site (see _ADDITIONAL_SITE_REASON above for the "
+    "discovery trace) -- 186.1-03 scoped this npx instance to "
+    "`fieldRegion`'s leading run (imported from ./state-document.js, the "
+    "same run-time-derived, no-allowlist region the plain-fallback fix "
+    "uses) instead of the whole outer `## Current Position` span, and "
+    "named the pattern variables (`new RegExp('^Field:.*$', flags)`) so "
+    "this scan's structural detector can see the scoping -- previously "
+    "these were unnamed inline regex literals, which the detector's "
+    "conservative default always reports as 'unscoped' regardless of "
+    "actual behaviour. Flipped to 'scoped' in the same commit that landed "
+    "the code change (the bidirectional property 186.1-02 Task 3 "
+    "requires). The `.cjs` twin (bin/lib/state.cjs) is unaffected -- that "
+    "install is plan 186.1-04's, not touched here."
+)
+
 _SNAPSHOT_READ_ONLY_REASON = (
     "Session-snapshot read: assigns into a `session.<field> = "
     "match[1].trim()` object consumed only by `state json`'s/`state "
@@ -1506,21 +1522,24 @@ _PLAIN_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
         "stdout display, never written back to STATE.md.",
     ),
     ("query/state-document.js", "${escaped}", "stateExtractField"): (
-        "pending-scoping",
+        "scoped",
         "TOOL-05 (D-05): npx twin of the .cjs stateExtractField plain "
-        "fallback above -- same unscoped-but-anchored shape. Plan 186.1-03 "
-        "scopes this in the npx install; this row asserts the site is "
-        "CURRENTLY unscoped and must flip to 'scoped' in the same commit "
-        "that lands that patch.",
+        "fallback above -- same unscoped-but-anchored shape. 186.1-03 "
+        "scoped this to `fieldRegion`'s leading run (per-heading, "
+        "run-time derived) and fails closed (null) when the field is "
+        "absent from every region -- flipped in the same commit that "
+        "landed the patch.",
     ),
     ("query/state-document.js", "${escaped}", "stateReplaceField"): (
-        "pending-scoping",
+        "scoped",
         "TOOL-05 (D-01/D-02): npx twin of the .cjs stateReplaceField plain "
         "fallback above -- the ORIGINAL live-corruption site (186.1-01's "
         "RED transcript: this exact branch rewrote STATE.md's narrative "
-        "Status: decoy 8 times). Plan 186.1-03 scopes this in the npx "
-        "install; this row asserts the site is CURRENTLY unscoped and "
-        "must flip to 'scoped' in the same commit that lands that patch.",
+        "Status: decoy 8 times). 186.1-03 scoped this to `fieldRegion`'s "
+        "leading run and splices the replacement back at that region's "
+        "exact offset, failing closed (null) when the field is absent "
+        "from every region -- flipped in the same commit that landed "
+        "the patch.",
     ),
     ("query/state.js", "${fieldEscaped}", "stateGet"): (
         "accepted-read-only",
@@ -1550,15 +1569,15 @@ _PLAIN_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
     ("bin/lib/state.cjs", "Status", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
     ("bin/lib/state.cjs", "Plan", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
     ("bin/lib/state.cjs", "Last activity", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("query/state-mutation.js", "Phase", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("query/state-mutation.js", "Plan", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("query/state-mutation.js", "Status", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("query/state-mutation.js", "Last activity", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("query/state-mutation.js", "Status", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("query/state-mutation.js", "Plan", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Phase", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
+    ("query/state-mutation.js", "Plan", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
+    ("query/state-mutation.js", "Status", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
+    ("query/state-mutation.js", "Last activity", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
+    ("query/state-mutation.js", "Status", "updateCurrentPositionFields"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
+    ("query/state-mutation.js", "Plan", "updateCurrentPositionFields"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
     ("query/state-mutation.js", "Last activity", "updateCurrentPositionFields"): (
-        "pending-scoping",
-        _ADDITIONAL_SITE_REASON,
+        "scoped",
+        _NPX_186_1_03_SCOPED_REASON,
     ),
 }
 
