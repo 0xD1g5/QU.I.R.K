@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.18.0
+# QU.I.R.K. — v5.19.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -82,10 +82,18 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.18
+## What's New in v5.19
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
 
+- **v5.19 Drain & Tooling Integrity (Phases 182-186.1)** — readiness-score correctness across
+  coverage metrics, default-config scanning posture, timestamp handling, and a single-producer
+  severity-band contract (`quirk/severity_bands.py`); drift-proof test-suite honesty gates so the
+  fork-safety and skip-registry checks derive their coverage from live source scans instead of
+  hand-maintained lists; the a11y baseline environment stabilized; and two carried-forward defects
+  (a Keycloak cert fixture, a plaintext-HTTP classifier gap) drained. The release toolchain that
+  authors this project's own planning files also had its state-corruption defect class closed on
+  this machine — an operator-side fix, not a product change.
 - **v5.16 Review Drain & Gate Integrity** — every open finding from the 2026-08-24 third-party
   functional review closed: the UAT corpus went from 377 undispositioned cases to zero across all
   666, a CRITICAL evidence-injection vulnerability in the UAT tooling was found and fixed

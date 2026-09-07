@@ -5,6 +5,42 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.19.0] - 2026-09-07
+
+Ten phases (182 through 186.1), one milestone: readiness-score correctness, drift-proof
+test-suite honesty gates, an a11y baseline stabilization, and two carried-forward defects
+drained — shipped as a single release.
+
+### Added
+
+- **Readiness-score correctness** (SCORE-01..SCORE-05) — coverage-metric calculation corrected,
+  default out-of-the-box config now actually scans what it claims to, scan timestamps corrected,
+  and a single-producer severity-band contract (`quirk/severity_bands.py`) collapses previously
+  duplicated band logic into one source of truth.
+- **Drift-proof test-suite honesty gates** (DRIFT-01, DRIFT-02) — the fork-safety gate now derives
+  its covered file set from a live glob instead of a hand-maintained list, and the skip registry
+  keys entries by `(file, qualname)` with alias-aware AST resolution so an entry survives line
+  shifts and previously-invisible skip sites are now caught.
+
+### Fixed
+
+- **Carried-forward defect drain** (TRIAGE-01, TRIAGE-02) — a stale Keycloak certificate fixture
+  and a plaintext-HTTP classifier gap, both carried forward from prior milestones' chaos-lab and
+  findings-model work, are cleared.
+
+### Changed
+
+- **Accessibility baseline environment stabilized** (DRIFT-03) — the a11y test environment now
+  produces a reliable, hand-verified baseline for future violation tracking.
+
+The GSD release toolchain that authors this project's own planning files had its state-corruption
+defect class (TOOL-01 through TOOL-05) closed on this machine — 21 sites across 4 files in 2
+separate installs were scoped after a run-time source scan found 29 affected sites where planning
+had predicted 6, proven by a live re-demonstration against the real, tracked `.planning/STATE.md`
+restored byte-identical; this is an operator-machine-local tooling fix, not a change to the
+shipped product, and a second, semantic defect class in the same toolchain was found and filed
+open rather than folded into this closure.
+
 ## [5.18.0] - 2026-09-02
 
 The first release since 5.15.0 (2026-08-26). Two milestones of user-visible fixes — v5.16 Review

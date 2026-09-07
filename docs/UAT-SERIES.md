@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 5.18.0
-**Last Updated:** 2026-09-07 (v5.19 Phase 186.1 — Close gap TOOL-01/TOOL-05: Plain-Field Fallback
+**Version:** 5.19.0
+**Last Updated:** 2026-09-07 (Phase 187 Plan 02 — v5.19.0 release version bump across all bump
+surfaces: `pyproject.toml`, `README.md`, `CHANGELOG.md`, and this document's header; UAT-1-02's
+Pass Criteria updated to `QU.I.R.K. v5.19.0` — historical PASS evidence below is preserved until
+Series 187 re-executes it against the published artifact.) Prior: 2026-09-07 (v5.19 Phase 186.1 —
+Close gap TOOL-01/TOOL-05: Plain-Field Fallback
 Scoping, plan 186.1-07 phase-gate close-out: Series 186.1 added (UAT-186.1-01..03; 2 PASS, 1
 SKIP/GAP). The GSD toolchain's `stateReplaceField()`/`stateExtractField()` plain-field fallback was
 anchored but unscoped, deterministically clobbering `.planning/STATE.md` body prose on every
@@ -574,7 +578,7 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `QU.I.R.K. v5.18.0`
+- Output matches format: `QU.I.R.K. v5.19.0`
 - Exit code 0
 
 **Result:** - [x] PASS (2026-09-02 live re-execution against the bumped 5.18.0 install: `.venv/bin/python run_scan.py --version` printed `QU.I.R.K. v5.18.0`, exit code 0. This supersedes the prior 2026-08-30 PASS, whose evidence was `QU.I.R.K. v5.15.0` and no longer matches this criterion once the pass criteria were updated to v5.18.0.)  - [ ] FAIL  - [ ] SKIP
