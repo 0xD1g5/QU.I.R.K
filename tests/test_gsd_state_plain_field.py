@@ -42,6 +42,7 @@ resolve anything at runtime.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -832,4 +833,210 @@ def test_negative_control_phase_complete_cjs_frontmatter_redirect_function_level
         "expected the body decoy to survive untouched at this call site -- "
         "confirming the frontmatter redirect, not the decoy, is what "
         "absorbed this particular call"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Three positive command-boundary GREEN nodes (186.1-03 Task 3, D-09/D-10):
+# run each of the three implicated verbs via `gsd-sdk` against the LIVE,
+# now-patched npx install directly -- NOT a pristine copy, and NOT the
+# repo's own `.planning/STATE.md` (T-186.1-02, asserted via
+# `_assert_target_is_tmp`). Each node proves, at the command boundary
+# (never merely at the function level -- CLAUDE.md clause (e)):
+#   1. every decoy constant survives byte-identical
+#   2. the verb genuinely wrote SOMETHING legitimate inside the leading
+#      run (a bare no-op fixture would pass vacuously otherwise)
+#   3. the fail-closed path is visible in the verb's own parsed JSON
+#      return -- `Status` absent from `updated[]` rather than reported as
+#      a successful write (the exact `{"updated": ["Status"]}` tell that
+#      was misread for 7 occurrences)
+#
+# The plan-01 negative controls above remain untouched and still run
+# against the PRISTINE tree, proving the fixture is sensitive to the
+# unpatched code -- these new GREEN nodes are meaningless without that
+# standing sensitivity proof alongside them.
+# ---------------------------------------------------------------------------
+
+
+def _adjacent_state_md_with_plan_count() -> str:
+    """Variant of `_adjacent_state_md()` with a `Total Plans in Phase:`
+    line added to ## Current Position's leading run (still field-shaped,
+    so it does not disturb the run's structure or the decoy exclusion this
+    module's self-check already proves). `state.planned-phase` is the only
+    one of the three implicated verbs that never legitimately writes
+    `Phase:`/`Plan:` themselves (those two are `state.begin-phase`'s and
+    `phase.complete`'s territory) -- without a real field for it to update,
+    every one of its writes would fail closed against the base fixture,
+    proving D-04's visibility but NOT that the verb genuinely wrote
+    anything (acceptance criterion 2 needs a real, non-vacuous change).
+    """
+    base = _adjacent_state_md()
+    marker = "Plan: 1 of 3\n"
+    assert base.count(marker) == 1, "fixture structure changed unexpectedly"
+    return base.replace(marker, marker + "Total Plans in Phase: 3\n", 1)
+
+
+@_SDK_SKIP
+def test_positive_state_planned_phase_npx_live_patched(tmp_path) -> None:
+    """186.1-03 GREEN: `state.planned-phase` via the LIVE, now-patched npx
+    install (not a pristine copy)."""
+    root = tmp_path
+    _assert_target_is_tmp(root, tmp_path)
+    (root / ".planning").mkdir(parents=True, exist_ok=True)
+    (root / ".planning" / "STATE.md").write_text(
+        _adjacent_state_md_with_plan_count(), encoding="utf-8"
+    )
+
+    assert _NPX_SDK_CLI is not None
+    proc = _run_gsd_sdk_query(
+        _NPX_SDK_CLI, root, "state.planned-phase", "--phase", "901", "--plans", "5"
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    result = json.loads(proc.stdout)
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    # 1. Every decoy survives byte-identical.
+    assert _STATUS_DECOY in after_text
+    assert _PHASE_DECOY in after_text
+    assert _PLAN_DECOY in after_text
+    assert _SESSION_NARRATIVE_DECOY in after_text
+
+    # 2. The verb genuinely wrote something real inside the leading run --
+    # `Total Plans in Phase` is present there (unlike Status/Last Activity/
+    # Last Activity Description, none of which exist in this fixture) and
+    # gets legitimately updated from 3 to 5.
+    assert "Total Plans in Phase: 5" in after_text, (
+        f"expected the leading-run Total Plans in Phase field to be "
+        f"genuinely updated to 5 -- a no-op result would mean this GREEN "
+        f"node proves nothing. Got updated={result.get('updated')!r}"
+    )
+    assert "Total Plans in Phase: 3" not in after_text
+
+    # 3. D-04 visibility, checked against the PARSED JSON return, not
+    # stdout substring presence: Status is absent from updated[] because
+    # it does not exist anywhere in the leading run -- an honest no-op,
+    # not a misdirected write.
+    assert "Status" not in result["updated"], (
+        f"expected 'Status' absent from updated[] (fail-closed, no Status "
+        f"field in the leading run) -- got {result['updated']!r}"
+    )
+    assert "Total Plans in Phase" in result["updated"]
+
+
+@_SDK_SKIP
+def test_positive_state_begin_phase_npx_live_patched(tmp_path) -> None:
+    """186.1-03 GREEN: `state.begin-phase` via the LIVE, now-patched npx
+    install (not a pristine copy). This is the verb 186.1-01's RED
+    transcript captured actually corrupting the real repo's STATE.md; this
+    node is its direct GREEN inversion."""
+    root = tmp_path
+    _assert_target_is_tmp(root, tmp_path)
+    (root / ".planning").mkdir(parents=True, exist_ok=True)
+    (root / ".planning" / "STATE.md").write_text(_adjacent_state_md(), encoding="utf-8")
+
+    assert _NPX_SDK_CLI is not None
+    proc = _run_gsd_sdk_query(
+        _NPX_SDK_CLI, root, "state.begin-phase",
+        "--phase", "901", "--name", "demo", "--plans", "5",
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    result = json.loads(proc.stdout)
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    # 1. Every decoy survives byte-identical -- this is the exact
+    # corruption 186.1-01's RED transcript captured against the real
+    # repo's STATE.md; here it must NOT reproduce.
+    assert _STATUS_DECOY in after_text
+    assert _PHASE_DECOY in after_text
+    assert _PLAN_DECOY in after_text
+    assert _SESSION_NARRATIVE_DECOY in after_text
+
+    # 2. The verb genuinely wrote something real inside the leading run:
+    # Phase/Plan are both present there in the base fixture and both
+    # legitimately change.
+    assert "Phase: 901 (demo) — EXECUTING" in after_text, (
+        f"expected the leading-run Phase field to be genuinely updated -- "
+        f"a no-op result would mean this GREEN node proves nothing. Got "
+        f"updated={result.get('updated')!r}"
+    )
+    assert "Phase: 900 (demo) -- EXECUTING" not in after_text
+    assert "Plan: 1 of 5" in after_text
+    assert "Plan: 1 of 3" not in after_text
+
+    # 3. D-04 visibility, checked against the PARSED JSON return: `Status`
+    # is absent from updated[] -- reported only as the coarser
+    # 'Current Position' entry (Phase/Plan legitimately changed within
+    # it), never as a standalone successful 'Status' write, because no
+    # Status: field exists anywhere in the leading run.
+    assert "Status" not in result["updated"], (
+        f"expected 'Status' absent from updated[] (fail-closed, no Status "
+        f"field in the leading run) -- got {result['updated']!r}. This is "
+        f"the direct counter to the {{'updated': ['Status']}} tell that "
+        f"was misread for 7 occurrences against the real repo's STATE.md."
+    )
+    assert "Current Position" in result["updated"]
+
+
+@_SDK_SKIP
+def test_positive_phase_complete_npx_live_patched(tmp_path) -> None:
+    """186.1-03 GREEN: `phase.complete` via the LIVE, now-patched npx
+    install (not a pristine copy).
+
+    `phase.complete`'s JSON return has no per-field `updated`/`failed`
+    array (unlike `state.planned-phase`/`state.begin-phase`) -- its
+    `state_updated: true` is a document-level flag, not a field-level
+    one. D-04's visibility requirement is therefore checked directly
+    against the written body instead: the leading run must show NO
+    Status: line was ever inserted or matched (this verb's inline splice
+    never had insert-when-absent logic for Status to begin with -- only
+    `stateReplaceFieldWithFallback` is called for it, which is
+    unconditionally null-safe and never inserts), while Phase/Plan (which
+    ARE present and legitimately targeted) genuinely change.
+    """
+    root = tmp_path
+    _assert_target_is_tmp(root, tmp_path)
+    (root / ".planning").mkdir(parents=True, exist_ok=True)
+    (root / ".planning" / "STATE.md").write_text(_adjacent_state_md(), encoding="utf-8")
+    _seed_phase_complete_inputs(root, 901)
+
+    assert _NPX_SDK_CLI is not None
+    proc = _run_gsd_sdk_query(_NPX_SDK_CLI, root, "phase.complete", "901")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    result = json.loads(proc.stdout)
+    assert result["state_updated"] is True
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    # 1. Every decoy survives byte-identical -- this is one of the three
+    # verbs 186.1-01's RED transcript captured corrupting the real repo's
+    # STATE.md.
+    assert _STATUS_DECOY in after_text
+    assert _PHASE_DECOY in after_text
+    assert _PLAN_DECOY in after_text
+    assert _SESSION_NARRATIVE_DECOY in after_text
+
+    # 2. The verb genuinely wrote something real inside the leading run:
+    # Phase/Plan are both present there and both legitimately change
+    # (phase.complete rewrites Phase to the completed phase number and
+    # resets Plan to "Not started").
+    cp_body = _section_body(after_text, "Current Position")
+    cp_run = "\n".join(_leading_field_run_lines(cp_body))
+    assert "Phase: 901" in cp_run, (
+        f"expected the leading-run Phase field to be genuinely updated -- "
+        f"a no-op result would mean this GREEN node proves nothing. "
+        f"Leading run: {cp_run!r}"
+    )
+    assert "Plan: Not started" in cp_run
+
+    # 3. D-04 visibility (this verb's JSON shape has no updated[]/failed[]
+    # array, so checked against the body directly): no Status: line was
+    # ever written into the leading run -- the fail-closed path never
+    # inserted one, and the pre-existing absence is preserved rather than
+    # silently redirecting into the decoy the way the unpatched fallback
+    # did.
+    assert not re.search(r"^Status:", cp_run, re.MULTILINE), (
+        f"expected no Status: line in the leading run (fail-closed, no "
+        f"insert-when-absent for this verb) -- got: {cp_run!r}"
     )
