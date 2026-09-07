@@ -360,6 +360,121 @@ ALLOWED_SKIPS = [
         "are honest and a skip is not a pass; see CLAUDE.md's GSD `state.*` "
         "Verb Integrity section for why this durability check exists.",
     ),
+    # ------------------------------------------------------------------
+    # Phase 186.1 (TOOL-01/TOOL-05): environment_capability skips in the
+    # command-boundary harness built by 186.1-01 and extended by 186.1-03/04/05.
+    # Every reason below is derived from the guard condition read directly in
+    # tests/test_gsd_state_plain_field.py at registration time, not from a
+    # planning-time index. The Linux Full Suite CI job provisions NEITHER GSD
+    # install (no ~/.claude/get-shit-done/, no npx get-shit-done-cc cache), so
+    # ALL of these skip in CI and a skip is NEVER a pass -- the TOOL-05 fix is
+    # only actually exercised on an operator machine with both installs present.
+    # ------------------------------------------------------------------
+    (
+        "test_gsd_state_plain_field.py",
+        "pristine_npx_tree",
+        "environment_capability",
+        "GSD_SDK_AVAILABLE is False (no resolvable npx get-shit-done-cc "
+        "sdk/dist install), or the pristine npx query sources are missing "
+        "under ~/.claude/gsd-npx-sdk-patches/pristine/, or a would-be "
+        "pristine source already carries the LOCAL PATCH (2026-09-07, "
+        "TOOL-05) marker -- which would make every npx negative control pass "
+        "vacuously against already-fixed code. All three guard skips are "
+        "honest and a skip is not a pass.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "pristine_cjs_tree",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False (node on PATH plus "
+        "~/.claude/get-shit-done/bin/lib/{state-document.generated.cjs,"
+        "state.cjs}), or the pristine .cjs sources are missing under "
+        "~/.claude/gsd-pristine/, or a would-be pristine source already "
+        "carries the LOCAL PATCH (2026-09-07, TOOL-05) marker -- which would "
+        "make every .cjs negative control pass vacuously. All three guard "
+        "skips are honest and a skip is not a pass.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_negative_control_state_planned_phase_cjs",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False -- this is the pre-patch RED "
+        "negative control proving `state planned-phase` via gsd-tools.cjs "
+        "destroys a body prose decoy on UNPATCHED source. Without the "
+        "operator toolchain there is nothing to run it against; the durable "
+        "RED evidence is the verbatim transcript in 186.1-01-SUMMARY.md.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_negative_control_state_begin_phase_cjs",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False -- pre-patch RED negative control "
+        "for `state begin-phase` via gsd-tools.cjs. Same rationale as the "
+        "planned-phase control above; RED evidence lives in "
+        "186.1-01-SUMMARY.md.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_negative_control_phase_complete_cjs",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False. NOTE: this node asserts the TRUE, "
+        "empirically-verified behaviour that `phase.complete` via the .cjs "
+        "install does NOT reach the body decoy (readModifyWriteStateMd never "
+        "strips frontmatter and syncStateFrontmatter's rebuild absorbs the "
+        "cross-contamination) -- 186.1-01 reported this divergence honestly "
+        "rather than forcing a matching RED.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_negative_control_phase_complete_cjs_frontmatter_redirect_function_level",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False -- the function-level companion "
+        "demonstrating that the underlying scoping defect still crosses the "
+        "frontmatter/body boundary for phase.complete via .cjs even though it "
+        "never surfaces at the command boundary. Explicitly function-level "
+        "and NOT a substitute for command-boundary evidence (CLAUDE.md "
+        "clause (e)).",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_positive_state_planned_phase_cjs_live_patched",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False -- GREEN command-boundary node "
+        "running `state planned-phase` against the LIVE, now-patched .cjs "
+        "install. A skip means the 186.1-04 fix was NOT exercised here; the "
+        "live proof is 186.1-06-SUMMARY.md's six-run transcript.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_positive_state_begin_phase_cjs_live_patched",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False -- GREEN inversion of the "
+        "begin-phase corruption that 186.1-01's RED transcript captured. A "
+        "skip means the .cjs fix was not exercised here.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_positive_phase_complete_cjs_live_patched",
+        "environment_capability",
+        "GSD_TOOLCHAIN_AVAILABLE is False -- GREEN command-boundary node "
+        "confirming every decoy survives byte-identical through "
+        "`state complete-phase` on the patched .cjs install. NOTE per "
+        "186.1-04: `phase complete <n>` dispatches to phase.cjs and does NOT "
+        "reach the patched cmdStateCompletePhase; this node uses the verb "
+        "that actually exercises the patch.",
+    ),
+    (
+        "test_gsd_state_plain_field.py",
+        "test_npx_patch_loss_is_actually_detected",
+        "environment_capability",
+        "GSD_NPX_PATCHES_AVAILABLE is False (the ~/.claude/gsd-npx-sdk-patches/ "
+        "durability layer is absent), or the pristine baseline for "
+        "state-document.js is missing -- so this negative control, which "
+        "proves the npx durability gate is SENSITIVE by simulating a version "
+        "bump reverting the TOOL-05 patch, has nothing to diff against. "
+        "186.1-05 demonstrated it failing against a real live revert; a skip "
+        "here is not that evidence.",
+    ),
     (
         "test_uat_disposition_integrity.py",
         "test_vitest_non_vacuity_passing_substitute_is_not_flagged",
