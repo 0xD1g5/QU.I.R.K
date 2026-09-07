@@ -62,6 +62,14 @@ everything else ships **off with a stated reason**:
   already used. This means a stock scan now also TLS-probes ports commonly used by PostgreSQL,
   MySQL, and Vault (5432, 3306, 8200) — at the TLS layer only, independent of whether the
   credentialed `db`/`vault` connectors are enabled.
+- **Plaintext-HTTP classification no longer follows `scan.ports_tls` (Phase 186, TRIAGE-176-02).**
+  Previously, any plaintext-HTTP finding on a port in `scan.ports_tls` was relabelled `"HTTP on
+  TLS-designated port"` — this made every scanned-but-plaintext port look like a TLS
+  misconfiguration. Findings are now relabelled only for the well-known TLS port set (443, 8443,
+  9443, 10443, 4433, 5001) or ports you explicitly list in the new `scan.tls_designated_ports`
+  option. If you relied on the old behavior to flag plaintext HTTP on a non-standard TLS port
+  (e.g. 8444), add it to `scan.tls_designated_ports` to preserve that reporting. See
+  [`docs/configuration.md`](configuration.md) § "TLS-designated ports override" for details.
 
 **To narrow the out-of-the-box posture for an engagement:** edit `connectors.enable_email` /
 `enable_broker` to `false` if you don't want those probed, and edit `scan.ports_tls` directly to
@@ -312,7 +320,7 @@ inline subsection below the table.
 | Scanner | Scans | Config flag(s) | Optional deps | Sample finding |
 |---------|-------|----------------|---------------|----------------|
 | Discovery (nmap) | TCP port discovery before fingerprinting | wizard prompt, `--targets-file`, `cidrs:` | `nmap` binary | (advisory) "Scanner skipped — optional extra not installed" |
-| TLS | TLS handshake, cert chain, ciphers, key sizes | `scan.ports_tls`, `scan.include_sni`, `timeouts.tls_seconds` | `sslyze` (core) | "TLS certificate expired" |
+| TLS | TLS handshake, cert chain, ciphers, key sizes | `scan.ports_tls`, `scan.tls_designated_ports`, `scan.include_sni`, `timeouts.tls_seconds` | `sslyze` (core) | "TLS certificate expired" |
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
 | JWT/API | JWT signing-alg discovery | `connectors.enable_jwt`, `jwt_targets` | (none) | (algorithm-classification findings) |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |

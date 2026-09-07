@@ -36,6 +36,7 @@ Controls connection timeouts, concurrency, port selection, and TLS enumeration d
 | `timeout_seconds` | int | `5` | Global connection timeout in seconds |
 | `concurrency` | int | `200` | Maximum parallel workers (global cap) |
 | `ports_tls` | list[int] | `[443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]` | Ports probed for TLS/HTTP/SSH — the 17-port `CONSULTING_TLS_PORTS` list, shared with the CLI wizard and the dashboard's "Common TLS ports" scope (Phase 184.2, D-04). See below for the D-05 note on 5432/3306/8200. |
+| `tls_designated_ports` | list[int] | `[]` | Operator-declared ports that should be classified `"HTTP on TLS-designated port"` rather than `"Plaintext HTTP service detected"` when plaintext HTTP is found there, in addition to the well-known TLS set. Distinct from `ports_tls` above: `ports_tls` is the scan TARGET list (what gets probed), not a TLS-designation signal. (Phase 186, TRIAGE-176-02) |
 | `include_sni` | bool | `true` | Send SNI extension in TLS handshakes |
 | `tls_enum_mode` | string | `"fast"` | TLS enumeration depth: `off`, `fast`, `deep` |
 | `fingerprint_timeout_seconds` | int | `2` | Per-target fingerprint timeout |
@@ -399,6 +400,31 @@ ship `false`. This is deliberate, not a contradiction — the TLS scanner still 
 certificate/cipher posture of a database or Vault listener bound to those ports; only the
 *credentialed* connectors (which would additionally query the service for schema/secrets-level
 data) require you to opt in separately.
+
+### TLS-designated ports override (D-08, Phase 186)
+
+Before Phase 186, any plaintext-HTTP finding on any port listed in `scan.ports_tls` was
+relabelled `"HTTP on TLS-designated port"` — because `ports_tls` is the scan TARGET list, not a
+TLS-designation signal, this made a port that is plaintext by design (e.g. a scanned-but-plaintext
+service) indistinguishable in reports from a genuine TLS misconfiguration. The classifier now
+relabels a plaintext-HTTP finding only when its port is in the well-known TLS set:
+
+```
+443, 8443, 9443, 10443, 4433, 5001
+```
+
+or explicitly listed in `scan.tls_designated_ports`. Use the override for a non-standard TLS port
+that should still be flagged as a TLS misconfiguration when found serving plaintext HTTP — for
+example, a service running on port `8444`:
+
+```yaml
+scan:
+  tls_designated_ports: [8444]
+```
+
+With that override in place, plaintext HTTP found on port 8444 is classified `"HTTP on
+TLS-designated port"`; without it, the same finding is classified `"Plaintext HTTP service
+detected"`.
 
 ### Per-surface connector coverage (D-16, recorded 2026-09-04 — deferred, not closed)
 
