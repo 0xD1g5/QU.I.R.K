@@ -136,6 +136,7 @@ since they were first recorded.
 - [x] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable. **All 10 plans done (2026-09-05).** SCORE-04/SCORE-05 both complete; BACK-89 closed by reference (all 4 investigation questions answered); docs/UAT/Obsidian close-out in 184.4-10 — see `184.4-VALIDATION.md` (all 11 automated rows green, `nyquist_compliant: true`) and `184.4-10-SUMMARY.md`. Two manual-only checks (live chaos-lab re-verification, cross-surface visual placement) DEFERRED with cited substitute coverage — no chaos-lab/browser access in the close-out session. **Checkbox awaits `184.4-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184.4-10's scope). (completed 2026-09-06)
 - [x] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios. (completed 2026-09-06; close-out was stranded on the unmerged `phase-185-close` branch and integrated to main 2026-09-07)
 - [x] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
+- [ ] **Phase 186.1: Close gap: TOOL-01/TOOL-05 — scope the plain-field fallback** (INSERTED) - `stateReplaceField`'s plain-field fallback is anchored to line start but scoped to nothing, so it rewrites the FIRST document line beginning `Status:` — a body prose line, not the real field. Reproduced live 2026-09-07. Must be fixed in BOTH installs (`~/.claude/get-shit-done/bin/lib/` and the npx-cached `get-shit-done-cc/sdk/dist/`) and locked with a command-boundary test.
 
 ## Phase Details
 
@@ -696,6 +697,7 @@ Plans:
 | 184.4 Rating Band Severity Floor | 10/10 | Complete | 2026-09-06 |
 | 185. a11y Baseline Environment | 7/7 | Complete | 2026-09-06 |
 | 186. Carried Defect Drain | 7/7 | Complete | 2026-09-07 |
+| 186.1 Close gap: TOOL-01/TOOL-05 | 0/? | Not started | — |
 
 ## Backlog
 
@@ -903,3 +905,13 @@ None currently — the standing DISC-08 boundary item above was promoted into v5
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
+
+### Phase 186.1: Close gap: TOOL-01/TOOL-05 — scope the plain-field fallback (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 186
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 186.1 to break down)

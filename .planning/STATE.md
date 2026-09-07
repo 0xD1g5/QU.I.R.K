@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: v5.19 complete — 9 phases, 70/70 plans (phase-185-close branch integrated to main 2026-09-07)
+stopped_at: v5.19 audit = gaps_found; Phase 186.1 inserted to close TOOL-01/TOOL-05 (2026-09-07)
 last_updated: 2026-09-07T04:15:00.000Z
 progress:
   total_phases: 9
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.19 COMPLETE — all 9 phases on main. Phase 185's close-out plus a live `stamp_utc_iso` bugfix were stranded on the unmerged `phase-185-close` branch and integrated 2026-09-07.
+**Current focus:** Phase 186.1 — close the v5.19 milestone-audit gap (`.planning/v5.19-MILESTONE-AUDIT.md`, status `gaps_found`): TOOL-01 unsatisfied, TOOL-05 orphaned. Root cause located — `plainPattern` in `state-document.js` is anchored to line start but scoped to nothing. Next: /gsd-discuss-phase 186.1
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -767,11 +767,18 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   verification (22 + 99 tests, zero skips) was run to completion instead. See
   `184.1-04-SUMMARY.md` for the full arithmetic and before/after evidence.
 
+## Roadmap Evolution
+
+- Phase 186.1 inserted after Phase 186 (URGENT, 2026-09-07) — close v5.19 milestone-audit gap:
+  TOOL-01 unsatisfied (verification stale vs the 2026-09-06 reopening) + TOOL-05 orphaned.
+  Inserted by hand-edit; `state.patch` / `state.add-roadmap-evolution` deliberately NOT used —
+  they are the corrupting verbs this phase exists to fix (CLAUDE.md TOOL-05).
+
 ## Current Position
 
 Phase: 186 (carried-defect-drain) — COMPLETE (2026-09-07)
 Plan: 7 of 7
-Milestone: v5.19 COMPLETE — 9/9 phases, 70/70 plans
+Milestone: v5.19 — 9 phases complete, 70/70 plans; audit `gaps_found`, Phase 186.1 inserted (not started)
 184-04 (complete, 2026-09-06) — Verified the D-10 drift hypothesis live: all 9 pure-line-drift
 entries re-resolved for free under the qualname key, derived programmatically from the plan-01
 baseline + the pre-transform (lineno-keyed) registry revision, with byte-identical reason strings
