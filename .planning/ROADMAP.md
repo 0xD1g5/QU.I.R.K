@@ -137,7 +137,12 @@ work)
      `CHANGELOG.md` entry, `docs/UAT-SERIES.md` UAT-1-02 pass criteria + document header.
   4. `tests/test_version.py` passes after an editable reinstall (`pip install -e . --no-deps`).
 
-**Plans**: TBD
+**Plans**: 5 plans (sequential waves 1-5 — hard release ordering)
+- [ ] 187-01-PLAN.md — Reconcile local/remote `main` (-s ours) and delete the stray `v5.19` tag
+- [ ] 187-02-PLAN.md — Bump all four version surfaces to 5.19.0, hand-write the CHANGELOG entry, reinstall, full-suite gate
+- [ ] 187-03-PLAN.md — Workflow dry-run, `main` push checkpoint, create the annotated `v5.19.0` tag
+- [ ] 187-04-PLAN.md — CHECKPOINT: user pushes the tag; verify the run, PyPI artifact, provenance, Windows asset
+- [ ] 187-05-PLAN.md — UAT Series 187, vault sync, hand-written phase close-out
 
 ### Phase 188: Scoring Integrity
 
