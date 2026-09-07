@@ -918,7 +918,7 @@ command-boundary regression test proven RED pre-patch, and re-demonstrated live 
 `.planning/STATE.md`.
 **Requirements**: TOOL-01, TOOL-05
 **Depends on:** Phase 186
-**Plans:** 0 plans
+**Plans:** 7 plans
 
 **Success Criteria** (what must be TRUE):
 
@@ -955,4 +955,10 @@ command-boundary regression test proven RED pre-patch, and re-demonstrated live 
      the defect is filed upstream as a comment on issue #4243. (D-13, D-14)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 186.1 to break down)
+- [ ] 186.1-01-PLAN.md — Wave 0 harness: gsd-sdk invocation, adjacency fixtures, per-verb negative controls, pre-patch RED transcript
+- [ ] 186.1-02-PLAN.md — Extend the guard scan on both axes (2 installs x bold+bare shapes) and disposition all six bare-field sites
+- [ ] 186.1-03-PLAN.md — Scope + fail-close the plain fallback in the npx install, read and write side, GREEN via gsd-sdk
+- [ ] 186.1-04-PLAN.md — Same fix in the .cjs install, GREEN via gsd-tools.cjs
+- [ ] 186.1-05-PLAN.md — Re-seed durability in both homes, correct the npx README, add the npx durability check
+- [ ] 186.1-06-PLAN.md — Live re-demonstration: 3 verbs x 2 entry points against the real STATE.md
+- [ ] 186.1-07-PLAN.md — Record correction (REQUIREMENTS.md, CLAUDE.md), upstream comment, todo closure, UAT + Obsidian
