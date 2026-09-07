@@ -1040,3 +1040,224 @@ def test_positive_phase_complete_npx_live_patched(tmp_path) -> None:
         f"expected no Status: line in the leading run (fail-closed, no "
         f"insert-when-absent for this verb) -- got: {cp_run!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Three positive command-boundary GREEN nodes for the SECOND install
+# (186.1-04 Task 2, D-09/D-10): run each of the three implicated verbs via
+# `gsd-tools.cjs` against the LIVE, now-patched `.cjs` install -- NOT
+# `pristine_cjs_tree`, and NOT the repo's own `.planning/STATE.md`
+# (T-186.1-11, asserted via `_assert_target_is_tmp`). These mirror the three
+# npx GREEN nodes above; see those docstrings for the full three-property
+# rationale (decoys survive, a genuine write happened, D-04 visibility).
+#
+# The six negative-control nodes above (three of which target the `.cjs`
+# install specifically, via `pristine_cjs_tree`) remain untouched and still
+# run against the PRISTINE `.cjs` tree, proving the fixture is sensitive to
+# the unpatched code -- these new GREEN nodes are meaningless without that
+# standing sensitivity proof alongside them.
+# ---------------------------------------------------------------------------
+
+
+def test_positive_state_planned_phase_cjs_live_patched(tmp_path) -> None:
+    """186.1-04 GREEN: `state planned-phase` via the LIVE, now-patched
+    `.cjs` install (not `pristine_cjs_tree`)."""
+    if not GSD_TOOLCHAIN_AVAILABLE:
+        pytest.skip(GSD_SKIP_REASON)
+    root = tmp_path
+    _assert_target_is_tmp(root, tmp_path)
+    (root / ".planning").mkdir(parents=True, exist_ok=True)
+    (root / ".planning" / "STATE.md").write_text(
+        _adjacent_state_md_with_plan_count(), encoding="utf-8"
+    )
+
+    argv = [
+        NODE_PATH,
+        str(GSD_TOOLS_CJS),
+        "state",
+        "planned-phase",
+        "--cwd",
+        str(root),
+        "--phase",
+        "901",
+        "--plans",
+        "5",
+    ]
+    proc = run_fork_safe(argv, timeout=30)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    result = json.loads(proc.stdout)
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    # 1. Every decoy survives byte-identical.
+    assert _STATUS_DECOY in after_text
+    assert _PHASE_DECOY in after_text
+    assert _PLAN_DECOY in after_text
+    assert _SESSION_NARRATIVE_DECOY in after_text
+
+    # 2. The verb genuinely wrote something real inside the leading run.
+    assert "Total Plans in Phase: 5" in after_text, (
+        f"expected the leading-run Total Plans in Phase field to be "
+        f"genuinely updated to 5 -- a no-op result would mean this GREEN "
+        f"node proves nothing. Got updated={result.get('updated')!r}"
+    )
+    assert "Total Plans in Phase: 3" not in after_text
+
+    # 3. D-04 visibility, checked against the PARSED JSON return: Status is
+    # absent from updated[] because it does not exist anywhere in the
+    # leading run -- an honest no-op, not a misdirected write.
+    assert "Status" not in result["updated"], (
+        f"expected 'Status' absent from updated[] (fail-closed, no Status "
+        f"field in the leading run) -- got {result['updated']!r}"
+    )
+    assert "Total Plans in Phase" in result["updated"]
+
+
+def test_positive_state_begin_phase_cjs_live_patched(tmp_path) -> None:
+    """186.1-04 GREEN: `state begin-phase` via the LIVE, now-patched `.cjs`
+    install (not `pristine_cjs_tree`). This is the verb 186.1-01's RED
+    transcript captured actually corrupting the real repo's STATE.md; this
+    node is its direct GREEN inversion for the `.cjs` entry point."""
+    if not GSD_TOOLCHAIN_AVAILABLE:
+        pytest.skip(GSD_SKIP_REASON)
+    root = tmp_path
+    _assert_target_is_tmp(root, tmp_path)
+    (root / ".planning").mkdir(parents=True, exist_ok=True)
+    (root / ".planning" / "STATE.md").write_text(_adjacent_state_md(), encoding="utf-8")
+
+    argv = [
+        NODE_PATH,
+        str(GSD_TOOLS_CJS),
+        "state",
+        "begin-phase",
+        "--cwd",
+        str(root),
+        "--phase",
+        "901",
+        "--name",
+        "demo",
+        "--plans",
+        "5",
+    ]
+    proc = run_fork_safe(argv, timeout=30)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    result = json.loads(proc.stdout)
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    # 1. Every decoy survives byte-identical -- this is the exact
+    # corruption 186.1-01's RED transcript captured against the real
+    # repo's STATE.md via this exact verb/entry-point combination; here it
+    # must NOT reproduce.
+    assert _STATUS_DECOY in after_text
+    assert _PHASE_DECOY in after_text
+    assert _PLAN_DECOY in after_text
+    assert _SESSION_NARRATIVE_DECOY in after_text
+
+    # 2. The verb genuinely wrote something real inside the leading run:
+    # Phase/Plan are both present there in the base fixture and both
+    # legitimately change.
+    assert "Phase: 901 (demo) — EXECUTING" in after_text, (
+        f"expected the leading-run Phase field to be genuinely updated -- "
+        f"a no-op result would mean this GREEN node proves nothing. Got "
+        f"updated={result.get('updated')!r}"
+    )
+    assert "Phase: 900 (demo) -- EXECUTING" not in after_text
+    assert "Plan: 1 of 5" in after_text
+    assert "Plan: 1 of 3" not in after_text
+
+    # 3. D-04 visibility, checked against the PARSED JSON return: `Status`
+    # is absent from updated[] -- reported only as the coarser
+    # 'Current Position' entry (Phase/Plan legitimately changed within
+    # it), never as a standalone successful 'Status' write, because no
+    # Status: field exists anywhere in the leading run. This is the direct
+    # counter to the `{"updated": ["Status"]}` tell that was misread for
+    # 8 occurrences against the real repo's STATE.md (see CLAUDE.md
+    # clause (h)).
+    assert "Status" not in result["updated"], (
+        f"expected 'Status' absent from updated[] (fail-closed, no Status "
+        f"field in the leading run) -- got {result['updated']!r}"
+    )
+    assert "Current Position" in result["updated"]
+
+
+def test_positive_phase_complete_cjs_live_patched(tmp_path) -> None:
+    """186.1-04 GREEN: `state complete-phase` via the LIVE, now-patched
+    `.cjs` install (not `pristine_cjs_tree`).
+
+    NOTE (found empirically while writing this node -- see SUMMARY for the
+    full account): the `.cjs` command `phase complete <n>` (the argv shape
+    the npx `phase.complete` GREEN node above mirrors) dispatches to
+    `phase.cjs`'s `cmdPhaseComplete`, which never touches `##  Current
+    Position` inline at all -- it only calls
+    `stateReplaceFieldWithFallback`/`stateReplaceField`/`stateExtractField`
+    from `state-document.generated.cjs` (already scoped by this plan's
+    Task 1), so it has no inline defect-class site of its own to exercise
+    here. The inline `## Current Position` rewrite this plan actually
+    patched -- `cmdStateCompletePhase` -- is reachable only via the
+    SEPARATE verb `state complete-phase --phase <n>`
+    (`state-command-router.cjs`); THIS node exercises that verb, not
+    `phase complete`.
+
+    Unlike the npx `phase.complete` GREEN node above, `.cjs`'s
+    `cmdStateCompletePhase` never touches a `Plan:` line (its inline block
+    only rewrites `Phase:`/`Status:`/`Last activity:` -- see
+    `test_negative_control_phase_complete_cjs`'s docstring for the related,
+    but distinct, frontmatter-redirect divergence that combination
+    exhibits). This node proves the inline rewrite is now scoped: the
+    leading-run `Phase:` line updates to COMPLETE, no `Status:` line is
+    inserted (this verb's inline block has no insert-when-absent logic),
+    and every decoy survives byte-identical.
+    """
+    if not GSD_TOOLCHAIN_AVAILABLE:
+        pytest.skip(GSD_SKIP_REASON)
+    root = tmp_path
+    _assert_target_is_tmp(root, tmp_path)
+    (root / ".planning").mkdir(parents=True, exist_ok=True)
+    (root / ".planning" / "STATE.md").write_text(_adjacent_state_md(), encoding="utf-8")
+    _seed_phase_complete_inputs(root, 901)
+
+    argv = [
+        NODE_PATH,
+        str(GSD_TOOLS_CJS),
+        "state",
+        "complete-phase",
+        "--cwd",
+        str(root),
+        "--phase",
+        "901",
+    ]
+    proc = run_fork_safe(argv, timeout=30)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    result = json.loads(proc.stdout)
+    assert result.get("updated"), (
+        f"expected complete-phase to report at least one updated field -- "
+        f"got {result!r}"
+    )
+
+    after_text = (root / ".planning" / "STATE.md").read_text(encoding="utf-8")
+
+    # 1. Every decoy survives byte-identical.
+    assert _STATUS_DECOY in after_text
+    assert _PHASE_DECOY in after_text
+    assert _PLAN_DECOY in after_text
+    assert _SESSION_NARRATIVE_DECOY in after_text
+
+    # 2. The verb genuinely wrote something real inside the leading run:
+    # Phase legitimately changes to show COMPLETE.
+    cp_body = _section_body(after_text, "Current Position")
+    cp_run = "\n".join(_leading_field_run_lines(cp_body))
+    assert "Phase: 901 — COMPLETE" in cp_run, (
+        f"expected the leading-run Phase field to be genuinely updated -- "
+        f"a no-op result would mean this GREEN node proves nothing. "
+        f"Leading run: {cp_run!r}"
+    )
+
+    # 3. D-04 visibility: no Status: line was ever written into the leading
+    # run -- this verb's inline block has no insert-when-absent logic for
+    # Status, so the pre-existing absence is preserved rather than silently
+    # redirecting into the decoy the way the unpatched fallback did.
+    assert not re.search(r"^Status:", cp_run, re.MULTILINE), (
+        f"expected no Status: line in the leading run (fail-closed, no "
+        f"insert-when-absent for this verb) -- got: {cp_run!r}"
+    )

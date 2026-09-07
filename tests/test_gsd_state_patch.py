@@ -1494,24 +1494,24 @@ _SNAPSHOT_READ_ONLY_REASON = (
 _PLAIN_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
     # --- The six originally-named sites (186.1-CONTEXT.md D-05/D-07) ---
     ("bin/lib/state-document.generated.cjs", "${escaped}", "stateExtractField"): (
-        "pending-scoping",
+        "scoped",
         "TOOL-05 (D-05): read-side plain-fallback twin of stateReplaceField "
-        "below. Anchored (TOOL-04, 182-06) but UNSCOPED -- the `/m` flag "
-        "makes `^` match the start of ANY line in the whole document body, "
-        "so the first line-initial `Status:` anywhere wins. Plan 186.1-04 "
-        "scopes this to the correct leading-run region in the .cjs "
-        "install. This row asserts the site is CURRENTLY unscoped -- "
-        "flip to 'scoped' in the SAME commit that lands 186.1-04's patch, "
-        "or this gate fails the moment the patch lands without a matching "
-        "ledger update (the bidirectional property 186.1-02 Task 3 proves).",
+        "below. Anchored (TOOL-04, 182-06) but was UNSCOPED -- the `/m` flag "
+        "made `^` match the start of ANY line in the whole document body, "
+        "so the first line-initial `Status:` anywhere won. Plan 186.1-04 "
+        "scoped this to fieldRegion's leading-run region in the .cjs "
+        "install (behaviourally identical to 186.1-03's npx fix, including "
+        "the `(?![\\s\\S])` outer-span lookahead bugfix), flipped to "
+        "'scoped' in the same commit that landed the patch.",
     ),
     ("bin/lib/state-document.generated.cjs", "${escaped}", "stateReplaceField"): (
-        "pending-scoping",
+        "scoped",
         "TOOL-05 (D-01/D-02): write-side plain-fallback branch. Anchored "
-        "(TOOL-05, 2026-09-03) but UNSCOPED for the same reason as "
-        "stateExtractField above. Plan 186.1-04 scopes this in the .cjs "
-        "install; this row asserts the site is CURRENTLY unscoped and "
-        "must flip to 'scoped' in the same commit that lands that patch.",
+        "(TOOL-05, 2026-09-03) but was UNSCOPED for the same reason as "
+        "stateExtractField above. Plan 186.1-04 scoped this in the .cjs "
+        "install to fieldRegion's leading-run region, splicing the "
+        "replacement back at that region's exact offset; flipped to "
+        "'scoped' in the same commit that landed the patch.",
     ),
     ("bin/lib/state.cjs", "${fieldEscaped}", "cmdStateGet"): (
         "accepted-read-only",
@@ -1559,16 +1559,16 @@ _PLAIN_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
     # (17: cjs cmdStateBeginPhase x4, cmdStateCompletePhase x3,
     # updateCurrentPositionFields x3; npx stateBeginPhase x4,
     # updateCurrentPositionFields x3) ---
-    ("bin/lib/state.cjs", "Phase", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Plan", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Status", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Last activity", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Phase", "cmdStateCompletePhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Status", "cmdStateCompletePhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Last activity", "cmdStateCompletePhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Status", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Plan", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
-    ("bin/lib/state.cjs", "Last activity", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Phase", "cmdStateBeginPhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Plan", "cmdStateBeginPhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Status", "cmdStateBeginPhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Last activity", "cmdStateBeginPhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Phase", "cmdStateCompletePhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Status", "cmdStateCompletePhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Last activity", "cmdStateCompletePhase"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Status", "updateCurrentPositionFields"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Plan", "updateCurrentPositionFields"): ("scoped", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Last activity", "updateCurrentPositionFields"): ("scoped", _ADDITIONAL_SITE_REASON),
     ("query/state-mutation.js", "Phase", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
     ("query/state-mutation.js", "Plan", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
     ("query/state-mutation.js", "Status", "stateBeginPhase"): ("scoped", _NPX_186_1_03_SCOPED_REASON),
