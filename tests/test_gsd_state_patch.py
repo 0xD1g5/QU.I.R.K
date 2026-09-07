@@ -823,7 +823,14 @@ _FIELD_SCAN_INSTALLS: tuple[dict, ...] = (
         "root": _NPX_SDK_DIST,
         "available": GSD_SDK_AVAILABLE,
         "skip_reason": GSD_SDK_SKIP_REASON,
-        "relpaths": ("query/state.js", "query/state-document.js"),
+        # `state-mutation.js` added by 186.1-02 (D-07): it hosts the npx
+        # twin of `updateCurrentPositionFields`, a FOURTH, previously
+        # undocumented site of this defect class first surfaced by
+        # 186.1-01's negative controls (see 186.1-01-SUMMARY.md,
+        # "Additional Sites Found"). It carries no bold `**Field:**`
+        # markers (the bold scan finds nothing new here), but it does carry
+        # bare `^Field:` constructs the bare-field scan below must see.
+        "relpaths": ("query/state.js", "query/state-document.js", "query/state-mutation.js"),
     },
 )
 
@@ -952,6 +959,189 @@ def _scan_bold_field_occurrences() -> list[dict]:
     return occurrences
 
 
+# ---------------------------------------------------------------------------
+# Construct-shape axis (186.1-02 / TOOL-05, D-07): bare, line-initial
+# `Field:` regex constructions -- the plain-field FALLBACK branch that
+# `stateExtractField()`/`stateReplaceField()` (and their CLI-display twins)
+# fall through to when the bold `**Field:**` branch misses. This defect
+# class (D-05, D-07) is a SEPARATE construct shape from the bold markers
+# `_scan_bold_field_occurrences` looks for -- it has no `**`/`\\*\\*`
+# anywhere in the pattern, so the bold scan's own marker regexes cannot see
+# it at all. This is exactly how the plain-field fallback stayed invisible
+# to the 182-series gate for four rounds: the gate was extended on the
+# CONVENTION axis (regex-literal vs template-literal escaping, both still
+# BOLD) but never on the SHAPE axis (bold vs bare).
+#
+# All six known sites share one concrete shape in this codebase: a
+# template-literal regex source built as `new RegExp(\`^${expr}:...\`, 'im')`
+# -- a literal caret immediately followed by a `${...}` interpolation
+# immediately followed by a colon, with NO bold markers anywhere around it.
+# `_BARE_FIELD_RE` matches that. Per 186.1-02-PLAN.md Task 2, a second,
+# non-template "any plain-literal `^Something:` form" is also matched by
+# `_BARE_LITERAL_FIELD_RE` for completeness/future-proofing, even though it
+# currently matches zero sites in either install -- an honest zero is
+# reported, not manufactured.
+# ---------------------------------------------------------------------------
+
+# `^${expr}:` -- e.g. `^${escaped}:`, `^${fieldEscaped}:`.
+_BARE_FIELD_RE = re.compile(r"\^\$\{(\w+)\}:")
+# `^Word:` as a literal (non-template) regex-source fragment -- deliberately
+# NOT matching `^\s*\*\*...` (bold) or `^\$\{` (already handled above).
+_BARE_LITERAL_FIELD_RE = re.compile(r"\^([A-Za-z][A-Za-z0-9 ]*):")
+
+# Structural signals for the three-state scoping detector below. Read-only
+# CLI-display sinks are distinguished from write-capable sites by what
+# happens to the match result immediately afterward: `.cjs` funnels it
+# through `output(...)` (stdout only, never a file write); the npx `query/`
+# convention instead returns it wrapped in a `{ data: ... }` object (JSON
+# stdout, likewise never written back to STATE.md).
+_OUTPUT_SINK_RE = re.compile(r"\boutput\s*\(")
+_DATA_RETURN_RE = re.compile(r"return\s*\{\s*data\s*:")
+# `cmdStateSnapshot`/`stateSnapshot`'s Last Date/Stopped At/Resume File
+# reads assign into a `session.<field> = match[1].trim()` object -- a
+# third, mirrored-across-both-installs read-only sink shape distinct from
+# `output(...)`/`return { data: ... }`, feeding a JSON "snapshot" response
+# object that (like the other two shapes) is never written back to
+# STATE.md. Verified identical in both `state.cjs` and `query/state.js`.
+_SESSION_ASSIGN_RE = re.compile(r"\bsession\.\w+\s*=")
+
+
+def _classify_field_scope(lines: list[str], occurrence_idx: int, var_name: str) -> str:
+    """Return 'read-only', 'unscoped', or 'scoped' for the plain-field
+    pattern named `var_name`, defined at `lines[occurrence_idx]`, based
+    structurally on how the next few lines of source actually consume it --
+    never on the enclosing function's name, which this deliberately avoids
+    trusting per the run-time-scan design constraint above.
+
+    - 'read-only': the match result is only ever handed to a display sink
+      (`output(...)` or `return { data: ... }`) within the next few lines --
+      it can never reach a STATE.md write.
+    - 'unscoped': the pattern is applied (via `.match()`, `.test()`, or
+      `.replace()`) directly against the whole-document `content` variable.
+      This is the CURRENT, unpatched state of all four `state-document*`
+      read/write sites -- a detector that reports 'scoped' here, before
+      plan 03/04 lands, would make that plan's gate pass vacuously.
+    - 'scoped': the pattern is applied against some OTHER, narrower
+      variable (a derived region/substring) -- the post-patch shape.
+    """
+    window = lines[occurrence_idx : occurrence_idx + 8]
+    window_text = "\n".join(window)
+
+    if (
+        _OUTPUT_SINK_RE.search(window_text)
+        or _DATA_RETURN_RE.search(window_text)
+        or _SESSION_ASSIGN_RE.search(window_text)
+    ):
+        return "read-only"
+
+    # Two call shapes appear in this codebase for evaluating a pattern
+    # variable against a text variable:
+    #   <textVar>.match(<patternVar>)  /  <textVar>.replace(<patternVar>, ...)
+    #   <patternVar>.test(<textVar>)
+    target = None
+    m = re.search(re.escape(var_name) + r"\.test\(\s*(\w+)", window_text)
+    if m:
+        target = m.group(1)
+    else:
+        m = re.search(r"(\w+)\.(?:match|replace)\(\s*" + re.escape(var_name), window_text)
+        if m:
+            target = m.group(1)
+
+    if target is None:
+        # Cannot prove scoping either way from this window -- conservative
+        # default is 'unscoped' (today's known state for every real site),
+        # never 'scoped', so an ambiguous detection can't mask a real
+        # regression.
+        return "unscoped"
+    return "unscoped" if target == "content" else "scoped"
+
+
+def _nearest_var_name(lines: list[str], idx: int) -> str | None:
+    """Find the variable a pattern/match-result is assigned to, allowing
+    for a `||`-chained multi-line statement -- e.g. `cmdStateSnapshot`'s
+    `const lastDateMatch = sessionSection.match(/.../)\n  ||
+    sessionSection.match(/^Last Date:.../);`, where the bare-field
+    occurrence lives on the CONTINUATION line (no `const`/`let`/`var` on
+    that line itself). Checks the occurrence's own line first, then up to
+    two lines above it -- but ONLY accepts a candidate declaration whose
+    OWN line contains `.match(`/`.test(`/`.replace(`/`RegExp(`, so an
+    unrelated nearby variable (e.g. `updateCurrentPositionFields`'s
+    `let posBody = posMatch[2];`, which sits just above its own inline,
+    un-named `/^Status:/m.test(posBody)` calls) is never mistaken for the
+    pattern's own name -- verified necessary: without this guard, `posBody`
+    itself gets picked up as if it were the match-result variable, which is
+    wrong in the opposite direction (it is the TEXT being matched, not the
+    pattern/result)."""
+    decl_shape_re = re.compile(r"\.(?:match|test|replace)\(|RegExp\(")
+    for i in range(idx, max(idx - 3, -1), -1):
+        if not decl_shape_re.search(lines[i]):
+            continue
+        m = _VAR_NAME_RE.search(lines[i])
+        if m:
+            return m.group(1)
+    return None
+
+
+def _scan_bare_field_occurrences() -> list[dict]:
+    """Generate the bare/plain-field occurrence set the same way
+    `_scan_bold_field_occurrences` does -- reading BOTH installs' source at
+    run time, never from a checked-in list. A line already claimed by the
+    BOLD scan's markers (`_MARK4`/`_MARK6` surrounding the same `Field:`
+    text) is excluded here so the two occurrence sets stay disjoint; a bold
+    construction textually contains a bare-looking `${expr}:` substring
+    between its markers, and double-counting it under both scans would
+    make the two ledgers fight over the same site."""
+    bold_lines: set[tuple[str, int]] = {
+        (o["relpath"], o["line_no"]) for o in _scan_bold_field_occurrences()
+    }
+
+    occurrences: list[dict] = []
+    for entry in _FIELD_SCAN_INSTALLS:
+        if not entry["available"]:
+            continue
+        root = entry["root"]
+        for relpath in entry["relpaths"]:
+            abs_path = root / relpath
+            if not abs_path.is_file():
+                continue
+            text = abs_path.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            for idx, line in enumerate(lines):
+                if line.strip().startswith("//"):
+                    continue
+                if (relpath, idx + 1) in bold_lines:
+                    continue
+                seen_field_texts: set[str] = set()
+                for regex, shape in (
+                    (_BARE_FIELD_RE, "template (${expr}:)"),
+                    (_BARE_LITERAL_FIELD_RE, "literal (Word:)"),
+                ):
+                    for m in regex.finditer(line):
+                        field_text = f"${{{m.group(1)}}}" if regex is _BARE_FIELD_RE else m.group(1)
+                        if field_text in seen_field_texts:
+                            continue  # both regexes can match the same `${expr}:` span
+                        seen_field_texts.add(field_text)
+                        var_name = _nearest_var_name(lines, idx)
+                        occurrences.append(
+                            {
+                                "install": entry["install_id"],
+                                "relpath": relpath,
+                                "line_no": idx + 1,
+                                "line": line,
+                                "field_text": field_text,
+                                "function": _enclosing_function_name(lines, idx),
+                                "shape": shape,
+                                "var_name": var_name or "<unnamed>",
+                                "scope_state": (
+                                    _classify_field_scope(lines, idx, var_name)
+                                    if var_name is not None
+                                    else "unscoped"
+                                ),
+                            }
+                        )
+    return occurrences
+
+
 # Ledger: (relpath, literal field-name text, enclosing function) ->
 # (disposition, reason). "anchored" occurrences must carry `^` and the `/m`
 # flag on the SAME line; "accepted-read-only" occurrences carry a written
@@ -1057,6 +1247,24 @@ _BOLD_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
         "npx twin of `cmdStateSnapshot`'s Resume File read -- see the Last "
         "Date entry above for the anchored-vs-unanchored install "
         "divergence.",
+    ),
+    ("query/state-mutation.js", "Progress", "stateUpdateProgress"): (
+        "anchored",
+        "npx twin of `cmdStateUpdateProgress`'s boldProgressPattern "
+        "(182-07 Task 2's fix) -- already anchored per the 15-site npx "
+        "patch set (CLAUDE.md clause (h)). Newly visible to this gate "
+        "only as of 186.1-02's install-axis extension.",
+    ),
+    ("query/state-mutation.js", "Current focus", "stateBeginPhase"): (
+        "anchored",
+        "npx twin of `cmdStateBeginPhase`'s Current-focus rewrite (182-06 "
+        "Edit C's fix) -- already anchored per the 15-site npx patch set "
+        "(CLAUDE.md clause (h)). Newly visible to this gate only as of "
+        "186.1-02's install-axis extension, which also added "
+        "query/state-mutation.js to the npx relpaths list (D-07) because "
+        "it hosts the npx twin of `updateCurrentPositionFields` -- the "
+        "fourth defect-class site 186.1-01 found; see "
+        "_PLAIN_FIELD_DISPOSITIONS below for that site's own dispositions.",
     ),
     ("query/state.js", "${fieldEscaped}", "stateGet"): (
         "anchored",
@@ -1196,6 +1404,246 @@ def test_bold_field_regex_class_is_fully_dispositioned() -> None:
     stale = {
         key
         for key in set(_BOLD_FIELD_DISPOSITIONS) - matched_keys
+        if relpath_to_install.get(key[0]) not in unavailable_installs
+    }
+    assert not stale, (
+        "ledger entries with no matching occurrence in the installed "
+        "source -- a stale allowlist row is how a gate quietly stops "
+        f"gating anything: {sorted(stale)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Bare/plain-field defect-class enumeration gate (186.1-02, TOOL-05).
+#
+# 186.1-CONTEXT.md's D-05/D-07 named SIX sites: `stateExtractField`'s and
+# `stateReplaceField`'s plain-field FALLBACK branch, in both installs, plus
+# the two read-only CLI-display twins (`cmdStateGet`, `stateGet`). Running
+# the extended two-axis scan (`_scan_bare_field_occurrences`) against the
+# CURRENTLY INSTALLED, unpatched source found TWENTY-THREE more --
+# 186.1-01's negative controls had already flagged the reason why:
+# `updateCurrentPositionFields` (`state.cjs`, `state-mutation.js`) and its
+# siblings `cmdStateBeginPhase`/`cmdStateCompletePhase`/`stateBeginPhase`
+# carry their OWN, separate, unscoped `^Field:.*$` full-region regexes,
+# applied to a derived `posBody`/inline text variable rather than to
+# `content` directly, but STILL not scoped to the correct (leading-run)
+# granularity D-02 specifies. Per this phase's explicit honesty
+# requirement, the real count (29 total, not 6) is reported and every one
+# is dispositioned below -- none were filtered out to match the plan's
+# original hypothesis, and the six originally-named sites are still
+# present and still individually keyed among the 29.
+#
+# Ledger: (relpath, literal field-name text, enclosing function) ->
+# (disposition, reason). Every row's disposition must match the scoping
+# detector's OBSERVED state for that occurrence:
+#   'accepted-read-only' <-> observed 'read-only'
+#   'pending-scoping'    <-> observed 'unscoped'
+#   'scoped'             <-> observed 'scoped'   (none exist yet -- 186.1-02
+#                            lands before plans 03/04's fix, so this value
+#                            is reserved for a future ledger update, not
+#                            used here. A 'scoped' occurrence appearing
+#                            with no matching 'scoped' ledger row is caught
+#                            by the same undispositioned-occurrence check
+#                            every other shape uses.)
+# ---------------------------------------------------------------------------
+
+_ADDITIONAL_SITE_REASON = (
+    "Fourth defect-class site, found by 186.1-01's negative controls (see "
+    "186.1-01-SUMMARY.md 'Additional Sites Found'), NOT the "
+    "stateReplaceField/stateExtractField pair 186.1-CONTEXT.md/RESEARCH.md "
+    "originally named. A SEPARATE, unscoped, full-region `^Field:.*$` "
+    "regex applied to a derived `posBody` (or inlined directly against "
+    "`content`) -- still not scoped to the leading-run granularity D-02 "
+    "specifies, so it needs the SAME scoping treatment, just in a "
+    "different function/file. Flagged for plans 03/04, NOT fixed here -- "
+    "186.1-02 is guard-only. The scoping detector reports 'unscoped' here "
+    "via its documented conservative default (no named pattern variable "
+    "to test a scoping target against, since this code inlines the regex "
+    "literal straight into `.test()`/`.replace()`); that default happens "
+    "to be the semantically correct classification for this shape, not a "
+    "coincidence papered over -- see `_classify_field_scope`'s docstring."
+)
+
+_SNAPSHOT_READ_ONLY_REASON = (
+    "Session-snapshot read: assigns into a `session.<field> = "
+    "match[1].trim()` object consumed only by `state json`'s/`state "
+    "snapshot`'s console/report display (same accepted blast-radius class "
+    "as this file's T-182-29 bold-field entries for these same three "
+    "fields) -- the match result can never reach a STATE.md write. Newly "
+    "visible to this gate only as of 186.1-02's construct-shape extension "
+    "(the plain FALLBACK branch of the same read, distinct from the bold "
+    "branch already ledgered above)."
+)
+
+_PLAIN_FIELD_DISPOSITIONS: dict[tuple[str, str, str], tuple[str, str]] = {
+    # --- The six originally-named sites (186.1-CONTEXT.md D-05/D-07) ---
+    ("bin/lib/state-document.generated.cjs", "${escaped}", "stateExtractField"): (
+        "pending-scoping",
+        "TOOL-05 (D-05): read-side plain-fallback twin of stateReplaceField "
+        "below. Anchored (TOOL-04, 182-06) but UNSCOPED -- the `/m` flag "
+        "makes `^` match the start of ANY line in the whole document body, "
+        "so the first line-initial `Status:` anywhere wins. Plan 186.1-04 "
+        "scopes this to the correct leading-run region in the .cjs "
+        "install. This row asserts the site is CURRENTLY unscoped -- "
+        "flip to 'scoped' in the SAME commit that lands 186.1-04's patch, "
+        "or this gate fails the moment the patch lands without a matching "
+        "ledger update (the bidirectional property 186.1-02 Task 3 proves).",
+    ),
+    ("bin/lib/state-document.generated.cjs", "${escaped}", "stateReplaceField"): (
+        "pending-scoping",
+        "TOOL-05 (D-01/D-02): write-side plain-fallback branch. Anchored "
+        "(TOOL-05, 2026-09-03) but UNSCOPED for the same reason as "
+        "stateExtractField above. Plan 186.1-04 scopes this in the .cjs "
+        "install; this row asserts the site is CURRENTLY unscoped and "
+        "must flip to 'scoped' in the same commit that lands that patch.",
+    ),
+    ("bin/lib/state.cjs", "${fieldEscaped}", "cmdStateGet"): (
+        "accepted-read-only",
+        "Read-only `state get <field>` CLI display twin of the bold "
+        "cmdStateGet entry above -- same accepted blast radius (a wrong "
+        "value shown for a manually-invoked diagnostic command), same "
+        "reasoning: the match result only ever reaches output() for "
+        "stdout display, never written back to STATE.md.",
+    ),
+    ("query/state-document.js", "${escaped}", "stateExtractField"): (
+        "pending-scoping",
+        "TOOL-05 (D-05): npx twin of the .cjs stateExtractField plain "
+        "fallback above -- same unscoped-but-anchored shape. Plan 186.1-03 "
+        "scopes this in the npx install; this row asserts the site is "
+        "CURRENTLY unscoped and must flip to 'scoped' in the same commit "
+        "that lands that patch.",
+    ),
+    ("query/state-document.js", "${escaped}", "stateReplaceField"): (
+        "pending-scoping",
+        "TOOL-05 (D-01/D-02): npx twin of the .cjs stateReplaceField plain "
+        "fallback above -- the ORIGINAL live-corruption site (186.1-01's "
+        "RED transcript: this exact branch rewrote STATE.md's narrative "
+        "Status: decoy 8 times). Plan 186.1-03 scopes this in the npx "
+        "install; this row asserts the site is CURRENTLY unscoped and "
+        "must flip to 'scoped' in the same commit that lands that patch.",
+    ),
+    ("query/state.js", "${fieldEscaped}", "stateGet"): (
+        "accepted-read-only",
+        "Read-only `state get <field>` npx query-handler twin of "
+        "cmdStateGet above -- same accepted blast radius, same reasoning: "
+        "the match result only ever reaches the query result's `data` "
+        "field for JSON/stdout display, never written back to STATE.md.",
+    ),
+    # --- Session-snapshot read-only sites (6: 3 fields x 2 installs) ---
+    ("bin/lib/state.cjs", "Last Date", "cmdStateSnapshot"): ("accepted-read-only", _SNAPSHOT_READ_ONLY_REASON),
+    ("bin/lib/state.cjs", "Stopped At", "cmdStateSnapshot"): ("accepted-read-only", _SNAPSHOT_READ_ONLY_REASON),
+    ("bin/lib/state.cjs", "Resume File", "cmdStateSnapshot"): ("accepted-read-only", _SNAPSHOT_READ_ONLY_REASON),
+    ("query/state.js", "Last Date", "stateSnapshot"): ("accepted-read-only", _SNAPSHOT_READ_ONLY_REASON),
+    ("query/state.js", "Stopped At", "stateSnapshot"): ("accepted-read-only", _SNAPSHOT_READ_ONLY_REASON),
+    ("query/state.js", "Resume File", "stateSnapshot"): ("accepted-read-only", _SNAPSHOT_READ_ONLY_REASON),
+    # --- Fourth defect-class site: updateCurrentPositionFields + siblings
+    # (17: cjs cmdStateBeginPhase x4, cmdStateCompletePhase x3,
+    # updateCurrentPositionFields x3; npx stateBeginPhase x4,
+    # updateCurrentPositionFields x3) ---
+    ("bin/lib/state.cjs", "Phase", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Plan", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Status", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Last activity", "cmdStateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Phase", "cmdStateCompletePhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Status", "cmdStateCompletePhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Last activity", "cmdStateCompletePhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Status", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Plan", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("bin/lib/state.cjs", "Last activity", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Phase", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Plan", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Status", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Last activity", "stateBeginPhase"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Status", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Plan", "updateCurrentPositionFields"): ("pending-scoping", _ADDITIONAL_SITE_REASON),
+    ("query/state-mutation.js", "Last activity", "updateCurrentPositionFields"): (
+        "pending-scoping",
+        _ADDITIONAL_SITE_REASON,
+    ),
+}
+
+_PLAIN_FIELD_SCOPE_STATE_BY_DISPOSITION = {
+    "accepted-read-only": "read-only",
+    "pending-scoping": "unscoped",
+    "scoped": "scoped",
+}
+
+
+@_GSD_SKIP
+def test_bare_field_regex_class_is_fully_dispositioned() -> None:
+    """Enumerate every bare, line-initial `Field:`-shaped regex
+    construction across BOTH installs BY SCANNING THE INSTALLED SOURCE AT
+    RUN TIME (`_scan_bare_field_occurrences`), and assert each one carries
+    an explicit, matching disposition in `_PLAIN_FIELD_DISPOSITIONS`.
+
+    Failure modes mirror `test_bold_field_regex_class_is_fully_dispositioned`
+    (undispositioned occurrence, stale ledger row) plus TWO new ones specific
+    to this construct-shape/scoping axis:
+      - A ledgered row whose declared disposition does NOT match the
+        scoping detector's OBSERVED state for that occurrence -- this is
+        the bidirectional property 186.1-02 Task 3 requires: it fails
+        NOT ONLY when a site is wrongly left undispositioned, but ALSO the
+        moment a 'pending-scoping' site's underlying code is patched to be
+        genuinely scoped without its ledger row being flipped to 'scoped'
+        in that same commit.
+      - The bold and bare occurrence sets are NOT disjoint by
+        (relpath, line_no) -- would mean the same construction is being
+        double-ledgered under two different shape scanners.
+    """
+    bold_occurrences = _scan_bold_field_occurrences()
+    bare_occurrences = _scan_bare_field_occurrences()
+
+    bold_lines = {(o["relpath"], o["line_no"]) for o in bold_occurrences}
+    bare_lines = {(o["relpath"], o["line_no"]) for o in bare_occurrences}
+    overlap = bold_lines & bare_lines
+    assert not overlap, (
+        "the bold-field and bare-field scans both claimed the same "
+        f"(relpath, line_no) pair(s): {sorted(overlap)} -- a construction "
+        "is being double-ledgered under two different shape scanners."
+    )
+
+    matched_keys: set[tuple[str, str, str]] = set()
+    for occ in bare_occurrences:
+        key = (occ["relpath"], occ["field_text"], occ["function"])
+        assert key in _PLAIN_FIELD_DISPOSITIONS, (
+            f"undispositioned bare-field construction found by the "
+            f"run-time scan: file={occ['relpath']!r} "
+            f"pattern=`^{occ['field_text']}:` (variable "
+            f"{occ['var_name']!r}, function {occ['function']!r}, line "
+            f"{occ['line_no']}, {occ['shape']} shape, observed scope "
+            f"state {occ['scope_state']!r}). Disposition it deliberately "
+            f"in _PLAIN_FIELD_DISPOSITIONS as 'pending-scoping', "
+            f"'accepted-read-only', or 'scoped' with a written reason -- "
+            f"do not add it reflexively just to satisfy this assertion."
+        )
+        matched_keys.add(key)
+        disposition, reason = _PLAIN_FIELD_DISPOSITIONS[key]
+        assert reason.strip(), f"ledger entry {key} has an empty reason"
+        assert disposition in _PLAIN_FIELD_SCOPE_STATE_BY_DISPOSITION, (
+            f"unknown disposition {disposition!r} for {key}"
+        )
+
+        expected_state = _PLAIN_FIELD_SCOPE_STATE_BY_DISPOSITION[disposition]
+        assert occ["scope_state"] == expected_state, (
+            f"declared/observed scoping MISMATCH for {key}: ledger says "
+            f"{disposition!r} (expects observed state {expected_state!r}) "
+            f"but the scoping detector observed {occ['scope_state']!r} at "
+            f"line {occ['line_no']} (variable {occ['var_name']!r}). "
+            f"(relpath={key[0]!r}, function={key[2]!r}, "
+            f"observed={occ['scope_state']!r}, declared={disposition!r})"
+        )
+
+    relpath_to_install = {
+        relpath: entry["install_id"]
+        for entry in _FIELD_SCAN_INSTALLS
+        for relpath in entry["relpaths"]
+    }
+    unavailable_installs = {
+        entry["install_id"] for entry in _FIELD_SCAN_INSTALLS if not entry["available"]
+    }
+    stale = {
+        key
+        for key in set(_PLAIN_FIELD_DISPOSITIONS) - matched_keys
         if relpath_to_install.get(key[0]) not in unavailable_installs
     }
     assert not stale, (
