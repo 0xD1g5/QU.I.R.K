@@ -134,7 +134,7 @@ since they were first recorded.
 - [x] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed. (completed 2026-09-05)
 - [x] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **COMPLETE (2026-09-05). All 11 plans done; verified 6/6 success criteria, all evidence DERIVED at verification time — see 184.3-VERIFICATION.md. 1 of 5 human-verify checks (live cert calendar-day-shift) DEFERRED with cited substitute coverage (datetime.test.ts:39) — vacuous against available data, see 184.3-VALIDATION.md.**
 - [x] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable. **All 10 plans done (2026-09-05).** SCORE-04/SCORE-05 both complete; BACK-89 closed by reference (all 4 investigation questions answered); docs/UAT/Obsidian close-out in 184.4-10 — see `184.4-VALIDATION.md` (all 11 automated rows green, `nyquist_compliant: true`) and `184.4-10-SUMMARY.md`. Two manual-only checks (live chaos-lab re-verification, cross-surface visual placement) DEFERRED with cited substitute coverage — no chaos-lab/browser access in the close-out session. **Checkbox awaits `184.4-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184.4-10's scope). (completed 2026-09-06)
-- [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
+- [x] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios. (completed 2026-09-06; close-out was stranded on the unmerged `phase-185-close` branch and integrated to main 2026-09-07)
 - [x] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
 ## Phase Details
@@ -687,11 +687,15 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 182. Tooling Integrity | 4/5 | In progress | — |
-| 183. Fork-Safety Gate Derivation | 0/? | Not started | — |
-| 184. Skip Registry Closure | 7/7 | Complete    | 2026-09-06 |
-| 185. a11y Baseline Environment | 0/? | Not started | — |
-| 186. Carried Defect Drain | 7/7 | Complete    | 2026-09-07 |
+| 182. Tooling Integrity | 9/9 | Complete | 2026-09-04 |
+| 183. Fork-Safety Gate Derivation | 6/6 | Complete | 2026-09-04 |
+| 184. Skip Registry Closure | 7/7 | Complete | 2026-09-06 |
+| 184.1 Coverage Metric Correctness | 7/7 | Complete | 2026-09-04 |
+| 184.2 Out-of-the-Box Scanning Posture | 6/6 | Complete | 2026-09-05 |
+| 184.3 Timestamp Correctness | 11/11 | Complete | 2026-09-05 |
+| 184.4 Rating Band Severity Floor | 10/10 | Complete | 2026-09-06 |
+| 185. a11y Baseline Environment | 7/7 | Complete | 2026-09-06 |
+| 186. Carried Defect Drain | 7/7 | Complete | 2026-09-07 |
 
 ## Backlog
 
