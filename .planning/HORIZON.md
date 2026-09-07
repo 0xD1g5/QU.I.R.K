@@ -43,6 +43,11 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 | todo: gsd-state-bold-field-search-unscoped-latent | medium | Dormant bold-branch scoping risk, deliberately unfixed with stated reason | `.planning/todos/pending/` |
 | todo: backlog-reconciliation-and-derived-gate | high | Steps 1–2 executed 2026-09-07 (this ledger); **step 3 (derived gate) still open** | `.planning/todos/pending/` |
 
+**Watch item (rescued from STATE.md's pre-v5.20 Current Position, where it lived only in narrative):**
+CISA/NIST CBOM minimum-elements guidance is due ≈**2026-12-19** under EO 14412's 180-day tasking — a
+schema-risk event for the CBOM. Not scoped anywhere; SURF-01's VEX surface was built to absorb a
+schema shift. Re-check at every milestone boundary until the guidance lands.
+
 **Still parked:** SaaS multi-tenancy (no business-model signal, unchanged since v5.4).
 
 ---

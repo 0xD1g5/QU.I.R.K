@@ -33,8 +33,13 @@ default scanning posture, timestamps, and a single-producer severity-band contra
 - Frontend/backend severity-band consistency remains open (`ScoreGauge.tsx` vs `severity_bands.py`,
   backlog 999.92). SCORE-05 is satisfied *as scoped* to the backend.
 
-**Next milestone:** not yet opened. Run `/gsd-new-milestone`; fresh `REQUIREMENTS.md` is created as
-part of that flow (v5.19's is archived at `.planning/milestones/v5.19-REQUIREMENTS.md`).
+**Next milestone:** v5.20 Release & Correctness Drain — opened 2026-09-07. See
+`## Current Milestone` below. Opened after a milestone-boundary pass that (a) ran the doc-review
+template (version drift PASS, coverage gaps PASS, 3 stale Obsidian notes re-synced) and (b)
+executed the backlog reconciliation audit — all 92 archived BACK-* IDs classified with per-item
+evidence (`.planning/reports/backlog-reconciliation-2026-09-07.md`), and `HORIZON.md` now carries
+the canonical **Open-Item Ledger** (~92% of the archived backlog is closed; the open residue is
+small and fully visible there).
 
 <details>
 <summary>Previous state — v5.18 Migration Execution (shipped 2026-09-03)</summary>
@@ -128,6 +133,38 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 `.planning/todos/pending/backlog-reconciliation-and-derived-gate.md`.
 
 </details>
+
+## Current Milestone: v5.20 Release & Correctness Drain
+
+**Goal:** Ship v5.19's content as a real release, then make the score and the scanners stop
+overstating — no unassessed domain scores full marks, no probe silently fails, no config silently
+no-ops.
+
+**Target features:**
+- **Release v5.19** — tag `v5.19.0`, publish to PyPI (bump surfaces: `pyproject.toml`, README
+  heading/What's New, CHANGELOG entry, UAT-1-02 + UAT-SERIES header). Gating Wave A per the v5.18
+  precedent; last published release is `v5.18.0`.
+- **Scoring integrity** — backlog 999.95 (P1: readiness score awards a full 25/25 to domains with
+  zero evidence; the full 71-container chaos lab scored 96/100) + 999.92 (frontend `ScoreGauge.tsx`
+  band thresholds converged with `severity_bands.py`). Deliberate formula change — moves every
+  historical number; needs an explicit migration/communication decision, not a drive-by.
+- **Config correctness trio** — 999.93 (`docs/chaos-lab.md`'s example config fails verbatim),
+  999.97 (scan-config port fields lack int coercion — quoted YAML ports silently no-op), BACK-59
+  (port 22 still in `docs/sample-config.yaml` `ports_tls` — record the decision either way).
+- **Broker port plumbing** — BACK-68 (broker sense): Kafka/RabbitMQ/Redis scanner ports hardcoded
+  (`broker_scanner.py:465`) while the chaos lab maps 29092/25671/26380.
+- **Modbus end-to-end** — 999.91: Modbus fingerprinting Step-4 gate unsatisfiable, never activates;
+  deferred since 2026-07-31.
+- **BACK-51 targeted check** — one check to disposition the migration-planner dual-categorization
+  uncertainty (may close as a recorded no-op).
+
+**Key context:** deliberately deferred and visible in HORIZON's Open-Item Ledger: phantom-cert
+dashboard rows, 999.96 silent connector skips, 999.100 Executive Verdict, the backlog derived gate
+(reconciliation todo step 3), the 999.98→999.99 Exposure Map arc, and the GSD tooling todos.
+`phase.complete` remains unsafe on this machine — all phase/milestone closes happen under the
+pre-image + signature-diff protocol. Cadence note: correctness-leaning cycle immediately after the
+v5.19 ops cycle — acceptable because scope is small and evidence-driven; v5.21 should lean
+capability.
 
 ## What This Is
 
@@ -352,36 +389,23 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.16 Review Drain & Gate Integrity in progress. `.planning/REQUIREMENTS.md` will formalize these
-into REQ-IDs during requirements definition; this list is the PM-approved scope going in, sourced
-from `docs/reviews/2026-08-24-functional-review-action-plan.md`:
+v5.20 Release & Correctness Drain in progress (opened 2026-09-07). A fresh
+`.planning/REQUIREMENTS.md` formalizes these into REQ-IDs during requirements definition; this
+list is the PM-approved scope going in, sourced from `.planning/HORIZON.md`'s Open-Item Ledger and
+`.planning/reports/backlog-reconciliation-2026-09-07.md`:
 
-- [ ] **RVW-021** — `quirk scan --targets` does not exist, yet the dashboard empty state instructs
-      it; `--targets` prefix-matches `--targets-file` and raises an uncaught `FileNotFoundError`.
-      First-run experience; also touches 6 UAT step definitions and `docs/chaos-lab.md:676`.
-- [ ] **RVW-012** — 291 accessibility violations permanently baselined across 11 routes, 0 clean;
-      3 `button-name` screen-reader blockers to fix rather than accept; baseline keyed on axe's
-      full CSS-selector path so it breaks on browser upgrades; `@axe-core/puppeteer` on a `^` range.
-- [ ] **RVW-011** — `npm run e2e:smoke` cannot pass on a developer machine (140s scan vs 120s).
-- [ ] **RVW-020** — `uat_runner.py` parses XML with stdlib `ElementTree` (XXE by default).
-- [ ] **RVW-008** — ~325 of 628 UAT cases carry no recorded result; 3 duplicate case IDs
-      (UAT-144-01/02/03). Full drain agreed at the v5.16 open. Largest item; multi-phase.
-- [ ] **RVW-014** — four requirement formats and five UAT result formats across the corpus.
-      Sequenced before RVW-008 so drain completeness is mechanically checkable.
-- [ ] **RVW-007** — `CHANGELOG.md` backfill for v5.9–v5.14.
-- [ ] **RVW-009** — v4.7 shipped with no archived ROADMAP or REQUIREMENTS; dead link in ROADMAP.md.
-- [ ] **RVW-010** — DEBT-02, GAP-02, QRAMM-08, QRAMM-09 have no discoverable test; AUTH-05,
-      DEBT-04, GAP-01, QRAMM-11, TAIL-04 have tests but no linkage.
-- [ ] **RVW-015** — five archive documents record no completion status (v4.10, v4.3, v5.1, v5.12,
-      v5.4).
-- [ ] **RVW-018** — 16 planning summaries reference siblings by pre-archive path.
-- [ ] **RVW-019** — GAUGE-01/02/03 have no traceability link (code independently verified correct).
-- [ ] **RVW-006 remainder** — CMVP, error-codes and SNMP-contract catalogs absent from CLAUDE.md's
-      Staleness Review Cadence, so the runbook and `python-staleness.yml` disagree.
-- [ ] **Phase 163 UAT tail** — resuming an already-complete scan re-appends `discovery`/`inventory`/
-      `reports` checkpoint rows; `--list-resumable` Target column blank for `--targets-file` runs.
+- [ ] **Release v5.19** — tag `v5.19.0` + PyPI publish; all bump surfaces enumerated in the
+      2026-09-07 doc-review audit (pyproject, README, CHANGELOG, UAT-1-02/header)
+- [ ] **999.95** — readiness score must not award full domain subscores with zero evidence (P1)
+- [ ] **999.92** — `ScoreGauge.tsx` bands converged with `severity_bands.py` (single producer)
+- [ ] **999.93** — `docs/chaos-lab.md` example config loads verbatim
+- [ ] **999.97** — scan-config port fields int-coerced on the YAML load path
+- [ ] **BACK-59** — port 22 in `sample-config.yaml` `ports_tls`: fix or record the decision
+- [ ] **BACK-68 (broker sense)** — broker scanner custom-port plumbing
+- [ ] **999.91** — Modbus fingerprinting activates end-to-end (Step-4 gate satisfiable)
+- [ ] **BACK-51** — one targeted check to disposition the migration-planner duality
 
-Standing carry-forward, not in v5.16 scope:
+Standing carry-forward, not in v5.20 scope:
 
 - [ ] **Phase 158 human-UAT** — 2 deferred visual scenarios (`/hardware` and `/compare` rendering of
       sensor-pushed devices); code-level criteria independently satisfied, opportunistic only.
@@ -1147,7 +1171,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-06 — v5.19 Phase 184.4 (Rating Band Severity Floor) completed via `/gsd-execute-phase`, human UAT confirmed via `/gsd-verify-work`*
+*Last updated: 2026-09-07 — milestone v5.20 Release & Correctness Drain opened via `/gsd-new-milestone`; backlog reconciliation executed, HORIZON.md promoted to canonical Open-Item Ledger*
 
 ## Evolution
 
