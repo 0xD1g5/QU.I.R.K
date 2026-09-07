@@ -1,12 +1,28 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-07 (Phase 186 Plan 05 — TRIAGE-176-01/02 UAT closure: UAT-6-06's
+**Last Updated:** 2026-09-07 (v5.19 Phase 186 — Carried Defect Drain, plan 186-06 phase-gate
+close-out: `TRIAGE-176-01` and `TRIAGE-176-02` both fully CLOSED — product-code fixes landed
+186-01/186-02/186-03, `UAT-5-13`, `UAT-6-06`, and `UAT-6-07` all re-executed live against the
+chaos lab in plan 186-05 and now read `[x] PASS`, superseding their 2026-08-30 FAILs. Operator
+approved the closure 2026-09-07, including a documented falsification of `186-CONTEXT.md`'s D-11
+premise: compliance-control mappings do NOT differ pre/post-fix (`_build_finding()` attaches
+`compliance` against a finding's original title before `_postprocess_findings()` rewrites it), so
+`TRIAGE-176-02` is a labeling-defect fix, not a compliance-coverage fix — recorded here so it is
+not re-derived incorrectly later. Two carried deferred items (a machine-readable `finding_type`
+schema; the uninvestigated report-generation headline-vs-severity warning, now noted a second time
+without action) filed as `.planning/ROADMAP.md` Backlog entries with file:line evidence anchors so
+neither evaporates a third time. Plan 186-07 (same phase) separately closed a 7-profile/9-port
+`docs/chaos-lab.md` documentation gap against the chaos lab's `docker-compose.yml`, guarded by a
+new run-time source-scan pytest gate — no UAT case changes from that plan. Phase 186 plans: 186-01
+through 186-07 (seven plans; 186-06 was originally planned as the sixth and final plan but a
+seventh, chaos-lab-doc-only plan was added mid-phase at user request). Earlier: 2026-09-07 (Phase
+186 Plan 05 — TRIAGE-176-01/02 UAT closure: UAT-6-06's
 `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` pass criteria (identifiers absent from `quirk/`, invented by the
 case author) rewritten to name the product's real finding title `"Plaintext HTTP service
 detected"`, and UAT-6-07's `HTTP_ON_TLS_LIKE_PORT` corrected to `"HTTP on TLS-designated port"`,
-per D-09; both case-text corrections documented in the UAT-6-08 disposition shape. Dispositions
-pending Task 2's live chaos-lab re-run. Earlier: 2026-09-06 (v5.19 Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
+per D-09; both case-text corrections documented in the UAT-6-08 disposition shape. Earlier:
+2026-09-06 (v5.19 Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
 close-out: Series 184 added (UAT-184-01..03; 2 PASS, 1 SKIP/GAP) for DRIFT-02 — the skip-registry
 meta-gate is re-keyed from `(file, LINENO)` to `(file, test_qualname)`, made bidirectional, and
 the full suite's failing-node set is empty for the first time since v5.17. Earlier: 2026-09-05
