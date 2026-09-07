@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 186.1 PLANNED (7 plans, 6 waves) — ready to execute (2026-09-07)
-last_updated: 2026-09-07T15:00:00.000Z
+stopped_at: Phase 186.1 COMPLETE — 7/7 plans, verification passed 8/8 (2026-09-07)
+last_updated: 2026-09-07T17:15:00.000Z
 progress:
   total_phases: 10
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 77
-  completed_plans: 70
-  percent: 90
+  completed_plans: 77
+  percent: 100
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 186.1 — PLANNED 2026-09-07, 7 plans across 6 waves, ready to execute. Closes the v5.19 milestone-audit gap (`.planning/v5.19-MILESTONE-AUDIT.md`, status `gaps_found`): TOOL-01 unsatisfied, TOOL-05 orphaned. Root cause confirmed against installed source — the plain-field fallback in `state-document.js` is anchored to line start but scoped to nothing, so it rewrites the first body line beginning `Status:`. Research also found `phase.complete` is an independent third code path (`phase-lifecycle.js:1004-1141`), that a literal `## Section`-scoped region does NOT protect this file (decoys share the `## Current Position` span with no blank-line boundary), and 6 bare plain-field sites across the two installs rather than 2. NOTE: `state.planned-phase` was NOT run to record this — it is one of the three unpatched verbs this phase fixes; STATE.md was hand-edited. Next: /gsd-execute-phase 186.1
+**Current focus:** Phase 186.1 — COMPLETE 2026-09-07, 7/7 plans, verification `passed` 8/8. TOOL-01/TOOL-05 closed for the **textual** defect class: the unscoped plain-field fallback is now region-scoped and fail-closed at **21 sites across 4 files in 2 installs** — npx `query/state-document.js` (2) + `query/state-mutation.js` (7), and `~/.claude` `bin/lib/state-document.generated.cjs` (2) + `bin/lib/state.cjs` (10). The extended run-time scan found **29 bare-field sites, not the 6 planned** (and 16 bold, not 13); ledger is 21 `scoped` / 8 `accepted-read-only` / 1 `anchored` / 0 `pending-scoping`. Proven by a live six-run re-demonstration (3 verbs x 2 entry points) against this real file, restored byte-identical — not by a green unit test (CLAUDE.md clause (e)). **Scope limit, stated honestly:** closed for the two installs on THIS machine, for the write paths the tests exercise; an npx version bump lands a fresh content-addressed `_npx/<hash>/` with no patches and no signal. **A SECOND, SEMANTIC defect class is now open** — verbs writing well-formed WRONG values, which no anchor catches: `phase.complete` marked phase 186.1 complete at 5/7 plans with an impossible `completed_plans: 142`; `state.planned-phase` returns `updated: []` while drifting frontmatter; npx-vs-`.cjs` divergence on identical argv. Three todos filed pending. **`phase.complete` is UNSAFE to close a phase on this machine** — this phase's own close was hand-written under the pre-image + signature-diff protocol. Next: /gsd-complete-milestone v5.19
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
