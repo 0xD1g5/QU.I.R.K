@@ -1,8 +1,21 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-07 (v5.19 Phase 186 — Carried Defect Drain, plan 186-06 phase-gate
-close-out: `TRIAGE-176-01` and `TRIAGE-176-02` both fully CLOSED — product-code fixes landed
+**Last Updated:** 2026-09-07 (v5.19 Phase 186.1 — Close gap TOOL-01/TOOL-05: Plain-Field Fallback
+Scoping, plan 186.1-07 phase-gate close-out: Series 186.1 added (UAT-186.1-01..03; 2 PASS, 1
+SKIP/GAP). The GSD toolchain's `stateReplaceField()`/`stateExtractField()` plain-field fallback was
+anchored but unscoped, deterministically clobbering `.planning/STATE.md` body prose on every
+mutating `state.*` verb call — closed across both installs with a two-axis (install set x
+construct shape) run-time source scan (found 29 bare-field sites, not the 6 hypothesized) and a
+live six-run command-boundary re-demonstration against the real, tracked `.planning/STATE.md`,
+independently re-verified byte-identical by the orchestrator. TOOL-01 and TOOL-05 both closed in
+`.planning/REQUIREMENTS.md`. A newly-discovered, DIFFERENT (SEMANTIC, not TEXTUAL) defect class was
+found live during the same re-demonstration and left explicitly open: `phase.complete` writes
+well-formed but factually wrong phase-completion state without checking the named phase's plans
+are actually done — reproduced live against this very phase at 5/7 plans done. `phase.complete`
+MUST NOT be used to close a phase on this machine until that is fixed (see `CLAUDE.md` clause (h)
+and the new pending todos filed at close). Earlier: 2026-09-07 (v5.19 Phase 186 — Carried Defect
+Drain, plan 186-06 phase-gate close-out: `TRIAGE-176-01` and `TRIAGE-176-02` both fully CLOSED — product-code fixes landed
 186-01/186-02/186-03, `UAT-5-13`, `UAT-6-06`, and `UAT-6-07` all re-executed live against the
 chaos lab in plan 186-05 and now read `[x] PASS`, superseding their 2026-08-30 FAILs. Operator
 approved the closure 2026-09-07, including a documented falsification of `186-CONTEXT.md`'s D-11
@@ -23817,3 +23830,123 @@ interactive browser session). 1 case (`UAT-185-07`) is an honest `[x] SKIP` with
 disposition — not a fabricated PASS, and not silently converted to PASS to satisfy the corpus
 gate. It names a concrete follow-up for a future session (generate a report immediately after a
 qualifying third sensor push, before a later scan run suppresses the drift row).
+
+---
+
+## Series 186.1: GSD Plain-Field Fallback Scoping (Phase 186.1 — v5.19)
+
+**Last Updated:** 2026-09-07
+
+**Scope:** TOOL-01/TOOL-05 — the GSD toolchain's `stateReplaceField()`/`stateExtractField()` plain-
+field fallback was anchored but unscoped, deterministically clobbering `.planning/STATE.md` body
+prose on every mutating `state.*` verb call. Closed across both installs (`~/.claude/get-shit-done/
+bin/lib/` and the npx-cached `get-shit-done-cc/sdk/dist/`) with a run-time source scan extended on
+two axes (install set x construct shape) and a live six-run re-demonstration against the real,
+tracked `.planning/STATE.md`. This series covers what a human can actually verify about that
+closure — it is NOT a general GSD-toolchain-is-safe claim; see the notes below for what remains
+open.
+
+### UAT-186.1-01: A mutating state verb run against the real `.planning/STATE.md` leaves narrative prose byte-identical
+
+**ID:** UAT-186.1-01
+**Title:** `state.begin-phase` and `state.planned-phase`, run against the real, tracked
+`.planning/STATE.md` through both entry points, do not alter any of the four named narrative decoy
+lines (933, 934, 944, 1081 as of the 186.1-06 transcript).
+**Maps to:** TOOL-01, TOOL-05
+
+**What to test:** That the scoped, fail-closed fallback fix (186.1-03/186.1-04) holds at the
+command boundary — not the function level — against the real production file, not a fixture copy.
+
+**Steps:** See `186.1-06-SUMMARY.md` for the full six-run transcript: pre-image sha1, verbatim argv
+and stdout for each run, full `git diff`, hunk-by-hunk annotation against both named corruption
+signatures, restore via `git checkout --`, and post-restore sha1 re-verification.
+
+**Pass Criteria:** Zero occurrences of signature (a) (bold-field-in-prose garbling) or signature
+(b) (dropped frontmatter key) across all six runs; the four named decoy lines never appear in any
+diff hunk.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-07  **Tester:** Automated + human-approved (186.1-06 plan execution, operator
+approved at the plan's checkpoint)
+**Notes:** All six runs (3 verbs x 2 entry points) restored `.planning/STATE.md` byte-identical
+(sha1 `02e30896a1703a2752234577afd84a001daa31f8`), independently re-verified by the orchestrator
+before presenting the checkpoint, not taken on the executor's report alone. `.planning/ROADMAP.md`
+and `.planning/REQUIREMENTS.md` were also restored byte-identical after the `phase.complete` runs
+(5, 6). This is the phase's stated closure criterion, and it passed — but see UAT-186.1-03 below
+for what this PASS does NOT cover.
+
+---
+
+### UAT-186.1-02: The extended run-time guard scan fails loudly when a site is undispositioned
+
+**ID:** UAT-186.1-02
+**Title:** `tests/test_gsd_state_patch.py`'s two-axis (install set x construct shape) run-time
+source scan regenerates its occurrence set from installed source on every run and fails if any
+site lacks a disposition in the ledger.
+**Maps to:** TOOL-01, TOOL-05
+
+**What to test:** That the guard is a live, regenerating scan — not a checked-in list of known
+sites — and that it actually enforces zero `pending-scoping` entries.
+
+**Steps:**
+```bash
+pytest tests/test_gsd_state_patch.py tests/test_gsd_state_plain_field.py -q -m ""
+```
+
+**Pass Criteria:** All tests pass; the ledger (`_PLAIN_FIELD_DISPOSITIONS` and its bold-field
+sibling) shows 0 `pending-scoping` entries against the full run-time-enumerated site set.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-07  **Tester:** Automated (186.1-01 through 186.1-05 plan executions)
+**Notes:** Final ledger after all five patch waves: 21 sites `scoped`, 8 `accepted-read-only`
+(display-only, never reach a STATE.md write), 1 `anchored` (a bold-only site outside 186.1's
+plain-field scope), 0 `pending-scoping`. The scan found 29 bare-field sites, not the 6 that three
+prior planning rounds (Phase 182, Phase 185 planning, and 186.1's own initial CONTEXT/RESEARCH
+draft) hypothesized — see `CLAUDE.md` clause (h) for the full account of why extending on both
+axes simultaneously was necessary to find the full set.
+
+---
+
+### UAT-186.1-03: `phase.complete` premature-completion — GAP, no substitute coverage, and an operative warning
+
+**ID:** UAT-186.1-03
+**Title:** Whether `phase.complete` correctly refuses to mark a phase complete when its plans are
+not actually all done.
+**Maps to:** none — this is explicitly NOT part of the TOOL-01/TOOL-05 defect class this phase
+closed; it is a newly-discovered, different (SEMANTIC, not TEXTUAL) defect class, found live and
+NOT fixed by this phase.
+
+**What to test:** N/A for a PASS/FAIL verdict — this case exists to record, in the gated UAT
+corpus itself (not just prose elsewhere), that this defect is real, reproduced, and open.
+
+**Steps:** See `186.1-06-SUMMARY.md`, Runs 5 and 6: `phase.complete 186.1` was run live against
+this very phase (5/7 plans actually done) through both entry points. Both runs flipped
+`ROADMAP.md`/`REQUIREMENTS.md` checkboxes to `[x]` and `STATE.md`'s frontmatter to a completion
+state, while the verb's own JSON output correctly reported `"plans_executed": "5/7"` in the same
+call. `gsd-sdk` additionally wrote an impossible `completed_plans: 142` (real total: 77).
+
+**Pass Criteria:** N/A — disposed `GAP`, not scored PASS/FAIL. A future fix and its own UAT case
+belong to whichever phase closes `.planning/todos/pending/gsd-phase-complete-premature-completion.md`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-07  **Tester:** N/A — reproduced live, not fixed this phase
+**Notes:** **GAP — no substitute coverage; this is an honest disposition of an OPEN defect, not a
+skip of something already covered elsewhere.** `phase.complete` MUST NOT be used to close a phase
+on this machine until this is fixed (see `CLAUDE.md` clause (h) and
+`.planning/todos/pending/gsd-phase-complete-premature-completion.md`). Phase 186.1's own close-out
+(this plan) hand-writes `STATE.md`/`ROADMAP.md` tracking instead of invoking `phase.complete`, for
+exactly this reason.
+
+---
+
+**Series 186.1 disposition.** 2 of 3 cases are `[x] PASS` (`UAT-186.1-01`, `UAT-186.1-02`), proven
+by a live six-run command-boundary re-demonstration against the real, tracked `.planning/STATE.md`
+(independently re-verified by the orchestrator, not taken on the executor's report) and a green,
+two-axis run-time-regenerating guard scan. This closes the TEXTUAL defect class (TOOL-01/TOOL-05:
+an anchored-but-unscoped regex clobbering prose) for the 21 sites patched, in the two installs that
+exist on this machine, for the write paths the tests actually exercise — not a general claim that
+"the GSD toolchain is safe." 1 case (`UAT-186.1-03`) is an honest `[x] SKIP` with a `GAP`
+disposition, not a fabricated PASS: it records a newly-discovered, different SEMANTIC defect class
+(`phase.complete` writing well-formed but factually wrong completion state) found live during this
+phase's own re-demonstration and explicitly left open, with an operative warning not to use
+`phase.complete` to close phases until it is fixed.
