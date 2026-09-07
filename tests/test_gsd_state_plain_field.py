@@ -1261,3 +1261,168 @@ def test_positive_phase_complete_cjs_live_patched(tmp_path) -> None:
         f"expected no Status: line in the leading run (fail-closed, no "
         f"insert-when-absent for this verb) -- got: {cp_run!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# npx durability layer (Plan 186.1-05, TOOL-05). Closes the last Wave 0 gap:
+# unlike the `.cjs` install (`tests/test_gsd_state_patch.py::
+# test_local_patches_are_durable`, backed by `verify-reapply-patches.cjs`),
+# the npx install had NO automated check that its live, patched
+# `query/state-document.js`/`query/state-mutation.js` still match the
+# `~/.claude/gsd-npx-sdk-patches/query/` snapshots -- a silent `/gsd-update`-
+# style regeneration OR an npx cache-hash rotation to a fresh, unpatched
+# `_npx/<hash>/` directory (CLAUDE.md clause (h)(2)) would both drop the
+# TOOL-05 fix with no signal at all. `verify-reapply-patches.cjs` itself
+# cannot be reused here -- it resolves every patch path relative to
+# `--config-dir`, and an npx-cache path cannot be expressed relative to
+# `~/.claude` (see this directory's own README.md, "Why this lives OUTSIDE
+# gsd-local-patches/"). This comparison is therefore independent: a direct,
+# byte-identical comparison of each file under `gsd-npx-sdk-patches/query/`
+# against the dynamically-resolved live install, done in Python rather than
+# by invoking that script a second time.
+# ---------------------------------------------------------------------------
+
+_NPX_SNAPSHOT_DIR = Path.home() / ".claude" / "gsd-npx-sdk-patches" / "query"
+
+GSD_NPX_PATCHES_AVAILABLE = bool(GSD_SDK_AVAILABLE and _NPX_SNAPSHOT_DIR.is_dir())
+GSD_NPX_PATCHES_SKIP_REASON = (
+    "npx durability snapshot layer unavailable in this environment "
+    f"(GSD_SDK_AVAILABLE={GSD_SDK_AVAILABLE}, {_NPX_SNAPSHOT_DIR} present: "
+    f"{_NPX_SNAPSHOT_DIR.is_dir()}) -- a skip is not a pass: this leg does "
+    "NOT prove the live npx install still carries the TOOL-05 plain-field "
+    "fix. CI provisions neither an npx-installed get-shit-done-cc nor the "
+    "operator's ~/.claude/gsd-npx-sdk-patches/ snapshot directory, so it is "
+    "honestly skipped there rather than faked. Run on an operator machine "
+    "with both present to actually exercise this check."
+)
+
+_NPX_PATCHES_SKIP = pytest.mark.skipif(
+    not GSD_NPX_PATCHES_AVAILABLE, reason=GSD_NPX_PATCHES_SKIP_REASON
+)
+
+
+def _compare_npx_snapshot_dir(*, snapshot_dir: Path, live_query_dir: Path) -> dict:
+    """Compare every file under `snapshot_dir` against its counterpart in
+    `live_query_dir`, returning a report dict naming the resolved
+    `live_query_dir` path (so a rotated npx cache hash is diagnosable from
+    the failure message alone) plus per-file mismatch details. Never
+    silently skips a file: a file present in the snapshot but missing from
+    the live dir is reported as a mismatch, not ignored."""
+    snapshot_files = sorted(p.name for p in snapshot_dir.iterdir() if p.is_file())
+    mismatches = []
+    for name in snapshot_files:
+        snapshot_path = snapshot_dir / name
+        live_path = live_query_dir / name
+        if not live_path.is_file():
+            mismatches.append(
+                {"file": name, "reason": "missing_from_live", "live_path": str(live_path)}
+            )
+            continue
+        snapshot_bytes = snapshot_path.read_bytes()
+        live_bytes = live_path.read_bytes()
+        if snapshot_bytes != live_bytes:
+            mismatches.append(
+                {"file": name, "reason": "content_mismatch", "live_path": str(live_path)}
+            )
+    return {
+        "snapshot_dir": str(snapshot_dir),
+        "live_query_dir": str(live_query_dir),
+        "files_checked": snapshot_files,
+        "mismatches": mismatches,
+    }
+
+
+@_NPX_PATCHES_SKIP
+def test_npx_patches_are_durable() -> None:
+    """Assert every file snapshotted under `~/.claude/gsd-npx-sdk-patches/
+    query/` is byte-identical to its counterpart in the LIVE, dynamically-
+    resolved npx install (`_NPX_QUERY_DIR`). A divergence means either the
+    install was regenerated (e.g. by an operator `/gsd-update`) or the npx
+    content-addressed cache hash silently rotated to a fresh, unpatched
+    copy -- both are exactly the silent-drop hazard CLAUDE.md clause (h)(2)
+    names, and both must fail loudly here rather than pass vacuously.
+
+    Explicitly asserts the compared file set is NON-EMPTY first: a rotated
+    hash resolving to a directory that happens to exist but contains none
+    of the expected files would otherwise let `files_checked == []` read as
+    a (vacuous) pass."""
+    assert _NPX_QUERY_DIR is not None
+    report = _compare_npx_snapshot_dir(
+        snapshot_dir=_NPX_SNAPSHOT_DIR, live_query_dir=_NPX_QUERY_DIR
+    )
+    assert len(report["files_checked"]) > 0, (
+        "expected at least one snapshotted file under "
+        f"{_NPX_SNAPSHOT_DIR} -- an empty file set would make this "
+        "durability check pass vacuously (e.g. if the snapshot directory "
+        "were accidentally emptied). files_checked was empty."
+    )
+    assert not report["mismatches"], (
+        "npx durability check FAILED -- the following snapshotted file(s) "
+        f"no longer match the live install resolved at {_NPX_QUERY_DIR} "
+        "(a /gsd-update regeneration or an npx cache-hash rotation to an "
+        f"unpatched copy is the likely cause): {report['mismatches']!r}. "
+        "Full report: " + json.dumps(report, indent=2)
+    )
+
+
+def test_npx_patch_loss_is_actually_detected(tmp_path) -> None:
+    """Negative control, mirroring `tests/test_gsd_state_patch.py::
+    test_patch_loss_is_actually_detected`: build a throwaway COPY of the
+    live npx `query/` directory, overwrite ONE file
+    (`state-document.js` -- the ORIGINAL live-corruption site) with its
+    PRISTINE (pre-any-patch) content -- simulating a regeneration or a
+    cache-hash rotation that silently reverted the fix in place -- and
+    assert `_compare_npx_snapshot_dir` reports a mismatch for that file
+    when pointed at the corrupted copy. Proves
+    `test_npx_patches_are_durable`'s pass above is a real, sensitive
+    assertion and not a check that can only ever pass. Writes only under
+    `tmp_path`; the real npx cache and `~/.claude/gsd-npx-sdk-patches/` are
+    never touched."""
+    if not GSD_NPX_PATCHES_AVAILABLE:
+        pytest.skip(GSD_NPX_PATCHES_SKIP_REASON)
+
+    pristine_path = _NPX_PRISTINE_DIR / "state-document.js"
+    if not pristine_path.is_file():
+        pytest.skip(
+            f"pristine baseline not found at {pristine_path} -- cannot run "
+            "the negative control without a known-unpatched copy to "
+            "simulate a regeneration reverting the patch"
+        )
+    pristine_content = pristine_path.read_bytes()
+    assert _LOCAL_PATCH_MARKER_186_1 not in pristine_content.decode(
+        "utf-8", errors="replace"
+    ), (
+        f"{pristine_path} unexpectedly contains {_LOCAL_PATCH_MARKER_186_1!r} "
+        "-- it is not a genuine pristine copy, so the negative control "
+        "would run against already-patched content and pass vacuously"
+    )
+
+    # Sanity: the REAL snapshot is patched (contains the marker) before we
+    # build the corrupted copy, so the inversion below is genuine.
+    real_snapshot = _NPX_SNAPSHOT_DIR / "state-document.js"
+    assert _LOCAL_PATCH_MARKER_186_1 in real_snapshot.read_text(encoding="utf-8")
+
+    fake_live_dir = tmp_path / "live-query-copy"
+    fake_live_dir.mkdir(parents=True, exist_ok=True)
+    for name in sorted(p.name for p in _NPX_SNAPSHOT_DIR.iterdir() if p.is_file()):
+        (fake_live_dir / name).write_bytes((_NPX_SNAPSHOT_DIR / name).read_bytes())
+    # Simulate the silent revert: overwrite the copy's state-document.js
+    # with pristine (pre-patch) content.
+    (fake_live_dir / "state-document.js").write_bytes(pristine_content)
+    assert _LOCAL_PATCH_MARKER_186_1 not in (
+        fake_live_dir / "state-document.js"
+    ).read_text(encoding="utf-8")
+    # Sanity: the REAL npx install is untouched by any of the above.
+    assert _LOCAL_PATCH_MARKER_186_1 in _NPX_QUERY_DIR.joinpath(
+        "state-document.js"
+    ).read_text(encoding="utf-8")
+
+    report = _compare_npx_snapshot_dir(
+        snapshot_dir=_NPX_SNAPSHOT_DIR, live_query_dir=fake_live_dir
+    )
+    mismatched_files = {m["file"] for m in report["mismatches"]}
+    assert "state-document.js" in mismatched_files, (
+        "expected the deliberately-reverted state-document.js to be "
+        f"reported as a mismatch, but it was not. Full report: "
+        f"{json.dumps(report, indent=2)}"
+    )
