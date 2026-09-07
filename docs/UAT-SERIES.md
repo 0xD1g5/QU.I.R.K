@@ -1,7 +1,14 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.18.0
-**Last Updated:** 2026-09-06 (v5.19 Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
+**Last Updated:** 2026-09-06 (v5.19 Phase 185 — A11y Baseline Environment, plan 185-07 phase-gate
+close-out: Series 185 added (UAT-185-01..07; 5 PASS, 2 SKIP/GAP) for DRIFT-03 — a11y baselines
+regenerated on the Linux CI runner that enforces the gate, `/hardware`/`/compare` onboarded with
+justified Linux-generated baselines, Severity Breakdown tooltip contrast regression fixed and
+guarded, both previously-pending Phase 158 human-UAT scenarios dispositioned against a real
+backend, and the `quirk sensor scan` doc defect in Series 158 corrected. Also fixed during setup:
+Phase 184.3 regression emptying `/hardware`'s device table (commit `5d861ce1`). Earlier: v5.19
+Phase 184 — Skip Registry Closure, plan 184-07 phase-gate
 close-out: Series 184 added (UAT-184-01..03; 2 PASS, 1 SKIP/GAP) for DRIFT-02 — the skip-registry
 meta-gate is re-keyed from `(file, LINENO)` to `(file, test_qualname)`, made bidirectional, and
 the full suite's failing-node set is empty for the first time since v5.17. Earlier: 2026-09-05
@@ -18751,12 +18758,15 @@ page, with vendor/model/tier matching the sensor-side scan.
 
 **Steps:**
 1. Enroll a sensor via `quirk console enroll` and note the sensor_id + segment.
-2. Run a sensor-side scan against a fingerprinted target (e.g. the `hwcompat` chaos lab profile)
-   with `quirk sensor scan`, then push results with `quirk sensor push` (or export + `quirk
-   console import-results` for the air-gap path).
+2. Push results with `quirk sensor push`, which runs the local scan against a fingerprinted
+   target (e.g. the `hwcompat` chaos lab profile) *and* pushes the results in one step — there is
+   no separate `quirk sensor scan` subcommand (`quirk/cli/sensor_cmd.py` defines only `enroll`,
+   `push`, `export-results`, `merge`). For the air-gap path, use `quirk sensor export-results`
+   then `quirk console import-results` instead.
 3. Open the console dashboard's `/hardware` page.
 4. Confirm the pushed device(s) appear with vendor/model/PQC-status/CNSA-2.0-tier matching the
-   sensor-side scan output.
+   sensor-side scan output. Note the pushed device dict must carry `probe_status: "success"` or
+   the row is invisible to every projection/history query.
 
 **Pass criteria:**
 - Device rows visible on `/hardware` with vendor/model/tier matching the sensor-side scan
@@ -18778,15 +18788,20 @@ HTML/DOCX report — rendered identically to a console-direct-scan drift row, si
 dashboard/report code changed in this phase (RESEARCH.md Assumption A2 smoke test).
 
 **Steps:**
-1. Using the same enrolled sensor from UAT-158-01, re-run the sensor-side scan against a target
-   whose remediation tier or vendor identification has changed since the first push (or seed a
-   prior `HardwareDevice` row at a different tier directly).
-2. Push the updated results.
-3. Open `/compare` and confirm a "Recent Lifecycle Changes" drift row is present for the
+1. Using the same enrolled sensor from UAT-158-01, run `quirk sensor push` a **third** time
+   against a target whose remediation tier or vendor identification has changed since the first
+   push. Drift detection is N-of-M gated (`DEFAULT_N=2`, `DEFAULT_M=3` at
+   `quirk/scanner/hardware_drift.py:44-45`) — two pushes alone produce no drift event; a third
+   push is required to demonstrate a tier crossing. Every pushed device dict must carry
+   `probe_status: "success"` or it is invisible to the drift query.
+2. Open `/compare` and confirm a "Recent Lifecycle Changes" drift row is present for the
    sensor-scanned device, attributable to the sensor's segment.
-4. Generate an HTML or DOCX report for the same scan and confirm the same drift row is present,
-   rendered with the same `LifecycleEventList` styling as a console-direct-scan drift row (no
-   distinct visual treatment, no filtering by origin).
+3. There is no `quirk report` subcommand — reports are emitted only by a full scan run
+   (`write_reports` at `run_scan.py:3727`). If exercising the report leg, generate an HTML or
+   DOCX report via a full scan run immediately after the qualifying third push, before any later
+   scan updates `HardwareDevice.scanned_at` — `quirk/reports/writer.py:632-640` only includes a
+   drift row when `HardwareDriftEvent.detected_at` equals the newest successful scan's
+   `scanned_at`, so a later scan run would suppress the very row this leg needs to see.
 
 **Pass criteria:**
 - A drift row is visible on `/compare` for the sensor-scanned device
@@ -23507,3 +23522,252 @@ substitute (the historical drift-twin re-derivation evidence plus this plan's ow
 — not a fabricated PASS, and not silently converted into PASS to satisfy the corpus gate. See
 `docs/uat-coverage-gaps.md` item 16 for the full gap record and `184-VALIDATION.md`'s Manual-Only
 Verifications table for the substitute human check.
+
+---
+
+## Series 185: A11y Baseline Environment (Phase 185 — v5.19)
+
+**Last Updated:** 2026-09-06
+
+**Scope:** DRIFT-03 — a11y baselines are now regenerated on the Linux CI runner that actually
+enforces the gate (not a contributor's macOS machine), `/hardware` and `/compare` are onboarded
+with justified Linux-generated baselines, the Severity Breakdown tooltip's dark-on-dark contrast
+regression is fixed and permanently guarded, and both previously-pending Phase 158 human-UAT
+scenarios are dispositioned against a real backend. Cases below cite live CI run IDs and the
+operator's own reported verdicts as evidence, per D-08's rule that a local result is corroborating
+only, never deciding.
+
+### UAT-185-01: Severity Breakdown tooltip clears WCAG AA contrast in both light and dark theme
+
+**ID:** UAT-185-01
+**Title:** The Recharts Severity Breakdown tooltip's `itemStyle`/`labelStyle`/`contentStyle` are
+token-driven and clear 4.5:1 contrast against the tooltip background in both theme blocks.
+**Maps to:** DRIFT-03 (SC-4, Phase 185 Plan 03)
+
+**What to test:** That the 2026-09-06 regression (series text `count : N` rendering dark-on-dark
+because `<Tooltip>` had no `itemStyle` at all, falling back to Recharts' own dark default) is
+fixed and cannot silently regress.
+
+**Steps:**
+```bash
+cd src/dashboard && npm test -- --run executive-tooltip-contrast-guard
+```
+
+**Pass Criteria:** All tests in `executive-tooltip-contrast-guard.test.ts` pass, including the
+named 2026-09-06-regression test and the independent dark-theme and light-theme AA contrast
+assertions for `itemStyle` and `labelStyle` against `contentStyle`'s background.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Automated (185-07 plan execution)
+**Notes:** `npm test -- --run executive-tooltip-contrast-guard` -> 1 file, 12/12 tests passed.
+Full dashboard suite (`npm test -- --run`) -> 36 files, 254/254 tests passed, same run. Two
+negative controls were exercised during 185-03 (removing `itemStyle`; narrowing
+`--popover-foreground` toward `--popover` in the light theme) and both failed for the expected
+reason — see `185-03-SUMMARY.md`. The screenshot-level human hover confirmation named in
+`185-VALIDATION.md`'s Manual-Only Verifications table was not performed in this close-out session
+— see UAT-185-06 below for the honest disposition of that specific gap.
+
+---
+
+### UAT-185-02: `/hardware` and `/compare` are covered by the a11y sweep with zero regressions on Linux CI
+
+**ID:** UAT-185-02
+**Title:** Both routes render real content under the a11y fixture harness, are onboarded into
+`routes.json` with Linux-generated baselines for all three variants, and the `Axe + Console Gate`
+job is green for them on `ubuntu-latest`.
+**Maps to:** DRIFT-03 (D-01, D-02, D-04, D-11, D-12, D-13, D-14)
+
+**What to test:** The route-coverage half of DRIFT-03 — the exact gap CR-01 exposed in Phase 165
+(a contrast regression confined to these two routes was invisible to the sweep because neither
+route was ever swept).
+
+**Steps:** Not locally provable per D-02 (font metrics/overflow differ from Linux). Authoritative
+evidence is the live CI run at the landing commit:
+```
+Run: Axe + Console Gate, commit 3ea9e40e, run 34068026959
+```
+
+**Pass Criteria:** All three `a11y:check[,:empty,:loading]` variants exit 0 for both `hardware`
+and `compare` on `ubuntu-latest`, with zero unjustified count increases.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** CI (run 34068026959, ubuntu-latest, commit 3ea9e40e)
+**Notes:** **CI-only claim (D-02) — not locally provable, per this phase's own Observability
+Limit.** Live run `34068026959` at commit `3ea9e40e` (185-05-SUMMARY.md) went green across all
+three variants: `PASS [hardware]: no regressions (2 live)` and `PASS [compare]: no regressions
+(1 live)` reported in `a11y:check`, `a11y:check:empty`, and `a11y:check:loading`. Six baselines
+(`baseline-{hardware,compare}-{default,empty,loading}.json`) landed atomically with their
+`routes.json` entries in commit `3ea9e40e`. `color-contrast` findings on both routes are D-11
+firewall violations (Phase 156 HWLC-11 raw `hsl()` badge literals), justified in the ledger and
+NOT fixed — tokenizing them would break `lifecycle-advisory-guard.test.ts` and
+`vendor-trend-advisory-guard.test.ts`, both still green (29/29 each). A local macOS
+`npm run a11y:check` result showing the same two routes PASS is corroborating only, not the
+proof (D-08) — the pre-existing, unrelated `data-at-rest` local `FAIL` documented in
+185-04-SUMMARY.md/185-05-SUMMARY.md is a known macOS-Chrome rendering-jitter artifact, not a
+regression from this plan, and does not affect this case's disposition.
+
+---
+
+### UAT-185-03: The D-03/D-10 regeneration and failure-response procedures are followable from `docs/operators-guide.md` alone
+
+**ID:** UAT-185-03
+**Title:** A contributor who has never touched this phase can regenerate baselines and respond to
+a gate failure correctly by reading `docs/operators-guide.md` §5.3, without archaeology.
+**Maps to:** DRIFT-03 (D-03, D-10)
+
+**What to test:** The root defect this phase closes was that nobody knew the correct way to
+regenerate baselines. A procedure that is not discoverable by reading recreates that defect.
+
+**Steps:**
+```bash
+grep -q "a11y-regenerate-baselines" docs/operators-guide.md
+grep -q "gh workflow run" docs/operators-guide.md
+grep -q "gh run download" docs/operators-guide.md
+grep -qi "same commit" docs/operators-guide.md
+grep -qi "not sanctioned\|non-sanctioned" docs/operators-guide.md
+grep -q "Phase 177" docs/operators-guide.md
+```
+
+**Pass Criteria:** All six literal-content checks above succeed, confirming the job name, the
+exact dispatch/download commands, the same-commit rule, and the explicit non-sanctioned
+hand-patching statement (naming Phase 177) are all present in one contiguous, readable location.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Automated (185-07 plan execution)
+**Notes:** All six greps pass against the current `docs/operators-guide.md` (committed
+`92a6ac25`). Content check only — does not substitute for an independent contributor actually
+following the steps cold; that stronger claim is not made here.
+
+---
+
+### UAT-185-04: A sensor push carrying `hardware_devices` results in device rows visible on `/hardware` — carried from UAT-158-01
+
+**ID:** UAT-185-04
+**Title:** Real operator-observed disposition for UAT-158-01, executed against a real
+`quirk serve` backend with a real enrolled sensor and real `POST /api/sensor/push` calls.
+**Maps to:** DRIFT-03 (D-15)
+
+**What to test:** Same scenario as `UAT-158-01` (Series 158, above) — carried forward here with
+its real disposition now that it has actually been executed, rather than left `SKIP`/`DEFERRED`
+in the series where it was never exercised live.
+
+**Steps:** See `158-HUMAN-UAT.md` and `185-06-SUMMARY.md` for the full operator-executed steps
+(sensor enrollment, three real `POST /api/sensor/push` calls, visual confirmation on `/hardware`).
+
+**Pass Criteria:** Operator visually confirms device rows on `/hardware` matching the sensor-side
+push.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Human (operator, per 185-06-SUMMARY.md)
+**Notes:** Disposition carried across **exactly** as recorded in `185-06-SUMMARY.md` — not
+upgraded or reworded. Operator visually confirmed device rows on `/hardware` matching the
+sensor-side push (Cisco / ISR4321 / Tier 1). Corroborating (non-deciding) evidence:
+`/api/scan/latest` returned 3 `hardware_findings` rows. A pre-existing Phase 184.3 regression
+(`db293448`) was found and fixed (`5d861ce1`) during this UAT's setup — before the fix,
+`stamp_utc_iso()` raised on a `datetime.date`-typed `eol_date` and the broad advisory-only
+try/except in `_derive_hardware_findings()` silently emptied the entire `/hardware` table
+(0 rows -> 3 rows after the fix). 4261 passing automated tests did not catch this; the human UAT
+did. This fix is an out-of-scope bugfix surfaced during Phase 185, not a Phase 185 deliverable in
+its own right.
+
+---
+
+### UAT-185-05: Repeating a sensor push after a tier/vendor change surfaces a drift entry on `/compare` — carried from UAT-158-02 (scoped)
+
+**ID:** UAT-185-05
+**Title:** Real operator-observed disposition for UAT-158-02, scoped to the `/compare` leg only.
+**Maps to:** DRIFT-03 (D-15)
+
+**What to test:** Same scenario as `UAT-158-02` (Series 158, above) — carried forward with its
+real, honestly-scoped disposition.
+
+**Steps:** See `158-HUMAN-UAT.md` and `185-06-SUMMARY.md`. Three real `POST /api/sensor/push`
+calls were required (drift is N-of-M gated, `DEFAULT_N=2`/`DEFAULT_M=3`,
+`quirk/scanner/hardware_drift.py:44-45` — two pushes alone produce no drift event).
+
+**Pass Criteria:** A drift row is visible on `/compare` for the sensor-scanned device, rendered
+identically to a console-direct-scan drift row.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Human (operator, per 185-06-SUMMARY.md)
+**Notes:** Disposition carried across **exactly** as recorded in `185-06-SUMMARY.md` — PASS,
+scoped explicitly to the `/compare` leg only, not upgraded to cover the full original scenario
+text. Operator visually confirmed a drift entry on
+`/compare?a=2026-09-07 00:07:35&b=2026-09-06 23:38:17` for the sensor-scanned segment;
+corroborating evidence: `/api/hardware/drift` latest_events[0] = tier_crossing, Tier 2 -> Tier 1,
+worsened. **The scenario's "generated report" leg was NOT exercised** and is recorded here, as in
+185-06-SUMMARY.md, as an open item rather than silently folded into the PASS: there is no
+`quirk report` subcommand (reports come only from a full scan run via `write_reports` at
+`run_scan.py:3727`), and `quirk/reports/writer.py:632-640` only includes a drift row when
+`HardwareDriftEvent.detected_at` equals the newest successful scan's `scanned_at`, so a
+subsequent scan run would suppress the very row this leg needs to see. See `UAT-185-07` below for
+this gap's own disposition.
+
+---
+
+### UAT-185-06: Tooltip legibility screenshot-level human confirmation
+
+**ID:** UAT-185-06
+**Title:** A human hovers the Severity Breakdown bar on `/executive` and visually confirms
+`count : N` is legible in both light and dark theme.
+**Maps to:** DRIFT-03 (SC-4) — `185-VALIDATION.md` Manual-Only Verifications table
+
+**What to test:** The pixel-rendered, as-seen-by-a-human legibility of the tooltip — the defect
+this phase fixed was originally found by eye, and the static contrast guard (UAT-185-01) proves
+the numeric ratio, not the rendered pixels a person actually sees.
+
+**Steps:**
+1. Serve the dashboard against a real backend (`quirk serve`) and open `/executive`.
+2. Hover a bar in the Severity Breakdown chart so the Recharts tooltip appears.
+3. Confirm the series line (`count : N`) is legible against the tooltip background —
+   this is the text that previously inherited Recharts' dark default and rendered dark-on-dark.
+4. Switch theme (light <-> dark) and hover again — the pre-fix tooltip was hardcoded to a dark
+   panel and so was also wrong in light theme.
+
+**Pass Criteria:** The operator confirms `count : N` is legible in BOTH themes. Operator visual
+confirmation is the deciding evidence; the static guard is corroborating only.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Human (operator, live hover verification)
+**Notes:** Operator performed the hover on a live `quirk serve` dashboard and reported PASS for
+both themes. This closes what was initially recorded as a GAP during the 185-07 close-out (no
+interactive browser session was available at that moment). Substantive coverage relationship,
+stated precisely: `executive-tooltip-contrast-guard.test.ts` (UAT-185-01) is real, permanent,
+passing coverage of the *numeric* WCAG ratio computed from source-text token declarations — it
+never renders the tooltip in a browser, so it was never a citable substitute for this check. Both
+now exist: the guard prevents numeric regression, this case confirms the rendered result once.
+
+---
+
+### UAT-185-07: UAT-158-02's "generated report" leg — GAP, no substitute coverage
+
+**ID:** UAT-185-07
+**Title:** A generated HTML/DOCX report for the sensor-scanned segment shows the same drift row
+visible on `/compare`, rendered with the same `LifecycleEventList` styling as a
+console-direct-scan drift row.
+**Maps to:** DRIFT-03 (D-15) — the unexercised half of the original `UAT-158-02` scenario text
+
+**What to test:** That sensor-origin drift rows render identically in generated reports, not just
+on `/compare` — the half of UAT-158-02 the operator did not exercise (see `UAT-185-05`).
+
+**Steps:** No automated or human evidence exists for this leg as of this close-out. A concrete
+follow-up recipe is recorded in `158-HUMAN-UAT.md`'s `## Gaps` section: generate a report
+immediately after the qualifying 3rd push, before any later scan run suppresses the drift row
+(see `UAT-185-05`'s Notes for why report generation is order-sensitive here).
+
+**Pass Criteria:** N/A — disposed `GAP`, not scored PASS/FAIL.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-06  **Tester:** N/A — not exercised this close-out
+**Notes:** **GAP — no substitute coverage.** Recorded honestly per `185-06-SUMMARY.md` rather than
+silently folded into `UAT-185-05`'s PASS. See `158-HUMAN-UAT.md`'s `## Gaps` section for the full
+follow-up recipe.
+
+---
+
+**Series 185 disposition.** 5 of 7 cases are `[x] PASS` (`UAT-185-01` through `UAT-185-05`),
+proven by a mix of automated Vitest evidence, a live CI run at a named commit, and two real
+operator-executed human-UAT dispositions carried forward from `185-06-SUMMARY.md` without
+upgrade. 2 cases (`UAT-185-06`, `UAT-185-07`) are honest `[x] SKIP`s with `GAP` dispositions —
+neither is a fabricated PASS, and neither is silently converted to PASS to satisfy the corpus
+gate. Both name a concrete follow-up for a future session with live interactive/browser access.

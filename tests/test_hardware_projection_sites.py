@@ -265,6 +265,51 @@ def test_dashboard_schemas_expose_otics_fields():
 
 
 # ---------------------------------------------------------------------------
+# Regression: stamp_utc_iso must not raise on a DATE-typed column
+# (HardwareDevice.eol_date), which silently emptied the ENTIRE /hardware
+# table for every device once any one row had a non-null eol_date (the
+# broad advisory-only try/except in _derive_hardware_findings swallowed the
+# AttributeError and returned []). Found during Phase 185 UAT-158-01 setup;
+# regression origin commit db293448 (184.3-02).
+# ---------------------------------------------------------------------------
+
+
+def test_dashboard_projection_survives_non_null_eol_date():
+    """A device with a non-null eol_date (a datetime.date, via SQL DATE
+    column) must NOT empty out the whole projection. Before the fix,
+    stamp_utc_iso(eol_raw) raised AttributeError on the date's missing
+    .tzinfo, and _derive_hardware_findings's broad try/except silently
+    swallowed it and returned []."""
+    from quirk.dashboard.api.routes.scan import _derive_hardware_findings
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    scanned_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    device = HardwareDevice(
+        host="10.0.5.9",
+        port=502,
+        vendor="Schneider Electric",
+        pqc_status="unsupported",
+        confidence="high",
+        fingerprint_method="modbus_probe",
+        scanned_at=scanned_at,
+        probe_status="success",
+        eol_date=datetime.date(2027, 3, 15),
+    )
+    session.add(device)
+    session.commit()
+    try:
+        findings = _derive_hardware_findings(session, scanned_at)
+    finally:
+        session.close()
+
+    assert findings, "eol_date-bearing device vanished from the projection"
+    assert findings[0].host == "10.0.5.9"
+
+
+# ---------------------------------------------------------------------------
 # Phase 154 Plan 03 (HWLC-02) — per-(host, port) last-known-good parity
 # ---------------------------------------------------------------------------
 #

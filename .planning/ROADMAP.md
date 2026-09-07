@@ -134,7 +134,7 @@ since they were first recorded.
 - [x] **Phase 184.2: Out-of-the-Box Scanning Posture** - The shipped config template enables a defensible default scanning baseline, or states per connector why it ships off; template/working-config drift closed. (completed 2026-09-05)
 - [x] **Phase 184.3: Timestamp Correctness** - Timestamps mean the same thing from DB to API to UI. A scan run at 11:12 EDT currently displays as 3:13 PM — a 4-hour skew across 15 frontend files. Gating: a client-facing report timestamped four hours off cannot be reconciled against the client's own logs. **COMPLETE (2026-09-05). All 11 plans done; verified 6/6 success criteria, all evidence DERIVED at verification time — see 184.3-VERIFICATION.md. 1 of 5 human-verify checks (live cert calendar-day-shift) DEFERRED with cited substitute coverage (datetime.test.ts:39) — vacuous against available data, see 184.3-VALIDATION.md.**
 - [x] **Phase 184.4: Rating Band Severity Floor** - A single CRITICAL finding can currently make report generation **impossible**: `_rating()` bands on numeric score alone with no CRITICAL floor, while `_check_congruence()` forbids CRITICAL under EXCELLENT/GOOD/MODERATE — so any scan scoring >=55 with >=1 CRITICAL halts with **zero report artefacts**. Reproduced 2026-09-05 (89/100 EXCELLENT, 1 CRITICAL). Re-discovery of BACK-89, escalated P2->P1 by Phase 98's fail-closed guard. Gating: a complete, successful scan that yields nothing handable to a client is the worst failure shape for a consulting deliverable. **All 10 plans done (2026-09-05).** SCORE-04/SCORE-05 both complete; BACK-89 closed by reference (all 4 investigation questions answered); docs/UAT/Obsidian close-out in 184.4-10 — see `184.4-VALIDATION.md` (all 11 automated rows green, `nyquist_compliant: true`) and `184.4-10-SUMMARY.md`. Two manual-only checks (live chaos-lab re-verification, cross-surface visual placement) DEFERRED with cited substitute coverage — no chaos-lab/browser access in the close-out session. **Checkbox awaits `184.4-VERIFICATION.md`** (this repo's phase-close gate blocks a `[x]` flip without one; verification is a separate gsd-verifier step, not part of plan 184.4-10's scope). (completed 2026-09-06)
-- [ ] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
+- [x] **Phase 185: a11y Baseline Environment** - Baselines are generated in the environment that enforces them, and `/hardware` + `/compare` gain coverage alongside the 2 pending `158-HUMAN-UAT.md` visual scenarios.
 - [ ] **Phase 186: Carried Defect Drain** - TRIAGE-176-01 and TRIAGE-176-02 closed with their own plans and tests.
 
 ## Phase Details
@@ -623,28 +623,28 @@ routes gain coverage.
 Plans:
 **Wave 1**
 
-- [ ] 185-01-PLAN.md — Add the permanent workflow_dispatch Linux baseline-regeneration job; derive the Chrome pin from a live run (D-01, D-03)
-- [ ] 185-03-PLAN.md — Fix the Severity Breakdown tooltip (itemStyle + tokens + theme-aware) and add a static WCAG contrast guard (ROADMAP SC-4)
+- [x] 185-01-PLAN.md — Add the permanent workflow_dispatch Linux baseline-regeneration job; derive the Chrome pin from a live run (D-01, D-03)
+- [x] 185-03-PLAN.md — Fix the Severity Breakdown tooltip (itemStyle + tokens + theme-aware) and add a static WCAG contrast guard (ROADMAP SC-4)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 185-02-PLAN.md — Pin Chrome in both a11y jobs, guard it in pinned-deps.test.ts, reword the superseded Phase 165 D-04 records (D-07, D-08, D-09)
+- [x] 185-02-PLAN.md — Pin Chrome in both a11y jobs, guard it in pinned-deps.test.ts, reword the superseded Phase 165 D-04 records (D-07, D-08, D-09)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 185-04-PLAN.md — Fixture middleware, fixture data, and the contentMarker sweep check so /hardware and /compare render real content (D-14)
+- [x] 185-04-PLAN.md — Fixture middleware, fixture data, and the contentMarker sweep check so /hardware and /compare render real content (D-14)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 185-05-PLAN.md — Land routes.json entries with six Linux-generated baselines in one commit after D-04 triage (D-02, D-04, D-05, D-06, D-11, D-12, D-13)
+- [x] 185-05-PLAN.md — Land routes.json entries with six Linux-generated baselines in one commit after D-04 triage (D-02, D-04, D-05, D-06, D-11, D-12, D-13)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 185-06-PLAN.md — Operator-led execution of the two pending 158-HUMAN-UAT scenarios (D-15)
+- [x] 185-06-PLAN.md — Operator-led execution of the two pending 158-HUMAN-UAT scenarios (D-15)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 185-07-PLAN.md — Docs, Obsidian sync, UAT Series 185, todo closure, DRIFT-03 hand verification (D-10)
+- [x] 185-07-PLAN.md — Docs, Obsidian sync, UAT Series 185, todo closure, DRIFT-03 hand verification (D-10)
 
 ### Phase 186: Carried Defect Drain
 
@@ -669,7 +669,7 @@ Plans:
 | 182. Tooling Integrity | 4/5 | In progress | — |
 | 183. Fork-Safety Gate Derivation | 0/? | Not started | — |
 | 184. Skip Registry Closure | 7/7 | Complete    | 2026-09-06 |
-| 185. a11y Baseline Environment | 0/? | Not started | — |
+| 185. a11y Baseline Environment | 7/7 | Complete | 2026-09-06 |
 | 186. Carried Defect Drain | 0/? | Not started | — |
 
 ## Backlog
