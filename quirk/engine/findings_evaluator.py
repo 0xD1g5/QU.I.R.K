@@ -16,6 +16,7 @@ from quirk.reports.content_model import (
     REMEDIATION_CATALOG,
     _classify_finding,
 )
+from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -379,7 +380,16 @@ def _postprocess_findings(cfg, endpoints, findings: List[Dict[str, Any]]) -> Lis
       - If protocol classifier labels HTTP on ports we *expect* to be TLS, treat as MISCONFIG.
       - If TLS is blocked due to MTLS_REQUIRED, avoid calling it plaintext.
     """
-    tls_ports = set(getattr(cfg.scan, "ports_tls", []) or [])
+    # Phase 186 / TRIAGE-176-02 / D-07: cfg.scan.ports_tls is the set of ports
+    # the scanner PROBES (nmap_provider.py:37 builds the scan set as
+    # ports_tls ∪ _FIXED_NMAP_PORTS; interactive.py:272 populates it from
+    # CONSULTING_TLS_PORTS), so reading it here meant "we scanned this port"
+    # and fired on every plaintext finding the scanner could produce. The
+    # real TLS-designation signal is the well-known-port default unioned
+    # with the operator's explicit override (D-08).
+    tls_ports = set(WELL_KNOWN_TLS_PORTS) | set(
+        getattr(cfg.scan, "tls_designated_ports", []) or []
+    )
 
     # Map endpoint protocol/detail for quick context
     ep_map: Dict[Tuple[str, int], Any] = {}
