@@ -286,6 +286,63 @@ Compose profiles, with an oracle of expected findings per profile.
   (new debt) — and, deliberately, also if a count goes **down** without the baseline being
   regenerated (`npm run a11y:baseline`), so a real fix always tightens the ledger instead of
   leaving a now-stale, looser number in place.
+- **Regenerating a11y baselines — the sanctioned procedure (Phase 185, D-03).** Baselines
+  **must** be generated on a Linux CI runner, not a contributor's local machine. Font metrics,
+  overflow behavior, and other render-time properties differ enough between macOS and Linux that
+  a rule which never fires locally can fire on Linux, and vice versa — this is exactly what
+  happened when 33 baselines were batch-generated on macOS on 2026-08-27 and 31 of them were
+  never checked against the Linux runner that actually enforces the gate. To regenerate:
+  1. Dispatch the permanent `a11y-regenerate-baselines` job in
+     `.github/workflows/dashboard-quality.yml` (`workflow_dispatch`, runs on `ubuntu-latest`):
+     `gh workflow run dashboard-quality.yml --ref <branch>`. `workflow_dispatch` works from any
+     branch that contains the workflow file — you do not need to be on `main`.
+  2. Once the run completes, download its artifact:
+     `gh run download <run-id> --name a11y-baselines-<run-id>`. The artifact contains both the
+     regenerated `baseline-*.json` files and the regenerated `ACCEPTED-VIOLATIONS.md` — **both
+     must be committed together**, since `ACCEPTED-VIOLATIONS.md` is a rendering of the baseline
+     JSON and the two will silently disagree if only one is updated.
+  3. If you are onboarding a brand-new route, its `routes.json` entry and its baseline files
+     **must land in the same commit**. A `routes.json` entry with no matching baseline file is a
+     hard, by-design CI error (`missing baseline file`), not a soft warning — this is intentional,
+     so a route can never silently ship unswept.
+- **The sanctioned response to a gate failure (Phase 185, D-10).** When `Axe + Console Gate`
+  goes red on a PR: (1) dispatch `a11y-regenerate-baselines` per the procedure above; (2) download
+  the artifact; (3) review **every** changed `(route, rule)` count — an increase requires a
+  written per-entry triage naming the rule, the route, and why it is accepted (justified in the
+  ledger) or being fixed; a decrease may be committed freely; (4) commit the reviewed baselines
+  and ledger together. **Hand-patching a baseline count locally, without going through this
+  procedure, is NOT sanctioned.** This is not a stylistic preference — it is how Phase 177 fixed
+  three `data-at-rest` counts by hand after a first-ever remote CI run surfaced them, without
+  regenerating on Linux CI or auditing the other 31 baselines, and that gap went unnoticed for
+  9 days before a later phase (185) had to rediscover and close it. Hand-patching a count quiets
+  the gate without ever establishing whether the change was a genuine environment artifact or a
+  real regression slipping through — treat any future local count edit the same way: as a defect
+  to be replaced with the CI-regeneration procedure above, not a shortcut to repeat.
+- **CI pins Chrome; local runs deliberately do not (Phase 185, D-06/D-07/D-08/D-09).** All three
+  `browser-actions/setup-chrome` usages in `dashboard-quality.yml` (`a11y`,
+  `a11y-regenerate-baselines`, `e2e-smoke`) pin a concrete version
+  (`chrome-version: '152.0.7977.82'` as of this writing), guarded by
+  `src/dashboard/tests/a11y/pinned-deps.test.ts` so the three occurrences can never drift apart or
+  regress to a floating channel name (`stable`/`beta`/`dev`/`latest`). Local `a11y:check` runs
+  intentionally do **not** pin — `run-a11y.mjs` launches Puppeteer's `channel: 'chrome'`, whatever
+  is locally installed — so a local a11y result is **diagnostic-only** and never decides a
+  committed baseline; only the pinned, CI-run result does.
+  - **Why the exact pin needs no scheduled staleness check.** A `chrome-version: stable` pin
+    resolves against Google's rolling "current" distribution
+    (`dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`), which genuinely drops
+    old builds as new ones ship. The exact pin above instead resolves against the **Chrome for
+    Testing** archive (`storage.googleapis.com/chrome-for-testing-public/152.0.7977.82/...`),
+    which is a *versioned, retained* archive — old builds do not disappear. An exact CfT pin is
+    therefore **more durable** than `stable`, not less, and does not need a `last_verified`-style
+    staleness gate; one was explicitly considered for this pin and declined as unnecessary scope.
+  - **Recovery if the pinned build ever becomes unfetchable.** `pinned-deps.test.ts` can only
+    detect "never floats to `stable`" and "all three occurrences agree" — it cannot detect an
+    exact pin that CfT has stopped serving. If `setup-chrome` fails to acquire the pinned build in
+    CI: (1) dispatch the regeneration job with `chrome-version: stable` temporarily; (2) read the
+    resolved version from that run's "Record resolved Chrome version" step; (3) re-pin all three
+    occurrences in `dashboard-quality.yml` to the newly resolved version; (4) regenerate baselines
+    under the new pin per the D-03 procedure above; (5) triage any count changes per the D-10
+    increase-triage rule.
 
 ### 5.3.1 UAT corpus integrity gate
 
