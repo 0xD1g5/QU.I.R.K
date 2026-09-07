@@ -22,7 +22,7 @@ rather than inherited from its original report — two had drifted since they we
 
 ## Tooling Integrity (GSD state corruption)
 
-- [ ] **TOOL-01**: `gsd-sdk` / `gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`.
+- [x] **TOOL-01**: `gsd-sdk` / `gsd-tools` `state.*` verbs stop silently corrupting `STATE.md`.
   **REOPENED 2026-09-06 (Phase 185 planning) — see TOOL-05 below.** The sentence beginning "The
   plain-text branch below it is correctly anchored" is **FALSE as a safety claim** and is retained
   verbatim only as the record of what was believed. The plain branch *is* anchored; anchoring was
@@ -102,8 +102,29 @@ rather than inherited from its original report — two had drifted since they we
   **Re-demonstrated 2026-09-04 (182-08):** the live verb was re-run against this real,
   live `.planning/STATE.md` and the diff came back clean against both named hazard signatures.
   See `182-06-SUMMARY.md`, `182-07-SUMMARY.md`, and `182-08-SUMMARY.md`.
+  **Closed 2026-09-07 (Phase 186.1) — the SCOPING half.** The reopening above was correct that
+  bold-branch anchoring alone was never sufficient; the unscoped plain-field fallback (see TOOL-05)
+  was the site that proved it. Phase 186.1 extended the run-time source scan to a second install
+  and to bare `Field:` constructs and found **29 bare-field sites, not the 6 prior rounds
+  hypothesized** — a fifth demonstration of this section's own standing lesson that a hand-derived
+  enumeration is not a safeguard. 21 sites were scoped/patched across both installs (see TOOL-05).
+  Closure rests on 186.1-06's live six-run re-demonstration against the real, tracked
+  `.planning/STATE.md` (3 verbs x 2 entry points, pre-image + full-diff + restore protocol per
+  clause (e)) — **not** on the green pytest suite alone. TOOL-01 is now closed for **both** the
+  bold-field ANCHORING class (Phase 182) and the plain-field SCOPING class (Phase 186.1), in the
+  two installs that exist on this machine, for the write paths the tests actually exercise. See
+  `186.1-01` through `186.1-06` SUMMARY.md files.
+  **Not closed by this phase — a different, SEMANTIC defect class, filed separately:** live runs
+  in 186.1-06 found `phase.complete` (both entry points) flips `ROADMAP.md`/`REQUIREMENTS.md`
+  checkboxes and `STATE.md`'s `status` to complete without verifying the named phase's plans are
+  actually done, and `state.planned-phase` returns a misleading `updated: []` while silently
+  drifting frontmatter arithmetic. Neither is a corruption signature (a) or (b) — both are
+  well-formed, syntactically valid, WRONG values, which no anchoring or scoping fix would catch.
+  See `.planning/todos/pending/gsd-phase-complete-premature-completion.md` and the sibling todos
+  filed at 186.1-07 close. **`phase.complete` must not be used to close a phase on this machine
+  until that finding is fixed.**
 
-- [ ] **TOOL-05** (new 2026-09-06, discovered during Phase 185 planning by a live
+- [x] **TOOL-05** (new 2026-09-06, discovered during Phase 185 planning by a live
   `gsd-sdk query state.planned-phase` run): `stateReplaceField()`'s **plain-field fallback** at
   `~/.npm/_npx/4db0de1f85c3165e/node_modules/get-shit-done-cc/sdk/dist/query/state-document.js:26`
   is **unscoped**, and deterministically destroys `STATE.md` body prose. This is a distinct defect
@@ -133,6 +154,21 @@ rather than inherited from its original report — two had drifted since they we
   durability layer is seeded; and the fix is proven at the command boundary and then
   re-demonstrated live against the real `.planning/STATE.md` per CLAUDE.md §(e) — a green
   function-level test is explicitly not sufficient.
+  **Closed 2026-09-07 (Phase 186.1).** The fallback is now scoped (Wave 2/3: `186.1-03`
+  fixed the npx install, `186.1-04` fixed the `~/.claude` install) rather than failed-closed —
+  the searchable region is the leading contiguous field-shaped run after a known heading, not the
+  whole heading-to-next-heading span, because that wider span still contains this file's own
+  narrative decoys. The run-time source scan (`186.1-02`) was extended on two axes at once —
+  install set AND construct shape (bold + bare) — and found 29 bare-field sites, not the 6
+  originally hypothesized; neither axis alone would have found all of them. The durability layer
+  was re-seeded for all four patched files in both homes (`186.1-05`), and 186.1-06's live
+  six-run re-demonstration against the real, tracked `.planning/STATE.md` came back clean against
+  both named corruption signatures. Final ledger: 21 `scoped`, 8 `accepted-read-only`,
+  1 `anchored`, 0 `pending-scoping`. This closure is scoped to the two installs that exist on
+  this machine, for the write paths the tests actually exercise — an `npx` cache-directory
+  version bump silently creates a new, unpatched `_npx/<hash>/` install with no signal.
+  See `186.1-01` through `186.1-06` SUMMARY.md files; upstream comment on
+  https://github.com/open-gsd/gsd-core/issues/4243.
 
 ## Enumeration Drift (the shared defect class)
 
@@ -365,11 +401,11 @@ rather than inherited from its original report — two had drifted since they we
 
 | Requirement | Phase | Status |
 |---|---|---|
-| TOOL-01 | 182-01, 182-03, 182-06 | **REOPENED 2026-09-06** — bold-branch fixes hold, but the plain-field fallback is unscoped; see TOOL-05 |
+| TOOL-01 | 182-01, 182-03, 182-06, 186.1-01..06 | Complete — two defect classes closed: bold-field **anchoring** (Phase 182) and plain-field **scoping** (Phase 186.1); see TOOL-05 |
 | TOOL-02 | 182-02 | Complete |
 | TOOL-03 | 182-03, 182-04 | Complete |
 | TOOL-04 | 182-06, 182-07 | Complete (closed 2026-09-04, 182-08 re-demonstration clean) |
-| TOOL-05 | Unassigned | Open (found 2026-09-06 during Phase 185 planning) |
+| TOOL-05 | 186.1-01, 186.1-02, 186.1-03, 186.1-04, 186.1-05, 186.1-06 | Complete (closed 2026-09-07; 186.1-06 live six-run re-demonstration against real `.planning/STATE.md` came back clean) |
 | DRIFT-01 | 183-01, 183-02, 183-03, 183-04, 183-05, 183-06 | Complete |
 | DRIFT-02 | 184-01, 184-02, 184-03, 184-04, 184-05, 184-06, 184-07 | Complete |
 | SCORE-01 | 184.1-01, 184.1-02, 184.1-03, 184.1-04, 184.1-05, 184.1-06, 184.1-07 | Complete |
