@@ -2046,8 +2046,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-07T02:37:42.000Z
-Stopped at: Phase 186 context gathered
+Last session: 2026-09-07T14:21:23.000Z
+Stopped at: Phase 186.1 context gathered
+Resume file: .planning/phases/186.1-close-gap-tool-01-tool-05-scope-the-plain-field-fallback/186.1-CONTEXT.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
