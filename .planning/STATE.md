@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
 status: executing
-stopped_at: Phase 185 planned (7 plans)
-last_updated: 2026-09-06T22:55:00.000Z
+stopped_at: Phase 185 complete (7 of 7 plans, verification passed 22/22)
+last_updated: 2026-09-07T01:20:00.000Z
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 63
-  completed_plans: 56
-  percent: 78
+  completed_plans: 63
+  percent: 100
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 185 — a11y baseline environment
+**Current focus:** Phase 185 complete — next: Phase 186 (Carried Defect Drain)
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`

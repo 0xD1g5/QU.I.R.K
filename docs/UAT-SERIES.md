@@ -23705,7 +23705,7 @@ this gap's own disposition.
 
 ---
 
-### UAT-185-06: Tooltip legibility screenshot-level human confirmation — GAP, no substitute coverage
+### UAT-185-06: Tooltip legibility screenshot-level human confirmation
 
 **ID:** UAT-185-06
 **Title:** A human hovers the Severity Breakdown bar on `/executive` and visually confirms
@@ -23716,19 +23716,26 @@ this gap's own disposition.
 this phase fixed was originally found by eye, and the static contrast guard (UAT-185-01) proves
 the numeric ratio, not the rendered pixels a person actually sees.
 
-**Steps:** No automated node performs an actual browser hover-and-screenshot of this tooltip.
+**Steps:**
+1. Serve the dashboard against a real backend (`quirk serve`) and open `/executive`.
+2. Hover a bar in the Severity Breakdown chart so the Recharts tooltip appears.
+3. Confirm the series line (`count : N`) is legible against the tooltip background —
+   this is the text that previously inherited Recharts' dark default and rendered dark-on-dark.
+4. Switch theme (light <-> dark) and hover again — the pre-fix tooltip was hardcoded to a dark
+   panel and so was also wrong in light theme.
 
-**Pass Criteria:** N/A — disposed `GAP`, not scored PASS/FAIL by an automated run.
+**Pass Criteria:** The operator confirms `count : N` is legible in BOTH themes. Operator visual
+confirmation is the deciding evidence; the static guard is corroborating only.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
-**Date:** 2026-09-06  **Tester:** N/A — no automated or human screenshot-level check performed
-this close-out
-**Notes:** **GAP — no substitute coverage.** `executive-tooltip-contrast-guard.test.ts` (see
-UAT-185-01) is real, passing, permanent coverage of the *numeric* WCAG contrast ratio, but it
-computes contrast from source-text token declarations — it never renders the tooltip in a browser
-and is therefore not a citable substitute for the screenshot-level human check
-`185-VALIDATION.md` names. This close-out session had no live interactive browser session
-available to perform that specific check. Open item for a future session with that access.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-06  **Tester:** Human (operator, live hover verification)
+**Notes:** Operator performed the hover on a live `quirk serve` dashboard and reported PASS for
+both themes. This closes what was initially recorded as a GAP during the 185-07 close-out (no
+interactive browser session was available at that moment). Substantive coverage relationship,
+stated precisely: `executive-tooltip-contrast-guard.test.ts` (UAT-185-01) is real, permanent,
+passing coverage of the *numeric* WCAG ratio computed from source-text token declarations — it
+never renders the tooltip in a browser, so it was never a citable substitute for this check. Both
+now exist: the guard prevents numeric regression, this case confirms the rendered result once.
 
 ---
 
