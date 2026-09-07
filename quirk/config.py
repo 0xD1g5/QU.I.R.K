@@ -109,6 +109,15 @@ class ScanCfg:
     # (compliance/__init__.py, bacnet_vendors.py, hardware_eol.py).
     hardware_drift_event_retention_days: int = 365
 
+    # Phase 186 / TRIAGE-176-02 / D-08: operator-declared set of ports that
+    # should be treated as TLS-designated when plaintext HTTP is found on
+    # them, unioned with `quirk.util.ports.WELL_KNOWN_TLS_PORTS`. This is
+    # STRUCTURALLY DISTINCT from `ports_tls`, which is the list of ports the
+    # scanner probes, not a designation signal — that confusability is the
+    # root cause TRIAGE-176-02 fixes. Defaults to empty so no existing config
+    # file's behaviour changes.
+    tls_designated_ports: List[int] = field(default_factory=list)
+
     def __init__(
         self,
         concurrency: int,
@@ -137,6 +146,8 @@ class ScanCfg:
         hardware_history_retention_days: int = 180,
         # Phase 157 HWLC-16 / D-02, D-03: hardware_drift_events retention, days
         hardware_drift_event_retention_days: int = 365,
+        # Phase 186 / TRIAGE-176-02 / D-08: operator TLS-designation override
+        tls_designated_ports: Optional[List[int]] = None,
     ) -> None:
         self.concurrency = concurrency
         self.ports_tls = ports_tls
@@ -152,6 +163,7 @@ class ScanCfg:
         self.nmap_port_scope = nmap_port_scope
         self.hardware_history_retention_days = hardware_history_retention_days
         self.hardware_drift_event_retention_days = hardware_drift_event_retention_days
+        self.tls_designated_ports = list(tls_designated_ports) if tls_designated_ports else []
         # Route legacy flat kwargs into the nested TimeoutsCfg
         legacy_values = {
             "timeout_seconds": timeout_seconds,
