@@ -14,9 +14,8 @@ suite. Mirrors the conventions of the sibling
 import re
 from pathlib import Path
 
-import pytest
-
-yaml = pytest.importorskip("yaml", reason="PyYAML required to parse docker-compose.yml")
+import pytest  # noqa: F401  (kept: pytest.fail is used in the gate bodies below)
+import yaml
 
 COMPOSE_FILE = (
     Path(__file__).resolve().parent.parent
