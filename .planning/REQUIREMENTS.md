@@ -319,14 +319,22 @@ rather than inherited from its original report — two had drifted since they we
   `quirk/reports/html_renderer.py`'s `_score_band()` (the same thresholds, restated); the
   consumer table is `_BAND_CRITICAL_THRESHOLD` at `quirk/reports/content_model.py:469`.
 
-- [ ] **DRIFT-03**: a11y baselines are generated in the environment that enforces them. **33
-  baselines were generated on macOS on 2026-08-27 in a single batch; the gate runs on Linux CI;
-  31 have never been checked against the runner.** Regenerate via `--update-baselines` on a Linux
-  runner rather than hand-patching counts. Folds in the route-coverage gap: `/hardware` and
-  `/compare` are uncovered, and the same two routes are the 2 pending visual scenarios in
-  `158-HUMAN-UAT.md` — triage together.
-  *Evidence: `.planning/todos/pending/a11y-baseline-environment-mismatch.md`,
-  `a11y-route-coverage-gap.md`.*
+- [x] **DRIFT-03**: a11y baselines are generated in the environment that enforces them. **CLOSED
+  2026-09-06 (Phase 185).** A permanent `a11y-regenerate-baselines` `workflow_dispatch` job now
+  regenerates baselines on `ubuntu-latest`. Measured finding: the Linux-regenerated baselines for
+  all 11 pre-existing routes are content-identical to the committed macOS-generated ones (zero
+  count changes across all 33) — the macOS/Linux mismatch produced no enforced drift for those
+  routes after all; Phase 177's hand-patched `data-at-rest` counts were already correct. The real
+  gap closed was route coverage: `/hardware` and `/compare` are now onboarded with justified
+  Linux-generated baselines (39 total), `Axe + Console Gate` green on `ubuntu-latest` (run
+  `34068026959`), and the 2 pending `158-HUMAN-UAT.md` visual scenarios (same two routes) are
+  dispositioned by the operator against a real backend (UAT-158-01 PASS, UAT-158-02 PASS scoped
+  to `/compare`, report leg recorded as an open gap). D-03/D-10 regeneration and
+  failure-response procedures documented in `docs/operators-guide.md` §5.3.
+  *Evidence: `.planning/phases/185-a11y-baseline-environment/185-05-SUMMARY.md`,
+  `185-06-SUMMARY.md`, `185-07-SUMMARY.md`;
+  `.planning/todos/completed/a11y-baseline-environment-mismatch.md`,
+  `a11y-route-coverage-gap.md`; `docs/UAT-SERIES.md` Series 185.*
 
 ## Carried Defects
 
@@ -369,6 +377,6 @@ rather than inherited from its original report — two had drifted since they we
 | SCORE-03 | 184.3-01, 184.3-02, 184.3-03, 184.3-04, 184.3-05, 184.3-06, 184.3-07, 184.3-08, 184.3-09, 184.3-10, 184.3-11 | Complete (closed 2026-09-05; 1 manual leg DEFERRED with cited substitute coverage) |
 | SCORE-04 | 184.4-02, 184.4-04, 184.4-06, 184.4-07, 184.4-08 | Complete |
 | SCORE-05 | 184.4-03, 184.4-05, 184.4-09 | Complete |
-| DRIFT-03 | TBD | Pending |
+| DRIFT-03 | 185-01, 185-02, 185-03, 185-04, 185-05, 185-06, 185-07 | Complete (hand-verified 2026-09-06) |
 | TRIAGE-01 | 186-01, 186-05, 186-06 | Complete |
 | TRIAGE-02 | 186-02, 186-03, 186-04, 186-05, 186-06 | Complete |
