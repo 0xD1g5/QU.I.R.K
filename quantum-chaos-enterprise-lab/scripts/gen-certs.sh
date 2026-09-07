@@ -35,6 +35,7 @@ EOF
 echo "==> Generating modern/legacy server certs"
 gen_server modern "modern.chaos.local" 365
 gen_server legacy "legacy.chaos.local" 365
+gen_server keycloak "keycloak.chaos.local" 365
 
 echo "==> Generating EXPIRED cert (negative days not supported everywhere; use very short + backdate)"
 # Create cert valid for 1 day, then we will *force* nginx to still serve it; for true expired,
