@@ -1,6 +1,44 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-05)
+## Current State (updated 2026-09-07)
+
+**v5.19 Drain & Tooling Integrity — development complete 2026-09-07.** Phases 182–186.1, 77 plans,
+audit `passed` at 15/15 requirements, 10/10 phases Nyquist-compliant.
+→ `.planning/milestones/v5.19-ROADMAP.md`
+
+The milestone's spine was **tooling integrity**: the GSD toolchain that writes this project's own
+planning files had been silently corrupting `.planning/STATE.md` — nine documented occurrences
+across Phases 179–181. Phase 182 anchored the bold-field regex class; Phase 186.1 then scoped the
+plain-field fallback at **21 sites across 4 files in 2 separate installs**, after a run-time source
+scan found **29 bare-field sites where planning had predicted 6**. The closure rests on a live
+six-run re-demonstration against the real `STATE.md`, restored byte-identical — deliberately not on
+a green unit test, because a green function-level test promoted into a command-level claim is how
+this exact work was falsified once before.
+
+Alongside it: test-suite honesty gates made drift-proof (DRIFT-01/02 — glob-derived file sets and a
+`(file, qualname)`-keyed skip registry), readiness-score correctness across coverage metric,
+default scanning posture, timestamps, and a single-producer severity-band contract
+(SCORE-01…SCORE-05), a stabilised a11y baseline environment (DRIFT-03), and a carried-defect drain
+(TRIAGE-01/02).
+
+**What v5.19 did NOT close, stated plainly:**
+- A **second, semantic** toolchain defect class is open — verbs writing syntactically perfect but
+  *wrong* values. `phase.complete` was reproduced marking a phase complete at 5/7 plans with an
+  impossible `completed_plans: 142`. **It is unsafe to close a phase on this machine**; v5.19's own
+  close was hand-written under a pre-image + signature-diff protocol. Three todos filed.
+- TOOL-01/TOOL-05 are closed for the two installs **on this machine**, for the write paths the
+  tests exercise. An npx version bump lands a fresh content-addressed `_npx/<hash>/` with no
+  patches and **no signal**. CI provisions neither install, so those tests skip there — green CI is
+  not evidence.
+- Frontend/backend severity-band consistency remains open (`ScoreGauge.tsx` vs `severity_bands.py`,
+  backlog 999.92). SCORE-05 is satisfied *as scoped* to the backend.
+
+**Next milestone:** not yet opened. Run `/gsd-new-milestone`; fresh `REQUIREMENTS.md` is created as
+part of that flow (v5.19's is archived at `.planning/milestones/v5.19-REQUIREMENTS.md`).
+
+<details>
+<summary>Previous state — v5.18 Migration Execution (shipped 2026-09-03)</summary>
+
 
 **Shipped:** `v5.18.0` on PyPI — first published release since 5.12.0, carrying v5.16
 (Review Drain & Gate Integrity) and v5.17 (Defect Drain) content alongside v5.18's own.
@@ -89,6 +127,7 @@ hard blocker in the interim by Phase 98's guard). Tracked at
 ledger. A reconciliation phase plus a run-time derived gate is queued at
 `.planning/todos/pending/backlog-reconciliation-and-derived-gate.md`.
 
+</details>
 
 ## What This Is
 
@@ -686,7 +725,7 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 - **SaaS multi-tenancy stays PARKED** — unchanged from v5.4; gated on a business-model signal that does not yet exist.
 - **Cadence:** v5.4 broke the 2:1 capability/ops rhythm deliberately; v5.5 is the owed stabilization/hardening breather. Numbering continues at **Phase 113**. Source of truth for forward outlook: `.planning/HORIZON.md`.
 - **Live human-UAT keeps catching real bugs** that automated verification (which injected matching in-memory rows) missed — the entire 999.85–89 set came from the post-ship live distributed E2E. Treat live E2E as a first-class gate this milestone.
-## Current Milestone: v5.18 Migration Execution
+## Previous Milestone: v5.18 Migration Execution — SHIPPED 2026-09-03
 
 **Goal:** Close the loop. QUIRK detects, scores, and produces a prioritized remediation roadmap —
 then stops, and the client executes it elsewhere. v5.18 tracks remediation items to completion
@@ -715,7 +754,7 @@ amending it. Closure is machine-observed under a two-sided condition, never huma
 `not_observed` is an honest third state; burndown is relative to a named target date, because
 EO 14412 deadlines key establishment (2030-12-31) and signatures (2031-12-31) separately.
 
-## Current State
+## v5.19 Outcome Record — Phase 184.4 (superseded as 'Current State' at the 2026-09-07 archive)
 
 **v5.19 Phase 184.4 Rating Band Severity Floor — complete 2026-09-06 (SCORE-04, SCORE-05).** A scan
 scoring >= 55 with one open CRITICAL finding used to halt report generation entirely, emitting zero

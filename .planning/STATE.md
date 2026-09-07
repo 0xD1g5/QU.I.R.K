@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.19
 milestone_name: Drain & Tooling Integrity
-status: executing
-stopped_at: Phase 186.1 COMPLETE — 7/7 plans, verification passed 8/8 (2026-09-07)
-last_updated: 2026-09-07T17:15:00.000Z
+status: milestone_complete
+stopped_at: v5.19 ARCHIVED 2026-09-07 — 10 phases, 77 plans, audit passed 15/15. Next: /gsd-new-milestone
+last_updated: 2026-09-07T18:00:00.000Z
 progress:
   total_phases: 10
   completed_phases: 10
@@ -15,13 +15,34 @@ progress:
 
 # Project State
 
+## Deferred Items
+
+Items acknowledged and deferred at the v5.19 milestone close on 2026-09-07. All remain open and
+visible to `/gsd-progress` and `/gsd-audit-uat`.
+
+| Category | Item | Priority | Status |
+|----------|------|----------|--------|
+| todo | gsd-phase-complete-premature-completion | high | open — **operative: `phase.complete` unsafe to close a phase/milestone on this machine** |
+| todo | backlog-reconciliation-and-derived-gate | high | open — 57 BACK-* items invisible to every referenced planning doc |
+| todo | dashboard-cert-view-phantom-tls-rows | high | open |
+| todo | gsd-state-planned-phase-misleading-empty-updated | medium | open — returns `updated: []` while drifting frontmatter |
+| todo | gsd-state-bold-field-search-unscoped-latent | medium | open — dormant risk, deliberately unfixed with stated reason |
+| quick_task | 260611-g0b-merge-healthcare-vertical-branch-into-ma | — | **known false positive** — genuinely complete (PLAN + SUMMARY + merge commit exist); `audit-open` has misreported it as `status: missing` at every milestone close since v5.10. Do not re-investigate. |
+
+Also carried, not in `audit-open`'s scope:
+- Backlog **999.92** — frontend `ScoreGauge.tsx` band thresholds unconverged with
+  `severity_bands.py` (audit WARN-01). SCORE-05 satisfied *as scoped* to the backend.
+- Backlog **999.95** — readiness score awards a full 25/25 to domains with zero evidence.
+- 8 backlog items filed 2026-09-07 (999.95–999.102), none reflected in `HORIZON.md`.
+
+
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 186.1 — COMPLETE 2026-09-07, 7/7 plans, verification `passed` 8/8. TOOL-01/TOOL-05 closed for the **textual** defect class: the unscoped plain-field fallback is now region-scoped and fail-closed at **21 sites across 4 files in 2 installs** — npx `query/state-document.js` (2) + `query/state-mutation.js` (7), and `~/.claude` `bin/lib/state-document.generated.cjs` (2) + `bin/lib/state.cjs` (10). The extended run-time scan found **29 bare-field sites, not the 6 planned** (and 16 bold, not 13); ledger is 21 `scoped` / 8 `accepted-read-only` / 1 `anchored` / 0 `pending-scoping`. Proven by a live six-run re-demonstration (3 verbs x 2 entry points) against this real file, restored byte-identical — not by a green unit test (CLAUDE.md clause (e)). **Scope limit, stated honestly:** closed for the two installs on THIS machine, for the write paths the tests exercise; an npx version bump lands a fresh content-addressed `_npx/<hash>/` with no patches and no signal. **A SECOND, SEMANTIC defect class is now open** — verbs writing well-formed WRONG values, which no anchor catches: `phase.complete` marked phase 186.1 complete at 5/7 plans with an impossible `completed_plans: 142`; `state.planned-phase` returns `updated: []` while drifting frontmatter; npx-vs-`.cjs` divergence on identical argv. Three todos filed pending. **`phase.complete` is UNSAFE to close a phase on this machine** — this phase's own close was hand-written under the pre-image + signature-diff protocol. Next: /gsd-complete-milestone v5.19
+**Current focus:** None — **v5.19 Drain & Tooling Integrity ARCHIVED 2026-09-07** (10 phases, 77 plans, audit `passed` 15/15, 10/10 Nyquist-compliant). Archives at `.planning/milestones/v5.19-{ROADMAP,REQUIREMENTS}.md`; `.planning/REQUIREMENTS.md` removed — a fresh one is created by `/gsd-new-milestone`. The milestone's spine was tooling integrity: the GSD toolchain that writes this project's own planning files had corrupted `STATE.md` nine times across Phases 179-181. Closed for the TEXTUAL defect class at 21 sites / 4 files / 2 installs, proven by a live six-run re-demonstration against this very file. **Still open — a SECOND, SEMANTIC class:** verbs writing well-formed WRONG values, which no anchor catches. **`phase.complete` is UNSAFE to close a phase or milestone on this machine** — it marked phase 186.1 complete at 5/7 plans with an impossible `completed_plans: 142`. Both the phase close AND this milestone archive were hand-written under the pre-image + signature-diff protocol. Also caught at archive time: Phase 185's 7 plan checkboxes were still `[ ]` despite the phase being complete (same defect) — flipped by hand against disk evidence before archiving. Next: /gsd-new-milestone
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
