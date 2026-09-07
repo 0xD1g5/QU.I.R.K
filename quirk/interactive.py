@@ -15,11 +15,11 @@ from quirk.config import (
 )
 from quirk.assessment.operator_context import OperatorContext, attach_context
 from quirk.util.targets import parse_target_tokens, load_targets_file  # D-01
+from quirk.util.ports import WELL_KNOWN_TLS_PORTS  # Phase 186 / TRIAGE-176-02
 
 DEFAULT_TIMEZONE = "America/New_York"
 
-CONSULTING_TLS_PORTS = [
-    443, 8443, 9443, 10443, 4433, 5001,
+CONSULTING_TLS_PORTS = list(WELL_KNOWN_TLS_PORTS) + [
     636, 3269,
     993, 995, 465,
     6443, 2376,

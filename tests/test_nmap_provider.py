@@ -272,9 +272,10 @@ def test_liveness_port_spec_resolves_full_range_for_wide_scopes():
         _resolve_liveness_port_spec,
         default_nmap_ports_csv,
     )
+    from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 
     assert _resolve_liveness_port_spec([], None) == default_nmap_ports_csv(
-        (443, 8443, 9443, 10443, 5001)
+        WELL_KNOWN_TLS_PORTS
     )
     assert _resolve_liveness_port_spec([], "-p-") == "-"
     assert _resolve_liveness_port_spec([], "--top-ports 1000") == "-"

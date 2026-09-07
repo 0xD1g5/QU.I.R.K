@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Iterable, List, Optional
 
 from quirk.logging_util import Logger
+from quirk.util.ports import WELL_KNOWN_TLS_PORTS  # Phase 186 / TRIAGE-176-02
 from quirk.discovery.nmap_parser import (
     parse_nmap_xml,
     NmapOpenPort,
@@ -150,7 +151,7 @@ def _resolve_liveness_port_spec(
     if port_spec_override is None:
         if ports:
             return ",".join(str(p) for p in sorted(set(ports)))
-        return default_nmap_ports_csv((443, 8443, 9443, 10443, 5001))
+        return default_nmap_ports_csv(WELL_KNOWN_TLS_PORTS)
 
     if port_spec_override == "-p-":
         return "-"
@@ -327,13 +328,14 @@ def run_nmap_discovery(
     else:
         # D-03 / WR-04 — when caller passes no explicit port list, fall back to
         # the consulting-grade union (cfg.scan.ports_tls + fixed protocol set).
-        # The default here hardcodes the canonical TLS list (Phase 47 consulting
-        # set: 443, 8443, 9443, 10443, 5001) since this fallback runs without a
-        # cfg handle; callers with a cfg should pass `ports` explicitly.
+        # The default here uses the canonical TLS list
+        # (`quirk.util.ports.WELL_KNOWN_TLS_PORTS`) since this fallback runs
+        # without a cfg handle; callers with a cfg should pass `ports`
+        # explicitly.
         if ports:
             ports_csv = ",".join(str(p) for p in sorted(set(ports)))
         else:
-            ports_csv = default_nmap_ports_csv((443, 8443, 9443, 10443, 5001))
+            ports_csv = default_nmap_ports_csv(WELL_KNOWN_TLS_PORTS)
         args = [nmap_path] + _default_nmap_args(ports_csv)
 
     if extra_args:
