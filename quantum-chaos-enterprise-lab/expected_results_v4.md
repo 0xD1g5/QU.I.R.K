@@ -122,7 +122,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 
 | Port | Service | Expected protocol | Expected condition / tag | Notes |
 |---:|---|---|---|---|
-| 15449 | keycloak-tls | TLS | IDP_TLS | Keycloak behind TLS proxy |
+| 15449 | keycloak-tls | TLS | IDP_TLS | Keycloak behind TLS proxy; cert subject CN=keycloak.chaos.local |
 | 19000 | step-ca | TLS | PRIVATE_CA_TLS | CA health endpoint should be reachable |
 | 13890 | openldap | UNKNOWN (non-HTTP) | LDAP_TCP | LDAP service (plaintext unless LDAPS added) |
 | 18082 | phpldapadmin | HTTP | LDAP_ADMIN_HTTP | HTTP UI |
