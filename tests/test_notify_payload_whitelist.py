@@ -243,7 +243,14 @@ class TestBuildDriftSummary:
         assert ds.new_low == 1
 
     def test_score_band_critical(self):
-        """Score <= 30 → CRITICAL band."""
+        """Score below BAND_THRESHOLDS["FAIR"] (35) → POOR band → notify CRITICAL.
+
+        Phase 188 SCORE-07/RQ-2: this boundary now derives from
+        quirk.severity_bands.BAND_THRESHOLDS via band_for_score(), not an
+        independent literal. 20 is well inside POOR's range either before
+        or after the fold, so this assertion's outcome is unchanged — only
+        its source of truth moved.
+        """
         from quirk.notify.payload import build_drift_summary
 
         report = _make_report(current_score=20, score_delta=-5)
@@ -251,7 +258,12 @@ class TestBuildDriftSummary:
         assert ds.score_band == "CRITICAL"
 
     def test_score_band_high(self):
-        """Score 31-50 → HIGH band."""
+        """Score in [BAND_THRESHOLDS["FAIR"]=35, BAND_THRESHOLDS["MODERATE"]=55)
+        → FAIR band → notify HIGH.
+
+        45 is inside FAIR's range under both the pre-fold literal (31-50) and
+        the post-fold BAND_THRESHOLDS-derived range (35-54); outcome unchanged.
+        """
         from quirk.notify.payload import build_drift_summary
 
         report = _make_report(current_score=45, score_delta=-5)
@@ -259,7 +271,13 @@ class TestBuildDriftSummary:
         assert ds.score_band == "HIGH"
 
     def test_score_band_medium(self):
-        """Score 51-65 → MEDIUM band."""
+        """Score in [BAND_THRESHOLDS["MODERATE"]=55, BAND_THRESHOLDS["GOOD"]=70)
+        → MODERATE band → notify MEDIUM.
+
+        60 is inside MODERATE's range under both the pre-fold literal (51-65)
+        and the post-fold BAND_THRESHOLDS-derived range (55-69); outcome
+        unchanged.
+        """
         from quirk.notify.payload import build_drift_summary
 
         report = _make_report(current_score=60, score_delta=-5)
@@ -267,15 +285,49 @@ class TestBuildDriftSummary:
         assert ds.score_band == "MEDIUM"
 
     def test_score_band_low(self):
-        """Score 66-79 → LOW band."""
+        """Score in [BAND_THRESHOLDS["GOOD"]=70, BAND_THRESHOLDS["EXCELLENT"]=85)
+        → GOOD band → notify LOW.
+
+        72 is inside GOOD's range under both the pre-fold literal (66-79) and
+        the post-fold BAND_THRESHOLDS-derived range (70-84); outcome
+        unchanged.
+        """
         from quirk.notify.payload import build_drift_summary
 
         report = _make_report(current_score=72, score_delta=-5)
         ds = build_drift_summary(report, scan_id="test")
         assert ds.score_band == "LOW"
 
+    def test_score_band_low_at_excellent_boundary_minus_one(self):
+        """Score = BAND_THRESHOLDS["EXCELLENT"] - 1 = 84 → GOOD band → notify LOW
+        (Phase 188 RQ-2 fold: pins the moved boundary exactly where it moved).
+
+        Pre-fold, payload.py's own literal chain treated >= 80 as GOOD, so 84
+        used to map to GOOD/notify-GOOD. Post-fold, GOOD's band-boundary case
+        is quirk.severity_bands.BAND_THRESHOLDS["EXCELLENT"] (85) — 84 is one
+        point below it, still inside the GOOD band, so it now maps to
+        notify-LOW. This is the intended consequence of folding a drifted
+        producer (three separate 80-ish cutoffs collapsing into one 85 cutoff),
+        not a regression.
+        """
+        from quirk.notify.payload import build_drift_summary
+
+        report = _make_report(current_score=84, score_delta=1)
+        ds = build_drift_summary(report, scan_id="test")
+        assert ds.score_band == "LOW"
+
     def test_score_band_good(self):
-        """Score >= 80 → GOOD band."""
+        """Score >= BAND_THRESHOLDS["EXCELLENT"] (85) → EXCELLENT band → notify GOOD.
+
+        Phase 188 RQ-2 fold (CHANGED boundary): pre-fold, payload.py's own
+        independent literal chain treated >= 80 as GOOD. Post-fold, GOOD is
+        reached only at quirk.severity_bands.BAND_THRESHOLDS["EXCELLENT"] (85).
+        85 itself was already >= 80 pre-fold too, so this specific pinned
+        value's outcome (GOOD) is unchanged, but the *boundary* it sits on
+        moved from 80 to 85 — see test_score_band_low_at_excellent_boundary_minus_one
+        for the case that pins where the boundary actually shifted (84 used to
+        be GOOD, now is LOW).
+        """
         from quirk.notify.payload import build_drift_summary
 
         report = _make_report(current_score=85, score_delta=2)

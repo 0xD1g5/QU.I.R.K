@@ -19,9 +19,10 @@ downstream integration phases MUST consume:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from quirk.intelligence.trends import TrendReport
+from quirk.severity_bands import band_for_score
 
 
 # ---------------------------------------------------------------------------
@@ -57,23 +58,40 @@ class DriftSummary:
 # ---------------------------------------------------------------------------
 
 
-def _score_to_band(score: Optional[int]) -> str:
-    """Map a readiness score (0–100) to a severity band string.
+# Phase 188 SCORE-07 / RQ-2 — vocabulary map from quirk.severity_bands'
+# single-producer BAND_ORDER band names to this module's external notify
+# severity vocabulary. This is a presentation-layer rename, not a threshold:
+# the numeric boundaries below now come exclusively from
+# quirk.severity_bands.BAND_THRESHOLDS via band_for_score(). Do not add a
+# numeric literal here — that would recreate the third independently-drifted
+# producer this fold closes (see CLAUDE.md's "requirement closed for one
+# surface only" precedent, memory/BACK-33).
+_BAND_TO_NOTIFY_SEVERITY: Dict[str, str] = {
+    "EXCELLENT": "GOOD",
+    "GOOD": "LOW",
+    "MODERATE": "MEDIUM",
+    "FAIR": "HIGH",
+    "POOR": "CRITICAL",
+}
 
-    Score bands mirror the readiness tiers used in the CLI/HTML/PDF reports.
-    None (first scan, no previous data) is treated as CRITICAL (worst-case).
+
+def _score_to_band(score: Optional[int]) -> str:
+    """Map a readiness score (0-100) to a severity band string.
+
+    Boundaries derive from quirk.severity_bands.BAND_THRESHOLDS via
+    band_for_score() — this module is no longer an independent producer of
+    band thresholds (Phase 188 SCORE-07 / RQ-2 fold). Only the external
+    notify vocabulary (CRITICAL/HIGH/MEDIUM/LOW/GOOD) is preserved here,
+    via _BAND_TO_NOTIFY_SEVERITY, since renaming it would break existing
+    notify consumers and is out of scope for this fold.
+
+    None (first scan, no previous data) is treated as CRITICAL (worst-case,
+    unchanged behavior).
     """
     if score is None:
         return "CRITICAL"
-    if score <= 30:
-        return "CRITICAL"
-    if score <= 50:
-        return "HIGH"
-    if score <= 65:
-        return "MEDIUM"
-    if score <= 79:
-        return "LOW"
-    return "GOOD"
+    band = band_for_score(score)
+    return _BAND_TO_NOTIFY_SEVERITY[band]
 
 
 # ---------------------------------------------------------------------------
