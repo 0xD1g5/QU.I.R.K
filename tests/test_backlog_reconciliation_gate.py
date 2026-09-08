@@ -205,20 +205,26 @@ def _enumerate_back_ids(roadmap_paths: list[Path]) -> dict:
                 continue
             tm = TABLE_ROW_RE.match(line)
             if tm:
-                back_id, title = tm.group(1), tm.group(2).strip()
+                matches = [(tm.group(1), tm.group(2).strip())]
             else:
-                bm = BACK_ID_RE.search(line)
-                if not bm or bm.group(0) in table_row_ids:
-                    continue
-                back_id, title = bm.group(0), current_heading
-            key = f"{back_id}::{title}"
-            entry = result.setdefault(
-                key,
-                {"id": back_id, "title": title, "era": stem, "self_closed": False, "sources": set()},
-            )
-            entry["sources"].add(path)
-            if CHECKED_BOX_RE.match(line) and _boundary_search(back_id, line):
-                entry["self_closed"] = True
+                # WR-02: iterate ALL bare mentions on the line — a prose line
+                # like "BACK-89 shipped, but BACK-99 remains open" must
+                # enumerate BOTH IDs, never just the first. (`\d+` is greedy,
+                # so finditer can never yield BACK-1 inside BACK-10.)
+                matches = [
+                    (bm.group(0), current_heading)
+                    for bm in BACK_ID_RE.finditer(line)
+                    if bm.group(0) not in table_row_ids
+                ]
+            for back_id, title in matches:
+                key = f"{back_id}::{title}"
+                entry = result.setdefault(
+                    key,
+                    {"id": back_id, "title": title, "era": stem, "self_closed": False, "sources": set()},
+                )
+                entry["sources"].add(path)
+                if CHECKED_BOX_RE.match(line) and _boundary_search(back_id, line):
+                    entry["self_closed"] = True
     return result
 
 
@@ -413,3 +419,22 @@ def test_full_corpus_local_only_leg():
             ".planning/HORIZON.md's Open-Item Ledger for each ID above. Do not narrow "
             "enumeration or hand-exempt IDs to make this pass."
         )
+
+
+# ---------------------------------------------------------------------------
+# Parser regression tests (Phase 189 review fixes).
+# ---------------------------------------------------------------------------
+
+
+def test_enumerate_captures_every_id_on_a_multi_id_line(tmp_path):
+    """WR-02 regression: two bare IDs on one prose line must BOTH enumerate —
+    the pre-fix `.search()` took only the first, a silent-escape vector."""
+    doc = tmp_path / "vX-ROADMAP.md"
+    doc.write_text(
+        "## Some Heading\n"
+        "BACK-9001 shipped, but BACK-9002 remains open\n",
+        encoding="utf-8",
+    )
+    entries = _enumerate_back_ids([doc])
+    ids = {e["id"] for e in entries.values()}
+    assert ids == {"BACK-9001", "BACK-9002"}
