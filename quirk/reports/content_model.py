@@ -492,6 +492,70 @@ _NARRATIVE_LEAD_FALLBACK = (
     "No findings were detected. Verify scan coverage before distributing this report."
 )
 
+# Phase 188 SCORE-06 / plan 188-03 — composed ONCE, rendered verbatim on every
+# headline-bearing report surface (CLI markdown, HTML, DOCX/PDF, writer.py compat
+# markdown) when domains_assessed == 0. Never re-worded per surface — same
+# honest-absence idiom as writer.py's closure-refusal statements. Never emit a
+# fabricated "0 / 100" in its place. Lives HERE (not quirk.intelligence.scoring)
+# because html_renderer.py/docx_renderer.py/technical.py are firewalled from
+# ever importing that module (tests/test_cve_score_guard.py's ADVISORY-01 /
+# T-156-04 / T-157-05 / T-160-04 / T-161-22 gates) — content_model.py is the
+# seam every one of those renderers already imports from.
+NOT_COMPUTED_STATEMENT = (
+    "Readiness score not computed — no domain had assessable evidence."
+)
+
+# Phase 188 SCORE-06 / plan 188-03: the historical fixed 6-domain divisor,
+# preserved ONLY as a render-time fallback for a pre-188 score_raw dict that
+# has a computed score but no `score_divisor` key (a caller that predates
+# SCORE-06 entirely, e.g. an external caller or an old test fixture). Task 1's
+# own acceptance criterion locks `ExecContent.score_divisor` staying `None` for
+# such a dict — this constant is deliberately NOT written back into the model;
+# `effective_score_divisor()` below is the only place it is used, at render
+# time, so every renderer keeps rendering the pre-188 rollup line it always
+# rendered rather than silently dropping it.
+_LEGACY_FULL_COVERAGE_DIVISOR: float = 1.5
+
+
+def effective_score_divisor(
+    score_total: Optional[int], score_divisor: Optional[float]
+) -> Optional[float]:
+    """Render-time-only divisor resolution — never stored back into ExecContent.
+
+    Returns `score_divisor` unchanged when present. Returns `None` when
+    `score_total` is `None` (not-computed — no meaningful divisor exists).
+    Otherwise (a computed score with no `score_divisor`, i.e. a pre-188 caller)
+    falls back to `_LEGACY_FULL_COVERAGE_DIVISOR` so existing rollup arithmetic
+    keeps rendering unchanged for callers that never adopted SCORE-06.
+    """
+    if score_total is None:
+        return None
+    if score_divisor is not None:
+        return score_divisor
+    return _LEGACY_FULL_COVERAGE_DIVISOR
+
+
+# Phase 188 SCORE-06 / plan 188-03: legacy full-coverage domain count, paired
+# with _LEGACY_FULL_COVERAGE_DIVISOR above (1.5 == 6 * 25 / 100).
+_LEGACY_FULL_COVERAGE_DOMAINS: int = 6
+
+
+def effective_domain_counts(
+    score_total: Optional[int], domains_assessed: int, domains_total: int
+) -> tuple[int, int]:
+    """Render-time-only domain-count resolution — never stored back into ExecContent.
+
+    Mirrors `effective_score_divisor()`'s fallback: a computed score with
+    `domains_total == 0` (a pre-188 score_raw dict, which defaults both count
+    fields to 0) is assumed to have assessed all six legacy pillars, so the
+    coverage prose keeps reading correctly for callers that never adopted
+    SCORE-06. A not-computed score or a real SCORE-06 count (domains_total > 0)
+    passes through unchanged.
+    """
+    if score_total is None or domains_total:
+        return domains_assessed, domains_total
+    return _LEGACY_FULL_COVERAGE_DOMAINS, _LEGACY_FULL_COVERAGE_DOMAINS
+
 # ---------------------------------------------------------------------------
 # D-06: Congruence guard (TRANS-03)
 # ---------------------------------------------------------------------------
@@ -817,6 +881,9 @@ __all__ = [
     # Phase 99 CTX-01/CTX-02: per-finding context catalog + fallback
     "REMEDIATION_CATALOG",
     "FALLBACK_QUANTUM_RISK",
+    "NOT_COMPUTED_STATEMENT",
+    "effective_score_divisor",
+    "effective_domain_counts",
     # Error
     "ReportCongruenceError",
     # Functions

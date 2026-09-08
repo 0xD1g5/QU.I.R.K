@@ -12,6 +12,13 @@ from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reas
 SCORING_VERSION = "2.0"
 SCORING_VERSION_NOTE = "scoring v2 — not comparable with pre-5.20 scores"
 
+# Phase 188 SCORE-06 / plan 188-03: the once-composed not-computed statement
+# lives in quirk.reports.content_model, NOT here — html_renderer.py,
+# docx_renderer.py, and technical.py are firewalled from ever importing this
+# module (tests/test_cve_score_guard.py's ADVISORY-01 / T-156-04 / T-157-05 /
+# T-160-04 / T-161-22 gates), so a constant those renderers must read cannot
+# live in quirk.intelligence.scoring. See content_model.NOT_COMPUTED_STATEMENT.
+
 # Phase 188 SCORE-06 RQ-1 — the email/broker data-in-motion protocol literals
 # that quirk/intelligence/evidence.py's _PROTOCOL_KEYS was widened to count
 # (same phase). This tuple is asserted to be a subset of evidence._PROTOCOL_KEYS

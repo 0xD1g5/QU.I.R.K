@@ -321,9 +321,16 @@ def test_rollup_formula_in_html(tmp_path):
         "HTML report must contain 'How this score was computed' heading in rollup-formula block. "
         "TRANS-02 / UI-SPEC Copywriting Contract exact string."
     )
-    assert "Six pillar subscores" in content, (
-        "HTML report must contain 'Six pillar subscores' formula prose. "
-        "TRANS-02 / UI-SPEC Copywriting Contract exact string."
+    # Phase 188 SCORE-06 / 188-03: the static "Six pillar subscores... divided by
+    # 1.5" prose was replaced with an interpolated assessed-count + divisor
+    # sentence (it was false for any partial-coverage scan). _SCORE_RAW_FAIR is
+    # a pre-188 fixture (no domains_assessed/domains_total keys); the renderer's
+    # effective_domain_counts() legacy fallback assumes full six-domain coverage
+    # for it, so the interpolated sentence reads "6 of 6 assessed pillar
+    # subscores".
+    assert "6 of 6 assessed pillar subscores" in content, (
+        "HTML report must contain the interpolated coverage/divisor formula prose. "
+        "TRANS-02 / Phase 188 SCORE-06."
     )
 
     # Rollup formula must appear after Score Decomposition and before Findings Breakdown

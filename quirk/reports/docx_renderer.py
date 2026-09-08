@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: staleness caveat metadata
+from quirk.reports.content_model import NOT_COMPUTED_STATEMENT, effective_score_divisor  # Phase 188 SCORE-06 / 188-03
 
 logger = logging.getLogger(__name__)
 
@@ -600,11 +601,30 @@ def render_docx_report(
     score_band = getattr(exec_content, "score_band", None)
     if score_band:
         doc.add_paragraph(f"Rating: {score_band}", style="Normal")
-    # Rollup formula sentence
-    doc.add_paragraph(
-        f"{raw_sum} ÷ 1.5 = {score_total} / 100",
-        style="Normal",
+    # Phase 188 SCORE-06 / 188-03: coverage disclosure paragraph, sourced from the
+    # shared model verbatim (never re-derived). getattr keeps the exec_content=None
+    # legacy path alive (score 590's adjacent score_band paragraph uses the same
+    # idiom).
+    coverage_disclosure = getattr(exec_content, "coverage_disclosure", "") if exec_content else ""
+    if coverage_disclosure:
+        doc.add_paragraph(coverage_disclosure, style="Normal")
+    # Rollup formula sentence — dynamic divisor (never the retired fixed rollup literal). Phase 188
+    # SCORE-06 / 188-03: a not-computed score (score_total is None) or an
+    # unavailable divisor has no meaningful rollup arithmetic — render the
+    # once-composed not-computed statement instead of fabricating "0 / 100".
+    score_divisor = effective_score_divisor(
+        score_total, getattr(exec_content, "score_divisor", None) if exec_content else None
     )
+    if score_divisor:
+        doc.add_paragraph(
+            f"{raw_sum} ÷ {score_divisor:g} = {score_total} / 100",
+            style="Normal",
+        )
+    elif score_total is None:
+        doc.add_paragraph(NOT_COMPUTED_STATEMENT, style="Normal")
+    scoring_version = getattr(exec_content, "scoring_version", None) if exec_content else None
+    if scoring_version:
+        doc.add_paragraph(f"Scoring version: {scoring_version}", style="Normal")
     # D-09/D-10 (Phase 184.4): cap-reason annotation beside the rollup, matching
     # the CLI/HTML surfaces (quirk/reports/executive.py, report.html.j2). Renders
     # nothing when the band was not capped.

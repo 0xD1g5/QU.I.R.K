@@ -402,11 +402,29 @@
     {% endif %}
 
     <h2>Quantum Readiness Score</h2>
+    {# Phase 188 SCORE-06 / 188-03: coverage_disclosure and not_computed_statement are
+       both composed ONCE (quirk/intelligence/scoring.py) and rendered verbatim here —
+       static/integer content, no sanitize needed (same no-sanitize precedent as
+       rating_cap_reason above). A not-computed score (total_score is None) never
+       renders a fabricated "None / 100" or "0 / 100". #}
+    {% if total_score is none %}
+    <div class="score-card">
+      <div class="score-band">{{ coverage_disclosure }}</div>
+      <div class="score-label">{{ not_computed_statement }}</div>
+    </div>
+    {% else %}
     <div class="score-card">
       <div class="score-value">{{ total_score }}</div>
       <div class="score-band">{{ score_band }}</div>
       <div class="score-label">/ 100 &nbsp;|&nbsp; Confidence: {{ confidence }}/100</div>
     </div>
+    {% if coverage_disclosure %}
+    <div class="score-coverage-disclosure">{{ coverage_disclosure }}</div>
+    {% endif %}
+    {% endif %}
+    {% if scoring_version %}
+    <div class="scoring-version">Scoring version: {{ scoring_version }}</div>
+    {% endif %}
 
     {# Phase 184.4 D-09/D-10: cap-reason annotation on the score headline, not the
        drivers/impacts list (D-09 rejects framing the cap as a scoring driver).
@@ -432,17 +450,30 @@
         <tr><td>Data in Motion</td><td>{{ subscores.get('data_in_motion', '—') }}</td><td>/25</td></tr>
       </tbody>
     </table>
+    {% if total_score is not none and score_divisor %}
     <p><strong>Rollup:</strong>
       {# WR-03 / IN-01: use the shared pre-computed numerator so HTML and CLI agree (and a
-         future 7th subscore can't silently diverge the two surfaces). #}
-      {{ raw_sum }} &divide; 1.5 = <strong>{{ total_score }} / 100</strong>
+         future 7th subscore can't silently diverge the two surfaces).
+         Phase 188 SCORE-06 / 188-03: score_divisor is dynamic (never the retired fixed rollup literal) —
+         it agrees with the headline because both are read from the same computed-once
+         score_raw values, never re-derived here. #}
+      {{ raw_sum }} &divide; {{ score_divisor }} = <strong>{{ total_score }} / 100</strong>
     </p>
     {# Phase 98 / TRANS-02 / D-03: Rollup formula explanation block — static prose, no sanitize.
-       Sourced from UI-SPEC Copywriting Contract exact strings. #}
+       Phase 188 SCORE-06 / 188-03: the assessed-count and divisor are now interpolated —
+       the prior static "six pillar subscores... divided by one-and-a-half" sentence was
+       false for any partial-coverage scan (only assessed domains are summed; the divisor
+       scales with them). #}
     <div class="rollup-formula">
       <strong>How this score was computed</strong><br>
-      Six pillar subscores (each /25) are summed and divided by 1.5 to produce a 0&ndash;100 readiness score.
+      {{ domains_assessed }} of {{ domains_total }} assessed pillar subscores (each /25) are summed and divided by {{ score_divisor }} to produce a 0&ndash;100 readiness score.
     </div>
+    {% elif total_score is none %}
+    <div class="rollup-formula">
+      <strong>How this score was computed</strong><br>
+      {{ not_computed_statement }}
+    </div>
+    {% endif %}
     {% endif %}
 
     {# Phase 98 / EXEC-02 / D-03: Priority Business Risks from exec_content.top_risks (D-02 static map).

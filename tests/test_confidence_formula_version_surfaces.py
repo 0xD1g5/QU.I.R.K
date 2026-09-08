@@ -111,6 +111,47 @@ def test_intelligence_json_carries_formula_version(tmp_path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# (a2) intelligence-{stamp}.json — Phase 188 SCORE-06 / 188-03 checker WR-1.
+#
+# Same defect class as (a) above, one phase later: `scoring_version` and
+# `coverage_disclosure` are new score_raw keys (plan 188-01) that writer.py's
+# `intelligence["score"]` dict construction ALLOWLISTS explicitly (it does not
+# auto-flow the compat `score` dict) — a repeat of the exact silent-drop shape
+# this file exists to catch. Falsifiability: reverting either of writer.py's
+# two allowlist additions (the compat `score` dict's own keys, or the nested
+# `intelligence["score"]` dict's keys) turns this test RED.
+# ---------------------------------------------------------------------------
+
+def test_intelligence_json_carries_scoring_version_and_coverage_disclosure(tmp_path) -> None:
+    from quirk.intelligence.scoring import SCORING_VERSION
+
+    cfg = _make_cfg(str(tmp_path))
+    endpoints = _endpoints_fixture()
+    findings: list = []
+
+    write_reports(cfg, endpoints, findings)
+
+    intel_files = glob.glob(str(tmp_path / "intelligence-*.json"))
+    assert intel_files, "write_reports must emit an intelligence-{stamp}.json"
+    with open(intel_files[0], "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert "scoring_version" in data["score"], (
+        "checker WR-1: intelligence-{stamp}.json's score object must carry "
+        "scoring_version, or a client cannot tell a post-5.20 exclude-and-rescale "
+        "score from a pre-5.20 one."
+    )
+    assert data["score"]["scoring_version"] == SCORING_VERSION
+    assert "coverage_disclosure" in data["score"], (
+        "checker WR-1: intelligence-{stamp}.json's score object must carry "
+        "coverage_disclosure, or a client cannot see the assessed-domain count "
+        "behind the headline number."
+    )
+    assert isinstance(data["score"]["coverage_disclosure"], str)
+    assert data["score"]["coverage_disclosure"]  # non-empty
+
+
+# ---------------------------------------------------------------------------
 # (b) executive markdown
 # ---------------------------------------------------------------------------
 

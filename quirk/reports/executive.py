@@ -13,6 +13,7 @@ from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: wrap scann
 from quirk.reports.content_model import assert_congruent  # WR-05: fail-closed guard on compat path
 from quirk.reports.html_renderer import build_algorithm_inventory  # Phase 81 / CMVP-06: shared inventory builder
 from quirk.reports.content_model import ExecContent  # D-03 / Phase 98: shared content model
+from quirk.reports.content_model import NOT_COMPUTED_STATEMENT, effective_score_divisor  # Phase 188 SCORE-06 / 188-03
 
 # D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
 _INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
@@ -224,10 +225,20 @@ def build_exec_markdown(
     if exec_content is not None:
         # TRANS-04 / Phase 102: source score total/band/subscores/rollup from the shared
         # exec_content model so CLI output is numerically identical to HTML/PDF/DOCX.
-        lines.append(
-            f"**Score:** **{exec_content.score_total}/100**  \n"
-            f"**Rating:** **{exec_content.score_band}**"
-        )
+        # Phase 188 SCORE-06 / 188-03: score_total is None when zero domains were
+        # assessed -- render the disclosure + the once-composed not-computed
+        # statement instead of a fabricated "None/100" or "0/100".
+        if exec_content.score_total is None:
+            lines.append(f"**{exec_content.coverage_disclosure}**")
+            lines.append("")
+            lines.append(NOT_COMPUTED_STATEMENT)
+        else:
+            lines.append(
+                f"**Score:** **{exec_content.score_total}/100**  \n"
+                f"**Rating:** **{exec_content.score_band}**"
+            )
+            lines.append("")
+            lines.append(exec_content.coverage_disclosure)
         lines.append("")
         lines.append("### Score Drivers (Top)")
         if score_raw.get("drivers"):
@@ -241,9 +252,19 @@ def build_exec_markdown(
         lines.append("|----------|-------|--------|")
         for key, label in _SUBSCORE_LABELS:
             lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
-        # WR-03 / IN-01: raw_sum from shared model (identical to HTML surface).
         lines.append("")
-        lines.append(f"**Rollup:** {exec_content.raw_sum} ÷ 1.5 = **{exec_content.score_total} / 100**")
+        # WR-03 / IN-01: raw_sum from shared model (identical to HTML surface).
+        # Phase 188 SCORE-06 / 188-03: dynamic divisor (never the retired fixed rollup literal),
+        # and the rollup arithmetic is only meaningful when a score was computed.
+        # effective_score_divisor() falls back to the legacy fixed divisor for a
+        # pre-188 exec_content (score computed, no score_divisor) so this line
+        # keeps rendering unchanged for callers that never adopted SCORE-06.
+        _divisor = effective_score_divisor(exec_content.score_total, exec_content.score_divisor)
+        if _divisor:
+            lines.append(
+                f"**Rollup:** {exec_content.raw_sum} ÷ {_divisor:g}"
+                f" = **{exec_content.score_total} / 100**"
+            )
         # D-09 / 184.4-06: annotate a capped band beside the arithmetic that would
         # otherwise contradict it (BACK-89 in mirror image). Structured value from
         # quirk.severity_bands.cap_reason() via compute_readiness_score() — never
@@ -254,10 +275,22 @@ def build_exec_markdown(
         _rating_cap_reason = exec_content.rating_cap_reason
         if _rating_cap_reason:
             lines.append(f"**Cap reason:** {_rating_cap_reason}")
+        if exec_content.scoring_version:
+            lines.append(f"*Scoring version: {exec_content.scoring_version}*")
     else:
         # Backward-compat path: exec_content not available (external callers only).
         # writer.py always passes exec_content, so this path is legacy only.
-        lines.append(f"**Score:** **{score_raw['score']}/100**  \n**Rating:** **{score_raw['rating']}**")
+        _score_total = score_raw.get("score")
+        _coverage_disclosure = score_raw.get("coverage_disclosure", "") or ""
+        _scoring_version = score_raw.get("scoring_version")
+        if _score_total is None:
+            lines.append(f"**{_coverage_disclosure}**")
+            lines.append("")
+            lines.append(NOT_COMPUTED_STATEMENT)
+        else:
+            lines.append(f"**Score:** **{_score_total}/100**  \n**Rating:** **{score_raw['rating']}**")
+            lines.append("")
+            lines.append(_coverage_disclosure)
         lines.append("")
         lines.append("### Score Drivers (Top)")
         if score_raw.get("drivers"):
@@ -272,12 +305,16 @@ def build_exec_markdown(
         for key, label in _SUBSCORE_LABELS:
             lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
         # Phase 188 SCORE-06: subscores.get(k) is None for an unassessed category
-        # (exclude-and-rescale) -- `or 0` prevents a TypeError here. Minimal
-        # crash-prevention fix only; the "÷ 1.5" literal below is Pitfall 2's
-        # documented divisor-literal rework, owned by plans 188-03/188-04.
+        # (exclude-and-rescale) -- `or 0` prevents a TypeError here.
         raw_sum = sum((subscores.get(k) or 0) for k, _ in _SUBSCORE_LABELS)
         lines.append("")
-        lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
+        # Phase 188 SCORE-06 / 188-03: dynamic divisor, read from score_raw since
+        # exec_content is unavailable on this legacy path. Falls back to the
+        # legacy fixed divisor for a pre-188 score_raw dict (see
+        # effective_score_divisor's docstring).
+        _divisor = effective_score_divisor(_score_total, score_raw.get("score_divisor"))
+        if _divisor:
+            lines.append(f"**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_score_total} / 100**")
         # D-09 / 184.4-06: same cap-reason annotation as the exec_content branch,
         # so both surfaces agree (see comment above).
         # 184.4 WR-01: this branch reads score_raw by necessity — it is the
@@ -289,6 +326,8 @@ def build_exec_markdown(
         _rating_cap_reason = score_raw.get("rating_cap_reason")
         if _rating_cap_reason:
             lines.append(f"**Cap reason:** {_rating_cap_reason}")
+        if _scoring_version:
+            lines.append(f"*Scoring version: {_scoring_version}*")
     lines.append("")
 
     # EXEC-02 / D-03 / Phase 98: Priority Business Risks from shared content model.

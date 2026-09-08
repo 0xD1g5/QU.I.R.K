@@ -10,7 +10,7 @@ from rich.table import Table
 from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
-from quirk.reports.content_model import build_exec_content, ReportCongruenceError  # D-03 / D-06
+from quirk.reports.content_model import build_exec_content, ReportCongruenceError, NOT_COMPUTED_STATEMENT, effective_score_divisor  # D-03 / D-06 / Phase 188 SCORE-06
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.intelligence.evidence import build_evidence_summary
@@ -330,12 +330,25 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append("# Quantum Crypto Readiness — Scorecard\n")
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
-    lines.append(f"## Score\n- **Readiness Score:** **{score.get('total')} / 100**\n- **Confidence:** **{conf.get('confidence')} / 100**\n")
+    _score_total = score.get("total")
+    _coverage_disclosure = score.get("coverage_disclosure") or ""
+    if _score_total is None:
+        # Phase 188 SCORE-06 / 188-03: not-computed state — never a fabricated
+        # "None / 100" or "0 / 100". Disclosure + statement composed once
+        # (scoring.py), rendered verbatim.
+        lines.append(f"## Score\n- **{_coverage_disclosure}**\n- {NOT_COMPUTED_STATEMENT}\n")
+    else:
+        lines.append(f"## Score\n- **Readiness Score:** **{_score_total} / 100**\n- **Confidence:** **{conf.get('confidence')} / 100**\n")
+        if _coverage_disclosure:
+            lines.append(f"- **Coverage:** {_coverage_disclosure}\n")
     # D-09 / D-10 (184.4-06): scorecard headline surface — conditional, beside
     # the score headline, matching the CLI/HTML/DOCX idiom. None when uncapped.
     _rating_cap_reason = score.get("rating_cap_reason")
     if _rating_cap_reason:
         lines.append(f"- **Cap reason:** {_rating_cap_reason}\n")
+    _scoring_version = score.get("scoring_version")
+    if _scoring_version:
+        lines.append(f"- *Scoring version: {_scoring_version}*\n")
 
     # D-07 / SCORE-XPARENCY-01: subscore decomposition block
     _SUBSCORE_LABELS = [
@@ -353,13 +366,14 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     for key, label in _SUBSCORE_LABELS:
         lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
     # Phase 188 SCORE-06: subscores.get(k) is None for an unassessed category
-    # (exclude-and-rescale) -- `or 0` prevents a TypeError here. This is a
-    # minimal crash-prevention fix only; the "÷ 1.5" literal on the next line
-    # and the raw_sum's own meaning are Pitfall 2's documented divisor-literal
-    # rework, owned by plans 188-03/188-04 (this plan's <files> does not list
-    # this renderer).
+    # (exclude-and-rescale) -- `or 0` prevents a TypeError here.
     raw_sum = sum((subscores.get(k) or 0) for k, _ in _SUBSCORE_LABELS)
-    lines.append(f"\n**Rollup:** {raw_sum} ÷ 1.5 = **{score.get('total')} / 100**\n")
+    # Phase 188 SCORE-06 / 188-03: dynamic divisor (never the retired fixed rollup literal) —
+    # rollup arithmetic only rendered when a score was actually computed. Falls back
+    # to the legacy fixed divisor for a pre-188 compat dict with no score_divisor key.
+    _divisor = effective_score_divisor(_score_total, score.get("score_divisor"))
+    if _divisor:
+        lines.append(f"\n**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_score_total} / 100**\n")
 
     lines.append("## Why this score\n")
     for d in (drivers or []):
@@ -478,6 +492,15 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         "subscores": score_raw["subscores"],
         "drivers": [d["reason"] for d in score_raw.get("drivers", [])],
         "rating_cap_reason": exec_content.rating_cap_reason,
+        # Phase 188 SCORE-06 / 188-03 / checker WR-1: threaded through from the
+        # shared model (same seam as rating_cap_reason above) so the scorecard,
+        # DOCX-legacy paths, and intelligence-{stamp}.json's "score" allowlist
+        # below don't silently drop these new keys.
+        "domains_assessed": exec_content.domains_assessed,
+        "domains_total": exec_content.domains_total,
+        "score_divisor": exec_content.score_divisor,
+        "coverage_disclosure": exec_content.coverage_disclosure,
+        "scoring_version": exec_content.scoring_version,
     }
     conf = {
         "confidence": conf_raw.get("confidence_score", 0),
@@ -509,6 +532,14 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             # D-09 / D-10 (184.4-06): threaded through so intelligence-{stamp}.json
             # does not silently drop the key another consumer of `score` carries.
             "rating_cap_reason": score.get("rating_cap_reason"),
+            # Phase 188 SCORE-06 / 188-03 / checker WR-1: intelligence-{stamp}.json
+            # is a headline-bearing surface too (docx_renderer.py names it) — this
+            # allowlist does NOT auto-flow new compat-dict keys, so they must be
+            # added explicitly here, same trap as rating_cap_reason above.
+            "domains_assessed": score.get("domains_assessed"),
+            "domains_total": score.get("domains_total"),
+            "coverage_disclosure": score.get("coverage_disclosure"),
+            "scoring_version": score.get("scoring_version"),
         },
         "confidence": conf,
         "roadmap": roadmap_raw,

@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
-from quirk.reports.content_model import ExecContent, assert_congruent  # D-03 / Phase 98: shared content model
+from quirk.reports.content_model import ExecContent, assert_congruent, NOT_COMPUTED_STATEMENT, effective_score_divisor, effective_domain_counts  # D-03 / Phase 98: shared content model
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: NVD link helper
 from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reason  # Phase 184.4 D-05
 
@@ -826,6 +826,18 @@ def render_html_report(
         # (total_score/band above), so the key cannot be dropped by a compat-dict
         # refactor without also breaking score_total/score_band.
         rating_cap_reason = exec_content.rating_cap_reason
+        # Phase 188 SCORE-06 / 188-03: coverage-disclosure seam, sourced from the
+        # shared model — never re-derived.
+        # effective_domain_counts()/effective_score_divisor(): fall back to the
+        # legacy full-six-domain shape for a pre-188 exec_content (score
+        # computed, no domains_total/score_divisor) so the rollup and coverage
+        # prose keep rendering unchanged for callers that never adopted SCORE-06.
+        domains_assessed, domains_total = effective_domain_counts(
+            total_score, exec_content.domains_assessed, exec_content.domains_total
+        )
+        score_divisor = effective_score_divisor(total_score, exec_content.score_divisor)
+        coverage_disclosure = exec_content.coverage_disclosure
+        scoring_version = exec_content.scoring_version
     else:
         total_score = score.get("score", 0)  # WR-06: canonical key is "score", not "total"
         # Phase 184.4 D-05: severity-aware band via the shared module — the old
@@ -850,6 +862,16 @@ def render_html_report(
         )
         band = cap_band_for_severity(numeric_band, _critical_count)
         rating_cap_reason = cap_reason(numeric_band, band, _critical_count, total_score)
+        # Phase 188 SCORE-06 / 188-03: backward-compat path — `score` is the
+        # writer.py compat dict (or a canonical score_raw dict from an external
+        # caller); both carry these keys under the same names (RQ-1: not
+        # re-derived here, just read through).
+        domains_assessed, domains_total = effective_domain_counts(
+            total_score, score.get("domains_assessed") or 0, score.get("domains_total") or 0
+        )
+        score_divisor = effective_score_divisor(total_score, score.get("score_divisor"))
+        coverage_disclosure = score.get("coverage_disclosure") or ""
+        scoring_version = score.get("scoring_version")
 
     # Severity counts
     sev_counts: Dict[str, int] = {}
@@ -976,6 +998,15 @@ def render_html_report(
         roadmap_later=roadmap_later_ctx,
         subscores=subscores_ctx,  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
         raw_sum=raw_sum,  # WR-03 / IN-01: shared rollup numerator (matches CLI markdown)
+        # Phase 188 SCORE-06 / 188-03: coverage-disclosure seam — dynamic divisor
+        # (never the retired fixed rollup literal), the assessed-domain count, and the
+        # once-composed disclosure/not-computed sentences.
+        domains_assessed=domains_assessed,
+        domains_total=domains_total,
+        score_divisor=score_divisor,
+        coverage_disclosure=coverage_disclosure,
+        scoring_version=scoring_version,
+        not_computed_statement=NOT_COMPUTED_STATEMENT,
         severity_color=_severity_color,
         # D-03 / Phase 98: exec_content-derived template vars (None when exec_content absent)
         narrative_lead=narrative_lead,
