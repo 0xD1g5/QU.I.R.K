@@ -545,6 +545,13 @@ def _parse_port_value(item: Any, *, field_name: str, entry: str) -> int:
     (bool-before-int, non-integral float, non-coercible, 1-65535 range), but raise
     `QRK-CONFIG-002` instead of `QRK-CONFIG-001` since this is the broker_targets
     host:port validator, not the scan.ports_tls / tls_designated_ports one.
+
+    IN-03 note: both current call sites (in `_parse_host_port`) only ever pass
+    the string remainder of a split/slice, so the bool and non-integral-float
+    rungs below are DEFENSIVE-ONLY today (e.g. "host:true" is rejected by
+    `int("true")`, not the bool rung). They are kept deliberately so ladder
+    parity with `_as_int_list` holds if a future caller passes YAML-native
+    scalar port values.
     """
     if isinstance(item, bool):
         raise ValueError(
