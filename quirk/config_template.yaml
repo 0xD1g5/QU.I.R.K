@@ -133,6 +133,12 @@ connectors:
   # -- Broker scanner (optional, requires: pip install quirk[kafka,redis]) --
   # Broker scanner (Phase 33 — D-10/D-01)
   enable_broker: true  # on: requires-targets - like email, scans every host in the general `targets:` block above; broker_azure_namespaces / broker_sqs_regions ADD cloud-broker probes, they do not narrow the host sweep
+  # Explicit broker ports (Phase 190, TRIAGE-06) — probed IN ADDITION TO each family's
+  # hardcoded defaults, never a replacement. Accepts bare host, host:port, or [ipv6]:port.
+  # A malformed port fails config load with QRK-CONFIG-002. See docs/configuration.md.
+  # broker_targets:
+  #   - "broker.internal.example.com"        # bare host — default ports only
+  #   - "broker.internal.example.com:29092"  # host:port — this port probed in addition
   # Azure Service Bus namespaces — repeatable; produces probes against {namespace}.servicebus.windows.net:5671
   # broker_azure_namespaces: []
   # AWS SQS regions — repeatable; produces probes against sqs.{region}.amazonaws.com:443

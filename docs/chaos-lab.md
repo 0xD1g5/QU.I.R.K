@@ -595,6 +595,31 @@ See: `labs/email/expected_results.md`
 
 The `broker` profile (introduced in Phase 33) ships three message brokers — Apache Kafka, RabbitMQ, and Redis — each configured with both a plaintext listener and a TLS listener using deliberately weak non-PFS RSA cipher suites. This exercises QU.I.R.K.'s broker scanner across all three broker types simultaneously.
 
+> **Config required to reproduce this table (Phase 190, TRIAGE-06 — corrected 2026-09-08).**
+> The table below was written for QU.I.R.K.'s **hardcoded default broker ports**
+> (9092/9093, 5672/5671, 6379/6380). This lab intentionally remaps those to
+> 29092/29093, 25672/25671, and 26379/26380 (see the port map), so a stock
+> `enable_broker: true` scan with no further config — the setup this section's
+> "Start" steps used to describe — probes only the *default* ports and finds **zero**
+> broker findings against this lab, live-confirmed in
+> `.planning/phases/190-scanner-port-protocol-drain/190-EVIDENCE.md` (Leg 1, baseline
+> run). This was an aspirational spec read as current behavior until this correction
+> (190-RESEARCH.md Pitfall 2). **To reproduce the table, set
+> `connectors.broker_targets` to this lab's mapped ports** — see
+> [`docs/configuration.md`](configuration.md) § "`connectors.broker_targets`":
+>
+> ```yaml
+> connectors:
+>   enable_broker: true
+>   broker_targets:
+>     - "localhost:29092"
+>     - "localhost:29093"
+>     - "localhost:25671"
+>     - "localhost:25672"
+>     - "localhost:26379"
+>     - "localhost:26380"
+> ```
+
 | Host Port | Service         | Protocol   | Expected Finding                              | Severity |
 |-----------|-----------------|------------|-----------------------------------------------|----------|
 | 29092     | kafka-broker    | KAFKA-PLAIN| Kafka plaintext listener detected             | HIGH     |
@@ -615,7 +640,7 @@ PROFILE_ARGS="--profile broker" ./lab.sh up
 
 Allow ~30 seconds for all three healthchecks to pass.
 
-**Expected scanner findings:**
+**Expected scanner findings (with `connectors.broker_targets` set as shown above):**
 
 - `Kafka plaintext listener detected` — port 29092 — HIGH (KAFKA-02)
 - `Weak cipher suite on broker TLS endpoint` — port 29093 — HIGH (KAFKA-01)
@@ -627,6 +652,34 @@ Allow ~30 seconds for all three healthchecks to pass.
 **Total: 6 HIGH findings** (3 plaintext + 3 weak-cipher TLS).
 
 See: `labs/broker/expected_results.md`
+
+> **Live-run divergences from this table (2026-09-08, `190-EVIDENCE.md`).** A fresh live run
+> against this lab under Phase 190's additive `broker_targets`/`port_overrides` design
+> confirmed at least one real, protocol-correct finding per family at the lab's own mapped
+> port (KAFKA-PLAIN at 29092, AMQP-PLAIN at 25672, AMQPS/weak-cipher at 25671, REDIS-PLAIN at
+> 26379), but did **not** reproduce this table exactly — the additive design hands the *same*
+> flat port-override list to all three broker drivers, so naming one family's port also causes
+> the other two families to (harmlessly, by design) probe that port, and pre-existing
+> scanner-logic characteristics turn that into real noise:
+>
+> - Kafka's bare-TCP-connect plaintext heuristic fires `KAFKA-PLAIN` on every overridden port,
+>   not just the genuine Kafka listener (5 false positives in the live run: 29093, 25671,
+>   25672, 26379, 26380).
+> - Redis's TLS probe returns an error-tagged endpoint (not a clean skip) on any exception, so
+>   every foreign-family override port produces an `INFO`-level `REDIS-TLS` row whose content
+>   is a raw `scan_error` string rather than a cipher enumeration.
+> - Kafka's `sslyze`-based TLS probe successfully cross-detects the weak cipher at Redis's own
+>   TLS port (26380) where Redis's own dedicated TLS probe fails outright
+>   (`SSLV3_ALERT_HANDSHAKE_FAILURE`) — a real capability gap in the Redis probe that the
+>   additive design happens to paper over.
+> - Port 29093 (Kafka's native TLS/mTLS listener) never produced a genuine `KAFKA-TLS` finding
+>   in the live run — the listener appears to require a client certificate that neither
+>   `sslyze` nor a manual handshake check could satisfy.
+>
+> These are pre-existing scanner-logic characteristics, not a lab misconfiguration — this
+> lab's port map is the fixture and is unchanged by this correction. They are tracked as a
+> follow-up in `.planning/HORIZON.md`'s Open-Item Ledger (see the item citing
+> `190-EVIDENCE.md`'s "Divergences" section), not fixed in this documentation-only change.
 
 ---
 

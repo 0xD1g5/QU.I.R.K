@@ -356,6 +356,7 @@ template.
 | `enable_saml` | `true` | `requires-targets` | target-guarded, inert until `saml_targets` set |
 | `enable_email` | `true` | `requires-targets` | scans every host in the general `targets:` block, not a dedicated email target list; already on via the `standard` profile, written explicitly so the value is authoritative |
 | `enable_broker` | `true` | `requires-targets` | like email, scans every host in the general `targets:` block; `broker_azure_namespaces`/`broker_sqs_regions` add cloud-broker probes rather than narrowing the host sweep |
+| `broker_targets` | `[]` | `requires-targets` | (Phase 190, TRIAGE-06) an explicit list of `host` / `host:port` / `[ipv6]:port` entries probed **in addition to** each broker family's hardcoded default ports — see "`connectors.broker_targets` — explicit broker ports" below |
 | `enable_kerberos` | `false` | `requires-extra-install` | `quirk[identity]` (impacket) is not in `[all]`; downgrades `cryptography` and breaks the TLS scanner |
 | `enable_smime` | `false` | `requires-extra-install` | target-guarded like the identity connectors, but shipped off because `quirk[adcs]` (ldap3) is not installed by default |
 | `enable_adcs` | `false` | `requires-extra-install` | ldap3 via `quirk[adcs]`; same pre-gate shape as S/MIME |
@@ -379,6 +380,52 @@ Four fields are `not-a-connector`: `enable_nmap`, `enable_authenticated_mode`,
 `enable_recurring_otics`, and `enable_codesign` — real config fields whose values do not by
 themselves drive any scanner. Each is named above with the CLI flag or mechanism that actually
 controls its behavior.
+
+### `connectors.broker_targets` — explicit broker ports (Phase 190, TRIAGE-06)
+
+`enable_broker`'s three drivers (Kafka, RabbitMQ, Redis) each carry a fixed table of default
+ports they probe on every host in `targets:`. Before Phase 190 there was no way to tell the
+scanner "also check this non-default port" short of editing source — an operator running a
+broker on a non-standard port (as this project's own chaos lab does, mapping Kafka/RabbitMQ/
+Redis to 29092/29093, 25671/25672, 26379/26380) got silent zero-findings coverage of those
+ports even with `enable_broker: true`.
+
+`connectors.broker_targets` closes that gap:
+
+```yaml
+connectors:
+  enable_broker: true
+  broker_targets:
+    - "broker.internal.example.com"        # bare host — probed on every family's default ports only
+    - "broker.internal.example.com:29092"  # host:port — this port is probed IN ADDITION to defaults
+    - "[2001:db8::1]:6380"                 # IPv6 requires bracket syntax when a port follows
+```
+
+- **Accepted syntax:** a bare host, `host:port`, or bracketed `[ipv6]:port`. An unbracketed
+  entry with more than one colon is only accepted as a bare IPv6 literal (validated via
+  `ipaddress.ip_address`) — anything else is rejected at load time.
+- **ADDITIVE semantics, not a replacement (RQ-1).** A port named in `broker_targets` is probed
+  *in addition to* each family's hardcoded defaults — declaring a port never narrows or replaces
+  the default port sweep. This means an operator can never lose coverage by adding a port here;
+  the config errs toward over-scanning, never under-scanning. Every family (Kafka, RabbitMQ,
+  Redis) receives the same flat host→ports override map, so a port aimed at one broker family is
+  also, harmlessly by design, probed by the other two families' drivers.
+- **A host listed only in `broker_targets` is scanned even if the general TLS sweep
+  (`targets:`/`scan.ports_tls`) never saw it.** The broker phase's host list is the union of
+  hosts derived from the TLS-target sweep and the hosts named in `broker_targets`.
+- **A malformed port fails the config load with `QRK-CONFIG-002`**, not a silent skip — see
+  [`docs/error-codes.md`](error-codes.md). This mirrors the CONFIG-001 fail-fast precedent for
+  the general `scan.ports_tls` list (TRIAGE-04, Phase 189).
+- **Interaction with custom port scope (see "Custom port spec" below):** the dashboard's
+  `custom` port scope explicitly disables `enable_email`/`enable_broker` so a narrow custom scan
+  is not also widened by the fixed email/broker service-port tables. `broker_targets` does not
+  change this — it cannot re-enable a connector the operator (or the custom-scope suppression)
+  has disabled. Set `enable_broker: true` explicitly if you need both a custom port scope and
+  broker probing.
+- **Reachability advisory:** if an explicit `host:port` entry in `broker_targets` never responds
+  to any probe, the scan records exactly one `ADVISORY`-severity row naming the unreached target
+  — distinct from the deliberate silence for default-port probes that find nothing. See
+  [`docs/report-interpretation.md`](report-interpretation.md) for how this reads in a report.
 
 ### Default TLS port list (D-04, widened v5.19 / Phase 184.2)
 

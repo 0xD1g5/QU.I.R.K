@@ -46,13 +46,16 @@ everything else ships **off with a stated reason**:
   empty target list — they do nothing until you populate `jwt_targets`, `container_targets`,
   `source_targets`, `dnssec_targets`, or `saml_targets` respectively.
 - **Email and broker connectors (`enable_email`, `enable_broker`) are on, and unlike the five
-  above they are NOT inert.** Both scan every host in the general `targets:` block — there is no
-  dedicated email or broker target list gating them (`broker_azure_namespaces` /
-  `broker_sqs_regions` *add* cloud-broker probes rather than narrowing the host sweep). This was
-  already true before this phase: the `standard` profile (the CLI default) auto-enables both
-  whenever they are unset, and an explicit `false` has always been respected via the
-  `_user_set_fields` mechanism (Phase 72 D-02/WR-11). What changed here is only that the value is
-  now stated in the shipped config file instead of being implied by the profile.
+  above they are NOT inert.** Both scan every host in the general `targets:` block. Email has no
+  dedicated target list; broker now does — **`connectors.broker_targets`** (Phase 190, TRIAGE-06)
+  lets you name explicit `host`/`host:port` entries that are probed *in addition to* each broker
+  family's hardcoded default ports (`broker_azure_namespaces`/`broker_sqs_regions` similarly
+  *add* cloud-broker probes rather than narrowing the host sweep). See
+  [`docs/configuration.md`](configuration.md) § "`connectors.broker_targets` — explicit broker
+  ports" for syntax and the ADDITIVE-semantics guarantee. This was already true before this
+  phase for the base `enable_email`/`enable_broker` toggles: the `standard` profile (the CLI
+  default) auto-enables both whenever they are unset, and an explicit `false` has always been
+  respected via the `_user_set_fields` mechanism (Phase 72 D-02/WR-11).
 - **Everything else ships `false`**, each with an inline reason: credentials required (AWS,
   Azure, GCP, database, S3, Blob, Kubernetes, Vault), an optional extras package required
   (Kerberos, S/MIME, AD CS, SNMP), or the connector probes live OT/ICS equipment and needs
@@ -422,7 +425,7 @@ inline subsection below the table.
 | Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` | (etype findings) |
 | SAML | SAML IdP signing/digest algorithms | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | `quirk-scanner[identity]` | (signature-alg findings) |
 | Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `timeouts.email_seconds` | `quirk-scanner[motion]` | "STARTTLS downgrade risk on SMTP" |
-| Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
+| Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
 | AWS | ACM certs, KMS keys, CloudFront, ELB | `connectors.enable_aws`, `aws_region`, `aws_profile` | `boto3` (core) | (KMS / cert findings) — see [`docs/connectors/aws.md`](connectors/aws.md) |
 | Azure | Key Vault keys + certs, App Gateway TLS | `connectors.enable_azure`, `azure_subscription_id`, `azure_keyvault_urls` | (varies) | — see [`docs/connectors/azure.md`](connectors/azure.md) |
 | GCP | KMS + GCS storage encryption | `connectors.enable_gcp`, `gcp_project_id` | `quirk-scanner[cloud]` | (no dedicated doc yet) |
@@ -552,6 +555,13 @@ listeners), AMQP (RabbitMQ), Redis, Azure Service Bus (per `broker_azure_namespa
 and Amazon SQS (per `broker_sqs_regions`). Findings include plaintext-listener
 detection, weak TLS configuration, and missing authentication. Gated by
 `connectors.enable_broker=true` and requires `quirk-scanner[motion]`.
+
+**Non-default ports (Phase 190, TRIAGE-06):** each family's default port table is fixed; to
+also probe a broker running on a non-standard port, list it in `connectors.broker_targets`
+(`host` / `host:port` / `[ipv6]:port`). Declared ports are probed *in addition to* the
+defaults — this can only widen coverage, never narrow it. An explicitly-named `host:port` that
+never responds produces exactly one `ADVISORY`-severity row rather than failing silently. See
+[`docs/configuration.md`](configuration.md) for full syntax and semantics.
 
 ### quirk doctor
 

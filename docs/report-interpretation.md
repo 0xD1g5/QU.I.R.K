@@ -1377,3 +1377,34 @@ identically to "not capped" rather than raising an error.
 > if the rest of the estate scores well. The 'Cap reason' line beside the headline explains exactly
 > why — once that CRITICAL finding is remediated, the band will reflect the underlying score again
 > on your next scan."
+
+## 20. Unreached Broker Target Advisory (Phase 190, TRIAGE-06)
+
+`connectors.broker_targets` (see [`docs/configuration.md`](configuration.md)) lets an operator
+name explicit `host:port` broker endpoints to probe in addition to each broker family's default
+ports. When an explicitly-named `host:port` entry never responds to *any* probe across all three
+broker drivers, the scan records exactly one row with `protocol="ADVISORY"` and a detail message
+naming the unreached target (e.g. `"Configured broker target broker.internal:29099 did not
+respond to any probe"`).
+
+**What it means:** you told QU.I.R.K. about a specific broker port and it could not be reached
+during this scan — worth checking that the service is actually up, the port is correct, and
+there is network reachability from the scan host.
+
+**What it does NOT mean:** a *default-port* broker probe that finds nothing produces no row at
+all — that silence is by design (a scanner does not report "checked and found nothing" for every
+one of dozens of speculative default ports on every host, or the report would drown in noise).
+The unreached-target advisory exists specifically because an operator-named target is a
+deliberate assertion ("a broker lives here") that deserves an explicit answer, unlike a
+default-port probe which is exploratory.
+
+**Advisory-only:** like every other `ADVISORY`-severity row in this report (§12, §16), this row
+is excluded from the readiness score and from every severity-ranked findings table. It is
+informational context about scan coverage, not a cryptographic posture finding.
+
+> **Client Conversation — Unreached Broker Target:**
+> "You listed `broker.internal:29099` as a broker endpoint we should check, but our scan
+> couldn't get a response from it on any of the broker protocols we tried. That doesn't count
+> against your score — it's just telling you the target you named wasn't reachable during this
+> scan, which is worth double-checking (is the service running? is the port right? can this scan
+> host reach it over the network?)."
