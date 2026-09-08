@@ -1,20 +1,34 @@
 export interface SubScores {
-  hygiene: number
-  modern_tls: number
-  identity_trust: number
-  agility_signals: number
-  data_at_rest: number
-  data_in_motion: number
+  // Phase 188 SCORE-06 (RQ-3 schema-compatibility check): null when
+  // compute_readiness_score() excluded that category as unassessed
+  // (exclude-and-rescale) rather than a fabricated 0-25 value.
+  hygiene: number | null
+  modern_tls: number | null
+  identity_trust: number | null
+  agility_signals: number | null
+  data_at_rest: number | null
+  data_in_motion: number | null
 }
 
 export interface ScoreData {
-  score: number
+  // Phase 188 SCORE-06 (RQ-3 schema-compatibility check): null means "not
+  // computed" -- zero domains were assessed, never a fabricated 0/100.
+  score: number | null
   rating: string
   // SCORE-04 / D-09/D-10 (184.4): optional to mirror the Pydantic Optional[str] = None
   // field. Absent/undefined means the band was NOT capped.
   rating_cap_reason?: string
   subscores: SubScores
   drivers: Record<string, unknown>[]
+  // Phase 188 SCORE-06 — coverage/version disclosure, additive keys mirroring
+  // quirk/dashboard/api/schemas.py's ScoreData. Optional so a pre-188-shaped
+  // payload (absent fields) remains a valid ScoreData.
+  domains_assessed?: number
+  domains_total?: number
+  score_divisor?: number
+  coverage_disclosure?: string
+  scoring_version?: string
+  scoring_version_note?: string
 }
 
 export interface ConfidenceData {

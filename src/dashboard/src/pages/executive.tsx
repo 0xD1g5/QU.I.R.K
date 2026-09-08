@@ -36,6 +36,32 @@ const CONFIDENCE_BADGE_VARIANT: Record<string, "default" | "secondary" | "destru
   NO_DATA: "outline",
 }
 
+// Phase 188 SCORE-06 / 188-04 Task 2: an unassessed subscore renders as an
+// em-dash placeholder tile, visibly distinct from a genuine 0/25 gauge —
+// never a fabricated 0 (T-188-13). Matches ScoreGauge's own layout footprint
+// so the gauges row does not reflow when a category is unassessed.
+function SubscoreSlot({ score, label, maxValue = 25 }: { score: number | null; label: string; maxValue?: number }) {
+  if (score === null) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div
+          className="flex items-center justify-center text-muted-foreground"
+          style={{ width: 120, height: 120 / 2 + 20 }}
+        >
+          <span style={{ fontSize: 20, fontWeight: 600 }}>—</span>
+        </div>
+        <span
+          className="text-muted-foreground"
+          style={{ fontSize: 12, fontWeight: 600, textAlign: "center" }}
+        >
+          {label}
+        </span>
+      </div>
+    )
+  }
+  return <ScoreGauge score={score} label={label} size={120} maxValue={maxValue} />
+}
+
 function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
   function badgeElement(entry: PartialFailureEntry) {
     const cat = entry.error_category
@@ -323,12 +349,32 @@ export function ExecutivePage() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap justify-around gap-8">
             <div className="flex flex-col items-center gap-1">
-              <ScoreGauge
-                score={score.score}
-                label="Overall Readiness"
-                size={160}
-                isOverall
-              />
+              {/* Phase 188 SCORE-06 / T-188-13: a not-computed score (zero
+                  domains assessed) must never coerce to a 0 gauge — render an
+                  explicit placeholder + statement instead. */}
+              {score.score === null ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="flex items-center justify-center text-muted-foreground"
+                    style={{ width: 160, height: 160 / 2 + 20 }}
+                  >
+                    <span style={{ fontSize: 28, fontWeight: 600 }}>—</span>
+                  </div>
+                  <span
+                    className="text-muted-foreground"
+                    style={{ fontSize: 12, fontWeight: 600, textAlign: "center" }}
+                  >
+                    Overall Readiness
+                  </span>
+                </div>
+              ) : (
+                <ScoreGauge
+                  score={score.score}
+                  label="Overall Readiness"
+                  size={160}
+                  isOverall
+                />
+              )}
               <Badge
                 variant={CONFIDENCE_BADGE_VARIANT[confidence.confidence_rating] ?? "outline"}
                 className="mt-1 text-xs font-semibold"
@@ -348,13 +394,28 @@ export function ExecutivePage() {
                   {score.rating_cap_reason}
                 </span>
               )}
+              {/* Phase 188 SCORE-06: explicit not-computed statement — absent
+                  when a score IS computed. */}
+              {score.score === null && (
+                <span className="mt-1 text-xs text-muted-foreground text-center max-w-[180px] font-semibold">
+                  Readiness score not computed — no domain had assessable evidence.
+                </span>
+              )}
+              {/* Phase 188 SCORE-06 (T-188-15): mandatory coverage disclosure
+                  next to the overall gauge, on every surface. Absent for a
+                  pre-188 payload — absence is not an error state. */}
+              {score.coverage_disclosure && (
+                <span className="mt-1 text-xs text-muted-foreground text-center max-w-[180px]">
+                  {score.coverage_disclosure}
+                </span>
+              )}
             </div>
-            <ScoreGauge score={score.subscores.hygiene} label="Hygiene" size={120} maxValue={25} />
-            <ScoreGauge score={score.subscores.modern_tls} label="Modern TLS" size={120} maxValue={25} />
-            <ScoreGauge score={score.subscores.identity_trust} label="Identity" size={120} maxValue={25} />
-            <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} maxValue={25} />
-            <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} maxValue={25} />
-            <ScoreGauge score={score.subscores.data_in_motion} label="Data in Motion" size={120} maxValue={25} />
+            <SubscoreSlot score={score.subscores.hygiene} label="Hygiene" maxValue={25} />
+            <SubscoreSlot score={score.subscores.modern_tls} label="Modern TLS" maxValue={25} />
+            <SubscoreSlot score={score.subscores.identity_trust} label="Identity" maxValue={25} />
+            <SubscoreSlot score={score.subscores.agility_signals} label="Agility" maxValue={25} />
+            <SubscoreSlot score={score.subscores.data_at_rest} label="Data at Rest" maxValue={25} />
+            <SubscoreSlot score={score.subscores.data_in_motion} label="Data in Motion" maxValue={25} />
             {/* Phase 111: Per-segment gauges — only rendered when merge data present */}
             {merge?.per_segment_scores && Object.entries(merge.per_segment_scores).map(([seg, segScore]) => {
               const truncatedLabel = seg.length > 16 ? seg.slice(0, 15) + "…" : seg
