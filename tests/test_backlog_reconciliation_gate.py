@@ -135,6 +135,16 @@ def _git_tracked_files(pattern: str) -> list[Path]:
     return sorted(p for p in paths if p.is_file())
 
 
+def _rel(path: Path) -> str:
+    """Repo-relative path for evidence strings; falls back to the absolute
+    path for files outside REPO_ROOT (e.g. tmp_path fixtures in the parser
+    regression tests below)."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def _boundary_search(id_str: str, text: str) -> bool:
     """Word-boundary-safe substring search: `BACK-1` must not match inside `BACK-10`."""
     pattern = re.escape(id_str) + r"(?!\.?\d)"
@@ -261,7 +271,7 @@ def _is_closed(entry: dict, closure_universe: list[Path], disambiguate: bool) ->
     conflated')."""
     if entry["self_closed"]:
         src = next(iter(entry["sources"]))
-        return True, f"self-referential [x] line in {src.relative_to(REPO_ROOT)}"
+        return True, f"self-referential [x] line in {_rel(src)}"
     back_id = entry["id"]
     title_kw = _title_keywords(entry["title"]) if disambiguate else set()
     for path in closure_universe:
@@ -277,13 +287,22 @@ def _is_closed(entry: dict, closure_universe: list[Path], disambiguate: bool) ->
             if not _boundary_search(back_id, line):
                 continue
             if CHECKED_BOX_RE.match(line):
-                if disambiguate and not (title_kw & _title_keywords(line)):
+                # WR-03: the heading fallback documented above is real — a
+                # `- [x] BACK-NN` closure line whose own text lacks a title
+                # keyword still counts if its immediately preceding heading
+                # carries one (e.g. `- [x] BACK-68` under `### Broker
+                # Scanner Ports`).
+                if disambiguate and not (
+                    title_kw & (_title_keywords(line) | _title_keywords(current_heading))
+                ):
                     continue
-                return True, f"[x] line in {path.relative_to(REPO_ROOT)}"
+                return True, f"[x] line in {_rel(path)}"
             if HEADING_RE.match(line):
-                if disambiguate and not (title_kw & _title_keywords(line)):
+                if disambiguate and not (
+                    title_kw & (_title_keywords(line) | _title_keywords(current_heading))
+                ):
                     continue
-                return True, f"heading in {path.relative_to(REPO_ROOT)}"
+                return True, f"heading in {_rel(path)}"
     return False, None
 
 
@@ -438,3 +457,35 @@ def test_enumerate_captures_every_id_on_a_multi_id_line(tmp_path):
     entries = _enumerate_back_ids([doc])
     ids = {e["id"] for e in entries.values()}
     assert ids == {"BACK-9001", "BACK-9002"}
+
+
+def test_is_closed_heading_fallback_disambiguates(tmp_path):
+    """WR-03 regression: for a collided ID, a `- [x] BACK-NN` line with no
+    title keywords of its own must still count as closure when its
+    immediately preceding heading shares a keyword with the entry title —
+    the documented (previously unimplemented) fallback."""
+    doc = tmp_path / "vY-REQUIREMENTS.md"
+    doc.write_text(
+        "### Broker Scanner Ports\n"
+        "- [x] BACK-9003\n",
+        encoding="utf-8",
+    )
+    entry = {
+        "id": "BACK-9003",
+        "title": "Broker scanner ports hardcoded",
+        "era": "vY",
+        "self_closed": False,
+        "sources": {doc},
+    }
+    closed, evidence = _is_closed(entry, [doc], disambiguate=True)
+    assert closed, "heading-fallback disambiguation must accept this closure"
+
+    # Negative control: an unrelated heading must NOT disambiguate.
+    other = tmp_path / "vZ-REQUIREMENTS.md"
+    other.write_text(
+        "### Completely Unrelated Theme\n"
+        "- [x] BACK-9003\n",
+        encoding="utf-8",
+    )
+    closed, _ = _is_closed(entry, [other], disambiguate=True)
+    assert not closed, "keyword-free closure under an unrelated heading must not count"
