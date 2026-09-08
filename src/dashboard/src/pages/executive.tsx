@@ -415,6 +415,19 @@ export function ExecutivePage() {
                   {score.coverage_disclosure}
                 </span>
               )}
+              {/* 188 review WR-06: scoring-version comparability disclosure —
+                  the API threads scoring_version/scoring_version_note through
+                  ScoreData precisely so this surface can render it (mirrors
+                  the HTML template's .scoring-version element). Absent for a
+                  pre-188 payload — absence is not an error state. */}
+              {score.scoring_version && (
+                <span
+                  className="scoring-version mt-1 text-xs text-muted-foreground text-center max-w-[180px]"
+                  title={score.scoring_version_note}
+                >
+                  Scoring version: {score.scoring_version}
+                </span>
+              )}
             </div>
             <SubscoreSlot score={score.subscores.hygiene} label="Hygiene" maxValue={25} />
             <SubscoreSlot score={score.subscores.modern_tls} label="Modern TLS" maxValue={25} />
