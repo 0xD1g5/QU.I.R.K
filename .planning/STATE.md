@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.20
-milestone_name: Release & Correctness Drain
-status: milestone_complete
-last_updated: "2026-09-08T21:45:00.000Z"
+milestone: v5.21
+milestone_name: Dashboard Parity & Exposure Capability
+status: planning
+last_updated: "2026-09-08T18:25:32.586Z"
 last_activity: 2026-09-08
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 18
-  completed_plans: 18
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -804,10 +804,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 187 (Release v5.19) — not started
+Phase: Not started (defining requirements)
 Plan: —
-Status: Roadmap created — 4 phases (187-190), 10/10 requirements mapped
-Last activity: 2026-09-07 — Milestone v5.20 roadmap created
+Status: Defining requirements
+Last activity: 2026-09-08 — Milestone v5.21 started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 

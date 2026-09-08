@@ -35,13 +35,13 @@ default scanning posture, timestamps, and a single-producer severity-band contra
 - Frontend/backend severity-band consistency remains open (`ScoreGauge.tsx` vs `severity_bands.py`,
   backlog 999.92). SCORE-05 is satisfied *as scoped* to the backend.
 
-**Next milestone:** v5.20 Release & Correctness Drain — opened 2026-09-07. See
-`## Current Milestone` below. Opened after a milestone-boundary pass that (a) ran the doc-review
-template (version drift PASS, coverage gaps PASS, 3 stale Obsidian notes re-synced) and (b)
-executed the backlog reconciliation audit — all 92 archived BACK-* IDs classified with per-item
-evidence (`.planning/reports/backlog-reconciliation-2026-09-07.md`), and `HORIZON.md` now carries
-the canonical **Open-Item Ledger** (~92% of the archived backlog is closed; the open residue is
-small and fully visible there).
+**Next milestone:** v5.21 Dashboard Parity & Exposure Capability — opened 2026-09-08. See
+`## Current Milestone` below. Opened after a milestone-boundary pass that ran the doc-review
+template (version drift PASS — 5.19.0 consistent everywhere, correct since v5.20 deliberately cut
+no tag; coverage gaps PASS; Obsidian: 2 stale items found — `_QUIRK-Hub.md` callout and vault
+Roadmap/Requirements — queued for re-sync once the v5.21 roadmap exists) and a PM review of
+HORIZON's Open-Item Ledger. New backlog item **999.104** (CLI config ↔ dashboard parity) filed at
+this boundary at the PM's direction.
 
 <details>
 <summary>Previous state — v5.18 Migration Execution (shipped 2026-09-03)</summary>
@@ -136,37 +136,40 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.20 Release & Correctness Drain
+## Current Milestone: v5.21 Dashboard Parity & Exposure Capability
 
-**Goal:** Ship v5.19's content as a real release, then make the score and the scanners stop
-overstating — no unassessed domain scores full marks, no probe silently fails, no config silently
-no-ops.
+**Goal:** Make the dashboard a full operating surface a consultant can trust — config parity with
+the CLI, honest visibility when scanners don't run, phantom-free certificate views — and ship the
+first genuinely new detection capability since OT/ICS: the Quantum Exposure Map.
 
 **Target features:**
-- **Release v5.19** — tag `v5.19.0`, publish to PyPI (bump surfaces: `pyproject.toml`, README
-  heading/What's New, CHANGELOG entry, UAT-1-02 + UAT-SERIES header). Gating Wave A per the v5.18
-  precedent; last published release is `v5.18.0`.
-- **Scoring integrity** — backlog 999.95 (P1: readiness score awards a full 25/25 to domains with
-  zero evidence; the full 71-container chaos lab scored 96/100) + 999.92 (frontend `ScoreGauge.tsx`
-  band thresholds converged with `severity_bands.py`). Deliberate formula change — moves every
-  historical number; needs an explicit migration/communication decision, not a drive-by.
-- **Config correctness trio** — 999.93 (`docs/chaos-lab.md`'s example config fails verbatim),
-  999.97 (scan-config port fields lack int coercion — quoted YAML ports silently no-op), BACK-59
-  (port 22 still in `docs/sample-config.yaml` `ports_tls` — record the decision either way).
-- **Broker port plumbing** — BACK-68 (broker sense): Kafka/RabbitMQ/Redis scanner ports hardcoded
-  (`broker_scanner.py:465`) while the chaos lab maps 29092/25671/26380.
-- **Modbus end-to-end** — 999.91: Modbus fingerprinting Step-4 gate unsatisfiable, never activates;
-  deferred since 2026-07-31.
-- **BACK-51 targeted check** — one check to disposition the migration-planner dual-categorization
-  uncertainty (may close as a recorded no-op).
+- **999.104 — CLI config ↔ dashboard parity, tiers 1–3** (PM-filed at this boundary) — the scan
+  form exposes 6 knobs (`scan-new.tsx:19-29`) against ~138 YAML fields (`quirk/config.py`).
+  Tier 1: effective-config visibility (read-only resolved `QuirkCfg`); Tier 2: the 25 connector
+  `enable_*` flags + credential/endpoint fields at scan-submit time (closes 999.96's feature
+  half); Tier 3: scan-behavior fields (ports, tls_enum_mode, discovery, timeouts/retry as
+  advanced). **Tier 4 (server-side `config.yaml` editing) explicitly OUT** — new security
+  surface, deferred by decision. Shape + feasibility:
+  `.planning/backlog/999.104-cli-config-dashboard-parity/IDEA.md`.
+- **999.96 — silent connector skips, observability half** — skipped phases reported in UI,
+  report, and log; the feature half is absorbed by 999.104 tier 2.
+- **Phantom-cert dashboard rows** (todo, high) — failed TLS handshakes render as certificate
+  rows with em-dash columns and reach the client PDF (`routes/scan.py:1656-1669`, 44 of 237 TLS
+  rows DB-wide).
+- **999.100 — Executive Verdict layer** — already implemented flag-gated on `origin/UX-Updates`,
+  verified against main; cheapest real win in the UX set.
+- **999.98 — SPKI fingerprint persistence** — per-endpoint cert SPKI fingerprint, the hard
+  prerequisite for key-reuse detection.
+- **999.99 — Quantum Exposure Map** — attack-path view, operator-endorsed; milestone-sized on
+  its own, in by explicit PM decision ("big but worth it").
 
-**Key context:** deliberately deferred and visible in HORIZON's Open-Item Ledger: phantom-cert
-dashboard rows, 999.96 silent connector skips, 999.100 Executive Verdict, the backlog derived gate
-(reconciliation todo step 3), the 999.98→999.99 Exposure Map arc, and the GSD tooling todos.
-`phase.complete` remains unsafe on this machine — all phase/milestone closes happen under the
-pre-image + signature-diff protocol. Cadence note: correctness-leaning cycle immediately after the
-v5.19 ops cycle — acceptable because scope is small and evidence-driven; v5.21 should lean
-capability.
+**Key context:** capability-leaning cycle by design — v5.19/v5.20 were back-to-back
+ops/correctness cycles and the cadence note said v5.21 should lean capability. Deliberately
+deferred, still visible in HORIZON's Open-Item Ledger: the P3 UX set (999.101/999.102/
+BACK-01/03/08), 999.103 broker scanner-logic noise, trends.py/merge.py int-coercion, the GSD
+tooling todos, and the UAT coverage-gaps worklist. `phase.complete` remains unsafe on this
+machine — all phase/milestone closes happen under the pre-image + signature-diff protocol.
+CBOM minimum-elements watch item re-checked 2026-09-08: no guidance landed yet (due ≈2026-12-19).
 
 ## What This Is
 
@@ -391,21 +394,19 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.20 Release & Correctness Drain in progress (opened 2026-09-07). A fresh
+v5.21 Dashboard Parity & Exposure Capability in progress (opened 2026-09-08). A fresh
 `.planning/REQUIREMENTS.md` formalizes these into REQ-IDs during requirements definition; this
-list is the PM-approved scope going in, sourced from `.planning/HORIZON.md`'s Open-Item Ledger and
-`.planning/reports/backlog-reconciliation-2026-09-07.md`:
+list is the PM-approved scope going in, sourced from `.planning/HORIZON.md`'s Open-Item Ledger
+plus the PM-filed 999.104:
 
-- [ ] **Release v5.19** — tag `v5.19.0` + PyPI publish; all bump surfaces enumerated in the
-      2026-09-07 doc-review audit (pyproject, README, CHANGELOG, UAT-1-02/header)
-- [ ] **999.95** — readiness score must not award full domain subscores with zero evidence (P1)
-- [ ] **999.92** — `ScoreGauge.tsx` bands converged with `severity_bands.py` (single producer)
-- [ ] **999.93** — `docs/chaos-lab.md` example config loads verbatim
-- [ ] **999.97** — scan-config port fields int-coerced on the YAML load path
-- [ ] **BACK-59** — port 22 in `sample-config.yaml` `ports_tls`: fix or record the decision
-- [ ] **BACK-68 (broker sense)** — broker scanner custom-port plumbing
-- [ ] **999.91** — Modbus fingerprinting activates end-to-end (Step-4 gate satisfiable)
-- [ ] **BACK-51** — one targeted check to disposition the migration-planner duality
+- [ ] **999.104 (tiers 1–3)** — CLI config ↔ dashboard parity: effective-config visibility,
+      connector enablement + credentials at scan-submit, advanced scan-behavior fields. Tier 4
+      (server-side config.yaml editing) explicitly out.
+- [ ] **999.96 (observability half)** — every skipped scanner phase reported in UI, report, log
+- [ ] **Phantom-cert rows** — `routes/scan.py:1656-1669` cert view filters out failed handshakes
+- [ ] **999.100** — Executive Verdict layer merged from `origin/UX-Updates` and un-flag-gated
+- [ ] **999.98** — cert SPKI fingerprint persisted per endpoint
+- [ ] **999.99** — Quantum Exposure Map (attack-path view), built on 999.98
 
 Standing carry-forward, not in v5.20 scope:
 
@@ -1173,7 +1174,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-07 — milestone v5.20 Release & Correctness Drain opened via `/gsd-new-milestone`; backlog reconciliation executed, HORIZON.md promoted to canonical Open-Item Ledger*
+*Last updated: 2026-09-08 — milestone v5.21 Dashboard Parity & Exposure Capability opened via `/gsd-new-milestone`; backlog item 999.104 (CLI config ↔ dashboard parity) filed at the boundary*
 
 ## Evolution
 
