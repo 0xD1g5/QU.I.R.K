@@ -160,7 +160,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 191-05-PLAN.md — HTML + DOCX key-reuse sections and the three-surface parity gate
+- [x] 191-05-PLAN.md — HTML + DOCX key-reuse sections and the three-surface parity gate
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
