@@ -15,7 +15,7 @@ of 2026-09-07) and `.planning/reports/backlog-reconciliation-2026-09-07.md`. No 
 
 ### Release
 
-- [ ] **REL-01**: Operator can `pip install quirk-scanner==5.19.0` — `v5.19.0` tag cut, release
+- [x] **REL-01**: Operator can `pip install quirk-scanner==5.19.0` — `v5.19.0` tag cut, release
       workflow green (PyPI + Windows asset), with all bump surfaces updated in the same change:
       `pyproject.toml`, README heading/What's New, `CHANGELOG.md` entry, `docs/UAT-SERIES.md`
       UAT-1-02 pass criteria + document header. Editable reinstall (`pip install -e . --no-deps`)
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REL-01 | Phase 187 | Pending |
+| REL-01 | Phase 187 | Complete (2026-09-07, verified 4/4 in 187-VERIFICATION.md) |
 | SCORE-06 | Phase 188 | Pending |
 | SCORE-07 | Phase 188 | Pending |
 | TRIAGE-03 | Phase 189 | Pending |

@@ -108,7 +108,7 @@ drive-by. The six TRIAGE items split into two small drain phases: config correct
 
 ### Phases
 
-- [ ] **Phase 187: Release v5.19** - Operator can `pip install quirk-scanner==5.19.0`; the
+- [x] **Phase 187: Release v5.19** (completed 2026-09-07) - Operator can `pip install quirk-scanner==5.19.0`; the
   `v5.19.0` tag is cut with every bump surface updated in the same change. Gating — nothing else
   in this milestone should ship ahead of the release it depends on for a clean version baseline.
 - [ ] **Phase 188: Scoring Integrity** - A zero-evidence domain no longer contributes a full
