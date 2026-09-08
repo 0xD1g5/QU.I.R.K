@@ -187,7 +187,11 @@ agree on what a severity band means.
      time and fails when any ID is neither closed-with-evidence nor listed in HORIZON.md's
      Open-Item Ledger (title+ID keyed; heading-citation closure honored).
 
-**Plans**: TBD
+**Plans**: 4 plans (waves 1-3; 189-01 and 189-02 parallel in wave 1)
+- [ ] 189-01-PLAN.md — TRIAGE-04 port-list coercion at the `config_from_dict()` choke point + `CONFIG-001` coded error, and TRIAGE-03's chaos-lab example fix with an execution-based drift gate
+- [ ] 189-02-PLAN.md — TRIAGE-05 port-22 verdict (live-checked, recorded in `docs/sample-config.yaml` + HORIZON.md) and TRIAGE-08's "duality confirmed live" disposition
+- [ ] 189-03-PLAN.md — TRIAGE-09 derived backlog gate: run-time enumeration, non-vacuity guard, CI-enforced BACK-* leg + local-only 999.* leg
+- [ ] 189-04-PLAN.md — Docs (configuration/operators-guide), UAT Series 189, Obsidian vault sync + phase note
 
 ### Phase 190: Scanner Port & Protocol Drain
 
