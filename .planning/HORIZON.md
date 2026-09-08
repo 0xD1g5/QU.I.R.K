@@ -48,6 +48,100 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 |---|---|---|
 | BACK-59 | KEEP — port 22 in `docs/sample-config.yaml:10`'s `ports_tls` is deliberate, not vestigial | Live-confirmed 2026-09-08: a TLS ClientHello against a real SSH listener (local sshd, 127.0.0.1:22) raises `ssl.SSLError: [SSL: WRONG_VERSION_NUMBER]`, which `quirk/scanner/tls_scanner.py::_categorize_tls_error` (line 71-74) maps to `NOT_TLS_ON_PORT`, surfaced live via `quirk.scanner.tls_scanner.scan_one()` as `tls_blocker_reason="NOT_TLS_ON_PORT"` / `scan_error="NOT_TLS_ON_PORT: SSLError: ..."` — a real, operator-visible endpoint signal, not a swallowed exception. Mechanism half machine-checked in `tests/test_tls_error_categorization.py`. Rationale recorded inline in `docs/sample-config.yaml` above the `ports_tls` line. The lab's own `ssh-alt` container (2222) was unreachable at decision time (no chaos-lab containers running); the local-sshd fallback tier named in the plan was used instead. |
 
+### Bulk-closed by Phase 189 (TRIAGE-09 gate drain, recorded 2026-09-08)
+
+The TRIAGE-09 derived gate's first honest run against the full on-disk corpus found 97
+BACK-*/999.* id::title keys neither closed-with-evidence by the gate's own scan
+(`- [x]` lines / heading citations only) nor ledgered here -- even though the 2026-09-07
+reconciliation audit (`.planning/reports/backlog-reconciliation-2026-09-07.md`) had
+already independently verified nearly all of them SHIPPED by direct source-code
+existence checks, a closure form the gate structurally cannot see (it never reads the
+codebase, only planning-doc text). This table records that verdict here so the gate
+passes for the honest reason -- ledger membership -- rather than by narrowing the gate.
+
+| Backlog dir ID | Mirrors | Verdict / evidence |
+|---|---|---|
+| 999.1 | BACK-04 | SHIPPED — src/dashboard/src/components/theme-provider.tsx |
+| 999.2 | BACK-05 | SHIPPED — print.tsx cover section + v5.2 Consulting-Grade Reporting milestone |
+| 999.5 | BACK-09 | SHIPPED — closed via v5.1-REQUIREMENTS.md heading "Active REST Fuzzing (BACK-09)" |
+| 999.6 | BACK-10 | SHIPPED — closed via v5.1-REQUIREMENTS.md heading "OpenAPI / Swagger Spec Analysis (BACK-10)" |
+| 999.7 | BACK-11 | SHIPPED — closed via v5.1-REQUIREMENTS.md heading "Bearer Token Analysis (BACK-11)" |
+| 999.8 | BACK-12 | SHIPPED — quirk/scanner/db_connector.py; aws_connector.py:86 _scan_rds_encryption (DB-03) |
+| 999.9 | BACK-13 | SHIPPED — azure_connector.py:154 _scan_blob_encryption (STOR-02); gcp_connector.py:376 GCS CMEK |
+| 999.10 | BACK-14 | SHIPPED — quirk/scanner/gcp_connector.py |
+| 999.11 | BACK-15 | SHIPPED — quirk/scanner/k8s_connector.py; aws_connector.py:143 _scan_eks_encryption (K8S-01) |
+| 999.12 | BACK-16 | SHIPPED — quirk/scanner/email_scanner.py + postfix-email compose service |
+| 999.13 | BACK-17 | SHIPPED — quirk/scanner/broker_scanner.py |
+| 999.14 | BACK-18 | SHIPPED — quirk/scanner/kerberos_scanner.py |
+| 999.15 | BACK-19 | SHIPPED — quirk/scanner/saml_scanner.py |
+| 999.16 | BACK-20 | SHIPPED — closed via v4.6-REQUIREMENTS.md heading "Compliance Mapping (BACK-20)" |
+| 999.17 | BACK-21 | SHIPPED — trend analysis / dashboard delta reporting shipped (v4.8 Phase 64) |
+| 999.18 | BACK-22 | SHIPPED — quirk/scanner/dnssec_scanner.py |
+| 999.19 | BACK-23 | SHIPPED — quirk/scanner/vault_connector.py |
+| 999.20 | BACK-24 | SHIPPED — closed via v5.1-REQUIREMENTS.md heading "Code-Signing Certificate Inventory (BACK-24)" |
+| 999.21 | BACK-25 | SHIPPED — scheduled scans (v4.8 Phase 63) |
+| 999.23 | BACK-27 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] INTER-01 |
+| 999.24 | BACK-28 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] INTER-02 |
+| 999.25 | BACK-30 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] INTER-06 |
+| 999.26 | BACK-29 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] INTER-03 |
+| 999.27 | BACK-33 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] (TLS port defaults); re-verified live by Phase 189-02 (TRIAGE-05) |
+| 999.28 | BACK-34 | SHIPPED — SSH port prompt added to interactive mode (v4.1 era) |
+| 999.29 | BACK-32 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] INTER-05 |
+| 999.30 | BACK-35 | SHIPPED — tls_enum_mode surfaced in interactive mode (v4.1 era) |
+| 999.31 | BACK-31 | SHIPPED — data_classification/data_types consolidation (v4.1 era interactive-mode cleanup) |
+| 999.32 | BACK-36 | SHIPPED — interactive prompts reordered, targets first (v4.1 era) |
+| 999.33 | BACK-37 | SHIPPED — quirk/connectors/ legacy directory removed |
+| 999.34 | BACK-38 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] INTER-04 |
+| 999.35 | BACK-39 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] (enable_windows_adcs removed); re-verified live by Phase 184.2 |
+| 999.36 | BACK-40 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] CLI-01 |
+| 999.37 | BACK-41 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] CLI-02 |
+| 999.38 | BACK-42 | SHIPPED — quirk/assessment/ reduced to migration_advisor+operator_context; intelligence/scoring.py authoritative (Phase 83 CLEAN-01) |
+| 999.39 | BACK-43 | SHIPPED — scoring calibration profile fix (v4.1 era cleanup) |
+| 999.40 | BACK-44 | SHIPPED — validate.py/write_reports() artifact contract fixed (v4.1 era cleanup) |
+| 999.41 | BACK-45 | SHIPPED — cfg.scan mutation guarded with try/finally (v4.1 era cleanup) |
+| 999.42 | BACK-46 | SHIPPED — migration_advisor.py dead string patterns removed (v4.1 era cleanup) |
+| 999.43 | BACK-47 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] CLI-03 |
+| 999.44 | BACK-48 | SHIPPED — closed via v4.1-REQUIREMENTS.md [x] CLI-04 |
+| 999.45 | BACK-49 | SHIPPED — quirk/engine/rules.py empty reserved file removed |
+| 999.46 | BACK-50 | SHIPPED — dead helpers in writer.py / orphaned scorecard.py removed |
+| 999.47 | BACK-51 | OPEN — see main Open-Item Ledger table above (duality confirmed live, Phase 189-02 / TRIAGE-08) |
+| 999.48 | BACK-52 | SHIPPED — dead intelligence modules (driver_text, schema dataclasses, calibration) removed |
+| 999.49 | BACK-53 | SHIPPED — data/qcscan-legacy.sqlite removed |
+| 999.50 | BACK-54 | OBSOLETE — premise gone: tqdm now genuinely wired, run_scan.py:1614 use_tqdm=bool(args.progress) |
+| 999.51 | BACK-55 | SHIPPED — internal D-reference ticket comments cleaned from source |
+| 999.52 | BACK-56 | SHIPPED — datetime.utcnow() deprecation fixed |
+| 999.53 | BACK-57 | SHIPPED — tests/test_interactive_mode.py, test_validate.py, 6x test_run_scan_* |
+| 999.54 | BACK-58 | SHIPPED — closed via v4.8-REQUIREMENTS.md [x] DEBT-02 (JWT scanner verify=False documented) |
+| 999.55 | BACK-59 | RESOLVED by Phase 189 — see "Resolved by Phase 189" subsection above (KEEP verdict) |
+| 999.56 | BACK-63 | SHIPPED — score transparency in executive reports (v4.7/v5.2 reporting work) |
+| 999.57 | BACK-64 | SHIPPED — closed via v5.1-REQUIREMENTS.md heading "Authenticated Scanning — Credential Model (BACK-64)" |
+| 999.60 | BACK-67 | SHIPPED — defusedxml.lxml -> hardened lxml XXE migration (v5.0 Stabilization milestone) |
+| 999.61 | BACK-68 | SHIPPED (QRAMM sense only) — quirk/qramm/ data model + backend API; the still-open broker-ports BACK-68 stays in the main ledger table above |
+| 999.62 | BACK-69 | SHIPPED — pages/qramm-assessment.tsx, qramm-profile.tsx, components/qramm/QuestionCard.tsx |
+| 999.63 | BACK-70 | SHIPPED — components/qramm/ScorecardTab.tsx |
+| 999.64 | BACK-71 | SHIPPED — quirk/qramm/evidence_bridge.py |
+| 999.65 | BACK-72 | SHIPPED — quirk/qramm/compliance_map.py + components/qramm/ComplianceMapTab.tsx |
+| 999.66 | BACK-73 | SHIPPED — print.tsx:275 Compliance Framework Coverage section (combined PDF export) |
+| 999.67 | BACK-74 | SHIPPED — closed via v4.6-REQUIREMENTS.md heading "TLS Finding Gaps (BACK-74)" |
+| 999.68 | BACK-75 | SHIPPED — closed via v4.6-REQUIREMENTS.md heading "Nmap Port Discovery (BACK-75)" |
+| 999.72 | BACK-79 | SHIPPED — closed via v4.6-REQUIREMENTS.md heading "Rich Finding Context (BACK-79)" |
+| 999.79 | BACK-86 | SHIPPED — dashboard-initiated scan configuration/launch/reporting (v4.8 Phase 65) |
+| 999.80 | BACK-87 | SHIPPED — closed via v4.8-REQUIREMENTS.md [x] DEBT-02 (lab.sh PROFILE_ARGS CLI precedence) |
+| 999.94 | -- | SHIPPED — Phase 185-03 tooltip contrast fix + WCAG guard test |
+
+| BACK item (no surviving 999.* stub in this drain) | Verdict / evidence |
+|---|---|
+| BACK-02 | SHIPPED — src/dashboard/src/components/ScanSelector.tsx (+tests) |
+| BACK-06 | SUPERSEDED — cbom.tsx:266 colors nodes by quantum_safety (QS_NODE_COLOR), a deliberate different encoding |
+| BACK-26 | SHIPPED — Distributed On-Prem Scanner Architecture (v5.4 milestone, 7 phases) |
+| BACK-80 | SHIPPED — docker-compose.yml postgres-tls profile (Phase 89 / LAB-01) |
+| BACK-81 | SHIPPED — oqs-nginx profile + quirk/scanner/pqc_probe.py |
+| BACK-82 | SHIPPED — postfix-email service with weak-TLS certs |
+| BACK-83 | SHIPPED — grpc-tls profile |
+| BACK-84 | SHIPPED — kafka-tls profile |
+| BACK-90 | SHIPPED (both senses) — chaos lab config-drift bugs: v5.5-phases/999.83-.../999.83-01..05-SUMMARY.md; RELENG UAT automation shipped in v5.5+ CI workflows |
+
+
 **Completeness patch (2026-09-07, same day):** a PM spot-question ("are items marked months ago
 forgotten?") caught four v5.16-era carried-forward rows and one standing worklist that the initial
 ledger missed — verified still-open via `v5.17-REQUIREMENTS.md:271` (recorded there as deferred,
