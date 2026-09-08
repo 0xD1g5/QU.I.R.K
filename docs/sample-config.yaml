@@ -7,6 +7,17 @@ assessment:
 scan:
   timeout_seconds: 1
   concurrency: 20
+  # TRIAGE-05 / BACK-59 (Phase 189, decided 2026-09-08): port 22 is KEPT here
+  # deliberately, to demonstrate the `NOT_TLS_ON_PORT` classification
+  # (`quirk/scanner/tls_scanner.py::_categorize_tls_error`) firing against a
+  # real SSH listener -- a TLS ClientHello against SSH answers with
+  # WRONG_VERSION_NUMBER, and QU.I.R.K. surfaces that as a usable endpoint
+  # signal (`tls_blocker_reason`/`scan_error`), not a swallowed exception.
+  # Live-confirmed this phase against a local sshd on 127.0.0.1:22 (the
+  # chaos lab's `ssh-alt` container on 2222 was unreachable at decision
+  # time). Port 22 is intentionally NOT part of the shipped
+  # `CONSULTING_TLS_PORTS` default (`quirk/interactive.py`) -- this sample
+  # is meant to be illustrative, not a scan-scope precedent to copy blindly.
   ports_tls: [22, 443, 8443]
   tls_designated_ports: []
   include_sni: false

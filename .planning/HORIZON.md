@@ -33,7 +33,6 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 | 999.93 | P2 | `docs/chaos-lab.md` example config fails verbatim (`config-lab-core.yaml`) | Repro artifact sits untracked at repo root |
 | 999.97 | P3 | Scan-config port fields lack int coercion on YAML load — quoted ports silently no-op | Filed 2026-09-07 |
 | BACK-68 (broker sense) | P3 | Broker scanner ports hardcoded (Kafka 9092/9093); lab maps 29092/25671/26380 | v5.0 roadmap; distinct from shipped QRAMM BACK-68 |
-| BACK-59 | P3 | `docs/sample-config.yaml:10` still lists port 22 in `ports_tls` | Survived 184.2's drift fix in the same file; needs a one-line decision |
 | BACK-01 | P3 | Dashboard UI for per-algorithm threshold overrides | v4.x era; re-triage before building |
 | BACK-03 | P3 | Severity heatmap visualization | v4.x era; re-triage before building |
 | BACK-08 | P3 | Narrative onboarding/training guide | Possibly obsolete — docs/ is now deep |
@@ -42,6 +41,12 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 | todo: gsd-state-planned-phase-misleading-empty-updated | medium | `updated: []` returned while frontmatter drifts | `.planning/todos/pending/` |
 | todo: gsd-state-bold-field-search-unscoped-latent | medium | Dormant bold-branch scoping risk, deliberately unfixed with stated reason | `.planning/todos/pending/` |
 | todo: backlog-reconciliation-and-derived-gate | high | Steps 1–2 executed 2026-09-07 (this ledger); **step 3 (derived gate) still open** | `.planning/todos/pending/` |
+
+### Resolved by Phase 189
+
+| Item | Verdict | Evidence |
+|---|---|---|
+| BACK-59 | KEEP — port 22 in `docs/sample-config.yaml:10`'s `ports_tls` is deliberate, not vestigial | Live-confirmed 2026-09-08: a TLS ClientHello against a real SSH listener (local sshd, 127.0.0.1:22) raises `ssl.SSLError: [SSL: WRONG_VERSION_NUMBER]`, which `quirk/scanner/tls_scanner.py::_categorize_tls_error` (line 71-74) maps to `NOT_TLS_ON_PORT`, surfaced live via `quirk.scanner.tls_scanner.scan_one()` as `tls_blocker_reason="NOT_TLS_ON_PORT"` / `scan_error="NOT_TLS_ON_PORT: SSLError: ..."` — a real, operator-visible endpoint signal, not a swallowed exception. Mechanism half machine-checked in `tests/test_tls_error_categorization.py`. Rationale recorded inline in `docs/sample-config.yaml` above the `ports_tls` line. The lab's own `ssh-alt` container (2222) was unreachable at decision time (no chaos-lab containers running); the local-sshd fallback tier named in the plan was used instead. |
 
 **Completeness patch (2026-09-07, same day):** a PM spot-question ("are items marked months ago
 forgotten?") caught four v5.16-era carried-forward rows and one standing worklist that the initial
