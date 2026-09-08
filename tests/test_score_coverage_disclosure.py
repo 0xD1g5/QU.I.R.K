@@ -27,9 +27,36 @@ from __future__ import annotations
 
 import pytest
 
+from quirk.intelligence import evidence as evidence_mod
+from quirk.intelligence import scoring as scoring_mod
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.models import CryptoEndpoint
+
+
+# ---------------------------------------------------------------------------
+# 0. Predicate-key-tuple drift guard (188 review WR-02)
+# ---------------------------------------------------------------------------
+
+def test_predicate_key_tuples_are_subsets_of_protocol_keys():
+    """188 review WR-02: scoring.py's per-category predicate key tuples MUST be
+    subsets of evidence._PROTOCOL_KEYS — a literal renamed in one list but not
+    the other makes the predicate silently read a permanent 0 for that key and
+    the category drops out of the headline. scoring.py's own comment claimed
+    this assertion existed here; now it does."""
+    protocol_keys = set(evidence_mod._PROTOCOL_KEYS)
+    for name, keys in (
+        ("_MOTION_PROTOCOL_KEYS", scoring_mod._MOTION_PROTOCOL_KEYS),
+        ("_DAR_PROTOCOL_KEYS", scoring_mod._DAR_PROTOCOL_KEYS),
+        ("_IDENTITY_PROTOCOL_KEYS", scoring_mod._IDENTITY_PROTOCOL_KEYS),
+    ):
+        missing = set(keys) - protocol_keys
+        assert not missing, (
+            f"scoring.{name} contains keys absent from evidence._PROTOCOL_KEYS: "
+            f"{sorted(missing)}. protocol_counts can NEVER register these, so the "
+            f"predicate silently reads 0 and the category drops out of the "
+            f"headline. Rename both lists together."
+        )
 
 
 # ---------------------------------------------------------------------------
