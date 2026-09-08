@@ -162,7 +162,7 @@ agree on what a severity band means.
   4. A test fails if either side's band thresholds drift from the other, closing v5.19 SCORE-05's
      deferred frontend half.
 
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves — 188-01 formula rescale + derived predicate (SCORE-06), 188-02 band single-producer + gauge rewrite (SCORE-07), 188-03 surface disclosure + divisor sweep, 188-04 dashboard schema + rendering, 188-05 docs/UAT/vault close-out
 **UI hint**: yes
 
 ### Phase 189: Config Correctness Drain
