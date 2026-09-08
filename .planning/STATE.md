@@ -10,7 +10,7 @@ progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -807,7 +807,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 Phase: 191 (spki-fingerprint-persistence) — EXECUTING
 Plan: 6 of 6
-Status: Executing Phase 191
+Status: Phase 191 plans complete — verification in progress
 Last activity: 2026-09-08 -- Phase 191 execution started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)

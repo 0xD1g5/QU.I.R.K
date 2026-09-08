@@ -164,7 +164,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 191-06-PLAN.md — docs, UAT Series 191, Obsidian sync, human verification checkpoint
+- [x] 191-06-PLAN.md — docs, UAT Series 191, Obsidian sync, human verification checkpoint
 
 ### Phase 192: Config Visibility + Skip Observability
 
