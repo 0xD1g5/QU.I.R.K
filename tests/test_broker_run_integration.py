@@ -395,6 +395,29 @@ def test_build_broker_scan_inputs_bare_host_excluded_from_explicit_pairs():
     assert explicit_pairs == []
 
 
+def test_build_broker_scan_inputs_duplicate_entries_deduped():
+    """Phase 190 WR-01: a duplicated broker_targets entry (plain copy-paste in
+    config.yaml) must yield a single probe set and — when unreached — a single
+    advisory: pairs are deduped upstream, so both the override map and the
+    explicit-pairs list carry each (host, port) exactly once."""
+    from run_scan import _build_broker_scan_inputs
+    from quirk.scanner.broker_scanner import build_unreached_target_advisories
+
+    broker_hosts, port_overrides, explicit_pairs = _build_broker_scan_inputs(
+        tls_targets=[], broker_targets_raw=["h:29092", "h:29092"],
+    )
+
+    assert broker_hosts == ["h"]
+    assert port_overrides == {"h": [29092]}, (
+        f"Duplicate entries must not duplicate override ports, got {port_overrides}"
+    )
+    assert explicit_pairs == [("h", 29092)]
+
+    # And when unreached, exactly ONE advisory row — the documented contract.
+    advisories = build_unreached_target_advisories(explicit_pairs, [])
+    assert len(advisories) == 1, f"Expected exactly 1 advisory, got {len(advisories)}"
+
+
 def test_build_unreached_target_advisories_one_per_unreached_pair():
     """One ADVISORY row per explicit (host, port) pair that produced no endpoint;
     zero rows for pairs that WERE reached."""

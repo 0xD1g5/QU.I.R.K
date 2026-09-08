@@ -270,12 +270,14 @@ def _build_broker_scan_inputs(
     `broker_targets` (contributing no `tls_targets` entry) still reaches the
     drivers — additive, not exclusive (RQ-1, locked). Builds the shared flat
     `host -> [ports]` override map from the parsed pairs that carry a port —
-    the SAME map is hand to all three drivers (RESEARCH Pitfall 1).
+    the SAME map is handed to all three drivers (RESEARCH Pitfall 1).
 
     Re-parses each `broker_targets` entry via `_parse_host_port`. The field was
     already validated fail-fast at config load time (190-01), so this re-parse
     cannot raise here — it exists to convert strings back into (host, port)
-    pairs at scan-consumption time.
+    pairs at scan-consumption time. Parsed pairs are deduplicated (order-stable,
+    Phase 190 WR-01) so a copy-pasted duplicate config entry cannot produce
+    duplicate probes or duplicate `BROKER/target-unreached` advisory rows.
 
     Returns `(broker_hosts, port_overrides, explicit_reachable_pairs)` where
     `explicit_reachable_pairs` is the subset of parsed pairs that carried an
@@ -284,10 +286,10 @@ def _build_broker_scan_inputs(
     `broker_targets_raw=[]` reproduces today's exact `broker_hosts` list and an
     empty override map / empty explicit-pairs list.
     """
-    explicit_pairs = [
+    explicit_pairs = list(dict.fromkeys(
         _parse_host_port(entry, field_name="connectors.broker_targets")
         for entry in broker_targets_raw
-    ]
+    ))
     broker_hosts = list(dict.fromkeys(
         [h for h, _ in tls_targets] + [h for h, _ in explicit_pairs]
     ))
