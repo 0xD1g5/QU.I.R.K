@@ -265,8 +265,8 @@ targets:
   include_ips: []
   exclude_ips: []
 output:
-  directory: {output_dir!r}
-  db_path: {db_path!r}
+  directory: "{output_dir}"
+  db_path: "{db_path}"
 scan:
   concurrency: 50
   ports_tls: {ports_tls}
@@ -275,8 +275,11 @@ scan:
 
 
 def _write_port_coercion_config(tmp_path, *, ports_tls, extra_scan_lines=""):
-    output_dir = str(tmp_path / "out")
-    db_path = str(tmp_path / "out" / "quirk.db")
+    # IN-03: as_posix(), not str()/!r — a Windows tmp_path formatted via
+    # Python repr into single-quoted YAML would carry literal doubled
+    # backslashes into the loaded value.
+    output_dir = (tmp_path / "out").as_posix()
+    db_path = (tmp_path / "out" / "quirk.db").as_posix()
     text = _PORT_COERCION_MINIMAL_YAML.format(
         output_dir=output_dir,
         db_path=db_path,
