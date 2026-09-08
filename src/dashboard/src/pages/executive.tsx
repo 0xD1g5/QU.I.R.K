@@ -15,6 +15,11 @@ import { RegressionAlertChip } from "@/components/RegressionAlertChip"
 import { coerceErrorDetail } from "./executive-utils"
 import type { PartialFailureEntry } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
+// 188 review WR-05: the not-computed statement is composed ONCE
+// (quirk/reports/content_model.py::NOT_COMPUTED_STATEMENT) and delivered via
+// this generated, freshness-gated artifact — never hardcode a second copy of
+// the sentence in this file (tests/test_score_strings_freshness.py gates it).
+import scoreStrings from "@/lib/score-strings.json"
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
@@ -395,10 +400,11 @@ export function ExecutivePage() {
                 </span>
               )}
               {/* Phase 188 SCORE-06: explicit not-computed statement — absent
-                  when a score IS computed. */}
+                  when a score IS computed. WR-05: sourced from the generated
+                  score-strings.json artifact, never a hardcoded second copy. */}
               {score.score === null && (
                 <span className="mt-1 text-xs text-muted-foreground text-center max-w-[180px] font-semibold">
-                  Readiness score not computed — no domain had assessable evidence.
+                  {scoreStrings.not_computed_statement}
                 </span>
               )}
               {/* Phase 188 SCORE-06 (T-188-15): mandatory coverage disclosure

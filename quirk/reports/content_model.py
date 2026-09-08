@@ -505,6 +505,26 @@ NOT_COMPUTED_STATEMENT = (
     "Readiness score not computed — no domain had assessable evidence."
 )
 
+
+def dump_score_strings_json() -> str:
+    """188 review WR-05 — generator for src/dashboard/src/lib/score-strings.json.
+
+    The not-computed statement is composed ONCE and rendered verbatim on every
+    surface; the executive dashboard page previously hardcoded a second copy
+    as a JSX string literal, the exact drift pattern the severity-bands
+    generated-artifact gate (quirk/severity_bands.py::dump_json) exists to
+    kill. Same enforcement shape: the committed JSON must byte-match this
+    function's output (tests/test_score_strings_freshness.py), and
+    executive.tsx imports the JSON instead of hardcoding the sentence.
+    """
+    import json  # stdlib-only module contract (see quirk/severity_bands.py note)
+
+    payload = {
+        "not_computed_statement": NOT_COMPUTED_STATEMENT,
+        "generated_by": "quirk.reports.content_model.dump_score_strings_json",
+    }
+    return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
 # Phase 188 SCORE-06 / plan 188-03: the historical fixed 6-domain divisor,
 # preserved ONLY as a render-time fallback for a pre-188 score_raw dict that
 # has a computed score but no `score_divisor` key (a caller that predates
