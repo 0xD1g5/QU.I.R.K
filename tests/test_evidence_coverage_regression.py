@@ -114,9 +114,19 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         compute_readiness_score()'s data_in_motion assessed-predicate has an honest signal to
         read (previously documented here as deferred _PROTOCOL_KEYS blindness). This fixture's
         host5 endpoint is SMTP-STARTTLS, so it now shows up in protocol_counts as 1 instead of
-        being invisible. The `score` assertion below is updated separately (see the derivation
-        comment at that assertion) because Phase 188 also changed the aggregation formula
-        (exclude-and-rescale) — a second, unrelated cause of pin movement.
+        being invisible. The `score` assertion below carries its own derivation because Phase 188
+        also changed the aggregation formula (exclude-and-rescale) — a second, unrelated cause of
+        pin movement from the old 98.
+
+        Score derivation (SCORE-06, not copied from a test run): this fixture has zero DAR
+        protocol counts (no POSTGRESQL/MYSQL/etc.) and zero identity signals (certs_observed==0,
+        no KERBEROS/SAML/DNSSEC), so data_at_rest and identity_trust are unassessed. The SMTP-
+        STARTTLS endpoint now makes data_in_motion assessed (RQ-1 widening). That leaves 4 of 6
+        domains assessed: hygiene=24, modern_tls=24, agility_signals=25, data_in_motion=24.
+        sum(24, 24, 25, 24) = 97; 97 / (4 * 25) * 100 = 97.0 -> round() = 97. (Pre-188 this
+        fixture scored 98 — sum of all six subscores including two fabricated full-25s for
+        data_at_rest/identity_trust, divided by the fixed 1.5 — an expected rescale move per
+        RESEARCH Pitfall 4, not a regression.)
         """
         evidence = build_evidence_summary(_build_endpoints(), [])
 
@@ -134,6 +144,14 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
                 "REDIS-PLAIN": 0, "REDIS-TLS": 0,
             },
         )
+
+        score = compute_readiness_score(evidence)
+        self.assertEqual(score["score"], 97)
+        self.assertEqual(score["domains_assessed"], 4)
+        self.assertEqual(score["domains_total"], 6)
+        self.assertEqual(score["score_divisor"], 1.0)
+        self.assertIsNone(score["subscores"]["data_at_rest"])
+        self.assertIsNone(score["subscores"]["identity_trust"])
 
     def test_denominator_base_unchanged_from_totals_endpoints(self) -> None:
         """evidence['totals']['endpoints'] equals len(endpoints) exactly — the OLD denominator
