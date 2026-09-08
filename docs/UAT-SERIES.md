@@ -1,11 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-08 (Phase 189 Plan 04 — Series 189 added: config port-list coercion +
-`QRK-CONFIG-001` (TRIAGE-04), the chaos-lab doc example load gate (TRIAGE-03), the port-22 KEEP
-verdict (TRIAGE-05), and the derived backlog-reconciliation gate (TRIAGE-09); TRIAGE-08 recorded as
-an honest GAP with no operator-observable behavior to test. v5.20 has still not shipped a version
-bump, so `**Version:**` stays `5.19.0` — same reasoning Series 188's header note already recorded.)
+**Last Updated:** 2026-09-08 (Phase 190 Plan 04 — Series 190 added: `connectors.broker_targets`
+explicit non-default broker ports with ADDITIVE semantics and `QRK-CONFIG-002` fail-fast
+(TRIAGE-06), live before/after broker evidence against the chaos lab's mapped
+29092/25671/26380, the unreached-target advisory (T-190-03), and a fresh no-mocks Modbus
+Step-4-gate re-verification against the `otics` profile citing UAT-141-04 as prior art
+(TRIAGE-07); a filed-not-fixed scanner-logic divergences finding recorded as an honest GAP. v5.20
+has still not shipped a version bump, so `**Version:**` stays `5.19.0` — same reasoning Series
+188/189's header notes already recorded. Earlier: Phase 189 Plan 04 — Series 189 added: config
+port-list coercion + `QRK-CONFIG-001` (TRIAGE-04), the chaos-lab doc example load gate
+(TRIAGE-03), the port-22 KEEP verdict (TRIAGE-05), and the derived backlog-reconciliation gate
+(TRIAGE-09); TRIAGE-08 recorded as an honest GAP with no operator-observable behavior to test.)
 Prior: 2026-09-07 (Phase 188 Plan 05 — Series 188 added: readiness-score coverage
 disclosure and the single-producer severity-band contract (SCORE-06, SCORE-07). v5.20 has not
 shipped a version bump yet, so this document's `**Version:**` header stays `5.19.0` — no version
@@ -24574,3 +24580,261 @@ against their cited automated tests during this plan's execution (not cited from
 without re-verification). UAT-189-06 is `[x] SKIP (GAP)` because TRIAGE-08's disposition produced
 no operator-observable behavior change to test against — recording an honest GAP rather than
 inventing pass criteria for a ledger-only decision.
+
+## Series 190: Scanner Port & Protocol Drain (Phase 190 — v5.20)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its cases below carry
+HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175-177, 187, 188, and 189
+used. `scripts/uat_disposition_apply.py verify` adds zero ledger rows for this series.
+
+Phase 190 closed TRIAGE-06 (`connectors.broker_targets` — explicit, non-default broker ports,
+ADDITIVE semantics, live-verified against the chaos lab's mapped 29092/25671/26380) and TRIAGE-07
+(a fresh, no-mocks live re-verification of the Modbus Step-4 fingerprinting gate against the
+`otics` chaos-lab profile). All evidence below is sourced from
+`.planning/phases/190-scanner-port-protocol-drain/190-EVIDENCE.md`'s 2026-09-08 live run — no
+value is restated from a prior phase's evidence without a fresh check.
+
+### UAT-190-01: `connectors.broker_targets` accepts bare host / `host:port`, defaults empty (TRIAGE-06)
+
+**ID:** UAT-190-01
+**Title:** `connectors.broker_targets` defaults to an empty list (zero behavior change for
+configs that don't set it) and accepts both bare-host and `host:port` entries through the real
+`load_config()` entrypoint
+**Maps to:** TRIAGE-06
+
+**What to test:** loading a config with no `broker_targets` key at all (backward compatibility)
+and a config with a mixed list of bare hosts, `host:port`, and bracketed `[ipv6]:port` entries,
+confirming both load cleanly and the parsed values match the accepted-syntax contract documented
+in `docs/configuration.md`.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_broker_config_and_profile.py -q
+```
+
+**Pass Criteria:** all `broker_targets`-related tests pass, including the default-empty-list case
+and the bare-host / `host:port` / bracketed-IPv6 parsing cases.
+
+**Falsifiability:** this case turns red if omitting `broker_targets` from a config either raises
+or silently changes the pre-Phase-190 default connector behavior, or if a well-formed `host:port`
+entry fails to parse.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (190-04 phase-close plan execution)
+**Notes:** `.venv/bin/python -m pytest tests/test_broker_config_and_profile.py -q` re-run live
+during this plan's execution — green, per 190-01-SUMMARY.md's Task 2 (defaults, scalar coercion,
+list load).
+
+---
+
+### UAT-190-02: A malformed port in `broker_targets` fails config load with `QRK-CONFIG-002` (TRIAGE-06)
+
+**ID:** UAT-190-02
+**Title:** A malformed port inside a `broker_targets` entry (non-numeric, out of 1-65535 range,
+or an ambiguous unbracketed IPv6-with-port) fails loudly at config-load time with the coded
+`QRK-CONFIG-002` error, naming the field and accepted syntaxes — never a silent skip
+**Maps to:** TRIAGE-06
+
+**What to test:** loading configs with a representative set of malformed `broker_targets`
+entries and confirming `load_config()` raises `QRK-CONFIG-002` in every case, and that
+`docs/error-codes.md` carries the matching registry entry.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_broker_config_and_profile.py -k malformed -q
+grep -n "CONFIG-002" docs/error-codes.md
+```
+
+**Pass Criteria:** every malformed-port test case raises `QRK-CONFIG-002` (not a bare
+`ValueError` or a silent pass-through), and `docs/error-codes.md` documents the code.
+
+**Falsifiability:** this case turns red if a malformed port is silently accepted or dropped, or
+if the error-codes registry entry for `CONFIG-002` is missing or removed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (190-04 phase-close plan execution)
+**Notes:** `grep -n "CONFIG-002" docs/error-codes.md` confirms the registered row (added
+190-01, Task 1). Malformed-port fail-fast-at-load test cases pass per 190-01-SUMMARY.md
+(bare host, host:port, bracketed IPv6, bare IPv6, malformed ports x5, ambiguous unbracketed
+IPv6-with-port, empty host x3 — all covered).
+
+---
+
+### UAT-190-03: Live broker scan against the lab's mapped ports produces real findings; zero-findings baseline is the contrast (TRIAGE-06)
+
+**ID:** UAT-190-03
+**Title:** A live scan with `connectors.broker_targets` set to the chaos lab's mapped ports
+(29092/29093, 25671/25672, 26379/26380) produces at least one real, protocol-correct finding per
+broker family at that family's native port; a baseline run with no `broker_targets` against the
+same live lab produces zero real broker findings at those same ports
+**Maps to:** TRIAGE-06
+
+**What to test:** exactly what `190-EVIDENCE.md` Leg 1 did — bring up the `broker` chaos-lab
+profile, run a baseline scan (no `broker_targets`) and a `broker_targets` scan (six mapped ports
++ one deliberately-unreachable port) against the same live lab with distinct `output.db_path`
+values, and inspect `crypto_endpoints` directly for both runs.
+
+**Steps:**
+```bash
+cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile broker" ./lab.sh up
+.venv/bin/python run_scan.py --config config-lab-broker190-baseline.yaml \
+  --allow-internal-targets --allow-cleartext-broker-probe --quiet
+.venv/bin/python run_scan.py --config config-lab-broker190.yaml \
+  --allow-internal-targets --allow-cleartext-broker-probe --quiet
+PROFILE_ARGS="--profile broker" ./lab.sh down
+```
+
+**Pass Criteria:** the baseline run's `crypto_endpoints` table has zero rows at ports
+29092/29093/25671/25672/26379/26380; the `broker_targets` run has a real, protocol-correct
+finding at each family's native mapped port (`KAFKA-PLAIN` at 29092, `AMQP-PLAIN` at 25672,
+`AMQPS`/weak-cipher at 25671, `REDIS-PLAIN` at 26379).
+
+**Falsifiability:** this case turns red if the baseline run produces a real finding at any of the
+six mapped ports (proving `broker_targets` isn't actually gating coverage), or if the
+`broker_targets` run fails to produce the native-port finding for any of the four families.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (190-03 live evidence run, re-cited and reviewed
+during 190-04 phase-close, not re-executed a second time — the live lab run is expensive
+(~5 minutes) and 190-03's own evidence file records verbatim commands, UTC timestamps, and
+direct DB query output, satisfying this case's falsifiability bar without a redundant re-run)
+**Notes:** Full detail in `190-EVIDENCE.md` Leg 1. Baseline: `crypto_endpoints` query for ports
+29092/29093/25671/25672/26379/26380 in `output-190/baseline.db` returns zero rows — confirmed
+via direct DB inspection, not the log line alone (the log's one "RabbitMQ endpoint" is the
+pre-existing, unrelated management-API advisory at port 15672). `broker_targets` run: real
+findings confirmed at all four families' native ports, per the Finding-level detail table in
+`190-EVIDENCE.md`. **Divergences also recorded** (not blocking this case — see UAT-190-05 and
+the `.planning/HORIZON.md` ledger row citing `190-EVIDENCE.md`'s "Divergences" section): the
+additive `port_overrides` design surfaced pre-existing Kafka/Redis scanner-logic characteristics
+producing some cross-family false positives/noise, tracked as a follow-up, not a TRIAGE-06
+blocker (TRIAGE-06's own requirement text — real findings at operator-declared ports — is met).
+
+---
+
+### UAT-190-04: An unreachable explicitly-configured broker target produces exactly one advisory row (TRIAGE-06, T-190-03)
+
+**ID:** UAT-190-04
+**Title:** A `broker_targets` entry naming a port with no listener produces exactly one
+`ADVISORY`-severity row naming the unreached target — no false finding, no silent drop, and no
+duplicate advisory
+**Maps to:** TRIAGE-06
+
+**What to test:** the same live `broker_targets` run as UAT-190-03, which included
+`localhost:29099` (deliberately unreachable) in its target list, and confirming the resulting
+`crypto_endpoints`/`broker_scan_json` output contains exactly one advisory for that specific
+host:port.
+
+**Steps:** (same live run as UAT-190-03; see `190-EVIDENCE.md` Leg 1, "T-190-03 advisory
+verification")
+
+**Pass Criteria:** exactly one row with `protocol=ADVISORY`, `host=localhost`, `port=29099`
+exists in the run's database, with a detail message naming the unreached target.
+
+**Falsifiability:** this case turns red if zero advisory rows are produced (silent drop), if more
+than one is produced (duplicate/noisy advisory), or if a false plaintext/TLS finding is produced
+for a port with no real listener.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (190-03 live evidence run, reviewed during 190-04
+phase-close)
+**Notes:** `190-EVIDENCE.md` confirms via direct DB query
+(`crypto_endpoints.broker_scan_json`, host=localhost, port=29099) exactly one row,
+`protocol=ADVISORY`, detail `"Configured broker target localhost:29099 did not respond to any
+probe"`. The two other `ADVISORY` rows in that run (127.0.0.1:15672 and localhost:15672) are the
+pre-existing, unrelated RabbitMQ management-API advisory, present in both the baseline and
+`broker_targets` runs — correctly excluded from this count.
+
+---
+
+### UAT-190-05: Fresh Modbus Step-4 gate re-verification against the `otics` lab profile (TRIAGE-07) — cites UAT-141-04 as prior art
+
+**ID:** UAT-190-05
+**Title:** A fresh, no-mocks live run of the Modbus fingerprinting Step-4 gate
+(`quirk/scanner/hardware_scanner.py:565-587`) against the chaos lab's `otics` profile identifies
+the same simulated device (`Schneider Electric M221`, firmware `1.6.2.0`) that
+`expected_results_otics.md` and **prior art UAT-141-04** (Phase 141, 2026-08-03 live
+re-validation) recorded — proving the gate fixed in 141-08/141-11 remains satisfiable more than a
+month later, with THIS phase's own fresh evidence, not a restatement of UAT-141-04's evidence
+**Maps to:** TRIAGE-07
+
+**What to test:** exactly what `190-EVIDENCE.md` Leg 2 did — bring up the `otics` chaos-lab
+profile fresh, run a live scan with `--enable-modbus --enable-bacnet
+--allow-internal-targets`, and read the `hardware_devices` table's `modbus_*` columns directly
+from THIS run's own output database (not restated from `expected_results_otics.md` or from
+UAT-141-04's 2026-08-03 evidence).
+
+**Steps:**
+```bash
+cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile otics" ./lab.sh up
+.venv/bin/python run_scan.py --config config-lab-otics190.yaml \
+  --enable-modbus --enable-bacnet --allow-internal-targets --quiet
+# then query output-190/otics.db's hardware_devices table directly
+PROFILE_ARGS="--profile otics" ./lab.sh down
+```
+
+**Pass Criteria:** this run's own `hardware_devices` row has
+`modbus_vendor=Schneider Electric`, `modbus_model=M221`, `modbus_firmware=1.6.2.0`,
+`modbus_probe_state=identified` — matching the 2026-08-03 oracle exactly, produced by real
+`pymodbus`-backed Modbus/TCP FC 43/14 traffic, no mocks anywhere in the path.
+
+**Falsifiability:** this case turns red if the Step-4 gate (`cfg.connectors.enable_modbus AND 502
+in confirmed_open_ports[host]`) fails to fire, if `modbus_probe_state` is anything other than
+`identified`, or if any of the four `modbus_*` values diverges from the oracle without a
+documented root cause.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08 (this phase's fresh live run; prior art UAT-141-04 dated 2026-07-31 unit /
+2026-08-03 live)  **Tester:** Automated (190-03 live evidence run, reviewed during 190-04
+phase-close)
+**Notes:** **Prior art: UAT-141-04** (Phase 141) first fixed and live-validated this exact gate
+on 2026-08-03, after 141-08 (inner gate keyed on `502 in confirmed_open_ports[host]`) and 141-11
+(outer orchestration fix) landed. This case is a genuinely fresh re-verification, not a restatement
+of that evidence: `190-EVIDENCE.md` Leg 2 records its own 2026-09-08 timestamps, its own untracked
+config (`config-lab-otics190.yaml`, isolated `output-190/otics.db`), and its own direct SQL query
+against that run's own database — `modbus_vendor=Schneider Electric`, `modbus_model=M221`,
+`modbus_firmware=1.6.2.0`, `modbus_probe_state=identified`, exact match to the oracle. **Verdict:
+re-verified, no new fix needed** — the gate 141-08/141-11 fixed more than a month ago remains
+satisfiable today, against a live (not mocked) `pymodbus` simulator, with the lab profile itself
+(not the documented pymodbus-fixture fallback, which was not needed). BACnet also reproduced
+(`bacnet_vendor=5`, `bacnet_model=FX16`, `bacnet_probe_state=identified`) though re-verifying
+BACnet was not itself a TRIAGE-07 requirement.
+
+---
+
+### UAT-190-06: Live-run scanner-logic divergences from the chaos-lab acceptance table — GAP, filed not fixed
+
+**ID:** UAT-190-06
+**Title:** Four pre-existing scanner-logic characteristics (Kafka bare-TCP-connect false
+positives on foreign-family override ports; Redis TLS probe exception-swallowing; Kafka's sslyze
+cross-probe out-detecting Redis's own weak-cipher probe; Kafka's native TLS/mTLS port 29093 never
+producing a genuine finding), surfaced live by 190-02's additive `port_overrides` design being
+exercised against a real multi-broker lab for the first time, are documented as findings and
+filed to the backlog — not fixed in this evidence/docs-only closure wave
+**Maps to:** TRIAGE-06 (does not block closure — see Notes)
+
+**What to test:** N/A as a fix-verification case — this is a disposition record for four
+scanner-logic characteristics discovered during live evidence-gathering (190-03) and confirmed
+still present after 190-04's doc pass. There is no new operator-visible behavior change to write
+pass criteria against; the disposition is "filed for a future phase," not "fixed here."
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage for a filed-not-fixed finding; see Notes)
+**Date:** 2026-09-08  **Tester:** N/A (ledger-only disposition, 190-04 phase-close plan)
+**Notes:** All four divergences are documented verbatim in `190-EVIDENCE.md`'s "Divergences"
+section and in `docs/chaos-lab.md` §3.19's live-run-divergences note (added this plan). Filed as
+a single new P3 item in `.planning/HORIZON.md`'s Open-Item Ledger (item `999.103`, citing
+`190-EVIDENCE.md`) per this plan's explicit instruction that a mismatch is "a FINDING to report,
+not an error to hide." TRIAGE-06's own requirement text (real findings at operator-declared
+broker ports, live-verified) is satisfied regardless — see UAT-190-03 — so this GAP does not
+block Phase 190 closure.
+
+---
+
+**Series 190 disposition.** UAT-190-01 through UAT-190-05 are each `[x] PASS`. UAT-190-06 is
+`[x] SKIP (GAP)` — an honest disposition for a filed-not-fixed finding with no operator-visible
+behavior change to test, per UATREC-04's own guidance that GAP is a valid, passing disposition.
+No case in this series was checked to satisfy the gate without a corresponding real result; every
+PASS above cites this phase's own fresh evidence (`190-EVIDENCE.md`, dated 2026-09-08), and
+UAT-190-05 explicitly does not restate UAT-141-04's 2026-08-03 evidence as its own.
+
+**Last Updated:** 2026-09-08
