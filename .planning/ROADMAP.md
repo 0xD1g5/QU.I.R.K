@@ -110,6 +110,7 @@ editing) is explicitly out of scope for this milestone.
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (191, 192, ...): Planned milestone work
 - Decimal phases (191.1, 191.2): Urgent insertions (marked with INSERTED)
 
@@ -122,61 +123,89 @@ editing) is explicitly out of scope for this milestone.
 ## Phase Details
 
 ### Phase 191: SPKI Fingerprint Persistence
+
 **Goal**: Every discovered TLS certificate's SPKI SHA-256 fingerprint is captured and queryable for
 key reuse, across every scan path — including the sensor push/merge path — so key-reuse detection
 has real data to build on.
 **Depends on**: Nothing (first phase)
 **Requirements**: SPKI-01, SPKI-02
 **Success Criteria** (what must be TRUE):
+
   1. Every newly-scanned TLS endpoint's certificate SPKI SHA-256 fingerprint is persisted on
      `CryptoEndpoint`, including endpoints arriving via the sensor push/merge path.
+
   2. Operator can identify endpoints sharing the same public key via a `GROUP BY`-derived query —
      no denormalized boolean column.
+
   3. Key-reuse output is framed as remediation leverage ("one re-key closes N findings"), not mere
      discovery.
+
   4. A round-trip sensor-push integration test proves the SPKI field is never silently dropped on
      the merge path (guards against the v5.8 B-01 recurrence).
 **Plans**: 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 191-01-PLAN.md — cert_spki_fingerprint column, additive migration, SPKI SHA-256 capture at both TLS parse sites
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 191-02-PLAN.md — sensor push projections + end-to-end round-trip test (v5.8 B-01 guard)
 - [ ] 191-03-PLAN.md — compute_key_reuse_clusters GROUP BY helper + advisory-only score firewall
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 191-04-PLAN.md — ReportContent.key_reuse field, non-fatal loader, CLI markdown Key Reuse section
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 191-05-PLAN.md — HTML + DOCX key-reuse sections and the three-surface parity gate
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 191-06-PLAN.md — docs, UAT Series 191, Obsidian sync, human verification checkpoint
 
 ### Phase 192: Config Visibility + Skip Observability
+
 **Goal**: Operator can see exactly what a scan will run with before submitting it, and exactly what
 did or didn't run and why after it completes — on the dashboard and in every report format —
 replacing dashboard silence with disclosure.
 **Depends on**: Nothing (parallel-safe with Phase 191; sequenced second per research)
 **Requirements**: PARITY-01, OBS-01, OBS-02
 **Success Criteria** (what must be TRUE):
+
   1. Operator can view the effective, resolved scan config (`QuirkCfg`) from the dashboard via a
      new auth-gated `GET /api/config/effective` that actively redacts credential fields.
+
   2. Every scanner phase that does not run persists a structured skip record to the database per
      scan, with a distinguishable reason: disabled-by-config, missing-extra, no-eligible-targets,
      missing-credentials, or failed.
+
   3. Operator can see which scanner phases ran / were skipped and why on the dashboard scan
      surfaces.
+
   4. CLI/HTML/DOCX reports disclose the same coverage information — a scan that assessed nothing in
      a domain says so, never renders as silently empty.
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 193: Connector & Credential Parity
+
 **Goal**: Operator can enable, configure, and credential any of the 25 connectors from the
 dashboard at scan-submit time, with the same safety guarantees the CLI already has.
 **Depends on**: Phase 192 (visibility must exist before a trustworthy edit form)
 **Requirements**: PARITY-02, PARITY-03
 **Success Criteria** (what must be TRUE):
+
   1. Operator can enable/disable any of the 25 connectors at scan-submit time, each toggle gated on
      a run-time availability probe covering both `optional_extra.REGISTRY` and the per-scanner
      `*_AVAILABLE` flags — an unavailable connector is shown unavailable-with-reason, never offered
      as a silent no-op.
+
   2. Operator can supply connector credentials at scan-submit time through an in-memory-only path —
      credentials never land in `ScanJob`, the job `config.yaml`, or any log.
+
   3. Connector selections flow through the existing `_write_job_config()` YAML-overlay path (never
      a `ScanJob` blob column), preserving `_user_set_fields` precedence against vertical-preset
      overwrites.
@@ -184,17 +213,21 @@ dashboard at scan-submit time, with the same safety guarantees the CLI already h
 **UI hint**: yes
 
 ### Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix
+
 **Goal**: The dashboard exposes the remaining CLI scan-behavior knobs, greets the consultant with a
 trustworthy executive verdict by default, and only ever shows certificates that are real.
 **Depends on**: Phase 193 (advanced fields build on the same form-to-YAML plumbing)
 **Requirements**: PARITY-04, VERDICT-01, DASH-09
 **Success Criteria** (what must be TRUE):
+
   1. Operator can set advanced scan-behavior fields (TLS/SSH port lists, `tls_enum_mode`, discovery
      options, timeouts/retry) in a collapsed "advanced" section of the scan form, composing with
      (not fighting) vertical presets under one recorded precedence rule.
+
   2. Consultant sees the Executive Verdict layer on the dashboard by default (no flag gate), landed
      by cherry-picking only commit `f05e7dc7` from `origin/UX-Updates` and rewired to consume
      `rating`/`rating_cap_reason` from the API instead of re-deriving score bands client-side.
+
   3. Dashboard certificate inventory and the `/print` PDF render only real certificates — failed
      TLS handshakes are excluded via a shared filter helper, and an honest "no certificates
      discovered" empty state appears when nothing real was found.
@@ -202,20 +235,25 @@ trustworthy executive verdict by default, and only ever shows certificates that 
 **UI hint**: yes
 
 ### Phase 195: Quantum Exposure Map
+
 **Goal**: Consultant can view a defensible, zero-fabrication quantum-exposure attack-path map,
 gated behind an explicit reachability-source decision made before any rendering work is planned.
 **Depends on**: Phase 191 (SPKI/key-reuse data is the one confirmed-cheap data source), Phase 194
 (stable dashboard surfaces to build against)
 **Requirements**: MAP-01, MAP-02, MAP-03
 **Success Criteria** (what must be TRUE):
+
   1. A reachability-source decision (operator-declared vs. inferred vs. deferred) is resolved by a
      dedicated spike and recorded as a decision before any rendering implementation is planned — a
      hard go/no-go gate.
+
   2. Consultant can view a quantum-exposure attack-path map built only from verified relationships —
      key-reuse clusters (Phase 191), operator-declared crown jewels, confirmed hardware
      crypto-bridge chains — with zero inferred edges.
+
   3. The map shows an explicit "no path data available" state instead of a fabricated chain when
      data is insufficient.
+
   4. Exposure Map data never feeds the quantum-readiness score — machine-enforced by a
      `test_exposure_map_score_guard.py` firewall test (the `test_cve_score_guard.py` pattern)
      written in this same phase.
@@ -453,8 +491,10 @@ the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward i
 
 - **PARITY-T4**: Dashboard load/edit/save of the persistent `config.yaml` (tier 4) — needs its own
   threat model first. Explicitly out of scope for v5.21.
+
 - **MAP-ELK**: `cytoscape-elk` layout upgrade for the Quantum Exposure Map — only if dagre proves
   visually inadequate against real exposure data. Contingent on v5.21 Phase 195 shipping first.
+
 - P3 UX set (999.101/999.102/BACK-01/03/08), 999.103 broker scanner-logic noise, trends.py/merge.py
   int-coercion, GSD tooling todos (see `CLAUDE.md` TOOL-01..05), UAT coverage-gaps worklist —
   deliberately deferred at the v5.21 boundary; visible in `HORIZON.md`'s Open-Item Ledger.
@@ -466,4 +506,5 @@ the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward i
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
+
 </content>
