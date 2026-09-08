@@ -211,3 +211,106 @@ def test_port_coercion_format_error_renders_config_001():
     from quirk.errors import format_error
     assert format_error("CONFIG-001").startswith("[QRK-CONFIG-001]")
 
+
+# ---------------------------------------------------------------------------
+# Phase 189 / TRIAGE-04 (Task 2): end-to-end proof through the real
+# load_config() that a quoted "8444" and a bare 8444 are indistinguishable
+# against the literal findings_evaluator.py:390 set expression, that the
+# scope_signature.py:151 sort no longer raises on a mixed int/str list, and
+# that a non-numeric port raises QRK-CONFIG-001 at load time.
+# ---------------------------------------------------------------------------
+
+_PORT_COERCION_MINIMAL_YAML = """\
+assessment:
+  name: test
+  data_classification: internal
+  report_owner: tester
+  timezone: UTC
+targets:
+  fqdns: []
+  cidrs: []
+  include_ips: []
+  exclude_ips: []
+output:
+  directory: {output_dir!r}
+  db_path: {db_path!r}
+scan:
+  concurrency: 50
+  ports_tls: {ports_tls}
+{extra_scan_lines}
+"""
+
+
+def _write_port_coercion_config(tmp_path, *, ports_tls, extra_scan_lines=""):
+    output_dir = str(tmp_path / "out")
+    db_path = str(tmp_path / "out" / "quirk.db")
+    text = _PORT_COERCION_MINIMAL_YAML.format(
+        output_dir=output_dir,
+        db_path=db_path,
+        ports_tls=ports_tls,
+        extra_scan_lines=extra_scan_lines,
+    )
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(text, encoding="utf-8")
+    return cfg_path
+
+
+def test_port_coercion_quoted_tls_designated_port_matches_membership_test(tmp_path):
+    """Quoted "8444" must be accepted by the EXACT set expression at
+    findings_evaluator.py:390 — reproduced literally here (not paraphrased)
+    so this test stays coupled to the real consumer's semantics. Building a
+    full findings/endpoints fixture to call findings_evaluator directly
+    would be disproportionate; asserting against the identical set
+    expression is the proportionate coupling (deliberate choice, see
+    189-01-PLAN.md Task 2)."""
+    from quirk.config import load_config
+    from quirk.util.ports import WELL_KNOWN_TLS_PORTS
+
+    cfg_path = _write_port_coercion_config(
+        tmp_path,
+        ports_tls=[443],
+        extra_scan_lines='  tls_designated_ports: ["8444"]',
+    )
+    cfg = load_config(str(cfg_path))
+    tls_ports = set(WELL_KNOWN_TLS_PORTS) | set(
+        getattr(cfg.scan, "tls_designated_ports", []) or []
+    )
+    assert 8444 in tls_ports
+
+
+def test_port_coercion_quoted_and_bare_port_are_equal_after_load(tmp_path):
+    from quirk.config import load_config
+
+    quoted_path = _write_port_coercion_config(
+        tmp_path,
+        ports_tls=[443],
+        extra_scan_lines='  tls_designated_ports: ["8444"]',
+    )
+    bare_path = _write_port_coercion_config(
+        tmp_path,
+        ports_tls=[443],
+        extra_scan_lines="  tls_designated_ports: [8444]",
+    )
+    cfg_quoted = load_config(str(quoted_path))
+    cfg_bare = load_config(str(bare_path))
+    assert cfg_quoted.scan.tls_designated_ports == cfg_bare.scan.tls_designated_ports
+
+
+def test_port_coercion_mixed_ports_tls_sort_does_not_raise(tmp_path):
+    """Pitfall 2: scope_signature.py:151's sorted(cfg.scan.ports_tls) must
+    never raise TypeError after a config with a mixed int/str list loads
+    through the real load_config() — the crash path is unreachable, not
+    coincidentally avoided."""
+    from quirk.config import load_config
+
+    cfg_path = _write_port_coercion_config(tmp_path, ports_tls=[443, "8443"])
+    cfg = load_config(str(cfg_path))
+    sorted(cfg.scan.ports_tls)  # must not raise
+
+
+def test_port_coercion_non_numeric_ports_tls_raises_at_load_time(tmp_path):
+    from quirk.config import load_config
+
+    cfg_path = _write_port_coercion_config(tmp_path, ports_tls=["https"])
+    with pytest.raises(ValueError, match="QRK-CONFIG-001"):
+        load_config(str(cfg_path))
