@@ -382,6 +382,10 @@ def test_zero_assessed_domains_does_not_raise_on_realistic_empty_scan():
 
 
 if __name__ == "__main__":
-    import unittest
+    # 188 review IN-02: this file is pytest-parametrized — unittest.main()
+    # collected zero tests and exited green, a misleading no-op entry point.
+    import sys
 
-    unittest.main()
+    import pytest as _pytest
+
+    sys.exit(_pytest.main([__file__]))

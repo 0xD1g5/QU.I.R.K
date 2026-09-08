@@ -51,8 +51,10 @@ class TestScoreDataOptionalScore:
         )
         dumped = s.model_dump()
         assert dumped["score"] is None
-        assert dumped["domains_assessed"] is None or dumped["domains_assessed"] == 0
-        assert dumped["domains_total"] is None or dumped["domains_total"] == 0
+        # 188 review IN-01: pin the model's known default exactly — a
+        # dual-accept (None or 0) would let a serialization change pass silently.
+        assert dumped["domains_assessed"] is None
+        assert dumped["domains_total"] is None
 
     def test_partial_coverage_subscore_survives_as_none(self):
         """An individually-unassessed category (e.g. data_in_motion) must
