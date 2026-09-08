@@ -339,6 +339,15 @@ class ConnectorsCfg:
     # Cloud broker targets (D-01) — supplied via CLI/config only; no SDK enumeration (D-02)
     broker_azure_namespaces: List[str] = field(default_factory=list)
     broker_sqs_regions: List[str] = field(default_factory=list)
+    # Phase 190 / TRIAGE-06: operator-specified broker scan targets. Entries are
+    # bare hostnames/IPs (scanner's hardcoded per-family default ports still
+    # apply, backward compatible) or "host:port" ("[ipv6]:port" for IPv6).
+    # RQ-1 (190-CONTEXT.md): ADDITIVE semantics — an explicit port is ADDED to
+    # a broker family's default probe list for that host, never replacing it.
+    # No _user_set_fields tracking: an empty list already means "current
+    # behavior" (RESEARCH — a target list has no sensible non-empty default),
+    # so profile-level defaulting does not apply here.
+    broker_targets: List[str] = field(default_factory=list)
     # Phase 93 AUTH-01: opt-in flag for authenticated scanning (ephemeral credentials only).
     # Scheduler rejects configs where this is True (D-11 / QRK-SCHED-AUTH-001).
     enable_authenticated_mode: bool = False
@@ -691,6 +700,13 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         conn_raw["broker_azure_namespaces"] = _as_str_list(conn_raw["broker_azure_namespaces"])
     if "broker_sqs_regions" in conn_raw:
         conn_raw["broker_sqs_regions"] = _as_str_list(conn_raw["broker_sqs_regions"])
+    # Phase 190 TRIAGE-06: validate broker_targets at load time (fail fast,
+    # before any scan I/O — T-190-02). Store the original string list; entries
+    # are re-parsed via _parse_host_port at scan-consumption time in 190-02.
+    if "broker_targets" in conn_raw:
+        conn_raw["broker_targets"] = _as_str_list(conn_raw["broker_targets"])
+        for _entry in conn_raw["broker_targets"]:
+            _parse_host_port(_entry, field_name="connectors.broker_targets")
 
     # Phase 41 D-06/D-07: split [scan] into flat ScanCfg kwargs + nested
     # TimeoutsCfg / RetryCfg sub-tables, with backward-compat for the four

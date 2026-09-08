@@ -60,6 +60,38 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
     return ValidationResult(False, RC_NOT_IN_ALLOWLIST, host_or_ip[:32])
 
 
+def _broker_target_hosts(cfg) -> list:
+    """Phase 190 / T-190-01: extract the HOST component of every
+    connectors.broker_targets entry, tolerant of malformed entries (config
+    load-time validation in quirk/config.py already rejects those before this
+    is ever called; this stays defensive rather than importing quirk.config's
+    _parse_host_port, to avoid a circular import — quirk/config.py does not
+    import this module, but keeping this module dependency-free of quirk.config
+    keeps the import direction simple and one-way).
+    """
+    connectors = getattr(cfg, "connectors", None)
+    raw_targets = list(getattr(connectors, "broker_targets", None) or [])
+    hosts = []
+    for entry in raw_targets:
+        if not isinstance(entry, str):
+            continue
+        candidate = entry.strip()
+        if not candidate:
+            continue
+        if candidate.startswith("["):
+            close = candidate.find("]")
+            host = candidate[1:close].strip() if close != -1 else candidate
+        elif candidate.count(":") == 1:
+            host = candidate.split(":", 1)[0].strip()
+        else:
+            # Bare hostname, or a bare (unbracketed) IPv6 literal with no
+            # port — either way the whole string is the host.
+            host = candidate
+        if host:
+            hosts.append(host)
+    return hosts
+
+
 def enforce_trusted_targets(cfg) -> None:
     """Single chokepoint (D-04) — raise ValueError on the first untrusted target.
     Called from BOTH run_scan.py::main and jobs.py::create_job.
@@ -67,7 +99,11 @@ def enforce_trusted_targets(cfg) -> None:
     trusted = list(getattr(cfg.security, "trusted_targets", None) or [])
     if not trusted:
         return  # D-03: allow-all when empty
-    all_targets = list(cfg.targets.fqdns or []) + list(cfg.targets.cidrs or [])
+    all_targets = (
+        list(cfg.targets.fqdns or [])
+        + list(cfg.targets.cidrs or [])
+        + _broker_target_hosts(cfg)
+    )
     for target in all_targets:
         result = is_target_trusted(target, trusted)
         if not result.ok:

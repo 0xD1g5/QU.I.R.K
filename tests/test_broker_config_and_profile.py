@@ -133,3 +133,47 @@ def test_parse_host_port_empty_host_raises(entry):
     with pytest.raises(ValueError) as exc_info:
         _parse_host_port(entry, field_name="connectors.broker_targets")
     assert "QRK-CONFIG-002" in str(exc_info.value)
+
+
+# --- Phase 190 / TRIAGE-06: connectors.broker_targets config surface --------
+
+def test_connectors_cfg_broker_targets_defaults_empty():
+    assert ConnectorsCfg().broker_targets == []
+
+
+def test_broker_targets_in_known_connector_keys():
+    """A new dataclass field is auto-recognized — no manual registration needed."""
+    from quirk.config import _KNOWN_CONNECTOR_KEYS
+
+    assert "broker_targets" in _KNOWN_CONNECTOR_KEYS
+
+
+def test_config_from_dict_no_broker_targets_key_is_backward_compatible():
+    raw = dict(_MINIMAL_RAW)
+    raw["connectors"] = {"enable_broker": True}
+    cfg = config_from_dict(raw)
+    assert cfg.connectors.broker_targets == []
+    assert cfg.connectors.enable_broker is True
+
+
+def test_config_from_dict_broker_targets_scalar_coerces_to_list():
+    raw = dict(_MINIMAL_RAW)
+    raw["connectors"] = {"broker_targets": "localhost:29092"}
+    cfg = config_from_dict(raw)
+    assert cfg.connectors.broker_targets == ["localhost:29092"]
+
+
+def test_config_from_dict_broker_targets_list_loads_cleanly():
+    raw = dict(_MINIMAL_RAW)
+    raw["connectors"] = {"broker_targets": ["localhost:29092", "kafka.internal"]}
+    cfg = config_from_dict(raw)
+    assert cfg.connectors.broker_targets == ["localhost:29092", "kafka.internal"]
+
+
+def test_config_from_dict_broker_targets_malformed_port_raises_at_load_time():
+    raw = dict(_MINIMAL_RAW)
+    raw["connectors"] = {"broker_targets": ["localhost:notaport"]}
+    with pytest.raises(ValueError) as exc_info:
+        config_from_dict(raw)
+    assert "QRK-CONFIG-002" in str(exc_info.value)
+    assert "connectors.broker_targets" in str(exc_info.value)
