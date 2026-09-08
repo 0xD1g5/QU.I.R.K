@@ -247,6 +247,16 @@ Compose profiles, with an oracle of expected findings per profile.
   log line). If you enable a connector and see this advisory, install the named extra
   (`pip install quirk-scanner[motion]` for broker/email, `quirk-scanner[adcs]` for smime/adcs)
   or leave the connector disabled.
+- **`[QRK-CONFIG-001]` on startup — non-numeric `scan.ports_tls` / `scan.tls_designated_ports`
+  entry** — as of v5.20 (Phase 189, TRIAGE-04), a port-list value that isn't a bare integer or a
+  quoted digit-string (e.g. a typo like `"84a4"`) is now rejected loudly at config-load time
+  instead of being silently ignored. Fix the offending entry named in the error message. A quoted
+  digit-string such as `"8444"` is valid and behaves identically to a bare `8444` — only truly
+  non-numeric values raise this error. If you have an older config with a quoted port value that
+  never triggered this error before upgrading, re-check that scan's report: prior to Phase 189
+  such a value silently never matched the TLS-designation override, so its effective scope may
+  have been narrower than intended. See [`docs/configuration.md`](configuration.md) §
+  "Port-list value coercion and `QRK-CONFIG-001`" for details.
 - **A skipped scan phase leaves no `run_stats.timings_sec` key** — as of v5.17 (Phase 173), a
   phase that did not actually run (disabled connector, no targets, missing extra) omits its key
   from `run_stats.timings_sec` entirely, rather than recording a phantom near-zero duration. A
