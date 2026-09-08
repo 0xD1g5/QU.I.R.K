@@ -423,7 +423,8 @@ connectors:
   has disabled. Set `enable_broker: true` explicitly if you need both a custom port scope and
   broker probing.
 - **Reachability advisory:** if an explicit `host:port` entry in `broker_targets` never responds
-  to any probe, the scan records exactly one `ADVISORY`-severity row naming the unreached target
+  to any probe, the scan records exactly one informational (`severity: INFO`) `ADVISORY` row
+  (that is the `protocol` field value) naming the unreached target
   — distinct from the deliberate silence for default-port probes that find nothing. See
   [`docs/report-interpretation.md`](report-interpretation.md) for how this reads in a report.
 
