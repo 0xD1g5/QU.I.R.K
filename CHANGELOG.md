@@ -11,6 +11,14 @@ Ten phases (182 through 186.1), one milestone: readiness-score correctness, drif
 test-suite honesty gates, an a11y baseline stabilization, and two carried-forward defects
 drained — shipped as a single release.
 
+Separately from the product changes below: the GSD release toolchain that authors this project's
+own planning files had its state-corruption defect class (TOOL-01 through TOOL-05) closed on this
+machine — 21 sites across 4 files in 2 separate installs were scoped after a run-time source scan
+found 29 affected sites where planning had predicted 6, proven by a live re-demonstration against
+the real, tracked `.planning/STATE.md` restored byte-identical. This is an operator-machine-local
+tooling fix, not a change to the shipped product; a second, semantic defect class in the same
+toolchain was found and filed open rather than folded into this closure.
+
 ### Added
 
 - **Readiness-score correctness** (SCORE-01..SCORE-05) — coverage-metric calculation corrected,
@@ -32,14 +40,6 @@ drained — shipped as a single release.
 
 - **Accessibility baseline environment stabilized** (DRIFT-03) — the a11y test environment now
   produces a reliable, hand-verified baseline for future violation tracking.
-
-The GSD release toolchain that authors this project's own planning files had its state-corruption
-defect class (TOOL-01 through TOOL-05) closed on this machine — 21 sites across 4 files in 2
-separate installs were scoped after a run-time source scan found 29 affected sites where planning
-had predicted 6, proven by a live re-demonstration against the real, tracked `.planning/STATE.md`
-restored byte-identical; this is an operator-machine-local tooling fix, not a change to the
-shipped product, and a second, semantic defect class in the same toolchain was found and filed
-open rather than folded into this closure.
 
 ## [5.18.0] - 2026-09-02
 

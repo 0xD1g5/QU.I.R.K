@@ -588,13 +588,13 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 
 **Result:** - [x] PASS (2026-09-07 live re-execution against the published 5.19.0 PyPI install, clean throwaway venv `/tmp/q519-check` per 187-04-SUMMARY.md Task 3: `quirk --version` printed `QU.I.R.K. v5.19.0`, exit code 0; `quirk.__version__` also printed `5.19.0`. This supersedes the prior 2026-09-02 PASS, whose evidence was `QU.I.R.K. v5.18.0` and no longer matches this criterion once the pass criteria were updated to v5.19.0.)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-07  **Tester:** Automated (187-05 phase-close plan execution)
-**Notes:** Version bumped to 5.18.0 in Phase 177 Plan 04 (`pyproject.toml` sole SoT;
-importlib.metadata derives it). This is the first release since 5.15.0 — v5.16 and v5.17 were
-developed and archived deliberately untagged (see `.planning/ROADMAP.md`'s "deliberately untagged"
-notes) and both ship inside this single v5.18.0 release. Note v5.13 and v5.14 were tagged as
-two-component tags (`v5.13`, `v5.14`) which never matched release.yml's `v*.*.*` glob, so no
-release ran for them and the shipped package stayed at 5.12.0 — see RVW-004, now itself reframed
-as resolved history in `.planning/ROADMAP.md`.
+**Notes:** Version bumped to 5.19.0 in Phase 187 Plan 02 (`pyproject.toml` sole SoT;
+importlib.metadata derives it, which is why `pip install -e . --no-deps` must follow the bump).
+v5.19.0 ships v5.19 Drain & Tooling Integrity's development-complete content (Phases 182-186.1)
+as its own release, published 2026-09-07 via the `v5.19.0` tag push — see UAT Series 187 for the
+release-verification evidence against the published artifact. Historical context (v5.13/v5.14
+two-component-tag no-release defect; v5.16/v5.17 shipping untagged inside v5.18.0) is preserved
+in `.planning/ROADMAP.md`'s milestone notes and CHANGELOG 5.18.0.
 
 ---
 
