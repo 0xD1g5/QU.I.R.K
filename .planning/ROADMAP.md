@@ -113,7 +113,7 @@ drive-by. The six TRIAGE items split into two small drain phases: config correct
   in this milestone should ship ahead of the release it depends on for a clean version baseline.
 - [x] **Phase 188: Scoring Integrity** (completed 2026-09-08) - A zero-evidence domain no longer contributes a full
   25/25 subscore, and the frontend/backend severity-band divergence closes for good.
-- [ ] **Phase 189: Config Correctness Drain** - Documented and sample configs behave exactly as
+- [x] **Phase 189: Config Correctness Drain** (completed 2026-09-08) - Documented and sample configs behave exactly as
   documented; no port field silently no-ops on a quoted YAML value; the backlog derived gate makes
   ledger completeness mechanical.
 - [ ] **Phase 190: Scanner Port & Protocol Drain** - Broker scanning honors operator-specified

@@ -34,13 +34,13 @@ of 2026-09-07) and `.planning/reports/backlog-reconciliation-2026-09-07.md`. No 
 
 ### Correctness Drain
 
-- [ ] **TRIAGE-03**: The `config-lab-core.yaml` example in `docs/chaos-lab.md` loads verbatim
+- [x] **TRIAGE-03**: The `config-lab-core.yaml` example in `docs/chaos-lab.md` loads verbatim
       against the current config schema (docs==code, with a guard consistent with the existing
       drift-gate pattern). [999.93]
-- [ ] **TRIAGE-04**: Scan-config port-list fields coerce quoted YAML values to int on the load path
+- [x] **TRIAGE-04**: Scan-config port-list fields coerce quoted YAML values to int on the load path
       (or reject them loudly) — a `"8444"` override can no longer silently no-op. All port fields
       covered, not one-field patching. [999.97 / 186-REVIEW IN-01]
-- [ ] **TRIAGE-05**: The port-22-in-`ports_tls` question in `docs/sample-config.yaml` is resolved —
+- [x] **TRIAGE-05**: The port-22-in-`ports_tls` question in `docs/sample-config.yaml` is resolved —
       either removed or kept with the TLS-on-22 probe rationale recorded where the reconciliation
       audit can see it. [BACK-59]
 - [ ] **TRIAGE-06**: Broker scanner (Kafka/RabbitMQ/Redis) accepts operator-specified ports instead
@@ -48,10 +48,10 @@ of 2026-09-07) and `.planning/reports/backlog-reconciliation-2026-09-07.md`. No 
       [BACK-68, broker sense]
 - [ ] **TRIAGE-07**: Modbus fingerprinting activates end-to-end — the Step-4 gate is satisfiable
       and a live (or lab) Modbus target produces hardware fingerprint output. [999.91]
-- [ ] **TRIAGE-08**: BACK-51 (migration-planner dual categorization) is dispositioned with recorded
+- [x] **TRIAGE-08**: BACK-51 (migration-planner dual categorization) is dispositioned with recorded
       evidence — one targeted check; a "no user-visible duality remains" verdict closes it without
       code. [BACK-51, UNCERTAIN in audit]
-- [ ] **TRIAGE-09**: A derived CI gate enumerates every BACK-*/999.* ID from the archived roadmaps
+- [x] **TRIAGE-09**: A derived CI gate enumerates every BACK-*/999.* ID from the archived roadmaps
       and backlog at run time (never a hand-written list) and fails when any ID is neither
       closed-with-evidence nor listed in HORIZON.md's Open-Item Ledger. Keys on title+ID (BACK-68
       names two unrelated items); counts requirement-section-heading citations as closure. Closes
@@ -85,10 +85,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REL-01 | Phase 187 | Complete (2026-09-07, verified 4/4 in 187-VERIFICATION.md) |
 | SCORE-06 | Phase 188 | Complete (2026-09-08, 188-VERIFICATION 9/9 + operator UAT) |
 | SCORE-07 | Phase 188 | Complete (2026-09-08, 188-VERIFICATION 9/9 + operator UAT) |
-| TRIAGE-03 | Phase 189 | Pending |
-| TRIAGE-04 | Phase 189 | Pending |
-| TRIAGE-05 | Phase 189 | Pending |
+| TRIAGE-03 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
+| TRIAGE-04 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
+| TRIAGE-05 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
 | TRIAGE-06 | Phase 190 | Pending |
 | TRIAGE-07 | Phase 190 | Pending |
-| TRIAGE-08 | Phase 189 | Pending |
-| TRIAGE-09 | Phase 189 | Pending |
+| TRIAGE-08 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
+| TRIAGE-09 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
