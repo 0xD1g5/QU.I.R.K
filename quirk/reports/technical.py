@@ -49,6 +49,13 @@ BURNDOWN_ADVISORY_CAPTION = "Advisory - remediation burndown does not affect the
 # sections are stable and `unmapped` is always rendered last, never omitted.
 _BURNDOWN_BUCKET_ORDER = ("key_establishment", "digital_signature", "unmapped")
 
+# Phase 191 Plan 04 (SPKI-02) / D-01: locked advisory caption for the Key
+# Reuse section — must be reproduced byte-identically in html_renderer.py
+# and docx_renderer.py by plan 191-05. Per-renderer duplication is the
+# established Phase 161 convention (see VENDOR_TREND_ADVISORY_CAPTION
+# above), NOT a shared constant in content_model.py.
+KEY_REUSE_ADVISORY_CAPTION = "Advisory - key reuse does not affect the readiness score."
+
 # Phase 161 HWLC-19: human-readable labels for VendorPqcTrendEvent.event_type
 # values. Unknown/future event types fall back to the raw value unchanged.
 _VENDOR_TREND_EVENT_TYPE_LABELS: Dict[str, str] = {"pqc_status_change": "PQC status change"}
@@ -63,6 +70,7 @@ def build_tech_markdown(
     burndown: dict | None = None,
     closure_refusal: dict | None = None,
     scan_completed_at: "datetime | None" = None,
+    key_reuse: dict | None = None,
 ) -> str:
     """Build the CLI technical-findings markdown report.
 
@@ -76,6 +84,12 @@ def build_tech_markdown(
     keyword-only, `None`-defaulted parameters carrying the Plan 181-05
     ExecContent payload — every pre-existing call site keeps working
     unmodified.
+
+    Phase 191 Plan 04 (SPKI-02): `key_reuse` is likewise a keyword-only,
+    `None`-defaulted parameter. Unlike the sections above, the Key Reuse
+    section is never gated on truthiness of the whole payload — it always
+    renders (D-06), including when `key_reuse` is `None` or `{}` (loader
+    failed or not wired).
 
     SCORE-03 / D-16b (Phase 184.3): `scan_completed_at` is the naive-UTC
     scan instant (from `CryptoEndpoint.scanned_at`, derived once in
@@ -242,6 +256,45 @@ def build_tech_markdown(
                 f"| {bucket.get('open', 0)} | {bucket.get('closed', 0)} | {bucket.get('not_observed', 0)} "
                 f"| {bucket.get('resurfaced', 0)} |"
             )
+        lines.append("")
+
+    # === Key Reuse (Phase 191 Plan 04 / SPKI-02) ===
+    # D-06: this section renders unconditionally, on every run — never gated
+    # on truthiness of `key_reuse` (a failed/unwired loader still produces the
+    # heading, caption, and coverage line). D-12: coverage is disclosed in
+    # both the zero- and non-zero-cluster cases. D-05: each cluster is framed
+    # as remediation leverage, never as N separate discoveries. D-04:
+    # clusters render in the order `compute_key_reuse_clusters` returns them
+    # (member-count descending) — never re-sorted here.
+    _key_reuse = key_reuse or {}
+    _clusters = _key_reuse.get("clusters") or []
+    _fingerprinted = _key_reuse.get("fingerprinted", 0)
+    _total = _key_reuse.get("total", 0)
+    lines.append("## Key Reuse")
+    lines.append("")
+    lines.append(f"_{KEY_REUSE_ADVISORY_CAPTION}_")
+    lines.append("")
+    lines.append(f"{_fingerprinted} of {_total} TLS endpoints have SPKI fingerprints.")
+    lines.append("")
+    if _clusters:
+        for cluster in _clusters:
+            member_count = cluster.get("member_count", len(cluster.get("members") or []))
+            fingerprint = cluster.get("fingerprint") or ""
+            fingerprint_display = fingerprint[:16] + "..." if len(fingerprint) > 16 else fingerprint
+            lines.append(f"Re-keying this certificate remediates {member_count} endpoints.")
+            lines.append("")
+            lines.append(
+                f"- **Cert subject:** {md_cell(cluster.get('cert_subject'))}\n"
+                f"- **Public key:** {md_cell(cluster.get('cert_pubkey_alg'))} "
+                f"{cluster.get('cert_pubkey_size', '')}\n"
+                f"- **SPKI fingerprint:** {md_cell(fingerprint_display)}"
+            )
+            lines.append("")
+            for member in cluster.get("members") or []:
+                lines.append(f"  - {md_cell(member.get('host'))}:{member.get('port')}")
+            lines.append("")
+    else:
+        lines.append(f"No shared keys detected across {_fingerprinted} fingerprinted endpoints.")
         lines.append("")
 
     return "\n".join(lines)
