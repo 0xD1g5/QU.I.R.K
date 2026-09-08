@@ -5,6 +5,41 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [Unreleased]
+
+### Changed
+
+- **Scoring v2 — not comparable with pre-5.20 scores** (SCORE-06, SCORE-07, Phase 188). This is
+  the migration/communication decision record for the readiness-score integrity fixes shipped in
+  Phase 188 — write it here, not only in planning files, because a formula change that moves every
+  historical score is a silent drive-by unless a client can read what changed.
+
+  - **Exclude-and-rescale.** `compute_readiness_score()` no longer credits a domain it never
+    assessed with a fabricated full 25/25. The headline score now rescales over only the domains
+    with assessable evidence: `sum(assessed subscores) / (domains_assessed * 25) * 100`, replacing
+    the old fixed `÷ 1.5` rollup. Every report surface (CLI markdown, HTML, DOCX, the dashboard
+    executive page, and `intelligence-{stamp}.json`) now discloses `"N of 6 domains assessed"`
+    alongside the score.
+  - **Scores are NOT comparable with pre-5.20 scores.** A scan that shows a lower number after
+    upgrading may simply be reporting honestly on fewer fabricated points, not a regression in
+    posture. Compare trend lines only within the same `scoring_version`.
+  - **Historical database rows are deliberately NOT back-migrated.** Rows written before this
+    change keep the old fixed-divisor arithmetic baked into their stored score; QU.I.R.K. does not
+    rewrite history to make old and new scores artificially comparable.
+  - **Every score-bearing output now carries a scoring-version marker.** New reports and API
+    responses carry the following note verbatim:
+
+    > scoring v2 — not comparable with pre-5.20 scores
+
+  - **A zero-assessed scan reports "not computed", never a fabricated 0 or 100.** If no domain has
+    assessable evidence, the score is `None`/absent rather than a misleading number.
+  - **Severity-band thresholds now have a single producer** (SCORE-07). `quirk/severity_bands.py`
+    is the one source of truth for the EXCELLENT/GOOD/MODERATE/FAIR/POOR boundaries; the dashboard
+    gauge, the notify payload's severity mapping, and the report band all read the same thresholds.
+    The dashboard gauge's color boundaries shifted as a direct consequence (green now begins at 70,
+    not 80; amber covers 35-69, not roughly 50-79; red begins below 35, not below 50) — this is the
+    gauge now agreeing with the report band, not a new inconsistency.
+
 ## [5.19.0] - 2026-09-07
 
 Ten phases (182 through 186.1), one milestone: readiness-score correctness, drift-proof

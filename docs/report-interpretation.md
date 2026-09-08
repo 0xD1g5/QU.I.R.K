@@ -95,6 +95,85 @@ Agility measures how ready you are to swap out cryptographic algorithms when the
 
 ---
 
+### 3.5 Data at Rest and Data in Motion (0–25 points each)
+
+Beyond the four subscores above, two additional domains contribute to the headline score when the
+scan actually assessed them: **Data at Rest** (storage/vault encryption posture — fed by the
+storage and vault connector scanners) and **Data in Motion** (email and message-broker transport
+encryption — fed by the email and broker scanners). Together with the four subscores in §3, these
+are the **six domains** referenced throughout §3.6 below. A scan that does not enable or reach
+these scanners simply does not assess these two domains — see §3.6 for what that means for the
+headline score.
+
+---
+
+### 3.6 Coverage, Exclude-and-Rescale, and the Not-Computed State (Phase 188, SCORE-06)
+
+Before Phase 188, an unassessed domain (one your scan configuration or network access never gave
+QU.I.R.K. any evidence for) was silently credited a full 25/25 — the same as a domain that was
+actually clean. That inflated the headline score and hid the fact that part of the estate was
+never looked at. As of scoring v2, this is no longer the case.
+
+**Exclude-and-rescale.** The headline score is now computed only from the domains that were
+actually assessed:
+
+```
+total_score = round( sum(assessed domain subscores) / (domains_assessed * 25) * 100 )
+```
+
+An unassessed domain neither helps nor hurts the score — it is simply excluded from both the
+numerator and the denominator, rather than contributing a fabricated 25. This is why the rollup
+arithmetic you see in a report (for example, "÷ 1.5" for a 4-of-6-domain scan) is not always the
+same divisor from scan to scan: **a rollup divisor other than 1.5 is expected and correct** for any
+scan with partial domain coverage. A full 6-of-6 scan still divides by 1.5 exactly as before.
+
+**"N of 6 domains assessed."** Every report surface — the CLI markdown report, the HTML report,
+the DOCX report, the dashboard executive page, and `intelligence-{stamp}.json` — discloses this
+coverage sentence next to the headline score. It tells you how many of the six domains (§3, §3.5)
+had assessable evidence for this scan. If you expect a domain to be missing, check what to scan to
+raise coverage: `data_at_rest` needs the storage/vault connector scanners enabled and reachable;
+`data_in_motion` needs the email or broker scanners enabled and reachable (see
+[`docs/operators-guide.md`](operators-guide.md) for the operator-facing checklist — backlog item
+999.92 and audit finding WARN-01 both track making this coverage more visible and are addressed by
+this disclosure).
+
+**The not-computed state.** If a scan assesses zero of the six domains, QU.I.R.K. does not print a
+`0/100` — a `0` would misleadingly read as "posture is bad" when the truth is "we have no evidence
+at all." Instead the report shows an explicit statement: *"Readiness score not computed — no domain
+had assessable evidence."* Treat a not-computed report as a scan-configuration problem to fix, not
+a security finding.
+
+**Unassessed subscores render as an em-dash, not a zero.** On the dashboard executive page, a
+subscore category with no assessable evidence renders as `—` in place of a numeric gauge, in the
+same layout slot a real gauge would occupy — a `0` there would misrepresent an untested category as
+"tested and terrible."
+
+> **Client Conversation — Coverage & the Not-Computed State:**
+> "The score you're looking at is computed only from the parts of your estate we actually got
+> evidence for this run — the report tells you exactly how many of the six domains that was. An
+> unassessed area doesn't drag your score down or prop it up; it's just excluded until we scan it.
+> If a domain shows as not assessed, that's a to-do for widening scan coverage, not a finding about
+> your posture in that area."
+
+**Scores are not comparable with pre-5.20 scores.** Because the aggregation formula itself
+changed — not just the underlying findings — a score computed under scoring v2 is not directly
+comparable to one computed before it, even for the identical estate. Every scoring-v2 output
+carries a version marker (`scoring v2 — not comparable with pre-5.20 scores`) for exactly this
+reason; see `CHANGELOG.md`'s Unreleased entry for the full migration decision record. QU.I.R.K.
+does not back-migrate historical database rows to make old and new scores artificially comparable
+— compare trend lines only within the same scoring version.
+
+**Gauge colors now agree with the report band (SCORE-07).** The dashboard's overall-score gauge
+used to derive its green/amber/red boundaries independently of the report's EXCELLENT/GOOD/
+MODERATE/FAIR/POOR band table in §2. As of Phase 188, both read from the same single source
+(`quirk/severity_bands.py`), so the gauge color and the report band can never silently disagree.
+This moved the gauge's visible color boundaries: green now begins at score 70 (previously 80),
+amber covers 35–69 (previously roughly 50–79), and red begins below 35 (previously below 50) — the
+gauge did not get more lenient, it got *correct*, now matching the GOOD/FAIR boundaries in §2's
+table exactly.
+
+---
+
 ## 4. Severity Tiers
 
 Every finding in a QU.I.R.K. report is assigned one of five severity levels. CRITICAL and HIGH indicate active risk that should be addressed immediately or within 30 days, independent of any quantum threat. MEDIUM and LOW require a remediation schedule. INFO items are planning advisories.

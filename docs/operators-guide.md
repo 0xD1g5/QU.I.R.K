@@ -159,6 +159,32 @@ references. The CBOM enumerates every cryptographic asset discovered.
 > walkthrough, [`docs/report-interpretation.md`](report-interpretation.md) for
 > plain-English finding/score explanations and client-conversation guidance.
 
+### 3.1.1 Reading domain coverage in the headline score (SCORE-06, Phase 188)
+
+As of scoring v2, the headline Quantum-Readiness Score is computed only from the domains a scan
+actually assessed — an unassessed domain is excluded, never fabricated as a full 25/25 (see
+[`docs/report-interpretation.md`](report-interpretation.md#36-coverage-exclude-and-rescale-and-the-not-computed-state-phase-188-score-06)
+for the reader-facing explanation). Operators should know how to tell which domains were
+unassessed and what to do about it:
+
+- **Where to look.** Every report surface — CLI markdown, HTML, DOCX, the dashboard executive
+  page, and `intelligence-{stamp}.json` — prints a `"N of 6 domains assessed"` disclosure next to
+  the score. On the dashboard, an unassessed subscore renders as an em-dash (`—`) in place of its
+  gauge rather than a `0`. A scan with zero assessed domains shows an explicit "Readiness score not
+  computed" statement instead of a score.
+- **What to scan to raise coverage.** The six domains are `hygiene`, `modern_tls`,
+  `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. The first four are fed
+  by the core TLS/certificate scan path and are assessed by nearly every scan. The two domains most
+  often left unassessed are:
+  - `data_at_rest` — needs the storage and vault connector scanners (§6) enabled and reachable.
+  - `data_in_motion` — needs the email or broker scanners (§6.2) enabled and reachable.
+  If a report consistently shows fewer than 6 of 6 domains assessed, check `connectors:` in your
+  config for these scanners before treating the score as final.
+- **Scores are not comparable across scoring versions.** A lower number after upgrading to scoring
+  v2 may simply reflect honest exclusion of previously-fabricated points, not a regression — do not
+  compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s Unreleased entry for
+  the full migration decision record.
+
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
 `--fuzz` enables active REST crypto-posture probing against discovered OpenAPI
