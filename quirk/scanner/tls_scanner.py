@@ -1,3 +1,4 @@
+import hashlib
 import json
 import socket
 import ssl
@@ -7,6 +8,7 @@ from typing import List, Tuple, Optional, Callable
 
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa, ec, ed25519, ed448
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.backends import default_backend
 
 from quirk.models import CryptoEndpoint
@@ -50,6 +52,29 @@ def _pubkey_info(pubkey):
     if isinstance(pubkey, ed448.Ed448PublicKey):
         return ("Ed448", 456)
     return ("Unknown", None)
+
+
+def _spki_sha256(cert) -> Optional[str]:
+    """Phase 191 SPKI-01: SHA-256 hex digest of a leaf certificate's
+    DER-encoded subject public key info block (RFC 7469 pin-sha256
+    convention).
+
+    The DER + SubjectPublicKeyInfo serialization below is mandatory and
+    non-negotiable: any other encoding/format combination produces a
+    valid-looking but wrong digest that would not detect key reuse across
+    certificate/key-type boundaries.
+
+    Returns None (rather than raising) for exotic key types that reject
+    this serialization — T-191-01: never abort the scan over a
+    fingerprinting failure.
+    """
+    try:
+        spki_der = cert.public_key().public_bytes(
+            Encoding.DER, PublicFormat.SubjectPublicKeyInfo
+        )
+        return hashlib.sha256(spki_der).hexdigest()
+    except Exception:
+        return None
 
 
 def _extract_sans(cert: x509.Certificate) -> str:
@@ -214,6 +239,7 @@ def _scan_one_sslyze(
             alg, size = _pubkey_info(pubkey)
             ep.cert_pubkey_alg = alg
             ep.cert_pubkey_size = size
+            ep.cert_spki_fingerprint = _spki_sha256(leaf)
 
             # Date handling — use _utc variant when available
             if hasattr(leaf, "not_valid_before_utc") and hasattr(leaf, "not_valid_after_utc"):
@@ -437,6 +463,7 @@ def _scan_one_fallback(
                 alg, size = _pubkey_info(pubkey)
                 ep.cert_pubkey_alg = alg
                 ep.cert_pubkey_size = size
+                ep.cert_spki_fingerprint = _spki_sha256(cert)
 
                 # avoid cryptography warnings if possible
                 if hasattr(cert, "not_valid_before_utc") and hasattr(cert, "not_valid_after_utc"):
