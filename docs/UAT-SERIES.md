@@ -24229,20 +24229,17 @@ overlap or truncate other executive-page content.
 **Falsifiability:** this case turns red if the disclosure line is absent, mis-placed, or visually
 clipped when actually rendered in a browser.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
-`tests/test_dashboard_score_schema_compat.py`, which proves `coverage_disclosure` reaches the API
-payload correctly for a partial-coverage scan, and by the source-level assertion in
-`src/dashboard/src/pages/executive.tsx` that renders `score.coverage_disclosure` beside the overall
-gauge block — but neither substitute is a live-browser visual-placement check.
-`188-VALIDATION.md`'s Manual-Only Verifications table names this exact behavior ("Dashboard gauge
-disclosure rendering") as requiring a human load-and-look pass, which has not yet been run. Not
-fabricated as PASS.)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_dashboard_score_schema_compat.py::TestScoreDataOptionalScore::test_partial_coverage_subscore_survives_as_none)
 **Date:** 2026-09-07  **Tester:** Automated substitute only (188-05 phase-close plan execution);
 human visual pass pending.
-**Notes:** `.venv/bin/python -m pytest tests/test_dashboard_score_schema_compat.py -q` — 9 passed,
-re-run live during this plan's execution, confirming the payload shape the frontend code path
-consumes. `grep -c 'coverage_disclosure' src/dashboard/src/pages/executive.tsx` returns 2 (source
-present), but no browser was launched to confirm on-screen placement.
+**Notes:** The cited test proves `coverage_disclosure` reaches the API payload correctly for a
+partial-coverage scan, and `src/dashboard/src/pages/executive.tsx` (grep-confirmed,
+`coverage_disclosure` appears 2x) renders `score.coverage_disclosure` beside the overall gauge
+block — but neither substitute is a live-browser visual-placement check. `188-VALIDATION.md`'s
+Manual-Only Verifications table names this exact behavior ("Dashboard gauge disclosure rendering")
+as requiring a human load-and-look pass, which has not yet been run. Not fabricated as PASS.
+`.venv/bin/python -m pytest tests/test_dashboard_score_schema_compat.py -q` — 9 passed, re-run live
+during this plan's execution.
 
 ---
 
@@ -24274,18 +24271,16 @@ grep -c 'score.score === null' src/dashboard/src/pages/executive.tsx
 `0/100` headline for a zero-assessed scan, or if the dashboard source path coerces a null score to
 `0` instead of branching on the explicit null check.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
-`tests/test_score_render_parity.py::test_not_computed_never_renders_zero_over_100_across_surfaces`
-(CLI/HTML/DOCX, automated PASS below) and by the source-level `score.score === null` branch in
-`executive.tsx` (grep-confirmed present, automated) — but the DASHBOARD portion of this case has
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_score_render_parity.py::test_not_computed_never_renders_zero_over_100_across_surfaces)
+**Date:** 2026-09-07  **Tester:** Automated (3 of 4 surfaces; 188-05 phase-close plan execution)
+**Notes:** The cited test proves CLI/HTML/DOCX never render a fabricated `0/100` for a
+zero-assessed scan (automated PASS, re-run live: `.venv/bin/python -m pytest
+tests/test_score_render_parity.py -q` — 3 passed). The source-level `score.score === null` branch
+in `executive.tsx` is grep-confirmed present (2 hits) but the DASHBOARD portion of this case has
 not been observed in a live browser. `188-VALIDATION.md`'s Manual-Only Verifications table names
 "Not-computed state rendering per surface" explicitly as requiring a visual/copy judgment pass
-across all four surfaces including the dashboard. Three of four surfaces are automated-PASS-backed
-below; the fourth (dashboard, visually) is the honest gap. Not fabricated as a full PASS.)
-**Date:** 2026-09-07  **Tester:** Automated (3 of 4 surfaces; 188-05 phase-close plan execution)
-**Notes:** `.venv/bin/python -m pytest tests/test_score_render_parity.py -q` — 3 passed (re-run
-live). `grep -c 'score.score === null' src/dashboard/src/pages/executive.tsx` returns 2. No
-browser was launched to visually confirm the dashboard's rendered not-computed statement.
+across all four surfaces including the dashboard. Three of four surfaces are automated-PASS-backed;
+the fourth (dashboard, visually) is the honest gap. Not fabricated as a full PASS.
 
 ---
 
@@ -24316,22 +24311,24 @@ real rendered page.
 **Falsifiability:** this case turns red if the live-rendered gauge's color boundary is observed at
 any score other than 70 or 35, or disagrees with the report band shown for the identical score.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
-`src/dashboard/src/components/gauges/__tests__/ScoreGauge.test.tsx::"renders safe at the GOOD
-boundary and at-risk just below it, default maxValue"` and
-`src/dashboard/src/components/gauges/__tests__/ScoreGauge.test.tsx::"renders vulnerable below the
-FAIR boundary and at-risk at the FAIR boundary, default maxValue"`, both executed live via vitest
-during this plan (component-level proof the 70/35 boundaries are wired correctly), plus
-`tests/test_severity_bands_freshness.py` (proves the JSON artifact the gauge reads from is
-current). `188-VALIDATION.md`'s Manual-Only Verifications table names this exact behavior ("Gauge
-color-boundary shift") as a deliberate visual change requiring a human load-and-compare pass,
-which has not yet been run. Not fabricated as PASS.)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage for the live-browser end-to-end claim; see Notes for the automated component-level corroboration that exists short of that)
 **Date:** 2026-09-07  **Tester:** Automated substitute only (188-05 phase-close plan execution);
 human visual pass pending.
-**Notes:** `cd src/dashboard && npx vitest run src/components/gauges/__tests__/ScoreGauge.test.tsx`
-— **7 passed**, re-run live during this plan's execution (toolchain available: npm on PATH,
-`src/dashboard/node_modules` present). `.venv/bin/python -m pytest
-tests/test_severity_bands_freshness.py -q` — 4 passed, re-run live.
+**Notes:** GAP, not DEFERRED, because no substitute can prove the live-browser end-to-end claim
+(a rendered page's gauge color agreeing with its own report band at the real 70/35 boundaries) —
+this is intentionally not a fabricated DEFERRED citation. Automated corroboration exists short of
+that live claim: `ScoreGauge.test.tsx`'s "renders safe at the GOOD boundary and at-risk just below
+it, default maxValue" and "renders vulnerable below the FAIR boundary and at-risk at the FAIR
+boundary, default maxValue" cases prove the component itself switches color exactly at 70 and 35
+in isolation (`cd src/dashboard && npx vitest run
+src/components/gauges/__tests__/ScoreGauge.test.tsx` — **7 passed**, re-run live during this
+plan's execution; toolchain available: npm on PATH, `src/dashboard/node_modules` present), and
+`tests/test_severity_bands_freshness.py` (`.venv/bin/python -m pytest
+tests/test_severity_bands_freshness.py -q` — 4 passed, re-run live) proves the JSON artifact the
+component reads those thresholds from is current. Neither substitute drives an actual report
+render to cross-check the band label for the identical score in the same browser session, which is
+the specific claim `188-VALIDATION.md`'s Manual-Only Verifications table names ("Gauge
+color-boundary shift") as requiring a human load-and-compare pass. Not fabricated as PASS.
 
 ---
 
