@@ -107,7 +107,11 @@ export function ScanHistoryPage() {
                 <TableCell className="text-sm">
                   {s.profile ?? <span className="text-muted-foreground">—</span>}
                 </TableCell>
-                <TableCell className="font-data text-sm">{s.score}</TableCell>
+                <TableCell className="font-data text-sm">
+                  {/* 188 review CR-04: null score = not computed — render an
+                      honest placeholder, never a fabricated 0. */}
+                  {s.score ?? <span className="text-muted-foreground">—</span>}
+                </TableCell>
                 <TableCell>
                   <Badge className={`${SEVERITY_STYLES.HIGH} font-semibold text-xs font-data`}>
                     {s.finding_counts.high}

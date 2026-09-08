@@ -19,6 +19,7 @@ from __future__ import annotations
 from quirk.dashboard.api.schemas import (
     CompareResponse,
     CompareScanSummary,
+    ScanSession,
     ScoreData,
     SubScores,
     SubscoreDelta,
@@ -103,6 +104,44 @@ class TestScoreDataOptionalScore:
         s = ScoreData(score=90, rating="EXCELLENT", subscores=_full_subscores(), drivers=[])
         assert s.score == 90
         assert isinstance(s.score, int)
+
+
+class TestScanSessionOptionalScore:
+    """188 review CR-04: ScanSession.score is Optional[int]; a not-computed
+    scan appears in the scan-history list as score=None (rendered as a
+    placeholder by the UI), never a fabricated 0 beside rating NOT_ASSESSED."""
+
+    def test_none_score_validates_and_round_trips_as_null(self):
+        s = ScanSession(
+            scan_id="2026-09-07T00:00:00",
+            scanned_at="2026-09-07T00:00:00Z",
+            total_endpoints=5,
+            score=None,
+            rating="NOT_ASSESSED",
+        )
+        assert s.score is None
+        assert s.model_dump()["score"] is None
+
+    def test_int_score_still_validates(self):
+        s = ScanSession(
+            scan_id="2026-09-07T00:00:00",
+            scanned_at="2026-09-07T00:00:00Z",
+            total_endpoints=5,
+            score=82,
+        )
+        assert s.score == 82
+        assert isinstance(s.score, int)
+
+    def test_score_field_omitted_defaults_to_none_not_zero(self):
+        """The pre-CR-04 default was 0 — an int the schema could not
+        distinguish from a real worst-case score. The default is now the
+        honest None sentinel."""
+        s = ScanSession.model_validate({
+            "scan_id": "x",
+            "scanned_at": "2026-09-07T00:00:00Z",
+            "total_endpoints": 0,
+        })
+        assert s.score is None
 
 
 class TestCompareArithmeticNeverFabricatesZero:

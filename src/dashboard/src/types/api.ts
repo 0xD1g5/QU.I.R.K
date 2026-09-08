@@ -255,7 +255,9 @@ export interface ScanSession {
   scan_id: string
   scanned_at: string
   total_endpoints: number
-  score: number
+  // 188 review CR-04: null means the scan's score was not computed (zero
+  // domains assessed) — never a fabricated 0. Mirrors CompareScanSummary.
+  score: number | null
   profile: string | null
   calibration: string | null
   target: string | null

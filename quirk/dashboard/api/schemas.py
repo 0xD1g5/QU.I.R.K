@@ -468,7 +468,11 @@ class ScanSession(BaseModel):
     scanned_at: UTCDateTime
     total_endpoints: int
     # Phase 66 UI-HIST-01 additions — all Optional/default for backward compat with ScanSelector
-    score: int = 0
+    # 188 review CR-04: Optional[int], mirroring CompareScanSummary.score —
+    # None means the scan's score was not computed (zero domains assessed),
+    # never a fabricated 0 (which would read as worst-case POOR beside a
+    # rating of "NOT_ASSESSED" in the scan-history list).
+    score: Optional[int] = None
     profile: Optional[str] = None
     calibration: Optional[str] = None
     target: Optional[str] = None

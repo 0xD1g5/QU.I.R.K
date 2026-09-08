@@ -1376,7 +1376,11 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         # DEPTH vocabulary (quick|standard|deep) and would silently no-op back to
         # "balanced" inside compute_readiness_score(). `calibration` is None for
         # ScanJob-less (CLI-launched) sessions, which is the intended balanced fallback.
-        score = 0
+        # 188 review CR-04: None (not 0) is the honest default — a session with
+        # no endpoints, or one whose score was not computed, must never surface
+        # a fabricated 0/100 in the scan-history list. ScanSession.score is
+        # Optional[int] to express this (mirroring CompareScanSummary.score).
+        score: Optional[int] = None
         rating = ""
         rating_cap_reason = None
         if eps:
@@ -1404,10 +1408,14 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
                 eps, [f.model_dump() for f in session_findings]
             )
             score_dict = compute_readiness_score(evidence, profile=calibration)
-            # Phase 188 SCORE-06: score_dict["score"] may be None (zero domains
-            # assessed) -- minimal crash-prevention fix; coverage-aware
-            # rendering of this state is plans 188-03/188-04's job.
-            score = int(score_dict["score"] or 0)
+            # Phase 188 SCORE-06 / 188 review CR-04: pass the score through
+            # UNCHANGED — None means "not computed" and must survive to the
+            # scan-history surface (ScanSession.score is Optional[int]).
+            # Never coerce None to 0: that fabricated a worst-case 0/100 row
+            # beside rating "NOT_ASSESSED". Sibling `or 0` coercions remain in
+            # trends.py (timeline) and merge.py (segment gauges) — documented
+            # deferred follow-ups, out of this route's scope.
+            score = score_dict["score"]
             rating = score_dict.get("rating", "")
             rating_cap_reason = score_dict.get("rating_cap_reason")
 
