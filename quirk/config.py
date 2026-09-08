@@ -1,9 +1,10 @@
 import dataclasses
+import ipaddress
 import logging
 import os
 import warnings
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
@@ -528,6 +529,100 @@ def _as_int_list(v: Any, *, field_name: str) -> List[int]:
             )
         out.append(port)
     return out
+
+
+def _parse_port_value(item: Any, *, field_name: str, entry: str) -> int:
+    """Validate a single port value using the exact `_as_int_list` rejection ladder
+    (bool-before-int, non-integral float, non-coercible, 1-65535 range), but raise
+    `QRK-CONFIG-002` instead of `QRK-CONFIG-001` since this is the broker_targets
+    host:port validator, not the scan.ports_tls / tls_designated_ports one.
+    """
+    if isinstance(item, bool):
+        raise ValueError(
+            f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+        )
+    if isinstance(item, float) and not item.is_integer():
+        raise ValueError(
+            f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+        )
+    try:
+        port = int(item)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+        )
+    if not 1 <= port <= 65535:
+        raise ValueError(
+            f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+        )
+    return port
+
+
+def _parse_host_port(entry: str, *, field_name: str) -> Tuple[str, Optional[int]]:
+    """Parse a `connectors.broker_targets` entry (Phase 190 / TRIAGE-06) into a
+    (host, port) pair. Accepts a bare host/IP (no port), `host:port`, or bracketed
+    IPv6 with an optional port (`[::1]:29092` / `[::1]`).
+
+    Bare (unbracketed) IPv6 literals with no port (e.g. `::1`) are accepted as a
+    bare host — validated via `ipaddress.ip_address`. An unbracketed entry with
+    more than one colon that is NOT a valid bare IPv6 literal is ambiguous (can't
+    tell where the host ends and the port begins) and is rejected with
+    `QRK-CONFIG-002` rather than guessed at via `rsplit(":", 1)` (RESEARCH IPv6
+    caveat) — bracket syntax is required for IPv6-with-port.
+
+    Raises ValueError containing `QRK-CONFIG-002` and `field_name` on any
+    unparseable host:port shape or invalid port.
+    """
+    raw = entry.strip() if isinstance(entry, str) else entry
+    if not isinstance(raw, str) or not raw:
+        raise ValueError(
+            f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+        )
+
+    if raw.startswith("["):
+        close = raw.find("]")
+        if close == -1:
+            raise ValueError(
+                f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+            )
+        host = raw[1:close].strip()
+        remainder = raw[close + 1:]
+        if not host:
+            raise ValueError(
+                f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+            )
+        if not remainder:
+            return host, None
+        if not remainder.startswith(":"):
+            raise ValueError(
+                f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+            )
+        port_str = remainder[1:]
+        port = _parse_port_value(port_str, field_name=field_name, entry=entry)
+        return host, port
+
+    colon_count = raw.count(":")
+    if colon_count == 0:
+        return raw, None
+    if colon_count == 1:
+        host, port_str = raw.split(":", 1)
+        host = host.strip()
+        if not host:
+            raise ValueError(
+                f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+            )
+        port = _parse_port_value(port_str, field_name=field_name, entry=entry)
+        return host, port
+
+    # More than one colon, unbracketed: only acceptable as a bare IPv6 literal
+    # with no port. Anything else is ambiguous — require bracket syntax.
+    try:
+        ipaddress.ip_address(raw)
+    except ValueError:
+        raise ValueError(
+            f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
+        )
+    return raw, None
 
 
 _KNOWN_CONNECTOR_KEYS = {f.name for f in dataclasses.fields(ConnectorsCfg)}

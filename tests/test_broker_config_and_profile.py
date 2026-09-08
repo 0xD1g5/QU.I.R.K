@@ -1,7 +1,9 @@
 """Phase 33 / Plan 02: broker config flag + profile gating regression tests."""
 from types import SimpleNamespace
 
-from quirk.config import ConnectorsCfg, ScanCfg, config_from_dict
+import pytest
+
+from quirk.config import ConnectorsCfg, ScanCfg, _parse_host_port, config_from_dict
 from quirk.engine.profiles import apply_profile
 
 # Minimal raw config dict that satisfies config_from_dict() required fields.
@@ -80,3 +82,54 @@ def test_apply_profile_quick_leaves_broker_disabled():
     cfg = _base_cfg()
     apply_profile(cfg, "quick", safe_mode=False)
     assert cfg.connectors.enable_broker is False
+
+
+# --- Phase 190 / TRIAGE-06: _parse_host_port ---------------------------------
+
+def test_parse_host_port_bare_hostname():
+    assert _parse_host_port("kafka.internal", field_name="connectors.broker_targets") == (
+        "kafka.internal",
+        None,
+    )
+
+
+def test_parse_host_port_host_and_port():
+    assert _parse_host_port("localhost:29092", field_name="connectors.broker_targets") == (
+        "localhost",
+        29092,
+    )
+
+
+def test_parse_host_port_bracketed_ipv6_with_port():
+    assert _parse_host_port("[::1]:29092", field_name="connectors.broker_targets") == (
+        "::1",
+        29092,
+    )
+
+
+def test_parse_host_port_bare_ipv6_no_port():
+    assert _parse_host_port("::1", field_name="connectors.broker_targets") == ("::1", None)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    ["host:0", ":70000", "host:abc", "host:80.5", "host:true"],
+)
+def test_parse_host_port_malformed_port_raises_config_002(entry):
+    with pytest.raises(ValueError) as exc_info:
+        _parse_host_port(entry, field_name="connectors.broker_targets")
+    assert "QRK-CONFIG-002" in str(exc_info.value)
+    assert "connectors.broker_targets" in str(exc_info.value)
+
+
+def test_parse_host_port_ambiguous_unbracketed_ipv6_with_port_raises():
+    with pytest.raises(ValueError) as exc_info:
+        _parse_host_port("::1:29092", field_name="connectors.broker_targets")
+    assert "QRK-CONFIG-002" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("entry", ["", "   ", ":29092"])
+def test_parse_host_port_empty_host_raises(entry):
+    with pytest.raises(ValueError) as exc_info:
+        _parse_host_port(entry, field_name="connectors.broker_targets")
+    assert "QRK-CONFIG-002" in str(exc_info.value)

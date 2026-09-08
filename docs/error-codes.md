@@ -31,6 +31,7 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 | Code | Cause | Fix |
 |------|-------|-----|
 | QRK-CONFIG-001 | A scan-config port-list value (scan.ports_tls or scan.tls_designated_ports) is not a valid TCP port: not a number, a non-integral number, or outside the range 1-65535. | Use bare integers or digit-strings in the range 1-65535 (e.g. 8444 or "8444") for every entry in scan.ports_tls / scan.tls_designated_ports. |
+| QRK-CONFIG-002 | A connectors.broker_targets entry could not be parsed as host or host:port: the host:port string is unparseable (e.g. empty host, ambiguous unbracketed IPv6 with multiple colons), or the port half is not a valid TCP port (not a number, a non-integral number, or outside the range 1-65535). | Use a bare hostname/IP (e.g. "kafka.internal"), "host:port" (e.g. "localhost:29092"), or bracketed IPv6 with an optional port (e.g. "[::1]:29092") for every entry in connectors.broker_targets, with ports in the range 1-65535. |
 
 ## DASHBOARD
 
