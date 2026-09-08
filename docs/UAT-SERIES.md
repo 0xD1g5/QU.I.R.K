@@ -1,7 +1,14 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-08 (Phase 190 Plan 04 — Series 190 added: `connectors.broker_targets`
+**Last Updated:** 2026-09-08 (Phase 191 Plan 06 — Series 191 added: SPKI SHA-256 fingerprint
+capture at TLS leaf-certificate parse (SPKI-01) persisted end-to-end across the sensor push path,
+and read-time, advisory-only key-reuse derivation surfaced as a "Key Reuse" section across CLI
+markdown/HTML/DOCX report surfaces (SPKI-02) with honest zero-reuse and no-backfill coverage
+disclosure; UAT-191-06 recorded as an honest SKIP (DEFERRED) pending the plan's own
+human-verification checkpoint. v5.21 has still not shipped a version bump, so `**Version:**` stays
+`5.19.0` — same reasoning Series 188/189/190's header notes already recorded. Earlier: Phase 190
+Plan 04 — Series 190 added: `connectors.broker_targets`
 explicit non-default broker ports with ADDITIVE semantics and `QRK-CONFIG-002` fail-fast
 (TRIAGE-06), live before/after broker evidence against the chaos lab's mapped
 29092/25671/26380, the unreached-target advisory (T-190-03), and a fresh no-mocks Modbus
@@ -24836,5 +24843,228 @@ behavior change to test, per UATREC-04's own guidance that GAP is a valid, passi
 No case in this series was checked to satisfy the gate without a corresponding real result; every
 PASS above cites this phase's own fresh evidence (`190-EVIDENCE.md`, dated 2026-09-08), and
 UAT-190-05 explicitly does not restate UAT-141-04's 2026-08-03 evidence as its own.
+
+---
+
+## Series 191: SPKI Fingerprint Persistence (Phase 191 — v5.21)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its cases below carry
+HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175-177, 187, 188, 189, and
+190 used. `scripts/uat_disposition_apply.py verify` adds zero ledger rows for this series.
+
+Phase 191 closed SPKI-01 (SPKI SHA-256 fingerprint capture at TLS leaf-certificate parse,
+persisted on `CryptoEndpoint.cert_spki_fingerprint`, carried end-to-end across the sensor push
+path) and SPKI-02 (read-time, advisory-only key-reuse derivation surfaced as a "Key Reuse" section
+across all three report surfaces). All evidence below is sourced from the five 191-01..05
+`SUMMARY.md` files' own automated test runs, re-run live during this plan's execution
+(`.venv/bin/python -m pytest -q tests/test_spki_fingerprint_capture.py
+tests/test_sensor_spki_roundtrip.py tests/test_key_reuse_query.py
+tests/test_key_reuse_technical_render.py tests/test_key_reuse_render_parity.py
+tests/test_key_reuse_score_guard.py` -> 40 passed). Human confirmation on a real generated report
+(UAT-191-06) is a separate checkpoint gated by this same plan.
+
+### UAT-191-01: A fresh TLS scan populates `cert_spki_fingerprint` (SPKI-01)
+
+**ID:** UAT-191-01
+**Title:** Every TLS endpoint's leaf-certificate SPKI SHA-256 digest is computed at both
+`tls_scanner.py` parse sites (sslyze path and stdlib-`ssl` fallback path) and persisted on
+`CryptoEndpoint.cert_spki_fingerprint`
+**Maps to:** SPKI-01
+
+**What to test:** hash correctness against a manual `hashlib.sha256(DER SPKI)` computation across
+RSA/EC/Ed25519/Ed448 real certificates, the same-key-two-certs-same-digest property (and its
+inverse), and failure-tolerance (a broken cert-like object returns `None`, never raises).
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_spki_fingerprint_capture.py -q
+```
+
+**Pass Criteria:** all `_spki_sha256` correctness, same-key/different-key, and failure-tolerance
+tests pass; `grep -c "PublicFormat.SubjectPublicKeyInfo" quirk/scanner/tls_scanner.py` returns 1
+(leaf-only, no chain iteration).
+
+**Falsifiability:** this case turns red if the digest of two certificates sharing the same public
+key ever differs, if a malformed certificate object raises instead of returning `None`, or if a
+chain (non-leaf) certificate is ever hashed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (191-06 phase-close plan execution)
+**Notes:** `tests/test_spki_fingerprint_capture.py` re-run live during this plan — 7 tests
+passing, per 191-01-SUMMARY.md's Task 2 self-check.
+
+---
+
+### UAT-191-02: A sensor push round-trips `cert_spki_fingerprint` into the console DB (SPKI-01)
+
+**ID:** UAT-191-02
+**Title:** `cert_spki_fingerprint` travels the full sensor->console path — sensor-side
+serialization (`_endpoint_to_dict`), the push envelope, and console-side ingest
+(`_ingest_envelope`) — and is asserted on a row queried back out of a real on-disk SQLite DB, not
+merely on the parsed envelope object
+**Maps to:** SPKI-01
+
+**What to test:** exactly what `tests/test_sensor_spki_roundtrip.py` does — a `CryptoEndpoint`
+with a sentinel fingerprint serialized, JSON round-tripped, ingested, and read back from a real
+DB (Test A); an old-sensor finding dict with the key deleted ingests cleanly to `NULL` rather than
+raising (Test B, the D-11 control); and `quirk.merge.scan._assemble_union` is proven (not assumed)
+to carry the column through with zero code change (Test C).
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_sensor_spki_roundtrip.py -q
+```
+
+**Pass Criteria:** all three tests pass — the queried-back row has the sentinel fingerprint intact
+(Test A), a missing key ingests as `NULL` without raising (Test B), and the merge union query
+returns the fingerprint unchanged (Test C).
+
+**Falsifiability:** this case turns red if the fingerprint is dropped anywhere along
+sensor-serialize -> envelope -> console-ingest -> DB-read, or if an old-sensor finding lacking the
+key raises `KeyError` instead of ingesting as `NULL`. 191-02-SUMMARY.md records a live
+falsifiability demonstration: removing the `console_cmd.py` projection line made Test A fail with
+`AssertionError: assert None == 'aaa...1'` while Tests B/C still passed, confirming the test
+actually exercises the projection site.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (191-06 phase-close plan execution)
+**Notes:** `tests/test_sensor_spki_roundtrip.py` re-run live during this plan — 3 tests passing,
+per 191-02-SUMMARY.md's live falsifiability demonstration and self-check.
+
+---
+
+### UAT-191-03: The Key Reuse section appears in all three report surfaces (SPKI-02)
+
+**ID:** UAT-191-03
+**Title:** The "Key Reuse" section — heading, italic advisory caption
+(`"Advisory - key reuse does not affect the readiness score."`), coverage line, and
+biggest-cluster-first cluster list — renders identically (same numbers, same ordering, same
+caption) in the CLI technical markdown, the HTML report, and the DOCX report
+**Maps to:** SPKI-02
+
+**What to test:** exactly what `tests/test_key_reuse_render_parity.py`'s caption-equality and
+one-payload content-parity tests do — the same synthetic `key_reuse` dict fed to
+`build_tech_markdown`, `render_key_reuse_section` (HTML), and the DOCX renderer, then diffed for
+coverage numbers, truncated fingerprints, member counts, and ordering.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_key_reuse_render_parity.py tests/test_key_reuse_technical_render.py -q
+```
+
+**Pass Criteria:** the caption-equality test and all content-parity tests pass across CLI/HTML/DOCX.
+
+**Falsifiability:** 191-05-SUMMARY.md records this case's falsifiability was demonstrated live —
+a one-character edit to `html_renderer.KEY_REUSE_ADVISORY_CAPTION` made the parity test FAIL, and
+reverting restored a byte-identical file (confirmed via `diff`).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (191-06 phase-close plan execution)
+**Notes:** `tests/test_key_reuse_render_parity.py` (11 tests) and
+`tests/test_key_reuse_technical_render.py` (6 tests) re-run live during this plan — all passing,
+per 191-04-SUMMARY.md and 191-05-SUMMARY.md self-checks.
+
+---
+
+### UAT-191-04: A zero-reuse scan renders the explicit no-shared-keys statement, never a silent omission (SPKI-02, D-06)
+
+**ID:** UAT-191-04
+**Title:** When `compute_key_reuse_clusters` returns zero clusters, all three report surfaces
+still render the full Key Reuse section — heading, caption, coverage line — replacing the cluster
+list with an explicit `"No shared keys detected across N fingerprinted endpoints."` sentence,
+never omitting the section
+**Maps to:** SPKI-02
+
+**What to test:** the zero-cluster branch of `build_tech_markdown` (CLI), `render_key_reuse_section`
+(HTML), and the DOCX renderer's zero-cluster paragraph-instead-of-table path.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_key_reuse_technical_render.py -k zero -q
+.venv/bin/python -m pytest tests/test_key_reuse_render_parity.py -k "zero or empty" -q
+```
+
+**Pass Criteria:** all three surfaces render the section on a zero-cluster payload; none returns
+an empty string or omits the section when `key_reuse` is truthy but `clusters` is empty.
+
+**Falsifiability:** this case turns red if any surface silently drops the Key Reuse section on a
+zero-reuse result, or if the zero-reuse sentence's wording diverges across surfaces.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (191-06 phase-close plan execution)
+**Notes:** Zero-cluster/zero-reuse-sentence tests in both files re-run live during this plan —
+passing, per 191-04-SUMMARY.md's "zero-cluster absence sentence" test and 191-05-SUMMARY.md's
+"zero-cluster no-table check" (DOCX) and zero-reuse sentence parity check (cross-surface).
+
+---
+
+### UAT-191-05: Pre-Phase-191 endpoint rows read as unfingerprinted with no backfill (D-10)
+
+**ID:** UAT-191-05
+**Title:** An endpoint scanned before this feature shipped has `cert_spki_fingerprint IS NULL`,
+is excluded from key-reuse cluster membership, and is correctly counted against `total` but not
+`fingerprinted` in the coverage line — with no migration attempting to derive a fingerprint from
+already-stored `cert_*` fields
+**Maps to:** SPKI-01, SPKI-02, D-10/D-12
+
+**What to test:** the NULL-exclusion and coverage-count tests in `tests/test_key_reuse_query.py`
+(a NULL-fingerprint endpoint contributes to `total` but not `fingerprinted`, and never appears in
+any cluster), plus the migration idempotency test confirming the column is additive-only.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_key_reuse_query.py -k "null or coverage or non_tls" -q
+.venv/bin/python -m pytest tests/test_db_migrations.py -k phase191 -q
+```
+
+**Pass Criteria:** a seeded NULL-fingerprint TLS endpoint is counted in `total`, excluded from
+`fingerprinted` and from every cluster; the migration test confirms the column is nullable with no
+backfill logic present.
+
+**Falsifiability:** this case turns red if a NULL-fingerprint row is ever included in a cluster
+(a `NULL == NULL` SQL join bug would produce this), if `fingerprinted` over-counts NULL rows, or
+if a migration attempts to derive a fingerprint from other stored `cert_*` columns.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (191-06 phase-close plan execution)
+**Notes:** `tests/test_key_reuse_query.py` (7 tests, including NULL exclusion, coverage counts,
+and non-TLS exclusion) and the two `tests/test_db_migrations.py` Phase 191 tests re-run live
+during this plan — all passing, per 191-01-SUMMARY.md and 191-03-SUMMARY.md self-checks. No
+backfill code exists anywhere in the diff (confirmed by inspection of all five plans' file lists).
+
+---
+
+### UAT-191-06: Human confirmation of key-reuse output on a real generated report (SPKI-02, D-05/D-06)
+
+**ID:** UAT-191-06
+**Title:** A developer visually confirms, on a real generated report (not test output), that the
+Key Reuse section reads as remediation leverage on all three surfaces, renders honestly when
+empty, and does not move the readiness score
+**Maps to:** SPKI-02
+
+**What to test:** N/A as an automated case — this is the disposition record for Task 3's
+`checkpoint:human-verify` gate in `191-06-PLAN.md`, which requires a human developer to inspect a
+live-generated `technical-findings-*.md`, HTML report, and DOCX report and confirm the leverage
+framing, honest zero-reuse rendering, and score neutrality by eye. No test asserts operator-facing
+readability or framing quality; that is precisely why this checkpoint exists.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by 191-06-PLAN.md Task 3's
+`checkpoint:human-verify` gate; awaiting live developer sign-off, tracked separately from this
+docs-and-UAT plan's own automated tasks)
+**Date:** 2026-09-08  **Tester:** N/A (human-verification checkpoint, not yet executed at the time
+this series was authored)
+**Notes:** This is an honest SKIP, not a substitute PASS — per UATREC-04, checking this box before
+the human checkpoint actually runs would misrepresent an unexecuted manual verification as
+complete. If the checkpoint is later approved, flip this to `[x] PASS` and cite the approval
+transcript/commit; if it surfaces a defect, flip to `[x] FAIL` and file the fix.
+
+---
+
+**Series 191 disposition.** UAT-191-01 through UAT-191-05 are each `[x] PASS`, each citing a live
+re-run of this phase's own automated tests during this plan's execution (40 tests total across six
+files, all passing). UAT-191-06 is `[x] SKIP (DEFERRED)` — an honest disposition for the
+human-verification checkpoint that gates this same plan's Task 3, not yet executed at authoring
+time. No case in this series was checked to satisfy the gate without a corresponding real result.
 
 **Last Updated:** 2026-09-08
