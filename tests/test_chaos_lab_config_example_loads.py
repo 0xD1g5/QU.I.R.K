@@ -15,7 +15,11 @@ from quirk.config import load_config
 
 CHAOS_LAB_MD = Path(__file__).resolve().parents[1] / "docs" / "chaos-lab.md"
 
-_EXAMPLE_RE = re.compile(r"# config-lab-core\.yaml\n(.*?)```", re.DOTALL)
+# IN-02: anchored to the ```yaml fence so a future prose mention of the
+# literal anchor line earlier in the doc cannot hijack extraction. The
+# `# config-lab-core.yaml` comment line itself is excluded from the capture
+# (it is a YAML comment, so including it would also be harmless).
+_EXAMPLE_RE = re.compile(r"```yaml\n# config-lab-core\.yaml\n(.*?)```", re.DOTALL)
 
 
 def _extract_config_lab_core_example() -> str:
