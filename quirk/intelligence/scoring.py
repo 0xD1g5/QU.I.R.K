@@ -172,7 +172,10 @@ def _apply_weighted_impacts(
 
 def _endpoints_assessed(endpoints: int) -> bool:
     """hygiene / modern_tls / agility_signals all read endpoint-wide ratios
-    against the same `denom` -- they were assessed iff any endpoint exists."""
+    against the same `denom` -- they were assessed iff any ASSESSABLE endpoint
+    exists. Callers must pass the ADVISORY/CLOSED-excluded count
+    (`assessable_endpoint_count`), not `totals.endpoints` — see the CR-02
+    comment at the call site in compute_readiness_score()."""
     return endpoints > 0
 
 
@@ -370,7 +373,19 @@ def compute_readiness_score(
     # domains that were actually assessed. `domains_total`/`domains_assessed`
     # are ALWAYS derived from `len(category_table)`, never a hardcoded 6, so a
     # future 7th category cannot silently break this math.
-    endpoints_assessed = _endpoints_assessed(endpoints)
+    # 188 review CR-02: the endpoint-wide predicate must read the
+    # non-asset-excluded counter, not totals.endpoints — build_evidence_summary
+    # counts ADVISORY (scanner self-reports) and CLOSED (TIMEOUT/REFUSED/
+    # UNREACHABLE probes) rows into totals.endpoints, so a scan that reached
+    # NOTHING (all rows CLOSED) would otherwise mark hygiene/modern_tls/
+    # agility_signals "assessed" with zero real evidence and fabricate a
+    # 100/100 EXCELLENT headline. assessable_endpoint_count (Phase 184.1,
+    # excludes ADVISORY/CLOSED) is the honest signal; `endpoints` remains the
+    # fallback for hand-built pre-184.1 evidence dicts that lack the key.
+    assessable_endpoints = max(
+        0, _as_int(evidence.get("assessable_endpoint_count", endpoints))
+    )
+    endpoints_assessed = _endpoints_assessed(assessable_endpoints)
     identity_assessed = _identity_assessed(cert_obs, protocol_counts)
     dar_assessed = _dar_assessed(protocol_counts)
     motion_assessed = _motion_assessed(protocol_counts)

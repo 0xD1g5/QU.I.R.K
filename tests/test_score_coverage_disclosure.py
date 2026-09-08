@@ -243,6 +243,54 @@ def test_zero_assessed_domains_emits_not_computed_never_fabricated():
         assert value is None, f"subscore {category} must be None, got {value}"
 
 
+def test_all_closed_endpoints_score_not_computed_never_100(  # 188 review CR-02
+):
+    """188 review CR-02: a scan whose endpoint rows are ALL non-asset protocols
+    (CLOSED — TIMEOUT/REFUSED/UNREACHABLE probes) reached nothing and must emit
+    the honest not-computed state — NEVER a fabricated 100/100 EXCELLENT.
+
+    Pre-fix, `_endpoints_assessed` read `totals.endpoints` (which counts
+    ADVISORY/CLOSED rows) instead of `assessable_endpoint_count` (which
+    excludes them), so hygiene/modern_tls/agility_signals were marked
+    "assessed" with zero real evidence and contributed three clean 25s:
+    verified-by-execution output was `score: 100, rating: EXCELLENT,
+    "3 of 6 domains assessed"` for 5 all-CLOSED endpoints.
+    """
+    endpoints = [
+        CryptoEndpoint(host=f"dead{i}.example.com", port=443, protocol="CLOSED")
+        for i in range(5)
+    ]
+    evidence = build_evidence_summary(endpoints, [])
+    assert evidence["assessable_endpoint_count"] == 0, (
+        "Fixture precondition failed: CLOSED rows must be excluded from "
+        "assessable_endpoint_count (Phase 184.1 D-06/D-07)."
+    )
+
+    result = compute_readiness_score(evidence)
+
+    assert result["score"] is None, (
+        f"CR-02 REGRESSION: an all-CLOSED scan (nothing reachable) scored "
+        f"{result['score']} — the endpoint-wide assessed-predicate is reading "
+        f"totals.endpoints instead of assessable_endpoint_count."
+    )
+    assert result["rating"] == "NOT_ASSESSED"
+    assert result["domains_assessed"] == 0
+    for category, value in result["subscores"].items():
+        assert value is None, (
+            f"subscore {category} must be None for an all-CLOSED scan, got {value}"
+        )
+
+
+def test_hand_built_pre_1841_evidence_dict_still_uses_endpoints_fallback():
+    """Companion to the CR-02 fix: a hand-built evidence dict WITHOUT the
+    Phase 184.1 `assessable_endpoint_count` key must keep falling back to
+    totals.endpoints, so pre-184.1 callers and existing fixtures behave
+    unchanged."""
+    result = compute_readiness_score({"totals": {"endpoints": 10, "findings": 0}})
+    assert result["subscores"]["hygiene"] is not None
+    assert result["domains_assessed"] == 3  # endpoint-wide group only
+
+
 def test_zero_assessed_domains_does_not_raise_on_realistic_empty_scan():
     """Companion to the hand-built-dict case above: build_evidence_summary()'s own output
     shape (with all its extra keys) also hits the zero-assessed branch cleanly for a truly
