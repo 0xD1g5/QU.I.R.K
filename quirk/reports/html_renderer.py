@@ -926,6 +926,14 @@ def render_html_report(
         raw_sum = sum(int(v) for v in subscores_ctx.values()
                       if isinstance(v, (int, float)) and not isinstance(v, bool))
 
+    # 188 review CR-01: pre-map unassessed (None) subscores to an em dash ONCE,
+    # after raw_sum above has consumed the numeric values. The template's
+    # `subscores.get(key, '—')` default never fires for a present-but-None key
+    # (dict.get semantics), and Jinja renders None as the literal string "None"
+    # (no `finalize` is configured on the Environment) — so the None→"—"
+    # substitution must happen here, before the context is built.
+    subscores_ctx = {k: ("—" if v is None else v) for k, v in (subscores_ctx or {}).items()}
+
     # Phase 100 / FMT-01 / D-01: extract logo_path and base64-encode for cover page
     logo_path = getattr(getattr(cfg, "assessment", None), "logo_path", None)
     logo_b64, logo_mime = _load_logo_b64(logo_path)

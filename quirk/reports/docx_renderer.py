@@ -471,7 +471,11 @@ def render_docx_report(
     for key, label in _SUBSCORE_LABELS:
         row_cells = score_decomp_tbl.add_row().cells
         row_cells[0].text = label
-        row_cells[1].text = str(subscores.get(key, "—"))
+        # 188 review CR-01: key is always present with value None for an
+        # unassessed category — dict.get's default never fires; str(None)
+        # would render the literal "None". Branch on None explicitly.
+        _v = subscores.get(key)
+        row_cells[1].text = "—" if _v is None else str(_v)
         row_cells[2].text = "/25"
 
     # Priority Business Risks sub-section (2-col table)
@@ -643,7 +647,10 @@ def render_docx_report(
     for key, label in _SUBSCORE_LABELS:
         row_cells = score_breakdown_tbl.add_row().cells
         row_cells[0].text = label
-        row_cells[1].text = str(subscores.get(key, "—"))
+        # 188 review CR-01: same explicit None branch as the executive-summary
+        # decomposition table above — never render the literal "None".
+        _v = subscores.get(key)
+        row_cells[1].text = "—" if _v is None else str(_v)
         row_cells[2].text = "/25"
 
     # ---- Hardware PQC Advisory section (Phase 128 D-10, Phase 140 BRIDGE-03,

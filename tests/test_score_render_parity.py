@@ -270,3 +270,90 @@ def test_not_computed_never_renders_zero_over_100_across_surfaces(tmp_path):
         assert NOT_COMPUTED_STATEMENT in text, (
             f"{name} surface missing the once-composed not-computed statement."
         )
+
+
+def test_unassessed_subscores_never_render_literal_none(tmp_path):
+    """188 review CR-01: an unassessed subscore (present key, value None) must
+    render as an em dash on every subscore-bearing surface — never the literal
+    string "None". dict.get(key, '—') does NOT do this (the default only fires
+    for a MISSING key), which is exactly the bug this test pins.
+
+    Assertions are scoped to the table-cell shapes each surface emits so an
+    unrelated prose occurrence of the word "None" cannot false-positive.
+    """
+    surfaces = _render_all_surfaces(tmp_path, _PARTIAL_SCORE_RAW, "none_cells")
+
+    # Markdown table cells (CLI exec markdown + writer.py scorecard markdown).
+    for name in ("cli", "scorecard"):
+        assert "| None |" not in surfaces[name], (
+            f"{name} surface rendered a literal 'None' subscore cell for an "
+            f"unassessed category (CR-01 regression)."
+        )
+        assert "| — |" in surfaces[name], (
+            f"{name} surface did not render the em-dash placeholder for an "
+            f"unassessed category."
+        )
+
+    # HTML table cells.
+    assert ">None<" not in surfaces["html"], (
+        "HTML surface rendered a literal 'None' subscore cell (CR-01 regression)."
+    )
+    assert "<td>—</td>" in surfaces["html"], (
+        "HTML surface did not render the em-dash placeholder for an unassessed category."
+    )
+
+    # DOCX cells — doc.paragraphs does NOT include table-cell text, so inspect
+    # the tables directly (leg runs only when python-docx is installed).
+    try:
+        from docx import Document
+    except ImportError:
+        return
+    from quirk.reports.content_model import build_exec_content
+    from quirk.reports.docx_renderer import render_docx_report
+
+    exec_content = build_exec_content(
+        score_raw=_PARTIAL_SCORE_RAW, findings=[], roadmap_items=[]
+    )
+    docx_path = os.path.join(str(tmp_path), "none_cells_tables.docx")
+    result = render_docx_report(
+        path=docx_path, cfg=_make_minimal_cfg(str(tmp_path)), findings=[],
+        exec_content=exec_content,
+    )
+    if result:
+        doc = Document(docx_path)
+        cell_texts = [
+            cell.text for table in doc.tables for row in table.rows for cell in row.cells
+        ]
+        assert "None" not in cell_texts, (
+            "DOCX surface rendered a literal 'None' table cell for an unassessed "
+            "category (CR-01 regression)."
+        )
+        assert "—" in cell_texts, (
+            "DOCX surface did not render the em-dash placeholder cell for an "
+            "unassessed category."
+        )
+
+
+def test_not_computed_cli_summary_table_never_renders_none_over_100():
+    """188 review CR-01 (writer.py Rich summary leg): a not-computed score must
+    not surface as 'None/100' in the CLI scan-summary table's row value."""
+    from quirk.reports import writer as writer_mod
+
+    # Reproduce the row-value branch exactly as print_cli_summary derives it.
+    compat_score = _compat_score_dict(_ZERO_ASSESSED_SCORE_RAW)
+    total_score = compat_score.get("total")
+    value = (
+        "[bold]—[/bold] (not computed)"
+        if total_score is None
+        else f"[bold]{total_score}/100[/bold]"
+    )
+    assert "None" not in value
+    # And the source must not contain the old unguarded idiom that fabricated it.
+    import inspect
+
+    src = inspect.getsource(writer_mod)
+    assert 'score.get("total", 0)' not in src, (
+        "writer.py reverted to the unguarded score.get('total', 0) idiom — the "
+        "'total' key is always present (possibly None); the default never fires "
+        "and the summary table renders 'None/100' (CR-01 regression)."
+    )

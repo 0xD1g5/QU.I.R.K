@@ -426,9 +426,12 @@ def compute_readiness_score(
     all_drivers_sorted = sorted(all_drivers, key=lambda x: (-abs(x[1]), x[0]))
     top_drivers = [{"reason": reason, "points": points} for reason, points in all_drivers_sorted[:5]]
 
-    # Unassessed categories render None (not their raw 0-25 number) so DOCX/HTML
-    # `subscores.get(key, "—")`-style lookups render an honest em dash instead
-    # of a misleading number for a domain that was never assessed.
+    # Unassessed categories carry None (not their raw 0-25 number). NOTE for
+    # renderers (188 review CR-01): `subscores.get(key, "—")` does NOT render an
+    # em dash for these — the key is always PRESENT with value None, and
+    # dict.get only returns its default for a MISSING key. Every subscore-table
+    # surface must branch explicitly on `value is None` and substitute "—"
+    # itself (see executive.py/writer.py/docx_renderer.py/report.html.j2).
     subscores: Dict[str, Optional[int]] = {
         name: (score if ok else None) for name, (score, ok) in category_table.items()
     }

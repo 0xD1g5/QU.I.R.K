@@ -251,7 +251,11 @@ def build_exec_markdown(
         lines.append("| Category | Score | Budget |")
         lines.append("|----------|-------|--------|")
         for key, label in _SUBSCORE_LABELS:
-            lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+            # 188 review CR-01: the key is always present with value None for an
+            # unassessed category — dict.get's default never fires. Branch on
+            # None explicitly so the cell renders an honest em dash, never "None".
+            _v = subscores.get(key)
+            lines.append(f"| {label} | {'—' if _v is None else _v} | /25 |")
         lines.append("")
         # WR-03 / IN-01: raw_sum from shared model (identical to HTML surface).
         # Phase 188 SCORE-06 / 188-03: dynamic divisor (never the retired fixed rollup literal),
@@ -303,7 +307,10 @@ def build_exec_markdown(
         lines.append("| Category | Score | Budget |")
         lines.append("|----------|-------|--------|")
         for key, label in _SUBSCORE_LABELS:
-            lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+            # 188 review CR-01: explicit None branch — dict.get's default never
+            # fires for a present-but-None key (unassessed category).
+            _v = subscores.get(key)
+            lines.append(f"| {label} | {'—' if _v is None else _v} | /25 |")
         # Phase 188 SCORE-06: subscores.get(k) is None for an unassessed category
         # (exclude-and-rescale) -- `or 0` prevents a TypeError here.
         raw_sum = sum((subscores.get(k) or 0) for k, _ in _SUBSCORE_LABELS)

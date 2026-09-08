@@ -364,7 +364,11 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append("| Category | Score | Budget |")
     lines.append("|----------|-------|--------|")
     for key, label in _SUBSCORE_LABELS:
-        lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+        # 188 review CR-01: the subscore key is always present with value None
+        # for an unassessed category — dict.get's default never fires. Branch
+        # on None explicitly so the cell renders "—", never the string "None".
+        _v = subscores.get(key)
+        lines.append(f"| {label} | {'—' if _v is None else _v} | /25 |")
     # Phase 188 SCORE-06: subscores.get(k) is None for an unassessed category
     # (exclude-and-rescale) -- `or 0` prevents a TypeError here.
     raw_sum = sum((subscores.get(k) or 0) for k, _ in _SUBSCORE_LABELS)
@@ -850,7 +854,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     crit_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "CRITICAL")
     high_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "HIGH")
     medium_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "MEDIUM")
-    total_score = score.get("total", 0)
+    # 188 review CR-01: the "total" key is present with value None for a
+    # not-computed score — dict.get's default never fires, and rendering the
+    # raw value would print "None/100". Branch on None the same way
+    # _scorecard_markdown does.
+    total_score = score.get("total")
     total_conf = conf.get("confidence", 0)
 
     summary_table.add_row("Hosts scanned", str(hosts_count))
@@ -858,7 +866,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     summary_table.add_row("CRITICAL findings", f"[red]{crit_count}[/red]" if crit_count else "0")
     summary_table.add_row("HIGH findings", f"[orange1]{high_count}[/orange1]" if high_count else "0")
     summary_table.add_row("MEDIUM findings", f"[yellow]{medium_count}[/yellow]" if medium_count else "0")
-    summary_table.add_row("Readiness score", f"[bold]{total_score}/100[/bold]")
+    summary_table.add_row(
+        "Readiness score",
+        "[bold]—[/bold] (not computed)" if total_score is None else f"[bold]{total_score}/100[/bold]",
+    )
     # D-09 / D-10 (184.4-06): conditional row, absent when the band was not
     # capped. 184.4 WR-01: read from the shared model rather than the compat
     # `score` dict — this function already uses exec_content for the
