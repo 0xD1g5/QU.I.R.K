@@ -38,14 +38,17 @@ class DriftSummary:
     formatters receive this instance and format its fields — they do not
     re-derive content from raw TrendReport inputs.
 
-    score_band: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "GOOD"
+    score_band: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "GOOD" | "NOT_ASSESSED"
     dashboard_url: None when dashboard_base_url is not configured.
     """
 
     current_score: Optional[int]
     previous_score: Optional[int]
     score_delta: Optional[int]
-    score_band: str           # "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "GOOD"
+    # 188 review WR-03: "NOT_ASSESSED" when current_score is None (first scan,
+    # or a completed scan that assessed zero domains) — never a fabricated
+    # worst-case "CRITICAL" for a scan that measured nothing.
+    score_band: str           # "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "GOOD" | "NOT_ASSESSED"
     new_high: int
     new_medium: int
     new_low: int
@@ -85,11 +88,18 @@ def _score_to_band(score: Optional[int]) -> str:
     via _BAND_TO_NOTIFY_SEVERITY, since renaming it would break existing
     notify consumers and is out of scope for this fold.
 
-    None (first scan, no previous data) is treated as CRITICAL (worst-case,
-    unchanged behavior).
+    188 review WR-03: None returns "NOT_ASSESSED", NOT "CRITICAL". Phase 188
+    (SCORE-06) changed the meaning of a None score — it is no longer only
+    "first scan, no previous data" but also "completed scan that assessed
+    zero domains" (NOT_ASSESSED). Dispatching a fabricated worst-case
+    CRITICAL for a scan that measured nothing contradicts the honest-absence
+    principle every other Phase 188 surface adopted, so both None meanings
+    now map to the honest neutral band "NOT_ASSESSED" (a deliberate
+    behavior change from the pre-188 worst-case default, pinned by
+    tests/test_notify_payload_whitelist.py).
     """
     if score is None:
-        return "CRITICAL"
+        return "NOT_ASSESSED"
     band = band_for_score(score)
     return _BAND_TO_NOTIFY_SEVERITY[band]
 

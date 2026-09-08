@@ -361,8 +361,13 @@ class TestBuildDriftSummary:
         ds = build_drift_summary(report, scan_id="2026-05-24T12:00:00.000")
         assert ds.scan_id == "2026-05-24T12:00:00.000"
 
-    def test_score_band_none_score_safe(self):
-        """When current_score is None (first scan), score_band is CRITICAL."""
+    def test_score_band_none_score_is_not_assessed_never_critical(self):
+        """188 review WR-03: a None current_score (first scan, OR a completed
+        scan that assessed zero domains — SCORE-06 NOT_ASSESSED) must map to
+        the honest neutral band "NOT_ASSESSED", never a fabricated worst-case
+        "CRITICAL" for a scan that measured nothing. Pinned exactly (not a
+        membership check) so a regression back to the pre-188 worst-case
+        default fails loudly."""
         from quirk.notify.payload import build_drift_summary
 
         report = TrendReport(
@@ -376,5 +381,7 @@ class TestBuildDriftSummary:
             scan_errors_new_count=0, scan_errors_resolved_count=0,
         )
         ds = build_drift_summary(report, scan_id="test")
-        # None → unknown → defaults to CRITICAL (treat unknown as worst-case)
-        assert ds.score_band in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "GOOD")
+        assert ds.score_band == "NOT_ASSESSED", (
+            f"WR-03 REGRESSION: None score mapped to {ds.score_band!r} — a "
+            f"NOT_ASSESSED scan must never dispatch a fabricated severity band."
+        )
