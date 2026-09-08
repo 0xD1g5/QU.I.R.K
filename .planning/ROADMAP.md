@@ -211,7 +211,11 @@ targets instead of silently no-oping.
      `expected_results_*.md`, and `docs/chaos-lab.md` are updated in the same change per CLAUDE.md's
      Chaos Lab Maintenance rule.
 
-**Plans**: TBD
+**Plans**: 4 plans (sequential waves 1-4 — config layer, scanner wiring, live evidence, close-out)
+- [ ] 190-01-PLAN.md — Add connectors.broker_targets with host:port parsing, QRK-CONFIG-002 loud validation, and trusted-targets coverage
+- [ ] 190-02-PLAN.md — Additive per-host port overrides + explicit probe-mode dispatch in the three broker drivers, wired through run_scan with an unreached-target advisory
+- [ ] 190-03-PLAN.md — Live chaos-lab evidence: broker before/after at 29092/25671/26380 and a fresh Modbus Step-4 re-verification
+- [ ] 190-04-PLAN.md — Docs rows, UAT Series 190, backlog 999.91 closure, Obsidian vault sync and phase note
 
 ## Progress
 
