@@ -60,8 +60,11 @@ CLOSURE SEMANTICS (locked by 189-CONTEXT.md, non-negotiable):
       the enumerated occurrence's own checked-checkbox line (self-closure, the shape
       `v5.19-ROADMAP.md`'s bare `BACK-89` prose citations take), OR a `##`/`###`/`####` heading
       line citing the ID (the real-world form is `### Some Requirement (BACK-NN)`).
-    - Ledgered: the ID string appears anywhere in `.planning/HORIZON.md` (word-boundary-safe --
-      `BACK-1` must not match inside `BACK-10`).
+    - Ledgered: the ID string appears on a `|`-prefixed table row in `.planning/HORIZON.md`
+      (word-boundary-safe -- `BACK-1` must not match inside `BACK-10`). Prose mentions do NOT
+      count (WR-04): deleting a real ledger row must trip the gate even while narrative text
+      still cites the ID, and the run-time ID-collision disambiguation applies to the ledger
+      leg exactly as it does to closure.
     - Closure search runs across the whole visible file universe for that leg (not scoped to
       one milestone era), because the real-world closure path is routinely cross-era -- an ID
       first tabled in a v3.x/v4.x archived roadmap is commonly closed years later by a
@@ -306,8 +309,25 @@ def _is_closed(entry: dict, closure_universe: list[Path], disambiguate: bool) ->
     return False, None
 
 
-def _is_ledgered(back_id: str, horizon_text: str) -> bool:
-    return _boundary_search(back_id, horizon_text)
+def _is_ledgered(entry: dict, horizon_text: str, disambiguate: bool) -> bool:
+    """WR-04: a ledger claim requires a real `|`-prefixed table row in
+    HORIZON.md citing the ID -- a residual prose mention (rationale
+    paragraph, completeness-patch narrative) must NOT keep the gate green
+    after the actual ledger row is deleted. When `disambiguate` is true
+    (same run-time collision detection as `_is_closed`), the matching row
+    must also share a title keyword with the entry, so a NEW differently-
+    titled item reusing an already-ledgered ID (the BACK-68/89/90 pattern)
+    cannot pass instantly via an unrelated row."""
+    title_kw = _title_keywords(entry["title"]) if disambiguate else set()
+    for line in horizon_text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        if not _boundary_search(entry["id"], line):
+            continue
+        if disambiguate and not (title_kw & _title_keywords(line)):
+            continue
+        return True
+    return False
 
 
 def _offenders(entries: dict, closure_universe: list[Path], horizon_text: str) -> list[str]:
@@ -321,7 +341,7 @@ def _offenders(entries: dict, closure_universe: list[Path], horizon_text: str) -
         closed, evidence = _is_closed(entry, closure_universe, disambiguate)
         if closed:
             continue
-        if _is_ledgered(entry["id"], horizon_text):
+        if _is_ledgered(entry, horizon_text, disambiguate):
             continue
         src = ", ".join(sorted(str(p.relative_to(REPO_ROOT)) for p in entry["sources"]))
         offenders.append(f"{key} (source: {src})")
@@ -489,3 +509,42 @@ def test_is_closed_heading_fallback_disambiguates(tmp_path):
     )
     closed, _ = _is_closed(entry, [other], disambiguate=True)
     assert not closed, "keyword-free closure under an unrelated heading must not count"
+
+
+def test_is_ledgered_requires_table_row_not_prose():
+    """WR-04 regression: deleting the real ledger row must be noticed even
+    when a prose mention of the ID survives elsewhere in HORIZON.md."""
+    entry = {
+        "id": "BACK-9004",
+        "title": "Widget frobnicator drift",
+        "era": "vY",
+        "self_closed": False,
+        "sources": set(),
+    }
+    prose_only = (
+        "The completeness patch narrative still cites BACK-9004 as resolved\n"
+        "in a rationale paragraph, but its ledger row was deleted.\n"
+    )
+    assert not _is_ledgered(entry, prose_only, disambiguate=False), (
+        "a prose-only mention must NOT satisfy the ledger check"
+    )
+    with_row = prose_only + "| BACK-9004 | Widget frobnicator drift | P3 | open |\n"
+    assert _is_ledgered(entry, with_row, disambiguate=False)
+
+
+def test_is_ledgered_collision_requires_title_keyword_on_row():
+    """WR-04 regression: a NEW differently-titled item reusing an
+    already-ledgered ID must not pass via the old, unrelated row."""
+    horizon = "| BACK-9005 | Broker scanner ports hardcoded | P3 | open |\n"
+    old_item = {
+        "id": "BACK-9005",
+        "title": "Broker scanner ports hardcoded",
+        "era": "vY",
+        "self_closed": False,
+        "sources": set(),
+    }
+    new_item = {**old_item, "title": "Dashboard theme regression"}
+    assert _is_ledgered(old_item, horizon, disambiguate=True)
+    assert not _is_ledgered(new_item, horizon, disambiguate=True), (
+        "an unrelated same-ID item must not hide behind the old ledger row"
+    )
