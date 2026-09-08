@@ -490,6 +490,14 @@ def _as_int_list(v: Any, *, field_name: str) -> List[int]:
     Non-numeric entries fail LOUDLY with a coded `QRK-CONFIG-001` error —
     never silently dropped, stringified, or left as a str that a downstream
     `port in some_int_set` check would silently miss forever.
+
+    Range + shape validation (Phase 189 review WR-01): non-integral floats
+    are rejected — a YAML-native `443.8443` (missing-comma typo) must never
+    silently truncate to port 443. Integral floats (`443.0`) DO coerce to
+    the equivalent int — a deliberate acceptance, since the value is
+    unambiguous. Every accepted value must land in the valid TCP port range
+    1..65535; out-of-range entries (-5, 0, 70000) raise `QRK-CONFIG-001`
+    rather than silently probing nothing.
     """
     if v is None:
         return []
@@ -502,12 +510,23 @@ def _as_int_list(v: Any, *, field_name: str) -> List[int]:
             raise ValueError(
                 f"{format_error('CONFIG-001')} (field={field_name!r}, value={item!r})"
             )
+        if isinstance(item, float) and not item.is_integer():
+            # Non-integral float: silent truncation via int() would scan a
+            # port other than what the operator wrote (WR-01).
+            raise ValueError(
+                f"{format_error('CONFIG-001')} (field={field_name!r}, value={item!r})"
+            )
         try:
-            out.append(int(item))
+            port = int(item)
         except (TypeError, ValueError):
             raise ValueError(
                 f"{format_error('CONFIG-001')} (field={field_name!r}, value={item!r})"
             )
+        if not 1 <= port <= 65535:
+            raise ValueError(
+                f"{format_error('CONFIG-001')} (field={field_name!r}, value={item!r})"
+            )
+        out.append(port)
     return out
 
 

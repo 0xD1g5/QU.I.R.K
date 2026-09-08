@@ -207,6 +207,39 @@ def test_port_coercion_non_numeric_raises_coded_error():
     assert "http" in msg
 
 
+def test_port_coercion_non_integral_float_raises_coded_error():
+    """WR-01: 443.7 (missing-comma typo shape, e.g. 443.8443) must raise
+    QRK-CONFIG-001, never silently truncate to port 443."""
+    from quirk.config import _as_int_list
+    with pytest.raises(ValueError, match="QRK-CONFIG-001"):
+        _as_int_list([443.7], field_name="scan.ports_tls")
+
+
+def test_port_coercion_integral_float_coerces():
+    """WR-01 (documented decision): an integral float like 443.0 is
+    unambiguous and coerces to the equivalent int."""
+    from quirk.config import _as_int_list
+    assert _as_int_list([443.0], field_name="scan.ports_tls") == [443]
+
+
+@pytest.mark.parametrize("bad_port", [-5, 0, 70000])
+def test_port_coercion_out_of_range_raises_coded_error(bad_port):
+    """WR-01: out-of-range 'ports' would silently probe nothing — the
+    pre-189 silent-no-op shape in a new costume. Reject 1..65535 violations."""
+    from quirk.config import _as_int_list
+    with pytest.raises(ValueError, match="QRK-CONFIG-001"):
+        _as_int_list([bad_port], field_name="scan.ports_tls")
+
+
+@pytest.mark.parametrize("bool_val", [True, False])
+def test_port_coercion_bool_raises_coded_error(bool_val):
+    """bool is an int subclass; True/False must raise QRK-CONFIG-001, not
+    coerce to 1/0 (nor pass the 1..65535 range check as port 1)."""
+    from quirk.config import _as_int_list
+    with pytest.raises(ValueError, match="QRK-CONFIG-001"):
+        _as_int_list([bool_val], field_name="scan.ports_tls")
+
+
 def test_port_coercion_format_error_renders_config_001():
     from quirk.errors import format_error
     assert format_error("CONFIG-001").startswith("[QRK-CONFIG-001]")

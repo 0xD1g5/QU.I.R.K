@@ -221,8 +221,8 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
     # --- CONFIG domain (config load-path validation errors, Phase 189) ---
     "CONFIG-001": ErrorEntry(
         code="CONFIG-001",
-        cause="A scan-config port-list value (scan.ports_tls or scan.tls_designated_ports) is not a number.",
-        fix="Use bare integers or digit-strings (e.g. 8444 or \"8444\") for every entry in scan.ports_tls / scan.tls_designated_ports.",
+        cause="A scan-config port-list value (scan.ports_tls or scan.tls_designated_ports) is not a valid TCP port: not a number, a non-integral number, or outside the range 1-65535.",
+        fix="Use bare integers or digit-strings in the range 1-65535 (e.g. 8444 or \"8444\") for every entry in scan.ports_tls / scan.tls_designated_ports.",
     ),
 
     # --- FUZZ domain (fuzz safety errors, Phase 172) ---

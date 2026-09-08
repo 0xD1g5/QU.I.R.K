@@ -426,9 +426,12 @@ scan:
 
 Both `scan.ports_tls` and `scan.tls_designated_ports` accept YAML values as either bare integers
 or quoted digit-strings — `8444` and `"8444"` are equivalent after `load_config()` runs. A
-non-numeric entry (e.g. a typo like `"84a4"`) is rejected loudly at config-load time with a coded
+non-numeric entry (e.g. a typo like `"84a4"`), a non-integral number (e.g. `443.8443` from a
+missing comma — never silently truncated to port 443), or a value outside the valid TCP port
+range 1–65535 (e.g. `0` or `70000`) is rejected loudly at config-load time with a coded
 `QRK-CONFIG-001` error naming the offending field and value; see
-[`docs/error-codes.md`](error-codes.md) for the exact message text.
+[`docs/error-codes.md`](error-codes.md) for the exact message text. One deliberate acceptance:
+an integral float such as `443.0` is unambiguous and coerces to the equivalent integer.
 
 **Before Phase 189, this was a silent no-op, not a crash.** A quoted port value in either list
 would load without error but would never match the TLS-designation membership test in
