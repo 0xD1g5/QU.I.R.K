@@ -95,6 +95,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import warnings
 from pathlib import Path
 
 import pytest
@@ -136,7 +137,17 @@ def _git_tracked_files(pattern: str) -> list[Path]:
             close_fds=False,
         )
     except (subprocess.SubprocessError, OSError):
-        return sorted(REPO_ROOT.glob(pattern.replace(str(REPO_ROOT) + "/", "")))
+        # IN-01: label the fallback at runtime (the docstring's "clearly
+        # labeled" claim was previously aspirational) and apply the same
+        # is_file() filter as the git branch. The dead
+        # pattern.replace(REPO_ROOT, ...) no-op is gone: call sites always
+        # pass repo-relative patterns.
+        warnings.warn(
+            f"_git_tracked_files: git unavailable -- glob fallback engaged for {pattern!r}; "
+            "the 'tracked-only' set is silently widened to the full on-disk glob.",
+            stacklevel=2,
+        )
+        return sorted(p for p in REPO_ROOT.glob(pattern) if p.is_file())
     paths = [REPO_ROOT / line for line in out.stdout.splitlines() if line.strip()]
     return sorted(p for p in paths if p.is_file())
 
