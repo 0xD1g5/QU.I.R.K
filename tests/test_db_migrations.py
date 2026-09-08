@@ -33,6 +33,7 @@ from quirk.db import (
     _PHASE46_COLUMNS,
     _PHASE54_QRAMM_ANSWER_COLUMNS,
     _PHASE146_SCANJOB_COLUMNS,
+    _PHASE191_COLUMNS,
     _SAFE_COL_TYPE_RE,
     _V43_COLUMNS,
     _ensure_columns,
@@ -426,3 +427,55 @@ def test_checkin_is_partial_scan_migration_idempotent(tmp_path: Path) -> None:
     ]
     assert len(checkin_results) == 1
     assert checkin_results[0].status == "already-present"
+
+
+# ---------------------------------------------------------------------------
+# Phase 191 SPKI-01: cert_spki_fingerprint column on crypto_endpoints.
+# ---------------------------------------------------------------------------
+
+
+def test_phase191_spki_fingerprint_column_registered() -> None:
+    """("cert_spki_fingerprint", "VARCHAR(64)") must be present in
+    _ADDITIVE_MIGRATIONS under table crypto_endpoints."""
+    assert _PHASE191_COLUMNS == (("cert_spki_fingerprint", "VARCHAR(64)"),)
+    assert ("crypto_endpoints", _PHASE191_COLUMNS) in _ADDITIVE_MIGRATIONS
+
+
+def test_phase191_spki_fingerprint_migration_idempotent(tmp_path: Path) -> None:
+    """A hand-created pre-Phase-191 crypto_endpoints table (no
+    cert_spki_fingerprint column) gains the column via the additive-migration
+    entry point, and a second run reports it as already-present without
+    raising."""
+    import sqlite3
+
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "spki.db"
+
+    # Simulate a pre-Phase-191 database: init_db(), then drop the column back
+    # out so the table matches what a real legacy DB looks like.
+    init_db(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("ALTER TABLE crypto_endpoints DROP COLUMN cert_spki_fingerprint")
+        conn.commit()
+    finally:
+        conn.close()
+
+    engine = get_engine(str(db_path))
+    columns = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    assert "cert_spki_fingerprint" not in columns
+
+    # First migration entry point run retrofits the column.
+    run_additive_migration(engine, dry_run=False)
+    columns = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    assert "cert_spki_fingerprint" in columns
+
+    # Second run is idempotent — no exception, reports already-present.
+    results = run_additive_migration(engine, dry_run=False)
+    spki_results = [
+        r for r in results
+        if r.table == "crypto_endpoints" and r.column == "cert_spki_fingerprint"
+    ]
+    assert len(spki_results) == 1
+    assert spki_results[0].status == "already-present"

@@ -28,6 +28,7 @@ class CryptoEndpoint(Base):
     cert_sig_alg = Column(String(128), nullable=True)
     cert_pubkey_alg = Column(String(64), nullable=True)
     cert_pubkey_size = Column(Integer, nullable=True)
+    cert_spki_fingerprint = Column(String(64), nullable=True)  # Phase 191 SPKI-01: leaf-cert SPKI SHA-256 hex digest; NULL until re-scanned (D-10)
     cert_not_before = Column(DateTime, nullable=True)
     cert_not_after = Column(DateTime, nullable=True)
 

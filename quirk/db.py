@@ -216,6 +216,11 @@ _PHASE180_SCOPE_SIGNATURE_COLUMNS: tuple[tuple[str, str], ...] = (
     # written under signature_version 1.0.0 (pre-Phase-180) predate it.
     ("target_set_digest", "VARCHAR(64)"),
 )
+_PHASE191_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 191 SPKI-01: leaf-cert SPKI SHA-256 hex digest on crypto_endpoints.
+    # Nullable — existing rows are left NULL, no backfill (D-10).
+    ("cert_spki_fingerprint", "VARCHAR(64)"),
+)
 
 
 def _ensure_columns(
@@ -287,6 +292,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("crypto_endpoints", _RVW003_SCAN_SESSION_COLUMNS),       # RVW-003 scan session identity
     ("scheduled_scans",  _PHASE162_SCHEDULE_COLUMNS),         # Phase 162 HWLC-20
     ("scan_scope_signatures", _PHASE180_SCOPE_SIGNATURE_COLUMNS),  # Phase 180 D-13
+    ("crypto_endpoints", _PHASE191_COLUMNS),  # Phase 191 SPKI-01
 )
 
 
