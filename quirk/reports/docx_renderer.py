@@ -142,6 +142,16 @@ _BURNDOWN_ADVISORY_CAPTION = (
 _BURNDOWN_BUCKET_ORDER = ("key_establishment", "digital_signature", "unmapped")
 
 # ---------------------------------------------------------------------------
+# Phase 191 Plan 05 (SPKI-02 / D-01): "Key Reuse" subsection. Caption is byte-
+# identical to html_renderer.KEY_REUSE_ADVISORY_CAPTION and to technical.py's
+# KEY_REUSE_ADVISORY_CAPTION — kept as a per-renderer duplicate per the
+# convention documented above, with a parity test that fails loudly on drift
+# (tests/test_key_reuse_render_parity.py).
+# ---------------------------------------------------------------------------
+
+KEY_REUSE_ADVISORY_CAPTION = "Advisory - key reuse does not affect the readiness score."
+
+# ---------------------------------------------------------------------------
 # Phase 157 D-04/D-05/HWLC-18: forward-looking EOL/tier forecast subsection,
 # a sibling of the drift section above, one heading level down (level 3 vs the
 # drift section's level 2). Guarded independently of hardware_drift_events so
@@ -844,6 +854,64 @@ def render_docx_report(
             # — no total row, no percentage, no sum across buckets.
             # Advisory-only: no cell shading — this table carries no severity color.
             _set_col_widths(burndown_tbl, [1.4, 1.0, 1.3, 0.7, 0.7, 1.0, 1.0])
+
+    # ---- Key Reuse (Phase 191 Plan 05 / SPKI-02 / D-01) ----
+    # SEPARATE guard from every block above — a run with no hardware/drift/
+    # forecast/vendor-trend/burndown data at all still renders key reuse.
+    _key_reuse = getattr(exec_content, "key_reuse", {}) if exec_content else {}
+    if _key_reuse:
+        _kr_clusters = _key_reuse.get("clusters") or []
+        _kr_fingerprinted = _key_reuse.get("fingerprinted", 0)
+        _kr_total = _key_reuse.get("total", 0)
+        doc.add_heading("Key Reuse", level=2)
+        # UNCONDITIONAL — the advisory qualifier appears in every rendered
+        # format, never conditional on which other caveats happen to fire.
+        doc.add_paragraph(KEY_REUSE_ADVISORY_CAPTION, style="Normal")
+        doc.add_paragraph(
+            f"{_kr_fingerprinted} of {_kr_total} TLS endpoints have SPKI fingerprints.",
+            style="Normal",
+        )
+        if not _kr_clusters:
+            # D-06: honest-absence sentence, never a silent omission and
+            # never an empty table.
+            doc.add_paragraph(
+                f"No shared keys detected across {_kr_fingerprinted} fingerprinted endpoints.",
+                style="Normal",
+            )
+        else:
+            key_reuse_tbl = doc.add_table(rows=1, cols=5)
+            _set_table_style(key_reuse_tbl)
+            key_reuse_hdr = key_reuse_tbl.rows[0].cells
+            for _i, _h in enumerate(
+                ["Shared Key", "Public Key", "Members", "Endpoints", "Leverage"]
+            ):
+                key_reuse_hdr[_i].text = _h
+            # D-04: preserve incoming cluster order (already member-count descending).
+            for _cluster in _kr_clusters:
+                _member_count = _cluster.get(
+                    "member_count", len(_cluster.get("members") or [])
+                )
+                _fingerprint = _cluster.get("fingerprint") or ""
+                _fingerprint_display = (
+                    _fingerprint[:16] + "..." if len(_fingerprint) > 16 else _fingerprint
+                )
+                _members_text = ", ".join(
+                    f"{m.get('host', '')}:{m.get('port', '')}"
+                    for m in (_cluster.get("members") or [])
+                )
+                _row = key_reuse_tbl.add_row().cells
+                _row[0].text = (
+                    f"{_cluster.get('cert_subject', '')} ({_fingerprint_display})"
+                )
+                _row[1].text = (
+                    f"{_cluster.get('cert_pubkey_alg', '')} "
+                    f"{_cluster.get('cert_pubkey_size', '')}"
+                ).strip()
+                _row[2].text = str(_member_count)
+                _row[3].text = _members_text
+                _row[4].text = f"Re-keying this certificate remediates {_member_count} endpoints."
+            # Advisory-only: no cell shading — this table carries no severity color.
+            _set_col_widths(key_reuse_tbl, [2.0, 1.4, 0.8, 3.0, 2.3])
 
     # ---------------------------------------------------------------------------
     # Save document
