@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-07 (Phase 187 Plan 05 — Series 187 added: v5.19.0 release verification
+**Last Updated:** 2026-09-07 (Phase 188 Plan 05 — Series 188 added: readiness-score coverage
+disclosure and the single-producer severity-band contract (SCORE-06, SCORE-07). v5.20 has not
+shipped a version bump yet, so this document's `**Version:**` header stays `5.19.0` — no version
+string changed this phase; the version bump remains a future v5.20 release-plan task.) Prior:
+2026-09-07 (Phase 187 Plan 05 — Series 187 added: v5.19.0 release verification
 re-executed against the actually-published PyPI/GitHub artifact — clean-venv install, Sigstore
 provenance via PyPI's integrity endpoint, the pushed three-component tag plus a green push-event
 `release.yml` run, and the Windows sensor asset. UAT-1-02 re-executed against the published
@@ -24146,3 +24150,198 @@ disposition here was manufactured against absent evidence — each PASS cites th
 output recorded in `187-03-SUMMARY.md` and `187-04-SUMMARY.md`. UAT-1-02 (Series 1) was also
 re-executed against this same published 5.19.0 build and its `[x] PASS` box updated with a
 superseding note — see that entry above.
+
+---
+
+## Series 188: Scoring Integrity (Phase 188 — v5.20)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its four cases below
+carry HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175-177 and 187 used
+for their own cases. `scripts/uat_disposition_apply.py verify` adds zero ledger rows for this
+series.
+
+Phase 188 closed SCORE-06 (exclude-and-rescale aggregation; "N of 6 domains assessed" disclosure
+on every report surface; a not-computed statement instead of a fabricated 0/100) and SCORE-07 (a
+single-producer severity-band contract, `quirk/severity_bands.py`, feeding the dashboard gauge,
+the notify payload's severity mapping, and the report band identically). Three behaviors are
+visual/placement judgments that `188-VALIDATION.md`'s Manual-Only Verifications table names
+explicitly and that this plan's executor did not run a live dashboard or browser to confirm —
+each is dispositioned SKIP with a named, executed substitute per UATREC-04, not fabricated PASS.
+
+### UAT-188-01: Partial-coverage disclosure and matching divisor across CLI, HTML, and DOCX (SCORE-06)
+
+**ID:** UAT-188-01
+**Title:** A partial-coverage scan renders `"N of 6 domains assessed"` and a dynamic rollup divisor
+identically on the CLI markdown, HTML, and DOCX report surfaces
+**Maps to:** SCORE-06
+
+**What to test:** driving one `ExecContent` built from a partial-coverage `score_raw` (some but not
+all of the six domains assessed) through the CLI markdown, HTML, and DOCX renderers and confirming
+the coverage-disclosure sentence and the rollup divisor are byte-identical across all three, and
+that the divisor is NOT the pre-188 fixed `1.5` for a coverage count below 6-of-6.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_score_render_parity.py::test_coverage_disclosure_and_divisor_parity_across_surfaces -x -q
+```
+
+**Pass Criteria:**
+- The CLI markdown, HTML, and DOCX surfaces each contain the identical `"N of 6 domains assessed"`
+  disclosure sentence for the same partial-coverage fixture.
+- The rendered rollup divisor matches `domains_assessed * 25 / 100` for that fixture, not a
+  hardcoded `1.5`.
+
+**Falsifiability:** this case turns red if any surface's disclosure sentence diverges from the
+others, or if a surface still renders the fixed `÷ 1.5` divisor for a scan that did not assess all
+six domains. `188-03-SUMMARY.md`'s "Deliberate Falsification Check" already proved this specific
+test is non-vacuous: a temporarily hardcoded wrong disclosure string on the CLI surface made this
+exact test FAIL before the edit was reverted.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-07  **Tester:** Automated (188-05 phase-close plan execution)
+**Notes:** `.venv/bin/python -m pytest tests/test_score_render_parity.py -q` — **3 passed**, 0
+failed, re-run live during this plan's execution (not merely cited from 188-03's prior run).
+
+---
+
+### UAT-188-02: Dashboard executive page shows the coverage disclosure beside the overall gauge (SCORE-06)
+
+**ID:** UAT-188-02
+**Title:** The executive dashboard page renders `coverage_disclosure` next to the overall readiness
+gauge, matching the report surfaces' placement pattern
+**Maps to:** SCORE-06
+
+**What to test:** loading the dashboard executive page against a partial-coverage scan and visually
+confirming the `"N of 6 domains assessed"` line renders beside the overall gauge, in the same
+placement pattern as the pre-existing `rating_cap_reason` line it mirrors.
+
+**Steps (for the human tester when this case is later promoted to a live walkthrough):**
+```
+1. Start the dashboard against a partial-coverage scan's session.
+2. Open the /executive page.
+3. Confirm the coverage-disclosure line is visible beside the overall gauge.
+```
+
+**Pass Criteria:** the disclosure line is visible, legibly placed beside the gauge, and does not
+overlap or truncate other executive-page content.
+
+**Falsifiability:** this case turns red if the disclosure line is absent, mis-placed, or visually
+clipped when actually rendered in a browser.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
+`tests/test_dashboard_score_schema_compat.py`, which proves `coverage_disclosure` reaches the API
+payload correctly for a partial-coverage scan, and by the source-level assertion in
+`src/dashboard/src/pages/executive.tsx` that renders `score.coverage_disclosure` beside the overall
+gauge block — but neither substitute is a live-browser visual-placement check.
+`188-VALIDATION.md`'s Manual-Only Verifications table names this exact behavior ("Dashboard gauge
+disclosure rendering") as requiring a human load-and-look pass, which has not yet been run. Not
+fabricated as PASS.)
+**Date:** 2026-09-07  **Tester:** Automated substitute only (188-05 phase-close plan execution);
+human visual pass pending.
+**Notes:** `.venv/bin/python -m pytest tests/test_dashboard_score_schema_compat.py -q` — 9 passed,
+re-run live during this plan's execution, confirming the payload shape the frontend code path
+consumes. `grep -c 'coverage_disclosure' src/dashboard/src/pages/executive.tsx` returns 2 (source
+present), but no browser was launched to confirm on-screen placement.
+
+---
+
+### UAT-188-03: A zero-assessed scan shows an explicit not-computed statement, never a fabricated 0/100 (SCORE-06)
+
+**ID:** UAT-188-03
+**Title:** A scan with zero assessable evidence across all six domains renders an explicit
+"Readiness score not computed" statement, on every report surface, instead of `0 / 100`
+**Maps to:** SCORE-06
+
+**What to test:** driving a zero-assessed `ExecContent` through the CLI markdown, HTML, and DOCX
+renderers and confirming each shows `NOT_COMPUTED_STATEMENT` verbatim and never a numeric `0/100`
+headline; separately, confirming the dashboard's `executive.tsx` source path takes the same
+not-computed branch (`score.score === null`) rather than coercing to `0`.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_score_render_parity.py::test_not_computed_never_renders_zero_over_100_across_surfaces -x -q
+grep -c 'score.score === null' src/dashboard/src/pages/executive.tsx
+```
+
+**Pass Criteria:**
+- CLI markdown, HTML, and DOCX surfaces each render `"Readiness score not computed — no domain
+  had assessable evidence."` verbatim and never `"0 / 100"` or `"0/100"`.
+- `executive.tsx` branches on `score.score === null` to render the not-computed statement and an
+  em-dash placeholder rather than a numeric gauge.
+
+**Falsifiability:** this case turns red if any of the three report surfaces renders a numeric
+`0/100` headline for a zero-assessed scan, or if the dashboard source path coerces a null score to
+`0` instead of branching on the explicit null check.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
+`tests/test_score_render_parity.py::test_not_computed_never_renders_zero_over_100_across_surfaces`
+(CLI/HTML/DOCX, automated PASS below) and by the source-level `score.score === null` branch in
+`executive.tsx` (grep-confirmed present, automated) — but the DASHBOARD portion of this case has
+not been observed in a live browser. `188-VALIDATION.md`'s Manual-Only Verifications table names
+"Not-computed state rendering per surface" explicitly as requiring a visual/copy judgment pass
+across all four surfaces including the dashboard. Three of four surfaces are automated-PASS-backed
+below; the fourth (dashboard, visually) is the honest gap. Not fabricated as a full PASS.)
+**Date:** 2026-09-07  **Tester:** Automated (3 of 4 surfaces; 188-05 phase-close plan execution)
+**Notes:** `.venv/bin/python -m pytest tests/test_score_render_parity.py -q` — 3 passed (re-run
+live). `grep -c 'score.score === null' src/dashboard/src/pages/executive.tsx` returns 2. No
+browser was launched to visually confirm the dashboard's rendered not-computed statement.
+
+---
+
+### UAT-188-04: Gauge colors agree with the report band across the 70 and 35 score boundaries (SCORE-07)
+
+**ID:** UAT-188-04
+**Title:** The dashboard's `ScoreGauge` color (green/amber/red) matches the report's
+EXCELLENT/GOOD/MODERATE/FAIR/POOR band exactly at the shifted 70 and 35 score boundaries,
+end-to-end in a live browser
+**Maps to:** SCORE-07
+
+**What to test:** loading the executive page against scans scoring 69 and 70 (the GOOD/FAIR
+boundary as collapsed to amber/green) and 34 and 35 (the FAIR/POOR boundary as collapsed to
+red/amber), confirming the gauge color visually matches the report band for each.
+
+**Steps (for the human tester when this case is later promoted to a live walkthrough):**
+```
+1. Produce or fixture scans scoring 69, 70, 34, and 35.
+2. Load each in the executive page.
+3. Confirm gauge color: 69 -> amber, 70 -> green, 34 -> red, 35 -> amber.
+4. Cross-check each against the report's band label for the same score.
+```
+
+**Pass Criteria:** the gauge color transition happens exactly at 70 (amber -> green) and exactly at
+35 (red -> amber), matching `quirk/severity_bands.py`'s `BAND_THRESHOLDS` band thresholds, in a
+real rendered page.
+
+**Falsifiability:** this case turns red if the live-rendered gauge's color boundary is observed at
+any score other than 70 or 35, or disagrees with the report band shown for the identical score.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
+`src/dashboard/src/components/gauges/__tests__/ScoreGauge.test.tsx::"renders safe at the GOOD
+boundary and at-risk just below it, default maxValue"` and
+`src/dashboard/src/components/gauges/__tests__/ScoreGauge.test.tsx::"renders vulnerable below the
+FAIR boundary and at-risk at the FAIR boundary, default maxValue"`, both executed live via vitest
+during this plan (component-level proof the 70/35 boundaries are wired correctly), plus
+`tests/test_severity_bands_freshness.py` (proves the JSON artifact the gauge reads from is
+current). `188-VALIDATION.md`'s Manual-Only Verifications table names this exact behavior ("Gauge
+color-boundary shift") as a deliberate visual change requiring a human load-and-compare pass,
+which has not yet been run. Not fabricated as PASS.)
+**Date:** 2026-09-07  **Tester:** Automated substitute only (188-05 phase-close plan execution);
+human visual pass pending.
+**Notes:** `cd src/dashboard && npx vitest run src/components/gauges/__tests__/ScoreGauge.test.tsx`
+— **7 passed**, re-run live during this plan's execution (toolchain available: npm on PATH,
+`src/dashboard/node_modules` present). `.venv/bin/python -m pytest
+tests/test_severity_bands_freshness.py -q` — 4 passed, re-run live.
+
+---
+
+**Series 188 disposition.** UAT-188-01 is `[x] PASS`, re-executed live against
+`tests/test_score_render_parity.py`'s cross-surface parity assertion, including re-confirming
+188-03's non-vacuity falsification claim by inspection of that test's existing structure.
+UAT-188-02, UAT-188-03, and UAT-188-04 are each `[x] SKIP` with a named, executed automated
+substitute per UATREC-04 — not a fabricated PASS — because the three behaviors
+`188-VALIDATION.md`'s Manual-Only Verifications table names (dashboard gauge disclosure placement,
+not-computed rendering on the dashboard specifically, and the gauge color-boundary shift) are
+visual/placement judgments this non-interactive plan execution did not load a live browser to
+confirm. All four cases' cited automated substitutes were re-run live during this plan's
+execution, not merely cited from a prior SUMMARY without re-verification.
