@@ -149,6 +149,18 @@ def test_intelligence_json_carries_scoring_version_and_coverage_disclosure(tmp_p
     )
     assert isinstance(data["score"]["coverage_disclosure"], str)
     assert data["score"]["coverage_disclosure"]  # non-empty
+    # 188 review WR-07: score_divisor is the fifth SCORE-06 allowlist key —
+    # its omission left the artifact disclosing the assessed counts but not
+    # the divisor, so a consumer could not verify the rollup arithmetic
+    # (domains_assessed * 25 / 100) without a formula it has no contract for.
+    assert "score_divisor" in data["score"], (
+        "188 review WR-07: intelligence-{stamp}.json's score object must carry "
+        "score_divisor — the allowlist does not auto-flow compat-dict keys."
+    )
+    assert data["score"]["domains_assessed"] is not None
+    assert data["score"]["score_divisor"] == (
+        data["score"]["domains_assessed"] * 25 / 100
+    )
 
 
 # ---------------------------------------------------------------------------

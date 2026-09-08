@@ -542,6 +542,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             # added explicitly here, same trap as rating_cap_reason above.
             "domains_assessed": score.get("domains_assessed"),
             "domains_total": score.get("domains_total"),
+            # 188 review WR-07: score_divisor completes the five SCORE-06 keys —
+            # without it a consumer of intelligence-{stamp}.json cannot verify
+            # the rollup arithmetic (domains_assessed * 25 / 100) that every
+            # other headline surface (CLI/HTML/DOCX/scorecard/ScoreData) exposes.
+            "score_divisor": score.get("score_divisor"),
             "coverage_disclosure": score.get("coverage_disclosure"),
             "scoring_version": score.get("scoring_version"),
         },
