@@ -281,6 +281,55 @@ def test_all_closed_endpoints_score_not_computed_never_100(  # 188 review CR-02
         )
 
 
+def test_adcs_only_identity_evidence_marks_identity_assessed():  # 188 review WR-01
+    """188 review WR-01: a scan whose identity evidence is exclusively ADCS
+    rows (e.g. ESC coverage-gap rows, which carry no cert_not_after so
+    certs_observed stays 0) MUST mark identity_trust assessed — pre-fix,
+    SMIME/ADCS were absent from _PROTOCOL_KEYS/_IDENTITY_PROTOCOL_KEYS, so the
+    computed adcs_* penalties were silently discarded and the headline
+    rescaled UPWARD over the remaining domains (false-negative assessed
+    determination -> overstated score)."""
+    endpoints = [
+        CryptoEndpoint(
+            host="ca.example.com", port=389, protocol="ADCS",
+            service_detail="esc1-enrollee-supplies-subject|template=WebServer",
+        ),
+    ]
+    evidence = build_evidence_summary(endpoints, [])
+    assert evidence["protocol_counts"].get("ADCS", 0) > 0, (
+        "Fixture precondition failed: ADCS rows must register in protocol_counts."
+    )
+    assert evidence["adcs_weak_template_count"] > 0, (
+        "Fixture precondition failed: the ESC1 row must feed the adcs_weak_template "
+        "penalty counter."
+    )
+
+    result = compute_readiness_score(evidence)
+
+    assert result["subscores"]["identity_trust"] is not None, (
+        "WR-01 REGRESSION: identity_trust marked unassessed for an ADCS-only "
+        "scan — its computed adcs_* penalties are being discarded and the "
+        "headline rescaled upward."
+    )
+    # The penalty must actually land: identity subscore below the clean 25.
+    assert result["subscores"]["identity_trust"] < 25
+
+
+def test_smime_only_identity_evidence_marks_identity_assessed():  # 188 review WR-01
+    """SMIME sibling of the ADCS case above (same predicate blind spot)."""
+    endpoints = [
+        CryptoEndpoint(
+            host="mail.example.com", port=25, protocol="SMIME",
+            cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+        ),
+    ]
+    evidence = build_evidence_summary(endpoints, [])
+    assert evidence["protocol_counts"].get("SMIME", 0) > 0
+
+    result = compute_readiness_score(evidence)
+    assert result["subscores"]["identity_trust"] is not None
+
+
 def test_hand_built_pre_1841_evidence_dict_still_uses_endpoints_fallback():
     """Companion to the CR-02 fix: a hand-built evidence dict WITHOUT the
     Phase 184.1 `assessable_endpoint_count` key must keep falling back to

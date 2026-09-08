@@ -38,7 +38,11 @@ _DAR_PROTOCOL_KEYS: Tuple[str, ...] = (
 
 # Phase 188 SCORE-06 — the non-certificate identity protocol literals identity_trust's
 # assessed-predicate reads, in addition to certs_observed > 0.
-_IDENTITY_PROTOCOL_KEYS: Tuple[str, ...] = ("KERBEROS", "SAML", "DNSSEC")
+# 188 review WR-01: SMIME and ADCS added — the identity subscore penalizes six
+# smime_* and four adcs_* counters, and ADCS ESC/coverage-gap rows carry no
+# cert_not_after (certs_observed stays 0), so an SMIME/ADCS-only scan was
+# falsely marked unassessed and its computed penalties silently discarded.
+_IDENTITY_PROTOCOL_KEYS: Tuple[str, ...] = ("KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS")
 
 # SCORE_WEIGHTS invariant (D-04, WR-06 — Phase 73 documentation, NOT normalization)
 # ----------------------------------------------------------------------------

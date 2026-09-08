@@ -38,7 +38,14 @@ _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   # tests/test_evidence_coverage_regression.py's own docstring.
                   "SMTP-STARTTLS", "SMTPS", "IMAPS", "IMAP-STARTTLS", "POP3S",
                   "POP3-STARTTLS", "KAFKA-PLAIN", "KAFKA-TLS", "AMQP-PLAIN", "AMQPS",
-                  "AMQPS/AZURE-SERVICEBUS", "HTTPS/AWS-SQS", "REDIS-PLAIN", "REDIS-TLS")
+                  "AMQPS/AZURE-SERVICEBUS", "HTTPS/AWS-SQS", "REDIS-PLAIN", "REDIS-TLS",
+                  # Phase 188 review WR-01 — SMIME/ADCS identity evidence rows must
+                  # register in protocol_counts so scoring.py's identity_trust
+                  # assessed-predicate can see them: ADCS coverage-gap/ESC rows carry
+                  # no cert_not_after (certs_observed stays 0), so an ADCS-only scan
+                  # was marked "identity unassessed" while its adcs_* penalties were
+                  # computed and discarded, rescaling the headline UPWARD.
+                  "SMIME", "ADCS")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:

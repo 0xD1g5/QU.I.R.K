@@ -142,6 +142,12 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
                 "POP3-STARTTLS": 0, "KAFKA-PLAIN": 0, "KAFKA-TLS": 0, "AMQP-PLAIN": 0,
                 "AMQPS": 0, "AMQPS/AZURE-SERVICEBUS": 0, "HTTPS/AWS-SQS": 0,
                 "REDIS-PLAIN": 0, "REDIS-TLS": 0,
+                # 188 review WR-01 (deliberate, recorded change): SMIME/ADCS added
+                # to _PROTOCOL_KEYS so identity_trust's assessed-predicate can see
+                # SMIME/ADCS-only evidence (ADCS ESC rows carry no cert_not_after,
+                # so certs_observed alone cannot register them). Zero in this
+                # fixture — the score pin below is unmoved by this widening.
+                "SMIME": 0, "ADCS": 0,
             },
         )
 
