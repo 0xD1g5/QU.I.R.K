@@ -338,6 +338,7 @@ def _endpoint_to_dict(ep) -> dict:
         "cert_sig_alg": _str(ep.cert_sig_alg),
         "cert_pubkey_alg": _str(ep.cert_pubkey_alg),
         "cert_pubkey_size": ep.cert_pubkey_size,
+        "cert_spki_fingerprint": _str(ep.cert_spki_fingerprint),
         "cert_not_before": _dt(ep.cert_not_before),
         "cert_not_after": _dt(ep.cert_not_after),
         "sensor_id": _str(getattr(ep, "sensor_id", None)),

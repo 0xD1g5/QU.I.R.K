@@ -575,6 +575,7 @@ def _ingest_envelope(
                 cert_sig_alg=finding.get("cert_sig_alg"),
                 cert_pubkey_alg=finding.get("cert_pubkey_alg"),
                 cert_pubkey_size=finding.get("cert_pubkey_size"),
+                cert_spki_fingerprint=finding.get("cert_spki_fingerprint"),
                 cert_not_before=_parse_dt(finding.get("cert_not_before")),
                 cert_not_after=_parse_dt(finding.get("cert_not_after")),
                 # Envelope top-level values override per-finding sensor_id/segment
