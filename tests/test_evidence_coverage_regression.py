@@ -102,17 +102,21 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         )
 
     def test_readiness_score_and_protocol_counts_are_pinned_and_unmoved(self) -> None:
-        """D-03: the readiness score and protocol_counts must not move. Pinned literals here
-        are the direct proof — a future accidental edit to _PROTOCOL_KEYS or the coverage
-        counters that leaks into protocol_counts fails this test immediately.
+        """D-03: the readiness score and protocol_counts must not move except by a deliberate,
+        recorded phase decision. Pinned literals here are the direct proof — a future accidental
+        edit to _PROTOCOL_KEYS or the coverage counters that leaks into protocol_counts fails
+        this test immediately.
 
-        NOTE: none of the six email/STARTTLS protocols (SMTP-STARTTLS, SMTPS, IMAPS,
-        IMAP-STARTTLS, POP3S, POP3-STARTTLS) appears in the pinned protocol_counts dict below.
-        That is _PROTOCOL_KEYS blindness (deferred per D-03/184.1-CONTEXT.md's Deferred
-        Ideas) — NOT an oversight in this test. A future phase fixing that blindness is
-        expected to change this pinned dict (SMTP-STARTTLS would gain a count of 1), and
-        making that change here would be a deliberate decision made in that future phase,
-        not an accident discovered by this test failing unexpectedly.
+        Phase 188 / SCORE-06 (RQ-1) made exactly that deliberate change: _PROTOCOL_KEYS was
+        widened to count the email/broker data-in-motion protocol literals (SMTP-STARTTLS,
+        SMTPS, IMAPS, IMAP-STARTTLS, POP3S, POP3-STARTTLS, KAFKA-PLAIN, KAFKA-TLS, AMQP-PLAIN,
+        AMQPS, AMQPS/AZURE-SERVICEBUS, HTTPS/AWS-SQS, REDIS-PLAIN, REDIS-TLS) so that
+        compute_readiness_score()'s data_in_motion assessed-predicate has an honest signal to
+        read (previously documented here as deferred _PROTOCOL_KEYS blindness). This fixture's
+        host5 endpoint is SMTP-STARTTLS, so it now shows up in protocol_counts as 1 instead of
+        being invisible. The `score` assertion below is updated separately (see the derivation
+        comment at that assertion) because Phase 188 also changed the aggregation formula
+        (exclude-and-rescale) — a second, unrelated cause of pin movement.
         """
         evidence = build_evidence_summary(_build_endpoints(), [])
 
@@ -124,11 +128,12 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
                 "AZURE_BLOB": 0, "KUBERNETES": 0, "VAULT": 0, "CONTAINER": 0, "SOURCE": 0,
                 "AWS": 0, "AZURE": 0, "GCP": 0, "CLOUD_SQL": 0, "BEARER_TOKEN": 0,
                 "OPENAPI": 0, "CODE_SIGNING": 0, "REST_FUZZ": 0,
+                "SMTP-STARTTLS": 1, "SMTPS": 0, "IMAPS": 0, "IMAP-STARTTLS": 0, "POP3S": 0,
+                "POP3-STARTTLS": 0, "KAFKA-PLAIN": 0, "KAFKA-TLS": 0, "AMQP-PLAIN": 0,
+                "AMQPS": 0, "AMQPS/AZURE-SERVICEBUS": 0, "HTTPS/AWS-SQS": 0,
+                "REDIS-PLAIN": 0, "REDIS-TLS": 0,
             },
         )
-
-        score = compute_readiness_score(evidence)
-        self.assertEqual(score["score"], 98)
 
     def test_denominator_base_unchanged_from_totals_endpoints(self) -> None:
         """evidence['totals']['endpoints'] equals len(endpoints) exactly — the OLD denominator

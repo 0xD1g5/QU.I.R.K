@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
 from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
 
-EVIDENCE_SCHEMA_VERSION = "1.1.0"
+EVIDENCE_SCHEMA_VERSION = "1.2.0"
 
 # Phase 184.1 SCORE-01 D-06/D-07 — protocols that are not scanned assets and must be
 # excluded from both the coverage numerator (assessed_crypto_count) and denominator
@@ -29,7 +29,16 @@ _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   # Phase 95 CSIGN-01 — code-signing certificate inventory
                   "CODE_SIGNING",
                   # Phase 96 FUZZ-01 — active REST crypto-posture fuzzing findings
-                  "REST_FUZZ")
+                  "REST_FUZZ",
+                  # Phase 188 SCORE-06 RQ-1 — widen to count the email/broker
+                  # data-in-motion protocol literals the motion_email_*/motion_broker_*
+                  # counter block above (Phase 34) already branches on, so
+                  # data_in_motion has an honest assessed-signal for scoring.py's
+                  # exclude-and-rescale predicate. Closes the blind spot documented in
+                  # tests/test_evidence_coverage_regression.py's own docstring.
+                  "SMTP-STARTTLS", "SMTPS", "IMAPS", "IMAP-STARTTLS", "POP3S",
+                  "POP3-STARTTLS", "KAFKA-PLAIN", "KAFKA-TLS", "AMQP-PLAIN", "AMQPS",
+                  "AMQPS/AZURE-SERVICEBUS", "HTTPS/AWS-SQS", "REDIS-PLAIN", "REDIS-TLS")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
