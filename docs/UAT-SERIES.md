@@ -5,10 +5,11 @@
 capture at TLS leaf-certificate parse (SPKI-01) persisted end-to-end across the sensor push path,
 and read-time, advisory-only key-reuse derivation surfaced as a "Key Reuse" section across CLI
 markdown/HTML/DOCX report surfaces (SPKI-02) with honest zero-reuse and no-backfill coverage
-disclosure; UAT-191-06 recorded as an honest SKIP (DEFERRED) pending the plan's own
-human-verification checkpoint. v5.21 has still not shipped a version bump, so `**Version:**` stays
-`5.19.0` — same reasoning Series 188/189/190's header notes already recorded. Earlier: Phase 190
-Plan 04 — Series 190 added: `connectors.broker_targets`
+disclosure; all six cases PASS, including UAT-191-06's live human-verification checkpoint
+(remediation-leverage wording, three-surface consistency, explicit no-reuse statement, unchanged
+88/100 score across both a shared-key and a distinct-key scan run). v5.21 has still not shipped a
+version bump, so `**Version:**` stays `5.19.0` — same reasoning Series 188/189/190's header notes
+already recorded. Earlier: Phase 190 Plan 04 — Series 190 added: `connectors.broker_targets`
 explicit non-default broker ports with ADDITIVE semantics and `QRK-CONFIG-002` fail-fast
 (TRIAGE-06), live before/after broker evidence against the chaos lab's mapped
 29092/25671/26380, the unreached-target advisory (T-190-03), and a fresh no-mocks Modbus
@@ -25043,28 +25044,55 @@ Key Reuse section reads as remediation leverage on all three surfaces, renders h
 empty, and does not move the readiness score
 **Maps to:** SPKI-02
 
-**What to test:** N/A as an automated case — this is the disposition record for Task 3's
-`checkpoint:human-verify` gate in `191-06-PLAN.md`, which requires a human developer to inspect a
-live-generated `technical-findings-*.md`, HTML report, and DOCX report and confirm the leverage
-framing, honest zero-reuse rendering, and score neutrality by eye. No test asserts operator-facing
-readability or framing quality; that is precisely why this checkpoint exists.
+**What to test:** live-generated evidence from two real scans against local TLS servers on
+`127.0.0.1:8990/8991/8992` (self-signed RSA-2048 certs; 8990+8991 sharing one cert to guarantee a
+real 2-member cluster, 8992 on a distinct cert) — a "reuse run" (`config-lab-191-reuse.yaml`) and
+a "no-reuse run" (`config-lab-191-noreuse.yaml`, same three ports, all distinct certs), each
+producing a `technical-findings-*.md`, an HTML report, and a DOCX report for the developer to
+inspect directly.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by 191-06-PLAN.md Task 3's
-`checkpoint:human-verify` gate; awaiting live developer sign-off, tracked separately from this
-docs-and-UAT plan's own automated tasks)
-**Date:** 2026-09-08  **Tester:** N/A (human-verification checkpoint, not yet executed at the time
-this series was authored)
-**Notes:** This is an honest SKIP, not a substitute PASS — per UATREC-04, checking this box before
-the human checkpoint actually runs would misrepresent an unexecuted manual verification as
-complete. If the checkpoint is later approved, flip this to `[x] PASS` and cite the approval
-transcript/commit; if it surfaces a defect, flip to `[x] FAIL` and file the fix.
+**Steps:** (evidence generation, performed by the executor ahead of the checkpoint)
+```bash
+.venv/bin/python run_scan.py --config config-lab-191-reuse.yaml --allow-internal-targets --quiet
+.venv/bin/python run_scan.py --config config-lab-191-noreuse.yaml --allow-internal-targets --quiet
+```
+then the developer opened, by eye:
+`output-191-reuse/technical-findings-20260908-213327.md`,
+`output-191-reuse/report-20260908-213327.html`, `output-191-reuse/report-20260908-213327.docx`,
+`output-191-noreuse/technical-findings-20260908-213452.md`,
+`output-191-noreuse/report-20260908-213452.html`, `output-191-noreuse/report-20260908-213452.docx`.
+
+**Pass Criteria:** all four checkpoint requirements confirmed by the developer: (1) the reuse-run
+Key Reuse section reads as remediation leverage ("Re-keying this certificate remediates 2
+endpoints"), not as two separate discoveries; (2) all three reuse-run surfaces show the same
+cluster and coverage numbers ("3 of 6 TLS endpoints have SPKI fingerprints"); (3) all three
+no-reuse-run surfaces show the explicit "No shared keys detected across 3 fingerprinted
+endpoints." statement — never a silently absent section; (4) the readiness score is unchanged
+between the two runs.
+
+**Falsifiability:** this case turns red if any surface omits the section, if the wording reads as
+N separate discoveries rather than one remediation action, if the no-reuse statement is missing
+from any surface, or if the two runs' readiness scores differ.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Human (developer, live checkpoint approval during 191-06 plan
+execution)
+**Notes:** Developer visually confirmed all four checks against the real generated files listed
+above: the reuse-run wording reads as one remediation action closing two endpoints, not two
+separate findings; all three reuse-run surfaces (markdown, HTML, DOCX) show the identical cluster
+(`CN=shared-key-lab.internal`, `127.0.0.1:8990` + `127.0.0.1:8991`) and the same "3 of 6 TLS
+endpoints have SPKI fingerprints." coverage line; all three no-reuse-run surfaces show "No shared
+keys detected across 3 fingerprinted endpoints." with the section still fully present (heading,
+caption, coverage line); and both runs scored **88/100** — an identical finding profile (0
+CRITICAL / 3 HIGH / 6 MEDIUM) confirming key reuse never moves the readiness score. Approved via
+the checkpoint's `human-verify` gate in this same plan's execution transcript.
 
 ---
 
-**Series 191 disposition.** UAT-191-01 through UAT-191-05 are each `[x] PASS`, each citing a live
-re-run of this phase's own automated tests during this plan's execution (40 tests total across six
-files, all passing). UAT-191-06 is `[x] SKIP (DEFERRED)` — an honest disposition for the
-human-verification checkpoint that gates this same plan's Task 3, not yet executed at authoring
-time. No case in this series was checked to satisfy the gate without a corresponding real result.
+**Series 191 disposition.** All six cases, UAT-191-01 through UAT-191-06, are `[x] PASS`.
+UAT-191-01 through UAT-191-05 each cite a live re-run of this phase's own automated tests during
+this plan's execution (40 tests total across six files, all passing); UAT-191-06 cites the
+developer's live, real-report visual confirmation of the checkpoint's four pass criteria. No case
+in this series was checked to satisfy the gate without a corresponding real result.
 
 **Last Updated:** 2026-09-08
