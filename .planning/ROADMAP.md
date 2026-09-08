@@ -147,7 +147,7 @@ has real data to build on.
 Plans:
 **Wave 1**
 
-- [ ] 191-01-PLAN.md — cert_spki_fingerprint column, additive migration, SPKI SHA-256 capture at both TLS parse sites
+- [x] 191-01-PLAN.md — cert_spki_fingerprint column, additive migration, SPKI SHA-256 capture at both TLS parse sites
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

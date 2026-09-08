@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: "Phase 191 planned (6 plans / 5 waves, plan-checker passed, VALIDATION.md approved) — next: /gsd-execute-phase 191"
-last_updated: "2026-09-08T21:03:21.600Z"
-last_activity: 2026-09-08 -- Phase 191 planning complete
+stopped_at: "Phase 191 execution started (6 plans / 5 waves, worktrees disabled — sequential executors) — in progress: /gsd-execute-phase 191"
+last_updated: "2026-09-08T21:07:02.118Z"
+last_activity: 2026-09-08 -- Phase 191 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -50,7 +50,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.21 Dashboard Parity & Exposure Capability — ROADMAP.md written 2026-09-08, Phases 191-195 (SPKI persistence, config visibility + skip observability, connector/credential parity, advanced fields + Executive Verdict + phantom-cert fix, Quantum Exposure Map), 13/13 v1 requirements mapped, 0 unmapped. `phase.complete`/`milestone.complete` remain UNSAFE (semantic defect class, still open) — every phase/milestone close on this milestone must be hand-written under the pre-image + signature-diff protocol. Next: /gsd:plan-phase 191
+**Current focus:** Phase 191 — spki-fingerprint-persistence
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -805,10 +805,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-09-08 -- Phase 191 planning complete
+Phase: 191 (spki-fingerprint-persistence) — EXECUTING
+Plan: 2 of 6
+Status: Executing Phase 191
+Last activity: 2026-09-08 -- Phase 191 execution started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
