@@ -3,6 +3,7 @@ type: todo
 created: 2026-09-05
 source: phase-184.3 human-verify gate (UAT step 5 investigation) + 184.3-VERIFICATION.md
 priority: high
+resolves_phase: 194
 ---
 
 # Dashboard certificate view renders failed TLS handshakes as phantom certificates
