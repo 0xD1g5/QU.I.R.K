@@ -43,10 +43,10 @@ of 2026-09-07) and `.planning/reports/backlog-reconciliation-2026-09-07.md`. No 
 - [x] **TRIAGE-05**: The port-22-in-`ports_tls` question in `docs/sample-config.yaml` is resolved —
       either removed or kept with the TLS-on-22 probe rationale recorded where the reconciliation
       audit can see it. [BACK-59]
-- [ ] **TRIAGE-06**: Broker scanner (Kafka/RabbitMQ/Redis) accepts operator-specified ports instead
+- [x] **TRIAGE-06**: Broker scanner (Kafka/RabbitMQ/Redis) accepts operator-specified ports instead
       of hardcoded defaults, verified against the chaos lab's mapped ports (29092/25671/26380).
       [BACK-68, broker sense]
-- [ ] **TRIAGE-07**: Modbus fingerprinting activates end-to-end — the Step-4 gate is satisfiable
+- [x] **TRIAGE-07**: Modbus fingerprinting activates end-to-end — the Step-4 gate is satisfiable
       and a live (or lab) Modbus target produces hardware fingerprint output. [999.91]
 - [x] **TRIAGE-08**: BACK-51 (migration-planner dual categorization) is dispositioned with recorded
       evidence — one targeted check; a "no user-visible duality remains" verdict closes it without
@@ -88,7 +88,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRIAGE-03 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
 | TRIAGE-04 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
 | TRIAGE-05 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
-| TRIAGE-06 | Phase 190 | Pending |
-| TRIAGE-07 | Phase 190 | Pending |
+| TRIAGE-06 | Phase 190 | Complete (2026-09-08, 190-VERIFICATION 8/8; live lab evidence 190-EVIDENCE.md) |
+| TRIAGE-07 | Phase 190 | Complete (2026-09-08, re-verified live — Step-4 gate satisfiable since Phase 141; fresh Modbus fingerprint evidence) |
 | TRIAGE-08 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |
 | TRIAGE-09 | Phase 189 | Complete (2026-09-08, 189-VERIFICATION 5/5) |

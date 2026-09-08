@@ -116,7 +116,7 @@ drive-by. The six TRIAGE items split into two small drain phases: config correct
 - [x] **Phase 189: Config Correctness Drain** (completed 2026-09-08) - Documented and sample configs behave exactly as
   documented; no port field silently no-ops on a quoted YAML value; the backlog derived gate makes
   ledger completeness mechanical.
-- [ ] **Phase 190: Scanner Port & Protocol Drain** - Broker scanning honors operator-specified
+- [x] **Phase 190: Scanner Port & Protocol Drain** (completed 2026-09-08) - Broker scanning honors operator-specified
   ports and Modbus fingerprinting activates end-to-end.
 
 ## Phase Details
