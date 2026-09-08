@@ -360,9 +360,39 @@ def test_scan_redis_targets_port_overrides_no_duplicate_on_default_port():
 
 def test_scan_redis_targets_foreign_family_port_no_crash():
     """A foreign-family port (e.g. RabbitMQ's 25671) passed into scan_redis_targets
-    harmlessly probes and finds nothing — no exception, no false endpoint."""
+    harmlessly probes and finds nothing — no exception, no false endpoint.
+
+    Phase 190 WR-02: the double drives the real contract, not a mock of it —
+    _probe_redis_tls genuinely returns an error-shaped REDIS-TLS endpoint on a
+    non-refused failure (here simulated via ssl.SSLError raised inside the real
+    function's socket layer), and scan_one_redis's override-mode path is what
+    must discard it (CR-01). A return_value=None patch here would validate the
+    mock, not the implementation."""
+    def _raise_ssl_error(*args, **kwargs):
+        raise ssl.SSLError("wrong version number")
+
+    mock_sock = MagicMock()
+    mock_sock.__enter__ = MagicMock(return_value=mock_sock)
+    mock_sock.__exit__ = MagicMock(return_value=False)
+
+    def _connect(address, timeout=None):
+        # Default Redis ports are closed (refused -> real probe returns None);
+        # only the foreign-family port 25671 has a live plaintext listener.
+        if address[1] in (6379, 6380):
+            raise ConnectionRefusedError("closed default port")
+        return mock_sock
+
+    # Exercise the REAL _probe_redis_tls: TCP connect succeeds (plaintext
+    # listener on the foreign port), TLS handshake raises a non-refused error.
     with patch("quirk.scanner.broker_scanner._detect_redis_plaintext", return_value=False), \
-         patch("quirk.scanner.broker_scanner._probe_redis_tls", return_value=None):
+         patch("socket.create_connection", side_effect=_connect), \
+         patch("ssl.SSLContext.wrap_socket", side_effect=_raise_ssl_error):
+        # Sanity: the real probe DOES produce an error endpoint for this failure.
+        probe_ep = _probe_redis_tls("h", 25671)
+        assert probe_ep is not None and probe_ep.scan_error, (
+            "Precondition: real _probe_redis_tls must return an error endpoint "
+            "on non-refused failure"
+        )
         results = scan_redis_targets(hosts=["h"], port_overrides={"h": [25671]})
 
     assert results == [], f"Expected no endpoints for foreign-family port, got {results}"
