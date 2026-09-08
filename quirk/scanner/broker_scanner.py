@@ -87,6 +87,52 @@ _sslyze_warned = False
 
 ADVISORY_BROKER_CLEARTEXT  = "BROKER/cleartext-mgmt-api"
 ADVISORY_BROKER_CREDENTIAL = "BROKER/credential-probe"
+# Phase 190 / TRIAGE-06 / T-190-03: distinct from the two HIGH advisories above —
+# this one is informational (severity="INFO"), not a posture risk.
+ADVISORY_BROKER_TARGET_UNREACHED = "BROKER/target-unreached"
+
+
+def build_unreached_target_advisories(
+    explicit_targets: "List[Tuple[str, int]]",
+    results: "List[CryptoEndpoint]",
+    session_start: Optional[datetime] = None,
+) -> "List[CryptoEndpoint]":
+    """Phase 190 / TRIAGE-06 / T-190-03. Pure function, no I/O.
+
+    An operator-declared broker target (host:port from `connectors.broker_targets`)
+    that produced no scanner endpoint gets one visible ADVISORY row here — distinct
+    from the D-03 silent skip that remains correct for speculative default-port
+    probes that find nothing. These are different signals: an explicitly named
+    target that refuses connection is INFORMATION (the operator asserted a broker
+    lives there); a default-port probe finding nothing is expected and silent.
+
+    severity="INFO": informational, not a vulnerability — mirrors the
+    `quirk/scanner/db_connector.py` "emit scan_error (INFO, not vulnerability)"
+    precedent rather than the HIGH severity used by ADVISORY_BROKER_CLEARTEXT /
+    ADVISORY_BROKER_CREDENTIAL above (those flag an actual posture risk; this
+    flags a config assertion that could not be confirmed reachable).
+
+    `explicit_targets`: (host, port) pairs that carried an explicit port in
+    `connectors.broker_targets` (bare-host entries, with no declared port, are
+    not checked here — there is no specific port to confirm reachable).
+    `results`: the collected endpoints from all three broker drivers for this run.
+    Returns one ADVISORY CryptoEndpoint per unreached pair, [] when all were reached.
+    """
+    reached = {(ep.host, ep.port) for ep in results}
+    now_ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    advisories: List[CryptoEndpoint] = []
+    for host, port in explicit_targets:
+        if (host, port) in reached:
+            continue
+        advisories.append(CryptoEndpoint(
+            host=host, port=port, protocol="ADVISORY",
+            service_detail=ADVISORY_BROKER_TARGET_UNREACHED,
+            severity="INFO",
+            scan_error=f"Configured broker target {host}:{port} did not respond to any probe",
+            scan_error_category="config",
+            scanned_at=now_ts,
+        ))
+    return advisories
 
 # ---------------------------------------------------------------------------
 # Plaintext detection helpers
@@ -412,13 +458,32 @@ def scan_one_kafka(
     timeout: int,
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
+    *,
+    probe_mode: Optional[str] = None,
 ) -> Optional[CryptoEndpoint]:
     """Probe a single Kafka host:port. Returns endpoint or None.
 
     Port 9092 -> plaintext detection (KAFKA-02). Port 9093/9094 -> sslyze (KAFKA-01/KAFKA-03).
     Optionally enriches with kafka-python AdminClient (KAFKA-04).
+
+    Phase 190 / TRIAGE-06: `probe_mode` decouples the plaintext-vs-TLS decision from
+    the literal port number, keyword-only, default None. `probe_mode=None` preserves
+    the legacy `port == 9092` dispatch byte-for-byte (every existing caller/test is
+    unaffected). `probe_mode="plaintext"` / `"tls"` selects the path directly and the
+    port number is not consulted for routing — needed because operator-declared
+    non-default ports (e.g. this lab's Kafka 29092 PLAINTEXT listener) would
+    otherwise be silently misrouted to the sslyze TLS path and return None.
     """
-    if port == 9092:
+    if probe_mode is None:
+        is_plaintext = (port == 9092)
+    elif probe_mode == "plaintext":
+        is_plaintext = True
+    elif probe_mode == "tls":
+        is_plaintext = False
+    else:
+        raise ValueError(f"scan_one_kafka: unrecognized probe_mode={probe_mode!r}")
+
+    if is_plaintext:
         if _detect_kafka_plaintext(host, port):
             ep = CryptoEndpoint(host=host, port=port, protocol="KAFKA-PLAIN")
             ep.service_detail = f"KAFKA-PLAIN:{port}"
@@ -453,6 +518,8 @@ def scan_kafka_targets(
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
     motion_concurrency: int = 50,
+    *,
+    port_overrides: Optional[Dict[str, List[int]]] = None,
 ) -> List[CryptoEndpoint]:
     """Probe Kafka hosts on 9092 (plaintext), 9093 (TLS), and 9094 (TLS, standard/deep only).
 
@@ -460,18 +527,41 @@ def scan_kafka_targets(
     KAFKA-02: TCP detection on 9092.
     KAFKA-03: 9094 included for standard/deep profiles.
     STRUCT-01: session_start propagated to every ep.scanned_at; no bare now() calls in this module.
+
+    Phase 190 / TRIAGE-06 / RQ-1: `port_overrides` is a shared flat `host -> [ports]`
+    map (the SAME map is handed to all three drivers, RESEARCH Pitfall 1) built from
+    `connectors.broker_targets`. Override ports are ADDITIVE to the family defaults —
+    an operator can't lose coverage by declaring an extra port. Each override port is
+    probed in BOTH modes (`probe_mode="plaintext"` and `"tls"`), since the operator
+    names a port, not a listener type. A port that duplicates a default is not
+    re-probed. A foreign-family port (e.g. RabbitMQ's 25671) harmlessly probes and
+    finds nothing — no protocol-family inference is attempted from the port number.
+    `port_overrides=None`/`{}` reproduces today's exact task list.
     """
     results: List[CryptoEndpoint] = []
     ports = [9092, 9093]
     if profile in ("standard", "deep"):
         ports.append(9094)
-    tasks = [(h, p) for h in hosts for p in ports]
+    tasks: List[Tuple[str, int, Optional[str]]] = [(h, p, None) for h in hosts for p in ports]
+    override_map = port_overrides or {}
+    for h in hosts:
+        for p in override_map.get(h, []):
+            if p in ports:
+                continue
+            tasks.append((h, p, "plaintext"))
+            tasks.append((h, p, "tls"))
     if not tasks:
         return results
     if logger:
-        logger.stamp(f"Starting Kafka scans: {len(tasks)} probes ({len(hosts)} hosts x {len(ports)} ports)")
+        logger.stamp(
+            f"Starting Kafka scans: {len(tasks)} probes "
+            f"({len(hosts)} hosts x {len(ports)} default ports + overrides)"
+        )
     with ThreadPoolExecutor(max_workers=min(len(tasks), motion_concurrency)) as ex:
-        futs = {ex.submit(scan_one_kafka, h, p, timeout, logger, session_start): (h, p) for h, p in tasks}
+        futs = {
+            ex.submit(scan_one_kafka, h, p, timeout, logger, session_start, probe_mode=mode): (h, p)
+            for h, p, mode in tasks
+        }
         for f in as_completed(futs):
             ep = f.result()
             if ep is not None:
@@ -493,6 +583,7 @@ def scan_one_rabbitmq(
     protocol_label: str = "AMQPS",
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
+    probe_mode: Optional[str] = None,
 ) -> Optional[CryptoEndpoint]:
     """Probe a single RabbitMQ-family endpoint.
 
@@ -500,8 +591,22 @@ def scan_one_rabbitmq(
     Other ports -> sslyze direct-TLS probe with caller-supplied protocol_label.
     protocol_label values: "AMQPS" (5671 self-hosted), "AMQPS/Azure-ServiceBus" (5671 cloud),
     "HTTPS/AWS-SQS" (443 cloud).
+
+    Phase 190 / TRIAGE-06: `probe_mode` (keyword-only, default None) decouples the
+    plaintext-vs-TLS decision from the literal port number the same way
+    `scan_one_kafka` does. `probe_mode=None` preserves the legacy `port == 5672`
+    dispatch byte-for-byte; `"plaintext"`/`"tls"` selects the path directly.
     """
-    if port == 5672:
+    if probe_mode is None:
+        is_plaintext = (port == 5672)
+    elif probe_mode == "plaintext":
+        is_plaintext = True
+    elif probe_mode == "tls":
+        is_plaintext = False
+    else:
+        raise ValueError(f"scan_one_rabbitmq: unrecognized probe_mode={probe_mode!r}")
+
+    if is_plaintext:
         if _detect_amqp_plaintext(host, port):
             ep = CryptoEndpoint(host=host, port=port, protocol="AMQP-PLAIN")
             ep.service_detail = f"AMQP-PLAIN:{port}"
@@ -533,6 +638,7 @@ def scan_rabbitmq_targets(
     security=None,
     broker_credentials: "Optional[Dict]" = None,
     motion_concurrency: int = 50,
+    port_overrides: Optional[Dict[str, List[int]]] = None,
 ) -> List[CryptoEndpoint]:
     """RABBIT-01..05. Probe self-hosted RabbitMQ + Azure SB + AWS SQS in parallel.
 
@@ -545,21 +651,38 @@ def scan_rabbitmq_targets(
     AWS SQS: sqs.{region}.amazonaws.com:443 (D-04, RABBIT-05).
     RABBIT-03: Management API enrichment (best-effort, attaches to 5671 ep for that host).
     STRUCT-01: session_start propagated; no bare now() calls in this module.
+
+    Phase 190 / TRIAGE-06 / RQ-1: `port_overrides` (shared flat `host -> [ports]` map,
+    same map handed to all three drivers) adds ADDITIVE self-hosted probes only —
+    Azure SB / AWS SQS cloud task construction is untouched. Each override port not
+    already a self-hosted default (5672/5671) is probed in both plaintext and TLS
+    modes. `port_overrides=None`/`{}` reproduces today's exact task list.
     """
     results: List[CryptoEndpoint] = []
     azure_namespaces = azure_namespaces or []
     sqs_regions = sqs_regions or []
 
     # Self-hosted: 5672 (AMQP plaintext), 5671 (AMQPS)
-    self_tasks = [(h, 5672, "AMQPS") for h in hosts] + [(h, 5671, "AMQPS") for h in hosts]
+    default_self_ports = {5672, 5671}
+    self_tasks: List[Tuple[str, int, str, Optional[str]]] = (
+        [(h, 5672, "AMQPS", None) for h in hosts]
+        + [(h, 5671, "AMQPS", None) for h in hosts]
+    )
+    override_map = port_overrides or {}
+    for h in hosts:
+        for p in override_map.get(h, []):
+            if p in default_self_ports:
+                continue
+            self_tasks.append((h, p, "AMQPS", "plaintext"))
+            self_tasks.append((h, p, "AMQPS", "tls"))
     # Azure SB: {ns}.servicebus.windows.net:5671 (D-03)
     azure_tasks = [
-        (f"{ns}.servicebus.windows.net", 5671, "AMQPS/Azure-ServiceBus")
+        (f"{ns}.servicebus.windows.net", 5671, "AMQPS/Azure-ServiceBus", None)
         for ns in azure_namespaces
     ]
     # AWS SQS: sqs.{region}.amazonaws.com:443 (D-04)
     sqs_tasks = [
-        (f"sqs.{r}.amazonaws.com", 443, "HTTPS/AWS-SQS")
+        (f"sqs.{r}.amazonaws.com", 443, "HTTPS/AWS-SQS", None)
         for r in sqs_regions
     ]
     all_tasks = self_tasks + azure_tasks + sqs_tasks
@@ -575,8 +698,9 @@ def scan_rabbitmq_targets(
             ex.submit(
                 scan_one_rabbitmq, host, port, timeout,
                 protocol_label=label, logger=logger, session_start=session_start,
+                probe_mode=mode,
             ): (host, port)
-            for host, port, label in all_tasks
+            for host, port, label, mode in all_tasks
         }
         for f in as_completed(futs):
             ep = f.result()
@@ -753,9 +877,25 @@ def scan_one_redis(
     session_start: Optional[datetime] = None,
     *,
     allow_cleartext: bool = False,
+    probe_mode: Optional[str] = None,
 ) -> Optional[CryptoEndpoint]:
-    """Probe a single Redis host:port. Port 6379 -> plaintext detection; 6380 -> raw ssl probe."""
-    if port == 6379:
+    """Probe a single Redis host:port. Port 6379 -> plaintext detection; 6380 -> raw ssl probe.
+
+    Phase 190 / TRIAGE-06: `probe_mode` (keyword-only, default None) decouples the
+    plaintext-vs-TLS decision from the literal port number, mirroring
+    `scan_one_kafka`/`scan_one_rabbitmq`. `probe_mode=None` preserves the legacy
+    `port == 6379` dispatch byte-for-byte; `"plaintext"`/`"tls"` selects directly.
+    """
+    if probe_mode is None:
+        is_plaintext = (port == 6379)
+    elif probe_mode == "plaintext":
+        is_plaintext = True
+    elif probe_mode == "tls":
+        is_plaintext = False
+    else:
+        raise ValueError(f"scan_one_redis: unrecognized probe_mode={probe_mode!r}")
+
+    if is_plaintext:
         if _detect_redis_plaintext(host, port):
             ep = CryptoEndpoint(host=host, port=port, protocol="REDIS-PLAIN")
             ep.service_detail = f"REDIS-PLAIN:{port}"
@@ -788,20 +928,39 @@ def scan_redis_targets(
     *,
     security=None,
     motion_concurrency: int = 50,
+    port_overrides: Optional[Dict[str, List[int]]] = None,
 ) -> List[CryptoEndpoint]:
-    """REDIS-01..03. Probe Redis hosts on 6379 (plaintext) and 6380 (TLS) in parallel."""
+    """REDIS-01..03. Probe Redis hosts on 6379 (plaintext) and 6380 (TLS) in parallel.
+
+    Phase 190 / TRIAGE-06 / RQ-1: `port_overrides` (shared flat `host -> [ports]` map,
+    same map handed to all three drivers) is ADDITIVE to the 6379/6380 defaults. Each
+    override port not already a default is probed in both plaintext and TLS modes.
+    `port_overrides=None`/`{}` reproduces today's exact task list.
+    """
     allow_cleartext = bool(security and getattr(security, "allow_cleartext_broker_probe", False))
     results: List[CryptoEndpoint] = []
     ports = [6379, 6380]
-    tasks = [(h, p) for h in hosts for p in ports]
+    tasks: List[Tuple[str, int, Optional[str]]] = [(h, p, None) for h in hosts for p in ports]
+    override_map = port_overrides or {}
+    for h in hosts:
+        for p in override_map.get(h, []):
+            if p in ports:
+                continue
+            tasks.append((h, p, "plaintext"))
+            tasks.append((h, p, "tls"))
     if not tasks:
         return results
     if logger:
-        logger.stamp(f"Starting Redis scans: {len(tasks)} probes ({len(hosts)} hosts x 2 ports)")
+        logger.stamp(
+            f"Starting Redis scans: {len(tasks)} probes ({len(hosts)} hosts x {len(ports)} default ports + overrides)"
+        )
     with ThreadPoolExecutor(max_workers=min(len(tasks), motion_concurrency)) as ex:
         futs = {
-            ex.submit(scan_one_redis, h, p, timeout, logger, session_start, allow_cleartext=allow_cleartext): (h, p)
-            for h, p in tasks
+            ex.submit(
+                scan_one_redis, h, p, timeout, logger, session_start,
+                allow_cleartext=allow_cleartext, probe_mode=mode,
+            ): (h, p)
+            for h, p, mode in tasks
         }
         for f in as_completed(futs):
             ep = f.result()

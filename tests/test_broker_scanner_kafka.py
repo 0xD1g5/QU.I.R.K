@@ -183,7 +183,7 @@ def test_scan_kafka_targets_standard_profile_includes_9094():
     """KAFKA-03: scan_kafka_targets(profile='standard') schedules probes on ports 9092, 9093, 9094."""
     probed_ports = []
 
-    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None):
+    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
         probed_ports.append(port)
         return None
 
@@ -200,7 +200,7 @@ def test_scan_kafka_targets_quick_profile_excludes_9094():
     """KAFKA-03: scan_kafka_targets(profile='quick') does NOT probe port 9094."""
     probed_ports = []
 
-    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None):
+    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
         probed_ports.append(port)
         return None
 
@@ -293,6 +293,134 @@ def test_session_start_propagation():
     assert ep.scanned_at == fixed_time.replace(tzinfo=None), (
         f"Expected scanned_at={fixed_time.replace(tzinfo=None)!r}, got {ep.scanned_at!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: probe_mode decouples plaintext-vs-TLS from port number
+# ---------------------------------------------------------------------------
+
+def test_scan_one_kafka_probe_mode_plaintext_on_nondefault_port():
+    """probe_mode='plaintext' on port 29092 (non-default) takes the plaintext path
+    and returns KAFKA-PLAIN with the actual port interpolated."""
+    with patch("quirk.scanner.broker_scanner._detect_kafka_plaintext", return_value=True) as mock_detect:
+        ep = scan_one_kafka("kafka.example.com", 29092, timeout=5, probe_mode="plaintext")
+
+    mock_detect.assert_called_once_with("kafka.example.com", 29092)
+    assert ep is not None
+    assert ep.protocol == "KAFKA-PLAIN"
+    assert ep.port == 29092
+    assert ep.service_detail == "KAFKA-PLAIN:29092"
+
+
+def test_scan_one_kafka_probe_mode_tls_on_nondefault_port():
+    """probe_mode='tls' on port 29093 (non-default) takes the sslyze path and
+    yields KAFKA-TLS, never consulting the port number for routing."""
+    with patch(
+        "quirk.scanner.broker_scanner._scan_one_sslyze_kafka",
+        return_value=None,
+    ) as mock_sslyze, \
+         patch("quirk.scanner.broker_scanner._detect_kafka_plaintext") as mock_detect:
+        ep = scan_one_kafka("kafka.example.com", 29093, timeout=5, probe_mode="tls")
+
+    mock_sslyze.assert_called_once()
+    mock_detect.assert_not_called()
+    assert ep is None  # sslyze mocked to return None; routing is what's under test
+
+
+def test_scan_one_kafka_probe_mode_none_matches_legacy_dispatch():
+    """probe_mode omitted (None) reproduces the legacy port==9092/9093 dispatch
+    byte-for-byte — regression guard for every existing caller/test."""
+    with patch("quirk.scanner.broker_scanner._detect_kafka_plaintext", return_value=True):
+        ep_9092 = scan_one_kafka("kafka.example.com", 9092, timeout=5)
+    assert ep_9092.protocol == "KAFKA-PLAIN"
+
+    with patch("quirk.scanner.broker_scanner._scan_one_sslyze_kafka", return_value=None) as mock_sslyze:
+        ep_9093 = scan_one_kafka("kafka.example.com", 9093, timeout=5)
+    mock_sslyze.assert_called_once()
+    assert ep_9093 is None
+
+
+def test_scan_one_kafka_unrecognized_probe_mode_raises():
+    """An unrecognized probe_mode value raises rather than silently falling through."""
+    with pytest.raises(ValueError):
+        scan_one_kafka("kafka.example.com", 9092, timeout=5, probe_mode="bogus")
+
+
+# ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: additive per-host port overrides in scan_kafka_targets
+# ---------------------------------------------------------------------------
+
+def test_scan_kafka_targets_port_overrides_additive():
+    """port_overrides adds the override port to the family defaults (RQ-1) —
+    both remain in the probed set, and the override port is probed in BOTH modes."""
+    probed = []
+
+    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
+        probed.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_kafka", side_effect=fake_scan_one_kafka):
+        scan_kafka_targets(
+            ["h"], timeout=5, profile="quick", port_overrides={"h": [29092]},
+        )
+
+    ports_probed = {p for _, p, _ in probed}
+    assert {9092, 9093, 29092}.issubset(ports_probed), f"Expected defaults + override, got {ports_probed}"
+    modes_for_override = {m for h, p, m in probed if p == 29092}
+    assert modes_for_override == {"plaintext", "tls"}, (
+        f"Expected override port probed in both modes, got {modes_for_override}"
+    )
+
+
+def test_scan_kafka_targets_port_overrides_none_matches_today():
+    """port_overrides=None reproduces the exact task list from before this change."""
+    probed_default = []
+    probed_none = []
+
+    def fake_default(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
+        probed_default.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_kafka", side_effect=fake_default):
+        scan_kafka_targets(["h"], timeout=5, profile="quick")
+
+    def fake_none(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
+        probed_none.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_kafka", side_effect=fake_none):
+        scan_kafka_targets(["h"], timeout=5, profile="quick", port_overrides=None)
+
+    assert sorted(probed_default) == sorted(probed_none)
+    assert all(mode is None for _, _, mode in probed_default)
+
+
+def test_scan_kafka_targets_port_overrides_no_duplicate_on_default_port():
+    """An override port that duplicates a default port does not produce a duplicate probe."""
+    probed = []
+
+    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
+        probed.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_kafka", side_effect=fake_scan_one_kafka):
+        scan_kafka_targets(["h"], timeout=5, profile="quick", port_overrides={"h": [9092]})
+
+    port_9092_hits = [p for p in probed if p[1] == 9092]
+    assert len(port_9092_hits) == 1, f"Expected exactly one probe of duplicated default port, got {port_9092_hits}"
+    assert port_9092_hits[0][2] is None, "Duplicated default port must stay on the legacy None probe_mode"
+
+
+def test_scan_kafka_targets_foreign_family_port_no_crash():
+    """A foreign-family port (e.g. RabbitMQ's 25671) passed into scan_kafka_targets
+    harmlessly probes and finds nothing — no exception, no false endpoint."""
+    with patch("quirk.scanner.broker_scanner._detect_kafka_plaintext", return_value=False), \
+         patch("quirk.scanner.broker_scanner._scan_one_sslyze_kafka", return_value=None):
+        results = scan_kafka_targets(
+            ["h"], timeout=5, profile="quick", port_overrides={"h": [25671]},
+        )
+
+    assert results == [], f"Expected no endpoints for foreign-family port, got {results}"
 
 
 # ---------------------------------------------------------------------------

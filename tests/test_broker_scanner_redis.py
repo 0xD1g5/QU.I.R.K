@@ -249,6 +249,126 @@ def test_enrich_redis_config_noperm():
 
 
 # ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: probe_mode decouples plaintext-vs-TLS from port number
+# ---------------------------------------------------------------------------
+
+def test_scan_one_redis_probe_mode_plaintext_on_nondefault_port():
+    """probe_mode='plaintext' on port 26379 (non-default) takes the plaintext path."""
+    with patch("quirk.scanner.broker_scanner._detect_redis_plaintext", return_value=True) as mock_detect:
+        ep = scan_one_redis("r.example.com", 26379, timeout=5, probe_mode="plaintext")
+
+    mock_detect.assert_called_once_with("r.example.com", 26379)
+    assert ep is not None
+    assert ep.protocol == "REDIS-PLAIN"
+    assert ep.port == 26379
+    assert ep.service_detail == "REDIS-PLAIN:26379"
+
+
+def test_scan_one_redis_probe_mode_tls_on_nondefault_port():
+    """probe_mode='tls' takes the raw ssl probe path, never consulting the port
+    number for routing."""
+    with patch(
+        "quirk.scanner.broker_scanner._probe_redis_tls", return_value=None,
+    ) as mock_tls, \
+         patch("quirk.scanner.broker_scanner._detect_redis_plaintext") as mock_detect:
+        ep = scan_one_redis("r.example.com", 26379, timeout=5, probe_mode="tls")
+
+    mock_tls.assert_called_once()
+    mock_detect.assert_not_called()
+    assert ep is None
+
+
+def test_scan_one_redis_probe_mode_none_matches_legacy_dispatch():
+    """probe_mode omitted (None) reproduces the legacy port==6379/6380 dispatch
+    byte-for-byte."""
+    with patch("quirk.scanner.broker_scanner._detect_redis_plaintext", return_value=True):
+        ep_6379 = scan_one_redis("r.example.com", 6379, timeout=5)
+    assert ep_6379.protocol == "REDIS-PLAIN"
+
+    with patch("quirk.scanner.broker_scanner._probe_redis_tls", return_value=None) as mock_tls:
+        ep_6380 = scan_one_redis("r.example.com", 6380, timeout=5)
+    mock_tls.assert_called_once()
+    assert ep_6380 is None
+
+
+def test_scan_one_redis_unrecognized_probe_mode_raises():
+    """An unrecognized probe_mode value raises rather than silently falling through."""
+    with pytest.raises(ValueError):
+        scan_one_redis("r.example.com", 6379, timeout=5, probe_mode="bogus")
+
+
+# ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: additive per-host port overrides in scan_redis_targets
+# ---------------------------------------------------------------------------
+
+def test_scan_redis_targets_port_overrides_additive():
+    """port_overrides adds the override port to the 6379/6380 defaults (RQ-1),
+    probed in both modes."""
+    probed = []
+
+    def fake_scan_one(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False, probe_mode=None):
+        probed.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_redis", side_effect=fake_scan_one):
+        scan_redis_targets(hosts=["h"], port_overrides={"h": [26380]})
+
+    ports_probed = {p for _, p, _ in probed}
+    assert {6379, 6380, 26380}.issubset(ports_probed), f"Expected defaults + override, got {ports_probed}"
+    modes_for_override = {m for _, p, m in probed if p == 26380}
+    assert modes_for_override == {"plaintext", "tls"}
+
+
+def test_scan_redis_targets_port_overrides_none_matches_today():
+    """port_overrides=None reproduces today's exact task list."""
+    probed_default = []
+    probed_none = []
+
+    def fake_default(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False, probe_mode=None):
+        probed_default.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_redis", side_effect=fake_default):
+        scan_redis_targets(hosts=["h"])
+
+    def fake_none(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False, probe_mode=None):
+        probed_none.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_redis", side_effect=fake_none):
+        scan_redis_targets(hosts=["h"], port_overrides=None)
+
+    assert sorted(probed_default) == sorted(probed_none)
+    assert all(mode is None for _, _, mode in probed_default)
+
+
+def test_scan_redis_targets_port_overrides_no_duplicate_on_default_port():
+    """An override port duplicating a default is not re-probed."""
+    probed = []
+
+    def fake_scan_one(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False, probe_mode=None):
+        probed.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_redis", side_effect=fake_scan_one):
+        scan_redis_targets(hosts=["h"], port_overrides={"h": [6379]})
+
+    port_6379_hits = [p for p in probed if p[1] == 6379]
+    assert len(port_6379_hits) == 1, f"Expected exactly one probe of duplicated default port, got {port_6379_hits}"
+    assert port_6379_hits[0][2] is None
+
+
+def test_scan_redis_targets_foreign_family_port_no_crash():
+    """A foreign-family port (e.g. RabbitMQ's 25671) passed into scan_redis_targets
+    harmlessly probes and finds nothing — no exception, no false endpoint."""
+    with patch("quirk.scanner.broker_scanner._detect_redis_plaintext", return_value=False), \
+         patch("quirk.scanner.broker_scanner._probe_redis_tls", return_value=None):
+        results = scan_redis_targets(hosts=["h"], port_overrides={"h": [25671]})
+
+    assert results == [], f"Expected no endpoints for foreign-family port, got {results}"
+
+
+# ---------------------------------------------------------------------------
 # BROKER-ARCH: all three drivers importable
 # ---------------------------------------------------------------------------
 

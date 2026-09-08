@@ -120,7 +120,7 @@ def test_scan_email_targets_plaintext_only():
 
 def test_scan_kafka_targets_happy():
     # INFRA-03 / KAFKA-01 — happy: TLS handshake on 9093/9094 succeeds.
-    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None):
+    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
         if port in (9093, 9094):
             return _tls_endpoint(host, port, "KAFKA-TLS")
         return None
@@ -147,7 +147,7 @@ def test_scan_kafka_targets_refused():
 
 def test_scan_kafka_targets_plaintext_only():
     # INFRA-03 / KAFKA-02 — plaintext-only: 9092 PLAIN listener, 9093/9094 refused.
-    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None):
+    def fake_scan_one_kafka(host, port, timeout, logger=None, session_start=None, *, probe_mode=None):
         if port == 9092:
             return _plain_endpoint(host, port, "KAFKA-PLAIN")
         return None
@@ -168,7 +168,7 @@ def test_scan_kafka_targets_plaintext_only():
 
 def test_scan_rabbitmq_targets_happy():
     # INFRA-03 / RABBIT-01 — happy: AMQPS handshake on 5671 succeeds.
-    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         if port == 5671:
             return _tls_endpoint(host, port, protocol_label)
         return None
@@ -197,7 +197,7 @@ def test_scan_rabbitmq_targets_refused():
 
 def test_scan_rabbitmq_targets_plaintext_only():
     # INFRA-03 / RABBIT-02 — plaintext-only: 5672 AMQP listener, 5671 refused.
-    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         if port == 5672:
             return _plain_endpoint(host, port, "AMQP-PLAIN")
         return None
@@ -219,7 +219,7 @@ def test_scan_rabbitmq_targets_plaintext_only():
 
 def test_scan_redis_targets_happy():
     # INFRA-03 / REDIS-01 — happy: TLS on 6380 succeeds.
-    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False):
+    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False, probe_mode=None):
         if port == 6380:
             return _tls_endpoint(host, port, "REDIS-TLS")
         return None
@@ -246,7 +246,7 @@ def test_scan_redis_targets_refused():
 
 def test_scan_redis_targets_plaintext_only():
     # INFRA-03 / REDIS-02 — plaintext-only: 6379 PING/PONG without auth.
-    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False):
+    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False, probe_mode=None):
         if port == 6379:
             return _plain_endpoint(host, port, "REDIS-PLAIN")
         return None
@@ -268,7 +268,7 @@ def test_scan_redis_targets_plaintext_only():
 
 def test_azure_servicebus_probe_happy():
     # INFRA-03 / RABBIT-04 — happy: Azure SB AMQPS handshake succeeds on :5671.
-    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         if port == 5671 and "servicebus.windows.net" in host:
             return _tls_endpoint(host, port, protocol_label)
         return None
@@ -309,7 +309,7 @@ def test_azure_servicebus_probe_plaintext_only():
     # exposes AMQPS on :5671; there is NO plaintext analog (port 5672 is not part of the
     # Azure SB probe set). Per D-03, the test asserts the documented absence: probing a
     # nonexistent / TLS-refused Azure SB host yields zero findings without raising.
-    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         return None  # neither TLS handshake nor plaintext listener ever responds
 
     with patch("quirk.scanner.broker_scanner.scan_one_rabbitmq", side_effect=fake_scan_one_rabbitmq), \
@@ -334,7 +334,7 @@ def test_azure_servicebus_probe_plaintext_only():
 
 def test_aws_sqs_probe_happy():
     # INFRA-03 / RABBIT-05 — happy: AWS SQS HTTPS handshake succeeds on :443.
-    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         if port == 443 and host.startswith("sqs."):
             return _tls_endpoint(host, port, protocol_label)
         return None
@@ -375,7 +375,7 @@ def test_aws_sqs_probe_plaintext_only():
     # :443. There is no plaintext analog in the SQS probe path. Per D-03, the test asserts
     # the documented absence: when TLS is refused, the scanner emits no false-positive
     # plaintext finding (since port 80 is NOT part of the SQS probe set).
-    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one_rabbitmq(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         return None
 
     with patch("quirk.scanner.broker_scanner.scan_one_rabbitmq", side_effect=fake_scan_one_rabbitmq), \

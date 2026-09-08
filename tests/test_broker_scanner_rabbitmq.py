@@ -380,7 +380,7 @@ def test_mgmt_enrichment_attached_to_amqps_endpoint():
     # Create a stub AMQPS endpoint that scan_one_rabbitmq will return
     stub_ep = CryptoEndpoint(host="rabbitmq.example.com", port=5671, protocol="AMQPS")
 
-    def fake_scan_one(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None):
+    def fake_scan_one(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
         if port == 5671 and protocol_label == "AMQPS":
             return stub_ep
         return None
@@ -400,6 +400,138 @@ def test_mgmt_enrichment_attached_to_amqps_endpoint():
     assert enriched_ep._rabbit_mgmt_enrichment == enrichment_data, (
         f"Expected enrichment_data={enrichment_data!r}, got {enriched_ep._rabbit_mgmt_enrichment!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: probe_mode decouples plaintext-vs-TLS from port number
+# ---------------------------------------------------------------------------
+
+def test_scan_one_rabbitmq_probe_mode_plaintext_on_nondefault_port():
+    """probe_mode='plaintext' on port 25671 (non-default) takes the plaintext path."""
+    with patch("quirk.scanner.broker_scanner._detect_amqp_plaintext", return_value=True) as mock_detect:
+        ep = scan_one_rabbitmq("rabbitmq.example.com", 25671, timeout=5, probe_mode="plaintext")
+
+    mock_detect.assert_called_once_with("rabbitmq.example.com", 25671)
+    assert ep is not None
+    assert ep.protocol == "AMQP-PLAIN"
+    assert ep.port == 25671
+    assert ep.service_detail == "AMQP-PLAIN:25671"
+
+
+def test_scan_one_rabbitmq_probe_mode_tls_on_nondefault_port():
+    """probe_mode='tls' takes the sslyze path and honors protocol_label, never
+    consulting the port number for routing."""
+    with patch(
+        "quirk.scanner.broker_scanner._scan_one_sslyze_broker", return_value=None,
+    ) as mock_sslyze, \
+         patch("quirk.scanner.broker_scanner._detect_amqp_plaintext") as mock_detect:
+        ep = scan_one_rabbitmq(
+            "rabbitmq.example.com", 25671, timeout=5,
+            protocol_label="AMQPS", probe_mode="tls",
+        )
+
+    mock_sslyze.assert_called_once()
+    mock_detect.assert_not_called()
+    assert ep is None
+
+
+def test_scan_one_rabbitmq_probe_mode_none_matches_legacy_dispatch():
+    """probe_mode omitted (None) reproduces the legacy port==5672/5671 dispatch
+    byte-for-byte."""
+    with patch("quirk.scanner.broker_scanner._detect_amqp_plaintext", return_value=True):
+        ep_5672 = scan_one_rabbitmq("rabbitmq.example.com", 5672, timeout=5)
+    assert ep_5672.protocol == "AMQP-PLAIN"
+
+    with patch("quirk.scanner.broker_scanner._scan_one_sslyze_broker", return_value=None) as mock_sslyze:
+        ep_5671 = scan_one_rabbitmq("rabbitmq.example.com", 5671, timeout=5)
+    mock_sslyze.assert_called_once()
+    assert ep_5671 is None
+
+
+def test_scan_one_rabbitmq_unrecognized_probe_mode_raises():
+    """An unrecognized probe_mode value raises rather than silently falling through."""
+    with pytest.raises(ValueError):
+        scan_one_rabbitmq("rabbitmq.example.com", 5672, timeout=5, probe_mode="bogus")
+
+
+# ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: additive per-host port overrides in scan_rabbitmq_targets
+# ---------------------------------------------------------------------------
+
+def test_scan_rabbitmq_targets_port_overrides_additive():
+    """port_overrides adds the override port to the self-hosted defaults (RQ-1),
+    probed in both modes; azure/sqs cloud task construction is untouched."""
+    probed = []
+
+    def fake_scan_one(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
+        probed.append((host, port, protocol_label, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_rabbitmq", side_effect=fake_scan_one):
+        scan_rabbitmq_targets(
+            hosts=["h"], azure_namespaces=[], sqs_regions=[],
+            port_overrides={"h": [25671]},
+        )
+
+    ports_probed = {p for _, p, _, _ in probed}
+    assert {5672, 5671, 25671}.issubset(ports_probed), f"Expected defaults + override, got {ports_probed}"
+    modes_for_override = {m for _, p, _, m in probed if p == 25671}
+    assert modes_for_override == {"plaintext", "tls"}
+
+
+def test_scan_rabbitmq_targets_port_overrides_none_matches_today():
+    """port_overrides=None reproduces today's exact task list."""
+    probed_default = []
+    probed_none = []
+
+    def fake_default(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
+        probed_default.append((host, port, protocol_label, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_rabbitmq", side_effect=fake_default):
+        scan_rabbitmq_targets(hosts=["h"], azure_namespaces=[], sqs_regions=[])
+
+    def fake_none(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
+        probed_none.append((host, port, protocol_label, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_rabbitmq", side_effect=fake_none):
+        scan_rabbitmq_targets(hosts=["h"], azure_namespaces=[], sqs_regions=[], port_overrides=None)
+
+    assert sorted(probed_default) == sorted(probed_none)
+    assert all(mode is None for _, _, _, mode in probed_default)
+
+
+def test_scan_rabbitmq_targets_port_overrides_no_duplicate_on_default_port():
+    """An override port duplicating a self-hosted default is not re-probed."""
+    probed = []
+
+    def fake_scan_one(host, port, timeout, *, protocol_label="AMQPS", logger=None, session_start=None, probe_mode=None):
+        probed.append((host, port, probe_mode))
+        return None
+
+    with patch("quirk.scanner.broker_scanner.scan_one_rabbitmq", side_effect=fake_scan_one):
+        scan_rabbitmq_targets(
+            hosts=["h"], azure_namespaces=[], sqs_regions=[],
+            port_overrides={"h": [5672]},
+        )
+
+    port_5672_hits = [p for p in probed if p[1] == 5672]
+    assert len(port_5672_hits) == 1, f"Expected exactly one probe of duplicated default port, got {port_5672_hits}"
+    assert port_5672_hits[0][2] is None
+
+
+def test_scan_rabbitmq_targets_foreign_family_port_no_crash():
+    """A foreign-family port (e.g. Kafka's 29092) passed into scan_rabbitmq_targets
+    harmlessly probes and finds nothing — no exception, no false endpoint."""
+    with patch("quirk.scanner.broker_scanner._detect_amqp_plaintext", return_value=False), \
+         patch("quirk.scanner.broker_scanner._scan_one_sslyze_broker", return_value=None):
+        results = scan_rabbitmq_targets(
+            hosts=["h"], azure_namespaces=[], sqs_regions=[],
+            port_overrides={"h": [29092]},
+        )
+
+    assert results == [], f"Expected no endpoints for foreign-family port, got {results}"
 
 
 # ---------------------------------------------------------------------------
