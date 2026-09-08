@@ -41,11 +41,14 @@ DESIGN (RQ-2, locked by 189-CONTEXT.md): two enforcement legs plus one always-on
        returns nothing. This is the control that stops the CI-enforced leg from going green on
        a fresh checkout where almost nothing is visible (T-189-10).
     2. `test_back_star_ci_enforced_leg` -- CI-ENFORCED. Enumerates BACK-* IDs from git-tracked
-       sources only, and asserts every enumerated id::title key is either closed-with-evidence
-       or listed in HORIZON.md's Open-Item Ledger.
+       sources only (ROADMAP + REQUIREMENTS + phase docs -- widened per Phase 189 review WR-05
+       so an ID first/only declared outside a roadmap cannot escape), and asserts every
+       enumerated id::title key is either closed-with-evidence or listed in HORIZON.md's
+       Open-Item Ledger.
     3. `test_full_corpus_local_only_leg` -- LOCAL-ONLY, `skipif`-guarded on the presence of
        `.planning/backlog/` (the untracked 999.* source). Enumerates BOTH the full on-disk
-       BACK-* corpus (every `*-ROADMAP.md`, tracked or not) AND the full `999.*` corpus
+       BACK-* corpus (every `*-ROADMAP.md`, `*-REQUIREMENTS.md`, and `*-phases/**/*.md`,
+       tracked or not, per WR-05) AND the full `999.*` corpus
        (`.planning/backlog/` subdirectory names), and asserts the same closed-or-ledgered
        invariant across everything a human running this locally can see. Its skip reason names
        the exact missing paths so a skip in CI logs can never be misread as a pass (T-189-11).
@@ -357,11 +360,15 @@ def test_non_vacuity_guard_over_tracked_sources():
     """T-189-10: a CI-visible source set that still contains literal `BACK-` text must never
     read as a pass just because the enumeration regex found nothing. This is the control that
     stops the CI-enforced leg (test 2) from going green vacuously."""
-    tracked_roadmaps = _git_tracked_files(".planning/milestones/*-ROADMAP.md")
+    tracked_sources = (
+        _git_tracked_files(".planning/milestones/*-ROADMAP.md")
+        + _git_tracked_files(".planning/milestones/*-REQUIREMENTS.md")
+        + _git_tracked_files(".planning/milestones/*-phases/**/*.md")
+    )
     contains_back_text = [
-        p for p in tracked_roadmaps if "BACK-" in p.read_text(encoding="utf-8", errors="replace")
+        p for p in tracked_sources if "BACK-" in p.read_text(encoding="utf-8", errors="replace")
     ]
-    enumerated = _enumerate_back_ids(tracked_roadmaps)
+    enumerated = _enumerate_back_ids(tracked_sources)
     if contains_back_text and not enumerated:
         pytest.fail(
             "Non-vacuity guard tripped: "
@@ -387,7 +394,9 @@ def test_back_star_ci_enforced_leg():
     tracked_phase_docs = _git_tracked_files(".planning/milestones/*-phases/**/*.md")
     closure_universe = tracked_roadmaps + tracked_requirements + tracked_phase_docs
 
-    entries = _enumerate_back_ids(tracked_roadmaps)
+    # WR-05: enumeration reads the SAME widened set as closure -- an ID first
+    # (or only) declared in a REQUIREMENTS file or phase doc must not escape.
+    entries = _enumerate_back_ids(closure_universe)
     horizon_text = HORIZON_PATH.read_text(encoding="utf-8", errors="replace")
     offenders = _offenders(entries, closure_universe, horizon_text)
 
@@ -442,7 +451,8 @@ def test_full_corpus_local_only_leg():
     all_phase_docs = sorted(MILESTONES_DIR.glob("*-phases/**/*.md"))
     closure_universe = all_roadmaps + all_requirements + all_phase_docs
 
-    back_entries = _enumerate_back_ids(all_roadmaps)
+    # WR-05: same widening as the CI leg -- enumerate over the full closure set.
+    back_entries = _enumerate_back_ids(closure_universe)
     id_999_entries = _enumerate_999_ids(BACKLOG_DIR)
     entries = {**back_entries, **id_999_entries}
 

@@ -48,6 +48,19 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 |---|---|---|
 | BACK-59 | KEEP — port 22 in `docs/sample-config.yaml:10`'s `ports_tls` is deliberate, not vestigial | Live-confirmed 2026-09-08: a TLS ClientHello against a real SSH listener (local sshd, 127.0.0.1:22) raises `ssl.SSLError: [SSL: WRONG_VERSION_NUMBER]`, which `quirk/scanner/tls_scanner.py::_categorize_tls_error` (line 71-74) maps to `NOT_TLS_ON_PORT`, surfaced live via `quirk.scanner.tls_scanner.scan_one()` as `tls_blocker_reason="NOT_TLS_ON_PORT"` / `scan_error="NOT_TLS_ON_PORT: SSLError: ..."` — a real, operator-visible endpoint signal, not a swallowed exception. Mechanism half machine-checked in `tests/test_tls_error_categorization.py`. Rationale recorded inline in `docs/sample-config.yaml` above the `ports_tls` line. The lab's own `ssh-alt` container (2222) was unreachable at decision time (no chaos-lab containers running); the local-sshd fallback tier named in the plan was used instead. |
 
+### Drained by Phase 189 review fix (WR-05 enumeration widening, recorded 2026-09-08)
+
+The WR-05 review fix widened gate enumeration from `*-ROADMAP.md` only to the tracked
+`*-REQUIREMENTS.md` and phase-doc corpus. The widened scan surfaced exactly 2 new id::title
+keys — both prose citations of the already-shipped BACK-89 (executive-summary
+score-vs-severity consistency, closed/superseded by Phase 184.4), keyed by their nearest
+preceding headings as synthetic titles:
+
+| Cited as | Where | Verdict / evidence |
+|---|---|---|
+| BACK-89 under heading "Enumeration Drift (the shared defect class)" | `v5.19-REQUIREMENTS.md` SCORE-04 closure narrative ("This supersedes BACK-89") | SHIPPED/SUPERSEDED — Phase 184.4 severity floor; `.planning/backlog/999.82-executive-summary-score-vs-severity-consistency/RESOLVED.md` |
+| BACK-89 under heading "Observable Truths" | `v5.19-phases/184.4-rating-band-severity-floor/184.4-VERIFICATION.md` (truth row 6: "BACK-89 is closed by reference") | SHIPPED — same item, same closure evidence as above |
+
 ### Bulk-closed by Phase 189 (TRIAGE-09 gate drain, recorded 2026-09-08)
 
 The TRIAGE-09 derived gate's first honest run against the full on-disk corpus found 97
