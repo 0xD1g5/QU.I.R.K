@@ -194,6 +194,33 @@ def _load_closure_burndown(db_path, scan_run_id) -> dict:
         return {}
 
 
+def _load_key_reuse(db_path) -> dict:
+    """Phase 191 Plan 04 (SPKI-02, D-02/D-03): one non-fatal read of
+    `compute_key_reuse_clusters()`'s cross-scan cluster aggregate, unmodified.
+
+    Returns `{}` immediately when `db_path` is falsy, and `{}` on any read
+    failure (broad except-log-return-{} guard, mirroring
+    `_load_closure_burndown`'s idiom). Unlike `_load_closure_burndown`, this
+    takes no `scan_run_id` — D-03 makes key reuse a global, cross-scan query
+    rather than a scan-scoped one.
+    """
+    if not db_path:
+        return {}
+
+    try:
+        from quirk.db import get_session as _get_session
+        from quirk.intelligence.key_reuse import compute_key_reuse_clusters as _compute_key_reuse_clusters
+
+        with _get_session(db_path) as _key_reuse_sess:
+            return _compute_key_reuse_clusters(_key_reuse_sess)
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "key-reuse section skipped (non-fatal)", exc_info=True
+        )
+        return {}
+
+
 def _load_remediation_items(db_path, scan_run_id, closure_counters=None) -> list:
     """Phase 181 SURF-01: load current-scan RemediationItem rows for VEX emission.
 
@@ -452,8 +479,17 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # post-score, further down) — exactly one database read per run, and the
     # CLI report keeps its documented no-score-dependency property.
     vendor_pqc_trends = _load_vendor_pqc_trends(getattr(cfg.output, "db_path", None))
+    # Phase 191 Plan 04 (SPKI-02): key reuse has no score dependency either —
+    # loaded here alongside vendor_pqc_trends, single DB read feeding both
+    # the CLI markdown (below) and exec_content (further down).
+    _key_reuse = _load_key_reuse(getattr(cfg.output, "db_path", None))
     tech_md = build_tech_markdown(
-        cfg, endpoints, findings, vendor_pqc_trends=vendor_pqc_trends, scan_completed_at=_scan_completed_at
+        cfg,
+        endpoints,
+        findings,
+        vendor_pqc_trends=vendor_pqc_trends,
+        scan_completed_at=_scan_completed_at,
+        key_reuse=_key_reuse,
     )
     tech_path = os.path.join(outdir, f"technical-findings-{stamp}.md")
     with open(tech_path, "w", encoding="utf-8") as f:
@@ -744,6 +780,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     )
     exec_content.closure_refusal = _closure_refusal
     exec_content.burndown = _burndown
+
+    # Phase 191 Plan 04 (SPKI-02): same value already loaded above by
+    # _load_key_reuse feeds exec_content here — no second loader call, no
+    # second database read.
+    exec_content.key_reuse = _key_reuse
 
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — one shared computation
     # feeds markdown/HTML/DOCX/terminal summary; no renderer recomputes this.

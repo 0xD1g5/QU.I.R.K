@@ -165,6 +165,16 @@ class ExecContent:
     # closure WAS computed — it does NOT mean "unknown" or "not yet run".
     closure_refusal: dict = field(default_factory=dict)
 
+    # Phase 191 Plan 04 (SPKI-02, D-02): advisory-only key-reuse cluster
+    # disclosure, populated by writer.py's _load_key_reuse() from a single
+    # `compute_key_reuse_clusters()` read. Never routed through
+    # `_build_finding()` / findings_evaluator.py; deliberately carries no
+    # top-level `severity`, `host`, or `port` key, matching `burndown`'s and
+    # `closure_refusal`'s contract above — the absent key is the structural
+    # mechanism that keeps this out of the findings chokepoint, not
+    # decoration.
+    key_reuse: dict = field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # D-04: Ordering dicts for within-bucket priority sort
