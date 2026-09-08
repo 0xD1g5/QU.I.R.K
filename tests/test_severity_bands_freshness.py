@@ -8,11 +8,9 @@ ScoreGauge.tsx hardcoded, with nothing to catch it.
 """
 from __future__ import annotations
 
-import copy
-import json
 from pathlib import Path
 
-from quirk.severity_bands import BAND_THRESHOLDS, dump_json
+from quirk.severity_bands import dump_json
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SEVERITY_BANDS_JSON = REPO_ROOT / "src" / "dashboard" / "src" / "lib" / "severity-bands.json"
@@ -37,36 +35,28 @@ def test_severity_bands_json_is_current():
     )
 
 
-def test_severity_bands_gate_is_not_vacuous():
-    """Prove the gate would actually catch drift, not just compare a constant
-    to itself.
+def test_severity_bands_gate_is_not_vacuous(monkeypatch):
+    """Prove the gate would actually catch drift THROUGH the real generator,
+    not through a hand-pasted copy of its payload shape.
 
-    Mutate a copy of BAND_THRESHOLDS, re-serialize using the same shape
-    dump_json() produces, and assert the result differs from the committed
-    artifact. If this test cannot fail (i.e. any mutation still matches),
-    the freshness gate above is not load-bearing.
+    188 review WR-04: the prior version of this test pasted the entire payload
+    (band_order, allowance table, generated_by literal) and serialized it
+    locally — so if dump_json() ever stopped reading BAND_THRESHOLDS (e.g. an
+    inlined literal during a refactor), the freshness gate would become truly
+    vacuous while this "proof" stayed green. Sensitivity must be proven by
+    mutating the module state dump_json() itself reads and asserting ITS
+    output moves away from the committed artifact.
     """
-    mutated_thresholds = copy.deepcopy(BAND_THRESHOLDS)
-    mutated_thresholds["EXCELLENT"] = mutated_thresholds["EXCELLENT"] + 1
+    import quirk.severity_bands as sb
 
-    payload = {
-        "band_order": ["EXCELLENT", "GOOD", "MODERATE", "FAIR", "POOR"],
-        "band_thresholds": mutated_thresholds,
-        "band_critical_allowance": {
-            "EXCELLENT": 0,
-            "GOOD": 0,
-            "MODERATE": 0,
-            "FAIR": None,
-            "POOR": None,
-        },
-        "generated_by": "quirk.severity_bands.dump_json",
-    }
-    mutated_serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    mutated = dict(sb.BAND_THRESHOLDS, EXCELLENT=sb.BAND_THRESHOLDS["EXCELLENT"] + 1)
+    monkeypatch.setattr(sb, "BAND_THRESHOLDS", mutated)
 
-    committed = SEVERITY_BANDS_JSON.read_text()
-    assert mutated_serialized != committed, (
-        "Mutating BAND_THRESHOLDS produced the same serialization as the "
-        "committed artifact — the freshness gate would not catch drift."
+    assert sb.dump_json() != SEVERITY_BANDS_JSON.read_text(), (
+        "Mutating BAND_THRESHOLDS did NOT change dump_json()'s output — the "
+        "generator is no longer reading BAND_THRESHOLDS, so the freshness gate "
+        "above is vacuous (regenerating from the broken generator would still "
+        "byte-match the committed artifact)."
     )
 
 
