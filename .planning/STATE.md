@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-09-08T18:25:32.586Z"
 last_activity: 2026-09-08
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -49,7 +49,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.20 Release & Correctness Drain ARCHIVED 2026-09-08** (4 phases 187-190, 18 plans, audit `passed` 10/10, 4/4 Nyquist-compliant, 6/6 integration seams). Archives at `.planning/milestones/v5.20-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`; `.planning/REQUIREMENTS.md` removed — fresh one at `/gsd-new-milestone`. Highlights: v5.19.0 published to PyPI (REL-01); scoring v2 with coverage honesty (SCORE-06/07); config correctness drain incl. the derived backlog-reconciliation gate that drained 99 IDs honestly (TRIAGE-03..05/08/09); broker/Modbus end-to-end with live lab evidence (TRIAGE-06/07). Every phase close and this archive were hand-written under the pre-image + signature-diff protocol — `phase.complete`/`milestone.complete` remain UNSAFE (semantic defect class, still open). Next: /gsd-new-milestone
+**Current focus:** v5.21 Dashboard Parity & Exposure Capability — ROADMAP.md written 2026-09-08, Phases 191-195 (SPKI persistence, config visibility + skip observability, connector/credential parity, advanced fields + Executive Verdict + phantom-cert fix, Quantum Exposure Map), 13/13 v1 requirements mapped, 0 unmapped. `phase.complete`/`milestone.complete` remain UNSAFE (semantic defect class, still open) — every phase/milestone close on this milestone must be hand-written under the pre-image + signature-diff protocol. Next: /gsd:plan-phase 191
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`

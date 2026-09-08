@@ -35,6 +35,7 @@
 - ✅ **v5.18 Migration Execution** — Phases 177–181, 37 plans (shipped 2026-09-03 as `v5.18.0`, first PyPI release since 5.12.0; carries v5.16 + v5.17 content) → `.planning/milestones/v5.18-ROADMAP.md`
 - ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
 - ✅ **v5.20 Release & Correctness Drain** — Phases 187–190, 18 plans (shipped 2026-09-08; v5.19.0 published to PyPI 2026-09-07) → `.planning/milestones/v5.20-ROADMAP.md`
+- 🚧 **v5.21 Dashboard Parity & Exposure Capability** — Phases 191–195 (opened 2026-09-08, in progress) — dashboard config parity (999.104 tiers 1–3), skip observability (999.96), SPKI/key-reuse persistence (999.98), Executive Verdict un-gating (999.100), phantom-cert fix, and the Quantum Exposure Map (999.99)
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -91,6 +92,140 @@ is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
 
+## Current Milestone: v5.21 Dashboard Parity & Exposure Capability
+
+**Goal:** Make the dashboard a full operating surface a consultant can trust — config parity with
+the CLI, honest visibility when scanners don't run, phantom-free certificate views — and ship the
+first genuinely new detection capability since OT/ICS: the Quantum Exposure Map.
+
+**Numbering:** Continues from v5.20 (last phase 190) — this milestone starts at Phase 191.
+
+**Standing constraints carried into every phase below:** `phase.complete` is unsafe to use for
+closing a phase/milestone on this machine (see `CLAUDE.md` TOOL-01/04/05) — every phase and
+milestone close is hand-written under the pre-image + signature-diff protocol. The
+`origin/UX-Updates` branch is cherry-pick-only (commit `f05e7dc7`) — never a branch merge, the
+branch is 7 months stale (817 files, −143K lines vs `main`). Tier 4 (server-side `config.yaml`
+editing) is explicitly out of scope for this milestone.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (191, 192, ...): Planned milestone work
+- Decimal phases (191.1, 191.2): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 191: SPKI Fingerprint Persistence** - Every TLS endpoint's certificate SPKI fingerprint is captured and queryable for key reuse, across all scan paths including the sensor push/merge path
+- [ ] **Phase 192: Config Visibility + Skip Observability** - Operator can see the effective config a scan will run with and exactly what did/didn't run and why, on the dashboard and in reports
+- [ ] **Phase 193: Connector & Credential Parity** - Operator can enable, configure, and credential any of the 25 connectors from the dashboard at scan-submit time, safely
+- [ ] **Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix** - Advanced scan-behavior fields reach the dashboard, the Executive Verdict layer ships by default, and certificate views show only real certificates
+- [ ] **Phase 195: Quantum Exposure Map** - A reachability-source decision gates a zero-fabrication attack-path map built from verified relationships only
+
+## Phase Details
+
+### Phase 191: SPKI Fingerprint Persistence
+**Goal**: Every discovered TLS certificate's SPKI SHA-256 fingerprint is captured and queryable for
+key reuse, across every scan path — including the sensor push/merge path — so key-reuse detection
+has real data to build on.
+**Depends on**: Nothing (first phase)
+**Requirements**: SPKI-01, SPKI-02
+**Success Criteria** (what must be TRUE):
+  1. Every newly-scanned TLS endpoint's certificate SPKI SHA-256 fingerprint is persisted on
+     `CryptoEndpoint`, including endpoints arriving via the sensor push/merge path.
+  2. Operator can identify endpoints sharing the same public key via a `GROUP BY`-derived query —
+     no denormalized boolean column.
+  3. Key-reuse output is framed as remediation leverage ("one re-key closes N findings"), not mere
+     discovery.
+  4. A round-trip sensor-push integration test proves the SPKI field is never silently dropped on
+     the merge path (guards against the v5.8 B-01 recurrence).
+**Plans**: TBD
+
+### Phase 192: Config Visibility + Skip Observability
+**Goal**: Operator can see exactly what a scan will run with before submitting it, and exactly what
+did or didn't run and why after it completes — on the dashboard and in every report format —
+replacing dashboard silence with disclosure.
+**Depends on**: Nothing (parallel-safe with Phase 191; sequenced second per research)
+**Requirements**: PARITY-01, OBS-01, OBS-02
+**Success Criteria** (what must be TRUE):
+  1. Operator can view the effective, resolved scan config (`QuirkCfg`) from the dashboard via a
+     new auth-gated `GET /api/config/effective` that actively redacts credential fields.
+  2. Every scanner phase that does not run persists a structured skip record to the database per
+     scan, with a distinguishable reason: disabled-by-config, missing-extra, no-eligible-targets,
+     missing-credentials, or failed.
+  3. Operator can see which scanner phases ran / were skipped and why on the dashboard scan
+     surfaces.
+  4. CLI/HTML/DOCX reports disclose the same coverage information — a scan that assessed nothing in
+     a domain says so, never renders as silently empty.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 193: Connector & Credential Parity
+**Goal**: Operator can enable, configure, and credential any of the 25 connectors from the
+dashboard at scan-submit time, with the same safety guarantees the CLI already has.
+**Depends on**: Phase 192 (visibility must exist before a trustworthy edit form)
+**Requirements**: PARITY-02, PARITY-03
+**Success Criteria** (what must be TRUE):
+  1. Operator can enable/disable any of the 25 connectors at scan-submit time, each toggle gated on
+     a run-time availability probe covering both `optional_extra.REGISTRY` and the per-scanner
+     `*_AVAILABLE` flags — an unavailable connector is shown unavailable-with-reason, never offered
+     as a silent no-op.
+  2. Operator can supply connector credentials at scan-submit time through an in-memory-only path —
+     credentials never land in `ScanJob`, the job `config.yaml`, or any log.
+  3. Connector selections flow through the existing `_write_job_config()` YAML-overlay path (never
+     a `ScanJob` blob column), preserving `_user_set_fields` precedence against vertical-preset
+     overwrites.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix
+**Goal**: The dashboard exposes the remaining CLI scan-behavior knobs, greets the consultant with a
+trustworthy executive verdict by default, and only ever shows certificates that are real.
+**Depends on**: Phase 193 (advanced fields build on the same form-to-YAML plumbing)
+**Requirements**: PARITY-04, VERDICT-01, DASH-09
+**Success Criteria** (what must be TRUE):
+  1. Operator can set advanced scan-behavior fields (TLS/SSH port lists, `tls_enum_mode`, discovery
+     options, timeouts/retry) in a collapsed "advanced" section of the scan form, composing with
+     (not fighting) vertical presets under one recorded precedence rule.
+  2. Consultant sees the Executive Verdict layer on the dashboard by default (no flag gate), landed
+     by cherry-picking only commit `f05e7dc7` from `origin/UX-Updates` and rewired to consume
+     `rating`/`rating_cap_reason` from the API instead of re-deriving score bands client-side.
+  3. Dashboard certificate inventory and the `/print` PDF render only real certificates — failed
+     TLS handshakes are excluded via a shared filter helper, and an honest "no certificates
+     discovered" empty state appears when nothing real was found.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 195: Quantum Exposure Map
+**Goal**: Consultant can view a defensible, zero-fabrication quantum-exposure attack-path map,
+gated behind an explicit reachability-source decision made before any rendering work is planned.
+**Depends on**: Phase 191 (SPKI/key-reuse data is the one confirmed-cheap data source), Phase 194
+(stable dashboard surfaces to build against)
+**Requirements**: MAP-01, MAP-02, MAP-03
+**Success Criteria** (what must be TRUE):
+  1. A reachability-source decision (operator-declared vs. inferred vs. deferred) is resolved by a
+     dedicated spike and recorded as a decision before any rendering implementation is planned — a
+     hard go/no-go gate.
+  2. Consultant can view a quantum-exposure attack-path map built only from verified relationships —
+     key-reuse clusters (Phase 191), operator-declared crown jewels, confirmed hardware
+     crypto-bridge chains — with zero inferred edges.
+  3. The map shows an explicit "no path data available" state instead of a fabricated chain when
+     data is insufficient.
+  4. Exposure Map data never feeds the quantum-readiness score — machine-enforced by a
+     `test_exposure_map_score_guard.py` firewall test (the `test_cve_score_guard.py` pattern)
+     written in this same phase.
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
+
+| Phase | Plans Complete | Status | Completed |
+|-------|-----------------|--------|-----------|
+| 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
+| 192. Config Visibility + Skip Observability | 0/TBD | Not started | - |
+| 193. Connector & Credential Parity | 0/TBD | Not started | - |
+| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
+| 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
 ## Backlog
 
@@ -112,6 +247,25 @@ Items to be organized into future milestones. Organized by theme.
   structurally invisible in local testing — the live dev DB has 30 rows, all with `scan_run_id`,
   zero with `sensor_id` — so no local test run will ever trip over it; this must be caught by
   reading the code path, not by observing a failure.
+
+### Dashboard / CLI Configuration Parity (proposed, from Phase 184.2) — PROMOTED INTO v5.21
+
+Promoted into v5.21 as 999.104 tiers 1–3 (Phases 192–194 above) — kept here for backlog-history
+continuity:
+
+- **No configurable settings/connectors page in the dashboard — CLI is the only way to reach most
+  scan configuration.** Not every consultant or IT generalist is comfortable in a terminal.
+  Measured starting gap (D-16, Phase 184.2): the config template exposes 25 connectors, the CLI
+  interactive wizard (`quirk/interactive.py`) only prompts for 5 of them, and the dashboard's New
+  Scan page (`src/dashboard/src/pages/scan-new.tsx`, 330 LOC) exposes 0 connector controls. Overlaps
+  with the older, broader **BACK-86** (dashboard-initiated scan configuration, launch, and
+  reporting — `.planning/backlog/999.79-dashboard-scan-config-launch-reporting/`); this item is the
+  narrower configuration-parity slice of that broader idea. Tier 4 (server-side `config.yaml`
+  editing) remains explicitly out of scope — new security surface, deferred.
+  *Evidence: `.planning/milestones/v5.19-phases/184.2-out-of-the-box-scanning-posture/184.2-CONTEXT.md`
+  (`<deferred>`, "Proposed Phase 184.4: CLI↔UI Configuration Parity"), `184.2-RESEARCH.md`,
+  `docs/configuration.md` D-16. Originally sketched as "Phase 184.4," a number since claimed by an
+  unrelated shipped phase (184.4-rating-band-severity-floor) — do not reuse that phase number.*
 
 ### Findings Model & Reporting (Phase 186 carry-forward)
 
@@ -289,7 +443,13 @@ the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward i
 
 ### v1.x / v2+ (deferred, see PROJECT.md Active Requirements)
 
-None currently — the standing DISC-08 boundary item above was promoted into v5.15.
+- **PARITY-T4**: Dashboard load/edit/save of the persistent `config.yaml` (tier 4) — needs its own
+  threat model first. Explicitly out of scope for v5.21.
+- **MAP-ELK**: `cytoscape-elk` layout upgrade for the Quantum Exposure Map — only if dagre proves
+  visually inadequate against real exposure data. Contingent on v5.21 Phase 195 shipping first.
+- P3 UX set (999.101/999.102/BACK-01/03/08), 999.103 broker scanner-logic noise, trends.py/merge.py
+  int-coercion, GSD tooling todos (see `CLAUDE.md` TOOL-01..05), UAT coverage-gaps worklist —
+  deliberately deferred at the v5.21 boundary; visible in `HORIZON.md`'s Open-Item Ledger.
 
 ### SaaS Platform (Future Milestone)
 
@@ -298,3 +458,4 @@ None currently — the standing DISC-08 boundary item above was promoted into v5
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
+</content>

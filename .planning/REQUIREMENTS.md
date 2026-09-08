@@ -105,24 +105,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARITY-01 | — | Pending |
-| PARITY-02 | — | Pending |
-| PARITY-03 | — | Pending |
-| PARITY-04 | — | Pending |
-| OBS-01 | — | Pending |
-| OBS-02 | — | Pending |
-| SPKI-01 | — | Pending |
-| SPKI-02 | — | Pending |
-| VERDICT-01 | — | Pending |
-| DASH-09 | — | Pending |
-| MAP-01 | — | Pending |
-| MAP-02 | — | Pending |
-| MAP-03 | — | Pending |
+| PARITY-01 | 192 | Pending |
+| PARITY-02 | 193 | Pending |
+| PARITY-03 | 193 | Pending |
+| PARITY-04 | 194 | Pending |
+| OBS-01 | 192 | Pending |
+| OBS-02 | 192 | Pending |
+| SPKI-01 | 191 | Pending |
+| SPKI-02 | 191 | Pending |
+| VERDICT-01 | 194 | Pending |
+| DASH-09 | 194 | Pending |
+| MAP-01 | 195 | Pending |
+| MAP-02 | 195 | Pending |
+| MAP-03 | 195 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 13 ⚠️ (expected pre-roadmap)
+- Mapped to phases: 13 (Phase 191: SPKI-01/02; Phase 192: PARITY-01, OBS-01/02; Phase 193: PARITY-02/03; Phase 194: PARITY-04, VERDICT-01, DASH-09; Phase 195: MAP-01/02/03)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-09-08*
