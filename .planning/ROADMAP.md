@@ -151,8 +151,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 191-02-PLAN.md — sensor push projections + end-to-end round-trip test (v5.8 B-01 guard)
-- [ ] 191-03-PLAN.md — compute_key_reuse_clusters GROUP BY helper + advisory-only score firewall
+- [x] 191-02-PLAN.md — sensor push projections + end-to-end round-trip test (v5.8 B-01 guard)
+- [x] 191-03-PLAN.md — compute_key_reuse_clusters GROUP BY helper + advisory-only score firewall
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
