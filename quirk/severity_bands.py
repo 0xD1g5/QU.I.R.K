@@ -26,6 +26,7 @@ I/O-bearing code into the guard's import graph. See Phase 184.4 D-04.
 """
 from __future__ import annotations
 
+import json
 from typing import Dict, Optional
 
 # ---------------------------------------------------------------------------
@@ -60,6 +61,37 @@ BAND_CRITICAL_ALLOWANCE: Dict[str, Optional[int]] = {
     "FAIR": None,     # D-06: no restriction — FAIR can coexist with CRITICAL
     "POOR": None,     # D-06: no restriction — POOR can coexist with CRITICAL
 }
+
+
+def dump_json() -> str:
+    """Phase 188 SCORE-07 — single-producer JSON artifact for non-Python consumers.
+
+    Serializes `BAND_ORDER`, `BAND_THRESHOLDS`, and `BAND_CRITICAL_ALLOWANCE`
+    into the committed artifact `src/dashboard/src/lib/severity-bands.json`,
+    which `ScoreGauge.tsx` statically imports instead of hardcoding its own
+    threshold literals. `tests/test_severity_bands_freshness.py` asserts the
+    committed file byte-matches this function's live output (mirrors
+    `tests/test_error_codes_freshness.py`'s generator-drift gate shape).
+
+    Deterministic: `json.dumps(..., indent=2, sort_keys=True)` plus a single
+    trailing newline, so two calls in one process (and across processes) are
+    byte-identical regardless of dict insertion order.
+
+    Regenerate the committed artifact with:
+
+        python -c "from quirk.severity_bands import dump_json; \
+import sys; sys.stdout.write(dump_json())" \
+> src/dashboard/src/lib/severity-bands.json
+
+    Closes SCORE-07, backlog 999.92, audit WARN-01.
+    """
+    payload = {
+        "band_order": list(BAND_ORDER),
+        "band_thresholds": dict(BAND_THRESHOLDS),
+        "band_critical_allowance": dict(BAND_CRITICAL_ALLOWANCE),
+        "generated_by": "quirk.severity_bands.dump_json",
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def band_for_score(score: int) -> str:

@@ -1,0 +1,23 @@
+{
+  "band_critical_allowance": {
+    "EXCELLENT": 0,
+    "FAIR": null,
+    "GOOD": 0,
+    "MODERATE": 0,
+    "POOR": null
+  },
+  "band_order": [
+    "EXCELLENT",
+    "GOOD",
+    "MODERATE",
+    "FAIR",
+    "POOR"
+  ],
+  "band_thresholds": {
+    "EXCELLENT": 85,
+    "FAIR": 35,
+    "GOOD": 70,
+    "MODERATE": 55
+  },
+  "generated_by": "quirk.severity_bands.dump_json"
+}
