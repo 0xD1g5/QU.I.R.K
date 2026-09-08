@@ -164,3 +164,50 @@ def test_snmp_v3_credentials_reject_weak_protocols():
     }
     with pytest.raises(ValueError):
         config_from_dict(raw_des)
+
+
+# ---------------------------------------------------------------------------
+# Phase 189 / TRIAGE-04: _as_int_list() coercion helper + CONFIG-001 coded
+# error unit tests.
+# ---------------------------------------------------------------------------
+
+
+def test_port_coercion_none_returns_empty_list():
+    from quirk.config import _as_int_list
+    assert _as_int_list(None, field_name="scan.ports_tls") == []
+
+
+def test_port_coercion_already_int_list_passes_through():
+    from quirk.config import _as_int_list
+    assert _as_int_list([443, 8443], field_name="scan.ports_tls") == [443, 8443]
+
+
+def test_port_coercion_string_list_coerces_to_int():
+    from quirk.config import _as_int_list
+    assert _as_int_list(["443", "8443"], field_name="scan.ports_tls") == [443, 8443]
+
+
+def test_port_coercion_mixed_list_coerces_to_int():
+    from quirk.config import _as_int_list
+    assert _as_int_list([443, "8443"], field_name="scan.ports_tls") == [443, 8443]
+
+
+def test_port_coercion_bare_scalar_wrapped_in_list():
+    from quirk.config import _as_int_list
+    assert _as_int_list("8444", field_name="scan.ports_tls") == [8444]
+
+
+def test_port_coercion_non_numeric_raises_coded_error():
+    from quirk.config import _as_int_list
+    with pytest.raises(ValueError) as exc_info:
+        _as_int_list(["http"], field_name="scan.ports_tls")
+    msg = str(exc_info.value)
+    assert "QRK-CONFIG-001" in msg
+    assert "scan.ports_tls" in msg
+    assert "http" in msg
+
+
+def test_port_coercion_format_error_renders_config_001():
+    from quirk.errors import format_error
+    assert format_error("CONFIG-001").startswith("[QRK-CONFIG-001]")
+

@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from quirk.errors import format_error
+
 # Phase 184.2 D-14: module-level logger for the unknown-connector-key warning
 # in config_from_dict (mirrors quirk/intelligence/confidence.py's idiom).
 _LOGGER = logging.getLogger(__name__)
@@ -469,6 +471,46 @@ def _as_str_list(v: Any) -> List[str]:
     return [str(v)]
 
 
+def _as_int_list(v: Any, *, field_name: str) -> List[int]:
+    """Coerce a YAML port-list value to List[int] — TRIAGE-04 (Phase 189).
+
+    Accepts digit-strings (e.g. "8444") and int values interchangeably; a
+    `"8444"` override must behave identically to `8444` downstream (see
+    `findings_evaluator.py:390`'s `port in tls_ports` membership test, which
+    compares against an always-`int` finding port and would otherwise
+    silently and permanently evaluate `False` for a str-typed port).
+
+    None short-circuits to []. A non-list scalar is wrapped in a
+    single-element list, mirroring `_as_str_list()`. Already-int entries
+    pass through unchanged (programmatic writers such as
+    `quirk/cli/scheduler_cmd.py` and `quirk/dashboard/api/routes/jobs.py`
+    build plain int lists directly, never through this YAML load path, but
+    must not break if they ever do route through here).
+
+    Non-numeric entries fail LOUDLY with a coded `QRK-CONFIG-001` error —
+    never silently dropped, stringified, or left as a str that a downstream
+    `port in some_int_set` check would silently miss forever.
+    """
+    if v is None:
+        return []
+    # bool is an int subclass in Python; treat it as a genuine non-numeric
+    # port-list entry rather than silently coercing True/False to 1/0.
+    items = v if isinstance(v, list) else [v]
+    out: List[int] = []
+    for item in items:
+        if isinstance(item, bool):
+            raise ValueError(
+                f"{format_error('CONFIG-001')} (field={field_name!r}, value={item!r})"
+            )
+        try:
+            out.append(int(item))
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"{format_error('CONFIG-001')} (field={field_name!r}, value={item!r})"
+            )
+    return out
+
+
 _KNOWN_CONNECTOR_KEYS = {f.name for f in dataclasses.fields(ConnectorsCfg)}
 
 
@@ -540,6 +582,17 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     # TimeoutsCfg / RetryCfg sub-tables, with backward-compat for the four
     # legacy flat ``*_timeout_seconds`` keys.
     scan_raw = dict(raw.get("scan") or {})
+    # TRIAGE-04 (Phase 189): coerce port-list fields at the single load
+    # choke point before anything downstream reads them. Guarded by
+    # presence checks so an absent key keeps its existing behavior
+    # (ports_tls absent -> TypeError from ScanCfg.__init__, deliberately
+    # out of scope; tls_designated_ports absent -> its dataclass default).
+    if "ports_tls" in scan_raw:
+        scan_raw["ports_tls"] = _as_int_list(scan_raw["ports_tls"], field_name="scan.ports_tls")
+    if "tls_designated_ports" in scan_raw:
+        scan_raw["tls_designated_ports"] = _as_int_list(
+            scan_raw["tls_designated_ports"], field_name="scan.tls_designated_ports"
+        )
     timeouts_raw = scan_raw.pop("timeouts", None) or {}
     retry_raw = scan_raw.pop("retry", None) or {}
 

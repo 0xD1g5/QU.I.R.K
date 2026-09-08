@@ -218,6 +218,13 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         fix="Confirm the path is a regular file rather than a directory, and that you have read permission on it.",
     ),
 
+    # --- CONFIG domain (config load-path validation errors, Phase 189) ---
+    "CONFIG-001": ErrorEntry(
+        code="CONFIG-001",
+        cause="A scan-config port-list value (scan.ports_tls or scan.tls_designated_ports) is not a number.",
+        fix="Use bare integers or digit-strings (e.g. 8444 or \"8444\") for every entry in scan.ports_tls / scan.tls_designated_ports.",
+    ),
+
     # --- FUZZ domain (fuzz safety errors, Phase 172) ---
     "FUZZ-001": ErrorEntry(
         code="FUZZ-001",

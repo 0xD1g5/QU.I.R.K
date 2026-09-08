@@ -26,6 +26,12 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 | QRK-CMVP-REFRESH-PARSE | CMVP search page HTML did not match expected selectors. | NIST page structure may have changed. File an issue and pin to the bundled cache until parser updated. |
 | QRK-CMVP-STALE | CMVP cache is older than 90 days. | Run `quirk compliance cmvp refresh` and commit with message `chore: re-verify CMVP catalog (YYYY-MM-DD)`. |
 
+## CONFIG
+
+| Code | Cause | Fix |
+|------|-------|-----|
+| QRK-CONFIG-001 | A scan-config port-list value (scan.ports_tls or scan.tls_designated_ports) is not a number. | Use bare integers or digit-strings (e.g. 8444 or "8444") for every entry in scan.ports_tls / scan.tls_designated_ports. |
+
 ## DASHBOARD
 
 | Code | Cause | Fix |
