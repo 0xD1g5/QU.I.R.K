@@ -21,7 +21,7 @@ if sys.platform == "win32":
         except (AttributeError, ValueError):  # stream replaced or not a TextIOWrapper
             pass
 
-from quirk.config import load_config
+from quirk.config import load_config, _parse_host_port
 from quirk.util.safe_exc import safe_str
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
@@ -57,6 +57,7 @@ from quirk.scanner.dnssec_scanner import scan_dnssec_targets
 from quirk.scanner.email_scanner import scan_email_targets
 from quirk.scanner.broker_scanner import (
     scan_kafka_targets, scan_rabbitmq_targets, scan_redis_targets,
+    build_unreached_target_advisories,
 )
 
 from quirk.discovery.nmap_provider import (
@@ -254,6 +255,48 @@ def _broker_missing_extra(enable_broker: bool, error_endpoints) -> bool:
         _emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
         return True
     return False
+
+
+def _build_broker_scan_inputs(
+    tls_targets, broker_targets_raw: "List[str]",
+) -> "Tuple[List[str], Dict[str, List[int]], List[Tuple[str, int]]]":
+    """Phase 190 / TRIAGE-06 / RQ-1: standalone importable helper, extracted from
+    `_run_broker_phase` so tests can exercise the real host-union / port-override
+    construction instead of a hand-mirrored copy of it (same pattern as
+    `_broker_missing_extra`).
+
+    Unions `tls_targets`-derived hosts with `connectors.broker_targets` hosts
+    (order-stable, deduped via `dict.fromkeys`) so a host declared ONLY in
+    `broker_targets` (contributing no `tls_targets` entry) still reaches the
+    drivers — additive, not exclusive (RQ-1, locked). Builds the shared flat
+    `host -> [ports]` override map from the parsed pairs that carry a port —
+    the SAME map is hand to all three drivers (RESEARCH Pitfall 1).
+
+    Re-parses each `broker_targets` entry via `_parse_host_port`. The field was
+    already validated fail-fast at config load time (190-01), so this re-parse
+    cannot raise here — it exists to convert strings back into (host, port)
+    pairs at scan-consumption time.
+
+    Returns `(broker_hosts, port_overrides, explicit_reachable_pairs)` where
+    `explicit_reachable_pairs` is the subset of parsed pairs that carried an
+    explicit port (bare-host entries have no specific port to confirm
+    reachable, so they are excluded — feeds `build_unreached_target_advisories`).
+    `broker_targets_raw=[]` reproduces today's exact `broker_hosts` list and an
+    empty override map / empty explicit-pairs list.
+    """
+    explicit_pairs = [
+        _parse_host_port(entry, field_name="connectors.broker_targets")
+        for entry in broker_targets_raw
+    ]
+    broker_hosts = list(dict.fromkeys(
+        [h for h, _ in tls_targets] + [h for h, _ in explicit_pairs]
+    ))
+    port_overrides: Dict[str, List[int]] = {}
+    for host, port in explicit_pairs:
+        if port is not None:
+            port_overrides.setdefault(host, []).append(port)
+    explicit_reachable_pairs = [(h, p) for h, p in explicit_pairs if p is not None]
+    return broker_hosts, port_overrides, explicit_reachable_pairs
 
 
 def _smime_missing_extra(enable_smime: bool, error_endpoints) -> bool:
@@ -3456,7 +3499,13 @@ def main():
         def _run_broker_phase():
             if cfg_broker_skip or not cfg.connectors.enable_broker:
                 return _PHASE_SKIPPED
-            broker_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+            # Phase 190 / TRIAGE-06 / RQ-1: union tls_targets-derived hosts with
+            # explicit connectors.broker_targets hosts, so a host declared ONLY in
+            # broker_targets (contributing no tls_targets entry) still reaches the
+            # drivers — additive, not exclusive.
+            broker_hosts, port_overrides, explicit_reachable_pairs = _build_broker_scan_inputs(
+                tls_targets, cfg.connectors.broker_targets,
+            )
             if not broker_hosts:
                 return _PHASE_SKIPPED
             k = scan_kafka_targets(
@@ -3466,6 +3515,7 @@ def main():
                 logger=logger,
                 session_start=session_start,
                 motion_concurrency=cfg.scan.motion_concurrency,
+                port_overrides=port_overrides,
             )
             r = scan_rabbitmq_targets(
                 hosts=broker_hosts,
@@ -3477,6 +3527,7 @@ def main():
                 security=cfg.security,
                 broker_credentials=cfg.broker_credentials,
                 motion_concurrency=cfg.scan.motion_concurrency,
+                port_overrides=port_overrides,
             )
             rd = scan_redis_targets(
                 hosts=broker_hosts,
@@ -3484,9 +3535,19 @@ def main():
                 logger=logger,
                 session_start=session_start,
                 motion_concurrency=cfg.scan.motion_concurrency,
+                port_overrides=port_overrides,
             )
+            # T-190-03: an explicitly named (host, port) target that produced no
+            # endpoint anywhere gets an operator-visible advisory; speculative
+            # default-port probes finding nothing stay silent (D-03) — these are
+            # different signals and must not share one silence policy.
+            unreached = build_unreached_target_advisories(
+                explicit_reachable_pairs, k + r + rd, session_start,
+            )
+            r = r + unreached
             logger.info(
-                f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)}"
+                f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)} "
+                f"advisories={len(unreached)}"
             )
             return (k, r, rd)
         _broker_result = _wrapped_phase(

@@ -317,3 +317,129 @@ def test_broker_scan_json_db_round_trip():
     finally:
         engine.dispose()
         os.unlink(tmp.name)
+
+
+# ---------------------------------------------------------------------------
+# Phase 190 / TRIAGE-06: broker_targets threading + unreached-target advisory
+#
+# _run_broker_phase is a closure inside run_scan()'s scan loop and is not
+# independently importable; its pure host-union / port-override construction
+# is extracted to the standalone `_build_broker_scan_inputs` (same pattern as
+# `_broker_missing_extra`) so these tests exercise the real logic instead of a
+# hand-mirrored copy of it. No sockets are stood up — inputs are built and
+# fed to the pure helpers directly.
+# ---------------------------------------------------------------------------
+
+def _make_ep(host, port, protocol="KAFKA-PLAIN"):
+    from quirk.models import CryptoEndpoint
+    return CryptoEndpoint(host=host, port=port, protocol=protocol)
+
+
+def test_build_broker_scan_inputs_broker_targets_only_host_reaches_drivers():
+    """A host declared ONLY in broker_targets (empty tls_targets) is still in
+    the host list handed to the drivers."""
+    from run_scan import _build_broker_scan_inputs
+
+    broker_hosts, port_overrides, explicit_pairs = _build_broker_scan_inputs(
+        tls_targets=[], broker_targets_raw=["localhost:29092"],
+    )
+
+    assert broker_hosts == ["localhost"], f"Expected broker-only host present, got {broker_hosts}"
+    assert port_overrides == {"localhost": [29092]}
+    assert explicit_pairs == [("localhost", 29092)]
+
+
+def test_build_broker_scan_inputs_empty_matches_today():
+    """broker_targets_raw=[] reproduces today's exact broker_hosts / empty overrides."""
+    from run_scan import _build_broker_scan_inputs
+
+    tls_targets = [("a.example.com", 443), ("b.example.com", 443)]
+    broker_hosts, port_overrides, explicit_pairs = _build_broker_scan_inputs(
+        tls_targets=tls_targets, broker_targets_raw=[],
+    )
+
+    assert broker_hosts == ["a.example.com", "b.example.com"]
+    assert port_overrides == {}
+    assert explicit_pairs == []
+
+
+def test_build_broker_scan_inputs_union_dedupes_and_stays_order_stable():
+    """A host present in BOTH tls_targets and broker_targets is not duplicated,
+    and hosts declared only via broker_targets are appended additively."""
+    from run_scan import _build_broker_scan_inputs
+
+    tls_targets = [("shared.example.com", 443)]
+    broker_hosts, port_overrides, explicit_pairs = _build_broker_scan_inputs(
+        tls_targets=tls_targets,
+        broker_targets_raw=["shared.example.com:29092", "broker-only.example.com:25671"],
+    )
+
+    assert broker_hosts == ["shared.example.com", "broker-only.example.com"]
+    assert port_overrides == {
+        "shared.example.com": [29092],
+        "broker-only.example.com": [25671],
+    }
+
+
+def test_build_broker_scan_inputs_bare_host_excluded_from_explicit_pairs():
+    """A bare-host broker_targets entry (no port) contributes to broker_hosts
+    but not to explicit_reachable_pairs (no specific port to confirm reached)."""
+    from run_scan import _build_broker_scan_inputs
+
+    broker_hosts, port_overrides, explicit_pairs = _build_broker_scan_inputs(
+        tls_targets=[], broker_targets_raw=["bare-host.example.com"],
+    )
+
+    assert broker_hosts == ["bare-host.example.com"]
+    assert port_overrides == {}
+    assert explicit_pairs == []
+
+
+def test_build_unreached_target_advisories_one_per_unreached_pair():
+    """One ADVISORY row per explicit (host, port) pair that produced no endpoint;
+    zero rows for pairs that WERE reached."""
+    from quirk.scanner.broker_scanner import (
+        build_unreached_target_advisories,
+        ADVISORY_BROKER_TARGET_UNREACHED,
+    )
+
+    explicit_pairs = [("localhost", 29092), ("localhost", 25671)]
+    results = [_make_ep("localhost", 29092, "KAFKA-PLAIN")]  # 25671 not reached
+
+    advisories = build_unreached_target_advisories(explicit_pairs, results)
+
+    assert len(advisories) == 1, f"Expected exactly 1 advisory, got {len(advisories)}"
+    adv = advisories[0]
+    assert adv.host == "localhost"
+    assert adv.port == 25671
+    assert adv.protocol == "ADVISORY"
+    assert adv.service_detail == ADVISORY_BROKER_TARGET_UNREACHED
+    assert adv.severity == "INFO"
+    assert adv.scan_error_category == "config"
+    assert adv.scan_error
+
+
+def test_build_unreached_target_advisories_empty_when_all_reached():
+    """Zero advisory rows when every explicit target produced an endpoint."""
+    from quirk.scanner.broker_scanner import build_unreached_target_advisories
+
+    explicit_pairs = [("localhost", 29092)]
+    results = [_make_ep("localhost", 29092, "KAFKA-PLAIN")]
+
+    advisories = build_unreached_target_advisories(explicit_pairs, results)
+
+    assert advisories == [], f"Expected no advisories when all reached, got {advisories}"
+
+
+def test_build_unreached_target_advisories_silent_for_default_port_probes():
+    """D-03 silence is preserved: a default-port probe that finds nothing produces
+    NO advisory — only operator-named (explicit) targets do. Passing an empty
+    explicit_targets list (the default-probe case) always yields zero advisories,
+    regardless of how many endpoints were or were not found."""
+    from quirk.scanner.broker_scanner import build_unreached_target_advisories
+
+    # No explicit targets declared at all -- only speculative default-port probes,
+    # which found nothing (results=[]).
+    advisories = build_unreached_target_advisories([], [])
+
+    assert advisories == [], "Default-port-only probes must never produce an advisory"
