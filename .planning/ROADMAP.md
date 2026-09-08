@@ -111,7 +111,7 @@ drive-by. The six TRIAGE items split into two small drain phases: config correct
 - [x] **Phase 187: Release v5.19** (completed 2026-09-07) - Operator can `pip install quirk-scanner==5.19.0`; the
   `v5.19.0` tag is cut with every bump surface updated in the same change. Gating — nothing else
   in this milestone should ship ahead of the release it depends on for a clean version baseline.
-- [ ] **Phase 188: Scoring Integrity** - A zero-evidence domain no longer contributes a full
+- [x] **Phase 188: Scoring Integrity** (completed 2026-09-08) - A zero-evidence domain no longer contributes a full
   25/25 subscore, and the frontend/backend severity-band divergence closes for good.
 - [ ] **Phase 189: Config Correctness Drain** - Documented and sample configs behave exactly as
   documented; no port field silently no-ops on a quoted YAML value; the backlog derived gate makes

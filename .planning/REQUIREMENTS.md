@@ -23,12 +23,12 @@ of 2026-09-07) and `.planning/reports/backlog-reconciliation-2026-09-07.md`. No 
 
 ### Scoring Integrity
 
-- [ ] **SCORE-06**: A readiness-score domain with zero collected evidence no longer contributes a
+- [x] **SCORE-06**: A readiness-score domain with zero collected evidence no longer contributes a
       full 25/25 subscore — assessment coverage is reflected in (or explicitly disclosed alongside)
       the headline number, such that the full chaos lab can no longer score 96/100. The formula
       change ships with a recorded migration/communication decision (historical numbers move) —
       deliberate design, not a drive-by. [999.95, P1]
-- [ ] **SCORE-07**: Dashboard `ScoreGauge.tsx` band thresholds derive from the same single producer
+- [x] **SCORE-07**: Dashboard `ScoreGauge.tsx` band thresholds derive from the same single producer
       as `quirk/scoring/severity_bands.py` — no frontend/backend band divergence, guarded by a test
       that fails if either side drifts. [999.92; completes v5.19 SCORE-05's deferred frontend half]
 
@@ -83,8 +83,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | REL-01 | Phase 187 | Complete (2026-09-07, verified 4/4 in 187-VERIFICATION.md) |
-| SCORE-06 | Phase 188 | Pending |
-| SCORE-07 | Phase 188 | Pending |
+| SCORE-06 | Phase 188 | Complete (2026-09-08, 188-VERIFICATION 9/9 + operator UAT) |
+| SCORE-07 | Phase 188 | Complete (2026-09-08, 188-VERIFICATION 9/9 + operator UAT) |
 | TRIAGE-03 | Phase 189 | Pending |
 | TRIAGE-04 | Phase 189 | Pending |
 | TRIAGE-05 | Phase 189 | Pending |
