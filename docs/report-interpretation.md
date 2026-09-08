@@ -1408,3 +1408,58 @@ informational context about scan coverage, not a cryptographic posture finding.
 > against your score — it's just telling you the target you named wasn't reachable during this
 > scan, which is worth double-checking (is the service running? is the port right? can this scan
 > host reach it over the network?)."
+
+## 21. Key Reuse (Phase 191, SPKI-01/SPKI-02)
+
+Every TLS endpoint's leaf certificate now has its public key fingerprinted — a SHA-256 digest of
+the certificate's SubjectPublicKeyInfo (SPKI), the same construction used by RFC 7469 HPKP
+pinning. A "Key Reuse" section appears in every generated report (CLI technical markdown, HTML,
+and DOCX) and shows which TLS endpoints share the exact same public key.
+
+**What the section shows:** a coverage line — `"N of M TLS endpoints have SPKI fingerprints."` —
+followed by either a list of shared-key clusters, ordered biggest-first, or an explicit statement
+that no shared keys were found. Each cluster identifies the shared key (certificate subject,
+public-key algorithm and size, and a truncated fingerprint) and lists every endpoint (`host:port`)
+using that key.
+
+**Why it is advisory-only:** the italic caption directly under the "Key Reuse" heading —
+`"Advisory - key reuse does not affect the readiness score."` — is not a formality. Key reuse is
+never added to the readiness score, never appears in any severity-ranked findings table, and is
+covered by a dedicated firewall test (`tests/test_key_reuse_score_guard.py`) that fails the build
+if the scoring module is ever imported into the key-reuse code path. This is deliberate: sharing a
+public key across endpoints is an operational/architectural fact, not by itself a cryptographic
+weakness with a severity — the same key could be shared safely behind a load balancer, or badly
+across systems with different blast radii. Scoring it would either double-penalize a single
+certificate's existing weaknesses (already scored elsewhere) or invent a severity judgment the
+scanner cannot make responsibly.
+
+**How to read the leverage framing:** each cluster is phrased as
+`"Re-keying this certificate remediates N endpoints."` — read this as one remediation action
+(rotate this one certificate/key) that closes N exposures at once, not as N separate problems to
+fix independently. If a cluster lists 12 endpoints, that is one ticket, not twelve.
+
+**What the coverage line implies about endpoints scanned before this feature existed:** SPKI
+fingerprints are computed at TLS certificate parse time, starting with this release. There is no
+backfill — the raw certificate bytes are not persisted anywhere in the database, so a fingerprint
+cannot be reconstructed after the fact for a `crypto_endpoints` row that was written by an older
+scan. Any endpoint scanned before this feature shipped reads as unfingerprinted (`cert_spki_fingerprint`
+is `NULL`) until the next time it is re-scanned. If your coverage line reads
+`"40 of 120 TLS endpoints have SPKI fingerprints,"` the other 80 endpoints simply have not been
+re-scanned yet — that is not a scanning failure, and re-running a scan against those hosts is the
+only way to populate their fingerprints.
+
+**What "no shared keys detected" does and does not mean:** the zero-reuse sentence —
+`"No shared keys detected across N fingerprinted endpoints."` — is a statement about the N
+endpoints that currently have a fingerprint, never about all M TLS endpoints in the inventory.
+Because unfingerprinted endpoints are excluded from reuse analysis entirely, a report can honestly
+say "no shared keys" among a small fingerprinted subset while a much larger unfingerprinted
+population remains unexamined. Always read the "no shared keys" statement together with the
+coverage line above it, not in isolation.
+
+> **Client Conversation — Key Reuse:**
+> "Your report shows one certificate is reused across 12 different endpoints. That's not counted
+> against your score — key reuse by itself isn't a severity finding — but it is real remediation
+> leverage: rotating that one certificate closes all 12 exposures in a single action instead of
+> chasing them one at a time. The coverage line also tells you how many of your TLS endpoints we
+> could check for this — anything scanned before this feature existed needs a re-scan before we
+> can tell you whether it shares a key with anything else."

@@ -2598,3 +2598,45 @@ whose evidence was assembled without its findings list attached to the scoring c
 are running a version that includes Phase 184.4 (`v5.19` or later) and, if the error persists,
 capture the full evidence/findings payload for the scan and file it, since every production call
 site that renders a band is now required to pass its findings to the scorer.
+
+## 18. SPKI Fingerprint Capture and Key Reuse (Phase 191, SPKI-01/SPKI-02)
+
+### What is captured
+
+Every TLS scan now computes a SHA-256 hash of each leaf certificate's SubjectPublicKeyInfo (SPKI)
+and stores it on `CryptoEndpoint.cert_spki_fingerprint`. This is captured at TLS certificate parse
+only — the two `cryptography` x509 parse sites in `quirk/scanner/tls_scanner.py` (the `sslyze`
+path and the stdlib-`ssl` fallback path). Scanners that persist raw `*_scan_json` blobs instead of
+individual `cert_*` columns — broker, SAML, ADCS, and similar — are out of scope for this field;
+SPKI-01 scopes strictly to TLS endpoints' `cert_*` fields.
+
+Only the leaf certificate is fingerprinted — there is no chain fingerprinting or intermediate/root
+hashing.
+
+### Fill path for pre-existing rows
+
+The column is nullable and there is no backfill migration. Computing the SPKI hash requires the
+raw certificate bytes, which QU.I.R.K. does not persist; a fingerprint cannot be derived after the
+fact from the other `cert_*` fields already stored on a row. The only way to populate
+`cert_spki_fingerprint` for an endpoint scanned before this release is to re-scan it — the next
+TLS scan against that `(host, port)` writes the fingerprint going forward.
+
+### Sensor push path
+
+`cert_spki_fingerprint` travels the full sensor→console path end-to-end: sensor-side serialization
+(`quirk/cli/sensor_cmd.py::_endpoint_to_dict`), the push envelope, and console-side ingest
+(`quirk/cli/console_cmd.py::_ingest_envelope`), which is also the function backing the
+`POST /api/sensor/push` API route. An older sensor build that does not send the field is tolerated
+— `_ingest_envelope` reads it with `.get()`, not a required key, so a missing field ingests as
+`NULL` rather than raising an error. This matches the existing version-skew, warn-only policy for
+sensor pushes.
+
+### Where key reuse appears
+
+Key reuse — TLS endpoints sharing an identical SPKI fingerprint — is derived at report-generation
+time by a `GROUP BY cert_spki_fingerprint HAVING COUNT(*) >= 2` query
+(`quirk/intelligence/key_reuse.py::compute_key_reuse_clusters`); there is no stored cluster table
+or denormalized "is shared" column to keep in sync. The resulting "Key Reuse" section renders in
+the CLI technical markdown, the HTML report, and the DOCX report — **not** the dashboard UI in
+this release. It is advisory-only and never affects the readiness score; see
+`docs/report-interpretation.md` §21 for the client-facing explanation of how to read it.
