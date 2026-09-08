@@ -1,3 +1,5 @@
+import bands from "@/lib/severity-bands.json"
+
 interface ScoreGaugeProps {
   score: number          // 0..maxValue (default range: 0-100)
   label: string
@@ -7,10 +9,38 @@ interface ScoreGaugeProps {
   maxValue?: number      // upper bound of the score range; default 100
 }
 
+// Phase 188 SCORE-07 — single-producer band thresholds. No numeric threshold
+// literal may live here; every boundary comes from the generated
+// src/dashboard/src/lib/severity-bands.json artifact (quirk/severity_bands.py
+// is the sole producer). Mirrors band_for_score()'s descending-threshold
+// chain, with POOR as the implicit floor (absent from band_thresholds).
+function _bandForScore(scoreInScoreSpace: number): string {
+  const order: string[] = bands.band_order
+  const thresholds: Record<string, number> = bands.band_thresholds
+  for (const band of order) {
+    const threshold = thresholds[band]
+    if (threshold !== undefined && scoreInScoreSpace >= threshold) {
+      return band
+    }
+  }
+  return order[order.length - 1] // POOR — implicit floor
+}
+
+// The explicit 5-band -> 3-CSS-var color collapse (Phase 188 SCORE-07,
+// recorded in 188-02-PLAN.md's <interfaces> block). Thresholds live in the
+// generated JSON (data); this collapse map is presentation and stays here.
+const _BAND_TO_COLOR: Record<string, string> = {
+  EXCELLENT: "hsl(var(--quantum-safe))",
+  GOOD: "hsl(var(--quantum-safe))",
+  MODERATE: "hsl(var(--quantum-at-risk))",
+  FAIR: "hsl(var(--quantum-at-risk))",
+  POOR: "hsl(var(--quantum-vulnerable))",
+}
+
 function _gaugeColor(fraction: number): string {
-  if (fraction >= 0.8) return "hsl(var(--quantum-safe))"       // Green 500 — quantum-safe
-  if (fraction >= 0.5) return "hsl(var(--quantum-at-risk))"    // Amber 500 — at risk
-  return "hsl(var(--quantum-vulnerable))"                       // Red 600 — vulnerable
+  const scoreInScoreSpace = fraction * 100
+  const band = _bandForScore(scoreInScoreSpace)
+  return _BAND_TO_COLOR[band]
 }
 
 export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = false, maxValue = 100 }: ScoreGaugeProps) {
