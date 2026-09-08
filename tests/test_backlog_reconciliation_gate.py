@@ -117,13 +117,17 @@ def _git_tracked_files(pattern: str) -> list[Path]:
     an on-disk glob (clearly labeled) if git is unavailable, per Task 1's action spec.
     """
     try:
+        # `git -C` instead of a cwd= kwarg, and explicit close_fds=False:
+        # both are required by tests/test_cli_helper_usage.py's fork-safety
+        # gate (cwd= or default close_fds defeats posix_spawn selection and
+        # reintroduces the macOS fork-after-Network.framework SIGSEGV).
         out = subprocess.run(
-            ["git", "ls-files", pattern],
-            cwd=REPO_ROOT,
+            ["git", "-C", str(REPO_ROOT), "ls-files", pattern],
             capture_output=True,
             text=True,
             check=True,
             timeout=30,
+            close_fds=False,
         )
     except (subprocess.SubprocessError, OSError):
         return sorted(REPO_ROOT.glob(pattern.replace(str(REPO_ROOT) + "/", "")))

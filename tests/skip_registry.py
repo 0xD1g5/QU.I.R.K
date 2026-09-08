@@ -70,6 +70,7 @@ ALLOWED_SKIPS = [
     # false failure rather than a real result. CI (Linux) never takes this
     # branch and runs the assertions for real.
     ("test_scheduler_dispatch_profile.py", "_run_scan_argparse", "environment_subprocess_signal", 'macOS full-suite subprocess SIGSEGV; child never executed so there is no argparse result to assert. Runs for real on CI/Linux.'),
+    ("test_backlog_reconciliation_gate.py", "test_full_corpus_local_only_leg", "environment_capability", "TRIAGE-09 RQ-2: the full-corpus 999.* leg needs untracked .planning/backlog/ + .planning/milestones/ sources that a fresh CI checkout cannot see; skips honestly naming the missing paths, runs for real on a full local working tree."),
     ("test_broker_scanner_kafka.py", "<module>", "optional_extra", "broker_scanner is [motion]; D-05"),
     ("test_broker_scanner_rabbitmq.py", "<module>", "optional_extra", "broker_scanner is [motion]; D-05"),
     ("test_broker_scanner_redis.py", "<module>", "optional_extra", "broker_scanner is [motion]; D-05"),
