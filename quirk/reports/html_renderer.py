@@ -507,6 +507,14 @@ BURNDOWN_ADVISORY_CAPTION = (
     "Advisory - remediation burndown does not affect the readiness score."
 )
 
+# Phase 191 Plan 05 (SPKI-02 / D-01): LOCKED caption copy for the "Key Reuse"
+# section, byte-identical to quirk/reports/technical.py's
+# KEY_REUSE_ADVISORY_CAPTION and to docx_renderer.KEY_REUSE_ADVISORY_CAPTION.
+# Per-renderer duplication is the established Phase 161 convention (see
+# VENDOR_TREND_ADVISORY_CAPTION above) — NOT a shared constant in
+# content_model.py; a parity test fails loudly if the three surfaces drift.
+KEY_REUSE_ADVISORY_CAPTION = "Advisory - key reuse does not affect the readiness score."
+
 # Phase 181 SURF-02 / D-35/D-36: fixed bucket iteration order so per-deadline
 # sections are stable and `unmapped` is always rendered last, never omitted.
 _BURNDOWN_BUCKET_ORDER = ("key_establishment", "digital_signature", "unmapped")
@@ -779,6 +787,87 @@ def render_burndown_section(burndown: dict, closure_refusal: dict | None) -> str
     )
 
 
+def render_key_reuse_section(key_reuse: dict) -> str:
+    """Generate the HTML "Key Reuse" section (Phase 191 Plan 05 / SPKI-02 / D-01).
+
+    Pure function, sibling to render_burndown_section. Returns "" ONLY when
+    *key_reuse* is falsy overall (loader failure / no data at all) — when it
+    is present but `clusters` is empty, the full section still renders with
+    an explicit zero-reuse `<p>` (D-06 forbids silent omission). The coverage
+    line renders in both the zero- and non-zero-cluster cases (D-12).
+
+    Each cluster is framed as remediation leverage ("Re-keying this
+    certificate remediates N endpoints." — D-05). Incoming cluster order is
+    preserved (already member-count descending per
+    `compute_key_reuse_clusters` — D-04); never re-sorted here.
+
+    Every interpolated value is html.escape()'d without exception (T-191-13,
+    matching render_burndown_section's contract).
+    """
+    if not key_reuse:
+        return ""
+
+    clusters = key_reuse.get("clusters") or []
+    fingerprinted = key_reuse.get("fingerprinted", 0)
+    total = key_reuse.get("total", 0)
+
+    caption_html = (
+        f'<p class="key-reuse-advisory-caption" style="font-size:12px;color:#888;'
+        f'margin-bottom:8px">{_html.escape(KEY_REUSE_ADVISORY_CAPTION)}</p>'
+    )
+    coverage_html = (
+        f'<p class="key-reuse-coverage">{_html.escape(str(fingerprinted))} of '
+        f"{_html.escape(str(total))} TLS endpoints have SPKI fingerprints.</p>"
+    )
+
+    if not clusters:
+        return (
+            '<section class="key-reuse-section" style="margin:24px 0;'
+            'border-left:4px solid #2b8a86;padding-left:12px">'
+            '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Key Reuse</h2>'
+            f"{caption_html}"
+            f"{coverage_html}"
+            f'<p class="key-reuse-none">No shared keys detected across '
+            f"{_html.escape(str(fingerprinted))} fingerprinted endpoints.</p>"
+            "</section>"
+        )
+
+    clusters_html_parts = []
+    for cluster in clusters:
+        member_count = cluster.get("member_count", len(cluster.get("members") or []))
+        fingerprint = cluster.get("fingerprint") or ""
+        fingerprint_display = fingerprint[:16] + "..." if len(fingerprint) > 16 else fingerprint
+        members_html = "".join(
+            f"<li><code>{_html.escape(str(m.get('host', '')))}:"
+            f"{_html.escape(str(m.get('port', '')))}</code></li>"
+            for m in (cluster.get("members") or [])
+        )
+        clusters_html_parts.append(
+            '<div class="key-reuse-cluster" style="margin:12px 0">'
+            f"<p><strong>Re-keying this certificate remediates "
+            f"{_html.escape(str(member_count))} endpoints.</strong></p>"
+            "<ul>"
+            f"<li><strong>Cert subject:</strong> {_html.escape(str(cluster.get('cert_subject', '')))}</li>"
+            f"<li><strong>Public key:</strong> {_html.escape(str(cluster.get('cert_pubkey_alg', '')))} "
+            f"{_html.escape(str(cluster.get('cert_pubkey_size', '')))}</li>"
+            f"<li><strong>SPKI fingerprint:</strong> {_html.escape(fingerprint_display)}</li>"
+            "</ul>"
+            f"<ul>{members_html}</ul>"
+            "</div>"
+        )
+    clusters_joined = "".join(clusters_html_parts)
+
+    return (
+        '<section class="key-reuse-section" style="margin:24px 0;'
+        'border-left:4px solid #2b8a86;padding-left:12px">'
+        '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Key Reuse</h2>'
+        f"{caption_html}"
+        f"{coverage_html}"
+        f"{clusters_joined}"
+        "</section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -992,6 +1081,11 @@ def render_html_report(
     )
     burndown_section = render_burndown_section(_burndown_for_render, _closure_refusal_for_render)
 
+    # Phase 191 Plan 05 (SPKI-02 / D-01): key reuse section (advisory-only).
+    # getattr guard so an older ExecContent instance without the field cannot raise.
+    _key_reuse_for_render = getattr(exec_content, "key_reuse", {}) if exec_content is not None else {}
+    key_reuse_section = render_key_reuse_section(_key_reuse_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -1048,6 +1142,8 @@ def render_html_report(
         vendor_trend_section=vendor_trend_section,
         # Phase 181 SURF-02: remediation burndown section (pre-rendered HTML string)
         burndown_section=burndown_section,
+        # Phase 191 Plan 05 (SPKI-02 / D-01): key reuse section (pre-rendered HTML string)
+        key_reuse_section=key_reuse_section,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,

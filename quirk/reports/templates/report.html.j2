@@ -567,6 +567,9 @@
     {# Phase 181 SURF-02: remediation burndown — a sibling section, independent
        of hardware/drift/forecast/vendor-trend data availability #}
     {% if burndown_section %}{{ burndown_section | safe }}{% endif %}
+    {# Phase 191 Plan 05 (SPKI-02 / D-01): key reuse — a sibling section,
+       independent of hardware/drift/forecast/vendor-trend/burndown data availability #}
+    {% if key_reuse_section %}{{ key_reuse_section | safe }}{% endif %}
   </section>
 
   <!-- ===== TECHNICAL APPENDIX ===== -->
