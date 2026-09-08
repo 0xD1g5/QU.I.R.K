@@ -1596,9 +1596,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-07 (resumed)
-Stopped at: v5.20 milestone ARCHIVED (audit passed, archives + MILESTONES.md written, REQUIREMENTS.md removed) — next: /gsd-new-milestone
-Resume file: None
+Last session: 2026-09-08 (discuss-phase 191)
+Stopped at: Phase 191 context gathered (191-CONTEXT.md written, D-01…D-12 locked, all four gray areas user-delegated to recommended actions) — next: /gsd-plan-phase 191
+Resume file: .planning/phases/191-spki-fingerprint-persistence/191-CONTEXT.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
