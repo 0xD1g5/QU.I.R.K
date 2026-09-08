@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: executing
-stopped_at: "Phase 191 COMPLETE (6/6 plans, VERIFICATION passed 4/4, SPKI-01/02 flipped by hand, human UAT approved) — next: /gsd-plan-phase 192"
-last_updated: "2026-09-08T21:07:02.118Z"
+status: planning
+stopped_at: Phase 192 context gathered
+last_updated: "2026-09-08T23:33:11.884Z"
 last_activity: 2026-09-08 -- Phase 191 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
   completed_plans: 6
-  percent: 0
+  percent: 20
 ---
 
 # Project State
@@ -1597,9 +1597,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-08 (discuss-phase 191)
-Stopped at: Phase 191 context gathered (191-CONTEXT.md written, D-01…D-12 locked, all four gray areas user-delegated to recommended actions) — next: /gsd-plan-phase 191
-Resume file: .planning/phases/191-spki-fingerprint-persistence/191-CONTEXT.md
+Last session: 2026-09-08T23:33:11.874Z
+Stopped at: Phase 192 context gathered
+Resume file: .planning/phases/192-config-visibility-skip-observability/192-CONTEXT.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
