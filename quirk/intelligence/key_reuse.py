@@ -23,11 +23,11 @@ Mirroring ``quirk/intelligence/burndown.py``'s conventions:
   never form a cluster of their own, no matter how many share NULL.
 - This module is READ-ONLY: it never writes, never commits, and is never
   called from the scan pipeline — only from the report loader (191-04).
-- This module never imports ``quirk.intelligence.scoring`` and the data
-  it returns never reaches the quantum-readiness score (D-02) — enforced
-  permanently by ``tests/test_key_reuse_score_guard.py``. The return
-  shape deliberately carries no top-level ``severity``, ``host``, or
-  ``port`` key, which is what structurally keeps it out of
+- This module never imports the quantum-readiness weighting module and the
+  data it returns never reaches the quantum-readiness score (D-02) —
+  enforced permanently by ``tests/test_key_reuse_score_guard.py``. The
+  return shape deliberately carries no top-level ``severity``, ``host``,
+  or ``port`` key, which is what structurally keeps it out of
   ``_build_finding()``'s findings chokepoint even via an indirect path.
 """
 from __future__ import annotations
