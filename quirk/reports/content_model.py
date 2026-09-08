@@ -71,7 +71,7 @@ class ExecContent:
     roadmap_items: List[RoadmapItem]
 
     # TRANS-01 / D-07: score transparency — pass-through from score_raw
-    score_total: int
+    score_total: Optional[int]
     score_band: str
     subscores: Dict[str, Any]   # {hygiene, modern_tls, identity_trust, agility_signals, data_at_rest, data_in_motion}
     raw_sum: int                # sum(subscores.values()); 0 when subscores is empty — no error
@@ -97,6 +97,19 @@ class ExecContent:
     # Defaulted so every pre-existing ExecContent(...) construction in the
     # test suite keeps working unmodified.
     rating_cap_reason: Optional[str] = None
+
+    # Phase 188 SCORE-06 / plan 188-03: coverage-disclosure seam. `domains_assessed`/
+    # `domains_total`/`score_divisor`/`coverage_disclosure`/`scoring_version` are all
+    # pass-through reads of the SAME keys plan 188-01 added to score_raw — this model
+    # performs the ONLY extraction, mirroring `rating_cap_reason`'s WR-01 precedent
+    # above. Renderers read these fields verbatim; they never recompute the disclosure
+    # sentence or the divisor arithmetic themselves. Defaulted so every pre-188
+    # ExecContent(...) construction in the test suite keeps building unmodified.
+    domains_assessed: int = 0
+    domains_total: int = 0
+    score_divisor: Optional[float] = None
+    coverage_disclosure: str = ""
+    scoring_version: Optional[str] = None
 
     # Phase 128 D-08: hardware advisory — populated by writer.py from HardwareDevice rows
     # Advisory-only; never routed through _build_finding() / findings_evaluator.py (D-08 DISPOSITION).
@@ -691,14 +704,23 @@ def build_exec_content(
         ReportCongruenceError: if the headline band contradicts severity counts (D-06).
     """
     # TRANS-01/D-07: extract from canonical score_raw keys (NOT "total" — Pitfall 1)
-    # Phase 188 SCORE-06: score_raw["score"] is None when zero domains were
-    # assessed -- `.get(..., 0)` does NOT catch this (the key IS present, just
-    # None), so `or 0` is required to avoid a TypeError. This is a minimal
-    # crash-prevention fix; rendering the "not computed" state properly on
-    # every surface ExecContent feeds is plans 188-03/188-04's job.
-    score_total: int = int(score_raw.get("score") or 0)
+    # Phase 188 SCORE-06 / plan 188-03: score_raw["score"] is None when zero domains
+    # were assessed. Plan 188-01 minimally coerced this to `int(... or 0)` as
+    # crash-prevention; that fabricated a "0" score which CONTEXT.md's honest-absence
+    # clause forbids. score_total now stays None so every renderer can distinguish
+    # "scored zero" from "not computed" — see the not-computed bypass below.
+    _raw_score = score_raw.get("score")
+    score_total: Optional[int] = int(_raw_score) if _raw_score is not None else None
     score_band: str = str(score_raw.get("rating", "POOR"))
     subscores: Dict[str, Any] = dict(score_raw.get("subscores") or {})
+
+    # Phase 188 SCORE-06 / plan 188-03: coverage-disclosure seam — pass-through only,
+    # computed once in scoring.py (plan 188-01), never re-derived here.
+    domains_assessed: int = int(score_raw.get("domains_assessed") or 0)
+    domains_total: int = int(score_raw.get("domains_total") or 0)
+    score_divisor: Optional[float] = score_raw.get("score_divisor")
+    coverage_disclosure: str = str(score_raw.get("coverage_disclosure") or "")
+    scoring_version: Optional[str] = score_raw.get("scoring_version")
 
     # TRANS-01: raw_sum from subscores; 0 when subscores is empty — no error (Pitfall 3).
     # Defensive against malformed/non-numeric subscore values (calibration-injected
@@ -713,6 +735,10 @@ def build_exec_content(
         )
     )
 
+    # Phase 188 SCORE-06 / plan 188-03: a not-computed score has no band that could
+    # possibly exist in _NARRATIVE_LEADS ("NOT_ASSESSED" is not a key there), so the
+    # ordinary .get() already falls back correctly — this comment documents that the
+    # fallback path below is the not-computed narrative, not an oversight.
     # D-01 / EXEC-01: narrative lead from band (5→4 collapse per RESEARCH Pattern 4)
     narrative_lead = _NARRATIVE_LEADS.get(score_band, _NARRATIVE_LEAD_FALLBACK)
 
@@ -734,8 +760,14 @@ def build_exec_content(
     # TRANS-03 / D-06: severity counts computed ONCE — single source for guard + renderers
     sev_counts = _count_severities(findings)
 
-    # D-06: congruence guard — raises before any I/O if band contradicts severity
-    _check_congruence(score_band, sev_counts)
+    # D-06: congruence guard — raises before any I/O if band contradicts severity.
+    # Phase 188 SCORE-06 / plan 188-03: a not-computed score (score_total is None,
+    # score_band "NOT_ASSESSED") has no real band to contradict severity counts —
+    # skip the guard entirely rather than weakening it for any actual band. This is
+    # the ONLY bypass condition; every real band (EXCELLENT..POOR) still goes
+    # through the unmodified guard below.
+    if score_total is not None and score_band != "NOT_ASSESSED":
+        _check_congruence(score_band, sev_counts)
 
     # D-02 / EXEC-02: top-risks from static ALGO_IMPACT_MAP
     top_risks = _build_top_risks(findings)
@@ -759,6 +791,12 @@ def build_exec_content(
         # `.get()` so a pre-184.4-shaped score dict yields None rather than
         # raising — absence and None both mean "not capped".
         rating_cap_reason=score_raw.get("rating_cap_reason"),
+        # Phase 188 SCORE-06 / plan 188-03: coverage-disclosure seam pass-through.
+        domains_assessed=domains_assessed,
+        domains_total=domains_total,
+        score_divisor=score_divisor,
+        coverage_disclosure=coverage_disclosure,
+        scoring_version=scoring_version,
     )
 
 
