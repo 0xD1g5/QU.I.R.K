@@ -156,7 +156,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 191-04-PLAN.md — ReportContent.key_reuse field, non-fatal loader, CLI markdown Key Reuse section
+- [x] 191-04-PLAN.md — ReportContent.key_reuse field, non-fatal loader, CLI markdown Key Reuse section
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
