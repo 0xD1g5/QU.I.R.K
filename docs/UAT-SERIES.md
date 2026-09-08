@@ -1,7 +1,12 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-07 (Phase 188 Plan 05 — Series 188 added: readiness-score coverage
+**Last Updated:** 2026-09-08 (Phase 189 Plan 04 — Series 189 added: config port-list coercion +
+`QRK-CONFIG-001` (TRIAGE-04), the chaos-lab doc example load gate (TRIAGE-03), the port-22 KEEP
+verdict (TRIAGE-05), and the derived backlog-reconciliation gate (TRIAGE-09); TRIAGE-08 recorded as
+an honest GAP with no operator-observable behavior to test. v5.20 has still not shipped a version
+bump, so `**Version:**` stays `5.19.0` — same reasoning Series 188's header note already recorded.)
+Prior: 2026-09-07 (Phase 188 Plan 05 — Series 188 added: readiness-score coverage
 disclosure and the single-producer severity-band contract (SCORE-06, SCORE-07). v5.20 has not
 shipped a version bump yet, so this document's `**Version:**` header stays `5.19.0` — no version
 string changed this phase; the version bump remains a future v5.20 release-plan task.) Prior:
@@ -24342,3 +24347,230 @@ not-computed rendering on the dashboard specifically, and the gauge color-bounda
 visual/placement judgments this non-interactive plan execution did not load a live browser to
 confirm. All four cases' cited automated substitutes were re-run live during this plan's
 execution, not merely cited from a prior SUMMARY without re-verification.
+
+---
+
+## Series 189: Config Correctness Drain (Phase 189 — v5.20)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its cases below carry
+HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175-177, 187, and 188 used.
+`scripts/uat_disposition_apply.py verify` adds zero ledger rows for this series.
+
+Phase 189 closed TRIAGE-03 (chaos-lab doc example load-error), TRIAGE-04 (quoted YAML port values
+silently no-op'd against the TLS-designation membership test instead of being coerced or rejected),
+TRIAGE-05 (port-22 KEEP/REMOVE disposition in `docs/sample-config.yaml`), and TRIAGE-09 (a derived
+backlog-reconciliation gate). TRIAGE-08 (BACK-51's dual-categorization) was dispositioned
+"duality confirmed live" and stays open — see UAT-189-06 below for why that case is not a fix
+verification.
+
+### UAT-189-01: A quoted port value in `scan.ports_tls` / `scan.tls_designated_ports` takes effect identically to a bare integer (TRIAGE-04)
+
+**ID:** UAT-189-01
+**Title:** A quoted digit-string port (e.g. `"8444"`) in either port-list field behaves identically
+to a bare integer (`8444`) after `load_config()`, proven against the literal
+`findings_evaluator.py:390` membership test the coercion gap affected
+**Maps to:** TRIAGE-04
+
+**What to test:** loading a config fragment shaped like:
+```yaml
+scan:
+  ports_tls: ["8444", 443]
+  tls_designated_ports: ["8444"]
+```
+through the real `load_config()` entrypoint and confirming the resulting `ScanCfg.ports_tls` /
+`ScanCfg.tls_designated_ports` are `List[int]` (`[8444, 443]` / `[8444]`), and that `8444 in
+scan_cfg.tls_designated_ports` evaluates `True` — the exact membership test
+`findings_evaluator.py:390` performs when classifying a plaintext-HTTP finding.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_config.py -k port_coercion -q
+```
+
+**Pass Criteria:** all `port_coercion`-named tests pass, including the end-to-end cases proving a
+quoted string port and a bare-int port produce identical downstream membership-test behavior.
+
+**Falsifiability:** this case turns red if a quoted port value fails to coerce to `int`, or if the
+coerced value does not satisfy the same `in` membership check a bare int would.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (189-04 phase-close plan execution)
+**Notes:** `.venv/bin/python -m pytest tests/test_config.py -k port_coercion -q` — **11 passed**,
+6 deselected, re-run live during this plan's execution (not cited from 189-01-SUMMARY.md without
+re-verification).
+
+---
+
+### UAT-189-02: A non-numeric port-list entry raises `QRK-CONFIG-001` at load time, naming the field and value (TRIAGE-04)
+
+**ID:** UAT-189-02
+**Title:** A non-numeric entry in `scan.ports_tls` or `scan.tls_designated_ports` (e.g. a typo like
+`"84a4"`) fails loudly at config-load time with a coded `QRK-CONFIG-001` error instead of being
+silently ignored or crashing downstream
+**Maps to:** TRIAGE-04
+
+**What to test:** loading a config fragment with a non-numeric port-list entry and confirming
+`load_config()` raises with the `QRK-CONFIG-001` error code, and that `docs/error-codes.md` carries
+the matching registry entry.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_config.py -k port_coercion -q
+grep -n "CONFIG-001" docs/error-codes.md
+```
+
+**Pass Criteria:** the non-numeric-value test cases raise the coded error (not a bare `ValueError`
+or a silent pass-through), and `docs/error-codes.md` contains a `QRK-CONFIG-001` row naming both
+affected fields.
+
+**Falsifiability:** this case turns red if a non-numeric port value is silently accepted, raises an
+uncoded exception, or if the error-codes registry entry is missing or removed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (189-04 phase-close plan execution)
+**Notes:** Same `port_coercion` test run as UAT-189-01 (11 passed, includes the non-numeric-raises
+cases). `grep -n "CONFIG-001" docs/error-codes.md` confirms the registry row: `| QRK-CONFIG-001 | A
+scan-config port-list value (scan.ports_tls or scan.tls_designated_ports) is not a number. | Use
+bare integers or digit-strings ... |`.
+
+---
+
+### UAT-189-03: `docs/chaos-lab.md`'s `config-lab-core.yaml` example loads verbatim (TRIAGE-03)
+
+**ID:** UAT-189-03
+**Title:** The fenced `config-lab-core.yaml` example copied verbatim out of `docs/chaos-lab.md`
+loads through the real `load_config()` entrypoint without error
+**Maps to:** TRIAGE-03
+
+**What to test:** extracting the fenced example anchored on its `# config-lab-core.yaml` comment
+line, writing it to a temp path, and loading it through `load_config()`.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_chaos_lab_config_example_loads.py -q
+```
+
+**Pass Criteria:** the example loads without a `TypeError` / missing-required-field error; the
+extracted example's `scan:` block matches the shape of the repo-root `config-lab-core.yaml` repro
+artifact that originally reproduced TRIAGE-03.
+
+**Falsifiability:** this case turns red if a future edit to `docs/chaos-lab.md`'s example drops a
+required `ScanCfg` field again (the exact regression this test is a permanent drift gate against —
+189-01-SUMMARY.md recorded observing this test go RED with `TypeError: ScanCfg.__init__() missing
+2 required positional arguments: 'concurrency' and 'ports_tls'` during its discrimination check).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (189-04 phase-close plan execution)
+**Notes:** `.venv/bin/python -m pytest tests/test_chaos_lab_config_example_loads.py -q` — **2
+passed**, re-run live during this plan's execution. The repo-root `config-lab-core.yaml` repro
+artifact remains present and untracked (`git status --porcelain config-lab-core.yaml` → `??`); its
+repro role has ended per 189-01-SUMMARY.md.
+
+---
+
+### UAT-189-04: `docs/sample-config.yaml`'s `ports_tls` line matches the port-22 KEEP verdict, with readable inline rationale (TRIAGE-05)
+
+**ID:** UAT-189-04
+**Title:** `docs/sample-config.yaml`'s `ports_tls` line includes port `22` and carries an inline
+comment recording the live-confirmed KEEP rationale
+**Maps to:** TRIAGE-05
+
+**What to test:** reading `docs/sample-config.yaml`'s `ports_tls` line and its preceding comment
+block, confirming it matches the verdict Plan 02 actually reached (KEEP, not the CONTEXT-locked
+default REMOVE) and that the rationale is inline and readable, not just recorded in a separate
+ledger file.
+
+**Steps:**
+```bash
+grep -n -B8 "ports_tls" docs/sample-config.yaml
+.venv/bin/python -m pytest tests/test_tls_error_categorization.py -q
+```
+
+**Pass Criteria:** `ports_tls` includes `22`; the preceding comment states the KEEP verdict, cites
+the `NOT_TLS_ON_PORT` mechanism, and explicitly notes port 22 is NOT part of the shipped
+`CONSULTING_TLS_PORTS` default (so this sample isn't mistaken for a scan-scope precedent).
+
+**Falsifiability:** this case turns red if the verdict recorded here (KEEP) diverges from
+`.planning/HORIZON.md`'s "Resolved by Phase 189" subsection, or if the mechanism-backing unit test
+fails.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (189-04 phase-close plan execution)
+**Notes:** `docs/sample-config.yaml:13-21` carries the 8-line KEEP rationale comment immediately
+above `ports_tls: [22, 443, 8443]` (confirmed live via `grep -n -B8 "ports_tls" docs/sample-config.yaml`).
+`.venv/bin/python -m pytest tests/test_tls_error_categorization.py -q` — **3 passed**, re-run live,
+backing the `NOT_TLS_ON_PORT` mechanism claim in the comment.
+
+---
+
+### UAT-189-05: The derived backlog-reconciliation gate runs under `pytest -q -m ""`, with its documented CI-enforced vs. local-only split (TRIAGE-09)
+
+**ID:** UAT-189-05
+**Title:** `tests/test_backlog_reconciliation_gate.py`'s three functions collect and pass under the
+`Linux Full Suite` job's `pytest -q -m ""` marker selection, with the local-only leg correctly
+skip-guarded for a CI checkout
+**Maps to:** TRIAGE-09
+
+**What to test:** running the gate module directly, then re-running it filtered the way the
+`Linux Full Suite` CI job selects tests, and confirming which of the three functions CI actually
+enforces vs. which requires a full local working tree.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_backlog_reconciliation_gate.py -q
+.venv/bin/python -m pytest -q -m "" -k backlog_reconciliation
+```
+
+**Pass Criteria:** all 3 functions pass on a full local checkout; the `-m ""` filtered run selects
+the same 3 functions (proving the gate rides `Linux Full Suite` with zero new CI wiring); the
+full-corpus local-only leg's `skipif` reason names `.planning/backlog` when that directory is
+absent, per 189-03-SUMMARY.md.
+
+**Falsifiability:** this case turns red if the gate fails to collect under `-m ""`, if the
+non-vacuity guard silently passes on zero enumerated IDs, or if the local-only leg's skip condition
+is a hardcoded boolean rather than an evaluated path check.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (189-04 phase-close plan execution)
+**Notes:** `.venv/bin/python -m pytest tests/test_backlog_reconciliation_gate.py -q` — **3
+passed**. `.venv/bin/python -m pytest -q -m "" -k backlog_reconciliation` — **3 passed, 4475
+deselected**, confirming `Linux Full Suite` marker-selection compatibility, re-run live during this
+plan's execution. **CI-enforced-vs-local-only split, stated plainly per 189-03-SUMMARY.md:** the
+CI-enforced leg (`test_back_star_ci_enforced_leg`) only proves the 5-file tracked corpus's single
+bare-mention `BACK-89` citation is closed-or-ledgered; the full 94-key `BACK-*` invariant and the
+entire `999.*` corpus are proven only by `test_full_corpus_local_only_leg`, which is
+`skipif`-guarded on `.planning/backlog/` and representative untracked roadmaps being present — a
+real, evaluated-at-collection-time check, not a hardcoded skip.
+
+---
+
+### UAT-189-06: BACK-51 dual-categorization (TRIAGE-08) — GAP, no substitute coverage
+
+**ID:** UAT-189-06
+**Title:** No operator-observable behavior change exists to verify for TRIAGE-08's disposition
+**Maps to:** TRIAGE-08
+
+**What to test:** N/A — TRIAGE-08's scope was a disposition decision (is BACK-51's dual
+categorization a confirmed-live duplication issue, and at what priority), not a code fix. Plan 02
+explicitly declined a code fix per `189-CONTEXT.md` RQ-1 (unifying `categorize_waves()`'s
+severity-bucketed model with `build_phased_roadmap()`'s evidence-driven model is a multi-surface
+redesign, not the "one targeted check" TRIAGE-08 scoped). There is no new operator-visible report
+output, config option, or CLI behavior to write pass criteria against.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage for a ledger-only disposition; see Notes)
+**Date:** 2026-09-08  **Tester:** N/A (ledger-only disposition, 189-04 phase-close plan)
+**Notes:** BACK-51 stays **open** at priority `P3` with verdict "duality confirmed live" in
+`.planning/HORIZON.md` (re-verified by 189-02: `writer.py:265` def, call sites at `writer.py:470`
+and `writer.py:843`, both inside `write_reports()` at `writer.py:415`, zero line-number drift from
+RESEARCH). This is an honest GAP per UATREC-04's own guidance that GAP is a valid, passing
+disposition for a case with no substitute coverage — not an attempt to manufacture a test for a
+decision that produced no code change.
+
+---
+
+**Series 189 disposition.** UAT-189-01 through UAT-189-05 are each `[x] PASS`, re-executed live
+against their cited automated tests during this plan's execution (not cited from a prior SUMMARY
+without re-verification). UAT-189-06 is `[x] SKIP (GAP)` because TRIAGE-08's disposition produced
+no operator-observable behavior change to test against — recording an honest GAP rather than
+inventing pass criteria for a ledger-only decision.
