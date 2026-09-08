@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.20
 milestone_name: Release & Correctness Drain
-status: executing
-last_updated: "2026-09-07T20:30:00.000Z"
-last_activity: 2026-09-07
+status: milestone_complete
+last_updated: "2026-09-08T21:45:00.000Z"
+last_activity: 2026-09-08
 progress:
   total_phases: 4
   completed_phases: 4
@@ -17,13 +17,19 @@ progress:
 
 ## Deferred Items
 
-Items acknowledged and deferred at the v5.19 milestone close on 2026-09-07. All remain open and
-visible to `/gsd-progress` and `/gsd-audit-uat`.
+Items acknowledged and deferred at the v5.20 milestone close on 2026-09-08 (carried from the v5.19
+close where noted). All remain open and visible to `/gsd-progress` and `/gsd-audit-uat`.
+CLOSED since the v5.19 list: backlog-reconciliation-and-derived-gate (Phase 189 TRIAGE-09, todo
+moved to completed/). Backlog 999.92 closed by Phase 188 SCORE-07. Backlog 999.95 closed by
+Phase 188 SCORE-06. NEW at this close: 999.103 (4 broker scanner-logic divergences, P3, HORIZON
+ledger, evidence in 190-EVIDENCE.md); trends.py/merge.py int-coerced score fields (recorded in
+188-05-SUMMARY.md, needs a follow-up phase). NO v5.20 git tag was created — two-component
+milestone tags are a release-hazard per Phase 187 (release.yml fires on v[0-9]*); the milestone
+record lives in MILESTONES.md and .planning/milestones/, not in a tag.
 
 | Category | Item | Priority | Status |
 |----------|------|----------|--------|
 | todo | gsd-phase-complete-premature-completion | high | open — **operative: `phase.complete` unsafe to close a phase/milestone on this machine** |
-| todo | backlog-reconciliation-and-derived-gate | high | open — 57 BACK-* items invisible to every referenced planning doc |
 | todo | dashboard-cert-view-phantom-tls-rows | high | open |
 | todo | gsd-state-planned-phase-misleading-empty-updated | medium | open — returns `updated: []` while drifting frontmatter |
 | todo | gsd-state-bold-field-search-unscoped-latent | medium | open — dormant risk, deliberately unfixed with stated reason |
@@ -43,7 +49,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.19 Drain & Tooling Integrity ARCHIVED 2026-09-07** (10 phases, 77 plans, audit `passed` 15/15, 10/10 Nyquist-compliant). Archives at `.planning/milestones/v5.19-{ROADMAP,REQUIREMENTS}.md`; `.planning/REQUIREMENTS.md` removed — a fresh one is created by `/gsd-new-milestone`. The milestone's spine was tooling integrity: the GSD toolchain that writes this project's own planning files had corrupted `STATE.md` nine times across Phases 179-181. Closed for the TEXTUAL defect class at 21 sites / 4 files / 2 installs, proven by a live six-run re-demonstration against this very file. **Still open — a SECOND, SEMANTIC class:** verbs writing well-formed WRONG values, which no anchor catches. **`phase.complete` is UNSAFE to close a phase or milestone on this machine** — it marked phase 186.1 complete at 5/7 plans with an impossible `completed_plans: 142`. Both the phase close AND this milestone archive were hand-written under the pre-image + signature-diff protocol. Also caught at archive time: Phase 185's 7 plan checkboxes were still `[ ]` despite the phase being complete (same defect) — flipped by hand against disk evidence before archiving. Next: /gsd-new-milestone
+**Current focus:** None — **v5.20 Release & Correctness Drain ARCHIVED 2026-09-08** (4 phases 187-190, 18 plans, audit `passed` 10/10, 4/4 Nyquist-compliant, 6/6 integration seams). Archives at `.planning/milestones/v5.20-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`; `.planning/REQUIREMENTS.md` removed — fresh one at `/gsd-new-milestone`. Highlights: v5.19.0 published to PyPI (REL-01); scoring v2 with coverage honesty (SCORE-06/07); config correctness drain incl. the derived backlog-reconciliation gate that drained 99 IDs honestly (TRIAGE-03..05/08/09); broker/Modbus end-to-end with live lab evidence (TRIAGE-06/07). Every phase close and this archive were hand-written under the pre-image + signature-diff protocol — `phase.complete`/`milestone.complete` remain UNSAFE (semantic defect class, still open). Next: /gsd-new-milestone
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -1591,7 +1597,7 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-09-07 (resumed)
-Stopped at: Phase 190 COMPLETE (broker_targets end-to-end w/ live lab evidence, Modbus re-verified, review 1C/3W/4I fixed, verification 8/8) — ALL 4 v5.20 phases complete; milestone lifecycle next
+Stopped at: v5.20 milestone ARCHIVED (audit passed, archives + MILESTONES.md written, REQUIREMENTS.md removed) — next: /gsd-new-milestone
 Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

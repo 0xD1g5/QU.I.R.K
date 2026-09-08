@@ -2,6 +2,8 @@
 
 ## Current State (updated 2026-09-07)
 
+**v5.20 shipped 2026-09-08** — v5.19.0 live on PyPI; scoring v2 (coverage-honest readiness score, single-producer severity bands); config + scanner correctness drained (no silent port no-ops, broker/Modbus end-to-end). 10/10 requirements, audit passed.
+
 **v5.19 Drain & Tooling Integrity — development complete 2026-09-07.** Phases 182–186.1, 77 plans,
 audit `passed` at 15/15 requirements, 10/10 phases Nyquist-compliant.
 → `.planning/milestones/v5.19-ROADMAP.md`
