@@ -82,8 +82,20 @@ assessment:
   data_classification: "internal"
   report_owner: "Lab"
   timezone: "UTC"
+
 targets:
   cidrs: [127.0.0.1]
+
+# REQUIRED — ScanCfg.concurrency and ScanCfg.ports_tls have no defaults.
+# ports_tls below is the shipped 17-port CONSULTING_TLS_PORTS default
+# (quirk/interactive.py:21). Port 9443 is the lab's tls-expired service.
+scan:
+  concurrency: 50
+  ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]
+
+output:
+  directory: "./quirk-output"
+  db_path: "./quirk-output/quirk.db"
 ```
 
 ```bash
