@@ -54,20 +54,33 @@ def test_render_parity_all_surfaces():
         "dashboard recall subscores diverge from canonical. RENDER-PDF-01 parity violated."
     )
 
-    # Phase 86 contract: overall must be an int in [0, 100]
+    # Phase 86 contract: overall must be an int in [0, 100], OR the Phase 188
+    # SCORE-06 explicit "not computed" sentinel (None) when zero domains were
+    # assessed -- true here, since FIXTURE_ENDPOINTS/FIXTURE_FINDINGS are both
+    # empty (domains_assessed == 0). The parity assertions above still hold:
+    # every surface receives the identical None, which is itself the parity
+    # guarantee this test exists to prove -- see
+    # tests/test_score_coverage_disclosure.py for the dedicated zero-assessed
+    # regression.
     overall = canonical["score"]
-    assert isinstance(overall, int), (
-        f"Overall score must be int (Phase 86 contract), got {type(overall).__name__}."
+    assert overall is None or isinstance(overall, int), (
+        f"Overall score must be int or None (Phase 86 / Phase 188 SCORE-06 contract), "
+        f"got {type(overall).__name__}."
     )
-    assert 0 <= overall <= 100, (
-        f"Overall score {overall} outside [0, 100] (Phase 86 contract violated)."
-    )
+    if overall is not None:
+        assert 0 <= overall <= 100, (
+            f"Overall score {overall} outside [0, 100] (Phase 86 contract violated)."
+        )
+    else:
+        assert canonical["domains_assessed"] == 0
 
-    # Subscores must each be int in [0, 25]
+    # Subscores must each be int in [0, 25], or None for an unassessed category
+    # (Phase 188 SCORE-06) -- all six are unassessed here since domains_assessed == 0.
     for key, val in canonical["subscores"].items():
-        assert isinstance(val, int), (
-            f"Subscore '{key}' must be int, got {type(val).__name__}."
+        assert val is None or isinstance(val, int), (
+            f"Subscore '{key}' must be int or None, got {type(val).__name__}."
         )
-        assert 0 <= val <= 25, (
-            f"Subscore '{key}' value {val} outside [0, 25]."
-        )
+        if val is not None:
+            assert 0 <= val <= 25, (
+                f"Subscore '{key}' value {val} outside [0, 25]."
+            )

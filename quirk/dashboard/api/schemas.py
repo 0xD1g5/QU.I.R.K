@@ -27,17 +27,23 @@ class ConfigResponse(BaseModel):
 # ---- Score / Confidence ----
 
 class SubScores(BaseModel):
-    hygiene: int
-    modern_tls: int
-    identity_trust: int
-    agility_signals: int
-    data_at_rest: int = 0
-    data_in_motion: int = 0   # NEW — Phase 36 D-06
+    # Phase 188 SCORE-06 (RQ-3 schema-compatibility check): each subscore is
+    # None when compute_readiness_score() excluded that category as
+    # unassessed (exclude-and-rescale) rather than a fabricated 0-25 value.
+    hygiene: Optional[int] = None
+    modern_tls: Optional[int] = None
+    identity_trust: Optional[int] = None
+    agility_signals: Optional[int] = None
+    data_at_rest: Optional[int] = None
+    data_in_motion: Optional[int] = None   # NEW — Phase 36 D-06
 
 
 class ScoreData(BaseModel):
-    score: int
-    rating: str  # EXCELLENT / GOOD / MODERATE / FAIR / POOR
+    # Phase 188 SCORE-06 (RQ-3 schema-compatibility check): None means "not
+    # computed" — zero domains were assessed (compute_readiness_score()'s
+    # explicit honest-absence edge case), never a fabricated 0/100.
+    score: Optional[int] = None
+    rating: str  # EXCELLENT / GOOD / MODERATE / FAIR / POOR / NOT_ASSESSED
     # SCORE-04 / D-09/D-10 (184.4): structured cap-reason from
     # compute_readiness_score()'s rating_cap_reason key, mirroring the
     # confidence_formula_version precedent immediately below. None means the
@@ -46,6 +52,15 @@ class ScoreData(BaseModel):
     rating_cap_reason: Optional[str] = None
     subscores: SubScores
     drivers: List[Dict[str, Any]]
+    # Phase 188 SCORE-06 — coverage/version disclosure, additive keys on
+    # score_raw. Defaults keep this model backward-compatible for any caller
+    # still constructing ScoreData from a pre-188-shaped dict.
+    domains_assessed: Optional[int] = None
+    domains_total: Optional[int] = None
+    score_divisor: Optional[float] = None
+    coverage_disclosure: Optional[str] = None
+    scoring_version: Optional[str] = None
+    scoring_version_note: Optional[str] = None
 
 
 class ConfidenceData(BaseModel):

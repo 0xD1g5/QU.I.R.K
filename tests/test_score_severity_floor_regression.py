@@ -40,12 +40,24 @@ from quirk.reports.writer import write_reports
 # *attributes* on the endpoints themselves — those signals only reach the
 # scorer via the findings list here, exactly as `build_evidence_summary`
 # and `compute_readiness_score` are wired today) plus exactly one CRITICAL
-# and one HIGH finding, mirroring the UAT-184.2-05 chaos-lab run. The
-# resulting real numeric score was verified empirically (not guessed, not
-# hard-coded to the reproduction's literal 89) by calling
-# `build_evidence_summary` + `compute_readiness_score` directly before this
-# test was written: five clean endpoints + these two findings score 91/100,
-# safely and stably above the 85 EXCELLENT threshold.
+# and one HIGH finding, mirroring the UAT-184.2-05 chaos-lab run.
+#
+# Phase 188 SCORE-06 (exclude-and-rescale) moved this fixture's real numeric
+# score. This fixture only ever has TLS endpoints -- no DAR/motion protocol
+# counts and no certificate_observations/KERBEROS/SAML/DNSSEC signals -- so
+# identity_trust, data_at_rest, and data_in_motion are now correctly excluded
+# as unassessed (domains_assessed == 3 of 6) instead of each silently
+# contributing a full unearned 25/25 as they did pre-188. Derivation (not
+# copied from a test run): hygiene=25, modern_tls=25, agility_signals=11
+# (agility_high_impact_ratio = 2 HIGH+CRITICAL / max(findings,1)=2 -> ratio
+# 1.0 -> -14 impact on a 25 cap); identity/dar/motion are None (unassessed).
+# sum(25, 25, 11) = 61; 61 / (3 * 25) * 100 = 81.33... -> round() = 81.
+# Pre-188 this same fixture scored 91 (sum of all six subscores including
+# three fabricated full-25s, divided by the fixed 1.5) -- the drop to 81 is
+# SCORE-06 working as intended, not a regression. The severity-floor
+# assertions below (band capped to FAIR for an open CRITICAL) do not depend
+# on the exact numeric value, only on it clearing GOOD (>= 70) before the cap
+# is applied, which 81 still does.
 # ---------------------------------------------------------------------------
 
 
@@ -92,9 +104,9 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
 
     Asserts only that the fixture reproduces the documented defect
     conditions (a CRITICAL `TLS certificate expired` finding present, and a
-    real numeric score >= 85) without invoking `write_reports` at all, so
-    the fixture cannot silently drift out from under the regression test
-    below.
+    real numeric score of 81, pinned per SCORE-06's derivation above)
+    without invoking `write_reports` at all, so the fixture cannot silently
+    drift out from under the regression test below.
     """
     endpoints = _clean_endpoints()
     findings = _reproduction_findings()
@@ -109,11 +121,18 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
         "Fixture must carry the documented CRITICAL finding "
         "'TLS certificate expired' (Phase 184.2 UAT-184.2-05 reproduction)."
     )
-    assert score_raw["score"] >= 85, (
-        f"Fixture's real numeric score {score_raw['score']} dropped below the 85 "
-        "EXCELLENT threshold — the fixture no longer reproduces the documented "
-        "defect conditions (score >= 85 with one CRITICAL open). Adjust the clean "
-        "endpoint count in _clean_endpoints() to restore it."
+    assert score_raw["score"] == 81, (
+        f"Fixture's real numeric score {score_raw['score']} no longer matches the "
+        "derived post-SCORE-06 value of 81 (see the module-level comment above for "
+        "the arithmetic: sum(25, 25, 11) / (3*25) * 100 = 81.33 -> 81). A different "
+        "value here means either the fixture or the rescale formula moved."
+    )
+    assert score_raw["score"] >= 70, (
+        f"Fixture's real numeric score {score_raw['score']} dropped below GOOD (70) "
+        "— the fixture no longer reproduces the documented defect conditions (a "
+        "numeric band above FAIR, capped down to FAIR by the severity floor for one "
+        "open CRITICAL). Adjust the clean endpoint count in _clean_endpoints() to "
+        "restore it."
     )
 
 

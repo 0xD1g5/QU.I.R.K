@@ -352,7 +352,13 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append("|----------|-------|--------|")
     for key, label in _SUBSCORE_LABELS:
         lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
-    raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+    # Phase 188 SCORE-06: subscores.get(k) is None for an unassessed category
+    # (exclude-and-rescale) -- `or 0` prevents a TypeError here. This is a
+    # minimal crash-prevention fix only; the "÷ 1.5" literal on the next line
+    # and the raw_sum's own meaning are Pitfall 2's documented divisor-literal
+    # rework, owned by plans 188-03/188-04 (this plan's <files> does not list
+    # this renderer).
+    raw_sum = sum((subscores.get(k) or 0) for k, _ in _SUBSCORE_LABELS)
     lines.append(f"\n**Rollup:** {raw_sum} ÷ 1.5 = **{score.get('total')} / 100**\n")
 
     lines.append("## Why this score\n")

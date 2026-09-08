@@ -691,7 +691,12 @@ def build_exec_content(
         ReportCongruenceError: if the headline band contradicts severity counts (D-06).
     """
     # TRANS-01/D-07: extract from canonical score_raw keys (NOT "total" — Pitfall 1)
-    score_total: int = int(score_raw.get("score", 0))
+    # Phase 188 SCORE-06: score_raw["score"] is None when zero domains were
+    # assessed -- `.get(..., 0)` does NOT catch this (the key IS present, just
+    # None), so `or 0` is required to avoid a TypeError. This is a minimal
+    # crash-prevention fix; rendering the "not computed" state properly on
+    # every surface ExecContent feeds is plans 188-03/188-04's job.
+    score_total: int = int(score_raw.get("score") or 0)
     score_band: str = str(score_raw.get("rating", "POOR"))
     subscores: Dict[str, Any] = dict(score_raw.get("subscores") or {})
 

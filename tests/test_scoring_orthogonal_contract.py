@@ -20,6 +20,16 @@ from __future__ import annotations
 import pytest
 from quirk.intelligence.scoring import compute_readiness_score
 
+# Phase 188 SCORE-06: one representative protocol_counts literal per
+# assessed-predicate (KERBEROS for identity_trust, POSTGRESQL for
+# data_at_rest, KAFKA-PLAIN for data_in_motion; hygiene/modern_tls/agility
+# are assessed by endpoints > 0 alone) so every category in this fixture is
+# ASSESSED. A "clean" category must score 25 because it WAS assessed and
+# found nothing wrong -- orthogonal to other categories' problems -- not
+# because it was silently excluded as unassessed (which would make this
+# test vacuously pass by asserting None == 25, a failure, not a pass).
+_ALL_ASSESSED_PROTOCOL_COUNTS = {"KERBEROS": 1, "POSTGRESQL": 1, "KAFKA-PLAIN": 1}
+
 
 @pytest.mark.parametrize("category,trigger_key,trigger_value,clean_categories", [
     (
@@ -64,6 +74,7 @@ def test_subscore_orthogonality(category, trigger_key, trigger_value, clean_cate
     evidence: dict = {
         trigger_key: trigger_value,
         "totals": {"endpoints": 10, "findings": 5},
+        "protocol_counts": dict(_ALL_ASSESSED_PROTOCOL_COUNTS),
     }
     # data_in_motion uses motion_email_plaintext_num which folds into
     # motion_email_plaintext_count; supply the canonical key the scorer reads.
@@ -72,10 +83,22 @@ def test_subscore_orthogonality(category, trigger_key, trigger_value, clean_cate
         evidence = {
             "motion_email_plaintext_count": 5,
             "totals": {"endpoints": 10, "findings": 5},
+            "protocol_counts": dict(_ALL_ASSESSED_PROTOCOL_COUNTS),
         }
+    # trigger_key may itself be "protocol_counts"-adjacent (none of the current
+    # parametrizations are), but if trigger_key == "protocol_counts" in a future
+    # addition it would clobber the assessed markers above -- merge defensively.
+    if trigger_key == "protocol_counts" and isinstance(trigger_value, dict):
+        evidence["protocol_counts"] = {**_ALL_ASSESSED_PROTOCOL_COUNTS, **trigger_value}
 
     result = compute_readiness_score(evidence)
     subscores = result["subscores"]
+
+    assert result["domains_assessed"] == 6, (
+        f"Fixture precondition failed: expected all 6 categories assessed, got "
+        f"{result['domains_assessed']} (subscores={subscores}). The orthogonality "
+        f"contract only means something when every category was actually assessed."
+    )
 
     for clean_cat in clean_categories:
         assert subscores[clean_cat] == 25, (

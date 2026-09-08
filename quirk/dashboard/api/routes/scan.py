@@ -1404,7 +1404,10 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
                 eps, [f.model_dump() for f in session_findings]
             )
             score_dict = compute_readiness_score(evidence, profile=calibration)
-            score = int(score_dict["score"])
+            # Phase 188 SCORE-06: score_dict["score"] may be None (zero domains
+            # assessed) -- minimal crash-prevention fix; coverage-aware
+            # rendering of this state is plans 188-03/188-04's job.
+            score = int(score_dict["score"] or 0)
             rating = score_dict.get("rating", "")
             rating_cap_reason = score_dict.get("rating_cap_reason")
 
@@ -1827,18 +1830,25 @@ def compare_scans(
     evidence_b = build_evidence_summary(eps_b, [f.model_dump() for f in findings_b])
     sd_a = compute_readiness_score(evidence_a)
     sd_b = compute_readiness_score(evidence_b)
-    score_a = int(sd_a["score"])
-    score_b = int(sd_b["score"])
-    sub_a = sd_a["subscores"]  # dict: {"hygiene": int, "modern_tls": int, ...}
+    # Phase 188 SCORE-06: sd_a["score"]/subscores may be None (zero domains
+    # assessed / a specific category unassessed) -- `or 0` is a minimal
+    # crash-prevention fix here (delta arithmetic against an unassessed side
+    # degrades to "no delta contribution" rather than raising). Rendering the
+    # coverage-aware "not computed" state on this comparison surface properly
+    # is plans 188-03/188-04's job, not this plan's (scan.py is not in this
+    # plan's <files>).
+    score_a = int(sd_a["score"] or 0)
+    score_b = int(sd_b["score"] or 0)
+    sub_a = sd_a["subscores"]  # dict: {"hygiene": int|None, "modern_tls": int|None, ...}
     sub_b = sd_b["subscores"]
 
     subscore_deltas = SubscoreDelta(
-        hygiene=int(sub_a.get("hygiene", 0)) - int(sub_b.get("hygiene", 0)),
-        modern_tls=int(sub_a.get("modern_tls", 0)) - int(sub_b.get("modern_tls", 0)),
-        identity_trust=int(sub_a.get("identity_trust", 0)) - int(sub_b.get("identity_trust", 0)),
-        agility_signals=int(sub_a.get("agility_signals", 0)) - int(sub_b.get("agility_signals", 0)),
-        data_at_rest=int(sub_a.get("data_at_rest", 0)) - int(sub_b.get("data_at_rest", 0)),
-        data_in_motion=int(sub_a.get("data_in_motion", 0)) - int(sub_b.get("data_in_motion", 0)),
+        hygiene=int(sub_a.get("hygiene") or 0) - int(sub_b.get("hygiene") or 0),
+        modern_tls=int(sub_a.get("modern_tls") or 0) - int(sub_b.get("modern_tls") or 0),
+        identity_trust=int(sub_a.get("identity_trust") or 0) - int(sub_b.get("identity_trust") or 0),
+        agility_signals=int(sub_a.get("agility_signals") or 0) - int(sub_b.get("agility_signals") or 0),
+        data_at_rest=int(sub_a.get("data_at_rest") or 0) - int(sub_b.get("data_at_rest") or 0),
+        data_in_motion=int(sub_a.get("data_in_motion") or 0) - int(sub_b.get("data_in_motion") or 0),
     )
 
     # Finding diff: (host, protocol, severity) composite key (D-07, Pattern 3)
@@ -1897,27 +1907,31 @@ def compare_scans(
         )
         hardware_drift = []
 
+    # Phase 188 SCORE-06: SubScores fields are Optional[int] (a category may be
+    # unassessed) -- pass sub_a/sub_b values through as-is (no int() coercion,
+    # which would crash on None) rather than defaulting to 0, so an unassessed
+    # category is disclosed as None on this comparison surface too.
     return CompareResponse(
         scan_a=CompareScanSummary(
             scan_id=a, scanned_at=ts_a, score=score_a, subscores=SubScores(
-                hygiene=int(sub_a.get("hygiene", 0)),
-                modern_tls=int(sub_a.get("modern_tls", 0)),
-                identity_trust=int(sub_a.get("identity_trust", 0)),
-                agility_signals=int(sub_a.get("agility_signals", 0)),
-                data_at_rest=int(sub_a.get("data_at_rest", 0)),
-                data_in_motion=int(sub_a.get("data_in_motion", 0)),
+                hygiene=sub_a.get("hygiene"),
+                modern_tls=sub_a.get("modern_tls"),
+                identity_trust=sub_a.get("identity_trust"),
+                agility_signals=sub_a.get("agility_signals"),
+                data_at_rest=sub_a.get("data_at_rest"),
+                data_in_motion=sub_a.get("data_in_motion"),
             ),
             rating=sd_a.get("rating", ""),
             rating_cap_reason=sd_a.get("rating_cap_reason"),
         ),
         scan_b=CompareScanSummary(
             scan_id=b, scanned_at=ts_b, score=score_b, subscores=SubScores(
-                hygiene=int(sub_b.get("hygiene", 0)),
-                modern_tls=int(sub_b.get("modern_tls", 0)),
-                identity_trust=int(sub_b.get("identity_trust", 0)),
-                agility_signals=int(sub_b.get("agility_signals", 0)),
-                data_at_rest=int(sub_b.get("data_at_rest", 0)),
-                data_in_motion=int(sub_b.get("data_in_motion", 0)),
+                hygiene=sub_b.get("hygiene"),
+                modern_tls=sub_b.get("modern_tls"),
+                identity_trust=sub_b.get("identity_trust"),
+                agility_signals=sub_b.get("agility_signals"),
+                data_at_rest=sub_b.get("data_at_rest"),
+                data_in_motion=sub_b.get("data_in_motion"),
             ),
             rating=sd_b.get("rating", ""),
             rating_cap_reason=sd_b.get("rating_cap_reason"),

@@ -135,14 +135,29 @@ def test_subscores_unaffected_by_clamp():
     """SCORE-01 regression guard: verify subscores in the returned dict are not
     clamped individually — only the top-level 'score' receives the clamp.
     Each subscore is clamped to [0, 25] by _apply_weighted_impacts; the aggregated total is clamped to [0, 100].
+
+    Phase 188 SCORE-06: `compute_readiness_score({})` (truly zero evidence) now
+    hits the zero-assessed "not computed" branch and returns `score=None` with
+    every subscore `None` (never a fabricated 0-100 to clamp) — that edge case
+    is covered explicitly by tests/test_score_coverage_disclosure.py. This test
+    switches to a minimal-but-nonzero evidence dict (5 endpoints, no DAR/motion/
+    identity signals) so it keeps testing its original intent -- that the
+    per-category clamp in `_apply_weighted_impacts` is independent of the
+    top-level clamp -- against ASSESSED categories, while still allowing
+    unassessed categories (data_at_rest, data_in_motion; see
+    tests/test_score_coverage_disclosure.py for identity_trust's own
+    independent predicate) to be None rather than int.
     """
     from quirk.intelligence.scoring import compute_readiness_score
 
-    # Minimal evidence — all subscores should be within [0, 25]
-    result = compute_readiness_score({})
+    # Minimal-but-nonzero evidence — assessed subscores should be within [0, 25];
+    # unassessed ones (no DAR/motion protocol counts here) render None.
+    result = compute_readiness_score({"totals": {"endpoints": 5, "findings": 0}})
     assert "subscores" in result
     for key, val in result["subscores"].items():
-        assert isinstance(val, int), f"subscore {key} is not int: {val}"
+        if val is None:
+            continue
+        assert isinstance(val, int), f"subscore {key} is not int or None: {val}"
         assert 0 <= val <= 25, f"subscore {key}={val} outside [0, 25]"
     # The aggregated score must be clamped
     assert 0 <= result["score"] <= 100

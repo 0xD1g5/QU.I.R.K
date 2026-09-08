@@ -570,17 +570,33 @@ def test_burndown_surface_modules_do_not_import_scoring() -> None:
 
 def test_scoring_module_does_not_reference_closure_or_burndown() -> None:
     """The comment-stripped source of quirk/intelligence/scoring.py
-    references none of compute_burndown, RemediationItem, closure, burndown
-    — the scoring module never reaches back toward the closure substrate
-    (ADVISORY-01): closure state moving the readiness score would let
-    remediation activity change a client's score with no cryptographic
-    posture change."""
+    references none of compute_burndown, RemediationItem, closure (as a
+    whole word), burndown — the scoring module never reaches back toward the
+    closure substrate (ADVISORY-01): closure state moving the readiness
+    score would let remediation activity change a client's score with no
+    cryptographic posture change.
+
+    Phase 188 SCORE-06: "closure" is matched on a word boundary (not a bare
+    substring) so the unrelated word "disclosure" (as in the
+    `coverage_disclosure` score_raw key, which discloses evidence-assessment
+    coverage, not remediation-closure state) cannot false-positive this
+    guard. `compute_burndown`, `RemediationItem`, and `burndown` stay
+    substring checks -- they are specific, multi-word identifiers unlikely
+    to collide with unrelated vocabulary the way the bare English word
+    "closure" does.
+    """
     import pathlib
+    import re
 
     import quirk.intelligence.scoring as scoring_module
 
     source = _strip_comment_lines(pathlib.Path(scoring_module.__file__).read_text())
-    for forbidden in ("compute_burndown", "RemediationItem", "closure", "burndown"):
+    assert not re.search(r"\bclosure\b", source), (
+        "quirk/intelligence/scoring.py must never reference the word 'closure' "
+        "(ADVISORY-01): closure state moving the score would let remediation "
+        "activity change a client's score with no cryptographic posture change"
+    )
+    for forbidden in ("compute_burndown", "RemediationItem", "burndown"):
         assert forbidden not in source, (
             f"quirk/intelligence/scoring.py must never reference {forbidden!r} "
             f"(ADVISORY-01): closure state moving the score would let "

@@ -101,10 +101,19 @@ def test_dar_score_includes_storage_drivers():
 
 
 def test_dar_storage_unencrypted_ratio_applied():
-    """When unencrypted ratio is high, dar subscore must be lower than baseline (no findings)."""
+    """When unencrypted ratio is high, dar subscore must be lower than baseline (no findings).
+
+    Phase 188 SCORE-06: data_at_rest's assessed-predicate reads protocol_counts (S3 among
+    other DAR literals), not the raw dar_storage_* counts directly -- both fixtures below
+    now populate protocol_counts["S3"] = 4 (4 S3 endpoints were actually scanned in both
+    cases; only the unencrypted-count differs) so data_at_rest is correctly assessed in
+    both, matching how build_evidence_summary always populates protocol_counts alongside
+    the derived counts in the real pipeline.
+    """
     from quirk.intelligence.scoring import compute_readiness_score
     baseline_evidence = {
         "totals": {"endpoints": 4, "findings": 0},
+        "protocol_counts": {"S3": 4},
         "dar_storage_unencrypted_count": 0,
         "dar_storage_aws_managed_count": 0,
         "dar_db_plaintext_count": 0,

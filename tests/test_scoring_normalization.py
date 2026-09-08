@@ -23,11 +23,23 @@ from quirk.intelligence.scoring import compute_readiness_score, _rating
 # ---------------------------------------------------------------------------
 
 def _max_subscore_evidence() -> dict:
-    """Empty evidence — all counters default to zero, all ratios zero,
-    no negative impacts ⇒ _apply_weighted_impacts returns score_cap=25 per category.
+    """All counters default to zero, all ratios zero, no negative impacts ⇒
+    _apply_weighted_impacts returns score_cap=25 per category.
     Result: all six subscores = 25, sum = 150 → int(round(150/1.5)) = 100, EXCELLENT.
+
+    Phase 188 SCORE-06: truly empty evidence ({}) now hits the zero-assessed
+    "not computed" branch (domains_assessed == 0), which is NOT what this test
+    is verifying. protocol_counts gains one representative literal per
+    predicate this evidence needs to be considered "fully assessed"
+    (POSTGRESQL for data_at_rest, KAFKA-PLAIN for data_in_motion, KERBEROS for
+    identity_trust; hygiene/modern_tls/agility are assessed by endpoints > 0
+    alone) while leaving every impact counter at its zero default, so all six
+    subscores are still cleanly 25 with domains_assessed == 6.
     """
-    return {}
+    return {
+        "totals": {"endpoints": 1, "findings": 0},
+        "protocol_counts": {"POSTGRESQL": 1, "KAFKA-PLAIN": 1, "KERBEROS": 1},
+    }
 
 
 def _zero_subscore_evidence() -> dict:
@@ -43,7 +55,18 @@ def _zero_subscore_evidence() -> dict:
         "scan_error": {"rate": 1.0},
         "plaintext_http_count": 1,
         "http_on_tls_port_count": 1,
-        "protocol_counts": {"UNKNOWN": 100},
+        # Phase 188 SCORE-06: one representative protocol_counts literal per
+        # assessed-predicate (KERBEROS/SAML/DNSSEC for identity_trust,
+        # POSTGRESQL for data_at_rest, KAFKA-PLAIN for data_in_motion) so all
+        # six categories are assessed and their negative impacts (set below)
+        # actually reach the returned subscore instead of being excluded as
+        # unassessed.
+        "protocol_counts": {
+            "UNKNOWN": 100,
+            "KERBEROS": 1, "SAML": 1, "DNSSEC": 1,
+            "POSTGRESQL": 1,
+            "KAFKA-PLAIN": 1,
+        },
         "finding_severity_counts": {"HIGH": 100, "CRITICAL": 100, "LOW": 100},
         "certificate_observations": {
             "expired_count": 1,
@@ -155,7 +178,16 @@ def test_overall_score_canonical_example_120_to_80(monkeypatch):
     import quirk.intelligence.scoring as scoring_module
     monkeypatch.setattr(scoring_module, "_apply_weighted_impacts", _patched_apply)
 
-    result = compute_readiness_score({})
+    # Phase 188 SCORE-06: compute_readiness_score({}) now hits the
+    # zero-assessed "not computed" branch (domains_assessed == 0), which
+    # would make this test vacuous. Supply the same minimal
+    # fully-assessed evidence as _max_subscore_evidence() so all six
+    # categories are assessed (domains_assessed == 6, divisor == 1.5,
+    # identical to the pre-188 fixed-divisor formula this test locks).
+    result = compute_readiness_score({
+        "totals": {"endpoints": 1, "findings": 0},
+        "protocol_counts": {"POSTGRESQL": 1, "KAFKA-PLAIN": 1, "KERBEROS": 1},
+    })
 
     assert result["score"] == 80, (
         f"Canonical sum 25+25+23+3+25+19=120: expected int(round(120/1.5))=80, "

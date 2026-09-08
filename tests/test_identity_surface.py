@@ -146,9 +146,19 @@ def _tls_baseline_ep() -> _Ep:
 # ---------------------------------------------------------------------------
 
 def _base_evidence_with_identity(**overrides) -> dict:
+    # Phase 188 SCORE-06: identity_trust's assessed-predicate reads
+    # protocol_counts[KERBEROS/SAML/DNSSEC] (or certs_observed) -- set to 1
+    # here so identity_trust is assessed whenever this fixture is used,
+    # matching the real pipeline where build_evidence_summary always
+    # increments protocol_counts alongside the identity_weak_etype_count /
+    # saml_weak_signing_count / dnssec_weak_algo_count counters these tests
+    # exercise directly.
     base = {
         "totals": {"endpoints": 5, "findings": 0},
-        "protocol_counts": {"TLS": 1, "HTTP": 0, "SSH": 0, "UNKNOWN": 0},
+        "protocol_counts": {
+            "TLS": 1, "HTTP": 0, "SSH": 0, "UNKNOWN": 0,
+            "KERBEROS": 1, "SAML": 1, "DNSSEC": 1,
+        },
         "plaintext_http_count": 0,
         "http_on_tls_port_count": 0,
         "mtls_present_count": 0,

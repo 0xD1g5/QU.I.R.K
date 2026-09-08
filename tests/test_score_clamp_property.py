@@ -1,7 +1,16 @@
-"""Property test: compute_readiness_score() always returns score in [0, 100].
+"""Property test: compute_readiness_score() always returns score in [0, 100], or
+None when zero domains were assessed.
 
 Uses seeded random.Random(42) for 1,000 randomised evidence dicts.
 Per CONTEXT.md D-03.
+
+Phase 188 SCORE-06: this fixture's evidence dict never populates any DAR/
+identity/motion protocol_counts keys, so those three categories are always
+unassessed here; when `endpoints == 0` too, ALL six categories are unassessed
+and `compute_readiness_score()` now returns `score=None` / `rating=
+"NOT_ASSESSED"` (the locked "never fabricate 0/100" edge case) instead of a
+numeric score. The bound check below allows that explicit not-computed
+sentinel in addition to the numeric range.
 """
 from __future__ import annotations
 
@@ -74,7 +83,10 @@ def test_score_always_bounded_1000_iterations():
         ev = _random_evidence(rng)
         result = compute_readiness_score(ev)
         score = result["score"]
-        assert 0 <= score <= 100, (
+        assert score is None or 0 <= score <= 100, (
             f"Iteration {i}: score={score} out of bounds. "
             f"evidence snapshot: endpoints={ev['totals']['endpoints']}"
         )
+        if score is None:
+            assert result["domains_assessed"] == 0
+            assert result["rating"] == "NOT_ASSESSED"

@@ -79,9 +79,15 @@ def test_compute_readiness_score_subscores_count_unchanged():
 
 
 def test_compute_readiness_score_vault_impacts_data_at_rest():
-    """High vault count drops the data_at_rest subscore."""
-    ev_clean = {"totals": {"endpoints": 10, "findings": 0}, "dar_vault_weak_count": 0}
-    ev_dirty = {"totals": {"endpoints": 10, "findings": 0}, "dar_vault_weak_count": 5}
+    """High vault count drops the data_at_rest subscore.
+
+    Phase 188 SCORE-06: data_at_rest's assessed-predicate reads protocol_counts (VAULT
+    among other DAR literals). Both fixtures populate protocol_counts["VAULT"] = 10 (10
+    Vault endpoints actually scanned in both cases; only dar_vault_weak_count differs) so
+    data_at_rest is assessed in both and this remains an apples-to-apples comparison.
+    """
+    ev_clean = {"totals": {"endpoints": 10, "findings": 0}, "protocol_counts": {"VAULT": 10}, "dar_vault_weak_count": 0}
+    ev_dirty = {"totals": {"endpoints": 10, "findings": 0}, "protocol_counts": {"VAULT": 10}, "dar_vault_weak_count": 5}
     s_clean = compute_readiness_score(ev_clean)["subscores"]["data_at_rest"]
     s_dirty = compute_readiness_score(ev_dirty)["subscores"]["data_at_rest"]
     assert s_dirty < s_clean

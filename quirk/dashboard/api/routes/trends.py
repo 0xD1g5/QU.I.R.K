@@ -224,7 +224,10 @@ def get_trends_timeline(
         points.append(
             TrendSessionPoint(
                 session_ts=stamp_utc_iso(ts),
-                score=int(score_dict["score"]),
+                # Phase 188 SCORE-06: score_dict["score"] may be None (zero domains
+                # assessed) -- minimal crash-prevention fix; coverage-aware
+                # rendering of this state is plans 188-03/188-04's job.
+                score=int(score_dict["score"] or 0),
                 subscores=sub,
                 finding_counts=FindingCounts(
                     high=counts.get("high", 0),

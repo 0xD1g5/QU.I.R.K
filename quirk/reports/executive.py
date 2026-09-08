@@ -271,7 +271,11 @@ def build_exec_markdown(
         lines.append("|----------|-------|--------|")
         for key, label in _SUBSCORE_LABELS:
             lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
-        raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+        # Phase 188 SCORE-06: subscores.get(k) is None for an unassessed category
+        # (exclude-and-rescale) -- `or 0` prevents a TypeError here. Minimal
+        # crash-prevention fix only; the "÷ 1.5" literal below is Pitfall 2's
+        # documented divisor-literal rework, owned by plans 188-03/188-04.
+        raw_sum = sum((subscores.get(k) or 0) for k, _ in _SUBSCORE_LABELS)
         lines.append("")
         lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
         # D-09 / 184.4-06: same cap-reason annotation as the exec_content branch,

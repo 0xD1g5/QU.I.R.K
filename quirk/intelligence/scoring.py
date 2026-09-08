@@ -1,20 +1,56 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reason
+
+# Phase 188 SCORE-06 — scoring formula version marker. Bumped whenever the
+# aggregation shape changes (exclude-and-rescale replaces the fixed / 1.5
+# rollup). NO back-migration of stored historical scores (CONTEXT.md locked
+# decision) — this marker lets every report surface disclose that pre-5.20
+# scores are not comparable to post-5.20 scores.
+SCORING_VERSION = "2.0"
+SCORING_VERSION_NOTE = "scoring v2 — not comparable with pre-5.20 scores"
+
+# Phase 188 SCORE-06 RQ-1 — the email/broker data-in-motion protocol literals
+# that quirk/intelligence/evidence.py's _PROTOCOL_KEYS was widened to count
+# (same phase). This tuple is asserted to be a subset of evidence._PROTOCOL_KEYS
+# by tests/test_score_coverage_disclosure.py so the two lists cannot drift
+# apart silently.
+_MOTION_PROTOCOL_KEYS: Tuple[str, ...] = (
+    "SMTP-STARTTLS", "SMTPS", "IMAPS", "IMAP-STARTTLS", "POP3S", "POP3-STARTTLS",
+    "KAFKA-PLAIN", "KAFKA-TLS", "AMQP-PLAIN", "AMQPS", "AMQPS/AZURE-SERVICEBUS",
+    "HTTPS/AWS-SQS", "REDIS-PLAIN", "REDIS-TLS",
+)
+
+# Phase 188 SCORE-06 — the DAR protocol literals data_at_rest's assessed-predicate
+# reads. All 7 were already present in _PROTOCOL_KEYS before this phase.
+_DAR_PROTOCOL_KEYS: Tuple[str, ...] = (
+    "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
+)
+
+# Phase 188 SCORE-06 — the non-certificate identity protocol literals identity_trust's
+# assessed-predicate reads, in addition to certs_observed > 0.
+_IDENTITY_PROTOCOL_KEYS: Tuple[str, ...] = ("KERBEROS", "SAML", "DNSSEC")
 
 # SCORE_WEIGHTS invariant (D-04, WR-06 — Phase 73 documentation, NOT normalization)
 # ----------------------------------------------------------------------------
 # These values are ABSOLUTE per-ratio coefficients, NOT probabilities, NOT
 # a normalized PMF. Their sum is 275.0 BY DESIGN (Phase 83 rebalance).
 #
-# Scoring contract (v4.10.1, Phase 86 D-01):
+# Scoring contract (v4.10.1, Phase 86 D-01; rescale updated Phase 188 SCORE-06):
 #   Each of the six categories is scored on a 0-25 scale via
-#   `_apply_weighted_impacts(impacts, score_cap=25.0)`.  The overall
-#   readiness score is then:
-#       total_score = int(round((sum of six 0-25 subscores) / 1.5))
-#   mapping the 0-150 subscore range to 0-100, fed through `_rating()`.
+#   `_apply_weighted_impacts(impacts, score_cap=25.0)`.  A category with no
+#   evidence to assess (zero endpoints, zero DAR/motion protocol counts, zero
+#   identity signals -- see the `_*_assessed()` predicates below) is EXCLUDED
+#   from the headline rather than contributing a full 25/25. The overall
+#   readiness score is then exclude-and-rescale:
+#       total_score = int(round(sum(assessed 0-25 subscores) / (domains_assessed * 25) * 100))
+#   with `domains_assessed` derived from the same evidence counters this
+#   function already reads (never a hand-maintained flag). When
+#   domains_assessed == 0, `total_score` is None ("not computed") rather than
+#   a fabricated 0 or 100 -- see the zero-assessed branch below. `_rating()`
+#   is only invoked on a non-None score.
 #
 # Any contributor adding, removing, or modifying a weight value MUST update
 # `tests/test_score_weights_invariant.py` to match the new expected sum.
@@ -117,6 +153,34 @@ def _apply_weighted_impacts(
     score = int(round(clamped))
     rounded_impacts = [(label, int(round(points))) for label, points in impacts if int(round(points)) != 0]
     return score, rounded_impacts
+
+
+# Phase 188 SCORE-06 — per-category "was this domain assessed at all" predicates.
+# Each reads ONLY mappings/values already destructured at the top of
+# compute_readiness_score() -- no new evidence.py bookkeeping fields (per
+# CONTEXT.md's locked "derived, not hand-maintained" decision). Do NOT use
+# `denom == 0` as a predicate anywhere: `denom` is clamped to 1 below and can
+# never be zero by construction (RESEARCH Anti-Patterns).
+
+
+def _endpoints_assessed(endpoints: int) -> bool:
+    """hygiene / modern_tls / agility_signals all read endpoint-wide ratios
+    against the same `denom` -- they were assessed iff any endpoint exists."""
+    return endpoints > 0
+
+
+def _identity_assessed(cert_obs: Mapping[str, Any], protocol_counts: Mapping[str, Any]) -> bool:
+    if _as_int(cert_obs.get("certs_observed", 0)) > 0:
+        return True
+    return sum(_as_int(protocol_counts.get(k, 0)) for k in _IDENTITY_PROTOCOL_KEYS) > 0
+
+
+def _dar_assessed(protocol_counts: Mapping[str, Any]) -> bool:
+    return sum(_as_int(protocol_counts.get(k, 0)) for k in _DAR_PROTOCOL_KEYS) > 0
+
+
+def _motion_assessed(protocol_counts: Mapping[str, Any]) -> bool:
+    return sum(_as_int(protocol_counts.get(k, 0)) for k in _MOTION_PROTOCOL_KEYS) > 0
 
 
 def compute_readiness_score(
@@ -294,23 +358,60 @@ def compute_readiness_score(
     ]
     motion_score, motion_drivers = _apply_weighted_impacts(motion_impacts)
 
-    total_score = int(round(
-        (hygiene_score + modern_tls_score + identity_trust_score +
-         agility_score + dar_score + motion_score) / 1.5
-    ))
-    numeric_band = _rating(total_score)
+    # Phase 188 SCORE-06 — exclude-and-rescale. A category with no assessable
+    # evidence contributes neither 25 nor 0; the headline divides only by the
+    # domains that were actually assessed. `domains_total`/`domains_assessed`
+    # are ALWAYS derived from `len(category_table)`, never a hardcoded 6, so a
+    # future 7th category cannot silently break this math.
+    endpoints_assessed = _endpoints_assessed(endpoints)
+    identity_assessed = _identity_assessed(cert_obs, protocol_counts)
+    dar_assessed = _dar_assessed(protocol_counts)
+    motion_assessed = _motion_assessed(protocol_counts)
 
-    # Phase 184.4 D-01/D-02/D-03/D-06/D-09: severity floor on the BAND only.
-    # The number (`total_score`) never moves here. Any open CRITICAL finding
-    # caps the emitted band at FAIR (never a graduated ladder — see
-    # `cap_band_for_severity()`). This is orthogonal to, and does NOT
-    # double-count, the `high_impact`/`agility_high_impact_ratio` contribution
-    # above (D-03): that path already moved `total_score` down; this path
-    # only changes the label attached to it. `critical_count` is read from
-    # the `sev` mapping already in scope above (D-06) — no new parameter.
-    critical_count = max(0, _as_int(sev.get("CRITICAL", 0)))
-    rating = cap_band_for_severity(numeric_band, critical_count)
-    rating_cap_reason = cap_reason(numeric_band, rating, critical_count, total_score)
+    category_table: Dict[str, Tuple[int, bool]] = {
+        "hygiene": (hygiene_score, endpoints_assessed),
+        "modern_tls": (modern_tls_score, endpoints_assessed),
+        "identity_trust": (identity_trust_score, identity_assessed),
+        "agility_signals": (agility_score, endpoints_assessed),
+        "data_at_rest": (dar_score, dar_assessed),
+        "data_in_motion": (motion_score, motion_assessed),
+    }
+    domains_total = len(category_table)
+    assessed_scores = {name: score for name, (score, ok) in category_table.items() if ok}
+    domains_assessed = len(assessed_scores)
+
+    total_score: Optional[int]
+    score_divisor: Optional[float]
+    rating_cap_reason: Optional[str]
+
+    if domains_assessed == 0:
+        # Phase 181 honest-absence precedent: never fabricate a 0/100 headline
+        # for a scan that assessed nothing. `denom` above is clamped to 1 and
+        # therefore can never trigger a ZeroDivisionError here anyway, but this
+        # branch also skips `band_for_score`/`cap_band_for_severity` entirely
+        # (the latter raises ValueError for a band outside BAND_ORDER).
+        total_score = None
+        score_divisor = None
+        rating = "NOT_ASSESSED"
+        rating_cap_reason = None
+    else:
+        score_divisor = domains_assessed * 25 / 100
+        total_score = int(round(sum(assessed_scores.values()) / (domains_assessed * 25) * 100))
+        numeric_band = _rating(total_score)
+
+        # Phase 184.4 D-01/D-02/D-03/D-06/D-09: severity floor on the BAND only.
+        # The number (`total_score`) never moves here. Any open CRITICAL finding
+        # caps the emitted band at FAIR (never a graduated ladder — see
+        # `cap_band_for_severity()`). This is orthogonal to, and does NOT
+        # double-count, the `high_impact`/`agility_high_impact_ratio` contribution
+        # above (D-03): that path already moved `total_score` down; this path
+        # only changes the label attached to it. `critical_count` is read from
+        # the `sev` mapping already in scope above (D-06) — no new parameter.
+        critical_count = max(0, _as_int(sev.get("CRITICAL", 0)))
+        rating = cap_band_for_severity(numeric_band, critical_count)
+        rating_cap_reason = cap_reason(numeric_band, rating, critical_count, total_score)
+
+    coverage_disclosure = f"{domains_assessed} of {domains_total} domains assessed"
 
     all_drivers: List[Tuple[str, int]] = (
         hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers + dar_drivers + motion_drivers
@@ -318,17 +419,23 @@ def compute_readiness_score(
     all_drivers_sorted = sorted(all_drivers, key=lambda x: (-abs(x[1]), x[0]))
     top_drivers = [{"reason": reason, "points": points} for reason, points in all_drivers_sorted[:5]]
 
+    # Unassessed categories render None (not their raw 0-25 number) so DOCX/HTML
+    # `subscores.get(key, "—")`-style lookups render an honest em dash instead
+    # of a misleading number for a domain that was never assessed.
+    subscores: Dict[str, Optional[int]] = {
+        name: (score if ok else None) for name, (score, ok) in category_table.items()
+    }
+
     return {
         "score": total_score,
         "rating": rating,
         "rating_cap_reason": rating_cap_reason,
-        "subscores": {
-            "hygiene": hygiene_score,
-            "modern_tls": modern_tls_score,
-            "identity_trust": identity_trust_score,
-            "agility_signals": agility_score,
-            "data_at_rest": dar_score,
-            "data_in_motion": motion_score,
-        },
+        "subscores": subscores,
         "drivers": top_drivers,
+        "domains_assessed": domains_assessed,
+        "domains_total": domains_total,
+        "score_divisor": score_divisor,
+        "coverage_disclosure": coverage_disclosure,
+        "scoring_version": SCORING_VERSION,
+        "scoring_version_note": SCORING_VERSION_NOTE,
     }

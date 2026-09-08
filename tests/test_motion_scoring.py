@@ -158,14 +158,24 @@ def test_subscores_includes_data_in_motion():
 
 
 def test_motion_subscore_lowers_with_findings():
-    """SC-1 / D-09 — relative assertion only (no absolute equality per A3)."""
+    """SC-1 / D-09 — relative assertion only (no absolute equality per A3).
+
+    Phase 188 SCORE-06: data_in_motion's assessed-predicate reads protocol_counts
+    (KAFKA-PLAIN among other motion literals) -- both fixtures populate
+    protocol_counts["KAFKA-PLAIN"] = 4 (4 broker endpoints actually scanned in both
+    cases; only motion_broker_plaintext_count differs) so data_in_motion is assessed
+    in both, matching how build_evidence_summary always populates protocol_counts
+    alongside the derived counts in the real pipeline.
+    """
     from quirk.intelligence.scoring import compute_readiness_score
     baseline = compute_readiness_score({
         "totals": {"endpoints": 4, "findings": 0},
+        "protocol_counts": {"KAFKA-PLAIN": 4},
         "motion_broker_plaintext_count": 0,
     }, profile="balanced")
     bad = compute_readiness_score({
         "totals": {"endpoints": 4, "findings": 2},
+        "protocol_counts": {"KAFKA-PLAIN": 4},
         "motion_broker_plaintext_count": 2,
     }, profile="balanced")
     assert bad["subscores"]["data_in_motion"] < baseline["subscores"]["data_in_motion"]
@@ -208,10 +218,15 @@ def test_legacy_evidence_no_motion_keys_full_credit():
 
 def test_profile_strict_increases_motion_penalty():
     """D-08 — strict profile (1.4×) lowers data_in_motion more than balanced
-    when motion counters are present."""
+    when motion counters are present.
+
+    Phase 188 SCORE-06: protocol_counts["KAFKA-PLAIN"] = 4 makes data_in_motion
+    assessed (see test_motion_subscore_lowers_with_findings for the full rationale).
+    """
     from quirk.intelligence.scoring import compute_readiness_score
     evidence = {
         "totals": {"endpoints": 4, "findings": 2},
+        "protocol_counts": {"KAFKA-PLAIN": 4},
         "motion_broker_plaintext_count": 2,
     }
     balanced = compute_readiness_score(evidence, profile="balanced")
