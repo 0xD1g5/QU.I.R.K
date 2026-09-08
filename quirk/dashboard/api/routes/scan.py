@@ -1661,21 +1661,31 @@ def get_latest_scan(
 
     subscores_raw = score_raw.get("subscores", {})
     score = ScoreData(
-        score=score_raw.get("score", 0),
+        score=score_raw.get("score"),
         rating=score_raw.get("rating", "POOR"),
         # SCORE-04 / D-09/D-10 (184.4): pass the cap reason through; None means
         # not capped. Field-by-field construction means an omission here would
         # silently drop it (RESEARCH Pitfall 1) — do not remove.
         rating_cap_reason=score_raw.get("rating_cap_reason"),
         subscores=SubScores(
-            hygiene=subscores_raw.get("hygiene", 0),
-            modern_tls=subscores_raw.get("modern_tls", 0),
-            identity_trust=subscores_raw.get("identity_trust", 0),
-            agility_signals=subscores_raw.get("agility_signals", 0),
-            data_at_rest=subscores_raw.get("data_at_rest", 0),
-            data_in_motion=subscores_raw.get("data_in_motion", 0),   # NEW — fixes silent drop
+            hygiene=subscores_raw.get("hygiene"),
+            modern_tls=subscores_raw.get("modern_tls"),
+            identity_trust=subscores_raw.get("identity_trust"),
+            agility_signals=subscores_raw.get("agility_signals"),
+            data_at_rest=subscores_raw.get("data_at_rest"),
+            data_in_motion=subscores_raw.get("data_in_motion"),   # NEW — fixes silent drop
         ),
         drivers=score_raw.get("drivers", []),
+        # Phase 188 SCORE-06 (RQ-3): coverage/version disclosure keys, passed
+        # through from compute_readiness_score()'s score_raw dict so the
+        # executive dashboard page can render "N of 6 domains assessed" next
+        # to the overall gauge (188-04 Task 2).
+        domains_assessed=score_raw.get("domains_assessed"),
+        domains_total=score_raw.get("domains_total"),
+        score_divisor=score_raw.get("score_divisor"),
+        coverage_disclosure=score_raw.get("coverage_disclosure"),
+        scoring_version=score_raw.get("scoring_version"),
+        scoring_version_note=score_raw.get("scoring_version_note"),
     )
 
     confidence = ConfidenceData(
@@ -1830,25 +1840,32 @@ def compare_scans(
     evidence_b = build_evidence_summary(eps_b, [f.model_dump() for f in findings_b])
     sd_a = compute_readiness_score(evidence_a)
     sd_b = compute_readiness_score(evidence_b)
-    # Phase 188 SCORE-06: sd_a["score"]/subscores may be None (zero domains
-    # assessed / a specific category unassessed) -- `or 0` is a minimal
-    # crash-prevention fix here (delta arithmetic against an unassessed side
-    # degrades to "no delta contribution" rather than raising). Rendering the
-    # coverage-aware "not computed" state on this comparison surface properly
-    # is plans 188-03/188-04's job, not this plan's (scan.py is not in this
-    # plan's <files>).
-    score_a = int(sd_a["score"] or 0)
-    score_b = int(sd_b["score"] or 0)
+    # Phase 188 SCORE-06 / 188-04 Task 1 (RQ-3): sd_a["score"]/subscores may be
+    # None (zero domains assessed / a specific category unassessed). Both
+    # CompareScanSummary.score and SubscoreDelta's fields are now
+    # Optional[int] -- an unassessed side yields an explicit null delta
+    # rather than a coerced-to-zero fabrication (mirrors
+    # quirk/intelligence/trends.py's current_score/previous_score/score_delta
+    # None-guard pattern).
+    score_a = sd_a["score"]
+    score_b = sd_b["score"]
     sub_a = sd_a["subscores"]  # dict: {"hygiene": int|None, "modern_tls": int|None, ...}
     sub_b = sd_b["subscores"]
 
+    def _delta(key: str) -> int | None:
+        va = sub_a.get(key)
+        vb = sub_b.get(key)
+        if va is None or vb is None:
+            return None
+        return int(va) - int(vb)
+
     subscore_deltas = SubscoreDelta(
-        hygiene=int(sub_a.get("hygiene") or 0) - int(sub_b.get("hygiene") or 0),
-        modern_tls=int(sub_a.get("modern_tls") or 0) - int(sub_b.get("modern_tls") or 0),
-        identity_trust=int(sub_a.get("identity_trust") or 0) - int(sub_b.get("identity_trust") or 0),
-        agility_signals=int(sub_a.get("agility_signals") or 0) - int(sub_b.get("agility_signals") or 0),
-        data_at_rest=int(sub_a.get("data_at_rest") or 0) - int(sub_b.get("data_at_rest") or 0),
-        data_in_motion=int(sub_a.get("data_in_motion") or 0) - int(sub_b.get("data_in_motion") or 0),
+        hygiene=_delta("hygiene"),
+        modern_tls=_delta("modern_tls"),
+        identity_trust=_delta("identity_trust"),
+        agility_signals=_delta("agility_signals"),
+        data_at_rest=_delta("data_at_rest"),
+        data_in_motion=_delta("data_in_motion"),
     )
 
     # Finding diff: (host, protocol, severity) composite key (D-07, Pattern 3)
@@ -1936,7 +1953,7 @@ def compare_scans(
             rating=sd_b.get("rating", ""),
             rating_cap_reason=sd_b.get("rating_cap_reason"),
         ),
-        score_delta=score_a - score_b,
+        score_delta=(score_a - score_b) if score_a is not None and score_b is not None else None,
         subscore_deltas=subscore_deltas,
         added_findings=added_findings,
         removed_findings=removed_findings,

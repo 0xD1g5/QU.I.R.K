@@ -558,7 +558,10 @@ def _zero_subscores() -> "SubScores":
 class CompareScanSummary(BaseModel):
     scan_id: str
     scanned_at: UTCDateTime
-    score: int
+    # Phase 188 SCORE-06 (RQ-3 schema-compatibility check): None means the
+    # scan's score was not computed (zero domains assessed) -- never a
+    # fabricated 0.
+    score: Optional[int] = None
     subscores: SubScores = Field(default_factory=_zero_subscores)
     # SCORE-04 / D-07 (184.4-07): per-side rating + optional cap reason, so
     # /compare can prove the two sides' bands independently — a shared or
@@ -569,12 +572,15 @@ class CompareScanSummary(BaseModel):
 
 
 class SubscoreDelta(BaseModel):
-    hygiene: int = 0
-    modern_tls: int = 0
-    identity_trust: int = 0
-    agility_signals: int = 0
-    data_at_rest: int = 0
-    data_in_motion: int = 0
+    # Phase 188 SCORE-06 (RQ-3 schema-compatibility check): None means the
+    # delta could not be computed because the category was unassessed on
+    # at least one side being compared -- never a fabricated 0 delta.
+    hygiene: Optional[int] = None
+    modern_tls: Optional[int] = None
+    identity_trust: Optional[int] = None
+    agility_signals: Optional[int] = None
+    data_at_rest: Optional[int] = None
+    data_in_motion: Optional[int] = None
 
 
 class CompareFinding(BaseModel):
@@ -592,7 +598,9 @@ class CompareEndpoint(BaseModel):
 class CompareResponse(BaseModel):
     scan_a: CompareScanSummary
     scan_b: CompareScanSummary
-    score_delta: int
+    # Phase 188 SCORE-06 (RQ-3 schema-compatibility check): None means one or
+    # both sides had no computed score -- never a fabricated 0 delta.
+    score_delta: Optional[int] = None
     subscore_deltas: SubscoreDelta
     added_findings: List[CompareFinding] = []
     removed_findings: List[CompareFinding] = []
