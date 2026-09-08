@@ -26,6 +26,7 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 | 999.96 | P2 | Ten identity/DaR connectors unreachable from dashboard; every skip silent (observability half ≈ P1) | Filed 2026-09-07; feature half is tier 2 of 999.104 |
 | **999.104** | P2 | CLI config ↔ dashboard parity — scan form exposes 6 knobs vs ~138 YAML fields (`scan-new.tsx:19-29` vs `quirk/config.py`); structural parent of 999.96's feature half | Filed 2026-09-08 by PM at v5.21 boundary; tiered shape + feasibility in `.planning/backlog/999.104-cli-config-dashboard-parity/IDEA.md` |
 | 999.100 | P2 | Executive Verdict layer — already implemented on `origin/UX-Updates`, flag-gated, verified against main | Cheapest real win in the UX set |
+| 999.105 | P3 | Customizable reporting engine — operator-controlled composition/templates/branding on top of the existing `ReportContent` → three-renderer split | Filed 2026-09-08 by PM during Phase 191; three-tier shape + feasibility in `.planning/backlog/999.105-customizable-reporting-engine/IDEA.md`; interacts with BACK-51 and 999.101/102 |
 | 999.98 | P2 | Persist cert SPKI fingerprint per endpoint — enabler for key-reuse detection | Hard prerequisite of 999.99 |
 | 999.99 | P2 | Quantum Exposure Map (attack-path view) — operator-endorsed | **Milestone-sized**, blocked by 999.98 |
 | 999.101 / BACK-07 | P3 | Migration Roadmap NOW/NEXT/LATER re-frame with score-lift | Same item filed twice, 4 months apart |
