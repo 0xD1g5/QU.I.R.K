@@ -79,8 +79,8 @@ def _broker_target_hosts(cfg) -> list:
         if not candidate:
             continue
         if candidate.startswith("["):
-            close = candidate.find("]")
-            host = candidate[1:close].strip() if close != -1 else candidate
+            rbracket_idx = candidate.find("]")
+            host = candidate[1:rbracket_idx].strip() if rbracket_idx != -1 else candidate
         elif candidate.count(":") == 1:
             host = candidate.split(":", 1)[0].strip()
         else:

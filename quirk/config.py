@@ -589,13 +589,13 @@ def _parse_host_port(entry: str, *, field_name: str) -> Tuple[str, Optional[int]
         )
 
     if raw.startswith("["):
-        close = raw.find("]")
-        if close == -1:
+        rbracket_idx = raw.find("]")
+        if rbracket_idx == -1:
             raise ValueError(
                 f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
             )
-        host = raw[1:close].strip()
-        remainder = raw[close + 1:]
+        host = raw[1:rbracket_idx].strip()
+        remainder = raw[rbracket_idx + 1:]
         if not host:
             raise ValueError(
                 f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
