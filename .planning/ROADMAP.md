@@ -136,7 +136,15 @@ has real data to build on.
      discovery.
   4. A round-trip sensor-push integration test proves the SPKI field is never silently dropped on
      the merge path (guards against the v5.8 B-01 recurrence).
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 191-01-PLAN.md — cert_spki_fingerprint column, additive migration, SPKI SHA-256 capture at both TLS parse sites
+- [ ] 191-02-PLAN.md — sensor push projections + end-to-end round-trip test (v5.8 B-01 guard)
+- [ ] 191-03-PLAN.md — compute_key_reuse_clusters GROUP BY helper + advisory-only score firewall
+- [ ] 191-04-PLAN.md — ReportContent.key_reuse field, non-fatal loader, CLI markdown Key Reuse section
+- [ ] 191-05-PLAN.md — HTML + DOCX key-reuse sections and the three-surface parity gate
+- [ ] 191-06-PLAN.md — docs, UAT Series 191, Obsidian sync, human verification checkpoint
 
 ### Phase 192: Config Visibility + Skip Observability
 **Goal**: Operator can see exactly what a scan will run with before submitting it, and exactly what
