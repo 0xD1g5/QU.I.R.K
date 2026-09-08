@@ -839,7 +839,12 @@ def render_html_report(
         coverage_disclosure = exec_content.coverage_disclosure
         scoring_version = exec_content.scoring_version
     else:
-        total_score = score.get("score", 0)  # WR-06: canonical key is "score", not "total"
+        # WR-06: canonical key is "score", not "total". 188 review CR-03: the
+        # key is present with value None for a not-computed (zero-assessed)
+        # SCORE-06 dict — dict.get's default never fires, so total_score can be
+        # None here and every band derivation below must guard it (mirroring
+        # executive.py's compat branch, which handles None correctly).
+        total_score = score.get("score")
         # Phase 184.4 D-05: severity-aware band via the shared module — the old
         # severity-blind band helper is deleted outright. Cap using CRITICAL findings counted directly from
         # `findings`, NOT from the `sev_counts` display tally built below (which skips
@@ -855,13 +860,21 @@ def render_html_report(
         # two CRITICAL counting bases agree, and a source scan that fails on any new,
         # undispositioned coverage_gap site). Do not weaken that gate to make a new
         # emitter pass; state the new emitter's severity in its ledger entry instead.
-        numeric_band = band_for_score(total_score)
-        _critical_count = sum(
-            1 for f in (findings or [])
-            if str(f.get("severity", "INFO")).upper() == "CRITICAL"
-        )
-        band = cap_band_for_severity(numeric_band, _critical_count)
-        rating_cap_reason = cap_reason(numeric_band, band, _critical_count, total_score)
+        if total_score is None:
+            # 188 review CR-03: band_for_score(None) raises TypeError. A
+            # not-computed score has no numeric band and no cap — surface the
+            # producer's own rating (NOT_ASSESSED), matching executive.py's
+            # compat branch and the template's `total_score is none` support.
+            band = str(score.get("rating", "NOT_ASSESSED"))
+            rating_cap_reason = None
+        else:
+            numeric_band = band_for_score(total_score)
+            _critical_count = sum(
+                1 for f in (findings or [])
+                if str(f.get("severity", "INFO")).upper() == "CRITICAL"
+            )
+            band = cap_band_for_severity(numeric_band, _critical_count)
+            rating_cap_reason = cap_reason(numeric_band, band, _critical_count, total_score)
         # Phase 188 SCORE-06 / 188-03: backward-compat path — `score` is the
         # writer.py compat dict (or a canonical score_raw dict from an external
         # caller); both carry these keys under the same names (RQ-1: not
@@ -914,7 +927,12 @@ def render_html_report(
     else:
         # Backward-compat path: no exec_content — source raw dicts from score/roadmap_items.
         # WR-05: keep this path fail-closed with the same D-06 guard the model path runs.
-        assert_congruent(band, findings or [])
+        # 188 review CR-03: explicit not-computed bypass, mirroring
+        # build_exec_content's NOT_ASSESSED skip — a not-computed score has no
+        # real band to contradict severity counts. (_check_congruence happens
+        # to no-op on an unknown band, but relying on that would be implicit.)
+        if total_score is not None:
+            assert_congruent(band, findings or [])
         subscores_ctx = score.get("subscores", {})
         narrative_lead = None
         narrative_drivers = []

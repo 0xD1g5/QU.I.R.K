@@ -272,6 +272,39 @@ def test_not_computed_never_renders_zero_over_100_across_surfaces(tmp_path):
         )
 
 
+def test_html_compat_path_renders_not_computed_score_without_typeerror(tmp_path):
+    """188 review CR-03: html_renderer's backward-compat branch (exec_content
+    is None) must handle a SCORE-06 dict with score=None — pre-fix it called
+    band_for_score(None) and crashed with TypeError, so the template's own
+    `total_score is none` support was unreachable from this path."""
+    from quirk.reports.html_renderer import render_html_report
+
+    cfg = _make_minimal_cfg(str(tmp_path))
+    html_path = os.path.join(str(tmp_path), "compat_notcomputed.html")
+    render_html_report(  # must not raise
+        path=html_path,
+        cfg=cfg,
+        endpoints=[],
+        findings=[],
+        score=dict(_ZERO_ASSESSED_SCORE_RAW),
+        conf={"confidence": 60, "confidence_factors": {}},
+        roadmap_items=[],
+        exec_content=None,
+    )
+    html_output = open(html_path, encoding="utf-8").read()
+    assert NOT_COMPUTED_STATEMENT in html_output, (
+        "compat path did not render the once-composed not-computed statement."
+    )
+    assert '<div class="score-value">0</div>' not in html_output, (
+        "compat path fabricated a 0 score-value for a not-computed score."
+    )
+    # NOTE: the template's not-computed score-card deliberately renders the
+    # coverage disclosure + statement INSTEAD of a band, so no NOT_ASSESSED
+    # band assertion here — the crash-free render plus the two assertions
+    # above are the CR-03 contract.
+    assert _ZERO_ASSESSED_SCORE_RAW["coverage_disclosure"] in html_output
+
+
 def test_unassessed_subscores_never_render_literal_none(tmp_path):
     """188 review CR-01: an unassessed subscore (present key, value None) must
     render as an em dash on every subscore-bearing surface — never the literal
