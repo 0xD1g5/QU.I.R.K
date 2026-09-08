@@ -368,6 +368,63 @@ def test_scan_redis_targets_foreign_family_port_no_crash():
     assert results == [], f"Expected no endpoints for foreign-family port, got {results}"
 
 
+def _error_only_redis_tls_ep(host, port, msg="handshake failure"):
+    """The exact shape the real _probe_redis_tls produces on a non-refused
+    failure (ssl.SSLError / timeout / RST): protocol=REDIS-TLS, scan_error set,
+    no tls_version/cipher evidence."""
+    from quirk.models import CryptoEndpoint
+    ep = CryptoEndpoint(host=host, port=port, protocol="REDIS-TLS")
+    ep.scan_error = msg
+    return ep
+
+
+def test_scan_one_redis_override_tls_discards_error_only_endpoint():
+    """Phase 190 CR-01: a speculative override-port TLS probe (probe_mode="tls")
+    whose _probe_redis_tls fails non-refused must find NOTHING — no persisted
+    REDIS-TLS error row, no redis-py enrichment attempt."""
+    with patch(
+        "quirk.scanner.broker_scanner._probe_redis_tls",
+        side_effect=lambda h, p, t: _error_only_redis_tls_ep(h, p),
+    ), patch("quirk.scanner.broker_scanner._enrich_redis_config") as enrich:
+        result = scan_one_redis("h", 29092, timeout=5, probe_mode="tls")
+
+    assert result is None, f"Expected None for errored override probe, got {result}"
+    enrich.assert_not_called()
+
+
+def test_scan_one_redis_default_port_tls_error_endpoint_preserved():
+    """Phase 190 CR-01 non-regression: the legacy default-port path
+    (probe_mode=None, port 6380) still reports real Redis TLS probe errors."""
+    with patch(
+        "quirk.scanner.broker_scanner._probe_redis_tls",
+        side_effect=lambda h, p, t: _error_only_redis_tls_ep(h, p, "ssl handshake alert"),
+    ), patch("quirk.scanner.broker_scanner._enrich_redis_config", return_value={}):
+        result = scan_one_redis("h", 6380, timeout=5, probe_mode=None)
+
+    assert result is not None, "Default-port REDIS-TLS error reporting must be preserved"
+    assert result.protocol == "REDIS-TLS"
+    assert result.scan_error == "ssl handshake alert"
+
+
+def test_scan_redis_targets_kafka_plaintext_override_port_no_spurious_redis_tls_row():
+    """Phase 190 CR-01 flagship TRIAGE-06 scenario: declaring the chaos lab's
+    Kafka plaintext port (host:29092) must NOT persist a spurious REDIS-TLS
+    error endpoint from the Redis driver's cross-family TLS handshake failure."""
+    with patch("quirk.scanner.broker_scanner._detect_redis_plaintext", return_value=False), \
+         patch(
+             "quirk.scanner.broker_scanner._probe_redis_tls",
+             side_effect=lambda h, p, t: (
+                 None if p in (6379, 6380)
+                 else _error_only_redis_tls_ep(h, p, "wrong version number")
+             ),
+         ):
+        results = scan_redis_targets(hosts=["h"], port_overrides={"h": [29092]})
+
+    assert results == [], (
+        f"Expected no endpoints — cross-family override probe must find nothing, got {results}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # BROKER-ARCH: all three drivers importable
 # ---------------------------------------------------------------------------

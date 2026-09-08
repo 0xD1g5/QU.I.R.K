@@ -118,7 +118,16 @@ def build_unreached_target_advisories(
     `results`: the collected endpoints from all three broker drivers for this run.
     Returns one ADVISORY CryptoEndpoint per unreached pair, [] when all were reached.
     """
-    reached = {(ep.host, ep.port) for ep in results}
+    # Phase 190 CR-01: only endpoints carrying actual probe evidence count as
+    # "reached". An error-only row (scan_error set, no TLS/cipher evidence —
+    # e.g. a firewalled target whose TLS probe timed out) must NOT suppress
+    # the advisory: a reached-but-errored and an unreached-but-timed-out
+    # target would otherwise be indistinguishable here.
+    reached = {
+        (ep.host, ep.port)
+        for ep in results
+        if not ep.scan_error or ep.tls_version or ep.cipher_suite
+    }
     now_ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
     advisories: List[CryptoEndpoint] = []
     for host, port in explicit_targets:
@@ -905,6 +914,18 @@ def scan_one_redis(
 
     ep = _probe_redis_tls(host, port, timeout)
     if ep is None:
+        return None
+    if probe_mode == "tls" and ep.scan_error and not ep.tls_version:
+        # Phase 190 CR-01: probe_mode="tls" is only ever set for speculative
+        # override-port probes (the same flat host->ports map is handed to all
+        # three drivers, so most override ports belong to a foreign family).
+        # A non-refused failure there (TLS handshake against a plaintext
+        # listener, timeout, RST) must "find nothing" — persisting the
+        # error row would pollute results with a spurious REDIS-TLS endpoint
+        # per override port AND mark the (host, port) reached, suppressing
+        # build_unreached_target_advisories' T-190-03 advisory. The legacy
+        # default-port path (probe_mode=None, port 6380) keeps its error
+        # reporting: an operator-relevant Redis TLS failure there is signal.
         return None
     ep.service_detail = f"REDIS-TLS:{port}"
     ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)

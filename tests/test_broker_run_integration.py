@@ -419,6 +419,45 @@ def test_build_unreached_target_advisories_one_per_unreached_pair():
     assert adv.scan_error
 
 
+def test_build_unreached_target_advisories_error_only_endpoint_still_fires():
+    """Phase 190 CR-01: a firewalled explicit target (connect timeout, not
+    refusal) may leave an error-only endpoint (scan_error set, no TLS/cipher
+    evidence) in results. That row is NOT probe evidence and must not count as
+    "reached" — the T-190-03 advisory must still fire for that pair."""
+    from quirk.scanner.broker_scanner import (
+        build_unreached_target_advisories,
+        ADVISORY_BROKER_TARGET_UNREACHED,
+    )
+
+    explicit_pairs = [("dark-host.example.com", 29092)]
+    errored = _make_ep("dark-host.example.com", 29092, "REDIS-TLS")
+    errored.scan_error = "timed out"
+
+    advisories = build_unreached_target_advisories(explicit_pairs, [errored])
+
+    assert len(advisories) == 1, (
+        f"Error-only endpoint must not suppress the advisory, got {advisories}"
+    )
+    assert advisories[0].service_detail == ADVISORY_BROKER_TARGET_UNREACHED
+    assert (advisories[0].host, advisories[0].port) == ("dark-host.example.com", 29092)
+
+
+def test_build_unreached_target_advisories_errored_but_evidenced_counts_reached():
+    """Phase 190 CR-01 counterpart: an endpoint with real probe evidence
+    (tls_version/cipher_suite) counts as reached even if scan_error is also
+    set — reached-but-errored is not unreached."""
+    from quirk.scanner.broker_scanner import build_unreached_target_advisories
+
+    explicit_pairs = [("localhost", 6380)]
+    ep = _make_ep("localhost", 6380, "REDIS-TLS")
+    ep.tls_version = "TLSv1.2"
+    ep.scan_error = "cert enrichment failed"
+
+    advisories = build_unreached_target_advisories(explicit_pairs, [ep])
+
+    assert advisories == [], f"Evidenced endpoint must count as reached, got {advisories}"
+
+
 def test_build_unreached_target_advisories_empty_when_all_reached():
     """Zero advisory rows when every explicit target produced an endpoint."""
     from quirk.scanner.broker_scanner import build_unreached_target_advisories
