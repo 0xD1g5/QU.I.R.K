@@ -114,7 +114,7 @@ editing) is explicitly out of scope for this milestone.
 - Integer phases (191, 192, ...): Planned milestone work
 - Decimal phases (191.1, 191.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 191: SPKI Fingerprint Persistence** - Every TLS endpoint's certificate SPKI fingerprint is captured and queryable for key reuse, across all scan paths including the sensor push/merge path
+- [x] **Phase 191: SPKI Fingerprint Persistence** (completed 2026-09-08) - Every TLS endpoint's certificate SPKI fingerprint is captured and queryable for key reuse, across all scan paths including the sensor push/merge path
 - [ ] **Phase 192: Config Visibility + Skip Observability** - Operator can see the effective config a scan will run with and exactly what did/didn't run and why, on the dashboard and in reports
 - [ ] **Phase 193: Connector & Credential Parity** - Operator can enable, configure, and credential any of the 25 connectors from the dashboard at scan-submit time, safely
 - [ ] **Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix** - Advanced scan-behavior fields reach the dashboard, the Executive Verdict layer ships by default, and certificate views show only real certificates

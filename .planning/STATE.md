@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: "Phase 191 execution started (6 plans / 5 waves, worktrees disabled — sequential executors) — in progress: /gsd-execute-phase 191"
+stopped_at: "Phase 191 COMPLETE (6/6 plans, VERIFICATION passed 4/4, SPKI-01/02 flipped by hand, human UAT approved) — next: /gsd-plan-phase 192"
 last_updated: "2026-09-08T21:07:02.118Z"
 last_activity: 2026-09-08 -- Phase 191 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
   completed_plans: 6
   percent: 0
@@ -50,7 +50,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 191 — spki-fingerprint-persistence
+**Current focus:** Phase 191 complete (SPKI persistence + key-reuse, verified 2026-09-08). Next: /gsd-plan-phase 192. Reminder: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol.
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -805,9 +805,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 191 (spki-fingerprint-persistence) — EXECUTING
+Phase: 191 (spki-fingerprint-persistence) — COMPLETE
 Plan: 6 of 6
-Status: Phase 191 plans complete — verification in progress
+Status: Phase 191 complete (verified) — ready to plan Phase 192
 Last activity: 2026-09-08 -- Phase 191 execution started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)

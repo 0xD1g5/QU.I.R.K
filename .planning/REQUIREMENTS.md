@@ -44,11 +44,11 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 
 ### Key Identity (999.98)
 
-- [ ] **SPKI-01**: Every TLS endpoint's certificate SPKI SHA-256 fingerprint is persisted on
+- [x] **SPKI-01**: Every TLS endpoint's certificate SPKI SHA-256 fingerprint is persisted on
       `CryptoEndpoint` — including endpoints arriving via the sensor push/merge path
       (`PushEnvelope` + `merge/scan.py` projection updated in the same plan, with a round-trip
       sensor-push integration test; v5.8 B-01 recurrence guard).
-- [ ] **SPKI-02**: Operator can see key-reuse — endpoints sharing the same public key —
+- [x] **SPKI-02**: Operator can see key-reuse — endpoints sharing the same public key —
       derived by query (no denormalized boolean), framed as remediation leverage ("one re-key
       closes N findings").
 
@@ -111,8 +111,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PARITY-04 | 194 | Pending |
 | OBS-01 | 192 | Pending |
 | OBS-02 | 192 | Pending |
-| SPKI-01 | 191 | Pending |
-| SPKI-02 | 191 | Pending |
+| SPKI-01 | 191 | Complete |
+| SPKI-02 | 191 | Complete |
 | VERDICT-01 | 194 | Pending |
 | DASH-09 | 194 | Pending |
 | MAP-01 | 195 | Pending |
