@@ -3546,11 +3546,13 @@ def main():
             unreached = build_unreached_target_advisories(
                 explicit_reachable_pairs, k + r + rd, session_start,
             )
-            r = r + unreached
+            # IN-01: log BEFORE folding advisories into r, so rabbit= reports
+            # only real RabbitMQ endpoints and advisories are counted once.
             logger.info(
                 f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)} "
                 f"advisories={len(unreached)}"
             )
+            r = r + unreached
             return (k, r, rd)
         _broker_result = _wrapped_phase(
             run_stats, "broker_scanning", "broker_scanner",
