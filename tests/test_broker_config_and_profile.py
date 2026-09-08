@@ -113,7 +113,12 @@ def test_parse_host_port_bare_ipv6_no_port():
 
 @pytest.mark.parametrize(
     "entry",
-    ["host:0", ":70000", "host:abc", "host:80.5", "host:true"],
+    # Phase 190 WR-03: "host:65536" (boundary) and "host:70000" pair a VALID
+    # host with an out-of-range-high port so the `port > 65535` rung of
+    # _parse_port_value is actually exercised — the old ":70000" param raised
+    # on the empty-host check before the port was ever parsed (it now lives
+    # with the empty-host group below).
+    ["host:0", "host:65536", "host:70000", "host:abc", "host:80.5", "host:true"],
 )
 def test_parse_host_port_malformed_port_raises_config_002(entry):
     with pytest.raises(ValueError) as exc_info:
@@ -128,7 +133,7 @@ def test_parse_host_port_ambiguous_unbracketed_ipv6_with_port_raises():
     assert "QRK-CONFIG-002" in str(exc_info.value)
 
 
-@pytest.mark.parametrize("entry", ["", "   ", ":29092"])
+@pytest.mark.parametrize("entry", ["", "   ", ":29092", ":70000"])
 def test_parse_host_port_empty_host_raises(entry):
     with pytest.raises(ValueError) as exc_info:
         _parse_host_port(entry, field_name="connectors.broker_targets")
