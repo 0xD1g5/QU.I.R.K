@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 193-06-PLAN.md
+stopped_at: Completed 193-07-PLAN.md
 last_updated: "2026-09-09T05:20:00.000Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 23
-  percent: 92
+  completed_plans: 24
+  percent: 96
 ---
 
 # Project State
@@ -50,7 +50,28 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 193 — Connector & Credential Parity (executing, 6/8 plans complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+**Current focus:** Phase 193 — Connector & Credential Parity (executing, 7/8 plans complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+
+**193-07 (complete, 2026-09-09) — ConnectorsPanel UI, scan-new wiring, component tests, human verification (PARITY-02/PARITY-03).**
+New `ConnectorsPanel.tsx`: 25 availability-gated connector toggles grouped into six fixed-order
+categories (Identity, Cloud, Database, Email & Broker, OT/ICS, Source & API), lazy-fetched on first
+expand only, always-visible disabled-reason + verbatim `pip install` hints for unavailable
+connectors (D-02), masked not-saved credential inputs shown only for enabled connectors (D-12),
+ambient-auth notes (no input field) for AWS/Azure/GCP/S3/Blob, and a D-15 non-blocking amber
+warning for an enabled-but-blank-credential connector. `scan-new.tsx` mounts it above
+`EffectiveConfigPanel`; toggles feed the effective-config query string only when the delta is
+non-empty (Phase 192 empty-delta parity preserved); submit POST body carries `connectors`/
+`credentials` only when non-empty (D-13); a server 422 renders as a distinct full-width
+`--destructive` banner (D-08); `credential_warnings` surface without blocking navigation;
+credentials clear after successful submit (D-12). 9 new component tests (lazy fetch, category
+order, disabled-with-visible-reason, credential masking, ambient-auth note, D-15 warn-not-block,
+D-13 single-key delta, graceful fetch-failure copy) — full frontend suite (40 files, 281 tests)
+green. One documented design note (not a deviation): broker/SNMPv3 credential fields simplified in
+the UI to a single "default" host slot rather than arbitrary per-host entry — the server's
+per-host env-var naming (193-06) supports multiple hosts; the form covers the common single-target
+case for this phase. Human verification checkpoint: operator ran all 11 steps of the
+193-UI-SPEC.md walkthrough against the live dashboard and replied "approved" — full match, no
+deviations reported. See `193-07-SUMMARY.md`.
 
 **193-06 (complete, 2026-09-09) — D-08 submit-time 422 gate + credential Popen env injection + no-leak sentinel guard (PARITY-02/PARITY-03).**
 `create_job` now calls `resolve_effective_config(..., connectors_overlay=payload.connectors)` +

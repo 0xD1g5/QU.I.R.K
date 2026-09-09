@@ -253,7 +253,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 193-07-PLAN.md — ConnectorsPanel UI, scan-new wiring, component tests, human verification
+- [x] 193-07-PLAN.md — ConnectorsPanel UI, scan-new wiring, component tests, human verification
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -318,7 +318,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
-| 193. Connector & Credential Parity | 6/8 | In Progress|  |
+| 193. Connector & Credential Parity | 7/8 | In Progress|  |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
