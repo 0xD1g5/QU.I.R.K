@@ -280,8 +280,32 @@ trustworthy executive verdict by default, and only ever shows certificates that 
   3. Dashboard certificate inventory and the `/print` PDF render only real certificates — failed
      TLS handshakes are excluded via a shared filter helper, and an honest "no certificates
      discovered" empty state appears when nothing real was found.
-**Plans**: TBD
+**Plans**: 8 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 194-01-PLAN.md — phantom-cert server-side filter, excluded_cert_count, rating absence sentinel, TS contract
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 194-02-PLAN.md — AdvancedScanFields model, scan_overlay/assessment_overlay, 422 gate, preview forwarding
+- [ ] 194-03-PLAN.md — Executive Verdict cherry-pick (f05e7dc7), flag-gate removal, ratingToTone rewire
+- [ ] 194-04-PLAN.md — cert disclosure line + locked empty state on certificates.tsx and /print
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 194-05-PLAN.md — AdvancedPanel component, scan-new mount + submit, live preview query param
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 194-06-PLAN.md — operator UI walkthrough checkpoint across all three surfaces (blocking)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 194-07-PLAN.md — configuration/operators/report-interpretation docs, UAT Series 194, Obsidian sync
+- [ ] 194-08-PLAN.md — 999.104 CLI-vs-form parity audit artifact, HORIZON ledger update, full-suite gate
 
 ### Phase 195: Quantum Exposure Map
 
