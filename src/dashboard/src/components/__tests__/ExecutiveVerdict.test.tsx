@@ -8,7 +8,7 @@ function makeData(overrides: Partial<ScanLatestResponse> = {}): ScanLatestRespon
     meta: { scan_id: "t1", total_endpoints: 10, total_findings: 3 },
     score: {
       score: 42,
-      rating: "MODERATE",
+      rating: "POOR",
       subscores: {
         hygiene: 10,
         modern_tls: 8,
@@ -52,6 +52,8 @@ function makeData(overrides: Partial<ScanLatestResponse> = {}): ScanLatestRespon
   }
 }
 
+const HONEST_ABSENCE_TEXT = "Verdict not available for this scan (pre-v5.21 data)."
+
 describe("ExecutiveVerdict", () => {
   it("renders the score, band, and harvest-now framing", () => {
     render(<ExecutiveVerdict data={makeData()} />)
@@ -78,16 +80,96 @@ describe("ExecutiveVerdict", () => {
     expect(screen.getAllByText(/If you do nothing:/).length).toBe(2)
   })
 
-  it("shows the resilient verdict when score is high and no harvest-now findings", () => {
+  it("shows the resilient verdict when rating is EXCELLENT and no harvest-now findings", () => {
     render(
       <ExecutiveVerdict
         data={makeData({
-          score: { ...makeData().score, score: 88, rating: "STRONG" },
+          score: { ...makeData().score, score: 88, rating: "EXCELLENT" },
           findings: [{ host: "a", port: 443, severity: "LOW", title: "x", quantum_risk: "Safe" }],
         })}
       />,
     )
     expect(screen.getByText("QUANTUM-READY")).toBeInTheDocument()
     expect(screen.getByText(/largely resilient/i)).toBeInTheDocument()
+  })
+
+  // D-07: band mapping — all six enum values must map to the correct
+  // tone/label, and the band must be driven by `rating` alone.
+  it.each([
+    ["EXCELLENT", "QUANTUM-READY"],
+    ["GOOD", "QUANTUM-READY"],
+    ["MODERATE", "PARTIALLY READY"],
+    ["FAIR", "PARTIALLY READY"],
+    ["POOR", "NOT QUANTUM-READY"],
+  ] as const)("maps rating %s to band label %s", (rating, label) => {
+    render(<ExecutiveVerdict data={makeData({ score: { ...makeData().score, rating } })} />)
+    expect(screen.getByText(label)).toBeInTheDocument()
+  })
+
+  it("renders the honest-absence card for NOT_ASSESSED, with no band label", () => {
+    render(
+      <ExecutiveVerdict
+        data={makeData({ score: { ...makeData().score, rating: "NOT_ASSESSED" } })}
+      />,
+    )
+    expect(screen.getByText(HONEST_ABSENCE_TEXT)).toBeInTheDocument()
+    expect(screen.queryByText("QUANTUM-READY")).not.toBeInTheDocument()
+    expect(screen.queryByText("PARTIALLY READY")).not.toBeInTheDocument()
+    expect(screen.queryByText("NOT QUANTUM-READY")).not.toBeInTheDocument()
+  })
+
+  // D-20 / RESEARCH Pitfall 3: `rating: null` (the genuinely-absent-key
+  // case) must be tested independently from NOT_ASSESSED — a scan whose
+  // rating was never computed is a distinct condition from one the backend
+  // explicitly marked NOT_ASSESSED, even though both render the same card.
+  it("renders the honest-absence card for rating: null, with no band label", () => {
+    render(<ExecutiveVerdict data={makeData({ score: { ...makeData().score, rating: null } })} />)
+    expect(screen.getByText(HONEST_ABSENCE_TEXT)).toBeInTheDocument()
+    expect(screen.queryByText("QUANTUM-READY")).not.toBeInTheDocument()
+    expect(screen.queryByText("PARTIALLY READY")).not.toBeInTheDocument()
+    expect(screen.queryByText("NOT QUANTUM-READY")).not.toBeInTheDocument()
+  })
+
+  it("renders the honest-absence card for an unrecognized future rating value", () => {
+    render(
+      <ExecutiveVerdict data={makeData({ score: { ...makeData().score, rating: "SUPERB" } })} />,
+    )
+    expect(screen.getByText(HONEST_ABSENCE_TEXT)).toBeInTheDocument()
+  })
+
+  it("renders the cap-reason note when rating_cap_reason is present", () => {
+    render(
+      <ExecutiveVerdict
+        data={makeData({
+          score: {
+            ...makeData().score,
+            rating_cap_reason: "capped by unencrypted database traffic",
+          },
+        })}
+      />,
+    )
+    expect(
+      screen.getByText("Score capped: capped by unencrypted database traffic"),
+    ).toBeInTheDocument()
+  })
+
+  it("renders no cap-reason text when rating_cap_reason is null", () => {
+    render(
+      <ExecutiveVerdict
+        data={makeData({ score: { ...makeData().score, rating_cap_reason: undefined } })}
+      />,
+    )
+    expect(screen.queryByText(/Score capped:/)).not.toBeInTheDocument()
+  })
+
+  // D-07 regression guard: a high raw score with a POOR rating must still
+  // render the vulnerable band — proving the band follows `rating`, not
+  // the score number.
+  it("renders the vulnerable band for a high score paired with a POOR rating", () => {
+    render(
+      <ExecutiveVerdict data={makeData({ score: { ...makeData().score, score: 91, rating: "POOR" } })} />,
+    )
+    expect(screen.getByText("91")).toBeInTheDocument()
+    expect(screen.getByText("NOT QUANTUM-READY")).toBeInTheDocument()
   })
 })
