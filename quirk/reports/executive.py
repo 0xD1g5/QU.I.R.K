@@ -120,6 +120,7 @@ def build_exec_markdown(
     *,
     exec_content: "ExecContent | None" = None,
     scan_completed_at: "datetime | None" = None,
+    coverage: dict | None = None,
 ) -> str:
     # D-03 / Phase 98: exec_content carries shared narrative/risks/roadmap from writer.py seam.
     # When provided, narrative/risks/roadmap are sourced from exec_content (D-03 guarantee).
@@ -186,6 +187,38 @@ def build_exec_markdown(
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
     lines.append("")
+
+    # === Scan Coverage (Phase 192 Plan 07 / OBS-02, D-13/D-15) ===
+    # D-13: placed after Executive Summary, before Readiness Assessment.
+    # Unconditional heading (never gated on truthiness of `coverage`); only
+    # the body varies — mirrors technical.py's identical section, and is
+    # distinct from the pre-existing per-endpoint "Confidence & Coverage" /
+    # "Discovery and Coverage" sections further below in this report, which
+    # are untouched by this plan.
+    from quirk.reports.coverage import COVERAGE_NOT_RECORDED_NOTICE, PHASE_LABELS
+
+    _coverage = coverage or {}
+    lines.append("## Scan Coverage")
+    lines.append("")
+    if not _coverage.get("recorded"):
+        lines.append(COVERAGE_NOT_RECORDED_NOTICE)
+        lines.append("")
+    else:
+        lines.append(f"**{_coverage.get('ran', 0)} ran / {_coverage.get('skipped', 0)} skipped**")
+        lines.append("")
+        lines.append("| Phase | Status | Detail |")
+        lines.append("|---|---|---|")
+        for entry in _coverage.get("phases") or []:
+            label = entry.get("label") or PHASE_LABELS.get(entry.get("phase_name", ""), entry.get("phase_name", ""))
+            status = entry.get("status", "")
+            if status == "ran":
+                detail = f"{entry.get('duration_sec')}s" if entry.get("duration_sec") is not None else ""
+            else:
+                reason = entry.get("reason") or ""
+                detail_text = entry.get("detail") or ""
+                detail = f"{reason} — {detail_text}" if detail_text else reason
+            lines.append(f"| {md_cell(label)} | {md_cell(status)} | {md_cell(detail)} |")
+        lines.append("")
 
     # EXEC-01 / D-03 / Phase 98: Readiness Assessment narrative prose block.
     # Sourced from exec_content when provided (shared model, guaranteed identical to HTML).

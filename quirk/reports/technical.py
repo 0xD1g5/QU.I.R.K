@@ -71,6 +71,7 @@ def build_tech_markdown(
     closure_refusal: dict | None = None,
     scan_completed_at: "datetime | None" = None,
     key_reuse: dict | None = None,
+    coverage: dict | None = None,
 ) -> str:
     """Build the CLI technical-findings markdown report.
 
@@ -91,6 +92,13 @@ def build_tech_markdown(
     renders (D-06), including when `key_reuse` is `None` or `{}` (loader
     failed or not wired).
 
+    Phase 192 Plan 07 (OBS-02): `coverage` is likewise a keyword-only,
+    `None`-defaulted parameter carrying `quirk.reports.coverage.load_scan_coverage()`'s
+    payload. Like `key_reuse`, it is never gated on truthiness of the whole
+    payload — the Scan Coverage section always renders, including when
+    `coverage` is `None` or `{}`, so a pre-v5.21 scan (no recorded rows)
+    produces an honest absence notice rather than a missing section (D-15).
+
     SCORE-03 / D-16b (Phase 184.3): `scan_completed_at` is the naive-UTC
     scan instant (from `CryptoEndpoint.scanned_at`, derived once in
     writer.py), rendered as a `Scan completed:` line distinct from the
@@ -109,6 +117,39 @@ def build_tech_markdown(
     lines.append(f"- **Generated:** {now}")
     lines.append(f"- **Scan completed:** {format_scan_completed_at(scan_completed_at)}")
     lines.append("")
+
+    # === Scan Coverage (Phase 192 Plan 07 / OBS-02, D-13/D-15) ===
+    # D-13: this section is the first content section, before any findings —
+    # a reader should learn what the findings do not cover before reading
+    # them. Unconditional heading (never gated on truthiness of `coverage`);
+    # only the body varies. Distinct from the pre-existing per-endpoint
+    # "Confidence & Coverage" / "Discovery and Coverage" sections elsewhere
+    # in this report suite — this section answers "which scanner phases ran
+    # at all", not "how much of what we scanned did we get data for".
+    from quirk.reports.coverage import COVERAGE_NOT_RECORDED_NOTICE, PHASE_LABELS
+
+    _coverage = coverage or {}
+    lines.append("## Scan Coverage")
+    lines.append("")
+    if not _coverage.get("recorded"):
+        lines.append(COVERAGE_NOT_RECORDED_NOTICE)
+        lines.append("")
+    else:
+        lines.append(f"**{_coverage.get('ran', 0)} ran / {_coverage.get('skipped', 0)} skipped**")
+        lines.append("")
+        lines.append("| Phase | Status | Detail |")
+        lines.append("|---|---|---|")
+        for entry in _coverage.get("phases") or []:
+            label = entry.get("label") or PHASE_LABELS.get(entry.get("phase_name", ""), entry.get("phase_name", ""))
+            status = entry.get("status", "")
+            if status == "ran":
+                detail = f"{entry.get('duration_sec')}s" if entry.get("duration_sec") is not None else ""
+            else:
+                reason = entry.get("reason") or ""
+                detail_text = entry.get("detail") or ""
+                detail = f"{reason} — {detail_text}" if detail_text else reason
+            lines.append(f"| {md_cell(label)} | {md_cell(status)} | {md_cell(detail)} |")
+        lines.append("")
 
     # === Service Inventory ===
     inv_eps = [e for e in endpoints if getattr(e, "protocol", "") != "CLOSED"]

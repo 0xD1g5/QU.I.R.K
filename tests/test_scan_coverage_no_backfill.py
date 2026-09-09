@@ -236,3 +236,106 @@ def test_write_reports_falls_back_to_started_utc_when_no_endpoint_scan_run_id(tm
     assert len(calls) == 1
     assert calls[0] == (db_path, "fallback-run")
 
+
+# ---------------------------------------------------------------------------
+# Task 2: "## Scan Coverage" section — technical.py and executive.py
+# ---------------------------------------------------------------------------
+
+
+def _make_minimal_tech_cfg(tmpdir="/tmp/quirk_test_coverage_tech"):
+    return SimpleNamespace(
+        assessment=SimpleNamespace(
+            name="Coverage Test Org",
+            report_owner="Coverage Tester",
+            data_classification="CONFIDENTIAL",
+            timezone="UTC",
+            logo_path=None,
+        ),
+        output=SimpleNamespace(directory=tmpdir),
+    )
+
+
+def _make_minimal_exec_cfg(tmpdir="/tmp/quirk_test_coverage_exec"):
+    return SimpleNamespace(
+        assessment=SimpleNamespace(
+            name="Coverage Test Org",
+            report_owner="Coverage Tester",
+            data_classification="CONFIDENTIAL",
+            timezone="UTC",
+        ),
+        output=SimpleNamespace(directory=tmpdir),
+        intelligence=SimpleNamespace(profile="balanced", calibration_overrides=None),
+    )
+
+
+_RECORDED_PAYLOAD = {
+    "recorded": True,
+    "ran": 2,
+    "skipped": 1,
+    "phases": [
+        {"phase_name": "tls_scanning", "label": "TLS", "status": "ran", "reason": None, "detail": None, "duration_sec": 1.5},
+        {"phase_name": "ssh_scanning", "label": "SSH", "status": "ran", "reason": None, "detail": None, "duration_sec": 0.8},
+        {"phase_name": "vault_scanning", "label": "Vault", "status": "skipped", "reason": "missing-credentials", "detail": "VAULT_TOKEN not set", "duration_sec": None},
+    ],
+}
+
+
+def test_tech_markdown_recorded_payload_renders_heading_summary_and_rows():
+    md = build_tech_markdown(_make_minimal_tech_cfg(), [], [], coverage=_RECORDED_PAYLOAD)
+    assert "## Scan Coverage" in md
+    assert "2 ran / 1 skipped" in md
+    assert "TLS" in md
+    assert "SSH" in md
+    assert "Vault" in md
+    assert "missing-credentials" in md
+    assert "VAULT_TOKEN not set" in md
+
+
+def test_tech_markdown_coverage_none_still_renders_notice():
+    md = build_tech_markdown(_make_minimal_tech_cfg(), [], [], coverage=None)
+    assert "## Scan Coverage" in md
+    assert COVERAGE_NOT_RECORDED_NOTICE in md
+
+
+def test_tech_markdown_coverage_empty_dict_still_renders_notice_no_table():
+    md = build_tech_markdown(_make_minimal_tech_cfg(), [], [], coverage={})
+    assert "## Scan Coverage" in md
+    assert COVERAGE_NOT_RECORDED_NOTICE in md
+    assert "| Phase | Status | Detail |" not in md
+
+
+def test_tech_markdown_scan_coverage_before_service_inventory():
+    endpoint = SimpleNamespace(host="h1", port=443, protocol="TLS")
+    md = build_tech_markdown(_make_minimal_tech_cfg(), [endpoint], [], coverage=_RECORDED_PAYLOAD)
+    assert md.index("## Scan Coverage") < md.index("## Service Inventory")
+
+
+def test_exec_markdown_recorded_payload_renders_heading_and_summary():
+    md = build_exec_markdown(_make_minimal_exec_cfg(), [], [], coverage=_RECORDED_PAYLOAD)
+    assert "## Scan Coverage" in md
+    assert "2 ran / 1 skipped" in md
+
+
+def test_exec_markdown_coverage_none_or_empty_still_renders_notice():
+    md_none = build_exec_markdown(_make_minimal_exec_cfg(), [], [], coverage=None)
+    assert "## Scan Coverage" in md_none
+    assert COVERAGE_NOT_RECORDED_NOTICE in md_none
+
+    md_empty = build_exec_markdown(_make_minimal_exec_cfg(), [], [], coverage={})
+    assert "## Scan Coverage" in md_empty
+    assert COVERAGE_NOT_RECORDED_NOTICE in md_empty
+    assert "| Phase | Status | Detail |" not in md_empty
+
+
+def test_exec_markdown_scan_coverage_between_summary_and_readiness():
+    md = build_exec_markdown(_make_minimal_exec_cfg(), [], [], coverage=_RECORDED_PAYLOAD)
+    summary_idx = md.index("## Executive Summary")
+    coverage_idx = md.index("## Scan Coverage")
+    readiness_idx = md.index("## Readiness Assessment")
+    assert summary_idx < coverage_idx < readiness_idx
+
+
+def test_pre_existing_coverage_sections_unmodified():
+    md = build_exec_markdown(_make_minimal_exec_cfg(), [], [], coverage=_RECORDED_PAYLOAD)
+    assert md.count("## Confidence & Coverage") == 1
+    assert md.count("## Discovery and Coverage") == 1
