@@ -294,7 +294,11 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
             # Logger contract is best-effort; do not let logger failure mask the original error.
             pass
         if recorder is not None:
-            recorder.record_failed(phase_name, repr(exc))
+            # Phase 192 review CR-02 / T-192-03: `detail` is persisted,
+            # API-served, and report-rendered — never raw repr(exc), which can
+            # embed DSNs / userinfo URLs / auth payloads. safe_str() collapses
+            # credential-shaped messages to the exception class name.
+            recorder.record_failed(phase_name, safe_str(exc))
         error_endpoints.append(CryptoEndpoint(
             host=scanner_label,
             port=0,

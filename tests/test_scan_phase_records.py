@@ -263,6 +263,36 @@ def test_wrapped_phase_exception_records_failed_and_still_appends_error_endpoint
     assert "RuntimeError" in rows[0]["detail"]
 
 
+def test_wrapped_phase_exception_detail_is_credential_safe() -> None:
+    """T-192-03 / review CR-02: the failed-phase `detail` column must route
+    through safe_str() — a DSN / password embedded in exception text must never
+    reach scan_phase_records verbatim (it is persisted, API-served, and
+    rendered on all four report surfaces)."""
+    from run_scan import _wrapped_phase
+
+    run_stats = _make_run_stats()
+    error_endpoints: list = []
+
+    def _fn():
+        raise ConnectionError(
+            'could not connect: "postgresql://svc:hunter2@db.internal:5432/app"'
+        )
+
+    result = _wrapped_phase(
+        run_stats, "db_scanning", "db_connector", _fn, error_endpoints, _StubLogger()
+    )
+    assert result == []
+
+    rows = run_stats["phase_records"].rows()
+    assert len(rows) == 1
+    assert rows[0]["reason"] == "failed"
+    detail = rows[0]["detail"]
+    # safe_str collapses credential-shaped messages to the class name only.
+    assert "hunter2" not in detail
+    assert "svc:" not in detail
+    assert "ConnectionError" in detail
+
+
 def test_wrapped_phase_keyboard_interrupt_propagates_and_records_nothing() -> None:
     from run_scan import _wrapped_phase
 
