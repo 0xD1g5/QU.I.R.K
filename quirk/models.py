@@ -275,6 +275,59 @@ class ScanCheckpoint(Base):
     error_summary   = Column(Text, nullable=True)   # JSON array or NULL
 
 
+SCAN_PHASE_STATUS_RAN = "ran"
+SCAN_PHASE_STATUS_SKIPPED = "skipped"
+
+SCAN_PHASE_SKIP_REASONS = frozenset({
+    "disabled-by-config",
+    "missing-extra",
+    "no-eligible-targets",
+    "missing-credentials",
+    "failed",
+})
+
+
+class ScanPhaseRecord(Base):
+    """Phase 192 OBS-01: one row per scanner phase per scan_run_id.
+
+    ``status`` is ``ran | skipped``. ``reason`` is populated for ``skipped``
+    rows only (one of ``SCAN_PHASE_SKIP_REASONS``); ``duration_sec`` is
+    populated for ``ran`` rows only. D-10 requires ALL phases — ran and
+    skipped — to get a positive row here, so the absence of a row for a
+    given (scan_run_id, phase_name) is never itself a signal.
+
+    No ForeignKey and no relationship() — ``scan_run_id`` is a soft
+    reference only, matching this project's existing scan_run_id / sensor_id
+    convention (see ``RemediationItemFingerprint``).
+
+    ``reason`` values are validated against ``SCAN_PHASE_SKIP_REASONS`` at
+    the write site (Plan 03), not via a SQLAlchemy Enum type — this mirrors
+    how ``ScanCheckpoint.status`` is stored, and keeps future additive
+    reason values from requiring a schema migration.
+
+    T-192-03: ``detail`` is free text and must never contain secret
+    values — only non-secret descriptive text (e.g. a missing env var
+    *name*, never its value).
+    """
+
+    __tablename__ = "scan_phase_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "scan_run_id", "phase_name",
+            name="uq_scan_phase_records_scan_run_phase",
+        ),
+    )
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    scan_run_id   = Column(String, nullable=False, index=True)
+    phase_name    = Column(String(64), nullable=False)
+    status        = Column(String(16), nullable=False)
+    reason        = Column(String(32), nullable=True)
+    detail        = Column(Text, nullable=True)
+    duration_sec  = Column(Float, nullable=True)
+    recorded_at   = Column(DateTime, nullable=False)
+
+
 class IntegrationDelivery(Base):
     """Phase 101 NOTIFY-07 / ISEC-03: delivery audit log for all integration phases.
 
