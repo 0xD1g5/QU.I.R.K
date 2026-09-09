@@ -573,6 +573,17 @@ def render_docx_report(
     # landscape Letter usable width ~9.5".
     _set_col_widths(top_findings_tbl, [0.9, 2.6, 1.4, 4.6])
 
+    # ---- TLS Capabilities skip note (D-14 / Phase 192 Plan 08) ----
+    # Mirrors technical.py / html_renderer.py's renderer-side TLS skip note.
+    # Invisible unless tls_scanning was recorded skipped; the Findings table
+    # below already has an honest D-12 empty-state row.
+    from quirk.reports.coverage import format_skip_note, get_phase_entry
+
+    _tls_skip_entry = get_phase_entry(_coverage, "tls_scanning")
+    if _tls_skip_entry is not None and _tls_skip_entry.get("status") == "skipped":
+        doc.add_heading("TLS Capabilities", level=2)
+        doc.add_paragraph(format_skip_note(_tls_skip_entry), style="Normal")
+
     # ---- Findings section — 7-col table (100-UI-SPEC.md Word Table Column Contracts) ----
     doc.add_heading("Findings", level=1)
     findings_tbl = doc.add_table(rows=1, cols=7)

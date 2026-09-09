@@ -944,6 +944,31 @@ def render_scan_coverage_section(coverage: dict | None) -> str:
     )
 
 
+def render_tls_capabilities_skip_note(coverage: dict | None) -> str:
+    """D-14 (Phase 192 Plan 08 / OBS-02): TLS domain skip note, mirroring
+    technical.py's renderer-side "## TLS Capabilities" skip note.
+
+    OPPOSITE contract from render_scan_coverage_section: this returns `""`
+    unless the `tls_scanning` phase is recorded `skipped`. The Endpoint
+    Inventory table this note sits beside already renders unconditionally
+    with an honest "No endpoints recorded" empty state (report.html.j2),
+    so this note exists only to say WHY that table is TLS-empty when the
+    reason is a skip, not to replace the table's own empty-state handling.
+    """
+    from quirk.reports.coverage import format_skip_note, get_phase_entry
+
+    entry = get_phase_entry(coverage, "tls_scanning")
+    if entry is None or entry.get("status") != "skipped":
+        return ""
+
+    return (
+        '<section class="tls-capabilities-skip-note" style="margin:16px 0">'
+        '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">TLS Capabilities</h2>'
+        f"<p>{_html.escape(format_skip_note(entry))}</p>"
+        "</section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -1168,6 +1193,10 @@ def render_html_report(
     _coverage_for_render = getattr(exec_content, "coverage", {}) if exec_content is not None else {}
     scan_coverage_section = render_scan_coverage_section(_coverage_for_render)
 
+    # D-14 (Phase 192 Plan 08): TLS domain skip note (empty string unless
+    # tls_scanning was recorded skipped) — see render_tls_capabilities_skip_note.
+    tls_capabilities_skip_note = render_tls_capabilities_skip_note(_coverage_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -1229,6 +1258,9 @@ def render_html_report(
         # Phase 192 Plan 08 (OBS-02 / D-13/D-15): scan coverage section (pre-rendered
         # HTML string; always non-empty, unlike the sibling sections above)
         scan_coverage_section=scan_coverage_section,
+        # D-14 (Phase 192 Plan 08): TLS domain skip note (pre-rendered HTML string,
+        # "" when TLS was not skipped)
+        tls_capabilities_skip_note=tls_capabilities_skip_note,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,

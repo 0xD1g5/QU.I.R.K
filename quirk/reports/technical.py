@@ -164,24 +164,34 @@ def build_tech_markdown(
             )
         lines.append("")
 
-    # === TLS Capabilities ===
+    # === TLS Capabilities (D-14 / Phase 192 Plan 08: renderer-side skip note) ===
+    from quirk.reports.coverage import format_skip_note, get_phase_entry
+
     tls_eps = [e for e in endpoints if getattr(e, "protocol", "") == "TLS" and not getattr(e, "scan_error", None)]
-    if tls_eps:
+    _tls_skip_entry = get_phase_entry(_coverage, "tls_scanning")
+    _tls_skipped = _tls_skip_entry is not None and _tls_skip_entry.get("status") == "skipped"
+    if tls_eps or _tls_skipped:
         lines.append("## TLS Capabilities")
         lines.append("")
-        lines.append("| Host | Port | Negotiated TLS | Supported Versions | Weak Ciphers Present | Legacy Suites Present | PFS | Cipher Sample | Notes |")
-        lines.append("|---|---:|---|---|---|---|---|---|---|")
-        for e in sorted(tls_eps, key=lambda x: (x.host, x.port)):
-            sv = getattr(e, "tls_supported_versions", "") or ""
-            weak = "YES" if getattr(e, "tls_weak_ciphers_present", False) else "NO"
-            legacy = "YES" if getattr(e, "tls_legacy_suites_present", False) else "NO"
-            pfs = "YES" if getattr(e, "tls_pfs_supported", False) else "NO"
-            sample = getattr(e, "tls_supported_ciphers_sample", "") or ""
-            notes = getattr(e, "tls_enum_notes", "") or ""
-            lines.append(
-                f"| {md_cell(e.host)} | {e.port} | {md_cell(getattr(e, 'tls_version', '') or '')} | {md_cell(sv)} | {weak} | {legacy} | {pfs} | {md_cell(sample)} | {md_cell(notes)} |"
-            )
-        lines.append("")
+        if not tls_eps and _tls_skipped:
+            # D-14: the phase was skipped, not merely empty — say so instead of
+            # rendering an empty table or omitting the heading entirely.
+            lines.append(format_skip_note(_tls_skip_entry))
+            lines.append("")
+        else:
+            lines.append("| Host | Port | Negotiated TLS | Supported Versions | Weak Ciphers Present | Legacy Suites Present | PFS | Cipher Sample | Notes |")
+            lines.append("|---|---:|---|---|---|---|---|---|---|")
+            for e in sorted(tls_eps, key=lambda x: (x.host, x.port)):
+                sv = getattr(e, "tls_supported_versions", "") or ""
+                weak = "YES" if getattr(e, "tls_weak_ciphers_present", False) else "NO"
+                legacy = "YES" if getattr(e, "tls_legacy_suites_present", False) else "NO"
+                pfs = "YES" if getattr(e, "tls_pfs_supported", False) else "NO"
+                sample = getattr(e, "tls_supported_ciphers_sample", "") or ""
+                notes = getattr(e, "tls_enum_notes", "") or ""
+                lines.append(
+                    f"| {md_cell(e.host)} | {e.port} | {md_cell(getattr(e, 'tls_version', '') or '')} | {md_cell(sv)} | {weak} | {legacy} | {pfs} | {md_cell(sample)} | {md_cell(notes)} |"
+                )
+            lines.append("")
 
     # === TLS blockers ===
     blocker_allowed = {"MTLS_REQUIRED", "TLS_HANDSHAKE_FAILED", "TIMEOUT", "NOT_TLS_ON_PORT"}

@@ -679,6 +679,11 @@
     <p style="color:var(--text-muted)">All findings are mapped to at least one compliance framework.</p>
     {% endif %}
 
+    {# D-14 (Phase 192 Plan 08 / OBS-02): TLS domain skip note — invisible unless
+       tls_scanning was recorded skipped; the Endpoint Inventory table below already
+       has an honest empty state, this note says WHY when the reason is a skip. #}
+    {% if tls_capabilities_skip_note %}{{ tls_capabilities_skip_note | safe }}{% endif %}
+
     <h2>Endpoint Inventory</h2>
     {% if endpoints %}
     <table>
