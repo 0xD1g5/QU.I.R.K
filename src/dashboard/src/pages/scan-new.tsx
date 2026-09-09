@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import type { ScanSubmitRequest } from "@/types/api"
+import type { AdvancedScanFields, ScanSubmitRequest } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
 import { EffectiveConfigPanel } from "@/components/EffectiveConfigPanel"
 import { ConnectorsPanel } from "@/components/ConnectorsPanel"
+import { AdvancedPanel } from "@/components/AdvancedPanel"
 
 export function ScanNewPage() {
   const navigate = useNavigate()
@@ -36,6 +37,11 @@ export function ScanNewPage() {
   // credential values (D-12, never persisted, cleared after every submit).
   const [connectors, setConnectors] = useState<Record<string, boolean>>({})
   const [credentials, setCredentials] = useState<Record<string, string>>({})
+  // Phase 194 Plan 05 (PARITY-04, D-02): operator's Advanced-field delta
+  // (keys only for fields the operator touched). Not cleared after submit
+  // (unlike credentials) — these aren't secrets and a repeat scan should
+  // retain them.
+  const [advanced, setAdvanced] = useState<AdvancedScanFields>({})
   // D-08: a rejected-connector 422's `detail` renders here — a distinct
   // full-width destructive banner above Start Scan, never merged with the
   // plain inline `error` text used for field-validation failures.
@@ -55,6 +61,17 @@ export function ScanNewPage() {
     }
     setSubmitting(true)
     try {
+      // Phase 194 Plan 05 (PARITY-04, D-04/RESEARCH Pitfall 5): keep ONE
+      // port-spec string in play. When the Custom port scope is active and
+      // has a value, derive advanced.ports_tls from that same customPorts
+      // string rather than introducing a second independent free-text
+      // input — the backend merges the overlay LAST, so this is idempotent
+      // for the custom-scope case and an intentional override for every
+      // other scope.
+      const advancedPayload: AdvancedScanFields = {
+        ...advanced,
+        ...(portScope === "custom" && customPorts.trim() ? { ports_tls: customPorts.trim() } : {}),
+      }
       const resp = await fetchApi("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,6 +87,10 @@ export function ScanNewPage() {
           // it submitted before this phase.
           ...(Object.keys(connectors).length > 0 ? { connectors } : {}),
           ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
+          // D-02: same guard for the Advanced overlay — an untouched form
+          // must submit the byte-identical body it submitted before this
+          // phase (the same rule Phase 193 applied to `connectors`).
+          ...(Object.keys(advancedPayload).length > 0 ? { advanced: advancedPayload } : {}),
         } satisfies ScanSubmitRequest),
       })
       if (resp.status === 422) {
@@ -81,6 +102,12 @@ export function ScanNewPage() {
             setError("@file paths are not supported from the dashboard. Use the CLI to run file-based scans.")
           } else if (detail[0]?.loc?.includes("custom_ports") || msg.toLowerCase().includes("custom_ports")) {
             setCustomPortsError(msg)
+          } else if (detail[0]?.loc?.includes("advanced")) {
+            // D-03: server 422 is the authority for Advanced fields — render
+            // the field name + server-provided reason in the existing
+            // destructive banner, per the UI-SPEC copy contract.
+            const fieldName = String(detail[0].loc[detail[0].loc.length - 1])
+            setRejectionBanner(`Invalid ${fieldName}: ${msg}. Fix the value above and resubmit.`)
           } else {
             setError(msg)
           }
@@ -355,6 +382,18 @@ export function ScanNewPage() {
           presetState={null}
         />
 
+        <AdvancedPanel
+          advanced={advanced}
+          onAdvancedChange={setAdvanced}
+          presetState={null}
+          disabled={submitting}
+        />
+        {portScope === "custom" && (
+          <p className="text-xs text-muted-foreground -mt-4">
+            Also applied via the Custom port scope above.
+          </p>
+        )}
+
         <EffectiveConfigPanel
           targets={targets}
           profile={profile}
@@ -363,6 +402,7 @@ export function ScanNewPage() {
           portScope={portScope}
           customPorts={customPorts}
           connectors={connectors}
+          advanced={advanced}
         />
 
         {rejectionBanner && (
