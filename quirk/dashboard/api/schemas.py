@@ -505,6 +505,13 @@ class ScanLatestResponse(BaseModel):
     hardware_devices: List[HardwareComponent] = []   # Phase 134 CBOM-02
     partial_failures: List[PartialFailureEntry] = []  # Phase 67 RESUME-02
     burndown: Optional[ClosureBurndown] = None        # Phase 181 SURF-03
+    # Phase 194 DASH-09 / D-13: count of TLS endpoints excluded from
+    # `certificates` because they lacked a cert_subject or carried a
+    # scan_error (phantom rows — failed handshakes, not real certificates).
+    # Default 0 (not Optional[...] = None) — "nothing excluded" is the
+    # honest reading for any caller/fixture that does not set it, mirroring
+    # the Phase 188 coverage_disclosure additive-default precedent.
+    excluded_cert_count: int = 0
 
 
 class ScanSession(BaseModel):

@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from quirk.errors import format_error
@@ -1709,6 +1709,13 @@ def get_latest_scan(
     )
 
     # Derive remaining views
+    # Phase 194 DASH-09/D-11/D-12: filter phantom certificates (failed TLS
+    # handshakes with no cert_subject, or a recorded scan_error) BEFORE
+    # CertItem construction so no consumer of this response ever sees a
+    # phantom row. See _is_real_cert_endpoint() for the one-place rule.
+    tls_endpoints = [ep for ep in endpoints if ep.protocol and ep.protocol.upper() == "TLS"]
+    real_cert_endpoints = [ep for ep in tls_endpoints if _is_real_cert_endpoint(ep)]
+    excluded_cert_count = len(tls_endpoints) - len(real_cert_endpoints)
     certificates = [
         CertItem(
             host=ep.host,
@@ -1720,8 +1727,7 @@ def get_latest_scan(
             cert_pubkey_size=ep.cert_pubkey_size,
             quantum_safety=_cert_quantum_safety(ep.cert_pubkey_alg),
         )
-        for ep in endpoints
-        if ep.protocol and ep.protocol.upper() == "TLS"
+        for ep in real_cert_endpoints
     ]
     # Sort certificates by expiry ascending (soonest first, per UI-SPEC)
     certificates.sort(key=_cert_expiry_key)
@@ -1789,7 +1795,19 @@ def get_latest_scan(
         hardware_devices=hardware_devices,                     # Phase 134 CBOM-02
         partial_failures=partial_failures,                     # Phase 67 RESUME-02
         burndown=_derive_closure_burndown(db, response_scan_id),  # Phase 181 SURF-03
+        excluded_cert_count=excluded_cert_count,                # Phase 194 DASH-09/D-13
     )
+
+
+def _is_real_cert_endpoint(ep: Any) -> bool:
+    """Phase 194 DASH-09 / D-12: a TLS endpoint is a "real" certificate row
+    only if it has a cert_subject AND carries no scan_error. Both halves are
+    required — a subject with a scan_error (stale data from a prior probe) is
+    still phantom, and a subject-less endpoint is never a certificate at all.
+    This is the single named home for the phantom-cert exclusion rule; do
+    not duplicate this predicate elsewhere.
+    """
+    return bool(ep.cert_subject) and not ep.scan_error
 
 
 def _cert_quantum_safety(algorithm: Optional[str]) -> Optional[str]:
