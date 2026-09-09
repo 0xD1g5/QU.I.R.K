@@ -181,6 +181,12 @@ def test_write_reports_calls_loader_once_and_shares_payload(tmp_path, monkeypatc
         return real_loader(db_path, scan_run_id)
 
     monkeypatch.setattr(writer_mod, "load_scan_coverage", _counting_loader)
+    # PDF rendering (Playwright/greenlet) is irrelevant to this test's assertion
+    # (loader call count/payload sharing) and is flaky when invoked deep inside
+    # a large, already-running test session (asyncio/greenlet state left behind
+    # by unrelated tests) — mirrors tests/test_reports_writer.py's precedent of
+    # patching render_pdf_report rather than exercising the real renderer.
+    monkeypatch.setattr(writer_mod, "render_pdf_report", lambda **kwargs: False)
 
     db_path = _seed_db(tmp_path, scan_run_id="write-reports-run")
 
@@ -216,6 +222,7 @@ def test_write_reports_falls_back_to_started_utc_when_no_endpoint_scan_run_id(tm
         return real_loader(db_path, scan_run_id)
 
     monkeypatch.setattr(writer_mod, "load_scan_coverage", _counting_loader)
+    monkeypatch.setattr(writer_mod, "render_pdf_report", lambda **kwargs: False)
 
     db_path = _seed_db(tmp_path, scan_run_id="fallback-run")
 
