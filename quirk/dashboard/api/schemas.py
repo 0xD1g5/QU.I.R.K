@@ -690,6 +690,47 @@ class TrendTimelineResponse(BaseModel):
     sessions: List[TrendSessionPoint] = []
 
 
+# Phase 194 / PARITY-04 / D-01 / D-02 / D-13-precedent: advanced scan-behavior
+# field overlay. Mirrors ScanSubmitRequest.connectors' delta-only shape
+# (Phase 193 / PARITY-02 / D-13) but is `extra="forbid"` rather than
+# `extra="ignore"` -- an unrecognized advanced key must 422 at the request
+# boundary rather than being silently dropped (D-03).
+class AdvancedScanFields(BaseModel):
+    """POST /api/jobs `advanced` field + GET /api/config/effective `advanced`
+    query param. Delta-only (D-02): only fields the operator actually set are
+    read via `model_dump(exclude_unset=True)` in
+    `quirk.dashboard.api.routes.jobs.build_advanced_overlays` -- an unset
+    field never reaches the job YAML.
+
+    `tls_enum_mode` deliberately excludes the disabled mode value (D-19):
+    `tls_scanner.py`'s `enumerate_tls_capabilities` call site coerces any
+    value not in the fast/deep pair to fast, so offering the disabled value
+    here would be a silent no-op rather than a real behavior change --
+    rejected 422 instead via the tighter two-value Literal below.
+
+    `data_classification`'s 4-value vocabulary matches
+    `quirk.interactive._DATA_CLASS_MAP` (D-21) -- no fifth tier exists
+    anywhere in this codebase.
+
+    A field naming the SSH port list deliberately does not exist (D-18) --
+    it has no CLI or scanner counterpart and is out of scope, filed as
+    backlog 999.106.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ports_tls: Optional[str] = Field(None, max_length=512)
+    tls_enum_mode: Optional[Literal["fast", "deep"]] = None
+    include_sni: Optional[bool] = None
+    timeout_default_seconds: Optional[int] = Field(None, ge=1, le=300)
+    timeout_tls_seconds: Optional[int] = Field(None, ge=1, le=300)
+    timeout_ssh_seconds: Optional[int] = Field(None, ge=1, le=300)
+    retry_count: Optional[int] = Field(None, ge=0, le=10)
+    data_classification: Optional[
+        Literal["public", "internal", "confidential", "regulated"]
+    ] = None
+
+
 # Phase 65 UI-SCAN-01: dashboard-initiated scan submission
 class ScanSubmitRequest(BaseModel):
     """POST /api/jobs request body. Pydantic is authoritative validation.
@@ -726,6 +767,10 @@ class ScanSubmitRequest(BaseModel):
     # Phase 193 / PARITY-03 (D-09/D-10/D-11): request-scoped credential
     # values, NEVER persisted -- see class docstring.
     credentials: Optional[Dict[str, str]] = None
+
+    # Phase 194 / PARITY-04 / D-01: delta-only advanced scan-behavior field
+    # overlay -- see AdvancedScanFields' own docstring.
+    advanced: Optional[AdvancedScanFields] = None
 
     @field_validator("targets")
     @classmethod

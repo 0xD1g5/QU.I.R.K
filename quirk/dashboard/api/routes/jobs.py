@@ -24,7 +24,7 @@ import uuid
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
 from quirk.errors import format_error
@@ -34,7 +34,11 @@ from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db, _default_db_path
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
-from quirk.dashboard.api.schemas import ScanSubmitRequest, JobStatusResponse
+from quirk.dashboard.api.schemas import (
+    AdvancedScanFields,
+    JobStatusResponse,
+    ScanSubmitRequest,
+)
 from quirk.models import ScanJob
 
 logger = logging.getLogger(__name__)
@@ -51,6 +55,53 @@ _STAGE_TOTAL = 7
 def _utcnow_naive() -> datetime:
     """Tz-naive UTC datetime — matches schedules.py convention (Pitfall 6)."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def build_advanced_overlays(
+    advanced: Optional[AdvancedScanFields],
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Map `AdvancedScanFields` onto `build_job_config_dict`'s
+    `scan_overlay`/`assessment_overlay` kwargs (Phase 194 / PARITY-04 / D-01).
+
+    Delta-only (D-02): reads `advanced.model_dump(exclude_unset=True)` so a
+    field the operator never touched never appears in either overlay dict.
+    Returns `({}, {})` when `advanced` is None. `ports_tls`'s ValueError from
+    `parse_port_spec` propagates to the caller (converted to 422 by the same
+    `except ValueError` sites `connectors_overlay` already uses).
+    """
+    from quirk.util.port_spec import parse_port_spec
+
+    scan_overlay: Dict[str, Any] = {}
+    assessment_overlay: Dict[str, Any] = {}
+    if advanced is None:
+        return scan_overlay, assessment_overlay
+
+    values = advanced.model_dump(exclude_unset=True)
+
+    if "ports_tls" in values:
+        scan_overlay["ports_tls"] = parse_port_spec(values["ports_tls"])
+    if "tls_enum_mode" in values:
+        scan_overlay["tls_enum_mode"] = values["tls_enum_mode"]
+    if "include_sni" in values:
+        scan_overlay["include_sni"] = values["include_sni"]
+
+    timeouts: Dict[str, Any] = {}
+    if "timeout_default_seconds" in values:
+        timeouts["default_seconds"] = values["timeout_default_seconds"]
+    if "timeout_tls_seconds" in values:
+        timeouts["tls_seconds"] = values["timeout_tls_seconds"]
+    if "timeout_ssh_seconds" in values:
+        timeouts["ssh_seconds"] = values["timeout_ssh_seconds"]
+    if timeouts:
+        scan_overlay["timeouts"] = timeouts
+
+    if "retry_count" in values:
+        scan_overlay["retry"] = {"retry_count": values["retry_count"]}
+
+    if "data_classification" in values:
+        assessment_overlay["data_classification"] = values["data_classification"]
+
+    return scan_overlay, assessment_overlay
 
 
 def build_job_config_dict(
