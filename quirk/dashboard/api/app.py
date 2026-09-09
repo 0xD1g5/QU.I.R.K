@@ -25,6 +25,7 @@ from quirk.dashboard.api.middleware.rate_limit import RateLimitMiddleware
 from quirk.dashboard.api.middleware.security_headers import SecurityHeadersMiddleware
 from quirk.dashboard.api.routes import (
     config,
+    connectors,
     hardware_drift,
     health,
     jobs,
@@ -124,6 +125,7 @@ def create_app(db_path: str | None = None) -> FastAPI:
     application.include_router(health.router, prefix="/api")
     application.include_router(config.router, prefix="/api")
     application.include_router(config.effective_router, prefix="/api")
+    application.include_router(connectors.router, prefix="/api")
     application.include_router(pdf.router, prefix="/api")
     application.include_router(scan.router, prefix="/api")
     application.include_router(hardware_drift.router, prefix="/api")
