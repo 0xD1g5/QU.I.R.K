@@ -1673,7 +1673,14 @@ def get_latest_scan(
     subscores_raw = score_raw.get("subscores", {})
     score = ScoreData(
         score=score_raw.get("score"),
-        rating=score_raw.get("rating", "POOR"),
+        # Phase 194 / D-20: None when genuinely absent (no stored rating key)
+        # is distinguishable from a computed "POOR" — a fabricated fallback
+        # here would make the two indistinguishable to every downstream
+        # consumer. The compute-failure fallback dict at line ~1658 is
+        # intentionally left with its own "POOR" literal: that branch is a
+        # live compute exception, not absent stored data, and D-20 scopes
+        # this sentinel to the missing-key case only.
+        rating=score_raw.get("rating"),
         # SCORE-04 / D-09/D-10 (184.4): pass the cap reason through; None means
         # not capped. Field-by-field construction means an omission here would
         # silently drop it (RESEARCH Pitfall 1) — do not remove.

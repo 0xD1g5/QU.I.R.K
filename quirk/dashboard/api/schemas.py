@@ -87,7 +87,11 @@ class ScoreData(BaseModel):
     # computed" — zero domains were assessed (compute_readiness_score()'s
     # explicit honest-absence edge case), never a fabricated 0/100.
     score: Optional[int] = None
-    rating: str  # EXCELLENT / GOOD / MODERATE / FAIR / POOR / NOT_ASSESSED
+    # Phase 194 / D-20: widened from `str` to `Optional[str] = None`. None
+    # means "never computed" (the score_raw dict genuinely lacked a rating
+    # key) and is NOT the same as a computed "POOR" — the two are now
+    # distinguishable to every downstream consumer.
+    rating: Optional[str] = None  # EXCELLENT / GOOD / MODERATE / FAIR / POOR / NOT_ASSESSED / None
     # SCORE-04 / D-09/D-10 (184.4): structured cap-reason from
     # compute_readiness_score()'s rating_cap_reason key, mirroring the
     # confidence_formula_version precedent immediately below. None means the
