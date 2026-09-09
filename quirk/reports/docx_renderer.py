@@ -486,7 +486,10 @@ def render_docx_report(
             _label = _entry.get("label") or _entry.get("phase_name", "")
             _status = _entry.get("status", "")
             if _status == "ran":
-                _detail_text = f"{_entry.get('duration_sec', '')}s"
+                # Review WR-01: NULL duration must not render "Nones" —
+                # mirror technical.py/executive.py's `is not None` guard.
+                _dur = _entry.get("duration_sec")
+                _detail_text = f"{_dur}s" if _dur is not None else ""
             else:
                 _reason = _entry.get("reason") or ""
                 _detail = _entry.get("detail")

@@ -243,6 +243,34 @@ class TestDocxScanCoverageSection:
             header_texts = [c.text for c in table.rows[0].cells]
             assert header_texts != ["Phase", "Status", "Detail"]
 
+    def test_ran_row_with_null_duration_never_renders_nones(self, tmp_path):
+        """Review WR-01: a ran phase whose duration_sec DB column is NULL must
+        render an empty duration cell on the HTML and DOCX surfaces — not the
+        literal "Nones" — matching technical.py/executive.py's `is not None`
+        guard (four-surface parity)."""
+        from docx import Document
+
+        from quirk.reports.docx_renderer import render_docx_report
+        from quirk.reports.html_renderer import render_scan_coverage_section
+
+        payload = _coverage()
+        payload["phases"][0]["duration_sec"] = None  # ran row, NULL duration
+
+        html = render_scan_coverage_section(payload)
+        assert "Nones" not in html
+
+        path = str(tmp_path / "scan_coverage_null_duration.docx")
+        cfg = _make_minimal_cfg(str(tmp_path))
+        ok = render_docx_report(
+            path=path,
+            cfg=cfg,
+            findings=[],
+            exec_content=_exec_content(coverage=payload),
+        )
+        assert ok is True
+        doc = Document(path)
+        assert "Nones" not in _docx_full_text(doc)
+
     def test_heading_order_between_executive_summary_and_readiness_assessment(self, tmp_path):
         from docx import Document
 

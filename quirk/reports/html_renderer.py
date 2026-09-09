@@ -909,7 +909,11 @@ def render_scan_coverage_section(coverage: dict | None) -> str:
         label = entry.get("label") or entry.get("phase_name", "")
         status = entry.get("status", "")
         if status == "ran":
-            detail_text = f"{entry.get('duration_sec', '')}s"
+            # Review WR-01: duration_sec key is always present (None when the
+            # DB column is NULL) — guard like technical.py/executive.py do so
+            # a NULL duration never renders the literal "Nones".
+            _dur = entry.get("duration_sec")
+            detail_text = f"{_dur}s" if _dur is not None else ""
         else:
             reason = entry.get("reason") or ""
             detail = entry.get("detail")
