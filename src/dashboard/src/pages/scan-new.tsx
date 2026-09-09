@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import type { ScanSubmitRequest } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
 import { EffectiveConfigPanel } from "@/components/EffectiveConfigPanel"
+import { ConnectorsPanel } from "@/components/ConnectorsPanel"
 
 export function ScanNewPage() {
   const navigate = useNavigate()
@@ -30,6 +31,16 @@ export function ScanNewPage() {
   const [enableNmap, setEnableNmap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Phase 193 Plan 07 (PARITY-02/PARITY-03): operator's connector toggle
+  // delta (D-13, keys only for flags the operator touched) and request-scoped
+  // credential values (D-12, never persisted, cleared after every submit).
+  const [connectors, setConnectors] = useState<Record<string, boolean>>({})
+  const [credentials, setCredentials] = useState<Record<string, string>>({})
+  const [credentialWarnings, setCredentialWarnings] = useState<{ connector: string; message: string }[]>([])
+  // D-08: a rejected-connector 422's `detail` renders here — a distinct
+  // full-width destructive banner above Start Scan, never merged with the
+  // plain inline `error` text used for field-validation failures.
+  const [rejectionBanner, setRejectionBanner] = useState<string | null>(null)
 
   const nmapForced = portScope === "top1000" || portScope === "all"
 
@@ -37,6 +48,8 @@ export function ScanNewPage() {
     e.preventDefault()
     setError(null)
     setCustomPortsError(null)
+    setCredentialWarnings([])
+    setRejectionBanner(null)
     const trimmed = targets.trim()
     if (!trimmed) {
       setError("Targets field is required.")
@@ -54,6 +67,11 @@ export function ScanNewPage() {
           enable_nmap: enableNmap || nmapForced,
           port_scope: portScope,
           ...(portScope === "custom" ? { custom_ports: customPorts } : {}),
+          // D-13/D-11: only ride the request body when the operator actually
+          // touched something — an untouched form submits exactly the body
+          // it submitted before this phase.
+          ...(Object.keys(connectors).length > 0 ? { connectors } : {}),
+          ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
         } satisfies ScanSubmitRequest),
       })
       if (resp.status === 422) {
@@ -68,6 +86,12 @@ export function ScanNewPage() {
           } else {
             setError(msg)
           }
+        } else if (typeof detail === "string") {
+          // D-08: a rejected-connector 422 carries a plain string `detail`
+          // naming every offending connector + reason — rendered as a
+          // distinct destructive banner, visually separate from the panel's
+          // amber D-15 warnings.
+          setRejectionBanner(`Scan rejected: ${detail}`)
         } else {
           setError("Validation failed.")
         }
@@ -77,7 +101,14 @@ export function ScanNewPage() {
         setError(`Scan could not be started: API returned ${resp.status}. Check the targets format and try again.`)
         return
       }
-      const data: { job_id: string; status: string } = await resp.json()
+      const data: { job_id: string; status: string; credential_warnings?: { connector: string; message: string }[] } =
+        await resp.json()
+      if (data.credential_warnings && data.credential_warnings.length > 0) {
+        setCredentialWarnings(data.credential_warnings)
+      }
+      // D-12: credentials are request-scoped only — clear them after a
+      // successful submit so a repeat visit (or "Run again") re-opens empty.
+      setCredentials({})
       navigate(`/scan/job/${data.job_id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error.")
@@ -313,6 +344,14 @@ export function ScanNewPage() {
 
         <Separator />
 
+        <ConnectorsPanel
+          connectors={connectors}
+          onConnectorsChange={setConnectors}
+          credentials={credentials}
+          onCredentialsChange={setCredentials}
+          presetState={null}
+        />
+
         <EffectiveConfigPanel
           targets={targets}
           profile={profile}
@@ -320,7 +359,28 @@ export function ScanNewPage() {
           enableNmap={enableNmap || nmapForced}
           portScope={portScope}
           customPorts={customPorts}
+          connectors={connectors}
         />
+
+        {credentialWarnings.length > 0 && (
+          <div className="rounded-md border px-3 py-2.5" style={{ borderColor: "var(--ds-high)" }}>
+            {credentialWarnings.map((w) => (
+              <p key={w.connector} className="text-xs" style={{ color: "var(--ds-high)" }}>
+                {w.message}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {rejectionBanner && (
+          <div
+            className="rounded-md border px-4 py-3 text-sm text-destructive w-full"
+            style={{ borderColor: "hsl(var(--destructive))" }}
+            role="alert"
+          >
+            {rejectionBanner}
+          </div>
+        )}
 
         <Button
           type="submit"

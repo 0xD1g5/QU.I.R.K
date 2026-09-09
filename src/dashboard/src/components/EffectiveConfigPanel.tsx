@@ -59,6 +59,11 @@ interface EffectiveConfigPanelProps {
   enableNmap: boolean
   portScope: ScanSubmitRequest["port_scope"]
   customPorts: string
+  // Phase 193 Plan 07 (PARITY-02, D-16): the operator's connector toggle
+  // delta from ConnectorsPanel. Optional and query-additive only — an
+  // empty/undefined delta must produce the identical query string Phase 192
+  // produced, so cached responses and existing behavior are unchanged.
+  connectors?: Record<string, boolean>
 }
 
 function formatValue(value: unknown): string {
@@ -79,6 +84,12 @@ function buildQuery(props: EffectiveConfigPanelProps, vertical: string): string 
     params.set("custom_ports", props.customPorts.trim())
   }
   if (vertical) params.set("vertical", vertical)
+  // D-16: only append when the operator has touched at least one connector
+  // toggle — Object.keys(props.connectors ?? {}).length === 0 must produce
+  // the exact same query string as before this field existed.
+  if (props.connectors && Object.keys(props.connectors).length > 0) {
+    params.set("connectors", JSON.stringify(props.connectors))
+  }
   return params.toString()
 }
 
