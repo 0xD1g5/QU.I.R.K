@@ -239,13 +239,24 @@ dashboard at scan-submit time, with the same safety guarantees the CLI already h
 **Plans**: 8 plans in 4 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 193-01-PLAN.md — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test
 - [ ] 193-02-PLAN.md — Credential env-var fallback parity: CREDENTIAL_REGISTRY + 4 run_scan.py sites
 - [ ] 193-03-PLAN.md — API schema contracts: availability response models + ScanSubmitRequest connectors/credentials
-- [ ] 193-04-PLAN.md — Auth-gated GET /api/connectors/availability route + app registration
 - [ ] 193-05-PLAN.md — Delta-only connectors overlay through build_job_config_dict, resolve_effective_config and /api/config/effective
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 193-04-PLAN.md — Auth-gated GET /api/connectors/availability route + app registration
 - [ ] 193-06-PLAN.md — D-08 submit-time 422 gate + credential Popen env injection + no-leak sentinel guard
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 193-07-PLAN.md — ConnectorsPanel UI, scan-new wiring, component tests, human verification
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 193-08-PLAN.md — Docs, UAT-SERIES cases, Obsidian vault sync, full-suite gate
 
 **UI hint**: yes

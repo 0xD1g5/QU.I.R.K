@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 192 closed (verification passed, UAT-192-07 PASS) — next /gsd-discuss-phase 193
-last_updated: "2026-09-09T00:08:48.756Z"
-last_activity: 2026-09-09 -- Phase 192 COMPLETE (operator-approved UAT); next Phase 193
+stopped_at: Phase 193 UI-SPEC approved
+last_updated: "2026-09-09T04:25:50.520Z"
+last_activity: 2026-09-09 -- Phase 193 planning complete
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 17
-  completed_plans: 6
-  percent: 20
+  total_plans: 25
+  completed_plans: 17
+  percent: 40
 ---
 
 # Project State
@@ -807,8 +807,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 Phase: 192 (config-visibility-skip-observability) — COMPLETE
 Plan: 11 of 11
-Status: Phase 192 complete — ready to plan Phase 193
-Last activity: 2026-09-09 -- Phase 192 closed; next Phase 193
+Status: Ready to execute
+Last activity: 2026-09-09 -- Phase 193 planning complete
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
@@ -1597,9 +1597,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-08T23:33:11.874Z
-Stopped at: Phase 192 context gathered
-Resume file: .planning/phases/192-config-visibility-skip-observability/192-CONTEXT.md
+Last session: 2026-09-09T03:57:42.037Z
+Stopped at: Phase 193 UI-SPEC approved
+Resume file: .planning/phases/193-connector-credential-parity/193-UI-SPEC.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
