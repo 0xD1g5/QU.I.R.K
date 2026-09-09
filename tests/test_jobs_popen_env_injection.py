@@ -255,3 +255,31 @@ def test_blank_credential_warns_not_blocks(monkeypatch):
     assert "credential_warnings" in data
     connectors_warned = {w["connector"] for w in data["credential_warnings"]}
     assert "enable_adcs" in connectors_warned
+
+
+# ---------------------------------------------------------------------------
+# 8. Phase 193 review WR-02: snmpv3 key kind is parsed from the END, so hosts
+#    containing colons (IPv6 literals) keep their full host and an auth
+#    credential can never be silently misfiled as priv under a truncated host.
+# ---------------------------------------------------------------------------
+
+def test_snmpv3_ipv6_host_key_parses_kind_from_the_end():
+    from quirk.dashboard.api.routes.jobs import _build_credential_env
+
+    injected, fragment = _build_credential_env({"snmpv3:2001:db8::1:auth": "pw"})
+    creds = fragment["snmp_v3_credentials"]
+    assert "2001:db8::1" in creds, creds
+    assert creds["2001:db8::1"]["auth_key_env"] == "QUIRK_JOB_SNMPV3_2001_DB8__1_AUTH"
+    assert injected["QUIRK_JOB_SNMPV3_2001_DB8__1_AUTH"] == "pw"
+    # The old split(":", 2) parse filed this under host "2001" as priv.
+    assert "2001" not in creds
+    assert "priv_key_env" not in creds["2001:db8::1"]
+
+
+def test_snmpv3_unknown_kind_raises_instead_of_defaulting_to_priv():
+    import pytest
+
+    from quirk.dashboard.api.routes.jobs import _build_credential_env
+
+    with pytest.raises(ValueError, match="snmpv3 credential kind"):
+        _build_credential_env({"snmpv3:host.example.com:bogus": "pw"})

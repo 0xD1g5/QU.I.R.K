@@ -289,13 +289,25 @@ def _build_credential_env(
             injected_env[env_name] = value
             broker_credentials.setdefault(host, {})["pass_env"] = env_name
         elif key.startswith("snmpv3:"):
-            _, host, kind = key.split(":", 2)
+            # Phase 193 review WR-02: parse the KIND from the END (rsplit) —
+            # the validator's `^snmpv3:.+:(auth|priv)$` regex accepts hosts
+            # containing colons (IPv6 literals), so a `split(":", 2)` parse
+            # truncated the host and silently misfiled auth as priv. Any kind
+            # outside the contract raises (caller converts to 422) instead of
+            # defaulting to priv.
+            prefix_host, kind = key.rsplit(":", 1)
+            host = prefix_host[len("snmpv3:"):]
             if kind == "auth":
                 env_name = f"QUIRK_JOB_SNMPV3_{_sanitize_host_for_env(host)}_AUTH"
                 field_name = "auth_key_env"
-            else:
+            elif kind == "priv":
                 env_name = f"QUIRK_JOB_SNMPV3_{_sanitize_host_for_env(host)}_PRIV"
                 field_name = "priv_key_env"
+            else:
+                raise ValueError(
+                    f"Unrecognized snmpv3 credential kind in {key!r} — "
+                    "expected 'auth' or 'priv'"
+                )
             _claim(env_name, key)
             injected_env[env_name] = value
             snmp_v3_credentials.setdefault(host, {})[field_name] = env_name
