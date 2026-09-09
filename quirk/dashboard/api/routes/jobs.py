@@ -22,7 +22,7 @@ import uuid
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from quirk.errors import format_error
@@ -59,6 +59,8 @@ def build_job_config_dict(
     allow_internal_targets: bool = False,
     port_scope: str = "top1000",
     custom_ports: Optional[str] = None,
+    *,
+    connectors_overlay: Optional[Dict[str, bool]] = None,
 ) -> dict:
     """Build the dict a dashboard-dispatched scan's job config YAML is dumped from.
 
@@ -86,7 +88,16 @@ def build_job_config_dict(
     `quirk/dashboard/api/config_preview.py`'s `resolve_effective_config` can
     build the exact same dict a real submission would dump, without writing a
     file itself.
+
+    Phase 193 / PARITY-02 / D-13 / D-14: `connectors_overlay` is a delta-only
+    keyword-only parameter — only the connector flags the operator explicitly
+    touched are written into `config["connectors"]`. It is merged LAST, after
+    the Phase 121 custom-port-scope suppression below, so an explicit operator
+    toggle wins over that suppression (D-14). This is the only path connector
+    selections may reach the job YAML through — never a post-load `setattr` on
+    a loaded `ConnectorsCfg` (Phase 75 D-13's replaced anti-pattern).
     """
+    from quirk.config import _KNOWN_CONNECTOR_KEYS  # single allowlist source of truth
     from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
     from quirk.util.port_spec import parse_port_spec
 
@@ -148,6 +159,21 @@ def build_job_config_dict(
             "allow_internal_targets": allow_internal_targets,
         },
     }
+    # D-14: an explicit operator toggle (connectors_overlay) beats the
+    # custom-port-scope suppression above (enable_email/enable_broker=False),
+    # so the overlay is merged LAST — {**suppression, **overlay}. D-13:
+    # delta-only — only keys the operator actually touched are written, never
+    # the full 25-key ConnectorsCfg surface.
+    if connectors_overlay:
+        filtered_overlay: Dict[str, bool] = {}
+        for key, value in connectors_overlay.items():
+            if key not in _KNOWN_CONNECTOR_KEYS or not key.startswith("enable_"):
+                raise ValueError(
+                    f"{key!r} is not a recognized connector toggle "
+                    "(must be a known enable_* connector key)"
+                )
+            filtered_overlay[key] = value
+        connectors_block = {**(connectors_block or {}), **filtered_overlay}
     if connectors_block is not None:
         config["connectors"] = connectors_block
     return config
