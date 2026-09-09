@@ -280,6 +280,14 @@ export function ConnectorsPanel(props: ConnectorsPanelProps) {
                                 id={`cred-${field.key}`}
                                 type={field.secret === false ? "text" : "password"}
                                 placeholder={field.secret === false ? "" : "••••••••"}
+                                // Phase 193 review WR-04 / D-12: keep the browser
+                                // itself from becoming the persistence layer.
+                                // "new-password" is the most reliably honored
+                                // save/autofill suppressor; the data-* attributes
+                                // opt out of 1Password/LastPass extensions.
+                                autoComplete={field.secret === false ? "off" : "new-password"}
+                                data-1p-ignore
+                                data-lpignore="true"
                                 value={credentials[field.key] ?? ""}
                                 onChange={(e) => setCredential(field.key, e.target.value)}
                                 className="mt-1"
