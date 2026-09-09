@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import dataclasses
 
+import pytest
+
 from quirk.config import ConnectorsCfg
 from quirk.dashboard.api.connector_availability import (
     CONNECTOR_AVAILABILITY_MAP,
@@ -126,16 +128,16 @@ def test_unavailable_entries_with_an_extra_carry_the_registry_install_hint() -> 
             record.install_hint,
             registry_hints[source.extra],
         )
-    # Convention-blindness guard: this repo's live environment is expected to
-    # have at least one extra-gated connector currently unavailable (e.g. no
-    # `identity`/`db` extras installed in a bare dev checkout). If that ever
-    # stops being true, the assertion body above would pass vacuously --
-    # flag it rather than silently reading as "everything is fine".
-    assert checked_any_unavailable_with_extra, (
-        "no extra-gated connector was found unavailable in this environment -- "
-        "the verbatim install_hint assertion above never actually ran; this "
-        "test needs a live gap to be meaningful"
-    )
+    # Phase 193 review WR-05: on a fully-provisioned environment (every
+    # extra-gated connector available) the assertion body above never runs.
+    # That is a vacuity condition of the ENVIRONMENT, not a defect in the
+    # code under test -- surface it as an honest skip, never a hard failure
+    # that couples test success to the machine's package inventory.
+    if not checked_any_unavailable_with_extra:
+        pytest.skip(
+            "no extra-gated connector unavailable in this environment -- "
+            "verbatim-hint assertion not exercised"
+        )
 
 
 def test_categories_are_drawn_from_the_ui_spec_set() -> None:
