@@ -583,4 +583,14 @@ ALLOWED_SKIPS = [
         "(surfaced by CR-01's alias-resolution fix, not a new skip "
         "construct).",
     ),
+    (
+        "test_connector_availability_mapping.py",
+        "test_unavailable_entries_with_an_extra_carry_the_registry_install_hint",
+        "environment_capability",
+        "Phase 193 review WR-05: on a fully-provisioned machine every "
+        "extra-gated connector probes available, so the verbatim-install-hint "
+        "assertion body never runs -- an environment vacuity condition, "
+        "surfaced as an honest skip instead of a hard failure coupling test "
+        "success to the machine's package inventory.",
+    ),
 ]
