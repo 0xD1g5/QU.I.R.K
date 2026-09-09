@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 194 planned (8 plans, 5 waves) — ready to execute
-last_updated: "2026-09-09T12:53:48.054Z"
-last_activity: 2026-09-09 -- Phase 194 planning complete
+stopped_at: Completed 194-01-PLAN.md
+last_updated: "2026-09-09T12:58:00.000Z"
+last_activity: 2026-09-09 -- Phase 194 plan 01 (phantom-cert filter, rating-absence sentinel) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 25
-  percent: 60
+  completed_plans: 26
+  percent: 79
 ---
 
 # Project State
@@ -50,7 +50,30 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 193 COMPLETE (verification passed 9/9, code review resolved incl. 3 criticals, operator-approved UI walkthrough). Next: Phase 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-01 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-01 (complete, 2026-09-09) — Backend data-honesty prerequisites: phantom-cert filter + rating-absence sentinel (DASH-09/VERDICT-01 backend half).**
+`quirk/dashboard/api/routes/scan.py` gained a single named predicate `_is_real_cert_endpoint(ep)`
+(next to `_cert_quantum_safety`) requiring both `ep.cert_subject` truthy AND `not ep.scan_error`;
+the `certificates` list comprehension now filters BEFORE `CertItem` construction against this
+predicate, and a new `excluded_cert_count` field on `ScanLatestResponse` (`schemas.py`, `int = 0`
+default) discloses how many TLS endpoints were removed — both the certificates page and `/print`
+PDF consume the same fixed payload since both read `/api/scan/latest`. Separately, `ScoreData.rating`
+widened `str` -> `Optional[str] = None`, and the `rating=score_raw.get("rating", "POOR")`
+missing-key fallback at `scan.py:1676` became `rating=score_raw.get("rating")` — a genuinely absent
+stored rating now returns `null`, distinguishable from a computed `"POOR"` (D-20). The
+compute-failure fallback dict at `scan.py:1658` (`{"score": 0, "rating": "POOR", ...}`) was
+deliberately left unchanged per plan instruction — that branch is a live exception, not absent
+data. All 5 `rating=` construction sites audited; only the one at 1676 changed (1458/1952/1964 are
+`ScanSession`/`CompareScanSummary`, `rating: str = ""`, untouched; 1704 is
+`ConfidenceData.confidence_rating`, unrelated). `src/dashboard/src/types/api.ts` mirrors both
+changes (`excluded_cert_count: number`, `rating: string | null`); `npm run build`/`lint` both exit
+0 with zero call-site errors. 11 new tests (`tests/test_cert_phantom_filter.py`,
+`tests/test_score_rating_absence.py`) plus `tests/test_jobs_api.py` regression, all green; zero
+deviations from plan. **DASH-09 and VERDICT-01 are NOT flipped `[x]` in `REQUIREMENTS.md`** — this
+plan is explicitly the backend-only prerequisite (per its own objective text); DASH-09's empty-state
+UI and VERDICT-01's `ExecutiveVerdict.tsx` cherry-pick land in later plans in this phase. See
+`194-01-SUMMARY.md`.
 
 **193-08 (complete, 2026-09-09) — Docs, UAT-SERIES Series 193, Obsidian vault sync, full-suite gate (PARITY-02/PARITY-03). PHASE 193 NOW 8/8 PLANS COMPLETE.**
 `docs/operators-guide.md` gained §3.1.4 (Connectors panel: category grouping, unavailable-with-reason,
@@ -889,10 +912,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 193 (Connector & Credential Parity) — COMPLETE
-Plan: 8 of 8
-Status: Ready to execute
-Last activity: 2026-09-09 -- Phase 194 planning complete
+Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 194
+Last activity: 2026-09-09 -- Phase 194 execution started
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
@@ -1724,7 +1747,7 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-09-09T04:40:54.941Z
-Stopped at: Completed 193-03-PLAN.md
+Stopped at: Phase 194 execution started (wave 1 of 5)
 Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

@@ -286,7 +286,7 @@ trustworthy executive verdict by default, and only ever shows certificates that 
 Plans:
 **Wave 1**
 
-- [ ] 194-01-PLAN.md — phantom-cert server-side filter, excluded_cert_count, rating absence sentinel, TS contract
+- [x] 194-01-PLAN.md — phantom-cert server-side filter, excluded_cert_count, rating absence sentinel, TS contract
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -343,7 +343,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
-| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
+| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 1/8 | In progress | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
 ## Backlog
