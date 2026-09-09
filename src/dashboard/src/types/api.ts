@@ -490,11 +490,32 @@ export interface ConnectorAvailabilityResponse {
   unavailable_count: number
 }
 
+// Phase 194 Plan 05 (PARITY-04, D-01..D-04): mirrors
+// quirk/dashboard/api/schemas.py AdvancedScanFields — all optional
+// (delta-only, only operator-touched keys are ever present).
+// D-19: tls_enum_mode excludes "off" (scanner silently coerces it to
+// "fast"); D-21: data_classification excludes "restricted" (not a real
+// value anywhere in the codebase); D-18: no ports_ssh field — out of scope
+// (see backlog 999.106).
+export interface AdvancedScanFields {
+  ports_tls?: string
+  tls_enum_mode?: "fast" | "deep"
+  include_sni?: boolean
+  timeout_default_seconds?: number
+  timeout_tls_seconds?: number
+  timeout_ssh_seconds?: number
+  retry_count?: number
+  data_classification?: "public" | "internal" | "confidential" | "regulated"
+}
+
 // Phase 65 UI-SCAN-01/02: dashboard-initiated scan job types
 // Phase 121 PORT-07/08: port_scope + custom_ports added
 // Phase 193 Plan 07 (PARITY-02/PARITY-03, D-11/D-13): connectors/credentials
 // are deliberately separate optional fields, mirroring
 // quirk/dashboard/api/schemas.py ScanSubmitRequest.
+// Phase 194 Plan 05 (PARITY-04, D-01/D-02): advanced is the delta-only
+// AdvancedScanFields overlay, omitted from the request body entirely when
+// empty.
 export interface ScanSubmitRequest {
   targets: string
   profile: "quick" | "standard" | "deep"
@@ -504,6 +525,7 @@ export interface ScanSubmitRequest {
   custom_ports?: string
   connectors?: Record<string, boolean>
   credentials?: Record<string, string>
+  advanced?: AdvancedScanFields
 }
 
 // Phase 193 Plan 07 (PARITY-03, D-15): non-blocking response addition when
