@@ -296,7 +296,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 194-05-PLAN.md — AdvancedPanel component, scan-new mount + submit, live preview query param
+- [x] 194-05-PLAN.md — AdvancedPanel component, scan-new mount + submit, live preview query param
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
