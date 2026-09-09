@@ -467,8 +467,27 @@ export interface QRAMMComplianceMapRow {
   scanner_informed: boolean
 }
 
+// Phase 193 Plan 07 (PARITY-02): mirrors
+// quirk/dashboard/api/schemas.py ConnectorAvailabilityEntry/Response.
+export interface ConnectorAvailabilityEntry {
+  flag: string
+  label: string
+  category: string
+  available: boolean
+  reason: string
+  install_hint: string
+}
+
+export interface ConnectorAvailabilityResponse {
+  connectors: ConnectorAvailabilityEntry[]
+  unavailable_count: number
+}
+
 // Phase 65 UI-SCAN-01/02: dashboard-initiated scan job types
 // Phase 121 PORT-07/08: port_scope + custom_ports added
+// Phase 193 Plan 07 (PARITY-02/PARITY-03, D-11/D-13): connectors/credentials
+// are deliberately separate optional fields, mirroring
+// quirk/dashboard/api/schemas.py ScanSubmitRequest.
 export interface ScanSubmitRequest {
   targets: string
   profile: "quick" | "standard" | "deep"
@@ -476,6 +495,15 @@ export interface ScanSubmitRequest {
   enable_nmap: boolean
   port_scope: "common" | "top1000" | "all" | "custom"
   custom_ports?: string
+  connectors?: Record<string, boolean>
+  credentials?: Record<string, string>
+}
+
+// Phase 193 Plan 07 (PARITY-03, D-15): non-blocking response addition when
+// a connector was enabled with blank credentials.
+export interface CredentialWarning {
+  connector: string
+  message: string
 }
 
 export interface JobStatus {
