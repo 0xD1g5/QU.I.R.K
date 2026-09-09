@@ -25,16 +25,34 @@ export function CertificatesPage() {
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   const certs = data?.certificates ?? []
+  // Phase 194 DASH-09 / D-11 / D-13: excluded_cert_count is the server's
+  // authoritative count of TLS endpoints removed as phantom rows (failed
+  // handshake). Never re-derived or re-filtered from `certs` client-side.
+  const excluded = data?.excluded_cert_count ?? 0
+
+  const disclosure = excluded > 0 && (
+    <p className="text-xs text-muted-foreground">
+      {excluded} TLS endpoints failed handshake and are not shown.
+    </p>
+  )
 
   if (!certs.length) {
     return (
-      <EmptyStateCard message="No TLS certificates discovered in this scan — verify scan targets include HTTPS or TLS services." />
+      <div className="space-y-4">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Certificate Inventory</h1>
+        {disclosure}
+        <EmptyStateCard message="No TLS certificates discovered in this scan" />
+        <p className="text-muted-foreground text-sm">
+          — verify scan targets include HTTPS or TLS services.
+        </p>
+      </div>
     )
   }
 
   return (
     <div className="space-y-4">
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>Certificate Inventory</h1>
+      {disclosure}
       <div className="rounded-md border border-border">
         <Table>
           <TableHeader>
