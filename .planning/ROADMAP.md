@@ -198,9 +198,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 192-03-PLAN.md — _PhaseRecorder + best-effort flush; ran/failed records via _wrapped_phase
-- [ ] 192-06-PLAN.md — auth-gated GET /api/config/effective + overlay resolver + provenance
-- [ ] 192-07-PLAN.md — coverage loader, ExecContent.coverage, Scan Coverage in CLI/exec markdown
+- [x] 192-03-PLAN.md — _PhaseRecorder + best-effort flush; ran/failed records via _wrapped_phase
+- [x] 192-06-PLAN.md — auth-gated GET /api/config/effective + overlay resolver + provenance
+- [x] 192-07-PLAN.md — coverage loader, ExecContent.coverage, Scan Coverage in CLI/exec markdown
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -295,7 +295,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
-| 192. Config Visibility + Skip Observability | 2/11 | In Progress|  |
+| 192. Config Visibility + Skip Observability | 5/11 | In Progress|  |
 | 193. Connector & Credential Parity | 0/TBD | Not started | - |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
