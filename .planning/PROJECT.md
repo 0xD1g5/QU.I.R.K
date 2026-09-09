@@ -1,6 +1,8 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-07)
+## Current State (updated 2026-09-09)
+
+**v5.21 in progress — Phase 193 (Connector & Credential Parity) complete 2026-09-09.** PARITY-02/PARITY-03 validated: all 25 connectors toggleable from the dashboard behind a two-source availability probe (REGISTRY + per-scanner flags, 422 on unavailable), credentials ride an in-memory env-var path (never ScanJob/config.yaml/logs — sentinel-guard-tested), delta-only YAML overlay preserves _user_set_fields precedence. Verification passed 9/9; code review resolved (3 criticals fixed: dead SNMP env fallback, loader-discarded broker creds, never-matching default host slots). Phases 191-193 done; 194-195 remain.
 
 **v5.20 shipped 2026-09-08** — v5.19.0 live on PyPI; scoring v2 (coverage-honest readiness score, single-producer severity bands); config + scanner correctness drained (no silent port no-ops, broker/Modbus end-to-end). 10/10 requirements, audit passed.
 
@@ -1174,7 +1176,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-08 — milestone v5.21 Dashboard Parity & Exposure Capability opened via `/gsd-new-milestone`; backlog item 999.104 (CLI config ↔ dashboard parity) filed at the boundary*
+*Last updated: 2026-09-09 — Phase 193 Connector & Credential Parity complete (PARITY-02/03 validated)*
 
 ## Evolution
 
