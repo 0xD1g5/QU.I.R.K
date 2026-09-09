@@ -12,6 +12,7 @@ import { Link } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
 import { useMergeLatest } from "@/hooks/useMergeLatest"
 import { RegressionAlertChip } from "@/components/RegressionAlertChip"
+import { ExecutiveVerdict } from "@/components/ExecutiveVerdict"
 import { coerceErrorDetail } from "./executive-utils"
 import type { PartialFailureEntry } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
@@ -20,6 +21,10 @@ import { useVertical } from "@/context/vertical-context"
 // this generated, freshness-gated artifact — never hardcode a second copy of
 // the sentence in this file (tests/test_score_strings_freshness.py gates it).
 import scoreStrings from "@/lib/score-strings.json"
+
+// UX spike: verdict layer. Opt-in via VITE_VERDICT_LAYER=1 so the default
+// dashboard is unchanged. Reversible — remove this const + the guarded block.
+const VERDICT_LAYER_ENABLED = import.meta.env.VITE_VERDICT_LAYER === "1"
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
@@ -275,6 +280,11 @@ export function ExecutivePage() {
           </Button>
         </div>
       </div>
+
+      {/* UX spike (VITE_VERDICT_LAYER): opinionated verdict layer above the
+          gauges. Renders from the existing scan payload; gauges remain below
+          as supporting evidence. */}
+      {VERDICT_LAYER_ENABLED && <ExecutiveVerdict data={data} />}
 
       {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
       <RegressionAlertChip />
