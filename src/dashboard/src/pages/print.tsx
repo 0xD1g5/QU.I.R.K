@@ -76,10 +76,27 @@ function PrintFindings({ findings }: { findings: FindingItem[] }) {
   )
 }
 
-function PrintCerts({ certs }: { certs: CertItem[] }) {
-  if (!certs.length) return <p className="meta">No TLS endpoints found.</p>
+// Exported (not just module-private like PrintFindings/PrintCbom) so
+// print-cert-disclosure.test.tsx can render the real component directly —
+// Phase 194 DASH-09 D-13 cross-surface consistency guard.
+export function PrintCerts({ certs, excludedCount }: { certs: CertItem[]; excludedCount: number }) {
+  // Phase 194 DASH-09 / D-13 / D-14: disclosure + empty-state copy must stay
+  // byte-identical to certificates.tsx — the cross-surface consistency guard.
+  const disclosure = excludedCount > 0 && (
+    <p className="meta">{excludedCount} TLS endpoints failed handshake and are not shown.</p>
+  )
+  if (!certs.length) {
+    return (
+      <>
+        <p className="meta">No TLS certificates discovered in this scan.</p>
+        {disclosure}
+      </>
+    )
+  }
   return (
-    <table>
+    <>
+      {disclosure}
+      <table>
       <thead>
         <tr>
           <th>Host</th><th>Port</th><th>Subject CN</th><th>Expiry</th><th>Algorithm</th><th>Quantum Safety</th>
@@ -110,6 +127,7 @@ function PrintCerts({ certs }: { certs: CertItem[] }) {
         })}
       </tbody>
     </table>
+    </>
   )
 }
 
@@ -455,7 +473,7 @@ export function PrintPage() {
         {/* Section 4: Certificate Inventory */}
         <div className="print-section">
           <h2>Certificate Inventory</h2>
-          <PrintCerts certs={certificates} />
+          <PrintCerts certs={certificates} excludedCount={data.excluded_cert_count} />
         </div>
 
         {/* Section 5: CBOM */}
