@@ -25384,6 +25384,8 @@ satisfy the gate without a corresponding real result.
 
 ---
 
+## Series 193: Connector & Credential Parity (Phase 193 — v5.21)
+
 ### UAT-193-01: Connectors panel renders all connectors grouped into the six fixed categories (PARITY-02)
 
 **ID:** UAT-193-01

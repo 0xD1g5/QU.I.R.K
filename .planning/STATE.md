@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: executing
-stopped_at: Completed 193-08-PLAN.md
+status: phase_complete
+stopped_at: Phase 193 closed (verification passed 9/9, review resolved, operator-approved UI checkpoint) — next Phase 194
 last_updated: "2026-09-09T06:50:00.000Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 25
   completed_plans: 25
-  percent: 100
+  percent: 60
 ---
 
 # Project State
@@ -50,7 +50,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 193 — Connector & Credential Parity (all 8/8 plans complete 2026-09-09; awaiting orchestrator verification/close). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+**Current focus:** Phase 193 COMPLETE (verification passed 9/9, code review resolved incl. 3 criticals, operator-approved UI walkthrough). Next: Phase 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
 
 **193-08 (complete, 2026-09-09) — Docs, UAT-SERIES Series 193, Obsidian vault sync, full-suite gate (PARITY-02/PARITY-03). PHASE 193 NOW 8/8 PLANS COMPLETE.**
 `docs/operators-guide.md` gained §3.1.4 (Connectors panel: category grouping, unavailable-with-reason,
@@ -889,9 +889,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 193 (Connector & Credential Parity) — EXECUTING
-Plan: 4 of 8
-Status: Ready to execute
+Phase: 193 (Connector & Credential Parity) — COMPLETE
+Plan: 8 of 8
+Status: Phase 193 complete — ready to plan Phase 194
 Last activity: 2026-09-09
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
