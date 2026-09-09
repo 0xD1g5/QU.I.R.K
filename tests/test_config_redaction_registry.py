@@ -110,6 +110,60 @@ def test_credential_is_set_true_for_nonempty_value():
 
 
 # ---------------------------------------------------------------------------
+# Phase 193 / PARITY-03 / D-09 / D-10: every registry entry has a live
+# env_fallback (run-time-derived, not a hand-listed count), plus precedence
+# coverage for the four newly-added fields.
+# ---------------------------------------------------------------------------
+
+
+def test_every_registry_entry_has_a_nonempty_env_fallback():
+    """D-10: the registry stays the single machine-readable driver -- a
+    future bare CredentialField (no env_fallback) is a CI failure, not a
+    silent dashboard dead-end. Derived by iterating the live registry, never
+    a hand-written list of names."""
+    offenders = [
+        (e.section, e.name) for e in CREDENTIAL_REGISTRY if not e.env_fallback
+    ]
+    assert not offenders, f"CREDENTIAL_REGISTRY entries missing env_fallback: {offenders}"
+
+
+_NEW_FALLBACK_FIELDS = [
+    ("connectors", "adcs_password", "QUIRK_ADCS_PASSWORD"),
+    ("connectors", "pg_scanner_password", "QUIRK_PG_SCANNER_PASSWORD"),
+    ("connectors", "mysql_scanner_password", "QUIRK_MYSQL_SCANNER_PASSWORD"),
+    ("connectors", "snmp_community", "QUIRK_SNMP_COMMUNITY"),
+]
+
+
+@pytest.mark.parametrize("section,name,env_var", _NEW_FALLBACK_FIELDS)
+def test_credential_is_set_true_when_only_env_var_present(monkeypatch, section, name, env_var):
+    monkeypatch.setenv(env_var, "injected-value")
+    assert credential_is_set(section, name, None) is True
+
+
+@pytest.mark.parametrize("section,name,env_var", _NEW_FALLBACK_FIELDS)
+def test_credential_is_set_false_when_neither_present(monkeypatch, section, name, env_var):
+    monkeypatch.delenv(env_var, raising=False)
+    assert credential_is_set(section, name, None) is False
+
+
+@pytest.mark.parametrize("section,name,env_var", _NEW_FALLBACK_FIELDS)
+def test_credential_is_set_true_when_config_set_and_env_unset(monkeypatch, section, name, env_var):
+    monkeypatch.delenv(env_var, raising=False)
+    assert credential_is_set(section, name, "configured-value") is True
+
+
+def test_redact_config_reports_set_for_adcs_password_from_env_only(monkeypatch):
+    """D-10: an env-only-populated credential renders as REDACTED_SET, not
+    REDACTED_UNSET, in the effective-config preview."""
+    monkeypatch.setenv("QUIRK_ADCS_PASSWORD", "injected-secret")
+    cfg = _make_app_config(connectors=ConnectorsCfg(adcs_password=None))
+    result = redact_config(cfg)
+    assert result["connectors"]["adcs_password"] == REDACTED_SET
+    assert result["connectors"]["adcs_password"] != REDACTED_UNSET
+
+
+# ---------------------------------------------------------------------------
 # Task 2: redact_config() dataclass walker
 # ---------------------------------------------------------------------------
 
