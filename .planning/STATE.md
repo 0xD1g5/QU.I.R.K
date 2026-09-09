@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-04-PLAN.md
-last_updated: "2026-09-09T13:16:17.342Z"
-last_activity: 2026-09-09 -- Phase 194 plan 04 (phantom-cert disclosure line + D-14 empty state on certificates.tsx and print.tsx, DASH-09) complete
+stopped_at: Completed 194-05-PLAN.md
+last_updated: "2026-09-09T13:22:00.000Z"
+last_activity: 2026-09-09 -- Phase 194 plan 05 (Advanced scan fields UI: AdvancedPanel.tsx, scan-new.tsx wiring, EffectiveConfigPanel.tsx query extension, PARITY-04) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 29
-  percent: 88
+  completed_plans: 30
+  percent: 91
 ---
 
 # Project State
@@ -50,7 +50,32 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-04 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-05 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-05 (complete, 2026-09-09) — Advanced scan fields UI: collapsed "Advanced" section on the scan form, feeding the live effective-config preview (PARITY-04).**
+New `AdvancedPanel.tsx` — structural analog of `ConnectorsPanel.tsx`'s collapsible shell and
+delta-only toggle pattern, minus the availability fetch (no server-side probe exists for these
+always-settable fields). Renders TLS Ports, TLS Enumeration Mode (Fast/Deep only, D-19 — no
+"Off"), Discovery Options (`include_sni` switch only; `enable_nmap` already has its own top-level
+checkbox), Timeouts & Retry (4 numeric fields), and Data Classification
+(Public/Internal/Confidential/Regulated only, D-21 — no "Restricted"). No SSH Ports field (D-18,
+backlog 999.106). A local `setField()` implements delta-only semantics (D-02): clearing a field
+back to empty deletes the key rather than sending `""`/`NaN`. Mounted on `scan-new.tsx` between
+`<ConnectorsPanel/>` and `<EffectiveConfigPanel/>` per D-04; the TLS Ports input composes with the
+existing Custom port-scope input rather than duplicating it (RESEARCH Pitfall 5) — when Custom
+scope is active, the submitted `advanced.ports_tls` is derived from the same `customPorts` string.
+Submit body gains `advanced` only when non-empty (untouched-form parity, same guard Phase 193 used
+for `connectors`); a 422 naming an `advanced.*` field renders in the existing destructive banner
+(D-03). `EffectiveConfigPanel.tsx` gained an additive-only `advanced` query param mirroring the
+Phase 193 `connectors` param — an empty/undefined delta produces the byte-identical query string
+this panel produced before this phase, and the panel's existing refetch-on-query-change effect
+picks up Advanced edits automatically with zero new wiring. 9 new tests (6 AdvancedPanel, 3
+EffectiveConfigPanel) — full frontend suite 44 files / 313 tests, build+lint+test all green (up
+from 41/304). Two Rule-1 deviations, both found and fixed before their commits landed: a
+nested-component lint error (`react-hooks/static-components`) on the badge helper, fixed by using
+a plain function instead of a JSX component; and a Select placeholder colliding with its own
+"Confidential" option text in tests, fixed with a generic "Select classification" placeholder. See
+`194-05-SUMMARY.md`.
 
 **194-04 (complete, 2026-09-09) — Phantom-cert disclosure line + D-14 empty state on both certificate surfaces (DASH-09).**
 `certificates.tsx` reads `data?.excluded_cert_count` (server-authoritative, never re-filtered
