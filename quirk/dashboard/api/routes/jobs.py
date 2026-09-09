@@ -51,7 +51,7 @@ def _utcnow_naive() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _write_job_config(
+def build_job_config_dict(
     output_dir: Path,
     targets: str,
     db_path: str,
@@ -59,8 +59,8 @@ def _write_job_config(
     allow_internal_targets: bool = False,
     port_scope: str = "top1000",
     custom_ports: Optional[str] = None,
-) -> str:
-    """Write a minimal config YAML for a dashboard-dispatched scan.
+) -> dict:
+    """Build the dict a dashboard-dispatched scan's job config YAML is dumped from.
 
     run_scan.py has no --target CLI flag; all target/output config must live
     in a YAML file passed via --config. Targets are classified as cidrs (if
@@ -81,6 +81,11 @@ def _write_job_config(
     Common scope is intentionally left alone — CONSULTING_TLS_PORTS already
     curates in the implicit-TLS email ports (993/995/465), so its connector
     coverage is by design, not a leak.
+
+    Phase 192 / PARITY-01: extracted out of `_write_job_config` so
+    `quirk/dashboard/api/config_preview.py`'s `resolve_effective_config` can
+    build the exact same dict a real submission would dump, without writing a
+    file itself.
     """
     from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
     from quirk.util.port_spec import parse_port_spec
@@ -145,6 +150,29 @@ def _write_job_config(
     }
     if connectors_block is not None:
         config["connectors"] = connectors_block
+    return config
+
+
+def _write_job_config(
+    output_dir: Path,
+    targets: str,
+    db_path: str,
+    calibration: str,
+    allow_internal_targets: bool = False,
+    port_scope: str = "top1000",
+    custom_ports: Optional[str] = None,
+) -> str:
+    """Write a minimal config YAML for a dashboard-dispatched scan.
+
+    Dict construction lives in `build_job_config_dict` (Phase 192 / PARITY-01);
+    this function's remaining job is to dump that dict to the job's config path.
+    """
+    config = build_job_config_dict(
+        output_dir, targets, db_path, calibration,
+        allow_internal_targets=allow_internal_targets,
+        port_scope=port_scope,
+        custom_ports=custom_ports,
+    )
     config_path = str(output_dir / "config.yaml")
     with open(config_path, "w") as fh:
         yaml.dump(config, fh, default_flow_style=False)
