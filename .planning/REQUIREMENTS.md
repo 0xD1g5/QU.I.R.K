@@ -27,7 +27,7 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 - [x] **PARITY-03**: Operator can supply connector credentials at scan-submit time through an
       in-memory-only path — credentials never land in `ScanJob`, the job `config.yaml`, or any
       log (extends the Phase 59 `safe_str` no-log gate to the new request fields).
-- [ ] **PARITY-04**: Operator can set advanced scan-behavior fields (TLS/SSH port lists,
+- [ ] **PARITY-04**: Operator can set advanced scan-behavior fields (TLS port lists (SSH list dropped per Phase 194 D-18/999.106 — not a CLI field),
       `tls_enum_mode`, discovery options, timeouts/retry) in a collapsed "advanced" section of
       the scan form, composing with (not fighting) vertical presets under a single recorded
       precedence rule.

@@ -269,7 +269,7 @@ trustworthy executive verdict by default, and only ever shows certificates that 
 **Requirements**: PARITY-04, VERDICT-01, DASH-09
 **Success Criteria** (what must be TRUE):
 
-  1. Operator can set advanced scan-behavior fields (TLS/SSH port lists, `tls_enum_mode`, discovery
+  1. Operator can set advanced scan-behavior fields (TLS port lists (SSH port list dropped per Phase 194 D-18 — no CLI counterpart; parked as 999.106), `tls_enum_mode`, discovery
      options, timeouts/retry) in a collapsed "advanced" section of the scan form, composing with
      (not fighting) vertical presets under one recorded precedence rule.
 
