@@ -51,6 +51,16 @@ _STAGE_ORDER = [
 ]
 _STAGE_TOTAL = 7
 
+# Phase 194 / PARITY-04 / D-01 / D-02: allowlists for build_job_config_dict's
+# scan_overlay/assessment_overlay kwargs -- same shape as _KNOWN_CONNECTOR_KEYS
+# (quirk/config.py), gating what an operator-supplied delta may write into
+# the job YAML.
+_KNOWN_SCAN_OVERLAY_KEYS = frozenset(
+    {"ports_tls", "tls_enum_mode", "include_sni", "timeouts", "retry"}
+)
+_SCAN_OVERLAY_SUBTABLE_KEYS = frozenset({"timeouts", "retry"})
+_KNOWN_ASSESSMENT_OVERLAY_KEYS = frozenset({"data_classification"})
+
 
 def _utcnow_naive() -> datetime:
     """Tz-naive UTC datetime — matches schedules.py convention (Pitfall 6)."""
@@ -114,6 +124,8 @@ def build_job_config_dict(
     custom_ports: Optional[str] = None,
     *,
     connectors_overlay: Optional[Dict[str, bool]] = None,
+    scan_overlay: Optional[Dict[str, Any]] = None,
+    assessment_overlay: Optional[Dict[str, Any]] = None,
 ) -> dict:
     """Build the dict a dashboard-dispatched scan's job config YAML is dumped from.
 
@@ -149,6 +161,22 @@ def build_job_config_dict(
     toggle wins over that suppression (D-14). This is the only path connector
     selections may reach the job YAML through — never a post-load `setattr` on
     a loaded `ConnectorsCfg` (Phase 75 D-13's replaced anti-pattern).
+
+    Phase 194 / PARITY-04 / D-01 / D-02: `scan_overlay`/`assessment_overlay`
+    are the same delta-only, merged-LAST shape as `connectors_overlay` above,
+    built by `build_advanced_overlays`. `scan_overlay` merges into
+    `scan_block` AFTER every port_scope-derived default, so an explicit
+    operator `ports_tls` always beats whatever `port_scope` produced --
+    including under `port_scope == "custom"`, where the overlay value and the
+    port_scope value both derive from the same operator-supplied port-spec
+    string, so the merge is idempotent there (RESEARCH Pitfall 5). Nested
+    `timeouts`/`retry` sub-dicts are merged as whole dicts
+    (`{**scan_block.get(k, {}), **overlay[k]}`) rather than replacing the
+    parent key outright, so a partial timeout override does not erase
+    sibling defaults -- `load_config` fills the untouched ones from
+    `TimeoutsCfg`/`RetryCfg`. `assessment_overlay` merges into
+    `config["assessment"]`, overriding the hardcoded `"confidential"` only
+    when the operator actually set `data_classification`.
     """
     from quirk.config import _KNOWN_CONNECTOR_KEYS  # single allowlist source of truth
     from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
@@ -229,6 +257,31 @@ def build_job_config_dict(
         connectors_block = {**(connectors_block or {}), **filtered_overlay}
     if connectors_block is not None:
         config["connectors"] = connectors_block
+
+    # Phase 194 / PARITY-04 / D-01 / D-02: scan_overlay merges into scan_block
+    # LAST, after every port_scope-derived default above, so an explicit
+    # operator value always wins. Unrecognized keys raise ValueError, caught
+    # by create_job's existing `except ValueError -> HTTPException(422)`.
+    if scan_overlay:
+        for key in scan_overlay:
+            if key not in _KNOWN_SCAN_OVERLAY_KEYS:
+                raise ValueError(
+                    f"{key!r} is not a recognized advanced scan field"
+                )
+        for key, value in scan_overlay.items():
+            if key in _SCAN_OVERLAY_SUBTABLE_KEYS:
+                scan_block[key] = {**scan_block.get(key, {}), **value}
+            else:
+                scan_block[key] = value
+
+    if assessment_overlay:
+        for key in assessment_overlay:
+            if key not in _KNOWN_ASSESSMENT_OVERLAY_KEYS:
+                raise ValueError(
+                    f"{key!r} is not a recognized advanced scan field"
+                )
+        config["assessment"] = {**config["assessment"], **assessment_overlay}
+
     return config
 
 
@@ -669,7 +722,13 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     from quirk.dashboard.api.config_preview import resolve_effective_config
     from quirk.dashboard.api.connector_availability import probe_all_connectors
 
+    # Phase 194 / PARITY-04 / D-01: same try block as build_job_config_dict
+    # below -- a parse_port_spec ValueError from an advanced ports_tls value
+    # becomes 422 here too. Passed to resolve_effective_config as well so the
+    # D-08 availability gate evaluates the same fully-resolved config the
+    # scan will run with.
     try:
+        scan_overlay, assessment_overlay = build_advanced_overlays(payload.advanced)
         resolved_cfg, _resolved_dict, _preset_changed = resolve_effective_config(
             targets=normalized_targets,
             profile=payload.profile,
@@ -678,6 +737,8 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
             port_scope=payload.port_scope,
             custom_ports=payload.custom_ports,
             connectors_overlay=payload.connectors,
+            scan_overlay=scan_overlay,
+            assessment_overlay=assessment_overlay,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -743,6 +804,8 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
             port_scope=payload.port_scope,
             custom_ports=payload.custom_ports,
             connectors_overlay=payload.connectors,
+            scan_overlay=scan_overlay,
+            assessment_overlay=assessment_overlay,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
