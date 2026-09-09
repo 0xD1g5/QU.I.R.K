@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-08 (Phase 191 Plan 06 — Series 191 added: SPKI SHA-256 fingerprint
+**Last Updated:** 2026-09-08 (Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
+skip observability (OBS-01, five skip reasons) surfaced as a "Scan Coverage" section on CLI/HTML/
+DOCX reports plus D-14 TLS-domain skip notes (OBS-02), and an auth-gated `GET /api/config/effective`
+pre-flight config preview with credential redaction and Overridden/Preset provenance badges
+(PARITY-01) surfaced as dashboard coverage chips and the Effective config panel. v5.21 has still
+not shipped a version bump, so `**Version:**` stays `5.19.0` — same reasoning Series 188-191's
+header notes already recorded. Earlier: Phase 191 Plan 06 — Series 191 added: SPKI SHA-256 fingerprint
 capture at TLS leaf-certificate parse (SPKI-01) persisted end-to-end across the sensor push path,
 and read-time, advisory-only key-reuse derivation surfaced as a "Key Reuse" section across CLI
 markdown/HTML/DOCX report surfaces (SPKI-02) with honest zero-reuse and no-backfill coverage
@@ -25094,5 +25100,288 @@ UAT-191-01 through UAT-191-05 each cite a live re-run of this phase's own automa
 this plan's execution (40 tests total across six files, all passing); UAT-191-06 cites the
 developer's live, real-report visual confirmation of the checkpoint's four pass criteria. No case
 in this series was checked to satisfy the gate without a corresponding real result.
+
+**Last Updated:** 2026-09-08
+
+## Series 192: Config Visibility & Skip Observability (Phase 192 — v5.21, pending bump)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its cases below carry
+HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175-177, 187, 188, 189,
+190, and 191 used. `scripts/uat_disposition_apply.py verify` adds zero ledger rows for this series.
+
+Phase 192 closed OBS-01 (`ScanPhaseRecord` per-scanner-phase ran/skipped tracking with exactly
+five skip reasons, plus `missing-credentials` pre-flight guards on the vault and database phases),
+OBS-02 (a "Scan Coverage" report section on CLI/HTML/DOCX surfaces, D-14 TLS-domain skip notes,
+and dashboard coverage chips on scan-job/scan-history), and PARITY-01 (an auth-gated
+`GET /api/config/effective` endpoint with credential redaction and Overridden/Preset provenance
+badges, surfaced as the New Scan page's Effective config panel). Cases below marked PASS via
+automated test citation were all re-run live during this plan's execution. No case in this series
+was checked to satisfy the gate without a corresponding real result — the browser-visual case
+(UAT-192-07) is honestly disposed SKIP/DEFERRED because the human checkpoints in plans 09 and 10
+were auto-mode pre-approved, not actually visually confirmed by a developer in a running browser;
+that confirmation remains an outstanding phase-level HUMAN-UAT item (see both plans' SUMMARY.md
+"Deferred Human Verification" sections).
+
+### UAT-192-01: `ScanPhaseRecord` captures exactly five skip reasons per scanner phase (OBS-01)
+
+**ID:** UAT-192-01
+**Title:** Every eligible scanner phase writes a `ScanPhaseRecord` row (ran or skipped), the
+skip-reason set is exactly the five frozen values (`disabled-by-config`, `missing-extra`,
+`no-eligible-targets`, `missing-credentials`, `failed`), and the absence of a row is never itself
+a signal
+**Maps to:** OBS-01
+
+**What to test:** the schema/migration correctness in `tests/test_scan_phase_records.py`
+(round-trip persistence, unique-constraint enforcement, exact 5-member reason-set membership,
+additive-only migration) plus the precedence-ordered guard tests added across Plans 03-05
+(disabled/missing-extra/no-eligible-targets/missing-credentials/failed classification, and the
+vault/db `missing-credentials` pre-flight guards specifically).
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_scan_phase_records.py -q
+```
+
+**Pass Criteria:** all tests pass; the reason set contains exactly 5 members; a vault phase with
+no token set records `missing-credentials` and never calls `scan_vault_targets`; a db phase with
+one usable credentialed target group still runs (does not over-skip a mixed group).
+
+**Falsifiability:** this case turns red if a sixth reason value is ever accepted, if a duplicate
+`(scan_run_id, phase_name)` row is allowed, or if a credentialed target group is skipped anyway.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
+**Notes:** `tests/test_scan_phase_records.py` re-run live during this plan — 59 tests passing
+(schema tests from 192-01 plus the writer/guard tests accumulated through 192-02..05), per those
+plans' own SUMMARY.md self-checks.
+
+---
+
+### UAT-192-02: ADCS and broker are correctly left unguarded (evidence-backed OPTIONAL disposition) (OBS-01)
+
+**ID:** UAT-192-02
+**Title:** ADCS and broker connectors are NOT given `missing-credentials` pre-flight guards,
+because their scanner source code proves both support a credential-absent, result-producing path
+(ADCS: anonymous LDAP bind; broker: anonymous RabbitMQ management probe / no-credential TLS and
+protocol probing) — a wrong guard here would falsely tell an operator a working scan was skipped
+**Maps to:** OBS-01
+
+**What to test:** the `_broker_credential_is_set()` resolver's unit coverage (unset/set/None-cred/
+empty-pass_env branches) in `tests/test_scan_phase_records.py`, and the absence of any guard call
+site gating ADCS/broker on credential presence in `run_scan.py`.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_scan_phase_records.py -k broker_credential -q
+grep -n "_run_adcs_phase\|_run_broker_phase" run_scan.py
+```
+
+**Pass Criteria:** `_broker_credential_is_set()` resolves all four branches correctly; neither
+`_run_adcs_phase` nor `_run_broker_phase` contains a `missing-credentials` skip call gated on
+credential presence.
+
+**Falsifiability:** this case turns red if a future change adds an unconditional credential guard
+to ADCS or broker without re-verifying the anonymous-bind/anonymous-probe code paths still exist.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
+**Notes:** Per 192-05-SUMMARY.md's cited evidence (`quirk/scanner/adcs_scanner.py:252-255`,
+`quirk/scanner/broker_scanner.py:392-400`) and this plan's live re-run of the credential-resolver
+tests.
+
+---
+
+### UAT-192-03: The Scan Coverage section renders with identical data on CLI/HTML/DOCX, and the TLS-domain skip note fires per D-14 (OBS-02)
+
+**ID:** UAT-192-03
+**Title:** The `{N} ran / {M} skipped` Scan Coverage section — heading, five-reason skip table,
+and honest "not recorded" state for pre-v5.21 scans — renders with matching counts and labels
+across CLI technical markdown, executive markdown, HTML, and DOCX; the one heading in the codebase
+that normally vanishes on empty data (TLS Capabilities) now states its own skip reason instead
+**Maps to:** OBS-02
+
+**What to test:** the four-surface parity test and the absence-parity test in
+`tests/test_report_coverage_parity.py`, plus `tests/test_scan_coverage_no_backfill.py`'s honest
+"coverage not recorded" behavior for scans predating this feature.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_report_coverage_parity.py tests/test_scan_coverage_no_backfill.py -q
+```
+
+**Pass Criteria:** all tests pass; the derived `(ran, skipped, label_set)` triple matches across
+all four surfaces for one fixed payload; `COVERAGE_NOT_RECORDED_NOTICE` appears (no table header)
+on all four surfaces when `coverage={}`; the TLS Capabilities heading states
+"Not assessed — skipped: {reason}" on a skipped `tls_scanning` phase on all three report-file
+surfaces (CLI/HTML/DOCX).
+
+**Falsifiability:** this case turns red if any surface's ran/skipped counts or label set diverges
+from the others, if a not-recorded scan ever shows a fabricated `0 ran / 0 skipped` row, or if the
+TLS Capabilities heading silently vanishes instead of stating its skip.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
+**Notes:** `tests/test_report_coverage_parity.py` (15 tests) and
+`tests/test_scan_coverage_no_backfill.py` (18 tests) re-run live during this plan — 33 tests
+passing, per 192-07/192-08 SUMMARY.md self-checks.
+
+---
+
+### UAT-192-04: `GET /api/config/effective` is auth-gated, redacted, and provenance-badged (PARITY-01)
+
+**ID:** UAT-192-04
+**Title:** The endpoint returns 401 without a token when `security.api_token` is set and 200 with
+one (unlike the pre-existing unauthenticated `GET /api/config`); every credential field in its
+response is redacted to `•••• (set)` / `•••• (not set)`, never a real value; every field carries a
+`user` / `preset` / `default` provenance tag matching how it was actually resolved
+**Maps to:** PARITY-01
+
+**What to test:** `tests/test_config_effective_route.py`'s auth-enforcement, redaction, and
+provenance-tagging tests.
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_config_effective_route.py -q
+```
+
+**Pass Criteria:** all tests pass; a credential field's `value` in the response is never a real
+secret regardless of caller; an operator-overridden field is tagged `user`; a vertical-preset field
+is tagged `preset`; an untouched field is tagged `default`.
+
+**Falsifiability:** this case turns red if a real credential value ever appears in the response
+body, if the endpoint returns 200 without a token when `security.api_token` is set, or if a
+provenance tag misattributes a field's actual source.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
+**Notes:** `tests/test_config_effective_route.py` re-run live during this plan — 13 tests passing.
+
+---
+
+### UAT-192-05: Dashboard coverage chips render honestly on scan-job and scan-history, including the pre-v5.21 empty state (OBS-02)
+
+**ID:** UAT-192-05
+**Title:** `ScanCoverageChip` fetches through the same `load_scan_coverage()` loader the report
+pipeline uses (no second, divergent read path), renders `{N} ran`/`{M} skipped` badges plus an
+expandable per-phase detail table with severity-colored rows, renders nothing on fetch failure
+(never a fabricated zero pair), and shows the honest "Coverage data not recorded... pre-v5.21...
+Re-scan" notice for scans that predate this feature
+**Maps to:** OBS-02
+
+**What to test:** `tests/test_scan_coverage_api.py`'s endpoint tests (recorded payload, honest
+absence, job-id resolution, 404, auth) and `ScanCoverageChip.test.tsx`'s render-branch tests (chip
+pair, detail-row reveal, not-recorded state, failed-fetch silence, per-status colors).
+
+**Steps:**
+```bash
+.venv/bin/python -m pytest tests/test_scan_coverage_api.py -q
+npm --prefix src/dashboard run test -- ScanCoverageChip
+```
+
+**Pass Criteria:** all tests pass; `grep -c 'ScanPhaseRecord' quirk/dashboard/api/routes/scan.py`
+returns 0 (single shared read path); a not-recorded scan never renders a `0 ran / 0 skipped` pair;
+a failed fetch renders nothing.
+
+**Falsifiability:** this case turns red if the dashboard endpoint ever queries `ScanPhaseRecord`
+directly (bypassing the shared loader and risking divergence from the report pipeline), or if the
+chip ever renders fabricated zero counts on a not-recorded or failed-fetch scan.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
+**Notes:** `tests/test_scan_coverage_api.py` (5 tests) and `ScanCoverageChip.test.tsx` (5 tests)
+re-run live during this plan — 10 tests passing, per 192-09-SUMMARY.md's self-check.
+
+---
+
+### UAT-192-06: The Effective config panel previews the real submission config, redacts credentials identically in both tabs, and never blocks submission on failure (PARITY-01)
+
+**ID:** UAT-192-06
+**Title:** The New Scan page's collapsed "Effective config" panel fetches only after first expand
+(never on mount), carries the live form selections as query params, renders Grouped
+(section/field/provenance-badge) and Raw YAML tabs from the SAME server response (no second, less-
+redacted fetch), shows the identical `•••• (set)`/`•••• (not set)` placeholder in both tabs for a
+credential field, and degrades to an "unavailable" notice on fetch failure without disabling
+anything else on the page
+**Maps to:** PARITY-01
+
+**What to test:** all seven `EffectiveConfigPanel.test.tsx` behaviors, including the Raw-YAML-vs-
+Grouped placeholder-parity assertion — the automated equivalent of SUMMARY 192-10's flagged
+"security-relevant" manual redaction check (step 6).
+
+**Steps:**
+```bash
+npm --prefix src/dashboard run test -- EffectiveConfigPanel
+```
+
+**Pass Criteria:** all 7 tests pass; zero fetches occur before first expand; the Raw YAML tab
+shows the identical `•••• (not set)` placeholder text as the Grouped tab for the same credential
+field; no `<Input`, `<Switch`, or `contentEditable` appears anywhere in the component.
+
+**Falsifiability:** this case turns red if a real credential value ever appears in either tab, if
+the two tabs' redaction placeholders ever diverge, or if the panel fetches before the operator
+expands it.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
+**Notes:** `EffectiveConfigPanel.test.tsx` (7 tests) + `scan-new-effective-config-panel.test.tsx`
+(3 tests) re-run live during this plan — 10 tests passing, per 192-10-SUMMARY.md's self-check.
+This automated coverage satisfies the *mechanism* of SUMMARY 192-10's flagged redaction check; the
+live-browser visual confirmation of that same check remains outstanding — see UAT-192-07.
+
+---
+
+### UAT-192-07: Live-browser visual confirmation of coverage chips and the Effective config panel (OBS-02, PARITY-01) — outstanding
+
+**ID:** UAT-192-07
+**Title:** A developer visually confirms, in a running dashboard against a real scan, that the
+coverage chips and Effective config panel read correctly, that credential fields never leak a real
+value in the Raw YAML tab, and that the Run Scan / primary-action buttons remain visually dominant
+next to the new advisory UI
+**Maps to:** OBS-02, PARITY-01
+
+**What to test:** the two "Deferred Human Verification" checklists recorded verbatim in
+192-09-SUMMARY.md (coverage chips: 6 steps) and 192-10-SUMMARY.md (Effective config panel: 8
+steps, with step 6 — the Raw YAML redaction check — explicitly flagged as the security-relevant
+one that must be confirmed, not assumed).
+
+**Steps:** (not yet performed — this is the honest gap this case records)
+```
+1. python run_scan.py serve
+2. Run a scan with at least one connector disabled; open its scan-job page; confirm the chip pair,
+   colors, and detail-row copy match 192-09-SUMMARY.md's checklist.
+3. Open scan-history, expand a scan predating this phase; confirm the honest not-recorded notice.
+4. Open New Scan, expand Effective config with a typed target + deep profile; confirm grouped
+   sections, provenance badges, and the credential placeholder.
+5. Switch to Raw YAML; confirm the SAME placeholder appears — no real credential value.
+6. Confirm Run Scan / Start Scan remain the visually dominant actions on both pages.
+```
+
+**Pass Criteria:** all items in both checklists confirmed true by a human operator in a real
+browser session.
+
+**Falsifiability:** this case turns red (FAIL) if a real credential value is ever observed in the
+Raw YAML tab during the live walkthrough, or if any chip/panel element visually overwhelms the
+primary scan-submission action.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-08  **Tester:** N/A — not yet performed
+**Notes:** DEFERRED — covered by `tests/*` automated equivalents cited in UAT-192-03/05/06 for the
+mechanism (redaction, honest-absence, parity), but the live-browser visual walkthrough itself has
+not been performed. Both source SUMMARY.md files' Task 3 checkpoints were auto-mode
+pre-approved per this session's policy, not actually visually confirmed by a developer — this case
+exists specifically so that fact is recorded honestly rather than defaulting to an unverified PASS.
+Tracked as an outstanding phase-level HUMAN-UAT item; must be performed and this case flipped to
+PASS or FAIL before relying on visual claims (chip colors, badge placement, dominant-button
+hierarchy) beyond what the automated tests already assert structurally.
+
+---
+
+**Series 192 disposition.** Six of seven cases, UAT-192-01 through UAT-192-06, are `[x] PASS`,
+each citing a live re-run of this phase's own automated tests during this plan's execution.
+UAT-192-07 is honestly disposed `[x] SKIP` (DEFERRED) — the live-browser visual walkthrough for
+coverage chips and the Effective config panel has not yet been performed by a human, unlike Series
+191's UAT-191-06 which had a genuine live human checkpoint. No case in this series was checked to
+satisfy the gate without a corresponding real result.
 
 **Last Updated:** 2026-09-08
