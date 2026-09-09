@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useScanList } from "@/hooks/useScanList"
 import { formatDateTimeShort } from "@/lib/datetime"
 import type { ScanSession } from "@/types/api"
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/table"
 import { PageSpinner } from "@/components/PageSpinner"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { ScanCoverageChip } from "@/components/ScanCoverageChip"
 import { Card, CardContent } from "@/components/ui/card"
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -23,6 +25,11 @@ export function ScanHistoryPage() {
   const navigate = useNavigate()
   const { sessions, loading, error } = useScanList()
   const [selected, setSelected] = useState<string[]>([])
+  const [expandedScanId, setExpandedScanId] = useState<string | null>(null)
+
+  function handleToggleExpand(scanId: string) {
+    setExpandedScanId(prev => (prev === scanId ? null : scanId))
+  }
 
   function handleCheck(scanId: string, checked: boolean) {
     setSelected(prev => {
@@ -76,6 +83,7 @@ export function ScanHistoryPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-10"></TableHead>
+              <TableHead className="w-10"></TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Target</TableHead>
               <TableHead>Profile</TableHead>
@@ -88,7 +96,22 @@ export function ScanHistoryPage() {
           </TableHeader>
           <TableBody>
             {sessions.map(s => (
-              <TableRow key={s.scan_id}>
+              <Fragment key={s.scan_id}>
+              <TableRow>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`${expandedScanId === s.scan_id ? "Collapse" : "Expand"} coverage detail for scan from ${formatDateTimeShort(s.scanned_at)}`}
+                    onClick={() => handleToggleExpand(s.scan_id)}
+                  >
+                    {expandedScanId === s.scan_id ? (
+                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <Checkbox
                     checked={selected.includes(s.scan_id)}
@@ -131,6 +154,14 @@ export function ScanHistoryPage() {
                   <Button variant="outline" size="sm" onClick={() => handleClone(s)}>Clone</Button>
                 </TableCell>
               </TableRow>
+              {expandedScanId === s.scan_id && (
+                <TableRow>
+                  <TableCell colSpan={10} className="bg-muted/30">
+                    <ScanCoverageChip scanRunId={s.scan_id} />
+                  </TableCell>
+                </TableRow>
+              )}
+              </Fragment>
             ))}
           </TableBody>
         </Table>

@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react"
 import { useJobStatus } from "@/hooks/useJobStatus"
 import { fetchApi } from "@/lib/api"
 import { PageSpinner } from "@/components/PageSpinner"
+import { ScanCoverageChip } from "@/components/ScanCoverageChip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -211,6 +212,12 @@ export function ScanJobPage() {
             </Link>
             .
           </p>
+        </div>
+      )}
+
+      {data.status === "completed" && (
+        <div className="mt-4">
+          <ScanCoverageChip jobId={data.job_id} />
         </div>
       )}
 
