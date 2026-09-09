@@ -700,7 +700,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         # with the request-local injected credential vars — never a bare
         # dict of only `injected_env` (that would drop PATH/PYTHONPATH/
         # QUIRK_CONFIG_PATH and break every scan), and never
-        # `os.environ[...] = value` mutation of the server process (a race
+        # a direct assignment into os.environ (mutating it in place) of the server process (a race
         # under FastAPI's threadpool — two concurrent create_job calls would
         # stomp each other's env vars). `injected_env` is never stored beyond
         # this call (D-12).
@@ -719,10 +719,11 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     row.status = "running"
     db.commit()
 
-    logger.info("scan_job created job_id=%s pid=%d target=%s", job_id, proc.pid, payload.targets)
     response: dict = {"job_id": job_id, "status": "running"}
     if credential_warnings:
         response["credential_warnings"] = credential_warnings
+
+    logger.info("scan_job created job_id=%s pid=%d target=%s", job_id, proc.pid, payload.targets)
     return response
 
 
