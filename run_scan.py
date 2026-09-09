@@ -517,6 +517,51 @@ def _flush_stage_endpoints(
         pass
 
 
+def _flush_scan_phase_records(db_path, recorder, scan_run_id) -> None:
+    """Phase 192 OBS-01: best-effort flush of `_PhaseRecorder.rows()` to `scan_phase_records`.
+
+    Mirrors `_flush_stage_endpoints`'s shape exactly: early-return on any
+    falsy input, single `get_session` block, `except Exception: pass` — a DB
+    hiccup here must never abort a scan (T-192-09). The table's PK is a
+    plain autoincrement `id`, not `(scan_run_id, phase_name)`, so a bare
+    `session.merge()` on a fresh ORM instance would always INSERT and raise
+    on the composite UniqueConstraint on a re-flush; instead each row is
+    looked up by `(scan_run_id, phase_name)` first and updated in place if
+    found, upserting against the real unique key.
+    """
+    if not db_path or not recorder or not scan_run_id:
+        return
+    rows = recorder.rows()
+    if not rows:
+        return
+    try:
+        with get_session(db_path) as session:
+            recorded_at = datetime.now(timezone.utc)
+            for row in rows:
+                existing = session.query(ScanPhaseRecord).filter_by(
+                    scan_run_id=scan_run_id, phase_name=row["phase_name"],
+                ).one_or_none()
+                if existing is not None:
+                    existing.status = row["status"]
+                    existing.reason = row["reason"]
+                    existing.detail = row["detail"]
+                    existing.duration_sec = row["duration_sec"]
+                    existing.recorded_at = recorded_at
+                else:
+                    session.add(ScanPhaseRecord(
+                        scan_run_id=scan_run_id,
+                        phase_name=row["phase_name"],
+                        status=row["status"],
+                        reason=row["reason"],
+                        detail=row["detail"],
+                        duration_sec=row["duration_sec"],
+                        recorded_at=recorded_at,
+                    ))
+            session.commit()
+    except Exception:
+        pass
+
+
 def build_ot_supplemental_endpoints(
     targets: List[Tuple[str, int]],
     ssh_targets: List[Tuple[str, int]],
@@ -3865,6 +3910,17 @@ def main():
     run_stats["ended_utc"] = datetime.now(timezone.utc).isoformat()
     run_stats["protocol_counts"] = dict(proto_counts)
     run_stats["error_categories"] = dict(err_counts)
+
+    # Phase 192 OBS-01: flush the per-phase ran/skipped/failed rows BEFORE
+    # write_reports() so a coverage-loading report reader can see them in the
+    # same process run. Best-effort — never fails the scan (T-192-09). The
+    # "reporting" phase itself is a report-generation stage, not a scanner
+    # phase (D-11), so it is deliberately never passed to this flush.
+    _flush_scan_phase_records(
+        args.db_path or cfg.output.db_path,
+        run_stats.get("phase_records"),
+        scan_run_id,
+    )
 
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "reports")

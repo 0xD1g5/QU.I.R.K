@@ -302,3 +302,88 @@ def test_wrapped_phase_without_phase_records_key_behaves_as_before() -> None:
     assert result == ["x"]
     assert "container_scanning" in run_stats["timings_sec"]
     assert "phase_records" not in run_stats
+
+
+# ---------------------------------------------------------------------------
+# Plan 03 Task 2: _flush_scan_phase_records
+# ---------------------------------------------------------------------------
+
+
+def test_flush_scan_phase_records_writes_one_row_per_phase(tmp_path) -> None:
+    from run_scan import _PhaseRecorder, _flush_scan_phase_records
+    from quirk.models import ScanPhaseRecord
+
+    db_path = str(tmp_path / "flush.db")
+    init_db(db_path)
+
+    recorder = _PhaseRecorder()
+    recorder.record_ran("tls_scanning", 1.23)
+    recorder.record_ran("ssh_scanning", 0.5)
+    scan_run_id = "run-flush-1"
+
+    _flush_scan_phase_records(db_path, recorder, scan_run_id)
+
+    engine = init_db(db_path)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        rows = session.query(ScanPhaseRecord).filter_by(scan_run_id=scan_run_id).all()
+        assert len(rows) == 2
+        assert {r.scan_run_id for r in rows} == {scan_run_id}
+    finally:
+        session.close()
+
+
+def test_flush_scan_phase_records_twice_does_not_duplicate(tmp_path) -> None:
+    from run_scan import _PhaseRecorder, _flush_scan_phase_records
+    from quirk.models import ScanPhaseRecord
+
+    db_path = str(tmp_path / "flush_twice.db")
+    init_db(db_path)
+
+    recorder = _PhaseRecorder()
+    recorder.record_ran("tls_scanning", 1.23)
+    scan_run_id = "run-flush-2"
+
+    _flush_scan_phase_records(db_path, recorder, scan_run_id)
+    _flush_scan_phase_records(db_path, recorder, scan_run_id)  # re-flush, same rows
+
+    engine = init_db(db_path)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        rows = session.query(ScanPhaseRecord).filter_by(
+            scan_run_id=scan_run_id, phase_name="tls_scanning",
+        ).all()
+        assert len(rows) == 1
+    finally:
+        session.close()
+
+
+def test_flush_scan_phase_records_missing_db_path_returns_silently() -> None:
+    from run_scan import _PhaseRecorder, _flush_scan_phase_records
+
+    recorder = _PhaseRecorder()
+    recorder.record_ran("tls_scanning", 1.0)
+
+    assert _flush_scan_phase_records(None, recorder, "id") is None
+    assert _flush_scan_phase_records("/nonexistent/no.db", recorder, "id") is None
+
+
+def test_flush_scan_phase_records_no_rows_is_a_noop(tmp_path) -> None:
+    from run_scan import _PhaseRecorder, _flush_scan_phase_records
+    from quirk.models import ScanPhaseRecord
+
+    db_path = str(tmp_path / "norows.db")
+    init_db(db_path)
+    recorder = _PhaseRecorder()  # no record_* calls made
+
+    _flush_scan_phase_records(db_path, recorder, "run-norows")
+
+    engine = init_db(db_path)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        assert session.query(ScanPhaseRecord).count() == 0
+    finally:
+        session.close()
