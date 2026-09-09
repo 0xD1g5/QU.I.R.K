@@ -390,6 +390,66 @@ def test_flush_scan_phase_records_twice_does_not_duplicate(tmp_path) -> None:
         session.close()
 
 
+def test_record_resumed_writes_honest_unclassified_skipped_row() -> None:
+    """Review WR-07: checkpoint-skipped phases in a resumed run get an honest
+    row (unclassified shape, explicit resume detail) instead of being absent —
+    absence-as-a-signal is forbidden by D-10."""
+    from run_scan import _PhaseRecorder, _record_resumed_stage_phases
+
+    run_stats = {"phase_records": _PhaseRecorder()}
+    _record_resumed_stage_phases(run_stats, ("aws_scanning", "db_scanning"))
+
+    rows = run_stats["phase_records"].rows()
+    assert [r["phase_name"] for r in rows] == ["aws_scanning", "db_scanning"]
+    for row in rows:
+        assert row["status"] == "skipped"
+        assert row["reason"] is None
+        assert row["detail"] == "completed in prior run (resumed)"
+        assert row["duration_sec"] is None
+
+    # No recorder present (run_stats without phase_records) is a no-op.
+    _record_resumed_stage_phases({}, ("tls_scanning",))
+
+
+def test_flush_resume_backfill_never_overwrites_prior_run_real_row(tmp_path) -> None:
+    """Review WR-07: if the prior run already flushed a real row for a phase,
+    a resumed run's backfill marker for the same (scan_run_id, phase_name)
+    must not clobber it."""
+    from run_scan import _PhaseRecorder, _flush_scan_phase_records
+    from quirk.models import ScanPhaseRecord
+
+    db_path = str(tmp_path / "resume_backfill.db")
+    init_db(db_path)
+    scan_run_id = "run-resume-1"
+
+    prior = _PhaseRecorder()
+    prior.record_ran("tls_scanning", 2.5)
+    _flush_scan_phase_records(db_path, prior, scan_run_id)
+
+    resumed = _PhaseRecorder()
+    resumed.record_resumed("tls_scanning")  # backfill marker for same phase
+    resumed.record_resumed("ssh_scanning")  # phase with no prior row
+    _flush_scan_phase_records(db_path, resumed, scan_run_id)
+
+    engine = init_db(db_path)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        tls = session.query(ScanPhaseRecord).filter_by(
+            scan_run_id=scan_run_id, phase_name="tls_scanning",
+        ).one()
+        assert tls.status == "ran"  # real prior row preserved
+        assert tls.duration_sec == 2.5
+        ssh = session.query(ScanPhaseRecord).filter_by(
+            scan_run_id=scan_run_id, phase_name="ssh_scanning",
+        ).one()
+        assert ssh.status == "skipped"
+        assert ssh.reason is None
+        assert ssh.detail == "completed in prior run (resumed)"
+    finally:
+        session.close()
+
+
 def test_flush_scan_phase_records_missing_db_path_returns_silently() -> None:
     from run_scan import _PhaseRecorder, _flush_scan_phase_records
 

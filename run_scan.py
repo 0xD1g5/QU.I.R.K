@@ -219,6 +219,24 @@ class _PhaseRecorder:
             "duration_sec": None,
         })
 
+    def record_resumed(self, phase_name: str) -> None:
+        """Review WR-07: honest row for a phase whose stage was checkpoint-
+        completed in a PRIOR run and therefore not re-executed in this resumed
+        run. Without it, the resumed run's flush would yield `recorded: true`
+        coverage with entire stages absent — exactly the "absence of a row as
+        a signal" outcome D-10 forbids. Uses the honest unclassified shape
+        (reason=None) with an explicit resume detail. Flush never overwrites
+        a real prior-run row with this backfill (see _flush_scan_phase_records).
+        """
+        self._rows.append({
+            "phase_name": phase_name,
+            "status": SCAN_PHASE_STATUS_SKIPPED,
+            "reason": None,
+            "detail": "completed in prior run (resumed)",
+            "duration_sec": None,
+            "_resume_backfill": True,
+        })
+
     def record_failed(self, phase_name: str, detail: str) -> None:
         # Reset any stale pending classification from a prior skip() call
         # that never reached record_skipped() (defensive; should not happen).
@@ -234,6 +252,18 @@ class _PhaseRecorder:
 
     def rows(self) -> list:
         return list(self._rows)
+
+
+def _record_resumed_stage_phases(run_stats, phase_names) -> None:
+    """Review WR-07: called at each `_stage_completed(...)` resume gate with
+    the recorder phase names that live inside that stage's else-branch, so the
+    resumed run's coverage table stays complete rather than silently omitting
+    every checkpoint-skipped phase."""
+    recorder = run_stats.get("phase_records")
+    if recorder is None:
+        return
+    for name in phase_names:
+        recorder.record_resumed(name)
 
 
 def _phase_timer(run_stats: Dict[str, Any], name: str):
@@ -578,6 +608,11 @@ def _flush_scan_phase_records(db_path, recorder, scan_run_id) -> None:
                 existing = session.query(ScanPhaseRecord).filter_by(
                     scan_run_id=scan_run_id, phase_name=row["phase_name"],
                 ).one_or_none()
+                if row.get("_resume_backfill") and existing is not None:
+                    # Review WR-07: a resume-backfill marker must never
+                    # overwrite a real row the prior run already flushed for
+                    # this (scan_run_id, phase_name).
+                    continue
                 if existing is not None:
                     existing.status = row["status"]
                     existing.reason = row["reason"]
@@ -2613,6 +2648,7 @@ def main():
                or getattr(e, "protocol", "") in ("HTTPS",)
         ]
         logger.info(f"Resuming: skipping tls stage ({len(tls_endpoints)} endpoints from DB)")
+        _record_resumed_stage_phases(run_stats, ("tls_scanning",))  # Review WR-07
     else:
         def _run_tls_phase():
             if not tls_targets:
@@ -2656,6 +2692,7 @@ def main():
             if getattr(e, "protocol", "") == "SSH"
         ]
         logger.info(f"Resuming: skipping ssh stage ({len(ssh_endpoints)} endpoints from DB)")
+        _record_resumed_stage_phases(run_stats, ("ssh_scanning",))  # Review WR-07
     else:
 
         def _run_ssh_phase():
@@ -3034,6 +3071,10 @@ def main():
             f"({len(jwt_endpoints)} jwt, {len(container_endpoints)} container, "
             f"{len(source_endpoints)} source, {len(openapi_endpoints)} openapi from DB)"
         )
+        _record_resumed_stage_phases(run_stats, (  # Review WR-07
+            "jwt_scanning", "container_scanning", "source_scanning",
+            "openapi_scanning", "fuzz_scanning",
+        ))
     else:
         def _run_jwt_phase():
             _recorder = run_stats["phase_records"]
@@ -3194,6 +3235,9 @@ def main():
             f"({len(aws_endpoints)} aws, {len(azure_endpoints)} azure, "
             f"{len(gcp_endpoints)} gcp, {len(db_endpoints)} db from DB)"
         )
+        _record_resumed_stage_phases(run_stats, (  # Review WR-07
+            "aws_scanning", "azure_scanning", "gcp_scanning", "db_scanning",
+        ))
     else:
         def _run_aws_phase():
             _recorder = run_stats["phase_records"]
@@ -3355,6 +3399,11 @@ def main():
             f"{len(codesign_endpoints)} codesign, "
             f"{len(vault_endpoints)} vault from DB)"
         )
+        _record_resumed_stage_phases(run_stats, (  # Review WR-07
+            "s3_scanning", "blob_scanning", "k8s_scanning", "dnssec_scanning",
+            "saml_scanning", "kerberos_scanning", "smime_scanning",
+            "adcs_scanning", "codesign_scanning", "vault_scanning",
+        ))
     else:
         # ==============================
         # S3 object storage encryption (Phase 28, STOR-01)
@@ -3725,6 +3774,9 @@ def main():
             f"({len(email_endpoints)} email, {len(kafka_endpoints)} kafka, "
             f"{len(rabbit_endpoints)} rabbit, {len(redis_endpoints)} redis from DB)"
         )
+        _record_resumed_stage_phases(run_stats, (  # Review WR-07
+            "email_scanning", "broker_scanning",
+        ))
     else:
         email_endpoints = []
         # Phase 41 / D-12: probe optional-extra availability and emit advisory if missing.
