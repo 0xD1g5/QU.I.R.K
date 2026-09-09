@@ -55,15 +55,18 @@ def test_every_connector_flag_has_a_disposition() -> None:
 
 def test_no_flag_is_silently_unmapped() -> None:
     """Every map entry must either be `always_available=True` OR declare at
-    least one of `extra` / `module_flags` / `binary`. A mapping with all of
-    these empty and `always_available=False` is the silent-no-op failure
-    mode D-02/D-06 exist to prevent."""
+    least one of `extra` / `module_flags` / `any_module_flags` / `binary`.
+    A mapping with all of these empty and `always_available=False` is the
+    silent-no-op failure mode D-02/D-06 exist to prevent."""
     problems = []
     for flag, source in CONNECTOR_AVAILABILITY_MAP.items():
         if source.always_available:
             continue
         has_real_source = bool(
-            source.extra or source.module_flags or getattr(source, "binary", None)
+            source.extra
+            or source.module_flags
+            or getattr(source, "any_module_flags", ())
+            or getattr(source, "binary", None)
         )
         if not has_real_source:
             problems.append(flag)
@@ -144,3 +147,34 @@ def test_categories_are_drawn_from_the_ui_spec_set() -> None:
         if source.category not in _UI_SPEC_CATEGORIES
     }
     assert not bad, bad
+
+
+def test_enable_db_or_semantics_matches_run_scan_gate(monkeypatch):
+    """Phase 193 review WR-03: `enable_db` is available when AT LEAST ONE
+    driver flag is truthy (matching run_scan.py's
+    `not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE)` gate), and unavailable
+    only when both are falsy -- with the `db` extra's verbatim install hint
+    still attached via `hint_extra`."""
+    import quirk.scanner.db_connector as db_connector
+
+    from quirk.dashboard.api.connector_availability import probe_connector
+
+    # PG-only environment: must be AVAILABLE (the original defect 422-blocked it).
+    monkeypatch.setattr(db_connector, "PSYCOPG2_AVAILABLE", True)
+    monkeypatch.setattr(db_connector, "PYMYSQL_AVAILABLE", False)
+    record = probe_connector("enable_db")
+    assert record.available, record
+
+    # MySQL-only environment: also available.
+    monkeypatch.setattr(db_connector, "PSYCOPG2_AVAILABLE", False)
+    monkeypatch.setattr(db_connector, "PYMYSQL_AVAILABLE", True)
+    assert probe_connector("enable_db").available
+
+    # Neither driver: unavailable, accurate reason, verbatim registry hint.
+    monkeypatch.setattr(db_connector, "PSYCOPG2_AVAILABLE", False)
+    monkeypatch.setattr(db_connector, "PYMYSQL_AVAILABLE", False)
+    record = probe_connector("enable_db")
+    assert not record.available
+    assert "none of the alternatives is available" in record.reason
+    db_hint = next(e.install_hint for e in REGISTRY if e.extra == "db")
+    assert record.install_hint == db_hint

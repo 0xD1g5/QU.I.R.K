@@ -55,14 +55,16 @@ module's own optional-import guard, 2026-09-09):
   D-08's server reject has a definite yes/no; GKE/AKS absence is a reason-text
   nuance only, never surfaced here as a separate probe.
 - ``enable_vault`` -> ``vault_connector.HVAC_AVAILABLE`` (run_scan.py:3711).
-- ``enable_db`` -> BOTH ``extra="db"`` AND
-  ``db_connector.PSYCOPG2_AVAILABLE``/``PYMYSQL_AVAILABLE`` in
-  ``module_flags`` (run_scan.py:3320-3322), per this plan's explicit
-  disposition. Note this is stricter (AND) than ``run_scan.py``'s own gate
-  (``not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE)`` — an OR), which is a
-  known, deliberate divergence: the plan's generic probe formula ANDs every
-  ``module_flags`` entry, and this plan's disposition intentionally lists
-  both flags rather than special-casing an OR path into the shared formula.
+- ``enable_db`` -> ``db_connector.PSYCOPG2_AVAILABLE``/``PYMYSQL_AVAILABLE``
+  in ``any_module_flags`` (OR semantics — Phase 193 review WR-03), exactly
+  matching ``run_scan.py``'s own gate
+  (``not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE)``, run_scan.py:3320-3322).
+  The earlier AND-over-``module_flags`` disposition was a documented
+  divergence that fed a hard D-08 *reject*: a PG-only install (psycopg2
+  without pymysql) got 422-blocked for a scan the engine would run. The
+  ``db`` extra is availability-irrelevant here (``is_extra_available`` ANDs
+  both drivers) and supplies only the verbatim install hint via
+  ``hint_extra``.
 - ``enable_nmap`` -> ``extra="nmap"`` only; ``REGISTRY``'s ``binary="nmap"``
   probe already covers the ``shutil.which`` check.
 - ``enable_kerberos`` -> ``extra="identity"`` (``REGISTRY``'s ``impacket``
@@ -154,6 +156,17 @@ class AvailabilitySource:
     category: str = ""
     label: str = ""
     binary: Optional[str] = None
+    # Phase 193 review WR-03: OR-semantics module flags — the connector is
+    # available when AT LEAST ONE entry resolves truthy (vs `module_flags`'
+    # AND semantics). Needed for `enable_db`, whose run_scan.py gate is
+    # `not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE)` — a PG-only install
+    # must not be hard-422-rejected for a scan the engine would run.
+    any_module_flags: Tuple[Tuple[str, str], ...] = ()
+    # Install-hint lookup key into ``optional_extra.REGISTRY`` for entries
+    # that must NOT use ``extra`` for availability (the registry's
+    # ``is_extra_available`` ANDs every module in the extra's gate list) but
+    # still want its verbatim install hint when unavailable.
+    hint_extra: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -195,9 +208,10 @@ def probe_connector(flag: str) -> ConnectorAvailability:
 
     Available iff (``extra`` is ``None`` or ``is_extra_available(extra)``)
     AND every ``(module, flag)`` in ``module_flags`` resolves truthy AND
-    (``binary`` is ``None`` or ``shutil.which(binary)`` is not ``None``),
-    unless ``always_available`` is ``True`` (then always available with an
-    empty reason/hint).
+    (``any_module_flags`` is empty or AT LEAST ONE entry resolves truthy —
+    Phase 193 review WR-03) AND (``binary`` is ``None`` or
+    ``shutil.which(binary)`` is not ``None``), unless ``always_available``
+    is ``True`` (then always available with an empty reason/hint).
 
     T-193-01: raises ``KeyError`` for a ``flag`` not present in
     ``CONNECTOR_AVAILABILITY_MAP`` rather than guessing — ``flag`` is never
@@ -229,6 +243,23 @@ def probe_connector(flag: str) -> ConnectorAvailability:
         if not ok:
             problems.append(problem or f"{module}.{flag_name} unavailable")
 
+    # Phase 193 review WR-03: OR semantics — at least one flag truthy.
+    if source.any_module_flags:
+        any_problems: list[str] = []
+        any_ok = False
+        for module, flag_name in source.any_module_flags:
+            ok, problem = _module_flag_value(module, flag_name)
+            if ok:
+                any_ok = True
+                break
+            any_problems.append(problem or f"{module}.{flag_name} unavailable")
+        if not any_ok:
+            problems.append(
+                "none of the alternatives is available ("
+                + "; ".join(any_problems)
+                + ")"
+            )
+
     binary_ok = True
     if source.binary is not None:
         binary_ok = shutil.which(source.binary) is not None
@@ -238,8 +269,9 @@ def probe_connector(flag: str) -> ConnectorAvailability:
     available = not problems
 
     install_hint = ""
-    if not available and source.extra is not None:
-        entry = _registry_entry(source.extra)
+    hint_key = source.extra or source.hint_extra
+    if not available and hint_key is not None:
+        entry = _registry_entry(hint_key)
         if entry is not None:
             install_hint = entry.install_hint
 
@@ -310,8 +342,15 @@ CONNECTOR_AVAILABILITY_MAP: Dict[str, AvailabilitySource] = {
     ),
     # -- Database ----------------------------------------------------------
     "enable_db": AvailabilitySource(
-        extra="db",
-        module_flags=(
+        # Phase 193 review WR-03: OR semantics matching run_scan.py's own
+        # gate (`not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE)`). The `db`
+        # extra is NOT used for availability (is_extra_available ANDs both
+        # drivers and would falsely 422 a PG-only install) — it feeds only
+        # the verbatim install hint via `hint_extra`.
+        extra=None,
+        hint_extra="db",
+        module_flags=(),
+        any_module_flags=(
             ("quirk.scanner.db_connector", "PSYCOPG2_AVAILABLE"),
             ("quirk.scanner.db_connector", "PYMYSQL_AVAILABLE"),
         ),
