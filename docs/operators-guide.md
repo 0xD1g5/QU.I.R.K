@@ -244,6 +244,49 @@ recorded" / "This scan predates per-phase coverage tracking (pre-v5.21). Re-scan
 coverage detail." — never a fabricated `0 ran / 0 skipped` pair. There is no backfill; the only
 way to get coverage data for an older scan is to re-scan it.
 
+### 3.1.4 Connectors panel — enabling connectors and supplying credentials from the dashboard (PARITY-02/PARITY-03, Phase 193)
+
+The New Scan page carries a "Connectors" panel above the Effective config panel (§3.1.2). Expanding
+it (lazy-fetched on first expand only) loads `GET /api/connectors/availability` and renders all 25
+connector toggles grouped into six fixed-order categories: Identity, Cloud, Database, Email &
+Broker, OT/ICS, and Source & API — matching the CLI's `connectors.enable_*` surface field-for-field,
+not a dashboard-only subset.
+
+**Unavailable connectors are shown, never hidden.** A connector whose required optional extra is not
+installed on the server appears as a disabled toggle with its reason and the verbatim
+`pip install quirk[<extra>]` hint always visible — no hover required. This is advisory only: even if
+you could somehow force the toggle on, submitting a job that would run an unavailable connector is
+rejected server-side with an HTTP 422 that names the connector and the reason, including when the
+request bypasses the dashboard entirely and calls the job-creation API directly. The disabled switch
+is a convenience that saves you a failed submission; the actual guarantee is server-enforced.
+
+**Credential entry.** Toggling on a connector that needs a credential (e.g. AD CS, PostgreSQL/MySQL
+database scanning, SNMP community string, broker/SNMPv3 per-host auth) reveals a masked credential
+input. Every credential field is:
+
+- **masked** as you type, like a password field;
+- **never saved** — the value is used only for that one scan submission, is not written to the job's
+  stored config, and does not persist across page reloads;
+- **empty again after submission** — you must re-enter it on every scan you submit, by design.
+
+Cloud connectors (AWS, Azure, GCP) show an ambient-credentials note instead of a field — they use
+your environment's or instance's own credential chain (IAM role, service principal, application
+default credentials) and have no dashboard-fillable secret.
+
+**Enabling a connector with no credential supplied is allowed, not blocked.** Submission succeeds; the
+scan records a `missing-credentials` skip for that phase in its Scan Coverage disclosure (see
+`docs/report-interpretation.md` §22) rather than the job being rejected. The panel shows a
+non-blocking amber warning at submit time if you enable a connector and leave its credential blank,
+so the outcome isn't a surprise, but it never stops you from submitting.
+
+Also new this phase: **`GET /api/connectors/availability`**, the auth-gated endpoint the panel reads.
+It requires the same dashboard bearer token as every other `/api/*` route, probes every connector's
+real availability fresh on every call (no caching — a `pip install` you just ran is reflected on your
+very next fetch), and returns each connector's `available` flag, `reason` (when unavailable), and
+`install_hint` (the exact `pip install quirk[...]` string). `docs/api-reference.md` does not exist yet
+as a project convention (per CLAUDE.md's documentation checklist); this section is the interim
+documentation for that endpoint until that reference file is created.
+
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
 `--fuzz` enables active REST crypto-posture probing against discovered OpenAPI

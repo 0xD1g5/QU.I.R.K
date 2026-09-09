@@ -1520,3 +1520,21 @@ sole per-phase disclosure surface.
 > configured. That's not a finding against your posture — it just means we weren't able to check
 > that domain this time. Add the token and re-scan, and that domain will show up in your coverage
 > going forward."
+
+### `missing-credentials` vs. `disabled-by-config` vs. `missing-extra` — a dashboard scan submitted without credentials (Phase 193)
+
+As of Phase 193, a scan can be submitted from the dashboard's Connectors panel
+(`docs/operators-guide.md` §3.1.4) with a connector switched **on** but its credential field left
+**blank** — enabling a connector without a credential is allowed, not rejected. That combination
+always produces a `missing-credentials` row in this Scan Coverage section, and it reads differently
+from the other two config-related skip reasons even though all three sound similar:
+
+- **`disabled-by-config`** — the operator never turned the connector on at all (`enable_*: false`).
+  Nothing was attempted.
+- **`missing-extra`** — the connector is on, but the server doesn't have the optional Python
+  package installed to run it. The operator can't fix this from the dashboard form; it requires a
+  `pip install quirk[<extra>]` on the machine running the scan.
+- **`missing-credentials`** — the connector is on, the code to run it is installed, but no
+  credential was available at scan-launch time (blank dashboard field and no environment-variable
+  fallback set). This is the one case where re-running the *identical* scan with only a credential
+  added will change the outcome — nothing else about the target or config needs to change.

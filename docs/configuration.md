@@ -311,6 +311,43 @@ disposition and reason tags" immediately below for the full 25-key table.
 
 > **Note:** See [Connector Guides](connectors/) for per-connector credential setup and least-privilege templates.
 
+### Credential environment variables (D-09, Phase 193)
+
+The scanner honors an environment-variable fallback for every connector credential field in
+`quirk/config_redaction.py`'s `CREDENTIAL_REGISTRY` — these are **not dashboard-internal**. A CLI
+operator can export any of them instead of writing the secret into `config.yaml`:
+
+| Config field | Environment variable | Falls back for |
+|--------------|----------------------|-----------------|
+| `connectors.vault_token` | `VAULT_TOKEN` | HashiCorp Vault transit/PKI connector (pre-existing, Phase 25) |
+| `connectors.adcs_password` | `QUIRK_ADCS_PASSWORD` | AD CS LDAP bind password |
+| `connectors.pg_scanner_password` | `QUIRK_PG_SCANNER_PASSWORD` | PostgreSQL database-encryption scanner |
+| `connectors.mysql_scanner_password` | `QUIRK_MYSQL_SCANNER_PASSWORD` | MySQL database-encryption scanner |
+| `connectors.snmp_community` | `QUIRK_SNMP_COMMUNITY` | SNMPv2c community string for hardware fingerprinting |
+
+**The config-file value always wins when both are set.** These env vars are a fallback consulted
+only when the corresponding `config.yaml` field is empty/unset — set the field directly in
+`config.yaml` if you want it to take precedence over whatever is in the shell environment.
+
+For a shared or multi-operator machine, prefer a secret manager or an untracked, gitignored env
+file over exporting these inline in a shared shell session — anything placed in shell history or a
+committed dotfile is a credential leak, not a convenience.
+
+**Per-host broker and SNMPv3 credentials** use a related but distinct idiom: rather than one fixed
+env-var name, the dashboard's job submission generates a per-host variable name (the
+`pass_env` / `auth_key_env` / `priv_key_env` config fields, carrying the environment-variable NAME
+only, never the secret) and injects the actual value into the scan subprocess's environment at
+launch. This is the same non-persistence pattern the broker connector (Phase 57) and SNMPv3
+(Phase 139) already used for their own credential fields — Phase 193 extends dashboard-submitted
+scans to use it too, rather than inventing a new secret channel. See "Dashboard connector toggles"
+above and `docs/operators-guide.md` §3.1.4 for how this looks from the Connectors panel.
+
+**Credentials submitted from the dashboard are injected into the scan subprocess environment and
+never persisted.** Whether a credential comes from the Connectors panel or from one of the env vars
+above, it reaches the scanner only via the subprocess environment at scan-launch time — it is never
+written to the SQLite `ScanJob` row, the job's stored `config.yaml`, or any log line. The job YAML
+records only the environment-variable *name* that was used, never the value.
+
 ### Connector disposition and reason tags (D-06, Phase 184.2)
 
 Every `enable_*` line in the shipped `quirk/config_template.yaml` carries an inline, closed-vocabulary
@@ -1057,6 +1094,25 @@ Rules:
 - The expansion cap is 2048 unique ports — specs that expand to more than 2048 ports are rejected with a 422 error (guards against accidentally specifying `1-65535` in the custom field).
 - The nmap checkbox is honored: if you also enable nmap, custom ports are passed to nmap as `-p <csv>`; if nmap is off, the builtin fingerprinter probes each listed port directly.
 - **Custom scope means exactly these ports.** The email and broker connectors (SMTP/IMAP/POP3 and Kafka/AMQP/Redis) probe their own fixed service-port tables, which the `standard` and `deep` profiles normally auto-enable independently of the port list. Under custom scope these connectors are explicitly disabled so the scan covers only the ports you specified — otherwise a 2-port custom scan would also probe the ~7 fixed email ports. To scan email/broker crypto, use the `common`, `top1000`, or `all` scope (the `common`/Consulting list already curates in the implicit-TLS email ports 993/995/465 by design).
+
+### Dashboard connector toggles vs. custom-port-scope suppression (D-13/D-14, Phase 193)
+
+The "Custom port spec" section above describes the dashboard's `custom` port scope force-disabling
+`enable_email`/`enable_broker` so a narrow custom scan doesn't also probe the fixed email/broker
+service ports. As of Phase 193's Connectors panel (`docs/operators-guide.md` §3.1.4), that
+suppression is no longer absolute:
+
+- **D-14 — an explicit toggle beats custom-port-scope suppression.** If you explicitly turn
+  `enable_email` or `enable_broker` back on in the Connectors panel while `custom` port scope is
+  selected, your explicit toggle wins — the scan runs that connector even though custom scope would
+  otherwise have suppressed it. This mirrors the CLI precedent above (an explicit `false` always
+  beats the profile auto-enable) applied in the opposite direction: an explicit `true` now also
+  beats the dashboard's own suppression default.
+- **D-13 — only the toggles you touch are written to the job config.** The Connectors panel writes a
+  delta-only overlay: flipping one connector's switch writes only that field into the submitted job
+  YAML's `connectors:` block. Every connector you didn't touch keeps whatever the active vertical
+  preset or profile default would otherwise set — so toggling on one connector never silently resets
+  or overrides the other 24.
 
 ### CLI `scan.ports_tls`: email/broker auto-enable is independent of your port list (v5.17 — Phase 173)
 
