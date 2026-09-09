@@ -140,6 +140,17 @@ Three small operator-facing additions shipped in Phase 143:
   unchanged). The mechanism activates automatically, with no code changes, the moment a real
   certificate secret is configured.
 
+### 2.4.1 `GET /api/config/effective` — auth-gated, unlike `GET /api/config` (PARITY-01, Phase 192)
+
+The dashboard's pre-existing `GET /api/config` endpoint returns the server's base config and does
+not require the dashboard API token. The new `GET /api/config/effective` endpoint — added for the
+New Scan page's Effective config panel (§3.1.2) — **does require the dashboard API token** when
+`security.api_token` is set, because it accepts caller-supplied form parameters (targets, profile,
+etc.) and returns the exact merged, redacted config those parameters would produce; treat it as an
+authenticated preview endpoint, not a public config-read endpoint. Credential fields in its
+response are always redacted to `•••• (set)` / `•••• (not set)` regardless of caller — there is no
+authenticated mode that returns real credential values.
+
 ---
 
 ## 3. Scan
@@ -187,6 +198,51 @@ unassessed and what to do about it:
   v2 may simply reflect honest exclusion of previously-fabricated points, not a regression — do not
   compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s Unreleased entry for
   the full migration decision record.
+
+### 3.1.2 Previewing what a scan will run with — the Effective config panel (PARITY-01, Phase 192)
+
+The New Scan page in the dashboard has a collapsed "Effective config" panel above the Run Scan
+button. Expanding it fetches `GET /api/config/effective` with your current form selections
+(targets, profile, calibration, nmap toggle, port scope, custom ports, vertical) and previews the
+**exact config that submission would run with** — not the server's base config file, and not a
+static default. It re-fetches automatically as you change form fields while the panel stays open,
+and never fetches at all if you leave it collapsed.
+
+Two tabs render the same server response two ways:
+
+- **Grouped** (default) — one card per config section (Targets, Scan, Connectors, Output,
+  Assessment, Intelligence, Security), one row per field, with a provenance badge: "Overridden"
+  (you changed it on the form) or "Preset: {vertical}" (a vertical preset applied it); a field with
+  neither badge is a plain default.
+- **Raw YAML** — the identical redacted payload rendered as YAML text, for operators who want to
+  copy the exact config into a file.
+
+**Credentials never leave the server.** Any credential-bearing field (e.g. `connectors.vault_token`,
+broker credentials) renders only the literal placeholder text `•••• (set)` or `•••• (not set)` —
+never a real value, in either tab, and never inside an editable input. If you ever see a real
+credential value in the Raw YAML tab, that is a redaction bypass and should be reported
+immediately.
+
+A failed fetch renders an "Effective config unavailable" notice without blocking scan submission —
+the panel is advisory-only and never gates the Run Scan button.
+
+### 3.1.3 Scan Coverage chips (OBS-02, Phase 192)
+
+Both the scan-job page (while a scan is running/completed) and the scan-history page (per past
+scan, via the row's expand chevron) show a "Scan Coverage" chip pair: `{N} ran` (green) /
+`{M} skipped` (neutral outline), reading through `GET /api/scans/{scan_run_id}/coverage` (or the
+`GET /api/jobs/{job_id}/coverage` convenience wrapper for an in-progress job). Both endpoints
+require the dashboard API token like every other `/api/scans`/`/api/jobs` route.
+
+Expanding "Show detail" reveals one row per scanner phase — ran rows show duration, skipped rows
+show the reason and detail exactly as described in `docs/report-interpretation.md` §22's skip-reason
+table, colored by severity (`missing-credentials` amber, `failed` red, the other three skip
+reasons neutral, `ran` green).
+
+**Scans from before this feature (pre-v5.21)** show an honest two-line notice — "Coverage data not
+recorded" / "This scan predates per-phase coverage tracking (pre-v5.21). Re-scan to get full
+coverage detail." — never a fabricated `0 ran / 0 skipped` pair. There is no backfill; the only
+way to get coverage data for an older scan is to re-scan it.
 
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 

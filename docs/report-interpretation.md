@@ -1463,3 +1463,60 @@ coverage line above it, not in isolation.
 > chasing them one at a time. The coverage line also tells you how many of your TLS endpoints we
 > could check for this — anything scanned before this feature existed needs a re-scan before we
 > can tell you whether it shares a key with anything else."
+
+## 22. Scan Coverage (Phase 192, OBS-01/OBS-02)
+
+Every generated report (CLI technical markdown, HTML, and DOCX) now carries a "Scan Coverage"
+section, positioned immediately after the executive-summary metadata and before the readiness
+assessment. It answers a single question: **which scanner phases actually ran during this scan,
+and why did any that didn't run get skipped?**
+
+### What the section is NOT
+
+This section is deliberately distinct from the existing "Confidence & Coverage" section (§17) and
+the "Discovery and Coverage" bullet under Discovery Liveness Pre-Pass Rows (§12). Those sections
+report **per-endpoint assessment quality** — how many endpoints of a given type were reachable,
+liveness-probed, or had enough data for a confident score. Scan Coverage reports **per-phase
+execution status** — whether a scanner phase (TLS, SSH, JWT, container, vault, broker, database,
+and 17 others) ran at all this scan, independent of how many endpoints it found once it did run.
+A phase can run and still contribute low confidence (§17's concern); a phase can also never run at
+all, which is what this section discloses.
+
+### Reading the section
+
+The heading is followed by a `{N} ran / {M} skipped` summary line, then one row per phase: ran
+rows show the phase's wall-clock duration; skipped rows show the skip reason plus a short,
+non-secret detail string (e.g. `connectors.vault_token / VAULT_TOKEN not set`). There are exactly
+five skip reasons, each implying a specific operator action:
+
+| Skip reason | What it means | What to do |
+|---|---|---|
+| `disabled-by-config` | The connector/scanner is turned off in your config. | Enable it (flip the relevant `connectors.enable_*` or scanner toggle) if you want that domain assessed. |
+| `missing-extra` | The scanner needs an optional Python package that isn't installed. | Install the named optional extra (see `docs/operators-guide.md` §2.2, Optional extras matrix). |
+| `no-eligible-targets` | The scanner is enabled, but no targets were configured for it. | Add hosts/addresses to the named config key (e.g. `connectors.vault_targets`). |
+| `missing-credentials` | The scanner is enabled and has targets, but the credential it needs to authenticate is not set. | Supply the named config key or environment variable — see the Effective config panel (`docs/operators-guide.md` §3.1.2) to check credential status before submitting a scan. |
+| `failed` | The phase started and aborted with an error. | Check the error rows / logs for that phase; this is not a configuration gap, it is a runtime failure. |
+
+### A skipped phase never fabricates a zero
+
+The absence of a row for a phase is never itself a signal — every phase that was eligible to run
+is recorded, ran or skipped, explicitly. If a scan predates this feature (before v5.21), the
+section states plainly that coverage was **not recorded** for that scan, rather than rendering an
+empty or all-zero table. There is no backfill: coverage recording starts at the scan that produces
+it, and the only way to get coverage data for an older target set is to re-scan it.
+
+### D-14: a domain section whose phase was skipped states its own skip
+
+For the one report section whose *heading itself* — not merely its rows — normally vanishes when
+its backing data is empty (the "TLS Capabilities" section), a skipped `tls_scanning` phase now
+makes that heading state "Not assessed — skipped: {reason}" explicitly, on all three surfaces
+(CLI, HTML, DOCX), instead of silently disappearing. Every other scanner phase feeds an omnibus
+findings table that already renders unconditionally with an honest empty-state message regardless
+of which phase(s) produced zero data — for those 24 phases, the Scan Coverage section above is the
+sole per-phase disclosure surface.
+
+> **Client Conversation — Scan Coverage:**
+> "Your report shows the vault scanner was skipped this run because no Vault token was
+> configured. That's not a finding against your posture — it just means we weren't able to check
+> that domain this time. Add the token and re-scan, and that domain will show up in your coverage
+> going forward."
