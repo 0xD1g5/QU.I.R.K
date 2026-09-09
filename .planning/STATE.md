@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-02-PLAN.md
-last_updated: "2026-09-09T13:55:00.000Z"
-last_activity: 2026-09-09 -- Phase 194 plan 02 (advanced scan fields backend overlay, PARITY-04) complete
+stopped_at: Completed 194-03-PLAN.md
+last_updated: "2026-09-09T14:40:00.000Z"
+last_activity: 2026-09-09 -- Phase 194 plan 03 (Executive Verdict layer cherry-picked and rewired off API rating, VERDICT-01) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 27
-  percent: 82
+  completed_plans: 28
+  percent: 85
 ---
 
 # Project State
@@ -50,7 +50,30 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-02 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-03 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-03 (complete, 2026-09-09) — Executive Verdict layer cherry-picked from `origin/UX-Updates` and rewired off the API's authoritative rating (VERDICT-01).**
+`git cherry-pick --no-commit -n f05e7dc7` landed `ExecutiveVerdict.tsx` + its test file + the
+`executive.tsx` wiring from a single commit (D-05 — no branch merge, `git log --oneline HEAD`
+shows zero `Merge branch 'UX-Updates'` commits). Reconciled two 7-month drift points found by
+`tsc -b --noEmit`: `ScoreData.score` widened to `number | null` since the spike was written
+(Phase 188 SCORE-06); and the test fixture was missing `hardware_findings`/`hardware_devices`
+(Phase 128/134) and `excluded_cert_count` (Phase 194 DASH-09). Then: deleted
+`VERDICT_LAYER_ENABLED`/`VITE_VERDICT_LAYER` entirely — the verdict now mounts unconditionally
+above the gauges on `executive.tsx` (D-06); deleted `verdictBand(score)`'s `>=80`/`>=50`
+score-cutoff derivation and replaced it with a module-private `ratingToTone(rating)` switch over
+the API's 6-value enum (EXCELLENT/GOOD -> safe, MODERATE/FAIR -> at-risk, POOR -> vulnerable,
+default -> `unavailable`), so the band is driven exclusively by the server's `rating` field, never
+re-derived from the raw score (D-07); added the honest-absence branch rendering exactly `Verdict
+not available for this scan (pre-v5.21 data).` when rating is null/NOT_ASSESSED/unrecognized,
+using the existing `--ds-medium` neutral token (D-08); added the inline `Score capped: {reason}`
+note in `--ds-high` amber beneath the band label when `rating_cap_reason` is non-null (D-09).
+Tests rewritten: 15 cases (up from the spike's 4) covering all six rating->band mappings via
+`it.each`, `NOT_ASSESSED` and `rating: null` tested as two independent honest-absence cases per
+RESEARCH's Pitfall 3, an unrecognized future rating value, cap-reason present/absent, and a
+`score: 91, rating: "POOR"` regression guard proving the band follows rating not score. `npm run
+build && npm run lint && npm run test`: all exit 0 (41 files, 296 tests green); dashboard statics
+rebuilt and committed. Zero deviations from plan. See `194-03-SUMMARY.md`.
 
 **194-02 (complete, 2026-09-09) — Advanced scan fields backend overlay: AdvancedScanFields model, delta-only scan_overlay/assessment_overlay, effective-config preview forwarding with nested provenance (PARITY-04).**
 `quirk/dashboard/api/schemas.py` gained `AdvancedScanFields` (Pydantic, `extra="forbid"`,

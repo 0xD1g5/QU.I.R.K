@@ -291,7 +291,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 194-02-PLAN.md — AdvancedScanFields model, scan_overlay/assessment_overlay, 422 gate, preview forwarding
-- [ ] 194-03-PLAN.md — Executive Verdict cherry-pick (f05e7dc7), flag-gate removal, ratingToTone rewire
+- [x] 194-03-PLAN.md — Executive Verdict cherry-pick (f05e7dc7), flag-gate removal, ratingToTone rewire
 - [ ] 194-04-PLAN.md — cert disclosure line + locked empty state on certificates.tsx and /print
 
 **Wave 3** *(blocked on Wave 2 completion)*
