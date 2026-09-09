@@ -175,6 +175,18 @@ class ExecContent:
     # decoration.
     key_reuse: dict = field(default_factory=dict)
 
+    # Phase 192 Plan 07 (OBS-02, D-13/D-15): scan-phase coverage disclosure,
+    # populated by writer.py's `load_scan_coverage()` from a single
+    # `ScanPhaseRecord` read. Never routed through `_build_finding()` /
+    # findings_evaluator.py; deliberately carries no top-level `severity`,
+    # `host`, or `port` key, matching `key_reuse`'s contract above — the
+    # absent key is the structural mechanism that keeps this out of the
+    # findings chokepoint, not decoration. An empty dict here means the
+    # loader has not run yet (backward-compat default); the loaded payload
+    # itself distinguishes "not recorded" (pre-v5.21 scan) from "recorded,
+    # zero phases" via its own `recorded` flag — see `quirk/reports/coverage.py`.
+    coverage: dict = field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # D-04: Ordering dicts for within-bucket priority sort

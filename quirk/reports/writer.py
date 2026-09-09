@@ -11,6 +11,7 @@ from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
 from quirk.reports.content_model import build_exec_content, ReportCongruenceError, NOT_COMPUTED_STATEMENT, effective_score_divisor  # D-03 / D-06 / Phase 188 SCORE-06
+from quirk.reports.coverage import load_scan_coverage  # Phase 192 Plan 07 (OBS-02)
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.intelligence.evidence import build_evidence_summary
@@ -456,6 +457,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         (getattr(e, "scan_run_id", None) for e in (endpoints or []) if getattr(e, "scan_run_id", None)),
         None,
     )
+    # Phase 192 Plan 07 (OBS-02): when no endpoint carries a scan_run_id (e.g.
+    # a scan with zero endpoints), fall back to run_stats["started_utc"] — per
+    # run_scan.py's own comment, scan_run_id IS the run's started_utc value.
+    if not _scan_run_id:
+        _scan_run_id = (run_stats or {}).get("started_utc")
 
     # SCORE-03 / D-16b (Phase 184.3): the scan instant is derived once here,
     # following the same "derive once, reuse" idiom as _scan_run_id above,
@@ -483,6 +489,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # loaded here alongside vendor_pqc_trends, single DB read feeding both
     # the CLI markdown (below) and exec_content (further down).
     _key_reuse = _load_key_reuse(getattr(cfg.output, "db_path", None))
+    # Phase 192 Plan 07 (OBS-02): one load feeding both the CLI markdown
+    # (below) and exec_content (further down) — no second loader call.
+    _coverage = load_scan_coverage(getattr(cfg.output, "db_path", None), _scan_run_id)
     tech_md = build_tech_markdown(
         cfg,
         endpoints,
@@ -490,6 +499,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         vendor_pqc_trends=vendor_pqc_trends,
         scan_completed_at=_scan_completed_at,
         key_reuse=_key_reuse,
+        coverage=_coverage,
     )
     tech_path = os.path.join(outdir, f"technical-findings-{stamp}.md")
     with open(tech_path, "w", encoding="utf-8") as f:
@@ -786,6 +796,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # second database read.
     exec_content.key_reuse = _key_reuse
 
+    # Phase 192 Plan 07 (OBS-02): same value already loaded above by
+    # load_scan_coverage feeds exec_content here — no second loader call, no
+    # second database read.
+    exec_content.coverage = _coverage
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — one shared computation
     # feeds markdown/HTML/DOCX/terminal summary; no renderer recomputes this.
     _undetermined_count, _undetermined_breakdown = _compute_undetermined_hosts(endpoints)
@@ -794,7 +809,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
 
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
     exec_md = build_exec_markdown(
-        cfg, endpoints, findings, exec_content=exec_content, scan_completed_at=_scan_completed_at
+        cfg,
+        endpoints,
+        findings,
+        exec_content=exec_content,
+        scan_completed_at=_scan_completed_at,
+        coverage=_coverage,
     )
     exec_path = os.path.join(outdir, f"executive-summary-{stamp}.md")
     with open(exec_path, "w", encoding="utf-8") as f:
