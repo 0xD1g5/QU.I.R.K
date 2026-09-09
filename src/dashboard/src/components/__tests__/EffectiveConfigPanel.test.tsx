@@ -110,15 +110,18 @@ describe("EffectiveConfigPanel", () => {
     expect(screen.getByText("calibration")).toBeInTheDocument()
   })
 
-  it("badges a user-provenance field as 'Overridden' and a preset field as 'Preset: {vertical}'", async () => {
+  // Review WR-05: preset provenance comes from apply_profile(cfg, profile) —
+  // the badge is labeled with the scan PROFILE, never the vertical.
+  it("badges a user-provenance field as 'Overridden' and a preset field as 'Preset: {profile}'", async () => {
     mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
     render(<EffectiveConfigPanel {...defaultProps()} />)
     fireEvent.click(screen.getByText("Effective config"))
 
     expect(await screen.findByText("Overridden")).toBeInTheDocument()
-    expect(screen.getByText("Preset: healthcare")).toBeInTheDocument()
+    expect(screen.getByText("Preset: deep")).toBeInTheDocument()
+    expect(screen.queryByText("Preset: healthcare")).not.toBeInTheDocument()
     // default field renders no provenance badge
-    expect(screen.queryByText("Preset: healthcare")?.closest("table")).toBeTruthy()
+    expect(screen.queryByText("Preset: deep")?.closest("table")).toBeTruthy()
   })
 
   it("renders credential fields as a redacted status placeholder, never an editable input", async () => {

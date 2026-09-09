@@ -194,8 +194,11 @@ export function EffectiveConfigPanel(props: EffectiveConfigPanelProps) {
                                   Overridden
                                 </Badge>
                               )}
+                              {/* Review WR-05: preset provenance is computed from
+                                  apply_profile(cfg, profile) server-side — label with
+                                  the scan profile, not the vertical. */}
                               {field.provenance === "preset" && (
-                                <Badge variant="secondary">Preset: {data.vertical}</Badge>
+                                <Badge variant="secondary">Preset: {data.profile}</Badge>
                               )}
                             </TableCell>
                           </TableRow>
