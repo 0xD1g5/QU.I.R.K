@@ -257,6 +257,56 @@ def test_blank_credential_warns_not_blocks(monkeypatch):
     assert "enable_adcs" in connectors_warned
 
 
+def test_blank_snmp_community_warns_despite_truthy_public_default(monkeypatch):
+    """Phase 193 review WR-06: `snmp_community`'s dataclass default is the
+    TRUTHY string "public", which used to read as an operator-supplied
+    credential and made the `enable_snmp` D-15 warning unreachable dead
+    code. A pure default (never written into the raw YAML, no env fallback)
+    must warn."""
+    monkeypatch.delenv("QUIRK_SNMP_COMMUNITY", raising=False)
+    recording = _RecordingPopen()
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", recording)
+    _patch_probe_available(monkeypatch, "enable_snmp")
+
+    _app, tc, _Session = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={
+            "targets": "example.com",
+            "profile": "quick",
+            "connectors": {"enable_snmp": True},
+        },
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    connectors_warned = {w["connector"] for w in response.json()["credential_warnings"]}
+    assert "enable_snmp" in connectors_warned
+
+
+def test_submitted_snmp_community_suppresses_the_warning(monkeypatch):
+    monkeypatch.delenv("QUIRK_SNMP_COMMUNITY", raising=False)
+    recording = _RecordingPopen()
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", recording)
+    _patch_probe_available(monkeypatch, "enable_snmp")
+
+    _app, tc, _Session = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={
+            "targets": "example.com",
+            "profile": "quick",
+            "connectors": {"enable_snmp": True},
+            "credentials": {"snmp_community": "not-public"},
+        },
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    connectors_warned = {
+        w["connector"] for w in (response.json().get("credential_warnings") or [])
+    }
+    assert "enable_snmp" not in connectors_warned
+
+
 # ---------------------------------------------------------------------------
 # 8. Phase 193 review WR-02: snmpv3 key kind is parsed from the END, so hosts
 #    containing colons (IPv6 literals) keep their full host and an auth

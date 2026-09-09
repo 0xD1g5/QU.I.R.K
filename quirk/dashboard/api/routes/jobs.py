@@ -382,6 +382,15 @@ def _connectors_with_blank_credential_warnings(
     }
     warnings: list = []
     registry_names = {entry.name for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"}
+    # Phase 193 review WR-06: a field still holding its dataclass DEFAULT
+    # (e.g. snmp_community == "public") that the operator never wrote into
+    # the raw YAML is NOT a supplied credential — without this, the truthy
+    # "public" default made the enable_snmp warning unreachable dead code.
+    # `_user_set_fields` (Phase 72 D-02) is the explicit-vs-default record.
+    _field_defaults = {
+        f.name: f.default for f in dataclasses.fields(type(resolved_connectors))
+    }
+    _user_set = getattr(resolved_connectors, "_user_set_fields", frozenset())
     for flag, field_names in _FLAG_TO_CREDENTIAL_FIELDS.items():
         applicable_fields = [f for f in field_names if f in registry_names]
         if not applicable_fields:
@@ -390,9 +399,16 @@ def _connectors_with_blank_credential_warnings(
             continue
         all_blank = True
         for field_name in applicable_fields:
-            already_set = credential_is_set(
-                "connectors", field_name, getattr(resolved_connectors, field_name, None)
-            )
+            config_value = getattr(resolved_connectors, field_name, None)
+            if (
+                field_name not in _user_set
+                and config_value == _field_defaults.get(field_name)
+            ):
+                # Pure default, never operator-written: treat as unset so
+                # the warning can fire. credential_is_set(None) still
+                # reports a live env-var fallback as "set".
+                config_value = None
+            already_set = credential_is_set("connectors", field_name, config_value)
             submitted_value = submitted.get(field_name)
             if already_set or (submitted_value and submitted_value.strip()):
                 all_blank = False
