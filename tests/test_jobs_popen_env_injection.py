@@ -276,6 +276,38 @@ def test_snmpv3_ipv6_host_key_parses_kind_from_the_end():
     assert "priv_key_env" not in creds["2001:db8::1"]
 
 
+def test_username_keys_land_in_yaml_fragment_never_in_env():
+    """Phase 193 review CR-03: `broker:<host>:user` / `snmpv3:<host>:username`
+    carry identifiers, not secrets — they are written inline into the YAML
+    fragment's `user`/`username` fields (per the BrokerCredential /
+    SnmpV3Credential config contract) and are NEVER injected into the
+    subprocess env."""
+    from quirk.dashboard.api.routes.jobs import _build_credential_env
+
+    injected, fragment = _build_credential_env(
+        {
+            "broker:default": "broker-pw",
+            "broker:default:user": "alice",
+            "snmpv3:default:username": "bob",
+            "snmpv3:default:auth": "auth-pw",
+        }
+    )
+    assert fragment["broker_credentials"]["default"] == {
+        "user": "alice",
+        "pass_env": "QUIRK_JOB_BROKER_DEFAULT",
+    }
+    assert fragment["snmp_v3_credentials"]["default"] == {
+        "username": "bob",
+        "auth_key_env": "QUIRK_JOB_SNMPV3_DEFAULT_AUTH",
+    }
+    assert injected == {
+        "QUIRK_JOB_BROKER_DEFAULT": "broker-pw",
+        "QUIRK_JOB_SNMPV3_DEFAULT_AUTH": "auth-pw",
+    }
+    assert "alice" not in injected.values()
+    assert "bob" not in injected.values()
+
+
 def test_snmpv3_unknown_kind_raises_instead_of_defaulting_to_priv():
     import pytest
 

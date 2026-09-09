@@ -246,6 +246,17 @@ def _build_credential_env(
       - `broker:<host>` -> `QUIRK_JOB_BROKER_<SANITIZED_HOST>`.
       - `snmpv3:<host>:auth` / `snmpv3:<host>:priv` ->
         `QUIRK_JOB_SNMPV3_<SANITIZED_HOST>_AUTH` / `..._PRIV`.
+      - `broker:<host>:user` / `snmpv3:<host>:username` -> USERNAMES
+        (identifiers, not secrets — Phase 193 review CR-03): written inline
+        into the YAML fragment's `user`/`username` fields per the
+        BrokerCredential/SnmpV3Credential config contract, never injected
+        into the subprocess env.
+
+    The host slot `"default"` (the dashboard's single-slot credential UI)
+    has documented fallback semantics at every consumer: scanners use the
+    `"default"` entry for any host lacking a host-specific entry
+    (broker_scanner mgmt enrichment, run_scan.py's SNMP phase,
+    hardware_scanner's v3 ladder + bridge-evidence walk).
 
     Raises `ValueError` (the caller converts to 422) if two distinct hosts
     sanitize to the same env-var name, so one host's credential can never be
@@ -283,7 +294,18 @@ def _build_credential_env(
             # credentials warning is computed separately in create_job.
             continue
         if key.startswith("broker:"):
-            host = key.split(":", 1)[1]
+            remainder = key[len("broker:"):]
+            if remainder.endswith(":user"):
+                # Phase 193 review CR-03: `broker:<host>:user` carries the
+                # USERNAME — an identifier, not a secret. BrokerCredential
+                # stores `user` inline in YAML by contract (only the password
+                # rides env-var indirection via `pass_env`), and
+                # broker_scanner requires BOTH user and pass_env to
+                # authenticate. Never injected into the subprocess env.
+                host = remainder[: -len(":user")]
+                broker_credentials.setdefault(host, {})["user"] = value
+                continue
+            host = remainder
             env_name = f"QUIRK_JOB_BROKER_{_sanitize_host_for_env(host)}"
             _claim(env_name, key)
             injected_env[env_name] = value
@@ -303,6 +325,15 @@ def _build_credential_env(
             elif kind == "priv":
                 env_name = f"QUIRK_JOB_SNMPV3_{_sanitize_host_for_env(host)}_PRIV"
                 field_name = "priv_key_env"
+            elif kind == "username":
+                # Phase 193 review CR-03: `snmpv3:<host>:username` carries the
+                # USM USERNAME — an identifier, not a secret. SnmpV3Credential
+                # stores `username` inline in YAML by contract (only the
+                # auth/priv passphrases ride env-var indirection), and USM
+                # authentication with an empty username cannot succeed. Never
+                # injected into the subprocess env.
+                snmp_v3_credentials.setdefault(host, {})["username"] = value
+                continue
             else:
                 raise ValueError(
                     f"Unrecognized snmpv3 credential kind in {key!r} — "

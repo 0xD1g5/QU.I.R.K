@@ -790,7 +790,10 @@ class ScanSubmitRequest(BaseModel):
         allowed_names = {
             entry.name for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"
         }
-        snmpv3_re = re.compile(r"^snmpv3:.+:(auth|priv)$")
+        # Phase 193 review CR-03: `username` added — carries the USM
+        # username (identifier, not a secret; lands inline in the job YAML's
+        # snmp_v3_credentials fragment, never the subprocess env).
+        snmpv3_re = re.compile(r"^snmpv3:.+:(auth|priv|username)$")
 
         unknown = []
         for key in v:

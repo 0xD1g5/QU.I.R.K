@@ -120,6 +120,23 @@ def test_broker_and_snmpv3_shaped_keys_accepted():
     assert req.credentials["snmpv3:switch1.example.com:priv"] == "privpass"
 
 
+def test_username_shaped_keys_accepted():
+    """Phase 193 review CR-03: username keys (identifiers, not secrets) ride
+    the same credentials map -- `broker:<host>:user` matches the existing
+    `broker:` prefix rule; `snmpv3:<host>:username` needed a validator
+    extension."""
+    req = ScanSubmitRequest(
+        targets="example.com",
+        credentials={
+            "broker:default:user": "alice",
+            "snmpv3:default:username": "bob",
+        },
+    )
+    assert req.credentials is not None
+    assert req.credentials["broker:default:user"] == "alice"
+    assert req.credentials["snmpv3:default:username"] == "bob"
+
+
 def test_arbitrary_unknown_credential_key_rejected():
     with pytest.raises(pydantic.ValidationError) as exc_info:
         ScanSubmitRequest(targets="example.com", credentials={"totally_unknown_field": "x"})

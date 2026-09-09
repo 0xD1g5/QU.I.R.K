@@ -2881,11 +2881,19 @@ def main():
             # Hosts with a configured per-host v3 credential run the
             # v3 -> v2c -> none ladder individually; hosts without one keep
             # the existing bulk v2c-only scan_snmp_targets path unchanged.
-            _v3_hosts = [h for h in _snmp_unique_hosts if h in _snmp_v3_creds]
-            _v2c_only_hosts = [h for h in _snmp_unique_hosts if h not in _snmp_v3_creds]
+            # Phase 193 review CR-03: a "default" entry (the dashboard's
+            # single-slot SNMPv3 credential UI) applies to every host lacking
+            # a host-specific entry — documented fallback semantics, mirrored
+            # in hardware_scanner.py's two lookup sites.
+            _has_default_v3 = "default" in _snmp_v3_creds
+            _v3_hosts = [
+                h for h in _snmp_unique_hosts
+                if h in _snmp_v3_creds or _has_default_v3
+            ]
+            _v2c_only_hosts = [h for h in _snmp_unique_hosts if h not in _v3_hosts]
 
             for _v3_host in _v3_hosts:
-                _cred = _snmp_v3_creds[_v3_host]
+                _cred = _snmp_v3_creds.get(_v3_host) or _snmp_v3_creds.get("default")
                 try:
                     _v3_result = _probe_snmp_target(
                         _v3_host, version="v3", v3_credential=_cred, timeout=hw_timeout

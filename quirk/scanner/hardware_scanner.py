@@ -261,7 +261,10 @@ def _confirm_bridge_evidence(device: HardwareDevice, timeout: int, cfg=None) -> 
         host = getattr(device, "host", "")
         _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
         _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
-        _v3_cred = _v3_creds_map.get(host)
+        # Phase 193 review CR-03: documented "default" fallback for the
+        # dashboard's single-slot SNMPv3 credential (applies to any host
+        # lacking a host-specific entry).
+        _v3_cred = _v3_creds_map.get(host) or _v3_creds_map.get("default")
 
         # Phase 193 review CR-01: same env-fallback resolution as run_scan.py's
         # SNMP phase — the injected QUIRK_SNMP_COMMUNITY beats the truthy
@@ -485,7 +488,10 @@ def fingerprint_one(
             # (D-02 protocol-mismatch vs D-03 failed-fell-back vs plain v2c).
             _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
             _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
-            _v3_cred = _v3_creds_map.get(host)
+            # Phase 193 review CR-03: documented "default" fallback for the
+            # dashboard's single-slot SNMPv3 credential (applies to any host
+            # lacking a host-specific entry).
+            _v3_cred = _v3_creds_map.get(host) or _v3_creds_map.get("default")
 
             _snmp_version_label = None
             _snmp_result = None

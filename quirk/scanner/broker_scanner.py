@@ -721,7 +721,11 @@ def scan_rabbitmq_targets(
     allow_cleartext = bool(security and getattr(security, "allow_cleartext_broker_probe", False))
     broker_credentials = broker_credentials or {}
     for host in hosts:
-        cred_obj = broker_credentials.get(f"{host}:15672")
+        # Phase 193 review CR-03: documented "default" fallback — the
+        # dashboard's single-slot credential UI files its entry under the
+        # literal host key "default", which applies to any host lacking a
+        # host-specific "host:port" entry.
+        cred_obj = broker_credentials.get(f"{host}:15672") or broker_credentials.get("default")
         cred_dict = None
         if cred_obj is not None:
             cred_dict = {

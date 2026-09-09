@@ -53,6 +53,11 @@ const AMBIENT_AUTH_FLAGS = new Set([
 interface CredentialFieldSpec {
   key: string
   label: string
+  // Phase 193 review CR-03: usernames are identifiers, not secrets — they
+  // render as plain text inputs and land inline in the job YAML fragment
+  // (per the BrokerCredential/SnmpV3Credential config contract), while
+  // secret fields (default) render masked and ride env-var injection only.
+  secret?: boolean
 }
 
 // D-10: config-declared credential fields per connector, mirroring
@@ -60,9 +65,12 @@ interface CredentialFieldSpec {
 // quirk/dashboard/api/routes/jobs.py::_build_credential_env's key shapes.
 // Broker / SNMPv3 credentials are per-host on the wire (`broker:<host>`,
 // `snmpv3:<host>:auth`, `snmpv3:<host>:priv`) — this panel simplifies that
-// to a single "default" host slot; full multi-host credential management is
-// out of this plan's scope (193-UI-SPEC explicitly delegates "which fields,
-// ordering, masking" to executor discretion).
+// to a single "default" host slot with DOCUMENTED fallback semantics
+// (Phase 193 review CR-03): the scanners use the "default" entry for any
+// host lacking a host-specific entry. Username fields are required for
+// authentication (broker auth needs BOTH user and pass_env; SNMPv3 USM
+// cannot authenticate with an empty username). Full multi-host credential
+// management is out of this plan's scope.
 const CONNECTOR_CREDENTIAL_FIELDS: Record<string, CredentialFieldSpec[]> = {
   enable_vault: [{ key: "vault_token", label: "Vault Token" }],
   enable_adcs: [{ key: "adcs_password", label: "AD CS Password" }],
@@ -72,10 +80,14 @@ const CONNECTOR_CREDENTIAL_FIELDS: Record<string, CredentialFieldSpec[]> = {
   ],
   enable_snmp: [
     { key: "snmp_community", label: "SNMP Community String" },
+    { key: "snmpv3:default:username", label: "SNMPv3 Username (default host)", secret: false },
     { key: "snmpv3:default:auth", label: "SNMPv3 Auth Password (default host)" },
     { key: "snmpv3:default:priv", label: "SNMPv3 Priv Password (default host)" },
   ],
-  enable_broker: [{ key: "broker:default", label: "Broker Password (default host)" }],
+  enable_broker: [
+    { key: "broker:default:user", label: "Broker Username (default host)", secret: false },
+    { key: "broker:default", label: "Broker Password (default host)" },
+  ],
 }
 
 interface ConnectorsPanelProps {
@@ -266,8 +278,8 @@ export function ConnectorsPanel(props: ConnectorsPanelProps) {
                               </Label>
                               <Input
                                 id={`cred-${field.key}`}
-                                type="password"
-                                placeholder="••••••••"
+                                type={field.secret === false ? "text" : "password"}
+                                placeholder={field.secret === false ? "" : "••••••••"}
                                 value={credentials[field.key] ?? ""}
                                 onChange={(e) => setCredential(field.key, e.target.value)}
                                 className="mt-1"
