@@ -204,10 +204,10 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 192-04-PLAN.md — reason-classified skips across every scanner-phase guard
-- [ ] 192-08-PLAN.md — HTML + DOCX Scan Coverage, D-14 skipped-domain notes, parity gate
-- [ ] 192-09-PLAN.md — coverage endpoint + ScanCoverageChip on scan-job/scan-history
-- [ ] 192-10-PLAN.md — Effective config panel on the scan-submit surface
+- [x] 192-04-PLAN.md — reason-classified skips across every scanner-phase guard
+- [x] 192-08-PLAN.md — HTML + DOCX Scan Coverage, D-14 skipped-domain notes, parity gate
+- [x] 192-09-PLAN.md — coverage endpoint + ScanCoverageChip on scan-job/scan-history
+- [x] 192-10-PLAN.md — Effective config panel on the scan-submit surface
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -295,7 +295,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
-| 192. Config Visibility + Skip Observability | 5/11 | In Progress|  |
+| 192. Config Visibility + Skip Observability | 9/11 | In Progress|  |
 | 193. Connector & Credential Parity | 0/TBD | Not started | - |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
