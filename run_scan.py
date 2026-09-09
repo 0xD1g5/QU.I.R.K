@@ -3170,7 +3170,11 @@ def main():
                 return _recorder.skip("no-eligible-targets", "no OpenAPI endpoints discovered")
             _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
             if not _spec_path:
-                return []
+                # Review IN-02: classified skip (was a bare `return []` that
+                # recorded status "ran" with a duration for a no-op path).
+                return _recorder.skip(
+                    "no-eligible-targets", "scan.openapi_spec_path is not set",
+                )
             # Derive base_url from the first configured FQDN (prefer https://)
             _fqdns = []
             if hasattr(cfg, "targets") and cfg.targets is not None:
