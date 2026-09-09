@@ -847,9 +847,14 @@ def _db_cfg(pg_targets=None, mysql_targets=None, pg_user=None, pg_password=None,
 
 
 def _run_db_phase_mirror(recorder, cfg, logger):
-    """Mirrors run_scan.py's `_run_db_phase` guard exactly (post Plan 05)."""
-    from quirk.config_redaction import credential_is_set
+    """Mirrors run_scan.py's `_run_db_phase` guard exactly (post review CR-01).
 
+    Deliberately has NO missing-credentials pre-gate: both connectors support
+    running with no config credentials (libpq .pgpass / PGPASSWORD / trust /
+    peer for pg; pymysql defaults file / env for mysql), and default the user
+    ("postgres" / "root") when unset — see quirk/scanner/db_connector.py
+    Phase 72 D-20 / WR-07.
+    """
     if not cfg.connectors.enable_db:
         return recorder.skip("disabled-by-config", "enable_db is false")
     from quirk.scanner.db_connector import (
@@ -864,35 +869,14 @@ def _run_db_phase_mirror(recorder, cfg, logger):
             "no-eligible-targets",
             "connectors.pg_targets and connectors.mysql_targets are both empty",
         )
-    pg_usable = bool(cfg.connectors.pg_targets) and (
-        credential_is_set("connectors", "pg_scanner_user", cfg.connectors.pg_scanner_user)
-        and credential_is_set(
-            "connectors", "pg_scanner_password", cfg.connectors.pg_scanner_password,
-        )
-    )
-    mysql_usable = bool(cfg.connectors.mysql_targets) and (
-        credential_is_set(
-            "connectors", "mysql_scanner_user", cfg.connectors.mysql_scanner_user,
-        )
-        and credential_is_set(
-            "connectors", "mysql_scanner_password", cfg.connectors.mysql_scanner_password,
-        )
-    )
-    if not pg_usable and not mysql_usable:
-        return recorder.skip(
-            "missing-credentials",
-            "connectors.pg_scanner_user/pg_scanner_password and "
-            "connectors.mysql_scanner_user/mysql_scanner_password not set "
-            "for any configured target group",
-        )
     result = []
-    if cfg.connectors.pg_targets and pg_usable:
+    if cfg.connectors.pg_targets:
         result.extend(scan_pg_targets(
             targets=cfg.connectors.pg_targets, user=cfg.connectors.pg_scanner_user,
             password=cfg.connectors.pg_scanner_password, logger=logger,
             session_start=None, cfg=cfg,
         ))
-    if cfg.connectors.mysql_targets and mysql_usable:
+    if cfg.connectors.mysql_targets:
         result.extend(scan_mysql_targets(
             targets=cfg.connectors.mysql_targets, user=cfg.connectors.mysql_scanner_user,
             password=cfg.connectors.mysql_scanner_password, logger=logger,
@@ -901,16 +885,20 @@ def _run_db_phase_mirror(recorder, cfg, logger):
     return result
 
 
-def test_db_guard_pg_uncredentialed_no_mysql_reports_missing_credentials() -> None:
+def test_db_guard_pg_uncredentialed_no_mysql_still_runs_pg_via_libpq_fallbacks() -> None:
+    """Review CR-01: a pg-targets-only config with no pg_scanner_user /
+    pg_scanner_password must still invoke scan_pg_targets — password=None means
+    libpq resolves .pgpass / PGPASSWORD / trust / peer, and the user defaults
+    to the OS/libpq default. It must NOT be pre-gated as missing-credentials."""
     from unittest.mock import patch
 
-    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+    from run_scan import _PhaseRecorder
 
     recorder = _PhaseRecorder()
     cfg = _db_cfg(pg_targets=["db.example.com:5432"], mysql_targets=[])
 
     with patch(
-        "quirk.scanner.db_connector.scan_pg_targets", return_value=[],
+        "quirk.scanner.db_connector.scan_pg_targets", return_value=["pg-ep"],
     ) as mock_pg, patch(
         "quirk.scanner.db_connector.scan_mysql_targets", return_value=[],
     ) as mock_mysql, patch(
@@ -920,16 +908,19 @@ def test_db_guard_pg_uncredentialed_no_mysql_reports_missing_credentials() -> No
     ):
         result = _run_db_phase_mirror(recorder, cfg, logger=None)
 
-    mock_pg.assert_not_called()
+    mock_pg.assert_called_once_with(
+        targets=["db.example.com:5432"], user=None, password=None,
+        logger=None, session_start=None, cfg=cfg,
+    )
     mock_mysql.assert_not_called()
-    assert result is _PHASE_SKIPPED
-    recorder.record_skipped("db_scanning")
-    row = recorder.rows()[0]
-    assert row["reason"] == "missing-credentials"
-    assert "pg_scanner_user" in row["detail"] or "pg_scanner_password" in row["detail"]
+    assert result == ["pg-ep"]
+    assert recorder.rows() == []
 
 
-def test_db_guard_pg_uncredentialed_mysql_credentialed_runs_not_skips() -> None:
+def test_db_guard_mixed_pg_uncredentialed_mysql_credentialed_runs_both_groups() -> None:
+    """Review CR-01: mixed configs run BOTH target groups — the uncredentialed
+    pg leg is not asymmetrically dropped (each connector owns its own auth
+    failure reporting)."""
     from unittest.mock import patch
 
     from run_scan import _PhaseRecorder
@@ -942,9 +933,9 @@ def test_db_guard_pg_uncredentialed_mysql_credentialed_runs_not_skips() -> None:
     )
 
     with patch(
-        "quirk.scanner.db_connector.scan_pg_targets", return_value=[],
+        "quirk.scanner.db_connector.scan_pg_targets", return_value=["pg-ep"],
     ) as mock_pg, patch(
-        "quirk.scanner.db_connector.scan_mysql_targets", return_value=["ep"],
+        "quirk.scanner.db_connector.scan_mysql_targets", return_value=["mysql-ep"],
     ) as mock_mysql, patch(
         "quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True,
     ), patch(
@@ -952,9 +943,9 @@ def test_db_guard_pg_uncredentialed_mysql_credentialed_runs_not_skips() -> None:
     ):
         result = _run_db_phase_mirror(recorder, cfg, logger=None)
 
-    mock_pg.assert_not_called()
+    mock_pg.assert_called_once()
     mock_mysql.assert_called_once()
-    assert result == ["ep"]
+    assert result == ["pg-ep", "mysql-ep"]
     assert recorder.rows() == []
 
 

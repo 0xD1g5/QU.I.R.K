@@ -3270,33 +3270,17 @@ def main():
                     "no-eligible-targets",
                     "connectors.pg_targets and connectors.mysql_targets are both empty",
                 )
-            # Phase 192 / OBS-01: skip the whole phase only when EVERY target group
-            # that has targets is missing its credentials — a mixed pg-uncredentialed
-            # / mysql-credentialed config still runs (D-11 scopes records to whole
-            # phases, not per-connector sub-rows).
-            _pg_usable = bool(cfg.connectors.pg_targets) and (
-                credential_is_set("connectors", "pg_scanner_user", cfg.connectors.pg_scanner_user)
-                and credential_is_set(
-                    "connectors", "pg_scanner_password", cfg.connectors.pg_scanner_password,
-                )
-            )
-            _mysql_usable = bool(cfg.connectors.mysql_targets) and (
-                credential_is_set(
-                    "connectors", "mysql_scanner_user", cfg.connectors.mysql_scanner_user,
-                )
-                and credential_is_set(
-                    "connectors", "mysql_scanner_password", cfg.connectors.mysql_scanner_password,
-                )
-            )
-            if not _pg_usable and not _mysql_usable:
-                return _recorder.skip(
-                    "missing-credentials",
-                    "connectors.pg_scanner_user/pg_scanner_password and "
-                    "connectors.mysql_scanner_user/mysql_scanner_password not set "
-                    "for any configured target group",
-                )
+            # Phase 192 review CR-01: NO missing-credentials pre-gate here.
+            # Both connectors deliberately support running with no config
+            # credentials at all (quirk/scanner/db_connector.py Phase 72
+            # D-20 / WR-07): password=None omits the kwarg so libpq reads
+            # .pgpass / PGPASSWORD (pg) and pymysql reads its defaults
+            # file / env (mysql), and user=None falls back to
+            # "postgres" / "root". A config-field truthiness gate would
+            # silently disable those documented auth paths, so the
+            # connectors report their own auth failures instead.
             result = []
-            if cfg.connectors.pg_targets and _pg_usable:
+            if cfg.connectors.pg_targets:
                 result.extend(scan_pg_targets(
                     targets=cfg.connectors.pg_targets,
                     user=cfg.connectors.pg_scanner_user,
@@ -3305,7 +3289,7 @@ def main():
                     session_start=session_start,
                     cfg=cfg,
                 ))
-            if cfg.connectors.mysql_targets and _mysql_usable:
+            if cfg.connectors.mysql_targets:
                 result.extend(scan_mysql_targets(
                     targets=cfg.connectors.mysql_targets,
                     user=cfg.connectors.mysql_scanner_user,
