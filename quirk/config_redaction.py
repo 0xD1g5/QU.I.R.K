@@ -44,12 +44,19 @@ class CredentialField:
 
 # Direct read of quirk/config.py's ConnectorsCfg / SecurityCfg for every
 # field that holds a secret value (not an env-var NAME, not a username).
+#
+# Phase 193 / PARITY-03 / D-09 / D-10: the four `QUIRK_*` env_fallback names
+# below were introduced so the dashboard's credential transport (plan 06) can
+# inject values into the scan subprocess environment, mirroring the one
+# pre-existing `vault_token` precedent (`run_scan.py`'s `VAULT_TOKEN`
+# fallback). `credential_is_set()` already reads `entry.env_fallback`
+# generically, so no logic change was needed to light these up.
 CREDENTIAL_REGISTRY: tuple[CredentialField, ...] = (
     CredentialField("connectors", "vault_token", "VAULT_TOKEN"),
-    CredentialField("connectors", "adcs_password"),
-    CredentialField("connectors", "pg_scanner_password"),
-    CredentialField("connectors", "mysql_scanner_password"),
-    CredentialField("connectors", "snmp_community"),
+    CredentialField("connectors", "adcs_password", "QUIRK_ADCS_PASSWORD"),
+    CredentialField("connectors", "pg_scanner_password", "QUIRK_PG_SCANNER_PASSWORD"),
+    CredentialField("connectors", "mysql_scanner_password", "QUIRK_MYSQL_SCANNER_PASSWORD"),
+    CredentialField("connectors", "snmp_community", "QUIRK_SNMP_COMMUNITY"),
     CredentialField("security", "api_token", "QUIRK_API_TOKEN"),
 )
 

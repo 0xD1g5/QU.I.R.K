@@ -2839,7 +2839,13 @@ def main():
         hw_timeout = getattr(
             getattr(getattr(cfg, "scan", None), "timeouts", None), "default_seconds", 3
         )
-        _snmp_community = getattr(cfg.connectors, "snmp_community", "public")
+        # Phase 193 / PARITY-03 / D-09: env fallback for dashboard credential
+        # injection, mirroring the vault_token precedent below (line ~3737).
+        # Note: an empty-string community also falls back to the env var /
+        # default, matching vault_token's existing truthiness semantics.
+        _snmp_community = getattr(
+            cfg.connectors, "snmp_community", "public"
+        ) or os.environ.get("QUIRK_SNMP_COMMUNITY", "public")
         # Phase 139 SNMPV3-02: per-host v3 credentials (second required call
         # site — RESEARCH Anti-Pattern; hardware_scanner.py's Step 3 is the
         # other one, wired in this same plan).
@@ -3342,7 +3348,10 @@ def main():
                 result.extend(scan_pg_targets(
                     targets=cfg.connectors.pg_targets,
                     user=cfg.connectors.pg_scanner_user,
-                    password=cfg.connectors.pg_scanner_password,
+                    password=(
+                        cfg.connectors.pg_scanner_password
+                        or os.environ.get("QUIRK_PG_SCANNER_PASSWORD", None)
+                    ),
                     logger=logger,
                     session_start=session_start,
                     cfg=cfg,
@@ -3351,7 +3360,10 @@ def main():
                 result.extend(scan_mysql_targets(
                     targets=cfg.connectors.mysql_targets,
                     user=cfg.connectors.mysql_scanner_user,
-                    password=cfg.connectors.mysql_scanner_password,
+                    password=(
+                        cfg.connectors.mysql_scanner_password
+                        or os.environ.get("QUIRK_MYSQL_SCANNER_PASSWORD", None)
+                    ),
                     logger=logger,
                     session_start=session_start,
                     cfg=cfg,
@@ -3655,7 +3667,10 @@ def main():
                 session_start=session_start,
                 search_base=getattr(cfg.connectors, "adcs_search_base", None),
                 user=getattr(cfg.connectors, "adcs_user", None),
-                password=getattr(cfg.connectors, "adcs_password", None),
+                password=(
+                    getattr(cfg.connectors, "adcs_password", None)
+                    or os.environ.get("QUIRK_ADCS_PASSWORD", None)
+                ),
             )
             logger.info("ADCS scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.adcs_targets))
