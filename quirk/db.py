@@ -552,6 +552,18 @@ def _ensure_remediation_closure_events_table(engine) -> None:
     Base.metadata.create_all(engine, checkfirst=True)
 
 
+def _ensure_scan_phase_records_table(engine) -> None:
+    """Phase 192 OBS-01: create scan_phase_records table if absent (idempotent).
+
+    ScanPhaseRecord is registered on Base.metadata via import of
+    quirk.models. Uses Base.metadata.create_all with checkfirst=True — same
+    pattern as _ensure_remediation_closure_events_table. New table only —
+    NOT new columns, so _ensure_columns() / _ADDITIVE_MIGRATIONS
+    deliberately do not apply here.
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -593,6 +605,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_remediation_tables(engine)              # Phase 179 — REMED-01
     _ensure_scan_scope_signatures_table(engine)     # Phase 179 — REMED-02
     _ensure_remediation_closure_events_table(engine)  # Phase 180 — CLOSE-02
+    _ensure_scan_phase_records_table(engine)  # Phase 192 — OBS-01
     # Phase 107 D-02: explicit idempotent index on crypto_endpoints.sensor_id.
     # Column(index=True) + create_all(checkfirst=True) does NOT retro-add an
     # index to a pre-existing table, so this step is required for backward

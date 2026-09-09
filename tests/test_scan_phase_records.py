@@ -110,3 +110,56 @@ def test_scan_phase_skip_reasons_exact_membership() -> None:
         "missing-credentials",
         "failed",
     })
+
+
+# ---------------------------------------------------------------------------
+# Task 2: _ensure_scan_phase_records_table migration + init_db() wiring
+# ---------------------------------------------------------------------------
+
+
+def test_init_db_creates_scan_phase_records_table_on_fresh_db(tmp_path) -> None:
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "fresh.db"
+    engine = init_db(str(db_path))
+    names = set(sa_inspect(engine).get_table_names())
+    assert "scan_phase_records" in names
+
+
+def test_init_db_twice_does_not_raise_and_leaves_one_table(tmp_path) -> None:
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "twice.db"
+    engine1 = init_db(str(db_path))
+    names1 = set(sa_inspect(engine1).get_table_names())
+    assert "scan_phase_records" in names1
+
+    engine2 = init_db(str(db_path))
+    names2 = set(sa_inspect(engine2).get_table_names())
+    assert names1 == names2
+
+
+def test_init_db_adds_table_to_preexisting_db_without_touching_others(tmp_path) -> None:
+    """A DB with other QUIRK tables but no scan_phase_records gets the table
+    added without existing tables being dropped or altered."""
+    from sqlalchemy import inspect as sa_inspect
+    from quirk.models import Base, ScanPhaseRecord
+
+    db_path = tmp_path / "preexisting.db"
+
+    # Simulate a pre-Phase-192 DB: create all tables EXCEPT scan_phase_records.
+    from sqlalchemy import create_engine
+    engine = create_engine(f"sqlite:///{db_path}")
+    tables_without_new = [
+        t for name, t in Base.metadata.tables.items() if name != "scan_phase_records"
+    ]
+    Base.metadata.create_all(engine, tables=tables_without_new, checkfirst=True)
+
+    names_before = set(sa_inspect(engine).get_table_names())
+    assert "scan_phase_records" not in names_before
+    assert "scan_checkpoints" in names_before  # a pre-existing table sentinel
+
+    engine2 = init_db(str(db_path))
+    names_after = set(sa_inspect(engine2).get_table_names())
+    assert "scan_phase_records" in names_after
+    assert names_before.issubset(names_after)
