@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-01-PLAN.md
-last_updated: "2026-09-09T12:58:00.000Z"
-last_activity: 2026-09-09 -- Phase 194 plan 01 (phantom-cert filter, rating-absence sentinel) complete
+stopped_at: Completed 194-02-PLAN.md
+last_updated: "2026-09-09T13:55:00.000Z"
+last_activity: 2026-09-09 -- Phase 194 plan 02 (advanced scan fields backend overlay, PARITY-04) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 26
-  percent: 79
+  completed_plans: 27
+  percent: 82
 ---
 
 # Project State
@@ -50,7 +50,38 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-01 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-02 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-02 (complete, 2026-09-09) — Advanced scan fields backend overlay: AdvancedScanFields model, delta-only scan_overlay/assessment_overlay, effective-config preview forwarding with nested provenance (PARITY-04).**
+`quirk/dashboard/api/schemas.py` gained `AdvancedScanFields` (Pydantic, `extra="forbid"`,
+delta-only via `exclude_unset=True`) covering `ports_tls`/`tls_enum_mode`/`include_sni`/
+`timeout_default_seconds`/`timeout_tls_seconds`/`timeout_ssh_seconds`/`retry_count`/
+`data_classification`; `tls_enum_mode` deliberately excludes the disabled-mode value (D-19 —
+`tls_scanner.py` silently coerces anything outside fast/deep to fast), `data_classification`
+matches `_DATA_CLASS_MAP`'s 4-value vocabulary (D-21), no `ports_ssh` field exists (D-18, filed
+999.106). `quirk/dashboard/api/routes/jobs.py` gained `build_advanced_overlays()` (maps flat
+request fields to nested `scan_overlay`/`assessment_overlay` dicts, reusing `parse_port_spec`)
+and `scan_overlay`/`assessment_overlay` kwargs on `build_job_config_dict`, merged LAST after
+every `port_scope`-derived default, gated by `_KNOWN_SCAN_OVERLAY_KEYS`/
+`_KNOWN_ASSESSMENT_OVERLAY_KEYS` allowlists (unrecognized key -> `ValueError` -> 422, same
+pattern as the Phase 193 connector gate). `create_job` computes the overlays once and forwards
+them to both the D-08 availability-gate `resolve_effective_config` call and the real job-YAML
+`build_job_config_dict` call. `config_preview.py`'s `resolve_effective_config` forwards both
+overlays before the `yaml.dump`/`load_config` round-trip and its preset-provenance diff now
+walks `scan.timeouts`/`scan.retry`'s scalar fields too, emitting `scan.timeouts.*`/
+`scan.retry.*` dotted paths. `GET /api/config/effective` gained an `advanced` JSON query param
+validated through the identical `AdvancedScanFields` model the submit path uses. 33 new tests
+(`tests/test_advanced_fields_422_gate.py`, `tests/test_advanced_scan_fields_overlay.py`), plus
+regression sweep across `test_jobs_api.py`/`test_jobs_connector_422_gate.py`/
+`test_jobs_nmap_scope_cap.py`/`test_config_effective_connectors_overlay.py`/
+`test_build_job_config_connectors_overlay.py`/`test_job_config_scope.py` — 110 passed, 1
+pre-existing unrelated skip. Two Rule-1/3 deviations: `resolve_effective_config`'s
+`scan_overlay`/`assessment_overlay` signature addition (plan-assigned to Task 3) had to land in
+Task 2's commit instead, since Task 2's own `create_job` wiring calls it with those kwargs; and
+an acceptance test literally asserting `cfg.scan._user_set_fields` membership was corrected —
+`ScanCfg` has no such tracking field (unlike `ConnectorsCfg`), `apply_profile`'s precedence rule
+for scan fields is simply "only set if `None`", which the overlay satisfies by writing a real
+value. See `194-02-SUMMARY.md`.
 
 **194-01 (complete, 2026-09-09) — Backend data-honesty prerequisites: phantom-cert filter + rating-absence sentinel (DASH-09/VERDICT-01 backend half).**
 `quirk/dashboard/api/routes/scan.py` gained a single named predicate `_is_real_cert_endpoint(ep)`
