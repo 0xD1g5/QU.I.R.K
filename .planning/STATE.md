@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 193-02-PLAN.md
-last_updated: "2026-09-09T04:37:39.113Z"
+stopped_at: Completed 193-03-PLAN.md
+last_updated: "2026-09-09T04:40:54.949Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 19
+  completed_plans: 20
   percent: 40
 ---
 
@@ -806,7 +806,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 193 (Connector & Credential Parity) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-09-09
 
@@ -1110,6 +1110,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 184.1 P03 | 22min | 1 tasks | 1 files |
 | Phase 184.3 P01 | 8min | 2 tasks | 2 files |
 | Phase 193 P02 | 20min | 2 tasks | 4 files |
+| Phase 193 P03 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1443,6 +1444,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: 184.3-01: amended ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where 2026-09-05 measurement falsified the premise (D-04/D-06/D-11/D-16a)
 - [Phase ?]: Mirrored the existing vault_token config-or-env fallback shape exactly at all four sites (193-02)
 - [Phase ?]: Registry-completeness assertion is run-time-derived, never a hand-written field list (193-02)
+- [Phase ?]: connectors and credentials kept as two separate Optional dict fields on ScanSubmitRequest, never merged, per D-11 (193-03)
 
 ### Pending Todos
 
@@ -1620,8 +1622,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-09T04:37:39.105Z
-Stopped at: Completed 193-02-PLAN.md
+Last session: 2026-09-09T04:40:54.941Z
+Stopped at: Completed 193-03-PLAN.md
 Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
