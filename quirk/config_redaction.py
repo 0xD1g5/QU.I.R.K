@@ -148,17 +148,41 @@ def _redact_dataclass(instance: Any, section: str) -> dict:
     return result
 
 
+# WR-08 (Phase 192 review): URL userinfo scrub for operator-supplied strings
+# (e.g. connectors.jwt_targets entries). `scheme://user:secret@host` embeds a
+# credential VALUE in what is otherwise a plain target string — the whole
+# userinfo component is collapsed so neither username nor password survives.
+_URL_USERINFO_PATTERN: re.Pattern = re.compile(r"(\w[\w+.-]*://)[^/@\s]+@")
+
+
+def _scrub_url_userinfo(value: str) -> str:
+    return _URL_USERINFO_PATTERN.sub(r"\1••••@", value)
+
+
 def _redact_value(value: Any, section: str) -> Any:
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return _redact_dataclass(value, section)
     if isinstance(value, dict):
-        return {key: _redact_value(v, section) for key, v in value.items()}
+        # WR-08 (Phase 192 review): the D-06 fail-closed net applies to plain
+        # dict KEYS too, not only dataclass fields — a future headers/secrets
+        # map must not bypass redaction just because it isn't a dataclass.
+        result: dict = {}
+        for key, v in value.items():
+            if isinstance(key, str) and is_credential_field(section, key):
+                result[key] = (
+                    REDACTED_SET if credential_is_set(section, key, v) else REDACTED_UNSET
+                )
+            else:
+                result[key] = _redact_value(v, section)
+        return result
     if isinstance(value, (set, frozenset)):
-        return sorted(value)
+        return sorted(_redact_value(v, section) for v in value)
     if isinstance(value, tuple):
         return [_redact_value(v, section) for v in value]
     if isinstance(value, list):
         return [_redact_value(v, section) for v in value]
+    if isinstance(value, str):
+        return _scrub_url_userinfo(value)
     return value
 
 

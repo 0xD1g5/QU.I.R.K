@@ -146,6 +146,37 @@ def test_every_registry_entry_redacts_in_output(monkeypatch):
         assert value in (REDACTED_SET, REDACTED_UNSET), (entry.section, entry.name, value)
 
 
+def test_jwt_target_url_userinfo_never_survives_verbatim():
+    """Review WR-08: connectors.jwt_targets entries are operator-supplied URLs;
+    a URL with embedded basic-auth userinfo must not be emitted verbatim by
+    redact_config — the userinfo component is scrubbed."""
+    cfg = _make_app_config(
+        connectors=ConnectorsCfg(
+            jwt_targets=["https://svc:hunter2@api.example.com/token"],
+        )
+    )
+    result = redact_config(cfg)
+    dumped = json.dumps(result)
+    assert "hunter2" not in dumped
+    assert "svc:hunter2@" not in dumped
+    # The host itself stays visible — only userinfo is collapsed.
+    assert "api.example.com" in dumped
+
+
+def test_plain_dict_credential_shaped_key_is_redacted():
+    """Review WR-08: the D-06 fail-closed net must apply to plain-dict KEYS,
+    not only dataclass fields — a credential-named key inside a plain dict
+    value collapses to set/not-set."""
+    from quirk.config_redaction import _redact_value
+
+    result = _redact_value(
+        {"api_token": "raw-secret-value", "endpoint": "https://api.example.com"},
+        "connectors",
+    )
+    assert result["api_token"] == REDACTED_SET
+    assert result["endpoint"] == "https://api.example.com"
+
+
 def test_redact_config_output_is_json_serializable():
     cfg = _make_app_config()
     json.dumps(redact_config(cfg))  # must not raise
