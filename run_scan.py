@@ -22,6 +22,7 @@ if sys.platform == "win32":
             pass
 
 from quirk.config import load_config, _parse_host_port
+from quirk.config_redaction import credential_is_set  # Phase 192 / OBS-01 / D-05
 from quirk.util.safe_exc import safe_str
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
@@ -3243,8 +3244,33 @@ def main():
                     "no-eligible-targets",
                     "connectors.pg_targets and connectors.mysql_targets are both empty",
                 )
+            # Phase 192 / OBS-01: skip the whole phase only when EVERY target group
+            # that has targets is missing its credentials — a mixed pg-uncredentialed
+            # / mysql-credentialed config still runs (D-11 scopes records to whole
+            # phases, not per-connector sub-rows).
+            _pg_usable = bool(cfg.connectors.pg_targets) and (
+                credential_is_set("connectors", "pg_scanner_user", cfg.connectors.pg_scanner_user)
+                and credential_is_set(
+                    "connectors", "pg_scanner_password", cfg.connectors.pg_scanner_password,
+                )
+            )
+            _mysql_usable = bool(cfg.connectors.mysql_targets) and (
+                credential_is_set(
+                    "connectors", "mysql_scanner_user", cfg.connectors.mysql_scanner_user,
+                )
+                and credential_is_set(
+                    "connectors", "mysql_scanner_password", cfg.connectors.mysql_scanner_password,
+                )
+            )
+            if not _pg_usable and not _mysql_usable:
+                return _recorder.skip(
+                    "missing-credentials",
+                    "connectors.pg_scanner_user/pg_scanner_password and "
+                    "connectors.mysql_scanner_user/mysql_scanner_password not set "
+                    "for any configured target group",
+                )
             result = []
-            if cfg.connectors.pg_targets:
+            if cfg.connectors.pg_targets and _pg_usable:
                 result.extend(scan_pg_targets(
                     targets=cfg.connectors.pg_targets,
                     user=cfg.connectors.pg_scanner_user,
@@ -3253,7 +3279,7 @@ def main():
                     session_start=session_start,
                     cfg=cfg,
                 ))
-            if cfg.connectors.mysql_targets:
+            if cfg.connectors.mysql_targets and _mysql_usable:
                 result.extend(scan_mysql_targets(
                     targets=cfg.connectors.mysql_targets,
                     user=cfg.connectors.mysql_scanner_user,
@@ -3618,6 +3644,18 @@ def main():
                 return _recorder.skip(
                     "no-eligible-targets",
                     "connectors.vault_addr / VAULT_ADDR is not set",
+                )
+            # Phase 192 / OBS-01: vault_token is genuinely required (Phase 72 D-22 /
+            # WR-09 — no implicit env fallback inside vault_connector itself). Derive
+            # presence from the same helper the pre-flight config panel uses so the
+            # two surfaces can never disagree.
+            if not credential_is_set(
+                "connectors", "vault_token", cfg.connectors.vault_token,
+            ):
+                logger.v("vault_token not set -- Vault scanning skipped")
+                return _recorder.skip(
+                    "missing-credentials",
+                    "connectors.vault_token / VAULT_TOKEN not set",
                 )
             # Phase 72 D-22 / WR-09: connector requires explicit token now (no implicit
             # env fallback inside vault_connector). Source the token here at the caller

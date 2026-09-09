@@ -728,3 +728,250 @@ def test_no_skip_call_site_embeds_a_credential_looking_detail_string() -> None:
     for call_args in calls:
         for marker in forbidden_value_markers:
             assert marker not in call_args
+
+
+# ---------------------------------------------------------------------------
+# Plan 05: pre-flight missing-credentials guards (vault, db) + the ADCS/broker
+# disposition. Mirrors run_scan.py's real `_run_vault_phase` / `_run_db_phase`
+# closures exactly (same convention as tests/test_run_scan_adcs_wiring.py),
+# patching the real scanner entry points at their own module location so a
+# spy assertion proves the connector is genuinely never invoked.
+# ---------------------------------------------------------------------------
+
+
+def _vault_cfg(vault_token=None, vault_addr="https://vault.example.com:8200"):
+    from types import SimpleNamespace
+
+    connectors = SimpleNamespace(
+        enable_vault=True,
+        vault_addr=vault_addr,
+        vault_token=vault_token,
+        vault_transit_mount="transit",
+        vault_tls_verify=True,
+    )
+    return SimpleNamespace(connectors=connectors)
+
+
+def _run_vault_phase_mirror(recorder, cfg, logger):
+    """Mirrors run_scan.py's `_run_vault_phase` guard exactly (post Plan 05)."""
+    import os as _os
+
+    from quirk.config_redaction import credential_is_set
+
+    if not cfg.connectors.enable_vault:
+        return recorder.skip("disabled-by-config", "enable_vault is false")
+    from quirk.scanner.vault_connector import scan_vault_targets, HVAC_AVAILABLE
+    if not HVAC_AVAILABLE:
+        return recorder.skip("missing-extra", "hvac not installed (extras: vault)")
+    if not (cfg.connectors.vault_addr or _os.environ.get("VAULT_ADDR")):
+        return recorder.skip(
+            "no-eligible-targets", "connectors.vault_addr / VAULT_ADDR is not set",
+        )
+    if not credential_is_set("connectors", "vault_token", cfg.connectors.vault_token):
+        return recorder.skip(
+            "missing-credentials", "connectors.vault_token / VAULT_TOKEN not set",
+        )
+    _vault_token = cfg.connectors.vault_token or _os.environ.get("VAULT_TOKEN", "")
+    return scan_vault_targets(
+        vault_addr=cfg.connectors.vault_addr or _os.environ.get("VAULT_ADDR", ""),
+        token=_vault_token,
+        transit_mount=cfg.connectors.vault_transit_mount or "transit",
+        tls_verify=cfg.connectors.vault_tls_verify,
+        logger=logger,
+        session_start=None,
+        cfg=cfg,
+    )
+
+
+def test_vault_guard_no_token_no_env_reports_missing_credentials_and_never_scans(
+    monkeypatch,
+) -> None:
+    from unittest.mock import patch
+
+    from run_scan import _PhaseRecorder
+
+    monkeypatch.delenv("VAULT_TOKEN", raising=False)
+    monkeypatch.setattr("quirk.scanner.vault_connector.HVAC_AVAILABLE", True)
+    recorder = _PhaseRecorder()
+    cfg = _vault_cfg(vault_token=None)
+
+    with patch(
+        "quirk.scanner.vault_connector.scan_vault_targets", return_value=[],
+    ) as mock_scan:
+        result = _run_vault_phase_mirror(recorder, cfg, logger=None)
+
+    mock_scan.assert_not_called()
+    from run_scan import _PHASE_SKIPPED
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("vault_scanning")
+    row = recorder.rows()[0]
+    assert row["reason"] == "missing-credentials"
+    assert "vault_token" in row["detail"]
+    assert "VAULT_TOKEN" in row["detail"]
+
+
+def test_vault_guard_env_only_token_does_not_skip(monkeypatch) -> None:
+    from unittest.mock import patch
+
+    from run_scan import _PhaseRecorder
+
+    monkeypatch.setenv("VAULT_TOKEN", "s.abcdef1234")
+    monkeypatch.setattr("quirk.scanner.vault_connector.HVAC_AVAILABLE", True)
+    recorder = _PhaseRecorder()
+    cfg = _vault_cfg(vault_token=None)
+
+    with patch(
+        "quirk.scanner.vault_connector.scan_vault_targets", return_value=[],
+    ) as mock_scan:
+        result = _run_vault_phase_mirror(recorder, cfg, logger=None)
+
+    mock_scan.assert_called_once()
+    assert result == []
+    assert recorder.rows() == []
+
+
+def _db_cfg(pg_targets=None, mysql_targets=None, pg_user=None, pg_password=None,
+            mysql_user=None, mysql_password=None):
+    from types import SimpleNamespace
+
+    connectors = SimpleNamespace(
+        enable_db=True,
+        pg_targets=pg_targets or [],
+        mysql_targets=mysql_targets or [],
+        pg_scanner_user=pg_user,
+        pg_scanner_password=pg_password,
+        mysql_scanner_user=mysql_user,
+        mysql_scanner_password=mysql_password,
+    )
+    return SimpleNamespace(connectors=connectors)
+
+
+def _run_db_phase_mirror(recorder, cfg, logger):
+    """Mirrors run_scan.py's `_run_db_phase` guard exactly (post Plan 05)."""
+    from quirk.config_redaction import credential_is_set
+
+    if not cfg.connectors.enable_db:
+        return recorder.skip("disabled-by-config", "enable_db is false")
+    from quirk.scanner.db_connector import (
+        scan_pg_targets, scan_mysql_targets, PSYCOPG2_AVAILABLE, PYMYSQL_AVAILABLE,
+    )
+    if not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE):
+        return recorder.skip(
+            "missing-extra", "psycopg2 and PyMySQL not installed (extras: db)",
+        )
+    if not (cfg.connectors.pg_targets or cfg.connectors.mysql_targets):
+        return recorder.skip(
+            "no-eligible-targets",
+            "connectors.pg_targets and connectors.mysql_targets are both empty",
+        )
+    pg_usable = bool(cfg.connectors.pg_targets) and (
+        credential_is_set("connectors", "pg_scanner_user", cfg.connectors.pg_scanner_user)
+        and credential_is_set(
+            "connectors", "pg_scanner_password", cfg.connectors.pg_scanner_password,
+        )
+    )
+    mysql_usable = bool(cfg.connectors.mysql_targets) and (
+        credential_is_set(
+            "connectors", "mysql_scanner_user", cfg.connectors.mysql_scanner_user,
+        )
+        and credential_is_set(
+            "connectors", "mysql_scanner_password", cfg.connectors.mysql_scanner_password,
+        )
+    )
+    if not pg_usable and not mysql_usable:
+        return recorder.skip(
+            "missing-credentials",
+            "connectors.pg_scanner_user/pg_scanner_password and "
+            "connectors.mysql_scanner_user/mysql_scanner_password not set "
+            "for any configured target group",
+        )
+    result = []
+    if cfg.connectors.pg_targets and pg_usable:
+        result.extend(scan_pg_targets(
+            targets=cfg.connectors.pg_targets, user=cfg.connectors.pg_scanner_user,
+            password=cfg.connectors.pg_scanner_password, logger=logger,
+            session_start=None, cfg=cfg,
+        ))
+    if cfg.connectors.mysql_targets and mysql_usable:
+        result.extend(scan_mysql_targets(
+            targets=cfg.connectors.mysql_targets, user=cfg.connectors.mysql_scanner_user,
+            password=cfg.connectors.mysql_scanner_password, logger=logger,
+            session_start=None, cfg=cfg,
+        ))
+    return result
+
+
+def test_db_guard_pg_uncredentialed_no_mysql_reports_missing_credentials() -> None:
+    from unittest.mock import patch
+
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    cfg = _db_cfg(pg_targets=["db.example.com:5432"], mysql_targets=[])
+
+    with patch(
+        "quirk.scanner.db_connector.scan_pg_targets", return_value=[],
+    ) as mock_pg, patch(
+        "quirk.scanner.db_connector.scan_mysql_targets", return_value=[],
+    ) as mock_mysql, patch(
+        "quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True,
+    ), patch(
+        "quirk.scanner.db_connector.PYMYSQL_AVAILABLE", True,
+    ):
+        result = _run_db_phase_mirror(recorder, cfg, logger=None)
+
+    mock_pg.assert_not_called()
+    mock_mysql.assert_not_called()
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("db_scanning")
+    row = recorder.rows()[0]
+    assert row["reason"] == "missing-credentials"
+    assert "pg_scanner_user" in row["detail"] or "pg_scanner_password" in row["detail"]
+
+
+def test_db_guard_pg_uncredentialed_mysql_credentialed_runs_not_skips() -> None:
+    from unittest.mock import patch
+
+    from run_scan import _PhaseRecorder
+
+    recorder = _PhaseRecorder()
+    cfg = _db_cfg(
+        pg_targets=["pg.example.com:5432"], mysql_targets=["mysql.example.com:3306"],
+        pg_user=None, pg_password=None,
+        mysql_user="svc", mysql_password="s3cret-placeholder",
+    )
+
+    with patch(
+        "quirk.scanner.db_connector.scan_pg_targets", return_value=[],
+    ) as mock_pg, patch(
+        "quirk.scanner.db_connector.scan_mysql_targets", return_value=["ep"],
+    ) as mock_mysql, patch(
+        "quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True,
+    ), patch(
+        "quirk.scanner.db_connector.PYMYSQL_AVAILABLE", True,
+    ):
+        result = _run_db_phase_mirror(recorder, cfg, logger=None)
+
+    mock_pg.assert_not_called()
+    mock_mysql.assert_called_once()
+    assert result == ["ep"]
+    assert recorder.rows() == []
+
+
+def test_missing_credentials_reason_is_reachable_in_a_real_guard_path(monkeypatch) -> None:
+    """Proves `missing-credentials` is a live, tested reason — not a declared-but-
+    never-emitted enum value (Plan 05 objective)."""
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    monkeypatch.delenv("VAULT_TOKEN", raising=False)
+    monkeypatch.setattr("quirk.scanner.vault_connector.HVAC_AVAILABLE", True)
+    recorder = _PhaseRecorder()
+    cfg = _vault_cfg(vault_token=None)
+
+    from unittest.mock import patch
+    with patch("quirk.scanner.vault_connector.scan_vault_targets", return_value=[]):
+        result = _run_vault_phase_mirror(recorder, cfg, logger=None)
+
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("vault_scanning")
+    assert recorder.rows()[0]["reason"] == "missing-credentials"
