@@ -3415,13 +3415,14 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_k8s:
                 return _recorder.skip("disabled-by-config", "enable_k8s is false")
-            from quirk.scanner.k8s_connector import scan_k8s_targets, K8S_AVAILABLE
-            if not K8S_AVAILABLE:
-                return _recorder.skip(
-                    "missing-extra", "kubernetes client not installed (extras: cloud)",
-                )
-            if not cfg.connectors.k8s_provider:
-                return _recorder.skip("no-eligible-targets", "connectors.k8s_provider is empty")
+            # Review WR-03: NO pre-flight K8S_AVAILABLE / k8s_provider guards
+            # here. scan_k8s_targets owns the K8S-03 invariant ("NEVER returns
+            # an empty list silently") — unknown/unset provider and missing
+            # SDK each emit an inaccessible-finding CryptoEndpoint that feeds
+            # findings, trends, and scoring evidence. A pre-flight skip would
+            # silently delete those previously-emitted signals; the phase
+            # honestly records "ran" because the connector did run and emit.
+            from quirk.scanner.k8s_connector import scan_k8s_targets
             eps = scan_k8s_targets(
                 provider=cfg.connectors.k8s_provider or "",
                 cluster_name=cfg.connectors.k8s_cluster_name or "",
