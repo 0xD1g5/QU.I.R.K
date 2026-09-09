@@ -192,6 +192,12 @@ class _PhaseRecorder:
         return _PHASE_SKIPPED
 
     def record_ran(self, phase_name: str, duration_sec: Optional[float]) -> None:
+        # Review WR-04: reset any stale pending classification from a skip()
+        # call whose sentinel never reached record_skipped() — otherwise it
+        # would mislabel the NEXT unclassified skipped phase (mirrors the
+        # defensive reset in record_failed).
+        self._pending_reason = None
+        self._pending_detail = ""
         self._rows.append({
             "phase_name": phase_name,
             "status": SCAN_PHASE_STATUS_RAN,
