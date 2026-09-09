@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-08 (Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
+**Last Updated:** 2026-09-09 (Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
 skip observability (OBS-01, five skip reasons) surfaced as a "Scan Coverage" section on CLI/HTML/
 DOCX reports plus D-14 TLS-domain skip notes (OBS-02), and an auth-gated `GET /api/config/effective`
 pre-flight config preview with credential redaction and Overridden/Preset provenance badges
@@ -25118,10 +25118,9 @@ and dashboard coverage chips on scan-job/scan-history), and PARITY-01 (an auth-g
 badges, surfaced as the New Scan page's Effective config panel). Cases below marked PASS via
 automated test citation were all re-run live during this plan's execution. No case in this series
 was checked to satisfy the gate without a corresponding real result — the browser-visual case
-(UAT-192-07) is honestly disposed SKIP/DEFERRED because the human checkpoints in plans 09 and 10
-were auto-mode pre-approved, not actually visually confirmed by a developer in a running browser;
-that confirmation remains an outstanding phase-level HUMAN-UAT item (see both plans' SUMMARY.md
-"Deferred Human Verification" sections).
+(UAT-192-07) was initially disposed SKIP/DEFERRED because the human checkpoints in plans 09 and 10
+were auto-mode pre-approved; the live-browser walkthrough was then performed and operator-approved
+on 2026-09-09, flipping UAT-192-07 to PASS (evidence in the phase's 192-HUMAN-UAT.md).
 
 ### UAT-192-01: `ScanPhaseRecord` captures exactly five skip reasons per scanner phase (OBS-01)
 
@@ -25327,11 +25326,11 @@ expands it.
 **Notes:** `EffectiveConfigPanel.test.tsx` (7 tests) + `scan-new-effective-config-panel.test.tsx`
 (3 tests) re-run live during this plan — 10 tests passing, per 192-10-SUMMARY.md's self-check.
 This automated coverage satisfies the *mechanism* of SUMMARY 192-10's flagged redaction check; the
-live-browser visual confirmation of that same check remains outstanding — see UAT-192-07.
+live-browser visual confirmation of that same check passed 2026-09-09 — see UAT-192-07.
 
 ---
 
-### UAT-192-07: Live-browser visual confirmation of coverage chips and the Effective config panel (OBS-02, PARITY-01) — outstanding
+### UAT-192-07: Live-browser visual confirmation of coverage chips and the Effective config panel (OBS-02, PARITY-01)
 
 **ID:** UAT-192-07
 **Title:** A developer visually confirms, in a running dashboard against a real scan, that the
@@ -25345,7 +25344,7 @@ next to the new advisory UI
 steps, with step 6 — the Raw YAML redaction check — explicitly flagged as the security-relevant
 one that must be confirmed, not assumed).
 
-**Steps:** (not yet performed — this is the honest gap this case records)
+**Steps:** (performed 2026-09-09 — live Chrome session against scan b49e7889, operator-approved)
 ```
 1. python run_scan.py serve
 2. Run a scan with at least one connector disabled; open its scan-job page; confirm the chip pair,
@@ -25364,10 +25363,9 @@ browser session.
 Raw YAML tab during the live walkthrough, or if any chip/panel element visually overwhelms the
 primary scan-submission action.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
-**Date:** 2026-09-08  **Tester:** N/A — not yet performed
-**Notes:** DEFERRED — covered by `tests/*` automated equivalents cited in UAT-192-03/05/06 for the
-mechanism (redaction, honest-absence, parity), but the live-browser visual walkthrough itself has
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Operator (Digs) + Claude live-browser walkthrough
+**Notes:** PASSED 2026-09-09 — live Chrome walkthrough against a real scan (example.org, quick profile, job b49e7889): 3 ran / 22 skipped chips + reason-classified detail rows on scan-history; pre-v5.21 honest not-recorded notice; Effective config panel grouped/raw views with Overridden + Preset: deep provenance; all credentials masked incl. the genuinely-set snmp_community; Raw YAML AND the raw /api/config/effective payload show only •••• (server-side redaction); Run Scan remained visually dominant. Operator approved. Evidence in 192-HUMAN-UAT.md. Historical note: this case was originally SKIP because auto-mode pre-approved the plan 09/10 checkpoints; the prior deferral text said the walkthrough has
 not been performed. Both source SUMMARY.md files' Task 3 checkpoints were auto-mode
 pre-approved per this session's policy, not actually visually confirmed by a developer — this case
 exists specifically so that fact is recorded honestly rather than defaulting to an unverified PASS.

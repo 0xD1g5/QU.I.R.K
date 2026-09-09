@@ -14,7 +14,7 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 
 ### Config Parity (999.104, tiers 1–3)
 
-- [ ] **PARITY-01**: Operator can view the effective config a scan will run with (resolved
+- [x] **PARITY-01**: Operator can view the effective config a scan will run with (resolved
       `QuirkCfg`) from the dashboard, via a new auth-gated `GET /api/config/effective` that
       actively redacts credential fields (the existing 1-field unauthenticated `/api/config` is
       not a usable seed — research-verified).
@@ -34,11 +34,11 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 
 ### Skip Observability (999.96, observability half)
 
-- [ ] **OBS-01**: Every scanner phase that does not run has a structured skip record persisted
+- [x] **OBS-01**: Every scanner phase that does not run has a structured skip record persisted
       to the database per scan (not only the filesystem `run-stats-*.json`), with
       distinguishable reasons: disabled-by-config, missing-extra, no-eligible-targets,
       missing-credentials, failed.
-- [ ] **OBS-02**: Operator can see which scanner phases ran / were skipped and why, on the
+- [x] **OBS-02**: Operator can see which scanner phases ran / were skipped and why, on the
       dashboard scan surfaces and in the CLI/HTML/DOCX report coverage disclosure — a scan that
       assessed nothing in a domain says so, never renders as silently empty.
 
@@ -105,12 +105,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARITY-01 | 192 | Pending |
+| PARITY-01 | 192 | Complete (2026-09-09) |
 | PARITY-02 | 193 | Pending |
 | PARITY-03 | 193 | Pending |
 | PARITY-04 | 194 | Pending |
-| OBS-01 | 192 | Pending |
-| OBS-02 | 192 | Pending |
+| OBS-01 | 192 | Complete (2026-09-09) |
+| OBS-02 | 192 | Complete (2026-09-09) |
 | SPKI-01 | 191 | Complete |
 | SPKI-02 | 191 | Complete |
 | VERDICT-01 | 194 | Pending |
