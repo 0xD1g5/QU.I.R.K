@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import type { ScanSubmitRequest } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
+import { EffectiveConfigPanel } from "@/components/EffectiveConfigPanel"
 
 export function ScanNewPage() {
   const navigate = useNavigate()
@@ -311,6 +312,15 @@ export function ScanNewPage() {
         </div>
 
         <Separator />
+
+        <EffectiveConfigPanel
+          targets={targets}
+          profile={profile}
+          calibration={calibration}
+          enableNmap={enableNmap || nmapForced}
+          portScope={portScope}
+          customPorts={customPorts}
+        />
 
         <Button
           type="submit"
