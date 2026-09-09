@@ -36,7 +36,6 @@ export function ScanNewPage() {
   // credential values (D-12, never persisted, cleared after every submit).
   const [connectors, setConnectors] = useState<Record<string, boolean>>({})
   const [credentials, setCredentials] = useState<Record<string, string>>({})
-  const [credentialWarnings, setCredentialWarnings] = useState<{ connector: string; message: string }[]>([])
   // D-08: a rejected-connector 422's `detail` renders here — a distinct
   // full-width destructive banner above Start Scan, never merged with the
   // plain inline `error` text used for field-validation failures.
@@ -48,7 +47,6 @@ export function ScanNewPage() {
     e.preventDefault()
     setError(null)
     setCustomPortsError(null)
-    setCredentialWarnings([])
     setRejectionBanner(null)
     const trimmed = targets.trim()
     if (!trimmed) {
@@ -103,13 +101,18 @@ export function ScanNewPage() {
       }
       const data: { job_id: string; status: string; credential_warnings?: { connector: string; message: string }[] } =
         await resp.json()
-      if (data.credential_warnings && data.credential_warnings.length > 0) {
-        setCredentialWarnings(data.credential_warnings)
-      }
       // D-12: credentials are request-scoped only — clear them after a
       // successful submit so a repeat visit (or "Run again") re-opens empty.
       setCredentials({})
-      navigate(`/scan/job/${data.job_id}`)
+      // Phase 193 review WR-01: navigation unmounts this page, so warnings
+      // rendered here were never visible. D-15 warnings ride the navigation
+      // state and are rendered on the job page instead.
+      navigate(`/scan/job/${data.job_id}`, {
+        state:
+          data.credential_warnings && data.credential_warnings.length > 0
+            ? { credentialWarnings: data.credential_warnings }
+            : undefined,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error.")
     } finally {
@@ -361,16 +364,6 @@ export function ScanNewPage() {
           customPorts={customPorts}
           connectors={connectors}
         />
-
-        {credentialWarnings.length > 0 && (
-          <div className="rounded-md border px-3 py-2.5" style={{ borderColor: "var(--ds-high)" }}>
-            {credentialWarnings.map((w) => (
-              <p key={w.connector} className="text-xs" style={{ color: "var(--ds-high)" }}>
-                {w.message}
-              </p>
-            ))}
-          </div>
-        )}
 
         {rejectionBanner && (
           <div

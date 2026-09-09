@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom"
+import { useParams, useLocation, Link } from "react-router-dom"
 import { CheckCircle2 } from "lucide-react"
 import { useJobStatus } from "@/hooks/useJobStatus"
 import { fetchApi } from "@/lib/api"
@@ -41,6 +41,13 @@ const STATUS_LABEL: Record<string, string> = {
 export function ScanJobPage() {
   const { jobId } = useParams<{ jobId: string }>()
   const result = useJobStatus(jobId ?? "")
+  // Phase 193 review WR-01: D-15 blank-credential warnings computed at submit
+  // time ride the navigation state from ScanNewPage (rendering them there was
+  // unreachable — navigation unmounted the page before they could paint).
+  const location = useLocation()
+  const credentialWarnings =
+    (location.state as { credentialWarnings?: { connector: string; message: string }[] } | null)
+      ?.credentialWarnings ?? []
 
   const handleCancel = async () => {
     if (!jobId) return
@@ -92,6 +99,20 @@ export function ScanJobPage() {
       </div>
 
       <p className="font-mono text-sm text-muted-foreground mt-1">Job ID: {data.job_id}</p>
+
+      {credentialWarnings.length > 0 && (
+        <div
+          className="rounded-md border px-3 py-2.5 mt-3"
+          style={{ borderColor: "var(--ds-high)" }}
+          role="status"
+        >
+          {credentialWarnings.map((w) => (
+            <p key={w.connector} className="text-xs" style={{ color: "var(--ds-high)" }}>
+              {w.message}
+            </p>
+          ))}
+        </div>
+      )}
 
       <Separator className="my-4" />
 
