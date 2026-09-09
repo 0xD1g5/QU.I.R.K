@@ -123,6 +123,7 @@ def create_app(db_path: str | None = None) -> FastAPI:
     # 1. API routes
     application.include_router(health.router, prefix="/api")
     application.include_router(config.router, prefix="/api")
+    application.include_router(config.effective_router, prefix="/api")
     application.include_router(pdf.router, prefix="/api")
     application.include_router(scan.router, prefix="/api")
     application.include_router(hardware_drift.router, prefix="/api")

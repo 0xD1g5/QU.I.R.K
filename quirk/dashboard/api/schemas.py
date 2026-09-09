@@ -24,6 +24,31 @@ class ConfigResponse(BaseModel):
     vertical: str  # "general" | "healthcare"
 
 
+# Phase 192 / PARITY-01: GET /api/config/effective response shapes. Frozen
+# interfaces — Plan 10 (scan-new.tsx panel) consumes this shape directly.
+
+class ConfigField(BaseModel):
+    name: str
+    value: Any
+    provenance: Literal["default", "user", "preset"]
+    redacted: bool
+    credential_status: Optional[Literal["set", "not set"]] = None
+
+
+class ConfigSection(BaseModel):
+    name: str
+    title: str
+    fields: List[ConfigField]
+
+
+class ConfigEffectiveResponse(BaseModel):
+    vertical: str
+    profile: str
+    sections: List[ConfigSection]
+    raw: dict
+    redacted_field_count: int
+
+
 # ---- Score / Confidence ----
 
 class SubScores(BaseModel):
