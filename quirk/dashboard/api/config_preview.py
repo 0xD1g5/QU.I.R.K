@@ -62,6 +62,8 @@ def resolve_effective_config(
     custom_ports: Optional[str] = None,
     vertical: Optional[str] = None,
     connectors_overlay: Optional[Dict[str, bool]] = None,
+    scan_overlay: Optional[Dict[str, object]] = None,
+    assessment_overlay: Optional[Dict[str, object]] = None,
 ) -> tuple[AppConfig, dict, frozenset[str]]:
     """Resolve the config a `POST /api/jobs` submission with these selections
     would actually run with.
@@ -92,6 +94,13 @@ def resolve_effective_config(
     sees the operator's value as user-set, never preset-changed. Never
     `setattr` the loaded `cfg` after the fact (Phase 75 D-13's replaced
     anti-pattern).
+
+    Phase 194 / PARITY-04: `scan_overlay`/`assessment_overlay` are forwarded
+    the same way, BEFORE the round-trip, for the same reason. The
+    preset-provenance diff below is extended to walk `_SCAN_CONTAINER_FIELDS`
+    ("timeouts", "retry") -- otherwise a preset that changes
+    `scan.timeouts.tls_seconds` would show no "preset" badge, since those
+    sub-tables are excluded from the shallow scalar snapshot.
     """
     del vertical  # accepted for interface symmetry only; see docstring
     db_path = _default_db_path()
@@ -109,6 +118,8 @@ def resolve_effective_config(
             port_scope=port_scope,
             custom_ports=custom_ports,
             connectors_overlay=connectors_overlay,
+            scan_overlay=scan_overlay,
+            assessment_overlay=assessment_overlay,
         )
         config_path = output_dir / "preview-config.yaml"
         with open(config_path, "w", encoding="utf-8") as fh:
@@ -118,6 +129,13 @@ def resolve_effective_config(
 
     scan_before = _snapshot_scalar_fields(cfg.scan)
     connectors_before = _snapshot_scalar_fields(cfg.connectors)
+    # Phase 194 / PARITY-04: nested-container snapshot for the scalar fields
+    # of scan.timeouts / scan.retry, taken separately since
+    # _snapshot_scalar_fields skips container fields on the parent.
+    scan_containers_before = {
+        container_name: _snapshot_scalar_fields(getattr(cfg.scan, container_name))
+        for container_name in _SCAN_CONTAINER_FIELDS
+    }
 
     apply_profile(cfg, profile)
 
@@ -128,5 +146,10 @@ def resolve_effective_config(
     for name, before_value in connectors_before.items():
         if getattr(cfg.connectors, name) != before_value:
             preset_changed_field_paths.add(f"connectors.{name}")
+    for container_name, container_before in scan_containers_before.items():
+        container_after = getattr(cfg.scan, container_name)
+        for name, before_value in container_before.items():
+            if getattr(container_after, name) != before_value:
+                preset_changed_field_paths.add(f"scan.{container_name}.{name}")
 
     return cfg, config_dict, frozenset(preset_changed_field_paths)

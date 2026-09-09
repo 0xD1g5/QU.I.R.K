@@ -17,12 +17,15 @@ import json
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import ValidationError
 
 from quirk.config import get_vertical
 from quirk.config_redaction import REDACTED_SET, REDACTED_UNSET, redact_config
 from quirk.dashboard.api.config_preview import resolve_effective_config
 from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.routes.jobs import build_advanced_overlays
 from quirk.dashboard.api.schemas import (
+    AdvancedScanFields,
     ConfigEffectiveResponse,
     ConfigField,
     ConfigResponse,
@@ -151,6 +154,14 @@ def get_effective_config(
             "enforces on submit — not duplicated here."
         ),
     ),
+    advanced: Optional[str] = Query(
+        None,
+        description=(
+            "JSON-encoded AdvancedScanFields object (Phase 194 / PARITY-04 "
+            "D-01) -- validated through the SAME model POST /api/jobs uses, "
+            "so preview and submit can never disagree on what is valid."
+        ),
+    ),
 ) -> ConfigEffectiveResponse:
     """GET /api/config/effective — resolved, redacted, provenance-badged config
     preview matching what a `POST /api/jobs` submission with these query
@@ -172,6 +183,28 @@ def get_effective_config(
                 detail="connectors must be a JSON object mapping enable_* flags to booleans",
             )
 
+    # Phase 194 / PARITY-04 / D-01: JSON-decode, then validate through the
+    # SAME AdvancedScanFields model the submit path uses (never a second
+    # ad hoc validator), then derive the two overlays via the shared helper.
+    scan_overlay: Optional[dict] = None
+    assessment_overlay: Optional[dict] = None
+    if advanced is not None:
+        try:
+            advanced_raw = json.loads(advanced)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "advanced must be a JSON object matching the "
+                    "AdvancedScanFields shape"
+                ),
+            ) from exc
+        try:
+            advanced_model = AdvancedScanFields.model_validate(advanced_raw)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        scan_overlay, assessment_overlay = build_advanced_overlays(advanced_model)
+
     try:
         resolved_cfg, overlay_dict, preset_changed = resolve_effective_config(
             targets=targets,
@@ -182,6 +215,8 @@ def get_effective_config(
             custom_ports=custom_ports,
             vertical=vertical,
             connectors_overlay=connectors_overlay,
+            scan_overlay=scan_overlay,
+            assessment_overlay=assessment_overlay,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
