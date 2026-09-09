@@ -161,4 +161,46 @@ describe("EffectiveConfigPanel", () => {
       ),
     ).toBeInTheDocument()
   })
+
+  // Phase 194 Plan 05 (PARITY-04, D-04) — advanced overlay query param.
+  it("an empty/undefined advanced prop produces a query string with no advanced= segment (byte-identical to pre-phase)", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    render(<EffectiveConfigPanel {...defaultProps()} advanced={{}} />)
+    fireEvent.click(screen.getByText("Effective config"))
+
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    const calledPath = mockFetchApi.mock.calls[0][0] as string
+    expect(calledPath).not.toContain("advanced=")
+    expect(calledPath).toBe(
+      "/api/config/effective?targets=example.com&profile=deep&calibration=balanced&enable_nmap=false&port_scope=top1000&vertical=healthcare",
+    )
+  })
+
+  it("a non-empty advanced prop adds exactly one advanced= segment carrying the JSON-encoded delta", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    render(<EffectiveConfigPanel {...defaultProps()} advanced={{ tls_enum_mode: "deep" }} />)
+    fireEvent.click(screen.getByText("Effective config"))
+
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    const calledPath = mockFetchApi.mock.calls[0][0] as string
+    const matches = calledPath.match(/advanced=/g) ?? []
+    expect(matches.length).toBe(1)
+    expect(calledPath).toContain(`advanced=${encodeURIComponent(JSON.stringify({ tls_enum_mode: "deep" }))}`)
+  })
+
+  it("changing an advanced value changes the query string, proving the refetch key moves", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    const { rerender } = render(
+      <EffectiveConfigPanel {...defaultProps()} advanced={{ tls_enum_mode: "fast" }} />,
+    )
+    fireEvent.click(screen.getByText("Effective config"))
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalledTimes(1))
+    const firstPath = mockFetchApi.mock.calls[0][0] as string
+
+    rerender(<EffectiveConfigPanel {...defaultProps()} advanced={{ tls_enum_mode: "deep" }} />)
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalledTimes(2))
+    const secondPath = mockFetchApi.mock.calls[1][0] as string
+
+    expect(secondPath).not.toBe(firstPath)
+  })
 })

@@ -11,7 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { useVertical } from "@/context/vertical-context"
-import type { ScanSubmitRequest } from "@/types/api"
+import type { AdvancedScanFields, ScanSubmitRequest } from "@/types/api"
 
 /**
  * Phase 192 Plan 10 (PARITY-01 / D-01..D-05): "Effective config" pre-flight
@@ -64,6 +64,11 @@ interface EffectiveConfigPanelProps {
   // empty/undefined delta must produce the identical query string Phase 192
   // produced, so cached responses and existing behavior are unchanged.
   connectors?: Record<string, boolean>
+  // Phase 194 Plan 05 (PARITY-04, D-04): the operator's Advanced-field
+  // delta from AdvancedPanel. Optional and query-additive only, mirroring
+  // the `connectors` prop above — an empty/undefined delta must produce the
+  // identical query string this panel produced before this phase.
+  advanced?: AdvancedScanFields
 }
 
 function formatValue(value: unknown): string {
@@ -89,6 +94,12 @@ function buildQuery(props: EffectiveConfigPanelProps, vertical: string): string 
   // the exact same query string as before this field existed.
   if (props.connectors && Object.keys(props.connectors).length > 0) {
     params.set("connectors", JSON.stringify(props.connectors))
+  }
+  // Phase 194 Plan 05 (PARITY-04, D-04): additive-only, mirroring the
+  // `connectors` block above — an empty or undefined delta MUST produce the
+  // identical query string the panel produced before this phase.
+  if (props.advanced && Object.keys(props.advanced).length > 0) {
+    params.set("advanced", JSON.stringify(props.advanced))
   }
   return params.toString()
 }
