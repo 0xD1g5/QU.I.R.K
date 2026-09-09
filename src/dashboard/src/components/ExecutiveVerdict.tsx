@@ -3,18 +3,21 @@ import { ArrowRight, ShieldAlert, TrendingDown } from "lucide-react"
 import type { ScanLatestResponse } from "@/types/api"
 
 /**
- * ExecutiveVerdict — UX spike (verdict layer).
+ * ExecutiveVerdict — Executive Verdict layer (VERDICT-01).
  *
  * Turns the Executive page from "here is data" into "here is the call".
  * Renders ENTIRELY from the existing /api/scan/latest payload — no new
  * endpoints, no fabricated numbers:
- *   - headline verdict  ← score.score + score.rating
+ *   - headline verdict  ← score.score + ratingToTone(score.rating)
  *   - exposure framing   ← count of findings[].quantum_risk
  *   - "costing you most"  ← score.drivers[] (each carries {impact, description})
  *   - "start here"        ← roadmap.nodes filtered to phase === "NOW" (title + why)
  *
- * Gated by VITE_VERDICT_LAYER (see executive.tsx). Reversible: delete this
- * file + the guarded block in executive.tsx.
+ * Renders unconditionally on the executive page (D-06 — no flag gate).
+ * Band/tone are driven exclusively by the API's authoritative `rating`
+ * field (D-07), never re-derived from the raw score. A scan whose payload
+ * carries no rating (pre-v5.21 data, or an unrecognized future band) renders
+ * the honest-absence card instead of a headline (D-08).
  */
 
 interface DriverRow {
@@ -33,32 +36,60 @@ function parseDrivers(raw: Record<string, unknown>[]): DriverRow[] {
     .filter((d) => d.description !== "")
 }
 
-/** Verdict band from the 0-100 readiness score. */
-function verdictBand(score: number): {
-  label: string
-  tone: "vulnerable" | "at-risk" | "safe"
-} {
-  if (score >= 80) return { label: "QUANTUM-READY", tone: "safe" }
-  if (score >= 50) return { label: "PARTIALLY READY", tone: "at-risk" }
-  return { label: "NOT QUANTUM-READY", tone: "vulnerable" }
+type VerdictTone = "safe" | "at-risk" | "vulnerable" | "unavailable"
+
+/**
+ * D-07: band/tone derives ONLY from the API's authoritative `rating` enum
+ * (EXCELLENT/GOOD/MODERATE/FAIR/POOR/NOT_ASSESSED, quirk/dashboard/api/
+ * schemas.py:90) — never re-derived from the raw score. An explicit switch
+ * with a default branch means an unrecognized future rating value is
+ * honestly reported as "unavailable" rather than silently mis-colored.
+ *
+ * Not exported: this file must export only the ExecutiveVerdict component
+ * (react-refresh/only-export-components). Band-mapping correctness is
+ * locked by rendering ExecutiveVerdict with each rating value and asserting
+ * on the resulting label/tone, not by importing this function directly.
+ */
+function ratingToTone(rating: string | null | undefined): VerdictTone {
+  switch (rating) {
+    case "EXCELLENT":
+    case "GOOD":
+      return "safe"
+    case "MODERATE":
+    case "FAIR":
+      return "at-risk"
+    case "POOR":
+      return "vulnerable"
+    default:
+      // null, undefined, "", "NOT_ASSESSED", or any unrecognized future value.
+      return "unavailable"
+  }
 }
 
-const TONE_HSL: Record<string, string> = {
+const TONE_LABEL: Record<VerdictTone, string | null> = {
+  safe: "QUANTUM-READY",
+  "at-risk": "PARTIALLY READY",
+  vulnerable: "NOT QUANTUM-READY",
+  // D-08: the honest-absence card replaces the band label entirely.
+  unavailable: null,
+}
+
+const TONE_HSL: Record<VerdictTone, string> = {
   vulnerable: "hsl(var(--quantum-vulnerable))",
   "at-risk": "hsl(var(--quantum-at-risk))",
   safe: "hsl(var(--quantum-safe))",
+  // D-08: neutral honest-absence tone — never a vulnerable/safe color, since
+  // no verdict was computed. --ds-medium is a hex value (not an HSL triple
+  // like --quantum-*), so it is referenced directly, not wrapped in hsl().
+  unavailable: "var(--ds-medium)",
 }
 
 export function ExecutiveVerdict({ data }: { data: ScanLatestResponse }) {
   const verdict = useMemo(() => {
     const score = data.score.score
-    // Phase 194 landing adaptation (Task 1, D-10): score.score widened to
-    // `number | null` since this spike was written (Phase 188 SCORE-06).
-    // verdictBand still expects a number here — Task 2 deletes verdictBand
-    // entirely in favor of ratingToTone(), which is the real fix for the
-    // null/not-computed case (D-08 honest-absence branch). This is a
-    // type-check-only landing shim, not a design decision.
-    const band = verdictBand(score ?? 0)
+    const rating = data.score.rating
+    const capReason = data.score.rating_cap_reason
+    const tone = ratingToTone(rating)
 
     const findings = data.findings ?? []
     // quantum_risk values in the payload look like "Vulnerable" / "At Risk".
@@ -82,15 +113,37 @@ export function ExecutiveVerdict({ data }: { data: ScanLatestResponse }) {
       .filter((n) => (n.phase ?? "").toUpperCase() === "NOW")
       .slice(0, 3)
 
-    return { score, band, harvestNow, atRisk, total: findings.length, drivers, nowActions }
+    return { score, tone, capReason, harvestNow, atRisk, total: findings.length, drivers, nowActions }
   }, [data])
 
-  const { score, band, harvestNow, atRisk, total, drivers, nowActions } = verdict
-  const accent = TONE_HSL[band.tone]
+  const { score, tone, capReason, harvestNow, atRisk, total, drivers, nowActions } = verdict
+  const accent = TONE_HSL[tone]
+  const label = TONE_LABEL[tone]
+
+  // D-08: honest-absence card replaces the headline/score/band block
+  // entirely when no verdict was computed — never hidden, never a
+  // client-derived color.
+  if (tone === "unavailable") {
+    return (
+      <div
+        className="rounded-xl border p-6 mb-2"
+        style={{
+          borderColor: `color-mix(in srgb, ${accent} 35%, transparent)`,
+          background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 12%, transparent), transparent)`,
+        }}
+        role="region"
+        aria-label="Quantum readiness verdict"
+      >
+        <div style={{ fontSize: 14, color: accent, fontWeight: 600 }}>
+          Verdict not available for this scan (pre-v5.21 data).
+        </div>
+      </div>
+    )
+  }
 
   // Lead sentence adapts to the actual posture.
   const lead =
-    band.tone === "safe"
+    tone === "safe"
       ? "This environment is largely resilient to quantum-era threats."
       : harvestNow > 0
         ? "This environment is exposed to harvest-now-decrypt-later attacks today."
@@ -124,8 +177,22 @@ export function ExecutiveVerdict({ data }: { data: ScanLatestResponse }) {
               color: accent,
             }}
           >
-            {band.label}
+            {label}
           </div>
+          {/* D-09: cap-reason note, rendered inline directly beneath the
+              band label, only when the score was capped. */}
+          {capReason && (
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                marginTop: 4,
+                color: "var(--ds-high)",
+              }}
+            >
+              Score capped: {capReason}
+            </div>
+          )}
         </div>
 
         <div className="flex-1">

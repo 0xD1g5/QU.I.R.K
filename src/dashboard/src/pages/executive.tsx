@@ -22,10 +22,6 @@ import { useVertical } from "@/context/vertical-context"
 // the sentence in this file (tests/test_score_strings_freshness.py gates it).
 import scoreStrings from "@/lib/score-strings.json"
 
-// UX spike: verdict layer. Opt-in via VITE_VERDICT_LAYER=1 so the default
-// dashboard is unchanged. Reversible — remove this const + the guarded block.
-const VERDICT_LAYER_ENABLED = import.meta.env.VITE_VERDICT_LAYER === "1"
-
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
   // HIGH pairs with --risk-badge-high-foreground (220 22% 12%) in index.css (D-09). No text is
@@ -281,10 +277,10 @@ export function ExecutivePage() {
         </div>
       </div>
 
-      {/* UX spike (VITE_VERDICT_LAYER): opinionated verdict layer above the
+      {/* VERDICT-01 / D-06: verdict layer renders unconditionally, above the
           gauges. Renders from the existing scan payload; gauges remain below
           as supporting evidence. */}
-      {VERDICT_LAYER_ENABLED && <ExecutiveVerdict data={data} />}
+      <ExecutiveVerdict data={data} />
 
       {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
       <RegressionAlertChip />
