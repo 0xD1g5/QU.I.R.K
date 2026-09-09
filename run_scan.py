@@ -2994,8 +2994,11 @@ def main():
         )
     else:
         def _run_jwt_phase():
-            if not (cfg.connectors.enable_jwt and cfg.connectors.jwt_targets):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_jwt:
+                return _recorder.skip("disabled-by-config", "enable_jwt is false")
+            if not cfg.connectors.jwt_targets:
+                return _recorder.skip("no-eligible-targets", "connectors.jwt_targets is empty")
             return scan_jwt_targets(
                 cfg.connectors.jwt_targets,
                 timeout=cfg.scan.timeouts.jwt_seconds,
@@ -3012,8 +3015,11 @@ def main():
         # Container scan phase
         # ==============================
         def _run_container_phase():
-            if not (cfg.connectors.enable_container and cfg.connectors.container_targets):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_container:
+                return _recorder.skip("disabled-by-config", "enable_container is false")
+            if not cfg.connectors.container_targets:
+                return _recorder.skip("no-eligible-targets", "connectors.container_targets is empty")
             return scan_container_targets(
                 cfg.connectors.container_targets,
                 timeout=cfg.scan.timeouts.container_seconds,
@@ -3028,8 +3034,11 @@ def main():
         # Source code scan phase
         # ==============================
         def _run_source_phase():
-            if not (cfg.connectors.enable_source and cfg.connectors.source_targets):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_source:
+                return _recorder.skip("disabled-by-config", "enable_source is false")
+            if not cfg.connectors.source_targets:
+                return _recorder.skip("no-eligible-targets", "connectors.source_targets is empty")
             return scan_source_targets(
                 cfg.connectors.source_targets,
                 timeout=cfg.scan.timeouts.source_seconds,
@@ -3044,9 +3053,10 @@ def main():
         # OpenAPI spec scan phase (Phase 94 SPEC-01/02/03)
         # ==============================
         def _run_openapi_phase():
+            _recorder = run_stats["phase_records"]
             _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
             if not _spec_path:
-                return []
+                return _recorder.skip("no-eligible-targets", "scan.openapi_spec_path is not set")
             from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
             _target_list = []
             if hasattr(cfg, "targets") and cfg.targets is not None:
@@ -3069,11 +3079,12 @@ def main():
         # REST fuzz scan phase (Phase 96 FUZZ-01/02/03/04)
         # ==============================
         def _run_fuzz_phase():
+            _recorder = run_stats["phase_records"]
             # Guard: --fuzz must be set and openapi_endpoints must exist (no spec → no fuzz)
             if not getattr(args, "fuzz", False):
-                return []
+                return _recorder.skip("disabled-by-config", "--fuzz not set")
             if not openapi_endpoints:
-                return []
+                return _recorder.skip("no-eligible-targets", "no OpenAPI endpoints discovered")
             _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
             if not _spec_path:
                 return []
@@ -3371,8 +3382,11 @@ def main():
 
         # ── DNSSEC scanning ─────────────────────────────────────
         def _run_dnssec_phase():
-            if not (cfg.connectors.enable_dnssec and cfg.connectors.dnssec_targets):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_dnssec:
+                return _recorder.skip("disabled-by-config", "enable_dnssec is false")
+            if not cfg.connectors.dnssec_targets:
+                return _recorder.skip("no-eligible-targets", "connectors.dnssec_targets is empty")
             eps = scan_dnssec_targets(
                 targets=cfg.connectors.dnssec_targets,
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
@@ -3390,8 +3404,11 @@ def main():
 
         # ── SAML/OIDC scanning ────────────────────────────────────
         def _run_saml_phase():
-            if not (cfg.connectors.enable_saml and cfg.connectors.saml_targets):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_saml:
+                return _recorder.skip("disabled-by-config", "enable_saml is false")
+            if not cfg.connectors.saml_targets:
+                return _recorder.skip("no-eligible-targets", "connectors.saml_targets is empty")
             from quirk.scanner.saml_scanner import scan_saml_targets
             eps = scan_saml_targets(
                 targets=cfg.connectors.saml_targets,
@@ -3410,8 +3427,11 @@ def main():
 
         # ── Kerberos scanning ────────────────────────────────────
         def _run_kerberos_phase():
-            if not (cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_kerberos:
+                return _recorder.skip("disabled-by-config", "enable_kerberos is false")
+            if not cfg.connectors.kerberos_targets:
+                return _recorder.skip("no-eligible-targets", "connectors.kerberos_targets is empty")
             from quirk.scanner.kerberos_scanner import scan_kerberos_targets
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
@@ -3437,9 +3457,13 @@ def main():
         )
 
         def _run_smime_phase():
-            if cfg_smime_skip or not (getattr(cfg.connectors, "enable_smime", False)
-                    and getattr(cfg.connectors, "smime_targets", None)):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not getattr(cfg.connectors, "enable_smime", False):
+                return _recorder.skip("disabled-by-config", "enable_smime is false")
+            if cfg_smime_skip:
+                return _recorder.skip("missing-extra", "ldap3 not installed (extras: adcs)")
+            if not getattr(cfg.connectors, "smime_targets", None):
+                return _recorder.skip("no-eligible-targets", "connectors.smime_targets is empty")
             from quirk.scanner.smime_scanner import scan_smime_targets
             eps = scan_smime_targets(
                 targets=cfg.connectors.smime_targets,
@@ -3466,9 +3490,13 @@ def main():
         )
 
         def _run_adcs_phase():
-            if cfg_adcs_skip or not (getattr(cfg.connectors, "enable_adcs", False)
-                    and getattr(cfg.connectors, "adcs_targets", None)):
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not getattr(cfg.connectors, "enable_adcs", False):
+                return _recorder.skip("disabled-by-config", "enable_adcs is false")
+            if cfg_adcs_skip:
+                return _recorder.skip("missing-extra", "ldap3 not installed (extras: adcs)")
+            if not getattr(cfg.connectors, "adcs_targets", None):
+                return _recorder.skip("no-eligible-targets", "connectors.adcs_targets is empty")
             from quirk.scanner.adcs_scanner import scan_adcs_targets
             eps = scan_adcs_targets(
                 targets=cfg.connectors.adcs_targets,
@@ -3491,8 +3519,9 @@ def main():
         # IMPORTANT: runs AFTER tls_endpoints is populated so the TLS EKU path
         # (scan_codesign_from_tls_endpoints) can operate on already-captured certs.
         def _run_codesign_phase():
+            _recorder = run_stats["phase_records"]
             if not getattr(args, "inventory_code_signing", False):
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "--inventory-code-signing not set")
             from quirk.scanner.codesign_scanner import (
                 scan_codesign_from_ldap,
                 scan_codesign_from_tls_endpoints,

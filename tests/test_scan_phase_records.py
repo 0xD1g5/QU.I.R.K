@@ -387,3 +387,149 @@ def test_flush_scan_phase_records_no_rows_is_a_noop(tmp_path) -> None:
         assert session.query(ScanPhaseRecord).count() == 0
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# Plan 04 Task 1: classified skips in the target-list scanner phase guards.
+#
+# The `_run_X_phase()` closures live nested inside `run_scan.main()` and are
+# not independently importable, so — following this codebase's established
+# convention (see tests/test_run_scan_adcs_wiring.py's `_run_adcs_phase`
+# mirror) — each helper below mirrors its run_scan.py counterpart's guard
+# exactly, using a real `_PhaseRecorder` so the recorded reason/detail are
+# asserted against the actual `_PhaseRecorder.skip()` contract rather than a
+# hand-rolled stand-in.
+# ---------------------------------------------------------------------------
+
+
+def _mk_cfg(**connector_overrides):
+    from types import SimpleNamespace
+
+    defaults = dict(
+        enable_jwt=False, jwt_targets=[],
+        enable_smime=False, smime_targets=[],
+    )
+    defaults.update(connector_overrides)
+    connectors = SimpleNamespace(**defaults)
+    return SimpleNamespace(connectors=connectors)
+
+
+def _jwt_guard(recorder, cfg):
+    """Mirrors run_scan.py's `_run_jwt_phase` guard exactly (post Plan 04)."""
+    if not cfg.connectors.enable_jwt:
+        return recorder.skip("disabled-by-config", "enable_jwt is false")
+    if not cfg.connectors.jwt_targets:
+        return recorder.skip("no-eligible-targets", "connectors.jwt_targets is empty")
+    return None
+
+
+def test_jwt_guard_disabled_and_no_targets_reports_disabled_by_config() -> None:
+    """Precedence rule: disabled-by-config wins over no-eligible-targets when both true."""
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    cfg = _mk_cfg(enable_jwt=False, jwt_targets=[])
+
+    result = _jwt_guard(recorder, cfg)
+
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("jwt_scanning")
+    row = recorder.rows()[0]
+    assert row["reason"] == "disabled-by-config"
+    assert row["detail"] == "enable_jwt is false"
+
+
+def test_jwt_guard_enabled_no_targets_reports_no_eligible_targets() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    cfg = _mk_cfg(enable_jwt=True, jwt_targets=[])
+
+    result = _jwt_guard(recorder, cfg)
+
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("jwt_scanning")
+    row = recorder.rows()[0]
+    assert row["reason"] == "no-eligible-targets"
+    assert "connectors.jwt_targets" in row["detail"]
+
+
+def _smime_guard(recorder, cfg, cfg_smime_skip: bool):
+    """Mirrors run_scan.py's `_run_smime_phase` guard exactly (post Plan 04):
+    enable check first, THEN the (disabled|missing-extra)-conflating
+    cfg_smime_skip flag, so a disabled connector still reports
+    disabled-by-config rather than missing-extra."""
+    if not getattr(cfg.connectors, "enable_smime", False):
+        return recorder.skip("disabled-by-config", "enable_smime is false")
+    if cfg_smime_skip:
+        return recorder.skip("missing-extra", "ldap3 not installed (extras: adcs)")
+    if not getattr(cfg.connectors, "smime_targets", None):
+        return recorder.skip("no-eligible-targets", "connectors.smime_targets is empty")
+    return None
+
+
+def test_smime_guard_enabled_targets_present_missing_extra_reports_missing_extra() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    cfg = _mk_cfg(enable_smime=True, smime_targets=["ldap://dc.example.com"])
+
+    result = _smime_guard(recorder, cfg, cfg_smime_skip=True)
+
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("smime_scanning")
+    row = recorder.rows()[0]
+    assert row["reason"] == "missing-extra"
+
+
+def _openapi_guard(recorder, spec_path):
+    """Mirrors run_scan.py's `_run_openapi_phase` no-spec-path branch exactly
+    (post Plan 04) — previously a bare `return []` that looked like the phase
+    ran and found nothing."""
+    if not spec_path:
+        return recorder.skip("no-eligible-targets", "scan.openapi_spec_path is not set")
+    return None
+
+
+def test_openapi_guard_no_spec_path_reports_no_eligible_targets_not_ran() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+
+    result = _openapi_guard(recorder, spec_path=None)
+
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("openapi_scanning")
+    row = recorder.rows()[0]
+    assert row["status"] == "skipped"
+    assert row["reason"] == "no-eligible-targets"
+
+
+def _fuzz_guard(recorder, fuzz_flag: bool, openapi_endpoints: list):
+    """Mirrors run_scan.py's `_run_fuzz_phase` two classified guards exactly
+    (post Plan 04)."""
+    if not fuzz_flag:
+        return recorder.skip("disabled-by-config", "--fuzz not set")
+    if not openapi_endpoints:
+        return recorder.skip("no-eligible-targets", "no OpenAPI endpoints discovered")
+    return None
+
+
+def test_fuzz_guard_flag_unset_reports_disabled_by_config() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    result = _fuzz_guard(recorder, fuzz_flag=False, openapi_endpoints=[])
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("fuzz_scanning")
+    assert recorder.rows()[0]["reason"] == "disabled-by-config"
+
+
+def test_fuzz_guard_no_openapi_endpoints_reports_no_eligible_targets() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    result = _fuzz_guard(recorder, fuzz_flag=True, openapi_endpoints=[])
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("fuzz_scanning")
+    assert recorder.rows()[0]["reason"] == "no-eligible-targets"
