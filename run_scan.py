@@ -720,6 +720,7 @@ def run_ot_supplemental_and_persist(
     failure here must never abort the scan.
     """
     def _ot_supplemental_fn():
+        _recorder = run_stats.get("phase_records")
         hw_timeout = getattr(
             getattr(getattr(cfg, "scan", None), "timeouts", None), "default_seconds", 3
         )
@@ -727,6 +728,10 @@ def run_ot_supplemental_and_persist(
             targets, ssh_targets, confirmed_open_ports, cfg,
         )
         if not ot_eps:
+            if _recorder is not None:
+                return _recorder.skip(
+                    "no-eligible-targets", "no OT/ICS-eligible hosts to supplement",
+                )
             return []
         _ot_devs = fingerprint_hardware(
             ot_eps, timeout=hw_timeout, logger=logger, cfg=cfg,
@@ -3154,8 +3159,14 @@ def main():
         )
     else:
         def _run_aws_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_aws:
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "enable_aws is false")
+            from quirk.scanner.aws_connector import BOTO3_AVAILABLE
+            if not BOTO3_AVAILABLE:
+                return _recorder.skip("missing-extra", "boto3 not installed (extras: aws)")
+            if not cfg.connectors.aws_region:
+                return _recorder.skip("no-eligible-targets", "connectors.aws_region is empty")
             return scan_aws_targets(
                 region=cfg.connectors.aws_region,
                 profile=cfg.connectors.aws_profile,
@@ -3170,8 +3181,17 @@ def main():
         # Azure cloud connector phase
         # ==============================
         def _run_azure_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_azure:
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "enable_azure is false")
+            from quirk.scanner.azure_connector import AZURE_AVAILABLE
+            if not AZURE_AVAILABLE:
+                return _recorder.skip("missing-extra", "azure SDK not installed")
+            if not (cfg.connectors.azure_subscription_id or cfg.connectors.azure_keyvault_urls):
+                return _recorder.skip(
+                    "no-eligible-targets",
+                    "connectors.azure_subscription_id and connectors.azure_keyvault_urls are both empty",
+                )
             return scan_azure_targets(
                 subscription_id=cfg.connectors.azure_subscription_id or "",
                 keyvault_urls=cfg.connectors.azure_keyvault_urls,
@@ -3186,8 +3206,14 @@ def main():
         # GCP cloud connector phase
         # ==============================
         def _run_gcp_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_gcp:
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "enable_gcp is false")
+            from quirk.scanner.gcp_connector import GCP_AVAILABLE
+            if not GCP_AVAILABLE:
+                return _recorder.skip("missing-extra", "google-api-python-client not installed (extras: cloud)")
+            if not cfg.connectors.gcp_project_id:
+                return _recorder.skip("no-eligible-targets", "connectors.gcp_project_id is empty")
             return scan_gcp_targets(
                 project_id=cfg.connectors.gcp_project_id or "",
                 logger=logger,
@@ -3201,9 +3227,22 @@ def main():
         # DB connector phase (PostgreSQL / MySQL) — Phase 27
         # ==============================
         def _run_db_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_db:
-                return _PHASE_SKIPPED
-            from quirk.scanner.db_connector import scan_pg_targets, scan_mysql_targets
+                return _recorder.skip("disabled-by-config", "enable_db is false")
+            from quirk.scanner.db_connector import (
+                scan_pg_targets, scan_mysql_targets,
+                PSYCOPG2_AVAILABLE, PYMYSQL_AVAILABLE,
+            )
+            if not (PSYCOPG2_AVAILABLE or PYMYSQL_AVAILABLE):
+                return _recorder.skip(
+                    "missing-extra", "psycopg2 and PyMySQL not installed (extras: db)",
+                )
+            if not (cfg.connectors.pg_targets or cfg.connectors.mysql_targets):
+                return _recorder.skip(
+                    "no-eligible-targets",
+                    "connectors.pg_targets and connectors.mysql_targets are both empty",
+                )
             result = []
             if cfg.connectors.pg_targets:
                 result.extend(scan_pg_targets(
@@ -3275,12 +3314,13 @@ def main():
         # S3 object storage encryption (Phase 28, STOR-01)
         # ==============================
         def _run_s3_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_s3:
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "enable_s3 is false")
             from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
             if not BOTO3_AVAILABLE:
                 logger.v("boto3 not installed — S3 scanning skipped")
-                return _PHASE_SKIPPED
+                return _recorder.skip("missing-extra", "boto3 not installed")
             import boto3
             s3_session = boto3.Session(
                 region_name=cfg.connectors.aws_region,
@@ -3303,15 +3343,18 @@ def main():
         # Azure Blob container encryption (Phase 28, STOR-02)
         # ==============================
         def _run_blob_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_blob:
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "enable_blob is false")
             from quirk.scanner.azure_connector import _scan_blob_encryption, AZURE_AVAILABLE, DefaultAzureCredential
             if not AZURE_AVAILABLE:
                 logger.v("azure SDK not installed — Azure Blob scanning skipped")
-                return _PHASE_SKIPPED
+                return _recorder.skip("missing-extra", "azure SDK not installed")
             if not (cfg.connectors.azure_subscription_id or "").strip():
                 logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
-                return _PHASE_SKIPPED
+                return _recorder.skip(
+                    "no-eligible-targets", "connectors.azure_subscription_id is empty",
+                )
             eps = _scan_blob_encryption(
                 credential=DefaultAzureCredential(),
                 subscription_id=cfg.connectors.azure_subscription_id,
@@ -3329,9 +3372,16 @@ def main():
         # K8S secrets inspection (Phase 29, K8S-01 / K8S-02 / K8S-03)
         # ==============================
         def _run_k8s_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_k8s:
-                return _PHASE_SKIPPED
-            from quirk.scanner.k8s_connector import scan_k8s_targets
+                return _recorder.skip("disabled-by-config", "enable_k8s is false")
+            from quirk.scanner.k8s_connector import scan_k8s_targets, K8S_AVAILABLE
+            if not K8S_AVAILABLE:
+                return _recorder.skip(
+                    "missing-extra", "kubernetes client not installed (extras: cloud)",
+                )
+            if not cfg.connectors.k8s_provider:
+                return _recorder.skip("no-eligible-targets", "connectors.k8s_provider is empty")
             eps = scan_k8s_targets(
                 provider=cfg.connectors.k8s_provider or "",
                 cluster_name=cfg.connectors.k8s_cluster_name or "",
@@ -3553,18 +3603,22 @@ def main():
 
         # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
         def _run_vault_phase():
+            _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_vault:
-                return _PHASE_SKIPPED
+                return _recorder.skip("disabled-by-config", "enable_vault is false")
             from quirk.scanner.vault_connector import (
                 scan_vault_targets,
                 HVAC_AVAILABLE,
             )
             if not HVAC_AVAILABLE:
                 logger.v("hvac not installed -- Vault scanning skipped")
-                return _PHASE_SKIPPED
+                return _recorder.skip("missing-extra", "hvac not installed (extras: vault)")
             if not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
                 logger.v("vault_addr not set -- Vault scanning skipped")
-                return _PHASE_SKIPPED
+                return _recorder.skip(
+                    "no-eligible-targets",
+                    "connectors.vault_addr / VAULT_ADDR is not set",
+                )
             # Phase 72 D-22 / WR-09: connector requires explicit token now (no implicit
             # env fallback inside vault_connector). Source the token here at the caller
             # boundary — config takes precedence; VAULT_TOKEN env is the operator override.
@@ -3629,11 +3683,14 @@ def main():
         # cfg_email_skip and _emit_missing_extra_advisory() call above remain before the
         # _run_email_phase def — correct ordering preserved.
         def _run_email_phase():
-            if cfg_email_skip or not cfg.connectors.enable_email:
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_email:
+                return _recorder.skip("disabled-by-config", "enable_email is false")
+            if cfg_email_skip:
+                return _recorder.skip("missing-extra", "sslyze not installed (extras: motion)")
             email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
             if not email_hosts:
-                return _PHASE_SKIPPED
+                return _recorder.skip("no-eligible-targets", "no TLS-scanned hosts to derive email hosts from")
             eps = scan_email_targets(
                 hosts=email_hosts,
                 timeout=cfg.scan.timeouts.email_seconds,
@@ -3664,8 +3721,14 @@ def main():
         )
 
         def _run_broker_phase():
-            if cfg_broker_skip or not cfg.connectors.enable_broker:
-                return _PHASE_SKIPPED
+            _recorder = run_stats["phase_records"]
+            if not cfg.connectors.enable_broker:
+                return _recorder.skip("disabled-by-config", "enable_broker is false")
+            if cfg_broker_skip:
+                return _recorder.skip(
+                    "missing-extra",
+                    "sslyze/kafka-python/redis not installed (extras: motion)",
+                )
             # Phase 190 / TRIAGE-06 / RQ-1: union tls_targets-derived hosts with
             # explicit connectors.broker_targets hosts, so a host declared ONLY in
             # broker_targets (contributing no tls_targets entry) still reaches the
@@ -3674,7 +3737,10 @@ def main():
                 tls_targets, cfg.connectors.broker_targets,
             )
             if not broker_hosts:
-                return _PHASE_SKIPPED
+                return _recorder.skip(
+                    "no-eligible-targets",
+                    "no TLS-scanned hosts and connectors.broker_targets is empty",
+                )
             k = scan_kafka_targets(
                 hosts=broker_hosts,
                 timeout=cfg.scan.timeouts.broker_seconds,

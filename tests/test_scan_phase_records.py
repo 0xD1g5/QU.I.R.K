@@ -533,3 +533,198 @@ def test_fuzz_guard_no_openapi_endpoints_reports_no_eligible_targets() -> None:
     assert result is _PHASE_SKIPPED
     recorder.record_skipped("fuzz_scanning")
     assert recorder.rows()[0]["reason"] == "no-eligible-targets"
+
+
+# ---------------------------------------------------------------------------
+# Plan 04 Task 2: classified skips in cloud/storage/broker/email/vault guards
+# + the completeness sweep proving no unclassified skip path remains.
+# ---------------------------------------------------------------------------
+
+
+def _s3_guard(recorder, enable_s3: bool, boto3_available: bool):
+    """Mirrors run_scan.py's `_run_s3_phase` guard exactly (post Plan 04)."""
+    if not enable_s3:
+        return recorder.skip("disabled-by-config", "enable_s3 is false")
+    if not boto3_available:
+        return recorder.skip("missing-extra", "boto3 not installed")
+    return None
+
+
+def _vault_guard(recorder, enable_vault: bool, hvac_available: bool, vault_addr):
+    """Mirrors run_scan.py's `_run_vault_phase` guard exactly (post Plan 04)."""
+    if not enable_vault:
+        return recorder.skip("disabled-by-config", "enable_vault is false")
+    if not hvac_available:
+        return recorder.skip("missing-extra", "hvac not installed (extras: vault)")
+    if not vault_addr:
+        return recorder.skip(
+            "no-eligible-targets", "connectors.vault_addr / VAULT_ADDR is not set",
+        )
+    return None
+
+
+def _email_guard(recorder, enable_email: bool, cfg_email_skip: bool, email_hosts: list):
+    """Mirrors run_scan.py's `_run_email_phase` guard exactly (post Plan 04)."""
+    if not enable_email:
+        return recorder.skip("disabled-by-config", "enable_email is false")
+    if cfg_email_skip:
+        return recorder.skip("missing-extra", "sslyze not installed (extras: motion)")
+    if not email_hosts:
+        return recorder.skip("no-eligible-targets", "no TLS-scanned hosts to derive email hosts from")
+    return None
+
+
+def _broker_guard(recorder, enable_broker: bool, cfg_broker_skip: bool, broker_hosts: list):
+    """Mirrors run_scan.py's `_run_broker_phase` guard exactly (post Plan 04)."""
+    if not enable_broker:
+        return recorder.skip("disabled-by-config", "enable_broker is false")
+    if cfg_broker_skip:
+        return recorder.skip(
+            "missing-extra", "sslyze/kafka-python/redis not installed (extras: motion)",
+        )
+    if not broker_hosts:
+        return recorder.skip(
+            "no-eligible-targets", "no TLS-scanned hosts and connectors.broker_targets is empty",
+        )
+    return None
+
+
+def test_s3_guard_enabled_boto3_unavailable_reports_missing_extra() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    result = _s3_guard(recorder, enable_s3=True, boto3_available=False)
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("s3_scanning")
+    assert recorder.rows()[0]["reason"] == "missing-extra"
+
+
+def test_vault_guard_enabled_hvac_available_no_addr_reports_no_eligible_targets() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    result = _vault_guard(recorder, enable_vault=True, hvac_available=True, vault_addr="")
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("vault_scanning")
+    row = recorder.rows()[0]
+    assert row["reason"] == "no-eligible-targets"
+    assert "vault_addr" in row["detail"]
+    assert "VAULT_ADDR" in row["detail"]
+
+
+def test_email_guard_disabled_zero_hosts_reports_disabled_by_config() -> None:
+    """enable_email=False must win over the empty-hosts branch."""
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    result = _email_guard(recorder, enable_email=False, cfg_email_skip=True, email_hosts=[])
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("email_scanning")
+    assert recorder.rows()[0]["reason"] == "disabled-by-config"
+
+
+def test_email_guard_enabled_missing_extra_reports_missing_extra_not_disabled() -> None:
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    result = _email_guard(recorder, enable_email=True, cfg_email_skip=True, email_hosts=["a.example.com"])
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("email_scanning")
+    assert recorder.rows()[0]["reason"] == "missing-extra"
+
+
+def test_broker_guard_disabled_reports_disabled_by_config_not_missing_extra() -> None:
+    """Proves _broker_missing_extra's disabled/missing-extra conflation was split
+    correctly — a disabled broker connector must never surface as missing-extra."""
+    from run_scan import _PhaseRecorder, _PHASE_SKIPPED
+
+    recorder = _PhaseRecorder()
+    # cfg_broker_skip=True mirrors _broker_missing_extra(enable_broker=False, ...) == True
+    result = _broker_guard(recorder, enable_broker=False, cfg_broker_skip=True, broker_hosts=["h"])
+    assert result is _PHASE_SKIPPED
+    recorder.record_skipped("broker_scanning")
+    assert recorder.rows()[0]["reason"] == "disabled-by-config"
+
+
+def test_all_skip_details_are_nonempty_strings() -> None:
+    from run_scan import _PhaseRecorder
+
+    recorder = _PhaseRecorder()
+    scenarios = [
+        lambda: _jwt_guard(recorder, _mk_cfg(enable_jwt=False, jwt_targets=[])),
+        lambda: _jwt_guard(recorder, _mk_cfg(enable_jwt=True, jwt_targets=[])),
+        lambda: _smime_guard(recorder, _mk_cfg(enable_smime=True, smime_targets=["x"]), True),
+        lambda: _openapi_guard(recorder, spec_path=None),
+        lambda: _fuzz_guard(recorder, fuzz_flag=False, openapi_endpoints=[]),
+        lambda: _s3_guard(recorder, enable_s3=True, boto3_available=False),
+        lambda: _vault_guard(recorder, enable_vault=True, hvac_available=True, vault_addr=""),
+        lambda: _email_guard(recorder, enable_email=False, cfg_email_skip=True, email_hosts=[]),
+        lambda: _broker_guard(recorder, enable_broker=False, cfg_broker_skip=True, broker_hosts=[]),
+    ]
+    for i, scenario in enumerate(scenarios):
+        scenario()
+        recorder.record_skipped(f"phase_{i}")
+
+    for row in recorder.rows():
+        assert row["status"] == "skipped"
+        assert row["reason"] is not None
+        assert isinstance(row["detail"], str) and row["detail"] != ""
+
+
+def test_no_unclassified_phase_skip_sentinel_returns_remain() -> None:
+    """Runtime source scan (Plan 04's completeness gate — NOT a hand-derived list,
+    per this project's own TOOL-04 lesson about hand-maintained occurrence lists
+    going stale). The only literal `return _PHASE_SKIPPED` left in run_scan.py must
+    be the one inside `_PhaseRecorder.skip()` itself; every scanner-phase guard site
+    must instead route through a classified `_recorder.skip(reason, detail)` call."""
+    import inspect
+    import run_scan
+
+    source = inspect.getsource(run_scan)
+    bare_returns = [
+        line for line in source.splitlines()
+        if line.strip() == "return _PHASE_SKIPPED"
+    ]
+    assert len(bare_returns) == 1, (
+        f"expected exactly 1 bare 'return _PHASE_SKIPPED' (inside _PhaseRecorder.skip()), "
+        f"found {len(bare_returns)}"
+    )
+
+
+def test_every_recorder_skip_call_site_uses_a_reason_from_the_frozen_set() -> None:
+    """Runtime source scan: every `_recorder.skip("...", ...)` / `recorder.skip("...", ...)`
+    call site in run_scan.py must pass one of the five frozen SCAN_PHASE_SKIP_REASONS —
+    catches a typo'd or invented reason string at the point it's introduced."""
+    import inspect
+    import re
+    import run_scan
+    from quirk.models import SCAN_PHASE_SKIP_REASONS
+
+    source = inspect.getsource(run_scan)
+    reasons_used = re.findall(r'_recorder\.skip\(\s*"([^"]+)"', source)
+    assert len(reasons_used) >= 20, (
+        f"expected at least 20 classified recorder.skip(...) call sites across the "
+        f"scanner phase guards, found {len(reasons_used)}"
+    )
+    for reason in reasons_used:
+        assert reason in SCAN_PHASE_SKIP_REASONS, f"unknown skip reason literal: {reason!r}"
+    # `failed` is only ever emitted by _PhaseRecorder.record_failed(), never a
+    # guard-site skip() call — guards only ever use the other four reasons.
+    assert "failed" not in reasons_used
+
+
+def test_no_skip_call_site_embeds_a_credential_looking_detail_string() -> None:
+    """T-192-12: skip `detail` strings may only name config keys / env vars, never
+    values. Scans every literal detail string passed to a `.skip(...)` call site for
+    credential-shaped substrings that would indicate a value (not a name) leaked in."""
+    import inspect
+    import re
+    import run_scan
+
+    source = inspect.getsource(run_scan)
+    calls = re.findall(r'_recorder\.skip\(([^;]*?)\)\n', source, re.S)
+    assert calls, "expected at least one recorder.skip(...) call site to scan"
+    forbidden_value_markers = ("hunter2", "Bearer ", "-----BEGIN")
+    for call_args in calls:
+        for marker in forbidden_value_markers:
+            assert marker not in call_args
