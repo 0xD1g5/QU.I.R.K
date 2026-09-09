@@ -15,7 +15,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
-from quirk.dashboard.api.deps import get_db
+from quirk.dashboard.api.deps import get_db, _default_db_path
+from quirk.reports.coverage import load_scan_coverage
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 # RVW-002: share the report engine's tri-state chain-verification logic rather
 # than reimplementing it here. Two implementations of 'did the chain verify?'
@@ -43,6 +44,8 @@ from quirk.dashboard.api.schemas import (
     RoadmapData,
     RoadmapEdge,
     RoadmapNode,
+    ScanCoveragePhase,
+    ScanCoverageResponse,
     ScanLatestResponse,
     ScanMeta,
     ScanSession,
@@ -2002,3 +2005,49 @@ def get_job_result_summary(job_id: str, db: Session = Depends(get_db)) -> dict:
         .count()
     )
     return {"endpoint_count": count}
+
+
+@router.get("/scans/{scan_run_id}/coverage", response_model=ScanCoverageResponse)
+def get_scan_coverage(scan_run_id: str) -> ScanCoverageResponse:
+    """GET /api/scans/{scan_run_id}/coverage — OBS-02 / Phase 192 Plan 09.
+
+    Reads through `quirk.reports.coverage.load_scan_coverage` — the SAME loader
+    the report pipeline uses (Plan 07) — so the dashboard and the reports can
+    never disagree about which phases ran. No second query against the
+    underlying phase-record table here (T-192-33).
+
+    A scan_run_id with no recorded rows returns HTTP 200 with `recorded: false`,
+    never a 404 — "this scan predates coverage tracking" is a real, renderable
+    answer (D-15).
+
+    Auth: inherited from router-level require_auth (do NOT add per-route).
+    """
+    db_path = _default_db_path()
+    payload = load_scan_coverage(db_path, scan_run_id)
+    return ScanCoverageResponse(
+        recorded=payload["recorded"],
+        ran=payload["ran"],
+        skipped=payload["skipped"],
+        phases=[ScanCoveragePhase(**entry) for entry in payload["phases"]],
+    )
+
+
+@router.get("/jobs/{job_id}/coverage", response_model=ScanCoverageResponse)
+def get_job_coverage(job_id: str, db: Session = Depends(get_db)) -> ScanCoverageResponse:
+    """GET /api/jobs/{job_id}/coverage — resolves the job's scan_run_id and
+    returns the same payload as `get_scan_coverage`. Unknown job_id -> 404
+    via DASHBOARD-008, matching `get_job_result_summary`.
+
+    Auth: inherited from router-level require_auth (do NOT add per-route).
+    """
+    row = db.get(ScanJob, job_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-008"))
+    db_path = _default_db_path()
+    payload = load_scan_coverage(db_path, row.scan_run_id)
+    return ScanCoverageResponse(
+        recorded=payload["recorded"],
+        ran=payload["ran"],
+        skipped=payload["skipped"],
+        phases=[ScanCoveragePhase(**entry) for entry in payload["phases"]],
+    )

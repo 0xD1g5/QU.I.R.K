@@ -753,3 +753,23 @@ class MergeLatestResponse(BaseModel):
     merge is null when no merge_run row exists yet (first-boot / no merges run).
     """
     merge: Optional[MergeLatestData] = None
+
+
+# ---- Scan Coverage (Phase 192 Plan 09 / OBS-02) ----
+# Mirrors quirk/reports/coverage.py::load_scan_coverage's frozen payload shape
+# verbatim — the dashboard and the report pipeline read the same loader.
+
+class ScanCoveragePhase(BaseModel):
+    phase_name: str
+    label: str
+    status: str
+    reason: Optional[str] = None
+    detail: Optional[str] = None
+    duration_sec: Optional[float] = None
+
+
+class ScanCoverageResponse(BaseModel):
+    recorded: bool
+    ran: int
+    skipped: int
+    phases: List[ScanCoveragePhase]
