@@ -12,8 +12,10 @@ the spawned run_scan.py update scan_jobs progress via --job-id flag.
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -22,7 +24,7 @@ import uuid
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
 from quirk.errors import format_error
@@ -205,6 +207,168 @@ def _write_job_config(
     return config_path
 
 
+# Phase 193 / PARITY-03 / D-09/D-10: sanitize a per-host key into the
+# [A-Z0-9_] alphabet used for env-var names. Uppercases and replaces every
+# other character with "_" — never drops characters, so two DISTINCT hosts
+# can still collide (e.g. "a.b" and "a_b" both sanitize to "A_B"), which the
+# caller below detects and rejects rather than silently overwriting one
+# host's credential with another's (T-193-30).
+_SANITIZE_NON_ENV_CHARS = re.compile(r"[^A-Z0-9_]")
+
+
+def _sanitize_host_for_env(host: str) -> str:
+    return _SANITIZE_NON_ENV_CHARS.sub("_", host.upper())
+
+
+def _build_credential_env(
+    credentials: Optional[Dict[str, str]],
+) -> Tuple[Dict[str, str], Dict[str, dict]]:
+    """Map `ScanSubmitRequest.credentials` into a Popen env injection dict
+    plus a job-YAML fragment carrying env-var NAMES ONLY (D-09).
+
+    Returns `(injected_env, connectors_yaml_fragment)`:
+      - `injected_env` — {ENV_VAR_NAME: value} for `subprocess.Popen(env=...)`.
+        This is a plain local dict; the caller must never assign it to a
+        `ScanJob` column, a logger call, or the written config.yaml (D-11/D-12).
+      - `connectors_yaml_fragment` — optional `broker_credentials` /
+        `snmp_v3_credentials` keys, each value carrying only `pass_env` /
+        `auth_key_env` / `priv_key_env` NAMES, never the credential value
+        itself (mirrors `quirk/scanner/broker_scanner.py`'s
+        `os.environ.get(pass_env, "")` / `snmp_scanner.py`'s
+        `os.environ.get(credential.auth_key_env, "")` read idiom — no
+        scanner-side change is required).
+
+    Three key shapes, derived from `ScanSubmitRequest.known_credential_keys_only`'s
+    allowlist (plan 03):
+      - flat `CREDENTIAL_REGISTRY` names (e.g. `adcs_password`) -> the
+        registry entry's own `env_fallback` name, so the registry (plan 02)
+        stays the single source of truth — never a hardcoded name table here.
+      - `broker:<host>` -> `QUIRK_JOB_BROKER_<SANITIZED_HOST>`.
+      - `snmpv3:<host>:auth` / `snmpv3:<host>:priv` ->
+        `QUIRK_JOB_SNMPV3_<SANITIZED_HOST>_AUTH` / `..._PRIV`.
+
+    Raises `ValueError` (the caller converts to 422) if two distinct hosts
+    sanitize to the same env-var name, so one host's credential can never be
+    delivered to another host's scan (T-193-30).
+    """
+    injected_env: Dict[str, str] = {}
+    if not credentials:
+        return injected_env, {}
+
+    from quirk.config_redaction import CREDENTIAL_REGISTRY
+
+    registry_by_name = {
+        entry.name: entry for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"
+    }
+
+    # env-var NAME -> the credentials key that claimed it, for collision detection.
+    claimed_env_names: Dict[str, str] = {}
+
+    def _claim(env_name: str, source_key: str) -> None:
+        prior = claimed_env_names.get(env_name)
+        if prior is not None and prior != source_key:
+            raise ValueError(
+                f"Credential env-var name collision: {source_key!r} and {prior!r} "
+                f"both sanitize to {env_name!r} — use distinguishable host names"
+            )
+        claimed_env_names[env_name] = source_key
+
+    broker_credentials: Dict[str, dict] = {}
+    snmp_v3_credentials: Dict[str, dict] = {}
+
+    for key, value in credentials.items():
+        if not value:
+            # D-15: blank credential values never block submission here —
+            # they simply inject nothing. The connector-enabled-with-blank-
+            # credentials warning is computed separately in create_job.
+            continue
+        if key.startswith("broker:"):
+            host = key.split(":", 1)[1]
+            env_name = f"QUIRK_JOB_BROKER_{_sanitize_host_for_env(host)}"
+            _claim(env_name, key)
+            injected_env[env_name] = value
+            broker_credentials.setdefault(host, {})["pass_env"] = env_name
+        elif key.startswith("snmpv3:"):
+            _, host, kind = key.split(":", 2)
+            if kind == "auth":
+                env_name = f"QUIRK_JOB_SNMPV3_{_sanitize_host_for_env(host)}_AUTH"
+                field_name = "auth_key_env"
+            else:
+                env_name = f"QUIRK_JOB_SNMPV3_{_sanitize_host_for_env(host)}_PRIV"
+                field_name = "priv_key_env"
+            _claim(env_name, key)
+            injected_env[env_name] = value
+            snmp_v3_credentials.setdefault(host, {})[field_name] = env_name
+        else:
+            entry = registry_by_name.get(key)
+            if entry is None or not entry.env_fallback:
+                continue
+            injected_env[entry.env_fallback] = value
+
+    yaml_fragment: Dict[str, dict] = {}
+    if broker_credentials:
+        yaml_fragment["broker_credentials"] = broker_credentials
+    if snmp_v3_credentials:
+        yaml_fragment["snmp_v3_credentials"] = snmp_v3_credentials
+    return injected_env, yaml_fragment
+
+
+def _connectors_with_blank_credential_warnings(
+    resolved_connectors, credentials: Optional[Dict[str, str]]
+) -> list:
+    """D-15: connectors enabled with ALL declared credential fields blank warn,
+    never block. Returns a list of `{"connector": flag, "message": str}` dicts
+    for the success response's `credential_warnings` key.
+
+    Scoped to the flat `CREDENTIAL_REGISTRY` connector fields this plan wires
+    up (adcs/pg/mysql/snmp password fields) — broker/SNMPv3 per-host
+    credentials have no single enabled/disabled flag to key a warning off of
+    and are intentionally out of this helper's scope.
+    """
+    from quirk.config_redaction import CREDENTIAL_REGISTRY, credential_is_set
+
+    submitted = credentials or {}
+    # Map connector enable_* flag -> the CREDENTIAL_REGISTRY field name(s) it
+    # gates, derived from this plan's own naming convention (enable_db gates
+    # BOTH the PostgreSQL and MySQL password fields — a connector is only
+    # warned about when EVERY one of its gated fields is blank).
+    _FLAG_TO_CREDENTIAL_FIELDS = {
+        "enable_adcs": ("adcs_password",),
+        "enable_db": ("pg_scanner_password", "mysql_scanner_password"),
+        "enable_snmp": ("snmp_community",),
+    }
+    warnings: list = []
+    registry_names = {entry.name for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"}
+    for flag, field_names in _FLAG_TO_CREDENTIAL_FIELDS.items():
+        applicable_fields = [f for f in field_names if f in registry_names]
+        if not applicable_fields:
+            continue
+        if not getattr(resolved_connectors, flag, False):
+            continue
+        all_blank = True
+        for field_name in applicable_fields:
+            already_set = credential_is_set(
+                "connectors", field_name, getattr(resolved_connectors, field_name, None)
+            )
+            submitted_value = submitted.get(field_name)
+            if already_set or (submitted_value and submitted_value.strip()):
+                all_blank = False
+                break
+        if not all_blank:
+            continue
+        warnings.append(
+            {
+                "connector": flag,
+                "message": (
+                    f"{flag} is enabled but no credential was supplied for "
+                    f"{', '.join(repr(f) for f in applicable_fields)} — the "
+                    "scan will run with reduced access for this connector."
+                ),
+            }
+        )
+    return warnings
+
+
 def _stage_index(current_stage: Optional[str], status: str) -> int:
     """Map current_stage string to a 0..7 index for the progress bar.
 
@@ -384,6 +548,49 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     # Re-join stripped tokens; this is what gets stored and passed to the scanner.
     normalized_targets = ",".join(all_valid_tokens)
 
+    # Phase 193 / PARITY-02 / D-08: server-side availability re-check — the
+    # client's disabled Switch (ConnectorsPanel) is UX only, never the
+    # guarantee (T-193-23). Evaluate the FULLY RESOLVED post-apply_profile
+    # connector state via the same `resolve_effective_config` the GET
+    # /api/config/effective route uses, not just the raw `payload.connectors`
+    # delta, so a vertical preset silently enabling an unavailable connector
+    # is also caught (T-193-24). Placed before any ScanJob row or output
+    # directory is created, so a 422 here leaves no trace.
+    from quirk.dashboard.api.config_preview import resolve_effective_config
+    from quirk.dashboard.api.connector_availability import probe_all_connectors
+
+    try:
+        resolved_cfg, _resolved_dict, _preset_changed = resolve_effective_config(
+            targets=normalized_targets,
+            profile=payload.profile,
+            calibration=payload.calibration,
+            enable_nmap=payload.enable_nmap,
+            port_scope=payload.port_scope,
+            custom_ports=payload.custom_ports,
+            connectors_overlay=payload.connectors,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    availability = probe_all_connectors()
+    unavailable_offenders = []
+    for field in dataclasses.fields(resolved_cfg.connectors):
+        flag_name = field.name
+        if not flag_name.startswith("enable_"):
+            continue
+        if not getattr(resolved_cfg.connectors, flag_name, False):
+            continue
+        entry = availability.get(flag_name)
+        if entry is not None and not entry.available:
+            unavailable_offenders.append(entry)
+    if unavailable_offenders:
+        detail = "; ".join(
+            f"Scan rejected: {entry.label} is not available in this environment "
+            f"({entry.reason})"
+            for entry in unavailable_offenders
+        )
+        raise HTTPException(status_code=422, detail=detail)
+
     job_id = str(uuid.uuid4())
     db_path = _default_db_path()
     output_dir = _job_output_dir(job_id)
@@ -416,15 +623,47 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         # broken. Production callers can opt in only via valid server config.
         allow_internal = False
 
+    # Phase 193 / PARITY-02 (D-13/D-14): connectors_overlay threads the
+    # operator's accepted toggles into the job YAML — build_job_config_dict
+    # already merges it LAST, after the custom-port-scope suppression.
     try:
-        config_path = _write_job_config(
+        config_dict = build_job_config_dict(
             output_dir, normalized_targets, db_path, payload.calibration,
             allow_internal_targets=allow_internal,
             port_scope=payload.port_scope,
             custom_ports=payload.custom_ports,
+            connectors_overlay=payload.connectors,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # Phase 193 / PARITY-03 / D-09/D-11/D-12: credential VALUES are held in a
+    # request-local variable ONLY (never assigned to `row`, never merged into
+    # `config_dict`'s values, never logged) and injected into the scan
+    # subprocess's environment below. The job YAML gets env-var NAMES ONLY,
+    # via `credential_yaml_fragment` (`broker_credentials`/`snmp_v3_credentials`
+    # — never a bare credential value).
+    try:
+        injected_env, credential_yaml_fragment = _build_credential_env(payload.credentials)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # D-15: connectors enabled with every declared credential field blank
+    # warn, never block. Computed against the fully resolved connector state
+    # from the D-08 gate above (`resolved_cfg`).
+    credential_warnings = _connectors_with_blank_credential_warnings(
+        resolved_cfg.connectors, payload.credentials
+    )
+
+    if credential_yaml_fragment:
+        config_dict["connectors"] = {
+            **config_dict.get("connectors", {}),
+            **credential_yaml_fragment,
+        }
+
+    config_path = str(output_dir / "config.yaml")
+    with open(config_path, "w") as fh:
+        yaml.dump(config_dict, fh, default_flow_style=False)
 
     cmd = [
         sys.executable, "-m", "run_scan",
@@ -457,11 +696,20 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     log_path = output_dir / "run.log"
     log_fh = open(log_path, "wb")
     try:
+        # Phase 193 / PARITY-03 / D-09: env is the PARENT environment merged
+        # with the request-local injected credential vars — never a bare
+        # dict of only `injected_env` (that would drop PATH/PYTHONPATH/
+        # QUIRK_CONFIG_PATH and break every scan), and never
+        # `os.environ[...] = value` mutation of the server process (a race
+        # under FastAPI's threadpool — two concurrent create_job calls would
+        # stomp each other's env vars). `injected_env` is never stored beyond
+        # this call (D-12).
         proc = subprocess.Popen(
             cmd,
             stdin=subprocess.DEVNULL,
             stdout=log_fh,
             stderr=subprocess.STDOUT,
+            env={**os.environ, **injected_env},
         )
     finally:
         log_fh.close()
@@ -472,7 +720,10 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     db.commit()
 
     logger.info("scan_job created job_id=%s pid=%d target=%s", job_id, proc.pid, payload.targets)
-    return {"job_id": job_id, "status": "running"}
+    response: dict = {"job_id": job_id, "status": "running"}
+    if credential_warnings:
+        response["credential_warnings"] = credential_warnings
+    return response
 
 
 @read_router.get("/jobs/{job_id}", response_model=JobStatusResponse)

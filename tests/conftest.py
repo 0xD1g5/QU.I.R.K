@@ -22,6 +22,36 @@ if not os.environ.get("QUIRK_DB_PATH"):
     os.environ["QUIRK_DB_PATH"] = os.path.join(_CONFTEST_TMP_DIR, "quirk_collection.db")
 
 
+# ---------------------------------------------------------------------------
+# Phase 193 / PARITY-02 (D-08): warm the connector-availability import cache
+# at collection time, BEFORE any test monkeypatches `subprocess.Popen`.
+#
+# `POST /api/jobs` (quirk/dashboard/api/routes/jobs.py::create_job) now calls
+# `probe_all_connectors()` on every request. Several optional connector
+# modules (e.g. `quirk.scanner.azure_connector` -> `azure.identity`) call
+# `platform.processor()` at import time, which on macOS shells out via
+# `subprocess.check_output(["uname", "-p"])`. Job-creation tests across this
+# repo monkeypatch `quirk.dashboard.api.routes.jobs.subprocess.Popen` (i.e.
+# the shared `subprocess` module object) to a fake Popen stub that does not
+# support the context-manager protocol `subprocess.run`/`check_output`
+# require. If `azure.identity` has not been imported yet when that
+# monkeypatch is active, the FIRST-EVER import (triggered fresh inside the
+# request) explodes with `TypeError: ... does not support the context
+# manager protocol` — corrupting the whole request, not just the probe.
+# Importing here, with the REAL `subprocess.Popen` still in place, populates
+# `sys.modules` once so every later call to `importlib.import_module` (fresh
+# per `probe_connector` call, by D-07 design) hits the cache instead of
+# re-executing module-level import side effects.
+try:
+    from quirk.dashboard.api.connector_availability import probe_all_connectors as _warm_probe
+
+    _warm_probe()
+except Exception:
+    # Best-effort warm-up only — a probe failure here must never block
+    # collection; the real probe call inside a test will surface it honestly.
+    pass
+
+
 @pytest.fixture(autouse=True)
 def _isolate_quirk_db(tmp_path, monkeypatch):
     """CLEAN-03 D-03a: Point QUIRK_DB_PATH at an isolated tmp_path DB.
