@@ -187,8 +187,35 @@ replacing dashboard silence with disclosure.
 
   4. CLI/HTML/DOCX reports disclose the same coverage information — a scan that assessed nothing in
      a domain says so, never renders as silently empty.
-**Plans**: TBD
+**Plans**: 11 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 192-01-PLAN.md — ScanPhaseRecord ORM table + idempotent create-if-missing migration
+- [ ] 192-02-PLAN.md — credential redaction registry, fail-closed pattern net, presence helper
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 192-03-PLAN.md — _PhaseRecorder + best-effort flush; ran/failed records via _wrapped_phase
+- [ ] 192-06-PLAN.md — auth-gated GET /api/config/effective + overlay resolver + provenance
+- [ ] 192-07-PLAN.md — coverage loader, ExecContent.coverage, Scan Coverage in CLI/exec markdown
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 192-04-PLAN.md — reason-classified skips across every scanner-phase guard
+- [ ] 192-08-PLAN.md — HTML + DOCX Scan Coverage, D-14 skipped-domain notes, parity gate
+- [ ] 192-09-PLAN.md — coverage endpoint + ScanCoverageChip on scan-job/scan-history
+- [ ] 192-10-PLAN.md — Effective config panel on the scan-submit surface
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 192-05-PLAN.md — pre-flight missing-credentials guards + evidence-backed dispositions
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 192-11-PLAN.md — docs, UAT-SERIES update, Obsidian vault sync, phase close-out
 
 ### Phase 193: Connector & Credential Parity
 
