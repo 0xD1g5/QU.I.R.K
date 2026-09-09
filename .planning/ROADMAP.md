@@ -292,7 +292,7 @@ Plans:
 
 - [x] 194-02-PLAN.md — AdvancedScanFields model, scan_overlay/assessment_overlay, 422 gate, preview forwarding
 - [x] 194-03-PLAN.md — Executive Verdict cherry-pick (f05e7dc7), flag-gate removal, ratingToTone rewire
-- [ ] 194-04-PLAN.md — cert disclosure line + locked empty state on certificates.tsx and /print
+- [x] 194-04-PLAN.md — cert disclosure line + locked empty state on certificates.tsx and /print
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -343,7 +343,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
-| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 2/8 | In progress | - |
+| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 4/8 | In Progress|  |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
 ## Backlog

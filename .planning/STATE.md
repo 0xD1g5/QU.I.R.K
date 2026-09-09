@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-03-PLAN.md
-last_updated: "2026-09-09T14:40:00.000Z"
-last_activity: 2026-09-09 -- Phase 194 plan 03 (Executive Verdict layer cherry-picked and rewired off API rating, VERDICT-01) complete
+stopped_at: Completed 194-04-PLAN.md
+last_updated: "2026-09-09T13:16:17.342Z"
+last_activity: 2026-09-09 -- Phase 194 plan 04 (phantom-cert disclosure line + D-14 empty state on certificates.tsx and print.tsx, DASH-09) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 28
-  percent: 85
+  completed_plans: 29
+  percent: 88
 ---
 
 # Project State
@@ -50,7 +50,26 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-03 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-04 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-04 (complete, 2026-09-09) — Phantom-cert disclosure line + D-14 empty state on both certificate surfaces (DASH-09).**
+`certificates.tsx` reads `data?.excluded_cert_count` (server-authoritative, never re-filtered
+client-side — `grep -c "filter(" certificates.tsx` is 0) and renders "{N} TLS endpoints failed
+handshake and are not shown." above the table whenever excluded > 0; the empty-state early return
+was restructured so the disclosure line survives it, and the D-14-locked heading "No TLS
+certificates discovered in this scan" is passed to `EmptyStateCard`'s single `message` prop with
+the existing longer follow-up sentence moved to a sibling `<p>` so the locked phrase stays
+byte-greppable. `print.tsx`'s `PrintCerts` gained an `excludedCount` prop (threaded from the same
+`ScanLatestResponse` `PrintPage` already holds) and its previously-disagreeing "No TLS endpoints
+found." empty state was replaced with the identical D-14 wording plus the same disclosure line;
+`PrintCerts` was exported (was module-private) so its new test file can render it directly. Both
+surfaces now honestly handle the 2026-09-05 all-phantom scenario (5 phantoms, 0 real certs) that
+previously suppressed the empty state. 8 new tests across 2 new files
+(`certificates-phantom-disclosure.test.tsx`, `print-cert-disclosure.test.tsx`), all passing;
+`npm run build && npm run lint && npm run test` all exit 0 (43 files, 304 tests, up from 41/296).
+DASH-09 flipped `[x]` by hand in `REQUIREMENTS.md` (single-phase requirement). One Rule-3 deviation:
+`PrintCerts` had no export, blocking the plan's own "render PrintCerts directly" test instruction —
+exported it with an inline comment. See `194-04-SUMMARY.md`.
 
 **194-03 (complete, 2026-09-09) — Executive Verdict layer cherry-picked from `origin/UX-Updates` and rewired off the API's authoritative rating (VERDICT-01).**
 `git cherry-pick --no-commit -n f05e7dc7` landed `ExecutiveVerdict.tsx` + its test file + the
@@ -967,9 +986,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — EXECUTING
-Plan: 1 of 8
+Plan: 4 of 8
 Status: Executing Phase 194
-Last activity: 2026-09-09 -- Phase 194 execution started
+Last activity: 2026-09-09 -- Phase 194 plan 04 (phantom-cert disclosure line + D-14 empty state on certificates.tsx and print.tsx, DASH-09) complete
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against

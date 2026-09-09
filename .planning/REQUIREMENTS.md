@@ -61,7 +61,7 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 
 ### Certificate View Integrity (phantom-cert todo; continues existing DASH numbering)
 
-- [ ] **DASH-09**: Dashboard certificate inventory and `/print` PDF render only real
+- [x] **DASH-09**: Dashboard certificate inventory and `/print` PDF render only real
       certificates — failed TLS handshakes (no `cert_subject`, or `scan_error` set) are
       excluded via a shared filter helper, and an honest "no certificates discovered" empty
       state appears when nothing real was found.
@@ -114,7 +114,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPKI-01 | 191 | Complete |
 | SPKI-02 | 191 | Complete |
 | VERDICT-01 | 194 | Pending |
-| DASH-09 | 194 | Pending |
+| DASH-09 | 194 | Complete |
 | MAP-01 | 195 | Pending |
 | MAP-02 | 195 | Pending |
 | MAP-03 | 195 | Pending |
