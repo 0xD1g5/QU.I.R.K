@@ -958,6 +958,25 @@ def test_db_guard_pg_uncredentialed_mysql_credentialed_runs_not_skips() -> None:
     assert recorder.rows() == []
 
 
+def test_broker_credential_is_set_resolves_pass_env_indirection(monkeypatch) -> None:
+    """Task 2: `BrokerCredential.pass_env` names an env var; presence must resolve
+    through `os.environ.get(pass_env)`, not the config field's own truthiness."""
+    from types import SimpleNamespace
+
+    from run_scan import _broker_credential_is_set
+
+    monkeypatch.delenv("QUIRK_TEST_BROKER_PW", raising=False)
+    cred_unset = SimpleNamespace(user="svc", pass_env="QUIRK_TEST_BROKER_PW")
+    assert _broker_credential_is_set(cred_unset) is False
+
+    monkeypatch.setenv("QUIRK_TEST_BROKER_PW", "s3cret-placeholder")
+    cred_set = SimpleNamespace(user="svc", pass_env="QUIRK_TEST_BROKER_PW")
+    assert _broker_credential_is_set(cred_set) is True
+
+    assert _broker_credential_is_set(None) is False
+    assert _broker_credential_is_set(SimpleNamespace(user="svc", pass_env="")) is False
+
+
 def test_missing_credentials_reason_is_reachable_in_a_real_guard_path(monkeypatch) -> None:
     """Proves `missing-credentials` is a live, tested reason — not a declared-but-
     never-emitted enum value (Plan 05 objective)."""

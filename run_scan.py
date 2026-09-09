@@ -392,6 +392,32 @@ def _build_broker_scan_inputs(
     return broker_hosts, port_overrides, explicit_reachable_pairs
 
 
+def _broker_credential_is_set(cred) -> bool:
+    """Phase 192 / OBS-01 Task 2: resolves a `BrokerCredential.pass_env`
+    indirection to a set/not-set boolean via the shared
+    `quirk.config_redaction.credential_is_set()` helper — `pass_env` holds the
+    NAME of an environment variable, never the secret itself (Phase 57 D-05),
+    so presence must be decided from `os.environ.get(pass_env)`, not from the
+    config field's own truthiness.
+
+    No guard consumes this today — Task 2 found broker probing has a
+    supported, result-producing anonymous path
+    (`quirk/scanner/broker_scanner.py:400`, D-05) — but Plan 06's config panel
+    needs the identical resolution to render a "set / not set" badge for
+    per-host broker credentials, so it is exposed here as a standalone,
+    importable predicate rather than left as inline logic a future plan would
+    have to re-derive.
+    """
+    if cred is None:
+        return False
+    pass_env = (
+        cred.get("pass_env", "") if isinstance(cred, dict) else getattr(cred, "pass_env", "")
+    )
+    if not pass_env:
+        return False
+    return credential_is_set("connectors", "broker_credentials", os.environ.get(pass_env))
+
+
 def _smime_missing_extra(enable_smime: bool, error_endpoints) -> bool:
     """Phase 173 D-03 / WR-02: smime's missing-extra gate, extracted to a
     standalone importable predicate (see `_broker_missing_extra` docstring
