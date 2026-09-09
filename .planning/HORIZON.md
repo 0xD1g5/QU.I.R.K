@@ -20,6 +20,7 @@ BACK-*/999.* ID is neither closed-with-evidence nor listed here; it must key on 
 
 | Item | Priority | What it is | Source / notes |
 |---|---|---|---|
+| 999.106 | P3 (someday/maybe) | Operator-settable SSH port list (`ports_ssh`) — real backend capability: config field + scanner targeting support; today SSH targets derive solely from protocol-classified open ports | Filed 2026-09-09 during Phase 194 discuss: operator chose to DROP ports_ssh from the PARITY-04 Advanced section (no CLI counterpart = not parity) and park the build-it option here |
 | **999.95** | **P1** | Readiness score awards full 25/25 to domains with zero evidence — full chaos lab scored 96/100 | Filed 2026-09-07; needs a deliberate scoring phase, not a drive-by |
 | 999.92 | P2 | Frontend `ScoreGauge.tsx` band thresholds unconverged with `severity_bands.py` | v5.19 audit WARN-01; pairs with 999.95 |
 | todo: dashboard-cert-view-phantom-tls-rows | high | Failed TLS handshakes render as phantom certificate rows — reaches the client PDF | `.planning/todos/pending/` |
