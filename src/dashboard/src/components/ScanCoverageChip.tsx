@@ -141,13 +141,19 @@ export function ScanCoverageChip({ scanRunId, jobId, className }: ScanCoverageCh
               {data.phases.map(phase => (
                 <TableRow key={phase.phase_name}>
                   <TableCell className="text-sm">{phase.label}</TableCell>
+                  {/* Review WR-06: reason is nullable by design (D-10 honest
+                      unclassified row) — never render "skipped: null", and only
+                      append the parenthesized detail when it is non-empty
+                      (matching format_skip_note's Python contract). */}
                   <TableCell className={`text-sm ${statusColorClass(phase)}`}>
-                    {phase.status === "ran" ? "ran" : `skipped: ${phase.reason}`}
+                    {phase.status === "ran" ? "ran" : `skipped: ${phase.reason ?? "unclassified"}`}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {phase.status === "ran"
                       ? `${phase.label} — ran in ${formatDuration(phase.duration_sec)}`
-                      : `${phase.label} — skipped: ${phase.reason} (${phase.detail ?? ""})`}
+                      : `${phase.label} — skipped: ${phase.reason ?? "unclassified"}${
+                          phase.detail ? ` (${phase.detail})` : ""
+                        }`}
                   </TableCell>
                 </TableRow>
               ))}
