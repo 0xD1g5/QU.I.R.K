@@ -14,7 +14,10 @@ export interface ScoreData {
   // Phase 188 SCORE-06 (RQ-3 schema-compatibility check): null means "not
   // computed" -- zero domains were assessed, never a fabricated 0/100.
   score: number | null
-  rating: string
+  // Phase 194 / VERDICT-01 / D-20: null means "never computed" (the
+  // score_raw dict genuinely lacked a rating key), distinguishable from a
+  // computed "POOR".
+  rating: string | null
   // SCORE-04 / D-09/D-10 (184.4): optional to mirror the Pydantic Optional[str] = None
   // field. Absent/undefined means the band was NOT capped.
   rating_cap_reason?: string
@@ -369,6 +372,10 @@ export interface ScanLatestResponse {
   hardware_devices: HardwareComponent[]  // Phase 134 CBOM-02
   partial_failures?: PartialFailureEntry[]  // Phase 67 RESUME-02
   burndown?: ClosureBurndown | null  // Phase 181 SURF-03
+  // Phase 194 / DASH-09 / D-13: count of TLS endpoints excluded from
+  // `certificates` (phantom rows). Non-optional -- the Pydantic default
+  // (int = 0) guarantees the key is always present in the JSON.
+  excluded_cert_count: number
 }
 
 export interface SampleFinding {
