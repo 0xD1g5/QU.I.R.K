@@ -462,6 +462,41 @@ def render_docx_report(
             style="Normal",
         )
 
+    # ---- Scan Coverage (Phase 192 Plan 08 / OBS-02, D-13/D-15) ----
+    # UNCONDITIONAL heading — only the body branches. Placed directly under
+    # Executive Summary (D-13: "coverage before findings"), not down at the
+    # Key Reuse position, which is deep in the document.
+    _coverage = getattr(exec_content, "coverage", {}) if exec_content else {}
+    doc.add_heading("Scan Coverage", level=2)
+    if not _coverage.get("recorded"):
+        from quirk.reports.coverage import COVERAGE_NOT_RECORDED_NOTICE
+
+        doc.add_paragraph(COVERAGE_NOT_RECORDED_NOTICE, style="Normal")
+    else:
+        _cov_ran = _coverage.get("ran", 0)
+        _cov_skipped = _coverage.get("skipped", 0)
+        doc.add_paragraph(f"{_cov_ran} ran / {_cov_skipped} skipped", style="Normal")
+        coverage_tbl = doc.add_table(rows=1, cols=3)
+        _set_table_style(coverage_tbl)
+        coverage_hdr = coverage_tbl.rows[0].cells
+        coverage_hdr[0].text = "Phase"
+        coverage_hdr[1].text = "Status"
+        coverage_hdr[2].text = "Detail"
+        for _entry in _coverage.get("phases") or []:
+            _label = _entry.get("label") or _entry.get("phase_name", "")
+            _status = _entry.get("status", "")
+            if _status == "ran":
+                _detail_text = f"{_entry.get('duration_sec', '')}s"
+            else:
+                _reason = _entry.get("reason") or ""
+                _detail = _entry.get("detail")
+                _detail_text = f"{_reason} ({_detail})" if _detail else _reason
+            _row = coverage_tbl.add_row().cells
+            _row[0].text = str(_label)
+            _row[1].text = str(_status)
+            _row[2].text = str(_detail_text)
+        _set_col_widths(coverage_tbl, [2.0, 1.2, 4.5])
+
     # Readiness Assessment sub-section
     doc.add_heading("Readiness Assessment", level=2)
     if narrative_drivers:
