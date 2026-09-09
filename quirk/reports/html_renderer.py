@@ -868,6 +868,82 @@ def render_key_reuse_section(key_reuse: dict) -> str:
     )
 
 
+def render_scan_coverage_section(coverage: dict | None) -> str:
+    """Generate the HTML "Scan Coverage" section (Phase 192 Plan 08 / OBS-02, D-13/D-15).
+
+    D-15 / INVERTED CONTRACT vs. render_key_reuse_section: that sibling function
+    returns `""` when its payload is falsy (loader failure / no data at all) — this
+    one must ALWAYS return a non-empty section, even for `{}` or `None`. That
+    difference is the entire point of D-15 (an unrecorded scan states its own
+    absence rather than silently vanishing from the report). Do NOT "fix" this
+    function to match render_key_reuse_section's truthiness contract.
+
+    Every interpolated value (`label`, `reason`, `detail`) is passed through
+    `html.escape()` without exception, matching render_key_reuse_section's and
+    render_burndown_section's contract (T-192-27).
+    """
+    from quirk.reports.coverage import COVERAGE_NOT_RECORDED_NOTICE
+
+    _coverage = coverage or {}
+
+    if not _coverage.get("recorded"):
+        return (
+            '<section class="scan-coverage-section" style="margin:24px 0;'
+            'border-left:4px solid #2b8a86;padding-left:12px">'
+            '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Scan Coverage</h2>'
+            f'<p class="scan-coverage-not-recorded">{_html.escape(COVERAGE_NOT_RECORDED_NOTICE)}</p>'
+            "</section>"
+        )
+
+    ran = _coverage.get("ran", 0)
+    skipped = _coverage.get("skipped", 0)
+    phases = _coverage.get("phases") or []
+
+    summary_html = (
+        f'<p class="scan-coverage-summary">'
+        f"<strong>{_html.escape(str(ran))} ran / {_html.escape(str(skipped))} skipped</strong></p>"
+    )
+
+    rows_html_parts = []
+    for entry in phases:
+        label = entry.get("label") or entry.get("phase_name", "")
+        status = entry.get("status", "")
+        if status == "ran":
+            detail_text = f"{entry.get('duration_sec', '')}s"
+        else:
+            reason = entry.get("reason") or ""
+            detail = entry.get("detail")
+            detail_text = f"{reason} ({detail})" if detail else reason
+        rows_html_parts.append(
+            "<tr>"
+            f"<td>{_html.escape(str(label))}</td>"
+            f"<td>{_html.escape(str(status))}</td>"
+            f"<td>{_html.escape(str(detail_text))}</td>"
+            "</tr>"
+        )
+    rows_joined = "".join(rows_html_parts)
+
+    table_html = (
+        '<table style="width:100%;border-collapse:collapse;margin-top:8px">'
+        "<thead><tr>"
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Phase</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Status</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Detail</th>'
+        "</tr></thead>"
+        f"<tbody>{rows_joined}</tbody>"
+        "</table>"
+    )
+
+    return (
+        '<section class="scan-coverage-section" style="margin:24px 0;'
+        'border-left:4px solid #2b8a86;padding-left:12px">'
+        '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Scan Coverage</h2>'
+        f"{summary_html}"
+        f"{table_html}"
+        "</section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -1086,6 +1162,12 @@ def render_html_report(
     _key_reuse_for_render = getattr(exec_content, "key_reuse", {}) if exec_content is not None else {}
     key_reuse_section = render_key_reuse_section(_key_reuse_for_render)
 
+    # Phase 192 Plan 08 (OBS-02 / D-13/D-15): scan coverage section (unconditional —
+    # ALWAYS renders, unlike every other advisory section above). getattr guard so an
+    # older ExecContent instance without the field cannot raise.
+    _coverage_for_render = getattr(exec_content, "coverage", {}) if exec_content is not None else {}
+    scan_coverage_section = render_scan_coverage_section(_coverage_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -1144,6 +1226,9 @@ def render_html_report(
         burndown_section=burndown_section,
         # Phase 191 Plan 05 (SPKI-02 / D-01): key reuse section (pre-rendered HTML string)
         key_reuse_section=key_reuse_section,
+        # Phase 192 Plan 08 (OBS-02 / D-13/D-15): scan coverage section (pre-rendered
+        # HTML string; always non-empty, unlike the sibling sections above)
+        scan_coverage_section=scan_coverage_section,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,

@@ -385,6 +385,13 @@
       {% endif %}
     </table>
 
+    {# Phase 192 Plan 08 (OBS-02 / D-13/D-15): scan coverage — UNCONDITIONAL, no
+       {% if %} wrapper. Unlike every other pre-rendered section below (key_reuse_section,
+       burndown_section, etc.), this section always renders — the HTML renderer's builder
+       function never returns an empty string, so gating it here would be dead code that
+       misleads a future reader into thinking it can vanish. #}
+    {{ scan_coverage_section | safe }}
+
     {# Phase 98 / EXEC-01 / D-03: Narrative prose block from exec_content.narrative_lead.
        Positioned before the score card per RESEARCH "Required order after Phase 98".
        narrative_lead is static prose from _NARRATIVE_LEADS — no sanitize needed.
