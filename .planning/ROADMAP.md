@@ -211,7 +211,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 192-05-PLAN.md — pre-flight missing-credentials guards + evidence-backed dispositions
+- [x] 192-05-PLAN.md — pre-flight missing-credentials guards + evidence-backed dispositions
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -295,7 +295,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
-| 192. Config Visibility + Skip Observability | 9/11 | In Progress|  |
+| 192. Config Visibility + Skip Observability | 10/11 | In Progress|  |
 | 193. Connector & Credential Parity | 0/TBD | Not started | - |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
