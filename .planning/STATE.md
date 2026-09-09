@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: phase_complete
-stopped_at: Phase 193 closed (verification passed 9/9, review resolved, operator-approved UI checkpoint) — next Phase 194
-last_updated: "2026-09-09T06:50:00.000Z"
-last_activity: 2026-09-09
+status: executing
+stopped_at: Phase 194 planned (8 plans, 5 waves) — ready to execute
+last_updated: "2026-09-09T12:53:48.054Z"
+last_activity: 2026-09-09 -- Phase 194 planning complete
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 25
+  total_plans: 33
   completed_plans: 25
   percent: 60
 ---
@@ -891,8 +891,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 Phase: 193 (Connector & Credential Parity) — COMPLETE
 Plan: 8 of 8
-Status: Phase 193 complete — ready to plan Phase 194
-Last activity: 2026-09-09
+Status: Ready to execute
+Last activity: 2026-09-09 -- Phase 194 planning complete
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
