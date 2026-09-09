@@ -242,7 +242,7 @@ Plans:
 **Wave 1**
 
 - [x] 193-01-PLAN.md — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test
-- [ ] 193-02-PLAN.md — Credential env-var fallback parity: CREDENTIAL_REGISTRY + 4 run_scan.py sites
+- [x] 193-02-PLAN.md — Credential env-var fallback parity: CREDENTIAL_REGISTRY + 4 run_scan.py sites
 - [ ] 193-03-PLAN.md — API schema contracts: availability response models + ScanSubmitRequest connectors/credentials
 - [ ] 193-05-PLAN.md — Delta-only connectors overlay through build_job_config_dict, resolve_effective_config and /api/config/effective
 
@@ -318,7 +318,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
-| 193. Connector & Credential Parity | 0/TBD | Not started | - |
+| 193. Connector & Credential Parity | 2/8 | In Progress|  |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 

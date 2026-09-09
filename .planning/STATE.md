@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 193 UI-SPEC approved
-last_updated: "2026-09-09T04:33:00.000Z"
-last_activity: 2026-09-09 -- Plan 193-01 complete (connector availability mapping module)
+stopped_at: Completed 193-02-PLAN.md
+last_updated: "2026-09-09T04:37:39.113Z"
+last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 19
   percent: 40
 ---
 
@@ -806,9 +806,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 193 (Connector & Credential Parity) — EXECUTING
-Plan: 2 of 8
-Status: Executing Phase 193
-Last activity: 2026-09-09 -- Plan 193-01 complete (connector availability mapping module)
+Plan: 3 of 8
+Status: Ready to execute
+Last activity: 2026-09-09
 
 **193-01 (complete, 2026-09-09) — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test.**
 `quirk/dashboard/api/connector_availability.py` maps all 25 `ConnectorsCfg.enable_*` flags to a
@@ -1109,6 +1109,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 184.1 P02 | 24min | 2 tasks | 2 files |
 | Phase 184.1 P03 | 22min | 1 tasks | 1 files |
 | Phase 184.3 P01 | 8min | 2 tasks | 2 files |
+| Phase 193 P02 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1440,6 +1441,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: 184.1-02: coverage_ratio rewired onto assessed_crypto_count/assessable_endpoint_count (D-01/D-02); D-10 adds independent NO_DATA branch; CONFIDENCE_FORMULA_VERSION=2.0.0 stamped on all return paths (D-12/D-14); every D-19 test expectation re-derived individually
 - [Phase 184.1]: D-11: exclusion set {ADVISORY, CLOSED} guarded by a run-time source scan — tests/test_evidence_protocol_disposition.py regenerates its occurrence set from quirk/scanner/**, cbom/writer.py, optional_extra.py at every test run, classifying 46 real occurrences via a content-keyed disposition ledger; follows the TOOL-04/182-07 precedent
 - [Phase ?]: 184.3-01: amended ROADMAP SC-3/SC-4/SC-5/SC-6 and REQUIREMENTS SCORE-03 where 2026-09-05 measurement falsified the premise (D-04/D-06/D-11/D-16a)
+- [Phase ?]: Mirrored the existing vault_token config-or-env fallback shape exactly at all four sites (193-02)
+- [Phase ?]: Registry-completeness assertion is run-time-derived, never a hand-written field list (193-02)
 
 ### Pending Todos
 
@@ -1617,9 +1620,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-09T03:57:42.037Z
-Stopped at: Phase 193 UI-SPEC approved
-Resume file: .planning/phases/193-connector-credential-parity/193-UI-SPEC.md
+Last session: 2026-09-09T04:37:39.105Z
+Stopped at: Completed 193-02-PLAN.md
+Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
