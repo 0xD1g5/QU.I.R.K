@@ -13,6 +13,7 @@ server-side (T-192-18 / D-07), and badges each field's provenance (D-04).
 """
 from __future__ import annotations
 
+import json
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -141,10 +142,36 @@ def get_effective_config(
     port_scope: Literal["common", "top1000", "all", "custom"] = Query("top1000"),
     custom_ports: Optional[str] = Query(None),
     vertical: Optional[str] = Query(None),
+    connectors: Optional[str] = Query(
+        None,
+        description=(
+            "JSON-encoded dict[str, bool] of enable_* connector flags the "
+            "operator has explicitly toggled (D-16 live preview). Unknown "
+            "keys are rejected 422 by the same allowlist build_job_config_dict "
+            "enforces on submit — not duplicated here."
+        ),
+    ),
 ) -> ConfigEffectiveResponse:
     """GET /api/config/effective — resolved, redacted, provenance-badged config
     preview matching what a `POST /api/jobs` submission with these query
     params would actually run with (PARITY-01)."""
+    connectors_overlay: Optional[dict] = None
+    if connectors is not None:
+        try:
+            connectors_overlay = json.loads(connectors)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="connectors must be a JSON object mapping enable_* flags to booleans",
+            ) from exc
+        if not isinstance(connectors_overlay, dict) or not all(
+            isinstance(v, bool) for v in connectors_overlay.values()
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="connectors must be a JSON object mapping enable_* flags to booleans",
+            )
+
     try:
         resolved_cfg, overlay_dict, preset_changed = resolve_effective_config(
             targets=targets,
@@ -154,6 +181,7 @@ def get_effective_config(
             port_scope=port_scope,
             custom_ports=custom_ports,
             vertical=vertical,
+            connectors_overlay=connectors_overlay,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

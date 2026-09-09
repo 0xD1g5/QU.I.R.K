@@ -20,7 +20,7 @@ from __future__ import annotations
 import dataclasses
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import yaml
 
@@ -61,6 +61,7 @@ def resolve_effective_config(
     port_scope: str = "top1000",
     custom_ports: Optional[str] = None,
     vertical: Optional[str] = None,
+    connectors_overlay: Optional[Dict[str, bool]] = None,
 ) -> tuple[AppConfig, dict, frozenset[str]]:
     """Resolve the config a `POST /api/jobs` submission with these selections
     would actually run with.
@@ -82,6 +83,15 @@ def resolve_effective_config(
     symmetry (`get_vertical()` resolves independently of `load_config`, and
     `AppConfig` has no `vertical` field); callers attach the caller-supplied
     or server-default vertical to their own response directly.
+
+    Phase 193 / PARITY-02 / D-16: `connectors_overlay` is forwarded straight
+    into `build_job_config_dict` BEFORE the `yaml.dump`/`load_config`
+    round-trip below and before the `connectors_before` snapshot is taken, so
+    it rides the exact same real-parse path a live submission uses —
+    `_user_set_fields` is populated genuinely and the D-04 provenance diff
+    sees the operator's value as user-set, never preset-changed. Never
+    `setattr` the loaded `cfg` after the fact (Phase 75 D-13's replaced
+    anti-pattern).
     """
     del vertical  # accepted for interface symmetry only; see docstring
     db_path = _default_db_path()
@@ -98,6 +108,7 @@ def resolve_effective_config(
             allow_internal_targets=False,
             port_scope=port_scope,
             custom_ports=custom_ports,
+            connectors_overlay=connectors_overlay,
         )
         config_path = output_dir / "preview-config.yaml"
         with open(config_path, "w", encoding="utf-8") as fh:
