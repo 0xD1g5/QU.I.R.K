@@ -25382,4 +25382,171 @@ coverage chips and the Effective config panel has not yet been performed by a hu
 191's UAT-191-06 which had a genuine live human checkpoint. No case in this series was checked to
 satisfy the gate without a corresponding real result.
 
-**Last Updated:** 2026-09-08
+---
+
+### UAT-193-01: Connectors panel renders all connectors grouped into the six fixed categories (PARITY-02)
+
+**ID:** UAT-193-01
+**Title:** Expanding the Connectors panel renders all 25 connectors grouped under six category
+headings (Identity, Cloud, Database, Email & Broker, OT/ICS, Source & API) in fixed order
+**Maps to:** PARITY-02
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > renders connectors under their category headings in the six-heading fixed order`.
+
+---
+
+### UAT-193-02: An unavailable connector is disabled with its reason and install hint always visible (D-02, PARITY-02)
+
+**ID:** UAT-193-02
+**Title:** An unavailable connector's switch is disabled and its reason plus verbatim
+`pip install quirk[...]` hint render as visible text without requiring a hover
+**Maps to:** PARITY-02
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > disables an unavailable connector's switch and shows its reason + install hint as visible text`.
+
+---
+
+### UAT-193-03: Toggling a connector updates the Effective Config panel with "user" provenance (D-16, PARITY-02)
+
+**ID:** UAT-193-03
+**Title:** Toggling a connector on the Connectors panel is reflected in the Effective Config
+panel's query params so the resulting field shows "Overridden" provenance
+**Maps to:** PARITY-02
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-09  **Tester:** —
+**Notes:** GAP — no substitute coverage. `ConnectorsPanel.test.tsx`'s D-13 test confirms
+`onConnectorsChange` fires with exactly the touched key, and `scan-new.tsx` wires that callback
+into the same effective-config query-string mechanism Phase 192's `EffectiveConfigPanel` tests
+already cover for other fields, but no existing automated test exercises the two components
+together end-to-end (Connectors panel toggle -> Effective Config panel re-fetch -> provenance
+badge). Nothing else substitutes for this cross-component integration path.
+
+---
+
+### UAT-193-04: Submitting a job that would run an unavailable connector is server-rejected with a 422, including via direct API bypass (D-08, PARITY-02)
+
+**ID:** UAT-193-04
+**Title:** A job submission naming an unavailable connector (explicit toggle or preset auto-enable)
+is rejected with 422 naming the connector and reason, whether submitted through the dashboard form
+or a direct API call that bypasses the disabled switch
+**Maps to:** PARITY-02
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_jobs_connector_422_gate.py::test_unavailable_connector_toggle_rejected_422`,
+`::test_multiple_unavailable_connectors_named_in_one_422`, `::test_preset_enabled_unavailable_connector_rejected_422`,
+and `::test_rejected_submission_writes_no_row_or_config` — all four exercise `create_job` directly
+(the same code path a form-bypassing direct API call would hit), not the browser form.
+
+---
+
+### UAT-193-05: A credential entered on the form is masked, marked not-saved, and empty on re-entry (D-12, PARITY-03)
+
+**ID:** UAT-193-05
+**Title:** A credential field is masked while typing, and the "Run again" flow reopens the form
+with the credential field empty
+**Maps to:** PARITY-03
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > shows a masked, not-saved credential input when a credentialed connector is turned ON, and removes it when turned OFF`, which asserts the input's `type="password"` masking and "not saved" copy. The full post-submission "Run again"-reopens-empty round trip is asserted by construction (the form holds no persisted credential state to repopulate from) rather than by a dedicated end-to-end test.
+
+---
+
+### UAT-193-06: A submitted credential appears nowhere in the job's output directory, `config.yaml`, or `run.log` (D-11, PARITY-03)
+
+**ID:** UAT-193-06
+**Title:** A credential value submitted through the dashboard form reaches only the scan
+subprocess's environment and never the `ScanJob` row, the job's stored `config.yaml`, or `run.log`
+**Maps to:** PARITY-03
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_credential_no_leak_guard.py::test_sentinel_reaches_subprocess_env`
+and `::test_sentinel_absent_from_row_config_log_and_logrecords`, which prove (with a run-time-derived
+sentinel credential and a manually-executed, reverted negative control per the SUMMARY for 193-06)
+that the value reaches the subprocess env but appears in no DB column, file, or log record.
+
+---
+
+### UAT-193-07: A connector enabled with blank credentials submits successfully and produces a `missing-credentials` skip (D-15, PARITY-03)
+
+**ID:** UAT-193-07
+**Title:** Enabling a connector without supplying its credential does not block submission; the
+resulting scan's coverage disclosure records a `missing-credentials` skip for that phase
+**Maps to:** PARITY-03
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-09  **Tester:** —
+**Notes:** GAP — no substitute coverage. `ConnectorsPanel.test.tsx`'s D-15 test confirms the
+non-blocking warning copy renders client-side, and Phase 192's `ScanPhaseRecord`/OBS-01 tests
+(Series 192, UAT-192-01) confirm `missing-credentials` is a real, correctly-emitted skip reason at
+the scanner layer, but no automated test submits a dashboard job with a connector on and its
+credential blank and then asserts the resulting scan's coverage record end-to-end through this
+phase's new submission path specifically.
+
+---
+
+### UAT-193-08: Cloud connectors show the ambient-credentials note and offer no credential field (D-10, PARITY-03)
+
+**ID:** UAT-193-08
+**Title:** AWS/Azure/GCP connectors render an ambient-auth explanatory note instead of a credential
+input when toggled on
+**Maps to:** PARITY-03
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > renders the ambient-auth note and no input element for an ambient-auth cloud connector when ON`.
+
+---
+
+### UAT-193-09: An explicit `enable_broker` toggle survives custom-port-scope suppression (D-14, PARITY-02)
+
+**ID:** UAT-193-09
+**Title:** Explicitly toggling `enable_broker` on in the Connectors panel while `custom` port scope
+is selected causes the broker connector to run despite custom scope's normal suppression
+**Maps to:** PARITY-02
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-09  **Tester:** —
+**Notes:** GAP — no substitute coverage. `tests/test_build_job_config_connectors_overlay.py` and
+`tests/test_config_effective_connectors_overlay.py` (Phase 192/193) exercise the delta-only overlay
+write (D-13) in isolation, and Phase 121's existing custom-port-scope suppression tests exercise the
+suppression in isolation, but no automated test combines an explicit dashboard `enable_broker: true`
+toggle with an active `custom` port scope in the same request to confirm the explicit toggle wins
+end-to-end, per D-14's documented precedence rule (`docs/configuration.md` "Dashboard connector
+toggles vs. custom-port-scope suppression").
+
+---
+
+### UAT-193-10: A `QUIRK_*` credential env var exported in the shell is honored by a CLI scan with an unset config field (D-09 CLI parity)
+
+**ID:** UAT-193-10
+**Title:** Exporting `QUIRK_ADCS_PASSWORD` (or any of the four new `QUIRK_*` credential env vars) in
+the shell is picked up by a CLI-driven scan when the corresponding `config.yaml` field is unset,
+and the config-file value wins when both are set
+**Maps to:** PARITY-02, PARITY-03 (D-09 CLI parity)
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_run_scan_credential_env_fallback.py::test_env_var_used_when_config_unset`,
+`::test_config_value_wins_over_env_var`, and `::test_all_four_env_fallback_names_present_in_run_scan_py`
+(parametrized across all four `connectors.*_password`/`connectors.snmp_community` fields and their
+`QUIRK_*` env-var names).
+
+---
+
+**Series 193 disposition.** 7 of 10 cases (UAT-193-01, -02, -04, -05, -06, -08, -10) are `[x] PASS`,
+each `DEFERRED` to a named, currently-passing automated test node. 3 cases (UAT-193-03, UAT-193-07,
+UAT-193-09) are honestly `[x] SKIP` with `GAP — no substitute coverage` — each names the closest
+existing coverage and states precisely what integration path remains unexercised end-to-end. No
+case in this series was checked to satisfy the corpus-integrity gate without a corresponding real
+result.
+
+**Last Updated:** 2026-09-09 (Phase 193 Plan 08 — Series 193 added: Connectors panel and
+credential-entry dashboard UAT cases for PARITY-02/PARITY-03, 7 PASS / 3 honest GAP)
