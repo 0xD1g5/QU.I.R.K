@@ -115,7 +115,7 @@ editing) is explicitly out of scope for this milestone.
 - Decimal phases (191.1, 191.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 191: SPKI Fingerprint Persistence** (completed 2026-09-08) - Every TLS endpoint's certificate SPKI fingerprint is captured and queryable for key reuse, across all scan paths including the sensor push/merge path
-- [ ] **Phase 192: Config Visibility + Skip Observability** - Operator can see the effective config a scan will run with and exactly what did/didn't run and why, on the dashboard and in reports
+- [x] **Phase 192: Config Visibility + Skip Observability** - Operator can see the effective config a scan will run with and exactly what did/didn't run and why, on the dashboard and in reports (completed 2026-09-09)
 - [ ] **Phase 193: Connector & Credential Parity** - Operator can enable, configure, and credential any of the 25 connectors from the dashboard at scan-submit time, safely
 - [ ] **Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix** - Advanced scan-behavior fields reach the dashboard, the Executive Verdict layer ships by default, and certificate views show only real certificates
 - [ ] **Phase 195: Quantum Exposure Map** - A reachability-source decision gates a zero-fabrication attack-path map built from verified relationships only
@@ -215,7 +215,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 192-11-PLAN.md — docs, UAT-SERIES update, Obsidian vault sync, phase close-out
+- [x] 192-11-PLAN.md — docs, UAT-SERIES update, Obsidian vault sync, phase close-out
 
 ### Phase 193: Connector & Credential Parity
 
@@ -236,7 +236,18 @@ dashboard at scan-submit time, with the same safety guarantees the CLI already h
   3. Connector selections flow through the existing `_write_job_config()` YAML-overlay path (never
      a `ScanJob` blob column), preserving `_user_set_fields` precedence against vertical-preset
      overwrites.
-**Plans**: TBD
+**Plans**: 8 plans in 4 waves
+
+Plans:
+- [ ] 193-01-PLAN.md — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test
+- [ ] 193-02-PLAN.md — Credential env-var fallback parity: CREDENTIAL_REGISTRY + 4 run_scan.py sites
+- [ ] 193-03-PLAN.md — API schema contracts: availability response models + ScanSubmitRequest connectors/credentials
+- [ ] 193-04-PLAN.md — Auth-gated GET /api/connectors/availability route + app registration
+- [ ] 193-05-PLAN.md — Delta-only connectors overlay through build_job_config_dict, resolve_effective_config and /api/config/effective
+- [ ] 193-06-PLAN.md — D-08 submit-time 422 gate + credential Popen env injection + no-leak sentinel guard
+- [ ] 193-07-PLAN.md — ConnectorsPanel UI, scan-new wiring, component tests, human verification
+- [ ] 193-08-PLAN.md — Docs, UAT-SERIES cases, Obsidian vault sync, full-suite gate
+
 **UI hint**: yes
 
 ### Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix
@@ -295,7 +306,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
-| 192. Config Visibility + Skip Observability | 10/11 | In Progress|  |
+| 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 0/TBD | Not started | - |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
