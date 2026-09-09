@@ -163,6 +163,25 @@ def test_sentinel_absent_from_row_config_log_and_logrecords(monkeypatch, caplog)
     assert sentinel not in config_text, "sentinel leaked into config.yaml"
     assert "QUIRK_JOB_BROKER_SENTINEL_HOST_EXAMPLE_COM" in config_text
 
+    # 2b. Phase 193 review CR-02: the written YAML must survive a REAL
+    #     `load_config` round-trip — text presence alone is not delivery.
+    #     `broker_credentials` is a top-level AppConfig key (a fragment
+    #     written under `connectors:` is silently discarded by the loader's
+    #     unknown-connector-key filter), and `snmp_v3_credentials` is a
+    #     genuine ConnectorsCfg field. Assert both parse back to the
+    #     injected env-var NAMES.
+    from quirk.config import load_config
+
+    loaded_cfg = load_config(str(config_path))
+    assert (
+        loaded_cfg.broker_credentials["sentinel-host.example.com"].pass_env
+        == "QUIRK_JOB_BROKER_SENTINEL_HOST_EXAMPLE_COM"
+    ), loaded_cfg.broker_credentials
+    assert (
+        loaded_cfg.connectors.snmp_v3_credentials["sentinel-host.example.com"].auth_key_env
+        == "QUIRK_JOB_SNMPV3_SENTINEL_HOST_EXAMPLE_COM_AUTH"
+    ), loaded_cfg.connectors.snmp_v3_credentials
+
     # 3. run.log — sentinel absent.
     log_path = jobs_module._job_output_dir(job_id) / "run.log"
     log_text = log_path.read_text()

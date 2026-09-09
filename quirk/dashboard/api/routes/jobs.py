@@ -656,10 +656,25 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     )
 
     if credential_yaml_fragment:
-        config_dict["connectors"] = {
-            **config_dict.get("connectors", {}),
-            **credential_yaml_fragment,
+        # Phase 193 review CR-02: `broker_credentials` is a TOP-LEVEL
+        # AppConfig key (quirk/config.py reads `raw.get("broker_credentials")`)
+        # — writing it under `connectors:` would trip the loader's
+        # unknown-connector-key filter and be silently discarded.
+        # `snmp_v3_credentials` IS a genuine ConnectorsCfg field and stays
+        # under `connectors:`.
+        broker_fragment = credential_yaml_fragment.get("broker_credentials")
+        if broker_fragment:
+            config_dict["broker_credentials"] = broker_fragment
+        connectors_fragment = {
+            k: v
+            for k, v in credential_yaml_fragment.items()
+            if k != "broker_credentials"
         }
+        if connectors_fragment:
+            config_dict["connectors"] = {
+                **config_dict.get("connectors", {}),
+                **connectors_fragment,
+            }
 
     config_path = str(output_dir / "config.yaml")
     with open(config_path, "w") as fh:
