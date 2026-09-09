@@ -193,8 +193,8 @@ replacing dashboard silence with disclosure.
 Plans:
 **Wave 1**
 
-- [ ] 192-01-PLAN.md — ScanPhaseRecord ORM table + idempotent create-if-missing migration
-- [ ] 192-02-PLAN.md — credential redaction registry, fail-closed pattern net, presence helper
+- [x] 192-01-PLAN.md — ScanPhaseRecord ORM table + idempotent create-if-missing migration
+- [x] 192-02-PLAN.md — credential redaction registry, fail-closed pattern net, presence helper
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -295,7 +295,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
-| 192. Config Visibility + Skip Observability | 0/TBD | Not started | - |
+| 192. Config Visibility + Skip Observability | 2/11 | In Progress|  |
 | 193. Connector & Credential Parity | 0/TBD | Not started | - |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |

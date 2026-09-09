@@ -4,8 +4,8 @@ milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
 stopped_at: Phase 192 context gathered
-last_updated: "2026-09-09T00:07:41.970Z"
-last_activity: 2026-09-09 -- Phase 192 planning complete
+last_updated: "2026-09-09T00:08:48.756Z"
+last_activity: 2026-09-09 -- Phase 192 execution started
 progress:
   total_phases: 5
   completed_phases: 1
@@ -50,7 +50,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 191 complete (SPKI persistence + key-reuse, verified 2026-09-08). Next: /gsd-plan-phase 192. Reminder: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol.
+**Current focus:** Phase 192 — config-visibility-skip-observability
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -805,10 +805,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 191 (spki-fingerprint-persistence) — COMPLETE
-Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-09-09 -- Phase 192 planning complete
+Phase: 192 (config-visibility-skip-observability) — EXECUTING
+Plan: 1 of 11
+Status: Executing Phase 192
+Last activity: 2026-09-09 -- Phase 192 execution started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
