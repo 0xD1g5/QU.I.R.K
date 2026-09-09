@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 193-05-PLAN.md
-last_updated: "2026-09-09T04:40:54.949Z"
+stopped_at: Completed 193-04-PLAN.md (193-05 also already complete)
+last_updated: "2026-09-09T05:10:00.000Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 21
-  percent: 40
+  completed_plans: 22
+  percent: 88
 ---
 
 # Project State
@@ -51,6 +51,24 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
 **Current focus:** Phase 193 — Connector & Credential Parity (executing). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+
+**193-04 (complete, 2026-09-09) — `GET /api/connectors/availability` route (PARITY-02).**
+New `quirk/dashboard/api/routes/connectors.py` router, auth-gated via the identical
+`APIRouter(dependencies=[Depends(require_auth)])` construction `config.py`'s `effective_router`
+uses, registered on the app under `/api` grouped beside `config.effective_router`. Calls plan
+01's `probe_all_connectors()` fresh on every request (D-07, pinned by an exact-call-count == 2
+test), maps results into plan 03's `ConnectorAvailabilityEntry`/`ConnectorAvailabilityResponse`
+schemas sorted by (category, label), and wraps probe failures in a fixed 500 detail string —
+never `str(exc)` — so a filesystem path can't leak. 7 new tests in
+`tests/test_connector_availability_route.py` cover auth gating, full 25-connector coverage
+(derived via `dataclasses.fields(ConnectorsCfg)`, never a hand-counted literal), entry shape,
+verbatim install-hint carry-through, unavailable-count correctness, per-request freshness, and
+non-leaking 500 handling. One Rule-1 deviation: initial docstring prose literally quoted the
+`APIRouter(dependencies=[Depends(require_auth)])`/`lru_cache`/`str(exc)` patterns for
+documentation purposes, which over-counted the plan's own `grep -c` acceptance checks (2/1/1
+instead of 1/0/0); reworded without repeating the exact substrings. `python -m compileall` and
+both task's full acceptance-criteria commands pass; `tests/test_config_effective_route.py`
+(Phase 192 route) unaffected, 20 passed combined. See `193-04-SUMMARY.md`.
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
