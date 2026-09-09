@@ -25,7 +25,13 @@ from quirk.config import load_config, _parse_host_port
 from quirk.util.safe_exc import safe_str
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
-from quirk.models import CryptoEndpoint
+from quirk.models import (
+    CryptoEndpoint,
+    ScanPhaseRecord,
+    SCAN_PHASE_STATUS_RAN,
+    SCAN_PHASE_STATUS_SKIPPED,
+    SCAN_PHASE_SKIP_REASONS,
+)
 from quirk.models_util import latest_successful_hardware_devices  # Phase 159 HWLC-13
 
 from quirk.logging_util import Logger
@@ -155,6 +161,74 @@ def _get_scan_int(cfg, attr: str, fallback: int) -> int:
 _PHASE_SKIPPED = object()
 
 
+class _PhaseRecorder:
+    """Phase 192 OBS-01: in-memory per-scan recorder for `scan_phase_records`.
+
+    `_wrapped_phase()` calls one of this class's three `record_*` methods
+    for EVERY phase it wraps (D-10: absence of a row is never a signal). A
+    guard clause inside an individual `_run_X_phase()` may additionally call
+    `skip(reason, detail)` immediately before `return _PHASE_SKIPPED` to
+    classify WHY a phase was skipped; `record_skipped()` consumes and clears
+    that pending classification. If no `skip()` call was made, the row is
+    still written — honestly unclassified (`reason=None`,
+    `detail="Skip reason not classified"`) — rather than fabricating a
+    reason (Plan 04/05 classify the remaining guard clauses).
+    """
+
+    def __init__(self):
+        self._rows: list = []
+        self._pending_reason: Optional[str] = None
+        self._pending_detail: str = ""
+
+    def skip(self, reason: str, detail: str = ""):
+        if reason not in SCAN_PHASE_SKIP_REASONS:
+            raise ValueError(
+                f"Unknown scan phase skip reason: {reason!r} "
+                f"(must be one of {sorted(SCAN_PHASE_SKIP_REASONS)})"
+            )
+        self._pending_reason = reason
+        self._pending_detail = detail
+        return _PHASE_SKIPPED
+
+    def record_ran(self, phase_name: str, duration_sec: Optional[float]) -> None:
+        self._rows.append({
+            "phase_name": phase_name,
+            "status": SCAN_PHASE_STATUS_RAN,
+            "reason": None,
+            "detail": "",
+            "duration_sec": duration_sec,
+        })
+
+    def record_skipped(self, phase_name: str) -> None:
+        reason = self._pending_reason
+        detail = self._pending_detail if reason is not None else "Skip reason not classified"
+        self._pending_reason = None
+        self._pending_detail = ""
+        self._rows.append({
+            "phase_name": phase_name,
+            "status": SCAN_PHASE_STATUS_SKIPPED,
+            "reason": reason,
+            "detail": detail,
+            "duration_sec": None,
+        })
+
+    def record_failed(self, phase_name: str, detail: str) -> None:
+        # Reset any stale pending classification from a prior skip() call
+        # that never reached record_skipped() (defensive; should not happen).
+        self._pending_reason = None
+        self._pending_detail = ""
+        self._rows.append({
+            "phase_name": phase_name,
+            "status": SCAN_PHASE_STATUS_SKIPPED,
+            "reason": "failed",
+            "detail": detail,
+            "duration_sec": None,
+        })
+
+    def rows(self) -> list:
+        return list(self._rows)
+
+
 def _phase_timer(run_stats: Dict[str, Any], name: str):
     class _T:
         def __enter__(self_t):
@@ -188,13 +262,27 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
     sentinel is translated to `[]` before returning to the caller so no
     downstream consumer ever observes it.
     """
+    recorder = run_stats.get("phase_records")
     try:
         with _phase_timer(run_stats, phase_name) as _timer:
             result = fn()
-            if result is _PHASE_SKIPPED:
+            _was_skipped = result is _PHASE_SKIPPED
+            if _was_skipped:
                 _timer.mark_skipped()
-                return []
-            return result
+        # Phase 192 OBS-01: record AFTER the timer block exits so
+        # run_stats["timings_sec"][phase_name] is already populated for the
+        # ran case. Status derives from the SAME identity check above —
+        # never re-inferred from timings_sec (Pitfall 3).
+        if recorder is not None:
+            if _was_skipped:
+                recorder.record_skipped(phase_name)
+            else:
+                recorder.record_ran(
+                    phase_name, run_stats["timings_sec"].get(phase_name)
+                )
+        if _was_skipped:
+            return []
+        return result
     except (KeyboardInterrupt, SystemExit):
         # D-14: never swallow user-abort or interpreter-exit signals.
         raise
@@ -204,6 +292,8 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
         except Exception:
             # Logger contract is best-effort; do not let logger failure mask the original error.
             pass
+        if recorder is not None:
+            recorder.record_failed(phase_name, repr(exc))
         error_endpoints.append(CryptoEndpoint(
             host=scanner_label,
             port=0,
@@ -1667,6 +1757,7 @@ def main():
         "cache_enabled": bool(args.cache),
         "safe_mode": bool(args.safe_mode),
         "rate_limit": args.rate_limit,
+        "phase_records": _PhaseRecorder(),
     }
 
     used_config_file = False

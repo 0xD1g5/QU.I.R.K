@@ -163,3 +163,142 @@ def test_init_db_adds_table_to_preexisting_db_without_touching_others(tmp_path) 
     names_after = set(sa_inspect(engine2).get_table_names())
     assert "scan_phase_records" in names_after
     assert names_before.issubset(names_after)
+
+
+# ---------------------------------------------------------------------------
+# Plan 03 Task 1: _PhaseRecorder + _wrapped_phase emission
+# ---------------------------------------------------------------------------
+
+
+class _StubLogger:
+    """Minimal logger stub — _wrapped_phase only calls .error()."""
+
+    def __init__(self):
+        self.errors: list = []
+
+    def error(self, msg):
+        self.errors.append(msg)
+
+
+def _make_run_stats(with_recorder: bool = True) -> dict:
+    from run_scan import _PhaseRecorder
+
+    run_stats: dict = {"timings_sec": {}}
+    if with_recorder:
+        run_stats["phase_records"] = _PhaseRecorder()
+    return run_stats
+
+
+def test_wrapped_phase_ran_records_status_ran_with_duration() -> None:
+    from run_scan import _wrapped_phase
+
+    run_stats = _make_run_stats()
+    result = _wrapped_phase(
+        run_stats, "tls_scanning", "tls", lambda: [], [], _StubLogger()
+    )
+    assert result == []
+    assert "tls_scanning" in run_stats["timings_sec"]
+
+    rows = run_stats["phase_records"].rows()
+    assert len(rows) == 1
+    assert rows[0]["phase_name"] == "tls_scanning"
+    assert rows[0]["status"] == "ran"
+    assert rows[0]["duration_sec"] is not None
+
+
+def test_wrapped_phase_skipped_sentinel_records_status_skipped_no_timing() -> None:
+    from run_scan import _wrapped_phase, _PHASE_SKIPPED
+
+    run_stats = _make_run_stats()
+    result = _wrapped_phase(
+        run_stats, "vault_scanning", "vault", lambda: _PHASE_SKIPPED, [], _StubLogger()
+    )
+    assert result == []
+    assert "vault_scanning" not in run_stats["timings_sec"]
+
+    rows = run_stats["phase_records"].rows()
+    assert len(rows) == 1
+    assert rows[0]["status"] == "skipped"
+
+
+def test_wrapped_phase_classified_skip_records_reason_and_detail() -> None:
+    from run_scan import _wrapped_phase, _PHASE_SKIPPED
+
+    run_stats = _make_run_stats()
+    recorder = run_stats["phase_records"]
+
+    def _fn():
+        return recorder.skip("missing-extra", "hvac not installed")
+
+    result = _wrapped_phase(run_stats, "hvac_scanning", "hvac", _fn, [], _StubLogger())
+    assert result == []
+
+    rows = recorder.rows()
+    assert len(rows) == 1
+    assert rows[0]["status"] == "skipped"
+    assert rows[0]["reason"] == "missing-extra"
+    assert rows[0]["detail"] == "hvac not installed"
+
+
+def test_wrapped_phase_exception_records_failed_and_still_appends_error_endpoint() -> None:
+    from run_scan import _wrapped_phase
+
+    run_stats = _make_run_stats()
+    error_endpoints: list = []
+
+    def _fn():
+        raise RuntimeError("boom")
+
+    result = _wrapped_phase(
+        run_stats, "ssh_scanning", "ssh", _fn, error_endpoints, _StubLogger()
+    )
+    assert result == []
+    assert len(error_endpoints) == 1
+    assert error_endpoints[0].scan_error_category == "exception"
+
+    rows = run_stats["phase_records"].rows()
+    assert len(rows) == 1
+    assert rows[0]["status"] == "skipped"
+    assert rows[0]["reason"] == "failed"
+    assert "RuntimeError" in rows[0]["detail"]
+
+
+def test_wrapped_phase_keyboard_interrupt_propagates_and_records_nothing() -> None:
+    from run_scan import _wrapped_phase
+
+    run_stats = _make_run_stats()
+
+    def _fn():
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        _wrapped_phase(run_stats, "jwt_scanning", "jwt", _fn, [], _StubLogger())
+
+    assert run_stats["phase_records"].rows() == []
+
+
+def test_wrapped_phase_unclassified_skip_records_none_reason_honest_detail() -> None:
+    from run_scan import _wrapped_phase, _PHASE_SKIPPED
+
+    run_stats = _make_run_stats()
+    result = _wrapped_phase(
+        run_stats, "kms_scanning", "kms", lambda: _PHASE_SKIPPED, [], _StubLogger()
+    )
+    assert result == []
+
+    rows = run_stats["phase_records"].rows()
+    assert len(rows) == 1
+    assert rows[0]["reason"] is None
+    assert rows[0]["detail"] == "Skip reason not classified"
+
+
+def test_wrapped_phase_without_phase_records_key_behaves_as_before() -> None:
+    from run_scan import _wrapped_phase
+
+    run_stats = {"timings_sec": {}}  # no "phase_records" key at all
+    result = _wrapped_phase(
+        run_stats, "container_scanning", "container", lambda: ["x"], [], _StubLogger()
+    )
+    assert result == ["x"]
+    assert "container_scanning" in run_stats["timings_sec"]
+    assert "phase_records" not in run_stats
