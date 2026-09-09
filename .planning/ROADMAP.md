@@ -241,7 +241,7 @@ dashboard at scan-submit time, with the same safety guarantees the CLI already h
 Plans:
 **Wave 1**
 
-- [ ] 193-01-PLAN.md — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test
+- [x] 193-01-PLAN.md — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test
 - [ ] 193-02-PLAN.md — Credential env-var fallback parity: CREDENTIAL_REGISTRY + 4 run_scan.py sites
 - [ ] 193-03-PLAN.md — API schema contracts: availability response models + ScanSubmitRequest connectors/credentials
 - [ ] 193-05-PLAN.md — Delta-only connectors overlay through build_job_config_dict, resolve_effective_config and /api/config/effective

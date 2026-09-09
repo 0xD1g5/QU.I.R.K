@@ -4,13 +4,13 @@ milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
 stopped_at: Phase 193 UI-SPEC approved
-last_updated: "2026-09-09T04:25:50.520Z"
-last_activity: 2026-09-09 -- Phase 193 planning complete
+last_updated: "2026-09-09T04:33:00.000Z"
+last_activity: 2026-09-09 -- Plan 193-01 complete (connector availability mapping module)
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 17
+  completed_plans: 18
   percent: 40
 ---
 
@@ -50,7 +50,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 192 complete (verified + operator-approved UAT 2026-09-09). Next: /gsd-discuss-phase 193 (Connector & Credential Parity). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+**Current focus:** Phase 193 — Connector & Credential Parity (executing). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
 
 **184-08 (complete, 2026-09-06) — Post-review gap closure: CR-01 (pytest import alias blind spot) and WR-01 (silent parse-failure swallow) fixed and self-test-locked.**
 `184-REVIEW.md` found a live vacuous-pass hazard: `_is_pytest_skip_call()`/`_is_pytest_mark_decorator()`
@@ -805,10 +805,30 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 192 (config-visibility-skip-observability) — COMPLETE
-Plan: 11 of 11
-Status: Ready to execute
-Last activity: 2026-09-09 -- Phase 193 planning complete
+Phase: 193 (Connector & Credential Parity) — EXECUTING
+Plan: 2 of 8
+Status: Executing Phase 193
+Last activity: 2026-09-09 -- Plan 193-01 complete (connector availability mapping module)
+
+**193-01 (complete, 2026-09-09) — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test.**
+`quirk/dashboard/api/connector_availability.py` maps all 25 `ConnectorsCfg.enable_*` flags to a
+live probe source (`optional_extra.REGISTRY` extras, per-scanner `*_AVAILABLE` flags read live via
+`getattr(importlib.import_module(...))`, or a `shutil.which` binary probe), probed fresh on every
+call (D-07: no caching). `enable_gcp`/`enable_k8s`/`enable_vault` deliberately probe their OWN
+connector module's flag rather than `REGISTRY`'s `"cloud"` extra (which ANDs three unrelated SDKs
+together and would false-negative); `enable_smime`/`enable_adcs`/`enable_codesign` each probe their
+own scanner's independent `LDAP3_AVAILABLE` (REGISTRY's `"identity"` extra only gates `impacket`).
+Deviation (Rule 2): added an optional `binary` field to `AvailabilitySource` (mirrors
+`OptionalExtra.binary`) so `enable_container`/`enable_source` can honestly probe the `syft`/
+`semgrep` external CLI binaries instead of being mis-disposed as `always_available` — the guard
+test locks `always_available` to exactly `{enable_authenticated_mode, enable_recurring_otics}`.
+`tests/test_connector_availability_mapping.py` derives its expected flag set from
+`dataclasses.fields(ConnectorsCfg)` at run time (never hand-listed), and includes a negative-control
+demonstration (in-memory pop of `enable_snmp` -> `test_every_connector_flag_has_a_disposition` goes
+RED, discarded, never committed). `python -m pytest tests/test_connector_availability_mapping.py
+tests/test_config_connector_drift.py -q` -> 31 passed. `PARITY-02` NOT marked complete —
+this plan only builds the backend helper; plans 04/06 (route + submit-time gate) still need to
+consume it before the requirement is satisfied. See `193-01-SUMMARY.md`.
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
