@@ -72,10 +72,24 @@ _FIELDS = [
 
 
 def _resolve(cfg, field: str, env_var: str, default):
-    """Mirrors the exact `config-value-or-env` expression each run_scan.py
-    site uses -- getattr with the documented default, or-fallback to env."""
+    """Mirrors the exact resolution expression each run_scan.py site uses.
+
+    - Password fields (falsy config defaults): getattr with the documented
+      default, plain or-fallback to env.
+    - `snmp_community` (TRUTHY default "public" -- Phase 193 review CR-01):
+      env beats the *default* but never an operator-explicit config value,
+      keyed off `_user_set_fields` exactly as the production sites in
+      run_scan.py and quirk/scanner/hardware_scanner.py do.
+    """
     import os
 
+    if field == "snmp_community":
+        value = getattr(cfg.connectors, field, default)
+        if not value or field not in getattr(
+            cfg.connectors, "_user_set_fields", frozenset()
+        ):
+            value = os.environ.get(env_var, "") or value or default
+        return value
     return getattr(cfg.connectors, field, default) or os.environ.get(env_var, default)
 
 
@@ -91,6 +105,19 @@ def test_config_value_wins_over_env_var(tmp_path, monkeypatch, field, env_var, d
 def test_env_var_used_when_config_unset(tmp_path, monkeypatch, field, env_var, default):
     monkeypatch.setenv(env_var, "from-env")
     config_path = _write_config(tmp_path, **{field: None})
+    cfg = load_config(str(config_path))
+    assert _resolve(cfg, field, env_var, default) == "from-env"
+
+
+@pytest.mark.parametrize("field,env_var,default", _FIELDS)
+def test_env_var_used_when_config_key_omitted(tmp_path, monkeypatch, field, env_var, default):
+    """Phase 193 review CR-01: the dashboard's job config.yaml never writes a
+    credential key at all (env-only by design), so the field resolves to its
+    dataclass DEFAULT -- for `snmp_community` that default is the truthy
+    "public", which a plain `or`-fallback never falls through. This is the
+    fixture shape a real dashboard job produces (key OMITTED, not null)."""
+    monkeypatch.setenv(env_var, "from-env")
+    config_path = _write_config(tmp_path)  # no connectors overrides at all
     cfg = load_config(str(config_path))
     assert _resolve(cfg, field, env_var, default) == "from-env"
 

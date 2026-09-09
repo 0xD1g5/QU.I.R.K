@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import urllib.request
 import urllib.error
@@ -262,7 +263,21 @@ def _confirm_bridge_evidence(device: HardwareDevice, timeout: int, cfg=None) -> 
         _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
         _v3_cred = _v3_creds_map.get(host)
 
+        # Phase 193 review CR-01: same env-fallback resolution as run_scan.py's
+        # SNMP phase — the injected QUIRK_SNMP_COMMUNITY beats the truthy
+        # "public" DEFAULT but never an operator-explicit config value
+        # (explicitness tracked via _user_set_fields, Phase 72 D-02).
         _snmp_community = getattr(_connectors, "snmp_community", "public")
+        if (
+            not _snmp_community
+            or "snmp_community"
+            not in getattr(_connectors, "_user_set_fields", frozenset())
+        ):
+            _snmp_community = (
+                os.environ.get("QUIRK_SNMP_COMMUNITY", "")
+                or _snmp_community
+                or "public"
+            )
         raw_entries = walk_arp_table(
             host, community=_snmp_community, timeout=timeout, v3_credential=_v3_cred
         )

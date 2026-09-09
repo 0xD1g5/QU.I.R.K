@@ -2840,12 +2840,24 @@ def main():
             getattr(getattr(cfg, "scan", None), "timeouts", None), "default_seconds", 3
         )
         # Phase 193 / PARITY-03 / D-09: env fallback for dashboard credential
-        # injection, mirroring the vault_token precedent below (line ~3737).
-        # Note: an empty-string community also falls back to the env var /
-        # default, matching vault_token's existing truthiness semantics.
-        _snmp_community = getattr(
-            cfg.connectors, "snmp_community", "public"
-        ) or os.environ.get("QUIRK_SNMP_COMMUNITY", "public")
+        # injection. Unlike adcs/pg/mysql passwords (whose config defaults are
+        # falsy, so a plain `or` works), snmp_community has a TRUTHY default
+        # ("public"), so the env var must beat the *default* — but never an
+        # operator-explicit config value. `_user_set_fields` (Phase 72 D-02)
+        # records which keys appeared in the raw YAML connectors block, which
+        # is exactly the explicit-vs-default distinction needed here
+        # (Phase 193 review CR-01).
+        _snmp_community = getattr(cfg.connectors, "snmp_community", "public")
+        if (
+            not _snmp_community
+            or "snmp_community"
+            not in getattr(cfg.connectors, "_user_set_fields", frozenset())
+        ):
+            _snmp_community = (
+                os.environ.get("QUIRK_SNMP_COMMUNITY", "")
+                or _snmp_community
+                or "public"
+            )
         # Phase 139 SNMPV3-02: per-host v3 credentials (second required call
         # site — RESEARCH Anti-Pattern; hardware_scanner.py's Step 3 is the
         # other one, wired in this same plan).
