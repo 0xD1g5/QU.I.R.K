@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 193-03-PLAN.md
+stopped_at: Completed 193-05-PLAN.md
 last_updated: "2026-09-09T04:40:54.949Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 20
+  completed_plans: 21
   percent: 40
 ---
 
@@ -809,6 +809,23 @@ Phase: 193 (Connector & Credential Parity) — EXECUTING
 Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-09-09
+
+**193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
+`build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
+`quirk.config._KNOWN_CONNECTOR_KEYS` + an `enable_` prefix (unknown/non-toggle keys raise
+`ValueError` naming the key), merged LAST over the Phase 121 custom-port-scope suppression so an
+explicit operator toggle wins (D-14), and delta-only (only touched keys are written, D-13) — proven
+by a real `yaml.dump` -> `load_config` -> `apply_profile` round-trip surviving the "deep" profile's
+auto-enable mutation. `resolve_effective_config` forwards the same overlay before its temp-YAML
+round-trip (D-16), and `GET /api/config/effective` gained a JSON-encoded `connectors` query param,
+422ing on malformed/non-dict/non-boolean input, with unknown-key rejection deliberately NOT
+duplicated in `config.py` (single allowlist source of truth). 16 new tests across
+`tests/test_build_job_config_connectors_overlay.py` (9) and
+`tests/test_config_effective_connectors_overlay.py` (7), all green; existing
+`tests/test_config_effective_route.py`/`test_jobs_api.py`/`test_jobs_nmap_scope_cap.py`/
+`test_jobs_target_validation.py` unaffected (57 passed, 1 skipped combined). `grep -c 'setattr('`
+across both touched Python modules -> 0. Commits `52f9a597` (Task 1), `cd4fee8f` (Task 2). See
+`193-05-SUMMARY.md`.
 
 **193-01 (complete, 2026-09-09) — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test.**
 `quirk/dashboard/api/connector_availability.py` maps all 25 `ConnectorsCfg.enable_*` flags to a
