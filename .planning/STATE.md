@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 193-04-PLAN.md (193-05 also already complete)
-last_updated: "2026-09-09T05:10:00.000Z"
+stopped_at: Completed 193-06-PLAN.md
+last_updated: "2026-09-09T05:20:00.000Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 22
-  percent: 88
+  completed_plans: 23
+  percent: 92
 ---
 
 # Project State
@@ -50,7 +50,28 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 193 — Connector & Credential Parity (executing). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+**Current focus:** Phase 193 — Connector & Credential Parity (executing, 6/8 plans complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+
+**193-06 (complete, 2026-09-09) — D-08 submit-time 422 gate + credential Popen env injection + no-leak sentinel guard (PARITY-02/PARITY-03).**
+`create_job` now calls `resolve_effective_config(..., connectors_overlay=payload.connectors)` +
+`probe_all_connectors()` (the same helper the GET route uses) before any `ScanJob` row or output
+dir exists, rejecting with 422 (naming every offender's label + reason) whenever a resolved
+`enable_*` flag is unavailable — catches both explicit toggles and profile-preset auto-enables
+(e.g. `deep`'s email/broker). New `_build_credential_env()` derives env-var names from
+`CREDENTIAL_REGISTRY.env_fallback` for flat fields and `QUIRK_JOB_BROKER_<HOST>` /
+`QUIRK_JOB_SNMPV3_<HOST>_{AUTH,PRIV}` (sanitized, collision-checked -> 422) for per-host
+broker/SNMPv3 credentials; values are injected only via `Popen(env={**os.environ, **injected})`,
+never persisted, logged, or written to the job YAML (which gets the env-var *names* only). D-15
+blank-credential warnings surface as a new `credential_warnings` response key without blocking
+submission. `tests/test_credential_no_leak_guard.py` proves (with two positive controls and a
+manually-executed, reverted negative control) that a run-time-derived sentinel credential reaches
+the subprocess env but appears in no `ScanJob` column, `config.yaml`, `run.log`, or DEBUG log
+record. One Rule-1 test-infra fix: `probe_all_connectors()` (now called on every job submission)
+triggers `azure.identity`'s import-time `platform.processor()` -> `subprocess.check_output(["uname",
+"-p"])`, which this repo's Popen-monkeypatch job-creation tests broke on first-ever import; fixed
+with a best-effort warm-up call added to `tests/conftest.py` collection-time code, before any test
+monkeypatches `subprocess.Popen`. 16 new-file tests + 37 pre-existing job/build-config tests all
+green (1 pre-existing skip, unrelated). See `193-06-SUMMARY.md`.
 
 **193-04 (complete, 2026-09-09) — `GET /api/connectors/availability` route (PARITY-02).**
 New `quirk/dashboard/api/routes/connectors.py` router, auth-gated via the identical

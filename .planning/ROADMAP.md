@@ -249,7 +249,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 193-04-PLAN.md — Auth-gated GET /api/connectors/availability route + app registration
-- [ ] 193-06-PLAN.md — D-08 submit-time 422 gate + credential Popen env injection + no-leak sentinel guard
+- [x] 193-06-PLAN.md — D-08 submit-time 422 gate + credential Popen env injection + no-leak sentinel guard
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -318,7 +318,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 |-------|-----------------|--------|-----------|
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
-| 193. Connector & Credential Parity | 5/8 | In Progress|  |
+| 193. Connector & Credential Parity | 6/8 | In Progress|  |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 0/TBD | Not started | - |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
