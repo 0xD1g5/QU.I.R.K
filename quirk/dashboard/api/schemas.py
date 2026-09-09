@@ -5,6 +5,7 @@ TypeScript types in src/dashboard/src/types/api.ts must mirror these exactly.
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
@@ -47,6 +48,24 @@ class ConfigEffectiveResponse(BaseModel):
     sections: List[ConfigSection]
     raw: dict
     redacted_field_count: int
+
+
+# Phase 193 / PARITY-02: GET /api/connectors/availability response shapes.
+# Frozen interfaces -- plan 04's route and plan 07's React panel consume
+# these shapes directly.
+
+class ConnectorAvailabilityEntry(BaseModel):
+    flag: str            # "enable_adcs"
+    label: str            # "AD CS"
+    category: str         # one of the six 193-UI-SPEC categories
+    available: bool
+    reason: str = ""          # non-empty whenever available is False
+    install_hint: str = ""    # verbatim optional_extra.REGISTRY install_hint, "" when none
+
+
+class ConnectorAvailabilityResponse(BaseModel):
+    connectors: List[ConnectorAvailabilityEntry]
+    unavailable_count: int
 
 
 # ---- Score / Confidence ----
@@ -667,6 +686,17 @@ class ScanSubmitRequest(BaseModel):
     Per Phase 120 / AC-03, ``allow_internal_targets`` is server-policy only and
     sourced from ``quirk.config.SecurityConfig.allow_internal_targets``; any
     client-supplied value is silently dropped via ``extra="ignore"``.
+
+    Phase 193 / PARITY-02 / PARITY-03 (D-11, D-13): ``connectors`` and
+    ``credentials`` are deliberately SEPARATE fields, never merged into one
+    dict, so a stray log of the connectors toggle map can never leak a
+    secret. ``connectors`` is a delta of only the ``enable_*`` toggles the
+    operator explicitly touched in this request (D-13) -- it is merged into
+    the job's config overlay, never treated as a full replacement of
+    ``ConnectorsCfg``. ``credentials`` values are request-scoped only: they
+    are never assigned to a ``ScanJob`` column, never written to the job's
+    ``config.yaml``, and never passed to a logger (D-11) -- they exist only
+    to be injected into the scan subprocess's environment.
     """
     model_config = ConfigDict(extra="ignore")
 
@@ -679,6 +709,13 @@ class ScanSubmitRequest(BaseModel):
     port_scope: Literal["common", "top1000", "all", "custom"] = "top1000"
     custom_ports: Optional[str] = None
 
+    # Phase 193 / PARITY-02 (D-13): delta-only connector toggle overlay, key
+    # = enable_* flag name.
+    connectors: Optional[Dict[str, bool]] = None
+    # Phase 193 / PARITY-03 (D-09/D-10/D-11): request-scoped credential
+    # values, NEVER persisted -- see class docstring.
+    credentials: Optional[Dict[str, str]] = None
+
     @field_validator("targets")
     @classmethod
     def no_file_paths(cls, v: str) -> str:
@@ -688,6 +725,87 @@ class ScanSubmitRequest(BaseModel):
             raise ValueError("Targets field is required.")
         if stripped.startswith("@"):
             raise ValueError("@file paths are not supported from the dashboard — use the CLI")
+        return v
+
+    @field_validator("connectors")
+    @classmethod
+    def known_connector_toggle_keys_only(
+        cls, v: Optional[Dict[str, bool]]
+    ) -> Optional[Dict[str, bool]]:
+        """Allowlist submitted connector keys against ConnectorsCfg's own
+        field set (D-13 + ASVS V5). Rejects rather than silently drops, so
+        the operator learns their toggle did nothing. Also requires an
+        ``enable_`` prefix so non-toggle connector fields (e.g.
+        ``adcs_password``, ``broker_targets``) can never be smuggled
+        through the boolean toggle path.
+
+        Imported inside the validator body (not at module scope) to avoid a
+        circular import between quirk.dashboard.api.schemas and quirk.config.
+        """
+        if v is None:
+            return v
+        from quirk.config import _KNOWN_CONNECTOR_KEYS
+
+        if len(v) > len(_KNOWN_CONNECTOR_KEYS):
+            raise ValueError(
+                f"connectors payload has {len(v)} entries, more than the "
+                f"{len(_KNOWN_CONNECTOR_KEYS)} known connector fields"
+            )
+        unknown = sorted(k for k in v if k not in _KNOWN_CONNECTOR_KEYS)
+        if unknown:
+            raise ValueError(f"Unknown connector key(s): {', '.join(unknown)}")
+        non_toggle = sorted(k for k in v if not k.startswith("enable_"))
+        if non_toggle:
+            raise ValueError(
+                f"connectors only accepts enable_* toggle keys, got: "
+                f"{', '.join(non_toggle)}"
+            )
+        return v
+
+    @field_validator("credentials")
+    @classmethod
+    def known_credential_keys_only(
+        cls, v: Optional[Dict[str, str]]
+    ) -> Optional[Dict[str, str]]:
+        """Allowlist submitted credential names against
+        ``CREDENTIAL_REGISTRY`` (D-10), plus the ``broker:<host>`` and
+        ``snmpv3:<host>:<auth|priv>`` per-host shapes plan 06 injects.
+        Rejects unknown keys and explicitly rejects ``api_token`` -- the
+        dashboard's own API token is never a scan-submission credential.
+        """
+        if v is None:
+            return v
+        from quirk.config_redaction import CREDENTIAL_REGISTRY
+
+        if len(v) > 64:
+            raise ValueError(
+                f"credentials payload has {len(v)} entries, more than the 64-entry cap"
+            )
+        for key, value in v.items():
+            if len(value) > 4096:
+                raise ValueError(
+                    f"credential value for {key!r} exceeds the 4096-character cap"
+                )
+
+        allowed_names = {
+            entry.name for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"
+        }
+        snmpv3_re = re.compile(r"^snmpv3:.+:(auth|priv)$")
+
+        unknown = []
+        for key in v:
+            if key == "api_token":
+                unknown.append(key)
+                continue
+            if key in allowed_names:
+                continue
+            if key.startswith("broker:"):
+                continue
+            if snmpv3_re.match(key):
+                continue
+            unknown.append(key)
+        if unknown:
+            raise ValueError(f"Unknown credential key(s): {', '.join(sorted(unknown))}")
         return v
 
     @model_validator(mode="after")
