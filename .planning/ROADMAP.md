@@ -257,7 +257,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 193-08-PLAN.md — Docs, UAT-SERIES cases, Obsidian vault sync, full-suite gate
+- [x] 193-08-PLAN.md — Docs, UAT-SERIES cases, Obsidian vault sync, full-suite gate
 
 **UI hint**: yes
 

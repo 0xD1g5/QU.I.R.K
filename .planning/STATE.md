@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 193-07-PLAN.md
-last_updated: "2026-09-09T05:20:00.000Z"
+stopped_at: Completed 193-08-PLAN.md
+last_updated: "2026-09-09T06:50:00.000Z"
 last_activity: 2026-09-09
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 24
-  percent: 96
+  completed_plans: 25
+  percent: 100
 ---
 
 # Project State
@@ -50,7 +50,31 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 193 — Connector & Credential Parity (executing, 7/8 plans complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+**Current focus:** Phase 193 — Connector & Credential Parity (all 8/8 plans complete 2026-09-09; awaiting orchestrator verification/close). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (see HORIZON.md ledger note, operator re-confirmed 2026-09-09).
+
+**193-08 (complete, 2026-09-09) — Docs, UAT-SERIES Series 193, Obsidian vault sync, full-suite gate (PARITY-02/PARITY-03). PHASE 193 NOW 8/8 PLANS COMPLETE.**
+`docs/operators-guide.md` gained §3.1.4 (Connectors panel: category grouping, unavailable-with-reason,
+server-enforced 422, masked non-persisted credentials, `missing-credentials` non-blocking submission,
+`GET /api/connectors/availability` documented pending `docs/api-reference.md`'s eventual creation).
+`docs/configuration.md` gained the 5-variable credential env-var reference table (`VAULT_TOKEN` +
+4 new `QUIRK_*` vars, sourced from `CREDENTIAL_REGISTRY` at write time) and the D-13/D-14 dashboard
+toggle-precedence rules. `docs/report-interpretation.md` extended §22 with the
+`missing-credentials`/`disabled-by-config`/`missing-extra` distinction. 10 new `UAT-193-*` cases
+added (7 `[x] PASS` each citing a named passing test node — all 25 backend + 9 vitest nodes verified
+live; 3 honest `[x] SKIP` / `GAP — no substitute coverage` naming the precise unexercised
+cross-component integration paths: Connectors-panel<->Effective-Config-panel provenance, end-to-end
+`missing-credentials` submission, D-14 explicit-toggle-vs-custom-scope). Both UAT corpus gates green.
+**Full-suite finding, not a regression:** the first `python -m pytest -q -m ""` run showed 9
+failures (email/broker 422 rejections in unrelated pre-existing tests) — root-caused to the invoking
+`python` resolving to the system interpreter (no `sslyze`) rather than `.venv/bin/python`; re-run
+with the correct interpreter gave **4674 passed, 0 failed**, failing-node SET empty, matching
+baseline. Frontend `npm run build`/`lint`/`test` all exit 0 (40 files, 281 tests). Obsidian: phase
+note written (`Phase-193-Connector-Credential-Parity.md`, 8 "What Was Built" subsections), hub
+callout + table row linked, all 3 guides + UAT-Series.md + Roadmap.md + Requirements.md re-synced.
+Did not invoke `phase.complete`/`requirements mark-complete` — `PARITY-02`/`PARITY-03` flipped by
+hand in `REQUIREMENTS.md` (single-phase requirements, safe to hand-flip); phase-193 heading checkbox
+in `ROADMAP.md` deliberately left for the orchestrator's own verification/close step. See
+`193-08-SUMMARY.md`.
 
 **193-07 (complete, 2026-09-09) — ConnectorsPanel UI, scan-new wiring, component tests, human verification (PARITY-02/PARITY-03).**
 New `ConnectorsPanel.tsx`: 25 availability-gated connector toggles grouped into six fixed-order

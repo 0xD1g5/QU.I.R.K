@@ -18,13 +18,13 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
       `QuirkCfg`) from the dashboard, via a new auth-gated `GET /api/config/effective` that
       actively redacts credential fields (the existing 1-field unauthenticated `/api/config` is
       not a usable seed — research-verified).
-- [ ] **PARITY-02**: Operator can enable/disable any of the 25 connectors at scan-submit time,
+- [x] **PARITY-02**: Operator can enable/disable any of the 25 connectors at scan-submit time,
       with each toggle gated on a run-time availability probe covering BOTH
       `optional_extra.REGISTRY` and the per-scanner `*_AVAILABLE` flags — a connector whose
       extra isn't installed is shown unavailable-with-reason, never offered as a silent no-op.
       Config flows through the existing `_write_job_config()` YAML-overlay path (never a
       `ScanJob` blob column) to preserve `_user_set_fields` semantics.
-- [ ] **PARITY-03**: Operator can supply connector credentials at scan-submit time through an
+- [x] **PARITY-03**: Operator can supply connector credentials at scan-submit time through an
       in-memory-only path — credentials never land in `ScanJob`, the job `config.yaml`, or any
       log (extends the Phase 59 `safe_str` no-log gate to the new request fields).
 - [ ] **PARITY-04**: Operator can set advanced scan-behavior fields (TLS/SSH port lists,
@@ -106,8 +106,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PARITY-01 | 192 | Complete (2026-09-09) |
-| PARITY-02 | 193 | Pending |
-| PARITY-03 | 193 | Pending |
+| PARITY-02 | 193 | Complete |
+| PARITY-03 | 193 | Complete |
 | PARITY-04 | 194 | Pending |
 | OBS-01 | 192 | Complete (2026-09-09) |
 | OBS-02 | 192 | Complete (2026-09-09) |
