@@ -4063,8 +4063,14 @@ def main():
     # same process run. Best-effort — never fails the scan (T-192-09). The
     # "reporting" phase itself is a report-generation stage, not a scanner
     # phase (D-11), so it is deliberately never passed to this flush.
+    # Review WR-02: resolve the coverage DB path ONCE and thread the same
+    # value into write_reports (via run_stats) so the flush and the report
+    # pipeline's load_scan_coverage() always target the same database even
+    # when --db-path differs from cfg.output.db_path.
+    _coverage_db_path = args.db_path or cfg.output.db_path
+    run_stats["coverage_db_path"] = _coverage_db_path
     _flush_scan_phase_records(
-        args.db_path or cfg.output.db_path,
+        _coverage_db_path,
         run_stats.get("phase_records"),
         scan_run_id,
     )

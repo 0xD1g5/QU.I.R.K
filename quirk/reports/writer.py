@@ -491,7 +491,14 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     _key_reuse = _load_key_reuse(getattr(cfg.output, "db_path", None))
     # Phase 192 Plan 07 (OBS-02): one load feeding both the CLI markdown
     # (below) and exec_content (further down) — no second loader call.
-    _coverage = load_scan_coverage(getattr(cfg.output, "db_path", None), _scan_run_id)
+    # Review WR-02: run_scan.py threads the SAME resolved db_path it flushed
+    # the phase records to (args.db_path or cfg.output.db_path) via
+    # run_stats["coverage_db_path"], so a --db-path override never yields a
+    # false "not recorded (pre-v5.21)" claim about the scan that just recorded.
+    _coverage_db_path = (run_stats or {}).get("coverage_db_path") or getattr(
+        cfg.output, "db_path", None
+    )
+    _coverage = load_scan_coverage(_coverage_db_path, _scan_run_id)
     tech_md = build_tech_markdown(
         cfg,
         endpoints,
