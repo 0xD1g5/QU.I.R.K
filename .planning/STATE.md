@@ -8,7 +8,7 @@ last_activity: 2026-09-10
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 5
+  total_plans: 9
   completed_plans: 5
   percent: 33
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.22 Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Next: Phase 197 (Connector Parity Tail). Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
+**Current focus:** v5.22 Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Phase 197 (Connector Parity Tail) PLANNED 2026-09-10: UI-SPEC approved 6/6, 4 plans in 4 waves (01 backend lockstep widening → 02 frontend detail rows → 03 PARITY-07 proofs + suite gate → 04 docs/walkthrough checkpoint), plan-checker PASSED (2 warnings fixed: D-tags added, UI-SPEC pairlist row corrected), decision coverage 16/16. Key plan findings: gke/aks_clusters need name@location pairlist (scanner subscripts dicts); all 37 fields non-secret → PARITY-07 is regression-proof. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
 Complete, closing every requirement this phase owns. Proceeding to plan 07 (docs/UAT/Obsidian
 close-out). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after
