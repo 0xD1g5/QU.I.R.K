@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 195 plan 01 (MAP-01 spike) complete — DECISION DEFERRED, Tier B skipped, proceeding to plan 02
+stopped_at: Phase 195 plan 02 (Tier A exposure-map derivation module) complete — proceeding to plan 03
 last_updated: "2026-09-09T00:00:00.000Z"
-last_activity: 2026-09-09 -- Phase 195 plan 01 complete (MAP-01 spike, DECISION DEFERRED)
+last_activity: 2026-09-09 -- Phase 195 plan 02 complete (exposure_map.py + bridge.py shared helper)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 42
-  completed_plans: 34
-  percent: 81
+  completed_plans: 35
+  percent: 83
 ---
 
 # Project State
@@ -66,9 +66,10 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Current focus:** Phase 195 — Quantum Exposure Map (executing — FINAL v5.21 phase). Plan 01
 (MAP-01 spike) complete — DECISION: DEFERRED (operator-confirmed 2026-09-09). Tier B (plans
-08/09) skipped this phase, parked as v2 backlog 999.107. Proceeding to plan 02 (Tier A backend
-derivation module). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write
-closes; after this phase the milestone lifecycle (audit→complete→cleanup) runs.
+08/09) skipped this phase, parked as v2 backlog 999.107. Plan 02 (Tier A backend derivation
+module) complete — proceeding to plan 03 (score-firewall + edge guard tests). Reminders:
+phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after this phase the
+milestone lifecycle (audit→complete→cleanup) runs.
 
 **195-01 (complete, 2026-09-09) — MAP-01 reachability-source spike; DECISION: DEFERRED (MAP-01).**
 Investigated Tier B (operator-declared crown-jewel + reachability persistence) effort: estimated
@@ -1117,9 +1118,27 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 195 (Quantum Exposure Map) — EXECUTING
-Plan: 2 of 9
-Status: Executing Phase 195 (plan 01 complete, DECISION: DEFERRED; plan 02 next)
-Last activity: 2026-09-09 -- Phase 195 plan 01 complete (MAP-01 spike, DECISION DEFERRED)
+Plan: 3 of 9
+Status: Executing Phase 195 (plans 01-02 complete; plan 03 next)
+Last activity: 2026-09-09 -- Phase 195 plan 02 complete (exposure_map.py + bridge.py shared helper)
+
+**195-02 (complete, 2026-09-09) — Read-time exposure-map derivation module + bridge.py signature-preserving refactor (MAP-02).**
+`quirk/cbom/bridge.py` gained `_find_matching_gateway(dev, hw_devices) -> tuple[dict, str] | None`,
+extracted from `_has_sufficient_evidence`'s inner ARP-evidence loop; `_has_sufficient_evidence` now
+delegates to it and stays byte-compatible (same signature, `bool` return, single caller
+`_confirm_upstream_mitigation` untouched) — `pytest -q tests/ -k bridge` unchanged (47 passed, 1
+xfailed, 1 xpassed). New `quirk/intelligence/exposure_map.py`: `derive_key_reuse_edges` wraps
+`compute_key_reuse_clusters` verbatim (all-pairs edges per cluster, SPKI-fingerprint evidence
+citations); `derive_hardware_bridge_edges` filters STRICTLY on `bridge_status == "upstream_mitigated"`
+(never `partial_only` — the fabricated-chain anti-feature D-03/Pitfall-2 exists to prevent), reusing
+the new shared helper against the pre-promotion device list to recover gateway/backend evidence;
+`derive_exposure_map` composes both into `{"nodes": [...], "edges": [...]}`, both keys always present
+(D-08), `is_crown_jewel` defaults `False` (Tier B deferred by 195-01). Never imports
+`quirk.intelligence.scoring` (D-10, AST-verified); no persisted table/cache (D-12). Manually verified
+against an isolated in-memory session (5 behaviors from the plan's `<behavior>` block, incl. the
+partial_only-produces-zero-edges regression guard) — formal `tests/test_exposure_map_edges.py` is
+195-03's deliverable. `.venv/bin/python -m compileall -q quirk` exit 0. Commits `86cb4df2` (Task 1),
+`8b2291da` (Task 2). See `195-02-SUMMARY.md`.
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
