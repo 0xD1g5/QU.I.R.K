@@ -1,11 +1,14 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-09 (Phase 194 Plan 07 — Series 194 added: Advanced scan-fields panel,
-Executive Verdict layer, and the phantom-cert disclosure fix operator walkthrough (PARITY-04/
-VERDICT-01/DASH-09), 9 PASS / 3 honest GAP, transcribed from the 194-06 operator-approved
-checkpoint). v5.21 has still not shipped a version bump, so `**Version:**` stays `5.19.0` — same
-reasoning Series 188-193's header notes already recorded. Earlier: Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
+**Last Updated:** 2026-09-10 (Phase 195 Plan 07 — Series 195 added: Quantum Exposure Map dashboard
+tab operator walkthrough (MAP-01/MAP-02/MAP-03), 5 PASS / 3 honest GAP-or-DEFERRED, transcribed
+from the 195-06 operator-approved checkpoint plus the score-firewall and evidence-required
+automated guards). v5.21 has still not shipped a version bump, so `**Version:**` stays `5.19.0` —
+same reasoning Series 188-194's header notes already recorded. Earlier: Phase 194 Plan 07 — Series
+194 added: Advanced scan-fields panel, Executive Verdict layer, and the phantom-cert disclosure fix
+operator walkthrough (PARITY-04/VERDICT-01/DASH-09), 9 PASS / 3 honest GAP, transcribed from the
+194-06 operator-approved checkpoint. Earlier: Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
 skip observability (OBS-01, five skip reasons) surfaced as a "Scan Coverage" section on CLI/HTML/
 DOCX reports plus D-14 TLS-domain skip notes (OBS-02), and an auth-gated `GET /api/config/effective`
 pre-flight config preview with credential redaction and Overridden/Preset provenance badges
@@ -25774,3 +25777,173 @@ result.
 **Last Updated:** 2026-09-09 (Phase 194 Plan 07 — Series 194 added: Advanced scan-fields panel,
 Executive Verdict layer, and phantom-cert disclosure fix operator walkthrough for
 PARITY-04/VERDICT-01/DASH-09, 9 PASS / 3 honest GAP)
+
+---
+
+## Series 195: Quantum Exposure Map (Phase 195 — v5.21)
+
+### UAT-195-01: Exposure Map tab renders and is reachable from the sidebar nav (D-05, MAP-02)
+
+**ID:** UAT-195-01
+**Title:** The dashboard sidebar shows an "Exposure Map" nav entry that opens the `/exposure-map`
+tab, rendering the "Quantum Exposure Map" heading and its verified-only sub-heading
+**Maps to:** MAP-02
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Digs (human walkthrough during 195-06's operator checkpoint)
+**Notes:** PASSED — operator confirmed step 1 (nav to "Exposure Map") and step 2 (heading "Quantum
+Exposure Map" plus the sub-heading naming "verified... no inferred or fabricated paths") against
+the live dashboard at http://127.0.0.1:8512/. See `195-06-SUMMARY.md` walkthrough steps 1-2.
+
+---
+
+### UAT-195-02: Key-reuse edge renders amber/solid with a per-edge evidence tooltip (D-09, MAP-02)
+
+**ID:** UAT-195-02
+**Title:** Hovering a key-reuse edge shows an "Evidence" tooltip citing the shared SPKI fingerprint,
+and the edge itself renders amber/solid (matching the legend), on an LR dagre layout
+**Maps to:** MAP-02
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Digs (human walkthrough during 195-06's operator checkpoint)
+**Notes:** PASSED after one round-1 fix. The live DB (`example.org:443` / `example.org:8443`, SPKI
+fingerprint `0c7ae4cd2d05`) exercised the key-reuse edge type end-to-end: `GET /api/exposure-map`
+returned the edge with evidence citing "Source: Phase 191 key-reuse derivation", and the tooltip
+rendered it on hover. One defect was found and fixed within this checkpoint round: the edge
+initially rendered Cytoscape's default gray instead of the legend's amber, because Cytoscape
+renders to `<canvas>` and cannot resolve a CSS `var(--ds-high)` string — fixed in commit `6459cf91`
+by resolving the token via `getComputedStyle` at Cytoscape init. Re-verified amber/solid, matching
+the legend, after the fix. LR layout confirmed visually. See `195-06-SUMMARY.md` step 3 and its
+"What happened" section.
+
+---
+
+### UAT-195-03: Hardware crypto-bridge edge renders gray/dashed (D-03, MAP-02)
+
+**ID:** UAT-195-03
+**Title:** A confirmed hardware crypto-bridge chain edge renders gray with a dashed line style,
+visually distinct from the amber/solid key-reuse edge type
+**Maps to:** MAP-02
+
+**Result:** - [x] SKIP  - [ ] PASS  - [ ] FAIL
+**Notes:** **GAP — no substitute coverage against live data.** Per `195-SPIKE-DECISION.md`
+investigation (b), zero of the seven local dev-scan SQLite DBs inspected (and no chaos-lab profile)
+currently contain a populated `bridge_evidence_json` row that promotes to `upstream_mitigated` —
+the live DB used for the 195-06 walkthrough had exactly one key-reuse edge and zero hardware-bridge
+edges, so this rendering path could not be visually exercised this walkthrough. The dashed-gray
+styling code path exists (`exposure-map.tsx`'s edge-type style selector) and is covered by
+component tests (195-05), but a live visual confirmation requires a scan against the `hwcompat`
+chaos-lab profile with a legacy backend present in the same scan's device list as the evidenced
+gateway — not available in this environment. Consistent with the honest GAP recorded in
+`195-06-SUMMARY.md` walkthrough step 3.
+
+---
+
+### UAT-195-04: "No path data available" honest-absence empty state (D-08, MAP-02)
+
+**ID:** UAT-195-04
+**Title:** When a scan produces zero verified edges, the tab shows the "No path data available"
+empty-state card instead of an empty graph canvas
+**Maps to:** MAP-02
+
+**Result:** - [x] SKIP  - [ ] PASS  - [ ] FAIL
+**Notes:** **DEFERRED — covered by component tests, not this walkthrough.** The live DB used for the
+195-06 operator walkthrough had 1 populated edge, so the populated-graph branch was exercised
+instead of the empty-state branch — not this plan's exercisable condition against live data. The
+empty state is covered by 195-05's frontend component tests (`ExposureMapPage` empty-response
+fixture). See `195-06-SUMMARY.md` walkthrough step 4.
+
+---
+
+### UAT-195-05: Score firewall — exposure map data never affects the readiness score (D-10, MAP-03)
+
+**ID:** UAT-195-05
+**Title:** The tab displays the score-firewall reassurance note near the legend, and the backend
+guarantees exposure-map data can never leak into `SCORE_WEIGHTS` or the scoring module
+**Maps to:** MAP-03
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Digs (human walkthrough during 195-06's operator checkpoint) +
+automated guard
+**Notes:** PASSED on both the visual and machine-enforced levels. Operator confirmed the legend
+plus the score-firewall note "Exposure map data is advisory and does not affect the
+quantum-readiness score." rendered visibly (`195-06-SUMMARY.md` step 5). Machine-enforced by
+`tests/test_exposure_map_score_guard.py` (`test_score_weights_has_no_exposure_map_key`,
+`test_exposure_map_module_never_imports_scoring`, `test_negative_control_ast_walk_detects_a_real_forbidden_import`,
+`test_derive_exposure_map_result_has_no_finding_shaped_keys`) — all four pass, confirmed by
+`195-03-SUMMARY.md`.
+
+---
+
+### UAT-195-06: No fabricated or inferred edge — every edge carries citable evidence (D-11, MAP-02)
+
+**ID:** UAT-195-06
+**Title:** Every edge rendered on the map carries a concrete, checkable evidence string; the
+backend guarantees no edge can reach the client without one, and `partial_only`-evidenced devices
+produce zero edges
+**Maps to:** MAP-02
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Digs (human walkthrough during 195-06's operator checkpoint) +
+automated guard
+**Notes:** PASSED. Operator confirmed the single rendered edge carried a concrete, checkable
+evidence string (SPKI fingerprint match) with nothing on the page implying a path beyond what the
+evidence states (`195-06-SUMMARY.md` step 6). Machine-enforced by
+`tests/test_exposure_map_edges.py::test_every_exposure_map_edge_has_evidence` (no edge without
+evidence can ever be constructed) and
+`tests/test_exposure_map_edges.py::test_partial_only_devices_produce_zero_edges` (the D-11
+evidence-required guard — devices with only partial evidence are excluded, never rendered as a
+weaker-confidence edge).
+
+---
+
+### UAT-195-07: MAP-01 reachability-source spike decision recorded and honored (D-13, MAP-01)
+
+**ID:** UAT-195-07
+**Title:** The dedicated MAP-01 spike recorded an operator-confirmed DEFERRED decision before any
+Tier B rendering work was planned, and no Tier B surface (declared-reachability red edge,
+crown-jewel declaration UX) shipped this phase
+**Maps to:** MAP-01
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (autonomous AskUserQuestion decision, Plan 01)
+**Notes:** PASSED. `.planning/phases/195-quantum-exposure-map/195-SPIKE-DECISION.md` records the
+operator-confirmed DEFERRED decision (2026-09-09), gating plans 08/09 (Tier B) to stop cleanly via
+a `DECISION:\s*GO` grep that does not match. Corroborated visually: the 195-06 walkthrough (step 5)
+confirmed the live legend shows exactly 2 rows (key-reuse, hardware-bridge) with no "Declared
+reachability" row, matching the DEFERRED decision.
+
+---
+
+### UAT-195-08: Crown-jewel badge — honest absence, no fabricated declaration data (MAP-02)
+
+**ID:** UAT-195-08
+**Title:** A node with a declared crown-jewel status shows the accent-teal badge with a tooltip;
+absent any declared crown jewel, no node shows a fabricated badge
+**Maps to:** MAP-02
+
+**Result:** - [x] SKIP  - [ ] PASS  - [ ] FAIL
+**Notes:** **GAP — no substitute coverage against live data.** Crown-jewel declaration is a Tier B
+surface deferred per the MAP-01 spike decision (UAT-195-07); no live crown-jewel data exists in any
+inspected DB, so the badge-rendering path is unexercisable with the current environment. Expected
+per the plan's own acceptance note ("if none exist, that is expected"). See `195-06-SUMMARY.md`
+walkthrough step 7.
+
+---
+
+**Series 195 disposition.** 5 of 8 cases (UAT-195-01, -02, -05, -06, -07) are `[x] PASS`,
+transcribed directly from the operator's approval during 195-06's live-dashboard walkthrough (plus
+the automated score-firewall and evidence-required guard test suites). 3 cases (UAT-195-03,
+UAT-195-04, UAT-195-08) are honestly `[x] SKIP` — two `GAP — no substitute coverage` (hardware-bridge
+styling and the crown-jewel badge, both unexercisable against this environment's live data, per
+`195-SPIKE-DECISION.md`'s investigation (b) and the MAP-01 DEFERRED decision) and one
+`DEFERRED — covered by component tests` (the empty-state branch, not exercised because the live DB
+had a populated graph). The Tier B reachability-declaration surface (declared-reachability red edge,
+declaration UX) was never built this phase per the operator-confirmed DEFERRED spike decision
+(UAT-195-07) — it is documented context, not a gap in this series' own scope. No case in this
+series was checked to satisfy the corpus-integrity gate without a corresponding real result.
+
+**Last Updated:** 2026-09-10 (Phase 195 Plan 07 — Series 195 added: Exposure Map dashboard tab
+operator walkthrough for MAP-01/MAP-02/MAP-03, 5 PASS / 3 honest GAP-or-DEFERRED, transcribed from
+the 195-06 operator-approved checkpoint plus the score-firewall and evidence-required automated
+guards)
