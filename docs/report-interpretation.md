@@ -1378,6 +1378,101 @@ identically to "not capped" rather than raising an error.
 > why — once that CRITICAL finding is remediated, the band will reflect the underlying score again
 > on your next scan."
 
+## 19.5 Executive Verdict (Phase 194, VERDICT-01)
+
+### What the verdict is
+
+The dashboard's Executive page renders an **Executive Verdict** panel above the four readiness
+gauges — a plain-language reading of the same server-computed readiness rating that already drives
+the score/band headline elsewhere in this document (§19). It exists to answer, in one glance,
+"is this environment quantum-ready" without asking a reader to interpret a 0-100 number
+themselves.
+
+### The band mapping
+
+The verdict maps the API's six-value `rating` enum to three plain-language outcomes:
+
+| API `rating` | Verdict label | Color |
+|---------------|----------------|-------|
+| `EXCELLENT`, `GOOD` | QUANTUM-READY | green (safe) |
+| `MODERATE`, `FAIR` | PARTIALLY READY | amber (at-risk) |
+| `POOR` | NOT QUANTUM-READY | red (vulnerable) |
+
+### The band comes from the API's rating, never a client-side cutoff
+
+Before this phase, the same panel (built on a code-review-sourced spike, never shipped) derived its
+band from a client-side `score >= 80` / `score >= 50` cutoff, independently of the server's own
+band computation. That path is gone. The verdict now reads the band **exclusively** from the
+`rating` field the `/api/scan/latest` payload already carries — the same field §19's severity-floor
+cap acts on — so the verdict and the score/band pair shown elsewhere on the page can never disagree.
+A `score: 91, rating: "POOR"` scan (the severity floor from §19 in effect) renders `NOT
+QUANTUM-READY`, matching the capped band, not a `QUANTUM-READY` a naive score-cutoff would have
+shown.
+
+### The cap reason
+
+When `rating_cap_reason` is set (§19's severity floor is active), the verdict panel shows an inline
+note directly beneath the band label:
+
+```
+Score capped: <reason>
+```
+
+This is not an error and not a second, competing signal — it is the same `rating_cap_reason` string
+§19 documents, rendered in the verdict panel as well as the score card. Read a capped band as a
+caveat on the number, not a contradiction of it: the score reflects the whole posture, the cap
+reflects one open CRITICAL finding holding the band back from what the raw number would otherwise
+suggest.
+
+### The honest-absence state
+
+A scan whose stored data predates rating computation (before v5.21) carries no `rating` value at
+all. Rather than guessing a band from the raw score alone, the verdict panel renders:
+
+```
+Verdict not available for this scan (pre-v5.21 data).
+```
+
+**This is not a poor result — it is an honest statement that no band was ever computed for this
+scan.** Treat it exactly as you would a missing field in any other report section: the absence of a
+verdict does not imply "not quantum-ready," it means the underlying scan ran before the product
+computed this signal at all. Re-scanning the same target with the current version produces a real
+rating and a real verdict.
+
+## 19.6 Certificate inventory completeness (Phase 194, DASH-09)
+
+### Only real certificates are listed
+
+The certificates page and the `/print` PDF export list only TLS endpoints that both (a) carry a
+certificate subject and (b) completed the TLS handshake without a scan error. A failed handshake
+never yields a certificate to inspect — attempting to synthesize or infer one from a failed
+connection would fabricate data the scan never actually observed, so the endpoint is excluded from
+the certificate table entirely rather than shown with blank or placeholder fields.
+
+### The disclosure line
+
+Whenever any TLS endpoints were excluded for this reason, both the dashboard certificates page and
+the `/print` PDF render the same disclosure line above the certificate table:
+
+```
+N TLS endpoints failed handshake and are not shown.
+```
+
+`N` is the server-authoritative `excluded_cert_count` field on the `/api/scan/latest` payload —
+never a client-side re-filter of the certificate list — so a reader can always reconcile the number
+of TLS endpoints the scan actually reached against the number of certificates shown in the table.
+The line appears identically on both surfaces because both read the same fixed payload; it is
+absent entirely when the exclusion count is zero.
+
+### Reading an empty table alongside a non-zero exclusion count
+
+`No TLS certificates discovered in this scan` can appear **at the same time** as a non-zero
+exclusion count in the disclosure line above it. Read that combination correctly: it means TLS
+endpoints were reached during the scan, but **none** of them completed a handshake that yielded a
+certificate — a real finding about the estate's TLS posture, not an empty or failed scan. An empty
+certificate table with **no** disclosure line above it means the opposite: no TLS endpoints were
+even attempted, which is the genuinely empty case.
+
 ## 20. Unreached Broker Target Advisory (Phase 190, TRIAGE-06)
 
 `connectors.broker_targets` (see [`docs/configuration.md`](configuration.md)) lets an operator
