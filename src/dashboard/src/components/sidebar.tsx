@@ -20,6 +20,7 @@ import {
   Radio,
   BookOpen,
   Server,
+  Network,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { path: "/certificates", label: "Certificates", Icon: Shield },
   { path: "/cbom", label: "CBOM Viewer", Icon: Database },
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },
+  { path: "/exposure-map", label: "Exposure Map", Icon: Network },
   { path: "/trends", label: "Trends", Icon: TrendingUp },
   { path: "/scans", label: "Scan History", Icon: History },
   { path: "/sensors", label: "Sensors", Icon: Radio },

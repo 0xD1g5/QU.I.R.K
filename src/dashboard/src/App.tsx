@@ -19,6 +19,7 @@ import { DataAtRestPage } from "@/pages/data-at-rest"
 import { CertificatesPage } from "@/pages/certificates"
 import { CbomPage } from "@/pages/cbom"
 import { RoadmapPage } from "@/pages/roadmap"
+import { ExposureMapPage } from "@/pages/exposure-map"
 import { TrendsPage } from "@/pages/trends"
 import { OrgProfilePage } from "@/pages/qramm-profile"
 import { AssessmentPage } from "@/pages/qramm-assessment"
@@ -70,6 +71,7 @@ function AppShell() {
             <Route path="/certificates" element={<CertificatesPage />} />
             <Route path="/cbom" element={<CbomPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
+            <Route path="/exposure-map" element={<ExposureMapPage />} />
             <Route path="/trends" element={<TrendsPage />} />
             <Route path="/print" element={<PrintPage />} />
             <Route path="/qramm" element={<OrgProfilePage />} />
