@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 195 plan 03 (exposure-map score-firewall + zero-inferred-edges guards) complete — proceeding to plan 04
-last_updated: "2026-09-10T03:16:23.653Z"
-last_activity: 2026-09-10 -- Phase 195 plan 03 complete (test_exposure_map_score_guard.py + test_exposure_map_edges.py)
+stopped_at: Phase 195 plan 04 (exposure-map schemas + auth-gated GET /api/exposure-map route) complete — proceeding to plan 05
+last_updated: "2026-09-10T03:20:07.822Z"
+last_activity: 2026-09-10 -- Phase 195 plan 04 complete (ExposureNode/ExposureEdge/ExposureMapResponse schemas + GET /api/exposure-map route + test_exposure_map_route.py)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 42
-  completed_plans: 36
+  completed_plans: 37
   percent: 80
 ---
 
@@ -1118,9 +1118,19 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 195 (Quantum Exposure Map) — EXECUTING
-Plan: 4 of 9
-Status: Executing Phase 195 (plans 01-03 complete; plan 04 next)
-Last activity: 2026-09-10 -- Phase 195 plan 03 complete (test_exposure_map_score_guard.py + test_exposure_map_edges.py)
+Plan: 5 of 9
+Status: Executing Phase 195 (plans 01-04 complete; plan 05 next)
+Last activity: 2026-09-10 -- Phase 195 plan 04 complete (ExposureNode/ExposureEdge/ExposureMapResponse schemas + GET /api/exposure-map route + test_exposure_map_route.py)
+
+**195-04 (complete, 2026-09-10) — Exposure-map schemas + auth-gated GET /api/exposure-map route (MAP-02).**
+`quirk/dashboard/api/schemas.py` gains `ExposureNode`/`ExposureEdge`/`ExposureMapResponse` (closed
+`edge_type` vocabulary, required non-empty `evidence`, no severity/score field, D-08 always-present
+typed lists). `quirk/dashboard/api/routes/exposure_map.py` (NEW) exposes `GET /api/exposure-map`
+router-level-auth-gated identically to `hardware_drift.router`, calling the importable
+`derive_exposure_map` orchestrator only (no route-private logic), degrading to an advisory-empty
+response on derivation error. Registered in `app.py`. `tests/test_exposure_map_route.py` covers
+auth gating, empty-DB honest absence, and seeded key-reuse-cluster evidence. Commits: `ae92ca83`,
+`4ea93cf5`, `2288e4ad`.
 
 **195-03 (complete, 2026-09-10) — Score-firewall (D-10) + zero-inferred-edges (D-11/D-12) permanent guards (MAP-03).**
 `tests/test_exposure_map_score_guard.py` (NEW) copies test_key_reuse_score_guard.py's 4-assertion
