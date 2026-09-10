@@ -26,6 +26,7 @@ from quirk.dashboard.api.middleware.security_headers import SecurityHeadersMiddl
 from quirk.dashboard.api.routes import (
     config,
     connectors,
+    exposure_map,
     hardware_drift,
     health,
     jobs,
@@ -129,6 +130,7 @@ def create_app(db_path: str | None = None) -> FastAPI:
     application.include_router(pdf.router, prefix="/api")
     application.include_router(scan.router, prefix="/api")
     application.include_router(hardware_drift.router, prefix="/api")
+    application.include_router(exposure_map.router, prefix="/api")
     application.include_router(trends.router, prefix="/api")
     application.include_router(qramm.router, prefix="/api")
     application.include_router(schedules.router, prefix="/api")
