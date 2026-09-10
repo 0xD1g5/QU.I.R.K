@@ -15,13 +15,13 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 
 ### Release Integrity
 
-- [ ] **REL-02**: Operator can `pip install quirk-scanner==5.21.0` — the `v5.21.0` tag is cut
+- [x] **REL-02**: Operator can `pip install quirk-scanner==5.21.0` — the `v5.21.0` tag is cut
       with every bump surface updated in the same change (pyproject bump + editable reinstall
       passing `tests/test_version.py`), and `release.yml` completes green across all three jobs
       (build, Windows package, PyPI publish) with Sigstore attestation verified against the
       published artifact. Gating — nothing else in this milestone ships ahead of the release it
       depends on for a clean version baseline (v5.18/v5.20 precedent).
-- [ ] **REL-03**: CHANGELOG's `[Unreleased]` content moves under `5.21.0` documenting v5.20 +
+- [x] **REL-03**: CHANGELOG's `[Unreleased]` content moves under `5.21.0` documenting v5.20 +
       v5.21 user-visible changes (scoring v2, dashboard parity, Exposure Map), and README /
       `docs/getting-started.md` / UAT-1-02 version surfaces read 5.21.0 consistently.
 
@@ -52,9 +52,9 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
       BACK-*/999.* ID may be neither closed-with-evidence nor listed in HORIZON.md's Open-Item
       Ledger; keyed on **title+ID** (BACK-68 names two unrelated items) and counting
       requirement-section-heading citations as closure.
-- [ ] **HOUSE-01**: Repo-root untracked clutter (`config-lab-*.yaml`, `output-*/` directories)
+- [x] **HOUSE-01**: Repo-root untracked clutter (`config-lab-*.yaml`, `output-*/` directories)
       is dispositioned — each file gitignored, relocated, or deleted with a recorded rationale.
-- [ ] **HUAT-01**: Phase 192's two deferred browser checks (Scan Coverage chips render/colors;
+- [x] **HUAT-01**: Phase 192's two deferred browser checks (Scan Coverage chips render/colors;
       Effective-config Raw YAML tab redaction — security-relevant) are executed against the
       released build and dispositioned in `docs/UAT-SERIES.md`.
 
@@ -83,10 +83,10 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REL-02 | Phase 196 | Pending |
-| REL-03 | Phase 196 | Pending |
-| HOUSE-01 | Phase 196 | Pending |
-| HUAT-01 | Phase 196 | Pending |
+| REL-02 | Phase 196 | Complete |
+| REL-03 | Phase 196 | Complete |
+| HOUSE-01 | Phase 196 | Complete |
+| HUAT-01 | Phase 196 | Complete |
 | PARITY-05 | Phase 197 | Pending |
 | PARITY-06 | Phase 197 | Pending |
 | PARITY-07 | Phase 197 | Pending |

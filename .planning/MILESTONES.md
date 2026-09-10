@@ -1,5 +1,226 @@
 # Milestones
 
+## v5.21 Dashboard Parity & Exposure Capability (Shipped: 2026-09-10)
+
+**Phases completed:** 5 phases (191-195), plans per phase 6/15/9/8/7 = 45 execution units (per
+`v5.21-MILESTONE-AUDIT.md` Phase Verifications table)
+**Requirements:** 13/13 satisfied (SPKI-01/02, PARITY-01..04, OBS-01/02, VERDICT-01, DASH-09,
+MAP-01/02/03)
+**Shipped jointly with v5.20 under the single `v5.21.0` tag** — this is the milestone whose own
+development-complete content is the more recent half of that release; there is no separate
+`v5.21.0`-only tag and none is intended. Source: `.planning/milestones/v5.21-MILESTONE-AUDIT.md`
+(audited 2026-09-10, status `tech_debt` — no blockers, accumulated deferred items only).
+
+**What this milestone was:** dashboard-facing parity work closing the gap between what the
+scanner already detects and what an operator can see without reading raw JSON — SPKI
+fingerprint persistence for cross-cert key-reuse detection, connector and credential
+configuration visibility (with fail-closed redaction), advanced scan fields, an unconditional
+executive verdict, a phantom-TLS-row fix, and a new Quantum Exposure Map dashboard tab rendering
+evidence-only crypto-bridge and key-reuse edges with a hard score-firewall guaranteeing map data
+can never influence the readiness score.
+
+**Key accomplishments:**
+
+- **SPKI fingerprint persistence (SPKI-01/02, Phase 191).** Certificates' SPKI fingerprints are
+  now persisted per crypto endpoint, powering key-reuse cluster detection consumed directly by
+  the later Exposure Map work — a live, human-approved checkpoint (UAT-191-06) confirmed the
+  fingerprint column and clustering query end-to-end.
+- **Config visibility + skip observability (PARITY-01, OBS-01/02, Phase 192).** 15/15 automated
+  checks passed; two browser-only checks (Scan Coverage chips, Effective-config Raw YAML
+  redaction) were deferred at phase close and closed later in this same release cycle by Phase
+  196 Plan 04 against the actually-released `5.21.0` PyPI build (HUAT-01).
+- **Connector & credential parity (PARITY-02/03, Phase 193).** A 9/9-verified, operator-approved
+  11-step UI walkthrough confirmed connector configuration and credential handling parity across
+  the dashboard's scan-creation surface.
+- **Advanced scan fields, executive verdict, phantom-cert fix (PARITY-04, VERDICT-01, DASH-09,
+  Phase 194).** An unconditional executive verdict now renders regardless of score-computation
+  edge cases; the phantom-cert dashboard bug (rows for endpoints that were never real certificate
+  endpoints) was fixed via an `_is_real_cert_endpoint()` filter with honest empty states,
+  resolving the pre-existing `dashboard-cert-view-phantom-tls-rows` pending todo.
+- **Quantum Exposure Map (MAP-01/02/03, Phase 195).** A new dashboard tab renders key-reuse
+  (amber/solid) and hardware crypto-bridge (gray/dashed) edges, each carrying a citable evidence
+  string — a backend guard (`tests/test_exposure_map_edges.py`) makes it structurally impossible
+  to construct an edge without evidence. A dedicated MAP-01 spike recorded an operator-confirmed
+  DEFERRED decision on Tier B (declared-reachability rendering, crown-jewel declaration UX)
+  before any of that surface was built — parked as backlog `999.107` (v2). The score-firewall
+  guarantee (exposure-map data can never affect `SCORE_WEIGHTS` or the scoring module) is
+  enforced by four automated negative-control tests, not just documentation.
+
+**Cross-phase integration:** 6/6 seams wired per the audit (195 reuses 191's key-reuse
+computation directly; 193/194 overlays compose in one `create_job()` path; 192's redaction covers
+193's credentials; all new routers registered; E2E submit→scan→coverage→report→exposure-map
+traced end-to-end) — 35 targeted tests passing, 0 orphaned routes, 0 broken flows.
+
+**Tech debt carried forward (non-blocking, recorded in the audit, not silently dropped):** 2
+deferred human browser checks (192, closed by Phase 196 Plan 04 per above), 11 INFO-level review
+polish items (192/193/194), and the deliberate Tier B exposure-map deferral (195, tracked as
+backlog `999.107`). `phase.complete`/`milestone.complete` GSD verbs remain UNSAFE on this machine
+(semantic defect class, TOOL-04/05) — this milestone's close, like v5.19's and v5.20's, was
+hand-written under the pre-image + signature-diff protocol, not via a mutating verb.
+
+---
+
+## v5.20 Release & Correctness Drain (Development complete: 2026-09-08 — shipped inside v5.21.0)
+
+**Phases completed:** 4 phases (187-190), phase scores 4/4, 9/9, 5/5, 8/8 per
+`v5.20-MILESTONE-AUDIT.md` Phase Verifications table
+**Requirements:** 10/10 satisfied (REL-01, SCORE-06/07, TRIAGE-03..09)
+**No `v5.20.0` release exists and none was ever cut.** This milestone reached development-complete
+status on 2026-09-08 (audit: `passed`, 10/10 requirements, 6/6 integration seams, 4374 passed / 0
+failed at audit time), but per the user-approved release-mechanics decision in `196-CONTEXT.md`,
+its content shipped for the first time as part of the single `v5.21.0` tag on 2026-09-10 — there
+is no retroactive `v5.20.0` tag, PyPI release, or GitHub release, and none should ever be
+fabricated. Source: `.planning/milestones/v5.20-MILESTONE-AUDIT.md`.
+
+**What this milestone was:** a release-mechanics-and-correctness drain immediately following
+v5.19's tooling-integrity work — the actual v5.19.0 release execution (Phase 187), a
+scoring-arithmetic correctness pass (SCORE-06/07, Phase 188), a config-correctness drain
+(TRIAGE-03/04/05/08/09, Phase 189), and a scanner port/protocol drain (TRIAGE-06/07, Phase 190).
+
+**Key accomplishments:**
+
+- **The v5.19.0 release itself (REL-01, Phase 187).** `quirk-scanner` 5.19.0 went live on PyPI,
+  release run `34172197429` green across all three jobs, Sigstore provenance verified via the
+  PyPI integrity endpoint — the release-mechanics template every later release in this project,
+  including v5.21.0, follows.
+- **Scoring correctness (SCORE-06/07, Phase 188).** Exclude-and-rescale aggregation replaced a
+  defect where an all-`CLOSED`-findings scan could fabricate a 100/100 score; a disclosure
+  ("N of 6 domains assessed") now appears on every report surface instead of a fabricated 0 for a
+  domain that was never actually computed. `severity_bands.py` became the single producer for
+  severity-band mapping, feeding the dashboard gauge, the notify payload, and the report band
+  identically — closing a frontend/backend threshold mismatch flagged as `WARN-01` in the v5.19
+  audit for the backend side but explicitly noting the frontend `ScoreGauge.tsx` leg (`999.92`)
+  remained open until this phase. Found post-plan: 4 Critical review findings (including the
+  all-CLOSED→100/100 defect itself), all fixed same-phase; operator visual UAT 3/3.
+- **Config correctness drain (TRIAGE-03/04/05/08/09, Phase 189).** Documentation config examples
+  now load via the real `load_config()` path rather than being hand-verified prose; an
+  execution-gated regression test proves it. `_as_int_list` plus a new `QRK-CONFIG-001` error
+  code closed a class of float/range/boolean config-parsing gaps. Port 22 (SSH) was confirmed
+  live to warrant a KEEP verdict in scope-derivation logic, with the rationale recorded in two
+  locations by design. The 99-item derived-gate backlog drain (TRIAGE-09) closed with a
+  non-vacuity guard proving the gate can actually fail.
+- **Scanner port/protocol drain (TRIAGE-06/07, Phase 190).** `broker_targets` port/protocol
+  detection verified end-to-end against live chaos-lab evidence at ports 29092/25671/26380;
+  Modbus detection was re-verified fresh against a live Schneider M221 PLC, with "no new fix
+  needed" as an honest, evidence-backed conclusion rather than an assumed pass. Found post-plan: 1
+  Critical review finding (advisory suppression, CR-01), fixed same-phase with live before/after
+  chaos-lab evidence.
+
+**Tech debt carried forward (non-blocking, recorded in the audit):** two `int`-coercion surfaces
+(`ScanSession.score`, `TrendSessionPoint.score`, `MergeLatestData.per_segment_scores`) can still
+fabricate a `0` for a not-computed score outside SCORE-06's corrected surfaces (188); four broker
+scanner-logic divergences found live during the 190 drain, filed to the HORIZON ledger at P3
+(`999.103`); duplicated `host:port` parsing between `config.py` and `target_trust.py` deferred
+(IN-02, 190); the BACK-51 report-writer duality confirmed live and staying open at P3 (189). The
+same cross-cutting GSD-toolchain hazards named in the v5.19 entry below (`phase.complete` unsafe,
+`state.planned-phase` misleading, bold-field search unscoped-latent) were carried forward
+unresolved through this milestone as pre-existing, not newly introduced.
+
+---
+
+## v5.19 Drain & Tooling Integrity (Shipped: 2026-09-07)
+
+**Phases completed:** 10 phases (177-186.1), 77 plans (9/9, 6/6, 7/7, 7/7, 6/6, 11/11, 10/10,
+7/7, 7/7, 7/7 per phase, matching STATE.md's `completed_plans: 77` at the time)
+**Requirements:** 15/15 satisfied, 0 orphaned
+**Released 2026-09-07 under the `v5.19.0` tag** — see UAT Series 187 for the release-verification
+evidence against the published artifact; `v5.19.0` was this project's first real release since
+5.12.0 (v5.16 and v5.17 had shipped development-complete but untagged). Source:
+`.planning/milestones/v5.19-MILESTONE-AUDIT.md` (re-audit, superseding an earlier same-day
+`gaps_found` run whose two named gaps — TOOL-01, TOOL-05 — Phase 186.1 closed before this audit).
+
+**What this milestone was:** a defect drain of the 18 genuine v5.17-surfaced defects' aftermath
+plus a sustained fight against a GSD toolchain that was silently corrupting `.planning/*.md` on
+every mutating `state.*` verb call (TOOL-01 through TOOL-05), closed by anchoring and scoping
+every unsafe field-regex construct across two separate toolchain installs.
+
+**Key accomplishments:**
+
+- **GSD state-verb integrity (TOOL-01 through TOOL-05).** An unanchored, unscoped bold-field
+  regex in the GSD toolchain's `state.*` verbs was clobbering narrative prose and dropping
+  frontmatter keys on this project's own `STATE.md`, across TWO separate toolchain installs
+  (`~/.claude/get-shit-done/` and a second, independently-resolving `~/.npm/_npx/<hash>/`
+  install used by `gsd-sdk`). Root-caused and fixed via anchoring plus a run-time source scan
+  that regenerates its own occurrence set on every run rather than trusting a hand-derived list —
+  which is what caught the third and fourth instances the hand-derived enumeration missed.
+  `phase.complete` was separately found to write well-formed but factually WRONG completion
+  state (a distinct SEMANTIC defect class no regex anchor can catch) live against Phase 186.1
+  itself, at 5/7 plans complete — this defect class remains open, tracked as three pending todos,
+  and is the reason this milestone's own close (like v5.20's and v5.21's) is hand-written.
+- **Scoring band single-producer contract wired backend-side (SCORE-04/05).** `severity_bands.py`
+  confirmed the sole producer for both backend consumers; the frontend `ScoreGauge.tsx` leg was
+  explicitly disclosed as still unconverged (`WARN-01`, `999.92`) rather than silently claimed
+  closed — fixed one milestone later in v5.20.
+- **10/10 phases verified**, each with a passing `*-VERIFICATION.md` and a `*-VALIDATION.md`
+  reading `nyquist_compliant: true`; plan counts equal SUMMARY counts for every phase (77/77
+  total), matching STATE.md.
+
+**Tech debt carried forward (non-blocking, recorded in the audit):** the SEMANTIC toolchain defect
+class (`phase.complete`, `state.planned-phase`) filed as 3 pending todos; frontend/backend score
+band threshold mismatch (`999.92`, closed in v5.20); readiness score awarding a full 25/25 to
+domains with zero evidence (`999.95`); 8 backlog items filed 2026-09-07 not yet reflected in
+HORIZON.md at audit time; the `260611-g0b-merge-healthcare-vertical-branch` quick-task's
+permanent false `status:missing` misreport by `audit-open` (a known, acknowledged scanner false
+positive, not a real gap).
+
+---
+
+## v5.18 Migration Execution (Shipped: 2026-09-03)
+
+**Phases completed:** 5 phases (177-181), 37 plans, 142 commits, 81 files changed
+(+12,744 / −276)
+**Requirements:** 16/16 complete
+**Released 2026-09-02 under the `v5.18.0` tag** (PyPI run `33656116783`) — this project's first
+real release since 5.12.0; v5.16 and v5.17 had both been developed, merged, and archived
+**untagged**, so v5.18.0 shipped all three milestones' content as a single release. **Source note:
+there is no `v5.18-MILESTONE-AUDIT.md`** — this entry is written from
+`.planning/milestones/v5.18-ROADMAP.md`'s archived-milestone header (the audit-equivalent record
+for this milestone) plus its `v5.18-phases/` directory, per this plan's explicit sourcing
+instruction for the one milestone lacking a dedicated audit file. Tests at close: 1 failed
+(carried `DEFER-172-01`), 4,014 passed.
+
+**What this milestone was:** closure tracking, end to end — QUIRK gained the ability to track
+remediation items to completion across re-scans and show movement against the roadmap rather than
+only against the score, with every closure claim gated on machine-observed evidence rather than a
+human assertion.
+
+**Key accomplishments:**
+
+- **A real release, after three silent failures.** v5.16 and v5.17 had shipped untagged; the last
+  actual PyPI publish before this milestone was 5.12.0. Phase 177 repaired install residue, bumped
+  to 5.18.0, and shipped all three unreleased milestones' content as one release — the
+  push-event-triggered `release.yml` run fired successfully for the first time since a prior
+  `v[0-9]*` trigger-glob fix.
+- **Finding identity stabilized.** `SHA256(host:port::title)` had interpolated 22 f-string titles
+  including a day counter, so cert-expiry findings minted a fresh ticket every day against a
+  docstring promising cross-scan stability. Three normalizer copies were collapsed into one
+  derived table with an AST guard bounding the title set.
+- **The trend report was structurally dead, and now isn't.** `compute_trend_report` had keyed on
+  a column populated only by three cloud connectors, so every scan silently reported 0 new / 0
+  resolved while passing its own tests — re-keyed with severity transitions preserved separately.
+- **Remediation items became real, trackable objects.** Stable kind-derived slugs joined to
+  constituent finding fingerprints let progress be expressed as "6 of 8 verified closed" instead
+  of a boolean that silently vanished when the last endpoint was fixed. Closure itself is
+  two-sided (detected by a prior scan AND verified absent by a healthy recheck), with `resurfaced`
+  modelled explicitly so a regression can never be miscounted as a second closure.
+- **PQC burndown made per-deadline.** EO 14412's key-establishment (2030-12-31) and
+  digital-signature (2031-12-31) deadlines are tracked as separate, never-summed buckets, verified
+  against the Federal Register primary source.
+- **ADVISORY-01 held throughout and closed in Phase 181**: closure state is machine-enforced,
+  across intelligence, report, CBOM, and dashboard surfaces, to never feed the quantum-readiness
+  score — proven by two guards with falsifiable negative controls.
+
+**Defects found in flight:** RELEASE-01's originally-stated root cause was falsified (the cited
+test used `pip install --dry-run`, which cannot observe the build backend — real cause was three
+distributions claiming one import package); a broken `quirk` on PATH pointing at the deleted
+predecessor project `QuRisk`; v5.16's archived roadmap had cited 325 undispositioned UAT cases
+against a true figure of 377; `hw_cve.py`'s catalog flipped STALE mid-phase at a 30-day boundary;
+all 33 a11y baselines had been generated on macOS but were being enforced on Linux CI; the scope
+signature was estate-blind (two clients on the same profile produced an identical digest) until
+fixed with a target-set digest in Phase 180.
+
+---
+
 ## v5.17 Defect Drain (Shipped: 2026-09-01)
 
 **Phases completed:** 5 phases (172-176), 28 plans + 2 user-directed addenda = 30 execution units
