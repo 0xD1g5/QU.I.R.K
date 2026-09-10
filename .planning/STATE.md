@@ -556,7 +556,7 @@ byte-identical before and after; (b) every frontmatter key present before the wr
 scalar-style change only, same string value) and `last_updated` (expected, legitimate), and
 recomputed `progress.completed_plans` from 5 to 7 — correct, since plans 182-06 and 182-07 had
 completed since the frontmatter was last hand-set — but computed `progress.percent` as `0`
-instead of `78`, and reset the body `## Current Position` to `Plan: 1 of 9` /
+instead of `78`, and reset the body `## Current Position` to `Plan: 7 of 9 (Tier A complete; 08/09 skipped — spike DEFERRED)` /
 `Status: Executing Phase 182` and `**Current focus:**` to a bare one-liner, all because
 `begin-phase` treats every invocation as the start of a phase, with no case for "this phase is
 already 7/9 plans in." **This is a genuine, distinct behavior worth naming for a future session:

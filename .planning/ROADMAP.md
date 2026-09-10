@@ -337,7 +337,7 @@ gated behind an explicit reachability-source decision made before any rendering 
 - [x] 195-04-PLAN.md — ExposureMapResponse schemas + auth-gated GET /api/exposure-map route + route tests
 - [x] 195-05-PLAN.md — Cytoscape Exposure Map tab (LR dagre, empty state, evidence tooltips, legend) + nav/route + component tests
 - [x] 195-06-PLAN.md — Human-verify checkpoint of the live map surface
-- [ ] 195-07-PLAN.md — Docs (report-interpretation + operators-guide) + UAT Series 195 + Obsidian sync
+- [x] 195-07-PLAN.md — Docs (report-interpretation + operators-guide) + UAT Series 195 + Obsidian sync
 - [ ] 195-08-PLAN.md — Tier B (spike GO only): operator crown-jewel/reachability persistence + validated declaration endpoint
 - [ ] 195-09-PLAN.md — Tier B (spike GO only): declaration UX + red declared-reachability edges + crown-jewel badges
 **UI hint**: yes
@@ -353,7 +353,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 8/8 | Complete   | 2026-09-09 |
-| 195. Quantum Exposure Map | 6/9 | In Progress|  |
+| 195. Quantum Exposure Map | 7/9 | In Progress|  |
 
 ## Backlog
 
