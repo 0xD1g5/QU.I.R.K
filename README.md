@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.19.0
+# QU.I.R.K. — v5.21.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -82,10 +82,17 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.19
+## What's New in v5.21
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
 
+- **v5.21 Dashboard Parity & Quantum Exposure Map (Phases 191-195)** — a Connectors panel and
+  Advanced scan-fields panel bring the dashboard's scan-creation form to parity with the config
+  file, an always-on Executive Verdict layer driven by the server's authoritative rating, a
+  phantom-certificate disclosure fix so excluded TLS endpoints are never silently dropped, and a
+  new Quantum Exposure Map tab visualizing key-reuse relationships from real scan evidence with a
+  score-firewall guard. Carries forward v5.20's scoring v2 change (below) — **scores from this
+  release are not comparable with pre-5.20 scores.**
 - **v5.19 Drain & Tooling Integrity (Phases 182-186.1)** — readiness-score correctness across
   coverage metrics, default-config scanning posture, timestamp handling, and a single-producer
   severity-band contract (`quirk/severity_bands.py`); drift-proof test-suite honesty gates so the

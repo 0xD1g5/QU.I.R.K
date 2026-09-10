@@ -5,7 +5,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
-## [Unreleased]
+## [5.21.0] - 2026-09-10
+
+Two development-complete milestones, shipped as a single release: v5.20's readiness-score
+correctness fixes and v5.21's dashboard parity and quantum-exposure capability work.
+
+### Added
+
+- **Connectors panel** (PARITY-02, PARITY-03, Phase 193) — the scan-creation form gained a
+  Connectors panel exposing all 25 `enable_*` connectors (Identity, Cloud, Database, Email &
+  Broker, OT/ICS, Source & API), each showing live availability with a disabled reason and
+  install hint when a connector's dependency is missing, masked (never-persisted) credential
+  inputs for enabled connectors, and a submit-time 422 gate that rejects a job before it is
+  created if a resolved connector is unavailable — whether explicitly toggled or auto-enabled by
+  a profile preset.
+- **Advanced scan-fields panel** (PARITY-04, Phase 194) — a collapsible Advanced section on the
+  scan form exposing TLS ports, TLS enumeration mode (Fast/Deep), discovery options, per-protocol
+  timeouts and retry count, and data classification, feeding the same live effective-config
+  preview the Connectors panel uses so the operator can see exactly what will be scanned before
+  submitting.
+- **Executive Verdict layer** (VERDICT-01, Phase 194) — the dashboard's executive page now shows
+  an always-on verdict band (safe / at-risk / vulnerable) driven exclusively by the scan's
+  server-computed rating, never re-derived from the raw score client-side, with an honest
+  "Verdict not available for this scan (pre-v5.21 data)" state for scans that predate this
+  feature and an inline note when a score has been capped.
+- **Quantum Exposure Map dashboard tab** (MAP-01, MAP-02, MAP-03, Phase 195) — a new dashboard
+  tab visualizing key-reuse relationships between scanned endpoints as a graph, built entirely
+  from real, already-collected scan evidence with zero fabricated or inferred edges and a
+  score-firewall guard proving the map can never influence the readiness score. Operator-declared
+  crown-jewel reachability scoring was investigated and deliberately deferred (parked as backlog
+  item 999.107) after confirming no scanned environment currently produces the live data that
+  feature would need.
+- **Scan Coverage and Effective-Config visibility** (OBS-01, OBS-02, PARITY-01, Phase 192) — scan
+  jobs now surface a Scan Coverage summary (what was actually scanned vs. what was configured)
+  and an Effective-Config panel with a live preview, including a Raw YAML tab, showing exactly
+  what configuration a scan will run with before it starts, with credential values fail-closed
+  redacted on every surface.
+
+### Fixed
+
+- **Phantom-certificate disclosure** (DASH-09, Phase 194) — TLS endpoints that failed the
+  handshake (no subject, scan error) are no longer silently dropped from the certificate list on
+  both the dashboard and the print/PDF report; both surfaces now disclose "{N} TLS endpoints
+  failed handshake and are not shown" whenever endpoints are excluded, so an all-phantom scan
+  reads as a real, disclosed finding instead of a suppressed empty list.
 
 ### Changed
 
@@ -39,6 +82,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
     The dashboard gauge's color boundaries shifted as a direct consequence (green now begins at 70,
     not 80; amber covers 35-69, not roughly 50-79; red begins below 35, not below 50) — this is the
     gauge now agreeing with the report band, not a new inconsistency.
+
+Separately from the product changes above: the GSD release toolchain that authors this project's
+own planning files had a second, semantic defect class (`phase.complete`/`milestone.complete`
+reporting a phase closed without checking that phase's own plans actually finished) found and
+filed open during this window, alongside continued hand-written closes under the pre-image +
+signature-diff protocol. This is operator-machine-local tooling work, not a change to the shipped
+product.
 
 ## [5.19.0] - 2026-09-07
 

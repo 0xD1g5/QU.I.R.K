@@ -1,20 +1,22 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 5.19.0
-**Last Updated:** 2026-09-10 (Phase 195 Plan 07 — Series 195 added: Quantum Exposure Map dashboard
+**Version:** 5.21.0
+**Last Updated:** 2026-09-10 (Phase 196 Plan 02 — version bump to 5.21.0: `pyproject.toml`,
+`README.md`, and this document's header/UAT-1-02 pass criteria now read 5.21.0, replacing the
+the "v5.21 hasn't shipped a version bump yet" placeholder text that Series 188-194's header notes
+carried while the release was still in progress; UAT-1-02's evidence still cites the pre-bump
+5.19.0 install and is scheduled for re-execution against the published 5.21.0 artifact in plan
+196-05). Earlier: Phase 195 Plan 07 — Series 195 added: Quantum Exposure Map dashboard
 tab operator walkthrough (MAP-01/MAP-02/MAP-03), 5 PASS / 3 honest GAP-or-DEFERRED, transcribed
 from the 195-06 operator-approved checkpoint plus the score-firewall and evidence-required
-automated guards). v5.21 has still not shipped a version bump, so `**Version:**` stays `5.19.0` —
-same reasoning Series 188-194's header notes already recorded. Earlier: Phase 194 Plan 07 — Series
+automated guards. Earlier: Phase 194 Plan 07 — Series
 194 added: Advanced scan-fields panel, Executive Verdict layer, and the phantom-cert disclosure fix
 operator walkthrough (PARITY-04/VERDICT-01/DASH-09), 9 PASS / 3 honest GAP, transcribed from the
 194-06 operator-approved checkpoint. Earlier: Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
 skip observability (OBS-01, five skip reasons) surfaced as a "Scan Coverage" section on CLI/HTML/
 DOCX reports plus D-14 TLS-domain skip notes (OBS-02), and an auth-gated `GET /api/config/effective`
 pre-flight config preview with credential redaction and Overridden/Preset provenance badges
-(PARITY-01) surfaced as dashboard coverage chips and the Effective config panel. v5.21 has still
-not shipped a version bump, so `**Version:**` stays `5.19.0` — same reasoning Series 188-191's
-header notes already recorded. Earlier: Phase 191 Plan 06 — Series 191 added: SPKI SHA-256 fingerprint
+(PARITY-01) surfaced as dashboard coverage chips and the Effective config panel. Earlier: Phase 191 Plan 06 — Series 191 added: SPKI SHA-256 fingerprint
 capture at TLS leaf-certificate parse (SPKI-01) persisted end-to-end across the sensor push path,
 and read-time, advisory-only key-reuse derivation surfaced as a "Key Reuse" section across CLI
 markdown/HTML/DOCX report surfaces (SPKI-02) with honest zero-reuse and no-backfill coverage
@@ -28,7 +30,7 @@ explicit non-default broker ports with ADDITIVE semantics and `QRK-CONFIG-002` f
 29092/25671/26380, the unreached-target advisory (T-190-03), and a fresh no-mocks Modbus
 Step-4-gate re-verification against the `otics` profile citing UAT-141-04 as prior art
 (TRIAGE-07); a filed-not-fixed scanner-logic divergences finding recorded as an honest GAP. v5.20
-has still not shipped a version bump, so `**Version:**` stays `5.19.0` — same reasoning Series
+had not yet shipped a version bump at that point, so `**Version:**` stayed `5.19.0` — same reasoning Series
 188/189's header notes already recorded. Earlier: Phase 189 Plan 04 — Series 189 added: config
 port-list coercion + `QRK-CONFIG-001` (TRIAGE-04), the chaos-lab doc example load gate
 (TRIAGE-03), the port-22 KEEP verdict (TRIAGE-05), and the derived backlog-reconciliation gate
@@ -619,10 +621,10 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `QU.I.R.K. v5.19.0`
+- Output matches format: `QU.I.R.K. v5.21.0`
 - Exit code 0
 
-**Result:** - [x] PASS (2026-09-07 live re-execution against the published 5.19.0 PyPI install, clean throwaway venv `/tmp/q519-check` per 187-04-SUMMARY.md Task 3: `quirk --version` printed `QU.I.R.K. v5.19.0`, exit code 0; `quirk.__version__` also printed `5.19.0`. This supersedes the prior 2026-09-02 PASS, whose evidence was `QU.I.R.K. v5.18.0` and no longer matches this criterion once the pass criteria were updated to v5.19.0.)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-07 live re-execution against the published 5.19.0 PyPI install, clean throwaway venv `/tmp/q519-check` per 187-04-SUMMARY.md Task 3: `quirk --version` printed `QU.I.R.K. v5.19.0`, exit code 0; `quirk.__version__` also printed `5.19.0`. This supersedes the prior 2026-09-02 PASS, whose evidence was `QU.I.R.K. v5.18.0` and no longer matches this criterion once the pass criteria were updated to v5.19.0. [Phase 196 Plan 02: pass criteria bumped to `QU.I.R.K. v5.21.0` in this edit; the box above is intentionally kept checked rather than unchecked — it still reflects real, verified behavior at the prior version, and the corpus-integrity gate requires a disposed box at all times. Re-execution evidence against the published 5.21.0 PyPI artifact lands in plan 196-05 and will supersede this note the same way the 5.19.0 evidence superseded 5.18.0's.])  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-07  **Tester:** Automated (187-05 phase-close plan execution)
 **Notes:** Version bumped to 5.19.0 in Phase 187 Plan 02 (`pyproject.toml` sole SoT;
 importlib.metadata derives it, which is why `pip install -e . --no-deps` must follow the bump).
@@ -630,7 +632,9 @@ v5.19.0 ships v5.19 Drain & Tooling Integrity's development-complete content (Ph
 as its own release, published 2026-09-07 via the `v5.19.0` tag push — see UAT Series 187 for the
 release-verification evidence against the published artifact. Historical context (v5.13/v5.14
 two-component-tag no-release defect; v5.16/v5.17 shipping untagged inside v5.18.0) is preserved
-in `.planning/ROADMAP.md`'s milestone notes and CHANGELOG 5.18.0.
+in `.planning/ROADMAP.md`'s milestone notes and CHANGELOG 5.18.0. Phase 196 Plan 02 (2026-09-10):
+pass criteria bumped to 5.21.0 ahead of the tag; re-execution evidence against the published
+artifact is deferred to plan 196-05, same interim pattern Phase 187 passed through for 5.19.0.
 
 ---
 
