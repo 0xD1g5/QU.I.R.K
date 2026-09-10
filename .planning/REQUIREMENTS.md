@@ -27,13 +27,13 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 
 ### Connector Parity Tail (999.104 Tier 2 residue — 37 fields)
 
-- [ ] **PARITY-05**: Operator can set per-connector target lists (jwt/container/source/identity
+- [x] **PARITY-05**: Operator can set per-connector target lists (jwt/container/source/identity
       connector families) from the dashboard scan form through the existing delta-overlay path
       (`build_job_config_dict` connectors overlay — never a `ScanJob` blob column).
-- [ ] **PARITY-06**: Operator can set connector endpoint/identifier fields (cloud provider IDs,
+- [x] **PARITY-06**: Operator can set connector endpoint/identifier fields (cloud provider IDs,
       k8s config, `vault_addr`) from the dashboard through the same overlay path with 422
       validation at both submit and preview.
-- [ ] **PARITY-07**: Remaining connector credential sub-fields ride the Phase-193 in-memory-only
+- [x] **PARITY-07**: Remaining connector credential sub-fields ride the Phase-193 in-memory-only
       credential path — never in `ScanJob`, job `config.yaml`, or logs — with the no-leak
       sentinel guard extended to cover them.
 
@@ -87,9 +87,9 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 | REL-03 | Phase 196 | Complete |
 | HOUSE-01 | Phase 196 | Complete |
 | HUAT-01 | Phase 196 | Complete |
-| PARITY-05 | Phase 197 | Pending |
-| PARITY-06 | Phase 197 | Pending |
-| PARITY-07 | Phase 197 | Pending |
+| PARITY-05 | Phase 197 | Complete |
+| PARITY-06 | Phase 197 | Complete |
+| PARITY-07 | Phase 197 | Complete |
 | PARITY-08 | Phase 198 | Pending |
 | PARITY-09 | Phase 198 | Pending |
 | GATE-04 | Phase 198 | Pending |

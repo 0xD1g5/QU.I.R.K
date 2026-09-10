@@ -26183,7 +26183,219 @@ for the two Phase 192 browser checks — those are dispositioned in place on UAT
 196-04 (D-U3). UAT-1-02 (Series 1) was also re-executed against this same published 5.21.0 build
 and its `[x] PASS` box updated with a superseding note — see that entry above.
 
-**Last Updated:** 2026-09-10 (Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
+### UAT-197-01: Target-List Field Set From the Dashboard Reaches the Job `config.yaml`
+
+**ID:** UAT-197-01
+**Title:** A dashboard-set target-list field (e.g. `jwt_targets`) lands in the submitted job's
+stored `config.yaml` alongside its `enable_*` toggle
+**Maps to:** PARITY-05
+
+**What to test:** submitting a job with an `enable_*` connector toggle and its target-list detail
+field set together writes both keys into the on-disk job `config.yaml` under `connectors:` —
+proving `enable_jwt`/`enable_container`/`enable_source`/`enable_kerberos` are no longer no-ops
+(D-14, success criterion 4) once an operator supplies both.
+
+**Steps:** covered by an automated, parametrized `TestClient`-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** for each of `(enable_jwt, jwt_targets)`, `(enable_container,
+container_targets)`, `(enable_source, source_targets)`, `(enable_kerberos, kerberos_targets)`, the
+on-disk `config.yaml` (read via `yaml.safe_load`) contains both the toggle and the populated
+target list under `connectors:`.
+
+**Falsifiability:** this case turns red if either key is missing from the written YAML, or if the
+target list value does not match what was submitted.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (197-03 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`tests/test_build_job_config_connectors_overlay.py::test_enable_toggle_no_longer_noop_at_job_yaml_level`
+(4-row parametrize over the pairs above, all passing per `197-03-SUMMARY.md` Task 2), with the
+contrast case `test_enable_toggle_without_targets_is_still_a_documented_noop` proving the
+pre-phase no-op state is unchanged when only the toggle is set. Live confirmation of the same
+data flow (dashboard form -> Effective config preview) is part of the D-13 operator walkthrough
+step 5.
+
+---
+
+### UAT-197-02: Endpoint/Identifier Field Round-Trips Through the Overlay
+
+**ID:** UAT-197-02
+**Title:** An endpoint/identifier field (`vault_addr`, `gcp_project_id`, or an identifier field
+like `adcs_user`) set from the dashboard reaches `config.yaml` in cleartext, and true secrets set
+in the same submission never do
+**Maps to:** PARITY-05, PARITY-07
+
+**What to test:** a full job submission setting non-secret identifier/endpoint detail fields
+(`adcs_user`, `pg_scanner_user`, `mysql_scanner_user`, `vault_addr`, `smime_timeout`) alongside
+real secret credentials (`adcs_password`, `pg_scanner_password`, `mysql_scanner_password`) in the
+same request lands the identifiers in the job's `config.yaml` `connectors:` block while the secret
+values never appear there or on the credential-env output surface (D-04 identifier/secret
+boundary).
+
+**Steps:** covered by an automated `TestClient`-driven test — no manual execution required for
+this case.
+
+**Pass Criteria:** the on-disk `config.yaml` contains the identifier/endpoint field values in
+cleartext; the same file and `_build_credential_env`'s `injected_env`/`yaml_fragment` output
+contain none of the submitted secret values.
+
+**Falsifiability:** this case turns red if an identifier field is missing from `config.yaml`, or
+if any secret value leaks into `config.yaml`, `injected_env`, or the YAML fragment.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (197-03 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`tests/test_connector_detail_identifier_boundary.py::test_detail_identifiers_land_in_config_yaml_cleartext_never_in_credential_env`,
+which asserts both halves (identifiers present in cleartext, secrets absent) in one test so the
+distinction cannot be misread later. `test_identifier_detail_fields_never_reach_credential_env_path`
+provides a second, independent proof of the second half.
+
+---
+
+### UAT-197-03: 422 Parity Between Submit and Effective-Config Preview for an Unknown/Invalid Connector Key
+
+**ID:** UAT-197-03
+**Title:** An unrecognized or wrong-typed `connectors` overlay key is rejected with the same
+verdict and the same named offender at both `POST /api/jobs` and `GET /api/config/effective`
+**Maps to:** PARITY-06
+
+**What to test:** submit and preview must never disagree on whether a given `connectors` overlay
+payload is valid — the same shared validator (`validate_connectors_overlay`) gates both paths.
+
+**Steps:** covered by a 13-row parametrized `TestClient`-driven test (6 accept, 7 reject rows) —
+no manual execution required for this case; a live spot-check of one reject case is also covered
+by the D-13 operator walkthrough step 10 (a bad `smime_timeout` value at submit).
+
+**Pass Criteria:** for every row, submit and preview return the same accept/reject verdict, and on
+rejection both 422 bodies name the same offending key.
+
+**Falsifiability:** this case turns red if submit and preview ever disagree, or if a rejection's
+named key differs between the two surfaces. The plan's own deliberate-break check (reverting
+`routes/config.py`'s widened validation call) demonstrated 10 of 13 parametrize rows failing —
+proving this test is not vacuously passing.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (197-01 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`tests/test_connector_detail_overlay_lockstep.py::test_lockstep_parity`, with the deliberate-break
+check performed and reverted, transcribed in `197-01-SUMMARY.md` Task 3 (10/13 rows failed on the
+broken variant, all 16 tests in the file passed after restore, confirmed via
+`git diff --stat quirk/dashboard/api/routes/config.py` showing zero residual change).
+
+---
+
+### UAT-197-04: Delete-on-Blank Delta Semantics for Detail Fields
+
+**ID:** UAT-197-04
+**Title:** Clearing a detail field back to blank deletes its key from the submitted delta rather
+than sending an empty string or empty list (D-08), and an untouched form is byte-identical to
+pre-phase behavior
+**Maps to:** PARITY-05, PARITY-06
+
+**What to test:** the frontend's `isBlankDetailValue`/`setDetailField` delete-on-blank gate, and
+the backend's byte-identical-on-empty-overlay guard, both hold for the widened 37-field set —
+including the `vault_tls_verify: false` edge case, which must NOT be treated as blank.
+
+**Steps:** covered by automated Vitest component tests and pytest byte-identity tests — no manual
+execution required for this case; live confirmation of the field-clearing UX is also covered by
+the D-13 operator walkthrough step 6.
+
+**Pass Criteria:** clearing a list field deletes its key (never `[]`); toggling `vault_tls_verify`
+off writes an explicit `false` (never deleted, since `false` is a real, non-blank value); an
+untouched form calls `onConnectorsChange` zero times and produces the pre-phase submit body /
+Effective Config query string exactly.
+
+**Falsifiability:** this case turns red if a cleared field is submitted as `""`/`[]`, if
+`vault_tls_verify: false` is silently dropped, or if an untouched form's submit body/query string
+differs from pre-phase behavior.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (197-02 phase-execution plan)
+**Notes:** DEFERRED — covered by `ConnectorsPanel.test.tsx`'s "Test C (D-08 delete-on-blank)" and
+"D-08 untouched-form parity: expanding the panel and touching nothing never calls
+onConnectorsChange" cases, plus the "Test D (deliberate-break check, performed and reverted)" case
+which proved a truthiness-based blank predicate would wrongly delete an explicit `false` (caught
+by "Test D (Pitfall 6)" failing on the broken variant, per `197-02-SUMMARY.md` Task 2). Backend
+byte-identity covered by
+`tests/test_build_job_config_connectors_overlay.py::test_connectors_overlay_none_and_empty_dict_byte_identical`
+and `EffectiveConfigPanel.test.tsx`'s matching query-string byte-identity case.
+
+---
+
+### UAT-197-05: `vault_tls_verify` Renders Pre-Checked (Default-True) on the Dashboard
+
+**ID:** UAT-197-05
+**Title:** The Vault connector's TLS-verification Switch renders CHECKED by default, matching the
+`hvac.Client(verify=...)` config default of `true`, without the operator touching it
+**Maps to:** PARITY-05
+
+**What to test:** when `vault_tls_verify` is absent from the connectors state (the common case —
+an operator who has not touched this field), the rendered Switch must show CHECKED, not an
+unstyled/unchecked default — an unchecked switch here would misrepresent the actual scan behavior
+as TLS-verification-disabled when it is not.
+
+**Steps:** covered by an automated Vitest component test — no manual execution required for this
+case; live confirmation is also covered by the D-13 operator walkthrough step 7, which explicitly
+names an unchecked switch here as a bug.
+
+**Pass Criteria:** the Switch renders CHECKED when `vault_tls_verify` is absent from state;
+toggling it off writes an explicit `vault_tls_verify: false` into the connectors delta.
+
+**Falsifiability:** this case turns red if the Switch renders unchecked by default, or if turning
+it off silently drops the key instead of sending `false`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (197-02 phase-execution plan)
+**Notes:** DEFERRED — covered by `ConnectorsPanel.test.tsx`'s "Test D (Pitfall 6): vault_tls_verify
+Switch renders CHECKED when absent from state; turning it off writes an explicit false" case, per
+`197-02-SUMMARY.md` Task 2. Independently re-confirmed live at the D-13 walkthrough (step 7).
+
+---
+
+### UAT-197-06: Amber "Enabled With No Targets" Hint
+
+**ID:** UAT-197-06
+**Title:** A connector with one or more list-typed detail fields shows an amber non-blocking hint
+when enabled but every target-list field is blank, and the hint is absent for zero-list connectors
+**Maps to:** PARITY-05
+
+**What to test:** the enabled-with-empty-targets hint (197-CONTEXT.md specifics section, copy
+locked in 197-UI-SPEC.md's Copywriting Contract) fires only for connectors with 1+ list/pairlist
+fields when all are blank, disappears once a target is supplied, and never fires for a
+zero-list-field connector such as GCP (`gcp_project_id` only).
+
+**Steps:** covered by an automated Vitest component test — no manual execution required for this
+case; live confirmation is also covered by the D-13 operator walkthrough steps 3-4.
+
+**Pass Criteria:** the amber hint renders with the exact copy from the Copywriting Contract when a
+connector is ON and all its list fields are blank; disappears the moment any list field gets a
+non-blank value; never renders for GCP.
+
+**Falsifiability:** this case turns red if the hint fires for a zero-list connector, fails to
+disappear once targets are supplied, or its copy deviates from the UI-SPEC contract.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (197-02 phase-execution plan)
+**Notes:** DEFERRED — covered by `ConnectorsPanel.test.tsx`'s "Test E (empty-targets hint): enabled
+with no targets shows the amber hint; supplying targets removes it; a zero-list connector never
+shows it", per `197-02-SUMMARY.md` Task 2. Independently re-confirmed live at the D-13 walkthrough
+(steps 3-4).
+
+---
+
+**Series 197 disposition.** All six cases are honest `[x] SKIP` with `DEFERRED — covered by
+<test-node>` annotations, citing real, currently-passing test nodes from `197-01-SUMMARY.md`,
+`197-02-SUMMARY.md`, and `197-03-SUMMARY.md` — none was checked PASS without being run, and none
+substitutes a false PASS for genuine coverage. The D-13 operator walkthrough (a separate
+`checkpoint:human-verify` gate, not a UAT-series case) independently re-confirms the
+behaviorally-visible subset of this series live against the dashboard, per 197-04-PLAN.md Task 3.
+
+**Last Updated:** 2026-09-10 (Phase 197 Plan 04 — Series 197 added: 6 connector-detail-field
+cases (job-YAML target reach, identifier/secret boundary round-trip, submit/preview 422 lockstep,
+delete-on-blank delta semantics, vault_tls_verify default-true, empty-targets amber hint), all
+honest `[x] SKIP` / `DEFERRED — covered by <test-node>` citing 197-01/02/03-SUMMARY.md test
+evidence. Earlier: Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
 for v5.21.0 (PyPI install, Sigstore provenance, tag/workflow, Windows asset), all `[x] PASS`
 against `196-03-SUMMARY.md`'s verbatim published-artifact evidence; UAT-1-02 re-executed and
 superseded to the same published build)
