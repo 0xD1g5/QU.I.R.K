@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-05-PLAN.md
-last_updated: "2026-09-09T13:22:00.000Z"
-last_activity: 2026-09-09 -- Phase 194 plan 05 (Advanced scan fields UI: AdvancedPanel.tsx, scan-new.tsx wiring, EffectiveConfigPanel.tsx query extension, PARITY-04) complete
+stopped_at: Completed 194-06-PLAN.md
+last_updated: "2026-09-09T14:10:00.000Z"
+last_activity: 2026-09-09 -- Phase 194 plan 06 (operator walkthrough checkpoint approved — PARITY-04/VERDICT-01 flipped Complete) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 30
-  percent: 91
+  completed_plans: 31
+  percent: 94
 ---
 
 # Project State
@@ -50,7 +50,23 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-05 of N complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-06 of 8 complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-06 (complete, 2026-09-09) — Operator walkthrough checkpoint approved; PARITY-04 and VERDICT-01 flipped Complete.**
+Task 1 built the dashboard, started it against the canonical DB (`./quirk-output/quirk.db`),
+confirmed no `VITE_VERDICT_LAYER` env var set, and recorded the live comparison evidence: `rating:
+GOOD`, `rating_cap_reason: null`, `excluded_cert_count: 0`, `certificates` array length 0. `npm run
+build && npm run lint && npm run test` all exit 0. Task 2 (checkpoint:human-verify) presented the
+13-step walkthrough (steps 2-14) covering all three surfaces this phase changed — Advanced scan
+fields, Executive Verdict, and the phantom-cert fix — and the operator replied "Approved" at
+http://127.0.0.1:8512/. 10 of 13 steps PASS on direct visual confirmation; 3 steps (step 10's
+honest-absence card, step 11's positive blank-subject claim, step 12's positive disclosure-line
+claim) are honestly dispositioned GAP because the live scan's data (`rating: GOOD`, not null;
+`excluded_cert_count: 0`, not >0) did not contain the conditions those steps test — per the plan's
+T-194-20 mitigation, a GAP is never inflated to PASS on test-suite evidence alone. Zero FAIL.
+PARITY-04 and VERDICT-01 hand-flipped `[x]` Complete in `REQUIREMENTS.md` (DASH-09 was already
+flipped by 194-04) — all three of this phase's requirements are now Complete. No application code
+changes; checkpoint-only plan. See `194-06-SUMMARY.md`.
 
 **194-05 (complete, 2026-09-09) — Advanced scan fields UI: collapsed "Advanced" section on the scan form, feeding the live effective-config preview (PARITY-04).**
 New `AdvancedPanel.tsx` — structural analog of `ConnectorsPanel.tsx`'s collapsible shell and
@@ -1011,9 +1027,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — EXECUTING
-Plan: 4 of 8
+Plan: 6 of 8
 Status: Executing Phase 194
-Last activity: 2026-09-09 -- Phase 194 plan 04 (phantom-cert disclosure line + D-14 empty state on certificates.tsx and print.tsx, DASH-09) complete
+Last activity: 2026-09-09 -- Phase 194 plan 06 (operator walkthrough checkpoint approved — PARITY-04/VERDICT-01 flipped Complete, DASH-09 already complete) complete
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
@@ -1844,8 +1860,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-09T04:40:54.941Z
-Stopped at: Phase 194 execution started (wave 1 of 5)
+Last session: 2026-09-09T14:10:00.000Z
+Stopped at: Phase 194 plan 194-06 complete (operator walkthrough approved, plan 6 of 8)
 Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

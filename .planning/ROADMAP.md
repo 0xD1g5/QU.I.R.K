@@ -300,7 +300,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 194-06-PLAN.md — operator UI walkthrough checkpoint across all three surfaces (blocking)
+- [x] 194-06-PLAN.md — operator UI walkthrough checkpoint across all three surfaces (blocking)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -343,7 +343,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
-| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 4/8 | In Progress|  |
+| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 6/8 | In Progress|  |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
 ## Backlog

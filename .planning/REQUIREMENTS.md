@@ -27,7 +27,7 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 - [x] **PARITY-03**: Operator can supply connector credentials at scan-submit time through an
       in-memory-only path — credentials never land in `ScanJob`, the job `config.yaml`, or any
       log (extends the Phase 59 `safe_str` no-log gate to the new request fields).
-- [ ] **PARITY-04**: Operator can set advanced scan-behavior fields (TLS port lists (SSH list dropped per Phase 194 D-18/999.106 — not a CLI field),
+- [x] **PARITY-04**: Operator can set advanced scan-behavior fields (TLS port lists (SSH list dropped per Phase 194 D-18/999.106 — not a CLI field),
       `tls_enum_mode`, discovery options, timeouts/retry) in a collapsed "advanced" section of
       the scan form, composing with (not fighting) vertical presets under a single recorded
       precedence rule.
@@ -54,7 +54,7 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 
 ### Executive Verdict (999.100)
 
-- [ ] **VERDICT-01**: Consultant sees the Executive Verdict layer on the dashboard by default
+- [x] **VERDICT-01**: Consultant sees the Executive Verdict layer on the dashboard by default
       (no flag gate), landed by cherry-picking only commit `f05e7dc7` from `origin/UX-Updates`
       (never a branch merge — the branch is 7 months stale) and rewired to consume
       `rating`/`rating_cap_reason` from the API instead of re-deriving score bands client-side.
@@ -108,12 +108,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PARITY-01 | 192 | Complete (2026-09-09) |
 | PARITY-02 | 193 | Complete |
 | PARITY-03 | 193 | Complete |
-| PARITY-04 | 194 | Pending |
+| PARITY-04 | 194 | Complete (2026-09-09) |
 | OBS-01 | 192 | Complete (2026-09-09) |
 | OBS-02 | 192 | Complete (2026-09-09) |
 | SPKI-01 | 191 | Complete |
 | SPKI-02 | 191 | Complete |
-| VERDICT-01 | 194 | Pending |
+| VERDICT-01 | 194 | Complete (2026-09-09) |
 | DASH-09 | 194 | Complete |
 | MAP-01 | 195 | Pending |
 | MAP-02 | 195 | Pending |
@@ -126,4 +126,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-09-08*
-*Last updated: 2026-09-08 after initial definition*
+*Last updated: 2026-09-09 after 194-06 operator walkthrough approval (PARITY-04, VERDICT-01 flipped Complete)*
