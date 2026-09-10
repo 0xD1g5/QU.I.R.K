@@ -24,7 +24,7 @@ import uuid
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from quirk.errors import format_error
@@ -38,6 +38,7 @@ from quirk.dashboard.api.schemas import (
     AdvancedScanFields,
     JobStatusResponse,
     ScanSubmitRequest,
+    validate_connectors_overlay,
 )
 from quirk.models import ScanJob
 
@@ -123,7 +124,9 @@ def build_job_config_dict(
     port_scope: str = "top1000",
     custom_ports: Optional[str] = None,
     *,
-    connectors_overlay: Optional[Dict[str, bool]] = None,
+    connectors_overlay: Optional[
+        Dict[str, Union[bool, str, int, List[str], List[dict]]]
+    ] = None,
     scan_overlay: Optional[Dict[str, Any]] = None,
     assessment_overlay: Optional[Dict[str, Any]] = None,
 ) -> dict:

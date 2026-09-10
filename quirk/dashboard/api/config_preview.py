@@ -20,7 +20,7 @@ from __future__ import annotations
 import dataclasses
 import tempfile
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Union
 
 import yaml
 
@@ -61,7 +61,9 @@ def resolve_effective_config(
     port_scope: str = "top1000",
     custom_ports: Optional[str] = None,
     vertical: Optional[str] = None,
-    connectors_overlay: Optional[Dict[str, bool]] = None,
+    connectors_overlay: Optional[
+        Dict[str, Union[bool, str, int, List[str], List[dict]]]
+    ] = None,
     scan_overlay: Optional[Dict[str, object]] = None,
     assessment_overlay: Optional[Dict[str, object]] = None,
 ) -> tuple[AppConfig, dict, frozenset[str]]:

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -755,6 +755,182 @@ class TrendTimelineResponse(BaseModel):
     sessions: List[TrendSessionPoint] = []
 
 
+# Phase 197 / PARITY-05 / PARITY-06 / D-09: 37-entry hand-written type map for
+# the connectors overlay's non-toggle "detail" fields (target lists,
+# endpoint/identifier strings, two timeouts, one boolean). Hand-written per
+# RESEARCH Pitfall 2 -- `dataclasses.fields(ConnectorsCfg)`'s `field.type`
+# carries `Optional[...]`/`List[...]` wrappers that are not directly
+# `isinstance`-able, so this maps each field name to its UNWRAPPED wire type.
+# The *key-name* allowlist stays reflection-derived from `_KNOWN_CONNECTOR_KEYS`
+# (quirk.config) -- only the type mapping itself is hand-written, verified
+# live against `ConnectorsCfg` at plan-execution time (197-01-PLAN.md
+# field_inventory).
+_CONNECTOR_DETAIL_KEY_TYPES: Dict[str, type] = {
+    # list[str] (16)
+    "jwt_targets": list,
+    "container_targets": list,
+    "source_targets": list,
+    "kerberos_targets": list,
+    "saml_targets": list,
+    "dnssec_targets": list,
+    "smime_targets": list,
+    "adcs_targets": list,
+    "azure_keyvault_urls": list,
+    "pg_targets": list,
+    "mysql_targets": list,
+    "broker_targets": list,
+    "broker_azure_namespaces": list,
+    "broker_sqs_regions": list,
+    "gke_clusters": list,
+    "aks_clusters": list,
+    # str (18)
+    "aws_region": str,
+    "aws_profile": str,
+    "aws_endpoint_url": str,
+    "azure_subscription_id": str,
+    "gcp_project_id": str,
+    "dnssec_resolver": str,
+    "smime_search_base": str,
+    "adcs_search_base": str,
+    "adcs_user": str,
+    "pg_scanner_user": str,
+    "mysql_scanner_user": str,
+    "k8s_provider": str,
+    "k8s_cluster_name": str,
+    "k8s_namespace": str,
+    "k8s_kubeconfig": str,
+    "k8s_context": str,
+    "vault_addr": str,
+    "vault_transit_mount": str,
+    # int (2)
+    "smime_timeout": int,
+    "adcs_timeout": int,
+    # bool (1)
+    "vault_tls_verify": bool,
+}
+
+# gke_clusters / aks_clusters elements are dicts with exactly these string
+# keys -- `quirk/scanner/k8s_connector.py` subscripts `cfg["location"]` /
+# `cfg["name"]` (GKE) and `cfg["resource_group"]` / `cfg["name"]` (AKS) at
+# scan time, so a bare-string element must be rejected here rather than
+# raising a late `TypeError` inside the scanner.
+_K8S_CLUSTER_DICT_KEYS: Dict[str, frozenset] = {
+    "gke_clusters": frozenset({"name", "location"}),
+    "aks_clusters": frozenset({"name", "resource_group"}),
+}
+
+_CONNECTOR_STR_MAX_LENGTH = 512
+_CONNECTOR_LIST_MAX_LENGTH = 256
+_CONNECTOR_TIMEOUT_MIN = 1
+_CONNECTOR_TIMEOUT_MAX = 300
+
+
+def validate_connectors_overlay(v: Optional[dict]) -> Optional[dict]:
+    """Single implementation of connectors-overlay validation, shared by
+    `ScanSubmitRequest.connectors` (submit, enforcement point a),
+    `build_job_config_dict` (job YAML merge, enforcement point b), and
+    `GET /api/config/effective`'s `connectors` query param (preview,
+    enforcement point c) -- Phase 197 / PARITY-05 / PARITY-06 / D-09/D-10/D-11.
+
+    Widens the pre-Phase-197 enable_*-boolean-only gate to also accept the 37
+    residual `connectors.*` detail fields (target lists, endpoint/identifier
+    strings, two timeouts, one boolean), while preserving every existing
+    guarantee: the DoS length bound, the unknown-key rejection message shape,
+    and `enable_*` keys still requiring `bool`. Raises `ValueError` (never
+    `HTTPException`) so every caller maps it to its own 422 -- this is the one
+    function RESEARCH Pitfall 1's lockstep requirement depends on; widening
+    only a subset of the three call sites reproduces exactly the bug this
+    function exists to prevent. Never echoes the offending VALUE back in a
+    message, only the key name (T-197-03).
+    """
+    if v is None:
+        return v
+
+    from quirk.config import _KNOWN_CONNECTOR_KEYS
+
+    if len(v) > len(_KNOWN_CONNECTOR_KEYS):
+        raise ValueError(
+            f"connectors payload has {len(v)} entries, more than the "
+            f"{len(_KNOWN_CONNECTOR_KEYS)} known connector fields"
+        )
+    unknown = sorted(k for k in v if k not in _KNOWN_CONNECTOR_KEYS)
+    if unknown:
+        raise ValueError(f"Unknown connector key(s): {', '.join(unknown)}")
+
+    for key, value in v.items():
+        if key.startswith("enable_"):
+            if not isinstance(value, bool):
+                raise ValueError(f"{key!r} must be a boolean toggle")
+            continue
+
+        # D-04 boundary: true secrets (adcs_password, vault_token,
+        # pg_scanner_password, mysql_scanner_password, snmp_community) and
+        # out-of-phase-scope fields (codesign_*, snmp_v3_credentials,
+        # _user_set_fields) are real ConnectorsCfg fields but are NOT among
+        # the 37 detail fields this phase widens the overlay to carry --
+        # secrets ride the Phase-193 env-var path only, never this overlay.
+        if key not in _CONNECTOR_DETAIL_KEY_TYPES:
+            raise ValueError(
+                f"{key!r} is not a recognized connector overlay field (must "
+                "be a known enable_* toggle or one of the supported "
+                "connector detail fields)"
+            )
+
+        expected = _CONNECTOR_DETAIL_KEY_TYPES[key]
+
+        if expected is bool:
+            if not isinstance(value, bool):
+                raise ValueError(f"{key!r} must be a boolean")
+        elif expected is int:
+            # isinstance(True, int) is True in Python -- explicitly reject bool.
+            if type(value) is bool or not isinstance(value, int):
+                raise ValueError(f"{key!r} must be an integer")
+            if not (_CONNECTOR_TIMEOUT_MIN <= value <= _CONNECTOR_TIMEOUT_MAX):
+                raise ValueError(
+                    f"{key!r} must be between {_CONNECTOR_TIMEOUT_MIN} and "
+                    f"{_CONNECTOR_TIMEOUT_MAX}"
+                )
+        elif expected is str:
+            if not isinstance(value, str):
+                raise ValueError(f"{key!r} must be a string")
+            if len(value) > _CONNECTOR_STR_MAX_LENGTH:
+                raise ValueError(
+                    f"{key!r} must be at most {_CONNECTOR_STR_MAX_LENGTH} characters"
+                )
+        elif expected is list:
+            if not isinstance(value, list):
+                raise ValueError(f"{key!r} must be a list")
+            if len(value) > _CONNECTOR_LIST_MAX_LENGTH:
+                raise ValueError(
+                    f"{key!r} must have at most {_CONNECTOR_LIST_MAX_LENGTH} elements"
+                )
+            dict_keys = _K8S_CLUSTER_DICT_KEYS.get(key)
+            if dict_keys is not None:
+                for element in value:
+                    if (
+                        not isinstance(element, dict)
+                        or set(element.keys()) != dict_keys
+                        or not all(isinstance(val, str) for val in element.values())
+                    ):
+                        raise ValueError(
+                            f"{key!r} elements must be objects with keys "
+                            f"{sorted(dict_keys)} and string values"
+                        )
+            else:
+                for element in value:
+                    if not isinstance(element, str):
+                        raise ValueError(f"{key!r} elements must be strings")
+                    if len(element) > _CONNECTOR_STR_MAX_LENGTH:
+                        raise ValueError(
+                            f"{key!r} elements must be at most "
+                            f"{_CONNECTOR_STR_MAX_LENGTH} characters"
+                        )
+        else:  # pragma: no cover -- defensive, every mapped type is handled above
+            raise ValueError(f"{key!r} has an unsupported type mapping")
+
+    return v
+
+
 # Phase 194 / PARITY-04 / D-01 / D-02 / D-13-precedent: advanced scan-behavior
 # field overlay. Mirrors ScanSubmitRequest.connectors' delta-only shape
 # (Phase 193 / PARITY-02 / D-13) but is `extra="forbid"` rather than
@@ -827,8 +1003,13 @@ class ScanSubmitRequest(BaseModel):
     custom_ports: Optional[str] = None
 
     # Phase 193 / PARITY-02 (D-13): delta-only connector toggle overlay, key
-    # = enable_* flag name.
-    connectors: Optional[Dict[str, bool]] = None
+    # = enable_* flag name. Phase 197 / PARITY-05 / PARITY-06 / D-09: widened
+    # to also carry the 37 residual connectors.* detail fields (target lists,
+    # endpoint/identifier strings, two timeouts, one boolean) -- see
+    # `validate_connectors_overlay` for the shared type-check body.
+    connectors: Optional[
+        Dict[str, Union[bool, str, int, List[str], List[dict]]]
+    ] = None
     # Phase 193 / PARITY-03 (D-09/D-10/D-11): request-scoped credential
     # values, NEVER persisted -- see class docstring.
     credentials: Optional[Dict[str, str]] = None
@@ -851,37 +1032,18 @@ class ScanSubmitRequest(BaseModel):
     @field_validator("connectors")
     @classmethod
     def known_connector_toggle_keys_only(
-        cls, v: Optional[Dict[str, bool]]
-    ) -> Optional[Dict[str, bool]]:
-        """Allowlist submitted connector keys against ConnectorsCfg's own
-        field set (D-13 + ASVS V5). Rejects rather than silently drops, so
-        the operator learns their toggle did nothing. Also requires an
-        ``enable_`` prefix so non-toggle connector fields (e.g.
-        ``adcs_password``, ``broker_targets``) can never be smuggled
-        through the boolean toggle path.
-
-        Imported inside the validator body (not at module scope) to avoid a
-        circular import between quirk.dashboard.api.schemas and quirk.config.
+        cls, v: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Thin delegation to the module-level `validate_connectors_overlay`
+        (Phase 197 / PARITY-05 / PARITY-06 / D-09) -- the actual
+        allowlist/type-check body lives there, not here, so
+        `GET /api/config/effective`'s preview path (enforcement point c) and
+        `build_job_config_dict`'s job-YAML merge (enforcement point b) can
+        reuse the EXACT SAME validation this submit-path validator applies
+        (RESEARCH Pitfall 1's lockstep requirement -- widening only a subset
+        of the three call sites reproduces the bug this delegation avoids).
         """
-        if v is None:
-            return v
-        from quirk.config import _KNOWN_CONNECTOR_KEYS
-
-        if len(v) > len(_KNOWN_CONNECTOR_KEYS):
-            raise ValueError(
-                f"connectors payload has {len(v)} entries, more than the "
-                f"{len(_KNOWN_CONNECTOR_KEYS)} known connector fields"
-            )
-        unknown = sorted(k for k in v if k not in _KNOWN_CONNECTOR_KEYS)
-        if unknown:
-            raise ValueError(f"Unknown connector key(s): {', '.join(unknown)}")
-        non_toggle = sorted(k for k in v if not k.startswith("enable_"))
-        if non_toggle:
-            raise ValueError(
-                f"connectors only accepts enable_* toggle keys, got: "
-                f"{', '.join(non_toggle)}"
-            )
-        return v
+        return validate_connectors_overlay(v)
 
     @field_validator("credentials")
     @classmethod

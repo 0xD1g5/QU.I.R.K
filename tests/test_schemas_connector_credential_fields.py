@@ -75,15 +75,33 @@ def test_unknown_connector_key_rejected_with_key_named():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", ["adcs_password", "broker_targets"])
+# Phase 197 / D-09: `broker_targets` was rejected pre-Phase-197 (the overlay
+# only accepted enable_* toggles) -- it is now one of the 37 widened detail
+# fields (CONTEXT D-03) and is therefore intentionally REMOVED from this
+# rejection parametrization; it is asserted-accepted instead by
+# `test_connector_detail_overlay_lockstep.py`'s PAYLOAD_CASES. `adcs_password`
+# remains rejected: it is a true secret (D-04) that rides the Phase-193
+# env-var credential path, never this overlay, and is deliberately excluded
+# from `_CONNECTOR_DETAIL_KEY_TYPES`.
+@pytest.mark.parametrize("key", ["adcs_password"])
 def test_known_non_toggle_connector_field_rejected(key: str):
-    # Sanity: both keys must be real (non-enable_*) ConnectorsCfg fields --
-    # if either is renamed/removed, this test should fail loudly rather
-    # than silently pass on a key that was never a valid field to begin
-    # with.
+    # Sanity: the key must be a real (non-enable_*) ConnectorsCfg field --
+    # if it is renamed/removed, this test should fail loudly rather than
+    # silently pass on a key that was never a valid field to begin with.
     assert key in _known_connector_non_toggle_keys()
     with pytest.raises(pydantic.ValidationError):
         ScanSubmitRequest(targets="example.com", connectors={key: True})
+
+
+def test_broker_targets_now_accepted_as_widened_detail_field():
+    """Phase 197 / PARITY-05 / D-03 regression lock: `broker_targets` moved
+    from "rejected" to "accepted list[str] detail field" -- this test
+    replaces the old rejection assertion removed from the parametrization
+    above so the behavior change is proven, not just silently dropped."""
+    req = ScanSubmitRequest(
+        targets="example.com", connectors={"broker_targets": ["kafka.example.com"]}
+    )
+    assert req.connectors == {"broker_targets": ["kafka.example.com"]}
 
 
 # ---------------------------------------------------------------------------
