@@ -181,7 +181,6 @@ def build_job_config_dict(
     `config["assessment"]`, overriding the hardcoded `"confidential"` only
     when the operator actually set `data_classification`.
     """
-    from quirk.config import _KNOWN_CONNECTOR_KEYS  # single allowlist source of truth
     from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
     from quirk.util.port_spec import parse_port_spec
 
@@ -247,16 +246,17 @@ def build_job_config_dict(
     # custom-port-scope suppression above (enable_email/enable_broker=False),
     # so the overlay is merged LAST — {**suppression, **overlay}. D-13:
     # delta-only — only keys the operator actually touched are written, never
-    # the full 25-key ConnectorsCfg surface.
+    # the full ConnectorsCfg surface.
+    #
+    # Phase 197 / PARITY-05 / PARITY-06 / D-09 (enforcement point b):
+    # validate_connectors_overlay is the SAME function ScanSubmitRequest's
+    # field_validator (enforcement point a) and routes/config.py's preview
+    # query-param parsing (enforcement point c) call -- widening only this
+    # site would let a payload pass submit validation and still be rejected
+    # here, or vice versa (RESEARCH Pitfall 1). It raises ValueError, caught
+    # by create_job's existing `except ValueError -> HTTPException(422)`.
     if connectors_overlay:
-        filtered_overlay: Dict[str, bool] = {}
-        for key, value in connectors_overlay.items():
-            if key not in _KNOWN_CONNECTOR_KEYS or not key.startswith("enable_"):
-                raise ValueError(
-                    f"{key!r} is not a recognized connector toggle "
-                    "(must be a known enable_* connector key)"
-                )
-            filtered_overlay[key] = value
+        filtered_overlay = validate_connectors_overlay(connectors_overlay)
         connectors_block = {**(connectors_block or {}), **filtered_overlay}
     if connectors_block is not None:
         config["connectors"] = connectors_block

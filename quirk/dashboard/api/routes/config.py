@@ -30,6 +30,7 @@ from quirk.dashboard.api.schemas import (
     ConfigField,
     ConfigResponse,
     ConfigSection,
+    validate_connectors_overlay,
 )
 
 router = APIRouter()
@@ -148,10 +149,12 @@ def get_effective_config(
     connectors: Optional[str] = Query(
         None,
         description=(
-            "JSON-encoded dict[str, bool] of enable_* connector flags the "
-            "operator has explicitly toggled (D-16 live preview). Unknown "
-            "keys are rejected 422 by the same allowlist build_job_config_dict "
-            "enforces on submit — not duplicated here."
+            "JSON-encoded dict of connector overlay values -- enable_* "
+            "boolean toggles plus, since Phase 197 / PARITY-05 / PARITY-06 "
+            "(D-09/D-11), the 37 residual connectors.* detail fields (target "
+            "lists, endpoint/identifier strings, two timeouts, one boolean). "
+            "Validated through the SAME validate_connectors_overlay() the "
+            "submit path uses -- not duplicated here."
         ),
     ),
     advanced: Optional[str] = Query(
@@ -166,6 +169,13 @@ def get_effective_config(
     """GET /api/config/effective — resolved, redacted, provenance-badged config
     preview matching what a `POST /api/jobs` submission with these query
     params would actually run with (PARITY-01)."""
+    # Phase 197 / PARITY-05 / PARITY-06 / D-09/D-10/D-11 (enforcement point c):
+    # validate_connectors_overlay is the SAME function ScanSubmitRequest's
+    # field_validator (enforcement point a) and build_job_config_dict's merge
+    # gate (enforcement point b) call -- structurally identical to how
+    # `advanced` below validates through AdvancedScanFields.model_validate.
+    # No isinstance/allowlist logic against connector overlay values lives in
+    # this file anymore (RESEARCH Pitfall 1).
     connectors_overlay: Optional[dict] = None
     if connectors is not None:
         try:
@@ -173,15 +183,17 @@ def get_effective_config(
         except json.JSONDecodeError as exc:
             raise HTTPException(
                 status_code=422,
-                detail="connectors must be a JSON object mapping enable_* flags to booleans",
+                detail="connectors must be a JSON object of connector overlay values",
             ) from exc
-        if not isinstance(connectors_overlay, dict) or not all(
-            isinstance(v, bool) for v in connectors_overlay.values()
-        ):
+        if not isinstance(connectors_overlay, dict):
             raise HTTPException(
                 status_code=422,
-                detail="connectors must be a JSON object mapping enable_* flags to booleans",
+                detail="connectors must be a JSON object of connector overlay values",
             )
+        try:
+            connectors_overlay = validate_connectors_overlay(connectors_overlay)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Phase 194 / PARITY-04 / D-01: JSON-decode, then validate through the
     # SAME AdvancedScanFields model the submit path uses (never a second
