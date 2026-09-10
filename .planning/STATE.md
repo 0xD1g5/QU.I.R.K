@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 195 plan 04 (exposure-map schemas + auth-gated GET /api/exposure-map route) complete — proceeding to plan 05
-last_updated: "2026-09-10T03:20:07.822Z"
-last_activity: 2026-09-10 -- Phase 195 plan 04 complete (ExposureNode/ExposureEdge/ExposureMapResponse schemas + GET /api/exposure-map route + test_exposure_map_route.py)
+stopped_at: Phase 195 plan 05 (exposure-map dashboard tab — Cytoscape LR-dagre graph, evidence tooltips, Tier A legend, empty state, nav/route wiring) complete — proceeding to plan 06
+last_updated: "2026-09-10T03:32:22.868Z"
+last_activity: 2026-09-10 -- Phase 195 plan 05 complete (ExposureMapPage /exposure-map tab + api types + nav/route wiring + exposure-map.test.tsx)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 42
-  completed_plans: 37
+  completed_plans: 38
   percent: 80
 ---
 
@@ -1118,9 +1118,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 195 (Quantum Exposure Map) — EXECUTING
-Plan: 5 of 9
-Status: Executing Phase 195 (plans 01-04 complete; plan 05 next)
-Last activity: 2026-09-10 -- Phase 195 plan 04 complete (ExposureNode/ExposureEdge/ExposureMapResponse schemas + GET /api/exposure-map route + test_exposure_map_route.py)
+Plan: 6 of 9
+Status: Executing Phase 195 (plans 01-05 complete; plan 06 next — human-verify checkpoint)
+Last activity: 2026-09-10 -- Phase 195 plan 05 complete (ExposureMapPage /exposure-map tab + api types + nav/route wiring + exposure-map.test.tsx)
+
+**195-05 (complete, 2026-09-10) — Exposure Map dashboard tab: Cytoscape LR-dagre graph, evidence tooltips (hover + sr-only fallback), Tier A legend, empty state, nav/route wiring (MAP-02).**
 
 **195-04 (complete, 2026-09-10) — Exposure-map schemas + auth-gated GET /api/exposure-map route (MAP-02).**
 `quirk/dashboard/api/schemas.py` gains `ExposureNode`/`ExposureEdge`/`ExposureMapResponse` (closed
@@ -1480,6 +1482,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 184.3 P01 | 8min | 2 tasks | 2 files |
 | Phase 193 P02 | 20min | 2 tasks | 4 files |
 | Phase 193 P03 | 20min | 2 tasks | 2 files |
+| Phase 195 P05 | 55min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1814,6 +1817,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: Mirrored the existing vault_token config-or-env fallback shape exactly at all four sites (193-02)
 - [Phase ?]: Registry-completeness assertion is run-time-derived, never a hand-written field list (193-02)
 - [Phase ?]: connectors and credentials kept as two separate Optional dict fields on ScanSubmitRequest, never merged, per D-11 (193-03)
+- [Phase ?]: 195-05: Tier A only per 195-SPIKE-DECISION.md DEFERRED — no declared_reachability edge type/legend row/crown-jewel declaration UX in exposure-map.tsx
+- [Phase ?]: 195-05: evidence citation implemented both as hover shadcn Tooltip AND an always-present sr-only edge list, satisfying D-09 hover + UI-SPEC Dimension 2 no-hover accessible fallback simultaneously
 
 ### Pending Todos
 
@@ -1991,9 +1996,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-10T02:41:20.843Z
-Stopped at: Phase 195 UI-SPEC approved
-Resume file: .planning/phases/195-quantum-exposure-map/195-UI-SPEC.md
+Last session: 2026-09-10T03:32:22.860Z
+Stopped at: Completed 195-05-PLAN.md
+Resume file: None
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
