@@ -144,6 +144,38 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
+## Current Milestone: v5.22 Release & Parity Tail
+
+**Opened:** 2026-09-10, after a boundary pass that ran the doc-review template (version drift
+PASS — 5.19.0 consistent, correct until the release phase bumps it; coverage gaps PASS; Obsidian
+PASS with vault Roadmap/Requirements re-sync queued for when the v5.22 roadmap exists) and a PM
+review of HORIZON's Open-Item Ledger (8 stale rows closed with evidence at this boundary).
+
+**Goal:** Ship the two milestones of accumulated unreleased content (v5.20 scoring v2 + all of
+v5.21) as a real PyPI release, then close the dashboard parity residue and drain the small
+standing items.
+
+**Target features:**
+- **Release v5.21.0** — gating first phase per the v5.18/v5.20 precedent: version bump (+
+  editable reinstall for `test_version.py`), CHANGELOG/README/UAT-1-02 surfaces, correctly-formed
+  3-component tag, `release.yml` green through PyPI publish + Sigstore verification.
+- **999.104 Tier 2 residue** — the 37 connector credential/endpoint/target sub-fields not yet on
+  the dashboard (per-connector target lists for jwt/container/source/identity connectors, cloud
+  provider IDs, k8s config, vault_addr), riding the existing delta-overlay plumbing
+  (`194-PARITY-AUDIT.md` enumerates the exact fields).
+- **999.104 Tier 3 residue** — the 23 remaining scan-behavior fields (11 per-scanner timeouts,
+  4 concurrency knobs, retry backoff, misc) in the Advanced section.
+- **Small-drain set** — derived-gate step 3 (high todo: no BACK-*/999.* ID neither
+  closed-with-evidence nor ledgered); repo-root housekeeping (untracked `config-lab-*.yaml` /
+  `output-*/` clutter); the 2 deferred Phase-192 browser checks (Scan Coverage chips, Raw YAML
+  redaction) folded into release verification.
+
+**Key context:** Phase numbering continues at 196. No domain research — all audited brownfield
+residue. Tier 4 (server-side `config.yaml` editing) remains explicitly OUT (needs its own threat
+model, PARITY-T4). `phase.complete`/`milestone.complete` remain unsafe on this machine — every
+close is hand-written under the pre-image + signature-diff protocol. CBOM minimum-elements watch
+item re-checked 2026-09-10: no guidance landed yet (due ≈2026-12-19).
+
 ## Previous Milestone: v5.21 Dashboard Parity & Exposure Capability — SHIPPED 2026-09-10
 
 **Closed 2026-09-10:** all 13 requirements Complete; audit tech_debt accepted. Section retained
@@ -419,12 +451,17 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.21 closed 2026-09-10 — its entire scope (999.104 tiers 1–3, 999.96 observability half,
-phantom-cert rows, 999.100, 999.98, 999.99 Tier A) shipped and moved to Validated above.
-Deferred out of it: Tier B reachability rendering (999.107), advanced-field long tail
-(999.106/194-PARITY-AUDIT.md's 65 not-yet-covered fields), PARITY-T4 (server-side config.yaml
-editing — needs its own threat model). Next milestone's scope comes from `/gsd-new-milestone`'s
-PM review of `HORIZON.md`'s Open-Item Ledger.
+v5.22 Release & Parity Tail in progress (opened 2026-09-10). A fresh `.planning/REQUIREMENTS.md`
+formalizes these into REQ-IDs during requirements definition:
+
+- [ ] **Release v5.21.0** — PyPI release carrying v5.20 + v5.21 content (bump, tag, pipeline
+      green, Sigstore-verified), gating first phase
+- [ ] **999.104 Tier 2 residue** — 37 connector credential/endpoint/target sub-fields on the
+      dashboard
+- [ ] **999.104 Tier 3 residue** — 23 remaining scan-behavior fields in the Advanced section
+- [ ] **Derived-gate step 3** — backlog-ID reconciliation gate enforced (high todo)
+- [ ] **Repo-root housekeeping** — untracked `config-lab-*.yaml` / `output-*/` clutter dispositioned
+- [ ] **Phase-192 deferred browser checks** — Scan Coverage chips + Raw YAML redaction validated
 
 Standing carry-forward, not in v5.20 scope:
 
@@ -1192,7 +1229,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-10 after v5.21 milestone close*
+*Last updated: 2026-09-10 — milestone v5.22 Release & Parity Tail opened*
 
 ## Evolution
 

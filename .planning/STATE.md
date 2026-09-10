@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.21
-milestone_name: Dashboard Parity & Exposure Capability
-status: milestone_complete
-stopped_at: v5.21 CLOSED 2026-09-10 — audit (tech_debt accepted) → complete (hand-written archive) done; cleanup pending
-last_updated: "2026-09-10T11:15:00.000Z"
-last_activity: 2026-09-10 -- v5.21 milestone closed; archives written to .planning/milestones/; next /gsd-new-milestone
+milestone: v5.22
+milestone_name: Release & Parity Tail
+status: planning
+last_updated: "2026-09-10T12:57:06.189Z"
+last_activity: 2026-09-10
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 42
-  completed_plans: 40
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,12 @@ progress:
   redaction — security-relevant, do opportunistically against a running dashboard) + 5 INFO
   review items. Phases 193/194: 6 more INFO items (incl. 194 IN-02 compute-failure fabricating
   `score=0/POOR`). Phase 195: Tier B deferred by design → 999.107.
+
 - `audit-open` at this close: same 5 items as v5.20 minus the phantom-cert todo —
   **CLOSED since the v5.20 list:** dashboard-cert-view-phantom-tls-rows (resolved by Phase 194
   DASH-09, moved to todos/completed/). The 3 GSD-toolchain todos and the healthcare-vertical
   quick-task false positive carry unchanged (see table below).
+
 - NO v5.21 git tag, same rationale as v5.20 (release.yml fires on `v[0-9]*`).
 
 - **`test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg` — pre-existing
@@ -1146,89 +1147,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 195 (Quantum Exposure Map) — COMPLETE
-Plan: 7 of 7 Tier A (08/09 skipped — spike DEFERRED)
-Status: v5.21 ALL PHASES COMPLETE — milestone lifecycle (audit → complete → cleanup) next
-Last activity: 2026-09-10 -- Phase 195 plan 05 complete (ExposureMapPage /exposure-map tab + api types + nav/route wiring + exposure-map.test.tsx)
-
-**195-05 (complete, 2026-09-10) — Exposure Map dashboard tab: Cytoscape LR-dagre graph, evidence tooltips (hover + sr-only fallback), Tier A legend, empty state, nav/route wiring (MAP-02).**
-
-**195-04 (complete, 2026-09-10) — Exposure-map schemas + auth-gated GET /api/exposure-map route (MAP-02).**
-`quirk/dashboard/api/schemas.py` gains `ExposureNode`/`ExposureEdge`/`ExposureMapResponse` (closed
-`edge_type` vocabulary, required non-empty `evidence`, no severity/score field, D-08 always-present
-typed lists). `quirk/dashboard/api/routes/exposure_map.py` (NEW) exposes `GET /api/exposure-map`
-router-level-auth-gated identically to `hardware_drift.router`, calling the importable
-`derive_exposure_map` orchestrator only (no route-private logic), degrading to an advisory-empty
-response on derivation error. Registered in `app.py`. `tests/test_exposure_map_route.py` covers
-auth gating, empty-DB honest absence, and seeded key-reuse-cluster evidence. Commits: `ae92ca83`,
-`4ea93cf5`, `2288e4ad`.
-
-**195-03 (complete, 2026-09-10) — Score-firewall (D-10) + zero-inferred-edges (D-11/D-12) permanent guards (MAP-03).**
-`tests/test_exposure_map_score_guard.py` (NEW) copies test_key_reuse_score_guard.py's 4-assertion
-pattern: SCORE_WEIGHTS key check (exposure_map/reachability/crown_jewel), AST import-walk proving
-`quirk/intelligence/exposure_map.py` never imports scoring, a negative control, and a
-structural-contract test against a real seeded `derive_exposure_map` call. `tests/test_exposure_map_edges.py`
-(NEW) asserts every edge carries non-empty evidence, and the named regression
-`test_partial_only_devices_produce_zero_edges` proves the same gateway/backend pair produces zero
-edges when only `partial_only` and exactly one edge when promoted to `upstream_mitigated`
-(Pitfall 2, T-195-02) — plus a D-12 no-denormalized-table structural scan and a D-08
-empty-session honest-absence check. 8 tests total, all green; neither existing guard file
-(`test_cve_score_guard.py`, `test_key_reuse_score_guard.py`) was touched.
-
-**195-02 (complete, 2026-09-09) — Read-time exposure-map derivation module + bridge.py signature-preserving refactor (MAP-02).**
-`quirk/cbom/bridge.py` gained `_find_matching_gateway(dev, hw_devices) -> tuple[dict, str] | None`,
-extracted from `_has_sufficient_evidence`'s inner ARP-evidence loop; `_has_sufficient_evidence` now
-delegates to it and stays byte-compatible (same signature, `bool` return, single caller
-`_confirm_upstream_mitigation` untouched) — `pytest -q tests/ -k bridge` unchanged (47 passed, 1
-xfailed, 1 xpassed). New `quirk/intelligence/exposure_map.py`: `derive_key_reuse_edges` wraps
-`compute_key_reuse_clusters` verbatim (all-pairs edges per cluster, SPKI-fingerprint evidence
-citations); `derive_hardware_bridge_edges` filters STRICTLY on `bridge_status == "upstream_mitigated"`
-(never `partial_only` — the fabricated-chain anti-feature D-03/Pitfall-2 exists to prevent), reusing
-the new shared helper against the pre-promotion device list to recover gateway/backend evidence;
-`derive_exposure_map` composes both into `{"nodes": [...], "edges": [...]}`, both keys always present
-(D-08), `is_crown_jewel` defaults `False` (Tier B deferred by 195-01). Never imports
-`quirk.intelligence.scoring` (D-10, AST-verified); no persisted table/cache (D-12). Manually verified
-against an isolated in-memory session (5 behaviors from the plan's `<behavior>` block, incl. the
-partial_only-produces-zero-edges regression guard) — formal `tests/test_exposure_map_edges.py` is
-195-03's deliverable. `.venv/bin/python -m compileall -q quirk` exit 0. Commits `86cb4df2` (Task 1),
-`8b2291da` (Task 2). See `195-02-SUMMARY.md`.
-
-**193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
-`build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
-`quirk.config._KNOWN_CONNECTOR_KEYS` + an `enable_` prefix (unknown/non-toggle keys raise
-`ValueError` naming the key), merged LAST over the Phase 121 custom-port-scope suppression so an
-explicit operator toggle wins (D-14), and delta-only (only touched keys are written, D-13) — proven
-by a real `yaml.dump` -> `load_config` -> `apply_profile` round-trip surviving the "deep" profile's
-auto-enable mutation. `resolve_effective_config` forwards the same overlay before its temp-YAML
-round-trip (D-16), and `GET /api/config/effective` gained a JSON-encoded `connectors` query param,
-422ing on malformed/non-dict/non-boolean input, with unknown-key rejection deliberately NOT
-duplicated in `config.py` (single allowlist source of truth). 16 new tests across
-`tests/test_build_job_config_connectors_overlay.py` (9) and
-`tests/test_config_effective_connectors_overlay.py` (7), all green; existing
-`tests/test_config_effective_route.py`/`test_jobs_api.py`/`test_jobs_nmap_scope_cap.py`/
-`test_jobs_target_validation.py` unaffected (57 passed, 1 skipped combined). `grep -c 'setattr('`
-across both touched Python modules -> 0. Commits `52f9a597` (Task 1), `cd4fee8f` (Task 2). See
-`193-05-SUMMARY.md`.
-
-**193-01 (complete, 2026-09-09) — Connector availability mapping module (25 flags) + run-time-derived D-06 guard test.**
-`quirk/dashboard/api/connector_availability.py` maps all 25 `ConnectorsCfg.enable_*` flags to a
-live probe source (`optional_extra.REGISTRY` extras, per-scanner `*_AVAILABLE` flags read live via
-`getattr(importlib.import_module(...))`, or a `shutil.which` binary probe), probed fresh on every
-call (D-07: no caching). `enable_gcp`/`enable_k8s`/`enable_vault` deliberately probe their OWN
-connector module's flag rather than `REGISTRY`'s `"cloud"` extra (which ANDs three unrelated SDKs
-together and would false-negative); `enable_smime`/`enable_adcs`/`enable_codesign` each probe their
-own scanner's independent `LDAP3_AVAILABLE` (REGISTRY's `"identity"` extra only gates `impacket`).
-Deviation (Rule 2): added an optional `binary` field to `AvailabilitySource` (mirrors
-`OptionalExtra.binary`) so `enable_container`/`enable_source` can honestly probe the `syft`/
-`semgrep` external CLI binaries instead of being mis-disposed as `always_available` — the guard
-test locks `always_available` to exactly `{enable_authenticated_mode, enable_recurring_otics}`.
-`tests/test_connector_availability_mapping.py` derives its expected flag set from
-`dataclasses.fields(ConnectorsCfg)` at run time (never hand-listed), and includes a negative-control
-demonstration (in-memory pop of `enable_snmp` -> `test_every_connector_flag_has_a_disposition` goes
-RED, discarded, never committed). `python -m pytest tests/test_connector_availability_mapping.py
-tests/test_config_connector_drift.py -q` -> 31 passed. `PARITY-02` NOT marked complete —
-this plan only builds the backend helper; plans 04/06 (route + submit-time gate) still need to
-consume it before the requirement is satisfied. See `193-01-SUMMARY.md`.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-09-10 — Milestone v5.22 started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
