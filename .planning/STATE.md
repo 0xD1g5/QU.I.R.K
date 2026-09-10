@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: phase_complete
-stopped_at: Phase 194 closed (verification 8/8, review resolved, operator-approved walkthrough) — next Phase 195 (final)
-last_updated: "2026-09-10T01:49:47.533Z"
-last_activity: 2026-09-10 -- Phase 194 plan 08 (194-PARITY-AUDIT.md, HORIZON 999.104 ledger update, full-suite gate) complete
+status: executing
+stopped_at: Phase 195 planned (9 plans, 6 waves; spike-gated) — ready to execute
+last_updated: "2026-09-10T03:02:50.406Z"
+last_activity: 2026-09-10 -- Phase 195 planning complete
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 33
+  total_plans: 42
   completed_plans: 33
-  percent: 100
+  percent: 79
 ---
 
 # Project State
@@ -31,7 +31,6 @@ progress:
   reading them as real IDs — NOT ledgering fake IDs and NOT narrowing enumeration (the gate's own
   non-vacuity guard forbids both). Filed for a future GSD-tooling/doc-hygiene drain. Do not
   re-investigate at each phase close — this note is the disposition.
-
 
 Items acknowledged and deferred at the v5.20 milestone close on 2026-09-08 (carried from the v5.19
 close where noted). All remain open and visible to `/gsd-progress` and `/gsd-audit-uat`.
@@ -1099,8 +1098,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — all 8 plans executed, phase close pending
 Plan: 8 of 8
-Status: Executing Phase 194 (close-out pending)
-Last activity: 2026-09-10 -- Phase 194 plan 08 (194-PARITY-AUDIT.md, HORIZON 999.104 ledger update, full-suite gate) complete
+Status: Ready to execute
+Last activity: 2026-09-10 -- Phase 195 planning complete
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
@@ -1931,9 +1930,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-09T14:10:00.000Z
-Stopped at: Phase 194 plan 194-06 complete (operator walkthrough approved, plan 6 of 8)
-Resume file: None
+Last session: 2026-09-10T02:41:20.843Z
+Stopped at: Phase 195 UI-SPEC approved
+Resume file: .planning/phases/195-quantum-exposure-map/195-UI-SPEC.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
