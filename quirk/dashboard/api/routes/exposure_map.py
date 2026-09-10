@@ -44,10 +44,10 @@ def get_exposure_map(db: Session = Depends(get_db)) -> ExposureMapResponse:
     """
     try:
         result = derive_exposure_map(db)
+        nodes = [ExposureNode(**node) for node in result.get("nodes", [])]
+        edges = [ExposureEdge(**edge) for edge in result.get("edges", [])]
     except Exception:
         logger.exception("exposure-map derivation failed; returning advisory-empty response")
         return ExposureMapResponse(nodes=[], edges=[])
 
-    nodes = [ExposureNode(**node) for node in result.get("nodes", [])]
-    edges = [ExposureEdge(**edge) for edge in result.get("edges", [])]
     return ExposureMapResponse(nodes=nodes, edges=edges)
