@@ -244,7 +244,7 @@ recorded" / "This scan predates per-phase coverage tracking (pre-v5.21). Re-scan
 coverage detail." — never a fabricated `0 ran / 0 skipped` pair. There is no backfill; the only
 way to get coverage data for an older scan is to re-scan it.
 
-### 3.1.4 Connectors panel — enabling connectors and supplying credentials from the dashboard (PARITY-02/PARITY-03, Phase 193)
+### 3.1.4 Connectors panel — enabling connectors and supplying credentials from the dashboard (PARITY-02/PARITY-03, Phase 193; PARITY-05/PARITY-06, Phase 197)
 
 The New Scan page carries a "Connectors" panel above the Effective config panel (§3.1.2). Expanding
 it (lazy-fetched on first expand only) loads `GET /api/connectors/availability` and renders all 25
@@ -286,6 +286,51 @@ very next fetch), and returns each connector's `available` flag, `reason` (when 
 `install_hint` (the exact `pip install quirk[...]` string). `docs/api-reference.md` does not exist yet
 as a project convention (per CLAUDE.md's documentation checklist); this section is the interim
 documentation for that endpoint until that reference file is created.
+
+**Setting connector targets and endpoints (PARITY-05/PARITY-06, Phase 197).** Toggling on a
+connector that has target-list, endpoint, or identifier fields reveals them beneath its toggle —
+in the same place a credential input would render, stacked below it when both are present. These
+fields render **only when the connector is both available and ON** — the same visibility gate as
+credential fields — so an OFF connector shows none of them.
+
+- **List fields** (e.g. "JWT Targets", "Container Targets", "GKE Clusters") are one free-text
+  `<textarea>`, comma- or newline-separated, matching the main scan-level Targets field's own
+  convention. Clearing a list field back to blank **deletes the key from the submission** rather
+  than sending an empty list — this delta-only semantics means an untouched form produces the
+  exact same submit body and Effective Config query string as before this phase (D-08).
+- **GKE/AKS clusters** use a compact pairlist syntax instead of plain hostnames:
+  `name@location` for GKE (e.g. `prod-cluster-1@us-east1`), `name@resource-group` for AKS (e.g.
+  `prod-aks@rg-prod`). An entry missing the `@` separator is dropped from the submitted list and
+  surfaced with a visible amber "N entries are missing the required name@location format" count
+  — it is never silently discarded and never silently submitted half-formed.
+- **The amber "enabled with no targets configured" hint** appears when a connector with one or
+  more list-typed fields is ON and every one of those fields is blank. It reads: "{Connector
+  label} is enabled but has no targets configured. The scan will run but this connector's list is
+  empty, so it has nothing to check. Add targets above, or submit anyway." This is the dashboard
+  surfacing of the same "target-guarded, inert until populated" behavior documented in the
+  `requires-targets` reason tag above (e.g. `enable_jwt` shipping `true` but doing nothing until
+  `jwt_targets` is set) — toggling one of these connectors on alone is no longer silently a no-op,
+  because the panel now tells you it needs targets.
+- **`k8s_kubeconfig` is a server-side path, not a file upload.** Its helper text reads: "Path to a
+  kubeconfig file readable by the QU.I.R.K. server process. Not a file upload — enter the
+  server-side path." Whatever you type must already exist and be readable on the machine running
+  `quirk serve`, not your own workstation.
+- **`vault_tls_verify`** renders as a pre-checked Switch (the config default is `true`) — you must
+  explicitly uncheck it to disable TLS verification for the Vault connector; the field is never
+  silently defaulted off.
+- **Identifier fields are never masked.** `adcs_user`, `pg_scanner_user`, and `mysql_scanner_user`
+  are plain, visible text inputs — unlike the masked credential fields above, these are
+  identifiers that land in the job's stored `config.yaml` in cleartext by design (D-04); only the
+  matching password/token fields are masked and non-persisted.
+- **A field you have touched shows a small teal "Set" badge** next to its label — the same visual
+  language as the connector-level "Set" badge, now also available per-field.
+- **Rejected values return a 422 naming the field**, at both submit and the Effective Config
+  preview — e.g. an out-of-range timeout or a malformed cluster entry: "Scan rejected: `{key}` is
+  not a recognized connector field for this scan. Remove or correct it, then resubmit." Submit
+  and preview are guaranteed to agree on every accept/reject decision (PARITY-06).
+
+See [`docs/configuration.md`](configuration.md#connector-detail-fields-settable-from-the-dashboard-parity-0506-phase-197)
+for the full 37-field reference (types, defaults, bounds, gating flags).
 
 ### 3.1.5 Advanced scan fields — TLS ports, enumeration depth, timeouts, retry, data classification (PARITY-04, Phase 194)
 

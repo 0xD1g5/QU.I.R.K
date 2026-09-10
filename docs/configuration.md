@@ -311,6 +311,82 @@ disposition and reason tags" immediately below for the full 25-key table.
 
 > **Note:** See [Connector Guides](connectors/) for per-connector credential setup and least-privilege templates.
 
+### Connector detail fields settable from the dashboard (PARITY-05/06, Phase 197)
+
+Before Phase 197, the dashboard's Connectors panel could only flip the 25 `enable_*` toggles above
+— the target lists, endpoints, and identifiers that make most of those toggles actually *do*
+anything (e.g. `enable_jwt`'s `jwt_targets`) were config-file-only. Phase 197 widens the same
+delta-overlay path (`connectors` key of `POST /api/jobs` and `GET /api/config/effective`) to
+accept these 37 additional non-secret fields, enforced by a single shared validator
+(`quirk.dashboard.api.schemas.validate_connectors_overlay`,
+`_CONNECTOR_DETAIL_KEY_TYPES`) called at all three enforcement points — submit, job-YAML merge,
+and preview — so submit and preview can never disagree (PARITY-06). See
+[`docs/operators-guide.md` §3.1.4](operators-guide.md#314-connectors-panel--enabling-connectors-and-supplying-credentials-from-the-dashboard-parity-0203-phase-193-parity-0506-phase-197)
+for how these fields render and behave from the New Scan page.
+
+**Accepted wire types and bounds (D-09):** every `string` value is capped at 512 characters; every
+`list[str]` is capped at 256 elements (each element also capped at 512 characters); every `int`
+timeout is bounds-checked `1 <= value <= 300` seconds; a bare `true`/`false` is never accepted
+where an `int` is expected (`type(value) is bool` is explicitly rejected for int fields, since
+Python's `bool` is a subtype of `int`). An unrecognized key, or a key with the wrong wire type,
+is rejected with an HTTP 422 naming only the offending key — never its value (T-197-03).
+
+**`gke_clusters` / `aks_clusters` object shape:** unlike every other list field (plain strings),
+these two are `list[dict]`. Each GKE element requires exactly `{"name": str, "location": str}`;
+each AKS element requires exactly `{"name": str, "resource_group": str}` — a bare string element
+is rejected (it would otherwise raise a late `TypeError` inside `quirk/scanner/k8s_connector.py`
+at scan time). The dashboard's free-text list input accepts the more compact `name@location` /
+`name@resource-group` pairlist syntax and parses it into this object shape client-side before
+submission — see the operators guide for the exact textarea convention.
+
+**`vault_tls_verify` defaults to `true`** (matches `hvac.Client(verify=...)`'s config default) —
+the dashboard's Vault toggle renders this switch pre-checked, not blank, when the field is absent
+from the submitted delta; explicitly unchecking it sends `vault_tls_verify: false`.
+
+| Field | Type | Default | Gating `enable_*` flag | Purpose |
+|-------|------|---------|-------------------------|---------|
+| `jwt_targets` | list[str] | `[]` | `enable_jwt` | REST endpoint URLs for the JWT/API scanner |
+| `container_targets` | list[str] | `[]` | `enable_container` | Docker image refs for the container/binary scanner |
+| `source_targets` | list[str] | `[]` | `enable_source` | Git repo paths or URLs for the source scanner |
+| `kerberos_targets` | list[str] | `[]` | `enable_kerberos` | KDC hosts for the Kerberos identity scanner |
+| `saml_targets` | list[str] | `[]` | `enable_saml` | SAML IdP/SP metadata URLs |
+| `dnssec_targets` | list[str] | `[]` | `enable_dnssec` | Zones to query for DNSSEC posture |
+| `dnssec_resolver` | str | `null` | `enable_dnssec` | Resolver host used for DNSSEC lookups |
+| `smime_targets` | list[str] | `[]` | `enable_smime` | LDAP URLs for S/MIME certificate discovery |
+| `smime_search_base` | str | `null` | `enable_smime` | LDAP search base DN for S/MIME discovery |
+| `smime_timeout` | int (1-300s) | `10` | `enable_smime` | Per-connection LDAP timeout for S/MIME queries |
+| `adcs_targets` | list[str] | `[]` | `enable_adcs` | LDAP URLs for AD CS discovery |
+| `adcs_search_base` | str | `null` | `enable_adcs` | LDAP search base DN for AD CS discovery |
+| `adcs_user` | str | `null` | `enable_adcs` | LDAP bind username (identifier, not a secret — D-04) |
+| `adcs_timeout` | int (1-300s) | `10` | `enable_adcs` | Per-connection LDAP timeout for AD CS queries |
+| `aws_region` | str | `"us-east-1"` | `enable_aws` / `enable_s3` | AWS region for the cloud connector |
+| `aws_profile` | str | `null` | `enable_aws` / `enable_s3` | AWS named profile; `null` uses the default credential chain |
+| `aws_endpoint_url` | str | `null` | `enable_aws` / `enable_s3` | MinIO/LocalStack S3 endpoint override |
+| `azure_subscription_id` | str | `null` | `enable_azure` / `enable_blob` | Azure subscription UUID |
+| `azure_keyvault_urls` | list[str] | `[]` | `enable_azure` / `enable_blob` | Key Vault base URLs |
+| `gcp_project_id` | str | `null` | `enable_gcp` | GCP project id used with application default credentials |
+| `k8s_provider` | str | `null` | `enable_k8s` | `"eks"` \| `"gke"` \| `"aks"` |
+| `k8s_cluster_name` | str | `null` | `enable_k8s` | Cluster name for the EKS path |
+| `k8s_namespace` | str | `"default"` | `enable_k8s` | Namespace scope for the k8s connector |
+| `k8s_kubeconfig` | str | `null` | `enable_k8s` | Server-filesystem path to a kubeconfig readable by the QU.I.R.K. server process (D-02 — not a file upload) |
+| `k8s_context` | str | `null` | `enable_k8s` | kubeconfig context to use |
+| `gke_clusters` | list[{name, location}] | `[]` | `enable_k8s` | GKE clusters, dashboard syntax `name@location` |
+| `aks_clusters` | list[{name, resource_group}] | `[]` | `enable_k8s` | AKS clusters, dashboard syntax `name@resource-group` |
+| `vault_addr` | str | `null` | `enable_vault` | HashiCorp Vault address, e.g. `http://localhost:8200` |
+| `vault_transit_mount` | str | `"transit"` | `enable_vault` | Vault transit engine mount path |
+| `vault_tls_verify` | bool | `true` | `enable_vault` | Verify the Vault server's TLS certificate |
+| `pg_targets` | list[str] | `[]` | `enable_db` | PostgreSQL hosts for the database-encryption scanner |
+| `pg_scanner_user` | str | `null` | `enable_db` | PostgreSQL bind username (identifier, not a secret — D-04) |
+| `mysql_targets` | list[str] | `[]` | `enable_db` | MySQL hosts for the database-encryption scanner |
+| `mysql_scanner_user` | str | `null` | `enable_db` | MySQL bind username (identifier, not a secret — D-04) |
+| `broker_targets` | list[str] | `[]` | `enable_broker` | Explicit broker host/port entries (see the existing `broker_targets` subsection below) |
+| `broker_azure_namespaces` | list[str] | `[]` | `enable_broker` | Azure Service Bus namespaces to probe |
+| `broker_sqs_regions` | list[str] | `[]` | `enable_broker` | AWS regions to probe for SQS |
+
+Bound-value violations, unknown keys, and type mismatches all raise the same 422 shape from every
+one of the three enforcement points — see [`docs/operators-guide.md` §3.1.4](operators-guide.md#314-connectors-panel--enabling-connectors-and-supplying-credentials-from-the-dashboard-parity-0203-phase-193-parity-0506-phase-197)
+for what this looks like in the dashboard UI.
+
 ### Credential environment variables (D-09, Phase 193)
 
 The scanner honors an environment-variable fallback for every connector credential field in
@@ -546,6 +622,16 @@ This is a real, measured gap between what the config file can express and what e
 wizard or the dashboard's New Scan page can set interactively. **Closing it is out of scope for
 this phase** — it is recorded here only as the quantified starting point for whichever future
 phase takes on CLI↔UI configuration parity.
+
+**Phase 197 update (2026-09-10):** the dashboard's zero-connector-toggles measurement above is
+now historical, not current. Phase 197 closed 999.104 Tier 2 for the dashboard surface: all 25
+`enable_*` toggles were already dashboard-settable since Phase 193 (PARITY-02/03), and the 37
+`connectors.*` detail sub-fields that make most of those toggles do anything (target lists,
+endpoints, identifiers) are now dashboard-settable too (PARITY-05/06), via the field table in the
+"Connector detail fields settable from the dashboard" subsection above. What remains open: the
+CLI wizard's 5-connector subset (`jwt`, `container`, `source`, `aws`, `azure`) is unchanged by
+this phase — CLI↔dashboard parity for the wizard's remaining 20 connectors is still out of scope
+and is tracked as 999.104 Tier 3 residue (owned by Phase 198), not by this phase.
 
 ### SNMPv3 Credentials (Phase 139, `[hw]` extras)
 
