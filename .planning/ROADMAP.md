@@ -330,7 +330,16 @@ gated behind an explicit reachability-source decision made before any rendering 
   4. Exposure Map data never feeds the quantum-readiness score — machine-enforced by a
      `test_exposure_map_score_guard.py` firewall test (the `test_cve_score_guard.py` pattern)
      written in this same phase.
-**Plans**: TBD
+**Plans**: 9 plans (7 Tier A always-ship + 2 Tier B spike-gated)
+- [ ] 195-01-PLAN.md — MAP-01 spike: record reachability-source go/no-go (operator-declared vs deferred) before any rendering plan
+- [ ] 195-02-PLAN.md — Backend read-time derivation module (key-reuse + upstream_mitigated hardware-bridge edges) + bridge.py shared-helper refactor
+- [ ] 195-03-PLAN.md — Score-firewall (test_exposure_map_score_guard.py, NEW) + zero-inferred-edges/partial_only-exclusion guard (NEW)
+- [ ] 195-04-PLAN.md — ExposureMapResponse schemas + auth-gated GET /api/exposure-map route + route tests
+- [ ] 195-05-PLAN.md — Cytoscape Exposure Map tab (LR dagre, empty state, evidence tooltips, legend) + nav/route + component tests
+- [ ] 195-06-PLAN.md — Human-verify checkpoint of the live map surface
+- [ ] 195-07-PLAN.md — Docs (report-interpretation + operators-guide) + UAT Series 195 + Obsidian sync
+- [ ] 195-08-PLAN.md — Tier B (spike GO only): operator crown-jewel/reachability persistence + validated declaration endpoint
+- [ ] 195-09-PLAN.md — Tier B (spike GO only): declaration UX + red declared-reachability edges + crown-jewel badges
 **UI hint**: yes
 
 ## Progress
@@ -344,7 +353,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 8/8 | Complete   | 2026-09-09 |
-| 195. Quantum Exposure Map | 0/TBD | Not started | - |
+| 195. Quantum Exposure Map | 0/9 | Not started | - |
 
 ## Backlog
 
