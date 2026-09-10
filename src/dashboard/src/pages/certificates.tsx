@@ -41,7 +41,7 @@ export function CertificatesPage() {
       <div className="space-y-4">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Certificate Inventory</h1>
         {disclosure}
-        <EmptyStateCard message="No TLS certificates discovered in this scan" />
+        <EmptyStateCard message="No TLS certificates discovered in this scan." />
         <p className="text-muted-foreground text-sm">
           — verify scan targets include HTTPS or TLS services.
         </p>

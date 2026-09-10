@@ -86,10 +86,12 @@ export function PrintCerts({ certs, excludedCount }: { certs: CertItem[]; exclud
     <p className="meta">{excludedCount} TLS endpoints failed handshake and are not shown.</p>
   )
   if (!certs.length) {
+    // D-13/D-14: disclosure-first ordering, byte-identical to
+    // certificates.tsx (disclosure above the locked empty-state string).
     return (
       <>
-        <p className="meta">No TLS certificates discovered in this scan.</p>
         {disclosure}
+        <p className="meta">No TLS certificates discovered in this scan.</p>
       </>
     )
   }
