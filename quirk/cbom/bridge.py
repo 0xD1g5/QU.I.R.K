@@ -165,6 +165,35 @@ def _has_sufficient_evidence(dev: dict, hw_devices: list[dict]) -> bool:
         True if a gateway in dev's subnet group has ARP evidence listing a
         legacy backend's IP in that same group.
     """
+    return _find_matching_gateway(dev, hw_devices) is not None
+
+
+def _find_matching_gateway(dev: dict, hw_devices: list[dict]) -> tuple[dict, str] | None:
+    """Return ``(matched_gateway_dict, matched_ip)`` proving *dev*'s bridge
+    relationship, or ``None`` when no such evidence exists.
+
+    Phase 195 (MAP-02) shared evidence-matching seam: this is the exact inner
+    loop formerly inlined in ``_has_sufficient_evidence`` (Phase 140), factored
+    out so it has exactly ONE definition reused by both the boolean predicate
+    here and ``quirk/intelligence/exposure_map.py::derive_hardware_bridge_edges``
+    — see 195-PATTERNS.md Pattern 2 / RESEARCH A3. The matching predicate
+    (subnet /24 gating via *dev*'s partial_only subnet-group, JSON parse
+    guards, ``target_ip`` set membership, gateway-vs-legacy direction) is
+    UNCHANGED from the pre-refactor inline version — only its location and
+    return shape moved (bool -> ``(gateway, matched_ip) | None``).
+
+    Args:
+        dev: The candidate device dict (see ``_has_sufficient_evidence`` for
+            the "partial_only" precondition its caller enforces).
+        hw_devices: The full annotated device list (post _detect_crypto_bridges),
+            used to find dev's subnet-group gateway(s)/backend(s).
+
+    Returns:
+        A ``(gateway_dict, matched_ip)`` tuple — *gateway_dict* is a member of
+        *hw_devices* (not a copy), *matched_ip* is the legacy backend's host IP
+        proven reachable through it — when evidence proves the pairing, else
+        ``None``.
+    """
     prefix = _subnet_24(dev.get("host", ""))
 
     group = [
@@ -176,7 +205,7 @@ def _has_sufficient_evidence(dev: dict, hw_devices: list[dict]) -> bool:
         d.get("host", "") for d in group if d.get("pqc_status", "").lower() in _LEGACY_STATUS
     }
     if not gateways or not legacy_ips:
-        return False
+        return None
 
     is_gateway = dev.get("pqc_status", "").lower() in _PQC_CAPABLE
     dev_host = dev.get("host", "")
@@ -196,14 +225,16 @@ def _has_sufficient_evidence(dev: dict, hw_devices: list[dict]) -> bool:
         }
         if is_gateway:
             # dev is itself a gateway: only ITS OWN evidence can prove a pair.
-            if gw.get("host") == dev_host and (fact_ips & legacy_ips):
-                return True
+            matched_legacy_ips = fact_ips & legacy_ips
+            if gw.get("host") == dev_host and matched_legacy_ips:
+                # Deterministic tiebreak: lowest IP string wins.
+                return gw, sorted(matched_legacy_ips)[0]
         else:
             # dev is a legacy backend: some gateway's evidence must name dev's own IP.
             if dev_host in fact_ips:
-                return True
+                return gw, dev_host
 
-    return False
+    return None
 
 
 def _confirm_upstream_mitigation(hw_devices: list[dict]) -> list[dict]:
