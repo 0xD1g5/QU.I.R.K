@@ -11,7 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { useVertical } from "@/context/vertical-context"
-import type { AdvancedScanFields, ScanSubmitRequest } from "@/types/api"
+import type { AdvancedScanFields, ConnectorOverlayValue, ScanSubmitRequest } from "@/types/api"
 
 /**
  * Phase 192 Plan 10 (PARITY-01 / D-01..D-05): "Effective config" pre-flight
@@ -63,7 +63,10 @@ interface EffectiveConfigPanelProps {
   // delta from ConnectorsPanel. Optional and query-additive only — an
   // empty/undefined delta must produce the identical query string Phase 192
   // produced, so cached responses and existing behavior are unchanged.
-  connectors?: Record<string, boolean>
+  // Phase 197 Plan 02 (PARITY-05/PARITY-06): widened to carry the 37 detail
+  // fields alongside the pre-existing enable_* toggles — the emptiness
+  // guard below (`Object.keys(...).length > 0`) is UNCHANGED (D-08).
+  connectors?: Record<string, ConnectorOverlayValue>
   // Phase 194 Plan 05 (PARITY-04, D-04): the operator's Advanced-field
   // delta from AdvancedPanel. Optional and query-additive only, mirroring
   // the `connectors` prop above — an empty/undefined delta must produce the

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import type { AdvancedScanFields, ScanSubmitRequest } from "@/types/api"
+import type { AdvancedScanFields, ConnectorOverlayValue, ScanSubmitRequest } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
 import { EffectiveConfigPanel } from "@/components/EffectiveConfigPanel"
 import { ConnectorsPanel } from "@/components/ConnectorsPanel"
@@ -35,7 +35,11 @@ export function ScanNewPage() {
   // Phase 193 Plan 07 (PARITY-02/PARITY-03): operator's connector toggle
   // delta (D-13, keys only for flags the operator touched) and request-scoped
   // credential values (D-12, never persisted, cleared after every submit).
-  const [connectors, setConnectors] = useState<Record<string, boolean>>({})
+  // Phase 197 Plan 02 (PARITY-05/PARITY-06): widened to
+  // Record<string, ConnectorOverlayValue> to also carry the 37 connector
+  // detail fields (targets/endpoints/timeouts) — the submit-body emptiness
+  // guard below (`Object.keys(connectors).length > 0`) is UNCHANGED (D-08).
+  const [connectors, setConnectors] = useState<Record<string, ConnectorOverlayValue>>({})
   const [credentials, setCredentials] = useState<Record<string, string>>({})
   // Phase 194 Plan 05 (PARITY-04, D-02): operator's Advanced-field delta
   // (keys only for fields the operator touched). Not cleared after submit

@@ -508,6 +508,22 @@ export interface AdvancedScanFields {
   data_classification?: "public" | "internal" | "confidential" | "regulated"
 }
 
+// Phase 197 Plan 02 (PARITY-05/PARITY-06, D-09): a `gke_clusters`/
+// `aks_clusters` element — mirrors quirk/dashboard/api/schemas.py's
+// `_K8S_CLUSTER_DICT_KEYS` element-shape map. `location` is GKE-only,
+// `resource_group` is AKS-only; never both on the same element.
+export interface ConnectorClusterRef {
+  name: string
+  location?: string
+  resource_group?: string
+}
+
+// Phase 197 Plan 02 (PARITY-05/PARITY-06): widens the connectors overlay
+// value union from `enable_*`-boolean-only to the 37-field mixed type that
+// quirk/dashboard/api/schemas.py::_CONNECTOR_DETAIL_KEY_TYPES /
+// validate_connectors_overlay (Phase 197 Plan 01) now accepts.
+export type ConnectorOverlayValue = boolean | string | number | string[] | ConnectorClusterRef[]
+
 // Phase 65 UI-SCAN-01/02: dashboard-initiated scan job types
 // Phase 121 PORT-07/08: port_scope + custom_ports added
 // Phase 193 Plan 07 (PARITY-02/PARITY-03, D-11/D-13): connectors/credentials
@@ -516,6 +532,9 @@ export interface AdvancedScanFields {
 // Phase 194 Plan 05 (PARITY-04, D-01/D-02): advanced is the delta-only
 // AdvancedScanFields overlay, omitted from the request body entirely when
 // empty.
+// Phase 197 Plan 02 (PARITY-05/PARITY-06): `connectors` widened to
+// `ConnectorOverlayValue` to carry the 37 detail fields alongside the
+// pre-existing `enable_*` boolean toggles.
 export interface ScanSubmitRequest {
   targets: string
   profile: "quick" | "standard" | "deep"
@@ -523,7 +542,7 @@ export interface ScanSubmitRequest {
   enable_nmap: boolean
   port_scope: "common" | "top1000" | "all" | "custom"
   custom_ports?: string
-  connectors?: Record<string, boolean>
+  connectors?: Record<string, ConnectorOverlayValue>
   credentials?: Record<string, string>
   advanced?: AdvancedScanFields
 }

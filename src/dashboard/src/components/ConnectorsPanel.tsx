@@ -11,7 +11,9 @@ import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useVertical } from "@/context/vertical-context"
-import type { ConnectorAvailabilityEntry, ConnectorAvailabilityResponse } from "@/types/api"
+import type {
+  ConnectorAvailabilityEntry, ConnectorAvailabilityResponse, ConnectorOverlayValue,
+} from "@/types/api"
 
 /**
  * Phase 193 Plan 07 (PARITY-02 / PARITY-03 — D-01..D-04, D-10, D-12, D-15,
@@ -91,10 +93,18 @@ const CONNECTOR_CREDENTIAL_FIELDS: Record<string, CredentialFieldSpec[]> = {
 }
 
 interface ConnectorsPanelProps {
-  connectors: Record<string, boolean>
-  onConnectorsChange: (next: Record<string, boolean>) => void
+  // Phase 197 Plan 02 (PARITY-05/PARITY-06): widened from
+  // Record<string, boolean> to also carry the 37 connector detail fields
+  // (D-05..D-08). `presetState` intentionally stays boolean-only below —
+  // see the comment on that field.
+  connectors: Record<string, ConnectorOverlayValue>
+  onConnectorsChange: (next: Record<string, ConnectorOverlayValue>) => void
   credentials: Record<string, string>
   onCredentialsChange: (next: Record<string, string>) => void
+  // Presets only ever set enable_* boolean toggles — locked by Phase 197
+  // Plan 01's `test_a1_no_preset_writes_any_detail_field` against
+  // quirk/engine/profiles.py — so no detail field ever carries a "Preset"
+  // badge. Stays Record<string, boolean> | null; do not widen this one.
   presetState: Record<string, boolean> | null
 }
 
@@ -167,7 +177,9 @@ export function ConnectorsPanel(props: ConnectorsPanelProps) {
   }, [open])
 
   function isOn(flag: string): boolean {
-    if (flag in connectors) return connectors[flag]
+    // enable_* toggle flags are always boolean-valued in the overlay — the
+    // widened ConnectorOverlayValue union only applies to detail fields.
+    if (flag in connectors) return connectors[flag] === true
     return presetState?.[flag] ?? false
   }
 
