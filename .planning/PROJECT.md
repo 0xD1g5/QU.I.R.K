@@ -2,6 +2,8 @@
 
 ## Current State (updated 2026-09-09)
 
+**v5.21 ALL PHASES COMPLETE (2026-09-10) — Phase 195 (Quantum Exposure Map) closed; milestone lifecycle (audit → complete → cleanup) pending.** MAP-01/02/03 validated: the MAP-01 spike resolved reachability-source as DEFERRED (operator-confirmed; Tier B → 999.107), and Tier A shipped a zero-fabrication attack-path map — key-reuse + upstream_mitigated-only hardware-bridge edges, per-edge evidence tooltips, honest empty state, and a new-file score-firewall test. All 13 v5.21 requirements are now Complete.
+
 **v5.21 in progress — Phase 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) complete 2026-09-09.** PARITY-04/VERDICT-01/DASH-09 validated: dashboard Advanced section exposes TLS ports / tls_enum_mode / SNI / timeouts / retry / data_classification through the same delta-overlay path (SSH ports dropped as non-parity → 999.106); Executive Verdict ships by default (cherry-picked f05e7dc7, flag-gate removed, consumes rating/rating_cap_reason, honest-absence card); phantom TLS-handshake rows filtered from cert inventory + /print PDF via one shared predicate with an honest empty state. The 999.104 CLI-vs-form parity audit (121 real fields) closed tiers 1-3. Only Phase 195 (Quantum Exposure Map) remains in v5.21.
 
 **Phase 193 (Connector & Credential Parity) complete 2026-09-09.** PARITY-02/PARITY-03 validated: all 25 connectors toggleable from the dashboard behind a two-source availability probe (REGISTRY + per-scanner flags, 422 on unavailable), credentials ride an in-memory env-var path (never ScanJob/config.yaml/logs — sentinel-guard-tested), delta-only YAML overlay preserves _user_set_fields precedence. Verification passed 9/9; code review resolved (3 criticals fixed: dead SNMP env fallback, loader-discarded broker creds, never-matching default host slots). Phases 191-193 done; 194-195 remain.
@@ -1178,7 +1180,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-09 — Phase 194 complete (PARITY-04/VERDICT-01/DASH-09 validated); Phase 195 remains*
+*Last updated: 2026-09-10 — Phase 195 complete; all v5.21 phases done, milestone lifecycle pending*
 
 ## Evolution
 
