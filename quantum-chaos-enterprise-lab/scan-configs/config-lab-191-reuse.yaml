@@ -1,0 +1,16 @@
+assessment:
+  name: "Phase 191 SPKI Key-Reuse Checkpoint - Reuse Run"
+  data_classification: "internal"
+  report_owner: "Lab"
+  timezone: "UTC"
+
+targets:
+  cidrs: [127.0.0.1]
+
+scan:
+  concurrency: 10
+  ports_tls: [8990, 8991, 8992]
+
+output:
+  directory: "./output-191-reuse"
+  db_path: "./output-191-reuse/quirk.db"

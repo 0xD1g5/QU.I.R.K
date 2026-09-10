@@ -162,6 +162,7 @@ Pins enforced this phase: `gitea/gitea:1.21` (unchanged), `minio/minio:RELEASE.2
 - **Full operator guide:** [`docs/chaos-lab.md`](../docs/chaos-lab.md)
 - **Expected scanner findings (UAT oracle):** [`expected_results_v4.md`](./expected_results_v4.md)
 - **Historical reference:** [`CHAOS_LAB_BUILD_AND_OPERATIONS_text_only.md`](./CHAOS_LAB_BUILD_AND_OPERATIONS_text_only.md)
+- **Ad-hoc scan client configs:** [`scan-configs/`](./scan-configs/README.md)
 
 ## Phase C (mTLS + step-ca)
 

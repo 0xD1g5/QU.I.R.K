@@ -1,0 +1,19 @@
+assessment:
+  name: "Chaos Lab - OTICS 190 (Modbus re-verification)"
+  data_classification: "internal"
+  report_owner: "Lab"
+  timezone: "UTC"
+
+targets:
+  cidrs: [127.0.0.1]
+
+scan:
+  concurrency: 50
+  ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]
+
+security:
+  allow_internal_targets: true
+
+output:
+  directory: "./output-190"
+  db_path: "./output-190/otics.db"
