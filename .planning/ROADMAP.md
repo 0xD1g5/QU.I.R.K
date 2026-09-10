@@ -333,7 +333,7 @@ gated behind an explicit reachability-source decision made before any rendering 
 **Plans**: 9 plans (7 Tier A always-ship + 2 Tier B spike-gated)
 - [x] 195-01-PLAN.md — MAP-01 spike: record reachability-source go/no-go (operator-declared vs deferred) before any rendering plan — DECISION: DEFERRED (Tier B -> v2 backlog 999.107)
 - [x] 195-02-PLAN.md — Backend read-time derivation module (key-reuse + upstream_mitigated hardware-bridge edges) + bridge.py shared-helper refactor
-- [ ] 195-03-PLAN.md — Score-firewall (test_exposure_map_score_guard.py, NEW) + zero-inferred-edges/partial_only-exclusion guard (NEW)
+- [x] 195-03-PLAN.md — Score-firewall (test_exposure_map_score_guard.py, NEW) + zero-inferred-edges/partial_only-exclusion guard (NEW)
 - [ ] 195-04-PLAN.md — ExposureMapResponse schemas + auth-gated GET /api/exposure-map route + route tests
 - [ ] 195-05-PLAN.md — Cytoscape Exposure Map tab (LR dagre, empty state, evidence tooltips, legend) + nav/route + component tests
 - [ ] 195-06-PLAN.md — Human-verify checkpoint of the live map surface
@@ -353,7 +353,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 8/8 | Complete   | 2026-09-09 |
-| 195. Quantum Exposure Map | 2/9 | In progress | - |
+| 195. Quantum Exposure Map | 3/9 | In Progress|  |
 
 ## Backlog
 

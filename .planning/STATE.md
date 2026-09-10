@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 195 plan 02 (Tier A exposure-map derivation module) complete — proceeding to plan 03
-last_updated: "2026-09-09T00:00:00.000Z"
-last_activity: 2026-09-09 -- Phase 195 plan 02 complete (exposure_map.py + bridge.py shared helper)
+stopped_at: Phase 195 plan 03 (exposure-map score-firewall + zero-inferred-edges guards) complete — proceeding to plan 04
+last_updated: "2026-09-10T03:16:23.653Z"
+last_activity: 2026-09-10 -- Phase 195 plan 03 complete (test_exposure_map_score_guard.py + test_exposure_map_edges.py)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 42
-  completed_plans: 35
-  percent: 83
+  completed_plans: 36
+  percent: 80
 ---
 
 # Project State
@@ -1118,9 +1118,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 195 (Quantum Exposure Map) — EXECUTING
-Plan: 3 of 9
-Status: Executing Phase 195 (plans 01-02 complete; plan 03 next)
-Last activity: 2026-09-09 -- Phase 195 plan 02 complete (exposure_map.py + bridge.py shared helper)
+Plan: 4 of 9
+Status: Executing Phase 195 (plans 01-03 complete; plan 04 next)
+Last activity: 2026-09-10 -- Phase 195 plan 03 complete (test_exposure_map_score_guard.py + test_exposure_map_edges.py)
+
+**195-03 (complete, 2026-09-10) — Score-firewall (D-10) + zero-inferred-edges (D-11/D-12) permanent guards (MAP-03).**
+`tests/test_exposure_map_score_guard.py` (NEW) copies test_key_reuse_score_guard.py's 4-assertion
+pattern: SCORE_WEIGHTS key check (exposure_map/reachability/crown_jewel), AST import-walk proving
+`quirk/intelligence/exposure_map.py` never imports scoring, a negative control, and a
+structural-contract test against a real seeded `derive_exposure_map` call. `tests/test_exposure_map_edges.py`
+(NEW) asserts every edge carries non-empty evidence, and the named regression
+`test_partial_only_devices_produce_zero_edges` proves the same gateway/backend pair produces zero
+edges when only `partial_only` and exactly one edge when promoted to `upstream_mitigated`
+(Pitfall 2, T-195-02) — plus a D-12 no-denormalized-table structural scan and a D-08
+empty-session honest-absence check. 8 tests total, all green; neither existing guard file
+(`test_cve_score_guard.py`, `test_key_reuse_score_guard.py`) was touched.
 
 **195-02 (complete, 2026-09-09) — Read-time exposure-map derivation module + bridge.py signature-preserving refactor (MAP-02).**
 `quirk/cbom/bridge.py` gained `_find_matching_gateway(dev, hw_devices) -> tuple[dict, str] | None`,

@@ -75,7 +75,7 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
       verified relationships (key-reuse clusters from SPKI-02, operator-declared crown jewels,
       confirmed hardware crypto-bridge chains) — zero inferred edges, with an explicit "no path
       data available" state instead of a fabricated chain.
-- [ ] **MAP-03**: Exposure Map data never feeds the quantum-readiness score — machine-enforced
+- [x] **MAP-03**: Exposure Map data never feeds the quantum-readiness score — machine-enforced
       by a `test_exposure_map_score_guard.py` firewall test (ADVISORY-01 /
       `test_cve_score_guard.py` pattern) written in the same phase the feature is built.
 
@@ -117,7 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DASH-09 | 194 | Complete |
 | MAP-01 | 195 | Pending |
 | MAP-02 | 195 | Pending |
-| MAP-03 | 195 | Pending |
+| MAP-03 | 195 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
