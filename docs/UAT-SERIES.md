@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-10 (Phase 196 Plan 02 — version bump to 5.21.0: `pyproject.toml`,
+**Last Updated:** 2026-09-10 (Phase 196 Plan 04 — HUAT-01: UAT-192-07 re-verified against the
+actually-released `quirk-scanner==5.21.0` PyPI build (clean venv, filesystem-level provenance
+proof), superseding the 2026-09-09 dev-checkout evidence as the disposition for HUAT-01 while
+retaining it as dev-checkout evidence; the stale "Series 192 disposition" paragraph and a
+carried-over contradictory Notes block, both of which had claimed the live-browser walkthrough
+"has not yet been performed" despite the case's own checked PASS box, were corrected in the same
+edit. Earlier: Phase 196 Plan 02 — version bump to 5.21.0: `pyproject.toml`,
 `README.md`, and this document's header/UAT-1-02 pass criteria now read 5.21.0, replacing the
 the "v5.21 hasn't shipped a version bump yet" placeholder text that Series 188-194's header notes
 carried while the release was still in progress; UAT-1-02's evidence still cites the pre-bump
@@ -25376,21 +25382,51 @@ primary scan-submission action.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** Operator (Digs) + Claude live-browser walkthrough
-**Notes:** PASSED 2026-09-09 — live Chrome walkthrough against a real scan (example.org, quick profile, job b49e7889): 3 ran / 22 skipped chips + reason-classified detail rows on scan-history; pre-v5.21 honest not-recorded notice; Effective config panel grouped/raw views with Overridden + Preset: deep provenance; all credentials masked incl. the genuinely-set snmp_community; Raw YAML AND the raw /api/config/effective payload show only •••• (server-side redaction); Run Scan remained visually dominant. Operator approved. Evidence in 192-HUMAN-UAT.md. Historical note: this case was originally SKIP because auto-mode pre-approved the plan 09/10 checkpoints; the prior deferral text said the walkthrough has
+**Notes:** PASSED 2026-09-09 — live Chrome walkthrough against a real scan (example.org, quick profile, job b49e7889): 3 ran / 22 skipped chips + reason-classified detail rows on scan-history; pre-v5.21 honest not-recorded notice; Effective config panel grouped/raw views with Overridden + Preset: deep provenance; all credentials masked incl. the genuinely-set snmp_community; Raw YAML AND the raw /api/config/effective payload show only •••• (server-side redaction); Run Scan remained visually dominant. Operator approved. Evidence in 192-HUMAN-UAT.md. Superseded historical note: this case was originally SKIP because auto-mode pre-approved the plan 09/10 checkpoints; the prior deferral text said the walkthrough has
 not been performed. Both source SUMMARY.md files' Task 3 checkpoints were auto-mode
-pre-approved per this session's policy, not actually visually confirmed by a developer — this case
-exists specifically so that fact is recorded honestly rather than defaulting to an unverified PASS.
-Tracked as an outstanding phase-level HUMAN-UAT item; must be performed and this case flipped to
-PASS or FAIL before relying on visual claims (chip colors, badge placement, dominant-button
-hierarchy) beyond what the automated tests already assert structurally.
+pre-approved per this session's policy, not actually visually confirmed by a developer at that
+time — this case exists specifically so that fact is recorded honestly rather than defaulting to
+an unverified PASS. This note describes the state as of 2026-09-08 only; it was superseded by the
+2026-09-09 live walkthrough recorded above and by the 2026-09-10 released-build re-verification
+below. It is retained for the historical record and is not an open action item.
+
+**2026-09-10 — RELEASED-BUILD RE-VERIFICATION (Phase 196, HUAT-01).** This supersedes the
+2026-09-09 dev-checkout evidence above as the disposition for HUAT-01 — the 2026-09-09 run remains
+valid as dev-checkout evidence and is not deleted. The dashboard was served by
+`/tmp/q5210-check/bin/quirk serve --no-open`, a clean venv into which `quirk-scanner==5.21.0` was
+installed straight from PyPI (not the repo, not an editable install). Provenance was proven at the
+filesystem level, not by version string alone (the repo checkout also reports 5.21.0): `python -c
+"import quirk, sys; print(quirk.__file__); print(sys.executable)"` inside that venv printed
+`quirk.__file__` = `/private/tmp/q5210-check/lib/python3.14/site-packages/quirk/__init__.py`, with
+`sys.executable` resolving inside the same venv; `pip show quirk-scanner` reported `Location:
+/private/tmp/q5210-check/lib/python3.14/site-packages` (never the repo path). Scan job used for the
+coverage-chips check: `2026-09-09T03:25:49.676078+00:00` (target example.org, quick profile,
+pre-existing in the canonical `./quirk-output/quirk.db`; 3 ran / 22 skipped `scan_phase_records`
+rows, matching the dev-checkout run's counts). Corroborating (non-substituting per D-U2) evidence:
+a direct `GET /api/config/effective` capture showed only masked placeholders for every credential
+field (`adcs_password`, `pg_scanner_password`, `mysql_scanner_password`, `vault_token`,
+`security.api_token` all `•••• (not set)`; `snmp_community` — the one genuinely-set credential —
+`•••• (set)`; `redacted_field_count: 6`), zero real values. The operator personally re-ran both
+checklists in their own browser against this PyPI-served dashboard and replied "Both PASS": Check 1
+(Scan Coverage chips — pair renders, colors, reason rows, the honest not-recorded notice, dominant
+actions) PASS; Check 2 (Effective config panel + Raw YAML redaction, all 8 steps including the full
+scrolled YAML) PASS, no real credential value observed anywhere in the Raw YAML tab. No delta from
+the 2026-09-09 dev-checkout run was reported — released-build behavior matches the dev checkout
+exactly. This 2026-09-10 verdict is the released-build disposition for HUAT-01.
 
 ---
 
 **Series 192 disposition.** Six of seven cases, UAT-192-01 through UAT-192-06, are `[x] PASS`,
 each citing a live re-run of this phase's own automated tests during this plan's execution.
-UAT-192-07 is honestly disposed `[x] SKIP` (DEFERRED) — the live-browser visual walkthrough for
-coverage chips and the Effective config panel has not yet been performed by a human, unlike Series
-191's UAT-191-06 which had a genuine live human checkpoint. No case in this series was checked to
+UAT-192-07 is `[x] PASS`, carrying three recorded disposition stages: originally honestly disposed
+`[ ] SKIP` (DEFERRED) on 2026-09-08 because the live-browser visual walkthrough for coverage chips
+and the Effective config panel had not yet been performed by a human (the plan 09/10 checkpoints
+were auto-mode pre-approved, not visually confirmed); flipped to `[x] PASS` on 2026-09-09 after a
+genuine live Chrome walkthrough against a dev-checkout dashboard, operator-approved; then
+re-verified on 2026-09-10 (Phase 196, HUAT-01) against the actually-released
+`quirk-scanner==5.21.0` PyPI build, served from a clean venv with filesystem-level provenance
+proof, with the operator again personally confirming PASS for both checklists in their own browser
+and reporting no delta from the dev-checkout behavior. No case in this series was ever checked to
 satisfy the gate without a corresponding real result.
 
 ---
