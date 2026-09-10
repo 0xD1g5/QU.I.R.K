@@ -102,6 +102,18 @@ export function ExposureMapPage() {
       })
     })
 
+    // Cytoscape renders to a <canvas>, which cannot resolve CSS custom
+    // properties (`var(--x)`) — passing them yields cytoscape's default gray,
+    // which is why the graph edge/nodes rendered gray while the DOM legend
+    // swatch (real CSS) showed the correct color. Resolve tokens to concrete
+    // values here at init so the canvas gets a real color while staying
+    // theme-aware (getComputedStyle reads the active light/dark override).
+    const cssVar = (name: string): string =>
+      getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    const dsHigh = cssVar("--ds-high") || "#d4893a"        // key-reuse amber
+    const dsMedium = cssVar("--ds-medium") || "#8892a4"    // hardware-bridge / node slate
+    const accent = `hsl(${cssVar("--accent") || "180 37% 47%"})`  // crown-jewel / selection teal
+
     // Pitfall 5: rankDir MUST be "LR" (attack-path narrative reads
     // left-to-right), not roadmap.tsx's "TB".
     const layout: cytoscape.LayoutOptions = {
@@ -131,7 +143,7 @@ export function ExposureMapPage() {
             "width": 150,
             "height": 52,
             "shape": "roundrectangle",
-            "background-color": "var(--ds-medium)",
+            "background-color": dsMedium,
             "border-width": 0,
           },
         },
@@ -140,13 +152,13 @@ export function ExposureMapPage() {
           selector: "node[isCrownJewel='true']",
           style: {
             "border-width": 3,
-            "border-color": "hsl(var(--accent))",
+            "border-color": accent,
             "border-style": "solid",
           },
         },
         {
           selector: "node:selected",
-          style: { "border-width": 3, "border-color": "hsl(var(--accent))" },
+          style: { "border-width": 3, "border-color": accent },
         },
         // Edge-type taxonomy (D-06/UI-SPEC): key-reuse amber solid,
         // hardware-bridge gray dashed. declared_reachability is Tier B —
@@ -155,8 +167,8 @@ export function ExposureMapPage() {
           selector: "edge[edgeType='key_reuse']",
           style: {
             "width": 2,
-            "line-color": "var(--ds-high)",
-            "target-arrow-color": "var(--ds-high)",
+            "line-color": dsHigh,
+            "target-arrow-color": dsHigh,
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
             "line-style": "solid",
@@ -166,8 +178,8 @@ export function ExposureMapPage() {
           selector: "edge[edgeType='hardware_bridge']",
           style: {
             "width": 2,
-            "line-color": "var(--ds-medium)",
-            "target-arrow-color": "var(--ds-medium)",
+            "line-color": dsMedium,
+            "target-arrow-color": dsMedium,
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
             "line-style": "dashed",
