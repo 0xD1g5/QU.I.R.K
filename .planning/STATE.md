@@ -2,21 +2,34 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: completed
-stopped_at: v5.21 ALL PHASES COMPLETE — operator stopped at clean boundary; milestone lifecycle (audit → complete → cleanup) NOT yet run
-last_updated: "2026-09-10T10:30:04.410Z"
-last_activity: 2026-09-10 -- v5.21 all phases complete; clean stop at operator request; lifecycle pending
+status: milestone_complete
+stopped_at: v5.21 CLOSED 2026-09-10 — audit (tech_debt accepted) → complete (hand-written archive) done; cleanup pending
+last_updated: "2026-09-10T11:15:00.000Z"
+last_activity: 2026-09-10 -- v5.21 milestone closed; archives written to .planning/milestones/; next /gsd-new-milestone
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 42
   completed_plans: 40
-  percent: 80
+  percent: 100
 ---
 
 # Project State
 
 ## Deferred Items
+
+**Acknowledged at the v5.21 milestone close on 2026-09-10** (operator accepted audit status
+`tech_debt`; full inventory in `.planning/milestones/v5.21-MILESTONE-AUDIT.md`):
+
+- Phase 192: 2 deferred human browser checks (Scan Coverage chips; Effective-config Raw YAML
+  redaction — security-relevant, do opportunistically against a running dashboard) + 5 INFO
+  review items. Phases 193/194: 6 more INFO items (incl. 194 IN-02 compute-failure fabricating
+  `score=0/POOR`). Phase 195: Tier B deferred by design → 999.107.
+- `audit-open` at this close: same 5 items as v5.20 minus the phantom-cert todo —
+  **CLOSED since the v5.20 list:** dashboard-cert-view-phantom-tls-rows (resolved by Phase 194
+  DASH-09, moved to todos/completed/). The 3 GSD-toolchain todos and the healthcare-vertical
+  quick-task false positive carry unchanged (see table below).
+- NO v5.21 git tag, same rationale as v5.20 (release.yml fires on `v[0-9]*`).
 
 - **`test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg` — pre-existing
   local-only RED, NOT caused by Phase 194 (verified 2026-09-09 by reverting HORIZON.md to the
@@ -45,7 +58,6 @@ record lives in MILESTONES.md and .planning/milestones/, not in a tag.
 | Category | Item | Priority | Status |
 |----------|------|----------|--------|
 | todo | gsd-phase-complete-premature-completion | high | open — **operative: `phase.complete` unsafe to close a phase/milestone on this machine** |
-| todo | dashboard-cert-view-phantom-tls-rows | high | open |
 | todo | gsd-state-planned-phase-misleading-empty-updated | medium | open — returns `updated: []` while drifting frontmatter |
 | todo | gsd-state-bold-field-search-unscoped-latent | medium | open — dormant risk, deliberately unfixed with stated reason |
 | quick_task | 260611-g0b-merge-healthcare-vertical-branch-into-ma | — | **known false positive** — genuinely complete (PLAN + SUMMARY + merge commit exist); `audit-open` has misreported it as `status: missing` at every milestone close since v5.10. Do not re-investigate. |
@@ -64,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.21 ALL PHASES COMPLETE (191-195). Phase 195 closed 2026-09-10: verification 3/3, review resolved (3 warnings fixed), operator-approved map walkthrough, Tier B deferred per MAP-01 spike (999.107). Next: milestone lifecycle — audit → complete → cleanup. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
+**Current focus:** v5.21 CLOSED 2026-09-10 (audit tech_debt accepted 13/13; archives in `.planning/milestones/v5.21-*`; REQUIREMENTS.md removed for next milestone). Cleanup (phase-dir archival) next, then `/gsd-new-milestone`. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
 Complete, closing every requirement this phase owns. Proceeding to plan 07 (docs/UAT/Obsidian
 close-out). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after

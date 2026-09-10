@@ -1,6 +1,8 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-09)
+## Current State (updated 2026-09-10)
+
+**v5.21 SHIPPED (closed 2026-09-10) — Dashboard Parity & Exposure Capability.** All 5 phases (191–195), 42 plans (40 executed, 2 Tier B spike-gated skipped per MAP-01 DEFERRED → 999.107). Audit: 13/13 requirements satisfied, 6/6 cross-phase integration seams wired, 5/5 phases Nyquist-compliant, status `tech_debt` accepted by operator (2 deferred Phase-192 browser checks, 11 INFO-level review items, Tier B deferral). Close hand-written under the pre-image + signature-diff protocol; **no v5.21 git tag** (two-component tags fire release.yml — v5.20 precedent). Archives: `.planning/milestones/v5.21-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Next: `/gsd-new-milestone`.
 
 **v5.21 ALL PHASES COMPLETE (2026-09-10) — Phase 195 (Quantum Exposure Map) closed; milestone lifecycle (audit → complete → cleanup) pending.** MAP-01/02/03 validated: the MAP-01 spike resolved reachability-source as DEFERRED (operator-confirmed; Tier B → 999.107), and Tier A shipped a zero-fabrication attack-path map — key-reuse + upstream_mitigated-only hardware-bridge edges, per-edge evidence tooltips, honest empty state, and a new-file score-firewall test. All 13 v5.21 requirements are now Complete.
 
@@ -142,7 +144,10 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.21 Dashboard Parity & Exposure Capability
+## Previous Milestone: v5.21 Dashboard Parity & Exposure Capability — SHIPPED 2026-09-10
+
+**Closed 2026-09-10:** all 13 requirements Complete; audit tech_debt accepted. Section retained
+as the opening record.
 
 **Goal:** Make the dashboard a full operating surface a consultant can trust — config parity with
 the CLI, honest visibility when scanners don't run, phantom-free certificate views — and ship the
@@ -391,6 +396,20 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Chaos-lab re-run carries true outcomes — all 13 lab-down cases re-executed with the lab up (33 containers, 18 ports verified), final tally 10 PASS / 3 FAIL / 0 GAP, every genuine defect explicitly triaged; surfaced `TRIAGE-176-03`, a live scanner bug degrading every SSH scan to a banner grab — Phase 176 (LABRUN-01)
 - ✓ `UAT-1-02` false-FAIL root-caused — `uat_runner.py:154` gated PASS on `'4.2.0' in ver or 'quirk' in ver.lower()`, both disjuncts unsatisfiable against `QU.I.R.K. v5.15.0`; fixed under a narrow lift with a shape-pinning regression test — Phase 176 (LABRUN-02)
 
+**v5.21 Dashboard Parity & Exposure Capability (Phases 191–195, shipped 2026-09-10)**
+- ✓ SPKI SHA-256 fingerprint persisted on `CryptoEndpoint` across every scan path including sensor push/merge, with a round-trip integration test guarding the v5.8 B-01 silent-drop recurrence — Phase 191 (SPKI-01)
+- ✓ Key-reuse detection via `GROUP BY`-derived clusters (no denormalized boolean), framed as remediation leverage ("one re-key closes N findings") on CLI/HTML/DOCX — Phase 191 (SPKI-02)
+- ✓ Effective-config visibility — auth-gated `GET /api/config/effective` with fail-closed credential redaction, provenance badges, preview ≡ submit guaranteed by shared `build_job_config_dict` path — Phase 192 (PARITY-01)
+- ✓ Structured per-phase skip records (`ScanPhaseRecord`) with 5 distinguishable reasons; Scan Coverage disclosure on dashboard chips + CLI/HTML/DOCX — a scan that assessed nothing in a domain says so — Phase 192 (OBS-01, OBS-02)
+- ✓ All 25 connectors enable/configure/credential from the dashboard behind two-source run-time availability probes with 422 server-side re-check — Phase 193 (PARITY-02)
+- ✓ In-memory-only credential path — env-var injection at `Popen` time, never in `ScanJob`/job YAML/logs, sentinel-guard-tested — Phase 193 (PARITY-03)
+- ✓ Advanced scan-behavior fields (TLS ports, tls_enum_mode, SNI, timeouts/retry, data_classification) as delta-only overlays merged last, one recorded precedence rule, 422 at submit AND preview — Phase 194 (PARITY-04)
+- ✓ Executive Verdict default-on — cherry-pick of `f05e7dc7` only, flag-gate removed, consumes `rating`/`rating_cap_reason` from the API with an honest-absence card — Phase 194 (VERDICT-01)
+- ✓ Phantom-cert fix — `_is_real_cert_endpoint()` single shared server-side filter; certificates view + `/print` PDF show only real certificates with honest empty states and an excluded-count disclosure — Phase 194 (DASH-09)
+- ✓ Reachability-source spike as a hard go/no-go gate BEFORE rendering was planned — DECISION: DEFERRED, Tier B parked as 999.107 — Phase 195 (MAP-01)
+- ✓ Zero-fabrication Quantum Exposure Map — key-reuse clusters + `upstream_mitigated`-only hardware-bridge chains, per-edge evidence, explicit "no path data" empty state, zero inferred edges — Phase 195 (MAP-02)
+- ✓ Exposure-map score firewall machine-enforced — dedicated `test_exposure_map_score_guard.py` with AST-walk import guard and a negative control proving it can fail — Phase 195 (MAP-03)
+
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
 - [ ] Scan job queue (Celery + Redis or similar)
@@ -400,19 +419,12 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.21 Dashboard Parity & Exposure Capability in progress (opened 2026-09-08). A fresh
-`.planning/REQUIREMENTS.md` formalizes these into REQ-IDs during requirements definition; this
-list is the PM-approved scope going in, sourced from `.planning/HORIZON.md`'s Open-Item Ledger
-plus the PM-filed 999.104:
-
-- [ ] **999.104 (tiers 1–3)** — CLI config ↔ dashboard parity: effective-config visibility,
-      connector enablement + credentials at scan-submit, advanced scan-behavior fields. Tier 4
-      (server-side config.yaml editing) explicitly out.
-- [ ] **999.96 (observability half)** — every skipped scanner phase reported in UI, report, log
-- [ ] **Phantom-cert rows** — `routes/scan.py:1656-1669` cert view filters out failed handshakes
-- [ ] **999.100** — Executive Verdict layer merged from `origin/UX-Updates` and un-flag-gated
-- [ ] **999.98** — cert SPKI fingerprint persisted per endpoint
-- [ ] **999.99** — Quantum Exposure Map (attack-path view), built on 999.98
+v5.21 closed 2026-09-10 — its entire scope (999.104 tiers 1–3, 999.96 observability half,
+phantom-cert rows, 999.100, 999.98, 999.99 Tier A) shipped and moved to Validated above.
+Deferred out of it: Tier B reachability rendering (999.107), advanced-field long tail
+(999.106/194-PARITY-AUDIT.md's 65 not-yet-covered fields), PARITY-T4 (server-side config.yaml
+editing — needs its own threat model). Next milestone's scope comes from `/gsd-new-milestone`'s
+PM review of `HORIZON.md`'s Open-Item Ledger.
 
 Standing carry-forward, not in v5.20 scope:
 
@@ -1180,7 +1192,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-10 — Phase 195 complete; all v5.21 phases done, milestone lifecycle pending*
+*Last updated: 2026-09-10 after v5.21 milestone close*
 
 ## Evolution
 

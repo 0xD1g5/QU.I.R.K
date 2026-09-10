@@ -1223,6 +1223,59 @@ changed zero product code across 7 plans; Phase 176 needed 8 execution units for
 almost entirely due to environment (Docker daemon) rather than complexity. Test suite ended at
 **3,802 passed / 1 failed** (the pre-existing `DEFER-172-01` node).
 
+## Milestone: v5.21 — Dashboard Parity & Exposure Capability
+
+**Shipped:** 2026-09-10 (development complete; no git tag by design — release hazard)
+**Phases:** 5 (191–195) | **Plans:** 42 (40 executed, 2 Tier B spike-gated skipped)
+
+### What Was Built
+
+SPKI fingerprint persistence + GROUP BY key-reuse detection across every scan path (191);
+effective-config visibility with fail-closed redaction + per-phase ran/skip observability on
+dashboard and all report formats (192); all 25 connectors enable/configure/credential from the
+dashboard with in-memory-only credential injection (193); advanced scan-field overlays, Executive
+Verdict default-on, phantom-cert filter (194); zero-fabrication Quantum Exposure Map with
+machine-enforced score firewall, Tier B reachability deferred by spike decision (195).
+
+### What Worked
+
+- **Spike-as-gate before rendering work (MAP-01):** resolving the reachability-source question as
+  a hard go/no-go BEFORE planning Tier B avoided building a persistence surface with zero live
+  data to exercise it. The DEFERRED decision was made on measured evidence (7 dev DBs inspected,
+  zero populated `bridge_evidence_json` rows), not vibes.
+- **One shared plumbing seam, reused three times:** the delta-only YAML-overlay path built in 193
+  (connectors) carried 194's advanced fields and 192's preview with preview ≡ submit guaranteed
+  by construction — the integration audit found all 6 cross-phase seams wired with zero rework.
+- **Code-review → fix chains caught delivery-breaking defects pre-close:** 193's review found 3
+  criticals (dead SNMP env fallback, loader-discarded broker creds, never-matching default host)
+  that would have silently broken "credential parity" while every test stayed green.
+- **Operator walkthroughs earned their keep:** 195-06's human pass caught the Cytoscape
+  CSS-var()-in-canvas defect (edges rendering default gray) that no automated test could see.
+
+### What Was Inefficient
+
+- Phase 192 closed with 2 human browser checks deferred rather than scheduled — they're now
+  milestone tech debt instead of a 10-minute walkthrough during the phase.
+- The ROADMAP Progress table and one plan checkbox (194-08) were stale at close and needed
+  hand-correction during archival — the VALIDATION-row/checkbox staleness class again.
+
+### Patterns Established
+
+- Hand-written milestone close under pre-image + signature-diff is now the settled protocol
+  (second consecutive close; scripted signature check on STATE.md, byte-identical Backlog diff
+  on ROADMAP rewrite).
+- Two-component milestone git tags are permanently retired (release.yml fires on `v[0-9]*`).
+- Zero-fabrication evidence gating (every map edge carries queryable evidence; honest empty
+  states over inferred chains) extends the honest-absence line from v5.20's scoring work.
+
+### Key Lessons
+
+- A deliberate deferral recorded as a decision (Tier B → 999.107) costs nothing at audit time;
+  an undocumented one would have read as a gap. Record the no-go, not just the go.
+- Cross-phase seams stayed cheap because later phases reused earlier phases' exact code paths
+  (import, not copy; same builder function, not a parallel one) — the integration audit could
+  verify wiring by reading import statements.
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -1248,6 +1301,7 @@ almost entirely due to environment (Docker daemon) rather than complexity. Test 
 | v5.15 Lifecycle Tail Drain | 3 | 11 | First published release since 5.12.0 (tag `v5.15.0`, 3-component — v5.13/v5.14 had missed `release.yml`'s `v*.*.*` glob entirely); a blocking human-UAT gate caught a coverage under-report every automated criterion passed over; DISC-08's requirement was written against a checkpoint layer that did not exist, so the phase built it rather than tightening it; Phase 162 executed inline with no PLAN/SUMMARY artifacts (section authored retroactively 2026-09-01) |
 | v5.16 Review Drain & Gate Integrity | 8 | 47 | **Densest milestone to date — 187 commits in two days.** 377 unrecorded UAT cases driven to zero undispositioned across all 666 behind a standing CI gate; a CRITICAL injection (CR-01) shipped in its own tooling and survived one phase before a deep review caught it; three successive hand-enumerated slug lists each silently omitted work in a single phase; every count the source review asserted failed re-measurement (5→3, 4→2, 16→230, ~325→377, 291→81) (section authored retroactively 2026-09-01) |
 | v5.17 Defect Drain | 5 | 28 (+2 addenda) | First pure defect-drain milestone; scope re-measured from the ledger before opening (32 claimed FAILs → 18 genuine defects); Phase 175 changed ZERO product code across 7 plans; the milestone's most valuable finding (`TRIAGE-176-03`, every SSH scan silently degraded to a banner grab) came from re-running an investigation that already had a closed answer |
+| v5.21 Dashboard Parity & Exposure Capability | 5 | 42 (40 executed, 2 spike-gated skipped) | First capability milestone with a spike-as-hard-gate (MAP-01 go/no-go resolved BEFORE rendering plans ran); one shared delta-overlay plumbing seam reused across three phases kept all 6 integration seams rework-free; second consecutive hand-written close under pre-image + signature-diff |
 
 ### Cumulative Quality
 
