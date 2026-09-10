@@ -18,6 +18,21 @@ progress:
 
 ## Deferred Items
 
+- **`test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg` — pre-existing
+  local-only RED, NOT caused by Phase 194 (verified 2026-09-09 by reverting HORIZON.md to the
+  post-193 baseline: still fails).** Six offenders, all fake worked-example IDs
+  (`BACK-1`, `BACK-99`, `BACK-900`, `BACK-9999`) that live in archived v5.20 **Phase 189**
+  gate-development docs (`189-REVIEW.md` WR-02 line, `189-VERIFICATION.md`, `189-03-PLAN/SUMMARY`)
+  as illustrations of the gate's own enumeration behavior — none is a real backlog item (no
+  `.planning/backlog/` dir exists for any). The leg is `skipif`-guarded on untracked
+  `.planning/backlog/` + `.planning/milestones/` paths, so it is **CI-invisible** (a fresh
+  checkout skips it) and never gated Phase 194 or any prior phase's CI. Correct fix is Phase 189's
+  debt, not 194's: escape the example tokens in those archived docs so the enumerator stops
+  reading them as real IDs — NOT ledgering fake IDs and NOT narrowing enumeration (the gate's own
+  non-vacuity guard forbids both). Filed for a future GSD-tooling/doc-hygiene drain. Do not
+  re-investigate at each phase close — this note is the disposition.
+
+
 Items acknowledged and deferred at the v5.20 milestone close on 2026-09-08 (carried from the v5.19
 close where noted). All remain open and visible to `/gsd-progress` and `/gsd-audit-uat`.
 CLOSED since the v5.19 list: backlog-reconciliation-and-derived-gate (Phase 189 TRIAGE-09, todo
