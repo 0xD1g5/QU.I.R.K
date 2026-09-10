@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 195 planned (9 plans, 6 waves; spike-gated) — ready to execute
-last_updated: "2026-09-10T03:02:50.406Z"
-last_activity: 2026-09-10 -- Phase 195 planning complete
+stopped_at: Phase 195 plan 01 (MAP-01 spike) complete — DECISION DEFERRED, Tier B skipped, proceeding to plan 02
+last_updated: "2026-09-09T00:00:00.000Z"
+last_activity: 2026-09-09 -- Phase 195 plan 01 complete (MAP-01 spike, DECISION DEFERRED)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 42
-  completed_plans: 33
-  percent: 79
+  completed_plans: 34
+  percent: 81
 ---
 
 # Project State
@@ -64,7 +64,27 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 COMPLETE (verification 8/8, code review resolved incl. GET /config/effective 500→422 parity fix, operator-approved walkthrough 10 PASS/3 honest GAP). Next: Phase 195 (Quantum Exposure Map) — the FINAL v5.21 phase; opens with the MAP-01 reachability-source spike as a hard go/no-go gate. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
+**Current focus:** Phase 195 — Quantum Exposure Map (executing — FINAL v5.21 phase). Plan 01
+(MAP-01 spike) complete — DECISION: DEFERRED (operator-confirmed 2026-09-09). Tier B (plans
+08/09) skipped this phase, parked as v2 backlog 999.107. Proceeding to plan 02 (Tier A backend
+derivation module). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write
+closes; after this phase the milestone lifecycle (audit→complete→cleanup) runs.
+
+**195-01 (complete, 2026-09-09) — MAP-01 reachability-source spike; DECISION: DEFERRED (MAP-01).**
+Investigated Tier B (operator-declared crown-jewel + reachability persistence) effort: estimated
+~2 full plans minimum (new persistence surface, CRUD-lite auth-gated endpoint, `extra="forbid"`
+schema + host/IP validation, declaration UX, tests), exceeding RESEARCH's ~1-plan deferred/go
+threshold; freshly re-confirmed `OperatorContext.crown_jewels` is per-scan-run ephemeral with
+zero downstream consumers (not a usable dashboard persistence home). Confirmed no real
+chaos-lab/fixture data produces an end-to-end `upstream_mitigated` hardware-bridge promotion —
+`test_cbom_bridge_detection.py` is 100% synthetic fixtures, the one live Phase 140 lab run
+validated only ARP-walk collection (not a paired legacy-backend device), and 7 local dev-scan
+SQLite DBs were inspected read-only with zero populated `bridge_evidence_json` rows; key-reuse
+remains the only edge source with concretely demonstrable live data (D-03's floor). Operator
+confirmed **DEFERRED** — Tier B (plans 195-08/195-09) skipped this phase, filed as v2 backlog
+999.107 in `HORIZON.md`; Tier A (map renderer, key-reuse + hardware-bridge edges, score-firewall
+test, honest-absence empty states) ships regardless per D-14. This decision resolves D-13's hard
+gate before any rendering-implementation plan runs. See `195-01-SUMMARY.md`.
 
 **194-08 (complete, 2026-09-10) — 999.104 field parity audit + phase gate (PARITY-04, D-15).**
 `194-PARITY-AUDIT.md` enumerates all 121 operator-settable fields from `quirk/config_template.yaml`/
@@ -1096,10 +1116,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — all 8 plans executed, phase close pending
-Plan: 8 of 8
-Status: Ready to execute
-Last activity: 2026-09-10 -- Phase 195 planning complete
+Phase: 195 (Quantum Exposure Map) — EXECUTING
+Plan: 2 of 9
+Status: Executing Phase 195 (plan 01 complete, DECISION: DEFERRED; plan 02 next)
+Last activity: 2026-09-09 -- Phase 195 plan 01 complete (MAP-01 spike, DECISION DEFERRED)
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
