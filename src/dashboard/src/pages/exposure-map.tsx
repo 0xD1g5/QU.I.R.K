@@ -75,7 +75,33 @@ export function ExposureMapPage() {
   const nodes = useMemo(() => data?.nodes ?? [], [data])
   // D-11 (UI-side mirror of the backend evidence guard): never render an
   // edge whose evidence is empty/missing.
-  const edges = useMemo(() => (data?.edges ?? []).filter((e) => e.evidence && e.evidence.trim()), [data])
+  const evidenceEdges = useMemo(
+    () => (data?.edges ?? []).filter((e) => e.evidence && e.evidence.trim()),
+    [data],
+  )
+
+  // WR-01: cytoscape throws synchronously ("Can not create edge ... with
+  // nonexistant source/target") if any edge references a node id absent from
+  // `nodes`, crashing the whole page render. Filter to edges whose BOTH
+  // endpoints are present so the graph degrades to its valid subset instead
+  // of crashing. `edges` (the dangling-safe set) feeds the cytoscape
+  // elements, edgeById hover lookups, the sr-only list, and the empty-state
+  // gate — all consumers share one array so indices stay aligned.
+  const edges = useMemo(() => {
+    const nodeIds = new Set(nodes.map((n) => n.id))
+    return evidenceEdges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+  }, [nodes, evidenceEdges])
+
+  // Surface dropped dangling edges (referential-integrity slips in the
+  // backend payload) so the filter is observable, not silent.
+  useEffect(() => {
+    const dropped = evidenceEdges.length - edges.length
+    if (dropped > 0) {
+      console.warn(
+        `Exposure map: dropped ${dropped} edge(s) referencing node id(s) absent from the node set.`,
+      )
+    }
+  }, [evidenceEdges, edges])
 
   const edgeById = useMemo(() => {
     const m: Record<string, ExposureEdge> = {}

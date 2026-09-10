@@ -94,6 +94,54 @@ describe("ExposureMapPage", () => {
     ).toBeDefined()
   })
 
+  it("(d) drops a dangling edge (endpoint absent from nodes) instead of crashing the render", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    mockFetchApi.mockResolvedValue(
+      mockResponse({
+        nodes: [
+          { id: "host-a", label: "host-a:443", is_crown_jewel: false },
+          { id: "host-b", label: "host-b:443", is_crown_jewel: false },
+        ],
+        edges: [
+          {
+            source: "host-a",
+            target: "host-b",
+            edge_type: "key_reuse",
+            evidence: "Valid edge: host-a and host-b share SPKI fingerprint abc123.",
+          },
+          {
+            // Dangling: `ghost-node` is not in `nodes` — cytoscape would throw
+            // synchronously on this without the WR-01 filter.
+            source: "host-a",
+            target: "ghost-node",
+            edge_type: "hardware_bridge",
+            evidence: "Dangling edge: references ghost-node which was never emitted.",
+          },
+        ],
+      }),
+    )
+
+    render(<ExposureMapPage />)
+
+    // Graph container renders (no crash / error message) — the valid subset shows.
+    await waitFor(() => {
+      expect(screen.getByRole("img")).toBeDefined()
+    })
+
+    // Valid edge's evidence is reachable...
+    expect(
+      screen.getByLabelText(/Valid edge: host-a and host-b share SPKI fingerprint abc123\./i),
+    ).toBeDefined()
+    // ...but the dangling edge is dropped from every consumer (sr-only list).
+    expect(screen.queryByLabelText(/Dangling edge: references ghost-node/i)).toBeNull()
+    // The drop is observable, not silent.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("dropped 1 edge(s)"),
+    )
+
+    warnSpy.mockRestore()
+  })
+
   it("(c) renders the Tier A legend entries and the score-firewall note", async () => {
     mockFetchApi.mockResolvedValue(
       mockResponse({
