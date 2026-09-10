@@ -5,6 +5,19 @@ Phase 121 custom-port-scope enable_email/enable_broker suppression). See
 `quirk/dashboard/api/routes/jobs.py::build_job_config_dict` and
 `.planning/phases/193-connector-credential-parity/193-05-PLAN.md`.
 
+Phase 197 / Plan 03 / D-14 success criterion 4: `test_enable_toggle_no_longer_noop_at_job_yaml_level`
+proves — at the job's ON-DISK `config.yaml`, read through a real
+`POST /api/jobs` submission, not through `build_job_config_dict`'s return
+value directly — that toggling `enable_jwt`/`enable_container`/
+`enable_source`/`enable_kerberos` on TOGETHER WITH their target list is no
+longer a no-op (the audit finding these connectors "short-circuit on an
+empty target list" — see `run_scan.py`'s `if not cfg.connectors.X_targets:
+return _recorder.skip(...)` guards for jwt/container/source/kerberos).
+`test_enable_toggle_without_targets_is_still_a_documented_noop` is the
+contrast case: enabling the connector WITHOUT its target list still writes
+no `*_targets` key — this is the pre-phase no-op state the phase fixes when
+an operator supplies both.
+
 pytest -q tests/test_build_job_config_connectors_overlay.py
 """
 from __future__ import annotations
@@ -13,10 +26,16 @@ from pathlib import Path
 
 import pytest
 import yaml
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import sessionmaker
 
 from quirk.config import load_config
+from quirk.dashboard.api.app import create_app
+from quirk.dashboard.api.connector_availability import ConnectorAvailability, probe_all_connectors
+from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.routes.jobs import build_job_config_dict
 from quirk.engine.profiles import apply_profile
+from tests.conftest import make_isolated_memory_engine
 
 
 @pytest.mark.parametrize("port_scope", ["common", "top1000", "all", "custom"])
@@ -151,3 +170,136 @@ def test_connectors_overlay_detail_field_reaches_job_yaml_with_toggle():
     assert config["connectors"]["enable_jwt"] is True
     assert config["connectors"]["jwt_targets"] == ["a.example.com"]
     assert len(config["connectors"]) == 2
+
+
+def _app_with_db():
+    engine = make_isolated_memory_engine()
+    TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = override_get_db
+    return app, TestClient(app, raise_server_exceptions=False)
+
+
+class _FakeProc:
+    def __init__(self):
+        self.pid = 99999
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+
+def _fake_popen(*args, **kwargs):
+    return _FakeProc()
+
+
+def _all_available_probe_map() -> dict:
+    real = probe_all_connectors()
+    forced = {}
+    for flag, entry in real.items():
+        forced[flag] = ConnectorAvailability(
+            flag=flag,
+            available=True,
+            reason="",
+            install_hint=entry.install_hint,
+            category=entry.category,
+            label=entry.label,
+        )
+    return forced
+
+
+# (enable_flag, targets_field, sample_targets) — jwt/container/source are the
+# three success-criterion-4-named connectors whose run_scan.py skip guard was
+# cited by RESEARCH; kerberos is the identity-connector family member added
+# per the plan's acceptance criteria (>= 4 pairs, parametrized not copy-pasted).
+D14_TOGGLE_TARGET_PAIRS = [
+    ("enable_jwt", "jwt_targets", ["api.example.com", "auth.example.com"]),
+    ("enable_container", "container_targets", ["registry.example.com/app:latest"]),
+    ("enable_source", "source_targets", ["/repo/path-a", "/repo/path-b"]),
+    ("enable_kerberos", "kerberos_targets", ["kdc.example.com"]),
+]
+
+
+@pytest.mark.parametrize("enable_flag,targets_field,sample_targets", D14_TOGGLE_TARGET_PAIRS)
+def test_enable_toggle_no_longer_noop_at_job_yaml_level(
+    monkeypatch, enable_flag, targets_field, sample_targets
+):
+    """Phase 197 / D-14 success criterion 4: a full `POST /api/jobs`
+    submission with `{enable_flag: true, targets_field: [...]}` writes a job
+    `config.yaml` that, read from DISK via `yaml.safe_load`, carries both the
+    toggle and the operator's target list under `connectors:` — proving the
+    toggle is no longer a no-op for all four families named in the success
+    criterion."""
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    fake_map = _all_available_probe_map()
+    monkeypatch.setattr(
+        "quirk.dashboard.api.connector_availability.probe_all_connectors",
+        lambda: fake_map,
+    )
+
+    _app, tc = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={
+            "targets": "example.com",
+            "profile": "quick",
+            "connectors": {enable_flag: True, targets_field: sample_targets},
+        },
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
+
+    import quirk.dashboard.api.routes.jobs as jobs_module
+
+    config_path = jobs_module._job_output_dir(job_id) / "config.yaml"
+    on_disk = yaml.safe_load(config_path.read_text())
+    connectors_block = on_disk.get("connectors", {})
+
+    assert connectors_block.get(enable_flag) is True
+    assert connectors_block.get(targets_field) == sample_targets
+
+
+def test_enable_toggle_without_targets_is_still_a_documented_noop(monkeypatch):
+    """Phase 197 / D-14 no-op contrast: the SAME submission WITHOUT the
+    target list writes a `config.yaml` `connectors:` block containing
+    `enable_jwt: true` and NO `jwt_targets` key (delta-only, D-08) —
+    documenting the pre-phase no-op state (run_scan.py's
+    `if not cfg.connectors.jwt_targets: return _recorder.skip(...)` guard)
+    that the phase fixes only when an operator ALSO supplies targets."""
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    fake_map = _all_available_probe_map()
+    monkeypatch.setattr(
+        "quirk.dashboard.api.connector_availability.probe_all_connectors",
+        lambda: fake_map,
+    )
+
+    _app, tc = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={
+            "targets": "example.com",
+            "profile": "quick",
+            "connectors": {"enable_jwt": True},
+        },
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
+
+    import quirk.dashboard.api.routes.jobs as jobs_module
+
+    config_path = jobs_module._job_output_dir(job_id) / "config.yaml"
+    on_disk = yaml.safe_load(config_path.read_text())
+    connectors_block = on_disk.get("connectors", {})
+
+    assert connectors_block.get("enable_jwt") is True
+    assert "jwt_targets" not in connectors_block
