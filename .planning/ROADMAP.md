@@ -36,6 +36,7 @@
 - ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
 - ✅ **v5.20 Release & Correctness Drain** — Phases 187–190, 18 plans (shipped 2026-09-08; v5.19.0 published to PyPI 2026-09-07) → `.planning/milestones/v5.20-ROADMAP.md`
 - ✅ **v5.21 Dashboard Parity & Exposure Capability** — Phases 191–195, 42 plans (development complete 2026-09-10; audit tech_debt accepted 13/13; Tier B deferred → 999.107) → `.planning/milestones/v5.21-ROADMAP.md`
+- 🚧 **v5.22 Release & Parity Tail** — Phases 196–198 (opened 2026-09-10) → this file
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -92,6 +93,137 @@ is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
 
+## Current Milestone: v5.22 Release & Parity Tail
+
+**Opened:** 2026-09-10, after a boundary pass that ran the doc-review template (version drift
+PASS — 5.19.0 consistent, correct until this milestone's release phase bumps it; coverage gaps
+PASS; Obsidian PASS with vault Roadmap/Requirements re-sync queued for this roadmap's creation)
+and a PM review of HORIZON's Open-Item Ledger (8 stale rows closed with evidence at this
+boundary).
+
+**Goal:** Ship the two milestones of accumulated unreleased content (v5.20 scoring v2 + all of
+v5.21) as a real PyPI release, then close the dashboard parity residue (999.104 tiers 2–3) and
+drain the small standing items (backlog derived gate, repo-root hygiene, deferred browser checks).
+
+**Phase Numbering:** Continues from v5.21's last phase (195). Integer phases only — v5.22 starts
+at Phase 196.
+
+**Structure rationale:** REL-02 is gating per the v5.18/v5.20 precedent (release before feature
+work) — nothing else in this milestone ships ahead of the release it depends on for a clean
+version baseline. HOUSE-01 (repo-root hygiene) and HUAT-01 (deferred browser checks, which must
+run against the *released* build) ride the same release phase rather than getting their own.
+999.104's residue splits along the same seam the audit already drew: Tier 2 (connector
+credential/endpoint/target fields) is its own phase because it shares one code path
+(`build_job_config_dict` connectors overlay + the Phase-193 in-memory credential path); Tier 3
+(scan-behavior fields) groups with GATE-04 because both are small, independent drain items that
+don't touch the connector overlay at all.
+
+**Standing constraints carried into this milestone (see `CLAUDE.md` for full detail):**
+- `phase.complete`/`milestone.complete` GSD verbs remain unsafe on this machine (semantic defect
+  class — well-formed but wrong values). Every phase/milestone close in this milestone is
+  hand-written under the pre-image + signature-diff protocol; state-writing verbs are not used to
+  close phases.
+- The `v5.21.0` tag **must be three-component** (`release.yml` fires on `v[0-9]*` — a malformed
+  tag does real damage now, not a silent no-op; see the RVW-004 note above).
+- Any `src/dashboard/*.tsx` change needs `npm run build` + `npm run lint` in `src/dashboard/`
+  before the change is considered complete (FastAPI serves pre-built statics).
+- Tier 4 (server-side `config.yaml` editing) remains explicitly OUT — needs its own threat model
+  (PARITY-T4).
+
+### Phases
+
+- [ ] **Phase 196: Release v5.21.0** - Ship v5.20 + v5.21's accumulated content as a real,
+  installable PyPI release, with repo-root hygiene and the two deferred browser checks folded in.
+- [ ] **Phase 197: Connector Parity Tail** - Operator can configure the 37 residual connector
+  credential/endpoint/target sub-fields from the dashboard, closing 999.104 Tier 2.
+- [ ] **Phase 198: Scan-Behavior Parity Tail & Standing Drain** - Operator can configure the
+  remaining 23 scan-behavior fields from the Advanced section, and the backlog ledger becomes a
+  mechanically enforced standing gate.
+
+## Phase Details
+
+### Phase 196: Release v5.21.0
+
+**Goal**: Ship v5.20 + v5.21's development-complete content as a real, installable release, with
+repo-root hygiene and the two deferred browser checks closed in the same phase.
+**Depends on**: Nothing (gating — first phase, per the v5.18/v5.20 precedent of releasing before
+feature work)
+**Requirements**: REL-02, REL-03, HOUSE-01, HUAT-01
+**Success Criteria** (what must be TRUE):
+
+  1. `pip install quirk-scanner==5.21.0` succeeds from a clean environment against a published
+     PyPI release.
+  2. The `v5.21.0` release workflow (`release.yml`) is green end to end across all three jobs
+     (build, Windows package, PyPI publish), with Sigstore attestation verified against the
+     published artifact, under a correctly-formed three-component tag.
+  3. `CHANGELOG.md`'s `[Unreleased]` content moves under `5.21.0`, documenting v5.20 (scoring v2)
+     and v5.21 (dashboard parity, Exposure Map) user-visible changes; README, `docs/getting-started.md`,
+     and `docs/UAT-SERIES.md` UAT-1-02 all read `5.21.0` consistently.
+  4. Every untracked repo-root file (`config-lab-*.yaml`, `output-*/` directories) is
+     dispositioned — gitignored, relocated, or deleted — with a recorded rationale; zero
+     unexplained untracked clutter remains at repo root.
+  5. Phase 192's two deferred browser checks (Scan Coverage chips render/colors; Effective-config
+     Raw YAML tab redaction) are executed against the released build and dispositioned in
+     `docs/UAT-SERIES.md`.
+
+**Plans**: TBD
+
+### Phase 197: Connector Parity Tail
+
+**Goal**: Operator can configure the 37 residual connector credential/endpoint/target sub-fields
+from the dashboard, closing 999.104 Tier 2.
+**Depends on**: Phase 196
+**Requirements**: PARITY-05, PARITY-06, PARITY-07
+**Success Criteria** (what must be TRUE):
+
+  1. Operator can set per-connector target lists (jwt/container/source/identity connector
+     families) from the dashboard scan form through the existing delta-overlay path
+     (`build_job_config_dict` connectors overlay — never a `ScanJob` blob column).
+  2. Operator can set connector endpoint/identifier fields (cloud provider IDs, k8s config,
+     `vault_addr`) from the dashboard through the same overlay path with 422 validation at both
+     submit and preview.
+  3. Remaining connector credential sub-fields ride the Phase-193 in-memory-only credential path —
+     never persisted to `ScanJob`, job `config.yaml`, or logs — verified by the no-leak sentinel
+     guard extended to cover them.
+  4. Toggling `enable_jwt`/`enable_container`/`enable_source`/the identity connectors on from the
+     dashboard is no longer a no-op, because their target lists are now dashboard-settable.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 198: Scan-Behavior Parity Tail & Standing Drain
+
+**Goal**: Operator can configure the remaining scan-behavior fields from the Advanced section, and
+the backlog ledger's completeness becomes a mechanically enforced standing gate rather than a
+manual review.
+**Depends on**: Phase 196
+**Requirements**: PARITY-08, PARITY-09, GATE-04
+**Success Criteria** (what must be TRUE):
+
+  1. Operator can set the 11 per-scanner timeout fields from the Advanced section, delta-only,
+     composing correctly with vertical presets under the single recorded precedence rule
+     (`docs/configuration.md` §Dashboard form vs. presets precedence).
+  2. Operator can set the 4 concurrency knobs, retry backoff, and remaining misc scan-behavior
+     fields from the Advanced section under the same delta-only/422 rules.
+  3. A standing test fails if any BACK-*/999.* ID is neither closed-with-evidence nor listed in
+     `HORIZON.md`'s Open-Item Ledger, keyed on title+ID (BACK-68 names two unrelated items) and
+     counting requirement-section-heading citations as closure.
+
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|-----------------|--------|-----------|
+| 196. Release v5.21.0 | 0/? | Not started | - |
+| 197. Connector Parity Tail | 0/? | Not started | - |
+| 198. Scan-Behavior Parity Tail & Standing Drain | 0/? | Not started | - |
+
+## Previous Milestone: v5.21 Dashboard Parity & Exposure Capability — SHIPPED 2026-09-10
+
+Archived at `.planning/milestones/v5.21-ROADMAP.md`. All 13 requirements Complete; audit
+`tech_debt` accepted.
 
 ## Backlog
 
@@ -310,14 +442,22 @@ the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward i
 ### v1.x / v2+ (deferred, see PROJECT.md Active Requirements)
 
 - **PARITY-T4**: Dashboard load/edit/save of the persistent `config.yaml` (tier 4) — needs its own
-  threat model first. Explicitly out of scope for v5.21.
+  threat model first. Explicitly out of scope for v5.22.
+
+- **999.107**: Tier B Exposure Map (operator-declared reachability + crown jewels) — build when a
+  client engagement needs it. Deferred from v5.21 Phase 195's MAP-01 spike.
+
+- **999.106**: real `ports_ssh` backend capability (config field + scanner targeting) — deferred
+  from v5.21/v5.22's PARITY work; no CLI-side equivalent exists to achieve parity with today.
+
+- **999.105**: customizable reporting engine (three-tier shape in its IDEA.md).
 
 - **MAP-ELK**: `cytoscape-elk` layout upgrade for the Quantum Exposure Map — only if dagre proves
   visually inadequate against real exposure data. Contingent on v5.21 Phase 195 shipping first.
 
 - P3 UX set (999.101/999.102/BACK-01/03/08), 999.103 broker scanner-logic noise, trends.py/merge.py
   int-coercion, GSD tooling todos (see `CLAUDE.md` TOOL-01..05), UAT coverage-gaps worklist —
-  deliberately deferred at the v5.21 boundary; visible in `HORIZON.md`'s Open-Item Ledger.
+  deliberately deferred at the v5.22 boundary; visible in `HORIZON.md`'s Open-Item Ledger.
 
 ### SaaS Platform (Future Milestone)
 
@@ -326,5 +466,4 @@ the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward i
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
-
 </content>

@@ -83,3 +83,13 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| REL-02 | Phase 196 | Pending |
+| REL-03 | Phase 196 | Pending |
+| HOUSE-01 | Phase 196 | Pending |
+| HUAT-01 | Phase 196 | Pending |
+| PARITY-05 | Phase 197 | Pending |
+| PARITY-06 | Phase 197 | Pending |
+| PARITY-07 | Phase 197 | Pending |
+| PARITY-08 | Phase 198 | Pending |
+| PARITY-09 | Phase 198 | Pending |
+| GATE-04 | Phase 198 | Pending |
