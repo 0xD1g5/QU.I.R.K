@@ -163,7 +163,11 @@ export function ExecutiveVerdict({ data }: { data: ScanLatestResponse }) {
       <div className="flex items-start gap-6">
         <div className="text-center shrink-0" style={{ width: 116 }}>
           <div style={{ fontSize: 52, fontWeight: 800, lineHeight: 1, color: accent }}>
-            {score}
+            {/* WR-02: score is `number | null` independently of `rating`; a
+                recognized rating with a null score must not render a blank
+                headline. Fall back to an em-dash so the rating-derived band
+                (D-07) still shows while the missing number is honest. */}
+            {score ?? "—"}
           </div>
           <div className="text-muted-foreground" style={{ fontSize: 12, marginTop: 2 }}>
             / 100

@@ -162,6 +162,21 @@ describe("ExecutiveVerdict", () => {
     expect(screen.queryByText(/Score capped:/)).not.toBeInTheDocument()
   })
 
+  // WR-02: `score` and `rating` are independent nullables in the type
+  // contract. A recognized rating (GOOD) paired with a null score must not
+  // render a blank headline number — the band still shows (D-07) and the
+  // missing number falls back to an em-dash rather than an empty node.
+  it("renders an em-dash headline when rating is present but score is null", () => {
+    render(
+      <ExecutiveVerdict data={makeData({ score: { ...makeData().score, score: null, rating: "GOOD" } })} />,
+    )
+    // Band still derives from the rating (D-07).
+    expect(screen.getByText("QUANTUM-READY")).toBeInTheDocument()
+    // Honest-absence fallback for the number, not a blank node. The em-dash
+    // is unique to the headline in this component.
+    expect(screen.getByText("—")).toBeInTheDocument()
+  })
+
   // D-07 regression guard: a high raw score with a POOR rating must still
   // render the vulnerable band — proving the band follows `rating`, not
   // the score number.
