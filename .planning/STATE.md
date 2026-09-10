@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-07-PLAN.md
-last_updated: "2026-09-10T01:21:05.596Z"
-last_activity: 2026-09-09 -- Phase 194 plan 07 (docs, UAT Series 194, Obsidian sync) complete
+stopped_at: Completed 194-08-PLAN.md (all 8 plans of Phase 194 executed; phase close pending)
+last_updated: "2026-09-10T01:49:47.533Z"
+last_activity: 2026-09-10 -- Phase 194 plan 08 (194-PARITY-AUDIT.md, HORIZON 999.104 ledger update, full-suite gate) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 32
-  percent: 97
+  completed_plans: 33
+  percent: 100
 ---
 
 # Project State
@@ -50,7 +50,43 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-07 of 8 complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix — all 8 plans executed 2026-09-09/10, phase close (verification/validation, ROADMAP checkbox, Obsidian phase note) still pending. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol.
+
+**194-08 (complete, 2026-09-10) — 999.104 field parity audit + phase gate (PARITY-04, D-15).**
+`194-PARITY-AUDIT.md` enumerates all 121 operator-settable fields from `quirk/config_template.yaml`/
+`quirk/config.py` at audit time (git SHA `9af9d038`), replacing the PM-era "~138 fields" estimate —
+35 covered, 6 covered-indirectly, 15 intentional-gap, 65 not-yet-covered (150 table rows). Tier
+roll-up against 999.104: Tier 1 (visibility) CLOSED; Tier 2 (connector parity) PARTIALLY CLOSED (all
+25 `enable_*` flags dispositioned, but 37/46 credential/endpoint/target sub-fields — mostly
+per-connector target lists like `jwt_targets`/`kerberos_targets` — remain not-yet-covered); Tier 3
+(scan-behavior) PARTIALLY CLOSED (8 of 30 `scan.*`/`timeouts.*`/`retry.*` fields covered, residue is
+11 per-scanner timeouts + 4 concurrency knobs + retry backoff); Tier 4 confirmed explicitly OUT of
+scope. `ports_ssh` recorded as intentional-gap (it is not a real `config.py` field at all),
+cross-referenced to backlog 999.106. `HORIZON.md`'s 999.104 row updated to cite the audit and carry
+the counted figures; a second stale "~138 YAML fields" mention in the v5.21 milestone rationale log
+row was also corrected (with a forward-pointing note, not deleted, preserving the historical
+record); 999.106 row gained a pointer to the audit's ports_ssh entry. Full-suite gate:
+`.venv/bin/python -m compileall -q quirk` exit 0; `.venv/bin/python -m pytest -q -m ""` → 4719
+passed, 42 skipped, 72 xfailed, 5 xpassed, **1 failed** —
+`test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg`, a pre-existing, out-of-scope
+finding (4 fake `BACK-*` worked-example IDs in Phase 189's untracked review docs never ledgered in
+HORIZON.md; confirmed zero 194-08 commits touch that path) recorded in
+`194-advanced-scan-fields-executive-verdict-phantom-cert-fix/deferred-items.md`, not fixed here.
+Frontend `npm run build && npm run lint && npm run test`: all exit 0 (44 files, 313 tests, identical
+to 194-05/07's counts — zero frontend files touched). No `state.*`/`phase.complete`/
+`milestone.complete`/`requirements mark-complete` verb invoked; `git status --short .planning/
+STATE.md .planning/ROADMAP.md .planning/REQUIREMENTS.md` confirmed clean across all three 194-08
+commits. **`gsd-sdk query state.advance-plan` reproduced the TOOL-05/(h)-class semantic-drift bug
+live**: it correctly bumped `completed_plans` 32->33 but ALSO wrongly bumped `completed_phases` 3->4
+(Phase 194 is NOT yet closed — its ROADMAP.md checkbox is still `[ ]` per the orchestrator-owns-close
+convention) and flipped `percent` 97->80 by silently switching its denominator from plans (32/33) to
+phases (4/5) rather than continuing the plan-based methodology STATE.md has used throughout this
+milestone. Hand-corrected per the pre-image/signature-diff protocol: `completed_phases` reverted to
+3, `percent` recomputed plan-based as 33/33=100, `stopped_at`/`Current Position`/`Status` lines
+corrected to reflect "all 8 plans executed, phase close pending" rather than the verb's invented
+"Ready to execute" / "plan 6 of 8" values (the verb's own `stopped_at` write regressed to a
+194-06-era string despite `current_plan: 8` in its own JSON output — the same class of internal
+inconsistency TOOL-05 names). See `194-08-SUMMARY.md`.
 
 **194-07 (complete, 2026-09-09) — Documentation, UAT Series 194, Obsidian sync (PARITY-04/VERDICT-01/DASH-09 docs closure).**
 `docs/configuration.md` gained the single canonical `Dashboard form vs. presets precedence` section
@@ -1046,10 +1082,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — EXECUTING
-Plan: 7 of 8
-Status: Executing Phase 194
-Last activity: 2026-09-09 -- Phase 194 plan 07 (docs, UAT Series 194, Obsidian sync) complete
+Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — all 8 plans executed, phase close pending
+Plan: 8 of 8
+Status: Executing Phase 194 (close-out pending)
+Last activity: 2026-09-10 -- Phase 194 plan 08 (194-PARITY-AUDIT.md, HORIZON 999.104 ledger update, full-suite gate) complete
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
