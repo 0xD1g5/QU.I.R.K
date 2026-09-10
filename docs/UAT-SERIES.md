@@ -12,7 +12,7 @@ retaining it as dev-checkout evidence; the stale "Series 192 disposition" paragr
 carried-over contradictory Notes block, both of which had claimed the live-browser walkthrough
 "has not yet been performed" despite the case's own checked PASS box, were corrected in the same
 edit. Earlier: Phase 196 Plan 02 — version bump to 5.21.0: `pyproject.toml`,
-`README.md`, and this document's header/UAT-1-02 pass criteria now read 5.21.0, replacing the
+`README.md`, and this document's header/UAT-1-02 pass criteria now read 5.21.0, replacing
 the "v5.21 hasn't shipped a version bump yet" placeholder text that Series 188-194's header notes
 carried while the release was still in progress; UAT-1-02's evidence still cites the pre-bump
 5.19.0 install and is scheduled for re-execution against the published 5.21.0 artifact in plan
@@ -32,9 +32,9 @@ and read-time, advisory-only key-reuse derivation surfaced as a "Key Reuse" sect
 markdown/HTML/DOCX report surfaces (SPKI-02) with honest zero-reuse and no-backfill coverage
 disclosure; all six cases PASS, including UAT-191-06's live human-verification checkpoint
 (remediation-leverage wording, three-surface consistency, explicit no-reuse statement, unchanged
-88/100 score across both a shared-key and a distinct-key scan run). v5.21 has still not shipped a
-version bump, so `**Version:**` stays `5.19.0` — same reasoning Series 188/189/190's header notes
-already recorded. Earlier: Phase 190 Plan 04 — Series 190 added: `connectors.broker_targets`
+88/100 score across both a shared-key and a distinct-key scan run). At the time that series was
+recorded, v5.21 had not yet shipped a version bump, so `**Version:**` stayed `5.19.0` — same
+reasoning Series 188/189/190's header notes recorded; superseded by the 5.21.0 bump above. Earlier: Phase 190 Plan 04 — Series 190 added: `connectors.broker_targets`
 explicit non-default broker ports with ADDITIVE semantics and `QRK-CONFIG-002` fail-fast
 (TRIAGE-06), live before/after broker evidence against the chaos lab's mapped
 29092/25671/26380, the unreached-target advisory (T-190-03), and a fresh no-mocks Modbus
