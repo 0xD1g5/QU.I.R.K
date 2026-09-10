@@ -304,7 +304,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 194-07-PLAN.md — configuration/operators/report-interpretation docs, UAT Series 194, Obsidian sync
+- [x] 194-07-PLAN.md — configuration/operators/report-interpretation docs, UAT Series 194, Obsidian sync
 - [ ] 194-08-PLAN.md — 999.104 CLI-vs-form parity audit artifact, HORIZON ledger update, full-suite gate
 
 ### Phase 195: Quantum Exposure Map
@@ -343,7 +343,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
-| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 6/8 | In Progress|  |
+| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 7/8 | In Progress|  |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
 ## Backlog

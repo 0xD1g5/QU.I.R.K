@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Completed 194-06-PLAN.md
-last_updated: "2026-09-09T14:10:00.000Z"
-last_activity: 2026-09-09 -- Phase 194 plan 06 (operator walkthrough checkpoint approved — PARITY-04/VERDICT-01 flipped Complete) complete
+stopped_at: Completed 194-07-PLAN.md
+last_updated: "2026-09-10T01:21:05.596Z"
+last_activity: 2026-09-09 -- Phase 194 plan 07 (docs, UAT Series 194, Obsidian sync) complete
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 33
-  completed_plans: 31
-  percent: 94
+  completed_plans: 32
+  percent: 97
 ---
 
 # Project State
@@ -50,7 +50,27 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-06 of 8 complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (executing, plan 194-07 of 8 complete). Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol; at Phase 194 close run the 999.104 full CLI-vs-form field parity audit (plan 194-08 owns it).
+
+**194-07 (complete, 2026-09-09) — Documentation, UAT Series 194, Obsidian sync (PARITY-04/VERDICT-01/DASH-09 docs closure).**
+`docs/configuration.md` gained the single canonical `Dashboard form vs. presets precedence` section
+(D-16, covering Connectors AND Advanced fields together) plus an 8-field Advanced scan-fields
+reference table with explicit D-18 (no SSH port list — SSH targets derive from protocol-classified
+open ports)/D-19 (`tls_enum_mode` has no `off` behavior, coerced to `fast`)/D-21
+(`data_classification`'s exact 4-value vocabulary) notes; the prior connectors-only D-13/D-14
+precedence prose now cross-references the canonical section instead of restating it.
+`docs/operators-guide.md` gained §3.1.5 documenting the Advanced panel's placement, controls, and
+client-advisory/server-authoritative 422 relationship. `docs/report-interpretation.md` gained §19.5
+Executive Verdict (D-17: band mapping table, rating-not-score derivation tied to §19's severity
+floor, cap-reason rendering, honest-absence wording framed as "not a poor result") and §19.6
+Certificate inventory completeness (only-real-certificates rule, the disclosure-line reconciliation,
+and the "zero certs + non-zero exclusion count = a real finding" reading). `docs/UAT-SERIES.md`
+gained Series 194 (12 cases, 9 `[x] PASS` transcribed from the operator's "Approved" reply plus 3
+honest `[x] SKIP`/`GAP — no substitute coverage` cases naming the exact live-data condition that
+made the positive branch unexercisable) — both UAT corpus-integrity gates green (29 passed). All
+four docs synced to the Obsidian vault with `updated: 2026-09-09` frontmatter. No requirements
+flipped (PARITY-04/VERDICT-01/DASH-09 were already Complete from 194-04/194-06); no `phase.complete`/
+`milestone.complete`/`requirements mark-complete` invoked. See `194-07-SUMMARY.md`.
 
 **194-06 (complete, 2026-09-09) — Operator walkthrough checkpoint approved; PARITY-04 and VERDICT-01 flipped Complete.**
 Task 1 built the dashboard, started it against the canonical DB (`./quirk-output/quirk.db`),
@@ -1027,9 +1047,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 194 (Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Executing Phase 194
-Last activity: 2026-09-09 -- Phase 194 plan 06 (operator walkthrough checkpoint approved — PARITY-04/VERDICT-01 flipped Complete, DASH-09 already complete) complete
+Last activity: 2026-09-09 -- Phase 194 plan 07 (docs, UAT Series 194, Obsidian sync) complete
 
 **193-05 (complete, 2026-09-09) — connectors_overlay delta-merge plumbing (PARITY-02, D-13/D-14/D-16).**
 `build_job_config_dict` gained a keyword-only `connectors_overlay` param, filtered against
