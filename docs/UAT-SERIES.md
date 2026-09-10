@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.19.0
-**Last Updated:** 2026-09-09 (Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
+**Last Updated:** 2026-09-09 (Phase 194 Plan 07 — Series 194 added: Advanced scan-fields panel,
+Executive Verdict layer, and the phantom-cert disclosure fix operator walkthrough (PARITY-04/
+VERDICT-01/DASH-09), 9 PASS / 3 honest GAP, transcribed from the 194-06 operator-approved
+checkpoint). v5.21 has still not shipped a version bump, so `**Version:**` stays `5.19.0` — same
+reasoning Series 188-193's header notes already recorded. Earlier: Phase 192 Plan 11 — Series 192 added: `ScanPhaseRecord` per-phase
 skip observability (OBS-01, five skip reasons) surfaced as a "Scan Coverage" section on CLI/HTML/
 DOCX reports plus D-14 TLS-domain skip notes (OBS-02), and an auth-gated `GET /api/config/effective`
 pre-flight config preview with credential redaction and Overridden/Preset provenance badges
@@ -25552,3 +25556,221 @@ result.
 
 **Last Updated:** 2026-09-09 (Phase 193 Plan 08 — Series 193 added: Connectors panel and
 credential-entry dashboard UAT cases for PARITY-02/PARITY-03, 7 PASS / 3 honest GAP)
+
+---
+
+## Series 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix (Phase 194 — v5.21)
+
+### UAT-194-01: Advanced section is collapsed below Connectors, above Effective Config (D-04, PARITY-04)
+
+**ID:** UAT-194-01
+**Title:** The New Scan page's "Advanced" section renders below the Connectors panel and above the
+Effective Config preview, collapsed by default
+**Maps to:** PARITY-04
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator confirmed the collapsed "Advanced" section renders in the correct
+position (below Connectors §3.1.4, above the Effective Config preview §3.1.2) against the live
+dashboard at http://127.0.0.1:8512/. See `194-06-SUMMARY.md` step 2. Corroborated statically by
+`src/dashboard/src/pages/scan-new.tsx` mounting `<AdvancedPanel/>` between `<ConnectorsPanel/>` and
+`<EffectiveConfigPanel/>` per D-04.
+
+---
+
+### UAT-194-02: Advanced field edit updates the live Effective Config preview with `user` provenance (D-04, PARITY-04)
+
+**ID:** UAT-194-02
+**Title:** Changing TLS Enumeration Mode to Deep refreshes the Effective Config preview to show
+`scan.tls_enum_mode = deep` badged `user`
+**Maps to:** PARITY-04
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator confirmed the live query-string refresh and `user`-badged provenance
+against the running dashboard. See `194-06-SUMMARY.md` step 6. Corroborated by
+`EffectiveConfigPanel.test.tsx`'s 3 new advanced-overlay query-param tests (194-05-SUMMARY.md).
+
+---
+
+### UAT-194-03: A malformed advanced value is server-rejected with a visible 422 banner (D-03, PARITY-04)
+
+**ID:** UAT-194-03
+**Title:** Submitting `443,notaport` in the TLS Ports field is rejected server-side with a visible
+red banner naming the invalid value
+**Maps to:** PARITY-04
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator confirmed the 422 banner rendered with the offending value named. See
+`194-06-SUMMARY.md` step 7. Corroborated by `tests/test_advanced_fields_422_gate.py`
+(194-02-SUMMARY.md).
+
+---
+
+### UAT-194-04: TLS Enumeration Mode dropdown offers exactly Fast/Deep, no "Off" (D-19, PARITY-04)
+
+**ID:** UAT-194-04
+**Title:** The Advanced panel's TLS Enumeration Mode dropdown shows only Fast and Deep — no "Off"
+option, since `off` has never had a scanner-side effect
+**Maps to:** PARITY-04
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator visually confirmed exactly two options in the live dropdown. See
+`194-06-SUMMARY.md` step 4. Corroborated by `AdvancedPanel.tsx`'s hardcoded `SelectItem` pair
+(`fast`/`deep` only) and the D-19 note now published in `docs/configuration.md` (194-07 Task 1).
+
+---
+
+### UAT-194-05: Data Classification dropdown offers Public/Internal/Confidential/Regulated only, no "Restricted" (D-21, PARITY-04)
+
+**ID:** UAT-194-05
+**Title:** The Advanced panel's Data Classification dropdown shows exactly the CLI wizard's
+`_DATA_CLASS_MAP` four-value vocabulary
+**Maps to:** PARITY-04
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator visually confirmed exactly four options, no fifth "Restricted" value,
+in the live dropdown. See `194-06-SUMMARY.md` step 5. Corroborated by `AdvancedPanel.tsx`'s
+hardcoded 4-item `SelectItem` list and `quirk/interactive.py`'s `_DATA_CLASS_MAP`.
+
+---
+
+### UAT-194-06: Executive Verdict renders unconditionally with no flag set (D-06, VERDICT-01)
+
+**ID:** UAT-194-06
+**Title:** The Executive Verdict panel renders above the gauges on the live dashboard with no
+`VITE_VERDICT_LAYER` environment variable set
+**Maps to:** VERDICT-01
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — Task 1 of 194-06 confirmed `env | grep -c VITE_VERDICT_LAYER` returned `0`
+before the walkthrough; the operator then confirmed the verdict panel rendered unconditionally.
+See `194-06-SUMMARY.md` step 8 and its Task 1 Live API Evidence table. Corroborated by
+`ExecutiveVerdict.tsx` mounting unconditionally on `executive.tsx` (194-03-SUMMARY.md, D-06 —
+`VERDICT_LAYER_ENABLED` deleted outright).
+
+---
+
+### UAT-194-07: Verdict band follows the API's `rating`, not the raw score number (D-07, VERDICT-01)
+
+**ID:** UAT-194-07
+**Title:** The verdict's band color matches the live scan's `rating` (`GOOD` -> green/safe), not a
+client-side score cutoff
+**Maps to:** VERDICT-01
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator confirmed the band color matched the live `rating: GOOD` value. See
+`194-06-SUMMARY.md` step 8 and its Task 1 Live API Evidence table. Corroborated by
+`ExecutiveVerdict.test.tsx`'s 15-case rating->band mapping suite, including the explicit
+`score: 91, rating: "POOR"` regression guard proving the band follows rating, not score
+(194-03-SUMMARY.md).
+
+---
+
+### UAT-194-08: Cap reason renders inline when `rating_cap_reason` is present (D-09, VERDICT-01)
+
+**ID:** UAT-194-08
+**Title:** When a scan's band is capped, the verdict panel shows `Score capped: <reason>` inline
+beneath the band label
+**Maps to:** VERDICT-01
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-09  **Tester:** —
+**Notes:** GAP — no substitute coverage from the live walkthrough. The live scan's
+`rating_cap_reason` was `null` (Task 1 Live API Evidence, `194-06-SUMMARY.md`), so the operator
+confirmed only the negative branch (no "Score capped:" text appears, UAT step 9) — the positive
+branch (a real cap reason rendering inline) was not exercisable against this data. Corroborated at
+the unit level by `ExecutiveVerdict.test.tsx`'s cap-reason-present case (194-03-SUMMARY.md), but
+per T-194-20 that test-suite evidence does not substitute for the operator's own visual
+confirmation of the unexercised branch.
+
+---
+
+### UAT-194-09: Honest-absence card wording when `rating` is null (D-08, VERDICT-01)
+
+**ID:** UAT-194-09
+**Title:** A scan with no computed rating renders `Verdict not available for this scan (pre-v5.21
+data).` instead of a headline
+**Maps to:** VERDICT-01
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-09  **Tester:** —
+**Notes:** GAP — no substitute coverage from the live walkthrough. The live scan carried a real,
+non-null `GOOD` rating, so the honest-absence branch could not be exercised against real data. See
+`194-06-SUMMARY.md` step 10. Corroborated at the unit level by `ExecutiveVerdict.test.tsx`'s 15-case
+suite, which independently exercises both `rating: null` and `rating: "NOT_ASSESSED"` as two
+distinct honest-absence cases (194-03-SUMMARY.md), but per T-194-20 that is corroborating test
+evidence, not the operator's visual confirmation this case requires.
+
+---
+
+### UAT-194-10: Certificate rows all have a subject; disclosure line count matches `excluded_cert_count` (D-12, D-13, DASH-09)
+
+**ID:** UAT-194-10
+**Title:** Every certificate row shows a Subject CN with no blank-subject rows, and the disclosure
+line `<N> TLS endpoints failed handshake and are not shown.` renders with the correct count when
+`excluded_cert_count > 0`
+**Maps to:** DASH-09
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-09  **Tester:** —
+**Notes:** GAP — no substitute coverage from the live walkthrough. The live scan had zero
+certificate rows and `excluded_cert_count: 0` (Task 1 Live API Evidence, `194-06-SUMMARY.md`), so
+there were no rows to inspect for blank subjects and no positive-count disclosure line to confirm —
+only the negative branches (no phantom rows shown; no disclosure line when the count is 0) were
+exercisable, and the operator did confirm those. See `194-06-SUMMARY.md` steps 11-12. Corroborated
+at the unit level by `certificates-phantom-disclosure.test.tsx`'s explicit `2 TLS endpoints failed
+handshake` / `5 TLS endpoints failed handshake` positive-count assertions (194-04-SUMMARY.md), but
+per T-194-20 that does not substitute for the operator's own visual confirmation of the unexercised
+positive branch.
+
+---
+
+### UAT-194-11: `/print` certificate table matches the dashboard page's rows and disclosure exactly (D-13, DASH-09)
+
+**ID:** UAT-194-11
+**Title:** The `/print` PDF's certificate table shows the identical rows and disclosure-line
+presence/absence as the live dashboard certificates page
+**Maps to:** DASH-09
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — operator confirmed `/print` matched the dashboard page exactly (zero rows on
+both surfaces, disclosure line correctly absent on both since `excluded_cert_count` was 0). See
+`194-06-SUMMARY.md` step 13. Corroborated by `print-cert-disclosure.test.tsx` (194-04-SUMMARY.md).
+
+---
+
+### UAT-194-12: Locked empty-state wording renders when zero real certificates remain (D-14, DASH-09)
+
+**ID:** UAT-194-12
+**Title:** Both the certificates page and `/print` read `No TLS certificates discovered in this
+scan` when the certificate list is empty
+**Maps to:** DASH-09
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-09  **Tester:** Digs (human walkthrough during 194-06's operator checkpoint)
+**Notes:** PASSED — this step WAS exercisable against the live data (certificates array length was
+0) and the operator confirmed the locked wording on both surfaces. See `194-06-SUMMARY.md` step 14.
+Corroborated by `certificates-phantom-disclosure.test.tsx` and `print-cert-disclosure.test.tsx`
+(194-04-SUMMARY.md).
+
+---
+
+**Series 194 disposition.** 9 of 12 cases (UAT-194-01 through -07, -11, -12) are `[x] PASS`,
+transcribed directly from the operator's "Approved" reply during 194-06's live-dashboard
+walkthrough. 3 cases (UAT-194-08, UAT-194-09, UAT-194-10) are honestly `[x] SKIP` with `GAP — no
+substitute coverage` — each names the specific positive-data condition the live scan (`rating:
+GOOD`, `rating_cap_reason: null`, `excluded_cert_count: 0`) did not contain, and names the unit-test
+evidence that corroborates but does not substitute for a live visual confirmation, per T-194-20. No
+case in this series was checked to satisfy the corpus-integrity gate without a corresponding real
+result.
+
+**Last Updated:** 2026-09-09 (Phase 194 Plan 07 — Series 194 added: Advanced scan-fields panel,
+Executive Verdict layer, and phantom-cert disclosure fix operator walkthrough for
+PARITY-04/VERDICT-01/DASH-09, 9 PASS / 3 honest GAP)
