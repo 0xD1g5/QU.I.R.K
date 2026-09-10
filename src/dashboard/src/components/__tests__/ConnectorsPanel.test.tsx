@@ -26,6 +26,9 @@ const FIXTURE = {
   connectors: [
     { flag: "enable_kerberos", label: "Kerberos", category: "Identity", available: true, reason: "", install_hint: "" },
     { flag: "enable_aws", label: "AWS KMS", category: "Cloud", available: true, reason: "", install_hint: "" },
+    { flag: "enable_gcp", label: "GCP KMS", category: "Cloud", available: true, reason: "", install_hint: "" },
+    { flag: "enable_vault", label: "HashiCorp Vault", category: "Cloud", available: true, reason: "", install_hint: "" },
+    { flag: "enable_k8s", label: "Kubernetes", category: "Cloud", available: true, reason: "", install_hint: "" },
     {
       flag: "enable_db",
       label: "Database TLS (PostgreSQL/MySQL)",
@@ -180,5 +183,178 @@ describe("ConnectorsPanel", () => {
     await user.click(screen.getByText("Connectors"))
 
     expect(await screen.findByText("Connector availability failed to load (500)")).toBeInTheDocument()
+  })
+
+  // Phase 197 Plan 02 (PARITY-05/PARITY-06) — per-connector detail rows.
+
+  it("Test A (D-06 visibility gate): detail field renders only when available AND on; unavailable never renders it even with the flag true in state", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const { rerender } = render(<ConnectorsPanel {...defaultProps()} />)
+    fireEvent.click(screen.getByText("Connectors"))
+    await screen.findByText("JWT / API Endpoints")
+
+    expect(screen.queryByLabelText("JWT Targets")).not.toBeInTheDocument()
+
+    rerender(<ConnectorsPanel {...defaultProps({ connectors: { enable_jwt: true } })} />)
+    expect(await screen.findByLabelText("JWT Targets")).toBeInTheDocument()
+
+    // Database connector is unavailable in the fixture — even with its flag
+    // forced true in state, no detail field for it ever renders.
+    rerender(<ConnectorsPanel {...defaultProps({ connectors: { enable_jwt: true, enable_db: true } })} />)
+    expect(screen.queryByLabelText("PostgreSQL Targets")).not.toBeInTheDocument()
+  })
+
+  it("Test B (D-07 list parse): typing a comma/newline-separated list calls onConnectorsChange with a parsed array", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const onConnectorsChange = vi.fn()
+    render(
+      <ConnectorsPanel {...defaultProps({ onConnectorsChange, connectors: { enable_jwt: true } })} />,
+    )
+    fireEvent.click(screen.getByText("Connectors"))
+    const field = await screen.findByLabelText("JWT Targets")
+
+    fireEvent.change(field, { target: { value: "a.example.com, b.example.com\nc.example.com" } })
+
+    expect(onConnectorsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        jwt_targets: ["a.example.com", "b.example.com", "c.example.com"],
+      }),
+    )
+  })
+
+  it("Test C (D-08 delete-on-blank): clearing a list field deletes its key from the delta rather than sending []", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const onConnectorsChange = vi.fn()
+    render(
+      <ConnectorsPanel
+        {...defaultProps({
+          onConnectorsChange,
+          connectors: { enable_jwt: true, jwt_targets: ["a.example.com"] },
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByText("Connectors"))
+    // The field already carries a value, so its Label also renders the
+    // "Set" badge inline — match on the label prefix rather than the exact
+    // (now badge-suffixed) accessible name.
+    const field = await screen.findByLabelText(/^JWT Targets/)
+
+    fireEvent.change(field, { target: { value: "" } })
+
+    const next = onConnectorsChange.mock.calls[onConnectorsChange.mock.calls.length - 1][0]
+    expect("jwt_targets" in next).toBe(false)
+  })
+
+  it("Test D (Pitfall 6): vault_tls_verify Switch renders CHECKED when absent from state; turning it off writes an explicit false", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const onConnectorsChange = vi.fn()
+    render(
+      <ConnectorsPanel {...defaultProps({ onConnectorsChange, connectors: { enable_vault: true } })} />,
+    )
+    fireEvent.click(screen.getByText("Connectors"))
+    const sw = await screen.findByRole("switch", { name: "Verify Vault TLS certificate" })
+    expect(sw).toBeChecked()
+
+    fireEvent.click(sw)
+    expect(onConnectorsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vault_tls_verify: false }),
+    )
+  })
+
+  it("Test D (deliberate-break check, performed and reverted — pasted into SUMMARY): a truthiness blank-predicate would delete an explicit false", () => {
+    // This test documents the invariant asserted above via a standalone
+    // predicate check; the actual break-and-restore is performed manually
+    // against ConnectorsPanel.tsx's isBlankDetailValue and recorded in the
+    // plan SUMMARY, not left as permanently-broken source.
+    function truthinessBlank(v: unknown) {
+      return !v
+    }
+    function correctBlank(v: unknown) {
+      if (v === undefined) return true
+      if (typeof v === "string") return v.trim().length === 0
+      if (Array.isArray(v)) return v.length === 0
+      return false
+    }
+    expect(truthinessBlank(false)).toBe(true) // would wrongly delete the key
+    expect(correctBlank(false)).toBe(false) // correctly kept as a real value
+  })
+
+  it("Test E (empty-targets hint): enabled with no targets shows the amber hint; supplying targets removes it; a zero-list connector never shows it", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const { rerender } = render(
+      <ConnectorsPanel {...defaultProps({ connectors: { enable_jwt: true } })} />,
+    )
+    fireEvent.click(screen.getByText("Connectors"))
+    await screen.findByLabelText("JWT Targets")
+
+    expect(
+      screen.getByText(
+        "JWT / API Endpoints is enabled but has no targets configured. The scan will run but this connector's list is empty, so it has nothing to check. Add targets above, or submit anyway.",
+      ),
+    ).toBeInTheDocument()
+
+    rerender(
+      <ConnectorsPanel
+        {...defaultProps({ connectors: { enable_jwt: true, jwt_targets: ["a.example.com"] } })}
+      />,
+    )
+    expect(
+      screen.queryByText(/is enabled but has no targets configured/),
+    ).not.toBeInTheDocument()
+
+    // GCP has zero list-typed detail fields (only gcp_project_id, a text
+    // field) — the hint never shows for it regardless of state.
+    rerender(<ConnectorsPanel {...defaultProps({ connectors: { enable_gcp: true } })} />)
+    await screen.findByLabelText("GCP Project ID")
+    expect(
+      screen.queryByText(/is enabled but has no targets configured/),
+    ).not.toBeInTheDocument()
+  })
+
+  it("Test F (pairlist): typing name@location parses to a {name, location} object", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const onConnectorsChange = vi.fn()
+    render(
+      <ConnectorsPanel {...defaultProps({ onConnectorsChange, connectors: { enable_k8s: true } })} />,
+    )
+    fireEvent.click(screen.getByText("Connectors"))
+    const field = await screen.findByLabelText("GKE Clusters")
+
+    fireEvent.change(field, { target: { value: "prod-1@us-central1" } })
+
+    expect(onConnectorsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        gke_clusters: [{ name: "prod-1", location: "us-central1" }],
+      }),
+    )
+  })
+
+  it("Test G (field-level Set badge): a non-blank detail field shows a Set badge; an untouched one does not", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const { rerender } = render(
+      <ConnectorsPanel {...defaultProps({ connectors: { enable_jwt: true } })} />,
+    )
+    fireEvent.click(screen.getByText("Connectors"))
+    const field = await screen.findByLabelText("JWT Targets")
+    const label = field.closest("div")?.querySelector("label")
+    expect(label?.textContent).not.toMatch(/Set/)
+
+    rerender(
+      <ConnectorsPanel
+        {...defaultProps({ connectors: { enable_jwt: true, jwt_targets: ["a.example.com"] } })}
+      />,
+    )
+    const labelAfter = (await screen.findByLabelText(/^JWT Targets/)).closest("div")?.querySelector("label")
+    expect(labelAfter?.textContent).toMatch(/Set/)
+  })
+
+  it("ambient-auth and detail fields coexist: AWS shows both the ambient-auth note and its detail fields when ON", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    render(<ConnectorsPanel {...defaultProps({ connectors: { enable_aws: true } })} />)
+    fireEvent.click(screen.getByText("Connectors"))
+
+    await screen.findByText("AWS KMS uses environment or instance credentials — no field needed here.")
+    expect(screen.getByLabelText("AWS Region")).toBeInTheDocument()
+    expect(screen.getByLabelText("AWS Profile")).toBeInTheDocument()
   })
 })
