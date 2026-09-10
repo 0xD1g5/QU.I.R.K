@@ -577,3 +577,28 @@ export interface MergeLatestData {
 export interface MergeLatestResponse {
   merge: MergeLatestData | null
 }
+
+// Phase 195 (MAP-02) — Quantum Exposure Map types.
+// Mirrors quirk/dashboard/api/schemas.py ExposureNode/ExposureEdge/ExposureMapResponse.
+// Tier A only (195-SPIKE-DECISION.md: DECISION DEFERRED) — edge_type is
+// closed to "key_reuse" | "hardware_bridge"; no severity/score field exists
+// anywhere in this shape (D-11 — the map is evidence, not a scored finding).
+export interface ExposureNode {
+  id: string
+  label: string
+  is_crown_jewel: boolean
+}
+
+export type ExposureEdgeType = "key_reuse" | "hardware_bridge"
+
+export interface ExposureEdge {
+  source: string
+  target: string
+  edge_type: ExposureEdgeType
+  evidence: string
+}
+
+export interface ExposureMapResponse {
+  nodes: ExposureNode[]
+  edges: ExposureEdge[]
+}
