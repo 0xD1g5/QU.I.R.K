@@ -11,6 +11,9 @@ scan:
   concurrency: 50
   ports_tls: [443, 8443, 9443, 10443, 4433, 5001, 636, 3269, 993, 995, 465, 6443, 2376, 5432, 3306, 1433, 8200]
 
+# quirk-lab-config: true
+# lab-only connector exceptions:
+#   broker_targets: non-default broker ports explicit for the chaos lab's Phase 190 broker190 compose profile (Kafka/RabbitMQ/Redis on 29092-29099/25671-25672/26379-26380) -- not a real ConnectorsCfg template default, ADDITIVE scan-client override only.
 connectors:
   enable_broker: true
   broker_targets:
