@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: executing
-stopped_at: Completed 194-08-PLAN.md (all 8 plans of Phase 194 executed; phase close pending)
+status: phase_complete
+stopped_at: Phase 194 closed (verification 8/8, review resolved, operator-approved walkthrough) — next Phase 195 (final)
 last_updated: "2026-09-10T01:49:47.533Z"
 last_activity: 2026-09-10 -- Phase 194 plan 08 (194-PARITY-AUDIT.md, HORIZON 999.104 ledger update, full-suite gate) complete
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 33
   completed_plans: 33
   percent: 100
@@ -65,7 +65,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 194 — Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix — all 8 plans executed 2026-09-09/10, phase close (verification/validation, ROADMAP checkbox, Obsidian phase note) still pending. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under the pre-image + signature-diff protocol.
+**Current focus:** Phase 194 COMPLETE (verification 8/8, code review resolved incl. GET /config/effective 500→422 parity fix, operator-approved walkthrough 10 PASS/3 honest GAP). Next: Phase 195 (Quantum Exposure Map) — the FINAL v5.21 phase; opens with the MAP-01 reachability-source spike as a hard go/no-go gate. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
 
 **194-08 (complete, 2026-09-10) — 999.104 field parity audit + phase gate (PARITY-04, D-15).**
 `194-PARITY-AUDIT.md` enumerates all 121 operator-settable fields from `quirk/config_template.yaml`/

@@ -117,7 +117,7 @@ editing) is explicitly out of scope for this milestone.
 - [x] **Phase 191: SPKI Fingerprint Persistence** (completed 2026-09-08) - Every TLS endpoint's certificate SPKI fingerprint is captured and queryable for key reuse, across all scan paths including the sensor push/merge path
 - [x] **Phase 192: Config Visibility + Skip Observability** - Operator can see the effective config a scan will run with and exactly what did/didn't run and why, on the dashboard and in reports (completed 2026-09-09)
 - [x] **Phase 193: Connector & Credential Parity** - Operator can enable, configure, and credential any of the 25 connectors from the dashboard at scan-submit time, safely (completed 2026-09-09)
-- [ ] **Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix** - Advanced scan-behavior fields reach the dashboard, the Executive Verdict layer ships by default, and certificate views show only real certificates
+- [x] **Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix** - Advanced scan-behavior fields reach the dashboard, the Executive Verdict layer ships by default, and certificate views show only real certificates (completed 2026-09-09)
 - [ ] **Phase 195: Quantum Exposure Map** - A reachability-source decision gates a zero-fabrication attack-path map built from verified relationships only
 
 ## Phase Details
@@ -343,7 +343,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 191. SPKI Fingerprint Persistence | 0/TBD | Not started | - |
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
-| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 8/8 | In Progress (close pending) |  |
+| 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 8/8 | Complete   | 2026-09-09 |
 | 195. Quantum Exposure Map | 0/TBD | Not started | - |
 
 ## Backlog
