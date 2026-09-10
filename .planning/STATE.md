@@ -7,10 +7,10 @@ last_updated: "2026-09-10T18:30:00.000Z"
 last_activity: 2026-09-10
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 0
-  percent: 0
+  completed_plans: 5
+  percent: 33
 ---
 
 # Project State
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.22 Phase 196 (Release v5.21.0) PLANNED 2026-09-10 — 5 plans in 5 sequential waves (01 hygiene → 02 changelog/bump/gates → 03 tag checkpoint → 04 HUAT browser walkthrough → 05 UAT/MILESTONES/docs close-out), plan-checker VERIFICATION PASSED (1 cosmetic warning). Ready to execute. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write state under pre-image + signature-diff; plans 03/04 carry blocking human checkpoints (tag push is the user's; browser walkthrough is user-led).
+**Current focus:** v5.22 Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Next: Phase 197 (Connector Parity Tail). Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
 Complete, closing every requirement this phase owns. Proceeding to plan 07 (docs/UAT/Obsidian
 close-out). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after

@@ -132,7 +132,7 @@ don't touch the connector overlay at all.
 
 ### Phases
 
-- [ ] **Phase 196: Release v5.21.0** - Ship v5.20 + v5.21's accumulated content as a real,
+- [x] **Phase 196: Release v5.21.0** - Ship v5.20 + v5.21's accumulated content as a real,
   installable PyPI release, with repo-root hygiene and the two deferred browser checks folded in.
 - [ ] **Phase 197: Connector Parity Tail** - Operator can configure the 37 residual connector
   credential/endpoint/target sub-fields from the dashboard, closing 999.104 Tier 2.
@@ -168,11 +168,11 @@ feature work)
 
 **Plans**: 5 plans
 
-- [ ] 196-01-PLAN.md — Repo-root hygiene: relocate + track lab scan configs, delete output dirs, add root-anchored gitignore patterns (HOUSE-01)
-- [ ] 196-02-PLAN.md — Author the 5.21.0 CHANGELOG entry, bump every version surface, editable reinstall, full-suite + grep gates (REL-03)
-- [ ] 196-03-PLAN.md — Create the annotated v5.21.0 tag, checkpoint handoff (Claude pushes main / user pushes tag), verify the published artifact (REL-02)
-- [ ] 196-04-PLAN.md — HUAT-01 browser re-verification against the PyPI-served dashboard; disposition UAT-192-07 and fix the stale Series 192 paragraph
-- [ ] 196-05-PLAN.md — UAT Series 196, MILESTONES.md backfill, requirement checkbox flips, validation map, Obsidian sync
+- [x] 196-01-PLAN.md — Repo-root hygiene: relocate + track lab scan configs, delete output dirs, add root-anchored gitignore patterns (HOUSE-01)
+- [x] 196-02-PLAN.md — Author the 5.21.0 CHANGELOG entry, bump every version surface, editable reinstall, full-suite + grep gates (REL-03)
+- [x] 196-03-PLAN.md — Create the annotated v5.21.0 tag, checkpoint handoff (Claude pushes main / user pushes tag), verify the published artifact (REL-02)
+- [x] 196-04-PLAN.md — HUAT-01 browser re-verification against the PyPI-served dashboard; disposition UAT-192-07 and fix the stale Series 192 paragraph
+- [x] 196-05-PLAN.md — UAT Series 196, MILESTONES.md backfill, requirement checkbox flips, validation map, Obsidian sync
 
 ### Phase 197: Connector Parity Tail
 
