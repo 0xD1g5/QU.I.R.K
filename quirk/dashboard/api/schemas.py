@@ -407,6 +407,64 @@ class VendorPqcTrendResponse(BaseModel):
     truncated: bool = False
 
 
+# ---- Quantum Exposure Map (Phase 195 MAP-02) ----
+
+# V5 input-validation: the closed edge-type vocabulary. 195-SPIKE-DECISION.md
+# recorded DECISION: DEFERRED (Tier B / declared_reachability parked for v2),
+# so this tuple stays Tier-A-only — do not add "declared_reachability" unless
+# a future spike records DECISION: GO.
+EDGE_TYPES: tuple[str, ...] = ("key_reuse", "hardware_bridge")
+
+
+class ExposureNode(BaseModel):
+    """One node in the quantum exposure map (Phase 195 MAP-02).
+
+    Deliberately has NO ``severity``/``score`` field: a node is an endpoint
+    or device identity, not a scored finding.
+    """
+    id: str
+    label: str
+    is_crown_jewel: bool = False
+
+
+class ExposureEdge(BaseModel):
+    """One VERIFIED relationship edge in the quantum exposure map (D-03).
+
+    Deliberately has NO ``severity`` or ``score`` field (D-11): an exposure
+    edge is a verified relationship backed by cited evidence, not a scored
+    finding, and must never inherit finding-shaped severity semantics that
+    could feed finding-shaped sorting/scoring aggregation downstream.
+    """
+    source: str
+    target: str
+    edge_type: str
+    evidence: str
+
+    @field_validator("edge_type")
+    @classmethod
+    def _validate_edge_type(cls, v: str) -> str:
+        if v not in EDGE_TYPES:
+            raise ValueError(f"edge_type must be one of {EDGE_TYPES}, got {v!r}")
+        return v
+
+    @field_validator("evidence")
+    @classmethod
+    def _validate_evidence(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("evidence must be a non-empty string (D-11)")
+        return v
+
+
+class ExposureMapResponse(BaseModel):
+    """GET /api/exposure-map response body (MAP-02).
+
+    Both typed lists are ALWAYS present, default ``[]`` — never omitted,
+    never fabricated, even when there are zero verified edges (D-08).
+    """
+    nodes: List[ExposureNode] = []
+    edges: List[ExposureEdge] = []
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
