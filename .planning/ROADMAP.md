@@ -166,7 +166,13 @@ feature work)
      Raw YAML tab redaction) are executed against the released build and dispositioned in
      `docs/UAT-SERIES.md`.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 196-01-PLAN.md — Repo-root hygiene: relocate + track lab scan configs, delete output dirs, add root-anchored gitignore patterns (HOUSE-01)
+- [ ] 196-02-PLAN.md — Author the 5.21.0 CHANGELOG entry, bump every version surface, editable reinstall, full-suite + grep gates (REL-03)
+- [ ] 196-03-PLAN.md — Create the annotated v5.21.0 tag, checkpoint handoff (Claude pushes main / user pushes tag), verify the published artifact (REL-02)
+- [ ] 196-04-PLAN.md — HUAT-01 browser re-verification against the PyPI-served dashboard; disposition UAT-192-07 and fix the stale Series 192 paragraph
+- [ ] 196-05-PLAN.md — UAT Series 196, MILESTONES.md backfill, requirement checkbox flips, validation map, Obsidian sync
 
 ### Phase 197: Connector Parity Tail
 
