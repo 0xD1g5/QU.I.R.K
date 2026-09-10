@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: executing
-stopped_at: Phase 195 plan 06 (Exposure Map human-verify checkpoint — operator approved 2026-09-10 after one round of fix for the cytoscape CSS-var canvas-color defect) complete — proceeding to plan 07
+status: phase_complete
+stopped_at: Phase 195 closed (verification 3/3, review resolved, operator-approved map) — ALL v5.21 phases complete; milestone lifecycle next
 last_updated: "2026-09-10T00:00:00.000Z"
 last_activity: 2026-09-10 -- Phase 195 plan 06 complete (operator walkthrough approved; MAP-01/MAP-02 flipped Complete; MAP-03 already Complete)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 42
   completed_plans: 39
   percent: 93
@@ -64,7 +64,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 195 — Quantum Exposure Map (executing — FINAL v5.21 phase). Plans 01-06
+**Current focus:** v5.21 ALL PHASES COMPLETE (191-195). Phase 195 closed 2026-09-10: verification 3/3, review resolved (3 warnings fixed), operator-approved map walkthrough, Tier B deferred per MAP-01 spike (999.107). Next: milestone lifecycle — audit → complete → cleanup. Reminders: phase.complete/milestone.complete verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
 Complete, closing every requirement this phase owns. Proceeding to plan 07 (docs/UAT/Obsidian
 close-out). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after
@@ -1134,9 +1134,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 195 (Quantum Exposure Map) — EXECUTING
-Plan: 6 of 9
-Status: Executing Phase 195 (plans 01-05 complete; plan 06 next — human-verify checkpoint)
+Phase: 195 (Quantum Exposure Map) — COMPLETE
+Plan: 7 of 7 Tier A (08/09 skipped — spike DEFERRED)
+Status: v5.21 ALL PHASES COMPLETE — milestone lifecycle (audit → complete → cleanup) next
 Last activity: 2026-09-10 -- Phase 195 plan 05 complete (ExposureMapPage /exposure-map tab + api types + nav/route wiring + exposure-map.test.tsx)
 
 **195-05 (complete, 2026-09-10) — Exposure Map dashboard tab: Cytoscape LR-dagre graph, evidence tooltips (hover + sr-only fallback), Tier A legend, empty state, nav/route wiring (MAP-02).**

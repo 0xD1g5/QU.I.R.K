@@ -118,7 +118,7 @@ editing) is explicitly out of scope for this milestone.
 - [x] **Phase 192: Config Visibility + Skip Observability** - Operator can see the effective config a scan will run with and exactly what did/didn't run and why, on the dashboard and in reports (completed 2026-09-09)
 - [x] **Phase 193: Connector & Credential Parity** - Operator can enable, configure, and credential any of the 25 connectors from the dashboard at scan-submit time, safely (completed 2026-09-09)
 - [x] **Phase 194: Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix** - Advanced scan-behavior fields reach the dashboard, the Executive Verdict layer ships by default, and certificate views show only real certificates (completed 2026-09-09)
-- [ ] **Phase 195: Quantum Exposure Map** - A reachability-source decision gates a zero-fabrication attack-path map built from verified relationships only
+- [x] **Phase 195: Quantum Exposure Map** - A reachability-source decision gates a zero-fabrication attack-path map built from verified relationships only (completed 2026-09-10; Tier B deferred per MAP-01 spike → 999.107)
 
 ## Phase Details
 
@@ -338,8 +338,8 @@ gated behind an explicit reachability-source decision made before any rendering 
 - [x] 195-05-PLAN.md — Cytoscape Exposure Map tab (LR dagre, empty state, evidence tooltips, legend) + nav/route + component tests
 - [x] 195-06-PLAN.md — Human-verify checkpoint of the live map surface
 - [x] 195-07-PLAN.md — Docs (report-interpretation + operators-guide) + UAT Series 195 + Obsidian sync
-- [ ] 195-08-PLAN.md — Tier B (spike GO only): operator crown-jewel/reachability persistence + validated declaration endpoint
-- [ ] 195-09-PLAN.md — Tier B (spike GO only): declaration UX + red declared-reachability edges + crown-jewel badges
+- [~] 195-08-PLAN.md — Tier B — SKIPPED (MAP-01 spike DECISION: DEFERRED 2026-09-09; parked as v2 999.107)
+- [~] 195-09-PLAN.md — Tier B — SKIPPED (MAP-01 spike DECISION: DEFERRED 2026-09-09; parked as v2 999.107)
 **UI hint**: yes
 
 ## Progress
@@ -353,7 +353,7 @@ Phases execute in numeric order: 191 → 192 → 193 → 194 → 195
 | 192. Config Visibility + Skip Observability | 11/11 | Complete   | 2026-09-09 |
 | 193. Connector & Credential Parity | 8/8 | Complete   | 2026-09-09 |
 | 194. Advanced Scan Fields, Executive Verdict & Phantom-Cert Fix | 8/8 | Complete   | 2026-09-09 |
-| 195. Quantum Exposure Map | 7/9 | In Progress|  |
+| 195. Quantum Exposure Map | 7/7 Tier A (2 Tier B skipped per spike) | Complete   | 2026-09-10 |
 
 ## Backlog
 
