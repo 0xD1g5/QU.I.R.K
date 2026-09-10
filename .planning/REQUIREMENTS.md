@@ -68,10 +68,10 @@ backlog items 999.104 / 999.96 / 999.98 / 999.99 / 999.100 + the phantom-cert to
 
 ### Quantum Exposure Map (999.99)
 
-- [ ] **MAP-01**: The Exposure Map's reachability data-source decision (operator-declared vs
+- [x] **MAP-01**: The Exposure Map's reachability data-source decision (operator-declared vs
       inferred vs deferred) is resolved by a dedicated spike and recorded as a decision before
       any rendering implementation is planned — a hard go/no-go gate.
-- [ ] **MAP-02**: Consultant can view a quantum-exposure attack-path map built ONLY from
+- [x] **MAP-02**: Consultant can view a quantum-exposure attack-path map built ONLY from
       verified relationships (key-reuse clusters from SPKI-02, operator-declared crown jewels,
       confirmed hardware crypto-bridge chains) — zero inferred edges, with an explicit "no path
       data available" state instead of a fabricated chain.
@@ -115,8 +115,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPKI-02 | 191 | Complete |
 | VERDICT-01 | 194 | Complete (2026-09-09) |
 | DASH-09 | 194 | Complete |
-| MAP-01 | 195 | Pending |
-| MAP-02 | 195 | Pending |
+| MAP-01 | 195 | Complete (2026-09-10) |
+| MAP-02 | 195 | Complete (2026-09-10) |
 | MAP-03 | 195 | Complete |
 
 **Coverage:**
@@ -126,4 +126,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-09-08*
-*Last updated: 2026-09-09 after 194-06 operator walkthrough approval (PARITY-04, VERDICT-01 flipped Complete)*
+*Last updated: 2026-09-10 after 195-06 operator walkthrough approval (MAP-01, MAP-02 flipped Complete)*

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
 status: executing
-stopped_at: Phase 195 plan 05 (exposure-map dashboard tab — Cytoscape LR-dagre graph, evidence tooltips, Tier A legend, empty state, nav/route wiring) complete — proceeding to plan 06
-last_updated: "2026-09-10T03:32:22.868Z"
-last_activity: 2026-09-10 -- Phase 195 plan 05 complete (ExposureMapPage /exposure-map tab + api types + nav/route wiring + exposure-map.test.tsx)
+stopped_at: Phase 195 plan 06 (Exposure Map human-verify checkpoint — operator approved 2026-09-10 after one round of fix for the cytoscape CSS-var canvas-color defect) complete — proceeding to plan 07
+last_updated: "2026-09-10T00:00:00.000Z"
+last_activity: 2026-09-10 -- Phase 195 plan 06 complete (operator walkthrough approved; MAP-01/MAP-02 flipped Complete; MAP-03 already Complete)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 42
-  completed_plans: 38
-  percent: 80
+  completed_plans: 39
+  percent: 93
 ---
 
 # Project State
@@ -64,12 +64,29 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 195 — Quantum Exposure Map (executing — FINAL v5.21 phase). Plan 01
-(MAP-01 spike) complete — DECISION: DEFERRED (operator-confirmed 2026-09-09). Tier B (plans
-08/09) skipped this phase, parked as v2 backlog 999.107. Plan 02 (Tier A backend derivation
-module) complete — proceeding to plan 03 (score-firewall + edge guard tests). Reminders:
-phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after this phase the
-milestone lifecycle (audit→complete→cleanup) runs.
+**Current focus:** Phase 195 — Quantum Exposure Map (executing — FINAL v5.21 phase). Plans 01-06
+complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
+Complete, closing every requirement this phase owns. Proceeding to plan 07 (docs/UAT/Obsidian
+close-out). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after
+this phase the milestone lifecycle (audit→complete→cleanup) runs.
+
+**195-06 (complete, 2026-09-10) — Exposure Map operator walkthrough approved; MAP-01/MAP-02 flipped Complete.**
+Task 1 (prior executor) built dashboard statics and served against the canonical DB
+(`./quirk-output/quirk.db`); live `GET /api/exposure-map` confirmed 200 with 2 nodes, 1 `key_reuse`
+edge, evidence citing shared SPKI fingerprint `0c7ae4cd2d05`. Task 2 (checkpoint:human-verify): the
+operator found one defect on first pass — the key-reuse edge rendered gray in the Cytoscape canvas
+instead of the amber the legend showed for the same edge type, because Cytoscape renders to
+`<canvas>` and cannot resolve CSS custom properties (`var(--ds-high)` silently fell back to
+Cytoscape's built-in default gray; the DOM legend swatch, being real CSS, rendered the same token
+correctly). Fixed in commit `6459cf91`: `exposure-map.tsx` now resolves `--ds-high`/`--ds-medium`/
+`--accent` via `getComputedStyle` once at Cytoscape init and passes concrete color strings into the
+style spec. `npm run build && npm run lint && npm run test` all green (318 tests). Operator
+hard-refreshed, re-verified the edge now renders amber matching the legend, and **approved**. All
+7 how-to-verify steps PASS except two honest GAPs consistent with 195-01's DEFERRED decision
+(hardware-bridge edge styling and crown-jewel badge — no live data in this DB exercises either
+path). Zero FAIL. `MAP-01`/`MAP-02` hand-flipped `[x]` Complete in `REQUIREMENTS.md` (`MAP-03` was
+already Complete since 195-03) — all three of this phase's requirements are now Complete. See
+`195-06-SUMMARY.md`.
 
 **195-01 (complete, 2026-09-09) — MAP-01 reachability-source spike; DECISION: DEFERRED (MAP-01).**
 Investigated Tier B (operator-declared crown-jewel + reachability persistence) effort: estimated
