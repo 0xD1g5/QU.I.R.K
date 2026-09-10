@@ -83,6 +83,49 @@ def test_seeded_key_reuse_cluster_returns_evidence_bearing_edges(tmp_path, monke
     assert data["nodes"], "expected nodes derived from edge endpoints"
 
 
+def test_empty_derivation_is_honest_absence_not_unavailable(tmp_path, monkeypatch):
+    """WR-02: a genuinely-empty but SUCCESSFUL derivation returns the honest
+    empty shape (200, nodes==[]/edges==[]) with unavailable_reason==None."""
+    db_path = str(tmp_path / "honest_empty.db")
+    init_db(db_path)
+
+    client = _client(monkeypatch, db_path)
+    resp = client.get("/api/exposure-map")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["nodes"] == []
+    assert data["edges"] == []
+    assert data.get("unavailable_reason") is None
+
+
+def test_derivation_failure_surfaces_unavailable_reason(tmp_path, monkeypatch):
+    """WR-02: a derivation FAILURE must not masquerade as the honest-absence
+    empty map — it returns unavailable_reason set (distinguishable on the wire),
+    never a bare empty map that reads as 'zero verified exposure'."""
+    db_path = str(tmp_path / "boom.db")
+    init_db(db_path)
+
+    def _boom(_db):
+        raise RuntimeError("simulated derivation failure")
+
+    # Patch at the route's import site so the guarded region catches it.
+    monkeypatch.setattr(
+        "quirk.dashboard.api.routes.exposure_map.derive_exposure_map", _boom
+    )
+
+    client = _client(monkeypatch, db_path)
+    resp = client.get("/api/exposure-map")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["nodes"] == []
+    assert data["edges"] == []
+    # The failure MUST be distinguishable from honest absence.
+    assert data["unavailable_reason"], "failure must set unavailable_reason"
+    assert "computation error" in data["unavailable_reason"]
+
+
 def test_exposure_map_requires_auth(tmp_path, monkeypatch):
     db_path = str(tmp_path / "auth.db")
     init_db(db_path)

@@ -601,4 +601,8 @@ export interface ExposureEdge {
 export interface ExposureMapResponse {
   nodes: ExposureNode[]
   edges: ExposureEdge[]
+  // Phase 195 WR-02: set only when derivation/serialization failed, so a
+  // computation error is distinguishable from the honest-absence empty map
+  // (never presented as a positive "zero verified exposure" assertion).
+  unavailable_reason?: string | null
 }

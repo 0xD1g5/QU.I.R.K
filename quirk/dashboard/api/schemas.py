@@ -460,9 +460,16 @@ class ExposureMapResponse(BaseModel):
 
     Both typed lists are ALWAYS present, default ``[]`` — never omitted,
     never fabricated, even when there are zero verified edges (D-08).
+
+    ``unavailable_reason`` (Phase 195 WR-02, mirroring ``ClosureBurndown``)
+    distinguishes a derivation/serialization FAILURE from a genuinely-empty
+    but successful derivation. It is ``None`` for a real result (including the
+    honest-absence empty map); it is set only when computation failed, so a
+    bug can never masquerade as a positive "zero verified exposure" assertion.
     """
     nodes: List[ExposureNode] = []
     edges: List[ExposureEdge] = []
+    unavailable_reason: Optional[str] = None
 
 
 # ---- Roadmap ----

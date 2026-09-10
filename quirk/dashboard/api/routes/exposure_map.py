@@ -37,17 +37,30 @@ def get_exposure_map(db: Session = Depends(get_db)) -> ExposureMapResponse:
 
     Calls the importable ``derive_exposure_map`` orchestrator (never
     reimplements derivation logic route-side). When there are zero verified
-    edges, returns ``ExposureMapResponse(nodes=[], edges=[])`` — both keys
-    always present, never omitted, never fabricated (D-08). Any derivation
-    error degrades to an advisory-empty response rather than a 500 that
-    could leak internals (mirrors hardware_drift/scan.py bridge handling).
+    edges, returns ``ExposureMapResponse(nodes=[], edges=[])`` with
+    ``unavailable_reason=None`` — both lists always present, never omitted,
+    never fabricated (D-08). Any derivation OR serialization error degrades to
+    a 200 whose ``unavailable_reason`` is set (WR-02) rather than a 500 that
+    could leak internals; that field keeps a computation failure distinct from
+    the honest-absence empty map so a bug never reads as "zero verified
+    exposure" (mirrors hardware_drift/scan.py bridge handling).
     """
     try:
         result = derive_exposure_map(db)
         nodes = [ExposureNode(**node) for node in result.get("nodes", [])]
         edges = [ExposureEdge(**edge) for edge in result.get("edges", [])]
     except Exception:
-        logger.exception("exposure-map derivation failed; returning advisory-empty response")
-        return ExposureMapResponse(nodes=[], edges=[])
+        logger.exception("exposure-map derivation failed; surfacing as unavailable (not empty)")
+        # WR-02: a failure must NOT collapse into the byte-identical honest-absence
+        # empty map (D-08). Set unavailable_reason so the client can distinguish
+        # "computation failed / not measured" from "zero verified exposure".
+        return ExposureMapResponse(
+            nodes=[],
+            edges=[],
+            unavailable_reason=(
+                "Exposure-map derivation failed; this is a computation error, not a "
+                "verified zero-exposure result. See the API server log for the cause."
+            ),
+        )
 
     return ExposureMapResponse(nodes=nodes, edges=edges)
