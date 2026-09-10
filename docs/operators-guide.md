@@ -287,6 +287,39 @@ very next fetch), and returns each connector's `available` flag, `reason` (when 
 as a project convention (per CLAUDE.md's documentation checklist); this section is the interim
 documentation for that endpoint until that reference file is created.
 
+### 3.1.5 Advanced scan fields — TLS ports, enumeration depth, timeouts, retry, data classification (PARITY-04, Phase 194)
+
+The New Scan page carries an "Advanced" section directly below the Connectors panel (§3.1.4) and
+above the Effective config preview (§3.1.2). **It is collapsed by default** — clicking the
+"Advanced" label with the chevron expands it; nothing inside is fetched or evaluated until you
+open it.
+
+Inside, the panel exposes eight controls:
+
+- **TLS Ports** — a free-text comma-separated port/range list (e.g. `443,8443,9000-9010`) that
+  overrides `scan.ports_tls` for this scan only.
+- **TLS Enumeration Mode** — a Fast/Deep dropdown. There is no "Off" option; see
+  [`docs/configuration.md`](configuration.md#advanced-scan-fields-reference-parity-04-phase-194)
+  for why (D-19).
+- **Send SNI during TLS probes** — a switch controlling `scan.include_sni`.
+- **Timeouts & Retry** — four numeric fields (default/TLS/SSH timeout in seconds, retry count).
+- **Data Classification** — a Public/Internal/Confidential/Regulated dropdown controlling
+  `assessment.data_classification`; see D-21 in the configuration reference for why there is no
+  fifth option.
+
+**Every control here is advisory client-side only; the server's 422 response is authoritative.**
+The Input field for TLS Ports shows a red hint if you type something that doesn't look like a
+port/range list, but that hint is a courtesy — the actual validation happens server-side when you
+submit, and a rejected value returns a full-width 422 banner naming the offending field.
+
+**Every edit updates the Effective Config preview live**, badged `user` to distinguish it from a
+value coming from the active vertical preset or scan profile — the same provenance-badge mechanism
+`docs/report-interpretation.md` §22 documents for the Connectors panel. See "Dashboard form vs.
+presets precedence" in [`docs/configuration.md`](configuration.md#dashboard-form-vs-presets-precedence)
+for the full mechanism (delta-only writes, `_user_set_fields`, overlay-merged-last) — this panel
+follows it identically to the Connectors panel, it does not have a separate precedence rule of its
+own.
+
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
 `--fuzz` enables active REST crypto-posture probing against discovered OpenAPI

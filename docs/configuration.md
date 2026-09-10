@@ -1095,24 +1095,85 @@ Rules:
 - The nmap checkbox is honored: if you also enable nmap, custom ports are passed to nmap as `-p <csv>`; if nmap is off, the builtin fingerprinter probes each listed port directly.
 - **Custom scope means exactly these ports.** The email and broker connectors (SMTP/IMAP/POP3 and Kafka/AMQP/Redis) probe their own fixed service-port tables, which the `standard` and `deep` profiles normally auto-enable independently of the port list. Under custom scope these connectors are explicitly disabled so the scan covers only the ports you specified — otherwise a 2-port custom scan would also probe the ~7 fixed email ports. To scan email/broker crypto, use the `common`, `top1000`, or `all` scope (the `common`/Consulting list already curates in the implicit-TLS email ports 993/995/465 by design).
 
-### Dashboard connector toggles vs. custom-port-scope suppression (D-13/D-14, Phase 193)
+### Dashboard form vs. presets precedence
+
+*(D-16, Phase 194 — the one canonical home for this precedence rule. Both the Connectors panel
+(Phase 193) and the Advanced scan-fields panel (Phase 194) follow the exact mechanism described
+here; if you are looking for connector-specific or advanced-field-specific precedence detail, read
+this section first — the per-panel notes below only name what each panel additionally does, they
+do not restate the mechanism.)*
+
+The dashboard's New Scan form — both the Connectors panel and the Advanced scan-fields panel — and
+the CLI's vertical presets / scan profiles resolve to a single effective config through one shared
+mechanism, not two competing ones:
+
+- **The dashboard writes a delta into the job YAML — only the fields you actually touched.**
+  Leaving a field or toggle untouched submits no key for it at all; the submitted `advanced:` /
+  `connectors:` block in the job config contains exactly the keys you changed, nothing more.
+- **`load_config` records those keys in `_user_set_fields`, and `apply_profile` does not overwrite
+  them.** An explicit operator value — whether typed into the Advanced panel or flipped in the
+  Connectors panel — always beats the active vertical preset and always beats the scan profile
+  (`lenient`/`balanced`/`strict` or `deep`/`standard`/`custom`), because the profile-application step
+  checks `_user_set_fields` before it would otherwise set a default.
+- **The overlay is merged last.** `build_job_config_dict` applies every `port_scope`-derived
+  default first, then merges the Advanced/Connectors overlay on top — so an explicit advanced TLS
+  port list always beats the port-scope default, never the reverse.
+- **The Effective Config preview cannot disagree with the scan**, because it is not a
+  client-side simulation — `GET /api/config/effective` resolves through the identical real
+  `load_config` → `apply_profile` → overlay-merge path the scan itself uses. Whatever the preview
+  shows is what the scan will actually run with, by construction, not by convention.
+
+### Connectors panel: explicit toggle vs. custom-port-scope suppression (D-13/D-14, Phase 193)
 
 The "Custom port spec" section above describes the dashboard's `custom` port scope force-disabling
 `enable_email`/`enable_broker` so a narrow custom scan doesn't also probe the fixed email/broker
 service ports. As of Phase 193's Connectors panel (`docs/operators-guide.md` §3.1.4), that
-suppression is no longer absolute:
+suppression is no longer absolute — this is the connector-specific instance of the explicit-value-
+beats-preset rule stated in the canonical precedence section immediately above:
 
 - **D-14 — an explicit toggle beats custom-port-scope suppression.** If you explicitly turn
   `enable_email` or `enable_broker` back on in the Connectors panel while `custom` port scope is
   selected, your explicit toggle wins — the scan runs that connector even though custom scope would
-  otherwise have suppressed it. This mirrors the CLI precedent above (an explicit `false` always
-  beats the profile auto-enable) applied in the opposite direction: an explicit `true` now also
-  beats the dashboard's own suppression default.
+  otherwise have suppressed it.
 - **D-13 — only the toggles you touch are written to the job config.** The Connectors panel writes a
   delta-only overlay: flipping one connector's switch writes only that field into the submitted job
   YAML's `connectors:` block. Every connector you didn't touch keeps whatever the active vertical
   preset or profile default would otherwise set — so toggling on one connector never silently resets
   or overrides the other 24.
+
+### Advanced scan-fields reference (PARITY-04, Phase 194)
+
+The dashboard's collapsed "Advanced" section on the New Scan form (`docs/operators-guide.md`
+§3.1.5) exposes eight fields, each following the delta-only precedence rule above:
+
+| Field | YAML path | Accepted values / bounds | Default |
+|-------|-----------|---------------------------|---------|
+| TLS Ports | `scan.ports_tls` | Comma-separated ports/ranges (e.g. `443,8443,9000-9010`); each value 1-65535 | 17-port `CONSULTING_TLS_PORTS` list — see "Default TLS port list" above |
+| TLS Enumeration Mode | `scan.tls_enum_mode` | `fast` or `deep` only — see D-19 note below | `fast` |
+| Send SNI | `scan.include_sni` | boolean | `true` |
+| Default timeout | `scan.timeouts.default_seconds` | integer seconds, 1-300 | `5` |
+| TLS timeout | `scan.timeouts.tls_seconds` | integer seconds, 1-300 | `6` |
+| SSH timeout | `scan.timeouts.ssh_seconds` | integer seconds, 1-300 | `6` |
+| Retry count | `scan.retry.retry_count` | integer attempts, 0-10 | `0` |
+| Data Classification | `assessment.data_classification` | `public` / `internal` / `confidential` / `regulated` only — see D-21 note below | `confidential` for dashboard-dispatched scans |
+
+**D-19 — `tls_enum_mode` has no `off` behavior.** The config template comment historically read
+`off|fast|deep` (see the `scan:` example block above), but `quirk/scanner/tls_scanner.py` coerces
+any value outside `{fast, deep}` back to `fast` at scan time — `off` has never actually turned TLS
+enumeration off. Because of this, the Advanced panel's TLS Enumeration Mode dropdown deliberately
+offers only Fast and Deep; it does not offer a value that has never had an effect.
+
+**D-21 — `data_classification`'s vocabulary is exactly four values.** `public`, `internal`,
+`confidential`, `regulated` — the same four values the CLI wizard's `_DATA_CLASS_MAP` enforces
+(see the "Assessment Block" table above). The Advanced panel's Data Classification dropdown offers
+exactly these four; no fifth, legacy-named value exists anywhere in the codebase, and `confidential`
+remains the default for dashboard-dispatched scans that don't touch this field.
+
+**D-18 — there is no SSH port list setting, in the config file or the dashboard.** SSH targets are
+never enumerated by a dedicated port list; they are derived from protocol-classified open ports
+found during discovery (the same fingerprint pass that classifies a port as TLS-, SSH-, or
+plaintext-HTTP-carrying). There is nothing to configure, which is why the Advanced panel renders no
+"SSH Ports" field (tracked as backlog 999.106 if a dedicated SSH port list is ever wanted).
 
 ### CLI `scan.ports_tls`: email/broker auto-enable is independent of your port list (v5.17 — Phase 173)
 
