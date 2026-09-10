@@ -348,6 +348,17 @@ describe("ConnectorsPanel", () => {
     expect(labelAfter?.textContent).toMatch(/Set/)
   })
 
+  it("D-08 untouched-form parity: expanding the panel and touching nothing never calls onConnectorsChange", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
+    const onConnectorsChange = vi.fn()
+    render(<ConnectorsPanel {...defaultProps({ onConnectorsChange })} />)
+
+    fireEvent.click(screen.getByText("Connectors"))
+    await screen.findByText("JWT / API Endpoints")
+
+    expect(onConnectorsChange).not.toHaveBeenCalled()
+  })
+
   it("ambient-auth and detail fields coexist: AWS shows both the ambient-auth note and its detail fields when ON", async () => {
     mockFetchApi.mockResolvedValue(jsonResponse(FIXTURE))
     render(<ConnectorsPanel {...defaultProps({ connectors: { enable_aws: true } })} />)

@@ -188,6 +188,43 @@ describe("EffectiveConfigPanel", () => {
     expect(calledPath).toContain(`advanced=${encodeURIComponent(JSON.stringify({ tls_enum_mode: "deep" }))}`)
   })
 
+  // Phase 197 Plan 02 (PARITY-05/PARITY-06, D-08) — connectors overlay was
+  // widened from Record<string, boolean> to Record<string,
+  // ConnectorOverlayValue> to carry the 37 detail fields. An untouched
+  // `connectors` prop (empty object, or undefined) must still produce the
+  // exact byte-identical query string it produced before this phase.
+  it("an empty/undefined widened connectors prop produces a query string with no connectors= segment (byte-identical to pre-phase)", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    render(<EffectiveConfigPanel {...defaultProps()} connectors={{}} />)
+    fireEvent.click(screen.getByText("Effective config"))
+
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    const calledPath = mockFetchApi.mock.calls[0][0] as string
+    expect(calledPath).not.toContain("connectors=")
+    expect(calledPath).toBe(
+      "/api/config/effective?targets=example.com&profile=deep&calibration=balanced&enable_nmap=false&port_scope=top1000&vertical=healthcare",
+    )
+  })
+
+  it("a widened connectors delta with detail fields adds exactly one connectors= segment carrying the JSON-encoded delta", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    render(
+      <EffectiveConfigPanel
+        {...defaultProps()}
+        connectors={{ enable_jwt: true, jwt_targets: ["a.example.com"] }}
+      />,
+    )
+    fireEvent.click(screen.getByText("Effective config"))
+
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    const calledPath = mockFetchApi.mock.calls[0][0] as string
+    const matches = calledPath.match(/connectors=/g) ?? []
+    expect(matches.length).toBe(1)
+    expect(calledPath).toContain(
+      `connectors=${encodeURIComponent(JSON.stringify({ enable_jwt: true, jwt_targets: ["a.example.com"] }))}`,
+    )
+  })
+
   it("changing an advanced value changes the query string, proving the refetch key moves", async () => {
     mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
     const { rerender } = render(
