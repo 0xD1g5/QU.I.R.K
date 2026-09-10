@@ -1633,3 +1633,70 @@ from the other two config-related skip reasons even though all three sound simil
   credential was available at scan-launch time (blank dashboard field and no environment-variable
   fallback set). This is the one case where re-running the *identical* scan with only a credential
   added will change the outcome — nothing else about the target or config needs to change.
+
+## 23. Exposure Map (Phase 195, MAP-02/MAP-03)
+
+The dashboard carries a new "Exposure Map" tab (`/exposure-map`) rendering a node/edge graph of
+**verified-only** quantum-exposure relationships between scanned endpoints. It exists to answer
+one question for a consultant preparing a client conversation: "if one of these systems is
+compromised, what else is provably connected to it by evidence this scan actually collected" —
+never a guess, never an inferred network path.
+
+### What it shows
+
+Nodes are scanned endpoints (host:port). Edges connect two nodes **only** when this scan's own
+data proves a concrete relationship between them — there is no topology probing, no `nmap`-style
+reachability inference, and no fabricated or assumed path. Every edge that renders carries a
+citable evidence string, shown on hover.
+
+### The edge taxonomy
+
+Two edge types ship in this release, each with a distinct color and line style so a consultant can
+explain at a glance *why* a line exists:
+
+| Edge type | Appearance | What it means |
+|-----------|------------|----------------|
+| Key-reuse cluster | amber, solid | The two endpoints share the same TLS certificate SPKI SHA-256 fingerprint — the same key material is doing double duty, and compromising one endpoint's key compromises the other's too. Backed by the same derivation `docs/report-interpretation.md` §21 documents for the CLI/HTML/DOCX "Key Reuse" section. |
+| Hardware crypto-bridge chain | gray, dashed | A hardware device confirmed (via ARP-evidenced topology, never inferred) to bridge a legacy, non-upgradeable backend behind a PQC-capable front end. Dashed styling (not just color) keeps the distinction legible for colorblind users. |
+
+A third edge type — **operator-declared reachability** (red, solid) — is specified in the phase's
+UI contract but was **not shipped this release**. The Phase 195 spike (`195-SPIKE-DECISION.md`)
+found the declaration UX and its persistence layer would cost roughly two additional plans, and
+deferred it to a future release; the map ships with the two verified edge types above only, and
+there is currently no "declared reachability" legend row or red edge anywhere in this tab.
+
+### Reading the per-edge evidence
+
+Hovering (or, for keyboard/screen-reader users, focusing) an edge opens an evidence tooltip
+labeled "Evidence" naming exactly what was matched — e.g. the shared SPKI fingerprint for a
+key-reuse edge, or the bridging device name for a hardware-bridge edge. Every rendered edge is
+guaranteed to carry this citation; the map's own backend test suite
+(`tests/test_exposure_map_edges.py::test_every_exposure_map_edge_has_evidence`) enforces that no
+edge can ever reach the client without one — there is no such thing as an edge on this map with an
+empty or missing evidence string.
+
+### The honest-absence empty state
+
+When a scan produces zero verified edges — the common case until a scan surfaces reused key
+material or hardware-bridge evidence — the tab does not render an empty, confusing graph canvas.
+It shows:
+
+> **No path data available**
+> No verified key-reuse clusters or confirmed hardware crypto-bridge chains were found in this
+> scan. Nothing is fabricated or inferred here — check back after a scan surfaces reusable keys or
+> hardware bridge evidence.
+
+Read this exactly like any other honest-absence state in this product: it is not a failure or a
+weaker result than a populated graph, it is a true statement about what this particular scan's
+data did and did not prove.
+
+### The score firewall — exposure map data never affects the readiness score (MAP-03, D-10)
+
+**Exposure map data is advisory and does not affect the quantum-readiness score.** This sentence
+also appears in-product, next to the tab's legend, so the guarantee is visible to the consultant
+directly — not just enforced silently in code. The guarantee is machine-enforced, not aspirational:
+`tests/test_exposure_map_score_guard.py` asserts, by static AST inspection, that no `SCORE_WEIGHTS`
+key can ever reference exposure-map/reachability/crown-jewel concepts and that the exposure-map
+module can never import the scoring module at all. A scan with a rich, alarming-looking exposure
+graph and a scan with none produce identical readiness scores, all else equal — the map is a
+topology-and-evidence surface for a client conversation, not a second scoring input.

@@ -320,6 +320,28 @@ for the full mechanism (delta-only writes, `_user_set_fields`, overlay-merged-la
 follows it identically to the Connectors panel, it does not have a separate precedence rule of its
 own.
 
+### 3.1.6 Exposure Map tab — attack-path visualization (MAP-02, Phase 195)
+
+The dashboard sidebar carries a new "Exposure Map" nav entry, opening a read-only
+`/exposure-map` tab (Tier A — no write actions, auth-gated like every other dashboard tab). It
+renders a node/edge graph of verified-only relationships between scanned endpoints, sourced
+exclusively from `GET /api/exposure-map`, with no client-side data fabrication — see
+`docs/report-interpretation.md` §23 for the full client-facing explanation of what the graph shows
+and how to read an edge's evidence tooltip.
+
+Two things operators should know that are specific to how this tab behaves, not what it means to a
+client:
+
+- **A zero-edge graph is an honest, expected result, not a failure.** Most scans will not populate
+  either edge type (shared SPKI fingerprints or confirmed hardware crypto-bridge chains) unless the
+  target environment actually has that condition. Seeing the "No path data available" empty state
+  after a scan completes normally does not indicate anything went wrong with the scan or the tab.
+- **The tab is read-only in this release.** There is no "declare a reachability path" or
+  "mark crown jewel" action anywhere in the UI — that declaration workflow was evaluated in a
+  dedicated spike (`.planning/phases/195-quantum-exposure-map/195-SPIKE-DECISION.md`) and deferred
+  to a future release given the added persistence/CRUD/UX cost. Everything currently on this tab is
+  derived read-time from existing scan data; there is nothing to configure or maintain for it.
+
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
 `--fuzz` enables active REST crypto-posture probing against discovered OpenAPI
