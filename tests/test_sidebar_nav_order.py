@@ -5,7 +5,8 @@ Why this exists: a nine-item Phase 39 "D-11" nav-order lock note went five items
 stale over four months (Sensors, Schedules, QRAMM Assessment, Scan History, and
 finally Hardware -- Phase 128, planned/reviewed/shipped, commit
 07db14d75cc0f0da9546bcdd11d5c0ecf3cd9772) with nothing to catch the drift. The
-canonical fourteen-item order is recorded, with full evidence, in
+canonical order (fourteen items at Phase 174, fifteen since Phase 195 Plan 07
+added "Exposure Map") is recorded, with full evidence, in
 `.planning/phases/174-dashboard-api-correctness/174-SIDEBAR-ORDER.md`.
 
 Falsifiability contract (BIDIRECTIONAL -- this is the whole point):
@@ -34,11 +35,16 @@ from __future__ import annotations
 import pathlib
 import re
 
-# Canonical fourteen-item order, provenance:
+# Canonical fifteen-item order, provenance:
 # .planning/phases/174-dashboard-api-correctness/174-SIDEBAR-ORDER.md
-# (derived live from sidebar.tsx:35-48, 2026-08-29). If this list and
-# 174-SIDEBAR-ORDER.md's "One-line canonical form" ever disagree, that file
-# wins -- re-derive live from sidebar.tsx again, do not average stale copies.
+# (derived live from sidebar.tsx:35-48, 2026-08-29; corrected 2026-09-10 in
+# Phase 195 Plan 07 to add "Exposure Map", shipped in Phase 195 Plan 05
+# between "Migration Roadmap" and "Trends" -- sidebar.tsx:45). If this list
+# and 174-SIDEBAR-ORDER.md's "One-line canonical form" ever disagree, that
+# file wins -- re-derive live from sidebar.tsx again, do not average stale
+# copies. 174-SIDEBAR-ORDER.md itself is not amended here (out of this
+# plan's scope); this list and UAT-39-07 are the two sources this test
+# actually enforces.
 CANONICAL_ORDER = [
     "Executive Summary",
     "Findings",
@@ -49,6 +55,7 @@ CANONICAL_ORDER = [
     "Certificates",
     "CBOM Viewer",
     "Migration Roadmap",
+    "Exposure Map",
     "Trends",
     "Scan History",
     "Sensors",

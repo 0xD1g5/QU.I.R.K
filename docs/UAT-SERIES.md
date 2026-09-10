@@ -6188,12 +6188,12 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 **Steps:**
 1. Open `http://127.0.0.1:8512/`.
 2. Read the sidebar from top to bottom.
-**Expected:** Order is Executive Summary · Findings · Identity · Motion · Hardware · Data at Rest · Certificates · CBOM Viewer · Migration Roadmap · Trends · Scan History · Sensors · Schedules · QRAMM Assessment. (Criteria corrected in Phase 174 — evidence in `174-SIDEBAR-ORDER.md`; the original nine-item Phase 39 "D-11" lock predates five deliberately-shipped items including Hardware and had gone undetected-stale for four months. "D-11" here is Phase-39-scoped decision numbering, not a global identifier — Phase 128 has its own unrelated "D-11".)
+**Expected:** Order is Executive Summary · Findings · Identity · Motion · Hardware · Data at Rest · Certificates · CBOM Viewer · Migration Roadmap · Exposure Map · Trends · Scan History · Sensors · Schedules · QRAMM Assessment. (Criteria corrected in Phase 174 — evidence in `174-SIDEBAR-ORDER.md`; the original nine-item Phase 39 "D-11" lock predates five deliberately-shipped items including Hardware and had gone undetected-stale for four months. "D-11" here is Phase-39-scoped decision numbering, not a global identifier — Phase 128 has its own unrelated "D-11".)
 **Pass Criteria:**
-- Exact canonical order above for the fourteen fixed top-level `NAV_ITEMS` entries; "Hardware" immediately follows "Motion" and immediately precedes "Data at Rest". (Scope note: per-vertical entries injected at `sidebar.tsx:63` sit outside this fixed fourteen-item list and are not asserted by this criterion.)
+- Exact canonical order above for the fifteen fixed top-level `NAV_ITEMS` entries; "Hardware" immediately follows "Motion" and immediately precedes "Data at Rest"; "Exposure Map" immediately follows "Migration Roadmap" and immediately precedes "Trends". (Scope note: per-vertical entries injected at `sidebar.tsx:63` sit outside this fixed list and are not asserted by this criterion.)
 - "Data at Rest" entry uses the HardDrive icon.
 
-**Result:** - [x] PASS (2026-08-29 re-verified against corrected UAT-39-07 criteria: sidebar.tsx NAV_ITEMS order is Executive Summary . Findings . Identity . Motion . Hardware . Data at Rest . Certificates . CBOM Viewer . Migration Roadmap . Trends . Scan History . Sensors . Schedules . QRAMM Assessment, byte-matching 174-SIDEBAR-ORDER.md's canonical form and now the corrected document. Hardware's placement [after Motion, before Data at Rest] was planned, reviewed and shipped in Phase 128 commit 07db14d75cc0f0da9546bcdd11d5c0ecf3cd9772 with 4 corroborating planning artifacts; the original nine-item Phase 39 D-11 note was already 5 items stale before Hardware shipped. tests/test_sidebar_nav_order.py [added Task 3 this plan] now guards both sidebar.tsx and UAT-39-07 bidirectionally.)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-10 re-verified after Phase 195 Plan 05 added Exposure Map between Migration Roadmap and Trends; sidebar.tsx NAV_ITEMS and this documented order agree)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -25825,7 +25825,7 @@ the legend, after the fix. LR layout confirmed visually. See `195-06-SUMMARY.md`
 visually distinct from the amber/solid key-reuse edge type
 **Maps to:** MAP-02
 
-**Result:** - [x] SKIP  - [ ] PASS  - [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
 **Notes:** **GAP — no substitute coverage against live data.** Per `195-SPIKE-DECISION.md`
 investigation (b), zero of the seven local dev-scan SQLite DBs inspected (and no chaos-lab profile)
 currently contain a populated `bridge_evidence_json` row that promotes to `upstream_mitigated` —
@@ -25846,7 +25846,7 @@ gateway — not available in this environment. Consistent with the honest GAP re
 empty-state card instead of an empty graph canvas
 **Maps to:** MAP-02
 
-**Result:** - [x] SKIP  - [ ] PASS  - [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
 **Notes:** **DEFERRED — covered by component tests, not this walkthrough.** The live DB used for the
 195-06 operator walkthrough had 1 populated edge, so the populated-graph branch was exercised
 instead of the empty-state branch — not this plan's exercisable condition against live data. The
@@ -25922,7 +25922,7 @@ reachability" row, matching the DEFERRED decision.
 absent any declared crown jewel, no node shows a fabricated badge
 **Maps to:** MAP-02
 
-**Result:** - [x] SKIP  - [ ] PASS  - [ ] FAIL
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
 **Notes:** **GAP — no substitute coverage against live data.** Crown-jewel declaration is a Tier B
 surface deferred per the MAP-01 spike decision (UAT-195-07); no live crown-jewel data exists in any
 inspected DB, so the badge-rendering path is unexercisable with the current environment. Expected
