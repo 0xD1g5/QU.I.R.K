@@ -182,3 +182,27 @@ def test_credential_redaction_unaffected_by_connectors_overlay(monkeypatch):
     vault_field = _connectors_field(body, "vault_token")
     assert vault_field["redacted"] is True
     assert vault_field["credential_status"] == "set"
+
+
+def test_no_connectors_param_and_empty_dict_byte_identical(monkeypatch):
+    """Phase 197 / D-08 preview-level guard: no `connectors` query param at
+    all and an explicit `connectors={}` must produce identical response
+    bodies -- the widened validate_connectors_overlay() must not perturb
+    this pre-phase guarantee (mirrors the job-YAML level guard in
+    test_build_job_config_connectors_overlay.py)."""
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    monkeypatch.delenv("VAULT_TOKEN", raising=False)
+    _, tc = _app_with_db()
+
+    no_param = tc.get("/api/config/effective", params={"targets": "example.com"})
+    empty_dict = tc.get(
+        "/api/config/effective",
+        params={"targets": "example.com", "connectors": json.dumps({})},
+    )
+    assert no_param.status_code == 200
+    assert empty_dict.status_code == 200
+    no_param_body, empty_dict_body = no_param.json(), empty_dict.json()
+    for section_name in ("targets", "connectors", "scan", "assessment", "intelligence", "security"):
+        no_param_section = next(s for s in no_param_body["sections"] if s["name"] == section_name)
+        empty_dict_section = next(s for s in empty_dict_body["sections"] if s["name"] == section_name)
+        assert no_param_section == empty_dict_section

@@ -117,3 +117,37 @@ def test_connectors_overlay_user_set_field_survives_apply_profile(tmp_path):
     # The operator's explicit False must survive — not just the key's
     # presence in _user_set_fields, but the actual surviving VALUE.
     assert cfg.connectors.enable_broker is False
+
+
+def test_connectors_overlay_none_and_empty_dict_byte_identical(tmp_path):
+    """Phase 197 / D-08: an absent (None) connectors delta and an explicitly
+    empty ({}) connectors delta must produce byte-identical job config.yaml
+    output -- the widened overlay must not perturb this pre-phase guarantee
+    even though `validate_connectors_overlay` now does substantially more
+    work than the old `enable_*`-only gate."""
+    output_dir = tmp_path / "out"
+    with_none = build_job_config_dict(
+        output_dir, "example.com", "db.sqlite", "balanced",
+        port_scope="top1000", connectors_overlay=None,
+    )
+    with_empty = build_job_config_dict(
+        output_dir, "example.com", "db.sqlite", "balanced",
+        port_scope="top1000", connectors_overlay={},
+    )
+    assert with_none == with_empty
+
+
+def test_connectors_overlay_detail_field_reaches_job_yaml_with_toggle():
+    """Phase 197 / PARITY-05 / D-14 success criterion 4: an operator toggling
+    enable_jwt on AND setting jwt_targets in the SAME overlay must land BOTH
+    keys in the job config's connectors block -- proving enable_jwt is no
+    longer a no-op (the RESEARCH-cited audit finding: "the scan short-
+    circuits on an empty target list... toggling it on alone does nothing")."""
+    config = build_job_config_dict(
+        Path("/tmp/quirk-test-out"), "example.com", "db.sqlite", "balanced",
+        port_scope="top1000",
+        connectors_overlay={"enable_jwt": True, "jwt_targets": ["a.example.com"]},
+    )
+    assert config["connectors"]["enable_jwt"] is True
+    assert config["connectors"]["jwt_targets"] == ["a.example.com"]
+    assert len(config["connectors"]) == 2
