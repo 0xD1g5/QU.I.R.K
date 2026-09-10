@@ -203,7 +203,17 @@ def get_effective_config(
             advanced_model = AdvancedScanFields.model_validate(advanced_raw)
         except ValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        scan_overlay, assessment_overlay = build_advanced_overlays(advanced_model)
+        # Phase 194 / PARITY-04 / D-03 / D-16: build_advanced_overlays calls
+        # parse_port_spec, which raises ValueError on a malformed ports_tls
+        # (AdvancedScanFields only bounds it by max_length, not numerically).
+        # The submit path (jobs.py) converts that ValueError to 422; the GET
+        # preview must do the same so preview/submit can never disagree on
+        # what is valid -- otherwise a malformed advanced.ports_tls escapes as
+        # an unhandled 500 here.
+        try:
+            scan_overlay, assessment_overlay = build_advanced_overlays(advanced_model)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
         resolved_cfg, overlay_dict, preset_changed = resolve_effective_config(

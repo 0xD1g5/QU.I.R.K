@@ -135,6 +135,35 @@ def test_unknown_connector_key_returns_422_naming_it(monkeypatch):
     assert "enable_bogus" in response.json()["detail"]
 
 
+def test_malformed_advanced_ports_tls_returns_422_not_500(monkeypatch):
+    """Phase 194 / WR-01: a malformed advanced.ports_tls must surface as 422
+    on the GET preview path, exactly as the submit path (POST /api/jobs)
+    already does -- never an unhandled 500. build_advanced_overlays ->
+    parse_port_spec raises ValueError, which the preview handler must convert
+    to 422 so preview and submit can never disagree on what is valid (D-03/D-16).
+    """
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc = _app_with_db()
+
+    response = tc.get(
+        "/api/config/effective",
+        params={"advanced": json.dumps({"ports_tls": "443,abc"})},
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_out_of_range_advanced_ports_tls_returns_422_not_500(monkeypatch):
+    """A numerically out-of-range port (>65535) likewise returns 422, not 500."""
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc = _app_with_db()
+
+    response = tc.get(
+        "/api/config/effective",
+        params={"advanced": json.dumps({"ports_tls": "99999"})},
+    )
+    assert response.status_code == 422, response.text
+
+
 def test_credential_redaction_unaffected_by_connectors_overlay(monkeypatch):
     """Credential fields still render REDACTED_SET/REDACTED_UNSET markers,
     never a raw value, when a connectors overlay is supplied."""
