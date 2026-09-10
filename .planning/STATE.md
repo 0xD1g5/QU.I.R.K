@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.21
 milestone_name: Dashboard Parity & Exposure Capability
-status: phase_complete
-stopped_at: Phase 195 closed (verification 3/3, review resolved, operator-approved map) — ALL v5.21 phases complete; milestone lifecycle next
-last_updated: "2026-09-10T00:00:00.000Z"
-last_activity: 2026-09-10 -- Phase 195 plan 06 complete (operator walkthrough approved; MAP-01/MAP-02 flipped Complete; MAP-03 already Complete)
+status: completed
+stopped_at: v5.21 ALL PHASES COMPLETE — operator stopped at clean boundary; milestone lifecycle (audit → complete → cleanup) NOT yet run
+last_updated: "2026-09-10T10:30:04.410Z"
+last_activity: 2026-09-10 -- v5.21 all phases complete; clean stop at operator request; lifecycle pending
 progress:
   total_phases: 5
-  completed_phases: 5
+  completed_phases: 4
   total_plans: 42
-  completed_plans: 39
-  percent: 93
+  completed_plans: 40
+  percent: 80
 ---
 
 # Project State
@@ -2013,9 +2013,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-10T03:32:22.860Z
-Stopped at: Completed 195-05-PLAN.md
-Resume file: None
+Last session: 2026-09-10T10:30:04.396Z
+Stopped at: v5.21 ALL PHASES COMPLETE — operator stopped at clean boundary; milestone lifecycle (audit → complete → cleanup) NOT yet run
+Resume file: .planning/STATE.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
