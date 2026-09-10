@@ -29,6 +29,11 @@ tmp/
 recordings/
 quirk-output/
 
+# Phase 196 HOUSE-01 — ad-hoc scan output dirs from lab/UAT runs; reproducible, evidence archived under .planning/milestones/
+/output-*/
+# Phase 196 HOUSE-01 — ad-hoc lab scan configs live in quantum-chaos-enterprise-lab/scan-configs/, never repo root
+/config-lab-*.yaml
+
 # Local scratch / build artifacts
 .clone/
 .vite/
