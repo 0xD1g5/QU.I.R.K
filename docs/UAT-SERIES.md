@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-10 (Phase 196 Plan 04 — HUAT-01: UAT-192-07 re-verified against the
+**Last Updated:** 2026-09-10 (Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
+(PyPI install, Sigstore provenance, tag/workflow, Windows asset) dispositioned against
+`196-03-SUMMARY.md`'s verbatim published-artifact evidence for `v5.21.0`; UAT-1-02 re-executed
+against the same published build, superseding the 2026-09-07 5.19.0 evidence while its `[x] PASS`
+box stayed checked throughout. Earlier: Phase 196 Plan 04 — HUAT-01: UAT-192-07 re-verified against the
 actually-released `quirk-scanner==5.21.0` PyPI build (clean venv, filesystem-level provenance
 proof), superseding the 2026-09-09 dev-checkout evidence as the disposition for HUAT-01 while
 retaining it as dev-checkout evidence; the stale "Series 192 disposition" paragraph and a
@@ -630,17 +634,23 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 - Output matches format: `QU.I.R.K. v5.21.0`
 - Exit code 0
 
-**Result:** - [x] PASS (2026-09-07 live re-execution against the published 5.19.0 PyPI install, clean throwaway venv `/tmp/q519-check` per 187-04-SUMMARY.md Task 3: `quirk --version` printed `QU.I.R.K. v5.19.0`, exit code 0; `quirk.__version__` also printed `5.19.0`. This supersedes the prior 2026-09-02 PASS, whose evidence was `QU.I.R.K. v5.18.0` and no longer matches this criterion once the pass criteria were updated to v5.19.0. [Phase 196 Plan 02: pass criteria bumped to `QU.I.R.K. v5.21.0` in this edit; the box above is intentionally kept checked rather than unchecked — it still reflects real, verified behavior at the prior version, and the corpus-integrity gate requires a disposed box at all times. Re-execution evidence against the published 5.21.0 PyPI artifact lands in plan 196-05 and will supersede this note the same way the 5.19.0 evidence superseded 5.18.0's.])  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-07  **Tester:** Automated (187-05 phase-close plan execution)
-**Notes:** Version bumped to 5.19.0 in Phase 187 Plan 02 (`pyproject.toml` sole SoT;
+**Result:** - [x] PASS (2026-09-10 live re-execution against the published 5.21.0 PyPI install, clean throwaway venv `/tmp/q5210-check` per 196-03-SUMMARY.md Task 3: `quirk --version` printed `QU.I.R.K. v5.21.0`, exit code 0, on the first install attempt — attempt count: 1, no CDN-lag failure text observed. This SUPERSEDES the prior 2026-09-07 PASS note, whose evidence was `QU.I.R.K. v5.19.0`, the same way that note superseded 2026-09-02's `v5.18.0` evidence. The interim "criteria bumped, re-execution lands in 196-05" note that Phase 196 Plan 02 added is closed by this entry and no longer reads as an open item.)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (196-05 phase-close plan execution)
+**Notes:** Version bumped to 5.21.0 in Phase 196 Plan 02 (`pyproject.toml` sole SoT;
 importlib.metadata derives it, which is why `pip install -e . --no-deps` must follow the bump).
-v5.19.0 ships v5.19 Drain & Tooling Integrity's development-complete content (Phases 182-186.1)
-as its own release, published 2026-09-07 via the `v5.19.0` tag push — see UAT Series 187 for the
-release-verification evidence against the published artifact. Historical context (v5.13/v5.14
-two-component-tag no-release defect; v5.16/v5.17 shipping untagged inside v5.18.0) is preserved
-in `.planning/ROADMAP.md`'s milestone notes and CHANGELOG 5.18.0. Phase 196 Plan 02 (2026-09-10):
-pass criteria bumped to 5.21.0 ahead of the tag; re-execution evidence against the published
-artifact is deferred to plan 196-05, same interim pattern Phase 187 passed through for 5.19.0.
+v5.21.0 ships both v5.20 (scoring v2) and v5.21 (dashboard parity, Quantum Exposure Map)
+development-complete content as a single release, published 2026-09-10 via the `v5.21.0` tag
+push — see UAT Series 196 for the full release-verification evidence against the published
+artifact. Historical context (v5.13/v5.14 two-component-tag no-release defect; v5.16/v5.17
+shipping untagged inside v5.18.0; v5.19.0 published 2026-09-07 per Series 187) is preserved in
+`.planning/ROADMAP.md`'s milestone notes, `.planning/MILESTONES.md`, and CHANGELOG 5.18.0/5.19.0.
+2026-09-10 re-execution evidence: throwaway venv `/tmp/q5210-check` (created via
+`.venv/bin/python -m venv`, preserved for plan 196-04's reuse), `pip install
+quirk-scanner==5.21.0` succeeded on the first attempt (1 of a planned up-to-10 retry budget), no
+CDN-lag failure text observed, `/tmp/q5210-check/bin/quirk --version` printed
+`QU.I.R.K. v5.21.0`, exit 0. The project's own `.venv/bin/quirk --version` also reported
+`QU.I.R.K. v5.21.0`, confirming the throwaway-venv result reflects the published artifact rather
+than an editable-install leak.
 
 ---
 
@@ -25987,3 +25997,193 @@ series was checked to satisfy the corpus-integrity gate without a corresponding 
 operator walkthrough for MAP-01/MAP-02/MAP-03, 5 PASS / 3 honest GAP-or-DEFERRED, transcribed from
 the 195-06 operator-approved checkpoint plus the score-firewall and evidence-required automated
 guards)
+
+---
+
+## Series 196: Release Verification (Phase 196 — v5.21.0)
+
+**Ledger-scope note (D-04 / MAX_SERIES=163 exception).** `scripts/uat_disposition_apply.py` sets
+`MAX_SERIES = 163`, so this series is OUT of ledger scope by construction — its four cases below
+carry HAND-WRITTEN `**Result:**` lines, the same documented exception Series 175, 176, 177, and 187
+used for their own cases. `scripts/uat_disposition_apply.py verify` adds zero ledger rows for this
+series.
+
+**v5.21.0 shipped 2026-09-10.** The user pushed the annotated three-component tag (Claude pushed
+`main`, the user personally pushed `git push origin v5.21.0`); `release.yml` run
+[34520340774](https://github.com/0xD1g5/QU.I.R.K/actions/runs/34520340774) fired on a `push` event
+and completed `success` across all three jobs (`Build wheel + sdist`, `Publish to PyPI (Trusted
+Publishers + Sigstore)`, `Build Windows zip + attach GitHub Release asset`). This single release
+carries both v5.20 (scoring v2) and v5.21 (dashboard parity, Quantum Exposure Map)
+development-complete content — no retro `v5.20.0` was ever cut. All four cases below are
+re-executed against real, published-artifact evidence per `196-03-SUMMARY.md`.
+
+### UAT-196-01: PyPI Install Reports the Correct Version
+
+**ID:** UAT-196-01
+**Title:** A clean-venv install of `quirk-scanner==5.21.0` from PyPI reports the correct version
+**Maps to:** REL-02
+
+**What to test:** installing the published `5.21.0` package into a fresh virtual environment and
+confirming `quirk --version` reports the correct version with a clean exit.
+
+**Steps:**
+```bash
+.venv/bin/python -m venv /tmp/q5210-check
+/tmp/q5210-check/bin/pip install quirk-scanner==5.21.0
+/tmp/q5210-check/bin/quirk --version
+```
+
+**Pass Criteria:**
+- `pip install` exits 0 and resolves exactly one `quirk-scanner` distribution.
+- `quirk --version` prints `QU.I.R.K. v5.21.0`.
+- Exit code 0.
+
+**Falsifiability:** this case turns red if the published package installs a stale version, fails
+to install, or the `quirk` entry point is missing.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (196-03/196-05 phase-release plan execution)
+**Notes:** Per `196-03-SUMMARY.md` Task 3: a genuine clean scratch venv (`/tmp/q5210-check`,
+created fresh via `.venv/bin/python -m venv` — never the repo's own `.venv` editable install) ran
+the steps above. **Install attempts needed: 1** — `pip install quirk-scanner==5.21.0` succeeded on
+the first attempt of a planned up-to-10 retry budget at ~30s intervals; no "Could not find a
+version that satisfies the requirement" (CDN-lag) failure text was ever observed for the install
+step — the simple-index CDN had already propagated by the time this task ran, some time after the
+Task 2 checkpoint's push plus run duration. `/tmp/q5210-check/bin/quirk --version` printed
+`QU.I.R.K. v5.21.0`, exit code 0. The project's own `.venv/bin/quirk --version` (inside the repo)
+also reported `QU.I.R.K. v5.21.0`, confirming the throwaway venv's result reflects the published
+artifact and not an editable-install leak. PyPI JSON API (`https://pypi.org/pypi/quirk-scanner/json`)
+`info.version` = `5.21.0`; `urls[]` contains `quirk_scanner-5.21.0-py3-none-any.whl` and
+`quirk_scanner-5.21.0.tar.gz`.
+
+---
+
+### UAT-196-02: Sigstore Attestation Verifies Against the Published Wheel
+
+**ID:** UAT-196-02
+**Title:** A PyPI Sigstore provenance bundle attests the wheel to `release.yml` in this repository
+**Maps to:** REL-02
+
+**What to test:** the Sigstore build-provenance attestation for the published wheel resolves via
+PyPI's integrity/provenance endpoint (the actual publication target for
+`pypa/gh-action-pypi-publish`'s attestations) and names this repository's `release.yml` workflow as
+the signer. **`gh attestation verify` is the WRONG surface for this** — per UAT-177-02's and
+UAT-187-02's case-text correction, that command queries GitHub's own attestation store, which is
+empty for this artifact because the Sigstore bundle is uploaded to PyPI's integrity endpoint
+instead; a 404 (or a flag-usage error, as observed this run) from `gh attestation verify` here is
+not a release failure — it is a symptom of asking the wrong API, not a pass/fail signal at all.
+
+**Steps:**
+```bash
+curl -s "https://pypi.org/integrity/quirk-scanner/5.21.0/quirk_scanner-5.21.0-py3-none-any.whl/provenance"
+```
+
+**Pass Criteria:**
+- The response contains at least one entry under `attestation_bundles`.
+- That bundle's `publisher.kind` is `GitHub`, `publisher.repository` is `0xD1g5/QU.I.R.K`, and
+  `publisher.workflow` is `release.yml`.
+
+**Falsifiability:** this case turns red if the provenance endpoint returns zero bundles, or if the
+publisher fields name a different repository or workflow than this project's `release.yml`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (196-03 phase-release plan execution)
+**Notes:** Per `196-03-SUMMARY.md`:
+`curl -s "https://pypi.org/integrity/quirk-scanner/5.21.0/quirk_scanner-5.21.0-py3-none-any.whl/provenance"`
+returned a valid `attestation_bundles[]` entry with raw `publisher` object
+`{"environment": "release", "kind": "GitHub", "repository": "0xD1g5/QU.I.R.K", "workflow":
+"release.yml"}` — matching the required shape exactly. The signing certificate's embedded SAN
+independently confirms the source ref
+(`https://github.com/0xD1g5/QU.I.R.K/.github/workflows/release.yml@refs/tags/v5.21.0`) and build
+commit (`f6562e232e348870394066d7caf05402b0bd63d7`), matching the tag SHA. `gh attestation verify`
+was attempted but errored on flag usage (`--owner`/`--repo` mutual exclusivity) before reaching the
+network call, so no 404 was actually observed this run — this does not affect the required
+evidence: the sanctioned surface (PyPI integrity endpoint) fully succeeded, and `gh attestation
+verify` is explicitly named above as the wrong surface for Trusted-Publisher bundles regardless of
+which error it happens to produce.
+
+---
+
+### UAT-196-03: The Pushed Tag Is Three-Component and `release.yml` Ran Green on a Push Event
+
+**ID:** UAT-196-03
+**Title:** `v5.21.0` (not `v5.21`) reached origin and triggered a green `release.yml` `publish` job
+**Maps to:** REL-02
+
+**What to test:** the pushed tag is three-component, matching `release.yml`'s `v*.*.*` glob (the
+exact defect that silently orphaned the `v5.13`/`v5.14` two-component tags per RVW-004), and the
+resulting workflow run fired on a `push` event with all three jobs concluding `success`.
+
+**Steps:**
+```bash
+git ls-remote --tags origin | grep v5.21.0
+gh run list --repo 0xD1g5/QU.I.R.K --workflow release.yml --event push --limit 5
+```
+
+**Pass Criteria:**
+- `git ls-remote --tags origin` shows `refs/tags/v5.21.0` (three-component, not `refs/tags/v5.21`).
+- The matching `release.yml` run has `event_name == push` and every job (`Build wheel + sdist`,
+  `Publish to PyPI (Trusted Publishers + Sigstore)`, `Build Windows zip + attach GitHub Release
+  asset`) concludes `success`.
+
+**Falsifiability:** this case turns red if the tag pushed is two-component (repeating the
+`v5.13`/`v5.14` defect), if the workflow never fired, or if any job failed or was unexpectedly
+skipped.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (196-03 phase-release plan execution)
+**Notes:** Per `196-03-SUMMARY.md`: `git ls-remote --tags origin` shows `refs/tags/v5.21.0` present;
+no two-component `refs/tags/v5.21` exists remotely (ancient drifted tags `v3.8.0`, `v3.9`, `v4.1`,
+`v4.10`, `v4.10.0`, `v4.10.1`, `v5.2.0` are present and unchanged — untouched by this release, per
+the CONTEXT-approved out-of-scope disposition). `gh run view 34520340774` confirmed
+`event_name: push`, overall conclusion `success`, and all three jobs concluded `success` with none
+skipped, recorded individually: `Build Windows zip + attach GitHub Release asset` (2m54s), `Build
+wheel + sdist` (13s), `Publish to PyPI (Trusted Publishers + Sigstore)` (17s). `main`, `origin/main`,
+and the `v5.21.0` tag all point to the same commit `f6562e232e348870394066d7caf05402b0bd63d7`.
+
+---
+
+### UAT-196-04: The GitHub Release Carries the Windows Sensor Asset
+
+**ID:** UAT-196-04
+**Title:** The `v5.21.0` GitHub release includes a nonzero-size Windows sensor zip asset
+**Maps to:** REL-02 (the asset that was missing in v5.11.0)
+
+**What to test:** `gh release view v5.21.0` lists a Windows sensor zip asset with a nonzero byte
+size, closing the exact gap REL-02 (and its predecessor REL-01) names.
+
+**Steps:**
+```bash
+gh release view v5.21.0 --repo 0xD1g5/QU.I.R.K
+```
+
+**Pass Criteria:**
+- The release lists an asset named `quirk-windows-<version>.zip`.
+- That asset's reported size is nonzero.
+
+**Falsifiability:** this case turns red if the release has no Windows zip asset, or the asset is
+present but zero bytes (a truncated/failed upload).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (196-03 phase-release plan execution)
+**Notes:** Per `196-03-SUMMARY.md`: `gh release view v5.21.0 --repo 0xD1g5/QU.I.R.K` confirmed asset
+`quirk-windows-5.21.0.zip`, size **59,140,326 bytes** — nonzero, present. This is the exact asset
+class that was missing in v5.11.0 (REL-01/REL-02's explicit clause), confirmed present here.
+
+---
+
+**Series 196 disposition.** All four cases are `[x] PASS`, re-executed 2026-09-10 against a real
+published `v5.21.0` release: a genuine clean-venv install succeeding on the first attempt, PyPI's
+Sigstore provenance/integrity endpoint (with `gh attestation verify` correctly named as the wrong
+surface, per Series 177/187 precedent), the pushed three-component tag plus a green `push`-event
+`release.yml` run with all three jobs `success`, and the Windows sensor asset present at a nonzero
+size (59,140,326 bytes). No disposition here was manufactured against absent evidence — each PASS
+cites the literal command output recorded in `196-03-SUMMARY.md`. No Series 196 case was authored
+for the two Phase 192 browser checks — those are dispositioned in place on UAT-192-07 by plan
+196-04 (D-U3). UAT-1-02 (Series 1) was also re-executed against this same published 5.21.0 build
+and its `[x] PASS` box updated with a superseding note — see that entry above.
+
+**Last Updated:** 2026-09-10 (Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
+for v5.21.0 (PyPI install, Sigstore provenance, tag/workflow, Windows asset), all `[x] PASS`
+against `196-03-SUMMARY.md`'s verbatim published-artifact evidence; UAT-1-02 re-executed and
+superseded to the same published build)
