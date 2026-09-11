@@ -1919,11 +1919,25 @@ def main():
         getattr(cfg, "report", None), "profile", None
     )
     if report_profile_name:
+        import yaml as _yaml
+
         from quirk.report_profiles import apply_report_profile
         try:
             apply_report_profile(cfg, report_profile_name)
-        except ValueError as exc:
-            print(str(exc), file=_sys.stderr)
+        except (ValueError, OSError, _yaml.YAMLError) as exc:
+            # Phase 200 review WR-01: load_profile propagates yaml.YAMLError
+            # (malformed profile file) and OSError (unreadable file) in
+            # addition to the coded ValueError — all three must abort with a
+            # clean coded stderr line, never a raw traceback. ValueError
+            # already carries its own QRK-CONFIG-004 message.
+            if isinstance(exc, ValueError):
+                print(str(exc), file=_sys.stderr)
+            else:
+                print(
+                    f"{format_error('CONFIG-004')} "
+                    f"(field='report.profile', value={report_profile_name!r}) — {exc}",
+                    file=_sys.stderr,
+                )
             _sys.exit(1)
 
     # Phase 33 / D-01: cloud broker target plumbing — CLI extends config-supplied lists

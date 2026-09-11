@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+import yaml
 from rich.console import Console
 from rich.table import Table
 
@@ -65,7 +66,11 @@ def _run_save(args: argparse.Namespace, console: Console) -> None:
         cfg = load_config(args.config)
         existed = args.name in list_profiles()
         path = save_profile(args.name, cfg)
-    except ValueError as exc:
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        # Phase 200 review WR-01: load_config(args.config) raises
+        # FileNotFoundError / yaml.YAMLError for a bad --config path (the most
+        # common operator typo), and save_profile can raise OSError on an
+        # unwritable profiles dir — all must exit cleanly, never traceback.
         console.print(f"[red]{exc}[/red]")
         sys.exit(1)
 
