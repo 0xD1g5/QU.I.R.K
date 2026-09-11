@@ -962,6 +962,39 @@ class AdvancedScanFields(BaseModel):
     A field naming the SSH port list deliberately does not exist (D-18) --
     it has no CLI or scanner counterpart and is out of scope, filed as
     backlog 999.106.
+
+    Phase 198 / PARITY-08 / PARITY-09 / D-01..D-04/D-09/D-11: extended from 8
+    to 27 fields to close the 999.104 Tier 3 scan-behavior residue --
+
+    - 11 new per-scanner timeout fields (D-01) and 2 retry backoff fields
+      (D-01), bounded `ge=1, le=600` for timeouts and `gt=0` for backoffs
+      (D-11). The 3 ALREADY-SHIPPED timeout fields immediately below
+      (`timeout_default_seconds`, `timeout_tls_seconds`,
+      `timeout_ssh_seconds`) deliberately KEEP their 1-300 bound -- D-11
+      scopes 1-600 to the 19 NEW fields only; this asymmetry is intentional,
+      not a bug.
+    - 5 new concurrency fields (D-02), bounded `ge=1, le=500` (D-11).
+      **D-02 finding, recorded verbatim per phase plan**: REQUIREMENTS.md's
+      PARITY-09 text says "four concurrency knobs", but a live read of
+      `quirk.config.ScanCfg` and `194-PARITY-AUDIT.md` both independently
+      enumerate FIVE (`scan.concurrency`, `fingerprint_concurrency`,
+      `tls_concurrency`, `ssh_concurrency`, `motion_concurrency`). All five
+      are in scope per D-02 -- the requirement's count is stale, not this
+      model's scope.
+    - `tls_designated_ports` (D-03): a port-spec string in, parsed by the
+      same `parse_port_spec` the existing `ports_tls` field already uses --
+      no second parser.
+    - **D-04 intentional gaps** (no field exists on this model for any of
+      the following three `ScanCfg`/live-config fields, by design):
+      `scan.openapi_spec_path` (local-path / scope-gated-URL -- a
+      path-traversal surface, same rationale class as
+      `assessment.logo_path`), `scan.hardware_history_retention_days` and
+      `scan.hardware_drift_event_retention_days` (install-scoped
+      engagement-history retention policy, not per-scan behavior -- setting
+      these per-scan would be operationally meaningless).
+    - A `model_validator(mode="after")` enforces `backoff_base_seconds <=
+      backoff_max_seconds` when both are set (D-11 "enforced if cheap"),
+      naming both fields in the error message.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -976,6 +1009,47 @@ class AdvancedScanFields(BaseModel):
     data_classification: Optional[
         Literal["public", "internal", "confidential", "regulated"]
     ] = None
+
+    # Phase 198 / D-01 / D-11: 11 new per-scanner timeout fields, 1-600s
+    # (deliberately NOT 1-300 like the 3 pre-existing timeout fields above).
+    timeout_fingerprint_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_jwt_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_container_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_source_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_dnssec_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_saml_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_kerberos_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_vault_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_db_connect_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_broker_seconds: Optional[int] = Field(None, ge=1, le=600)
+    timeout_email_seconds: Optional[int] = Field(None, ge=1, le=600)
+
+    # Phase 198 / D-01 / D-11: retry backoff pair, floats > 0.
+    retry_backoff_base_seconds: Optional[float] = Field(None, gt=0)
+    retry_backoff_max_seconds: Optional[float] = Field(None, gt=0)
+
+    # Phase 198 / D-02 / D-11: 5 live-enumerated concurrency knobs, 1-500.
+    scan_concurrency: Optional[int] = Field(None, ge=1, le=500)
+    fingerprint_concurrency: Optional[int] = Field(None, ge=1, le=500)
+    tls_concurrency: Optional[int] = Field(None, ge=1, le=500)
+    ssh_concurrency: Optional[int] = Field(None, ge=1, le=500)
+    motion_concurrency: Optional[int] = Field(None, ge=1, le=500)
+
+    # Phase 198 / D-03: port-spec string, parsed by parse_port_spec in the
+    # mapper -- same treatment as ports_tls above.
+    tls_designated_ports: Optional[str] = Field(None, max_length=512)
+
+    @model_validator(mode="after")
+    def _validate_backoff_order(self) -> "AdvancedScanFields":
+        """D-11: base <= max on the backoff pair, when both are set."""
+        base = self.retry_backoff_base_seconds
+        max_ = self.retry_backoff_max_seconds
+        if base is not None and max_ is not None and base > max_:
+            raise ValueError(
+                "retry_backoff_base_seconds must be <= retry_backoff_max_seconds "
+                f"(got base={base}, max={max_})"
+            )
+        return self
 
 
 # Phase 65 UI-SCAN-01: dashboard-initiated scan submission
