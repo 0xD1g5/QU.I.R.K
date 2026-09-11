@@ -693,6 +693,10 @@ def validate_report_path_field(field_name: str, value: Optional[str]) -> None:
 
     - Every field: a falsy value (None/"") returns immediately — every
       field is optional, so absence is never an error.
+    - Every field: a truthy non-string value (YAML int/list/mapping) is
+      REJECTED with a coded ``CONFIG-003`` ``ValueError`` naming the field
+      and the received type — never an uncoded ``TypeError`` from inside
+      ``pathlib`` (Phase 200 review WR-02).
     - Every field: a value whose ``pathlib.Path(...).parts`` contains ``..``
       is REJECTED with a coded ``CONFIG-003`` ``ValueError`` naming the
       field and the offending value. Traversal is a load-time error
@@ -717,6 +721,12 @@ def validate_report_path_field(field_name: str, value: Optional[str]) -> None:
     """
     if not value:
         return
+
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{format_error('CONFIG-003')} (field={field_name!r}, value={value!r}, "
+            f"type={type(value).__name__})"
+        )
 
     path = pathlib.Path(value)
     if ".." in path.parts:

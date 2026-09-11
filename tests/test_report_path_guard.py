@@ -83,6 +83,37 @@ class TestValidateReportPathFieldAcceptance:
             )
 
 
+class TestValidateReportPathFieldTypeGuard:
+    """Phase 200 review WR-02: a truthy non-string YAML value (int/list/
+    mapping/float/bool) must raise the coded CONFIG-003 error naming the
+    field and the received type — never an uncoded TypeError from pathlib."""
+
+    @pytest.mark.parametrize(
+        "bad_value", [123, 1.5, True, ["a", "b"], {"x": "y"}],
+        ids=["int", "float", "bool", "list", "mapping"],
+    )
+    def test_non_string_value_raises_coded_error(self, bad_value):
+        with pytest.raises(ValueError) as excinfo:
+            validate_report_path_field("report.template_dir", bad_value)
+        message = str(excinfo.value)
+        assert "QRK-CONFIG-003" in message
+        assert "report.template_dir" in message
+        assert type(bad_value).__name__ in message
+
+    def test_non_string_logo_path_raises_coded_error(self):
+        with pytest.raises(ValueError) as excinfo:
+            validate_report_path_field("report.branding.logo_path", [1, 2])
+        message = str(excinfo.value)
+        assert "QRK-CONFIG-003" in message
+        assert "report.branding.logo_path" in message
+
+    def test_falsy_non_string_values_still_treated_as_absent(self):
+        # Falsy values of any type mean "not set" — they return before the
+        # type rung, matching the every-field-is-optional contract.
+        validate_report_path_field("report.template_dir", 0)
+        validate_report_path_field("report.branding.logo_path", [])
+
+
 class TestValidateReportPathFieldTemplateDirMustBeDirectory:
     def test_template_dir_pointing_at_a_file_raises_coded_error(self, tmp_path):
         file_path = tmp_path / "not_a_dir.txt"
