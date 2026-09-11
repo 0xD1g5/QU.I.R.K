@@ -6,7 +6,11 @@
 customization (999.105 Tier 1), score-lift migration-roadmap re-frame (999.101), finding
 storyline drawer (999.102), gated by a small Wave A drain (trends/merge int-coercion +
 overlay CI regression test). Sequencing commitment: v5.24 = UAT Coverage Drain. See
-`## Current Milestone` below.
+`## Current Milestone` below. **Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11** —
+TRIAGE-10/TRIAGE-11 validated: fractional scores round-trip via Optional[float] transport
+widening (merge/trends/scan + TS mirrors, null-honest SubscoreSlot gauges), combined
+connectors+advanced overlay regression test green; verification passed 8/8, full suite
+4845/0.
 
 **v5.22 SHIPPED (closed 2026-09-11) — Release & Parity Tail.** All 3 phases (196–198), 13 plans.
 Audit `passed` 10/10 (REL-02/03, HOUSE-01, HUAT-01, PARITY-05..09, GATE-04); 5/5 integration
