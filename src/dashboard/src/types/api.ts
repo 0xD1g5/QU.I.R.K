@@ -497,6 +497,11 @@ export interface ConnectorAvailabilityResponse {
 // "fast"); D-21: data_classification excludes "restricted" (not a real
 // value anywhere in the codebase); D-18: no ports_ssh field — out of scope
 // (see backlog 999.106).
+// Phase 198 Plan 02 (PARITY-08/PARITY-09, D-01..D-04/D-09/D-11): extended
+// from 8 to 27 fields — 11 new per-scanner timeouts, 2 retry backoff
+// fields, 5 concurrency knobs (D-02: five, not the four REQUIREMENTS.md
+// predicted), and tls_designated_ports. Must stay name-for-name identical
+// to the Pydantic model — see the lockstep check in 198-02-PLAN.md Task 1.
 export interface AdvancedScanFields {
   ports_tls?: string
   tls_enum_mode?: "fast" | "deep"
@@ -506,6 +511,34 @@ export interface AdvancedScanFields {
   timeout_ssh_seconds?: number
   retry_count?: number
   data_classification?: "public" | "internal" | "confidential" | "regulated"
+
+  // Phase 198 / D-01 / D-11: 11 new per-scanner timeouts, 1-600s.
+  timeout_fingerprint_seconds?: number
+  timeout_jwt_seconds?: number
+  timeout_container_seconds?: number
+  timeout_source_seconds?: number
+  timeout_dnssec_seconds?: number
+  timeout_saml_seconds?: number
+  timeout_kerberos_seconds?: number
+  timeout_vault_seconds?: number
+  timeout_db_connect_seconds?: number
+  timeout_broker_seconds?: number
+  timeout_email_seconds?: number
+
+  // Phase 198 / D-01 / D-11: retry backoff pair, floats > 0.
+  retry_backoff_base_seconds?: number
+  retry_backoff_max_seconds?: number
+
+  // Phase 198 / D-02 / D-11: 5 live-enumerated concurrency knobs, 1-500.
+  scan_concurrency?: number
+  fingerprint_concurrency?: number
+  tls_concurrency?: number
+  ssh_concurrency?: number
+  motion_concurrency?: number
+
+  // Phase 198 / D-03: port-spec string, parsed by parse_port_spec —
+  // identical treatment to ports_tls above.
+  tls_designated_ports?: string
 }
 
 // Phase 197 Plan 02 (PARITY-05/PARITY-06, D-09): a `gke_clusters`/
