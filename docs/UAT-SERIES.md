@@ -26879,14 +26879,9 @@ of interior pages; no field bleeds into the wrong surface.
 **Falsifiability:** this case turns red if the logo fails to render, an identity field is silently
 dropped, or header/footer identity text is missing/misplaced.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
-**Date:** 2026-09-11  **Tester:** N/A — no live operator walkthrough was run for this plan
-**Notes:** GAP — no substitute coverage for the **appearance** aspect (logo placement, cover
-layout, header/footer visual position). Presence of every branding field and correct logo
-precedence is proven by automated tests (`tests/test_report_branding.py::test_html_full_branding_all_fields_present`,
-per `200-03-SUMMARY.md`'s byte-identical-diff and logo-precedence evidence), but this repo's render
-tests assert presence, not appearance (project convention) — a live operator walkthrough is the
-honest path to a real PASS on the visual-placement claim specifically.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Operator (live walkthrough)
+**Notes:** Operator-approved 2026-09-11 in a live walkthrough against a real loopback scan (branded PDF + HTML generated from a full report.branding set incl. a 240×80 test logo): logo placement, cover identity block (client/engagement/prepared-by/cover-date), confidentiality line, and header/footer all confirmed visually — no overlap or clipping. Presence remains automated via tests/test_report_branding.py::test_html_full_branding_all_fields_present.
 
 ---
 
@@ -26912,14 +26907,9 @@ paragraphs; the header/footer carries the identity line and confidentiality text
 **Falsifiability:** this case turns red if the logo picture fails to embed when a valid logo path
 is set, or any identity field/header/footer text is missing.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
-**Date:** 2026-09-11  **Tester:** N/A — no live operator walkthrough was run for this plan
-**Notes:** GAP — no substitute coverage for the **appearance** aspect. Presence of the logo
-picture (via `doc.inline_shapes`) and all five identity fields is proven by
-`tests/test_report_branding.py::test_docx_full_branding_all_fields_present`, per
-`200-03-SUMMARY.md`, but visual cover/header/footer layout is not asserted by any automated test in
-this repo (render tests assert presence, not appearance) — a live operator walkthrough is the
-honest path to a real PASS on the visual-placement claim specifically.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Operator (live walkthrough)
+**Notes:** Operator-approved 2026-09-11 — same run as UAT-200-01; DOCX opened cleanly with logo + identity on the cover and identity in the header/footer, no layout breakage. Presence remains automated via tests/test_report_branding.py::test_docx_full_branding_all_fields_present.
 
 ---
 
@@ -27201,14 +27191,9 @@ conditions; `HORIZON.md`'s 999.105 row carries that verdict.
 **Falsifiability:** this case turns red if the document is missing, asserts a verdict without
 evidence, misidentifies the congruence-guard raising site, or `HORIZON.md` does not reflect it.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
-**Date:** 2026-09-11  **Tester:** N/A — no live human document review was run for this plan
-**Notes:** GAP — no substitute coverage; a decision document's argumentative soundness has no
-automatable truth condition. `200-06-SUMMARY.md` confirms the document exists (246 lines), names
-`content_model.py::_check_congruence` (line 626) correctly, tables all nine parity files with both
-literal and indent-tolerant counts, and states a NO-GO verdict with named conditions; `HORIZON.md`'s
-999.105 row is confirmed extended with the verdict via a `git diff --stat` showing exactly one row
-changed. A human review of the document's argumentative quality remains outstanding.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Operator (live document review)
+**Notes:** Operator-approved 2026-09-11 — TIER2-GO-NO-GO.md read and accepted as a sound, evidence-based NO-GO (congruence-guard anatomy naming content_model.py::_check_congruence, all nine parity files with measured counts, ~15-16-plan sizing floor).
 
 ---
 
