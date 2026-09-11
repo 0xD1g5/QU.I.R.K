@@ -265,7 +265,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 200-07-PLAN.md — Docs (configuration/operators/getting-started/report-interpretation), UAT Series 200, Obsidian sync + phase note, validation close + hand-flipped checkboxes
+- [x] 200-07-PLAN.md — Docs (configuration/operators/getting-started/report-interpretation), UAT Series 200, Obsidian sync + phase note, validation close + hand-flipped checkboxes
 
 **UI hint**: yes
 

@@ -26,19 +26,19 @@ new score-lift math.
 
 ### Report Branding & Templates (RPT — 999.105 Tier 1 + profiles + Tier 2 spike)
 
-- [ ] **RPT-01**: Operator can set client branding (logo, client/engagement identity, cover
+- [x] **RPT-01**: Operator can set client branding (logo, client/engagement identity, cover
       details) in config, rendered consistently on every report surface that supports it
       (CLI/HTML+PDF/DOCX; CLI carries the identity fields it can honestly render)
-- [ ] **RPT-02**: Operator can override report templates from a local template directory,
+- [x] **RPT-02**: Operator can override report templates from a local template directory,
       rendered through a sandboxed Jinja2 environment (`SandboxedEnvironment`) with the existing
       autoescape discipline preserved on the same Environment instance — SSTI containment is a
       go/no-go gate inside this phase, not a follow-up
-- [ ] **RPT-03**: Branding/template path fields are containment-guarded (path-traversal) and
+- [x] **RPT-03**: Branding/template path fields are containment-guarded (path-traversal) and
       dashboard-excluded via a **named, tested guard** — not tribal-knowledge absence (the
       `assessment.logo_path` lesson, `schemas.py:991`)
-- [ ] **RPT-04**: Operator can save and select named report profiles ("house styles") bundling
+- [x] **RPT-04**: Operator can save and select named report profiles ("house styles") bundling
       branding + template settings for reuse across engagements
-- [ ] **RPT-05**: Section-composition spike delivers a written go/no-go + honest sizing for
+- [x] **RPT-05**: Section-composition spike delivers a written go/no-go + honest sizing for
       999.105 Tier 2 — resolves how the zero-CRITICAL congruence guard (`writer.py:307,:927`)
       and the presence-based parity test suite would be redesigned; decision doc only, no
       implementation
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | TRIAGE-10 | Phase 199 | Complete |
 | TRIAGE-11 | Phase 199 | Complete |
-| RPT-01 | Phase 200 | Pending |
-| RPT-02 | Phase 200 | Pending |
-| RPT-03 | Phase 200 | Pending |
-| RPT-04 | Phase 200 | Pending |
-| RPT-05 | Phase 200 | Pending |
+| RPT-01 | Phase 200 | Complete |
+| RPT-02 | Phase 200 | Complete |
+| RPT-03 | Phase 200 | Complete |
+| RPT-04 | Phase 200 | Complete |
+| RPT-05 | Phase 200 | Complete |
 | LIFT-01 | Phase 201 | Pending |
 | LIFT-02 | Phase 201 | Pending |
 | LIFT-03 | Phase 201 | Pending |
