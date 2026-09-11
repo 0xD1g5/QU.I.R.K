@@ -250,8 +250,8 @@ scoped.
 Plans:
 **Wave 1**
 
-- [ ] 200-01-PLAN.md — SandboxedEnvironment swap + ChoiceLoader template override + dedicated SSTI payload gate (RPT-02)
-- [ ] 200-02-PLAN.md — `report:` config section, CONFIG-003/004, named path guard, runtime-enumeration dashboard-exclusion sweep (RPT-01/03/04)
+- [x] 200-01-PLAN.md — SandboxedEnvironment swap + ChoiceLoader template override + dedicated SSTI payload gate (RPT-02)
+- [x] 200-02-PLAN.md — `report:` config section, CONFIG-003/004, named path guard, runtime-enumeration dashboard-exclusion sweep (RPT-01/03/04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
