@@ -1,5 +1,34 @@
 # Milestones
 
+## v5.22 Release & Parity Tail (Shipped: 2026-09-11)
+
+**Phases completed:** 3 phases (196-198), plans per phase 5/4/4 = 13 execution units
+**Requirements:** 10/10 satisfied (REL-02/03, HOUSE-01, HUAT-01, PARITY-05..09, GATE-04)
+**Audit:** `passed` 10/10 (`.planning/milestones/v5.22-MILESTONE-AUDIT.md`) — 5/5 integration
+seams wired (live HTTP round-trip with both overlays), Nyquist 3/3 compliant.
+
+**Highlights:**
+- **v5.21.0 published to PyPI 2026-09-10** — first release since 5.19.0, carrying both unreleased
+  milestones (v5.20 scoring v2 + v5.21 dashboard parity/Exposure Map). Release run 34520340774
+  green across build/windows-package/publish; Sigstore provenance verified via the PyPI integrity
+  endpoint; Windows sensor asset attached (59,140,326 bytes). Tag `v5.21.0` human-pushed.
+- **999.104 fully closed** — Tier 2 (Phase 197: all 37 residual connector detail fields
+  dashboard-settable through the lockstep-widened connectors overlay) and Tier 3 (Phase 198: 19
+  scan-behavior fields — 11 timeouts, 2 backoff, 5 concurrency knobs, tls_designated_ports — via
+  AdvancedScanFields, with 3 recorded intentional-gaps). Tier 4 stays explicitly out.
+- **Standing backlog-reconciliation gate green end-to-end (GATE-04)** — the Phase-189 gate
+  re-verified, the long-standing local-only RED fixed by escaping fake worked-example IDs
+  (U+2011, 9 files) — the full-suite expected failing-node SET is now EMPTY, the strictest
+  baseline in project history.
+- Repo-root hygiene (HOUSE-01): lab scan configs relocated + tracked, output dirs deleted,
+  root-anchored gitignore patterns; Phase-192 deferred browser checks re-verified against the
+  actually-released build (HUAT-01).
+
+**Known deferred items at close:** 4 (3 GSD-toolchain todos + 1 known-false-positive quick_task —
+see STATE.md Deferred Items). Tech debt (non-blocking, in audit): combined-overlay CI regression
+test; 2 accepted-advisory review infos (198). NO v5.22 git tag by design (release.yml fires on
+v[0-9]*; milestone record lives here and in .planning/milestones/).
+
 ## v5.21 Dashboard Parity & Exposure Capability (Shipped: 2026-09-10)
 
 **Phases completed:** 5 phases (191-195), plans per phase 6/15/9/8/7 = 45 execution units (per

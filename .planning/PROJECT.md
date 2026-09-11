@@ -1,6 +1,18 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-10)
+## Current State (updated 2026-09-11)
+
+**v5.22 SHIPPED (closed 2026-09-11) — Release & Parity Tail.** All 3 phases (196–198), 13 plans.
+Audit `passed` 10/10 (REL-02/03, HOUSE-01, HUAT-01, PARITY-05..09, GATE-04); 5/5 integration
+seams wired; Nyquist 3/3. **v5.21.0 published to PyPI 2026-09-10** — first release since 5.19.0,
+carrying v5.20 + v5.21 content (release run 34520340774 green ×3 jobs, Sigstore verified,
+human-pushed three-component tag). 999.104 fully closed: Tier 2 (37 connector detail fields,
+Phase 197) + Tier 3 (19 scan-behavior fields, Phase 198); Tier 4 stays out (PARITY-T4).
+Standing backlog-reconciliation gate green end-to-end — the full-suite expected failing-node
+SET is now EMPTY (former local-only RED fixed by U+2011-escaping fake example IDs across 9
+files). Close hand-written under pre-image + signature-diff; **no v5.22 git tag** (release.yml
+fires on v[0-9]*). Archives: `.planning/milestones/v5.22-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`.
+Next: `/gsd-new-milestone`.
 
 **v5.21 SHIPPED (closed 2026-09-10) — Dashboard Parity & Exposure Capability.** All 5 phases (191–195), 42 plans (40 executed, 2 Tier B spike-gated skipped per MAP-01 DEFERRED → 999.107). Audit: 13/13 requirements satisfied, 6/6 cross-phase integration seams wired, 5/5 phases Nyquist-compliant, status `tech_debt` accepted by operator (2 deferred Phase-192 browser checks, 11 INFO-level review items, Tier B deferral). Close hand-written under the pre-image + signature-diff protocol; **no v5.21 git tag** (two-component tags fire release.yml — v5.20 precedent). Archives: `.planning/milestones/v5.21-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Next: `/gsd-new-milestone`.
 
@@ -144,7 +156,7 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.22 Release & Parity Tail
+## Current Milestone: v5.22 Release & Parity Tail (CLOSED 2026-09-11 — see Current State; next milestone opens via /gsd-new-milestone)
 
 **Opened:** 2026-09-10, after a boundary pass that ran the doc-review template (version drift
 PASS — 5.19.0 consistent, correct until the release phase bumps it; coverage gaps PASS; Obsidian
