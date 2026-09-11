@@ -1413,11 +1413,12 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             score_dict = compute_readiness_score(evidence, profile=calibration)
             # Phase 188 SCORE-06 / 188 review CR-04: pass the score through
             # UNCHANGED — None means "not computed" and must survive to the
-            # scan-history surface (ScanSession.score is Optional[int]).
-            # Never coerce None to 0: that fabricated a worst-case 0/100 row
-            # beside rating "NOT_ASSESSED". Sibling `or 0` coercions remain in
-            # trends.py (timeline) and merge.py (segment gauges) — documented
-            # deferred follow-ups, out of this route's scope.
+            # scan-history surface (ScanSession.score is Optional[float] as
+            # of Phase 199 / TRIAGE-10). Never coerce None to 0: that
+            # fabricated a worst-case 0/100 row beside rating "NOT_ASSESSED".
+            # The sibling `or 0` coercions that used to live in trends.py
+            # (timeline) and merge.py (segment gauges) were removed in
+            # Phase 199 / TRIAGE-10 — no fabrication sites remain.
             score = score_dict["score"]
             rating = score_dict.get("rating", "")
             rating_cap_reason = score_dict.get("rating_cap_reason")
