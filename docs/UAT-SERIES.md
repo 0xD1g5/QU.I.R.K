@@ -26611,9 +26611,13 @@ already ran that exact command live. None was checked PASS without being run, an
 a false PASS for genuine coverage. The D-08 operator walkthrough (a separate
 `checkpoint:human-verify` gate, not a UAT-series case) independently re-confirms the
 behaviorally-visible subset of this series live against the dashboard, per 198-04-PLAN.md Task 3.
+The D-08 walkthrough was run live on 2026-09-11 and the operator responded verbatim
+"Approved — all steps match" across all 11 steps, closing the last open item in this phase; see
+`198-VALIDATION.md`'s sign-off and `198-04-SUMMARY.md` for the recorded approval.
 
-**Last Updated:** 2026-09-10 (Phase 198 Plan 04 — Series 198 added: 6 scan-behavior-parity-tail
+**Last Updated:** 2026-09-11 (Phase 198 Plan 04 — Series 198 added: 6 scan-behavior-parity-tail
 cases (per-scanner timeouts grid + delta semantics, concurrency group, backoff base<=max 422,
 tls_designated_ports shared format validation, out-of-bounds 422 naming, GATE-04 full-corpus leg
 green), 5 honest `[x] SKIP` / `DEFERRED — covered by <test-node>` plus 1 `[x] PASS` citing
-198-01/02/03-SUMMARY.md test evidence)
+198-01/02/03-SUMMARY.md test evidence; D-08 operator walkthrough approved 2026-09-11, "Approved —
+all steps match")
