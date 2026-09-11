@@ -97,26 +97,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRIAGE-10 | — | Pending |
-| TRIAGE-11 | — | Pending |
-| RPT-01 | — | Pending |
-| RPT-02 | — | Pending |
-| RPT-03 | — | Pending |
-| RPT-04 | — | Pending |
-| RPT-05 | — | Pending |
-| LIFT-01 | — | Pending |
-| LIFT-02 | — | Pending |
-| LIFT-03 | — | Pending |
-| LIFT-04 | — | Pending |
-| LIFT-05 | — | Pending |
-| STORY-01 | — | Pending |
-| STORY-02 | — | Pending |
+| TRIAGE-10 | Phase 199 | Pending |
+| TRIAGE-11 | Phase 199 | Pending |
+| RPT-01 | Phase 200 | Pending |
+| RPT-02 | Phase 200 | Pending |
+| RPT-03 | Phase 200 | Pending |
+| RPT-04 | Phase 200 | Pending |
+| RPT-05 | Phase 200 | Pending |
+| LIFT-01 | Phase 201 | Pending |
+| LIFT-02 | Phase 201 | Pending |
+| LIFT-03 | Phase 201 | Pending |
+| LIFT-04 | Phase 201 | Pending |
+| LIFT-05 | Phase 201 | Pending |
+| STORY-01 | Phase 202 | Pending |
+| STORY-02 | Phase 202 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 14 ⚠️ (expected — roadmap not yet created)
+- Mapped to phases: 14/14 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-11*
-*Last updated: 2026-09-11 after initial definition (milestone v5.23 open)*
+*Last updated: 2026-09-11 after roadmap creation (Phases 199–202 mapped, milestone v5.23)*
