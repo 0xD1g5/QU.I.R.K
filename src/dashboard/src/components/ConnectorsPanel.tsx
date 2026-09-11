@@ -109,6 +109,7 @@ interface DetailFieldSpec {
 }
 
 const LIST_HELPER = "Comma or newline-separated. Leave blank to skip."
+const TIMEOUT_HELPER = "Whole seconds only, 1-300."
 const TARGETS_PLACEHOLDER = "api.example.com, auth.example.com"
 
 const CONNECTOR_DETAIL_FIELDS: Record<string, DetailFieldSpec[]> = {
@@ -125,13 +126,13 @@ const CONNECTOR_DETAIL_FIELDS: Record<string, DetailFieldSpec[]> = {
   enable_smime: [
     { key: "smime_targets", label: "S/MIME Targets", kind: "list", placeholder: TARGETS_PLACEHOLDER, helper: LIST_HELPER },
     { key: "smime_search_base", label: "S/MIME Search Base", kind: "text" },
-    { key: "smime_timeout", label: "S/MIME Timeout (seconds)", kind: "number" },
+    { key: "smime_timeout", label: "S/MIME Timeout (seconds)", kind: "number", helper: TIMEOUT_HELPER },
   ],
   enable_adcs: [
     { key: "adcs_targets", label: "AD CS Targets", kind: "list", placeholder: TARGETS_PLACEHOLDER, helper: LIST_HELPER },
     { key: "adcs_search_base", label: "AD CS Search Base", kind: "text" },
     { key: "adcs_user", label: "AD CS Username", kind: "text" },
-    { key: "adcs_timeout", label: "AD CS Timeout (seconds)", kind: "number" },
+    { key: "adcs_timeout", label: "AD CS Timeout (seconds)", kind: "number", helper: TIMEOUT_HELPER },
   ],
   enable_aws: [
     { key: "aws_region", label: "AWS Region", kind: "text" },
@@ -459,6 +460,7 @@ export function ConnectorsPanel(props: ConnectorsPanelProps) {
             type="number"
             min={1}
             max={300}
+            step={1}
             value={typeof raw === "number" ? raw : ""}
             onChange={(e) => setDetailField(
               field.key,
@@ -466,6 +468,9 @@ export function ConnectorsPanel(props: ConnectorsPanelProps) {
             )}
             className="mt-1"
           />
+          {field.helper && (
+            <p className="text-xs text-[var(--ds-medium)] mt-1">{field.helper}</p>
+          )}
         </div>
       )
     }
