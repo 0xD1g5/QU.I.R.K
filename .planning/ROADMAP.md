@@ -134,7 +134,7 @@ don't touch the connector overlay at all.
 
 - [x] **Phase 196: Release v5.21.0** - Ship v5.20 + v5.21's accumulated content as a real,
   installable PyPI release, with repo-root hygiene and the two deferred browser checks folded in.
-- [ ] **Phase 197: Connector Parity Tail** - Operator can configure the 37 residual connector
+- [x] **Phase 197: Connector Parity Tail** - Operator can configure the 37 residual connector
   credential/endpoint/target sub-fields from the dashboard, closing 999.104 Tier 2.
 - [ ] **Phase 198: Scan-Behavior Parity Tail & Standing Drain** - Operator can configure the
   remaining 23 scan-behavior fields from the Advanced section, and the backlog ledger becomes a
@@ -197,10 +197,10 @@ from the dashboard, closing 999.104 Tier 2.
 **Plans**: 4 plans in 4 waves
 
 Plans:
-- [ ] 197-01-PLAN.md — Widen the connectors overlay at all three enforcement points in lockstep (schema type map + shared validator + job-YAML merge gate + preview query param) with parity/422 tests
-- [ ] 197-02-PLAN.md — Render the 37 per-connector detail rows in ConnectorsPanel, wire the widened delta into submit body + effective-config query, component tests, rebuilt statics
-- [ ] 197-03-PLAN.md — PARITY-07 no-leak regression + D-04 identifier/secret boundary proof, D-14 job-YAML proof of success criterion 4, full-suite gate
-- [ ] 197-04-PLAN.md — Docs (configuration.md, operators-guide.md §3.1.4), UAT Series 197, HORIZON 999.104 Tier 2 closure, REQUIREMENTS flips, validation close, Obsidian sync, D-13 operator walkthrough
+- [x] 197-01-PLAN.md — Widen the connectors overlay at all three enforcement points in lockstep (schema type map + shared validator + job-YAML merge gate + preview query param) with parity/422 tests
+- [x] 197-02-PLAN.md — Render the 37 per-connector detail rows in ConnectorsPanel, wire the widened delta into submit body + effective-config query, component tests, rebuilt statics
+- [x] 197-03-PLAN.md — PARITY-07 no-leak regression + D-04 identifier/secret boundary proof, D-14 job-YAML proof of success criterion 4, full-suite gate
+- [x] 197-04-PLAN.md — Docs (configuration.md, operators-guide.md §3.1.4), UAT Series 197, HORIZON 999.104 Tier 2 closure, REQUIREMENTS flips, validation close, Obsidian sync, D-13 operator walkthrough
 
 **UI hint**: yes
 

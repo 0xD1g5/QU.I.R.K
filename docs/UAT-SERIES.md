@@ -26183,6 +26183,12 @@ for the two Phase 192 browser checks — those are dispositioned in place on UAT
 196-04 (D-U3). UAT-1-02 (Series 1) was also re-executed against this same published 5.21.0 build
 and its `[x] PASS` box updated with a superseding note — see that entry above.
 
+## Series 197: Connector Parity Tail (Phase 197 — dashboard connector detail fields)
+
+Covers the 37 residual connector target/endpoint/identifier fields made dashboard-settable in
+Phase 197 (999.104 Tier 2 closure): overlay lockstep, delete-on-blank delta semantics, the
+identifier/secret boundary, and the D-13 operator walkthrough.
+
 ### UAT-197-01: Target-List Field Set From the Dashboard Reaches the Job `config.yaml`
 
 **ID:** UAT-197-01
