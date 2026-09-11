@@ -181,7 +181,14 @@ before new score-lift math is built on the same scoring-adjacent paths.
   4. `docs/UAT-SERIES.md` gains a Series 199 entry and the touched files' Obsidian counterparts
      are re-synced.
 
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
+
+Plans:
+- [ ] 199-01-PLAN.md — TRIAGE-10 failing-first regression suite (4 surfaces × fractional/null) + RED evidence
+- [ ] 199-02-PLAN.md — Widen score transport types; remove the 6 int-truncation / fabricated-0 sites; update legacy int-assertions
+- [ ] 199-03-PLAN.md — TRIAGE-11 combined connectors+advanced overlay regression test (job YAML + effective-config)
+- [ ] 199-04-PLAN.md — TS type mirrors + SubscoreSlot null per-segment gauge + dashboard rebuild
+- [ ] 199-05-PLAN.md — Docs note, UAT Series 199, Obsidian vault sync + phase note, hand-flipped checkboxes
 
 ### Phase 200: Report Branding & Templates
 
