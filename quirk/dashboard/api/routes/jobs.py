@@ -56,8 +56,17 @@ _STAGE_TOTAL = 7
 # scan_overlay/assessment_overlay kwargs -- same shape as _KNOWN_CONNECTOR_KEYS
 # (quirk/config.py), gating what an operator-supplied delta may write into
 # the job YAML.
+# Phase 198 / PARITY-08 / PARITY-09 / D-10: extended with the 6 new
+# TOP-LEVEL keys the 19-field overlay expansion introduces (5 concurrency
+# scalars + tls_designated_ports). The 13 nested fields (11 timeouts + 2
+# backoffs) need no allowlist change -- "timeouts"/"retry" are already
+# _SCAN_OVERLAY_SUBTABLE_KEYS members below.
 _KNOWN_SCAN_OVERLAY_KEYS = frozenset(
-    {"ports_tls", "tls_enum_mode", "include_sni", "timeouts", "retry"}
+    {
+        "ports_tls", "tls_enum_mode", "include_sni", "timeouts", "retry",
+        "concurrency", "fingerprint_concurrency", "tls_concurrency",
+        "ssh_concurrency", "motion_concurrency", "tls_designated_ports",
+    }
 )
 _SCAN_OVERLAY_SUBTABLE_KEYS = frozenset({"timeouts", "retry"})
 _KNOWN_ASSESSMENT_OVERLAY_KEYS = frozenset({"data_classification"})
@@ -103,11 +112,67 @@ def build_advanced_overlays(
         timeouts["tls_seconds"] = values["timeout_tls_seconds"]
     if "timeout_ssh_seconds" in values:
         timeouts["ssh_seconds"] = values["timeout_ssh_seconds"]
+    # Phase 198 / D-01: 11 new per-scanner timeout fields, same "timeouts"
+    # sub-dict as the 3 pre-existing ones above.
+    if "timeout_fingerprint_seconds" in values:
+        timeouts["fingerprint_seconds"] = values["timeout_fingerprint_seconds"]
+    if "timeout_jwt_seconds" in values:
+        timeouts["jwt_seconds"] = values["timeout_jwt_seconds"]
+    if "timeout_container_seconds" in values:
+        timeouts["container_seconds"] = values["timeout_container_seconds"]
+    if "timeout_source_seconds" in values:
+        timeouts["source_seconds"] = values["timeout_source_seconds"]
+    if "timeout_dnssec_seconds" in values:
+        timeouts["dnssec_seconds"] = values["timeout_dnssec_seconds"]
+    if "timeout_saml_seconds" in values:
+        timeouts["saml_seconds"] = values["timeout_saml_seconds"]
+    if "timeout_kerberos_seconds" in values:
+        timeouts["kerberos_seconds"] = values["timeout_kerberos_seconds"]
+    if "timeout_vault_seconds" in values:
+        timeouts["vault_seconds"] = values["timeout_vault_seconds"]
+    if "timeout_db_connect_seconds" in values:
+        timeouts["db_connect_seconds"] = values["timeout_db_connect_seconds"]
+    if "timeout_broker_seconds" in values:
+        timeouts["broker_seconds"] = values["timeout_broker_seconds"]
+    if "timeout_email_seconds" in values:
+        timeouts["email_seconds"] = values["timeout_email_seconds"]
     if timeouts:
         scan_overlay["timeouts"] = timeouts
 
+    # Phase 198 / D-01: restructured from a single-key assignment into an
+    # accumulating dict covering retry_count + the 2 new backoff fields, so
+    # a backoff-only delta does not erase retry_count and vice versa --
+    # mirrors the "timeouts" accumulation pattern above.
+    retry: Dict[str, Any] = {}
     if "retry_count" in values:
-        scan_overlay["retry"] = {"retry_count": values["retry_count"]}
+        retry["retry_count"] = values["retry_count"]
+    if "retry_backoff_base_seconds" in values:
+        retry["backoff_base_seconds"] = values["retry_backoff_base_seconds"]
+    if "retry_backoff_max_seconds" in values:
+        retry["backoff_max_seconds"] = values["retry_backoff_max_seconds"]
+    if retry:
+        scan_overlay["retry"] = retry
+
+    # Phase 198 / D-02: 5 concurrency scalars, top-level scan_overlay keys.
+    # scan_concurrency maps to the bare "concurrency" key; the other 4 keep
+    # their flat names.
+    if "scan_concurrency" in values:
+        scan_overlay["concurrency"] = values["scan_concurrency"]
+    if "fingerprint_concurrency" in values:
+        scan_overlay["fingerprint_concurrency"] = values["fingerprint_concurrency"]
+    if "tls_concurrency" in values:
+        scan_overlay["tls_concurrency"] = values["tls_concurrency"]
+    if "ssh_concurrency" in values:
+        scan_overlay["ssh_concurrency"] = values["ssh_concurrency"]
+    if "motion_concurrency" in values:
+        scan_overlay["motion_concurrency"] = values["motion_concurrency"]
+
+    # Phase 198 / D-03: reuse the same parse_port_spec already imported
+    # above for ports_tls -- no second parser.
+    if "tls_designated_ports" in values:
+        scan_overlay["tls_designated_ports"] = parse_port_spec(
+            values["tls_designated_ports"]
+        )
 
     if "data_classification" in values:
         assessment_overlay["data_classification"] = values["data_classification"]
