@@ -10,7 +10,11 @@ overlay CI regression test). Sequencing commitment: v5.24 = UAT Coverage Drain. 
 TRIAGE-10/TRIAGE-11 validated: fractional scores round-trip via Optional[float] transport
 widening (merge/trends/scan + TS mirrors, null-honest SubscoreSlot gauges), combined
 connectors+advanced overlay regression test green; verification passed 8/8, full suite
-4845/0.
+4845/0. **Phase 200 (Report Branding & Templates) COMPLETE 2026-09-11** — RPT-01..05
+validated: report.branding config + HTML/PDF/DOCX/CLI rendering, sandboxed template_dir
+override (SSTI gate GO, 13/13 payloads), named path guard + dashboard-exclusion sweep,
+report profiles + CLI, 999.105 Tier 2 NO-GO spike; operator-approved live walkthrough;
+full suite 4909/0.
 
 **v5.22 SHIPPED (closed 2026-09-11) — Release & Parity Tail.** All 3 phases (196–198), 13 plans.
 Audit `passed` 10/10 (REL-02/03, HOUSE-01, HUAT-01, PARITY-05..09, GATE-04); 5/5 integration
