@@ -2,6 +2,7 @@ import dataclasses
 import ipaddress
 import logging
 import os
+import pathlib
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -680,6 +681,65 @@ def _parse_host_port(entry: str, *, field_name: str) -> Tuple[str, Optional[int]
     return raw, None
 
 
+def validate_report_path_field(field_name: str, value: Optional[str]) -> None:
+    """Phase 200 / RPT-03: the ONE named guard for every report path-shaped
+    field (``report.branding.logo_path``, ``report.template_dir``, and the
+    legacy ``assessment.logo_path`` fallback). Called once per field from
+    ``config_from_dict`` at the same load-time, fail-fast position the
+    ``broker_targets`` validation occupies (T-200-05).
+
+    Disposition is deliberately ASYMMETRIC between the two field shapes
+    (CONTEXT-locked decision):
+
+    - Every field: a falsy value (None/"") returns immediately — every
+      field is optional, so absence is never an error.
+    - Every field: a value whose ``pathlib.Path(...).parts`` contains ``..``
+      is REJECTED with a coded ``CONFIG-003`` ``ValueError`` naming the
+      field and the offending value. Traversal is a load-time error
+      regardless of which field carries it — there is no render-time
+      tolerance for a path shaped to escape the intended directory.
+    - ``template_dir`` ONLY: a non-traversal value that does not resolve to
+      an existing directory (missing entirely, or exists but is a file) is
+      ALSO a load-time ``CONFIG-003`` error. An operator who names a
+      template override directory that cannot supply templates gets a
+      loud, actionable failure instead of a silently-ignored override.
+    - ``logo_path`` fields (``report.branding.logo_path`` /
+      ``assessment.logo_path``) ONLY: a missing or unreadable file does
+      NOT raise. It only WARNS, naming the field and path. Render-time
+      ``_load_logo_b64`` (quirk/reports/html_renderer.py) already degrades
+      gracefully to a logo-less cover page on any read failure — a hard
+      guard failure here would regress a previously-working scan over a
+      merely-missing logo image (T-200-08 / DoS-by-overcorrection).
+
+    Raises:
+        ValueError: on a traversal-shaped value for any field, or a
+            ``template_dir`` that does not resolve to a directory.
+    """
+    if not value:
+        return
+
+    path = pathlib.Path(value)
+    if ".." in path.parts:
+        raise ValueError(
+            f"{format_error('CONFIG-003')} (field={field_name!r}, value={value!r})"
+        )
+
+    is_template_dir = field_name.endswith("template_dir")
+    is_logo_path = field_name.endswith("logo_path")
+
+    if is_template_dir:
+        if not path.is_dir():
+            raise ValueError(
+                f"{format_error('CONFIG-003')} (field={field_name!r}, value={value!r})"
+            )
+    elif is_logo_path:
+        if not path.is_file():
+            _LOGGER.warning(
+                "%s=%r does not point at a readable file — logo will be omitted "
+                "from generated reports.", field_name, value,
+            )
+
+
 _KNOWN_CONNECTOR_KEYS = {f.name for f in dataclasses.fields(ConnectorsCfg)}
 
 
@@ -892,6 +952,12 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
 
     report_filtered = {k: v for k, v in report_raw.items() if k in report_fields}
     branding_filtered = {k: v for k, v in branding_raw.items() if k in branding_fields}
+
+    # Phase 200 / RPT-03: fail fast, before any scan I/O — same load-time
+    # position the broker_targets validation occupies above.
+    validate_report_path_field("report.branding.logo_path", branding_filtered.get("logo_path"))
+    validate_report_path_field("report.template_dir", report_filtered.get("template_dir"))
+    validate_report_path_field("assessment.logo_path", raw["assessment"].get("logo_path"))
 
     branding_cfg = ReportBrandingCfg(**branding_filtered)
     report_cfg = ReportCfg(branding=branding_cfg, **report_filtered)
