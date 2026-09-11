@@ -492,6 +492,13 @@ class RoadmapNode(BaseModel):
     # (no db/scan_run_id supplied) or its title maps to no known slug.
     closure_state: Optional[str] = None   # open | closed | not_observed | resurfaced
     slug: Optional[str] = None            # the slug_for_title() join key, or None
+    # Phase 201 LIFT-05: advisory point delta this item would add to the
+    # readiness score if resolved, joined by `slug` above (never by `id`,
+    # which has no stable identity). None is honest absence — the item's
+    # resolution cannot be modeled against any key the scorer reads, the
+    # scan is unassessed, or the computation failed — and must NEVER be
+    # rendered as `0`.
+    score_lift: Optional[float] = None
 
 
 class RoadmapData(BaseModel):
@@ -581,6 +588,14 @@ class ScanLatestResponse(BaseModel):
     # honest reading for any caller/fixture that does not set it, mirroring
     # the Phase 188 coverage_disclosure additive-default precedent.
     excluded_cert_count: int = 0
+    # Phase 201 LIFT-05: advisory simulation of the readiness score if every
+    # modelable roadmap item were resolved. A top-level sibling of `roadmap`
+    # — deliberately NOT a field of `ScoreData` — so the ADVISORY-02
+    # firewall's real-score-surface assertion stays true and this number can
+    # never be mistaken for the actual computed score. None when the scan's
+    # current score is None (unassessed) or the projection computation
+    # failed; never a fabricated value.
+    projected_score: Optional[float] = None
 
 
 class ScanSession(BaseModel):

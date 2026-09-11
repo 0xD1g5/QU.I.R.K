@@ -100,6 +100,9 @@ export interface RoadmapNode {
   // the display `id` above, which has no stable identity across responses).
   closure_state?: string | null
   slug?: string | null
+  // Phase 201 LIFT-05 — advisory point delta if this item is resolved,
+  // joined by `slug` above. null is honest absence; never render as 0.
+  score_lift?: number | null
 }
 
 export interface RoadmapEdge {
@@ -390,6 +393,10 @@ export interface ScanLatestResponse {
   // `certificates` (phantom rows). Non-optional -- the Pydantic default
   // (int = 0) guarantees the key is always present in the JSON.
   excluded_cert_count: number
+  // Phase 201 LIFT-05 — advisory simulation of the score if every modelable
+  // roadmap item were resolved. Top-level sibling of `roadmap`, never a
+  // field of `score`. null when unassessed or the projection failed.
+  projected_score?: number | null
 }
 
 export interface SampleFinding {
