@@ -245,7 +245,28 @@ scoped.
      profiles), explicitly addressing how the zero-CRITICAL congruence guard
      (`writer.py:307,:927`) and the presence-based parity test suite would need to be redesigned.
 
-**Plans**: TBD
+**Plans**: 7 plans (4 waves)
+
+Plans:
+**Wave 1**
+
+- [ ] 200-01-PLAN.md — SandboxedEnvironment swap + ChoiceLoader template override + dedicated SSTI payload gate (RPT-02)
+- [ ] 200-02-PLAN.md — `report:` config section, CONFIG-003/004, named path guard, runtime-enumeration dashboard-exclusion sweep (RPT-01/03/04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 200-03-PLAN.md — Branding on HTML/PDF + DOCX (cover logo, identity block, header/footer) + cross-surface presence tests (RPT-01)
+- [ ] 200-04-PLAN.md — Identity text on the executive/scorecard markdown and the Rich console summary (RPT-01)
+- [ ] 200-05-PLAN.md — Report profiles: storage module, `quirk report profile save|list`, `--report-profile`, explicit-config-wins merge (RPT-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 200-06-PLAN.md — 999.105 Tier 2 go/no-go decision doc + tracked HORIZON.md row (RPT-05)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 200-07-PLAN.md — Docs (configuration/operators/getting-started/report-interpretation), UAT Series 200, Obsidian sync + phase note, validation close + hand-flipped checkboxes
+
 **UI hint**: yes
 
 ### Phase 201: Score-Lift Roadmap Re-frame
