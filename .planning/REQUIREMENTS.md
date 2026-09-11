@@ -39,15 +39,17 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 
 ### Scan-Behavior Parity Tail (999.104 Tier 3 residue — 23 fields)
 
-- [ ] **PARITY-08**: Operator can set the 11 per-scanner timeout fields from the Advanced
+- [x] **PARITY-08**: Operator can set the 11 per-scanner timeout fields from the Advanced
       section, delta-only, composing with vertical presets under the single recorded precedence
       rule (`docs/configuration.md` §Dashboard form vs. presets precedence).
-- [ ] **PARITY-09**: Operator can set the 4 concurrency knobs, retry backoff, and remaining
+- [x] **PARITY-09**: Operator can set the 5 concurrency knobs (D-02: live enumeration of
+      `quirk/config.py`'s `ScanCfg` and `194-PARITY-AUDIT.md` both independently give five, not
+      the four this text originally said — all five shipped), retry backoff, and remaining
       misc scan-behavior fields from the Advanced section under the same delta-only/422 rules.
 
 ### Standing Drain
 
-- [ ] **GATE-04**: The derived backlog-reconciliation gate (todo
+- [x] **GATE-04**: The derived backlog-reconciliation gate (todo
       `backlog-reconciliation-and-derived-gate.md`, step 3) is enforced as a standing test — no
       BACK-*/999.* ID may be neither closed-with-evidence nor listed in HORIZON.md's Open-Item
       Ledger; keyed on **title+ID** (BACK-68 names two unrelated items) and counting
@@ -90,6 +92,6 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
 | PARITY-05 | Phase 197 | Complete |
 | PARITY-06 | Phase 197 | Complete |
 | PARITY-07 | Phase 197 | Complete |
-| PARITY-08 | Phase 198 | Pending |
-| PARITY-09 | Phase 198 | Pending |
-| GATE-04 | Phase 198 | Pending |
+| PARITY-08 | Phase 198 | Complete |
+| PARITY-09 | Phase 198 | Complete |
+| GATE-04 | Phase 198 | Complete |

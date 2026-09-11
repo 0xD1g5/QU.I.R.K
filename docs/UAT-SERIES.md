@@ -26405,3 +26405,215 @@ evidence. Earlier: Phase 196 Plan 05 — Series 196 added: 4 release-verificatio
 for v5.21.0 (PyPI install, Sigstore provenance, tag/workflow, Windows asset), all `[x] PASS`
 against `196-03-SUMMARY.md`'s verbatim published-artifact evidence; UAT-1-02 re-executed and
 superseded to the same published build)
+
+---
+
+## Series 198: Scan-Behavior Parity Tail & Standing Drain (Phase 198 — v5.22)
+
+Covers the 19 new scan-behavior fields made dashboard-settable in Phase 198 (999.104 Tier 3
+closure): the Per-Scanner Timeouts compact grid, the Concurrency group, the backoff pair, and
+`tls_designated_ports`, plus GATE-04's standing backlog-reconciliation gate landing an EMPTY
+full-suite failing-node baseline. The D-08 operator walkthrough (a separate
+`checkpoint:human-verify` gate, not a UAT-series case) independently re-confirms the
+behaviorally-visible subset of this series live against the dashboard, per 198-04-PLAN.md Task 3.
+
+### UAT-198-01: Per-Scanner Timeouts Grid Renders 11 Compact Fields With Delta Semantics
+
+**ID:** UAT-198-01
+**Title:** The Advanced panel's "Per-Scanner Timeouts" group renders 11 short-labeled numeric
+fields in a compact grid, and touching one writes exactly one key to the delta while clearing it
+deletes the key rather than sending an empty value
+**Maps to:** PARITY-08
+
+**What to test:** the group-label and all 11 short label + full-phrase `aria-label` pairs render;
+setting the Broker field to a value shows a "Set" badge and adds `timeout_broker_seconds` to the
+delta; clearing it back to blank removes the badge and deletes the key (D-06) rather than sending
+`""`/`NaN`.
+
+**Steps:** covered by an automated, component-driven test — no manual execution required for this
+case.
+
+**Pass Criteria:** all 11 short labels + `aria-label`s render; the single-key delta add/delete
+assertion passes for the Broker timeout field; no group-level "Set" badge appears (only individual
+fields carry it).
+
+**Falsifiability:** this case turns red if any of the 11 labels/aria-labels is missing, if the
+delta carries more than the one touched key, or if clearing a field sends an empty value instead
+of deleting the key.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (198-02 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`src/dashboard/src/components/__tests__/AdvancedPanel.test.tsx` (group-label rendering, all 11
+short timeout labels + full-phrase aria-labels, single-key delta add/delete for the Broker
+timeout), per `198-02-SUMMARY.md` Task 2 (15/15 tests passing). Live confirmation of the same grid
+and badge behavior is part of the D-08 operator walkthrough steps 2-4.
+
+---
+
+### UAT-198-02: Concurrency Group Renders 5 Stacked Fields With Motion Helper Text
+
+**ID:** UAT-198-02
+**Title:** The Advanced panel's "Concurrency" group renders 5 stacked worker-pool-size fields
+(Scan, Fingerprint, TLS, SSH, Motion), with the Motion field's helper text naming the shared
+email + broker worker pool
+**Maps to:** PARITY-09
+
+**What to test:** all 5 concurrency field labels render in the panel's existing `space-y-2`
+stacked pattern (not the compact grid — D-07 names only the 11 timeouts), and the Motion
+concurrency field's helper text reads "Shared worker pool for email and broker connector
+scanning."
+
+**Steps:** covered by an automated, component-driven test — no manual execution required for this
+case.
+
+**Pass Criteria:** all 5 concurrency labels render; the Motion field's helper text is present and
+matches the copywriting contract.
+
+**Falsifiability:** this case turns red if a concurrency label is missing, or if the Motion helper
+text is absent or does not name the shared email/broker pool.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (198-02 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`src/dashboard/src/components/__tests__/AdvancedPanel.test.tsx` (all 5 concurrency labels + motion
+helper text case), per `198-02-SUMMARY.md` Task 2. Live confirmation is part of the D-08 operator
+walkthrough step 5.
+
+---
+
+### UAT-198-03: Backoff Base > Max Is Rejected With a 422 Naming Both Fields
+
+**ID:** UAT-198-03
+**Title:** Submitting `retry_backoff_base_seconds` greater than `retry_backoff_max_seconds` is
+rejected with a 422 naming both offending fields, never silently accepted or silently reordered
+**Maps to:** PARITY-08
+
+**What to test:** the `AdvancedScanFields` model-level validator (`model_validator(mode="after")`)
+rejects `base > max` at the request boundary, both fields accept decimal values (e.g. `0.5`), and
+the rendered field order matches "Backoff base (seconds)" then "Backoff max (seconds)" below Retry
+count.
+
+**Steps:** covered by an automated, parametrized `TestClient`-driven test — no manual execution
+required for this case; a live spot-check is also covered by the D-08 operator walkthrough step 7.
+
+**Pass Criteria:** a request with `backoff_base_seconds > backoff_max_seconds` returns 422 naming
+both fields; boundary-equal values (`base == max`) are accepted.
+
+**Falsifiability:** this case turns red if an out-of-order backoff pair is accepted, or if the 422
+body fails to name both fields.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (198-01 phase-execution plan)
+**Notes:** DEFERRED — covered by `tests/test_advanced_fields_422_gate.py`'s backoff-order
+validator case, per `198-01-SUMMARY.md` Task 1 (65 tests passing, including the boundary-equal
+accept case and the regression case proving the 3 original 1-300-bounded fields still reject 301).
+Live confirmation is part of the D-08 operator walkthrough step 7.
+
+---
+
+### UAT-198-04: TLS-Designated Ports Shares the Same Format Validation as TLS Ports
+
+**ID:** UAT-198-04
+**Title:** `tls_designated_ports` renders beside TLS Ports, accepts the same comma-separated
+port/range format, shows the identical inline amber format warning on malformed input, and parses
+to a sorted int list server-side
+**Maps to:** PARITY-08
+
+**What to test:** entering a malformed value (e.g. `abc`) shows the same `PORT_SPEC_HINT_RE`
+inline warning `ports_tls` already shows; entering a valid value (`8443,9443`) clears the warning
+and the value round-trips through `parse_port_spec` into a sorted int list server-side.
+
+**Steps:** covered by automated component and backend tests — no manual execution required for
+this case; a live spot-check is also covered by the D-08 operator walkthrough step 8.
+
+**Pass Criteria:** the client-side warning renders/clears identically to the TLS Ports field's
+existing behavior; the server-side parse produces a sorted int list matching the submitted spec.
+
+**Falsifiability:** this case turns red if the warning copy or trigger condition differs from
+`ports_tls`'s, or if the parsed server-side list is unsorted or does not match the input.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (198-01/198-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`src/dashboard/src/components/__tests__/AdvancedPanel.test.tsx` (TLS-Designated Ports rendering +
+shared invalid-format warning case) per `198-02-SUMMARY.md` Task 2, and
+`tests/test_advanced_scan_fields_overlay.py::test_tls_designated_ports_parsed_to_int_list` per
+`198-01-SUMMARY.md` Task 2 (sorted-output assertion corrected during authoring — see that
+SUMMARY's Deviations §1). Live confirmation is part of the D-08 operator walkthrough step 8.
+
+---
+
+### UAT-198-05: A 422 Names the Offending Field for an Out-of-Bounds Advanced Value
+
+**ID:** UAT-198-05
+**Title:** Submitting any of the 16 newly-bounded Advanced fields outside its documented range
+(e.g. `scan_concurrency` at 9999, above the 1-500 bound) returns a 422 naming that field, never a
+silent clamp or a generic error
+**Maps to:** PARITY-08, PARITY-09
+
+**What to test:** for each of the 16 bounded fields (11 timeouts at 1-600, 5 concurrency at
+1-500), values at the boundary are accepted and values at boundary+1 (or 0) are rejected with a
+422 naming the field.
+
+**Steps:** covered by an automated, parametrized `TestClient`-driven test — no manual execution
+required for this case; a live spot-check (`scan_concurrency=100000`) is also covered by the D-08
+operator walkthrough step 9.
+
+**Pass Criteria:** every boundary-accept and boundary+1-reject row passes; every reject names the
+correct field in the 422 body.
+
+**Falsifiability:** this case turns red if any boundary value is misclassified, or if a 422 body
+fails to name the offending field.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (198-01 phase-execution plan)
+**Notes:** DEFERRED — covered by `tests/test_advanced_fields_422_gate.py`'s parametrized bounds
+coverage (accept-at-boundary, reject-at-0-and-boundary+1, for all 16 bounded fields), per
+`198-01-SUMMARY.md` Task 1. Live confirmation is part of the D-08 operator walkthrough step 9.
+
+---
+
+### UAT-198-06: GATE-04 Full-Corpus Local-Only Leg Is Green
+
+**ID:** UAT-198-06
+**Title:** `tests/test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg` passes
+against the live `.planning/` corpus, closing the standing local-only RED that persisted since
+Phase 194
+**Maps to:** GATE-04
+
+**What to test:** the full-corpus leg — which enumerates every `BACK-*`/`999.*` ID reference
+across `.planning/milestones/**` at run time and requires each to be either closed-with-evidence
+or HORIZON-ledgered — passes with zero offenders, after the D-13 U+2011 escaping fix landed across
+8 files (100 occurrences).
+
+**Steps:** covered by an automated pytest node — no manual execution required for this case.
+
+**Pass Criteria:** `test_full_corpus_local_only_leg` passes; the full backend suite
+(`pytest -q -m ""`) reports an EMPTY failing-node set.
+
+**Falsifiability:** this case turns red if the local-only leg fails, or if any other node in the
+full-suite run fails.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-10  **Tester:** Automated (198-03 phase-execution plan)
+**Notes:** Confirmed via `198-03-SUMMARY.md` Task 3: `.venv/bin/python -m pytest -q -m ""` →
+4831 passed, 42 skipped, 72 xfailed, 5 xpassed, **0 failed**, exit code 0 — the EMPTY
+failing-node-set baseline this phase's other cases assume.
+
+---
+
+**Series 198 disposition.** Five of six cases are honest `[x] SKIP` with `DEFERRED — covered by
+<test-node>` annotations, citing real, currently-passing test nodes from `198-01-SUMMARY.md` and
+`198-02-SUMMARY.md`; one case (UAT-198-06) is checked `[x] PASS` directly against
+`198-03-SUMMARY.md`'s verbatim full-suite evidence, since GATE-04's own re-verification task
+already ran that exact command live. None was checked PASS without being run, and none substitutes
+a false PASS for genuine coverage. The D-08 operator walkthrough (a separate
+`checkpoint:human-verify` gate, not a UAT-series case) independently re-confirms the
+behaviorally-visible subset of this series live against the dashboard, per 198-04-PLAN.md Task 3.
+
+**Last Updated:** 2026-09-10 (Phase 198 Plan 04 — Series 198 added: 6 scan-behavior-parity-tail
+cases (per-scanner timeouts grid + delta semantics, concurrency group, backoff base<=max 422,
+tls_designated_ports shared format validation, out-of-bounds 422 naming, GATE-04 full-corpus leg
+green), 5 honest `[x] SKIP` / `DEFERRED — covered by <test-node>` plus 1 `[x] PASS` citing
+198-01/02/03-SUMMARY.md test evidence)
