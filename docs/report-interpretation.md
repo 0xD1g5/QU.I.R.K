@@ -1716,3 +1716,21 @@ key can ever reference exposure-map/reachability/crown-jewel concepts and that t
 module can never import the scoring module at all. A scan with a rich, alarming-looking exposure
 graph and a scan with none produce identical readiness scores, all else equal — the map is a
 topology-and-evidence surface for a client conversation, not a second scoring input.
+
+## 24. Report Branding Placement (Phase 200, v5.23 — RPT-01)
+
+When an operator sets a `report:` block in `config.yaml` (see
+[Configuration Reference](configuration.md#report-block-phase-200-v523--rpt-01rpt-02rpt-03rpt-04)),
+branding text and imagery are operator-supplied labels, not scan results — nothing under this
+section reflects anything QU.I.R.K. discovered on the network. Knowing where each piece appears
+helps a reader distinguish "who prepared this" from "what was found":
+
+| Surface | What appears | Where |
+|---|---|---|
+| HTML / PDF | Cover logo (if `branding.logo_path` or the deprecated `assessment.logo_path` is set) + a cover identity block (client, engagement, prepared-by, cover date, confidentiality line) | Cover page, plus the client/engagement + confidentiality line repeated in the running header/footer of every page |
+| DOCX | Same cover logo (embedded picture, or the existing `"[ Insert organization logo here ]"` placeholder if no logo resolves) + the same identity fields as cover paragraphs | Cover page, plus a header/footer identity line and confidentiality line |
+| CLI (executive summary markdown, scorecard markdown, Rich console scan-summary table) | Client / engagement / prepared-by / cover-date / confidentiality identity **text only** | Header block of each surface — **no logo is ever rendered on a CLI surface** |
+
+Every field is independently optional — an unset field simply does not render its line/row, on any
+surface. If none of the `report.branding.*` fields are set, all three surfaces render exactly as
+they did before Phase 200.
