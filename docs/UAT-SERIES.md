@@ -26841,3 +26841,389 @@ cases for TRIAGE-10 (fractional-score transport across `/api/merge/latest`, `/ap
 TRIAGE-11 (combined connectors+advanced overlay coexistence); 5 honest `[x] SKIP` /
 `DEFERRED — covered by <test-node>` citing 199-01/02/03-SUMMARY.md test evidence, plus 1 honest
 `[x] SKIP` / `GAP — no substitute coverage` for the live-browser gauge-render case (UAT-199-05))
+
+---
+
+## Series 200: Report Branding & Templates (Phase 200 — v5.23)
+
+Covers RPT-01 (full-fidelity cover/header/footer branding on HTML/PDF and DOCX, plus identity-only
+text on CLI surfaces), RPT-02 (sandboxed Jinja2 template overrides with SSTI containment),
+RPT-03 (load-time path-traversal guard + dashboard exclusion), RPT-04 (named report profiles:
+save/list/select with explicit-config-always-wins precedence), and RPT-05 (the 999.105 Tier 2
+section-composition go/no-go decision).
+
+### UAT-200-01: Branded HTML/PDF Cover, Header, and Footer
+
+**ID:** UAT-200-01
+**Title:** A config with the full `report.branding` set produces a branded HTML/PDF report — logo
+on the cover, identity block on the cover, and identity text repeated in the running header/footer
+**Maps to:** RPT-01
+
+**What to test:** run a scan against a config carrying all six `report.branding` fields (including
+`logo_path`) and open the generated HTML report (and its PDF export); confirm the logo renders on
+the cover, the cover identity block (client/engagement/prepared-by/cover-date/confidentiality)
+appears, and the client/engagement + confidentiality text repeats in the running header/footer of
+every page.
+
+**Steps:**
+1. Add a `report.branding` block with all six fields (including a real `logo_path`) to a test
+   engagement config.
+2. Run `quirk --config config.yaml` against a small target set.
+3. Open the generated HTML report in a browser; also export/inspect the PDF.
+4. Visually inspect the cover page and at least two interior pages' header/footer.
+
+**Pass Criteria:** the logo renders visibly on the cover; all five identity fields appear on the
+cover in the expected labels; client/engagement + confidentiality line repeat in the header/footer
+of interior pages; no field bleeds into the wrong surface.
+
+**Falsifiability:** this case turns red if the logo fails to render, an identity field is silently
+dropped, or header/footer identity text is missing/misplaced.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** N/A — no live operator walkthrough was run for this plan
+**Notes:** GAP — no substitute coverage for the **appearance** aspect (logo placement, cover
+layout, header/footer visual position). Presence of every branding field and correct logo
+precedence is proven by automated tests (`tests/test_report_branding.py::test_html_full_branding_all_fields_present`,
+per `200-03-SUMMARY.md`'s byte-identical-diff and logo-precedence evidence), but this repo's render
+tests assert presence, not appearance (project convention) — a live operator walkthrough is the
+honest path to a real PASS on the visual-placement claim specifically.
+
+---
+
+### UAT-200-02: Branded DOCX Cover, Header, and Footer
+
+**ID:** UAT-200-02
+**Title:** The same `report.branding` config produces a branded DOCX with the same six fields,
+including a cover logo picture (or the pre-existing placeholder paragraph if the logo is absent)
+**Maps to:** RPT-01
+
+**What to test:** open the generated DOCX report from the same run as UAT-200-01 and confirm the
+cover logo picture (or placeholder), cover identity paragraphs, and header/footer identity line +
+confidentiality footer text all render as expected.
+
+**Steps:**
+1. Using the same run as UAT-200-01, open the generated `.docx` report in Word or LibreOffice.
+2. Inspect the cover page, and the header/footer of at least one interior page.
+
+**Pass Criteria:** the logo picture is embedded on the cover (or the `"[ Insert organization logo
+here ]"` placeholder appears if no logo resolves); all five identity fields appear as cover
+paragraphs; the header/footer carries the identity line and confidentiality text.
+
+**Falsifiability:** this case turns red if the logo picture fails to embed when a valid logo path
+is set, or any identity field/header/footer text is missing.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** N/A — no live operator walkthrough was run for this plan
+**Notes:** GAP — no substitute coverage for the **appearance** aspect. Presence of the logo
+picture (via `doc.inline_shapes`) and all five identity fields is proven by
+`tests/test_report_branding.py::test_docx_full_branding_all_fields_present`, per
+`200-03-SUMMARY.md`, but visual cover/header/footer layout is not asserted by any automated test in
+this repo (render tests assert presence, not appearance) — a live operator walkthrough is the
+honest path to a real PASS on the visual-placement claim specifically.
+
+---
+
+### UAT-200-03: CLI Surfaces Carry Identity Text, Never a Logo
+
+**ID:** UAT-200-03
+**Title:** The CLI executive summary, scorecard markdown, and Rich console scan-summary table all
+carry the branding identity text, and none of the three ever renders a logo/image reference
+**Maps to:** RPT-01
+
+**What to test:** a scan run against the same branded config produces identity lines on
+`executive.md`, the scorecard markdown, and the console summary table — with no logo/image data or
+path reaching any of the three surfaces even when `report.branding.logo_path` is set.
+
+**Steps:** covered by an automated test file exercising all three surfaces directly against a
+constructed cfg — no manual execution required for this case.
+
+**Pass Criteria:** all five identity fields appear as lines/rows on each of the three surfaces when
+set; no `logo`/`data:image` string or literal branding image path appears on any of the three
+surfaces.
+
+**Falsifiability:** this case turns red if any identity field is missing from a surface it should
+appear on, or if any logo/image reference leaks onto a CLI surface.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-04 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_branding_cli.py::test_fully_branded_executive_markdown_carries_identity`,
+`tests/test_report_branding_cli.py::test_fully_branded_scorecard_markdown_carries_identity`,
+`tests/test_report_branding_cli.py::test_fully_branded_console_summary_carries_identity`, and the
+negative leg `tests/test_report_branding_cli.py::test_no_image_branding_reference_reaches_any_cli_surface`,
+per `200-04-SUMMARY.md` (7/7 passing).
+
+---
+
+### UAT-200-04: Logo Precedence — `report.branding.logo_path` Wins Over `assessment.logo_path`
+
+**ID:** UAT-200-04
+**Title:** `assessment.logo_path` alone still brands the report (Phase 100 behavior preserved);
+`report.branding.logo_path` wins when both are set
+**Maps to:** RPT-01
+
+**What to test:** a config with only `assessment.logo_path` set still embeds that logo; a config
+with both `assessment.logo_path` and `report.branding.logo_path` set embeds only the
+`report.branding.logo_path` image.
+
+**Steps:** covered by an automated test using two distinguishable generated PNGs and a
+base64-comparison assertion — no manual execution required for this case.
+
+**Pass Criteria:** the `assessment.logo_path`-only case embeds that image; the both-set case
+embeds only the `report.branding.logo_path` image's bytes, never the `assessment.logo_path`
+image's bytes.
+
+**Falsifiability:** this case turns red if either direction embeds the wrong image, or if
+`assessment.logo_path` alone stops working (a Phase 100 regression).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-03 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_branding.py::test_logo_precedence_report_branding_wins_over_assessment` and
+`tests/test_report_branding.py::test_logo_precedence_assessment_logo_used_alone`, per
+`200-03-SUMMARY.md`'s logo-precedence proof (two distinguishable PNGs, base64 comparison, both
+directions verified).
+
+---
+
+### UAT-200-05: Operator Template Override and Fallback
+
+**ID:** UAT-200-05
+**Title:** A `report.template_dir` containing a modified `report.html.j2` overrides the packaged
+template; removing the override file falls back to the packaged template
+**Maps to:** RPT-02
+
+**What to test:** point `report.template_dir` at a directory containing a modified
+`report.html.j2` and confirm the override renders instead of the packaged template; remove the
+file from that directory and confirm the packaged template renders again.
+
+**Steps:** covered by an automated test asserting a marker string unique to the override template
+renders, and a separate test asserting the packaged template renders when the override directory
+has no matching file — no manual execution required for this case.
+
+**Pass Criteria:** the override marker string is present when the override file exists; the
+packaged template's normal output renders when it does not.
+
+**Falsifiability:** this case turns red if the override is silently ignored, or if the packaged
+template fails to serve as a fallback when the override directory lacks the file.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-01 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_template_sandbox.py::test_operator_override_template_renders_instead_of_packaged`
+and
+`tests/test_report_template_sandbox.py::test_fallback_to_packaged_template_when_override_dir_has_no_report_template`,
+per `200-01-SUMMARY.md` (RED-first: both legs failed against unmodified source, then GREEN after
+the `ChoiceLoader` swap).
+
+---
+
+### UAT-200-06: SSTI Payloads Are Contained Under the Operator Override
+
+**ID:** UAT-200-06
+**Title:** An override template containing canonical SSTI payloads cannot reach host internals —
+every payload either raises `SecurityError` or renders marker-free, empty output
+**Maps to:** RPT-02
+
+**What to test:** render 13 canonical Jinja2 SSTI payloads (attribute-chain escapes, `__globals__`
+access, `__class__`/`__mro__`/`__subclasses__` chains) through the real `write_reports` pipeline
+under an operator override template, and confirm none of them leaks host/interpreter internals
+into the rendered output.
+
+**Steps:** covered by a parametrized automated test corpus rendering all 13 payloads through the
+real report-writing pipeline — no manual execution required for this case.
+
+**Pass Criteria:** every one of the 13 payloads either raises `SecurityError` or renders with no
+leaked marker/internal-state string present in the output; the packaged template's own
+`_rows.append`/`_unmapped.append` mutation idiom (lines 637, 664) is unaffected by the sandbox.
+
+**Falsifiability:** this case turns red if any payload leaks Python internals (module globals,
+class hierarchy, subclass list) into the rendered HTML.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-01 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_template_sandbox.py::test_ssti_payload_is_contained*` (13/13 parametrized cases
+passing — 6 raise `SecurityError`, 7 render empty/marker-free), per `200-01-SUMMARY.md`'s
+payload-by-payload evidence table and the written GO verdict in
+`.planning/phases/200-report-branding-templates/200-SSTI-GATE.md`.
+
+---
+
+### UAT-200-07: Path-Traversal Rejection with `QRK-CONFIG-003`
+
+**ID:** UAT-200-07
+**Title:** A `..`-containing `template_dir` or `logo_path` is rejected at config load with a
+`QRK-CONFIG-003` message naming the offending field and value
+**Maps to:** RPT-03
+
+**What to test:** a config with a traversal-shaped `report.template_dir`, `report.branding.logo_path`,
+or `assessment.logo_path` value fails to load, raising `QRK-CONFIG-003` and naming the field and
+value.
+
+**Steps:** covered by automated tests exercising all three call sites — no manual execution
+required for this case.
+
+**Pass Criteria:** each of the three traversal-shaped call sites raises `QRK-CONFIG-003` naming the
+correct field and offending value; a non-traversal path with the same field does not raise.
+
+**Falsifiability:** this case turns red if a traversal-shaped value loads successfully at any of
+the three call sites, or if the error omits the field name/value.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-02 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_path_guard.py::TestValidateReportPathFieldTraversal::test_traversal_template_dir_raises_coded_error`,
+`tests/test_report_path_guard.py::TestValidateReportPathFieldTraversal::test_traversal_logo_path_raises_coded_error`,
+and
+`tests/test_report_path_guard.py::TestValidateReportPathFieldTraversal::test_traversal_assessment_logo_path_raises_coded_error`,
+per `200-02-SUMMARY.md`'s verbatim guard error text.
+
+---
+
+### UAT-200-08: No Report Path Field Is Dashboard-Reachable
+
+**ID:** UAT-200-08
+**Title:** No report path field (`logo_path`, `template_dir`) is exposed by any dashboard schema,
+connectors-overlay allowlist, or effective-config section title
+**Maps to:** RPT-03
+
+**What to test:** a runtime-enumeration sweep over every dashboard Pydantic schema, every
+`_KNOWN_*_OVERLAY_KEYS` frozenset, and `_SECTION_TITLES` confirms none exposes a report path field,
+and the sweep is demonstrated able to fail (not vacuously green) via an injected scratch model.
+
+**Steps:** covered by an automated runtime-enumeration test — no manual execution required for
+this case.
+
+**Pass Criteria:** the enumeration is non-vacuous (finds at least one real schema/overlay/section);
+no report path field is found in any of the three surfaces; the mutation-check leg confirms the
+sweep detects an injected path field in a scratch model.
+
+**Falsifiability:** this case turns red if a future dashboard schema change introduces a
+`logo_path`/`template_dir` field without the sweep catching it, or if the sweep is shown to be
+vacuous.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-02 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_path_guard.py::test_no_dashboard_schema_exposes_a_path_field`,
+`tests/test_report_path_guard.py::test_no_overlay_allowlist_contains_a_path_field`,
+`tests/test_report_path_guard.py::test_report_section_not_in_effective_config_section_titles`, and
+the non-vacuity proof `tests/test_report_path_guard.py::test_mutation_check_sweep_detects_an_injected_path_field`,
+per `200-02-SUMMARY.md`.
+
+---
+
+### UAT-200-09: `report profile save` / `list` / `--report-profile` Round Trip
+
+**ID:** UAT-200-09
+**Title:** `quirk report profile save` then `list` then a scan with `--report-profile` reproduces
+the saved branding without re-entering values
+**Maps to:** RPT-04
+
+**What to test:** save a config's `report:` block as a named profile, confirm it appears in
+`profile list`, and confirm applying it via `--report-profile` (or `report.profile`) fills the same
+branding/template_dir fields onto another config.
+
+**Steps:** covered by an automated round-trip test plus a CLI-level save-then-list test — no manual
+execution required for this case; this plan also ran the CLI save/list flow live (see
+`200-05-SUMMARY.md`'s CLI transcript) as corroborating evidence.
+
+**Pass Criteria:** `save_profile`/`load_profile` round-trip every set branding field and
+`template_dir` exactly; `list_profiles` returns the saved name; the CLI `save` then `list` sequence
+shows the profile name in the printed table.
+
+**Falsifiability:** this case turns red if any field is lost/altered on round trip, or if a saved
+profile does not appear in `list`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-05 phase-execution plan) + live CLI transcript
+**Notes:** Confirmed via
+`tests/test_report_profiles.py::test_save_then_load_round_trips_branding_and_template_dir` and
+`tests/test_report_profiles.py::test_cli_save_then_list`, per `200-05-SUMMARY.md`'s round-trip
+evidence and verbatim CLI save→list transcript. Also independently re-verified live during this
+plan's own execution (`quirk report profile save housestyle --config ...` then
+`quirk report profile list` against a scratch `QUIRK_PROFILES_DIR`), reproducing the same
+save/overwrite/list behavior — see `200-07-SUMMARY.md`.
+
+---
+
+### UAT-200-10: Explicit Config Value Survives Profile Application
+
+**ID:** UAT-200-10
+**Title:** An explicitly-set engagement-config branding value is never overwritten by an applied
+report profile; only unset fields are filled from the profile
+**Maps to:** RPT-04
+
+**What to test:** apply a saved profile carrying `client_name`/`engagement_name` onto a config that
+explicitly sets only `client_name`; confirm `client_name` keeps its explicit value while
+`engagement_name` is filled from the profile.
+
+**Steps:** covered by an automated test asserting both halves of the precedence rule in one
+assertion — no manual execution required for this case.
+
+**Pass Criteria:** the explicit `client_name` value survives unchanged; the unset
+`engagement_name` field is filled from the profile.
+
+**Falsifiability:** this case turns red if the profile overwrites the explicit value, or if it
+fails to fill the genuinely-unset field.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-05 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_profiles.py::test_explicit_config_value_survives_profile_application`, per
+`200-05-SUMMARY.md`'s verbatim precedence-test evidence (both directions asserted in one test).
+
+---
+
+### UAT-200-11: Tier 2 Go/No-Go Document Exists and Is Argued from Evidence
+
+**ID:** UAT-200-11
+**Title:** The 999.105 Tier 2 (section-composition report profiles) go/no-go document exists,
+names the real congruence-guard raising site, enumerates the presence-based parity suite, and the
+tracked `HORIZON.md` 999.105 row carries the verdict
+**Maps to:** RPT-05
+
+**What to test:** review `TIER2-GO-NO-GO.md` against its own cited evidence (congruence-guard
+anatomy, parity-suite file/test counts, Tier 1 evidence from 200-01/200-03/200-05) and confirm the
+verdict is actually argued, not asserted; confirm `HORIZON.md`'s 999.105 row reflects the verdict.
+
+**Steps:** this is a human document-quality review, not an automatable behavior — no test can
+verify "is this argument sound." Read
+`.planning/backlog/999.105-customizable-reporting-engine/TIER2-GO-NO-GO.md` end to end against the
+`HORIZON.md` 999.105 row diff.
+
+**Pass Criteria:** the document exists, correctly identifies `content_model.py::_check_congruence`
+(not the ROADMAP's `writer.py:307/:927` shorthand) as the real raising site, tables all nine parity
+test files with measured counts, and states a verdict (GO/NO-GO/GO-WITH-CONDITIONS) with named
+conditions; `HORIZON.md`'s 999.105 row carries that verdict.
+
+**Falsifiability:** this case turns red if the document is missing, asserts a verdict without
+evidence, misidentifies the congruence-guard raising site, or `HORIZON.md` does not reflect it.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** N/A — no live human document review was run for this plan
+**Notes:** GAP — no substitute coverage; a decision document's argumentative soundness has no
+automatable truth condition. `200-06-SUMMARY.md` confirms the document exists (246 lines), names
+`content_model.py::_check_congruence` (line 626) correctly, tables all nine parity files with both
+literal and indent-tolerant counts, and states a NO-GO verdict with named conditions; `HORIZON.md`'s
+999.105 row is confirmed extended with the verdict via a `git diff --stat` showing exactly one row
+changed. A human review of the document's argumentative quality remains outstanding.
+
+---
+
+**Series 200 disposition.** 8 of 11 cases (UAT-200-03/04/05/06/07/08/09/10) are
+`[x] PASS`, confirmed via real, currently-collectible pytest node IDs cited above, each verified
+via `pytest --collect-only` before being written here. 3 cases (UAT-200-01/02/11) are honest
+`[x] SKIP` / `GAP — no substitute coverage`: UAT-200-01/02 because this repo's render tests assert
+presence, not appearance, and the visual-placement claim needs a live operator walkthrough;
+UAT-200-11 because a decision document's argumentative soundness has no automatable truth
+condition. None was checked PASS without being run, and no allowlist or gate-code change was made.
+
+**Last Updated:** 2026-09-11 (Phase 200 Plan 07 — Series 200 added: 11 report-branding-templates
+cases covering RPT-01 (HTML/PDF + DOCX + CLI branding, logo precedence), RPT-02 (template override,
+fallback, SSTI containment), RPT-03 (path-traversal guard, dashboard-exclusion sweep), RPT-04
+(report profile save/list/select, explicit-config-wins precedence), and RPT-05 (Tier 2 go/no-go
+document); 8 automated `[x] PASS` cases citing real `pytest --collect-only`-resolvable node IDs
+against 200-01/02/03/05-SUMMARY.md evidence, plus 3 honest `[x] SKIP` / `GAP — no substitute
+coverage` cases for the two visual-placement legs and the human document-quality review)
