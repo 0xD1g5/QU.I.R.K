@@ -158,13 +158,13 @@ describe("AdvancedPanel", () => {
   })
 
   it("renders 'TLS-Designated Ports' next to TLS Ports and shows the same invalid-format warning", () => {
-    const onAdvancedChange = vi.fn()
-    render(<AdvancedPanel {...defaultProps({ onAdvancedChange })} />)
+    render(
+      <AdvancedPanel {...defaultProps({ advanced: { tls_designated_ports: "abc" } })} />,
+    )
     fireEvent.click(screen.getByText("Advanced"))
 
     expect(screen.getByText("TLS-Designated Ports")).toBeInTheDocument()
-    const input = screen.getByLabelText("TLS-Designated Ports")
-    fireEvent.change(input, { target: { value: "abc" } })
+    expect(screen.getByLabelText("TLS-Designated Ports")).toBeInTheDocument()
     expect(screen.getAllByText("Ports must be numbers, ranges, or commas.").length).toBeGreaterThan(0)
   })
 

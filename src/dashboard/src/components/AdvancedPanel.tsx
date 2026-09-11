@@ -44,6 +44,45 @@ interface AdvancedPanelProps {
 
 const PORT_SPEC_HINT_RE = /^[0-9,\-\s]*$/
 
+// Phase 198 Plan 02 (PARITY-08/PARITY-09, D-07): the 11 per-scanner
+// timeouts, in TimeoutsCfg declaration order — short visual label + full
+// aria-label phrase (the compact grid's visual label omits "(seconds)").
+const TIMEOUT_SCANNER_FIELDS: {
+  key: keyof AdvancedScanFields
+  short: string
+  aria: string
+}[] = [
+  { key: "timeout_fingerprint_seconds", short: "Fingerprint", aria: "Fingerprint scanner timeout, seconds" },
+  { key: "timeout_jwt_seconds", short: "JWT", aria: "JWT scanner timeout, seconds" },
+  { key: "timeout_container_seconds", short: "Container", aria: "Container scanner timeout, seconds" },
+  { key: "timeout_source_seconds", short: "Source", aria: "Source scanner timeout, seconds" },
+  { key: "timeout_dnssec_seconds", short: "DNSSEC", aria: "DNSSEC scanner timeout, seconds" },
+  { key: "timeout_saml_seconds", short: "SAML", aria: "SAML scanner timeout, seconds" },
+  { key: "timeout_kerberos_seconds", short: "Kerberos", aria: "Kerberos scanner timeout, seconds" },
+  { key: "timeout_vault_seconds", short: "Vault", aria: "Vault scanner timeout, seconds" },
+  { key: "timeout_db_connect_seconds", short: "DB Connect", aria: "DB Connect scanner timeout, seconds" },
+  { key: "timeout_broker_seconds", short: "Broker", aria: "Broker scanner timeout, seconds" },
+  { key: "timeout_email_seconds", short: "Email", aria: "Email scanner timeout, seconds" },
+]
+
+// Phase 198 Plan 02 (PARITY-08/PARITY-09, D-02): 5 live-enumerated
+// concurrency knobs, in ScanCfg declaration order.
+const CONCURRENCY_FIELDS: {
+  key: keyof AdvancedScanFields
+  label: string
+  helper?: string
+}[] = [
+  { key: "scan_concurrency", label: "Scan concurrency" },
+  { key: "fingerprint_concurrency", label: "Fingerprint concurrency" },
+  { key: "tls_concurrency", label: "TLS concurrency" },
+  { key: "ssh_concurrency", label: "SSH concurrency" },
+  {
+    key: "motion_concurrency",
+    label: "Motion concurrency",
+    helper: "Shared worker pool for email and broker connector scanning.",
+  },
+]
+
 function isEmptyValue(value: unknown): boolean {
   if (value === "" || value === null || value === undefined) return true
   if (typeof value === "number" && Number.isNaN(value)) return true
@@ -85,6 +124,11 @@ export function AdvancedPanel(props: AdvancedPanelProps) {
   const portsTlsValue = advanced.ports_tls ?? ""
   const portsTlsInvalid = portsTlsValue.length > 0 && !PORT_SPEC_HINT_RE.test(portsTlsValue)
 
+  // Phase 198 / D-03: tls_designated_ports clones ports_tls's format check.
+  const tlsDesignatedPortsValue = advanced.tls_designated_ports ?? ""
+  const tlsDesignatedPortsInvalid =
+    tlsDesignatedPortsValue.length > 0 && !PORT_SPEC_HINT_RE.test(tlsDesignatedPortsValue)
+
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-6">
       <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[var(--ds-accent)] data-[state=open]:text-[var(--ds-accent)]">
@@ -115,6 +159,32 @@ export function AdvancedPanel(props: AdvancedPanelProps) {
                 className="mt-1"
               />
               {portsTlsInvalid && (
+                <p className="text-xs mt-1" style={{ color: "var(--ds-high)" }}>
+                  Ports must be numbers, ranges, or commas.
+                </p>
+              )}
+            </div>
+
+            {/* TLS-Designated Ports — Phase 198 D-03: clones ports_tls wholesale */}
+            <div>
+              <Label htmlFor="advanced-tls-designated-ports" className="text-xs flex items-center">
+                TLS-Designated Ports
+                {renderSetBadge("tls_designated_ports")}
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ports to treat as TLS even when plaintext is detected — overrides the
+                plaintext-on-TLS-port classifier. Comma-separated ports or ranges, e.g. 8443,9443.
+              </p>
+              <Input
+                id="advanced-tls-designated-ports"
+                aria-label="TLS-Designated Ports"
+                value={tlsDesignatedPortsValue}
+                onChange={(e) => setField("tls_designated_ports", e.target.value)}
+                disabled={disabled}
+                placeholder={presetState?.tls_designated_ports}
+                className="mt-1"
+              />
+              {tlsDesignatedPortsInvalid && (
                 <p className="text-xs mt-1" style={{ color: "var(--ds-high)" }}>
                   Ports must be numbers, ranges, or commas.
                 </p>
@@ -245,6 +315,114 @@ export function AdvancedPanel(props: AdvancedPanelProps) {
                     placeholder={presetState?.retry_count?.toString()}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="advanced-retry-backoff-base" className="text-xs text-muted-foreground flex items-center">
+                    Backoff base (seconds)
+                    {renderSetBadge("retry_backoff_base_seconds")}
+                  </Label>
+                  <Input
+                    id="advanced-retry-backoff-base"
+                    type="number"
+                    step={0.1}
+                    min={0.1}
+                    value={advanced.retry_backoff_base_seconds ?? ""}
+                    onChange={(e) => setField(
+                      "retry_backoff_base_seconds",
+                      e.target.value === "" ? undefined : Number(e.target.value),
+                    )}
+                    disabled={disabled}
+                    placeholder={presetState?.retry_backoff_base_seconds?.toString()}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="advanced-retry-backoff-max" className="text-xs text-muted-foreground flex items-center">
+                    Backoff max (seconds)
+                    {renderSetBadge("retry_backoff_max_seconds")}
+                  </Label>
+                  <Input
+                    id="advanced-retry-backoff-max"
+                    type="number"
+                    step={0.1}
+                    min={0.1}
+                    value={advanced.retry_backoff_max_seconds ?? ""}
+                    onChange={(e) => setField(
+                      "retry_backoff_max_seconds",
+                      e.target.value === "" ? undefined : Number(e.target.value),
+                    )}
+                    disabled={disabled}
+                    placeholder={presetState?.retry_backoff_max_seconds?.toString()}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Per-Scanner Timeouts — Phase 198 D-07: compact nested grid */}
+            <div>
+              <Label className="text-xs flex items-center">
+                Per-Scanner Timeouts
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Overrides the default timeout above for specific scanner types (seconds).
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 mt-1">
+                {TIMEOUT_SCANNER_FIELDS.map((field) => (
+                  <div key={field.key}>
+                    <Label htmlFor={`advanced-${field.key}`} className="text-xs text-muted-foreground flex items-center">
+                      {field.short}
+                      {renderSetBadge(field.key)}
+                    </Label>
+                    <Input
+                      id={`advanced-${field.key}`}
+                      aria-label={field.aria}
+                      type="number"
+                      min={1}
+                      max={600}
+                      value={advanced[field.key] ?? ""}
+                      onChange={(e) => setField(
+                        field.key,
+                        e.target.value === "" ? undefined : Number(e.target.value),
+                      )}
+                      disabled={disabled}
+                      placeholder={presetState?.[field.key]?.toString()}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Concurrency — Phase 198 D-02: stacked fields, not the compact grid */}
+            <div>
+              <Label className="text-xs flex items-center">
+                Concurrency
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Worker pool sizes for parallel scanning (higher = faster, more load).
+              </p>
+              <div className="space-y-2 mt-1">
+                {CONCURRENCY_FIELDS.map((field) => (
+                  <div key={field.key}>
+                    <Label htmlFor={`advanced-${field.key}`} className="text-xs text-muted-foreground flex items-center">
+                      {field.label}
+                      {renderSetBadge(field.key)}
+                    </Label>
+                    {field.helper && (
+                      <p className="text-xs text-muted-foreground">{field.helper}</p>
+                    )}
+                    <Input
+                      id={`advanced-${field.key}`}
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={advanced[field.key] ?? ""}
+                      onChange={(e) => setField(
+                        field.key,
+                        e.target.value === "" ? undefined : Number(e.target.value),
+                      )}
+                      disabled={disabled}
+                      placeholder={presetState?.[field.key]?.toString()}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 
