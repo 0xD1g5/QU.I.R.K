@@ -153,7 +153,7 @@ schedule slack.
 
 ### Phases
 
-- [ ] **Phase 199: Wave A Correctness Drain** - Fractional scores survive the trend/merge paths
+- [x] **Phase 199: Wave A Correctness Drain** (completed 2026-09-11) - Fractional scores survive the trend/merge paths
   end to end, and a combined connectors+advanced overlay CI regression test closes the v5.22
   tech-debt item, before score-lift math builds on the same scoring paths.
 
