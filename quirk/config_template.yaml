@@ -14,6 +14,23 @@ assessment:
   data_classification: "CONFIDENTIAL"  # Data classification label on all reports
   timezone: "UTC"                   # Timezone for report timestamps
   # logo_path: /path/to/your-org-logo.png   # optional; omit to show org name only
+  #   NOTE: report.branding.logo_path (below) is the preferred field as of
+  #   Phase 200 — this assessment.logo_path key is honored as a deprecated
+  #   fallback when report.branding.logo_path is unset.
+
+# -- Report branding & templates --------------------------------------------
+# Phase 200 / RPT-01/RPT-03/RPT-04: every key below is optional. Omitting
+# this whole block reproduces today's rendering exactly.
+# report:
+#   branding:
+#     logo_path: /path/to/your-org-logo.png   # preferred over assessment.logo_path above
+#     client_name: "Acme Corp"                # overrides the cover-page client label
+#     engagement_name: "Q3 2026 Crypto Assessment"
+#     prepared_by: "Security Team"
+#     cover_date: "September 2026"            # free-form cover label, rendered verbatim
+#     confidentiality_line: "CONFIDENTIAL — Internal Use Only"
+#   template_dir: /path/to/custom/templates   # operator Jinja2 template override directory
+#   profile: my-profile                       # name of a ~/.quirk/report_profiles/<name>.yaml
 
 # -- Scan targets ----------------------------------------------------------
 # Add the IPs, CIDRs, or hostnames you want to scan.

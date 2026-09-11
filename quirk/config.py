@@ -419,6 +419,44 @@ class SecurityCfg:
     trusted_targets: list = dataclasses.field(default_factory=list)
 
 
+@dataclass
+class ReportBrandingCfg:
+    """Phase 200 / RPT-01: optional per-report branding overrides.
+
+    Every field is optional and defaults to ``None`` — absence reproduces
+    today's rendering exactly. ``logo_path`` falls back to the legacy
+    ``assessment.logo_path`` when unset (renderer double-getattr resolution
+    order, plan 200-01/200-02).
+    """
+    logo_path: Optional[str] = None
+    client_name: Optional[str] = None
+    engagement_name: Optional[str] = None
+    prepared_by: Optional[str] = None
+    cover_date: Optional[str] = None  # free-form cover label, rendered verbatim
+    confidentiality_line: Optional[str] = None
+
+
+@dataclass
+class ReportCfg:
+    """Phase 200 / RPT-01/RPT-03/RPT-04: operator-facing `report:` config
+    section — branding overrides, a Jinja2 template override directory, and
+    a named report profile.
+
+    Every field is optional; a config with no `report:` block builds a
+    `ReportCfg` with every field `None`/default and reproduces today's
+    rendering exactly (RPT-01 hard constraint).
+    """
+    branding: ReportBrandingCfg = field(default_factory=ReportBrandingCfg)
+    template_dir: Optional[str] = None
+    profile: Optional[str] = None
+    # Phase 200 / RPT-04: tracks which *flattened* keys appeared in the raw
+    # YAML report block (top-level keys verbatim, "branding.<key>" for keys
+    # present in the nested branding sub-table). Consumed by the plan 200-05
+    # report-profile merge so an explicit operator value always wins over a
+    # profile-supplied default (mirrors ConnectorsCfg._user_set_fields).
+    _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
+
+
 @dataclass(frozen=True)
 class BrokerCredential:
     """Phase 57 / D-05: per-host broker credential entry.
@@ -462,6 +500,7 @@ class AppConfig:
     output: OutputCfg
     intelligence: IntelligenceCfg
     security: SecurityCfg = field(default_factory=SecurityCfg)             # Phase 57 / D-04
+    report: ReportCfg = field(default_factory=ReportCfg)                   # Phase 200 / RPT-01
     broker_credentials: Dict[str, BrokerCredential] = field(default_factory=dict)  # Phase 57 / D-05
     remediation_aliases: Dict[str, str] = field(default_factory=dict)  # Phase 179 / REMED-03 — operator-supplied re-scan aliases; human-edited only
 
@@ -830,6 +869,37 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     connectors_cfg = ConnectorsCfg(**conn_raw)
     connectors_cfg._user_set_fields = frozenset(conn_raw.keys())
 
+    # Phase 200 / RPT-01/RPT-03/RPT-04: parse the optional `report:` section.
+    # Mirrors the [scan.timeouts] sub-table split (:721-743) — pop the nested
+    # `branding:` sub-table, filter each level by its dataclass field names,
+    # warn-and-ignore unknown keys at both levels (never fatal), and stamp a
+    # *flattened* _user_set_fields set so plan 200-05's profile merge can tell
+    # explicit operator values from ReportCfg defaults.
+    report_raw = dict(raw.get("report") or {})
+    branding_raw = dict(report_raw.pop("branding", None) or {})
+
+    report_fields = {f.name for f in dataclasses.fields(ReportCfg) if not f.name.startswith("_")}
+    branding_fields = {f.name for f in dataclasses.fields(ReportBrandingCfg)}
+
+    for _unknown_key in sorted(set(report_raw) - report_fields):
+        _LOGGER.warning(
+            "%r is not a recognized report option — ignored", _unknown_key,
+        )
+    for _unknown_key in sorted(set(branding_raw) - branding_fields):
+        _LOGGER.warning(
+            "%r is not a recognized report.branding option — ignored", _unknown_key,
+        )
+
+    report_filtered = {k: v for k, v in report_raw.items() if k in report_fields}
+    branding_filtered = {k: v for k, v in branding_raw.items() if k in branding_fields}
+
+    branding_cfg = ReportBrandingCfg(**branding_filtered)
+    report_cfg = ReportCfg(branding=branding_cfg, **report_filtered)
+    report_cfg._user_set_fields = frozenset(
+        list(report_filtered.keys())
+        + [f"branding.{k}" for k in branding_filtered.keys()]
+    )
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
@@ -838,6 +908,7 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
         security=security_cfg,
+        report=report_cfg,
         broker_credentials=broker_credentials,
         remediation_aliases=remediation_aliases,
     )
