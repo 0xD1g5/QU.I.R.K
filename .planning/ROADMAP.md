@@ -204,7 +204,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 199-02-PLAN.md — Widen score transport types; remove the 6 int-truncation / fabricated-0 sites; update legacy int-assertions
+- [x] 199-02-PLAN.md — Widen score transport types; remove the 6 int-truncation / fabricated-0 sites; update legacy int-assertions
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
