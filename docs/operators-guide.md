@@ -325,9 +325,12 @@ credential fields — so an OFF connector shows none of them.
 - **A field you have touched shows a small teal "Set" badge** next to its label — the same visual
   language as the connector-level "Set" badge, now also available per-field.
 - **Rejected values return a 422 naming the field**, at both submit and the Effective Config
-  preview — e.g. an out-of-range timeout or a malformed cluster entry: "Scan rejected: `{key}` is
-  not a recognized connector field for this scan. Remove or correct it, then resubmit." Submit
-  and preview are guaranteed to agree on every accept/reject decision (PARITY-06).
+  preview — e.g. an out-of-range timeout or a malformed cluster entry. The banner is prefixed
+  "Scan rejected: " followed by the backend's message, such as
+  `Unknown connector key(s): {key}` for a typo'd field name, or `{key!r} is not a recognized
+  connector overlay field (must be a known enable_* toggle or one of the supported connector
+  detail fields)` for a real-but-out-of-phase-scope field like a secret. Submit and preview are
+  guaranteed to agree on every accept/reject decision (PARITY-06).
 
 See [`docs/configuration.md`](configuration.md#connector-detail-fields-settable-from-the-dashboard-parity-0506-phase-197)
 for the full 37-field reference (types, defaults, bounds, gating flags).
