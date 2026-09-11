@@ -208,13 +208,14 @@ class TestMergeLatestWithData:
             if val is not None:
                 assert 0 <= val <= 100
 
-    def test_per_segment_score_float_round_trips(self):
-        """A fractional per-segment score round-trips through JSON unchanged.
+    def test_snapshot_score_passthrough_when_no_endpoints(self):
+        """With zero endpoints, the merge-time snapshot score passes through.
 
-        Phase 199 / TRIAGE-10: records why the int-ness assertion above was
-        relaxed rather than dropped — the response's score is expected to
-        equal the seeded value even when Pydantic/JSON serializes an
-        integral score as a float (e.g. 75 -> 75.0).
+        Phase 199 / TRIAGE-10 (renamed per 199 review IN-02): no endpoints
+        means no live recompute, so `score` is the seeded snapshot value —
+        and JSON equality must hold even when Pydantic serializes an
+        integral score as a float (75 == 75.0). Real fractional round-trip
+        coverage lives in tests/test_score_precision_transport.py.
         """
         client, TestingSession = _make_isolated_client()
         db = TestingSession()
@@ -278,7 +279,8 @@ class TestMergeLatestWithData:
 
         With two segments (dmz, corp) the overall live_score must be derived
         from ALL union endpoints — not from the stale merge-time snapshot.
-        We verify that score is an integer (recomputed) and that per_segment_scores
+        We verify that score is numeric (recomputed, int or float per
+        TRIAGE-10) and that per_segment_scores
         contains entries for both segments, all from one consistent dataset.
         """
         client, TestingSession = _make_isolated_client()
