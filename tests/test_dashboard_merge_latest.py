@@ -114,6 +114,9 @@ class TestMergeLatestWithData:
         assert merge is not None
         assert "scan_id" in merge
         assert "merged_at" in merge
+        # 199 review WR-01: merged_at must carry the UTC offset (SCORE-03
+        # stamping contract) — python-mode model_dump() used to drop it.
+        assert merge["merged_at"].endswith("+00:00")
         assert "score" in merge
         assert merge["score"] == 75
         assert merge["endpoint_count"] == 12

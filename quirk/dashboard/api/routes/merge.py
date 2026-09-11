@@ -54,7 +54,10 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
         db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
     )
     if latest_run is None:
-        return MergeLatestResponse(merge=None).model_dump()
+        # 199 review WR-01: mode="json" so UTCDateTime's when_used="json"
+        # serializer runs (python-mode model_dump() would bypass the SCORE-03
+        # UTC-offset stamping contract).
+        return MergeLatestResponse(merge=None).model_dump(mode="json")
 
     # ------------------------------------------------------------------
     # Parse coverage_warning_json (Trap T8: malformed JSON → None, no 500)
@@ -139,4 +142,8 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
         coverage_warning=coverage_warning,
         per_segment_scores=per_segment_scores,
     )
-    return MergeLatestResponse(merge=merge_data).model_dump()
+    # 199 review WR-01: mode="json" so merged_at is serialized through the
+    # UTCDateTime PlainSerializer (when_used="json") and carries its +00:00
+    # offset — python-mode model_dump() left a naive datetime that FastAPI's
+    # jsonable_encoder emitted WITHOUT the offset (SCORE-03 defect class).
+    return MergeLatestResponse(merge=merge_data).model_dump(mode="json")
