@@ -216,13 +216,19 @@ manual review.
   1. Operator can set the 11 per-scanner timeout fields from the Advanced section, delta-only,
      composing correctly with vertical presets under the single recorded precedence rule
      (`docs/configuration.md` §Dashboard form vs. presets precedence).
-  2. Operator can set the 4 concurrency knobs, retry backoff, and remaining misc scan-behavior
+  2. Operator can set the 5 concurrency knobs (live audit count; the earlier "4" was an estimate), retry backoff, and remaining misc scan-behavior
      fields from the Advanced section under the same delta-only/422 rules.
   3. A standing test fails if any BACK-*/999.* ID is neither closed-with-evidence nor listed in
      `HORIZON.md`'s Open-Item Ledger, keyed on title+ID (BACK-68 names two unrelated items) and
      counting requirement-section-heading citations as closure.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+- [ ] 198-01-PLAN.md — Backend: extend AdvancedScanFields/build_advanced_overlays with the 19 scan-behavior fields, D-11 bounds, 422 + provenance tests (PARITY-08, PARITY-09)
+- [ ] 198-02-PLAN.md — Frontend: AdvancedPanel Per-Scanner Timeouts grid, Concurrency group, backoff pair, TLS-Designated Ports; TS lockstep, vitest, rebuilt statics (PARITY-08, PARITY-09)
+- [ ] 198-03-PLAN.md — GATE-04: re-verify the shipped standing gate, escape the fake worked-example IDs across the live-enumerated offender set, establish the EMPTY failing-node baseline (GATE-04)
+- [ ] 198-04-PLAN.md — Docs (configuration.md 27-field table, operators-guide §3.1.5), UAT Series 198, HORIZON 999.104 Tier 3 closure, REQUIREMENTS flips, VALIDATION close, Obsidian sync, D-08 operator walkthrough (PARITY-08, PARITY-09, GATE-04)
+
 **UI hint**: yes
 
 ## Progress
