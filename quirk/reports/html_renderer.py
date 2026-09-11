@@ -6,7 +6,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import ChoiceLoader, FileSystemLoader, select_autoescape
+from jinja2.sandbox import SandboxedEnvironment
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
@@ -1001,8 +1002,20 @@ def render_html_report(
     # (writer.py imports this module at load time).
     from quirk.reports.writer import format_scan_completed_at
 
-    env = Environment(
-        loader=FileSystemLoader(_TEMPLATES_DIR),
+    # Phase 200 / RPT-02: template_dir is operator-supplied, so the env is a
+    # SandboxedEnvironment UNCONDITIONALLY at this single construction site —
+    # there is no config flag, no "trusted" path, no second env. When an
+    # operator template_dir is set, it is inserted FIRST so operator templates
+    # override the packaged ones; the packaged _TEMPLATES_DIR is always the
+    # fallback so a missing override never breaks rendering. autoescape and
+    # the sanitize filter live on this SAME instance by contract (T-200-02).
+    template_dir = getattr(getattr(cfg, "report", None), "template_dir", None)
+    if template_dir:
+        loader = ChoiceLoader([FileSystemLoader(template_dir), FileSystemLoader(_TEMPLATES_DIR)])
+    else:
+        loader = FileSystemLoader(_TEMPLATES_DIR)
+    env = SandboxedEnvironment(
+        loader=loader,
         autoescape=select_autoescape(["html", "j2"]),
     )
     env.filters["sanitize"] = sanitize_scanner_text
