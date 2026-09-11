@@ -916,6 +916,12 @@ def validate_connectors_overlay(v: Optional[dict]) -> Optional[dict]:
                             f"{key!r} elements must be objects with keys "
                             f"{sorted(dict_keys)} and string values"
                         )
+                    for field_name, field_value in element.items():
+                        if len(field_value) > _CONNECTOR_STR_MAX_LENGTH:
+                            raise ValueError(
+                                f"{key!r} element {field_name!r} must be at most "
+                                f"{_CONNECTOR_STR_MAX_LENGTH} characters"
+                            )
             else:
                 for element in value:
                     if not isinstance(element, str):

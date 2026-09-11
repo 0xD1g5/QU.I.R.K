@@ -123,6 +123,11 @@ PAYLOAD_CASES: list[tuple[dict, bool, str | None]] = [
     ({"jwt_targets": "not-a-list"}, False, "jwt_targets"),  # wrong scalar type
     ({"smime_timeout": True}, False, "smime_timeout"),  # bool-for-int
     ({"gke_clusters": ["prod-1"]}, False, "gke_clusters"),  # bare-string element
+    (
+        {"gke_clusters": [{"name": "p" * 513, "location": "us-central1"}]},
+        False,
+        "gke_clusters",
+    ),  # over-length dict-element string value (CR-01)
     ({"vault_addr": "x" * 513}, False, "vault_addr"),  # over-length str
     ({"adcs_timeout": 9999}, False, "adcs_timeout"),  # out-of-range timeout
     ({"enable_jwt": "yes"}, False, "enable_jwt"),  # enable_* given non-bool
