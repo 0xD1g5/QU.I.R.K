@@ -299,8 +299,32 @@ system feeding every surface.
   5. Score-lift renders on the dashboard roadmap surface (with its own `routes/scan.py` wiring),
      consistent with the report-surface numbers for the same scan.
 
-**Plans**: TBD
+**Plans**: 8 plans (5 waves)
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 201-01-PLAN.md — Wave 0: ADVISORY-02 forward-projection firewall (RED-verified) + LIFT-01/02 unit spec, failing-first
+- [ ] 201-03-PLAN.md — BACK-51: delete categorize_waves, re-derive console Migration Waves from roadmap items, update 8 patching test files, pin one-categorization-source
+
+**Wave 2**
+
+- [ ] 201-02-PLAN.md — quirk/intelligence/score_lift.py: 9 slug-keyed evidence deltas + independent aggregate rescore
+
+**Wave 3**
+
+- [ ] 201-04-PLAN.md — dashboard API wiring: RoadmapNode.score_lift, top-level projected_score, slug join, degrade-to-absence
+- [ ] 201-05-PLAN.md — content model fields + writer/executive lift attachment + CLI markdown and scorecard rendering
+
+**Wave 4**
+
+- [ ] 201-06-PLAN.md — roadmap.tsx lift badge + Projected Score card, print.tsx, vitest, rebuilt statics, operator walkthrough
+- [ ] 201-07-PLAN.md — HTML + DOCX rendering and four-surface numeric-equality / non-additivity check
+
+**Wave 5**
+
+- [ ] 201-08-PLAN.md — docs, UAT Series 201, HORIZON BACK-51 closure, Obsidian sync, phase note, validation close + checkbox flips
 
 ### Phase 202: Finding Storyline Drawer
 
