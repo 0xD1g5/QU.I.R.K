@@ -967,7 +967,13 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     # position the broker_targets validation occupies above.
     validate_report_path_field("report.branding.logo_path", branding_filtered.get("logo_path"))
     validate_report_path_field("report.template_dir", report_filtered.get("template_dir"))
-    validate_report_path_field("assessment.logo_path", raw["assessment"].get("logo_path"))
+    # Phase 200 review IN-01: null-safe lookup — a missing or empty
+    # `assessment:` block must not add a NEW uncoded failure shape here; the
+    # pre-existing AssessmentCfg(**raw["assessment"]) site below still owns
+    # that failure class.
+    validate_report_path_field(
+        "assessment.logo_path", (raw.get("assessment") or {}).get("logo_path")
+    )
 
     branding_cfg = ReportBrandingCfg(**branding_filtered)
     report_cfg = ReportCfg(branding=branding_cfg, **report_filtered)
