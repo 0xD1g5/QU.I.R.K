@@ -4,13 +4,13 @@ milestone: v5.22
 milestone_name: Release & Parity Tail
 status: in_progress
 last_updated: "2026-09-10T18:30:00.000Z"
-last_activity: 2026-09-10
+last_activity: 2026-09-11
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 9
-  percent: 67
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.22 Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Phase 197 (Connector Parity Tail) COMPLETE 2026-09-10 — verification `passed` 9/9; 999.104 Tier 2 CLOSED (all 37 residual connector fields dashboard-settable via lockstep-widened overlay; PARITY-05/06/07 `[x]`). D-13 walkthrough operator-approved (one env finding: Vault/K8s optional extras were missing from .venv — installed hvac/kubernetes/google-cloud-container/azure-mgmt-containerservice, zero code changes; visible-but-disabled contract worked as designed). Code review: 1 critical (pairlist length-bound DoS gap) + 2 minor, all fixed (7f6be242/87cf7371/fffe151f), review resolved. Phase 198 PLANNED 2026-09-10: UI-SPEC approved 6/6 (one spacing fix), 4 plans/3 waves (01 backend +19 fields ∥ 03 GATE-04 escaping fix → 02 frontend → 04 docs/walkthrough), plan-checker PASSED (2 minor warnings fixed), decision coverage 15/15. Key findings: GATE-04 gate already shipped in Phase 189 (re-verify+fix scope); D-13 offender set is 6 files incl. two 194 docs; concurrency count is 5 not 4. Executing now. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Unpushed main commits accumulate since the release push — batch-push at next checkpoint or milestone close.
+**Current focus:** v5.22 Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Phase 197 (Connector Parity Tail) COMPLETE 2026-09-10 — verification `passed` 9/9; 999.104 Tier 2 CLOSED (all 37 residual connector fields dashboard-settable via lockstep-widened overlay; PARITY-05/06/07 `[x]`). D-13 walkthrough operator-approved (one env finding: Vault/K8s optional extras were missing from .venv — installed hvac/kubernetes/google-cloud-container/azure-mgmt-containerservice, zero code changes; visible-but-disabled contract worked as designed). Code review: 1 critical (pairlist length-bound DoS gap) + 2 minor, all fixed (7f6be242/87cf7371/fffe151f), review resolved. Phase 198 COMPLETE 2026-09-11 — verification `passed` 9/9; 999.104 Tier 3 CLOSED (19 fields shipped: 11 timeouts + 2 backoff + 5 concurrency + tls_designated_ports; 3 recorded intentional-gaps); GATE-04 green end-to-end, full-suite failing-node SET now EMPTY (former local-only RED fixed by U+2011 escaping, 9 files); D-08 walkthrough operator-approved. Review resolved (2 warnings fixed by orchestrator, 2 infos accepted-advisory). ALL 3 PHASES + 10/10 REQUIREMENTS COMPLETE — milestone lifecycle (audit → complete → cleanup) next; batch-push of unpushed main commits due at close. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Unpushed main commits accumulate since the release push — batch-push at next checkpoint or milestone close.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
 Complete, closing every requirement this phase owns. Proceeding to plan 07 (docs/UAT/Obsidian
 close-out). Reminders: phase.complete/milestone.complete verbs UNSAFE — hand-write closes; after

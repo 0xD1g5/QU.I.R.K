@@ -136,7 +136,7 @@ don't touch the connector overlay at all.
   installable PyPI release, with repo-root hygiene and the two deferred browser checks folded in.
 - [x] **Phase 197: Connector Parity Tail** - Operator can configure the 37 residual connector
   credential/endpoint/target sub-fields from the dashboard, closing 999.104 Tier 2.
-- [ ] **Phase 198: Scan-Behavior Parity Tail & Standing Drain** - Operator can configure the
+- [x] **Phase 198: Scan-Behavior Parity Tail & Standing Drain** - Operator can configure the
   remaining 23 scan-behavior fields from the Advanced section, and the backlog ledger becomes a
   mechanically enforced standing gate.
 
@@ -224,10 +224,10 @@ manual review.
 
 **Plans**: 4 plans
 
-- [ ] 198-01-PLAN.md — Backend: extend AdvancedScanFields/build_advanced_overlays with the 19 scan-behavior fields, D-11 bounds, 422 + provenance tests (PARITY-08, PARITY-09)
-- [ ] 198-02-PLAN.md — Frontend: AdvancedPanel Per-Scanner Timeouts grid, Concurrency group, backoff pair, TLS-Designated Ports; TS lockstep, vitest, rebuilt statics (PARITY-08, PARITY-09)
-- [ ] 198-03-PLAN.md — GATE-04: re-verify the shipped standing gate, escape the fake worked-example IDs across the live-enumerated offender set, establish the EMPTY failing-node baseline (GATE-04)
-- [ ] 198-04-PLAN.md — Docs (configuration.md 27-field table, operators-guide §3.1.5), UAT Series 198, HORIZON 999.104 Tier 3 closure, REQUIREMENTS flips, VALIDATION close, Obsidian sync, D-08 operator walkthrough (PARITY-08, PARITY-09, GATE-04)
+- [x] 198-01-PLAN.md — Backend: extend AdvancedScanFields/build_advanced_overlays with the 19 scan-behavior fields, D-11 bounds, 422 + provenance tests (PARITY-08, PARITY-09)
+- [x] 198-02-PLAN.md — Frontend: AdvancedPanel Per-Scanner Timeouts grid, Concurrency group, backoff pair, TLS-Designated Ports; TS lockstep, vitest, rebuilt statics (PARITY-08, PARITY-09)
+- [x] 198-03-PLAN.md — GATE-04: re-verify the shipped standing gate, escape the fake worked-example IDs across the live-enumerated offender set, establish the EMPTY failing-node baseline (GATE-04)
+- [x] 198-04-PLAN.md — Docs (configuration.md 27-field table, operators-guide §3.1.5), UAT Series 198, HORIZON 999.104 Tier 3 closure, REQUIREMENTS flips, VALIDATION close, Obsidian sync, D-08 operator walkthrough (PARITY-08, PARITY-09, GATE-04)
 
 **UI hint**: yes
 
@@ -235,9 +235,9 @@ manual review.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 196. Release v5.21.0 | 0/? | Not started | - |
-| 197. Connector Parity Tail | 0/? | Not started | - |
-| 198. Scan-Behavior Parity Tail & Standing Drain | 0/? | Not started | - |
+| 196. Release v5.21.0 | 5/5 | Complete | 2026-09-10 |
+| 197. Connector Parity Tail | 4/4 | Complete | 2026-09-10 |
+| 198. Scan-Behavior Parity Tail & Standing Drain | 4/4 | Complete | 2026-09-11 |
 
 ## Previous Milestone: v5.21 Dashboard Parity & Exposure Capability — SHIPPED 2026-09-10
 
