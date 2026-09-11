@@ -310,7 +310,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 201-02-PLAN.md — quirk/intelligence/score_lift.py: 9 slug-keyed evidence deltas + independent aggregate rescore
+- [x] 201-02-PLAN.md — quirk/intelligence/score_lift.py: 9 slug-keyed evidence deltas + independent aggregate rescore
 
 **Wave 3**
 
