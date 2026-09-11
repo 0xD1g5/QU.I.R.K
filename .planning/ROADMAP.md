@@ -126,21 +126,28 @@ written. The storyline drawer goes last because it consumes LIFT-01's per-item s
 schedule slack.
 
 **Standing constraints carried into this milestone (see `CLAUDE.md` for full detail):**
+
 - `phase.complete`/`milestone.complete`/`state.*` GSD verbs remain unsafe on this machine
   (semantic defect class — well-formed but wrong values). Every phase/milestone close in this
   milestone is hand-written under the pre-image + signature-diff protocol.
+
 - Score firewall: projected/simulated score-lift values must never persist into or feed any real
   score surface (LIFT-03's forward-projection guard, mirroring ADVISORY-01/ADVISORY-02).
+
 - Operator-supplied template directories are a new SSTI/RCE trust boundary, not a repeat of the
   hardened scan-data-XSS class — `SandboxedEnvironment` plus a dedicated SSTI payload test is a
   go/no-go gate inside Phase 200, not a follow-up.
+
 - Any filesystem-path-shaped branding/template field must be routed through a named,
   dashboard-exclusion guard (the `assessment.logo_path` lesson, `schemas.py:991`) — not tribal
   knowledge.
+
 - Any `src/dashboard/*.tsx` change needs `npm run build` + `npm run lint` in `src/dashboard/`
   before the change is considered complete (FastAPI serves pre-built statics).
+
 - Per-phase docs/UAT-SERIES.md/Obsidian close-out tasks are mandatory (CLAUDE.md's Per-Phase
   Documentation Checklist) — every phase below carries them.
+
 - Sequencing commitment recorded in HORIZON's rationale log: v5.24 = UAT Coverage Drain
   (`docs/uat-coverage-gaps.md`, 57+ GAPs) — not folded into this milestone.
 
@@ -149,12 +156,15 @@ schedule slack.
 - [ ] **Phase 199: Wave A Correctness Drain** - Fractional scores survive the trend/merge paths
   end to end, and a combined connectors+advanced overlay CI regression test closes the v5.22
   tech-debt item, before score-lift math builds on the same scoring paths.
+
 - [ ] **Phase 200: Report Branding & Templates** - Operator can brand reports, override templates
   through a sandboxed environment, and save reusable report profiles; a written go/no-go resolves
   999.105 Tier 2's feasibility.
+
 - [ ] **Phase 201: Score-Lift Roadmap Re-frame** - Every remediation roadmap item and its
   aggregate projection carry a real, non-additive, firewalled score-lift number from one unified
   categorization builder, rendered consistently across all four surfaces.
+
 - [ ] **Phase 202: Finding Storyline Drawer** - Operator can open a per-finding narrative drawer
   on the dashboard findings table, showing the finding's story and its score-lift attribution.
 
@@ -172,22 +182,36 @@ before new score-lift math is built on the same scoring-adjacent paths.
   1. A scan producing a fractional readiness score (e.g. 71.4) round-trips unchanged through
      `quirk/intelligence/trends.py` and the sensor `merge.py` path — no int-coercion truncation —
      proven by a regression test that fails against the pre-fix code.
+
   2. `ScanSession.score`, `TrendSessionPoint.score`, and `MergeLatestData.per_segment_scores`
      preserve float precision through persistence and read paths, closing the surface named in
      `188-05-SUMMARY.md`.
+
   3. A CI test exercises the connectors overlay and the advanced-scan-fields overlay **combined**
      on one scan submission, asserting both the job YAML and the effective-config preview reflect
      both overlays simultaneously — closing the v5.22 milestone-audit tech-debt item.
+
   4. `docs/UAT-SERIES.md` gains a Series 199 entry and the touched files' Obsidian counterparts
      are re-synced.
 
 **Plans**: 5 plans (4 waves)
 
 Plans:
+**Wave 1**
+
 - [ ] 199-01-PLAN.md — TRIAGE-10 failing-first regression suite (4 surfaces × fractional/null) + RED evidence
-- [ ] 199-02-PLAN.md — Widen score transport types; remove the 6 int-truncation / fabricated-0 sites; update legacy int-assertions
 - [ ] 199-03-PLAN.md — TRIAGE-11 combined connectors+advanced overlay regression test (job YAML + effective-config)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 199-02-PLAN.md — Widen score transport types; remove the 6 int-truncation / fabricated-0 sites; update legacy int-assertions
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 199-04-PLAN.md — TS type mirrors + SubscoreSlot null per-segment gauge + dashboard rebuild
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 199-05-PLAN.md — Docs note, UAT Series 199, Obsidian vault sync + phase note, hand-flipped checkboxes
 
 ### Phase 200: Report Branding & Templates
@@ -204,15 +228,19 @@ scoped.
      config, and it renders consistently across every report surface that supports it — CLI
      carries the identity fields it can honestly render as text, HTML/PDF and DOCX render the full
      branding set.
+
   2. Operator can point `report.template_dir` at a local directory to override HTML/PDF report
      templates; templates render through a `SandboxedEnvironment` with the existing autoescape
      discipline preserved on the same Environment instance, and a dedicated SSTI payload test
      proves containment (not just a green `test_report_injection_hardening.py`).
+
   3. A path-traversal-shaped branding or template path field is rejected with a clear error, and
      all such fields are excluded from any dashboard-exposed config surface by one named, tested
      guard function — not by absence alone.
+
   4. Operator can save a named report profile bundling branding + template settings and select it
      by name on a later engagement, without re-entering the same values.
+
   5. A written go/no-go decision document exists for 999.105 Tier 2 (section-composition
      profiles), explicitly addressing how the zero-CRITICAL congruence guard
      (`writer.py:307,:927`) and the presence-based parity test suite would need to be redesigned.
@@ -233,16 +261,20 @@ system feeding every surface.
   1. Every remediation roadmap item displays a score-lift number computed by a real, read-only
      second call to `compute_readiness_score()` over synthetic evidence — never a heuristic
      mapping table.
+
   2. The aggregate projected score shown alongside the roadmap is its own independent rescore
      call — never a sum of per-item lifts — correctly reflecting the 25-point subscore clamp's
      non-additive behavior.
+
   3. A new forward-projection firewall test (ADVISORY-02-style, mirroring
      `test_remediation_advisory_guard.py`) proves no projected/simulated score value can persist
      into or feed any real score surface.
+
   4. CLI, HTML, DOCX, and dashboard roadmap surfaces all agree on the same NOW/NEXT/LATER
      categorization for a given scan, sourced from one categorization function — the
      `build_phased_roadmap()`/`categorize_waves()` duality (BACK-51) is resolved by an explicit,
      recorded decision, not an accident of which function a later phase happens to touch.
+
   5. Score-lift renders on the dashboard roadmap surface (with its own `routes/scan.py` wiring),
      consistent with the report-surface numbers for the same scan.
 
@@ -260,11 +292,14 @@ narrative catalogs rather than forking a new one.
 
   1. Operator can open a per-finding storyline drawer directly from the dashboard findings table
      without navigating away from the findings view.
+
   2. The drawer's narrative is sourced from the existing Phase-99 `ALGO_IMPACT_MAP` /
      `REMEDIATION_CATALOG` catalogs — no forked fourth narrative generator, keeping the deliverable
      and the live dashboard telling the same story for the same finding.
+
   3. The drawer displays the finding's score-lift attribution, consuming Phase 201's LIFT-01
      per-item number.
+
   4. The drawer's open/close/focus interaction passes a new a11y baseline capture consistent with
      the project's existing WCAG AA discipline.
 
@@ -534,4 +569,5 @@ the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward i
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
+
 </content>

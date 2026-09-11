@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.23
 milestone_name: Deliverable Experience
-status: planning
+status: executing
 last_updated: "2026-09-11T00:00:00.000Z"
 last_activity: 2026-09-11
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---
@@ -91,7 +91,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.23 Deliverable Experience OPENED 2026-09-11 (defining requirements). Scope: Wave A drain (trends.py/merge.py int-coerced score fields from 188-05; combined connectors+advanced overlay CI regression test) gating 999.105 Tier 1 (customizable reporting engine), 999.101 (roadmap NOW/NEXT/LATER score-lift re-frame), 999.102 (finding storyline drawer), BACK-51 opportunistic. Sequencing commitment: v5.24 = UAT Coverage Drain. Phase numbering continues at 199. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
+**Current focus:** v5.23 Phase 199 (Wave A Correctness Drain) PLANNED 2026-09-11 — 5 plans in 4 waves (RED-first regression suite; TRIAGE-10/TRIAGE-11), plan-checker passed 0 blockers, ready to execute. Scope: Wave A drain (trends.py/merge.py int-coerced score fields from 188-05; combined connectors+advanced overlay CI regression test) gating 999.105 Tier 1 (customizable reporting engine), 999.101 (roadmap NOW/NEXT/LATER score-lift re-frame), 999.102 (finding storyline drawer), BACK-51 opportunistic. Sequencing commitment: v5.24 = UAT Coverage Drain. Phase numbering continues at 199. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff.
 
 Previous (v5.22, closed 2026-09-11): Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Phase 197 (Connector Parity Tail) COMPLETE 2026-09-10 — verification `passed` 9/9; 999.104 Tier 2 CLOSED (all 37 residual connector fields dashboard-settable via lockstep-widened overlay; PARITY-05/06/07 `[x]`). D-13 walkthrough operator-approved (one env finding: Vault/K8s optional extras were missing from .venv — installed hvac/kubernetes/google-cloud-container/azure-mgmt-containerservice, zero code changes; visible-but-disabled contract worked as designed). Code review: 1 critical (pairlist length-bound DoS gap) + 2 minor, all fixed (7f6be242/87cf7371/fffe151f), review resolved. Phase 198 COMPLETE 2026-09-11 — verification `passed` 9/9; 999.104 Tier 3 CLOSED (19 fields shipped: 11 timeouts + 2 backoff + 5 concurrency + tls_designated_ports; 3 recorded intentional-gaps); GATE-04 green end-to-end, full-suite failing-node SET now EMPTY (former local-only RED fixed by U+2011 escaping, 9 files); D-08 walkthrough operator-approved. Review resolved (2 warnings fixed by orchestrator, 2 infos accepted-advisory). v5.22 CLOSED 2026-09-11 (audit passed 10/10; archives in `.planning/milestones/v5.22-*`; REQUIREMENTS.md removed for next milestone; NO v5.22 tag by design). Cleanup (phase-dir archival) next, then `/gsd-new-milestone`. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Unpushed main commits accumulate since the release push — batch-push at next checkpoint or milestone close.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
