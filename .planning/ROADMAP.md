@@ -157,7 +157,7 @@ schedule slack.
   end to end, and a combined connectors+advanced overlay CI regression test closes the v5.22
   tech-debt item, before score-lift math builds on the same scoring paths.
 
-- [ ] **Phase 200: Report Branding & Templates** - Operator can brand reports, override templates
+- [x] **Phase 200: Report Branding & Templates** (completed 2026-09-11) - Operator can brand reports, override templates
   through a sandboxed environment, and save reusable report profiles; a written go/no-go resolves
   999.105 Tier 2's feasibility.
 
