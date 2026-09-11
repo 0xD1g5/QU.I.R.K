@@ -110,15 +110,10 @@ def _stub_roadmap(evidence, score):
     }
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 def _patches():
     """Standard intelligence-pipeline patches for write_reports (same set
     used by tests/test_report_injection_hardening.py / test_reports_writer.py)."""
     return (
-        patch("quirk.reports.writer.categorize_waves", side_effect=_stub_waves),
         patch("quirk.reports.writer.build_phased_roadmap", side_effect=_stub_roadmap),
         patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence),
         patch("quirk.reports.writer.compute_readiness_score", side_effect=_stub_score),
@@ -142,8 +137,8 @@ def _run_write_reports(tmp_path, template_dir=None, no_report_section=False):
     cfg = _make_cfg(tmp_path, template_dir=template_dir, no_report_section=no_report_section)
     endpoints = []
     findings = []
-    p1, p2, p3, p4, p5, p6 = _patches()
-    with p1, p2, p3, p4, p5, p6:
+    p1, p2, p3, p4, p5 = _patches()
+    with p1, p2, p3, p4, p5:
         write_reports(cfg, endpoints=endpoints, findings=findings)
 
     html_files = glob.glob(os.path.join(str(tmp_path), "report-*.html"))
@@ -226,8 +221,8 @@ def test_autoescape_still_active_on_override_template(tmp_path):
     cfg = _make_cfg(out_dir, template_dir=str(override_dir))
     endpoints = []
     findings = [{"severity": "HIGH", "host": "x", "port": 443, "title": XSS_PAYLOAD, "description": "d"}]
-    p1, p2, p3, p4, p5, p6 = _patches()
-    with p1, p2, p3, p4, p5, p6:
+    p1, p2, p3, p4, p5 = _patches()
+    with p1, p2, p3, p4, p5:
         write_reports(cfg, endpoints=endpoints, findings=findings)
 
     html_files = glob.glob(os.path.join(str(out_dir), "report-*.html"))

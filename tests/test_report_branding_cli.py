@@ -113,15 +113,10 @@ def _stub_roadmap(evidence, score):
     }
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 def _patches():
     """Standard intelligence-pipeline patches for write_reports (same set
     used by tests/test_reports_writer.py and test_report_injection_hardening.py)."""
     return (
-        patch("quirk.reports.writer.categorize_waves", side_effect=_stub_waves),
         patch("quirk.reports.writer.build_phased_roadmap", side_effect=_stub_roadmap),
         patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence),
         patch("quirk.reports.writer.compute_readiness_score", side_effect=_stub_score),
@@ -143,8 +138,8 @@ def _run_write_reports(tmp_path, branding=None):
     endpoints = []
     findings = _findings_fixture()
 
-    p1, p2, p3, p4, p5, p6 = _patches()
-    with p1, p2, p3, p4, p5, p6:
+    p1, p2, p3, p4, p5 = _patches()
+    with p1, p2, p3, p4, p5:
         write_reports(cfg, endpoints=endpoints, findings=findings)
 
     exec_files = glob.glob(os.path.join(str(tmp_path), "executive-summary-*.md"))
@@ -168,8 +163,8 @@ def _run_write_reports_console(tmp_path, capsys, branding=None):
     endpoints = []
     findings = _findings_fixture()
 
-    p1, p2, p3, p4, p5, p6 = _patches()
-    with p1, p2, p3, p4, p5, p6:
+    p1, p2, p3, p4, p5 = _patches()
+    with p1, p2, p3, p4, p5:
         write_reports(cfg, endpoints=endpoints, findings=findings)
 
     captured = capsys.readouterr()

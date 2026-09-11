@@ -244,10 +244,6 @@ def _stub_roadmap(evidence, score):
     return {"items": [{"title": "Test Action", "why": "Because testing", "timeframe": "NOW"}]}
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 def _seed_burndown_db(db_path):
     from quirk.db import get_session, init_db
 
@@ -273,7 +269,6 @@ def _run_write_reports(cfg, endpoints, findings=None, closure_counters=None):
     from quirk.reports.writer import write_reports
 
     with (
-        patch("quirk.reports.writer.categorize_waves", side_effect=_stub_waves),
         patch("quirk.reports.writer.build_phased_roadmap", side_effect=_stub_roadmap),
         patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence),
         patch("quirk.reports.writer.compute_readiness_score", side_effect=_stub_score),

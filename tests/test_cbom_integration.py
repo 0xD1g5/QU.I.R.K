@@ -90,27 +90,21 @@ def _stub_roadmap(evidence, score):
     }
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 # ---------------------------------------------------------------------------
 # Test: write_reports() creates CBOM files
 # ---------------------------------------------------------------------------
 
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_write_reports_creates_cbom_files(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path
 ):
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
@@ -127,19 +121,17 @@ def test_write_reports_creates_cbom_files(
     assert len(xml_files) == 1, f"Expected 1 CBOM XML file, found: {xml_files}"
 
 
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_write_reports_cbom_paths_in_console(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path, capsys
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path, capsys
 ):
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
@@ -154,20 +146,18 @@ def test_write_reports_cbom_paths_in_console(
     assert ".cdx.xml" in captured.out, "Console output missing .cdx.xml path"
 
 
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_write_reports_cbom_contains_endpoint_algorithms(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path
 ):
     """CBOM JSON should contain algorithm components from the scanned endpoint."""
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
