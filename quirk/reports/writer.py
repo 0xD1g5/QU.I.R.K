@@ -357,11 +357,17 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines = []
     lines.append("# Quantum Crypto Readiness — Scorecard\n")
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
-    lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
+    lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
     # Phase 200 Plan 04 / RPT-01: identity lines, each individually conditional —
     # absent branding must produce byte-identical output to today.
+    # Phase 200 review IN-02: no per-line "\n" terminator — a single ""
+    # block terminator keeps the identity bullets a tight list contiguous
+    # with Owner/Data-classification (mirrors executive.py's idiom). With
+    # no branding, ["...classification", ""] joins to the same bytes the
+    # old "...classification\n" element produced.
     for _label, _value in resolve_identity_pairs(cfg):
-        lines.append(f"- **{_label}:** {_value}\n")
+        lines.append(f"- **{_label}:** {_value}")
+    lines.append("")
     _score_total = score.get("total")
     _coverage_disclosure = score.get("coverage_disclosure") or ""
     if _score_total is None:
