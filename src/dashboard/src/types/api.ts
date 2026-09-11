@@ -412,7 +412,9 @@ export interface TrendFindingCounts {
 
 export interface TrendSessionPoint {
   session_ts: string       // ISO 8601 string
-  score: number
+  // Phase 199 TRIAGE-10: null means the session's score was not computed
+  // (zero domains assessed) — never a fabricated 0. Mirrors ScanSession.score.
+  score: number | null
   subscores: SubScores     // reuses existing SubScores interface
   finding_counts: TrendFindingCounts
 }
@@ -623,7 +625,9 @@ export interface MergeLatestData {
   endpoint_count: number
   sensor_count: number
   coverage_warning?: Record<string, unknown> | null
-  per_segment_scores: Record<string, number>
+  // Phase 199 TRIAGE-10: an unassessed segment carries null, never a
+  // fabricated 0 — mirrors MergeLatestData.score above.
+  per_segment_scores: Record<string, number | null>
 }
 
 export interface MergeLatestResponse {
