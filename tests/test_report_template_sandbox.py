@@ -123,6 +123,12 @@ def _patches():
         patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence),
         patch("quirk.reports.writer.compute_readiness_score", side_effect=_stub_score),
         patch("quirk.reports.writer.build_evidence_summary", side_effect=_stub_evidence),
+        # Phase 200 close-out: patch the PDF leg at the writer seam. These
+        # tests assert HTML/CLI content only — reaching sync_playwright()
+        # in-suite is the TRIAGE-149 order-pollution class (asyncio-loop
+        # state left by earlier full-suite tests), and skipping the leg
+        # here keeps the tests deterministic in any collection order.
+        patch("quirk.reports.writer.render_pdf_report", return_value=False),
     )
 
 
@@ -136,8 +142,8 @@ def _run_write_reports(tmp_path, template_dir=None, no_report_section=False):
     cfg = _make_cfg(tmp_path, template_dir=template_dir, no_report_section=no_report_section)
     endpoints = []
     findings = []
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4, p5, p6 = _patches()
+    with p1, p2, p3, p4, p5, p6:
         write_reports(cfg, endpoints=endpoints, findings=findings)
 
     html_files = glob.glob(os.path.join(str(tmp_path), "report-*.html"))
@@ -220,8 +226,8 @@ def test_autoescape_still_active_on_override_template(tmp_path):
     cfg = _make_cfg(out_dir, template_dir=str(override_dir))
     endpoints = []
     findings = [{"severity": "HIGH", "host": "x", "port": 443, "title": XSS_PAYLOAD, "description": "d"}]
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4, p5, p6 = _patches()
+    with p1, p2, p3, p4, p5, p6:
         write_reports(cfg, endpoints=endpoints, findings=findings)
 
     html_files = glob.glob(os.path.join(str(out_dir), "report-*.html"))
