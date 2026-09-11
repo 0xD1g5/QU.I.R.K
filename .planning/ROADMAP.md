@@ -208,7 +208,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 199-04-PLAN.md — TS type mirrors + SubscoreSlot null per-segment gauge + dashboard rebuild
+- [x] 199-04-PLAN.md — TS type mirrors + SubscoreSlot null per-segment gauge + dashboard rebuild
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
