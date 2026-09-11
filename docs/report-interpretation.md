@@ -172,6 +172,22 @@ amber covers 35–69 (previously roughly 50–79), and red begins below 35 (prev
 gauge did not get more lenient, it got *correct*, now matching the GOOD/FAIR boundaries in §2's
 table exactly.
 
+**The honest-absence convention now extends to per-segment gauges, the trend timeline, and scan
+history (Phase 199, TRIAGE-10).** The em-dash-not-zero rule described above for the six subscores
+applies identically to three more surfaces: the executive dashboard's per-segment gauges row, the
+trend timeline's per-session points, and the scan-history list's per-scan score column. A
+per-segment gauge, timeline point, or scan-history score showing `—` means that segment or session
+was not assessed — including when its scoring raised an exception — and it must never be read as a
+score of `0` or as worst-case risk. Because scoring failures on one segment now surface as
+unassessed rather than a fabricated `0`, a single gauges row can legitimately show a mix of scored
+and unassessed segments side by side.
+
+Readiness scores are also now float-capable in transport, even though scoring itself still only
+ever emits whole numbers today: the `/api/merge/latest`, `/api/trends`, `/api/trends/timeline`, and
+`/api/scans` JSON responses may serialize a score with a decimal point (for example `71.0` rather
+than `71`). Anything that consumes these endpoints programmatically should parse score fields as
+numbers, not as integers, rather than assuming an integer-shaped response body.
+
 ---
 
 ## 4. Severity Tiers
