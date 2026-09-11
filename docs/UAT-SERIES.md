@@ -26621,3 +26621,223 @@ tls_designated_ports shared format validation, out-of-bounds 422 naming, GATE-04
 green), 5 honest `[x] SKIP` / `DEFERRED — covered by <test-node>` plus 1 `[x] PASS` citing
 198-01/02/03-SUMMARY.md test evidence; D-08 operator walkthrough approved 2026-09-11, "Approved —
 all steps match")
+
+---
+
+## Series 199: Wave A Correctness Drain (Phase 199 — v5.23)
+
+Covers TRIAGE-10 (fractional-score transport across `/api/merge/latest`, `/api/trends`,
+`/api/trends/timeline`, and `/api/scans`, plus honest-absence per-segment gauge rendering) and
+TRIAGE-11 (a connectors overlay and an advanced-scan-fields overlay coexisting on one scan
+submission without one clobbering the other), the two defects drained by this phase's Wave A.
+
+### UAT-199-01: Fractional Readiness Score Round-Trips `/api/merge/latest`
+
+**ID:** UAT-199-01
+**Title:** A fractional per-segment and overall readiness score (e.g. `71.4`) round-trips
+`/api/merge/latest` without truncation to an integer
+**Maps to:** TRIAGE-10
+
+**What to test:** a merge run whose per-segment and overall scores are fractional values is
+served back through `/api/merge/latest` with the fractional value intact, never `int()`-truncated.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** the served per-segment and overall scores equal the seeded fractional values
+exactly (e.g. `71.4 == 71.4`, not `71`).
+
+**Falsifiability:** this case turns red if either score is truncated to an integer anywhere
+between computation and the served JSON body.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_fractional_score_round_trips_merge_per_segment`
+and `tests/test_score_precision_transport.py::test_fractional_score_round_trips_merge_overall`,
+per `199-01-SUMMARY.md` (RED, 8/10 failing pre-fix) and `199-02-SUMMARY.md` (GREEN, all 10 passing
+post-fix — schema widened to `Optional[float]` before the truncation call sites were removed).
+
+---
+
+### UAT-199-02: An Unassessed Segment Reaches the API as Null, Never `0`
+
+**ID:** UAT-199-02
+**Title:** A segment with no assessable evidence — including one whose scoring raised an
+exception — is served by `/api/merge/latest` as `null`, never as a fabricated `0`
+**Maps to:** TRIAGE-10
+
+**What to test:** a merge run with an absent per-segment score, and separately one where
+per-segment scoring raises, both serve that segment's score as `null` rather than `0`.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** both the absent-score case and the scoring-exception case serve `None`/`null`
+for the affected segment; neither serves `0`.
+
+**Falsifiability:** this case turns red if either case serves a fabricated `0` in place of `null`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_absent_score_stays_null_not_zero_merge` and
+`tests/test_score_precision_transport.py::test_per_segment_scoring_failure_yields_null_not_zero`,
+per `199-01-SUMMARY.md` (RED) and `199-02-SUMMARY.md` (GREEN — merge.py's exception path now
+assigns `None`, never `0`).
+
+---
+
+### UAT-199-03: Fractional Score Round-Trips `/api/trends/timeline` and `/api/trends`
+
+**ID:** UAT-199-03
+**Title:** A fractional readiness score round-trips both the trend timeline (`/api/trends/timeline`)
+and the trend report (`/api/trends`, current/previous/delta) without truncation, and an absent
+score on either surface stays `null`
+**Maps to:** TRIAGE-10
+
+**What to test:** a timeline point and a trend-report current/previous pair carrying fractional
+scores are served intact; an absent score on either surface stays `null` rather than becoming `0`.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** fractional values round-trip exactly on both surfaces; the delta computed
+between two fractional scores is within tolerance; absent scores stay `null` on both surfaces.
+
+**Falsifiability:** this case turns red if either surface truncates a fractional score, fabricates
+a `0` for an absent score, or the delta is computed incorrectly across a fractional pair.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_fractional_score_round_trips_timeline`,
+`tests/test_score_precision_transport.py::test_timeline_absent_score_stays_null_not_zero`,
+`tests/test_score_precision_transport.py::test_fractional_scores_round_trip_trend_report`, and
+`tests/test_score_precision_transport.py::test_trend_report_null_scores_stay_null_contract_lock`
+(the last a contract lock that passed pre-fix by design, per `199-01-SUMMARY.md`), per
+`199-01-SUMMARY.md` (RED) and `199-02-SUMMARY.md` (GREEN — `trends.py`'s `int(score_dict["score"]
+or 0)` call site removed, `TrendReport` dataclass fields widened).
+
+---
+
+### UAT-199-04: Fractional Score Round-Trips `/api/scans`
+
+**ID:** UAT-199-04
+**Title:** A fractional `ScanSession.score` round-trips `/api/scans` without truncation, and an
+absent scan score stays `null`
+**Maps to:** TRIAGE-10
+
+**What to test:** a scan session with a fractional score is served back through `/api/scans` with
+the fractional value intact; a scan session with no score stays `null`.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** the fractional score round-trips exactly; the absent-score case stays `null`.
+
+**Falsifiability:** this case turns red if the fractional score is truncated, or the absent-score
+case is coerced to `0`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_fractional_score_round_trips_scan_session` and
+`tests/test_score_precision_transport.py::test_scan_session_absent_score_stays_null` (the latter a
+contract lock that passed pre-fix by design — `quirk/dashboard/api/routes/scan.py` already passed
+`None` through unchanged, per `199-01-SUMMARY.md`'s discovered-live finding), per
+`199-01-SUMMARY.md` and `199-02-SUMMARY.md` (`ScanSession.score` widened to `Optional[float]`).
+
+---
+
+### UAT-199-05: Unassessed Per-Segment Gauge Renders as an Em-Dash, Not a NaN Arc
+
+**ID:** UAT-199-05
+**Title:** An unassessed per-segment score renders as the honest-absence em-dash placeholder on
+the executive dashboard's gauges row, visibly distinct from a real low score, with no NaN arc
+**Maps to:** TRIAGE-10
+
+**What to test:** load the executive dashboard against a merge result with one unassessed
+segment; that segment's gauge shows the `SubscoreSlot` em-dash placeholder, not a `ScoreGauge`
+rendering a `NaN`-driven arc or a fabricated `0`.
+
+**Steps:** this is a live-browser visual behavior. A component-level substitute exists
+(`src/dashboard/src/pages/__tests__/executive.test.tsx` and/or `SubscoreSlot`'s own test file),
+but per `199-04-SUMMARY.md` no dedicated multi-case vitest file isolates this exact per-segment
+null-gauge render as a single, quote-delimited titled case the integrity gate's zero-skip
+execution leg can cite without also depending on the dashboard's Node toolchain being present in
+CI (`VITEST_TOOLCHAIN_AVAILABLE`, a documented non-blocking gap per `docs/uat-coverage-gaps.md`).
+Manufacturing a citation against a multi-test file here would not survive the disposition
+integrity gate's EXECUTION leg honestly. A live operator walkthrough is the honest path to a real
+PASS for this specific case.
+
+**Pass Criteria:** the affected segment's gauge slot shows the em-dash placeholder; no other
+segment's gauge is affected; no NaN arc renders anywhere in the row.
+
+**Falsifiability:** this case turns red if the unassessed segment renders a numeric or `NaN` arc
+instead of the em-dash placeholder.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** N/A — no live operator walkthrough was run for this plan
+**Notes:** GAP — no substitute coverage. `199-04-SUMMARY.md` confirms the production change
+(`executive.tsx`'s per-segment gauge map now renders `SubscoreSlot` instead of `ScoreGauge`,
+reusing the existing SCORE-06 honest-absence pattern) and confirms `npm run build`/`lint`/`test`
+all passed (340 tests, zero new failures), but no test in that run isolates this exact visual
+behavior as a single citable, quote-delimited case. This is an honest, deliberate GAP rather than
+a fabricated citation — per this plan's hard constraint, a GAP is a passing disposition.
+
+---
+
+### UAT-199-06: Connectors Overlay and Advanced Overlay Coexist on One Scan Submission
+
+**ID:** UAT-199-06
+**Title:** A single scan submission carrying both a connectors overlay and an advanced overlay is
+reflected in both the job YAML and the effective-config preview simultaneously, with neither
+overlay clobbering the other
+**Maps to:** TRIAGE-11
+
+**What to test:** POSTing `/api/jobs` with both a `connectors` overlay (e.g. `enable_jwt`,
+`jwt_targets`) and an `advanced` overlay (e.g. `tls_enum_mode`, `motion_concurrency`) in one
+request body lands both overlays' keys in the job's on-disk `config.yaml`; `GET
+/api/config/effective` with both query params shows both overlays' provenance as `user`; and
+`build_job_config_dict` called directly with both overlays present preserves both overlays' keys
+intact.
+
+**Steps:** covered by an automated, mocked-`Popen`-driven test — no manual execution required for
+this case.
+
+**Pass Criteria:** all four connectors+advanced values are present on the same parsed
+`config.yaml` document; both overlay sections show `provenance: "user"` on the effective-config
+preview; `build_job_config_dict`'s direct-call assertion shows both overlays' keys intact.
+
+**Falsifiability:** this case turns red if either overlay's keys are missing from the job YAML, if
+either overlay's provenance is not `user` on the effective-config preview, or if
+`build_job_config_dict` drops either overlay's keys when both are supplied together.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-03 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`tests/test_combined_overlays_regression.py::test_combined_overlays_land_in_job_yaml`,
+`tests/test_combined_overlays_regression.py::test_combined_overlays_reflected_in_effective_config`,
+and
+`tests/test_combined_overlays_regression.py::test_neither_overlay_clobbers_the_other_in_build_job_config_dict`,
+per `199-03-SUMMARY.md` (3/3 passing on first run — no live defect found, confirming the plumbing
+already worked and this was purely a coverage gap).
+
+---
+
+**Series 199 disposition.** Five of six cases (UAT-199-01 through 04, and UAT-199-06) are honest
+`[x] SKIP` with `DEFERRED — covered by <test-node>` annotations, each citing real, currently-passing
+test nodes from `199-01-SUMMARY.md`, `199-02-SUMMARY.md`, and `199-03-SUMMARY.md` — every cited
+node ID was confirmed collectible via `pytest --collect-only` before being written here. UAT-199-05
+is an honest `[x] SKIP` / `GAP — no substitute coverage`: the production fix is confirmed via
+`199-04-SUMMARY.md`, but no existing test isolates the exact visual behavior as a single citable
+case, and no allowlist or gate-code change was made to manufacture one. None was checked PASS
+without being run.
+
+**Last Updated:** 2026-09-11 (Phase 199 Plan 05 — Series 199 added: 6 Wave-A-correctness-drain
+cases for TRIAGE-10 (fractional-score transport across `/api/merge/latest`, `/api/trends`,
+`/api/trends/timeline`, `/api/scans`, and honest-absence per-segment gauge rendering) and
+TRIAGE-11 (combined connectors+advanced overlay coexistence); 5 honest `[x] SKIP` /
+`DEFERRED — covered by <test-node>` citing 199-01/02/03-SUMMARY.md test evidence, plus 1 honest
+`[x] SKIP` / `GAP — no substitute coverage` for the live-browser gauge-render case (UAT-199-05))
