@@ -1227,10 +1227,11 @@ beats-preset rule stated in the canonical precedence section immediately above:
   preset or profile default would otherwise set — so toggling on one connector never silently resets
   or overrides the other 24.
 
-### Advanced scan-fields reference (PARITY-04, Phase 194)
+### Advanced scan-fields reference (PARITY-04, Phase 194; PARITY-08/09, Phase 198)
 
 The dashboard's collapsed "Advanced" section on the New Scan form (`docs/operators-guide.md`
-§3.1.5) exposes eight fields, each following the delta-only precedence rule above:
+§3.1.5) exposes **27 fields** (the original 8 from Phase 194, extended to the full 27-field
+scan-behavior surface in Phase 198), each following the delta-only precedence rule above:
 
 | Field | YAML path | Accepted values / bounds | Default |
 |-------|-----------|---------------------------|---------|
@@ -1242,6 +1243,48 @@ The dashboard's collapsed "Advanced" section on the New Scan form (`docs/operato
 | SSH timeout | `scan.timeouts.ssh_seconds` | integer seconds, 1-300 | `6` |
 | Retry count | `scan.retry.retry_count` | integer attempts, 0-10 | `0` |
 | Data Classification | `assessment.data_classification` | `public` / `internal` / `confidential` / `regulated` only — see D-21 note below | `confidential` for dashboard-dispatched scans |
+| Fingerprint timeout | `scan.timeouts.fingerprint_seconds` | integer seconds, 1-600 | `4` |
+| JWT timeout | `scan.timeouts.jwt_seconds` | integer seconds, 1-600 | `10` |
+| Container timeout | `scan.timeouts.container_seconds` | integer seconds, 1-600 | `120` |
+| Source timeout | `scan.timeouts.source_seconds` | integer seconds, 1-600 | `300` |
+| DNSSEC timeout | `scan.timeouts.dnssec_seconds` | integer seconds, 1-600 | `10` |
+| SAML timeout | `scan.timeouts.saml_seconds` | integer seconds, 1-600 | `10` |
+| Kerberos timeout | `scan.timeouts.kerberos_seconds` | integer seconds, 1-600 | `10` |
+| Vault timeout | `scan.timeouts.vault_seconds` | integer seconds, 1-600 | `10` |
+| DB Connect timeout | `scan.timeouts.db_connect_seconds` | integer seconds, 1-600 | `5` |
+| Broker timeout | `scan.timeouts.broker_seconds` | integer seconds, 1-600 | `10` |
+| Email timeout | `scan.timeouts.email_seconds` | integer seconds, 1-600 | `10` |
+| Backoff base | `scan.retry.backoff_base_seconds` | float seconds, must be > 0; server rejects `base > max` naming both fields | `1.0` |
+| Backoff max | `scan.retry.backoff_max_seconds` | float seconds, must be > 0 and >= backoff base | `5.0` |
+| Scan concurrency | `scan.concurrency` | integer workers, 1-500 | `20` (config template default; required in hand-authored YAML) |
+| Fingerprint concurrency | `scan.fingerprint_concurrency` | integer workers, 1-500 | `200` |
+| TLS concurrency | `scan.tls_concurrency` | integer workers, 1-500 | `150` |
+| SSH concurrency | `scan.ssh_concurrency` | integer workers, 1-500 | `100` |
+| Motion concurrency | `scan.motion_concurrency` | integer workers, 1-500 — shared pool for email + broker connector scanning | `50` |
+| TLS-Designated Ports | `scan.tls_designated_ports` | Comma-separated ports/ranges (same format as TLS Ports), max 512 characters | empty list (no ports forced TLS-designated) |
+
+**D-11 — the bounds asymmetry between the 3 Phase-194 timeout fields and the 11 new Phase-198
+timeout fields is deliberate, not a typo.** `timeout_default_seconds`, `timeout_tls_seconds`, and
+`timeout_ssh_seconds` keep their original 1-300 bound; all 11 new per-scanner timeout fields
+(Fingerprint through Email above) use a wider 1-600 bound, because several of the underlying
+scanners (Container, Source) already default well past 300 seconds — scoping the wider range to
+only the new fields avoids silently loosening the three original fields' validation.
+
+**D-04 — three intentional gaps: recorded, not rendered.** The following `scan.*` fields exist in
+`quirk/config.py` but deliberately have **no** Advanced-panel control and no dashboard-settable
+overlay path. This is a recorded design decision, not an oversight:
+
+- `scan.openapi_spec_path` — a local filesystem path (or scope-gated URL) fed to the REST-fuzzing
+  OpenAPI loader. It is the same trust-boundary class as `assessment.logo_path`: a
+  path-traversal-capable input that is safe when hand-authored in `config.yaml` by an operator with
+  filesystem access, but not safe to expose as a dashboard-submitted string from a browser.
+- `scan.hardware_history_retention_days` and `scan.hardware_drift_event_retention_days` — these
+  govern how long hardware-crypto engagement history and drift events are retained at the
+  **install** level, not how a single scan behaves. They belong with install-scoped retention
+  policy, not a per-scan Advanced form field.
+
+If you need to set any of these three, hand-edit `config.yaml` directly — there is no dashboard
+path for them, by design.
 
 **D-19 — `tls_enum_mode` has no `off` behavior.** The config template comment historically read
 `off|fast|deep` (see the `scan:` example block above), but `quirk/scanner/tls_scanner.py` coerces

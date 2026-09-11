@@ -335,25 +335,43 @@ credential fields — so an OFF connector shows none of them.
 See [`docs/configuration.md`](configuration.md#connector-detail-fields-settable-from-the-dashboard-parity-0506-phase-197)
 for the full 37-field reference (types, defaults, bounds, gating flags).
 
-### 3.1.5 Advanced scan fields — TLS ports, enumeration depth, timeouts, retry, data classification (PARITY-04, Phase 194)
+### 3.1.5 Advanced scan fields — TLS ports, enumeration depth, timeouts, retry, concurrency, data classification (PARITY-04, Phase 194; PARITY-08/09, Phase 198)
 
 The New Scan page carries an "Advanced" section directly below the Connectors panel (§3.1.4) and
 above the Effective config preview (§3.1.2). **It is collapsed by default** — clicking the
 "Advanced" label with the chevron expands it; nothing inside is fetched or evaluated until you
-open it.
+open it. It remains a single panel — Phase 198 added two new field groups inside it, not a second
+panel.
 
-Inside, the panel exposes eight controls:
+Inside, the panel exposes 27 controls, in these groups:
 
 - **TLS Ports** — a free-text comma-separated port/range list (e.g. `443,8443,9000-9010`) that
   overrides `scan.ports_tls` for this scan only.
 - **TLS Enumeration Mode** — a Fast/Deep dropdown. There is no "Off" option; see
-  [`docs/configuration.md`](configuration.md#advanced-scan-fields-reference-parity-04-phase-194)
+  [`docs/configuration.md`](configuration.md#advanced-scan-fields-reference-parity-04-phase-194-parity-0809-phase-198)
   for why (D-19).
 - **Send SNI during TLS probes** — a switch controlling `scan.include_sni`.
-- **Timeouts & Retry** — four numeric fields (default/TLS/SSH timeout in seconds, retry count).
+- **Timeouts & Retry** — the original default/TLS/SSH timeout fields (seconds) and retry count,
+  plus two new fields: **Backoff base (seconds)** and **Backoff max (seconds)**, both accepting
+  decimals. Submitting a base greater than max returns a 422 naming both fields.
+- **Per-Scanner Timeouts** — a new compact grid of 11 short-labeled numeric fields (Fingerprint,
+  JWT, Container, Source, DNSSEC, SAML, Kerberos, Vault, DB Connect, Broker, Email), each
+  overriding that scanner's individual timeout. Accepted range is 1-600 seconds — wider than the
+  three original timeout fields' 1-300 bound; see D-11 in the configuration reference for why the
+  bounds intentionally differ.
+- **Concurrency** — a new group of 5 worker-pool-size fields (Scan, Fingerprint, TLS, SSH, Motion
+  concurrency), 1-500 each. Motion concurrency is the shared worker pool for email and broker
+  connector scanning.
+- **TLS-Designated Ports** — a second port/range field beside TLS Ports, overriding
+  `scan.tls_designated_ports`: ports listed here are treated as TLS even if plaintext is detected,
+  overriding the plaintext-on-TLS-port classifier. Same comma-separated format and inline format
+  validation as TLS Ports.
 - **Data Classification** — a Public/Internal/Confidential/Regulated dropdown controlling
   `assessment.data_classification`; see D-21 in the configuration reference for why there is no
   fifth option.
+
+No control exists for `scan.openapi_spec_path` or either hardware retention-days field — these are
+recorded, intentional gaps (D-04); see the configuration reference for why.
 
 **Every control here is advisory client-side only; the server's 422 response is authoritative.**
 The Input field for TLS Ports shows a red hint if you type something that doesn't look like a
