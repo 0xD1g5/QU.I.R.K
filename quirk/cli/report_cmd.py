@@ -76,6 +76,15 @@ def _run_save(args: argparse.Namespace, console: Console) -> None:
 
     if existed:
         console.print(f"[yellow]Profile {args.name!r} already existed — overwritten.[/yellow]")
+    # Phase 200 review IN-04: an empty payload usually means --config pointed
+    # at a file with no report: block — surface that instead of a silent
+    # success that only shows up when the profile is later applied and does
+    # nothing.
+    if path.read_text(encoding="utf-8").strip() in ("", "{}"):
+        console.print(
+            f"[yellow]Warning: {args.config} has no report.branding/template_dir "
+            f"values to save — profile {args.name!r} is empty.[/yellow]"
+        )
     console.print(f"[green]Saved report profile {args.name!r} to {path}[/green]")
     sys.exit(0)
 
