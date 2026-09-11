@@ -178,8 +178,15 @@ class TestMergeLatestWithData:
         assert "dmz" in per_seg
         assert "corp" in per_seg
 
-    def test_per_segment_scores_are_ints(self):
-        """per_segment_scores values are integers 0-100."""
+    def test_per_segment_scores_are_numeric_in_range(self):
+        """per_segment_scores values are None or a real number 0-100.
+
+        Phase 199 / TRIAGE-10: per_segment_scores is Dict[str, Optional[float]]
+        — a value is either None (unassessed / scoring failure) or a real
+        number in [0, 100], never a fabricated 0 and never coerced to int.
+        bool is explicitly excluded since `isinstance(True, int)` is True in
+        Python and would otherwise silently pass this check.
+        """
         client, TestingSession = _make_isolated_client()
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         db = TestingSession()
@@ -192,8 +199,28 @@ class TestMergeLatestWithData:
         assert resp.status_code == 200
         per_seg = resp.json()["merge"]["per_segment_scores"]
         for key, val in per_seg.items():
-            assert isinstance(val, int), f"Expected int for segment {key}, got {type(val)}"
-            assert 0 <= val <= 100
+            assert val is None or (
+                isinstance(val, (int, float)) and not isinstance(val, bool)
+            ), f"Expected None or numeric for segment {key}, got {type(val)}"
+            if val is not None:
+                assert 0 <= val <= 100
+
+    def test_per_segment_score_float_round_trips(self):
+        """A fractional per-segment score round-trips through JSON unchanged.
+
+        Phase 199 / TRIAGE-10: records why the int-ness assertion above was
+        relaxed rather than dropped — the response's score is expected to
+        equal the seeded value even when Pydantic/JSON serializes an
+        integral score as a float (e.g. 75 -> 75.0).
+        """
+        client, TestingSession = _make_isolated_client()
+        db = TestingSession()
+        _seed_merge_run(db, score=75)
+        db.close()
+
+        resp = client.get("/api/merge/latest")
+        assert resp.status_code == 200
+        assert resp.json()["merge"]["score"] == 75
 
     def test_per_segment_groups_by_segment_not_sensor_id(self):
         """Two sensors in the same segment produce ONE score entry (Trap T5)."""
@@ -266,8 +293,10 @@ class TestMergeLatestWithData:
         assert resp.status_code == 200
         merge = resp.json()["merge"]
 
-        # Overall score must be an integer recomputed from live union (not None)
-        assert isinstance(merge["score"], int)
+        # Overall score must be numeric, recomputed from live union (not None).
+        # Phase 199 / TRIAGE-10: score is Optional[float] now; bool is
+        # explicitly excluded since isinstance(True, int) is True.
+        assert isinstance(merge["score"], (int, float)) and not isinstance(merge["score"], bool)
         assert 0 <= merge["score"] <= 100
 
         # Per-segment scores must cover both segments
@@ -279,5 +308,5 @@ class TestMergeLatestWithData:
         # endpoints are present — the recompute returns a real score not 99.
         # (This documents that WR-04 is active; if somehow the scoring returns
         # exactly 99 legitimately, the assertion below only checks type consistency.)
-        assert isinstance(per_seg["dmz"], int)
-        assert isinstance(per_seg["corp"], int)
+        assert isinstance(per_seg["dmz"], (int, float)) and not isinstance(per_seg["dmz"], bool)
+        assert isinstance(per_seg["corp"], (int, float)) and not isinstance(per_seg["corp"], bool)

@@ -77,9 +77,9 @@ _DISPOSITIONS: dict[str, str] = {
     "quirk/dashboard/api/routes/trends.py:get_trends_timeline": (
         "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- "
         "TrendSessionPoint (quirk/dashboard/api/schemas.py) exposes only "
-        "`score: int` and `subscores: SubScores` (all ints); it has no "
-        "rating/band field at all, so this timeline point can never render "
-        "a severity-blind band."
+        "`score: Optional[float]` (Phase 199 / TRIAGE-10 widening) and "
+        "`subscores: SubScores` (all ints); it has no rating/band field at "
+        "all, so this timeline point can never render a severity-blind band."
     ),
     "quirk/merge/scan.py:merge_scan": (
         "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- this call scores "
@@ -88,16 +88,17 @@ _DISPOSITIONS: dict[str, str] = {
         "The `rating` this call produces passes through the return dict but "
         "has no DB column (MergeRun has no rating field) and no schema "
         "consumer ever reads it -- MergeLatestData exposes only `score` and "
-        "`per_segment_scores`, both ints. No band is ever rendered from "
-        "this call."
+        "`per_segment_scores`, both Optional[float] as of Phase 199 / "
+        "TRIAGE-10. No band is ever rendered from this call."
     ),
     "quirk/dashboard/api/routes/merge.py:get_merge_latest": (
         "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- covers BOTH "
         "findings-less calls inside this function (per-segment score loop "
         "and the overall live-recompute call). Both feed exclusively "
-        "int-typed fields on MergeLatestData (`per_segment_scores: "
-        "Dict[str, int]` and `live_score: int`); neither result's rating/ "
-        "band is ever read."
+        "float-capable, null-honest fields on MergeLatestData "
+        "(`per_segment_scores: Dict[str, Optional[float]]` and "
+        "`live_score: Optional[float]`, widened Phase 199 / TRIAGE-10); "
+        "neither result's rating/band is ever read."
     ),
 }
 
