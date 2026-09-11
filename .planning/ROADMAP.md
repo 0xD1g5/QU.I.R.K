@@ -199,8 +199,8 @@ before new score-lift math is built on the same scoring-adjacent paths.
 Plans:
 **Wave 1**
 
-- [ ] 199-01-PLAN.md — TRIAGE-10 failing-first regression suite (4 surfaces × fractional/null) + RED evidence
-- [ ] 199-03-PLAN.md — TRIAGE-11 combined connectors+advanced overlay regression test (job YAML + effective-config)
+- [x] 199-01-PLAN.md — TRIAGE-10 failing-first regression suite (4 surfaces × fractional/null) + RED evidence
+- [x] 199-03-PLAN.md — TRIAGE-11 combined connectors+advanced overlay regression test (job YAML + effective-config)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
