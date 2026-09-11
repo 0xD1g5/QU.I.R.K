@@ -64,7 +64,39 @@ def _fake_popen(*args, **kwargs):
     return _FakeProc()
 
 
+def _patch_probe_all_available(monkeypatch):
+    """Pin the connector-availability probe to all-available (999.108).
+
+    Phase 193's submit-time 422 gate rejects a job whose resolved config
+    enables a connector unavailable in the running environment — and the
+    standard profile auto-enables email/broker, so environments without
+    sslyze (e.g. CI) would 422 these submissions. This file tests nmap scope-cap chunking,
+    not connector gating, so the probe is pinned for determinism.
+    """
+    from quirk.dashboard.api.connector_availability import (
+        ConnectorAvailability,
+        probe_all_connectors,
+    )
+
+    fake = {
+        flag: ConnectorAvailability(
+            flag=flag,
+            available=True,
+            reason="",
+            install_hint=entry.install_hint,
+            category=entry.category,
+            label=entry.label,
+        )
+        for flag, entry in probe_all_connectors().items()
+    }
+    monkeypatch.setattr(
+        "quirk.dashboard.api.connector_availability.probe_all_connectors",
+        lambda: fake,
+    )
+
+
 def test_oversized_cidr_accepted_and_chunked_when_nmap_forced(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
     """Phase 144 / D-02: a /16 CIDR (65534 usable hosts) with the default
     port_scope="top1000" (which forces nmap) must now be ACCEPTED (201) —
     the batch loop chunks it into ~64 sequential batches instead of the old
@@ -87,6 +119,7 @@ def test_oversized_cidr_accepted_and_chunked_when_nmap_forced(monkeypatch, tmp_p
 
 
 def test_oversized_cidr_allowed_when_nmap_not_forced(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
     """The same /16 CIDR with port_scope="common" (no nmap) must NOT be blocked
     by this guard — the existing target_expander.py cap governs the actual scan
     phase separately; this guard only protects the nmap discovery subprocess."""
@@ -108,6 +141,7 @@ def test_oversized_cidr_allowed_when_nmap_not_forced(monkeypatch, tmp_path):
 
 
 def test_small_cidr_allowed_with_nmap_forced(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
     """A /24 CIDR (254 usable hosts, well under the 1024 cap) with nmap forced
     must be accepted normally."""
     monkeypatch.chdir(tmp_path)
@@ -127,6 +161,7 @@ def test_small_cidr_allowed_with_nmap_forced(monkeypatch, tmp_path):
 
 
 def test_multiple_small_cidrs_summing_over_cap_accepted_and_chunked(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
     """Phase 144 / D-02: two /22 CIDRs (1022 hosts each) sum to over 2000
     hosts combined — previously rejected by a combined-total guard, now
     ACCEPTED (201) and split into separate sequential batches."""

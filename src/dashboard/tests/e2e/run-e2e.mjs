@@ -190,6 +190,18 @@ try {
 } catch {
   report('scan-flow', 'scope-not-selected', 'could not select #scope-common port scope radio before submitting')
 }
+try {
+  // Select the `quick` profile instead of the form's `standard` default.
+  // The standard preset auto-enables the email/broker connectors, and the
+  // Phase 193 submit-time availability gate 422s the submission on hosts
+  // without sslyze (e.g. the Dashboard Quality CI runner) — quick never
+  // auto-enables them, keeping this smoke test environment-independent
+  // (999.108). It is also faster, which suits a smoke run.
+  await page.click('#profile-quick')
+  await page.waitForSelector('#profile-quick[aria-checked="true"]', { timeout: 5_000 })
+} catch {
+  report('scan-flow', 'profile-not-selected', 'could not select #profile-quick profile radio before submitting')
+}
 await page.evaluate(() => {
   const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Run Scan')
   if (!btn) throw new Error('Run Scan button not found')
