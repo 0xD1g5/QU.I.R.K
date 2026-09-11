@@ -1159,8 +1159,24 @@ def render_html_report(
     # substitution must happen here, before the context is built.
     subscores_ctx = {k: ("—" if v is None else v) for k, v in (subscores_ctx or {}).items()}
 
-    # Phase 100 / FMT-01 / D-01: extract logo_path and base64-encode for cover page
-    logo_path = getattr(getattr(cfg, "assessment", None), "logo_path", None)
+    # Phase 200 / RPT-01: branding namespace, double-getattr shape so a cfg with
+    # no `report` attribute (existing SimpleNamespace fixtures) renders exactly
+    # as today. Every field defaults to None when unset — the template gates
+    # each one behind its own presence conditional.
+    _branding_ns = getattr(getattr(cfg, "report", None), "branding", None)
+    branding = {
+        "logo_path": getattr(_branding_ns, "logo_path", None),
+        "client_name": getattr(_branding_ns, "client_name", None),
+        "engagement_name": getattr(_branding_ns, "engagement_name", None),
+        "prepared_by": getattr(_branding_ns, "prepared_by", None),
+        "cover_date": getattr(_branding_ns, "cover_date", None),
+        "confidentiality_line": getattr(_branding_ns, "confidentiality_line", None),
+    }
+
+    # Phase 100 / FMT-01 / D-01: extract logo_path and base64-encode for cover page.
+    # Phase 200 / RPT-01: report.branding.logo_path wins over assessment.logo_path
+    # (locked precedence); _load_logo_b64 is unchanged and remains the only loader.
+    logo_path = branding["logo_path"] or getattr(getattr(cfg, "assessment", None), "logo_path", None)
     logo_b64, logo_mime = _load_logo_b64(logo_path)
 
     # Phase 128 D-10: render hardware advisory section (advisory-only, not scored)
@@ -1284,6 +1300,8 @@ def render_html_report(
         # Phase 100 / FMT-01 / D-01: logo embed for cover page
         logo_b64=logo_b64,
         logo_mime=logo_mime,
+        # Phase 200 / RPT-01: branding identity block (cover + header/footer)
+        branding=branding,
     )
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
