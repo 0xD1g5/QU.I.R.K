@@ -16,11 +16,11 @@ ARCHITECTURE, PITFALLS. Zero new runtime dependencies required for this scope.
 Gating correctness drain, sequenced first so scoring-adjacent defects don't compound with the
 new score-lift math.
 
-- [ ] **TRIAGE-10**: Fractional scores survive the trend/merge paths end-to-end —
+- [x] **TRIAGE-10**: Fractional scores survive the trend/merge paths end-to-end —
       `quirk/intelligence/trends.py` / sensor `merge.py` int-coercion of score fields fixed
       (recorded in `188-05-SUMMARY.md` at the scoring-v2 boundary), with regression coverage
       proving a fractional score round-trips unchanged
-- [ ] **TRIAGE-11**: A CI regression test exercises the connectors + advanced overlays
+- [x] **TRIAGE-11**: A CI regression test exercises the connectors + advanced overlays
       **combined** on one scan submission (job YAML + effective-config preview both asserted) —
       the v5.22 milestone-audit deferred tech-debt item
 
@@ -97,8 +97,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRIAGE-10 | Phase 199 | Pending |
-| TRIAGE-11 | Phase 199 | Pending |
+| TRIAGE-10 | Phase 199 | Complete |
+| TRIAGE-11 | Phase 199 | Complete |
 | RPT-01 | Phase 200 | Pending |
 | RPT-02 | Phase 200 | Pending |
 | RPT-03 | Phase 200 | Pending |

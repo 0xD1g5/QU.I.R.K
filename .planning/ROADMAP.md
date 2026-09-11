@@ -212,7 +212,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 199-05-PLAN.md — Docs note, UAT Series 199, Obsidian vault sync + phase note, hand-flipped checkboxes
+- [x] 199-05-PLAN.md — Docs note, UAT Series 199, Obsidian vault sync + phase note, hand-flipped checkboxes
 
 ### Phase 200: Report Branding & Templates
 
