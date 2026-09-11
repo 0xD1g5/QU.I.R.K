@@ -37,7 +37,7 @@ HORIZON.md Open-Item Ledger (999.104 tiers 2–3 residue per `194-PARITY-AUDIT.m
       credential path — never in `ScanJob`, job `config.yaml`, or logs — with the no-leak
       sentinel guard extended to cover them.
 
-### Scan-Behavior Parity Tail (999.104 Tier 3 residue — 23 fields)
+### Scan-Behavior Parity Tail (999.104 Tier 3 residue — 19 fields shipped (PM-era estimate was 23; live enumeration at Phase 198: 11 timeouts + 2 backoff + 5 concurrency + tls_designated_ports, with 3 recorded intentional-gaps))
 
 - [x] **PARITY-08**: Operator can set the 11 per-scanner timeout fields from the Advanced
       section, delta-only, composing with vertical presets under the single recorded precedence

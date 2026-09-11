@@ -32,19 +32,17 @@ progress:
 
 - NO v5.21 git tag, same rationale as v5.20 (release.yml fires on `v[0-9]*`).
 
-- **`test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg` — pre-existing
-  local-only RED, NOT caused by Phase 194 (verified 2026-09-09 by reverting HORIZON.md to the
-  post-193 baseline: still fails).** Six offenders, all fake worked-example IDs
-  (`BACK-1`, `BACK-99`, `BACK-900`, `BACK-9999`) that live in archived v5.20 **Phase 189**
-  gate-development docs (`189-REVIEW.md` WR-02 line, `189-VERIFICATION.md`, `189-03-PLAN/SUMMARY`)
-  as illustrations of the gate's own enumeration behavior — none is a real backlog item (no
-  `.planning/backlog/` dir exists for any). The leg is `skipif`-guarded on untracked
-  `.planning/backlog/` + `.planning/milestones/` paths, so it is **CI-invisible** (a fresh
-  checkout skips it) and never gated Phase 194 or any prior phase's CI. Correct fix is Phase 189's
-  debt, not 194's: escape the example tokens in those archived docs so the enumerator stops
-  reading them as real IDs — NOT ledgering fake IDs and NOT narrowing enumeration (the gate's own
-  non-vacuity guard forbids both). Filed for a future GSD-tooling/doc-hygiene drain. Do not
-  re-investigate at each phase close — this note is the disposition.
+- **`test_backlog_reconciliation_gate.py::test_full_corpus_local_only_leg` — CLOSED 2026-09-10
+  by Phase 198 plan 03 (GATE-04 D-13).** The former pre-existing local-only RED (fake
+  worked-example IDs BACK‑1/BACK‑99/BACK‑900/BACK‑9999 in archived Phase 189 gate-development
+  docs, later self-reproduced into Phase 194 and 198 planning docs that quoted them) was fixed
+  exactly as this note's original disposition prescribed: the example tokens were escaped with
+  U+2011 non-breaking hyphens across 9 offender files (100 occurrences) — the gate's code is
+  zero-diff, nothing was ledgered, enumeration was not narrowed. All 7 gate legs green;
+  **the full-suite expected failing-node SET is now EMPTY** (4831 passed, 0 failed, confirmed
+  three times on 2026-09-10/11). Transient `test_chaos_lab_idempotency` Docker network-race
+  failures remain an environmental class (isolated re-run: 29 passed, 0 failed) — compare SETS
+  on a healthy daemon, as ever.
 
 Items acknowledged and deferred at the v5.20 milestone close on 2026-09-08 (carried from the v5.19
 close where noted). All remain open and visible to `/gsd-progress` and `/gsd-audit-uat`.
