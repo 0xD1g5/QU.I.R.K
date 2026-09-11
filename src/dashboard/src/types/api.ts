@@ -265,22 +265,34 @@ export interface ScanSession {
   calibration: string | null
   target: string | null
   finding_counts: { high: number; medium: number; low: number }
+  // SCORE-04 / D-07 (184.4): session-history rating + optional cap reason;
+  // "" is not a real band (pre-fix rows). Added per 199 review IN-01.
+  rating: string
+  rating_cap_reason?: string | null
 }
 
 export interface CompareScanSummary {
   scan_id: string
   scanned_at: string
-  score: number
+  // Phase 188 SCORE-06 / 199 review WR-02: null means the scan's score was
+  // not computed (zero domains assessed) — never a fabricated 0.
+  score: number | null
   subscores: SubScores
+  // SCORE-04 / D-07 (184.4): per-side rating + optional cap reason.
+  rating: string
+  rating_cap_reason?: string | null
 }
 
+// Phase 188 SCORE-06 / 199 review WR-02: null means the delta could not be
+// computed because the category was unassessed on at least one side —
+// never a fabricated 0 delta.
 export interface SubscoreDelta {
-  hygiene: number
-  modern_tls: number
-  identity_trust: number
-  agility_signals: number
-  data_at_rest: number
-  data_in_motion: number
+  hygiene: number | null
+  modern_tls: number | null
+  identity_trust: number | null
+  agility_signals: number | null
+  data_at_rest: number | null
+  data_in_motion: number | null
 }
 
 export interface CompareFinding {
@@ -346,7 +358,9 @@ export interface VendorPqcTrendResponse {
 export interface CompareResponse {
   scan_a: CompareScanSummary
   scan_b: CompareScanSummary
-  score_delta: number
+  // Phase 188 SCORE-06 / 199 review WR-02: null means one or both sides had
+  // no computed score — never a fabricated 0 delta.
+  score_delta: number | null
   subscore_deltas: SubscoreDelta
   added_findings: CompareFinding[]
   removed_findings: CompareFinding[]
@@ -401,6 +415,19 @@ export interface TrendReport {
   scan_errors_resolved_count: number
   new_findings_sample: SampleFinding[]
   resolved_findings_sample: SampleFinding[]
+  severity_transitions: SeverityTransition[]
+  new_total: number
+  resolved_total: number
+}
+
+// Mirrors SeverityTransitionResponse — an endpoint whose severity changed
+// between two sessions without its identity changing (199 review WR-03).
+export interface SeverityTransition {
+  host: string
+  port: number
+  protocol: string
+  previous_severity: string | null
+  current_severity: string | null
 }
 
 // Phase 64 TREND-01: timeline types

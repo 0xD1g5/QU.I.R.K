@@ -114,21 +114,23 @@ export function ComparePage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Scan A</p>
             <p className="text-sm">{formatDateTimeShort(data.scan_a.scanned_at)}</p>
-            <p className="text-2xl font-semibold font-data">{data.scan_a.score}</p>
+            <p className="text-2xl font-semibold font-data">{data.scan_a.score ?? "—"}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Scan B</p>
             <p className="text-sm">{formatDateTimeShort(data.scan_b.scanned_at)}</p>
-            <p className="text-2xl font-semibold font-data">{data.scan_b.score}</p>
+            <p className="text-2xl font-semibold font-data">{data.scan_b.score ?? "—"}</p>
           </div>
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            {delta > 0 && (
+            {/* 199 review WR-02: null delta = one or both sides unassessed — honest absence, not 0 */}
+            {delta === null && <Badge variant="outline">Score not comparable</Badge>}
+            {delta !== null && delta > 0 && (
               <Badge className="bg-[hsl(var(--ds-ok,142_46%_46%))] text-white">
                 <TrendingUp className="inline w-4 h-4 mr-1" />
                 +{delta} pts improvement
               </Badge>
             )}
-            {delta < 0 && (
+            {delta !== null && delta < 0 && (
               <Badge className="bg-[hsl(var(--destructive))] text-white">
                 <TrendingDown className="inline w-4 h-4 mr-1" />
                 {delta} pts regression
@@ -211,9 +213,9 @@ export function ComparePage() {
             <TableBody>
               {(["hygiene", "modern_tls", "identity_trust", "agility_signals", "data_at_rest", "data_in_motion"] as const).map(key => {
                 const d = data.subscore_deltas[key]
-                const colorClass = d > 0
+                const colorClass = d !== null && d > 0
                   ? "text-[hsl(var(--ds-ok))]"
-                  : d < 0
+                  : d !== null && d < 0
                     ? "text-destructive"
                     : "text-muted-foreground"
                 return (
@@ -222,7 +224,7 @@ export function ComparePage() {
                     <TableCell className="font-data">{data.scan_a.subscores[key]}</TableCell>
                     <TableCell className="font-data">{data.scan_b.subscores[key]}</TableCell>
                     <TableCell className={`font-data ${colorClass}`}>
-                      {d === 0 ? "±0" : d > 0 ? `+${d}` : `${d}`}
+                      {d === null ? "—" : d === 0 ? "±0" : d > 0 ? `+${d}` : `${d}`}
                     </TableCell>
                   </TableRow>
                 )

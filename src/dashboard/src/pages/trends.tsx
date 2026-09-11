@@ -30,7 +30,7 @@ const TIMELINE_CHART_CONFIG: ChartConfig = {
 
 // Shape of one timeline datum carried in the Recharts tooltip payload.
 type TimelineRow = {
-  session_ts: string; score: number;
+  session_ts: string; score: number | null;
   hygiene: number; modern_tls: number; identity_trust: number;
   agility_signals: number; data_at_rest: number; data_in_motion: number;
   high: number; medium: number; low: number;
@@ -181,7 +181,7 @@ export function TrendsPage() {
                         <div key={entry.dataKey} className="flex items-center gap-2">
                           <span className="inline-block h-2 w-2 rounded-sm" style={{ background: entry.color }} />
                           <span className="text-muted-foreground">{TIMELINE_CHART_CONFIG[entry.dataKey as keyof typeof TIMELINE_CHART_CONFIG]?.label ?? entry.dataKey}:</span>
-                          <span className="font-mono">{entry.value}</span>
+                          <span className="font-mono">{entry.value ?? "—"}</span>
                         </div>
                       ))}
                       <div className="mt-1 border-t pt-1 font-mono">
