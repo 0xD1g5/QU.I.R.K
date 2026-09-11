@@ -255,9 +255,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 200-03-PLAN.md — Branding on HTML/PDF + DOCX (cover logo, identity block, header/footer) + cross-surface presence tests (RPT-01)
-- [ ] 200-04-PLAN.md — Identity text on the executive/scorecard markdown and the Rich console summary (RPT-01)
-- [ ] 200-05-PLAN.md — Report profiles: storage module, `quirk report profile save|list`, `--report-profile`, explicit-config-wins merge (RPT-04)
+- [x] 200-03-PLAN.md — Branding on HTML/PDF + DOCX (cover logo, identity block, header/footer) + cross-surface presence tests (RPT-01)
+- [x] 200-04-PLAN.md — Identity text on the executive/scorecard markdown and the Rich console summary (RPT-01)
+- [x] 200-05-PLAN.md — Report profiles: storage module, `quirk report profile save|list`, `--report-profile`, explicit-config-wins merge (RPT-04)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
