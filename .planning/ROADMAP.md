@@ -305,8 +305,8 @@ system feeding every surface.
 Plans:
 **Wave 1**
 
-- [ ] 201-01-PLAN.md — Wave 0: ADVISORY-02 forward-projection firewall (RED-verified) + LIFT-01/02 unit spec, failing-first
-- [ ] 201-03-PLAN.md — BACK-51: delete categorize_waves, re-derive console Migration Waves from roadmap items, update 8 patching test files, pin one-categorization-source
+- [x] 201-01-PLAN.md — Wave 0: ADVISORY-02 forward-projection firewall (RED-verified) + LIFT-01/02 unit spec, failing-first
+- [x] 201-03-PLAN.md — BACK-51: delete categorize_waves, re-derive console Migration Waves from roadmap items, update 8 patching test files, pin one-categorization-source
 
 **Wave 2**
 
