@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 from rich.table import Table
 
-from quirk.reports.executive import build_exec_markdown
+from quirk.reports.executive import build_exec_markdown, resolve_identity_pairs
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
 from quirk.reports.content_model import build_exec_content, ReportCongruenceError, NOT_COMPUTED_STATEMENT, effective_score_divisor  # D-03 / D-06 / Phase 188 SCORE-06
@@ -358,6 +358,10 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append("# Quantum Crypto Readiness — Scorecard\n")
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
+    # Phase 200 Plan 04 / RPT-01: identity lines, each individually conditional —
+    # absent branding must produce byte-identical output to today.
+    for _label, _value in resolve_identity_pairs(cfg):
+        lines.append(f"- **{_label}:** {_value}\n")
     _score_total = score.get("total")
     _coverage_disclosure = score.get("coverage_disclosure") or ""
     if _score_total is None:
@@ -952,6 +956,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         summary_table.add_row("Cap reason", _cap_reason_row)
     summary_table.add_row("Confidence", f"{total_conf}/100")
     summary_table.add_row("Platform version", PLATFORM_VERSION)
+    # Phase 200 Plan 04 / RPT-01: identity rows, each individually conditional —
+    # a cfg with no report.branding section emits no rows, matching the
+    # executive/scorecard byte-identical contract for this table's text.
+    for _label, _value in resolve_identity_pairs(cfg):
+        summary_table.add_row(_label, str(_value))
     _console.print(summary_table)
 
     # Output files list

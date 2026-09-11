@@ -18,6 +18,36 @@ from quirk.reports.content_model import NOT_COMPUTED_STATEMENT, effective_score_
 # D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
 _INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
 
+# Phase 200 Plan 04 / RPT-01: ordered (label, cfg-attr) pairs for the identity
+# lines carried onto CLI-visible surfaces (executive markdown, scorecard
+# markdown, Rich console summary). Image-based branding is deliberately
+# excluded — no CLI surface can honestly render an image.
+_IDENTITY_FIELD_ORDER = (
+    ("Client", "client_name"),
+    ("Engagement", "engagement_name"),
+    ("Prepared by", "prepared_by"),
+    ("Cover date", "cover_date"),
+    ("Confidentiality", "confidentiality_line"),
+)
+
+
+def resolve_identity_pairs(cfg) -> List[tuple]:
+    """Return the ordered (label, value) identity pairs set on cfg.report.branding.
+
+    Phase 200 Plan 04 / RPT-01: the ONE shared resolution used by every
+    CLI-visible surface (executive.py, writer.py's scorecard and Rich console).
+    Double-getattr throughout — a cfg with no `report` section (e.g. existing
+    SimpleNamespace test fixtures) must yield an empty list, not raise.
+    No image-based branding field is ever included here (T-200-12).
+    """
+    branding = getattr(getattr(cfg, "report", None), "branding", None)
+    pairs: List[tuple] = []
+    for label, attr in _IDENTITY_FIELD_ORDER:
+        value = getattr(branding, attr, None)
+        if value:
+            pairs.append((label, value))
+    return pairs
+
 
 def _build_interpretation(
     evidence: Dict[str, Any],
@@ -186,6 +216,10 @@ def build_exec_markdown(
     lines.append(f"- **Scan completed:** {format_scan_completed_at(scan_completed_at)}")
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
+    # Phase 200 Plan 04 / RPT-01: identity lines, each individually conditional —
+    # absent branding must produce byte-identical output to today.
+    for _label, _value in resolve_identity_pairs(cfg):
+        lines.append(f"- **{_label}:** {_value}")
     lines.append("")
 
     # === Scan Coverage (Phase 192 Plan 07 / OBS-02, D-13/D-15) ===
