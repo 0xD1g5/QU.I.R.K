@@ -261,7 +261,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 200-06-PLAN.md — 999.105 Tier 2 go/no-go decision doc + tracked HORIZON.md row (RPT-05)
+- [x] 200-06-PLAN.md — 999.105 Tier 2 go/no-go decision doc + tracked HORIZON.md row (RPT-05)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
