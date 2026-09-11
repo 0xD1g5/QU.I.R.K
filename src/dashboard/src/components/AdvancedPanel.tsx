@@ -377,13 +377,13 @@ export function AdvancedPanel(props: AdvancedPanelProps) {
                       type="number"
                       min={1}
                       max={600}
-                      value={advanced[field.key] ?? ""}
+                      value={(advanced[field.key] as number | undefined) ?? ""}
                       onChange={(e) => setField(
                         field.key,
                         e.target.value === "" ? undefined : Number(e.target.value),
                       )}
                       disabled={disabled}
-                      placeholder={presetState?.[field.key]?.toString()}
+                      placeholder={(presetState?.[field.key] as number | undefined)?.toString()}
                     />
                   </div>
                 ))}
@@ -413,13 +413,13 @@ export function AdvancedPanel(props: AdvancedPanelProps) {
                       type="number"
                       min={1}
                       max={500}
-                      value={advanced[field.key] ?? ""}
+                      value={(advanced[field.key] as number | undefined) ?? ""}
                       onChange={(e) => setField(
                         field.key,
                         e.target.value === "" ? undefined : Number(e.target.value),
                       )}
                       disabled={disabled}
-                      placeholder={presetState?.[field.key]?.toString()}
+                      placeholder={(presetState?.[field.key] as number | undefined)?.toString()}
                     />
                   </div>
                 ))}
