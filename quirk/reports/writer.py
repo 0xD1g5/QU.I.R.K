@@ -17,7 +17,7 @@ from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/I
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
-from quirk.intelligence.roadmap import build_phased_roadmap
+from quirk.intelligence.roadmap import build_phased_roadmap, _TIMEFRAME_BY_PHASE
 from quirk.cbom import build_cbom, write_cbom_files
 from quirk.cbom.bridge import _detect_crypto_bridges, _confirm_upstream_mitigation  # Phase 129 HWCOMPAT-03 / Phase 140 BRIDGE-01
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
@@ -288,30 +288,6 @@ def _unique_hosts(hosts) -> set:
     entries before deduplicating.
     """
     return {h for h in (hosts or []) if h}
-
-
-def categorize_waves(findings):
-    """Bucket findings into migration waves by severity.
-
-    Phase 83 / CLEAN-01: Inlined from former ``quirk/engine/migration_planner.py``
-    (now deleted). Test mocks at ``quirk.reports.writer.categorize_waves`` continue
-    to resolve via namespace-of-use and remain valid without modification.
-    """
-    waves = {
-        "NOW": [],
-        "NEXT": [],
-        "LATER": []
-    }
-
-    for f in findings:
-        if f["severity"] == "CRITICAL":
-            waves["NOW"].append(f)
-        elif f["severity"] == "HIGH":
-            waves["NEXT"].append(f)
-        else:
-            waves["LATER"].append(f)
-
-    return waves
 
 
 SCHEMA_VERSION = 2
@@ -918,12 +894,29 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     _console = Console()
 
     # Migration waves summary (kept as before, but using rich)
-    waves = categorize_waves(findings)
+    #
+    # BACK-51 / LIFT-04 (Phase 201): the second, independently-derived
+    # severity-bucketed migration-wave categorizer that used to live in this
+    # module has been deleted outright (no adapter, no deprecated stub).
+    # build_phased_roadmap() (roadmap_raw, built above) is now the single
+    # categorization system across every surface (CLI, HTML, DOCX, dashboard).
+    # This table's second column therefore now counts roadmap ITEMS per
+    # NOW/NEXT/LATER phase, not findings per severity bucket — a deliberate
+    # semantic change, recorded here rather than left implicit.
+    _timeframe_to_phase = {v: k for k, v in _TIMEFRAME_BY_PHASE.items()}
+    wave_counts = {"NOW": 0, "NEXT": 0, "LATER": 0}
+    for item in roadmap_raw.get("items", []):
+        phase = item.get("phase")
+        if phase not in wave_counts:
+            timeframe = item.get("timeframe")
+            phase = timeframe if timeframe in wave_counts else _timeframe_to_phase.get(timeframe)
+        if phase in wave_counts:
+            wave_counts[phase] += 1
     wave_table = Table(title="Migration Waves", show_header=True, header_style="bold #3b9dff")
     wave_table.add_column("Wave", style="bold cyan")
-    wave_table.add_column("Findings", justify="right")
-    for wave, items in waves.items():
-        wave_table.add_row(str(wave), str(len(items)))
+    wave_table.add_column("Items", justify="right")
+    for wave, count in wave_counts.items():
+        wave_table.add_row(str(wave), str(count))
     _console.print(wave_table)
 
     # Scan summary table
