@@ -280,8 +280,17 @@ CANONICAL_SSTI_PAYLOADS = (
     "x|attr('__class__')",
 )
 
+# Phase 200 review WR-03: the override template ends in `.j2`, so autoescape
+# is ACTIVE on any leaked value — a real leak of `<class 'dict'>` reaches the
+# HTML as `&lt;class &#39;dict&#39;&gt;`. Every marker that contains an HTML
+# metacharacter must therefore be present in BOTH its raw form (belt: a
+# non-autoescaping regression) and its HTML-escaped form (what a
+# leaked-but-escaped value actually looks like), or the leaf-attribute payload
+# class ({}.__class__ etc.) passes vacuously even with a plain Environment.
 SENSITIVE_MARKERS = (
     "<class ",
+    "&lt;class ",
+    "&#39;object&#39;",
     "__globals__",
     "subprocess",
     "/bin/",
@@ -319,4 +328,45 @@ def test_ssti_payload_is_contained(tmp_path, payload):
     assert not leaked, (
         f"SSTI payload {payload!r} leaked sensitive markers {leaked!r} into "
         "rendered HTML without raising SecurityError"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Falsifiability leg (Phase 200 review WR-03) — a gate that cannot fail is
+# not a gate. Downgrade the production env to a plain (non-sandboxed)
+# Environment through the SAME render path and prove the marker scan above
+# DOES flag the resulting leak. If the sandbox were ever removed, this is the
+# leak shape the parametrized legs must catch — so this test proves they can.
+# ---------------------------------------------------------------------------
+
+
+def test_marker_scan_flags_a_plain_environment_leak(tmp_path, monkeypatch):
+    """With SandboxedEnvironment monkeypatched to jinja2.Environment at the
+    single construction site, the leaf-attribute payload `{}.__class__`
+    renders an (autoescaped) class repr — and the SENSITIVE_MARKERS scan used
+    by test_ssti_payload_is_contained must flag it. This proves the go/no-go
+    gate is falsifiable for precisely the payload class that never raises
+    SecurityError."""
+    from jinja2 import Environment
+
+    import quirk.reports.html_renderer as html_renderer
+
+    monkeypatch.setattr(html_renderer, "SandboxedEnvironment", Environment)
+
+    override_dir = tmp_path / "override"
+    override_dir.mkdir()
+    (override_dir / "report.html.j2").write_text(
+        "<html><body>{{ {}.__class__ }}</body></html>", encoding="utf-8"
+    )
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+
+    html = _run_write_reports(out_dir, template_dir=str(override_dir))
+
+    lowered = html.lower()
+    leaked = [m for m in SENSITIVE_MARKERS if m.lower() in lowered]
+    assert leaked, (
+        "A plain (non-sandboxed) Environment leaked a class repr through the "
+        "real render path, but no SENSITIVE_MARKER flagged it — the SSTI "
+        "containment gate would pass vacuously if the sandbox were removed"
     )
