@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-10 (Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
+**Last Updated:** 2026-09-12 (Phase 201 Plan 08 — Series 201 added: 11 score-lift-roadmap-re-frame
+cases covering LIFT-01 (per-item `(+N pts)` real-rescore badge, honest absence for unmodelable
+items), LIFT-02 (independent-rescore aggregate projection and its non-additivity), LIFT-03 (the
+ADVISORY-02 forward-projection firewall and the real-score-surface isolation), LIFT-04 (BACK-51 —
+one categorization system feeding the console Migration Waves table), and LIFT-05 (cross-surface
+numeric equality across CLI/HTML/DOCX/dashboard, and the dashboard's lift badge + Projected Score
+card); 10 automated `[x] PASS` cases citing real `pytest --collect-only`-resolvable node IDs against
+201-01 through 201-07-SUMMARY.md evidence, and 1 operator-approved `[x] PASS` (UAT-201-10, the one
+visual-placement case this repo's presence-only render tests cannot substitute-prove) citing
+201-06-SUMMARY.md's verbatim "approved" live walkthrough of badge placement/tone/absence and the
+Projected Score card. Earlier: Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
 (PyPI install, Sigstore provenance, tag/workflow, Windows asset) dispositioned against
 `196-03-SUMMARY.md`'s verbatim published-artifact evidence for `v5.21.0`; UAT-1-02 re-executed
 against the same published build, superseding the 2026-09-07 5.19.0 evidence while its `[x] PASS`
@@ -27212,3 +27222,375 @@ fallback, SSTI containment), RPT-03 (path-traversal guard, dashboard-exclusion s
 document); 8 automated `[x] PASS` cases citing real `pytest --collect-only`-resolvable node IDs
 against 200-01/02/03/05-SUMMARY.md evidence, plus 3 honest `[x] SKIP` / `GAP — no substitute
 coverage` cases for the two visual-placement legs and the human document-quality review)
+
+## Series 201: Score-Lift Roadmap Re-frame (Phase 201 — v5.23)
+
+Covers LIFT-01 (per-item `(+N pts)` score-lift badge computed by a genuine second scoring pass,
+with honest absence for items no scoring input can model), LIFT-02 (a single independent-rescore
+aggregate projection, deliberately non-additive against the sum of per-item lifts), LIFT-03 (the
+ADVISORY-02 forward-projection firewall — scoring/persistence modules never import the projection
+module, and the projection never touches a real score surface or a DB session), LIFT-04 (BACK-51 —
+`build_phased_roadmap()` becomes the single categorization system feeding every surface including
+the console "Migration Waves" table), and LIFT-05 (the dashboard renders the same badge/card as
+every report surface, and all four surfaces report identical numbers for the same scan).
+
+### UAT-201-01: Per-Item `(+N pts)` Badge Is a Real Rescore, Not a Heuristic
+
+**ID:** UAT-201-01
+**Title:** A roadmap item with resolvable findings shows a `+N pts` number equal to a real,
+independent rescore with that item's findings marked resolved
+**Maps to:** LIFT-01
+
+**What to test:** for a fixture evidence set with a modelable roadmap item (expired certificates),
+confirm the item's `score_lift` value equals `compute_readiness_score(evidence-with-that-item-
+resolved) − compute_readiness_score(evidence)`, computed independently in the test.
+
+**Steps:** covered by an automated test that independently rescoring both the base and the
+resolved evidence and comparing the delta to `compute_item_lifts`' output — no manual execution
+required for this case.
+
+**Pass Criteria:** `compute_item_lifts(...)["expired-certificates"]` equals the independently
+hand-computed delta exactly.
+
+**Falsifiability:** this case turns red if the lift value diverges from an independent rescore of
+the same evidence delta, which would mean the module is using a fixed/heuristic value rather than
+a real second scoring pass.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_per_item_lift_matches_independent_rescore_for_expired_certificates`
+(collect-only verified,
+`.venv/bin/python -m pytest --collect-only -q tests/test_score_lift.py::test_per_item_lift_matches_independent_rescore_for_expired_certificates`
+resolves 1 test; executed green), per `201-01-SUMMARY.md`'s pinned-RED contract and
+`201-02-SUMMARY.md`'s first-attempt-green implementation.
+
+---
+
+### UAT-201-02: Changing Scoring Calibration Changes the Lift Value
+
+**ID:** UAT-201-02
+**Title:** Reweighting a scoring input changes the computed lift for the same slug, proving the
+badge is computed against live calibration rather than a lookup table
+**Maps to:** LIFT-01
+
+**What to test:** re-run the per-item lift computation for `expired-certificates` under two
+different `identity_expired_ratio` weights and confirm the lift value changes.
+
+**Steps:** covered by an automated test reweighting `identity_expired_ratio` from its default 14.0
+to 30.0 against the same fixture and asserting the lift moves — no manual execution required.
+
+**Pass Criteria:** the lift value for the same slug differs between the two weight settings (the
+plan's SUMMARY records 1 -> 4 for this exact reweight).
+
+**Falsifiability:** this case turns red if the lift value is identical regardless of calibration,
+which would indicate a static/heuristic table rather than a genuine rescore.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_realness_weights_change_moves_the_lift_for_the_same_slug`
+(collect-only resolves 1 test; executed green), per `201-01-SUMMARY.md`'s decision log recording
+the 1 -> 4 reweight transcript for `identity_expired_ratio` 14.0 -> 30.0.
+
+---
+
+### UAT-201-03: Process/Governance Items Show No Number At All
+
+**ID:** UAT-201-03
+**Title:** Items whose resolution cannot move any scoring input (owner/SLA assignment, evidence-
+refresh automation, crypto governance review, TLS enumeration coverage, mTLS lifecycle) never
+appear as a lift key — not as `0 pts`, not as `N/A`
+**Maps to:** LIFT-01
+
+**What to test:** run `compute_item_lifts` over a fixture engineered to include all five
+unmodelable item kinds as real roadmap items, and confirm none of the five slugs appears as a key
+in the returned lift mapping.
+
+**Steps:** covered by an automated test asserting the five unmodelable slugs never appear as keys,
+across three separate fixtures — no manual execution required.
+
+**Pass Criteria:** `tls-enum-coverage`, `mtls-lifecycle-operations`, `assign-owners-and-slas`,
+`automate-evidence-refresh`, and `crypto-governance-review` never appear as keys in any lift
+mapping the test exercises; no lift key is ever `0` or negative.
+
+**Falsifiability:** this case turns red if any of the five unmodelable slugs appears as a lift key
+(with any value, including 0), which would mean a heuristic fallback exists where the design
+requires honest absence.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_unmodelable_slugs_never_appear_as_keys` (collect-only resolves 1
+test; executed green), per `201-02-SUMMARY.md`'s module-level `_DELTAS` 9-entry map (exactly the 9
+modelable slugs) and its explicit 5-kind absence comment block.
+
+---
+
+### UAT-201-04: Projected Aggregate Is Smaller Than the Sum of Individual Lifts When a Cap Binds
+
+**ID:** UAT-201-04
+**Title:** On a scan where a subscore's cap binds, the sum of per-item `(+N pts)` badges exceeds
+the aggregate projection — proving the aggregate is not their sum
+**Maps to:** LIFT-02
+
+**What to test:** on the clamp-binding fixture (hygiene subscore forced to clamp at 0), compute the
+sum of every per-item lift and compare it to the single independent-rescore aggregate.
+
+**Steps:** covered by two automated tests — one at the `score_lift.py` unit boundary, one parsed
+directly out of rendered CLI markdown (surface-visible) — no manual execution required.
+
+**Pass Criteria:** `sum(per-item lifts) > aggregate lift` strictly, on both the unit-level and the
+surface-rendered check.
+
+**Falsifiability:** this case turns red if the aggregate ever equals or exceeds the sum of the
+per-item lifts on the clamp-binding fixture, which would mean the aggregate is being computed as
+(or has silently become) a sum rather than one independent rescore.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via `tests/test_score_lift.py::test_lifts_are_not_additive_on_a_clamp_binding_fixture`
+and `tests/test_score_lift_cross_surface_numbers.py::test_surface_visible_non_additivity_on_clamp_binding_fixture`
+(collect-only resolves both; executed green), per `201-01-SUMMARY.md`'s scratch calculation
+(sum=70, aggregate=67, base 33 -> 100) and `201-07-SUMMARY.md`'s surface-level reproduction of the
+same numbers parsed from rendered CLI markdown.
+
+---
+
+### UAT-201-05: Unassessed Scan Shows No Lifts and No Projection
+
+**ID:** UAT-201-05
+**Title:** When the current scan's score is `None` (unassessed), no per-item lift and no
+aggregate projection are computed anywhere
+**Maps to:** LIFT-01, LIFT-02
+
+**What to test:** run `compute_item_lifts`/`compute_projected_score` against unassessed evidence
+(base score `None`) and confirm both return empty/`None` rather than fabricating a value.
+
+**Steps:** covered by an automated test at the `score_lift.py` boundary plus a report-surface test
+confirming no lift text renders anywhere on an unassessed scan — no manual execution required.
+
+**Pass Criteria:** `compute_item_lifts` returns `{}` and `compute_projected_score` returns `None`
+for unassessed evidence; the rendered report shows no `(+N pts)`, no projected line, and no
+disclaimer anywhere.
+
+**Falsifiability:** this case turns red if either function returns a non-empty/non-`None` value for
+unassessed evidence, or if any lift-related text renders on an unassessed scan's report.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_unassessed_evidence_yields_empty_lifts_and_none_projection`
+(collect-only resolves 1 test; executed green), per `201-01-SUMMARY.md`'s SCORE-06 honest-absence
+pin and `201-05-SUMMARY.md`'s `test_unassessed_scan_produces_no_lift_text_anywhere` surface-level
+corroboration.
+
+---
+
+### UAT-201-06: The Forward-Projection Firewall Blocks Reverse Imports and Touches No DB Session
+
+**ID:** UAT-201-06
+**Title:** Scoring/persistence modules never import the projection module (ADVISORY-02), and the
+projection API touches no DB session and does not mutate the scan's evidence
+**Maps to:** LIFT-03
+
+**What to test:** an AST reverse-import ban over the 8 guarded scoring/persistence modules, plus
+runtime purity legs proving the projection functions never open a DB session and never mutate
+their input evidence dict.
+
+**Steps:** covered by automated AST-walk and runtime-purity tests — no manual execution required.
+The negative control was RED-verified live during 201-01 by temporarily injecting a forbidden
+import into `quirk/intelligence/scoring.py` and confirming the guard fails, then reverting cleanly.
+
+**Pass Criteria:** none of the 8 guarded modules imports `quirk.intelligence.score_lift`; a
+negative-control injection is correctly detected as a violation; `compute_item_lifts`/
+`compute_projected_score` open zero DB sessions and leave the input evidence dict byte-identical
+after the call.
+
+**Falsifiability:** this case turns red if any guarded module imports the projection module, if the
+negative control fails to detect a real forbidden import, or if either projection function is ever
+observed touching a DB session or mutating its input.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_forward_projection_firewall.py::test_scoring_and_persistence_modules_never_import_score_lift`,
+`::test_projection_api_does_not_mutate_input_evidence`, and `::test_projection_api_touches_no_db_session`
+(collect-only resolves all three; executed green), per `201-01-SUMMARY.md`'s live RED-verification
+transcript (injected import into `scoring.py`, confirmed failure, reverted with an empty
+`git diff --stat quirk/`) and `201-02-SUMMARY.md`'s all-green confirmation after the module landed.
+
+---
+
+### UAT-201-07: No Projected Value Ever Reaches a Real Score Surface
+
+**ID:** UAT-201-07
+**Title:** No projected/lift key ever appears in the intelligence JSON's `"score"` block or on any
+static real-score-surface assertion; the displayed readiness score is unaffected by the
+projection's presence
+**Maps to:** LIFT-03
+
+**What to test:** confirm the intelligence JSON's `"score"` block key set carries no `projected`/
+`lift`-named key, and that a static AST/source assertion confirms no real score surface (DB score
+columns, `ScoreData`, stored score JSON) ever receives a projected value.
+
+**Steps:** covered by two automated tests — no manual execution required.
+
+**Pass Criteria:** the `"score"` block's key set matches the pre-Phase-201 allowlist exactly (no
+`projected`/`lift` key added); the static real-score-surface assertion passes.
+
+**Falsifiability:** this case turns red if a `projected`/`lift` key is ever added to the `"score"`
+block, or if the static real-score-surface guard is ever violated.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift_report_surfaces.py::test_intelligence_json_score_block_has_no_projected_or_lift_key`
+and `tests/test_forward_projection_firewall.py::test_real_score_surfaces_carry_no_projected_key`
+(collect-only resolves both; executed green), per `201-05-SUMMARY.md`'s extracted `"score"` block
+key list (no `projected`/`lift` key present) and `201-04-SUMMARY.md`'s confirmation that
+`ScoreData` carries no field with `projected`/`lift` in its name.
+
+---
+
+### UAT-201-08: CLI, HTML, DOCX, and Dashboard Agree on the Same NOW/NEXT/LATER Assignment
+
+**ID:** UAT-201-08
+**Title:** One evidence fixture's roadmap items are assigned to the same NOW/NEXT/LATER phase on
+all four surfaces, and `categorize_waves()` no longer exists
+**Maps to:** LIFT-04
+
+**What to test:** drive one canonical `{title: phase}` fixture mapping through the CLI markdown
+parser, the HTML context split, the DOCX split, and the dashboard's `_derive_roadmap`, and confirm
+all four agree with the canonical mapping; confirm `quirk.reports.writer` no longer has a
+`categorize_waves` attribute.
+
+**Steps:** covered by four surface-comparison automated tests plus a `hasattr` guard test — no
+manual execution required.
+
+**Pass Criteria:** all four surfaces' per-title phase assignment matches the canonical fixture
+exactly; `hasattr(quirk.reports.writer, "categorize_waves")` is `False`.
+
+**Falsifiability:** this case turns red if any surface disagrees with the canonical phase
+assignment, or if `categorize_waves` is reintroduced.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_roadmap_categorization_unification.py::test_categorize_waves_is_gone` and
+`::test_cli_markdown_matches_canonical_phase_assignment` (collect-only resolves both; executed
+green — the file's 6 tests are all green per `201-03-SUMMARY.md`), per `201-03-SUMMARY.md`'s
+RED-verification transcript (live-injected stub `categorize_waves` correctly detected as a BACK-51
+violation, then reverted with an empty `git diff quirk/`).
+
+---
+
+### UAT-201-09: Console Migration Waves Table Counts Items Per Phase
+
+**ID:** UAT-201-09
+**Title:** The console "Migration Waves" table's counts match `build_phased_roadmap()`'s own
+per-phase item counts — the column now counts roadmap items, not severity-bucketed findings
+**Maps to:** LIFT-04
+
+**What to test:** compute the console table's wave counts via the writer.py render-site logic and
+compare them to `build_phased_roadmap()`'s own `phase_counts` for the same evidence.
+
+**Steps:** covered by an automated test mirroring the console counter logic — no manual execution
+required.
+
+**Pass Criteria:** the console table's NOW/NEXT/LATER counts equal `build_phased_roadmap()`'s own
+phase counts exactly, for the same evidence.
+
+**Falsifiability:** this case turns red if the console counts ever diverge from
+`build_phased_roadmap()`'s own counts, which would mean a second, independently-derived
+categorization survived BACK-51's closure.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_roadmap_categorization_unification.py::test_console_wave_counts_match_roadmap_phase_counts`
+(collect-only resolves 1 test; executed green), per `201-03-SUMMARY.md`'s three-stub-shape scratch
+transcript and the column rename from "Findings" to "Items" recorded in the same SUMMARY.
+
+---
+
+### UAT-201-10: Dashboard Lift Badge and Projected Score Card — Visual Placement
+
+**ID:** UAT-201-10
+**Title:** The dashboard roadmap detail panel shows the `+N pts` badge and a Projected Score card
+with the verbatim advisory, in the placement/tone the UI-SPEC locks; absence renders nothing (no
+chart, no gauge, no placeholder)
+**Maps to:** LIFT-05
+
+**What to test:** on the live dashboard roadmap page, select a node with a positive `score_lift`
+and confirm the badge renders on the existing badge row with the `--ds-ok` tone; confirm the
+Projected Score card renders directly above Remediation Burndown with the locked copy and no
+chart/gauge; confirm both are absent (not zeroed, not placeholder) when the underlying values are
+null; confirm the print/export view shows the same parenthetical and projected line.
+
+**Steps:** this is a real-browser visual-placement/tone verification — this repo's automated
+render tests assert presence, not appearance (documented house convention; see Series 200's
+UAT-200-01/02 disposition for the same limitation), so no automated substitute exists for the
+appearance aspect specifically. An operator walkthrough was performed live against the running
+dashboard on 2026-09-12 per plan 201-06's Task 3 checkpoint instructions.
+
+**Pass Criteria:** badge tone/placement, card placement/copy/absence-of-chart, and print-view
+parity all match the UI-SPEC as visually confirmed by the operator; the real readiness score is
+unmoved by the projection's presence.
+
+**Falsifiability:** this case turns red if the operator reports incorrect badge tone/placement, a
+chart/gauge/placeholder appears where the spec requires silent absence, or the real readiness score
+changes when the projection renders.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Operator (live walkthrough)
+**Notes:** Operator-approved 2026-09-12 per `201-06-SUMMARY.md`'s verbatim record: after a
+hard-refresh, the operator re-ran the walkthrough (+9 pts badge on "Stabilize scan reliability"; no
+badge on a process item; Projected Score card showing 100 with the advisory line; current score
+unchanged at 91; print view `(+N pts)` parenthetical) and replied verbatim **"approved"**. The
+earlier "no badge appears" report was root-caused to browser cache (stale `index.html` pointing at
+a pre-rebuild bundle hash), the identical symptom/fix as Phase 195, not a defect. Presence-only
+automated coverage: `src/dashboard/src/pages/__tests__/roadmap-score-lift.test.tsx` (7/7 passing).
+
+---
+
+### UAT-201-11: Per-Item and Aggregate Numbers Are Identical Across All Four Surfaces
+
+**ID:** UAT-201-11
+**Title:** For the same scan, the CLI markdown, HTML, DOCX, and dashboard report the exact same
+per-item lift mapping and the exact same aggregate projection
+**Maps to:** LIFT-05
+
+**What to test:** drive one evidence fixture through all four surfaces under one pinned
+`(profile="balanced", weights=None)` pair and compare the extracted `{slug: lift}` mappings and
+aggregate projections.
+
+**Steps:** covered by two automated four-surface-comparison tests, with a live perturbation
+mutation proving the equality check is non-vacuous — no manual execution required.
+
+**Pass Criteria:** all four surfaces' `{slug: lift}` mappings are identical; all four surfaces'
+aggregate projection values are identical and equal to one independent rescore.
+
+**Falsifiability:** this case turns red if any surface's per-item or aggregate number diverges from
+the other three — demonstrated live during 201-07 by mutating `docx_renderer.py`'s lift formula by
++1 and confirming the test correctly flags DOCX as the outlier before the mutation was reverted.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift_cross_surface_numbers.py::test_four_surfaces_report_identical_per_item_lifts`
+and `::test_four_surfaces_report_identical_projected_aggregate` (collect-only resolves both;
+executed green), per `201-07-SUMMARY.md`'s four-surface `{slug: lift}` table (base=85,
+projected=99 on all four surfaces) and its live perturbation RED transcript
+(`docx_renderer.py` `+1` mutation correctly flagged, then reverted with an empty `git diff quirk/`).
+
+---
+
+**Series 201 disposition.** All 11 cases are `[x] PASS`. 10 (UAT-201-01/02/03/04/05/06/07/08/09/11)
+are confirmed via real, currently-collectible `pytest --collect-only` node IDs cited above, each
+verified before being written here. 1 (UAT-201-10) is an honest operator-approved PASS — the
+visual-placement/tone aspect has no automated substitute in this repo's presence-only render-test
+house convention (matching Series 200's UAT-200-01/02 precedent), so it is dispositioned against
+201-06-SUMMARY.md's verbatim recorded operator approval rather than a fabricated pytest citation.
+None was checked PASS without being run or without a cited operator approval, and no allowlist or
+gate-code change was made.
