@@ -1,0 +1,12 @@
+{
+  "finding_id": 1,
+  "narrative": "This TLS endpoint negotiates RSA-2048 key exchange, which quantum adversaries harvesting today's traffic could later decrypt once cryptographically relevant quantum computers mature.",
+  "quantum_impact": "RSA key establishment is vulnerable to Shor's algorithm; a sufficiently capable quantum computer breaks the key exchange used to protect this session.",
+  "remediation_guidance": "Migrate to a hybrid post-quantum key-exchange (e.g. X25519Kyber768) once your TLS stack and client population support it.",
+  "theme_slug": "plaintext-http-exposure",
+  "theme_title": "Eliminate plaintext HTTP exposure",
+  "theme_score_lift": 7,
+  "theme_finding_count": 5,
+  "theme_closed_count": 2,
+  "finding_position": null
+}
