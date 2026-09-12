@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import {
   useReactTable,
   getCoreRowModel,
@@ -38,6 +38,35 @@ export function FindingsPage() {
   const [protocolFilter, setProtocolFilter] = useState("ALL")
   const [segmentFilter, setSegmentFilter] = useState("all")
   const [selectedFinding, setSelectedFinding] = useState<FindingItem | null>(null)
+
+  // Phase 202-06 / F1-F7 focus contract. TanStack row ids default to the
+  // row's index in `findings`, which stays stable across a render (data
+  // order is only re-derived from filters, not shuffled), so a Map keyed by
+  // `row.id` is a safe per-row registry of each row's Storyline trigger
+  // button. `triggerRefs`, `registerTrigger`, and `openStoryline` are all
+  // stable references (useRef / useCallback with empty deps), so including
+  // them in the memoized `columns` array's deps below does not defeat
+  // TanStack's referential-stability requirement (D-25/IN-03) — the array
+  // identity still only changes once, on mount.
+  const triggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+
+  const registerTrigger = useCallback((rowId: string, el: HTMLButtonElement | null) => {
+    if (el) {
+      triggerRefs.current.set(rowId, el)
+    } else {
+      triggerRefs.current.delete(rowId)
+    }
+  }, [])
+
+  // F2/F6: a row-click (or trigger-click) open must focus that row's own
+  // Storyline button BEFORE setting open state, because the Sheet is
+  // state-controlled (no SheetTrigger) — Radix's FocusScope would otherwise
+  // restore focus to whatever was focused pre-open (`<body>` for a mouse
+  // click on a non-focusable row), not the row's trigger.
+  const openStoryline = useCallback((finding: FindingItem, rowId: string) => {
+    triggerRefs.current.get(rowId)?.focus()
+    setSelectedFinding(finding)
+  }, [])
 
   // Derive sorted, deduped list of segments from findings
   const distinctSegments = useMemo(() => {
@@ -95,7 +124,47 @@ export function FindingsPage() {
       },
     },
     { accessorKey: "source", header: "Source" },
-  ], [])
+    {
+      id: "storyline",
+      header: "Storyline",
+      cell: ({ row }) => {
+        const finding = row.original
+        const label = `${finding.title} at ${finding.host}:${finding.port}`
+        if (finding.id == null) {
+          // A6 / S7: no stable id — this finding cannot be fetched, so the
+          // trigger is disabled rather than opening a drawer that can never
+          // load. Live state: identity-protocol findings (KERBEROS/SAML/
+          // DNSSEC) carry no id at all.
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled
+              aria-label={`Storyline unavailable for ${label}`}
+              title="Storyline unavailable — this finding has no stable identifier in this scan."
+            >
+              Storyline
+            </Button>
+          )
+        }
+        return (
+          <Button
+            ref={(el) => registerTrigger(row.id, el)}
+            variant="ghost"
+            size="sm"
+            aria-haspopup="dialog"
+            aria-label={`Open storyline for ${label}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              openStoryline(finding, row.id)
+            }}
+          >
+            Storyline
+          </Button>
+        )
+      },
+    },
+  ], [registerTrigger, openStoryline])
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table returns non-memoizable functions; known React Compiler limitation
   const table = useReactTable({
@@ -190,7 +259,7 @@ export function FindingsPage() {
               <TableRow
                 key={row.id}
                 className="cursor-pointer hover:bg-accent/5"
-                onClick={() => setSelectedFinding(row.original)}
+                onClick={() => openStoryline(row.original, row.id)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="text-sm py-2">
