@@ -314,8 +314,8 @@ Plans:
 
 **Wave 3**
 
-- [ ] 201-04-PLAN.md — dashboard API wiring: RoadmapNode.score_lift, top-level projected_score, slug join, degrade-to-absence
-- [ ] 201-05-PLAN.md — content model fields + writer/executive lift attachment + CLI markdown and scorecard rendering
+- [x] 201-04-PLAN.md — dashboard API wiring: RoadmapNode.score_lift, top-level projected_score, slug join, degrade-to-absence
+- [x] 201-05-PLAN.md — content model fields + writer/executive lift attachment + CLI markdown and scorecard rendering
 
 **Wave 4**
 
