@@ -271,6 +271,70 @@ The migration roadmap organizes findings and recommendations into three planning
 > **Client Conversation — Migration Roadmap:**
 > "The migration roadmap is organized in three horizons. 'Now' items are things with known classical risk today — they need to be fixed regardless of quantum. 'Next' items are the early quantum-preparation work you can do in your normal modernization cycle. 'Later' items are the full post-quantum migration — that's the NIST FIPS 203/204/205 standards work that most organizations will execute between 2026 and 2030."
 
+### 7.1 Score-Lift and the Projected Score (Phase 201, LIFT-01..LIFT-05)
+
+Every roadmap item that can carry a quantified score movement shows a `(+N pts)` badge next to
+its title. **This is not a heuristic points table.** `(+N pts)` is the readiness score this exact
+scan would have if that one item — and only that one item — were resolved, computed by re-running
+the real, unmodified scoring function (`compute_readiness_score`) a second time over a copy of the
+scan's own evidence with that item's underlying findings marked resolved. The number is a genuine
+second scoring pass, not a lookup table or a fixed weight assigned to a finding category.
+
+**Why some items carry no number at all.** Nine kinds of roadmap item can be modeled this way as
+of Phase 201. Five cannot, because resolving them changes no input the scoring model reads: three
+process/governance items (assigning remediation owners and SLAs, automating evidence-refresh
+cadence, establishing crypto governance review) and two coverage/lifecycle items (increasing TLS
+enumeration coverage, standardizing mTLS lifecycle operations). These five items render with **no
+badge at all** — never `0 pts`, never a dash, never "N/A." A blank means "not measurable by the
+scoring model," not "worth zero." Treat the absence itself as information: it tells you the item
+is real remediation work that the score simply has no input for, not that the item is unimportant.
+
+**"Projected score if all items resolved: {N}"** is a separate number from the sum of the
+per-item badges, and it is deliberately not their sum. It comes from exactly one additional,
+independent rescore — the same evidence, with every resolvable item's findings marked resolved
+simultaneously, scored once. It is smaller than adding up the individual `(+N pts)` badges
+whenever two or more items compete for the same capped subscore's remaining headroom: each of the
+four subscores is capped, so once a subscore reaches its ceiling, a second item that would have
+pushed it further has nothing left to add in the aggregate, even though that same item shows a
+real, positive number on its own. Read the projected score as "the ceiling this scan could reach,"
+not as "what you get by adding up the badges."
+
+**Neither number moves the readiness score you see today.** The badge and the projected score are
+both advisory simulations, machine-firewalled from every real score surface — the scan's stored
+score, its `score` block in the intelligence JSON, and its API response are computed exactly as
+they always were, before this phase existed. Every surface that shows the projected score carries
+this line, verbatim:
+
+> Advisory — this projection is a simulation and does not affect the readiness score.
+
+**Where you'll see both numbers:** the CLI roadmap markdown, the scorecard's top-3 "Next 30–60
+days" actions, the HTML and PDF reports, the DOCX report, the dashboard's roadmap detail panel
+(per-item badge) and its Projected Score card (aggregate), and the print/export view. The same
+scan produces the same numbers on every one of these surfaces — a per-item badge or an aggregate
+that disagreed across surfaces would itself be a defect.
+
+**The console "Migration Waves" table's second column changed meaning (BACK-51 / LIFT-04).**
+Before Phase 201, that column counted raw *findings* bucketed by severity (Critical/High/other),
+computed independently of the roadmap shown everywhere else in the report. As of Phase 201 it
+counts roadmap *items* per NOW/NEXT/LATER phase, using the exact same categorization
+(`build_phased_roadmap()`) that already fed the CLI markdown, HTML, DOCX, and dashboard roadmap
+sections — the column is labeled "Items," not "Findings," to make that change legible on sight. A
+report generated before Phase 201 and one generated after it can show different NOW/NEXT/LATER
+counts for what looks like the same underlying findings, because the two are now counting
+different things by design: items to act on, not findings to triage.
+
+> **Client Conversation — Score-Lift and Projected Score:**
+> "Each roadmap item that carries a number — the '+N pts' badge — is a real second scoring pass:
+> we re-run the actual scoring engine as if that one item were already fixed, and show you the
+> difference. It's not a guess or a fixed point value per finding type. Some items don't carry a
+> number at all — that's honest, not an oversight: those are process items like assigning owners
+> or automating evidence refresh, and our scoring model has no input to move for them. The
+> 'Projected score if all items resolved' number at the top is a single independent rescore with
+> everything fixed at once — it's usually smaller than adding up all the individual badges,
+> because our four subscores each have a ceiling, so two fixes can end up competing for the same
+> headroom. And to be clear: none of this changes the score you see today. It's a simulation,
+> labeled as one everywhere it appears."
+
 ---
 
 ## 8. Compliance Summary

@@ -510,6 +510,33 @@ it is really three:
   text. This is a real, honest tradeoff, not a theoretical one: do not strip `| sanitize` from an
   override template unless you understand and accept that consequence for that specific field.
 
+### 3.4 Score-Lift Badges and the Projected Score on the Remediation Roadmap (Phase 201, LIFT-01..LIFT-05)
+
+Every roadmap item that can be quantified now carries a `(+N pts)` badge — the readiness score
+this scan would have if that one item were resolved, computed by a real second call into the
+scoring engine over a copy of the scan's evidence, never a fixed points table. Items whose
+resolution changes no scoring input (process/governance work, and coverage/lifecycle items) show
+no badge at all — a blank means "not measurable," never `0 pts`. A separate "Projected score if
+all items resolved: {N}" figure is one additional independent rescore with everything resolved at
+once — it is usually smaller than summing the individual badges, because the score's four
+subscores are each capped and can only give up so much headroom. Neither number ever changes the
+readiness score you see today; every surface that shows the projected number also shows, verbatim:
+"Advisory — this projection is a simulation and does not affect the readiness score." See
+`docs/report-interpretation.md` §7.1 for the full explanation, the exact list of unmodelable item
+kinds, and worked examples across all report surfaces.
+
+**Where it appears:** the CLI roadmap markdown and scorecard, the HTML/PDF and DOCX reports, and
+the dashboard roadmap page — a per-item badge in the node detail panel, and a "Projected Score"
+card directly above the Remediation Burndown card. The dashboard omits the card entirely (not a
+placeholder) when the scan is unassessed or the projection could not be computed.
+
+**The console "Migration Waves" table's second column changed meaning in the same phase
+(BACK-51 / LIFT-04):** it now counts roadmap *items* per NOW/NEXT/LATER phase — labeled "Items" —
+instead of raw findings bucketed by severity. This makes the console table agree with every other
+roadmap surface, which already used the same categorization. A report generated before Phase 201
+may show different NOW/NEXT/LATER counts than one generated after it for the same findings; that
+is the intended effect of unifying the two previously-independent categorization systems into one.
+
 ---
 
 ## 4. Validation / Smoke Test
