@@ -1265,6 +1265,92 @@ def _derive_roadmap(
     return RoadmapData(nodes=nodes, edges=edges)
 
 
+def lift_context_for_scan(db: Session, scan_run_id: Optional[str]) -> dict[str, int]:
+    """Per-slug score lifts for one scan, computed exactly as the roadmap
+    surface computes them.
+
+    Phase 202 Plan 05 (STORY-02): this is the SAME pipeline `get_latest_scan`
+    runs to feed `_derive_roadmap`'s `compute_item_lifts` call — endpoints ->
+    `_derive_findings` + identity findings -> `build_evidence_summary` ->
+    `stored_profile` resolution -> `compute_readiness_score` -> raw items via
+    `build_phased_roadmap` -> `compute_item_lifts(evidence, items,
+    profile=stored_profile)`. It is extracted here (rather than threading a
+    return value out of `_derive_roadmap`) because `_derive_roadmap`'s
+    2-argument call sites are a pinned pre-existing contract exercised by
+    `tests/test_dashboard_closure_burndown.py` and
+    `tests/test_roadmap_categorization_unification.py` — forcing a new
+    return shape through it would be a behaviour change those call sites
+    never asked for. Numeric equality between this helper's output and
+    `_derive_roadmap`'s own node-level `score_lift` is instead proven by a
+    same-scan, same-slug test (202-05 Task 3) that compares two live API
+    responses.
+
+    `weights` is deliberately NOT passed to `compute_item_lifts` — mirrors
+    `_derive_roadmap`'s own call, which passes `profile=` only. Passing
+    `weights` here would reopen the CLI/dashboard calibration asymmetry
+    Phase 201 deliberately left unnormalised (RESEARCH Pitfall 4).
+
+    Advisory-only, same posture as `_derive_roadmap`'s own lift computation
+    (:1219-1228 above): any exception anywhere in this pipeline is
+    `logger.exception`'d and the helper returns `{}` — a lift-computation
+    failure must never raise past this function into a caller that expects
+    only a dict.
+    """
+    try:
+        if not scan_run_id:
+            return {}
+
+        endpoints: list[CryptoEndpoint] = (
+            db.query(CryptoEndpoint)
+            .filter(CryptoEndpoint.scan_run_id == scan_run_id)
+            .all()
+        )
+        if not endpoints:
+            return {}
+
+        findings = _derive_findings(endpoints)
+        identity_findings = _derive_identity_findings(endpoints)
+        for idf in identity_findings:
+            findings.append(FindingItem(
+                host=idf.host,
+                port=idf.port,
+                severity=idf.severity,
+                title=idf.title,
+                protocol=idf.protocol,
+                description=idf.description,
+                remediation=idf.remediation,
+                quantum_risk=idf.quantum_risk,
+                source=idf.source,
+            ))
+
+        try:
+            evidence = build_evidence_summary(endpoints, [f.model_dump() for f in findings])
+        except Exception:
+            evidence = {}
+
+        stored_profile = None
+        try:
+            from quirk.validate import _latest_intelligence
+            _output_dir = _resolve_output_dir()
+            _intel_path = _latest_intelligence(_output_dir)
+            if _intel_path:
+                _intel_data = json.loads(_intel_path.read_text(encoding="utf-8"))
+                stored_profile = _intel_data.get("calibration", {}).get("profile")
+        except Exception:
+            pass  # fall back to balanced default via profile=None
+
+        score_raw = compute_readiness_score(evidence, profile=stored_profile)
+
+        from quirk.intelligence.roadmap import build_phased_roadmap
+        roadmap = build_phased_roadmap(evidence, score_raw)
+        items_list = roadmap.get("items", []) if isinstance(roadmap, dict) else []
+
+        return compute_item_lifts(evidence, items_list, profile=stored_profile)
+    except Exception:
+        logger.exception("lift_context_for_scan: lift computation failed (advisory-only, skipping)")
+        return {}
+
+
 def _derive_closure_burndown(db: Session, scan_run_id: Optional[str]) -> Optional[ClosureBurndown]:
     """Build the per-deadline closure burndown payload for `scan_run_id`.
 
