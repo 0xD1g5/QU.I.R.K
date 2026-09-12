@@ -677,45 +677,134 @@ def test_never_zero_for_null_item_progress_zero_total():
     assert data["theme_closed_count"] is None
 
 
-def test_numeric_equality_with_roadmap_surface(monkeypatch):
+def test_numeric_equality_with_roadmap_surface():
     """theme_score_lift for a finding equals the score_lift the /api/scan/latest
     roadmap node for that SAME slug reports for the SAME scan -- proven by
-    comparing two live API responses, not two internal function calls. This
-    is the drift class Phase 201 fixed and the claim STORY-02 actually makes."""
+    comparing two live API responses computed from REAL seeded evidence, with
+    NO patch of `compute_item_lifts` (the shared producer both call sites
+    invoke). This is the drift class Phase 201 fixed and the claim STORY-02
+    actually makes.
+
+    WR-02(a): the prior version of this test monkeypatched
+    `quirk.dashboard.api.routes.scan.compute_item_lifts` to a fixed constant,
+    which makes the two responses equal BY CONSTRUCTION regardless of whether
+    `lift_context_for_scan` (storyline path) and `_derive_roadmap` (roadmap
+    path) actually feed that function the same evidence -- it proves the
+    plumbing carries a value through, not that the two paths agree on what
+    that value should be. This version patches nothing in the lift-production
+    pipeline: both endpoints run the real `build_evidence_summary` ->
+    `compute_readiness_score` -> `build_phased_roadmap` ->
+    `compute_item_lifts` chain against the one seeded endpoint/fingerprint
+    row, so if either call site's evidence-resolution logic ever diverged
+    (different endpoint set, different profile, different roadmap items) the
+    two numbers would differ and this assertion would fail. The single
+    endpoint here intentionally has one unambiguous `scan_run_id` so this
+    test isolates WR-02(a)'s vacuity fix from WR-02(b)'s divergence risk
+    (multiple/legacy `scan_run_id` values), which is covered separately by
+    `test_scan_run_id_divergence_between_storyline_and_roadmap_surfaces`.
+    """
     client, TestingSession = _client_and_session()
     scan_run_id = "2026-09-12T06:00:00"
+    slug = "high-impact-findings"
+    cli_title = "TLS certificate uses undersized RSA key"
     ep_id = _seed_endpoint(
         TestingSession,
-        cert_issuer="CN=self",
-        cert_subject="CN=self",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=1024,
         scan_run_id=scan_run_id,
         scanned_at=datetime(2026, 9, 12, 6, 0, 0),
     )
-    cli_title = "TLS certificate is self-signed"
     _seed_fingerprint_row(
-        TestingSession, scan_run_id=scan_run_id, slug="self-signed-certificates", cli_title=cli_title,
+        TestingSession, scan_run_id=scan_run_id, slug=slug, cli_title=cli_title,
     )
-
-    def _fake_lifts(evidence, items, *, profile=None, weights=None):
-        return {"self-signed-certificates": 7}
-
-    monkeypatch.setattr("quirk.dashboard.api.routes.scan.compute_item_lifts", _fake_lifts)
 
     roadmap_resp = client.get("/api/scan/latest")
     assert roadmap_resp.status_code == 200
     roadmap_nodes = roadmap_resp.json()["roadmap"]["nodes"]
-    roadmap_node = next(n for n in roadmap_nodes if n["slug"] == "self-signed-certificates")
+    roadmap_node = next(n for n in roadmap_nodes if n["slug"] == slug)
 
     story_resp = client.get(
         f"/api/findings/{ep_id}/storyline",
-        params={"title": "TLS certificate is self-signed"},
+        params={"title": cli_title},
     )
     assert story_resp.status_code == 200
     story_data = story_resp.json()
 
-    assert story_data["theme_slug"] == "self-signed-certificates"
-    assert roadmap_node["score_lift"] == 7
-    assert story_data["theme_score_lift"] == roadmap_node["score_lift"] == 7
+    assert story_data["theme_slug"] == slug
+    # Not asserting a hardcoded numeral: the real computed lift is whatever
+    # the real pipeline produces. The load-bearing assertions are (1) both
+    # surfaces agree, and (2) that agreement is not the trivial "both None"
+    # case -- a real, non-null lift was actually modeled for this slug.
+    assert roadmap_node["score_lift"] is not None
+    assert story_data["theme_score_lift"] == roadmap_node["score_lift"]
+
+
+def test_scan_run_id_divergence_between_storyline_and_roadmap_surfaces():
+    """WR-02(b): demonstrates the real divergence risk the review flagged, on
+    the sharpest fixture that provokes it -- a legacy row with
+    `scan_run_id IS NULL`. `lift_context_for_scan` (storyline drawer) opens
+    with `if not scan_run_id: return {}` (`scan.py:1300-1301`), so ANY finding
+    whose endpoint has a falsy `scan_run_id` -- the documented common legacy
+    case -- gets `theme_score_lift: None` (A2) from the drawer, no matter how
+    real and positive the underlying evidence's lift actually is.
+
+    The roadmap surface's "latest scan" (`get_latest_scan`, no `scan_id`
+    query param) resolves its endpoint set via a `SESSION_BRACKET` time
+    window around `MAX(scanned_at)` with NO `scan_run_id` filter at all
+    (`scan.py:1755-1763`) -- it picks up this same NULL-`scan_run_id` endpoint
+    just fine and computes a real, non-null lift for the very same slug.
+
+    This is a documented, accepted constraint (WR-02(b), not fixed by a
+    shared-resolution refactor in this pass -- see the cross-referencing
+    docstrings on `lift_context_for_scan` and `get_latest_scan`), not a
+    corrected behavior: the test locks down what CURRENTLY happens (a genuine
+    number on one surface, an honest absence on the other, for the identical
+    finding) so a future change to either resolution strategy is caught here
+    first rather than silently drifting further.
+    """
+    client, TestingSession = _client_and_session()
+    slug = "high-impact-findings"
+    cli_title = "TLS certificate uses undersized RSA key"
+
+    # Legacy row: scan_run_id is NULL, inside the SESSION_BRACKET window the
+    # no-scan_id roadmap resolution anchors on MAX(scanned_at).
+    ep_id = _seed_endpoint(
+        TestingSession,
+        host="10.0.0.1",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=1024,
+        scan_run_id=None,
+        scanned_at=datetime(2026, 9, 12, 7, 0, 0),
+    )
+    _seed_fingerprint_row(
+        TestingSession, scan_run_id=None, slug=slug, cli_title=cli_title, host="10.0.0.1",
+    )
+
+    # Roadmap ("latest scan") resolves this NULL-scan_run_id endpoint via the
+    # SESSION_BRACKET window and computes a real lift for the slug.
+    roadmap_resp = client.get("/api/scan/latest")
+    assert roadmap_resp.status_code == 200
+    roadmap_nodes = roadmap_resp.json()["roadmap"]["nodes"]
+    roadmap_node = next(n for n in roadmap_nodes if n["slug"] == slug)
+    assert roadmap_node["score_lift"] is not None
+
+    # Storyline drawer opened from the SAME finding: `ep.scan_run_id` is
+    # None, so `lift_context_for_scan` short-circuits to `{}` and the drawer
+    # renders A2 (theme_score_lift: None) for the identical slug the roadmap
+    # page just reported a real number for.
+    story_resp = client.get(
+        f"/api/findings/{ep_id}/storyline",
+        params={"title": cli_title},
+    )
+    assert story_resp.status_code == 200
+    story_data = story_resp.json()
+    assert story_data["theme_slug"] == slug
+    assert story_data["theme_score_lift"] is None
+
+    # The divergence itself, stated as one assertion: same finding, same
+    # slug, same scan -- two different answers depending on which surface
+    # the operator is looking at.
+    assert story_data["theme_score_lift"] != roadmap_node["score_lift"]
 
 
 def test_theme_score_lift_null_when_no_modelable_delta(monkeypatch):

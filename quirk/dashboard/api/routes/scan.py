@@ -1269,6 +1269,28 @@ def lift_context_for_scan(db: Session, scan_run_id: Optional[str]) -> dict[str, 
     """Per-slug score lifts for one scan, computed exactly as the roadmap
     surface computes them.
 
+    KNOWN CONSTRAINT (202-REVIEW.md WR-02(b), accepted, not fixed this pass):
+    the endpoint set this function scores is resolved via a STRICT
+    `CryptoEndpoint.scan_run_id == scan_run_id` equality filter (below), and
+    it short-circuits to `{}` whenever `scan_run_id` is falsy — including the
+    common legacy case where `ep.scan_run_id is None`. `get_latest_scan`'s
+    no-`scan_id` branch, by contrast, resolves "the latest scan"'s endpoint
+    set via a `SESSION_BRACKET` time window around `MAX(scanned_at)`, with NO
+    `scan_run_id` filter — it merges endpoints across distinct `scan_run_id`
+    values (and NULL rows) that this function cannot see. For a scan whose
+    endpoints do not all share one `scan_run_id`, this function's
+    `theme_score_lift` for a slug CAN legitimately differ from — or be
+    honestly null where the roadmap page has a real number for — the exact
+    same slug on the exact same "latest scan" the operator is viewing. See
+    `test_scan_run_id_divergence_between_storyline_and_roadmap_surfaces` in
+    `tests/test_dashboard_finding_storyline.py` for a live-reproduced example
+    with a legacy (`scan_run_id IS NULL`) endpoint. A shared-resolution
+    refactor (making both call sites resolve endpoints identically) was
+    judged too large a blast radius to take in a post-review fix pass —
+    `get_latest_scan`'s window/fallback tree is exercised by several other
+    pinned tests this function's callers do not want to risk. Revisit if this
+    divergence is ever reported live rather than only demonstrated in a test.
+
     Phase 202 Plan 05 (STORY-02): this is the SAME pipeline `get_latest_scan`
     runs to feed `_derive_roadmap`'s `compute_item_lifts` call — endpoints ->
     `_derive_findings` + identity findings -> `build_evidence_summary` ->
@@ -1690,6 +1712,16 @@ def get_latest_scan(
     With ?scan_id=<ISO timestamp>: returns that specific scan session.
     With ?segment=<label>: filters findings/CBOM to that segment only.
       Omitting the segment param leaves NULL-segment local scans unaffected (Trap T4).
+
+    KNOWN CONSTRAINT (202-REVIEW.md WR-02(b), accepted): the no-`scan_id`
+    branch below resolves endpoints via a `SESSION_BRACKET` time window
+    around `MAX(scanned_at)` with NO `scan_run_id` filter — it can merge
+    endpoints spanning multiple `scan_run_id` values (or NULL). The
+    storyline drawer's `lift_context_for_scan` (this module) instead filters
+    by a single, strict `scan_run_id` equality. For a "latest scan" spanning
+    more than one `scan_run_id`, `score_lift` for a slug computed HERE can
+    diverge from `theme_score_lift` for the same slug shown in the drawer.
+    See `lift_context_for_scan`'s docstring for the full accounting.
     """
     if scan_id is not None:
         try:
