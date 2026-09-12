@@ -173,6 +173,18 @@ describe("StorylineSections — State Matrix S1-S6", () => {
     expect(panel.textContent).not.toMatch(/\d+ of \d+/)
   })
 
+  it("UI-202-02: theme_finding_count and theme_score_lift both null renders A3 only, not A2 — pinned precedence", () => {
+    renderStoryline({ theme_finding_count: null, theme_score_lift: null })
+    const panel = getAttributionPanel()
+    expect(panel.textContent).toMatch(/Remediation theme: Disable legacy TLS versions/)
+    expect(screen.getByText(A3_TEXT)).toBeInTheDocument()
+    expect(screen.queryByText(A2_TEXT)).not.toBeInTheDocument()
+    expect(panel.textContent).not.toMatch(/\+\d/)
+    expect(panel.textContent).not.toMatch(/This finding is/)
+    expect(panel.textContent).not.toMatch(/verified closed/)
+    expect(screen.queryByText(DISCLAIMER_TEXT)).not.toBeInTheDocument()
+  })
+
   it("S5 A4 position null only: position omitted silently, lift/closure/disclaimer still render", () => {
     renderStoryline({ finding_position: null })
     const panel = getAttributionPanel()
