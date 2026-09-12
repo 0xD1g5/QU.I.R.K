@@ -245,3 +245,37 @@ The drawer displays ONE theme. It does NOT hint that a finding also belongs to a
 showing two conditioned lift numbers side by side would make D-01's non-additivity point
 substantially harder to convey, which is the whole problem D-01 exists to solve. Record this
 simplification in the phase SUMMARY.
+
+## D-09 — When `high-impact-findings` is a finding's ONLY theme, it IS rendered (closes a D-08 gap)
+
+**Operator-confirmed 2026-09-12**, after the planner flagged this as an interpretation rather than
+silently adopting it. D-09 is now a decision, not an interpretation — plans may cite it directly.
+
+D-08's text governs the multi-theme **tie**: "when a finding maps to more than one slug… never the
+catch-all." It is silent on a finding whose *only* theme is `high-impact-findings`. That case is real,
+not hypothetical: `TLS certificate uses undersized RSA key` is `severity="HIGH"`
+(`quirk/dashboard/api/routes/scan.py:240-241`) and appears in **no** `REMEDIATION_CONSTITUENCY`
+fingerprint tuple, so the severity catch-all is its single genuine theme — with a genuine lift.
+
+`REMEDIATION_CONSTITUENCY` (verified live, 14 slugs): 6 `fingerprint` slugs carrying explicit title
+tuples, 7 `evidence_only` slugs with empty tuples, and `high-impact-findings` as the lone `severity`
+matcher. Any HIGH-severity finding outside every title tuple therefore constitutes exactly one theme.
+
+**Resolution: render the catch-all theme in that branch.** A literal "never the catch-all" reading
+would route it to absence case A1 — telling the operator the finding maps to no remediation theme when
+it demonstrably does, and withholding a real lift number. That is a **fabricated absence**, the exact
+failure class D-01 and D-07 exist to prevent, pointed backwards. D-08's prohibition is about
+preferring the specific theme when one competes with the catch-all; when nothing competes, the
+catch-all is simply the truth.
+
+The contrast case needs no interpretation and stays A1: `TLS certificate issued by untrusted CA` is
+MEDIUM (`scan.py:292-293`) and in no constituency, so it genuinely belongs to no theme.
+
+**Fencing (keep all of it).** The planner's handling is retained even though this is now a confirmed
+decision: the branch is locked by a dedicated catch-all-only test in 202-05, surfaced in the 202-01 and
+202-05 SUMMARYs, and documented in 202-08 — three independent places a future reader meets it, so
+changing it later is a visible, deliberate edit rather than a silent drift.
+
+**Not adopted:** labelling the catch-all in the UI as severity-derived ("Grouped by severity: …").
+Considered and declined — it would add a sixth distinct attribution wording to maintain for a
+precision gain the theme title ("Triage high-impact findings") already mostly conveys.
