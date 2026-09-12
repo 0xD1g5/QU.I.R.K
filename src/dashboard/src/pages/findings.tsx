@@ -283,7 +283,15 @@ export function FindingsPage() {
               <TableRow
                 key={row.id}
                 className="cursor-pointer hover:bg-accent/5"
-                onClick={() => openStoryline(row.original, row.id)}
+                onClick={() => {
+                  // A6/S7: identity-protocol findings (KERBEROS/SAML/DNSSEC)
+                  // carry no stable id and cannot be fetched. The Storyline
+                  // button column guards this; the row click must guard it
+                  // identically, or clicking any other cell in the row opens
+                  // a drawer that can never load (WR-01).
+                  if (row.original.id == null) return
+                  openStoryline(row.original, row.id)
+                }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="text-sm py-2">

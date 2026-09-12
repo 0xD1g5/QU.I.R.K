@@ -125,6 +125,19 @@ describe("FindingsPage — Storyline trigger column (F1)", () => {
     await user.click(disabledTrigger)
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
+
+  it("WR-01: clicking a non-button cell of a no-id row never opens the drawer", async () => {
+    scanDataReturn = { data: makeFixture([FINDING_NO_ID]), loading: false, error: null }
+    const user = userEvent.setup()
+    await renderFindingsPage()
+
+    // Click the title cell (not the Storyline button) of the id:null row —
+    // the row-level onClick must be guarded identically to the disabled
+    // trigger, per the UI-SPEC's "the drawer is never opened in a state
+    // where it cannot fetch" (A6).
+    await user.click(screen.getByText(FINDING_NO_ID.title))
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
 })
 
 describe("FindingsPage — opening the drawer (F2, keyboard activation)", () => {
