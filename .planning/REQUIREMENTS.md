@@ -45,16 +45,16 @@ new score-lift math.
 
 ### Score-Lift Roadmap Re-frame (LIFT — 999.101 + BACK-51)
 
-- [ ] **LIFT-01**: Every remediation roadmap item carries a score-lift computed by real
+- [x] **LIFT-01**: Every remediation roadmap item carries a score-lift computed by real
       delta-scoring against `compute_readiness_score()` as a pure function over synthetic
       evidence — never a heuristic mapping
-- [ ] **LIFT-02**: The aggregate projected score is its own independent rescore call — never a
+- [x] **LIFT-02**: The aggregate projected score is its own independent rescore call — never a
       sum of per-item lifts (the 25-point subscore clamp in `_apply_weighted_impacts` makes
       lifts non-additive; a summed aggregate overstates)
-- [ ] **LIFT-03**: Projected/simulated scores never persist into or feed any real score
+- [x] **LIFT-03**: Projected/simulated scores never persist into or feed any real score
       surface — machine-enforced by a new forward-projection firewall guard test
       (ADVISORY-02-style, mirroring `test_remediation_advisory_guard.py`'s pattern)
-- [ ] **LIFT-04**: One roadmap categorization system feeds all surfaces — the
+- [x] **LIFT-04**: One roadmap categorization system feeds all surfaces — the
       `build_phased_roadmap()` / `categorize_waves()` duality (BACK-51) is unified so
       NOW/NEXT/LATER assignments agree across CLI/HTML/DOCX/dashboard for the same scan
 - [x] **LIFT-05**: Score-lift renders on the dashboard roadmap surface (including the
@@ -104,10 +104,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RPT-03 | Phase 200 | Complete |
 | RPT-04 | Phase 200 | Complete |
 | RPT-05 | Phase 200 | Complete |
-| LIFT-01 | Phase 201 | Pending |
-| LIFT-02 | Phase 201 | Pending |
-| LIFT-03 | Phase 201 | Pending |
-| LIFT-04 | Phase 201 | Pending |
+| LIFT-01 | Phase 201 | Complete |
+| LIFT-02 | Phase 201 | Complete |
+| LIFT-03 | Phase 201 | Complete |
+| LIFT-04 | Phase 201 | Complete |
 | LIFT-05 | Phase 201 | Complete |
 | STORY-01 | Phase 202 | Pending |
 | STORY-02 | Phase 202 | Pending |

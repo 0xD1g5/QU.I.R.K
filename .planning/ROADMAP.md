@@ -163,7 +163,9 @@ schedule slack.
 
 - [ ] **Phase 201: Score-Lift Roadmap Re-frame** - Every remediation roadmap item and its
   aggregate projection carry a real, non-additive, firewalled score-lift number from one unified
-  categorization builder, rendered consistently across all four surfaces.
+  categorization builder, rendered consistently across all four surfaces. All 8 plans executed and
+  committed; awaiting the orchestrator's post-execution gsd-verifier pass (201-VERIFICATION.md)
+  before the phase heading and this row can flip to Complete — see 201-08-SUMMARY.md.
 
 - [ ] **Phase 202: Finding Storyline Drawer** - Operator can open a per-finding narrative drawer
   on the dashboard findings table, showing the finding's story and its score-lift attribution.
@@ -319,12 +321,12 @@ Plans:
 
 **Wave 4**
 
-- [ ] 201-06-PLAN.md — roadmap.tsx lift badge + Projected Score card, print.tsx, vitest, rebuilt statics, operator walkthrough
-- [ ] 201-07-PLAN.md — HTML + DOCX rendering and four-surface numeric-equality / non-additivity check
+- [x] 201-06-PLAN.md — roadmap.tsx lift badge + Projected Score card, print.tsx, vitest, rebuilt statics, operator walkthrough
+- [x] 201-07-PLAN.md — HTML + DOCX rendering and four-surface numeric-equality / non-additivity check
 
 **Wave 5**
 
-- [ ] 201-08-PLAN.md — docs, UAT Series 201, HORIZON BACK-51 closure, Obsidian sync, phase note, validation close + checkbox flips
+- [x] 201-08-PLAN.md — docs, UAT Series 201, HORIZON BACK-51 closure, Obsidian sync, phase note, validation close + checkbox flips
 
 ### Phase 202: Finding Storyline Drawer
 
@@ -357,7 +359,7 @@ narrative catalogs rather than forking a new one.
 |-------|-----------------|--------|-----------|
 | 199. Wave A Correctness Drain | 0/? | Not started | - |
 | 200. Report Branding & Templates | 0/? | Not started | - |
-| 201. Score-Lift Roadmap Re-frame | 0/? | Not started | - |
+| 201. Score-Lift Roadmap Re-frame | 8/8 | Plans complete, verification pending | - |
 | 202. Finding Storyline Drawer | 0/? | Not started | - |
 
 ## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
