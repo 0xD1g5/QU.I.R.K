@@ -150,7 +150,7 @@ const summary = []
 // ledger reflects the same default-variant entries the freshness test byte-compares against.
 const writtenBaselinesByRoute = []
 
-for (const { slug, path: routePath, contentMarker } of ROUTES) {
+for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
   console.log(`[a11y] Scanning ${slug} (${url})...`)
 
@@ -308,6 +308,160 @@ for (const { slug, path: routePath, contentMarker } of ROUTES) {
       missingJustifications.length === 0
     ) {
       console.log(`[a11y] PASS [${slug}]: no regressions (${results.violations.length} live)`)
+    }
+  }
+
+  // Phase 202-07 — optional per-route interaction step (F10a/F10b/F10c). Declared via
+  // routes.json's `interaction: { slug, trigger, awaitSelector }` on the EXISTING route
+  // entry — never a routes.json ROUTE entry of its own, so the base route above is always
+  // scanned with the drawer closed and this is the only place the opened state is
+  // captured. Runs AFTER the primary route's axe scan/baseline handling and BEFORE the
+  // console-allowlist check below, so `consoleMsgs` (collected by the page-lifetime
+  // listener registered above) picks up any console output the interaction itself
+  // produces — F8 is specifically about that post-open console state.
+  if (interaction) {
+    const { slug: interactionSlug, trigger, awaitSelector } = interaction
+
+    if (VARIANT !== 'default') {
+      // F10c: the `empty` variant renders EmptyStateCard and `loading` renders
+      // FindingsSkeleton — neither has table rows, so there is no trigger and no drawer
+      // to open. This skip is a LOGGED line, never a silent continue: a silent failure to
+      // find the selector would be indistinguishable from the trigger being broken.
+      console.log(
+        `[a11y] SKIP [${interactionSlug}] (route: ${slug}, variant: ${VARIANT}): interaction skipped by design — no table rows in this variant`,
+      )
+    } else {
+      const triggerHandle = await page.waitForSelector(trigger, { timeout: 5_000 }).catch(() => null)
+      if (!triggerHandle) {
+        console.error(`[a11y] FAIL [${interactionSlug}]: trigger "${trigger}" not found`)
+        exitCode = 1
+        summary.push({ slug: interactionSlug, violations: 0, console: 0, status: 'FAIL' })
+      } else {
+        await triggerHandle.click()
+        const opened = await page.waitForSelector(awaitSelector, { timeout: 5_000 }).catch(() => null)
+        if (!opened) {
+          console.error(
+            `[a11y] FAIL [${interactionSlug}]: awaitSelector "${awaitSelector}" never appeared after clicking trigger — drawer did not open`,
+          )
+          exitCode = 1
+          summary.push({ slug: interactionSlug, violations: 0, console: 0, status: 'FAIL' })
+        } else {
+          // Second, independent axe scan of the opened state — reuses the exact same
+          // helpers the primary route scan above uses (buildBaselineEntries /
+          // compareToBaseline / baselineFilename); no parallel baseline code path.
+          const interactionResults = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
+
+          let interactionViolationsCount = 0
+          let interactionStatus = 'PASS'
+          const interactionBaselinePath = resolve(A11Y_DIR, baselineFilename(interactionSlug, VARIANT))
+
+          if (UPDATE_BASELINES) {
+            const previous = existsSync(interactionBaselinePath)
+              ? JSON.parse(readFileSync(interactionBaselinePath, 'utf8'))
+              : null
+            const previousEntries = previous?.entries ?? []
+
+            const { entries, refusedCritical } = buildBaselineEntries(
+              interactionSlug,
+              interactionResults.violations,
+              { previousEntries },
+            )
+
+            const baseline = {
+              route: interactionSlug,
+              generated: new Date().toISOString(),
+              entries,
+            }
+            writeFileSync(interactionBaselinePath, JSON.stringify(baseline, null, 2) + '\n')
+            console.log(`[a11y] Wrote baseline for ${interactionSlug}: ${entries.length} rule(s)`)
+
+            if (VARIANT === 'default') {
+              writtenBaselinesByRoute.push({ route: interactionSlug, entries })
+            }
+
+            if (refusedCritical.length > 0) {
+              exitCode = 1
+              interactionStatus = 'FAIL'
+              for (const entry of refusedCritical) {
+                console.error(
+                  `[a11y] REFUSED [${interactionSlug}]: ${entry.rule} is impact:critical and cannot be baselined — fix it in the UI`,
+                )
+              }
+            }
+          } else {
+            if (!existsSync(interactionBaselinePath)) {
+              const generateCmd =
+                VARIANT === 'default'
+                  ? 'npm run a11y:baseline'
+                  : `npm run a11y:baseline:${VARIANT}`
+              console.error(
+                `[a11y] FAIL [${interactionSlug}]: missing baseline file ${interactionBaselinePath} — run \`${generateCmd}\` to generate it`,
+              )
+              exitCode = 1
+              interactionStatus = 'FAIL'
+            } else {
+              const baseline = JSON.parse(readFileSync(interactionBaselinePath, 'utf8'))
+              const { regressions, staleEntries, criticalViolations, missingJustifications } =
+                compareToBaseline(interactionSlug, interactionResults.violations, baseline.entries ?? [])
+
+              interactionViolationsCount = regressions.length
+
+              for (const r of regressions) {
+                exitCode = 1
+                interactionStatus = 'FAIL'
+                console.error(
+                  `[a11y] FAIL [${interactionSlug}]: ${r.rule} count ${r.observedCount} exceeds baseline ${r.baselineCount}`,
+                )
+                if (r.samples[0]) {
+                  console.error(`    sample: ${r.samples[0]}`)
+                }
+              }
+
+              for (const s of staleEntries) {
+                exitCode = 1
+                interactionStatus = 'FAIL'
+                console.error(
+                  `[a11y] FAIL [${interactionSlug}]: ${s.rule} count ${s.observedCount} is BELOW baseline ${s.baselineCount} — Baseline is stale — run npm run a11y:baseline to tighten`,
+                )
+              }
+
+              for (const c of criticalViolations) {
+                exitCode = 1
+                interactionStatus = 'FAIL'
+                console.error(`[a11y] FAIL [${interactionSlug}]: ${c.rule} is impact:critical — never baselineable`)
+              }
+
+              for (const m of missingJustifications) {
+                exitCode = 1
+                interactionStatus = 'FAIL'
+                console.error(`[a11y] FAIL [${interactionSlug}]: ${m.rule} has no written justification`)
+              }
+
+              if (
+                regressions.length === 0 &&
+                staleEntries.length === 0 &&
+                criticalViolations.length === 0 &&
+                missingJustifications.length === 0
+              ) {
+                console.log(
+                  `[a11y] PASS [${interactionSlug}]: no regressions (${interactionResults.violations.length} live)`,
+                )
+              }
+            }
+          }
+
+          if (UPDATE_BASELINES && interactionStatus !== 'FAIL') {
+            interactionStatus = 'WRITTEN'
+          }
+
+          summary.push({
+            slug: interactionSlug,
+            violations: interactionViolationsCount,
+            console: 0,
+            status: interactionStatus,
+          })
+        }
+      }
     }
   }
 
