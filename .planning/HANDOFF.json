@@ -1,46 +1,43 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-08T20:04:57.934Z",
-  "phase": null,
-  "phase_name": null,
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "timestamp": "2026-09-12T00:58:35Z",
+  "phase": "201",
+  "phase_name": "Score-Lift Roadmap Re-frame",
+  "phase_dir": ".planning/phases/201-score-lift-roadmap-re-frame",
+  "plan": 6,
+  "task": 3,
+  "total_tasks": 3,
   "status": "paused",
-  "context": "milestone-boundary",
   "completed_tasks": [
-    {"id": 1, "name": "Milestone-boundary doc review (version drift PASS, coverage PASS, 2 stale Obsidian items found and later fixed)", "status": "done"},
-    {"id": 2, "name": "PM review of HORIZON Open-Item Ledger; backlog item 999.104 (CLI config <-> dashboard parity) filed with Feasibility & Effort", "status": "done"},
-    {"id": 3, "name": "Milestone v5.21 opened: PROJECT.md + HORIZON.md rationale log updated", "status": "done", "commit": "b7033647"},
-    {"id": 4, "name": "STATE.md milestone-switch via gsd-sdk, verified clean under pre-image + signature-diff protocol", "status": "done", "commit": "b7033647"},
-    {"id": 5, "name": "Research pass: 4 parallel researchers + synthesizer -> .planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md (untracked by design)", "status": "done"},
-    {"id": 6, "name": "REQUIREMENTS.md: 13 v1 requirements, 6 categories, PM-confirmed", "status": "done", "commit": "18fe73b4"},
-    {"id": 7, "name": "ROADMAP.md: 5 phases (191-195), 13/13 mapped, PM-approved", "status": "done", "commit": "2c4a8fc2"},
-    {"id": 8, "name": "Todo dashboard-cert-view-phantom-tls-rows tagged resolves_phase: 194; Obsidian hub + Roadmap/Requirements vault synced", "status": "done"}
+    {"id": "201-01", "name": "ADVISORY-02 firewall + RED score-lift spec", "status": "done", "commit": "5bb1ff6e/e3c2d2ef"},
+    {"id": "201-03", "name": "BACK-51: categorize_waves deleted, console waves re-derived, 8-file patch removal", "status": "done", "commit": "153bbe1f/6a0786cb/78780fc4"},
+    {"id": "201-02", "name": "score_lift.py — 9 deltas + one-rescore aggregate (32/32 green untouched)", "status": "done", "commit": "a267282c"},
+    {"id": "201-04", "name": "Dashboard API: RoadmapNode.score_lift + projected_score + TS mirrors", "status": "done", "commit": "1bb13767/876b3ba7"},
+    {"id": "201-05", "name": "Content-model + writer/executive attachment + CLI markdown/scorecard", "status": "done", "commit": "4e018afa/d76a1acc"},
+    {"id": "201-07", "name": "HTML + DOCX rendering + four-surface numeric equality", "status": "done", "commit": "caab97dc/d72ac958"},
+    {"id": "201-06", "name": "roadmap.tsx lift badge + Projected Score card + print.tsx + rebuilt statics", "status": "in_progress", "progress": "Tasks 1-2 committed (c15ccde3/940a0c24, 347 vitest green); Task 3 = operator walkthrough checkpoint AWAITING APPROVAL. Operator initially saw no badge — root-caused to stale browser cache (fresh-load reproduction shows +9 pts badge working, screenshot delivered); operator was asked to hard-refresh (Cmd+Shift+R) and re-verify, has not yet replied."}
   ],
   "remaining_tasks": [
-    {"id": 9, "name": "Phase 191 (SPKI Fingerprint Persistence): discuss or plan", "status": "not_started"},
-    {"id": 10, "name": "Phases 192-195 per ROADMAP.md", "status": "not_started"}
+    {"id": "201-06-T3", "name": "Operator walkthrough sign-off (hard-refresh then verify badge/absence/card/score-unchanged/print)", "status": "in_progress"},
+    {"id": "201-08", "name": "Close-out: docs, UAT Series 201, HORIZON BACK-51 closure row, Obsidian sync, phase note, VALIDATION close, checkbox flips", "status": "not_started"},
+    {"id": "post-execution", "name": "Orchestrator: code review + fix chain, gsd-ui-review (CONTEXT obligation recorded in 201-08 plan), gsd-verifier, hand-written phase close (STATE/ROADMAP/PROJECT), then Phase 202 discuss→plan→execute, then milestone lifecycle audit→complete→cleanup", "status": "not_started"}
   ],
-  "blockers": [],
+  "blockers": [
+    {"description": "201-06 Task 3 operator walkthrough awaiting approval after hard-refresh", "type": "human_action", "workaround": "none — human-verify gate is blocking by design"}
+  ],
   "human_actions_pending": [
-    {"action": "Decide whether to add the proposed 'Worktree Isolation' section to CLAUDE.md (documents use_worktrees=false rationale + .planning/CLAUDE.md invisibility inside worktrees + absolute-paths rule)", "context": "Recommended during this session's worktree discussion; user has not yet approved", "blocking": false}
+    {"action": "Hard-refresh http://127.0.0.1:8512/roadmap (Cmd+Shift+R), click 'Stabilize scan reliability' (expect +9 pts badge), click a process item (expect NO badge), confirm Projected Score card (100) + advisory line, current score still 91, print view shows (+N pts). Reply approved or report issues.", "context": "201-06 Task 3 human-verify checkpoint; dashboard server must be restarted first (see next_action)", "blocking": true}
   ],
   "decisions": [
-    {"decision": "v5.21 = capability cycle: 999.104 tiers 1-3 + 999.96 obs half + phantom-cert + 999.100 + 999.98 + 999.99", "rationale": "v5.19/v5.20 were back-to-back ops/correctness; cadence note said v5.21 should lean capability; PM chose 'big but worth it'", "phase": "boundary"},
-    {"decision": "999.104 tier 4 (server-side config.yaml editing) OUT", "rationale": "New security surface needing its own threat model", "phase": "boundary"},
-    {"decision": "Version v5.21, not v6.0", "rationale": "Big scope alone doesn't warrant a major bump", "phase": "boundary"},
-    {"decision": "VERDICT-01 lands by cherry-picking only f05e7dc7 from origin/UX-Updates", "rationale": "Branch diverged 2026-02-18; merge would delete ~7 months of main (817 files, -143K lines)", "phase": "194"},
-    {"decision": "MAP-01 reachability-source spike is a go/no-go gate inside Phase 195 before rendering", "rationale": "Research: only one confirmed-cheap data source (key reuse); inferred edges are an anti-feature in a client deliverable", "phase": "195"}
+    {"decision": "Operator's 'no badge appears' report attributed to stale browser cache, not a defect", "rationale": "Fresh-tab reproduction via Chrome automation showed the badge/panel working exactly per UI-SPEC; served bundle hash verified fresh (index-Cf751BQG.js); Phase 195 precedent (hard-refresh fixed identical symptom)", "phase": "201"},
+    {"decision": "201-07 ran before 201-06 within wave 4", "rationale": "walkthrough compares cross-surface numbers, so all other surfaces needed to exist first", "phase": "201"},
+    {"decision": "Plan-checker blocker + 4 warnings fixed by orchestrator directly (RESOLVED markers, filename alignment, depends_on widening, weights=None pin, UI-review-is-orchestrator note)", "rationale": "doc-state fixes, no plan redesign needed", "phase": "201"}
   ],
   "uncommitted_files": [
-    "config-lab-broker190-baseline.yaml (pre-existing v5.20 lab artifact, untracked)",
-    "config-lab-broker190.yaml (pre-existing)",
-    "config-lab-core.yaml (pre-existing; 999.93 repro artifact per HORIZON)",
-    "config-lab-otics190.yaml (pre-existing)",
-    "output-190/, output-narrow/, output-uat188/, output-widened/ (pre-existing scan outputs)"
+    ".planning/phases/201-score-lift-roadmap-re-frame/201-06-PLAN.md (tracked; orchestrator checker-fix edits — committed at pause)",
+    ".planning/phases/201-score-lift-roadmap-re-frame/201-07-PLAN.md (same)",
+    ".planning/phases/201-score-lift-roadmap-re-frame/201-08-PLAN.md (same)"
   ],
-  "next_action": "/clear then /gsd-discuss-phase 191 (or /gsd-plan-phase 191 — research rated Phase 191 'standard patterns'; or /gsd-autonomous for the whole milestone)",
-  "context_notes": "Milestone v5.21 Dashboard Parity & Exposure Capability fully initialized and committed; nothing mid-flight. Research SUMMARY.md is the planning input for all 5 phases — phases 193 and 195 are flagged as needing deeper research at plan time (credential-path design; exposure-map spike). Standing machine hazards are recorded in CLAUDE.md (TOOL sections) and ROADMAP.md's standing-constraints block: phase.complete/milestone.complete unsafe (hand-written closes under pre-image + signature-diff protocol), gsd-sdk mutating state verbs require the pre-image protocol, gsd commit wrapper falsely fails on this repo (use plain git add -f + git commit for the tracked .planning files)."
+  "next_action": "Restart dashboard: .venv/bin/python run_scan.py serve --port 8512 (canonical DB ./quirk-output/quirk.db), have operator hard-refresh and finish the 201-06 walkthrough; on 'approved', spawn a continuation executor to finalize 201-06 SUMMARY + LIFT-05 notes, then execute plan 201-08, then the post-execution chain (code review→fix, ui-review, verifier, hand-written phase close), then Phase 202, then milestone lifecycle.",
+  "context_notes": "Autonomous /gsd-autonomous run for milestone v5.23 (4 phases). Phases 199+200 COMPLETE and closed (operator-approved). Phase 201: 6.67/8 plans done. This session also: fixed+closed 999.108 (main CI red, cfdd5438), filed 999.109 (P2 release bodies), re-greened backlog-reconciliation gate (c2d4ee81). All GSD state verbs remain UNSAFE — every STATE/ROADMAP/REQUIREMENTS write is hand-edited under pre-image + signature-diff; executors are instructed to never touch them. Unpushed main commits continue to accumulate (batch-push on operator go-ahead)."
 }
