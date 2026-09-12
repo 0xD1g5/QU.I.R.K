@@ -132,6 +132,39 @@ describe("RoadmapPage — LIFT-05 per-item lift badge (dashboard)", () => {
   })
 })
 
+describe("RoadmapPage — 201-UI-C2/E1 fractional score-lift formatting", () => {
+  it("renders a one-decimal '+4.2 pts' badge when score_lift is fractional", async () => {
+    scanDataReturn = {
+      data: makeFixture({ nodes: [makeNode({ id: "n1", score_lift: 4.2 })] }),
+      loading: false,
+      error: null,
+    }
+    const { RoadmapPage } = await import("@/pages/roadmap")
+    render(<RoadmapPage />)
+
+    await waitFor(() => expect(capturedTapHandler).not.toBeNull())
+    selectNode("n1")
+
+    expect(await screen.findByText("+4.2 pts")).toBeInTheDocument()
+  })
+
+  it("renders a one-decimal projected score when projected_score is fractional", async () => {
+    scanDataReturn = {
+      data: makeFixture({ nodes: [makeNode()], projected_score: 78.5 }),
+      loading: false,
+      error: null,
+    }
+    const { RoadmapPage } = await import("@/pages/roadmap")
+    render(<RoadmapPage />)
+
+    expect(
+      screen.getByText((_content, node) => {
+        return node?.textContent === "Projected score if all items resolved: 78.5"
+      }),
+    ).toBeInTheDocument()
+  })
+})
+
 describe("RoadmapPage — LIFT-05 Projected Score card (dashboard)", () => {
   it("renders the Projected Score card with the locked body text and verbatim disclaimer when projected_score: 78", async () => {
     scanDataReturn = {
@@ -179,6 +212,32 @@ describe("RoadmapPage — LIFT-05 Projected Score card (dashboard)", () => {
 })
 
 describe("PrintRoadmap — LIFT-05 print-surface equivalents", () => {
+  it("renders a one-decimal '(+4.2 pts)' parenthetical for a fractional score_lift (201-UI-C2/E1)", async () => {
+    const { PrintRoadmap } = await import("@/pages/print")
+    render(
+      <PrintRoadmap
+        nodes={[makeNode({ id: "n1", title: "Rotate expiring TLS certificates", score_lift: 4.2 })]}
+        projectedScore={null}
+      />,
+    )
+
+    expect(screen.getByText("(+4.2 pts)")).toBeInTheDocument()
+  })
+
+  it("renders a one-decimal fractional projected score (201-UI-C2/E1)", async () => {
+    const { PrintRoadmap } = await import("@/pages/print")
+    render(<PrintRoadmap nodes={[makeNode({ id: "n1" })]} projectedScore={78.5} />)
+
+    expect(
+      screen.getByText((_content, node) => {
+        return (
+          node?.tagName === "P" &&
+          (node.textContent?.includes("Projected score if all items resolved: 78.5") ?? false)
+        )
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("renders '(+4 pts)' after a node title with a lift, and nothing after a node without one", async () => {
     const { PrintRoadmap } = await import("@/pages/print")
     render(

@@ -102,7 +102,9 @@ export interface RoadmapNode {
   slug?: string | null
   // Phase 201 LIFT-05 — advisory point delta if this item is resolved,
   // joined by `slug` above. null is honest absence; never render as 0.
-  score_lift?: number | null
+  // Required `number | null` (never `undefined`) per 201-UI-SPEC.md line
+  // 112 — matches the Phase 199 `Optional[float]` widening convention.
+  score_lift: number | null
 }
 
 export interface RoadmapEdge {
@@ -396,7 +398,9 @@ export interface ScanLatestResponse {
   // Phase 201 LIFT-05 — advisory simulation of the score if every modelable
   // roadmap item were resolved. Top-level sibling of `roadmap`, never a
   // field of `score`. null when unassessed or the projection failed.
-  projected_score?: number | null
+  // Required `number | null` (never `undefined`) per 201-UI-SPEC.md line
+  // 112 — matches the Phase 199 `Optional[float]` widening convention.
+  projected_score: number | null
 }
 
 export interface SampleFinding {

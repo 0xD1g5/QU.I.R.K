@@ -33,9 +33,9 @@ function makeData(overrides: Partial<ScanLatestResponse> = {}): ScanLatestRespon
     cbom_components: [],
     roadmap: {
       nodes: [
-        { id: "n1", title: "Disable TLS 1.0/1.1", timeframe: "0-30 days", phase: "NOW", why: "Deprecated and exploitable." },
-        { id: "n2", title: "Remove RC4", timeframe: "0-30 days", phase: "NOW", why: "Cryptographically broken." },
-        { id: "n3", title: "PQC migration", timeframe: "90+ days", phase: "LATER", why: "Long-term." },
+        { id: "n1", title: "Disable TLS 1.0/1.1", timeframe: "0-30 days", phase: "NOW", why: "Deprecated and exploitable.", score_lift: null },
+        { id: "n2", title: "Remove RC4", timeframe: "0-30 days", phase: "NOW", why: "Cryptographically broken.", score_lift: null },
+        { id: "n3", title: "PQC migration", timeframe: "90+ days", phase: "LATER", why: "Long-term.", score_lift: null },
       ],
       edges: [],
     },
@@ -48,6 +48,7 @@ function makeData(overrides: Partial<ScanLatestResponse> = {}): ScanLatestRespon
     hardware_findings: [],
     hardware_devices: [],
     excluded_cert_count: 0,
+    projected_score: null,
     ...overrides,
   }
 }

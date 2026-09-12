@@ -5,6 +5,7 @@ import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/
 import type { QRAMMScoreResponse, QRAMMComplianceMapRow } from "@/types/api"
 import { extractCN } from "@/lib/cert-parse"
 import { formatScanDateTime, formatDateOnly } from "@/lib/datetime"
+import { formatScoreNumber } from "@/lib/utils"
 
 const FRAMEWORK_DISPLAY: Record<string, string> = {
   NIST_PQC: "NIST PQC Standards",
@@ -186,7 +187,7 @@ export function PrintRoadmap({
           placeholder paragraph in its absence. */}
       {projectedScore != null && (
         <p className="meta">
-          Projected score if all items resolved: {projectedScore}
+          Projected score if all items resolved: {formatScoreNumber(projectedScore)}
           <br />
           Advisory — this projection is a simulation and does not affect the readiness score.
         </p>
@@ -201,7 +202,9 @@ export function PrintRoadmap({
                 {/* Phase 201 LIFT-05: (+N pts) parenthetical after the title,
                     mirroring the `{n.why && ...}` conditional idiom. Absence
                     renders no parenthetical at all — never "(—)". */}
-                {n.score_lift != null && n.score_lift > 0 && <span> (+{n.score_lift} pts)</span>}
+                {n.score_lift != null && n.score_lift > 0 && (
+                  <span> (+{formatScoreNumber(n.score_lift)} pts)</span>
+                )}
                 {n.why && <span className="meta"> — {n.why}</span>}
               </li>
             ))}
