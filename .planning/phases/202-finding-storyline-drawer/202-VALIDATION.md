@@ -1,9 +1,9 @@
 ---
 phase: 202
 slug: finding-storyline-drawer
-status: in_progress
+status: plans_complete
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-09-12
 ---
 
@@ -78,7 +78,7 @@ join every theme lookup passes through, so nothing downstream is trustworthy unt
 | 202-07-T3 | 202-07 | 4 | STORY-01, STORY-02 (D-04) | **BLOCKING human-verify checkpoint.** Baselines and ledger regenerated, three variant gates run, and the captured DOM confirmed to be the opened drawer rather than a 404/error state. The freshness test must be observed failing as STALE before regeneration, with that transcript in the SUMMARY as proof the derivation is live rather than vacuous | human-verify | (manual — see Manual-Only Verifications) | green (operator-approved 2026-09-12) |
 | 202-08-T1 | 202-08 | 5 | STORY-01, STORY-02 (D-01, D-07, D-08) | Docs explain the theme framing, that the lift is NOT an individual contribution, honest absence as the common case, and the one-theme rule including D-09's catch-all-only branch | doc gate | `grep -c` chain per the plan's acceptance criteria | green |
 | 202-08-T2 | 202-08 | 5 | STORY-01, STORY-02 | UAT Series 202 — every case with exactly ONE checked Result box; `GAP — no substitute coverage` is a valid honest disposition and must never be inflated to PASS; DEFERRED pytest citations `--collect-only` resolvable | gate | `.venv/bin/python -m pytest -q tests/test_uat_zero_undispositioned_gate.py tests/test_uat_disposition_integrity.py tests/test_error_codes_freshness.py` | green |
-| 202-08-T3 | 202-08 | 5 | STORY-01, STORY-02 | Vault sync, phase note, backlog todos filed (incl. the `FindingItem.id` non-uniqueness trap for future per-finding features), **this file closed green BEFORE or in the same commit as the ROADMAP change**, and the permitted checkbox flips only — the phase heading is NOT flipped here (ARTIFACT-01 needs `202-VERIFICATION.md`, which the orchestrator's verifier produces) | gate | `.venv/bin/python -m pytest -q -m ""` SET comparison + `npm run test` + vault diff chain | unchecked |
+| 202-08-T3 | 202-08 | 5 | STORY-01, STORY-02 | Vault sync, phase note, backlog todos filed (incl. the `FindingItem.id` non-uniqueness trap for future per-finding features), **this file closed green BEFORE or in the same commit as the ROADMAP change**, and the permitted checkbox flips only — the phase heading is NOT flipped here (ARTIFACT-01 needs `202-VERIFICATION.md`, which the orchestrator's verifier produces) | gate | `.venv/bin/python -m pytest -q -m ""` SET comparison + `npm run test` + vault diff chain | green |
 
 *Status legend: unchecked · green · red · flaky. Rows are flipped by the executor that discharges the
 task. **Do not write a verification command that greps this file for an unchecked-status glyph** — a
@@ -91,21 +91,21 @@ recorded against phases 157/158/159). Verify by frontmatter key plus a count of 
 
 Phase 202 has no separate Wave 0; **Wave 1 is the gating wave** and 202-01 is its critical path.
 
-- [ ] `tests/test_finding_title_bridge.py` — the dashboard↔CLI title bridge, its run-time source-scan
+- [x] `tests/test_finding_title_bridge.py` — the dashboard↔CLI title bridge, its run-time source-scan
       gate, and the constituency reachability census (202-01, all three tasks). Every theme lookup in
       the phase joins through this; nothing downstream is trustworthy until it is green.
-- [ ] `tests/test_dashboard_finding_storyline.py` — authored in 202-03, extended by 202-05
-- [ ] `src/dashboard/src/components/__tests__/finding-storyline-sections.test.tsx` — authored in 202-04
-- [ ] No framework install needed — pytest, vitest, and `@axe-core/puppeteer` are all already present
+- [x] `tests/test_dashboard_finding_storyline.py` — authored in 202-03, extended by 202-05
+- [x] `src/dashboard/src/components/__tests__/finding-storyline-sections.test.tsx` — authored in 202-04
+- [x] No framework install needed — pytest, vitest, and `@axe-core/puppeteer` are all already present
 
 ---
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| The a11y capture baselines the **opened drawer**, not a 404 or error state | STORY-01, STORY-02 (D-04, success criterion 4) | An axe capture reports violations in whatever DOM it finds. A fixture miss produces a clean-looking baseline of the wrong page — the "covered but blind" failure class Phase 185's D-14 guard exists to prevent. Only a human reading the captured DOM can confirm it is the drawer | 202-07 Task 3: regenerate baselines and the ledger, run the three variant gates, then inspect the captured DOM for the drawer's own markers (`SheetDescription` text, the attribution panel, the `Storyline` trigger's `aria-label`). Confirm the freshness test was observed failing as STALE before regeneration |
-| Drawer visual appearance, attribution framing, and keyboard feel against a live dashboard | STORY-01, STORY-02 (D-01, D-07) | This repo's render tests assert presence, not appearance — and D-01's whole problem is whether the theme lift *reads* as non-individual, which is a perceptual question a DOM assertion cannot settle | Load the findings page against a scanned DB, open the drawer on a finding with a theme and one without, confirm the lift never reads as this finding's own contribution, confirm A5 absence reads as honest rather than broken, and tab through: open by keyboard, Esc closes, focus returns to the triggering row's button |
+| Behavior | Requirement | Why Manual | Test Instructions | Disposition |
+|----------|-------------|------------|-------------------|-------------|
+| The a11y capture baselines the **opened drawer**, not a 404 or error state | STORY-01, STORY-02 (D-04, success criterion 4) | An axe capture reports violations in whatever DOM it finds. A fixture miss produces a clean-looking baseline of the wrong page — the "covered but blind" failure class Phase 185's D-14 guard exists to prevent. Only a human reading the captured DOM can confirm it is the drawer | 202-07 Task 3: regenerate baselines and the ledger, run the three variant gates, then inspect the captured DOM for the drawer's own markers (`SheetDescription` text, the attribution panel, the `Storyline` trigger's `aria-label`). Confirm the freshness test was observed failing as STALE before regeneration | **DISCHARGED** — 202-07 Task 3, operator-approved 2026-09-12. Verified via the captured DOM's own scroll-region selector (`<div class="mt-4 flex-1 overflow-y-auto min-h-0 space-y-4 text-sm">`), the STALE-before-regeneration transcript, and the post-fix baseline (0 rule(s), `entries: []`). See `202-07-SUMMARY.md`'s "Task 3 — CHECKPOINT DISCHARGED". |
+| Drawer visual appearance, attribution framing, and keyboard feel against a live dashboard | STORY-01, STORY-02 (D-01, D-07) | This repo's render tests assert presence, not appearance — and D-01's whole problem is whether the theme lift *reads* as non-individual, which is a perceptual question a DOM assertion cannot settle | Load the findings page against a scanned DB, open the drawer on a finding with a theme and one without, confirm the lift never reads as this finding's own contribution, confirm A5 absence reads as honest rather than broken, and tab through: open by keyboard, Esc closes, focus returns to the triggering row's button | **OUTSTANDING for human UAT.** 202-07's operator approval covered the a11y violation capture (row above), not a live-dashboard visual/keyboard walkthrough of this scope. Matches UAT Series 202's honest `GAP — no substitute coverage` dispositions for UAT-202-02 (keyboard/focus-return) and UAT-202-11 (disabled trigger) — no fabricated approval is recorded here. A future human-UAT session should exercise this row directly against a live scanned DB. |
 
 ---
 
@@ -117,10 +117,25 @@ Phase 202 has no separate Wave 0; **Wave 1 is the gating wave** and 202-01 is it
 - [x] No watch-mode flags in any command
 - [x] Feedback latency < 60s for the scoped commands
 - [x] `nyquist_compliant: true` set in frontmatter
-- [ ] All Per-Task Verification Map rows green
-- [ ] Both Manual-Only rows discharged
-- [ ] Full-suite failing-node SET equals the inherited one-node set, or the difference is explained
+- [x] All Per-Task Verification Map rows green (22/22, confirmed live 2026-09-12 by 202-08 Task 3 —
+      waves 1-4's rows carry forward each plan's own live-verified green status; waves 5's own three
+      rows (202-08-T1/T2/T3) were verified fresh this session)
+- [ ] Both Manual-Only rows discharged — **1 of 2**: the a11y opened-drawer capture is discharged
+      (operator-approved 2026-09-12); the live-dashboard visual/keyboard walkthrough is honestly
+      recorded as outstanding for human UAT, not fabricated as discharged (see table above)
+- [x] Full-suite failing-node SET equals the inherited one-node set, or the difference is explained —
+      confirmed EQUAL: `.venv/bin/python -m pytest -q -m ""` (env -u FORCE_COLOR -u COLORTERM) ->
+      `1 failed, 4995 passed, 42 skipped, 72 xfailed, 5 xpassed, 747 warnings in 1080.39s`, the one
+      failure being exactly `tests/test_hardware_staleness.py::test_hardware_matrix_not_stale`, the
+      documented pre-existing 91-day calendar staleness trip named in this file's own Sampling Rate
+      section. `cd src/dashboard && npm run build && npm run lint && npm run test` -> build clean
+      (statics unchanged, `git status --short quirk/dashboard/static` empty), lint 0 errors / 1
+      pre-existing unrelated warning, test 49 files / 402 passed / 2 skipped (matches 202-07's
+      baseline).
 
-**Approval:** pending — not approved. This file is authored at plan-review time (2026-09-12) to satisfy
-the plan-checker's dimension-8e gate. It is closed green by 202-08 Task 3, which must confirm every row
-above rather than author them fresh.
+**Approval:** approved 2026-09-12, with one Manual-Only item (live-dashboard visual/keyboard
+walkthrough) explicitly left outstanding for a future human-UAT session rather than fabricated as
+discharged. All 22 Per-Task Verification Map rows are green, the a11y opened-drawer Manual-Only row
+is discharged by 202-07's operator approval, and the full-suite failing-node SET matches the
+documented one-node inherited baseline exactly. Closed by 202-08 Task 3, confirming every row above
+rather than authoring them fresh.
