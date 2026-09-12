@@ -363,26 +363,26 @@ Plans:
 
 **Wave 1**
 
-- [ ] 202-01-PLAN.md — dashboard->CLI finding-title bridge + run-time source-scan gate + constituency reachability census
-- [ ] 202-02-PLAN.md — FindingStoryline TS contract, FindingItem.id nullability fix, useFindingStoryline hook
+- [x] 202-01-PLAN.md — dashboard->CLI finding-title bridge + run-time source-scan gate + constituency reachability census
+- [x] 202-02-PLAN.md — FindingStoryline TS contract, FindingItem.id nullability fix, useFindingStoryline hook
 
 **Wave 2**
 
-- [ ] 202-03-PLAN.md — GET /api/findings/{id}/storyline: schema, auth-gated route, catalog narrative, (id,title) disambiguation
-- [ ] 202-04-PLAN.md — StorylineSections component: all 8 states, Invariants 1-3, division trip-wire
+- [x] 202-03-PLAN.md — GET /api/findings/{id}/storyline: schema, auth-gated route, catalog narrative, (id,title) disambiguation
+- [x] 202-04-PLAN.md — StorylineSections component: all 8 states, Invariants 1-3, division trip-wire
 
 **Wave 3**
 
-- [ ] 202-05-PLAN.md — theme attribution join: fingerprint lookup, D-08 tie-break, item_progress, shared lift context
-- [ ] 202-06-PLAN.md — findings.tsx: Storyline trigger column, Sheet description/width/scroll, focus contract, rebuilt statics
+- [x] 202-05-PLAN.md — theme attribution join: fingerprint lookup, D-08 tie-break, item_progress, shared lift context
+- [x] 202-06-PLAN.md — findings.tsx: Storyline trigger column, Sheet description/width/scroll, focus contract, rebuilt statics
 
 **Wave 4**
 
-- [ ] 202-07-PLAN.md — a11y harness opened-drawer capture: fixture handler, HOOK_TARGETS, interaction step, baselines
+- [x] 202-07-PLAN.md — a11y harness opened-drawer capture: fixture handler, HOOK_TARGETS, interaction step, baselines
 
 **Wave 5**
 
-- [ ] 202-08-PLAN.md — docs, UAT Series 202, Obsidian sync, phase note, backlog todos, validation close
+- [x] 202-08-PLAN.md — docs, UAT Series 202, Obsidian sync, phase note, backlog todos, validation close
 
 **UI hint**: yes
 
@@ -393,7 +393,7 @@ Plans:
 | 199. Wave A Correctness Drain | 5/5 | Complete | 2026-09-11 |
 | 200. Report Branding & Templates | 7/7 | Complete | 2026-09-11 |
 | 201. Score-Lift Roadmap Re-frame | 8/8 | Complete | 2026-09-12 |
-| 202. Finding Storyline Drawer | 0/8 | Planned | - |
+| 202. Finding Storyline Drawer | 8/8 | Plans complete, verification pending | - |
 
 ## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
 
