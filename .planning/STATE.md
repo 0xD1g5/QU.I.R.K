@@ -1964,8 +1964,8 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-09-11
-Stopped at: v5.23 Deliverable Experience opened — PROJECT.md/STATE.md updated; requirements definition next
-Resume file: .planning/STATE.md
+Stopped at: Session resumed from HANDOFF.json — Phase 201 plan 06 Task 3 (operator walkthrough checkpoint) pending; dashboard restarted on :8512 for the hard-refresh re-verification
+Resume file: .planning/HANDOFF.json
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in

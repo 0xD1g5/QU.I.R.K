@@ -57,7 +57,7 @@ new score-lift math.
 - [ ] **LIFT-04**: One roadmap categorization system feeds all surfaces — the
       `build_phased_roadmap()` / `categorize_waves()` duality (BACK-51) is unified so
       NOW/NEXT/LATER assignments agree across CLI/HTML/DOCX/dashboard for the same scan
-- [ ] **LIFT-05**: Score-lift renders on the dashboard roadmap surface (including the
+- [x] **LIFT-05**: Score-lift renders on the dashboard roadmap surface (including the
       `routes/scan.py`-side wiring it requires), consistent with the report surfaces
 
 ### Finding Storyline Drawer (STORY — 999.102, unblocked: 999.98 shipped v5.21 Phase 191)
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIFT-02 | Phase 201 | Pending |
 | LIFT-03 | Phase 201 | Pending |
 | LIFT-04 | Phase 201 | Pending |
-| LIFT-05 | Phase 201 | Pending |
+| LIFT-05 | Phase 201 | Complete |
 | STORY-01 | Phase 202 | Pending |
 | STORY-02 | Phase 202 | Pending |
 
