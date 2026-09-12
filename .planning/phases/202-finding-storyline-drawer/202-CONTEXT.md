@@ -161,3 +161,87 @@ that `gsd-ui-phase` will produce before planning).
   `.planning/phases/201-score-lift-roadmap-re-frame/deferred-items.md` item 4. Do NOT address here;
   it moves an operator-approved displayed number on four surfaces.
 </deferred>
+
+---
+
+# AMENDMENTS — 2026-09-12, post-research (operator-confirmed)
+
+`202-RESEARCH.md` (commit `009e2f9d`) falsified parts of D-01 and D-02. All three amendments below
+were put to the operator with evidence and confirmed. **D-06/D-07/D-08 supersede the conflicting
+clauses in D-01/D-02 above; where they disagree, the amendment wins.** The original text is retained
+unedited as the record of what was believed before research ran.
+
+## D-06 — The storyline endpoint is keyed by `(endpoint id, title)`, NOT by id alone (supersedes D-02's route shape)
+
+**D-02's `GET /api/findings/{id}/storyline` cannot work as written.** `FindingItem.id` is
+`CryptoEndpoint.id`, not a finding id: `_derive_findings()` emits multiple `FindingItem`s per endpoint
+inside one `for ep in endpoints:` loop (`quirk/dashboard/api/routes/scan.py:129`), every one carrying
+`id=ep.id`. Verified by direct read — there are 9 such assignments in that loop, and one TLS endpoint
+routinely yields 2-4 findings sharing a single `id`. Keying by id alone would return the wrong
+finding's storyline, silently and plausibly.
+
+**Resolution:** `GET /api/findings/{id}/storyline?title=<finding title>` — `title` is REQUIRED. The
+`(endpoint id, title)` pair is unique, and the client already holds both from the row the operator
+clicked, so no schema change or migration is needed.
+
+**A title-translation layer is required and is in scope.** The dashboard's finding titles
+(`_derive_findings` in `routes/scan.py`) and the CLI pipeline's titles (`evaluate_endpoints` in
+`quirk/engine/findings_evaluator.py`) are two independently-maintained vocabularies for the same
+conditions, and `RemediationItemFingerprint` rows are written only from the CLI vocabulary
+(`run_scan.py:4071,4118`). Research reports ~5 of 9 TLS classes diverge (HTTP, legacy-TLS,
+weak-cipher, cert-expired, cert-expiring) with 3 matching verbatim (self-signed, untrusted-CA,
+undersized-RSA) — **the planner must re-verify this mapping class by class rather than trusting the
+count**, since a wrong translation yields a confidently wrong theme. The route translates the
+dashboard title to the CLI canonical title, then computes
+`TicketingChannel.compute_fingerprint({host, port, title})` in memory. No re-scan, no DB write.
+
+Note for the planner: `FindingItem.id` being non-unique is a latent trap for ANY future per-finding
+feature, not just this one. Giving findings a genuinely unique identifier was considered and
+deliberately NOT chosen here — it is a wider blast radius than Phase 202 needs. Worth filing as
+backlog after this phase.
+
+## D-07 — Absent narrative is the COMMON case and is accepted as faithful to success criterion 2
+
+The Phase-99 catalogs are keyed by **crypto-algorithm keyword** (RSA/ECC/ECDSA/DH/DSA/hash
+weaknesses), matched by case-insensitive substring search over title+description+category+check_id
+(`quirk/reports/content_model.py:690-710`) — NOT by finding title. So the highest-volume finding
+classes (plaintext HTTP, legacy TLS, expired/expiring certs, self-signed, untrusted CA) carry no
+algorithm keyword and resolve to **absence case A5**. Narrative is the exception, not the rule:
+RSA/ECDSA-key findings and named-weak-cipher findings (RC4/DES/MD5/SHA1 appearing in description
+text) get narrative; most others do not.
+
+**Operator decision: accept this, do not paper over it.** The reasoning is that criterion 2's intent
+is "do not fork a generator — keep the deliverable and the dashboard telling the SAME story for the
+same finding." The report has no narrative for those classes either, so rendering honest absence IS
+that consistency, not a failure of it. D-05 stands unrelaxed: **no new narrative content is to be
+written in this phase**, and the catalogs are not to be extended.
+
+Consequence the planner must design for, not treat as an edge: the drawer's reliable value is the
+**theme attribution block** (theme name, conditioned lift, closure progress) plus the finding's own
+facts. A5 must therefore be a first-class, well-worded state — not a thin fallback — because
+operators will see it more often than they see narrative. The UI-SPEC's S6 state (narrative absence
+must NOT suppress the attribution block) is load-bearing for exactly this reason.
+
+## D-08 — Multi-theme tie-break: prefer the specific theme over the `high-impact-findings` catch-all (closes a D-01 gap)
+
+D-01 says "the owning theme" (singular). That is **not a data-model invariant**: verified live against
+`./quirk-output/quirk.db`, **28 of 67 distinct fingerprints (41%) belong to 2+ themes**. The pattern is
+uniform — every single multi-theme case pairs the `high-impact-findings` severity catch-all with one
+specific title-based theme (`plaintext-http-exposure` ×21, `self-signed-certificates` ×5,
+`expired-certificates` ×2).
+
+**Resolution:** when a finding maps to more than one slug, display the **specific title-based theme**
+and never the `high-impact-findings` catch-all. One rule, deterministic, explainable to an operator,
+and it resolves 28 of 28 observed cases.
+
+**A hand-ordered `_SLUG_PRIORITY` list was considered and REJECTED.** It is more general, but a
+hand-maintained list of sites is this repo's documented recurring failure mode — CLAUDE.md records
+four instances in the GSD toolchain, the staleness catalog list was found incomplete on 2026-09-12,
+and the a11y harness's `HOOK_TARGETS` is a fifth. Do not introduce a sixth. If a future overlap
+appears that is NOT the severity catch-all, that is the trigger to revisit — and it should be caught
+by a test that derives the overlap set from data, not by a list someone remembers to update.
+
+The drawer displays ONE theme. It does NOT hint that a finding also belongs to another theme —
+showing two conditioned lift numbers side by side would make D-01's non-additivity point
+substantially harder to convey, which is the whole problem D-01 exists to solve. Record this
+simplification in the phase SUMMARY.
