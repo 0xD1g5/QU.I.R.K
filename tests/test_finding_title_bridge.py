@@ -69,7 +69,15 @@ def _literal_prefix(title_literal: str) -> str:
 
 
 def _extract_dashboard_titles() -> List[Tuple[int, str]]:
-    """Scan `_derive_findings`' body for `title=`/`title=f"` sites.
+    """Scan `findings_for_endpoint`'s body for `title=`/`title=f"` sites.
+
+    Phase 202 / 202-03 (D-06) extracted the nine per-endpoint branches out of
+    `_derive_findings` into `findings_for_endpoint` so the storyline route
+    and the findings-list route share one implementation; this extractor was
+    updated in the same plan to scan the function the sites actually live in
+    now. `_derive_findings` itself retains only two loop-level concerns (the
+    KERBEROS/SAML/DNSSEC skip and the severity sort) and emits no `title=`
+    sites of its own.
 
     Returns a list of (absolute_line_number, literal_prefix) tuples. FAILS
     LOUDLY (raises) if any `title=` construct in the sliced body is not
@@ -78,7 +86,7 @@ def _extract_dashboard_titles() -> List[Tuple[int, str]]:
     over one.
     """
     source = _SCAN_PY.read_text()
-    body, base_line = _slice_function(source, "_derive_findings")
+    body, base_line = _slice_function(source, "findings_for_endpoint")
     results: List[Tuple[int, str]] = []
     for i, line in enumerate(body.splitlines()):
         if re.search(r"\btitle\s*=", line) and "title=idf.title" not in line:
@@ -286,7 +294,9 @@ def _dashboard_severity_for_cli_title(cli_title: str) -> str:
         k for k, v in DASHBOARD_TITLE_BRIDGE.items() if v == cli_title
     )
     source = _SCAN_PY.read_text()
-    body, _ = _slice_function(source, "_derive_findings")
+    # 202-03 (D-06): the severity=/title= sites live in findings_for_endpoint
+    # now, not _derive_findings -- see _extract_dashboard_titles' docstring.
+    body, _ = _slice_function(source, "findings_for_endpoint")
     lines = body.splitlines()
     for i, line in enumerate(lines):
         m = _TITLE_RE.search(line) if re.search(r"\btitle\s*=", line) else None
