@@ -117,13 +117,238 @@ _QS_DISPLAY = {
 }
 
 
+def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
+    """Every FindingItem one endpoint row yields.
+
+    The single-endpoint slice of `_derive_findings` (Phase 202 / 202-03,
+    D-06). Extracted so the storyline route's per-(id, title) lookup and the
+    findings-list route share exactly one implementation of "what findings
+    does this endpoint yield" — a second copy would drift exactly the way the
+    dashboard and CLI finding vocabularies already have (see
+    `quirk/dashboard/api/finding_title_bridge.py`, 202-01).
+
+    Deliberately excludes the KERBEROS/SAML/DNSSEC identity-protocol skip and
+    the cross-endpoint severity sort: both are loop-level concerns over the
+    full endpoint list, not properties of a single endpoint, and both remain
+    in `_derive_findings` below. `findings_for_endpoint` must be importable
+    without importing the router.
+    """
+    now = datetime.now(tz=timezone.utc)
+    findings: list[FindingItem] = []
+
+    # Unencrypted HTTP
+    if ep.protocol and ep.protocol.upper() == "HTTP":
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="Unencrypted HTTP service",
+            protocol="HTTP",
+            description="Service is accessible over plaintext HTTP without TLS.",
+            remediation="Enable TLS and redirect HTTP to HTTPS.",
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # Legacy TLS version
+    if ep.tls_version and ep.tls_version in ("TLSv1", "TLSv1.1", "TLS 1.0", "TLS 1.1"):
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title=f"Legacy TLS version: {ep.tls_version}",
+            protocol="TLS",
+            description=f"Server accepts {ep.tls_version} which is deprecated and insecure.",
+            remediation="Disable TLSv1.0 and TLSv1.1. Enforce TLS 1.2 minimum, prefer TLS 1.3.",
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # Weak cipher suites
+    if ep.tls_weak_ciphers_present:
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="Weak cipher suites enabled",
+            protocol="TLS",
+            description="Server accepts cipher suites with known weaknesses (RC4, DES, NULL, EXPORT, etc.).",
+            remediation="Restrict cipher suites to ECDHE/DHE forward-secret suites with AES-GCM or ChaCha20.",
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # Expired certificate
+    if ep.cert_not_after:
+        cert_expiry = ep.cert_not_after
+        if cert_expiry.tzinfo is None:
+            cert_expiry = cert_expiry.replace(tzinfo=timezone.utc)
+        days_to_expiry = (cert_expiry - now).days
+        if days_to_expiry < 0:
+            findings.append(FindingItem(
+                id=ep.id,
+                host=ep.host,
+                port=ep.port,
+                severity="CRITICAL",
+                title="Certificate expired",
+                protocol="TLS",
+                description=f"Certificate expired {abs(days_to_expiry)} day(s) ago.",
+                remediation="Renew the certificate immediately.",
+                quantum_risk=None,
+                source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
+            ))
+        elif days_to_expiry < 30:
+            findings.append(FindingItem(
+                id=ep.id,
+                host=ep.host,
+                port=ep.port,
+                severity="HIGH",
+                title=f"Certificate expiring in {days_to_expiry} day(s)",
+                protocol="TLS",
+                description="Certificate expires within 30 days.",
+                remediation="Renew certificate before expiry to avoid service interruption.",
+                quantum_risk=None,
+                source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
+            ))
+
+    # RVW-002: title and severity are the report engine's, verbatim.
+    # This used to read "Weak RSA key: N bits" at CRITICAL while
+    # findings_evaluator called the same condition "TLS certificate uses
+    # undersized RSA key" at HIGH — the operator console and the client
+    # deliverable disagreeing about the same endpoint. Parity is asserted by
+    # tests/test_finding_engine_parity.py.
+    if (
+        ep.cert_pubkey_alg
+        and ep.cert_pubkey_alg.upper().startswith("RSA")
+        and ep.cert_pubkey_size
+        and ep.cert_pubkey_size < 2048
+    ):
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="TLS certificate uses undersized RSA key",
+            protocol="TLS",
+            description=(
+                f"Certificate uses a {ep.cert_pubkey_size}-bit RSA key, below the "
+                f"classical 2048-bit minimum."
+            ),
+            remediation=(
+                f"RSA-{ep.cert_pubkey_size} is below the 2048-bit classical minimum. "
+                f"Migrate to RSA-2048+ or ECDSA P-256 immediately."
+            ),
+            quantum_risk="Vulnerable",
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # RVW-002 / TLS-FIND-02 / TLS-FIND-03: self-signed and untrusted-CA.
+    # The dashboard had neither detection, so an operator triaging in the
+    # console never saw a finding the client's report did carry. Mutually
+    # exclusive per D-04 — a self-signed cert is a strict subset of "chain
+    # didn't verify", and emitting both is redundant noise. The untrusted-CA
+    # branch fires only on an explicit False, never on an indeterminate None.
+    _issuer = (ep.cert_issuer or "").strip()
+    _subject = (ep.cert_subject or "").strip()
+    if _issuer and _subject and _issuer == _subject:
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="TLS certificate is self-signed",
+            protocol="TLS",
+            description=(
+                "This certificate is self-signed and is not issued by a trusted "
+                "certificate authority. Clients cannot verify the server's identity "
+                "and are exposed to man-in-the-middle interception."
+            ),
+            remediation=(
+                "Replace with a certificate issued by a trusted CA (public or "
+                "internal PKI)."
+            ),
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+    elif _issuer and _subject and _chain_verified(ep) is False:
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="MEDIUM",
+            title="TLS certificate issued by untrusted CA",
+            protocol="TLS",
+            description=(
+                "This certificate chains to a certificate authority not in the "
+                "system trust store. Clients cannot verify the server's identity."
+            ),
+            remediation=(
+                "Replace with a certificate from a publicly trusted CA, or add the "
+                "issuing CA to the system trust store if it is an internal PKI."
+            ),
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # Quantum-vulnerable algorithm (non-RSA)
+    if ep.cert_pubkey_alg and not ep.cert_pubkey_alg.upper().startswith("RSA"):
+        try:
+            from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+            _, nist_level, _ = classify_algorithm(ep.cert_pubkey_alg)
+            qs = _QS_DISPLAY.get(quantum_safety_label(nist_level), "Unknown")
+            if qs in ("Vulnerable", "At Risk"):
+                findings.append(FindingItem(
+                    id=ep.id,
+                    host=ep.host,
+                    port=ep.port,
+                    severity="MEDIUM",
+                    title=f"Quantum-{qs.lower()} algorithm: {ep.cert_pubkey_alg}",
+                    protocol=ep.protocol,
+                    description=f"{ep.cert_pubkey_alg} is classified as quantum-{qs.lower()} under NIST PQC evaluation.",
+                    remediation="Plan migration to a post-quantum algorithm per the NIST PQC roadmap.",
+                    quantum_risk=qs,
+                    source="tls",
+                    sensor_id=ep.sensor_id,
+                    segment=ep.segment,
+                ))
+        except Exception:
+            pass
+
+    return findings
+
+
 def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     """Synthesize findings from CryptoEndpoint rows.
 
     Findings are not stored in a separate table — they are derived at query time
-    from the state of each endpoint.
+    from the state of each endpoint. Delegates the per-endpoint branch logic to
+    `findings_for_endpoint` (Phase 202 / 202-03, D-06) so there is exactly one
+    implementation; this function retains only the two loop-level concerns
+    that are properties of the endpoint LIST, not of any single endpoint:
+    the KERBEROS/SAML/DNSSEC identity-protocol skip (a cross-endpoint filter
+    decision, handled exclusively by `_derive_identity_findings`) and the
+    final severity sort (a property of the assembled list, not any one
+    endpoint's findings).
     """
-    now = datetime.now(tz=timezone.utc)
     findings: list[FindingItem] = []
 
     for ep in endpoints:
@@ -133,207 +358,41 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
         if proto in {"KERBEROS", "SAML", "DNSSEC"}:
             continue
 
-        # Unencrypted HTTP
-        if ep.protocol and ep.protocol.upper() == "HTTP":
-            findings.append(FindingItem(
-                id=ep.id,
-                host=ep.host,
-                port=ep.port,
-                severity="HIGH",
-                title="Unencrypted HTTP service",
-                protocol="HTTP",
-                description="Service is accessible over plaintext HTTP without TLS.",
-                remediation="Enable TLS and redirect HTTP to HTTPS.",
-                quantum_risk=None,
-                source="tls",
-                sensor_id=ep.sensor_id,
-                segment=ep.segment,
-            ))
-
-        # Legacy TLS version
-        if ep.tls_version and ep.tls_version in ("TLSv1", "TLSv1.1", "TLS 1.0", "TLS 1.1"):
-            findings.append(FindingItem(
-                id=ep.id,
-                host=ep.host,
-                port=ep.port,
-                severity="HIGH",
-                title=f"Legacy TLS version: {ep.tls_version}",
-                protocol="TLS",
-                description=f"Server accepts {ep.tls_version} which is deprecated and insecure.",
-                remediation="Disable TLSv1.0 and TLSv1.1. Enforce TLS 1.2 minimum, prefer TLS 1.3.",
-                quantum_risk=None,
-                source="tls",
-                sensor_id=ep.sensor_id,
-                segment=ep.segment,
-            ))
-
-        # Weak cipher suites
-        if ep.tls_weak_ciphers_present:
-            findings.append(FindingItem(
-                id=ep.id,
-                host=ep.host,
-                port=ep.port,
-                severity="HIGH",
-                title="Weak cipher suites enabled",
-                protocol="TLS",
-                description="Server accepts cipher suites with known weaknesses (RC4, DES, NULL, EXPORT, etc.).",
-                remediation="Restrict cipher suites to ECDHE/DHE forward-secret suites with AES-GCM or ChaCha20.",
-                quantum_risk=None,
-                source="tls",
-                sensor_id=ep.sensor_id,
-                segment=ep.segment,
-            ))
-
-        # Expired certificate
-        if ep.cert_not_after:
-            cert_expiry = ep.cert_not_after
-            if cert_expiry.tzinfo is None:
-                cert_expiry = cert_expiry.replace(tzinfo=timezone.utc)
-            days_to_expiry = (cert_expiry - now).days
-            if days_to_expiry < 0:
-                findings.append(FindingItem(
-                    id=ep.id,
-                    host=ep.host,
-                    port=ep.port,
-                    severity="CRITICAL",
-                    title="Certificate expired",
-                    protocol="TLS",
-                    description=f"Certificate expired {abs(days_to_expiry)} day(s) ago.",
-                    remediation="Renew the certificate immediately.",
-                    quantum_risk=None,
-                    source="tls",
-                    sensor_id=ep.sensor_id,
-                    segment=ep.segment,
-                ))
-            elif days_to_expiry < 30:
-                findings.append(FindingItem(
-                    id=ep.id,
-                    host=ep.host,
-                    port=ep.port,
-                    severity="HIGH",
-                    title=f"Certificate expiring in {days_to_expiry} day(s)",
-                    protocol="TLS",
-                    description="Certificate expires within 30 days.",
-                    remediation="Renew certificate before expiry to avoid service interruption.",
-                    quantum_risk=None,
-                    source="tls",
-                    sensor_id=ep.sensor_id,
-                    segment=ep.segment,
-                ))
-
-        # RVW-002: title and severity are the report engine's, verbatim.
-        # This used to read "Weak RSA key: N bits" at CRITICAL while
-        # findings_evaluator called the same condition "TLS certificate uses
-        # undersized RSA key" at HIGH — the operator console and the client
-        # deliverable disagreeing about the same endpoint. Parity is asserted by
-        # tests/test_finding_engine_parity.py.
-        if (
-            ep.cert_pubkey_alg
-            and ep.cert_pubkey_alg.upper().startswith("RSA")
-            and ep.cert_pubkey_size
-            and ep.cert_pubkey_size < 2048
-        ):
-            findings.append(FindingItem(
-                id=ep.id,
-                host=ep.host,
-                port=ep.port,
-                severity="HIGH",
-                title="TLS certificate uses undersized RSA key",
-                protocol="TLS",
-                description=(
-                    f"Certificate uses a {ep.cert_pubkey_size}-bit RSA key, below the "
-                    f"classical 2048-bit minimum."
-                ),
-                remediation=(
-                    f"RSA-{ep.cert_pubkey_size} is below the 2048-bit classical minimum. "
-                    f"Migrate to RSA-2048+ or ECDSA P-256 immediately."
-                ),
-                quantum_risk="Vulnerable",
-                source="tls",
-                sensor_id=ep.sensor_id,
-                segment=ep.segment,
-            ))
-
-        # RVW-002 / TLS-FIND-02 / TLS-FIND-03: self-signed and untrusted-CA.
-        # The dashboard had neither detection, so an operator triaging in the
-        # console never saw a finding the client's report did carry. Mutually
-        # exclusive per D-04 — a self-signed cert is a strict subset of "chain
-        # didn't verify", and emitting both is redundant noise. The untrusted-CA
-        # branch fires only on an explicit False, never on an indeterminate None.
-        _issuer = (ep.cert_issuer or "").strip()
-        _subject = (ep.cert_subject or "").strip()
-        if _issuer and _subject and _issuer == _subject:
-            findings.append(FindingItem(
-                id=ep.id,
-                host=ep.host,
-                port=ep.port,
-                severity="HIGH",
-                title="TLS certificate is self-signed",
-                protocol="TLS",
-                description=(
-                    "This certificate is self-signed and is not issued by a trusted "
-                    "certificate authority. Clients cannot verify the server's identity "
-                    "and are exposed to man-in-the-middle interception."
-                ),
-                remediation=(
-                    "Replace with a certificate issued by a trusted CA (public or "
-                    "internal PKI)."
-                ),
-                quantum_risk=None,
-                source="tls",
-                sensor_id=ep.sensor_id,
-                segment=ep.segment,
-            ))
-        elif _issuer and _subject and _chain_verified(ep) is False:
-            findings.append(FindingItem(
-                id=ep.id,
-                host=ep.host,
-                port=ep.port,
-                severity="MEDIUM",
-                title="TLS certificate issued by untrusted CA",
-                protocol="TLS",
-                description=(
-                    "This certificate chains to a certificate authority not in the "
-                    "system trust store. Clients cannot verify the server's identity."
-                ),
-                remediation=(
-                    "Replace with a certificate from a publicly trusted CA, or add the "
-                    "issuing CA to the system trust store if it is an internal PKI."
-                ),
-                quantum_risk=None,
-                source="tls",
-                sensor_id=ep.sensor_id,
-                segment=ep.segment,
-            ))
-
-        # Quantum-vulnerable algorithm (non-RSA)
-        if ep.cert_pubkey_alg and not ep.cert_pubkey_alg.upper().startswith("RSA"):
-            try:
-                from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
-                _, nist_level, _ = classify_algorithm(ep.cert_pubkey_alg)
-                qs = _QS_DISPLAY.get(quantum_safety_label(nist_level), "Unknown")
-                if qs in ("Vulnerable", "At Risk"):
-                    findings.append(FindingItem(
-                        id=ep.id,
-                        host=ep.host,
-                        port=ep.port,
-                        severity="MEDIUM",
-                        title=f"Quantum-{qs.lower()} algorithm: {ep.cert_pubkey_alg}",
-                        protocol=ep.protocol,
-                        description=f"{ep.cert_pubkey_alg} is classified as quantum-{qs.lower()} under NIST PQC evaluation.",
-                        remediation="Plan migration to a post-quantum algorithm per the NIST PQC roadmap.",
-                        quantum_risk=qs,
-                        source="tls",
-                        sensor_id=ep.sensor_id,
-                        segment=ep.segment,
-                    ))
-            except Exception:
-                pass
+        findings.extend(findings_for_endpoint(ep))
 
     # Sort: CRITICAL > HIGH > MEDIUM > LOW > INFO
     _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
     findings.sort(key=lambda f: _severity_order.get(f.severity, 99))
     return findings
+
+
+def finding_by_id_and_title(
+    db: Session, endpoint_id: int, title: str
+) -> tuple[Optional[CryptoEndpoint], Optional[FindingItem]]:
+    """Resolve the ONE finding identified by (CryptoEndpoint.id, title).
+
+    Phase 202 / 202-03 (D-06): `FindingItem.id` IS `CryptoEndpoint.id` —
+    `findings_for_endpoint` yields multiple findings per endpoint, all
+    sharing that id, so `title` is the disambiguator. Exact string match
+    against the titles `findings_for_endpoint` produces for this endpoint —
+    not prefix or fuzzy — because the client sends back the exact title it
+    rendered from a prior `GET /api/scan/latest` response.
+
+    Returns:
+        (endpoint, finding) — the resolved pair, when both exist.
+        (endpoint, None) — the endpoint exists but no finding on it matches
+            `title` (lets the caller distinguish this from "no such endpoint").
+        (None, None) — no endpoint with this id exists at all.
+    """
+    ep = db.query(CryptoEndpoint).filter(CryptoEndpoint.id == endpoint_id).one_or_none()
+    if ep is None:
+        return None, None
+
+    for finding in findings_for_endpoint(ep):
+        if finding.title == title:
+            return ep, finding
+
+    return ep, None
 
 
 def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityFinding]:

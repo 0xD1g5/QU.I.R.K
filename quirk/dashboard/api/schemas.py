@@ -151,6 +151,33 @@ class FindingItem(BaseModel):
     segment: Optional[str] = None
 
 
+# Phase 202 (STORY-01, D-06): response payload for GET
+# /api/findings/{finding_id}/storyline. This mirrors, field-for-field and in
+# the same order, the locked TS interface `FindingStoryline` in
+# src/dashboard/src/types/api.ts (202-02) — the TS side declares every field
+# `T | null`, never `T?`, so a dropped/omitted key here would introduce a
+# silent third state (missing vs. null) the frontend contract does not admit.
+# `response_model_exclude_none` and `exclude_none=True` must NEVER be used
+# with this model.
+#
+# `None` is honest absence and must never be rendered as `0` downstream,
+# inheriting the contract already documented on `RoadmapNode.score_lift`
+# above (schemas.py:495-501). 202-03 populates finding_id/narrative/
+# quantum_impact/remediation_guidance only; the six theme_*/finding_position
+# fields are declared now and left `None` — 202-05 fills them.
+class FindingStoryline(BaseModel):
+    finding_id: int
+    narrative: Optional[str] = None
+    quantum_impact: Optional[str] = None
+    remediation_guidance: Optional[str] = None
+    theme_slug: Optional[str] = None
+    theme_title: Optional[str] = None
+    theme_score_lift: Optional[int] = None
+    theme_finding_count: Optional[int] = None
+    theme_closed_count: Optional[int] = None
+    finding_position: Optional[int] = None
+
+
 # ---- Certificates ----
 
 class CertItem(BaseModel):
