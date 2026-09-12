@@ -161,11 +161,18 @@ schedule slack.
   through a sandboxed environment, and save reusable report profiles; a written go/no-go resolves
   999.105 Tier 2's feasibility.
 
-- [ ] **Phase 201: Score-Lift Roadmap Re-frame** - Every remediation roadmap item and its
-  aggregate projection carry a real, non-additive, firewalled score-lift number from one unified
-  categorization builder, rendered consistently across all four surfaces. All 8 plans executed and
-  committed; awaiting the orchestrator's post-execution gsd-verifier pass (201-VERIFICATION.md)
-  before the phase heading and this row can flip to Complete — see 201-08-SUMMARY.md.
+- [x] **Phase 201: Score-Lift Roadmap Re-frame** (completed 2026-09-12) - Every remediation roadmap
+  item and its aggregate projection carry a real, non-additive, firewalled score-lift number from one
+  unified categorization builder, rendered consistently across all four surfaces. All 8 plans
+  executed; verification `passed` 5/5 (201-VERIFICATION.md), LIFT-01..LIFT-05 all Complete, BACK-51
+  closed by recorded decision. Post-execution: code review 0 critical / 2 warning (WR-01 dead
+  double-rescore in build_exec_markdown fixed, WR-02 accepted-advisory) + 2 info accepted-advisory;
+  UI review 20/24 with all 4 warnings fixed (UI-SPEC fractional formatting, required score types,
+  real flex badge row, off-grid margin removed). One genuine in-phase regression found and fixed
+  after the last plan: 201-05's surface tests hit the TRIAGE-149 Playwright order-pollution class
+  and are now patched at the writer seam (d1f1351f) — it had been misfiled as pre-existing. Full
+  suite 4960 passed / 1 failed, that one being an unrelated 91-day HARDWARE_MATRIX staleness trip,
+  operator-deferred with a record. 4 deferred items recorded, incl. `int(delta)` lift truncation.
 
 - [ ] **Phase 202: Finding Storyline Drawer** - Operator can open a per-finding narrative drawer
   on the dashboard findings table, showing the finding's story and its score-lift attribution.
@@ -357,9 +364,9 @@ narrative catalogs rather than forking a new one.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 199. Wave A Correctness Drain | 0/? | Not started | - |
-| 200. Report Branding & Templates | 0/? | Not started | - |
-| 201. Score-Lift Roadmap Re-frame | 8/8 | Plans complete, verification pending | - |
+| 199. Wave A Correctness Drain | 5/5 | Complete | 2026-09-11 |
+| 200. Report Branding & Templates | 7/7 | Complete | 2026-09-11 |
+| 201. Score-Lift Roadmap Re-frame | 8/8 | Complete | 2026-09-12 |
 | 202. Finding Storyline Drawer | 0/? | Not started | - |
 
 ## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
