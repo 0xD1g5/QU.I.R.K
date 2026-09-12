@@ -159,7 +159,15 @@ def _write_reports_with_stubs(cfg, *, evidence_fn, roadmap_fn):
     with patch("quirk.reports.writer.build_evidence_summary", side_effect=evidence_fn), \
          patch("quirk.reports.writer.compute_readiness_score", side_effect=_passthrough_score), \
          patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence), \
-         patch("quirk.reports.writer.build_phased_roadmap", side_effect=roadmap_fn):
+         patch("quirk.reports.writer.build_phased_roadmap", side_effect=roadmap_fn), \
+         patch("quirk.reports.writer.render_pdf_report", return_value=False):
+        # render_pdf_report is patched at the writer seam for the same reason
+        # test_report_branding_cli.py and test_report_template_sandbox.py do it
+        # (Phase 200 close-out): these tests assert markdown/JSON content only,
+        # so reaching sync_playwright() buys nothing and exposes them to the
+        # TRIAGE-149 order-pollution class — asyncio/playwright process state
+        # left behind by earlier full-suite tests. Skipping the leg keeps them
+        # deterministic in any collection order.
         write_reports(cfg, endpoints=[], findings=[])
 
 
@@ -360,7 +368,8 @@ def test_lift_computation_exception_degrades_to_complete_report_with_no_lift_tex
          patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence), \
          patch("quirk.reports.writer.build_phased_roadmap", side_effect=_roadmap_with_modelable_and_unmodelable_items), \
          patch("quirk.reports.writer.compute_item_lifts", side_effect=_raise_lifts), \
-         patch("quirk.reports.writer.compute_projected_score", side_effect=_raise_projected):
+         patch("quirk.reports.writer.compute_projected_score", side_effect=_raise_projected), \
+         patch("quirk.reports.writer.render_pdf_report", return_value=False):
         write_reports(cfg, endpoints=[], findings=[])
 
     roadmap_md = _read_single(os.path.join(str(tmp_path), "roadmap-*.md"))
