@@ -73,9 +73,12 @@ class SeverityTransitionItem:
 class TrendReport:
     current_session_ts: Optional[datetime]
     previous_session_ts: Optional[datetime]
-    current_score: Optional[int]
-    previous_score: Optional[int]
-    score_delta: Optional[int]
+    # Phase 199 / TRIAGE-10: widened Optional[int] -> Optional[float] x3 —
+    # transport-accurate typing so a fractional score survives, and the
+    # delta reflects real float subtraction.
+    current_score: Optional[float]
+    previous_score: Optional[float]
+    score_delta: Optional[float]
     new_high: int
     new_medium: int
     new_low: int
@@ -198,11 +201,14 @@ def _sample_findings(
     ]
 
 
-def _score_for_session(endpoints: List[CryptoEndpoint]) -> int:
+def _score_for_session(endpoints: List[CryptoEndpoint]) -> Optional[float]:
     """Compute the readiness score for a list of endpoints.
 
-    Returns score as int (compute_readiness_score always returns int via
-    total_score = int(...) — confirmed in scoring.py).
+    quirk/intelligence/scoring.py's compute_readiness_score still returns
+    total_score = int(round(...)) today (unchanged, LOCKED). This function's
+    return annotation is transport-accurate rather than source-accurate,
+    Phase 199 / TRIAGE-10: it preserves whatever score_dict["score"] yields,
+    including None (zero domains assessed) or a future fractional value.
     """
     # D-07 (184.4): intentionally findings-less — the only consumer of this
     # function's return value is `return score_dict["score"]` immediately below;

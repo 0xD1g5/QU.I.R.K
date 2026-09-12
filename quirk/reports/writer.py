@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 from rich.table import Table
 
-from quirk.reports.executive import build_exec_markdown
+from quirk.reports.executive import build_exec_markdown, resolve_identity_pairs
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
 from quirk.reports.content_model import build_exec_content, ReportCongruenceError, NOT_COMPUTED_STATEMENT, effective_score_divisor  # D-03 / D-06 / Phase 188 SCORE-06
@@ -17,7 +17,9 @@ from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/I
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
-from quirk.intelligence.roadmap import build_phased_roadmap
+from quirk.intelligence.roadmap import build_phased_roadmap, _TIMEFRAME_BY_PHASE
+from quirk.intelligence.remediation import slug_for_title  # Phase 201 Plan 05 (LIFT-01)
+from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score  # Phase 201 Plan 05
 from quirk.cbom import build_cbom, write_cbom_files
 from quirk.cbom.bridge import _detect_crypto_bridges, _confirm_upstream_mitigation  # Phase 129 HWCOMPAT-03 / Phase 140 BRIDGE-01
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
@@ -290,30 +292,6 @@ def _unique_hosts(hosts) -> set:
     return {h for h in (hosts or []) if h}
 
 
-def categorize_waves(findings):
-    """Bucket findings into migration waves by severity.
-
-    Phase 83 / CLEAN-01: Inlined from former ``quirk/engine/migration_planner.py``
-    (now deleted). Test mocks at ``quirk.reports.writer.categorize_waves`` continue
-    to resolve via namespace-of-use and remain valid without modification.
-    """
-    waves = {
-        "NOW": [],
-        "NEXT": [],
-        "LATER": []
-    }
-
-    for f in findings:
-        if f["severity"] == "CRITICAL":
-            waves["NOW"].append(f)
-        elif f["severity"] == "HIGH":
-            waves["NEXT"].append(f)
-        else:
-            waves["LATER"].append(f)
-
-    return waves
-
-
 SCHEMA_VERSION = 2
 # v4.10 D-02 / Phase 84-01: derive from pyproject.toml SoT via quirk.__version__
 INTELLIGENCE_VERSION = PLATFORM_VERSION
@@ -357,7 +335,17 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines = []
     lines.append("# Quantum Crypto Readiness — Scorecard\n")
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
-    lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
+    lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
+    # Phase 200 Plan 04 / RPT-01: identity lines, each individually conditional —
+    # absent branding must produce byte-identical output to today.
+    # Phase 200 review IN-02: no per-line "\n" terminator — a single ""
+    # block terminator keeps the identity bullets a tight list contiguous
+    # with Owner/Data-classification (mirrors executive.py's idiom). With
+    # no branding, ["...classification", ""] joins to the same bytes the
+    # old "...classification\n" element produced.
+    for _label, _value in resolve_identity_pairs(cfg):
+        lines.append(f"- **{_label}:** {_value}")
+    lines.append("")
     _score_total = score.get("total")
     _coverage_disclosure = score.get("coverage_disclosure") or ""
     if _score_total is None:
@@ -415,17 +403,36 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append("\n## Next 30–60 days\n")
     if now_actions:
         for a in now_actions:
-            lines.append(f"- **{md_cell(a.get('title'))}** — {md_cell(a.get('why'))}")
+            # Phase 201 Plan 05 (LIFT-01, RESEARCH Open Question 1 — ADOPTED):
+            # the scorecard's top-3 NOW actions carry the same (+N pts)
+            # parenthetical as the roadmap markdown, built the same way
+            # (server-computed int, appended outside md_cell).
+            _lift = a.get("score_lift")
+            _lift_txt = f" (+{int(_lift)} pts)" if _lift is not None else ""
+            lines.append(f"- **{md_cell(a.get('title'))}** — {md_cell(a.get('why'))}{_lift_txt}")
     else:
         lines.append("- Establish ownership + inventory closure for crypto endpoints.\n")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
+# Phase 201 Plan 05 (LIFT-03): verbatim advisory disclaimer — locked copy,
+# character for character, on every projected-number surface.
+_LIFT_DISCLAIMER = (
+    "Advisory — this projection is a simulation and does not affect the readiness score."
+)
+
+
+def _roadmap_markdown(roadmap: List[Dict[str, Any]], projected_score: Optional[float] = None) -> str:
     def section(tf: str) -> List[Dict[str, Any]]:
         return [r for r in roadmap if r.get("timeframe") == tf or r.get("phase") == tf]
 
     lines = ["# Quantum Crypto Transition Roadmap\n"]
+    # Phase 201 Plan 05 (LIFT-03): projected-score line + disclaimer, directly
+    # after the heading, only when a projection exists (SCORE-06 honest
+    # absence — never a fabricated number for an unassessed scan).
+    if projected_score is not None:
+        lines.append(f"Projected score if all items resolved: {int(projected_score)}\n")
+        lines.append(f"{_LIFT_DISCLAIMER}\n")
     for tf in ("NOW", "NEXT", "LATER"):
         lines.append(f"## {tf}\n")
         for r in section(tf):
@@ -435,7 +442,14 @@ def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
             dep_txt = (
                 f" _(deps: {', '.join(md_cell(d) for d in deps)})_" if deps else ""
             )
-            lines.append(f"- **{md_cell(r.get('title'))}** — {md_cell(r.get('why'))}{dep_txt}")
+            # Phase 201 Plan 05 (LIFT-01): the (+N pts) parenthetical is built
+            # from a server-computed int and appended OUTSIDE md_cell, exactly
+            # like dep_txt (HARDEN-01) — never wrapped around scanner text.
+            # Absence (no score_lift key, or None) renders nothing at all —
+            # never "(+0 pts)", never a dash (SCORE-06 house style).
+            _lift = r.get("score_lift")
+            lift_txt = f" (+{int(_lift)} pts)" if _lift is not None else ""
+            lines.append(f"- **{md_cell(r.get('title'))}** — {md_cell(r.get('why'))}{dep_txt}{lift_txt}")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
@@ -522,6 +536,42 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     conf_raw = compute_confidence(evidence)
     roadmap_raw = build_phased_roadmap(evidence, score_raw)
 
+    # Phase 201 Plan 05 (LIFT-01/02/03): forward-projection lifts, computed with
+    # the IDENTICAL profile/weights pair the compute_readiness_score call above
+    # used for this report's own headline score (Pitfall 4/T-201-18). Attached
+    # to roadmap_raw's item dicts OUTSIDE build_phased_roadmap() (structural
+    # constraint (a) — that function's return keys must stay exactly the 6
+    # tests/test_intelligence_roadmap.py asserts). T-201-19: a lift-computation
+    # failure must never abort report generation — degrade to no lifts/no
+    # projection, never a stale or fabricated number.
+    _roadmap_items_raw = roadmap_raw.get("items", [])
+    try:
+        _lifts_by_slug = compute_item_lifts(
+            evidence,
+            _roadmap_items_raw,
+            profile=cfg.intelligence.profile,
+            weights=cfg.intelligence.calibration_overrides or None,
+        )
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning("score-lift computation skipped (non-fatal)", exc_info=True)
+        _lifts_by_slug = {}
+    try:
+        projected_score = compute_projected_score(
+            evidence,
+            _roadmap_items_raw,
+            profile=cfg.intelligence.profile,
+            weights=cfg.intelligence.calibration_overrides or None,
+        )
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning("projected-score computation skipped (non-fatal)", exc_info=True)
+        projected_score = None
+    for _item in _roadmap_items_raw:
+        _slug = slug_for_title(_item.get("title"))
+        if _slug is not None and _slug in _lifts_by_slug:
+            _item["score_lift"] = _lifts_by_slug[_slug]
+
     # D-03 / D-06: build shared content object BEFORE compat wrapper — score_raw uses
     # canonical keys ("score", "rating", "subscores"), not the writer compat wrapper keys
     # ("total"). ReportCongruenceError propagates to CLI before any exec report is written.
@@ -529,6 +579,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         score_raw=score_raw,
         findings=findings,
         roadmap_items=roadmap_raw.get("items", []),
+        projected_score=projected_score,
     )
 
     # Compat wrappers: map intelligence schema to writer's internal format
@@ -833,7 +884,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
 
     roadmap_path = os.path.join(outdir, f"roadmap-{stamp}.md")
     with open(roadmap_path, "w", encoding="utf-8") as f:
-        f.write(_roadmap_markdown(roadmap_items))
+        f.write(_roadmap_markdown(roadmap_items, exec_content.projected_score))
 
     # 3b) Standalone HTML report (D-08) + PDF via Playwright (D-11)
     html_path = os.path.join(outdir, f"report-{stamp}.html")
@@ -908,12 +959,29 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     _console = Console()
 
     # Migration waves summary (kept as before, but using rich)
-    waves = categorize_waves(findings)
+    #
+    # BACK-51 / LIFT-04 (Phase 201): the second, independently-derived
+    # severity-bucketed migration-wave categorizer that used to live in this
+    # module has been deleted outright (no adapter, no deprecated stub).
+    # build_phased_roadmap() (roadmap_raw, built above) is now the single
+    # categorization system across every surface (CLI, HTML, DOCX, dashboard).
+    # This table's second column therefore now counts roadmap ITEMS per
+    # NOW/NEXT/LATER phase, not findings per severity bucket — a deliberate
+    # semantic change, recorded here rather than left implicit.
+    _timeframe_to_phase = {v: k for k, v in _TIMEFRAME_BY_PHASE.items()}
+    wave_counts = {"NOW": 0, "NEXT": 0, "LATER": 0}
+    for item in roadmap_raw.get("items", []):
+        phase = item.get("phase")
+        if phase not in wave_counts:
+            timeframe = item.get("timeframe")
+            phase = timeframe if timeframe in wave_counts else _timeframe_to_phase.get(timeframe)
+        if phase in wave_counts:
+            wave_counts[phase] += 1
     wave_table = Table(title="Migration Waves", show_header=True, header_style="bold #3b9dff")
     wave_table.add_column("Wave", style="bold cyan")
-    wave_table.add_column("Findings", justify="right")
-    for wave, items in waves.items():
-        wave_table.add_row(str(wave), str(len(items)))
+    wave_table.add_column("Items", justify="right")
+    for wave, count in wave_counts.items():
+        wave_table.add_row(str(wave), str(count))
     _console.print(wave_table)
 
     # Scan summary table
@@ -952,6 +1020,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         summary_table.add_row("Cap reason", _cap_reason_row)
     summary_table.add_row("Confidence", f"{total_conf}/100")
     summary_table.add_row("Platform version", PLATFORM_VERSION)
+    # Phase 200 Plan 04 / RPT-01: identity rows, each individually conditional —
+    # a cfg with no report.branding section emits no rows, matching the
+    # executive/scorecard byte-identical contract for this table's text.
+    for _label, _value in resolve_identity_pairs(cfg):
+        summary_table.add_row(_label, str(_value))
     _console.print(summary_table)
 
     # Output files list

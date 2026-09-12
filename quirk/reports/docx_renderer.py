@@ -20,6 +20,9 @@ from typing import Any, Dict, List, Optional
 
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: staleness caveat metadata
 from quirk.reports.content_model import NOT_COMPUTED_STATEMENT, effective_score_divisor  # Phase 188 SCORE-06 / 188-03
+# Phase 200 / RPT-01: shared logo size cap (T-200-10) — reused, not re-defined.
+# Not a docx import, safe at module level.
+from quirk.reports.html_renderer import _MAX_LOGO_BYTES
 
 logger = logging.getLogger(__name__)
 
@@ -396,6 +399,22 @@ def render_docx_report(
     report_owner = getattr(getattr(cfg, "assessment", None), "report_owner", "")
     data_classification = getattr(getattr(cfg, "assessment", None), "data_classification", "")
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    # ---------------------------------------------------------------------------
+    # Phase 200 / RPT-01: branding resolution — same double-getattr shape and
+    # same report.branding -> assessment.logo_path -> None precedence as
+    # html_renderer.py. A cfg with no `report` attribute renders unchanged.
+    # ---------------------------------------------------------------------------
+    _branding_ns = getattr(getattr(cfg, "report", None), "branding", None)
+    branding_logo_path = getattr(_branding_ns, "logo_path", None)
+    branding_client_name = getattr(_branding_ns, "client_name", None)
+    branding_engagement_name = getattr(_branding_ns, "engagement_name", None)
+    branding_prepared_by = getattr(_branding_ns, "prepared_by", None)
+    branding_cover_date = getattr(_branding_ns, "cover_date", None)
+    branding_confidentiality_line = getattr(_branding_ns, "confidentiality_line", None)
+    branding_logo_resolved = branding_logo_path or getattr(
+        getattr(cfg, "assessment", None), "logo_path", None
+    )
     # SCORE-03 / D-16b (Phase 184.3): local import avoids a circular import
     # (writer.py imports this module at load time).
     from quirk.reports.writer import format_scan_completed_at
@@ -425,8 +444,26 @@ def render_docx_report(
         )
 
     # ---- Cover block ----
-    # 1. Logo placeholder paragraph (D-12 / 100-UI-SPEC.md §C — exact verbatim string)
-    doc.add_paragraph("[ Insert organization logo here ]", style="Normal")
+    # 1. Logo: embed a picture when a readable, size-capped logo path resolves
+    #    (report.branding.logo_path -> assessment.logo_path -> None); otherwise
+    #    fall back to the existing placeholder paragraph verbatim (D-12). Never
+    #    crash the render over branding (D-11) — same try/except-and-warn shape
+    #    the orientation block above uses.
+    _logo_embedded = False
+    if branding_logo_resolved:
+        try:
+            from docx.shared import Inches
+            if os.path.getsize(branding_logo_resolved) <= _MAX_LOGO_BYTES:
+                doc.add_picture(branding_logo_resolved, width=Inches(2.0))
+                _logo_embedded = True
+        except Exception:
+            logger.warning(
+                "Failed to embed logo at %r — using placeholder text.",
+                branding_logo_resolved,
+                exc_info=True,
+            )
+    if not _logo_embedded:
+        doc.add_paragraph("[ Insert organization logo here ]", style="Normal")
 
     # 2. Report title — Heading 1
     doc.add_heading("QU.I.R.K. Cryptographic Readiness Report", level=1)
@@ -441,6 +478,20 @@ def render_docx_report(
         f"  |  Classification: {data_classification}",
         style="Normal",
     )
+
+    # 4b. Branding identity block (Phase 200 / RPT-01) — each paragraph only
+    #     when its field is set; an absent field emits nothing (today's
+    #     rendering when report.branding is unset).
+    if branding_client_name:
+        doc.add_paragraph(f"Client: {branding_client_name}", style="Normal")
+    if branding_engagement_name:
+        doc.add_paragraph(f"Engagement: {branding_engagement_name}", style="Normal")
+    if branding_prepared_by:
+        doc.add_paragraph(f"Prepared By: {branding_prepared_by}", style="Normal")
+    if branding_cover_date:
+        doc.add_paragraph(f"Cover Date: {branding_cover_date}", style="Normal")
+    if branding_confidentiality_line:
+        doc.add_paragraph(branding_confidentiality_line, style="Normal")
 
     # ---- Executive Summary section ----
     doc.add_heading("Executive Summary", level=1)
@@ -622,6 +673,19 @@ def render_docx_report(
 
     # ---- Remediation Roadmap section ----
     doc.add_heading("Remediation Roadmap", level=1)
+    # Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only projected-score line +
+    # verbatim disclaimer, directly after the heading, gated on presence so an
+    # unassessed/failed-projection scan renders neither line. Value is read
+    # via getattr — never computed here.
+    _projected_score = getattr(exec_content, "projected_score", None) if exec_content is not None else None
+    if _projected_score is not None:
+        doc.add_paragraph(
+            f"Projected score if all items resolved: {int(_projected_score)}", style="Normal"
+        )
+        doc.add_paragraph(
+            "Advisory — this projection is a simulation and does not affect the readiness score.",
+            style="Normal",
+        )
     for phase_label, phase_items in [("NOW", roadmap_now), ("NEXT", roadmap_next), ("LATER", roadmap_later)]:
         doc.add_heading(phase_label, level=2)
         roadmap_tbl = doc.add_table(rows=1, cols=4)
@@ -635,7 +699,12 @@ def render_docx_report(
             for item in phase_items:
                 row_cells = roadmap_tbl.add_row().cells
                 row_cells[0].text = str(getattr(item, "phase", phase_label))
-                row_cells[1].text = str(getattr(item, "title", ""))
+                # Phase 201 Plan 07 (LIFT-02/LIFT-05): per-item forward-projection
+                # lift, appended to the Action cell text. `getattr(..., None)` is
+                # None for honest absence (never 0) — no parenthetical then.
+                _lift = getattr(item, "score_lift", None)
+                _lift_txt = f" (+{int(_lift)} pts)" if _lift is not None else ""
+                row_cells[1].text = str(getattr(item, "title", "")) + _lift_txt
                 row_cells[2].text = str(getattr(item, "why", ""))
                 effort = getattr(item, "effort", "")
                 impact = getattr(item, "impact", "")
@@ -961,6 +1030,32 @@ def render_docx_report(
                 _row[4].text = f"Re-keying this certificate remediates {_member_count} endpoints."
             # Advisory-only: no cell shading — this table carries no severity color.
             _set_col_widths(key_reuse_tbl, [2.0, 1.4, 0.8, 3.0, 2.3])
+
+    # ---------------------------------------------------------------------------
+    # Phase 200 / RPT-01: header/footer identity block. Guarded the same way
+    # as the orientation block above — never crash the render over branding.
+    # ---------------------------------------------------------------------------
+    if branding_client_name or branding_engagement_name or branding_confidentiality_line:
+        try:
+            _section = doc.sections[0]
+            _identity_parts = [
+                v for v in (branding_client_name, branding_engagement_name) if v
+            ]
+            if _identity_parts:
+                _identity_line = "  |  ".join(_identity_parts)
+                _header_para = _section.header.paragraphs[0]
+                _header_para.text = _identity_line
+                _footer_para = _section.footer.paragraphs[0]
+                _footer_para.text = _identity_line
+                if branding_confidentiality_line:
+                    _footer_para.text = f"{_identity_line}  |  {branding_confidentiality_line}"
+            elif branding_confidentiality_line:
+                _section.footer.paragraphs[0].text = branding_confidentiality_line
+        except Exception:
+            logger.warning(
+                "Failed to write branding identity into header/footer.",
+                exc_info=True,
+            )
 
     # ---------------------------------------------------------------------------
     # Save document

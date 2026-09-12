@@ -2,6 +2,20 @@
 
 ## Current State (updated 2026-09-11)
 
+**v5.23 Deliverable Experience — OPENED 2026-09-11.** Capability cycle: reporting-engine
+customization (999.105 Tier 1), score-lift migration-roadmap re-frame (999.101), finding
+storyline drawer (999.102), gated by a small Wave A drain (trends/merge int-coercion +
+overlay CI regression test). Sequencing commitment: v5.24 = UAT Coverage Drain. See
+`## Current Milestone` below. **Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11** —
+TRIAGE-10/TRIAGE-11 validated: fractional scores round-trip via Optional[float] transport
+widening (merge/trends/scan + TS mirrors, null-honest SubscoreSlot gauges), combined
+connectors+advanced overlay regression test green; verification passed 8/8, full suite
+4845/0. **Phase 200 (Report Branding & Templates) COMPLETE 2026-09-11** — RPT-01..05
+validated: report.branding config + HTML/PDF/DOCX/CLI rendering, sandboxed template_dir
+override (SSTI gate GO, 13/13 payloads), named path guard + dashboard-exclusion sweep,
+report profiles + CLI, 999.105 Tier 2 NO-GO spike; operator-approved live walkthrough;
+full suite 4909/0.
+
 **v5.22 SHIPPED (closed 2026-09-11) — Release & Parity Tail.** All 3 phases (196–198), 13 plans.
 Audit `passed` 10/10 (REL-02/03, HOUSE-01, HUAT-01, PARITY-05..09, GATE-04); 5/5 integration
 seams wired; Nyquist 3/3. **v5.21.0 published to PyPI 2026-09-10** — first release since 5.19.0,
@@ -156,7 +170,49 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.22 Release & Parity Tail (CLOSED 2026-09-11 — see Current State; next milestone opens via /gsd-new-milestone)
+## Current Milestone: v5.23 Deliverable Experience
+
+**Opened:** 2026-09-11, after a boundary pass that ran the doc-review template (version drift
+PASS — 5.21.0 consistent everywhere, correct since v5.22 deliberately cut no tag; coverage gaps
+PASS — Phases 196–198 each ran the per-phase doc checklist; Obsidian PASS — phase notes 196–198
+present, guides + Roadmap/Requirements/UAT-Series synced 2026-09-11, hub callout refresh queued
+for when the v5.23 roadmap exists) and a PM review of HORIZON's Open-Item Ledger (2 stale rows
+corrected at this boundary: 999.97 closed by v5.20 Phase 189 QRK-CONFIG-001/002; the
+backlog-reconciliation derived-gate todo discharged by Phase 189/198 GATE-04).
+
+**Goal:** Give the consulting deliverable a dedicated makeover — operator-controlled report
+composition and branding, a score-lift-framed migration roadmap, and a finding storyline
+drawer — after a small gating drain of carried correctness debt.
+
+**Target features:**
+- **Wave A drain (gating)** — trends.py/merge.py int-coerced score fields fix (recorded in
+  `188-05-SUMMARY.md`, breaks fractional scores in trend/merge paths since scoring v2); combined
+  connectors+advanced overlay CI regression test (v5.22 non-blocking tech debt).
+- **999.105 Tier 1 — Customizable reporting engine** — operator-controlled composition/templates/
+  branding on top of the existing `ReportContent` → three-renderer (CLI/HTML+PDF/DOCX) split.
+  Shape + feasibility: `.planning/backlog/999.105-customizable-reporting-engine/IDEA.md`.
+- **999.101 — Migration Roadmap NOW/NEXT/LATER re-frame with score-lift** — filed twice, four
+  months apart (999.101 and BACK-07); frame roadmap items by expected score movement.
+- **999.102 — Finding storyline drawer** — the Obsidian Pro design remnant (999.102/BACK-88);
+  per-finding narrative drawer on the dashboard.
+- **BACK-51 opportunistic fold-in** — migration_planner dual categorization
+  (`build_phased_roadmap()` vs `categorize_waves()`, both reaching the operator in one pass);
+  in scope if the 999.101 re-frame touches that code anyway — roadmapper's call.
+
+**Key context:** Capability cycle; cadence in balance (v5.19 ops → v5.20 correctness → v5.21
+capability → v5.22 capability tail). 999.105 ↔ 999.101/999.102/BACK-51 treated as one deliverable
+surface per 999.105's IDEA.md interaction note. **Sequencing commitment recorded in HORIZON's
+rationale log: v5.24 = UAT Coverage Drain** (`docs/uat-coverage-gaps.md`, 57+ GAPs) so it cannot
+slip a fourth boundary. Phase numbering continues at 199. Tier 4 config-file parity, 999.107
+Exposure Map Tier B, and detection breadth all stay gated/out. `phase.complete`/
+`milestone.complete`/`state.*` verbs remain unsafe on this machine — every close is hand-written
+under the pre-image + signature-diff protocol. CBOM minimum-elements watch item re-checked
+2026-09-11: no guidance landed yet (due ≈2026-12-19).
+
+## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
+
+**Closed 2026-09-11:** audit `passed` 10/10; v5.21.0 published to PyPI; 999.104 closed across
+tiers 1–3; EMPTY full-suite failing-node baseline. Section retained as the opening record.
 
 **Opened:** 2026-09-10, after a boundary pass that ran the doc-review template (version drift
 PASS — 5.19.0 consistent, correct until the release phase bumps it; coverage gaps PASS; Obsidian
@@ -463,19 +519,19 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.22 Release & Parity Tail in progress (opened 2026-09-10). A fresh `.planning/REQUIREMENTS.md`
+v5.23 Deliverable Experience in progress (opened 2026-09-11). A fresh `.planning/REQUIREMENTS.md`
 formalizes these into REQ-IDs during requirements definition:
 
-- [ ] **Release v5.21.0** — PyPI release carrying v5.20 + v5.21 content (bump, tag, pipeline
-      green, Sigstore-verified), gating first phase
-- [ ] **999.104 Tier 2 residue** — 37 connector credential/endpoint/target sub-fields on the
-      dashboard
-- [ ] **999.104 Tier 3 residue** — 23 remaining scan-behavior fields in the Advanced section
-- [ ] **Derived-gate step 3** — backlog-ID reconciliation gate enforced (high todo)
-- [ ] **Repo-root housekeeping** — untracked `config-lab-*.yaml` / `output-*/` clutter dispositioned
-- [ ] **Phase-192 deferred browser checks** — Scan Coverage chips + Raw YAML redaction validated
+- [ ] **Wave A drain** — trends.py/merge.py int-coerced score fields fix; combined
+      connectors+advanced overlay CI regression test
+- [ ] **999.105 Tier 1** — customizable reporting engine: operator-controlled composition/
+      templates/branding on the existing `ReportContent` → three-renderer split
+- [ ] **999.101** — Migration Roadmap NOW/NEXT/LATER re-frame with score-lift framing
+- [ ] **999.102** — Finding storyline drawer
+- [ ] **BACK-51 (opportunistic)** — migration_planner dual categorization unification, if the
+      999.101 re-frame touches that code anyway
 
-Standing carry-forward, not in v5.20 scope:
+Standing carry-forward, not in v5.23 scope:
 
 - [ ] **Phase 158 human-UAT** — 2 deferred visual scenarios (`/hardware` and `/compare` rendering of
       sensor-pushed devices); code-level criteria independently satisfied, opportunistic only.
@@ -1241,7 +1297,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-10 — milestone v5.22 Release & Parity Tail opened*
+*Last updated: 2026-09-11 — milestone v5.23 Deliverable Experience opened*
 
 ## Evolution
 

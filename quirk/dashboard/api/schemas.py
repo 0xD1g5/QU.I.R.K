@@ -492,6 +492,13 @@ class RoadmapNode(BaseModel):
     # (no db/scan_run_id supplied) or its title maps to no known slug.
     closure_state: Optional[str] = None   # open | closed | not_observed | resurfaced
     slug: Optional[str] = None            # the slug_for_title() join key, or None
+    # Phase 201 LIFT-05: advisory point delta this item would add to the
+    # readiness score if resolved, joined by `slug` above (never by `id`,
+    # which has no stable identity). None is honest absence — the item's
+    # resolution cannot be modeled against any key the scorer reads, the
+    # scan is unassessed, or the computation failed — and must NEVER be
+    # rendered as `0`.
+    score_lift: Optional[float] = None
 
 
 class RoadmapData(BaseModel):
@@ -581,6 +588,14 @@ class ScanLatestResponse(BaseModel):
     # honest reading for any caller/fixture that does not set it, mirroring
     # the Phase 188 coverage_disclosure additive-default precedent.
     excluded_cert_count: int = 0
+    # Phase 201 LIFT-05: advisory simulation of the readiness score if every
+    # modelable roadmap item were resolved. A top-level sibling of `roadmap`
+    # — deliberately NOT a field of `ScoreData` — so the ADVISORY-02
+    # firewall's real-score-surface assertion stays true and this number can
+    # never be mistaken for the actual computed score. None when the scan's
+    # current score is None (unassessed) or the projection computation
+    # failed; never a fabricated value.
+    projected_score: Optional[float] = None
 
 
 class ScanSession(BaseModel):
@@ -588,11 +603,13 @@ class ScanSession(BaseModel):
     scanned_at: UTCDateTime
     total_endpoints: int
     # Phase 66 UI-HIST-01 additions — all Optional/default for backward compat with ScanSelector
-    # 188 review CR-04: Optional[int], mirroring CompareScanSummary.score —
+    # 188 review CR-04: mirroring CompareScanSummary.score —
     # None means the scan's score was not computed (zero domains assessed),
     # never a fabricated 0 (which would read as worst-case POOR beside a
     # rating of "NOT_ASSESSED" in the scan-history list).
-    score: Optional[int] = None
+    # Phase 199 / TRIAGE-10: widened Optional[int] -> Optional[float] — a
+    # fractional readiness score (e.g. 71.4) must round-trip unchanged.
+    score: Optional[float] = None
     profile: Optional[str] = None
     calibration: Optional[str] = None
     target: Optional[str] = None
@@ -642,9 +659,12 @@ class SeverityTransitionResponse(BaseModel):
 class TrendReportResponse(BaseModel):
     current_session_ts: Optional[UTCDateTime] = None
     previous_session_ts: Optional[UTCDateTime] = None
-    current_score: Optional[int] = None
-    previous_score: Optional[int] = None
-    score_delta: Optional[int] = None
+    # Phase 199 / TRIAGE-10: widened Optional[int] -> Optional[float] x3 — a
+    # fractional readiness score must round-trip unchanged through the trend
+    # report, and its delta is real float subtraction, not an int truncation.
+    current_score: Optional[float] = None
+    previous_score: Optional[float] = None
+    score_delta: Optional[float] = None
     new_high: int = 0
     new_medium: int = 0
     new_low: int = 0
@@ -741,7 +761,10 @@ class TrendSessionPoint(BaseModel):
     subscores reuses the existing SubScores model (per D-06).
     """
     session_ts: str
-    score: int
+    # Phase 199 / TRIAGE-10: widened from required bare int to Optional[float]
+    # — a fractional score (71.4) must survive, and an unassessed session
+    # emits None (honest absence) rather than a fabricated 0.
+    score: Optional[float] = None
     subscores: SubScores
     finding_counts: FindingCounts
 
@@ -1224,11 +1247,16 @@ class MergeLatestData(BaseModel):
     """Payload inside MergeLatestResponse when a merge_run row exists."""
     scan_id: Optional[str] = None
     merged_at: Optional[UTCDateTime] = None
-    score: Optional[int] = None
+    # Phase 199 / TRIAGE-10: widened Optional[int] -> Optional[float] — a
+    # fractional overall score must round-trip unchanged.
+    score: Optional[float] = None
     endpoint_count: int = 0
     sensor_count: int = 0
     coverage_warning: Optional[Dict[str, Any]] = None
-    per_segment_scores: Dict[str, int] = {}
+    # Phase 199 / TRIAGE-10: widened Dict[str, int] -> Dict[str, Optional[float]]
+    # — a per-segment score can be fractional, or None on scoring failure
+    # (honest absence, never a fabricated 0).
+    per_segment_scores: Dict[str, Optional[float]] = {}
 
 
 class MergeLatestResponse(BaseModel):

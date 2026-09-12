@@ -234,6 +234,22 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         "\"localhost:29092\"), or bracketed IPv6 with an optional port (e.g. \"[::1]:29092\") "
         "for every entry in connectors.broker_targets, with ports in the range 1-65535.",
     ),
+    "CONFIG-003": ErrorEntry(
+        code="CONFIG-003",
+        cause="A report branding/template path field (report.branding.logo_path or "
+        "report.template_dir) contains a path-traversal segment (\"..\"), or "
+        "report.template_dir points at a location that is not a usable directory.",
+        fix="Use an absolute or project-relative path with no \"..\" segments for "
+        "report.branding.logo_path / report.template_dir, and make sure "
+        "report.template_dir points at an existing directory.",
+    ),
+    "CONFIG-004": ErrorEntry(
+        code="CONFIG-004",
+        cause="A report profile name or profile file (report.profile) is invalid.",
+        fix="Use a profile name containing only letters, digits, hyphens, and "
+        "underscores. Profiles live in ~/.quirk/report_profiles/ (or the "
+        "directory named by the QUIRK_PROFILES_DIR environment variable).",
+    ),
 
     # --- FUZZ domain (fuzz safety errors, Phase 172) ---
     "FUZZ-001": ErrorEntry(

@@ -2,6 +2,7 @@ import dataclasses
 import ipaddress
 import logging
 import os
+import pathlib
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -419,6 +420,44 @@ class SecurityCfg:
     trusted_targets: list = dataclasses.field(default_factory=list)
 
 
+@dataclass
+class ReportBrandingCfg:
+    """Phase 200 / RPT-01: optional per-report branding overrides.
+
+    Every field is optional and defaults to ``None`` — absence reproduces
+    today's rendering exactly. ``logo_path`` falls back to the legacy
+    ``assessment.logo_path`` when unset (renderer double-getattr resolution
+    order, plan 200-01/200-02).
+    """
+    logo_path: Optional[str] = None
+    client_name: Optional[str] = None
+    engagement_name: Optional[str] = None
+    prepared_by: Optional[str] = None
+    cover_date: Optional[str] = None  # free-form cover label, rendered verbatim
+    confidentiality_line: Optional[str] = None
+
+
+@dataclass
+class ReportCfg:
+    """Phase 200 / RPT-01/RPT-03/RPT-04: operator-facing `report:` config
+    section — branding overrides, a Jinja2 template override directory, and
+    a named report profile.
+
+    Every field is optional; a config with no `report:` block builds a
+    `ReportCfg` with every field `None`/default and reproduces today's
+    rendering exactly (RPT-01 hard constraint).
+    """
+    branding: ReportBrandingCfg = field(default_factory=ReportBrandingCfg)
+    template_dir: Optional[str] = None
+    profile: Optional[str] = None
+    # Phase 200 / RPT-04: tracks which *flattened* keys appeared in the raw
+    # YAML report block (top-level keys verbatim, "branding.<key>" for keys
+    # present in the nested branding sub-table). Consumed by the plan 200-05
+    # report-profile merge so an explicit operator value always wins over a
+    # profile-supplied default (mirrors ConnectorsCfg._user_set_fields).
+    _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
+
+
 @dataclass(frozen=True)
 class BrokerCredential:
     """Phase 57 / D-05: per-host broker credential entry.
@@ -462,6 +501,7 @@ class AppConfig:
     output: OutputCfg
     intelligence: IntelligenceCfg
     security: SecurityCfg = field(default_factory=SecurityCfg)             # Phase 57 / D-04
+    report: ReportCfg = field(default_factory=ReportCfg)                   # Phase 200 / RPT-01
     broker_credentials: Dict[str, BrokerCredential] = field(default_factory=dict)  # Phase 57 / D-05
     remediation_aliases: Dict[str, str] = field(default_factory=dict)  # Phase 179 / REMED-03 — operator-supplied re-scan aliases; human-edited only
 
@@ -639,6 +679,75 @@ def _parse_host_port(entry: str, *, field_name: str) -> Tuple[str, Optional[int]
             f"{format_error('CONFIG-002')} (field={field_name!r}, value={entry!r})"
         )
     return raw, None
+
+
+def validate_report_path_field(field_name: str, value: Optional[str]) -> None:
+    """Phase 200 / RPT-03: the ONE named guard for every report path-shaped
+    field (``report.branding.logo_path``, ``report.template_dir``, and the
+    legacy ``assessment.logo_path`` fallback). Called once per field from
+    ``config_from_dict`` at the same load-time, fail-fast position the
+    ``broker_targets`` validation occupies (T-200-05).
+
+    Disposition is deliberately ASYMMETRIC between the two field shapes
+    (CONTEXT-locked decision):
+
+    - Every field: a falsy value (None/"") returns immediately — every
+      field is optional, so absence is never an error.
+    - Every field: a truthy non-string value (YAML int/list/mapping) is
+      REJECTED with a coded ``CONFIG-003`` ``ValueError`` naming the field
+      and the received type — never an uncoded ``TypeError`` from inside
+      ``pathlib`` (Phase 200 review WR-02).
+    - Every field: a value whose ``pathlib.Path(...).parts`` contains ``..``
+      is REJECTED with a coded ``CONFIG-003`` ``ValueError`` naming the
+      field and the offending value. Traversal is a load-time error
+      regardless of which field carries it — there is no render-time
+      tolerance for a path shaped to escape the intended directory.
+    - ``template_dir`` ONLY: a non-traversal value that does not resolve to
+      an existing directory (missing entirely, or exists but is a file) is
+      ALSO a load-time ``CONFIG-003`` error. An operator who names a
+      template override directory that cannot supply templates gets a
+      loud, actionable failure instead of a silently-ignored override.
+    - ``logo_path`` fields (``report.branding.logo_path`` /
+      ``assessment.logo_path``) ONLY: a missing or unreadable file does
+      NOT raise. It only WARNS, naming the field and path. Render-time
+      ``_load_logo_b64`` (quirk/reports/html_renderer.py) already degrades
+      gracefully to a logo-less cover page on any read failure — a hard
+      guard failure here would regress a previously-working scan over a
+      merely-missing logo image (T-200-08 / DoS-by-overcorrection).
+
+    Raises:
+        ValueError: on a traversal-shaped value for any field, or a
+            ``template_dir`` that does not resolve to a directory.
+    """
+    if not value:
+        return
+
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{format_error('CONFIG-003')} (field={field_name!r}, value={value!r}, "
+            f"type={type(value).__name__})"
+        )
+
+    path = pathlib.Path(value)
+    if ".." in path.parts:
+        raise ValueError(
+            f"{format_error('CONFIG-003')} (field={field_name!r}, value={value!r})"
+        )
+
+    is_template_dir = field_name.endswith("template_dir")
+    is_logo_path = field_name.endswith("logo_path")
+
+    if is_template_dir:
+        if not path.is_dir():
+            raise ValueError(
+                f"{format_error('CONFIG-003')} (field={field_name!r}, value={value!r})"
+            )
+    elif is_logo_path:
+        if not path.is_file():
+            _LOGGER.warning(
+                "%s=%r does not point at a readable file — logo will be omitted "
+                "from generated reports.", field_name, value,
+            )
 
 
 _KNOWN_CONNECTOR_KEYS = {f.name for f in dataclasses.fields(ConnectorsCfg)}
@@ -830,6 +939,49 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     connectors_cfg = ConnectorsCfg(**conn_raw)
     connectors_cfg._user_set_fields = frozenset(conn_raw.keys())
 
+    # Phase 200 / RPT-01/RPT-03/RPT-04: parse the optional `report:` section.
+    # Mirrors the [scan.timeouts] sub-table split (:721-743) — pop the nested
+    # `branding:` sub-table, filter each level by its dataclass field names,
+    # warn-and-ignore unknown keys at both levels (never fatal), and stamp a
+    # *flattened* _user_set_fields set so plan 200-05's profile merge can tell
+    # explicit operator values from ReportCfg defaults.
+    report_raw = dict(raw.get("report") or {})
+    branding_raw = dict(report_raw.pop("branding", None) or {})
+
+    report_fields = {f.name for f in dataclasses.fields(ReportCfg) if not f.name.startswith("_")}
+    branding_fields = {f.name for f in dataclasses.fields(ReportBrandingCfg)}
+
+    for _unknown_key in sorted(set(report_raw) - report_fields):
+        _LOGGER.warning(
+            "%r is not a recognized report option — ignored", _unknown_key,
+        )
+    for _unknown_key in sorted(set(branding_raw) - branding_fields):
+        _LOGGER.warning(
+            "%r is not a recognized report.branding option — ignored", _unknown_key,
+        )
+
+    report_filtered = {k: v for k, v in report_raw.items() if k in report_fields}
+    branding_filtered = {k: v for k, v in branding_raw.items() if k in branding_fields}
+
+    # Phase 200 / RPT-03: fail fast, before any scan I/O — same load-time
+    # position the broker_targets validation occupies above.
+    validate_report_path_field("report.branding.logo_path", branding_filtered.get("logo_path"))
+    validate_report_path_field("report.template_dir", report_filtered.get("template_dir"))
+    # Phase 200 review IN-01: null-safe lookup — a missing or empty
+    # `assessment:` block must not add a NEW uncoded failure shape here; the
+    # pre-existing AssessmentCfg(**raw["assessment"]) site below still owns
+    # that failure class.
+    validate_report_path_field(
+        "assessment.logo_path", (raw.get("assessment") or {}).get("logo_path")
+    )
+
+    branding_cfg = ReportBrandingCfg(**branding_filtered)
+    report_cfg = ReportCfg(branding=branding_cfg, **report_filtered)
+    report_cfg._user_set_fields = frozenset(
+        list(report_filtered.keys())
+        + [f"branding.{k}" for k in branding_filtered.keys()]
+    )
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
@@ -838,6 +990,7 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
         security=security_cfg,
+        report=report_cfg,
         broker_credentials=broker_credentials,
         remediation_aliases=remediation_aliases,
     )

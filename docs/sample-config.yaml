@@ -46,6 +46,21 @@ output:
   directory: "tmp/sample_output"
   db_path: "tmp/sample_output/sample.sqlite"
 
+# Report Branding & Templates — Phase 200 (v5.23+)
+# Every key below is optional; omitting this whole block reproduces today's
+# rendering exactly. report.branding.logo_path is preferred over the
+# deprecated assessment.logo_path fallback.
+# report:
+#   branding:
+#     logo_path: /path/to/your-org-logo.png
+#     client_name: "Acme Corp"
+#     engagement_name: "Q3 2026 Crypto Assessment"
+#     prepared_by: "Security Team"
+#     cover_date: "September 2026"
+#     confidentiality_line: "CONFIDENTIAL — Internal Use Only"
+#   template_dir: /path/to/custom/templates
+#   profile: my-profile
+
 # Jira Ticketing — Phase 104 (v5.3+)
 # Create one Jira issue per finding with SHA-256 fingerprint dedup.
 # Requires: pip install "quirk-scanner[tickets]"

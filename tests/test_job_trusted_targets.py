@@ -70,6 +70,37 @@ def _fake_load_config_factory(trusted_targets):
     return _fake_load
 
 
+def _patch_probe_all_available(monkeypatch):
+    """Pin the connector-availability probe to all-available (999.108).
+
+    Phase 193's submit-time 422 gate rejects a job whose resolved config
+    enables a connector unavailable in the running environment — and the
+    standard profile auto-enables email/broker, so environments without
+    sslyze (e.g. CI) would 422 these submissions. This file tests trusted-target enforcement,
+    not connector gating, so the probe is pinned for determinism.
+    """
+    from quirk.dashboard.api.connector_availability import (
+        ConnectorAvailability,
+        probe_all_connectors,
+    )
+
+    fake = {
+        flag: ConnectorAvailability(
+            flag=flag,
+            available=True,
+            reason="",
+            install_hint=entry.install_hint,
+            category=entry.category,
+            label=entry.label,
+        )
+        for flag, entry in probe_all_connectors().items()
+    }
+    monkeypatch.setattr(
+        "quirk.dashboard.api.connector_availability.probe_all_connectors",
+        lambda: fake,
+    )
+
+
 def test_post_jobs_rejects_target_outside_trusted_targets(monkeypatch):
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
     monkeypatch.setattr(
@@ -91,6 +122,7 @@ def test_post_jobs_rejects_target_outside_trusted_targets(monkeypatch):
 
 
 def test_post_jobs_allows_when_trusted_targets_empty(monkeypatch):
+    _patch_probe_all_available(monkeypatch)
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
     monkeypatch.setattr("quirk.config.load_config", _fake_load_config_factory([]))
 
@@ -109,6 +141,7 @@ def test_post_jobs_allows_when_trusted_targets_empty(monkeypatch):
 
 
 def test_post_jobs_allows_when_target_matches_trusted_targets(monkeypatch):
+    _patch_probe_all_available(monkeypatch)
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
     monkeypatch.setattr(
         "quirk.config.load_config", _fake_load_config_factory(["example.com"])

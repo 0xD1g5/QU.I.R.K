@@ -441,15 +441,19 @@ export function ExecutivePage() {
             <SubscoreSlot score={score.subscores.agility_signals} label="Agility" maxValue={25} />
             <SubscoreSlot score={score.subscores.data_at_rest} label="Data at Rest" maxValue={25} />
             <SubscoreSlot score={score.subscores.data_in_motion} label="Data in Motion" maxValue={25} />
-            {/* Phase 111: Per-segment gauges — only rendered when merge data present */}
+            {/* Phase 111: Per-segment gauges — only rendered when merge data present.
+                Phase 199 TRIAGE-10: per_segment_scores values are now nullable
+                (an unassessed segment carries null, never a fabricated 0), so this
+                renders via SubscoreSlot — the same SCORE-06 em-dash placeholder
+                used for the six subscores above — instead of piping straight into
+                ScoreGauge, whose score prop is number (null/maxValue yields NaN). */}
             {merge?.per_segment_scores && Object.entries(merge.per_segment_scores).map(([seg, segScore]) => {
               const truncatedLabel = seg.length > 16 ? seg.slice(0, 15) + "…" : seg
               return (
-                <ScoreGauge
+                <SubscoreSlot
                   key={seg}
                   score={segScore}
                   label={truncatedLabel}
-                  size={120}
                   maxValue={100}
                 />
               )

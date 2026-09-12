@@ -199,6 +199,19 @@ to wire into pre-engagement scripts or CI.
 
 ---
 
+## Report Branding Quickstart (v5.23+)
+
+Want your firm's logo and client name on the report cover instead of the default look? Add a
+`report:` block to `config.yaml` (see [Configuration Reference](configuration.md#report-block-phase-200-v523--rpt-01rpt-02rpt-03rpt-04)),
+or save it once and reuse it on every future engagement:
+
+```bash
+quirk report profile save housestyle --config config.yaml
+quirk --config config.yaml --report-profile housestyle
+```
+
+---
+
 ## Next Steps
 
 - [Installation](installation.md) — full install options, Windows WSL, system requirements
