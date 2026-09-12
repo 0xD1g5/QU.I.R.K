@@ -1131,6 +1131,10 @@ def render_html_report(
         # WR-03 / IN-01: consume the model's pre-computed numerator so the HTML rollup
         # matches the CLI markdown exactly (and survives a future 7th subscore).
         raw_sum = exec_content.raw_sum
+        # Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only forward-projection
+        # aggregate, read from the model — never recomputed here. getattr guard
+        # so an older ExecContent instance without the field cannot raise.
+        projected_score = getattr(exec_content, "projected_score", None)
     else:
         # Backward-compat path: no exec_content — source raw dicts from score/roadmap_items.
         # WR-05: keep this path fail-closed with the same D-06 guard the model path runs.
@@ -1150,6 +1154,8 @@ def render_html_report(
         # WR-03: mirror the CLI's six-key sum on the compat path (no exec_content available).
         raw_sum = sum(int(v) for v in subscores_ctx.values()
                       if isinstance(v, (int, float)) and not isinstance(v, bool))
+        # Phase 201 Plan 07: no exec_content on the compat path -> no projection to show.
+        projected_score = None
 
     # 188 review CR-01: pre-map unassessed (None) subscores to an em dash ONCE,
     # after raw_sum above has consumed the numeric values. The template's
@@ -1260,6 +1266,9 @@ def render_html_report(
         roadmap_now=roadmap_now_ctx,
         roadmap_next=roadmap_next_ctx,
         roadmap_later=roadmap_later_ctx,
+        # Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only projected-score
+        # aggregate; None renders neither the projected line nor the disclaimer.
+        projected_score=projected_score,
         subscores=subscores_ctx,  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
         raw_sum=raw_sum,  # WR-03 / IN-01: shared rollup numerator (matches CLI markdown)
         # Phase 188 SCORE-06 / 188-03: coverage-disclosure seam — dynamic divisor

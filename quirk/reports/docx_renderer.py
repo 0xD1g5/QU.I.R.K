@@ -673,6 +673,19 @@ def render_docx_report(
 
     # ---- Remediation Roadmap section ----
     doc.add_heading("Remediation Roadmap", level=1)
+    # Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only projected-score line +
+    # verbatim disclaimer, directly after the heading, gated on presence so an
+    # unassessed/failed-projection scan renders neither line. Value is read
+    # via getattr — never computed here.
+    _projected_score = getattr(exec_content, "projected_score", None) if exec_content is not None else None
+    if _projected_score is not None:
+        doc.add_paragraph(
+            f"Projected score if all items resolved: {int(_projected_score)}", style="Normal"
+        )
+        doc.add_paragraph(
+            "Advisory — this projection is a simulation and does not affect the readiness score.",
+            style="Normal",
+        )
     for phase_label, phase_items in [("NOW", roadmap_now), ("NEXT", roadmap_next), ("LATER", roadmap_later)]:
         doc.add_heading(phase_label, level=2)
         roadmap_tbl = doc.add_table(rows=1, cols=4)
@@ -686,7 +699,12 @@ def render_docx_report(
             for item in phase_items:
                 row_cells = roadmap_tbl.add_row().cells
                 row_cells[0].text = str(getattr(item, "phase", phase_label))
-                row_cells[1].text = str(getattr(item, "title", ""))
+                # Phase 201 Plan 07 (LIFT-02/LIFT-05): per-item forward-projection
+                # lift, appended to the Action cell text. `getattr(..., None)` is
+                # None for honest absence (never 0) — no parenthetical then.
+                _lift = getattr(item, "score_lift", None)
+                _lift_txt = f" (+{int(_lift)} pts)" if _lift is not None else ""
+                row_cells[1].text = str(getattr(item, "title", "")) + _lift_txt
                 row_cells[2].text = str(getattr(item, "why", ""))
                 effort = getattr(item, "effort", "")
                 impact = getattr(item, "impact", "")

@@ -591,6 +591,15 @@
     {% endif %}
 
     <h2>Transition Roadmap</h2>
+    {# Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only projected-score line +
+       verbatim disclaimer, directly after the heading, gated on presence so an
+       unassessed/failed-projection scan renders neither line. Value is read
+       from ExecContent.projected_score via html_renderer.py — never computed
+       here. #}
+    {% if projected_score is defined and projected_score is not none %}
+    <p>Projected score if all items resolved: {{ projected_score|int }}</p>
+    <p>Advisory — this projection is a simulation and does not affect the readiness score.</p>
+    {% endif %}
     {% for phase_label, items in [('NOW', roadmap_now), ('NEXT', roadmap_next), ('LATER', roadmap_later)] %}
     {% if items %}
     <div class="roadmap-phase">
@@ -600,7 +609,17 @@
         {# Phase 98 / EXEC-03 / D-03: item is RoadmapItem dataclass (with .title/.why/.effort/.impact)
            when exec_content is provided; falls back to raw dict when not. Jinja2 resolves
            item.title via getattr-then-item-lookup so both cases work transparently. #}
-        <strong>{{ item.title | sanitize }}</strong><br>
+        <strong>{{ item.title | sanitize }}</strong>
+        {# Phase 201 Plan 07 (LIFT-02/LIFT-05): per-item forward-projection lift.
+           Server-computed number carried on RoadmapItem.score_lift (None = honest
+           absence, never 0) — appended outside any scanner-string filter, same as
+           the existing effort/impact labels below. Mirrors the item.effort
+           branch-guard shape so both the dataclass and raw-dict fallback paths
+           are safe. #}
+        {% if item.score_lift is defined and item.score_lift %}
+        <span class="lift-label">&nbsp;(+{{ item.score_lift|int }} pts)</span>
+        {% endif %}
+        <br>
         <span>{{ item.why | sanitize }}</span>
         {# Priority labels: effort/impact from D-05 EFFORT_IMPACT_MAP — static strings, no sanitize.
            Only rendered when item carries effort/impact (RoadmapItem dataclass path). #}
