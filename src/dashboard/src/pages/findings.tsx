@@ -60,13 +60,28 @@ export function FindingsPage() {
     }
   }, [])
 
+  // F6: which trigger button to restore focus to when the Sheet closes.
+  // Set on every open (both F2's row click and a direct trigger click) and
+  // read back in the SheetContent's onCloseAutoFocus below.
+  const lastTriggerRef = useRef<HTMLButtonElement | null>(null)
+
   // F2/F6: a row-click (or trigger-click) open must focus that row's own
   // Storyline button BEFORE setting open state, because the Sheet is
   // state-controlled (no SheetTrigger) — Radix's FocusScope would otherwise
   // restore focus to whatever was focused pre-open (`<body>` for a mouse
-  // click on a non-focusable row), not the row's trigger.
+  // click on a non-focusable row), not the row's trigger. Belt-and-braces
+  // with the explicit onCloseAutoFocus restore below: Radix's own default
+  // onCloseAutoFocus handler (DialogContentModal) unconditionally calls
+  // event.preventDefault() and tries context.triggerRef.current?.focus() —
+  // which is null with no <SheetTrigger>, so without our own
+  // onCloseAutoFocus handler, focus is silently dropped to <body> on close
+  // rather than falling back to FocusScope's own previously-focused-element
+  // restoration (that fallback path is unreachable once defaultPrevented is
+  // true).
   const openStoryline = useCallback((finding: FindingItem, rowId: string) => {
-    triggerRefs.current.get(rowId)?.focus()
+    const trigger = triggerRefs.current.get(rowId) ?? null
+    lastTriggerRef.current = trigger
+    trigger?.focus()
     setSelectedFinding(finding)
   }, [])
 
@@ -294,7 +309,13 @@ export function FindingsPage() {
 
       {/* Finding detail Sheet */}
       <Sheet open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
-        <SheetContent className="w-full sm:w-[480px] sm:max-w-[480px] flex flex-col">
+        <SheetContent
+          className="w-full sm:w-[480px] sm:max-w-[480px] flex flex-col"
+          onCloseAutoFocus={(e) => {
+            e.preventDefault()
+            lastTriggerRef.current?.focus()
+          }}
+        >
           {selectedFinding && (
             <>
               <SheetHeader>
