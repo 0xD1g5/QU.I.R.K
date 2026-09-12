@@ -15,12 +15,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { FindingsSkeleton } from "./findings.skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { StorylineSections } from "@/components/FindingStorylineSections"
+import { useFindingStoryline } from "@/hooks/useFindingStoryline"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -91,6 +93,13 @@ export function FindingsPage() {
     }
     return filtered
   }, [data, severityFilter, protocolFilter, segmentFilter])
+
+  const {
+    data: storylineData,
+    loading: storylineLoading,
+    error: storylineError,
+    retry: retryStoryline,
+  } = useFindingStoryline(selectedFinding)
 
   // D-25 (IN-03): memoize columns for stable reference identity across renders
   // (TanStack Table relies on referential stability of the columns array).
@@ -285,13 +294,17 @@ export function FindingsPage() {
 
       {/* Finding detail Sheet */}
       <Sheet open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
-        <SheetContent style={{ width: 480 }}>
+        <SheetContent className="w-full sm:w-[480px] sm:max-w-[480px] flex flex-col">
           {selectedFinding && (
             <>
               <SheetHeader>
                 <SheetTitle className="text-base">{selectedFinding.title}</SheetTitle>
+                <SheetDescription>
+                  {selectedFinding.host}:{selectedFinding.port}
+                  {selectedFinding.protocol ? ` — ${selectedFinding.protocol}` : ""}
+                </SheetDescription>
               </SheetHeader>
-              <div className="mt-4 space-y-3 text-sm">
+              <div className="mt-4 flex-1 overflow-y-auto min-h-0 space-y-4 text-sm">
                 <div className="flex gap-2 items-center">
                   <Badge className={`${SEVERITY_STYLES[selectedFinding.severity] ?? ""} text-xs`}>
                     {selectedFinding.severity}
@@ -316,6 +329,12 @@ export function FindingsPage() {
                     <p className="text-foreground">Algorithm classified as: <strong>{selectedFinding.quantum_risk}</strong></p>
                   </div>
                 )}
+                <StorylineSections
+                  data={storylineData}
+                  loading={storylineLoading}
+                  error={storylineError}
+                  onRetry={retryStoryline}
+                />
               </div>
             </>
           )}
