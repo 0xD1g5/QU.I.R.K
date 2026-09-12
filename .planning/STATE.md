@@ -1963,9 +1963,9 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-11
-Stopped at: Session resumed from HANDOFF.json — Phase 201 plan 06 Task 3 (operator walkthrough checkpoint) pending; dashboard restarted on :8512 for the hard-refresh re-verification
-Resume file: .planning/HANDOFF.json
+Last session: 2026-09-12
+Stopped at: Phase 201 at 7 of 8 plans — 201-06 operator walkthrough APPROVED 2026-09-12 (stale-cache root cause confirmed, not a defect), LIFT-05 hand-flipped [x], commit 0d1d3654. Paused on session limit with NO blockers and NO human action outstanding; plan 201-08 (close-out) is next.
+Resume file: .planning/HANDOFF.json (+ .planning/phases/201-score-lift-roadmap-re-frame/.continue-here.md)
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
