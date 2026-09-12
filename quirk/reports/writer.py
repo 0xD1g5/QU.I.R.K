@@ -18,6 +18,8 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap, _TIMEFRAME_BY_PHASE
+from quirk.intelligence.remediation import slug_for_title  # Phase 201 Plan 05 (LIFT-01)
+from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score  # Phase 201 Plan 05
 from quirk.cbom import build_cbom, write_cbom_files
 from quirk.cbom.bridge import _detect_crypto_bridges, _confirm_upstream_mitigation  # Phase 129 HWCOMPAT-03 / Phase 140 BRIDGE-01
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
@@ -401,17 +403,36 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append("\n## Next 30–60 days\n")
     if now_actions:
         for a in now_actions:
-            lines.append(f"- **{md_cell(a.get('title'))}** — {md_cell(a.get('why'))}")
+            # Phase 201 Plan 05 (LIFT-01, RESEARCH Open Question 1 — ADOPTED):
+            # the scorecard's top-3 NOW actions carry the same (+N pts)
+            # parenthetical as the roadmap markdown, built the same way
+            # (server-computed int, appended outside md_cell).
+            _lift = a.get("score_lift")
+            _lift_txt = f" (+{int(_lift)} pts)" if _lift is not None else ""
+            lines.append(f"- **{md_cell(a.get('title'))}** — {md_cell(a.get('why'))}{_lift_txt}")
     else:
         lines.append("- Establish ownership + inventory closure for crypto endpoints.\n")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
+# Phase 201 Plan 05 (LIFT-03): verbatim advisory disclaimer — locked copy,
+# character for character, on every projected-number surface.
+_LIFT_DISCLAIMER = (
+    "Advisory — this projection is a simulation and does not affect the readiness score."
+)
+
+
+def _roadmap_markdown(roadmap: List[Dict[str, Any]], projected_score: Optional[float] = None) -> str:
     def section(tf: str) -> List[Dict[str, Any]]:
         return [r for r in roadmap if r.get("timeframe") == tf or r.get("phase") == tf]
 
     lines = ["# Quantum Crypto Transition Roadmap\n"]
+    # Phase 201 Plan 05 (LIFT-03): projected-score line + disclaimer, directly
+    # after the heading, only when a projection exists (SCORE-06 honest
+    # absence — never a fabricated number for an unassessed scan).
+    if projected_score is not None:
+        lines.append(f"Projected score if all items resolved: {int(projected_score)}\n")
+        lines.append(f"{_LIFT_DISCLAIMER}\n")
     for tf in ("NOW", "NEXT", "LATER"):
         lines.append(f"## {tf}\n")
         for r in section(tf):
@@ -421,7 +442,14 @@ def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
             dep_txt = (
                 f" _(deps: {', '.join(md_cell(d) for d in deps)})_" if deps else ""
             )
-            lines.append(f"- **{md_cell(r.get('title'))}** — {md_cell(r.get('why'))}{dep_txt}")
+            # Phase 201 Plan 05 (LIFT-01): the (+N pts) parenthetical is built
+            # from a server-computed int and appended OUTSIDE md_cell, exactly
+            # like dep_txt (HARDEN-01) — never wrapped around scanner text.
+            # Absence (no score_lift key, or None) renders nothing at all —
+            # never "(+0 pts)", never a dash (SCORE-06 house style).
+            _lift = r.get("score_lift")
+            lift_txt = f" (+{int(_lift)} pts)" if _lift is not None else ""
+            lines.append(f"- **{md_cell(r.get('title'))}** — {md_cell(r.get('why'))}{dep_txt}{lift_txt}")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
@@ -508,6 +536,42 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     conf_raw = compute_confidence(evidence)
     roadmap_raw = build_phased_roadmap(evidence, score_raw)
 
+    # Phase 201 Plan 05 (LIFT-01/02/03): forward-projection lifts, computed with
+    # the IDENTICAL profile/weights pair the compute_readiness_score call above
+    # used for this report's own headline score (Pitfall 4/T-201-18). Attached
+    # to roadmap_raw's item dicts OUTSIDE build_phased_roadmap() (structural
+    # constraint (a) — that function's return keys must stay exactly the 6
+    # tests/test_intelligence_roadmap.py asserts). T-201-19: a lift-computation
+    # failure must never abort report generation — degrade to no lifts/no
+    # projection, never a stale or fabricated number.
+    _roadmap_items_raw = roadmap_raw.get("items", [])
+    try:
+        _lifts_by_slug = compute_item_lifts(
+            evidence,
+            _roadmap_items_raw,
+            profile=cfg.intelligence.profile,
+            weights=cfg.intelligence.calibration_overrides or None,
+        )
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning("score-lift computation skipped (non-fatal)", exc_info=True)
+        _lifts_by_slug = {}
+    try:
+        projected_score = compute_projected_score(
+            evidence,
+            _roadmap_items_raw,
+            profile=cfg.intelligence.profile,
+            weights=cfg.intelligence.calibration_overrides or None,
+        )
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning("projected-score computation skipped (non-fatal)", exc_info=True)
+        projected_score = None
+    for _item in _roadmap_items_raw:
+        _slug = slug_for_title(_item.get("title"))
+        if _slug is not None and _slug in _lifts_by_slug:
+            _item["score_lift"] = _lifts_by_slug[_slug]
+
     # D-03 / D-06: build shared content object BEFORE compat wrapper — score_raw uses
     # canonical keys ("score", "rating", "subscores"), not the writer compat wrapper keys
     # ("total"). ReportCongruenceError propagates to CLI before any exec report is written.
@@ -515,6 +579,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         score_raw=score_raw,
         findings=findings,
         roadmap_items=roadmap_raw.get("items", []),
+        projected_score=projected_score,
     )
 
     # Compat wrappers: map intelligence schema to writer's internal format
@@ -819,7 +884,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
 
     roadmap_path = os.path.join(outdir, f"roadmap-{stamp}.md")
     with open(roadmap_path, "w", encoding="utf-8") as f:
-        f.write(_roadmap_markdown(roadmap_items))
+        f.write(_roadmap_markdown(roadmap_items, exec_content.projected_score))
 
     # 3b) Standalone HTML report (D-08) + PDF via Playwright (D-11)
     html_path = os.path.join(outdir, f"report-{stamp}.html")

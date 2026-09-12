@@ -8,6 +8,8 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
+from quirk.intelligence.remediation import slug_for_title  # Phase 201 Plan 05 (LIFT-01)
+from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score  # Phase 201 Plan 05
 from quirk.assessment.migration_advisor import recommend_migration_paths
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: wrap scanner-controlled cells
 from quirk.reports.content_model import assert_congruent  # WR-05: fail-closed guard on compat path
@@ -173,6 +175,45 @@ def build_exec_markdown(
     )
     conf_raw = compute_confidence(evidence)
     roadmap_raw = build_phased_roadmap(evidence, score_raw)
+
+    # Phase 201 Plan 05 (LIFT-01/02, T-201-18): same profile/weights pair as
+    # this function's own compute_readiness_score call above, so this
+    # surface's lifts never disagree with writer.py's. This is the
+    # backward-compat (exec_content is None) legacy path's own roadmap
+    # sequence — when a caller supplies exec_content (the normal writer.py
+    # flow), those per-item score_lift/projected_score values already came
+    # from writer.py's identical seam and are inherited automatically
+    # through ExecContent (RESEARCH Open Question 1, resolved ADOPTED); no
+    # separate render change is needed there. T-201-19: degrade to no
+    # lifts/no projection on failure, never abort report generation.
+    _roadmap_items_raw = roadmap_raw.get("items", [])
+    try:
+        _lifts_by_slug = compute_item_lifts(
+            evidence,
+            _roadmap_items_raw,
+            profile=cfg.intelligence.profile,
+            weights=cfg.intelligence.calibration_overrides or None,
+        )
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning("score-lift computation skipped (non-fatal)", exc_info=True)
+        _lifts_by_slug = {}
+    try:
+        _projected_score = compute_projected_score(
+            evidence,
+            _roadmap_items_raw,
+            profile=cfg.intelligence.profile,
+            weights=cfg.intelligence.calibration_overrides or None,
+        )
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning("projected-score computation skipped (non-fatal)", exc_info=True)
+        _projected_score = None
+    for _item in _roadmap_items_raw:
+        _slug = slug_for_title(_item.get("title"))
+        if _slug is not None and _slug in _lifts_by_slug:
+            _item["score_lift"] = _lifts_by_slug[_slug]
+
     recs = recommend_migration_paths(findings)
     interp = _build_interpretation(evidence, score_raw, endpoints=endpoints, findings=findings)
 
