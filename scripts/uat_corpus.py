@@ -175,6 +175,19 @@ def iter_cases(lines: Iterable[str]) -> Iterable[CaseRecord]:
                 if m.group(5) == "x":
                     boxes.add("SKIP")
                 current.boxes = boxes
+                if len(boxes) > 1:
+                    # Malformed: more than one box checked on the same Result line. This is NOT
+                    # a case to silently resolve by picking a priority order -- a Result line's
+                    # own two derived fields (disposition, annotation) previously used two
+                    # DIFFERENT priority orders (PASS > FAIL > SKIP vs SKIP > PASS > FAIL), so a
+                    # two-boxes-checked line could produce disposition="PASS" paired with a GAP
+                    # annotation, silently dropping an intended GAP out of the worklist with
+                    # nothing downstream flagging the contradiction. Surface it as a distinct,
+                    # machine-visible state instead so reconcile()/run_reconcile() can name the
+                    # case id and line number rather than guessing which box the author meant.
+                    current.disposition = "MALFORMED_MULTI_CHECKED"
+                    current.annotation = None
+                    continue
                 annotation = None
                 if "SKIP" in boxes and m.group(6) is not None:
                     annotation = m.group(6)
@@ -233,6 +246,7 @@ class Reconciliation:
     ledger_ids_absent_from_doc: list  # cause 4: ledger id matches no heading
     doc_obsolete_ledger_gap: list  # cause 5: doc OBSOLETE (COV-09 retirement), ledger GAP
     retired_obsolete_ids: list  # ALL doc-OBSOLETE cases, whether or not a ledger row exists
+    malformed_multi_checked: list  # (case_id, result_lineno) -- more than one Result box checked
     arithmetic_ok: bool
     arithmetic_detail: dict
 
@@ -314,6 +328,14 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         (c.case_id for c in cases if c.disposition == "OBSOLETE"), key=lambda cid: by_id[cid].heading_lineno
     )
 
+    # A malformed Result line (more than one box checked) must never resolve silently to whatever
+    # disposition a priority order happens to pick -- report the case id and its **Result:** line
+    # number explicitly so a contributor can go fix the transcription error.
+    malformed_multi_checked = sorted(
+        ((c.case_id, c.result_lineno) for c in cases if c.disposition == "MALFORMED_MULTI_CHECKED"),
+        key=lambda pair: by_id[pair[0]].heading_lineno,
+    )
+
     ledger_gap_ids = sorted(cid for cid, row in ledger_by_id.items() if row.get("outcome") == "GAP")
     ledger_gap_in_doc = [cid for cid in ledger_gap_ids if cid in by_id]
     ledger_gap_not_in_doc = [cid for cid in ledger_gap_ids if cid not in by_id]
@@ -348,9 +370,10 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         "cause4_ledger_ids_absent_from_doc": len(ledger_ids_absent_from_doc),
         "cause5_doc_obsolete_ledger_gap": len(doc_obsolete_ledger_gap),
         "retired_obsolete_total": len(retired_obsolete_ids),
+        "malformed_multi_checked_total": len(malformed_multi_checked),
     }
 
-    arithmetic_ok = doc_direction_ok and ledger_gap_direction_ok
+    arithmetic_ok = doc_direction_ok and ledger_gap_direction_ok and not malformed_multi_checked
 
     return Reconciliation(
         total_headings=total_headings,
@@ -366,6 +389,7 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         ledger_ids_absent_from_doc=ledger_ids_absent_from_doc,
         doc_obsolete_ledger_gap=doc_obsolete_ledger_gap,
         retired_obsolete_ids=retired_obsolete_ids,
+        malformed_multi_checked=malformed_multi_checked,
         arithmetic_ok=arithmetic_ok,
         arithmetic_detail=arithmetic_detail,
     )
@@ -396,6 +420,7 @@ def _print_reconciliation(r: Reconciliation) -> None:
     print(f"Cause 4 -- ledger id absent from document: {len(r.ledger_ids_absent_from_doc)} {r.ledger_ids_absent_from_doc}")
     print(f"Cause 5 -- doc OBSOLETE (COV-09 retirement), ledger GAP: {len(r.doc_obsolete_ledger_gap)} {r.doc_obsolete_ledger_gap}")
     print(f"Retired OBSOLETE (all, excluded from open-GAP count): {len(r.retired_obsolete_ids)} {r.retired_obsolete_ids}")
+    print(f"Malformed Result lines (more than one box checked): {len(r.malformed_multi_checked)} {r.malformed_multi_checked}")
     print(f"Arithmetic detail: {r.arithmetic_detail}")
     print(f"Arithmetic closes: {r.arithmetic_ok}")
     if not r.arithmetic_ok:

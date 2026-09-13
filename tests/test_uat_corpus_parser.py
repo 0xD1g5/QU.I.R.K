@@ -173,6 +173,51 @@ def test_iter_cases_skip_no_annotation_is_skip_other():
 
 
 # ---------------------------------------------------------------------------
+# WR-03 (204-REVIEW.md): a Result line with more than one box checked must
+# surface as a distinct, machine-visible MALFORMED state, never silently
+# resolve to a PASS disposition paired with a GAP annotation (the two
+# previously-divergent priority orders' failure mode).
+# ---------------------------------------------------------------------------
+
+
+def test_iter_cases_multi_checked_result_line_is_malformed_not_silent_pass():
+    lines = _lines(
+        """
+### UAT-9-10: Transcription error, two boxes checked
+**Result:** - [x] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage)
+"""
+    )
+    c = list(uat_corpus.iter_cases(lines))[0]
+    assert c.boxes == {"PASS", "SKIP"}
+    assert c.disposition == "MALFORMED_MULTI_CHECKED"
+    assert c.disposition != "PASS", (
+        "a two-boxes-checked line must never silently resolve to PASS -- that is exactly "
+        "the WR-03 failure mode (an intended GAP disappearing from the worklist)"
+    )
+    assert c.annotation is None
+    assert c.is_gap is False, (
+        "MALFORMED must never be counted as a doc-GAP either -- it is neither silently a "
+        "PASS nor silently a GAP; it must be reported, not guessed"
+    )
+
+
+def test_reconcile_surfaces_malformed_multi_checked_and_fails_arithmetic():
+    lines = _lines(
+        """
+### UAT-9-10: Transcription error, two boxes checked
+**Result:** - [x] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage)
+"""
+    )
+    cases = list(uat_corpus.iter_cases(lines))
+    r = uat_corpus.reconcile(cases, [])
+    assert r.malformed_multi_checked == [("UAT-9-10", 2)]
+    assert r.arithmetic_ok is False, (
+        "a malformed multi-checked Result line must trip arithmetic_ok so reconcile()'s "
+        "CLI (`uat_corpus reconcile`) exits non-zero rather than silently reading clean"
+    )
+
+
+# ---------------------------------------------------------------------------
 # The UAT-151-01 body-literal-checkbox trap
 # ---------------------------------------------------------------------------
 
