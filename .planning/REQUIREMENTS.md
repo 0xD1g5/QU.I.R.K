@@ -221,6 +221,14 @@ See `CLAUDE.md` for full detail. Named here because they change how work is exec
   extends the stale window by a full cadence. A deferral recorded in STATE.md is honest; a bumped
   date is not. This constraint is load-bearing for STALE-01/02 specifically.
 
+- **STALE-01/02 re-verification goes through Chrome browser automation** (operator decision,
+  2026-09-13). NSA / `media.defense.gov` and likely several vendor advisories 403 non-browser
+  agents, so the sources are read via the `mcp__claude-in-chrome__*` tools in the **main session** —
+  those tools are unavailable inside worktree subagents, so Phase 203 must not be fanned out. A
+  source that still cannot be read through the browser is an honest, dated deferral; the browser
+  path removes an expected obstacle, it does not license bumping a date. See ROADMAP.md's
+  "Autonomy Plan" section.
+
 - **A hand-derived list of sites is not a safeguard.** Only a scan that regenerates its occurrence
   set from source at run time is. This is the fifth time the project has had to name this lesson,
   and it is the direct rationale for COV-01 and COV-02.

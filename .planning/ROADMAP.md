@@ -163,6 +163,50 @@ corrections close the milestone.
 - Per-phase docs/UAT-SERIES.md/Obsidian close-out tasks are mandatory (CLAUDE.md's Per-Phase
   Documentation Checklist) — every phase below carries them.
 
+### Autonomy Plan — operator decisions taken 2026-09-13, before any phase work
+
+v5.24 runs autonomously **in two segments with a hard manual stop between them**. This is an
+operator instruction, not an executor preference: do not collapse the segments, and do not let an
+autonomous runner advance past Phase 206.
+
+| Segment | Command | Phases |
+|---------|---------|--------|
+| 1a | in-session discuss→plan→execute, **no worktree fan-out** | **203** (Chrome-dependent — see below) |
+| 1b | `/gsd-autonomous --from 204 --to 206` | 204, 205, 206 — then **halt** |
+| — | manual, operator-led | **207** (see below) |
+| 2 | `/gsd-autonomous --from 208` | 208 + milestone audit / close |
+
+Segment 1 is split deliberately. `/gsd-autonomous` dispatches plan→execute as background
+worktree agents, and the Chrome tools do not exist inside a worktree subagent — so a single
+`--to 206` invocation would hand Phase 203 to an executor that silently falls back to HTTP
+fetches, hits the 403s, and faces the fabrication pressure the Chrome decision exists to
+remove. The constraint is enforced by sequencing rather than by instructing an executor to
+respect it.
+
+**Phase 203 uses Chrome browser automation for the 403-ing sources (operator decision).** The NSA
+CNSA 2.0 page and `media.defense.gov` return HTTP 403 to non-browser agents, and several vendor
+advisories are expected to behave the same way. STALE-01's re-verification is therefore performed
+through the `mcp__claude-in-chrome__*` tools against a real browser session, so `last_verified`
+attests to a source that was genuinely read.
+
+Two consequences that change how Phase 203 must be executed:
+
+- **Phase 203 runs in the main session, NOT fanned out to worktree subagents.** The Chrome tools are
+  not available inside worktree-isolated subagents, so a fanned-out executor would silently fall
+  back to HTTP fetches, hit the 403s, and face exactly the fabrication pressure this decision
+  exists to remove.
+- **A 403 through the browser is still an honest deferral.** The browser path removes the *expected*
+  obstacle; it does not license bumping a date for any source that still cannot be read. Success
+  criteria 2 and 5 stand unchanged — name the unreachable source per vendor, defer with a date and a
+  reason, never bump.
+
+**Phase 207 is explicitly de-scoped from autonomous execution (operator decision).** The
+Playwright-E2E-versus-permanent-GAP verdict is a CI toolchain commitment (browser install cost,
+flake surface, long-term maintenance) for 3 cases, and the operator retains that call. Segment 1
+halts after 206; Phase 207 is then run manually and operator-led, per the project's standing
+HUMAN-UAT convention that walkthrough-shaped work is user-led with CLI evidence as corroboration
+only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
+
 ### Phases
 
 - [ ] **Phase 203: Catalog Freshness Drain** - Every date-gated staleness catalog is green against

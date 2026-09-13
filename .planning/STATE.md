@@ -2016,4 +2016,23 @@ rounds (141-09) on 2026-08-03 — no longer pending.
 
 ## Operator Next Steps
 
-- v5.23 requirements definition → roadmap (in progress via /gsd-new-milestone)
+v5.24 UAT Coverage Drain is open (requirements + roadmap written 2026-09-13). Autonomy decisions
+were taken by the operator on 2026-09-13 before any phase work; the authoritative copy is
+ROADMAP.md's "Autonomy Plan" section, restated here because this is the file a resuming session
+reads first.
+
+1. **Phase 203 in-session first** — discuss→plan→execute driven from the main session with **no
+   worktree fan-out**. STALE-01's source re-verification uses Chrome browser automation
+   (`mcp__claude-in-chrome__*`) because NSA / `media.defense.gov` 403s non-browser agents, and
+   those tools do not exist inside a worktree subagent — `/gsd-autonomous` would dispatch 203 to
+   one and silently fall back to HTTP. A source still unreadable through the browser is a dated,
+   reasoned deferral — never a bumped `last_verified`.
+2. `/gsd-autonomous --from 204 --to 206` — phases 204, 205, 206, then **halt**.
+3. **Phase 207 is manual and operator-led** — deliberately de-scoped from autonomous execution. Its
+   Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. Do not
+   let an autonomous runner advance into it.
+4. `/gsd-autonomous --from 208` — resume autonomous for Phase 208 and the milestone audit/close,
+   once 207's verdict is recorded.
+
+Superseded: the previous entry here ("v5.23 requirements definition → roadmap") completed at the
+v5.23 close; v5.23 merged to `main` 2026-09-13 via PRs #12/#13.
