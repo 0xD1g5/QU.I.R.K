@@ -6078,10 +6078,18 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 - Output shows `3 passed, 0 failed`
 - `identity_findings[]` contains entries for KERBEROS, SAML, and DNSSEC even when the Kerberos endpoint is timestamped 30 s after the others (proves the 5-minute backward bracket covers the skew)
 
-**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-13 third leaf tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_issue3_scan_window_returns_all_identity_protocols -- CI-EXEMPT: it skips on `impacket not installed`, and impacket cannot be added to the CI environment — `quirk[identity]` is deliberately excluded from `quirk[all]` per Phase 45 / D-01 because impacket pulls pyOpenSSL, which downgrades cryptography and breaks the TLS scanner, so installing it to prove this one leaf would break the product under test. Passes on an operator machine with `quirk[identity]`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-03  **Tester:** Digs
 **Status:** Passed
-**Notes:** `.venv/bin/python -m pytest tests/test_identity_surface.py::Issue3ScanWindowRegressionTest -x -q` → 3 passed in 0.34s
+**Notes:** DEFERRED — covered by `tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_saml_visible_with_earlier_dnssec` and `tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_explicit_scan_id_uses_exact_second` — the two leaves CI can run, both strictly enforced. The third leaf is declared CI-EXEMPT on the Result line above, because CI genuinely cannot run it, not because it is unimportant. Originally run as the whole class: `.venv/bin/python -m pytest <the class> -x -q` → 3 passed in 0.34s, on an operator machine where `quirk[identity]` is installed.
+
+**Citation split (205-06) — why this was invisible until now.** The original class-scoped citation
+expanded to ZERO nodes under the old `fnmatch`-only expansion, so the execution leg never ran any of
+these three leaves. 205-06 fixed the expansion; the impacket-gated leaf then skipped in CI, and
+`Expected: All 3 tests … pass` turned out to be true only on an operator machine. The citation is now
+split rather than declared exempt wholesale, so CI keeps enforcing the 2 leaves it can actually run —
+declaring the whole class exempt would have silently surrendered that enforcement. The Expected line
+is left as written: it is accurate on an operator machine, and this note records that CI proves 2 of 3.
 
 ---
 
