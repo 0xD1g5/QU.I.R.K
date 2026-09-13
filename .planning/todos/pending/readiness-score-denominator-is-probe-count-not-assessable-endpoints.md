@@ -2,7 +2,7 @@
 type: todo
 created: 2026-09-13
 source: multihost chaos-lab work (999.110 thin slice) — found while trying to make a demo score worse
-priority: P2
+priority: P1  # raised from P2 2026-09-13 — see the CERT evidence below
 requirement: null
 resolves_phase: null
 ---
@@ -52,6 +52,44 @@ including ports where nothing was found. So:
   observed directly: 4 weak-TLS hosts (RSA-1024, SHA-1, broken chain, plaintext) plus 6 plaintext
   intranet hosts took HIGH findings from 3 to 11 and left Hygiene at exactly 19/25 and the score at
   exactly 91/100.
+
+## DECISIVE EVIDENCE — cert subscores are affected too, and the effect is severe
+
+A deliberately vulnerable 31-host estate was built to try to drive the score down honestly. Final
+measurement (2026-09-13, live):
+
+```
+finding_severity_counts: {CRITICAL: 5, HIGH: 14, MEDIUM: 33, LOW: 16, INFO: 330}
+certificate_observations: {certs_observed: 17, expired_count: 5, expiring_count: 1, self_signed_count: 3}
+endpoints = 370          <- the denominator for EVERY ratio penalty
+assessable_endpoint_count = 38
+Score: 91/100.  Hygiene 19/25, Modern TLS 20/25, Identity 25/25, Agility 25/25, DAR 25/25.
+```
+
+**29% of the estate's certificates are expired (5 of 17) and Identity scored a PERFECT 25/25.**
+
+`identity_expired_ratio` is weighted 14.0. With `denom = endpoints = 370`:
+
+    -(5/370) * 14.0 = -0.19   -> rounds away entirely
+
+With `denom = certs_observed = 17` — the natural denominator for a *certificate* ratio:
+
+    -(5/17) * 14.0 = -4.12    -> plus self-signed -(3/17)*9 = -1.59, expiring -(1/17)*7 = -0.41
+                              -> Identity 25 -> ~19
+
+So the cert-based subscores divide certificate counts by the PROBE count. Four successive rounds of
+adding real, detected vulnerabilities moved every subscore by exactly zero:
+
+| Estate | CRITICAL | HIGH | MEDIUM | Hygiene | Identity | Score |
+|---|---|---|---|---|---|---|
+| 10 hosts | 1 | 3 | 10 | 19/25 | 25/25 | 89 |
+| + at-rest connectors | 1 | 3 | 10 | 19/25 | 25/25 | 91 |
+| + 4 weak-crypto hosts | 1 | 5 | 15 | 19/25 | 25/25 | 91 |
+| + 6 plaintext intranet | 1 | 11 | 15 | 19/25 | 25/25 | 91 |
+| + 11 expired/self-signed/legacy | **5** | **14** | **33** | **19/25** | **25/25** | **91** |
+
+The scanner DETECTS everything correctly — the findings are all present and correctly severity-rated.
+Only the SCORE is blind to them.
 
 ## Why this matters beyond a demo
 

@@ -496,6 +496,19 @@ Measured across four live runs on 2026-09-13 while trying to drive the score DOW
 | + S3/pg connectors completed | 3 | 19/25 | **91** (went UP) |
 | + RSA-1024, SHA-1, broken-chain, plaintext hosts | 5 | 19/25 | 91 |
 | + 6 plaintext intranet hosts | **11** | **19/25** | **91** |
+| + 11 expired/self-signed/legacy hosts (31 hosts, 5 CRITICAL) | **14** | **19/25** | **91** |
+
+**Final estate: 31 purpose-built vulnerable hosts, 5 CRITICAL / 14 HIGH / 33 MEDIUM / 16 LOW / 330
+INFO — and the readiness score is still 91/100 with EVERY subscore byte-identical to the 10-host
+run.** `certificate_observations` reports `certs_observed: 17, expired_count: 5` — 29% of the
+estate's certificates expired — and Identity scored a perfect 25/25, because
+`identity_expired_ratio` (weight 14.0) divides by `endpoints = 370` (the probe count):
+`-(5/370)*14 = -0.19`, which rounds away. The same evidence over `certs_observed` would be
+`-(5/17)*14 = -4.1`.
+
+**The scanner detects everything correctly; only the SCORE is blind to it.** This is now filed at
+**P1**. Demo guidance: lead with the FINDINGS (5 CRITICAL, 14 HIGH, per-host attribution, CBOM,
+roadmap), not the headline score, until the denominator question is settled.
 
 Adding badly configured hosts took HIGH findings from 3 to 11 and moved the score by **zero**.
 Every penalty in `quirk/intelligence/scoring.py` is `-_ratio(count, denom) * weight` where

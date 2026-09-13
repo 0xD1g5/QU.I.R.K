@@ -44,7 +44,7 @@ assessment:
 scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443,80,389,636,2222,5432,6379,8080,9000,9001]
+  ports_tls: [443,80,389,636,2222,3306,5432,6379,8080,9000,9001]
   include_sni: true
 
   tls_enum_mode: fast  # off|fast|deep
@@ -85,6 +85,17 @@ targets:
     - "10.80.0.50/32"   # mh-storage-archive  S3 + unencrypted bucket
     - "10.80.0.60/32"   # mh-pki-ca           step-ca
     - "10.80.0.70/32"   # mh-ssh-jump         SSH
+    - "10.80.0.101/32"  # mh-vpn-gateway      EXPIRED cert
+    - "10.80.0.102/32"  # mh-mail-relay       EXPIRED cert
+    - "10.80.0.103/32"  # mh-vendor-portal    EXPIRED cert
+    - "10.80.0.104/32"  # mh-backup-console   EXPIRED cert
+    - "10.80.0.105/32"  # mh-devtest-api      self-signed
+    - "10.80.0.106/32"  # mh-staging-web      self-signed
+    - "10.80.0.107/32"  # mh-iot-controller   self-signed
+    - "10.80.0.108/32"  # mh-erp-frontend     legacy TLS
+    - "10.80.0.109/32"  # mh-hr-portal        legacy TLS
+    - "10.80.0.110/32"  # mh-payroll          legacy TLS
+    - "10.80.0.111/32"  # mh-db-hr            MySQL plaintext
   include_ips: []
   exclude_ips: []
 
