@@ -17,6 +17,51 @@ progress:
 
 ## Deferred Items
 
+### Phase 203 (2026-09-13) — STALE-01 partially discharged; staleness gate RED by design
+
+`tests/test_hardware_staleness.py::test_hardware_matrix_not_stale` is **RED and deliberately left
+red.** This is a **recorded, dated deferral, not a bumped date** — per CLAUDE.md §Staleness Review
+Cadence, a deferral is honest and a bumped date is not.
+
+**What happened:** Phase 203 re-verified `HARDWARE_MATRIX` against its real sources through Chrome
+browser automation. **1 of 8 vendors verified** (Fortinet — and it was *wrong on two counts*, now
+corrected). **7 could not be read at their recorded URLs.** Chrome reached every host successfully,
+including the NSA page that HTTP 403s all non-browser clients — so this is not a tooling limit. The
+vendor documents are gone: 6 dead or silently moved, 1 behind a support login (Juniper).
+
+Under D-01 the top-level `last_verified` is `min()` of the entry dates, so 7 unverified vendors pin
+it at `2026-06-13` and the gate cannot go green. **That is the invariant working as designed.**
+A future session must NOT clear this by bumping the date or by setting
+`QUIRK_CI_STALENESS_OVERRIDE_DATE`.
+
+**Tracked as:** `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md` (high).
+Evidence: `.planning/phases/203-catalog-freshness-drain/203-ATTESTATION.md`.
+
+**STALE-02 is fully discharged** — `hw_cve` re-verified against the live NVD API, 6/6 rows
+confirmed, bounded CRITICAL/HIGH delta clean, date moved to `2026-09-13`.
+
+### D-07 — date-gated catalog trip dates (computed from source 2026-09-13)
+
+Recorded so a future session sees these coming rather than meeting a surprise red gate. The other
+seven catalogs were deliberately NOT re-verified in Phase 203 (D-07); only the two in STALE-01/02
+were in scope.
+
+| Catalog | `last_verified` | Threshold | Next trip |
+|---|---|---|---|
+| `quirk/scanner/hardware_meta.py` | 2026-06-13 | 90 | **already tripped 2026-09-11 — see deferral above** |
+| `quirk/scanner/hw_cve.py` | **2026-09-13** | 30 | 2026-10-13 *(was ≈2026-10-02; moved past the milestone)* |
+| `quirk/qramm/model_meta.py` | 2026-08-11 | 90 | 2026-11-09 |
+| `quirk/compliance/cmvp.py` | 2026-08-25 | 90 | 2026-11-23 — **never run `quirk compliance cmvp refresh`** (RVW-022) |
+| `quirk/scanner/snmp_meta.py` | 2026-09-02 | 90 | 2026-12-01 |
+| `quirk/scanner/pqc_deadlines.py` | 2026-09-02 | 90 | 2026-12-01 |
+| `quirk/compliance/__init__.py` | 2026-05-05 | 365 | 2027-05-05 |
+| `quirk/scanner/bacnet_vendors.py` | 2026-08-11 | 365 | 2027-08-11 |
+| `quirk/scanner/hardware_eol.py` | 2026-08-14 | 365 | 2027-08-14 |
+
+Enumerate with `grep -rln "^STALENESS_THRESHOLD_DAYS: int = " quirk/ --include="*.py" | grep -v __pycache__`
+— which returns exactly these 9. The broader form documented in CLAUDE.md returns 16 (it also
+matches reader modules and docstrings) and needs manual triage; see Phase 203's SC#4 finding.
+
 **Acknowledged at the v5.22 milestone close on 2026-09-11** (operator accepted audit status
 `passed`; 4 open artifacts deferred — the same carried set as v5.21 minus
 backlog-reconciliation-and-derived-gate, which Phase 198 GATE-04 discharged):
