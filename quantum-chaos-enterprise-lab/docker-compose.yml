@@ -984,7 +984,15 @@ services:
   # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
   # ===========================================================================================
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # quay.io, NOT Docker Hub: MinIO withdrew `minio/minio` and `minio/mc` from Docker Hub.
+    # Verified 2026-09-13 — the Docker Hub API returns `{"message":"object not found"}` for BOTH
+    # repositories, and a pull fails with `pull access denied ... repository does not exist`. This
+    # broke `test_profile_re_up_is_idempotent[storage-s3]` on every CI run; it had been carried as
+    # an "environmental / Docker Hub rate limit" flake, which was wrong — the images are gone, so
+    # the profile could never have come up again.
+    # The exact pinned tag exists on quay.io and was verified with `docker manifest inspect`, so
+    # the CHAOS-05 image-pin discipline is preserved (no drift to :latest).
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     profiles: ["storage-s3"]
     command: server /data --console-address ":9001"
     environment:
@@ -1002,7 +1010,8 @@ services:
       start_period: 10s
 
   minio-seed:
-    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # quay.io for the same reason as the `minio` service above — see that comment.
+    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
     profiles: ["storage-s3"]
     restart: "no"
     depends_on:
