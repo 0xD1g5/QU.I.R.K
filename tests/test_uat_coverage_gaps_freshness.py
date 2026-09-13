@@ -188,7 +188,7 @@ def test_uat_coverage_gaps_exists():
 def test_uat_coverage_gaps_is_current():
     """docs/uat-coverage-gaps.md must byte-match live generator output over the real corpus."""
     generated = generator.generate().rstrip("\n")
-    current = UAT_COVERAGE_GAPS_MD.read_text().rstrip("\n")
+    current = UAT_COVERAGE_GAPS_MD.read_text(encoding="utf-8").rstrip("\n")
     assert generated == current, (
         f"docs/uat-coverage-gaps.md is stale. Regenerate with: {generator.REGEN_COMMAND}"
     )
@@ -214,7 +214,7 @@ def test_uat_coverage_gaps_gate_is_not_vacuous(tmp_path):
     fixture_path.write_text(mutated_text, encoding="utf-8")
 
     mutated_output = generator.generate(series_path=fixture_path)
-    committed = UAT_COVERAGE_GAPS_MD.read_text()
+    committed = UAT_COVERAGE_GAPS_MD.read_text(encoding="utf-8")
 
     assert mutated_output != committed, (
         "Appending a new GAP case to a copy of the live corpus and regenerating through "
@@ -237,7 +237,7 @@ def test_no_obsolete_case_appears_in_live_open_gap_table():
         "real retirement to be non-vacuous (COV-09 retired UAT-5-18 and UAT-92-01 in 204-02)."
     )
 
-    committed = UAT_COVERAGE_GAPS_MD.read_text()
+    committed = UAT_COVERAGE_GAPS_MD.read_text(encoding="utf-8")
     open_section = _open_gap_section(committed)
     retired_section = _retired_section(committed)
 
