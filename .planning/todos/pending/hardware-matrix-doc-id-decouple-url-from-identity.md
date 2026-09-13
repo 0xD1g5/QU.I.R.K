@@ -2,6 +2,7 @@
 type: todo
 created: 2026-09-13
 source: operator decision after phase 203 — "instead of fixing it, start building the structure for doc id being separate"
+updated: 2026-09-13 — re-sourcing executed; three hypotheses in this file now have evidence
 priority: high
 requirement: none yet — candidate for a v5.24 tail phase or v5.25
 resolves_phase: null
@@ -12,6 +13,14 @@ resolves_phase: null
 **Operator decision, 2026-09-13:** do **not** spend a phase re-sourcing the 7 rotted URLs. The
 operator is taking the URL re-sourcing themselves. QUIRK's side of the work is the **structural
 change that stops this recurring** — which is the higher-value half.
+
+> **UPDATE 2026-09-13 — the re-sourcing HAPPENED, and it produced evidence that changes this design.**
+> The operator supplied candidate URLs; all were read in a browser and checked against their claims,
+> and 7 of 8 entries were corrected and committed (`5670d550`). See
+> `hardware-matrix-source-urls-broadly-rotted.md` for the per-vendor outcome. **Three proposals below
+> moved from hypothesis to observation, and two new findings were added** — see
+> §"What the 2026-09-13 pass actually proved" at the end. Still open, still deferred; now better
+> specified.
 
 **Scheduling: deferred.** Not now — v5.24 continues through Phases 204-208 first. This is a
 candidate for a v5.24 tail phase or v5.25.
@@ -105,3 +114,123 @@ structure first is cheaper, because it avoids a second pass over the same eight 
   tracked in `hardware-matrix-source-urls-broadly-rotted.md`.
 - Bumping any `last_verified`. The staleness gate stays red under its recorded deferral until real
   verification happens.
+
+
+---
+
+# What the 2026-09-13 pass actually proved
+
+Four findings, in descending order of how much they should change the design.
+
+## 1. The durable anchor usually EXISTS — it is just less precise than the deep link
+
+This file previously *proposed* preferring stable anchors, reasoning from the rot pattern. It is now
+an observation. **Two of the three replacement sources found have no release number in their path:**
+
+```
+thalesdocs.com/gphsm/luna/7/docs/network/Content/sdk/extensions/pqc/post_quantum_algorithms.htm
+docs.paloaltonetworks.com/network-security/decryption/administration/
+    post-quantum-cryptography-decryption/detection-control-post-quantum-cryptography
+```
+
+Both are **topic pages the vendor maintains in place** rather than forking per release, and both state
+their claim directly. In both cases the original entry had reached past the topic page for a
+version-pinned deep link that was more precise the day it was written and 404s today.
+
+Palo Alto is the cleanest demonstration: the old URL was
+`pan-os/11-1/pan-os-admin/decryption/post-quantum-cryptography` (404); the live page is the same
+subject under a **version-free** path. The information never moved. The versioned rendering of where
+it lived did.
+
+**Design consequence — make this a recorded rule, not a preference:** when a topic page states the
+claim, record the topic page. Reach for a version-pinned path only when the claim is genuinely
+version-specific *and* no topic page carries it — and mark that entry as expected to rot.
+
+## 2. `doc_id` gives you a LOOKUP KEY, not immortality — F5 disproved the stronger version
+
+This file's key observation was that F5's `K000141701` and Fortinet's `527690` survived their URL
+changes, concluding "the article ID is the durable key."
+
+**Half right.** `K000141701` did *not* survive: the article was **retired**, not moved, and its
+content now lives across **two different** K-numbers — `K000149577` (the how-to) and `K000136126` (the
+support matrix). Searching MyF5 by K-number is still far better than guessing paths, but `doc_id` must
+not be modelled as a permanent pointer to the same document.
+
+**Design consequence:** `doc_id` is a *search key within a vendor namespace* — which makes
+`doc_id_scheme` load-bearing rather than a nicety. It should also be **nullable and non-unique**: one
+claim may need several ids. The F5 entry now cites two articles, with the second referenced only in
+prose because the schema holds a single `source_url`.
+
+## 3. NEW — evidence belongs per CLAIM, not per ENTRY, and a recurring data error proves it
+
+**Four of the five corrections share one shape:** the catalog recorded **transport-layer PQC** while
+the vendor had shipped **artifact-signing PQC**.
+
+| Vendor | Catalog claimed | Vendor actually shipped |
+|---|---|---|
+| HPE | iLO 6 hybrid **TLS** | iLO 7 **LMS firmware-update signing** |
+| Juniper | nothing (`unsupported`) | **ML-DSA-87 image signing** + hybrid SSH KEX |
+| Thales | ML-KEM/ML-DSA generation at 7.7.1 | generation at **7.9.0**, **LMS-HSS** at 7.8.9, wrapping at 7.9.1 |
+| Cisco | nothing (`unsupported`) | **IKEv2 RFC 9370** multiple key exchange |
+
+These solve different problems — signing protects supply-chain integrity, KEMs protect against
+harvest-now-decrypt-later. **One `pqc_status` per vendor cannot express "signs firmware post-quantum,
+negotiates sessions classically,"** so it collapses toward whichever the author found first. That
+collapse produced four of today's six corrections.
+
+This answers the open question this file raised as *"Does `evidence` live per entry, or per claim
+within an entry?"* — **per claim.** Each needs its own plane, version floor, and evidence line.
+Several entries now assert three or four separable things inside one `notes` blob.
+
+## 4. NEW — `pqc_status` cannot express "actively strips PQC", and that is a real device class
+
+Palo Alto forced a decision the schema does not support. In a decryption path a PAN-OS NGFW does not
+merely lack PQC — it **removes hybrid groups from the ClientHello** to force classical negotiation and
+**drops** PQC-only sessions, preventing everything behind it from being quantum-safe regardless of
+endpoint capability.
+
+The entry was set to `unsupported` because it is the most conservative available value and maps to
+Tier 1. That is a **workaround, not a representation**: `unsupported` says "this device can't", where
+the truth is "this device stops others from". Structurally it is closer to the gateway/legacy pairing
+logic already in `cbom/bridge.py` than to a vendor capability row.
+
+**Open question for the discuss pass:** does the catalog need a downgrade/interference concept
+distinct from capability? Any middlebox that terminates TLS to inspect it is a candidate, so this is
+not Palo-Alto-specific.
+
+---
+
+# The process finding this file should carry
+
+A structural fix makes re-sourcing a lookup. **It does not make anyone read the page.**
+
+F5 published the article refuting its own entry in **February 2025** — sixteen months before that
+entry's `2026-06-13` attestation — at the very K-number the catalog already cited. `doc_id` would have
+surfaced it instantly; it would not have caused anyone to compare it against the claim.
+
+That is a stronger argument for `evidence` + `evidence_checked` than the rot pattern that originally
+motivated it: **an evidence quote turns re-verification into a diff that cannot be passed by glancing
+at a live page.** The content-aware check then has something real to assert against.
+
+# Revised scope sketch
+
+- **`doc_id` + `doc_id_scheme`** — nullable, **non-unique**, a vendor-namespace search key rather than
+  a permanent pointer (finding 2).
+- **`evidence` + `evidence_checked`** — **per claim, not per entry** (finding 3).
+- **Sourcing policy: topic page over version-pinned deep link** where the topic page states the claim
+  (finding 1), with version-pinned entries flagged as expected to rot.
+- **Content-aware link check** — unchanged; still operator-run or browser-driven, not a GitHub Action.
+  Six of these hosts block non-browser clients, and this pass re-confirmed HTTP 200 is not evidence of
+  content.
+- **NEW: a claim-plane field** (transport / signing / key-storage) — the minimum change that would
+  have prevented four of today's six corrections.
+- **NEW, possibly a separate todo: a downgrade/interference concept** distinct from capability
+  (finding 4).
+
+# Does NOT include
+
+- Re-sourcing — done 2026-09-13, except IPMI.
+- The IPMI claim rewrite. The unfalsifiable clause is removed and the status moved to `unsupported`
+  ahead of verification (fails safe — see the other todo), but the structural cipher-suite claim is
+  **still unverified** and `last_verified` is deliberately not bumped.
+- Bumping any `last_verified`. The gate stays red on IPMI alone.
