@@ -1224,3 +1224,37 @@ Local tag `v5.4.0`.
 - **v5.19 Drain & Tooling Integrity** — development complete 2026-09-07; shipped as v5.19.0 to PyPI 2026-09-07 by milestone v5.20 Phase 187. Phases 182–186.1, 77 plans, 294 commits, 215 files changed (+21,081/−1,106). 15/15 requirements; audit `passed`, 0 blockers, 10/10 Nyquist-compliant. Closed the GSD toolchain's **textual** state-corruption class (TOOL-01…TOOL-05) at 21 sites across 4 files in 2 installs — a run-time source scan found 29 bare-field sites where planning predicted 6 — proven by a live six-run re-demonstration against the real `STATE.md`, restored byte-identical. Plus drift-proof test-suite honesty gates (DRIFT-01/02), readiness-score correctness (SCORE-01…05), a11y baseline environment (DRIFT-03), and carried-defect drain (TRIAGE-01/02). **Known deferred items at close: 6** (see STATE.md `## Deferred Items`). **A second, SEMANTIC toolchain defect class remains open** — `phase.complete` marks a phase complete without checking its own plans are done (reproduced at 5/7 plans with an impossible `completed_plans: 142`), so it is unsafe to close a phase or milestone on this machine; this milestone's close was hand-written under a pre-image + signature-diff protocol.
 
 - **v5.20 Release & Correctness Drain** — shipped 2026-09-08. Phases 187–190, 18 plans. v5.19.0 published to PyPI (tag @ 290e028d, Sigstore-verified, Windows asset attached); scoring v2 (exclude-and-rescale + coverage disclosure on six surfaces + severity-band single producer); config correctness drain (port coercion QRK-CONFIG-001/002, executable docs-example gate, derived backlog-reconciliation gate with 99-ID honest drain); broker/Modbus port & protocol drain (connectors.broker_targets end-to-end with live lab evidence). 10/10 requirements; audit passed, 0 blockers, 4/4 Nyquist-compliant. Known deferred items at close: 6 (see STATE.md `## Deferred Items`) — incl. the still-open SEMANTIC phase.complete defect class; this close was again hand-written under the pre-image + signature-diff protocol.
+
+- **v5.23 Deliverable Experience** — development complete 2026-09-12. Phases 199–202, 28 plans. Audit
+  **`gaps_found`** — 14/14 requirements, 4/4 phases verified, 4/4 Nyquist-compliant, but **5/6 integration
+  seams** with one blocker **accepted by the operator at close** rather than downgraded. Shipped a
+  deliverable-layer chain, not four independent features: fractional scores made to survive the
+  merge/trends/scan transports (TRIAGE-10/11); operator report branding, full template overrides and named
+  profiles on an unconditional `SandboxedEnvironment` with a 13/13 SSTI containment verdict (RPT-01…05); a
+  remediation roadmap where every item carries a score-lift from a **real second scoring pass** and the
+  aggregate projection is **one independent rescore, deliberately not a sum**, with `categorize_waves()`
+  deleted outright so one categorization system feeds all surfaces (LIFT-01…05); and a per-finding
+  storyline drawer consuming that lift at **remediation-theme level** (STORY-01/02).
+  **The milestone's best process outcome was research falsifying two LOCKED decisions before any plan
+  ran:** `FindingItem.id` turned out to be `CryptoEndpoint.id` with 2–4 findings sharing one, so the
+  drawer's planned endpoint could never have identified a finding (→ re-keyed `(id, title)` plus a
+  dashboard↔CLI title bridge); and 41% of fingerprints proved multi-theme, so "the owning theme" was never
+  a data-model invariant (→ a specific-theme-wins tie-break, plus rendering the severity catch-all when it
+  is a finding's only theme, because suppressing it would assert a false absence).
+  Gates that earned their keep by failing on purpose: a run-time source scan over both title vocabularies
+  (RED-demonstrated in both directions), a division trip-wire that was live-falsified by mutating the
+  source, and an a11y capture that found a **real serious WCAG 2.1.1/2.1.3 violation** on the drawer's own
+  scroll region — fixed rather than ledgered, because the app-wide justification covering the two existing
+  ledger entries did not apply to a single-site container.
+  **Known open at close: 1 accepted blocker + 12 tech-debt items** (see `.planning/v5.23-MILESTONE-AUDIT.md`
+  and STATE.md `## Deferred Items`). The blocker — the roadmap surface and the drawer disagreeing on
+  score-lift where endpoints do not share a `scan_run_id`, i.e. legacy and distributed-sensor deployments —
+  is filed as backlog **999.111 (P2)**, pinned by a characterization test, and accepted because the failure
+  is *missing* rather than *wrong* information. A cross-phase-only finding is filed as **999.112 (P3)**:
+  LIFT-05's four-surface numeric-equality guarantee is implicitly scoped to *unmodified* templates, because
+  RPT-02's full-file override can drop the roadmap section and nothing validates its presence — two
+  independently-correct features acquiring an unstated precondition the moment both exist.
+  **NO v5.23 git tag**, same rationale as v5.20–v5.22: `release.yml` fires on `v[0-9]*`, so the milestone
+  record lives here and in `.planning/milestones/`, not in a tag. This close was again **hand-written under
+  a pre-image + signature-diff protocol** — `phase.complete` / `milestone.complete` and every mutating
+  `state.*` / `roadmap.*` verb remain UNSAFE on this machine.
