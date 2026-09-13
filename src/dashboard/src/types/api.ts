@@ -100,6 +100,11 @@ export interface RoadmapNode {
   // the display `id` above, which has no stable identity across responses).
   closure_state?: string | null
   slug?: string | null
+  // Phase 201 LIFT-05 — advisory point delta if this item is resolved,
+  // joined by `slug` above. null is honest absence; never render as 0.
+  // Required `number | null` (never `undefined`) per 201-UI-SPEC.md line
+  // 112 — matches the Phase 199 `Optional[float]` widening convention.
+  score_lift: number | null
 }
 
 export interface RoadmapEdge {
@@ -265,22 +270,34 @@ export interface ScanSession {
   calibration: string | null
   target: string | null
   finding_counts: { high: number; medium: number; low: number }
+  // SCORE-04 / D-07 (184.4): session-history rating + optional cap reason;
+  // "" is not a real band (pre-fix rows). Added per 199 review IN-01.
+  rating: string
+  rating_cap_reason?: string | null
 }
 
 export interface CompareScanSummary {
   scan_id: string
   scanned_at: string
-  score: number
+  // Phase 188 SCORE-06 / 199 review WR-02: null means the scan's score was
+  // not computed (zero domains assessed) — never a fabricated 0.
+  score: number | null
   subscores: SubScores
+  // SCORE-04 / D-07 (184.4): per-side rating + optional cap reason.
+  rating: string
+  rating_cap_reason?: string | null
 }
 
+// Phase 188 SCORE-06 / 199 review WR-02: null means the delta could not be
+// computed because the category was unassessed on at least one side —
+// never a fabricated 0 delta.
 export interface SubscoreDelta {
-  hygiene: number
-  modern_tls: number
-  identity_trust: number
-  agility_signals: number
-  data_at_rest: number
-  data_in_motion: number
+  hygiene: number | null
+  modern_tls: number | null
+  identity_trust: number | null
+  agility_signals: number | null
+  data_at_rest: number | null
+  data_in_motion: number | null
 }
 
 export interface CompareFinding {
@@ -346,7 +363,9 @@ export interface VendorPqcTrendResponse {
 export interface CompareResponse {
   scan_a: CompareScanSummary
   scan_b: CompareScanSummary
-  score_delta: number
+  // Phase 188 SCORE-06 / 199 review WR-02: null means one or both sides had
+  // no computed score — never a fabricated 0 delta.
+  score_delta: number | null
   subscore_deltas: SubscoreDelta
   added_findings: CompareFinding[]
   removed_findings: CompareFinding[]
@@ -376,6 +395,12 @@ export interface ScanLatestResponse {
   // `certificates` (phantom rows). Non-optional -- the Pydantic default
   // (int = 0) guarantees the key is always present in the JSON.
   excluded_cert_count: number
+  // Phase 201 LIFT-05 — advisory simulation of the score if every modelable
+  // roadmap item were resolved. Top-level sibling of `roadmap`, never a
+  // field of `score`. null when unassessed or the projection failed.
+  // Required `number | null` (never `undefined`) per 201-UI-SPEC.md line
+  // 112 — matches the Phase 199 `Optional[float]` widening convention.
+  projected_score: number | null
 }
 
 export interface SampleFinding {
@@ -401,6 +426,19 @@ export interface TrendReport {
   scan_errors_resolved_count: number
   new_findings_sample: SampleFinding[]
   resolved_findings_sample: SampleFinding[]
+  severity_transitions: SeverityTransition[]
+  new_total: number
+  resolved_total: number
+}
+
+// Mirrors SeverityTransitionResponse — an endpoint whose severity changed
+// between two sessions without its identity changing (199 review WR-03).
+export interface SeverityTransition {
+  host: string
+  port: number
+  protocol: string
+  previous_severity: string | null
+  current_severity: string | null
 }
 
 // Phase 64 TREND-01: timeline types
@@ -412,7 +450,9 @@ export interface TrendFindingCounts {
 
 export interface TrendSessionPoint {
   session_ts: string       // ISO 8601 string
-  score: number
+  // Phase 199 TRIAGE-10: null means the session's score was not computed
+  // (zero domains assessed) — never a fabricated 0. Mirrors ScanSession.score.
+  score: number | null
   subscores: SubScores     // reuses existing SubScores interface
   finding_counts: TrendFindingCounts
 }
@@ -623,7 +663,9 @@ export interface MergeLatestData {
   endpoint_count: number
   sensor_count: number
   coverage_warning?: Record<string, unknown> | null
-  per_segment_scores: Record<string, number>
+  // Phase 199 TRIAGE-10: an unassessed segment carries null, never a
+  // fabricated 0 — mirrors MergeLatestData.score above.
+  per_segment_scores: Record<string, number | null>
 }
 
 export interface MergeLatestResponse {

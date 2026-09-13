@@ -156,13 +156,8 @@ def _stub_roadmap(evidence, score):
     return {"items": []}
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 def _patches():
     return (
-        patch("quirk.reports.writer.categorize_waves", side_effect=_stub_waves),
         patch(
             "quirk.reports.writer.build_phased_roadmap", side_effect=_stub_roadmap
         ),
@@ -197,8 +192,8 @@ def _run_reports(tmp_path, endpoints) -> str:
 
 def test_html_has_algorithm_inventory_heading(tmp_path) -> None:
     """The Algorithm Inventory section header MUST be present in the HTML."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_reports(tmp_path, [_aes_endpoint(), _chacha_endpoint()])
     assert "<h2>Algorithm Inventory" in html, (
         "HTML report is missing the Algorithm Inventory <h2>"
@@ -207,8 +202,8 @@ def test_html_has_algorithm_inventory_heading(tmp_path) -> None:
 
 def test_html_has_cmvp_coverage_column_header(tmp_path) -> None:
     """The CMVP Coverage column header MUST be present."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_reports(tmp_path, [_aes_endpoint(), _chacha_endpoint()])
     assert "CMVP Coverage" in html, (
         "HTML report is missing the 'CMVP Coverage' column header"
@@ -218,8 +213,8 @@ def test_html_has_cmvp_coverage_column_header(tmp_path) -> None:
 def test_html_aes_row_lists_known_covering_module(tmp_path) -> None:
     """The AES row's CMVP Coverage cell must list at least one of the bundled
     covering module names (RESEARCH anchor: OpenSSL FIPS Provider)."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_reports(tmp_path, [_aes_endpoint()])
     assert "OpenSSL FIPS Provider" in html, (
         "AES row does not surface 'OpenSSL FIPS Provider' from cmvp_cache.json"
@@ -229,8 +224,8 @@ def test_html_aes_row_lists_known_covering_module(tmp_path) -> None:
 def test_html_unmapped_algorithm_renders_not_in_cmvp_catalog(tmp_path) -> None:
     """ChaCha20-Poly1305 has no _FAMILY_MAP entry → row reads the literal
     'Not in CMVP catalog' (v4.10-D-01 — DO NOT change this wording)."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_reports(tmp_path, [_chacha_endpoint()])
     assert "Not in CMVP catalog" in html, (
         "HTML should render 'Not in CMVP catalog' for ChaCha20-Poly1305"
@@ -241,8 +236,8 @@ def test_html_xss_payload_in_algorithm_name_is_sanitized(tmp_path) -> None:
     """Phase 78 sanitize chokepoint contract: the XSS payload placed in an
     algorithm-name field MUST NOT appear unescaped in the rendered HTML —
     either escaped (``&lt;script&gt;``) or stripped is acceptable."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_reports(tmp_path, [_xss_endpoint(), _aes_endpoint()])
     assert XSS_PAYLOAD not in html, (
         "Raw XSS payload appears unescaped in the rendered HTML report"
@@ -254,8 +249,8 @@ def test_html_never_emits_certified_true_literal(tmp_path) -> None:
     ``certified: true`` / ``"certified":true`` string."""
     import re
 
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_reports(tmp_path, [_aes_endpoint(), _chacha_endpoint()])
     # Case-insensitive, tolerant of whitespace/JSON-ish.
     pattern = re.compile(r"\"?certified\"?\s*:\s*true", re.IGNORECASE)

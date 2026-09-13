@@ -58,6 +58,37 @@ def _app_with_db():
 # Schema-level assertions
 # ---------------------------------------------------------------------------
 
+def _patch_probe_all_available(monkeypatch):
+    """Pin the connector-availability probe to all-available (999.108).
+
+    Phase 193's submit-time 422 gate rejects a job whose resolved config
+    enables a connector unavailable in the running environment — and the
+    standard profile auto-enables email/broker, so environments without
+    sslyze (e.g. CI) would 422 these submissions. This file tests allow_internal_targets exclusion,
+    not connector gating, so the probe is pinned for determinism.
+    """
+    from quirk.dashboard.api.connector_availability import (
+        ConnectorAvailability,
+        probe_all_connectors,
+    )
+
+    fake = {
+        flag: ConnectorAvailability(
+            flag=flag,
+            available=True,
+            reason="",
+            install_hint=entry.install_hint,
+            category=entry.category,
+            label=entry.label,
+        )
+        for flag, entry in probe_all_connectors().items()
+    }
+    monkeypatch.setattr(
+        "quirk.dashboard.api.connector_availability.probe_all_connectors",
+        lambda: fake,
+    )
+
+
 def test_schema_has_no_allow_internal_targets_field():
     """AC-03: the field must be removed from the request schema entirely."""
     assert "allow_internal_targets" not in ScanSubmitRequest.model_fields
@@ -77,6 +108,7 @@ def test_client_supplied_allow_internal_targets_is_dropped():
 # ---------------------------------------------------------------------------
 
 def test_post_jobs_ignores_client_allow_internal_and_uses_server_config(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
     """POST /api/jobs with allow_internal_targets=true must NOT enable internal targeting.
 
     The route must source the value from the server's config (which we monkey-patch
@@ -123,6 +155,7 @@ def test_post_jobs_ignores_client_allow_internal_and_uses_server_config(monkeypa
 
 
 def test_post_jobs_without_field_still_works(monkeypatch):
+    _patch_probe_all_available(monkeypatch)
     """Regression guard: omitting the field still produces a valid job."""
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
 

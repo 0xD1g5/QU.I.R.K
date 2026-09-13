@@ -3,6 +3,7 @@ import cytoscape from "cytoscape"
 import dagre from "cytoscape-dagre"
 import { useScanData } from "@/hooks/useScanData"
 import type { RoadmapNode } from "@/types/api"
+import { formatScoreNumber } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageSpinner } from "@/components/PageSpinner"
@@ -75,6 +76,7 @@ export function RoadmapPage() {
 
   const nodes = useMemo(() => data?.roadmap?.nodes ?? [], [data])
   const burndown = data?.burndown ?? null
+  const projectedScore = data?.projected_score ?? null
 
   // Build nodesByPhase lookup for detail panel
   const nodeById = useMemo(() => {
@@ -285,20 +287,43 @@ export function RoadmapPage() {
                 <X className="h-3 w-3" />
               </Button>
             </div>
-            <Badge className="text-xs text-white" style={{ background: PHASE_COLORS[selected.phase] ?? "hsl(240 5% 46%)" }}>
-              {PHASE_LABEL[selected.phase] ?? selected.timeframe}
-            </Badge>
-            {/* Phase 181 SURF-03: closure badge is omitted entirely when
-                closure_state is null, rather than showing an "Unknown" chip —
-                null means "no persisted lookup available", not "unknown state". */}
-            {selected.closure_state && (
-              <Badge
-                className="text-xs text-white ml-1.5"
-                style={{ background: CLOSURE_STATE_COLOR[selected.closure_state] ?? "hsl(240 5% 46%)" }}
-              >
-                {CLOSURE_STATE_LABEL[selected.closure_state] ?? selected.closure_state}
+            {/* 201-UI-V1/S1 fix: the phase/closure/lift badges must render as
+                a real flex row (`flex ... gap-1.5`), not bare siblings inside
+                the panel's `space-y-2` vertical stack — per the UI-SPEC's
+                Layout & Placement Contract ("same row (flex row, gap-1.5)").
+                gap-1.5 replaces the prior off-grid ml-1.5 (6px) margins. */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge className="text-xs text-white" style={{ background: PHASE_COLORS[selected.phase] ?? "hsl(240 5% 46%)" }}>
+                {PHASE_LABEL[selected.phase] ?? selected.timeframe}
               </Badge>
-            )}
+              {/* Phase 181 SURF-03: closure badge is omitted entirely when
+                  closure_state is null, rather than showing an "Unknown" chip —
+                  null means "no persisted lookup available", not "unknown state". */}
+              {selected.closure_state && (
+                <Badge
+                  className="text-xs text-white"
+                  style={{ background: CLOSURE_STATE_COLOR[selected.closure_state] ?? "hsl(240 5% 46%)" }}
+                >
+                  {CLOSURE_STATE_LABEL[selected.closure_state] ?? selected.closure_state}
+                </Badge>
+              )}
+              {/* Phase 201 LIFT-05: lift badge is omitted entirely when
+                  score_lift is null — null means this item's resolution is
+                  not modelable, not "zero improvement". A "+0 pts" badge is
+                  forbidden by the UI-SPEC. */}
+              {selected.score_lift != null && selected.score_lift > 0 && (
+                <Badge
+                  className="text-xs"
+                  style={{
+                    background: "var(--ds-ok-dim)",
+                    border: "1px solid var(--ds-ok-bdr)",
+                    color: "var(--ds-ok)",
+                  }}
+                >
+                  +{formatScoreNumber(selected.score_lift)} pts
+                </Badge>
+              )}
+            </div>
             {selected.why && (
               <p className="text-xs leading-relaxed text-muted-foreground">{selected.why}</p>
             )}
@@ -314,6 +339,29 @@ export function RoadmapPage() {
         />
         <p className="text-xs text-muted-foreground mt-1.5 text-center">Click any node to inspect · Scroll to zoom · Drag to pan</p>
       </div>
+
+      {/* Phase 201 LIFT-05: Projected Score card — sits directly above the
+          Remediation Burndown card per the UI-SPEC's Layout & Placement
+          Contract. Omitted entirely when projected_score is null (e.g. the
+          scan's current score is None, or the aggregate rescore could not
+          be computed) — never a placeholder card. No chart/gauge/arrow is
+          introduced here; this repo forbids conditionally mounting a
+          Recharts child, and this stat sidesteps that hazard by never
+          using a chart component at all. */}
+      {projectedScore != null && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+          <h2 style={{ fontSize: 16, fontWeight: 600 }}>Projected Score</h2>
+          <p>
+            Projected score if all items resolved:{" "}
+            <span style={{ fontSize: 20, fontWeight: 600, color: "var(--ds-ok)" }}>
+              {formatScoreNumber(projectedScore)}
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Advisory — this projection is a simulation and does not affect the readiness score.
+          </p>
+        </div>
+      )}
 
       {/* Phase 181 SURF-03: Remediation Burndown — extends this existing
           roadmap surface rather than adding a new tab, since closure is a

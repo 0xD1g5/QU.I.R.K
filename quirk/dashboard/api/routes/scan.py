@@ -65,6 +65,7 @@ from quirk.models import (
 )
 from quirk.models_util import latest_successful_hardware_devices
 from quirk.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
@@ -1105,6 +1106,8 @@ def _derive_roadmap(
     scoring: dict,
     db: Optional[Session] = None,
     scan_run_id: Optional[str] = None,
+    *,
+    profile: Optional[str] = None,
 ) -> RoadmapData:
     """Build migration roadmap graph from build_phased_roadmap().
 
@@ -1116,6 +1119,13 @@ def _derive_roadmap(
     `slug_for_title()` and joined against the scan's persisted
     `RemediationItem` rows. The generated `node_id` above is NEVER used as a
     lookup key — it has no stable identity across responses.
+
+    Phase 201 LIFT-05: `profile` is keyword-only with a `None` default so
+    every existing positional/2-arg call site keeps working unchanged. When
+    supplied, it is threaded into `compute_item_lifts` with NO `weights` —
+    mirroring the endpoint's own `compute_readiness_score(evidence,
+    profile=stored_profile)` call for its current score (RESEARCH Pitfall 4;
+    the CLI/dashboard calibration asymmetry is not normalized here).
     """
     try:
         from quirk.intelligence.roadmap import build_phased_roadmap
@@ -1147,6 +1157,17 @@ def _derive_roadmap(
     items_list = roadmap.get("items", []) if isinstance(roadmap, dict) else []
     timeframe_map = {"NOW": "0-30 days", "NEXT": "31-90 days", "LATER": "90+ days"}
 
+    # Phase 201 LIFT-05: fetch every item's lift ONCE, before the loop, same
+    # "fetch once, join by slug, degrade to empty" posture as the closure
+    # state lookup above. A lift-computation failure must never empty the
+    # roadmap or raise past this function — it is advisory-only.
+    lifts_by_slug: dict = {}
+    try:
+        lifts_by_slug = compute_item_lifts(evidence, items_list, profile=profile)
+    except Exception:
+        logger.exception("_derive_roadmap: score lift computation failed (advisory-only, skipping)")
+        lifts_by_slug = {}
+
     for item in items_list:
         if not isinstance(item, dict):
             continue
@@ -1172,6 +1193,7 @@ def _derive_roadmap(
             phase=phase_key,
             closure_state=closure_state,
             slug=slug,
+            score_lift=lifts_by_slug.get(slug) if slug else None,
         ))
 
     # Add phase-to-phase ordering edges (connect last NOW → first NEXT, last NEXT → first LATER)
@@ -1413,11 +1435,12 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             score_dict = compute_readiness_score(evidence, profile=calibration)
             # Phase 188 SCORE-06 / 188 review CR-04: pass the score through
             # UNCHANGED — None means "not computed" and must survive to the
-            # scan-history surface (ScanSession.score is Optional[int]).
-            # Never coerce None to 0: that fabricated a worst-case 0/100 row
-            # beside rating "NOT_ASSESSED". Sibling `or 0` coercions remain in
-            # trends.py (timeline) and merge.py (segment gauges) — documented
-            # deferred follow-ups, out of this route's scope.
+            # scan-history surface (ScanSession.score is Optional[float] as
+            # of Phase 199 / TRIAGE-10). Never coerce None to 0: that
+            # fabricated a worst-case 0/100 row beside rating "NOT_ASSESSED".
+            # The sibling `or 0` coercions that used to live in trends.py
+            # (timeline) and merge.py (segment gauges) were removed in
+            # Phase 199 / TRIAGE-10 — no fabrication sites remain.
             score = score_dict["score"]
             rating = score_dict.get("rating", "")
             rating_cap_reason = score_dict.get("rating_cap_reason")
@@ -1752,7 +1775,26 @@ def get_latest_scan(
     # same value here (rather than the unrelated `_checkpoint_scan_run_id`
     # derived below for partial_failures) keeps this join on the convention
     # `quirk/intelligence/closure.py` writes against.
-    roadmap = _derive_roadmap(evidence, score_raw, db=db, scan_run_id=response_scan_id)
+    roadmap = _derive_roadmap(evidence, score_raw, db=db, scan_run_id=response_scan_id, profile=stored_profile)
+
+    # Phase 201 LIFT-05: projected_score is an independent aggregate
+    # simulation, never a sum of the per-node score_lift values above
+    # (LIFT-02 non-additivity). `_derive_roadmap` returns `RoadmapData`
+    # only — its return type is a pinned pre-existing contract exercised by
+    # several 2-arg call sites in tests/test_dashboard_closure_burndown.py
+    # and tests/test_roadmap_categorization_unification.py that must keep
+    # working unmodified — so the items are re-derived here via the same
+    # pure, deterministic `build_phased_roadmap(evidence, score_raw)` rather
+    # than threading a tuple back out of `_derive_roadmap`. Degrades to
+    # None on any failure; never fabricated.
+    projected_score = None
+    try:
+        from quirk.intelligence.roadmap import build_phased_roadmap
+        _projection_items = build_phased_roadmap(evidence, score_raw).get("items", [])
+        projected_score = compute_projected_score(evidence, _projection_items, profile=stored_profile)
+    except Exception:
+        logger.exception("scan_latest: score projection failed (advisory-only, skipping)")
+        projected_score = None
 
     # Phase 67 RESUME-02: load partial_failures from scan_checkpoints.
     # CR-02: response_scan_id is MAX(scanned_at) (tz-naive ISO), but scan_checkpoints
@@ -1803,6 +1845,7 @@ def get_latest_scan(
         partial_failures=partial_failures,                     # Phase 67 RESUME-02
         burndown=_derive_closure_burndown(db, response_scan_id),  # Phase 181 SURF-03
         excluded_cert_count=excluded_cert_count,                # Phase 194 DASH-09/D-13
+        projected_score=projected_score,                        # Phase 201 LIFT-05
     )
 
 

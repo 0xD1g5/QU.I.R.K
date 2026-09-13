@@ -231,7 +231,11 @@ def merge_scan(
     # `rating` this call produces is passed through the return dict but has no
     # DB column (MergeRun has no rating field) and no schema consumer ever reads
     # it — MergeLatestData (dashboard/api/schemas.py) exposes only `score` and
-    # `per_segment_scores`, both ints. No band is ever rendered from this call.
+    # `per_segment_scores`. No band is ever rendered from this call.
+    # Phase 199 / TRIAGE-10: this WRITE path still persists scoring.py's int
+    # into MergeRun.score (unchanged, correct) — only the READ transport
+    # (MergeLatestData.score/per_segment_scores) was widened to
+    # Optional[float]; no code here changed.
     evidence = build_evidence_summary(union, findings=None)
     score_result = compute_readiness_score(evidence, profile=profile, weights=weights)
 

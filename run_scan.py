@@ -1441,6 +1441,12 @@ def main():
         run_errors(_sys.argv[2:])
         return
 
+    # --- report subcommand: intercept before scan argparse (Phase 200 / RPT-04) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "report":
+        from quirk.cli.report_cmd import run_report
+        run_report(_sys.argv[2:])
+        return
+
     # --- db subcommand: intercept before scan argparse (Phase 85-01 LAUNCH-04) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "db":
         db_parser = argparse.ArgumentParser(
@@ -1544,6 +1550,16 @@ def main():
         choices=["lenient", "balanced", "strict"],
         default=None,
         help="Scoring calibration profile (lenient|balanced|strict). Does NOT affect scan behavior.",)
+    parser.add_argument("--report-profile",
+        dest="report_profile",
+        default=None,
+        help=(
+            "Named REPORT branding/template profile to apply (see `quirk report profile "
+            "list`). Distinct from --profile (the SCAN profile: quick/standard/deep) and "
+            "--score-profile (the scoring calibration: lenient/balanced/strict) — this flag "
+            "only fills unset report.branding.*/report.template_dir values and does NOT "
+            "affect scan behavior or scoring."
+        ),)
     parser.add_argument("--safe-mode", action="store_true", help="Reduce concurrency and increase timeouts")
     parser.add_argument("--rate-limit", type=float, default=0.0, help="Targets/sec limiter (0 = off)")
     parser.add_argument(
@@ -1893,6 +1909,36 @@ def main():
 
     # Apply profile defaults (v3.7)
     apply_profile(cfg, scan_profile, safe_mode=args.safe_mode)
+
+    # Phase 200 / RPT-04: apply a named REPORT profile (branding/template
+    # settings), distinct from the scan profile above. CLI --report-profile
+    # wins over a config-declared report.profile for WHICH profile loads; a
+    # ValueError here (bad name, malformed/traversal-smuggling profile file)
+    # must abort the run before any scanning, not mid-report.
+    report_profile_name = args.report_profile or getattr(
+        getattr(cfg, "report", None), "profile", None
+    )
+    if report_profile_name:
+        import yaml as _yaml
+
+        from quirk.report_profiles import apply_report_profile
+        try:
+            apply_report_profile(cfg, report_profile_name)
+        except (ValueError, OSError, _yaml.YAMLError) as exc:
+            # Phase 200 review WR-01: load_profile propagates yaml.YAMLError
+            # (malformed profile file) and OSError (unreadable file) in
+            # addition to the coded ValueError — all three must abort with a
+            # clean coded stderr line, never a raw traceback. ValueError
+            # already carries its own QRK-CONFIG-004 message.
+            if isinstance(exc, ValueError):
+                print(str(exc), file=_sys.stderr)
+            else:
+                print(
+                    f"{format_error('CONFIG-004')} "
+                    f"(field='report.profile', value={report_profile_name!r}) — {exc}",
+                    file=_sys.stderr,
+                )
+            _sys.exit(1)
 
     # Phase 33 / D-01: cloud broker target plumbing — CLI extends config-supplied lists
     if getattr(args, "azure_servicebus_namespaces", None):

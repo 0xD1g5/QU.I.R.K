@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -54,7 +54,10 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
         db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
     )
     if latest_run is None:
-        return MergeLatestResponse(merge=None).model_dump()
+        # 199 review WR-01: mode="json" so UTCDateTime's when_used="json"
+        # serializer runs (python-mode model_dump() would bypass the SCORE-03
+        # UTC-offset stamping contract).
+        return MergeLatestResponse(merge=None).model_dump(mode="json")
 
     # ------------------------------------------------------------------
     # Parse coverage_warning_json (Trap T8: malformed JSON → None, no 500)
@@ -83,22 +86,25 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
         if ep.segment is not None:
             segment_eps[ep.segment].append(ep)
 
-    per_segment_scores: Dict[str, int] = {}
+    per_segment_scores: Dict[str, Optional[float]] = {}
     for seg, eps in segment_eps.items():
         try:
-            # D-07 (184.4): intentionally findings-less — per_segment_scores
-            # (MergeLatestData.per_segment_scores) is a Dict[str, int]; only the
-            # numeric score is ever assigned into it below, never a rating/band.
+            # D-07 (184.4) / Phase 199 TRIAGE-10: intentionally findings-less —
+            # per_segment_scores (MergeLatestData.per_segment_scores) is a
+            # Dict[str, Optional[float]]; only the numeric score is ever
+            # assigned into it below, never a rating/band.
             evidence = build_evidence_summary(eps, findings=None)
             result = compute_readiness_score(evidence)
-            per_segment_scores[seg] = int(result["score"]) if result.get("score") is not None else 0
+            per_segment_scores[seg] = result.get("score")
         except Exception as exc:
             logger.warning(
                 "merge/latest: per-segment score failed for seg=%r: %s",
                 seg,
                 exc,
             )
-            per_segment_scores[seg] = 0
+            # Phase 199 / TRIAGE-10: a scoring failure is an unassessed
+            # segment, not a segment that scored zero — None, never 0.
+            per_segment_scores[seg] = None
 
     # ------------------------------------------------------------------
     # Recompute overall score from the SAME live union so overall and
@@ -107,16 +113,17 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
     # point-in-time snapshot written at merge time — we keep it available
     # on the model but the displayed score comes from the live union.
     # ------------------------------------------------------------------
-    live_score: int = latest_run.score if latest_run.score is not None else 0
+    live_score: Optional[float] = latest_run.score
     if endpoints:
         try:
-            # D-07 (184.4): intentionally findings-less — only overall_result["score"]
-            # is read below into live_score (int); MergeLatestData carries no
-            # rating/band field, so this evidence's severity counts are never
-            # consulted for a band anywhere on this response.
+            # D-07 (184.4) / Phase 199 TRIAGE-10: intentionally findings-less —
+            # only overall_result["score"] is read below into live_score
+            # (nullable float); MergeLatestData carries no rating/band field,
+            # so this evidence's severity counts are never consulted for a
+            # band anywhere on this response.
             overall_evidence = build_evidence_summary(endpoints, findings=None)
             overall_result = compute_readiness_score(overall_evidence)
-            live_score = int(overall_result["score"]) if overall_result.get("score") is not None else 0
+            live_score = overall_result.get("score")
         except Exception as exc:
             logger.warning(
                 "merge/latest: overall score recompute failed, falling back to merge-time snapshot: %s",
@@ -135,4 +142,8 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
         coverage_warning=coverage_warning,
         per_segment_scores=per_segment_scores,
     )
-    return MergeLatestResponse(merge=merge_data).model_dump()
+    # 199 review WR-01: mode="json" so merged_at is serialized through the
+    # UTCDateTime PlainSerializer (when_used="json") and carries its +00:00
+    # offset — python-mode model_dump() left a naive datetime that FastAPI's
+    # jsonable_encoder emitted WITHOUT the offset (SCORE-03 defect class).
+    return MergeLatestResponse(merge=merge_data).model_dump(mode="json")

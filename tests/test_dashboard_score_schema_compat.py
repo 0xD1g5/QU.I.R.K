@@ -125,6 +125,11 @@ class TestScanSessionOptionalScore:
         assert s.model_dump()["score"] is None
 
     def test_int_score_still_validates(self):
+        """Phase 199 / TRIAGE-10: ScanSession.score widened Optional[int] ->
+        Optional[float] so a fractional score round-trips unchanged. An
+        integral input now yields a float value (82 -> 82.0) rather than an
+        int -- update, don't drop, the assertion (bool explicitly excluded
+        since isinstance(True, (int, float)) would otherwise pass)."""
         s = ScanSession(
             scan_id="2026-09-07T00:00:00",
             scanned_at="2026-09-07T00:00:00Z",
@@ -132,7 +137,7 @@ class TestScanSessionOptionalScore:
             score=82,
         )
         assert s.score == 82
-        assert isinstance(s.score, int)
+        assert isinstance(s.score, (int, float)) and not isinstance(s.score, bool)
 
     def test_score_field_omitted_defaults_to_none_not_zero(self):
         """The pre-CR-04 default was 0 — an int the schema could not

@@ -23,7 +23,70 @@ assessment:
   data_classification: "confidential"
   report_owner: "ACME Corp"
   timezone: "America/New_York"
+  # logo_path: /path/to/your-org-logo.png   # DEPRECATED fallback — see "Report Block" below.
+  #   report.branding.logo_path is the preferred field as of Phase 200 (v5.23). This
+  #   assessment.logo_path key is still honored when report.branding.logo_path is unset — it is
+  #   not being removed — but new configs should set report.branding.logo_path instead.
 ```
+
+---
+
+## Report Block (Phase 200, v5.23 — RPT-01/RPT-02/RPT-03/RPT-04)
+
+Controls report branding (cover logo, client/engagement identity text), an operator-supplied
+Jinja2 template override directory, and a named report profile. **The entire block is optional —
+omitting it, or any individual key inside it, reproduces today's rendering exactly.** Every field
+defaults to unset/`None` and is rendered only when present.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `branding.logo_path` | string | `null` | Path to a logo image file embedded on the HTML/PDF and DOCX cover. Preferred over the deprecated `assessment.logo_path` fallback — if both are set, `report.branding.logo_path` wins. An unreadable/missing file degrades gracefully to no logo (warning logged), never a crash. |
+| `branding.client_name` | string | `null` | Client/organization name rendered in the cover identity block and the running header/footer, in addition to `assessment.report_owner`. |
+| `branding.engagement_name` | string | `null` | Engagement label (e.g. `"Q3 2026 Crypto Assessment"`) rendered on the cover and running header/footer. |
+| `branding.prepared_by` | string | `null` | "Prepared By" line on the cover identity block. |
+| `branding.cover_date` | string | `null` | Free-form cover date label (e.g. `"September 2026"`), rendered verbatim — not parsed as a date. |
+| `branding.confidentiality_line` | string | `null` | Confidentiality legend (e.g. `"CONFIDENTIAL — Internal Use Only"`) rendered on the cover and the running footer. |
+| `template_dir` | string | `null` | Directory containing operator-authored `.j2` template overrides (only `.j2` files are consulted). Searched **first**, ahead of the packaged template, which remains the fallback for any template not present in this directory. Must be an existing, usable directory — see the error-code note below. Templates render inside a sandboxed Jinja2 environment (`SandboxedEnvironment`) unconditionally; see `docs/operators-guide.md`'s "Report template overrides" section for the full security posture. |
+| `profile` | string | `null` | Name of a saved report profile (`~/.quirk/report_profiles/<name>.yaml`, or `$QUIRK_PROFILES_DIR` if set) to merge onto this config. See `docs/operators-guide.md` for `quirk report profile save\|list` and the `--report-profile` CLI flag. |
+
+```yaml
+report:
+  branding:
+    logo_path: /path/to/your-org-logo.png
+    client_name: "Acme Corp"
+    engagement_name: "Q3 2026 Crypto Assessment"
+    prepared_by: "Security Team"
+    cover_date: "September 2026"
+    confidentiality_line: "CONFIDENTIAL — Internal Use Only"
+  template_dir: /path/to/custom/templates
+  profile: my-profile
+```
+
+### Which surfaces render which fields
+
+- **HTML/PDF and DOCX** render the full branding set, including the cover logo — cover identity
+  block plus running header/footer identity text (client/engagement + confidentiality line).
+- **CLI markdown (executive summary, scorecard) and the Rich console scan-summary table** render
+  the identity text only (`client_name`, `engagement_name`, `prepared_by`, `cover_date`,
+  `confidentiality_line`) — **no logo ever reaches a CLI surface.**
+
+### Path guard and error codes
+
+Every report path field (`report.branding.logo_path`, `report.template_dir`, and the legacy
+`assessment.logo_path` fallback) is validated at config-load time by one named guard,
+`validate_report_path_field()`:
+
+- **`QRK-CONFIG-003`** — raised when a path field contains a `".."` traversal segment, or when
+  `report.template_dir` does not point at an existing, usable directory. This is a hard,
+  load-time failure — the config never loads with a traversal-shaped or unusable `template_dir`.
+- **`QRK-CONFIG-004`** — raised when `report.profile` (or a `quirk report profile save`/`list`
+  invocation) names an invalid profile — profile names accept only letters, digits, hyphens, and
+  underscores.
+- **Asymmetric disposition for `logo_path` specifically:** a missing or unreadable logo file only
+  **warns** and degrades to no logo on the affected surface — it does not fail config load. Only a
+  traversal-shaped `logo_path` value fails hard; a legitimately-missing file does not.
+
+See [`docs/error-codes.md`](error-codes.md) for the exact cause/fix text of both codes.
 
 ---
 

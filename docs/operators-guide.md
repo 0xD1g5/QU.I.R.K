@@ -437,6 +437,106 @@ QU.I.R.K. runs needs to know before wiring `--fuzz` into automation:
 See [`docs/error-codes.md`](error-codes.md) for the full `FUZZ` error-domain cause/fix
 text for `FUZZ-001` and `FUZZ-002`.
 
+### 3.3 Report Branding, Templates, and Profiles (Phase 200, v5.23 — RPT-01..RPT-04)
+
+Reports can carry a client's own branding (cover logo, client/engagement identity text), an
+operator-authored template override directory, and a named, reusable "report profile" that
+bundles both. See [`docs/configuration.md`](configuration.md#report-block-phase-200-v523--rpt-01rpt-02rpt-03rpt-04)
+for the full `report:` config key reference.
+
+#### Three similarly-named flags — do not confuse them
+
+QU.I.R.K. has three separate `--*profile` concepts. They are unrelated to each other and each
+controls a different axis of behavior:
+
+| Flag / config key | Controls | Values |
+|---|---|---|
+| `--profile` (CLI) / preset applied by `apply_profile`| **Scan** behavior — timeouts and TLS enumeration depth | `quick` / `standard` / `deep` |
+| `--score-profile` (CLI) / `intelligence.profile` | **Scoring calibration** — how heavily agility/identity findings are weighted | `lenient` / `balanced` / `strict` |
+| `--report-profile` (CLI) / `report.profile` | **Report branding/templates** — which saved branding+template bundle to apply to this run's deliverables | any saved profile name |
+
+None of the three overlap: `--profile deep` does not affect scoring or branding; `--score-profile
+strict` does not affect timeouts or branding; `--report-profile housestyle` does not affect
+timeouts or scoring.
+
+#### Saving and applying a report profile
+
+```bash
+# Save the report: block of an existing config as a named, reusable profile
+quirk report profile save housestyle --config /path/to/config.yaml
+
+# List saved profiles
+quirk report profile list
+
+# Apply a saved profile to a scan run (selects it by name; does not require --config to carry a report: block)
+quirk --config config.yaml --report-profile housestyle
+```
+
+Saved profiles live at `~/.quirk/report_profiles/<name>.yaml`, redirectable via the
+`QUIRK_PROFILES_DIR` environment variable (useful for CI, containerized runs, or per-client profile
+directories). `quirk report profile save` overwrites an existing profile of the same name and says
+so explicitly on stdout rather than failing or silently overwriting.
+
+**Precedence — one unambiguous rule:** a value set explicitly in the engagement's own `config.yaml`
+always beats the same field coming from an applied report profile. A profile only *fills in* fields
+the engagement config left unset; it can never override an explicit value. Selecting *which*
+profile to apply follows the same CLI-over-config precedent as `--profile`: `--report-profile` on
+the command line wins over a config-declared `report.profile` for which profile loads — but the
+loaded profile's *values* still lose to any explicit config field regardless of how the profile was
+selected.
+
+#### Report template overrides — the honest security posture
+
+`report.template_dir` lets an operator override the packaged Jinja2 report templates with their
+own `.j2` files (the operator's directory is searched first; the packaged template is the fallback
+for anything not present there). Templates render inside a **sandboxed Jinja2 environment**
+(`SandboxedEnvironment`) unconditionally — there is no config flag to disable the sandbox, and no
+second, "trusted" template environment exists anywhere in the codebase.
+
+State the division of responsibility plainly, because it is easy to misread as one guarantee when
+it is really three:
+
+- **The sandbox protects the HOST.** `SandboxedEnvironment` blocks Server-Side Template Injection
+  (SSTI) payloads that try to reach Python internals (`__class__`, `__globals__`, attribute-chain
+  escapes) from breaking out to the machine running QU.I.R.K. This holds even for a hostile or
+  compromised override template.
+- **Autoescape protects against scan-data XSS in the rendered HTML.** Scan-derived values (host
+  names, finding titles, certificate subjects) are escaped by default so they cannot inject
+  executable markup into the report.
+- **The `| sanitize` filter is a second, narrower layer used on branding and free-text fields
+  specifically.** If you write a custom override template and remove `| sanitize` from a field that
+  had it, you are **weakening scanner-data XSS hardening for your own report** — the sandbox still
+  protects the host, but the rendered HTML you hand to a client can carry unsanitized scan-derived
+  text. This is a real, honest tradeoff, not a theoretical one: do not strip `| sanitize` from an
+  override template unless you understand and accept that consequence for that specific field.
+
+### 3.4 Score-Lift Badges and the Projected Score on the Remediation Roadmap (Phase 201, LIFT-01..LIFT-05)
+
+Every roadmap item that can be quantified now carries a `(+N pts)` badge — the readiness score
+this scan would have if that one item were resolved, computed by a real second call into the
+scoring engine over a copy of the scan's evidence, never a fixed points table. Items whose
+resolution changes no scoring input (process/governance work, and coverage/lifecycle items) show
+no badge at all — a blank means "not measurable," never `0 pts`. A separate "Projected score if
+all items resolved: {N}" figure is one additional independent rescore with everything resolved at
+once — it is usually smaller than summing the individual badges, because the score's four
+subscores are each capped and can only give up so much headroom. Neither number ever changes the
+readiness score you see today; every surface that shows the projected number also shows, verbatim:
+"Advisory — this projection is a simulation and does not affect the readiness score." See
+`docs/report-interpretation.md` §7.1 for the full explanation, the exact list of unmodelable item
+kinds, and worked examples across all report surfaces.
+
+**Where it appears:** the CLI roadmap markdown and scorecard, the HTML/PDF and DOCX reports, and
+the dashboard roadmap page — a per-item badge in the node detail panel, and a "Projected Score"
+card directly above the Remediation Burndown card. The dashboard omits the card entirely (not a
+placeholder) when the scan is unassessed or the projection could not be computed.
+
+**The console "Migration Waves" table's second column changed meaning in the same phase
+(BACK-51 / LIFT-04):** it now counts roadmap *items* per NOW/NEXT/LATER phase — labeled "Items" —
+instead of raw findings bucketed by severity. This makes the console table agree with every other
+roadmap surface, which already used the same categorization. A report generated before Phase 201
+may show different NOW/NEXT/LATER counts than one generated after it for the same findings; that
+is the intended effect of unifying the two previously-independent categorization systems into one.
+
 ---
 
 ## 4. Validation / Smoke Test

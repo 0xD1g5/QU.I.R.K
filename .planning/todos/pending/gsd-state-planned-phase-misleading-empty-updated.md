@@ -66,3 +66,12 @@ re-verify is misled into skipping verification exactly when verification was mos
   actually complete.
 
 Full transcript: `.planning/phases/186.1-close-gap-tool-01-tool-05-scope-the-plain-field-fallback/186.1-06-SUMMARY.md`, Run 1 (and Runs 3/4 for the same frontmatter-drift pattern under `state.begin-phase`).
+
+---
+
+**2026-09-12:** Operator confirmed this should be fixed eventually (single dev machine going
+forward), deferred until after v5.23. Bundle it into the same fix session as the sibling
+`gsd-phase-complete-premature-completion.md` — that todo now carries the verified feasibility
+assessment, the install inventory, and the upstream status for BOTH verbs. Same defect class, same
+two installs, same test-and-re-demonstrate protocol; fixing them separately would duplicate all the
+snapshot/baseline/durability work.

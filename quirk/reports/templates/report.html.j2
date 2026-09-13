@@ -323,6 +323,16 @@
 <header class="report-header">
   <span class="wordmark">QU.I.R.K.</span>
   <span class="report-meta">Quantum Readiness Report &nbsp;|&nbsp; {{ org_name | sanitize }} &nbsp;|&nbsp; {{ generated_at }}</span>
+  {#- Phase 200 / RPT-01: identity carries into the running header beyond the
+     cover page. Each piece is independently optional — absent field emits
+     nothing (today's rendering when report.branding is unset). Trim markers
+     keep an all-unset branding cfg byte-identical to the pre-branding markup. -#}
+  {%- if branding.client_name or branding.engagement_name -%}
+  <span class="report-meta">{% if branding.client_name %}{{ branding.client_name | sanitize }}{% endif %}{% if branding.engagement_name %}{% if branding.client_name %} &nbsp;|&nbsp; {% endif %}{{ branding.engagement_name | sanitize }}{% endif %}</span>
+  {%- endif -%}
+  {%- if branding.confidentiality_line -%}
+  <span class="report-meta">{{ branding.confidentiality_line | sanitize }}</span>
+  {%- endif %}
 </header>
 
 <div class="report-body">
@@ -363,6 +373,48 @@
       </div>
       <div class="cover-classification-banner">{{ data_classification | upper | sanitize }}</div>
     </div>
+    {#- Phase 200 / RPT-01: operator branding identity block. Each row is its own
+       presence conditional — an unset field emits nothing, so a cfg with no
+       report.branding section (or only some fields set) renders exactly as
+       today for every other row. Values are operator-supplied strings and go
+       through | sanitize like every other cfg-sourced cover value; never
+       marked | safe (T-200-09). Trim markers keep an all-unset branding cfg
+       byte-identical to the pre-branding cover markup. -#}
+    {%- if branding.client_name or branding.engagement_name or branding.prepared_by or branding.cover_date or branding.confidentiality_line %}
+
+    <div class="cover-meta-block">
+      {% if branding.client_name %}
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Client</span>
+        <span class="cover-meta-value">{{ branding.client_name | sanitize }}</span>
+      </div>
+      {% endif %}
+      {% if branding.engagement_name %}
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Engagement</span>
+        <span class="cover-meta-value">{{ branding.engagement_name | sanitize }}</span>
+      </div>
+      {% endif %}
+      {% if branding.prepared_by %}
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Prepared By</span>
+        <span class="cover-meta-value">{{ branding.prepared_by | sanitize }}</span>
+      </div>
+      {% endif %}
+      {% if branding.cover_date %}
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Cover Date</span>
+        <span class="cover-meta-value">{{ branding.cover_date | sanitize }}</span>
+      </div>
+      {% endif %}
+      {% if branding.confidentiality_line %}
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Confidentiality</span>
+        <span class="cover-meta-value">{{ branding.confidentiality_line | sanitize }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {%- endif %}
 
   </div><!-- /cover-page -->
 
@@ -539,6 +591,15 @@
     {% endif %}
 
     <h2>Transition Roadmap</h2>
+    {# Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only projected-score line +
+       verbatim disclaimer, directly after the heading, gated on presence so an
+       unassessed/failed-projection scan renders neither line. Value is read
+       from ExecContent.projected_score via html_renderer.py — never computed
+       here. #}
+    {% if projected_score is defined and projected_score is not none %}
+    <p>Projected score if all items resolved: {{ projected_score|int }}</p>
+    <p>Advisory — this projection is a simulation and does not affect the readiness score.</p>
+    {% endif %}
     {% for phase_label, items in [('NOW', roadmap_now), ('NEXT', roadmap_next), ('LATER', roadmap_later)] %}
     {% if items %}
     <div class="roadmap-phase">
@@ -548,7 +609,17 @@
         {# Phase 98 / EXEC-03 / D-03: item is RoadmapItem dataclass (with .title/.why/.effort/.impact)
            when exec_content is provided; falls back to raw dict when not. Jinja2 resolves
            item.title via getattr-then-item-lookup so both cases work transparently. #}
-        <strong>{{ item.title | sanitize }}</strong><br>
+        <strong>{{ item.title | sanitize }}</strong>
+        {# Phase 201 Plan 07 (LIFT-02/LIFT-05): per-item forward-projection lift.
+           Server-computed number carried on RoadmapItem.score_lift (None = honest
+           absence, never 0) — appended outside any scanner-string filter, same as
+           the existing effort/impact labels below. Mirrors the item.effort
+           branch-guard shape so both the dataclass and raw-dict fallback paths
+           are safe. #}
+        {% if item.score_lift is defined and item.score_lift %}
+        <span class="lift-label">&nbsp;(+{{ item.score_lift|int }} pts)</span>
+        {% endif %}
+        <br>
         <span>{{ item.why | sanitize }}</span>
         {# Priority labels: effort/impact from D-05 EFFORT_IMPACT_MAP — static strings, no sanitize.
            Only rendered when item carries effort/impact (RoadmapItem dataclass path). #}
@@ -733,6 +804,15 @@
 
 <footer class="footer">
   Generated by <strong>QU.I.R.K.</strong> Quantum Infrastructure Readiness Kit &nbsp;|&nbsp; {{ generated_at }}
+  {#- Phase 200 / RPT-01: identity carries into the running footer beyond the
+     cover page, same presence-conditional shape as the header above. Trim
+     markers keep an all-unset branding cfg byte-identical to today's markup. -#}
+  {%- if branding.client_name or branding.engagement_name -%}
+  &nbsp;|&nbsp; {% if branding.client_name %}{{ branding.client_name | sanitize }}{% endif %}{% if branding.engagement_name %}{% if branding.client_name %} &nbsp;-&nbsp; {% endif %}{{ branding.engagement_name | sanitize }}{% endif %}
+  {%- endif -%}
+  {%- if branding.confidentiality_line -%}
+  <br>{{ branding.confidentiality_line | sanitize }}
+  {%- endif %}
 </footer>
 
 </body>

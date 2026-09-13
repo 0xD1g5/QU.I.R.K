@@ -76,3 +76,82 @@ of this finding.
   are independent.
 
 Full transcript: `.planning/phases/186.1-close-gap-tool-01-tool-05-scope-the-plain-field-fallback/186.1-06-SUMMARY.md`, Runs 5 and 6.
+
+---
+
+## Feasibility & Effort — verified live 2026-09-12 (read the code, did not infer)
+
+**Operator decision 2026-09-12: fix deferred deliberately, not forgotten.** This machine is the
+single development machine going forward, so the fix is wanted eventually — but not mid-milestone.
+v5.23 finishes under the existing hand-edit + pre-image + signature-diff protocol first.
+
+### Verdict: CONFIRMED feasible · effort S (≈half a session) · no spike needed
+
+The guard has a precise, already-available insertion point. In the npx SDK install,
+`sdk/dist/query/phase-lifecycle.js`:
+
+```js
+848:  const planCount = plans.length;
+849:  const summaryCount = summaries.length;
+      // ←← NOTHING between here and the Step C/E/F writes ever compares these two values
+1154: plans_executed: `${summaryCount}/${planCount}`,   // reports the truth, having already ignored it
+```
+
+The verb computes exact ground truth at 848-849 and reports it honestly at 1154. There is no
+eligibility check of any kind in between. That is the whole defect — it is a missing conditional,
+not a logic error, which is why no anchoring/scoping fix could ever have caught it.
+
+`--force` precedent already exists **in this same file** at line 663 (`phase.remove`:
+`Phase N has X executed plan(s). Use --force to remove anyway.`), so the refusal shape is
+established in-codebase rather than invented.
+
+### Scope of the fix session
+
+1. Guard in `phaseComplete` after line 849: refuse (`GSDError`, Validation) when
+   `summaryCount < planCount` unless `--force`. Mirror into the `.cjs` install
+   (`~/.claude/get-shit-done/bin/lib/phase.cjs`, `cmdPhaseComplete`).
+2. Same treatment for `state.planned-phase`'s `updated: []` misreport — see
+   `gsd-state-planned-phase-misleading-empty-updated.md` (sibling todo, same session).
+3. Command-boundary test against a fixture phase at N/M (M > N), then a live
+   re-demonstration per CLAUDE.md clause (e) — a green function-level test is never sufficient here.
+4. Snapshot + pristine-baseline both installs per the `~/.claude/gsd-npx-sdk-patches/` convention.
+5. **Environment hygiene (operator-requested):** prune the stale second npx cache dir
+   `~/.npm/_npx/9785a834b31d581d` (get-shit-done-cc **v1.30.0**, zero LOCAL PATCH markers). It has
+   **no `sdk/dist/cli.js`**, so it is NOT a reachable entry point and NOT a third unpatched install
+   — cache residue only. Removing it eliminates the ambiguity rather than any live hazard.
+
+### Install inventory as verified 2026-09-12 (all patches INTACT — no silent wipe has occurred)
+
+| Install | Resolves from | Version | `LOCAL PATCH` files | Reachable? |
+|---------|---------------|---------|---------------------|------------|
+| `~/.npm/_npx/4db0de1f85c3165e/…/get-shit-done-cc/sdk/dist/` | `gsd-sdk` → `cli.js` | 1.42.3 | 6 | **yes — live** |
+| `~/.claude/get-shit-done/bin/lib/` | `gsd-tools.cjs` (node path) | 1.42.3 | 2 (`state.cjs`, `state-document.generated.cjs`) | yes |
+| `~/.npm/_npx/9785a834b31d581d/…/get-shit-done-cc/` | nothing — no `sdk/dist/cli.js` | 1.30.0 | 0 | no — prune |
+
+The npx-hash-rotation hazard CLAUDE.md clause (h)(2) warns about **has not fired**: the live hash is
+still `4db0de1f85c3165e` and still v1.42.3.
+
+### Upstream status — a dead end short-term, DO NOT UPGRADE to chase it
+
+- Issue **#4243 is CLOSED** (`open-gsd/gsd-core`). It only ever covered the **TEXTUAL** class
+  (bold-field regex + frontmatter key drop). The maintainer's triage comment states our 1.42.3
+  "predates or omits those fixes."
+- **1.42.3 IS the latest published stable.** The upstream fixes exist only in `1.43.0-rc1`/`rc2`
+  and `1.50.0-canary.1`/`.2`. Upgrading would trade a known-patched install for an unverified
+  prerelease **and** rotate the content-addressed npx hash, silently wiping all 21 patched sites.
+- **This SEMANTIC class was never filed upstream.** Adjacent issues prove maintainers act on it
+  when told: **#4067** (`state.advance-plan`: phase-complete branch can fire while sibling plans are
+  still executing) CLOSED/confirmed-bug; **#2022** (`roadmap update-plan-progress` checks the
+  phase-level checkbox with zero verification gate) CLOSED/confirmed-bug; **#4624** OPEN
+  (orchestrator-worktree workers finishing without lifecycle reconciliation). Filing this with the
+  `completed_plans: 142`-at-5/7 evidence is part of the fix session, and may make the local patch
+  unnecessary on a later release.
+
+### Correction to the standing blanket rule
+
+CLAUDE.md's operative guidance reads as "every mutating GSD verb is unsafe on this machine." The
+**demonstrated** exposure is narrower: the textual class is patched and guarded in both reachable
+installs, and the open semantic exposure is **two named verbs** (`phase.complete`,
+`state.planned-phase`). The blanket is retained as conservative risk management — nobody has done
+the per-verb clearing work — but it should not be read as evidence that every verb has been caught
+misbehaving. Keep hand-editing; know why.

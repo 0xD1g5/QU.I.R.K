@@ -107,29 +107,23 @@ def _stub_roadmap(evidence, score):
     }
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_json_export_preserves_description")
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_json_export_preserves_description(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path
 ):
     """findings-{stamp}.json must carry `description` for every finding."""
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
@@ -145,20 +139,18 @@ def test_json_export_preserves_description(
 
 
 @pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_json_export_preserves_deprecation_phrase")
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_json_export_preserves_deprecation_phrase(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path
 ):
     """findings JSON preserves the literal NIST IR 8547 + FIPS 203 strings."""
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
@@ -173,20 +165,18 @@ def test_json_export_preserves_deprecation_phrase(
 
 
 @pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_html_report_has_description_column")
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_html_report_has_description_column(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path
 ):
     """HTML report contains <th>Description</th> in BOTH Top Findings + All Findings."""
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
@@ -207,13 +197,12 @@ def test_html_report_has_description_column(
 # ---------------------------------------------------------------------------
 
 @patch("quirk.reports.writer.render_pdf_report")
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_pdf_failure_advisory_propagates_via_writer(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, mock_pdf,
+    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_pdf,
     tmp_path, capsys,
 ):
     """Phase 73 WR-14: writer consumes False from render_pdf_report and assigns pdf_path=None.
@@ -227,7 +216,6 @@ def test_pdf_failure_advisory_propagates_via_writer(
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     # Force PDF render to fail AND emit the callee advisory directly so this
     # test exercises the contract that writer remains stable on pdf_ok=False.
@@ -262,20 +250,18 @@ def test_pdf_failure_advisory_propagates_via_writer(
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_docx_emitted_by_write_reports")
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_docx_emitted_by_write_reports(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+    mock_evidence, mock_score, mock_conf, mock_roadmap, tmp_path
 ):
     """write_reports auto-emits a report-*.docx alongside HTML on every run (D-11)."""
     mock_evidence.side_effect = _stub_evidence
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
 
     from quirk.reports.writer import write_reports
 
@@ -289,13 +275,12 @@ def test_docx_emitted_by_write_reports(
 
 @pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_docx_none_on_fail_not_in_output_files")
 @patch("quirk.reports.writer.render_docx_report")
-@patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
 @patch("quirk.reports.writer.compute_readiness_score")
 @patch("quirk.reports.writer.build_evidence_summary")
 def test_docx_none_on_fail_not_in_output_files(
-    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves,
+    mock_evidence, mock_score, mock_conf, mock_roadmap,
     mock_docx, tmp_path, capsys,
 ):
     """When render_docx_report returns False, docx_path is dropped from output_files.
@@ -306,7 +291,6 @@ def test_docx_none_on_fail_not_in_output_files(
     mock_score.side_effect = _stub_score
     mock_conf.side_effect = _stub_confidence
     mock_roadmap.side_effect = _stub_roadmap
-    mock_waves.side_effect = _stub_waves
     mock_docx.return_value = False  # simulate python-docx absent
 
     from quirk.reports.writer import write_reports

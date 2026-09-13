@@ -6,7 +6,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import ChoiceLoader, FileSystemLoader, select_autoescape
+from jinja2.sandbox import SandboxedEnvironment
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
@@ -1001,8 +1002,20 @@ def render_html_report(
     # (writer.py imports this module at load time).
     from quirk.reports.writer import format_scan_completed_at
 
-    env = Environment(
-        loader=FileSystemLoader(_TEMPLATES_DIR),
+    # Phase 200 / RPT-02: template_dir is operator-supplied, so the env is a
+    # SandboxedEnvironment UNCONDITIONALLY at this single construction site —
+    # there is no config flag, no "trusted" path, no second env. When an
+    # operator template_dir is set, it is inserted FIRST so operator templates
+    # override the packaged ones; the packaged _TEMPLATES_DIR is always the
+    # fallback so a missing override never breaks rendering. autoescape and
+    # the sanitize filter live on this SAME instance by contract (T-200-02).
+    template_dir = getattr(getattr(cfg, "report", None), "template_dir", None)
+    if template_dir:
+        loader = ChoiceLoader([FileSystemLoader(template_dir), FileSystemLoader(_TEMPLATES_DIR)])
+    else:
+        loader = FileSystemLoader(_TEMPLATES_DIR)
+    env = SandboxedEnvironment(
+        loader=loader,
         autoescape=select_autoescape(["html", "j2"]),
     )
     env.filters["sanitize"] = sanitize_scanner_text
@@ -1118,6 +1131,10 @@ def render_html_report(
         # WR-03 / IN-01: consume the model's pre-computed numerator so the HTML rollup
         # matches the CLI markdown exactly (and survives a future 7th subscore).
         raw_sum = exec_content.raw_sum
+        # Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only forward-projection
+        # aggregate, read from the model — never recomputed here. getattr guard
+        # so an older ExecContent instance without the field cannot raise.
+        projected_score = getattr(exec_content, "projected_score", None)
     else:
         # Backward-compat path: no exec_content — source raw dicts from score/roadmap_items.
         # WR-05: keep this path fail-closed with the same D-06 guard the model path runs.
@@ -1137,6 +1154,8 @@ def render_html_report(
         # WR-03: mirror the CLI's six-key sum on the compat path (no exec_content available).
         raw_sum = sum(int(v) for v in subscores_ctx.values()
                       if isinstance(v, (int, float)) and not isinstance(v, bool))
+        # Phase 201 Plan 07: no exec_content on the compat path -> no projection to show.
+        projected_score = None
 
     # 188 review CR-01: pre-map unassessed (None) subscores to an em dash ONCE,
     # after raw_sum above has consumed the numeric values. The template's
@@ -1146,8 +1165,24 @@ def render_html_report(
     # substitution must happen here, before the context is built.
     subscores_ctx = {k: ("—" if v is None else v) for k, v in (subscores_ctx or {}).items()}
 
-    # Phase 100 / FMT-01 / D-01: extract logo_path and base64-encode for cover page
-    logo_path = getattr(getattr(cfg, "assessment", None), "logo_path", None)
+    # Phase 200 / RPT-01: branding namespace, double-getattr shape so a cfg with
+    # no `report` attribute (existing SimpleNamespace fixtures) renders exactly
+    # as today. Every field defaults to None when unset — the template gates
+    # each one behind its own presence conditional.
+    _branding_ns = getattr(getattr(cfg, "report", None), "branding", None)
+    branding = {
+        "logo_path": getattr(_branding_ns, "logo_path", None),
+        "client_name": getattr(_branding_ns, "client_name", None),
+        "engagement_name": getattr(_branding_ns, "engagement_name", None),
+        "prepared_by": getattr(_branding_ns, "prepared_by", None),
+        "cover_date": getattr(_branding_ns, "cover_date", None),
+        "confidentiality_line": getattr(_branding_ns, "confidentiality_line", None),
+    }
+
+    # Phase 100 / FMT-01 / D-01: extract logo_path and base64-encode for cover page.
+    # Phase 200 / RPT-01: report.branding.logo_path wins over assessment.logo_path
+    # (locked precedence); _load_logo_b64 is unchanged and remains the only loader.
+    logo_path = branding["logo_path"] or getattr(getattr(cfg, "assessment", None), "logo_path", None)
     logo_b64, logo_mime = _load_logo_b64(logo_path)
 
     # Phase 128 D-10: render hardware advisory section (advisory-only, not scored)
@@ -1231,6 +1266,9 @@ def render_html_report(
         roadmap_now=roadmap_now_ctx,
         roadmap_next=roadmap_next_ctx,
         roadmap_later=roadmap_later_ctx,
+        # Phase 201 Plan 07 (LIFT-02/LIFT-05): advisory-only projected-score
+        # aggregate; None renders neither the projected line nor the disclaimer.
+        projected_score=projected_score,
         subscores=subscores_ctx,  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
         raw_sum=raw_sum,  # WR-03 / IN-01: shared rollup numerator (matches CLI markdown)
         # Phase 188 SCORE-06 / 188-03: coverage-disclosure seam — dynamic divisor
@@ -1271,6 +1309,8 @@ def render_html_report(
         # Phase 100 / FMT-01 / D-01: logo embed for cover page
         logo_b64=logo_b64,
         logo_mime=logo_mime,
+        # Phase 200 / RPT-01: branding identity block (cover + header/footer)
+        branding=branding,
     )
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:

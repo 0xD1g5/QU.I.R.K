@@ -51,6 +51,16 @@ class RoadmapItem:
     impact: str             # "HIGH" | "MEDIUM" | "LOW"
     priority_score: float   # IMPACT_RANK * (4 - EFFORT_RANK) — higher is better
 
+    # Phase 201 Plan 05 (LIFT-01/02): advisory-only forward-projection lift for
+    # this item, populated by writer.py/executive.py from
+    # quirk.intelligence.score_lift.compute_item_lifts and carried through by
+    # _enrich_roadmap_item(). `None` is honest absence — an unmodelable item
+    # (no evidence-delta mutator) or an unassessed scan — and must never
+    # render as 0. Appended LAST with a default so every pre-201
+    # RoadmapItem(...) construction in the test suite keeps building
+    # unmodified (RESEARCH Pitfall 11 — all 8 fields above are non-defaulted).
+    score_lift: Optional[float] = None
+
 
 @dataclass
 class ExecContent:
@@ -186,6 +196,18 @@ class ExecContent:
     # itself distinguishes "not recorded" (pre-v5.21 scan) from "recorded,
     # zero phases" via its own `recorded` flag — see `quirk/reports/coverage.py`.
     coverage: dict = field(default_factory=dict)
+
+    # Phase 201 Plan 05 (LIFT-03): advisory-only aggregate forward-projection —
+    # the readiness score if every modelable roadmap item were resolved.
+    # Populated by writer.py/executive.py from
+    # quirk.intelligence.score_lift.compute_projected_score, passed into
+    # build_exec_content() as a keyword. This is a SIMULATION and never
+    # affects score_total; `None` means no projection is available (e.g. an
+    # unassessed scan) and every renderer must render nothing in that case,
+    # never a fabricated number. Appended LAST with a default so every
+    # pre-201 ExecContent(...) construction in the test suite keeps building
+    # unmodified.
+    projected_score: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -747,6 +769,11 @@ def _enrich_roadmap_item(raw: Dict[str, Any]) -> RoadmapItem:
         effort=effort,
         impact=impact,
         priority_score=priority_score,
+        # Phase 201 Plan 05 (LIFT-01): carry-through only — the raw dict's
+        # score_lift key was attached by the writer/executive caller, not
+        # computed here. `.get()` yields None for a raw dict lacking the key
+        # (unmodelable item or a caller that never attached lifts).
+        score_lift=raw.get("score_lift"),
     )
 
 
@@ -785,6 +812,8 @@ def build_exec_content(
     score_raw: Dict[str, Any],
     findings: List[Dict[str, Any]],
     roadmap_items: List[Dict[str, Any]],
+    *,
+    projected_score: Optional[float] = None,
 ) -> ExecContent:
     """D-03: build the shared ExecContent from canonical scoring-engine output.
 
@@ -802,6 +831,10 @@ def build_exec_content(
                    "drivers" (list[str]).
         findings: List of finding dicts (title, description, severity, …).
         roadmap_items: List of raw roadmap item dicts from build_phased_roadmap().
+        projected_score: Phase 201 Plan 05 (LIFT-03) — optional aggregate
+            forward-projection from
+            quirk.intelligence.score_lift.compute_projected_score(). `None`
+            when no projection is available; never affects score_total.
 
     Returns:
         ExecContent instance ready for both renderers.
@@ -903,6 +936,10 @@ def build_exec_content(
         score_divisor=score_divisor,
         coverage_disclosure=coverage_disclosure,
         scoring_version=scoring_version,
+        # Phase 201 Plan 05 (LIFT-03): pass-through only — computed by the
+        # caller (writer.py/executive.py) via compute_projected_score(),
+        # never re-derived here.
+        projected_score=projected_score,
     )
 
 

@@ -76,6 +76,37 @@ def _fake_popen(*args, **kwargs):
 # Test 1 (RED): invalid/empty targets rejected with 422
 # ---------------------------------------------------------------------------
 
+def _patch_probe_all_available(monkeypatch):
+    """Pin the connector-availability probe to all-available (999.108).
+
+    Phase 193's submit-time 422 gate rejects a job whose resolved config
+    enables a connector unavailable in the running environment — and the
+    standard profile auto-enables email/broker, so environments without
+    sslyze (e.g. CI) would 422 these submissions. This file tests target validation,
+    not connector gating, so the probe is pinned for determinism.
+    """
+    from quirk.dashboard.api.connector_availability import (
+        ConnectorAvailability,
+        probe_all_connectors,
+    )
+
+    fake = {
+        flag: ConnectorAvailability(
+            flag=flag,
+            available=True,
+            reason="",
+            install_hint=entry.install_hint,
+            category=entry.category,
+            label=entry.label,
+        )
+        for flag, entry in probe_all_connectors().items()
+    }
+    monkeypatch.setattr(
+        "quirk.dashboard.api.connector_availability.probe_all_connectors",
+        lambda: fake,
+    )
+
+
 def test_invalid_targets_rejected_422(monkeypatch, tmp_path):
     """AUDIT-07 RED: POST /api/jobs with syntactically invalid targets must
     return 422 with the bad token(s) identified in the error body.
@@ -150,6 +181,7 @@ def test_whitespace_only_target_rejected_422(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_valid_targets_stored_stripped(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
     """AUDIT-07 RED: valid targets with whitespace padding must be stored stripped.
 
     Payload: " 10.0.0.1 ,example.com " — both tokens are valid but have

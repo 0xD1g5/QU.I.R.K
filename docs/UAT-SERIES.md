@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-10 (Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
+**Last Updated:** 2026-09-12 (Phase 201 Plan 08 — Series 201 added: 11 score-lift-roadmap-re-frame
+cases covering LIFT-01 (per-item `(+N pts)` real-rescore badge, honest absence for unmodelable
+items), LIFT-02 (independent-rescore aggregate projection and its non-additivity), LIFT-03 (the
+ADVISORY-02 forward-projection firewall and the real-score-surface isolation), LIFT-04 (BACK-51 —
+one categorization system feeding the console Migration Waves table), and LIFT-05 (cross-surface
+numeric equality across CLI/HTML/DOCX/dashboard, and the dashboard's lift badge + Projected Score
+card); 10 automated `[x] PASS` cases citing real `pytest --collect-only`-resolvable node IDs against
+201-01 through 201-07-SUMMARY.md evidence, and 1 operator-approved `[x] PASS` (UAT-201-10, the one
+visual-placement case this repo's presence-only render tests cannot substitute-prove) citing
+201-06-SUMMARY.md's verbatim "approved" live walkthrough of badge placement/tone/absence and the
+Projected Score card. Earlier: Phase 196 Plan 05 — Series 196 added: 4 release-verification cases
 (PyPI install, Sigstore provenance, tag/workflow, Windows asset) dispositioned against
 `196-03-SUMMARY.md`'s verbatim published-artifact evidence for `v5.21.0`; UAT-1-02 re-executed
 against the same published build, superseding the 2026-09-07 5.19.0 evidence while its `[x] PASS`
@@ -26621,3 +26631,966 @@ tls_designated_ports shared format validation, out-of-bounds 422 naming, GATE-04
 green), 5 honest `[x] SKIP` / `DEFERRED — covered by <test-node>` plus 1 `[x] PASS` citing
 198-01/02/03-SUMMARY.md test evidence; D-08 operator walkthrough approved 2026-09-11, "Approved —
 all steps match")
+
+---
+
+## Series 199: Wave A Correctness Drain (Phase 199 — v5.23)
+
+Covers TRIAGE-10 (fractional-score transport across `/api/merge/latest`, `/api/trends`,
+`/api/trends/timeline`, and `/api/scans`, plus honest-absence per-segment gauge rendering) and
+TRIAGE-11 (a connectors overlay and an advanced-scan-fields overlay coexisting on one scan
+submission without one clobbering the other), the two defects drained by this phase's Wave A.
+
+### UAT-199-01: Fractional Readiness Score Round-Trips `/api/merge/latest`
+
+**ID:** UAT-199-01
+**Title:** A fractional per-segment and overall readiness score (e.g. `71.4`) round-trips
+`/api/merge/latest` without truncation to an integer
+**Maps to:** TRIAGE-10
+
+**What to test:** a merge run whose per-segment and overall scores are fractional values is
+served back through `/api/merge/latest` with the fractional value intact, never `int()`-truncated.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** the served per-segment and overall scores equal the seeded fractional values
+exactly (e.g. `71.4 == 71.4`, not `71`).
+
+**Falsifiability:** this case turns red if either score is truncated to an integer anywhere
+between computation and the served JSON body.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_fractional_score_round_trips_merge_per_segment`
+and `tests/test_score_precision_transport.py::test_fractional_score_round_trips_merge_overall`,
+per `199-01-SUMMARY.md` (RED, 8/10 failing pre-fix) and `199-02-SUMMARY.md` (GREEN, all 10 passing
+post-fix — schema widened to `Optional[float]` before the truncation call sites were removed).
+
+---
+
+### UAT-199-02: An Unassessed Segment Reaches the API as Null, Never `0`
+
+**ID:** UAT-199-02
+**Title:** A segment with no assessable evidence — including one whose scoring raised an
+exception — is served by `/api/merge/latest` as `null`, never as a fabricated `0`
+**Maps to:** TRIAGE-10
+
+**What to test:** a merge run with an absent per-segment score, and separately one where
+per-segment scoring raises, both serve that segment's score as `null` rather than `0`.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** both the absent-score case and the scoring-exception case serve `None`/`null`
+for the affected segment; neither serves `0`.
+
+**Falsifiability:** this case turns red if either case serves a fabricated `0` in place of `null`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_absent_score_stays_null_not_zero_merge` and
+`tests/test_score_precision_transport.py::test_per_segment_scoring_failure_yields_null_not_zero`,
+per `199-01-SUMMARY.md` (RED) and `199-02-SUMMARY.md` (GREEN — merge.py's exception path now
+assigns `None`, never `0`).
+
+---
+
+### UAT-199-03: Fractional Score Round-Trips `/api/trends/timeline` and `/api/trends`
+
+**ID:** UAT-199-03
+**Title:** A fractional readiness score round-trips both the trend timeline (`/api/trends/timeline`)
+and the trend report (`/api/trends`, current/previous/delta) without truncation, and an absent
+score on either surface stays `null`
+**Maps to:** TRIAGE-10
+
+**What to test:** a timeline point and a trend-report current/previous pair carrying fractional
+scores are served intact; an absent score on either surface stays `null` rather than becoming `0`.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** fractional values round-trip exactly on both surfaces; the delta computed
+between two fractional scores is within tolerance; absent scores stay `null` on both surfaces.
+
+**Falsifiability:** this case turns red if either surface truncates a fractional score, fabricates
+a `0` for an absent score, or the delta is computed incorrectly across a fractional pair.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_fractional_score_round_trips_timeline`,
+`tests/test_score_precision_transport.py::test_timeline_absent_score_stays_null_not_zero`,
+`tests/test_score_precision_transport.py::test_fractional_scores_round_trip_trend_report`, and
+`tests/test_score_precision_transport.py::test_trend_report_null_scores_stay_null_contract_lock`
+(the last a contract lock that passed pre-fix by design, per `199-01-SUMMARY.md`), per
+`199-01-SUMMARY.md` (RED) and `199-02-SUMMARY.md` (GREEN — `trends.py`'s `int(score_dict["score"]
+or 0)` call site removed, `TrendReport` dataclass fields widened).
+
+---
+
+### UAT-199-04: Fractional Score Round-Trips `/api/scans`
+
+**ID:** UAT-199-04
+**Title:** A fractional `ScanSession.score` round-trips `/api/scans` without truncation, and an
+absent scan score stays `null`
+**Maps to:** TRIAGE-10
+
+**What to test:** a scan session with a fractional score is served back through `/api/scans` with
+the fractional value intact; a scan session with no score stays `null`.
+
+**Steps:** covered by an automated, monkeypatched-client-driven test — no manual execution
+required for this case.
+
+**Pass Criteria:** the fractional score round-trips exactly; the absent-score case stays `null`.
+
+**Falsifiability:** this case turns red if the fractional score is truncated, or the absent-score
+case is coerced to `0`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-01/199-02 phase-execution plans)
+**Notes:** DEFERRED — covered by
+`tests/test_score_precision_transport.py::test_fractional_score_round_trips_scan_session` and
+`tests/test_score_precision_transport.py::test_scan_session_absent_score_stays_null` (the latter a
+contract lock that passed pre-fix by design — `quirk/dashboard/api/routes/scan.py` already passed
+`None` through unchanged, per `199-01-SUMMARY.md`'s discovered-live finding), per
+`199-01-SUMMARY.md` and `199-02-SUMMARY.md` (`ScanSession.score` widened to `Optional[float]`).
+
+---
+
+### UAT-199-05: Unassessed Per-Segment Gauge Renders as an Em-Dash, Not a NaN Arc
+
+**ID:** UAT-199-05
+**Title:** An unassessed per-segment score renders as the honest-absence em-dash placeholder on
+the executive dashboard's gauges row, visibly distinct from a real low score, with no NaN arc
+**Maps to:** TRIAGE-10
+
+**What to test:** load the executive dashboard against a merge result with one unassessed
+segment; that segment's gauge shows the `SubscoreSlot` em-dash placeholder, not a `ScoreGauge`
+rendering a `NaN`-driven arc or a fabricated `0`.
+
+**Steps:** this is a live-browser visual behavior. A component-level substitute exists
+(`src/dashboard/src/pages/__tests__/executive.test.tsx` and/or `SubscoreSlot`'s own test file),
+but per `199-04-SUMMARY.md` no dedicated multi-case vitest file isolates this exact per-segment
+null-gauge render as a single, quote-delimited titled case the integrity gate's zero-skip
+execution leg can cite without also depending on the dashboard's Node toolchain being present in
+CI (`VITEST_TOOLCHAIN_AVAILABLE`, a documented non-blocking gap per `docs/uat-coverage-gaps.md`).
+Manufacturing a citation against a multi-test file here would not survive the disposition
+integrity gate's EXECUTION leg honestly. A live operator walkthrough is the honest path to a real
+PASS for this specific case.
+
+**Pass Criteria:** the affected segment's gauge slot shows the em-dash placeholder; no other
+segment's gauge is affected; no NaN arc renders anywhere in the row.
+
+**Falsifiability:** this case turns red if the unassessed segment renders a numeric or `NaN` arc
+instead of the em-dash placeholder.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** N/A — no live operator walkthrough was run for this plan
+**Notes:** GAP — no substitute coverage. `199-04-SUMMARY.md` confirms the production change
+(`executive.tsx`'s per-segment gauge map now renders `SubscoreSlot` instead of `ScoreGauge`,
+reusing the existing SCORE-06 honest-absence pattern) and confirms `npm run build`/`lint`/`test`
+all passed (340 tests, zero new failures), but no test in that run isolates this exact visual
+behavior as a single citable, quote-delimited case. This is an honest, deliberate GAP rather than
+a fabricated citation — per this plan's hard constraint, a GAP is a passing disposition.
+
+---
+
+### UAT-199-06: Connectors Overlay and Advanced Overlay Coexist on One Scan Submission
+
+**ID:** UAT-199-06
+**Title:** A single scan submission carrying both a connectors overlay and an advanced overlay is
+reflected in both the job YAML and the effective-config preview simultaneously, with neither
+overlay clobbering the other
+**Maps to:** TRIAGE-11
+
+**What to test:** POSTing `/api/jobs` with both a `connectors` overlay (e.g. `enable_jwt`,
+`jwt_targets`) and an `advanced` overlay (e.g. `tls_enum_mode`, `motion_concurrency`) in one
+request body lands both overlays' keys in the job's on-disk `config.yaml`; `GET
+/api/config/effective` with both query params shows both overlays' provenance as `user`; and
+`build_job_config_dict` called directly with both overlays present preserves both overlays' keys
+intact.
+
+**Steps:** covered by an automated, mocked-`Popen`-driven test — no manual execution required for
+this case.
+
+**Pass Criteria:** all four connectors+advanced values are present on the same parsed
+`config.yaml` document; both overlay sections show `provenance: "user"` on the effective-config
+preview; `build_job_config_dict`'s direct-call assertion shows both overlays' keys intact.
+
+**Falsifiability:** this case turns red if either overlay's keys are missing from the job YAML, if
+either overlay's provenance is not `user` on the effective-config preview, or if
+`build_job_config_dict` drops either overlay's keys when both are supplied together.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (199-03 phase-execution plan)
+**Notes:** DEFERRED — covered by
+`tests/test_combined_overlays_regression.py::test_combined_overlays_land_in_job_yaml`,
+`tests/test_combined_overlays_regression.py::test_combined_overlays_reflected_in_effective_config`,
+and
+`tests/test_combined_overlays_regression.py::test_neither_overlay_clobbers_the_other_in_build_job_config_dict`,
+per `199-03-SUMMARY.md` (3/3 passing on first run — no live defect found, confirming the plumbing
+already worked and this was purely a coverage gap).
+
+---
+
+**Series 199 disposition.** Five of six cases (UAT-199-01 through 04, and UAT-199-06) are honest
+`[x] SKIP` with `DEFERRED — covered by <test-node>` annotations, each citing real, currently-passing
+test nodes from `199-01-SUMMARY.md`, `199-02-SUMMARY.md`, and `199-03-SUMMARY.md` — every cited
+node ID was confirmed collectible via `pytest --collect-only` before being written here. UAT-199-05
+is an honest `[x] SKIP` / `GAP — no substitute coverage`: the production fix is confirmed via
+`199-04-SUMMARY.md`, but no existing test isolates the exact visual behavior as a single citable
+case, and no allowlist or gate-code change was made to manufacture one. None was checked PASS
+without being run.
+
+**Last Updated:** 2026-09-11 (Phase 199 Plan 05 — Series 199 added: 6 Wave-A-correctness-drain
+cases for TRIAGE-10 (fractional-score transport across `/api/merge/latest`, `/api/trends`,
+`/api/trends/timeline`, `/api/scans`, and honest-absence per-segment gauge rendering) and
+TRIAGE-11 (combined connectors+advanced overlay coexistence); 5 honest `[x] SKIP` /
+`DEFERRED — covered by <test-node>` citing 199-01/02/03-SUMMARY.md test evidence, plus 1 honest
+`[x] SKIP` / `GAP — no substitute coverage` for the live-browser gauge-render case (UAT-199-05))
+
+---
+
+## Series 200: Report Branding & Templates (Phase 200 — v5.23)
+
+Covers RPT-01 (full-fidelity cover/header/footer branding on HTML/PDF and DOCX, plus identity-only
+text on CLI surfaces), RPT-02 (sandboxed Jinja2 template overrides with SSTI containment),
+RPT-03 (load-time path-traversal guard + dashboard exclusion), RPT-04 (named report profiles:
+save/list/select with explicit-config-always-wins precedence), and RPT-05 (the 999.105 Tier 2
+section-composition go/no-go decision).
+
+### UAT-200-01: Branded HTML/PDF Cover, Header, and Footer
+
+**ID:** UAT-200-01
+**Title:** A config with the full `report.branding` set produces a branded HTML/PDF report — logo
+on the cover, identity block on the cover, and identity text repeated in the running header/footer
+**Maps to:** RPT-01
+
+**What to test:** run a scan against a config carrying all six `report.branding` fields (including
+`logo_path`) and open the generated HTML report (and its PDF export); confirm the logo renders on
+the cover, the cover identity block (client/engagement/prepared-by/cover-date/confidentiality)
+appears, and the client/engagement + confidentiality text repeats in the running header/footer of
+every page.
+
+**Steps:**
+1. Add a `report.branding` block with all six fields (including a real `logo_path`) to a test
+   engagement config.
+2. Run `quirk --config config.yaml` against a small target set.
+3. Open the generated HTML report in a browser; also export/inspect the PDF.
+4. Visually inspect the cover page and at least two interior pages' header/footer.
+
+**Pass Criteria:** the logo renders visibly on the cover; all five identity fields appear on the
+cover in the expected labels; client/engagement + confidentiality line repeat in the header/footer
+of interior pages; no field bleeds into the wrong surface.
+
+**Falsifiability:** this case turns red if the logo fails to render, an identity field is silently
+dropped, or header/footer identity text is missing/misplaced.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Operator (live walkthrough)
+**Notes:** Operator-approved 2026-09-11 in a live walkthrough against a real loopback scan (branded PDF + HTML generated from a full report.branding set incl. a 240×80 test logo): logo placement, cover identity block (client/engagement/prepared-by/cover-date), confidentiality line, and header/footer all confirmed visually — no overlap or clipping. Presence remains automated via tests/test_report_branding.py::test_html_full_branding_all_fields_present.
+
+---
+
+### UAT-200-02: Branded DOCX Cover, Header, and Footer
+
+**ID:** UAT-200-02
+**Title:** The same `report.branding` config produces a branded DOCX with the same six fields,
+including a cover logo picture (or the pre-existing placeholder paragraph if the logo is absent)
+**Maps to:** RPT-01
+
+**What to test:** open the generated DOCX report from the same run as UAT-200-01 and confirm the
+cover logo picture (or placeholder), cover identity paragraphs, and header/footer identity line +
+confidentiality footer text all render as expected.
+
+**Steps:**
+1. Using the same run as UAT-200-01, open the generated `.docx` report in Word or LibreOffice.
+2. Inspect the cover page, and the header/footer of at least one interior page.
+
+**Pass Criteria:** the logo picture is embedded on the cover (or the `"[ Insert organization logo
+here ]"` placeholder appears if no logo resolves); all five identity fields appear as cover
+paragraphs; the header/footer carries the identity line and confidentiality text.
+
+**Falsifiability:** this case turns red if the logo picture fails to embed when a valid logo path
+is set, or any identity field/header/footer text is missing.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Operator (live walkthrough)
+**Notes:** Operator-approved 2026-09-11 — same run as UAT-200-01; DOCX opened cleanly with logo + identity on the cover and identity in the header/footer, no layout breakage. Presence remains automated via tests/test_report_branding.py::test_docx_full_branding_all_fields_present.
+
+---
+
+### UAT-200-03: CLI Surfaces Carry Identity Text, Never a Logo
+
+**ID:** UAT-200-03
+**Title:** The CLI executive summary, scorecard markdown, and Rich console scan-summary table all
+carry the branding identity text, and none of the three ever renders a logo/image reference
+**Maps to:** RPT-01
+
+**What to test:** a scan run against the same branded config produces identity lines on
+`executive.md`, the scorecard markdown, and the console summary table — with no logo/image data or
+path reaching any of the three surfaces even when `report.branding.logo_path` is set.
+
+**Steps:** covered by an automated test file exercising all three surfaces directly against a
+constructed cfg — no manual execution required for this case.
+
+**Pass Criteria:** all five identity fields appear as lines/rows on each of the three surfaces when
+set; no `logo`/`data:image` string or literal branding image path appears on any of the three
+surfaces.
+
+**Falsifiability:** this case turns red if any identity field is missing from a surface it should
+appear on, or if any logo/image reference leaks onto a CLI surface.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-04 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_branding_cli.py::test_fully_branded_executive_markdown_carries_identity`,
+`tests/test_report_branding_cli.py::test_fully_branded_scorecard_markdown_carries_identity`,
+`tests/test_report_branding_cli.py::test_fully_branded_console_summary_carries_identity`, and the
+negative leg `tests/test_report_branding_cli.py::test_no_image_branding_reference_reaches_any_cli_surface`,
+per `200-04-SUMMARY.md` (7/7 passing).
+
+---
+
+### UAT-200-04: Logo Precedence — `report.branding.logo_path` Wins Over `assessment.logo_path`
+
+**ID:** UAT-200-04
+**Title:** `assessment.logo_path` alone still brands the report (Phase 100 behavior preserved);
+`report.branding.logo_path` wins when both are set
+**Maps to:** RPT-01
+
+**What to test:** a config with only `assessment.logo_path` set still embeds that logo; a config
+with both `assessment.logo_path` and `report.branding.logo_path` set embeds only the
+`report.branding.logo_path` image.
+
+**Steps:** covered by an automated test using two distinguishable generated PNGs and a
+base64-comparison assertion — no manual execution required for this case.
+
+**Pass Criteria:** the `assessment.logo_path`-only case embeds that image; the both-set case
+embeds only the `report.branding.logo_path` image's bytes, never the `assessment.logo_path`
+image's bytes.
+
+**Falsifiability:** this case turns red if either direction embeds the wrong image, or if
+`assessment.logo_path` alone stops working (a Phase 100 regression).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-03 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_branding.py::test_logo_precedence_report_branding_wins_over_assessment` and
+`tests/test_report_branding.py::test_logo_precedence_assessment_logo_used_alone`, per
+`200-03-SUMMARY.md`'s logo-precedence proof (two distinguishable PNGs, base64 comparison, both
+directions verified).
+
+---
+
+### UAT-200-05: Operator Template Override and Fallback
+
+**ID:** UAT-200-05
+**Title:** A `report.template_dir` containing a modified `report.html.j2` overrides the packaged
+template; removing the override file falls back to the packaged template
+**Maps to:** RPT-02
+
+**What to test:** point `report.template_dir` at a directory containing a modified
+`report.html.j2` and confirm the override renders instead of the packaged template; remove the
+file from that directory and confirm the packaged template renders again.
+
+**Steps:** covered by an automated test asserting a marker string unique to the override template
+renders, and a separate test asserting the packaged template renders when the override directory
+has no matching file — no manual execution required for this case.
+
+**Pass Criteria:** the override marker string is present when the override file exists; the
+packaged template's normal output renders when it does not.
+
+**Falsifiability:** this case turns red if the override is silently ignored, or if the packaged
+template fails to serve as a fallback when the override directory lacks the file.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-01 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_template_sandbox.py::test_operator_override_template_renders_instead_of_packaged`
+and
+`tests/test_report_template_sandbox.py::test_fallback_to_packaged_template_when_override_dir_has_no_report_template`,
+per `200-01-SUMMARY.md` (RED-first: both legs failed against unmodified source, then GREEN after
+the `ChoiceLoader` swap).
+
+---
+
+### UAT-200-06: SSTI Payloads Are Contained Under the Operator Override
+
+**ID:** UAT-200-06
+**Title:** An override template containing canonical SSTI payloads cannot reach host internals —
+every payload either raises `SecurityError` or renders marker-free, empty output
+**Maps to:** RPT-02
+
+**What to test:** render 13 canonical Jinja2 SSTI payloads (attribute-chain escapes, `__globals__`
+access, `__class__`/`__mro__`/`__subclasses__` chains) through the real `write_reports` pipeline
+under an operator override template, and confirm none of them leaks host/interpreter internals
+into the rendered output.
+
+**Steps:** covered by a parametrized automated test corpus rendering all 13 payloads through the
+real report-writing pipeline — no manual execution required for this case.
+
+**Pass Criteria:** every one of the 13 payloads either raises `SecurityError` or renders with no
+leaked marker/internal-state string present in the output; the packaged template's own
+`_rows.append`/`_unmapped.append` mutation idiom (lines 637, 664) is unaffected by the sandbox.
+
+**Falsifiability:** this case turns red if any payload leaks Python internals (module globals,
+class hierarchy, subclass list) into the rendered HTML.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-01 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_template_sandbox.py::test_ssti_payload_is_contained*` (13/13 parametrized cases
+passing — 6 raise `SecurityError`, 7 render empty/marker-free), per `200-01-SUMMARY.md`'s
+payload-by-payload evidence table and the written GO verdict in
+`.planning/phases/200-report-branding-templates/200-SSTI-GATE.md`.
+
+---
+
+### UAT-200-07: Path-Traversal Rejection with `QRK-CONFIG-003`
+
+**ID:** UAT-200-07
+**Title:** A `..`-containing `template_dir` or `logo_path` is rejected at config load with a
+`QRK-CONFIG-003` message naming the offending field and value
+**Maps to:** RPT-03
+
+**What to test:** a config with a traversal-shaped `report.template_dir`, `report.branding.logo_path`,
+or `assessment.logo_path` value fails to load, raising `QRK-CONFIG-003` and naming the field and
+value.
+
+**Steps:** covered by automated tests exercising all three call sites — no manual execution
+required for this case.
+
+**Pass Criteria:** each of the three traversal-shaped call sites raises `QRK-CONFIG-003` naming the
+correct field and offending value; a non-traversal path with the same field does not raise.
+
+**Falsifiability:** this case turns red if a traversal-shaped value loads successfully at any of
+the three call sites, or if the error omits the field name/value.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-02 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_path_guard.py::TestValidateReportPathFieldTraversal::test_traversal_template_dir_raises_coded_error`,
+`tests/test_report_path_guard.py::TestValidateReportPathFieldTraversal::test_traversal_logo_path_raises_coded_error`,
+and
+`tests/test_report_path_guard.py::TestValidateReportPathFieldTraversal::test_traversal_assessment_logo_path_raises_coded_error`,
+per `200-02-SUMMARY.md`'s verbatim guard error text.
+
+---
+
+### UAT-200-08: No Report Path Field Is Dashboard-Reachable
+
+**ID:** UAT-200-08
+**Title:** No report path field (`logo_path`, `template_dir`) is exposed by any dashboard schema,
+connectors-overlay allowlist, or effective-config section title
+**Maps to:** RPT-03
+
+**What to test:** a runtime-enumeration sweep over every dashboard Pydantic schema, every
+`_KNOWN_*_OVERLAY_KEYS` frozenset, and `_SECTION_TITLES` confirms none exposes a report path field,
+and the sweep is demonstrated able to fail (not vacuously green) via an injected scratch model.
+
+**Steps:** covered by an automated runtime-enumeration test — no manual execution required for
+this case.
+
+**Pass Criteria:** the enumeration is non-vacuous (finds at least one real schema/overlay/section);
+no report path field is found in any of the three surfaces; the mutation-check leg confirms the
+sweep detects an injected path field in a scratch model.
+
+**Falsifiability:** this case turns red if a future dashboard schema change introduces a
+`logo_path`/`template_dir` field without the sweep catching it, or if the sweep is shown to be
+vacuous.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-02 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_path_guard.py::test_no_dashboard_schema_exposes_a_path_field`,
+`tests/test_report_path_guard.py::test_no_overlay_allowlist_contains_a_path_field`,
+`tests/test_report_path_guard.py::test_report_section_not_in_effective_config_section_titles`, and
+the non-vacuity proof `tests/test_report_path_guard.py::test_mutation_check_sweep_detects_an_injected_path_field`,
+per `200-02-SUMMARY.md`.
+
+---
+
+### UAT-200-09: `report profile save` / `list` / `--report-profile` Round Trip
+
+**ID:** UAT-200-09
+**Title:** `quirk report profile save` then `list` then a scan with `--report-profile` reproduces
+the saved branding without re-entering values
+**Maps to:** RPT-04
+
+**What to test:** save a config's `report:` block as a named profile, confirm it appears in
+`profile list`, and confirm applying it via `--report-profile` (or `report.profile`) fills the same
+branding/template_dir fields onto another config.
+
+**Steps:** covered by an automated round-trip test plus a CLI-level save-then-list test — no manual
+execution required for this case; this plan also ran the CLI save/list flow live (see
+`200-05-SUMMARY.md`'s CLI transcript) as corroborating evidence.
+
+**Pass Criteria:** `save_profile`/`load_profile` round-trip every set branding field and
+`template_dir` exactly; `list_profiles` returns the saved name; the CLI `save` then `list` sequence
+shows the profile name in the printed table.
+
+**Falsifiability:** this case turns red if any field is lost/altered on round trip, or if a saved
+profile does not appear in `list`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-05 phase-execution plan) + live CLI transcript
+**Notes:** Confirmed via
+`tests/test_report_profiles.py::test_save_then_load_round_trips_branding_and_template_dir` and
+`tests/test_report_profiles.py::test_cli_save_then_list`, per `200-05-SUMMARY.md`'s round-trip
+evidence and verbatim CLI save→list transcript. Also independently re-verified live during this
+plan's own execution (`quirk report profile save housestyle --config ...` then
+`quirk report profile list` against a scratch `QUIRK_PROFILES_DIR`), reproducing the same
+save/overwrite/list behavior — see `200-07-SUMMARY.md`.
+
+---
+
+### UAT-200-10: Explicit Config Value Survives Profile Application
+
+**ID:** UAT-200-10
+**Title:** An explicitly-set engagement-config branding value is never overwritten by an applied
+report profile; only unset fields are filled from the profile
+**Maps to:** RPT-04
+
+**What to test:** apply a saved profile carrying `client_name`/`engagement_name` onto a config that
+explicitly sets only `client_name`; confirm `client_name` keeps its explicit value while
+`engagement_name` is filled from the profile.
+
+**Steps:** covered by an automated test asserting both halves of the precedence rule in one
+assertion — no manual execution required for this case.
+
+**Pass Criteria:** the explicit `client_name` value survives unchanged; the unset
+`engagement_name` field is filled from the profile.
+
+**Falsifiability:** this case turns red if the profile overwrites the explicit value, or if it
+fails to fill the genuinely-unset field.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Automated (200-05 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_report_profiles.py::test_explicit_config_value_survives_profile_application`, per
+`200-05-SUMMARY.md`'s verbatim precedence-test evidence (both directions asserted in one test).
+
+---
+
+### UAT-200-11: Tier 2 Go/No-Go Document Exists and Is Argued from Evidence
+
+**ID:** UAT-200-11
+**Title:** The 999.105 Tier 2 (section-composition report profiles) go/no-go document exists,
+names the real congruence-guard raising site, enumerates the presence-based parity suite, and the
+tracked `HORIZON.md` 999.105 row carries the verdict
+**Maps to:** RPT-05
+
+**What to test:** review `TIER2-GO-NO-GO.md` against its own cited evidence (congruence-guard
+anatomy, parity-suite file/test counts, Tier 1 evidence from 200-01/200-03/200-05) and confirm the
+verdict is actually argued, not asserted; confirm `HORIZON.md`'s 999.105 row reflects the verdict.
+
+**Steps:** this is a human document-quality review, not an automatable behavior — no test can
+verify "is this argument sound." Read
+`.planning/backlog/999.105-customizable-reporting-engine/TIER2-GO-NO-GO.md` end to end against the
+`HORIZON.md` 999.105 row diff.
+
+**Pass Criteria:** the document exists, correctly identifies `content_model.py::_check_congruence`
+(not the ROADMAP's `writer.py:307/:927` shorthand) as the real raising site, tables all nine parity
+test files with measured counts, and states a verdict (GO/NO-GO/GO-WITH-CONDITIONS) with named
+conditions; `HORIZON.md`'s 999.105 row carries that verdict.
+
+**Falsifiability:** this case turns red if the document is missing, asserts a verdict without
+evidence, misidentifies the congruence-guard raising site, or `HORIZON.md` does not reflect it.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-11  **Tester:** Operator (live document review)
+**Notes:** Operator-approved 2026-09-11 — TIER2-GO-NO-GO.md read and accepted as a sound, evidence-based NO-GO (congruence-guard anatomy naming content_model.py::_check_congruence, all nine parity files with measured counts, ~15-16-plan sizing floor).
+
+---
+
+**Series 200 disposition.** 8 of 11 cases (UAT-200-03/04/05/06/07/08/09/10) are
+`[x] PASS`, confirmed via real, currently-collectible pytest node IDs cited above, each verified
+via `pytest --collect-only` before being written here. 3 cases (UAT-200-01/02/11) are honest
+`[x] SKIP` / `GAP — no substitute coverage`: UAT-200-01/02 because this repo's render tests assert
+presence, not appearance, and the visual-placement claim needs a live operator walkthrough;
+UAT-200-11 because a decision document's argumentative soundness has no automatable truth
+condition. None was checked PASS without being run, and no allowlist or gate-code change was made.
+
+**Last Updated:** 2026-09-11 (Phase 200 Plan 07 — Series 200 added: 11 report-branding-templates
+cases covering RPT-01 (HTML/PDF + DOCX + CLI branding, logo precedence), RPT-02 (template override,
+fallback, SSTI containment), RPT-03 (path-traversal guard, dashboard-exclusion sweep), RPT-04
+(report profile save/list/select, explicit-config-wins precedence), and RPT-05 (Tier 2 go/no-go
+document); 8 automated `[x] PASS` cases citing real `pytest --collect-only`-resolvable node IDs
+against 200-01/02/03/05-SUMMARY.md evidence, plus 3 honest `[x] SKIP` / `GAP — no substitute
+coverage` cases for the two visual-placement legs and the human document-quality review)
+
+## Series 201: Score-Lift Roadmap Re-frame (Phase 201 — v5.23)
+
+Covers LIFT-01 (per-item `(+N pts)` score-lift badge computed by a genuine second scoring pass,
+with honest absence for items no scoring input can model), LIFT-02 (a single independent-rescore
+aggregate projection, deliberately non-additive against the sum of per-item lifts), LIFT-03 (the
+ADVISORY-02 forward-projection firewall — scoring/persistence modules never import the projection
+module, and the projection never touches a real score surface or a DB session), LIFT-04 (BACK-51 —
+`build_phased_roadmap()` becomes the single categorization system feeding every surface including
+the console "Migration Waves" table), and LIFT-05 (the dashboard renders the same badge/card as
+every report surface, and all four surfaces report identical numbers for the same scan).
+
+### UAT-201-01: Per-Item `(+N pts)` Badge Is a Real Rescore, Not a Heuristic
+
+**ID:** UAT-201-01
+**Title:** A roadmap item with resolvable findings shows a `+N pts` number equal to a real,
+independent rescore with that item's findings marked resolved
+**Maps to:** LIFT-01
+
+**What to test:** for a fixture evidence set with a modelable roadmap item (expired certificates),
+confirm the item's `score_lift` value equals `compute_readiness_score(evidence-with-that-item-
+resolved) − compute_readiness_score(evidence)`, computed independently in the test.
+
+**Steps:** covered by an automated test that independently rescoring both the base and the
+resolved evidence and comparing the delta to `compute_item_lifts`' output — no manual execution
+required for this case.
+
+**Pass Criteria:** `compute_item_lifts(...)["expired-certificates"]` equals the independently
+hand-computed delta exactly.
+
+**Falsifiability:** this case turns red if the lift value diverges from an independent rescore of
+the same evidence delta, which would mean the module is using a fixed/heuristic value rather than
+a real second scoring pass.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_per_item_lift_matches_independent_rescore_for_expired_certificates`
+(collect-only verified,
+`.venv/bin/python -m pytest --collect-only -q tests/test_score_lift.py::test_per_item_lift_matches_independent_rescore_for_expired_certificates`
+resolves 1 test; executed green), per `201-01-SUMMARY.md`'s pinned-RED contract and
+`201-02-SUMMARY.md`'s first-attempt-green implementation.
+
+---
+
+### UAT-201-02: Changing Scoring Calibration Changes the Lift Value
+
+**ID:** UAT-201-02
+**Title:** Reweighting a scoring input changes the computed lift for the same slug, proving the
+badge is computed against live calibration rather than a lookup table
+**Maps to:** LIFT-01
+
+**What to test:** re-run the per-item lift computation for `expired-certificates` under two
+different `identity_expired_ratio` weights and confirm the lift value changes.
+
+**Steps:** covered by an automated test reweighting `identity_expired_ratio` from its default 14.0
+to 30.0 against the same fixture and asserting the lift moves — no manual execution required.
+
+**Pass Criteria:** the lift value for the same slug differs between the two weight settings (the
+plan's SUMMARY records 1 -> 4 for this exact reweight).
+
+**Falsifiability:** this case turns red if the lift value is identical regardless of calibration,
+which would indicate a static/heuristic table rather than a genuine rescore.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_realness_weights_change_moves_the_lift_for_the_same_slug`
+(collect-only resolves 1 test; executed green), per `201-01-SUMMARY.md`'s decision log recording
+the 1 -> 4 reweight transcript for `identity_expired_ratio` 14.0 -> 30.0.
+
+---
+
+### UAT-201-03: Process/Governance Items Show No Number At All
+
+**ID:** UAT-201-03
+**Title:** Items whose resolution cannot move any scoring input (owner/SLA assignment, evidence-
+refresh automation, crypto governance review, TLS enumeration coverage, mTLS lifecycle) never
+appear as a lift key — not as `0 pts`, not as `N/A`
+**Maps to:** LIFT-01
+
+**What to test:** run `compute_item_lifts` over a fixture engineered to include all five
+unmodelable item kinds as real roadmap items, and confirm none of the five slugs appears as a key
+in the returned lift mapping.
+
+**Steps:** covered by an automated test asserting the five unmodelable slugs never appear as keys,
+across three separate fixtures — no manual execution required.
+
+**Pass Criteria:** `tls-enum-coverage`, `mtls-lifecycle-operations`, `assign-owners-and-slas`,
+`automate-evidence-refresh`, and `crypto-governance-review` never appear as keys in any lift
+mapping the test exercises; no lift key is ever `0` or negative.
+
+**Falsifiability:** this case turns red if any of the five unmodelable slugs appears as a lift key
+(with any value, including 0), which would mean a heuristic fallback exists where the design
+requires honest absence.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_unmodelable_slugs_never_appear_as_keys` (collect-only resolves 1
+test; executed green), per `201-02-SUMMARY.md`'s module-level `_DELTAS` 9-entry map (exactly the 9
+modelable slugs) and its explicit 5-kind absence comment block.
+
+---
+
+### UAT-201-04: Projected Aggregate Is Smaller Than the Sum of Individual Lifts When a Cap Binds
+
+**ID:** UAT-201-04
+**Title:** On a scan where a subscore's cap binds, the sum of per-item `(+N pts)` badges exceeds
+the aggregate projection — proving the aggregate is not their sum
+**Maps to:** LIFT-02
+
+**What to test:** on the clamp-binding fixture (hygiene subscore forced to clamp at 0), compute the
+sum of every per-item lift and compare it to the single independent-rescore aggregate.
+
+**Steps:** covered by two automated tests — one at the `score_lift.py` unit boundary, one parsed
+directly out of rendered CLI markdown (surface-visible) — no manual execution required.
+
+**Pass Criteria:** `sum(per-item lifts) > aggregate lift` strictly, on both the unit-level and the
+surface-rendered check.
+
+**Falsifiability:** this case turns red if the aggregate ever equals or exceeds the sum of the
+per-item lifts on the clamp-binding fixture, which would mean the aggregate is being computed as
+(or has silently become) a sum rather than one independent rescore.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via `tests/test_score_lift.py::test_lifts_are_not_additive_on_a_clamp_binding_fixture`
+and `tests/test_score_lift_cross_surface_numbers.py::test_surface_visible_non_additivity_on_clamp_binding_fixture`
+(collect-only resolves both; executed green), per `201-01-SUMMARY.md`'s scratch calculation
+(sum=70, aggregate=67, base 33 -> 100) and `201-07-SUMMARY.md`'s surface-level reproduction of the
+same numbers parsed from rendered CLI markdown.
+
+---
+
+### UAT-201-05: Unassessed Scan Shows No Lifts and No Projection
+
+**ID:** UAT-201-05
+**Title:** When the current scan's score is `None` (unassessed), no per-item lift and no
+aggregate projection are computed anywhere
+**Maps to:** LIFT-01, LIFT-02
+
+**What to test:** run `compute_item_lifts`/`compute_projected_score` against unassessed evidence
+(base score `None`) and confirm both return empty/`None` rather than fabricating a value.
+
+**Steps:** covered by an automated test at the `score_lift.py` boundary plus a report-surface test
+confirming no lift text renders anywhere on an unassessed scan — no manual execution required.
+
+**Pass Criteria:** `compute_item_lifts` returns `{}` and `compute_projected_score` returns `None`
+for unassessed evidence; the rendered report shows no `(+N pts)`, no projected line, and no
+disclaimer anywhere.
+
+**Falsifiability:** this case turns red if either function returns a non-empty/non-`None` value for
+unassessed evidence, or if any lift-related text renders on an unassessed scan's report.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift.py::test_unassessed_evidence_yields_empty_lifts_and_none_projection`
+(collect-only resolves 1 test; executed green), per `201-01-SUMMARY.md`'s SCORE-06 honest-absence
+pin and `201-05-SUMMARY.md`'s `test_unassessed_scan_produces_no_lift_text_anywhere` surface-level
+corroboration.
+
+---
+
+### UAT-201-06: The Forward-Projection Firewall Blocks Reverse Imports and Touches No DB Session
+
+**ID:** UAT-201-06
+**Title:** Scoring/persistence modules never import the projection module (ADVISORY-02), and the
+projection API touches no DB session and does not mutate the scan's evidence
+**Maps to:** LIFT-03
+
+**What to test:** an AST reverse-import ban over the 8 guarded scoring/persistence modules, plus
+runtime purity legs proving the projection functions never open a DB session and never mutate
+their input evidence dict.
+
+**Steps:** covered by automated AST-walk and runtime-purity tests — no manual execution required.
+The negative control was RED-verified live during 201-01 by temporarily injecting a forbidden
+import into `quirk/intelligence/scoring.py` and confirming the guard fails, then reverting cleanly.
+
+**Pass Criteria:** none of the 8 guarded modules imports `quirk.intelligence.score_lift`; a
+negative-control injection is correctly detected as a violation; `compute_item_lifts`/
+`compute_projected_score` open zero DB sessions and leave the input evidence dict byte-identical
+after the call.
+
+**Falsifiability:** this case turns red if any guarded module imports the projection module, if the
+negative control fails to detect a real forbidden import, or if either projection function is ever
+observed touching a DB session or mutating its input.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_forward_projection_firewall.py::test_scoring_and_persistence_modules_never_import_score_lift`,
+`::test_projection_api_does_not_mutate_input_evidence`, and `::test_projection_api_touches_no_db_session`
+(collect-only resolves all three; executed green), per `201-01-SUMMARY.md`'s live RED-verification
+transcript (injected import into `scoring.py`, confirmed failure, reverted with an empty
+`git diff --stat quirk/`) and `201-02-SUMMARY.md`'s all-green confirmation after the module landed.
+
+---
+
+### UAT-201-07: No Projected Value Ever Reaches a Real Score Surface
+
+**ID:** UAT-201-07
+**Title:** No projected/lift key ever appears in the intelligence JSON's `"score"` block or on any
+static real-score-surface assertion; the displayed readiness score is unaffected by the
+projection's presence
+**Maps to:** LIFT-03
+
+**What to test:** confirm the intelligence JSON's `"score"` block key set carries no `projected`/
+`lift`-named key, and that a static AST/source assertion confirms no real score surface (DB score
+columns, `ScoreData`, stored score JSON) ever receives a projected value.
+
+**Steps:** covered by two automated tests — no manual execution required.
+
+**Pass Criteria:** the `"score"` block's key set matches the pre-Phase-201 allowlist exactly (no
+`projected`/`lift` key added); the static real-score-surface assertion passes.
+
+**Falsifiability:** this case turns red if a `projected`/`lift` key is ever added to the `"score"`
+block, or if the static real-score-surface guard is ever violated.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift_report_surfaces.py::test_intelligence_json_score_block_has_no_projected_or_lift_key`
+and `tests/test_forward_projection_firewall.py::test_real_score_surfaces_carry_no_projected_key`
+(collect-only resolves both; executed green), per `201-05-SUMMARY.md`'s extracted `"score"` block
+key list (no `projected`/`lift` key present) and `201-04-SUMMARY.md`'s confirmation that
+`ScoreData` carries no field with `projected`/`lift` in its name.
+
+---
+
+### UAT-201-08: CLI, HTML, DOCX, and Dashboard Agree on the Same NOW/NEXT/LATER Assignment
+
+**ID:** UAT-201-08
+**Title:** One evidence fixture's roadmap items are assigned to the same NOW/NEXT/LATER phase on
+all four surfaces, and `categorize_waves()` no longer exists
+**Maps to:** LIFT-04
+
+**What to test:** drive one canonical `{title: phase}` fixture mapping through the CLI markdown
+parser, the HTML context split, the DOCX split, and the dashboard's `_derive_roadmap`, and confirm
+all four agree with the canonical mapping; confirm `quirk.reports.writer` no longer has a
+`categorize_waves` attribute.
+
+**Steps:** covered by four surface-comparison automated tests plus a `hasattr` guard test — no
+manual execution required.
+
+**Pass Criteria:** all four surfaces' per-title phase assignment matches the canonical fixture
+exactly; `hasattr(quirk.reports.writer, "categorize_waves")` is `False`.
+
+**Falsifiability:** this case turns red if any surface disagrees with the canonical phase
+assignment, or if `categorize_waves` is reintroduced.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_roadmap_categorization_unification.py::test_categorize_waves_is_gone` and
+`::test_cli_markdown_matches_canonical_phase_assignment` (collect-only resolves both; executed
+green — the file's 6 tests are all green per `201-03-SUMMARY.md`), per `201-03-SUMMARY.md`'s
+RED-verification transcript (live-injected stub `categorize_waves` correctly detected as a BACK-51
+violation, then reverted with an empty `git diff quirk/`).
+
+---
+
+### UAT-201-09: Console Migration Waves Table Counts Items Per Phase
+
+**ID:** UAT-201-09
+**Title:** The console "Migration Waves" table's counts match `build_phased_roadmap()`'s own
+per-phase item counts — the column now counts roadmap items, not severity-bucketed findings
+**Maps to:** LIFT-04
+
+**What to test:** compute the console table's wave counts via the writer.py render-site logic and
+compare them to `build_phased_roadmap()`'s own `phase_counts` for the same evidence.
+
+**Steps:** covered by an automated test mirroring the console counter logic — no manual execution
+required.
+
+**Pass Criteria:** the console table's NOW/NEXT/LATER counts equal `build_phased_roadmap()`'s own
+phase counts exactly, for the same evidence.
+
+**Falsifiability:** this case turns red if the console counts ever diverge from
+`build_phased_roadmap()`'s own counts, which would mean a second, independently-derived
+categorization survived BACK-51's closure.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_roadmap_categorization_unification.py::test_console_wave_counts_match_roadmap_phase_counts`
+(collect-only resolves 1 test; executed green), per `201-03-SUMMARY.md`'s three-stub-shape scratch
+transcript and the column rename from "Findings" to "Items" recorded in the same SUMMARY.
+
+---
+
+### UAT-201-10: Dashboard Lift Badge and Projected Score Card — Visual Placement
+
+**ID:** UAT-201-10
+**Title:** The dashboard roadmap detail panel shows the `+N pts` badge and a Projected Score card
+with the verbatim advisory, in the placement/tone the UI-SPEC locks; absence renders nothing (no
+chart, no gauge, no placeholder)
+**Maps to:** LIFT-05
+
+**What to test:** on the live dashboard roadmap page, select a node with a positive `score_lift`
+and confirm the badge renders on the existing badge row with the `--ds-ok` tone; confirm the
+Projected Score card renders directly above Remediation Burndown with the locked copy and no
+chart/gauge; confirm both are absent (not zeroed, not placeholder) when the underlying values are
+null; confirm the print/export view shows the same parenthetical and projected line.
+
+**Steps:** this is a real-browser visual-placement/tone verification — this repo's automated
+render tests assert presence, not appearance (documented house convention; see Series 200's
+UAT-200-01/02 disposition for the same limitation), so no automated substitute exists for the
+appearance aspect specifically. An operator walkthrough was performed live against the running
+dashboard on 2026-09-12 per plan 201-06's Task 3 checkpoint instructions.
+
+**Pass Criteria:** badge tone/placement, card placement/copy/absence-of-chart, and print-view
+parity all match the UI-SPEC as visually confirmed by the operator; the real readiness score is
+unmoved by the projection's presence.
+
+**Falsifiability:** this case turns red if the operator reports incorrect badge tone/placement, a
+chart/gauge/placeholder appears where the spec requires silent absence, or the real readiness score
+changes when the projection renders.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Operator (live walkthrough)
+**Notes:** Operator-approved 2026-09-12 per `201-06-SUMMARY.md`'s verbatim record: after a
+hard-refresh, the operator re-ran the walkthrough (+9 pts badge on "Stabilize scan reliability"; no
+badge on a process item; Projected Score card showing 100 with the advisory line; current score
+unchanged at 91; print view `(+N pts)` parenthetical) and replied verbatim **"approved"**. The
+earlier "no badge appears" report was root-caused to browser cache (stale `index.html` pointing at
+a pre-rebuild bundle hash), the identical symptom/fix as Phase 195, not a defect. Presence-only
+automated coverage: `src/dashboard/src/pages/__tests__/roadmap-score-lift.test.tsx` (7/7 passing).
+
+---
+
+### UAT-201-11: Per-Item and Aggregate Numbers Are Identical Across All Four Surfaces
+
+**ID:** UAT-201-11
+**Title:** For the same scan, the CLI markdown, HTML, DOCX, and dashboard report the exact same
+per-item lift mapping and the exact same aggregate projection
+**Maps to:** LIFT-05
+
+**What to test:** drive one evidence fixture through all four surfaces under one pinned
+`(profile="balanced", weights=None)` pair and compare the extracted `{slug: lift}` mappings and
+aggregate projections.
+
+**Steps:** covered by two automated four-surface-comparison tests, with a live perturbation
+mutation proving the equality check is non-vacuous — no manual execution required.
+
+**Pass Criteria:** all four surfaces' `{slug: lift}` mappings are identical; all four surfaces'
+aggregate projection values are identical and equal to one independent rescore.
+
+**Falsifiability:** this case turns red if any surface's per-item or aggregate number diverges from
+the other three — demonstrated live during 201-07 by mutating `docx_renderer.py`'s lift formula by
++1 and confirming the test correctly flags DOCX as the outlier before the mutation was reverted.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (201-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_score_lift_cross_surface_numbers.py::test_four_surfaces_report_identical_per_item_lifts`
+and `::test_four_surfaces_report_identical_projected_aggregate` (collect-only resolves both;
+executed green), per `201-07-SUMMARY.md`'s four-surface `{slug: lift}` table (base=85,
+projected=99 on all four surfaces) and its live perturbation RED transcript
+(`docx_renderer.py` `+1` mutation correctly flagged, then reverted with an empty `git diff quirk/`).
+
+---
+
+**Series 201 disposition.** All 11 cases are `[x] PASS`. 10 (UAT-201-01/02/03/04/05/06/07/08/09/11)
+are confirmed via real, currently-collectible `pytest --collect-only` node IDs cited above, each
+verified before being written here. 1 (UAT-201-10) is an honest operator-approved PASS — the
+visual-placement/tone aspect has no automated substitute in this repo's presence-only render-test
+house convention (matching Series 200's UAT-200-01/02 precedent), so it is dispositioned against
+201-06-SUMMARY.md's verbatim recorded operator approval rather than a fabricated pytest citation.
+None was checked PASS without being run or without a cited operator approval, and no allowlist or
+gate-code change was made.

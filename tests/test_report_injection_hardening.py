@@ -121,15 +121,10 @@ def _stub_roadmap(evidence, score):
     }
 
 
-def _stub_waves(findings):
-    return {"Wave 1": [], "Wave 2": [], "Wave 3": []}
-
-
 def _patches():
     """Standard intelligence-pipeline patches for write_reports (same set
     used by tests/test_reports_writer.py)."""
     return (
-        patch("quirk.reports.writer.categorize_waves", side_effect=_stub_waves),
         patch("quirk.reports.writer.build_phased_roadmap", side_effect=_stub_roadmap),
         patch("quirk.reports.writer.compute_confidence", side_effect=_stub_confidence),
         patch("quirk.reports.writer.compute_readiness_score", side_effect=_stub_score),
@@ -163,8 +158,8 @@ def test_script_payload_in_cert_cn_is_escaped_in_html(tmp_path):
     """`<script>alert(1)</script>` in adversarial finding fields must never
     appear raw in `report-*.html`. Either escape (`&lt;script&gt;`) or
     strip-to-empty is acceptable per CONTEXT.md criterion #1."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_write_reports(tmp_path)
 
     # Raw payload MUST NOT appear unescaped anywhere in the HTML body.
@@ -184,8 +179,8 @@ def test_script_payload_in_cert_cn_is_escaped_in_html(tmp_path):
 def test_javascript_url_in_finding_recommendation_stripped(tmp_path):
     """`javascript:alert(1)` URL in a finding recommendation must be stripped
     by sanitize_scanner_text (URL-scheme regex strip, Plan 78-01)."""
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         html = _run_write_reports(tmp_path)
 
     assert "javascript:" not in html, (
@@ -206,8 +201,8 @@ def test_db_stored_raw_payload_preserved(tmp_path):
     """
     import json
 
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         from quirk.reports.writer import write_reports
 
         cfg = _make_cfg(tmp_path)
@@ -244,8 +239,8 @@ def test_script_payload_in_cert_cn_is_escaped_in_pdf(tmp_path):
     pytest.importorskip("playwright.sync_api")
     pypdf = pytest.importorskip("pypdf")
 
-    p1, p2, p3, p4, p5 = _patches()
-    with p1, p2, p3, p4, p5:
+    p1, p2, p3, p4 = _patches()
+    with p1, p2, p3, p4:
         from quirk.reports.writer import write_reports
 
         cfg = _make_cfg(tmp_path)

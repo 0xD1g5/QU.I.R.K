@@ -204,9 +204,10 @@ def get_trends_timeline(
         if not eps:
             continue
         # D-07 (184.4): intentionally findings-less — TrendSessionPoint (schemas.py)
-        # exposes only `score` (int) and `subscores` (SubScores, all ints) from
-        # this evidence/score_dict; it has no rating/band field, so this timeline
-        # point can never render a severity-blind band.
+        # exposes only `score: Optional[float]` (Phase 199 / TRIAGE-10 widening)
+        # and `subscores: SubScores` from this evidence/score_dict; it has no
+        # rating/band field, so this timeline point can never render a
+        # severity-blind band.
         evidence = build_evidence_summary(eps)
         score_dict = compute_readiness_score(evidence)
         sub = score_dict["subscores"]
@@ -224,10 +225,11 @@ def get_trends_timeline(
         points.append(
             TrendSessionPoint(
                 session_ts=stamp_utc_iso(ts),
-                # Phase 188 SCORE-06: score_dict["score"] may be None (zero domains
-                # assessed) -- minimal crash-prevention fix; coverage-aware
-                # rendering of this state is plans 188-03/188-04's job.
-                score=int(score_dict["score"] or 0),
+                # Phase 199 / TRIAGE-10: score_dict["score"] may be None (zero
+                # domains assessed) or fractional (e.g. 71.4) — both pass
+                # through unchanged. An unassessed session carries score=None
+                # through TrendSessionPoint; the frontend renders the gap.
+                score=score_dict["score"],
                 subscores=sub,
                 finding_counts=FindingCounts(
                     high=counts.get("high", 0),

@@ -5,6 +5,7 @@ import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/
 import type { QRAMMScoreResponse, QRAMMComplianceMapRow } from "@/types/api"
 import { extractCN } from "@/lib/cert-parse"
 import { formatScanDateTime, formatDateOnly } from "@/lib/datetime"
+import { formatScoreNumber } from "@/lib/utils"
 
 const FRAMEWORK_DISPLAY: Record<string, string> = {
   NIST_PQC: "NIST PQC Standards",
@@ -163,7 +164,15 @@ function PrintCbom({ components }: { components: CbomComponent[] }) {
   )
 }
 
-function PrintRoadmap({ nodes }: { nodes: RoadmapNode[] }) {
+// Exported so roadmap-score-lift.test.tsx can render it directly (mirrors
+// PrintCerts' export convention for cross-surface consistency guards).
+export function PrintRoadmap({
+  nodes,
+  projectedScore,
+}: {
+  nodes: RoadmapNode[]
+  projectedScore?: number | null
+}) {
   if (!nodes.length) return <p className="meta">No migration roadmap generated.</p>
   const grouped: Record<string, RoadmapNode[]> = {}
   for (const n of nodes) {
@@ -173,6 +182,16 @@ function PrintRoadmap({ nodes }: { nodes: RoadmapNode[] }) {
   }
   return (
     <div>
+      {/* Phase 201 LIFT-05: projected line + advisory render before the
+          grouped list, and only when projectedScore is not null — no
+          placeholder paragraph in its absence. */}
+      {projectedScore != null && (
+        <p className="meta">
+          Projected score if all items resolved: {formatScoreNumber(projectedScore)}
+          <br />
+          Advisory — this projection is a simulation and does not affect the readiness score.
+        </p>
+      )}
       {Object.entries(grouped).map(([tf, items]) => (
         <div key={tf} style={{ marginBottom: 16 }}>
           <h3>{tf}</h3>
@@ -180,6 +199,12 @@ function PrintRoadmap({ nodes }: { nodes: RoadmapNode[] }) {
             {items.map((n) => (
               <li key={n.id} style={{ marginBottom: 6 }}>
                 <strong>{n.title}</strong>
+                {/* Phase 201 LIFT-05: (+N pts) parenthetical after the title,
+                    mirroring the `{n.why && ...}` conditional idiom. Absence
+                    renders no parenthetical at all — never "(—)". */}
+                {n.score_lift != null && n.score_lift > 0 && (
+                  <span> (+{formatScoreNumber(n.score_lift)} pts)</span>
+                )}
                 {n.why && <span className="meta"> — {n.why}</span>}
               </li>
             ))}
@@ -487,7 +512,7 @@ export function PrintPage() {
         {/* Section 6: Migration Roadmap (text list — no Cytoscape graph in print per UI-SPEC) */}
         <div className="print-section">
           <h2>Migration Roadmap</h2>
-          <PrintRoadmap nodes={roadmap.nodes} />
+          <PrintRoadmap nodes={roadmap.nodes} projectedScore={data.projected_score ?? null} />
         </div>
 
         {/* Section 7: QRAMM Governance Assessment */}
