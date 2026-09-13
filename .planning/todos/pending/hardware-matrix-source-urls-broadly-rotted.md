@@ -9,6 +9,17 @@ resolves_phase: null
 
 # 7 of 8 `HARDWARE_MATRIX` vendor `source_url`s are dead, moved, or access-gated
 
+> **OWNERSHIP + SCHEDULING, operator decision 2026-09-13.** The **operator is taking the URL
+> re-sourcing personally** — do not spend a QUIRK phase on it. QUIRK's half is the structural fix
+> that stops this recurring, tracked separately in
+> **`hardware-matrix-doc-id-decouple-url-from-identity.md`** (high). **Both are deferred until
+> after v5.24's Phases 204-208.**
+>
+> The work matrix below stays here as the operator's reference while re-sourcing. The staleness
+> gate stays RED under its recorded STATE.md deferral until real verification happens — that is
+> expected, and must not be cleared by bumping a date.
+
+
 Phase 203 re-verified `quirk/scanner/hardware_meta.py` against its real sources using Chrome
 browser automation. **Only 1 of 8 vendors could be verified.** The other 7 could not be read at
 their recorded URLs — not because of tooling limits, but because the documents are gone.
