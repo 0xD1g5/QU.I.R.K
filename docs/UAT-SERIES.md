@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-12 (Phase 202 Plan 08 — Series 202 added: 12 finding-storyline-drawer
+**Last Updated:** 2026-09-13 (Phase 204 Plan 05 — Series 204 added: 4 worklist-truth-derivation
+cases covering COV-01 (byte-reproducible generated gap worklist), COV-02 (standing reconciliation
+gate demonstrated RED against three probe shapes before being trusted green), COV-03 (the written
+reconciliation verdict, arithmetic closure asserted programmatically), and COV-09 (OBSOLETE as a
+disposition structurally distinct from GAP, applied to exactly two retirements after a third
+candidate's stated reason was checked against source and found false, then corrected to GAP rather
+than forced to fit); all 4 automated `[x] PASS` citing real `pytest --collect-only`-resolvable node
+IDs re-verified live against the tree, corroborated by `204-RED-PROOF.md`'s recorded RED/revert
+inductions. Also documented the `SKIP (OBSOLETE — <reason>)` convention in the "How to Use This
+Document" section (previously only in a test file). Earlier: Phase 202 Plan 08 — Series 202 added: 12 finding-storyline-drawer
 cases covering STORY-01 (per-finding drawer opened from the findings table, keyed by `(endpoint id,
 title)`, catalog-sourced narrative with honest absence as the common case) and STORY-02 (theme-framed
 score-lift attribution — never a per-finding share — the D-08/D-09 one-theme/catch-all-only tie-break,
@@ -592,6 +601,24 @@ Pass Criteria: Specific measurable condition(s)
 - `- [x] PASS` — Test passed all criteria
 - `- [x] FAIL` — Test failed; document details in **Notes:**
 - `- [x] SKIP` — Test skipped; document reason in **Notes:**
+
+`SKIP` carries a parenthetical annotation naming which kind of skip it is. The two you will see
+most often are `GAP — no substitute coverage` (an honest absence — a valid, passing disposition;
+never checked without a real annotation) and `DEFERRED — covered by <node>` (a verified substitute
+test exists; name the exact node, not a same-area test with a similar title — see
+`docs/uat-coverage-reconciliation.md` for the rejection standard).
+
+A third annotation, `SKIP (OBSOLETE — <reason>)`, retires a case whose premise no longer holds —
+the scenario it tests cannot occur or cannot be reproduced (a one-time historical event already
+past, or a described behavior that never existed as claimed). It is structurally distinct from an
+open `GAP`: `scripts/uat_corpus.py::classify_annotation()` parses it as its own disposition,
+`scripts/generate_uat_coverage_gaps.py` excludes it from the open-GAP worklist so a retired case
+never reappears as drainable work on regeneration, and it still satisfies the zero-undispositioned
+gate (`tests/test_uat_zero_undispositioned_gate.py`) because the box is checked. Retiring a case
+is a product decision, not a cleanup — the reason must be evidenced and falsifiable (see Phase 204,
+where a proposed OBSOLETE retirement was checked against source and rejected as false, and the case
+was corrected to `GAP` instead). See `tests/test_uat_obsolete_grammar.py` for the mechanical
+contract.
 
 Fill in **Date:** and **Tester:** fields with today's date and your initials.
 
@@ -28010,3 +28037,159 @@ vitest coverage, but per this repo's UAT-gate grammar a vitest citation cannot p
 gate's execution leg, and no operator walkthrough in this phase specifically exercised either
 behavior (keyboard/focus-return; the disabled-trigger state). Neither GAP was inflated to a PASS
 with a fabricated citation, and no allowlist or gate-code change was made.
+
+---
+
+## Series 204: Worklist Truth & Derivation (Phase 204 — v5.24)
+
+Covers COV-01 (the gap worklist is a run-time-regenerated, byte-reproducible artifact rather than a
+hand-maintained snapshot), COV-02 (a standing gate that fails when a real GAP case is missing from
+the worklist, demonstrated RED before being accepted as green), COV-03 (a written reconciliation
+verdict adjudicating the document-vs-ledger GAP-count disagreement, with the arithmetic asserted
+programmatically), and COV-09 (OBSOLETE as a disposition structurally distinct from GAP, applied to
+exactly two retirements after a third candidate's stated reason was checked against source and
+found false).
+
+### UAT-204-01: `docs/uat-coverage-gaps.md` Is a Byte-Reproducible Generated Artifact
+
+**ID:** UAT-204-01
+**Title:** The gap worklist regenerates byte-identically from `docs/UAT-SERIES.md` at run time, and
+the committed file matches live regeneration
+**Maps to:** COV-01
+
+**What to test:** running `scripts/generate_uat_coverage_gaps.py` twice against the same corpus
+input produces byte-identical output (no timestamp, no absolute path, no incidental non-determinism
+such as dict/set ordering), and running it against the live tree reproduces the committed
+`docs/uat-coverage-gaps.md` exactly — the same generator-drift gate shape this project already uses
+for `docs/error-codes.md`, `severity-bands.json`, and `score-strings.json`.
+
+**Steps:** `tests/test_uat_coverage_gaps_freshness.py::test_two_runs_over_identical_fixture_are_byte_identical`
+(two independent runs over a synthetic fixture diff empty) and
+`::test_uat_coverage_gaps_is_current` (live regeneration diffed against the committed file).
+
+**Pass Criteria:** both cited nodes pass; `.venv/bin/python scripts/generate_uat_coverage_gaps.py |
+diff - docs/uat-coverage-gaps.md` produces no output.
+
+**Falsifiability:** this case turns red if the generator embeds a timestamp/path, if dict ordering
+makes two runs diverge, or if the committed file drifts from a fresh regeneration.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (204-01/204-03-SUMMARY.md)
+**Notes:** Re-verified live in plan 204-05:
+`.venv/bin/python scripts/generate_uat_coverage_gaps.py | diff - docs/uat-coverage-gaps.md`
+produced no output at plan-close time.
+
+---
+
+### UAT-204-02: The COV-02 Standing Gate Was Demonstrated RED Before Being Trusted Green
+
+**ID:** UAT-204-02
+**Title:** `tests/test_uat_worklist_reconciliation_gate.py` fails when a real, un-absorbed GAP case
+exists in the corpus but not in the worklist, including a non-numeric-shaped id and a Notes-line-only
+GAP annotation, and the demonstration is reverted byte-identically
+**Maps to:** COV-02
+
+**What to test:** the gate's own non-vacuity — it must be shown capable of failing, not merely shown
+passing — against three distinct probe shapes: a plain numeric-id GAP case, a non-numeric-shaped id
+(named-prefix series), and a GAP annotation living only on a case's own `**Notes:**` line with no
+Result-line annotation (the blind spot plan 204-04b closed).
+
+**Steps:** `.planning/phases/204-worklist-truth-derivation/204-RED-PROOF.md` records three
+inductions — md5 pre-image of `docs/UAT-SERIES.md`, an induced case appended, the gate's own
+`AssertionError` text naming the induced case and its line number, `git checkout --` revert, md5
+post-image confirmed byte-identical. Corroborated live by
+`tests/test_uat_worklist_reconciliation_gate.py::test_gate_evaluates_a_non_trivial_number_of_real_cases`
+(non-vacuity against the real corpus) and the file's two field-scoped non-vacuity legs
+(`test_non_vacuity_guard_result_line_field`, `test_non_vacuity_guard_notes_only_field`).
+
+**Pass Criteria:** all three inductions in `204-RED-PROOF.md` show a genuine `AssertionError` naming
+the induced case, and all three md5 pre/post pairs are byte-identical after revert.
+
+**Falsifiability:** this case turns red if a future narrowing of the gate's enumeration makes any of
+the three probe shapes pass silently, or if the revert leaves the corpus mutated.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated, RED-proof protocol (204-04-SUMMARY.md, 204-04b-SUMMARY.md)
+**Notes:** Induction 3 (204-04b) is the load-bearing one — it re-demonstrated RED against the exact
+Notes-line-only, non-numeric-id shape an earlier version of the gate could not see, closing a real
+scoping gap 204-04-SUMMARY.md had flagged forward for this plan's review.
+
+---
+
+### UAT-204-03: The COV-03 Reconciliation Verdict Is Written, Evidenced, and Self-Correcting
+
+**ID:** UAT-204-03
+**Title:** `docs/uat-coverage-reconciliation.md` adjudicates the document-vs-ledger GAP-count
+disagreement with a stated authoritative-source verdict, a decomposed arithmetic closure asserted
+programmatically (not eyeballed), and per-case evidence for every resolved discrepancy
+**Maps to:** COV-03
+
+**What to test:** the verdict document states which source is authoritative going forward
+(`docs/UAT-SERIES.md`, per D-02 — the ledger retained as historical evidence only), decomposes the
+divergence into named causes whose counts sum correctly in both directions, and cites real
+grep/pytest evidence for each of the 12 originally-disputed cases rather than asserting outcomes.
+
+**Steps:** `.venv/bin/python -m scripts.uat_corpus reconcile`'s `arithmetic_ok` field, asserted by
+the reconciler itself rather than read by eye; `docs/uat-coverage-reconciliation.md` §3's cause
+table and §"Per-case verdicts" table.
+
+**Pass Criteria:** `reconcile()` reports `arithmetic_ok: True` against the live corpus; every
+per-case verdict in the reconciliation doc cites a real command or file:line, not a restated claim.
+
+**Falsifiability:** this case turns red if a future corpus edit breaks the arithmetic closure, or if
+a per-case verdict is found to cite evidence that does not actually support it.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (204-01/204-02-SUMMARY.md, docs/uat-coverage-reconciliation.md)
+**Notes:** Re-run live at plan 204-05 close: `arithmetic_ok: True`, 878 case headings, GAP total 76
+(64 Result-line + 12 Notes-line-only) under the widened 204-04b rule — the reconciliation doc's own
+provenance section documents that these totals drift and must be recomputed, never transcribed
+forward; this note follows that instruction rather than restating the doc's own (now-superseded)
+66-total snapshot.
+
+---
+
+### UAT-204-04: OBSOLETE Is Structurally Distinct From GAP, Applied to Exactly Two Retirements
+
+**ID:** UAT-204-04
+**Title:** The `SKIP (OBSOLETE — <reason>)` annotation parses as its own disposition, is excluded
+from the open-GAP worklist, and was applied to exactly two of three originally-proposed retirements
+after the third's stated reason was checked against source and found false
+**Maps to:** COV-09
+
+**What to test:** `UAT-92-01` and `UAT-5-18` are recorded `OBSOLETE` with an evidenced,
+falsifiable reason each; `UAT-47-04` — originally proposed for retirement on the claim that its
+described interactive nmap prompt "no longer exists, superseded by `--discovery`" — was checked
+against `quirk/interactive.py` and `run_scan.py`, found still live (the prompt and `--discovery`
+are separate, coexisting code paths), and corrected to `GAP` rather than retired on a false premise.
+
+**Steps:** `tests/test_uat_obsolete_grammar.py::test_live_corpus_the_two_named_cov09_retirements_are_present_and_obsolete`
+(asserts exactly `UAT-92-01` and `UAT-5-18` are OBSOLETE, no more, no fewer) and
+`::test_live_corpus_uat_47_04_was_corrected_not_retired` (asserts `UAT-47-04` is `GAP`, not
+`OBSOLETE`, in the live corpus).
+
+**Pass Criteria:** both cited nodes pass against the live corpus; `reconcile()`'s
+`retired_obsolete_total` equals 2.
+
+**Falsifiability:** this case turns red if a future edit retires a third case without a checked,
+evidenced reason, or if `UAT-47-04` is retired rather than left as an honest GAP.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (204-02-SUMMARY.md, docs/uat-coverage-reconciliation.md
+§"Retirements (COV-09)")
+**Notes:** This case documents a self-correction, not a clean outcome: the phase's own CONTEXT.md
+D-11 named three retirement candidates; per-case spot-checking (required by the plan's own Task 2
+action block) found one premise false and corrected the plan's own frontmatter claim rather than
+forcing the case to fit it. `reconcile()` confirms `retired_obsolete_total: 2` live at plan close.
+
+---
+
+**Series 204 disposition.** All 4 cases (UAT-204-01/02/03/04) are `[x] PASS`, each citing real,
+currently-collectible `pytest --collect-only` node IDs re-verified in plan 204-05 against the live
+tree, corroborated by `.planning/phases/204-worklist-truth-derivation/204-RED-PROOF.md`'s recorded
+RED/revert inductions for UAT-204-02. No GAP or DEFERRED disposition was needed for this series —
+every claim this phase makes about its own gates and artifacts is backed by a real, currently-passing
+test node, not an operator walkthrough or a vitest-only citation. Live figures (878 case headings,
+GAP 76, OBSOLETE 2, `arithmetic_ok: True`) are recomputed values, not transcribed from any prior
+draft — see `docs/uat-coverage-reconciliation.md`'s own provenance section for why these numbers
+must be recomputed rather than cited forward.

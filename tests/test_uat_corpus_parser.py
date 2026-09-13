@@ -392,7 +392,9 @@ def test_iter_cases_total_matches_independent_heading_count():
     cases = list(uat_corpus.iter_cases(lines))
     assert len(cases) == independent_count
     # Cross-check against the shell-level grep count this phase's constraints are pinned to.
-    assert len(cases) == 878
+    # Bumped 878 -> 882 in plan 204-05: Series 204 added 4 new `### UAT-` case headings
+    # (UAT-204-01..04). Recompute, never transcribe, if this ever goes stale again.
+    assert len(cases) == 882
     # No duplicate IDs.
     ids = [c.case_id for c in cases]
     assert len(ids) == len(set(ids))
@@ -400,5 +402,7 @@ def test_iter_cases_total_matches_independent_heading_count():
 
 def test_run_reconcile_against_real_corpus_arithmetic_closes():
     r = uat_corpus.run_reconcile()
-    assert r.total_headings == 878
+    # Bumped 878 -> 882 in plan 204-05 (Series 204's 4 new case headings). See the sibling
+    # test above for the recompute-not-transcribe rationale.
+    assert r.total_headings == 882
     assert r.arithmetic_ok is True
