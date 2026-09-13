@@ -394,6 +394,33 @@ def test_load_ledger_missing_file_returns_empty(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# IN-01 (204-REVIEW.md): a duplicate ledger id (e.g. a corrected outcome
+# appended rather than replacing the original row) must be surfaced, never
+# silently resolved to "whichever row happened to be written first."
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_surfaces_duplicate_ledger_ids():
+    cases = [_case("UAT-1-01", "PASS")]
+    ledger_rows = [
+        {"id": "UAT-1-01", "series": "1", "outcome": "PASS"},
+        {"id": "UAT-1-01", "series": "1", "outcome": "GAP"},  # later, corrected row -- discarded
+    ]
+    r = uat_corpus.reconcile(cases, ledger_rows)
+    assert r.duplicate_ledger_ids == ["UAT-1-01"]
+
+
+def test_reconcile_no_duplicate_ledger_ids_on_clean_input():
+    cases = [_case("UAT-1-01", "PASS"), _case("UAT-1-02", "GAP")]
+    ledger_rows = [
+        {"id": "UAT-1-01", "series": "1", "outcome": "PASS"},
+        {"id": "UAT-1-02", "series": "1", "outcome": "GAP"},
+    ]
+    r = uat_corpus.reconcile(cases, ledger_rows)
+    assert r.duplicate_ledger_ids == []
+
+
+# ---------------------------------------------------------------------------
 # reconcile -- arithmetic closure and per-cause decomposition
 # ---------------------------------------------------------------------------
 

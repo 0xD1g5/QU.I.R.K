@@ -263,6 +263,7 @@ class Reconciliation:
     doc_obsolete_ledger_gap: list  # cause 5: doc OBSOLETE (COV-09 retirement), ledger GAP
     retired_obsolete_ids: list  # ALL doc-OBSOLETE cases, whether or not a ledger row exists
     malformed_multi_checked: list  # (case_id, result_lineno) -- more than one Result box checked
+    duplicate_ledger_ids: list  # ledger ids with more than one JSONL row; only the first is kept
     arithmetic_ok: bool
     arithmetic_detail: dict
 
@@ -291,11 +292,21 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         key=lambda cid: by_id[cid].heading_lineno,
     )
 
+    # setdefault keeps only the FIRST row seen for a given id -- any later row for the same id
+    # (e.g. a corrected outcome appended rather than replacing the original) is discarded. That
+    # discard must never be silent: track which ids had more than one row so a future append-only
+    # correction to the ledger doesn't silently resolve to "whichever row happened to be written
+    # first" with no count, warning, or arithmetic-closure signal.
     ledger_by_id = {}
+    duplicate_ledger_ids = []
     for row in ledger_rows:
         rid = row.get("id")
         if rid is not None:
-            ledger_by_id.setdefault(rid, row)
+            if rid in ledger_by_id:
+                duplicate_ledger_ids.append(rid)
+            else:
+                ledger_by_id[rid] = row
+    duplicate_ledger_ids = sorted(set(duplicate_ledger_ids))
 
     numeric_ledger_series = []
     for row in ledger_rows:
@@ -387,6 +398,7 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         "cause5_doc_obsolete_ledger_gap": len(doc_obsolete_ledger_gap),
         "retired_obsolete_total": len(retired_obsolete_ids),
         "malformed_multi_checked_total": len(malformed_multi_checked),
+        "duplicate_ledger_ids_total": len(duplicate_ledger_ids),
     }
 
     arithmetic_ok = doc_direction_ok and ledger_gap_direction_ok and not malformed_multi_checked
@@ -406,6 +418,7 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         doc_obsolete_ledger_gap=doc_obsolete_ledger_gap,
         retired_obsolete_ids=retired_obsolete_ids,
         malformed_multi_checked=malformed_multi_checked,
+        duplicate_ledger_ids=duplicate_ledger_ids,
         arithmetic_ok=arithmetic_ok,
         arithmetic_detail=arithmetic_detail,
     )
@@ -437,6 +450,7 @@ def _print_reconciliation(r: Reconciliation) -> None:
     print(f"Cause 5 -- doc OBSOLETE (COV-09 retirement), ledger GAP: {len(r.doc_obsolete_ledger_gap)} {r.doc_obsolete_ledger_gap}")
     print(f"Retired OBSOLETE (all, excluded from open-GAP count): {len(r.retired_obsolete_ids)} {r.retired_obsolete_ids}")
     print(f"Malformed Result lines (more than one box checked): {len(r.malformed_multi_checked)} {r.malformed_multi_checked}")
+    print(f"Duplicate ledger ids (only the first JSONL row kept per id): {len(r.duplicate_ledger_ids)} {r.duplicate_ledger_ids}")
     print(f"Arithmetic detail: {r.arithmetic_detail}")
     print(f"Arithmetic closes: {r.arithmetic_ok}")
     if not r.arithmetic_ok:
