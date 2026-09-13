@@ -290,6 +290,116 @@ jobs:
           $mb = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
           Write-Output "ZIP_ASSEMBLED: $zipName ($mb MB)"
 
+      - name: Compose release notes from CHANGELOG
+        # 999.109: this step exists because the release body below used to be a STATIC
+        # Windows-sensor block, hardcoded and unparameterized since ~Phase 118. Every
+        # published release therefore described "deploying Windows sensors" instead of what
+        # shipped -- confirmed byte-identical across v5.7.0, v5.8.0, v5.12.0, v5.15.0,
+        # v5.18.0, v5.19.0 and v5.21.0 (7 releases, wider than the filed item's estimate of 3).
+        #
+        # The unsigned-binary notice is NOT removed -- it is still accurate (the asset really
+        # is not Authenticode-signed) and it is a safety warning for a ~59 MB .exe people
+        # download. The CHANGELOG section is PREPENDED to it instead.
+        #
+        # pwsh, not bash/awk: this job runs on windows-latest.
+        #
+        # DELIBERATELY NOT gated on the tag push, unlike the attach step below. Composing a
+        # markdown file has no side effects, and running it on `workflow_dispatch` dry-runs is
+        # the only way this step is testable at all — `release.yml` fires on `v[0-9]*` and
+        # publishes to PyPI, so "just push a test tag" is not available (the Phase 187 lesson).
+        # The composed file is uploaded as a dry-run artifact so it can be read before any real
+        # release depends on it. It also fails a dry-run when CHANGELOG.md is missing the
+        # current version — an early warning that a release is not ready, which is exactly the
+        # silence 999.109 was.
+        shell: pwsh
+        # Version is passed through `env:` rather than interpolated directly into the script
+        # body. It originates from `quirk.__version__` (repo source, not event data), so this is
+        # defence-in-depth rather than a live injection fix -- but a `${{ }}` expansion inside a
+        # run: block is textual substitution before the shell sees it, and that is a pattern
+        # worth never establishing in this file.
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $v = $env:RELEASE_VERSION
+          if (-not $v) { Write-Error "version output is empty -- cannot compose release notes"; exit 1 }
+          if ($v -notmatch '^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$') {
+            Write-Error "version '$v' is not a plain version string -- refusing to build release notes from it"
+            exit 1
+          }
+
+          # Extract the `## [x.y.z]` section, stopping at the next `## [` heading.
+          $section = New-Object System.Collections.Generic.List[string]
+          $inSection = $false
+          foreach ($line in (Get-Content CHANGELOG.md -Encoding utf8)) {
+            if ($line -match "^## \[$([regex]::Escape($v))\]") { $inSection = $true; $section.Add($line); continue }
+            if ($inSection -and $line -match '^## \[') { break }
+            if ($inSection) { $section.Add($line) }
+          }
+
+          # Fail loudly rather than publish an empty or misleading body. A release whose
+          # version is missing from CHANGELOG.md is a release-prep defect, not something to
+          # paper over with boilerplate -- that silence is exactly what 999.109 was.
+          if ($section.Count -eq 0) {
+            Write-Error "No '## [$v]' section found in CHANGELOG.md. Add the release notes for $v before tagging."
+            exit 1
+          }
+
+          # Built as an indented array, NOT a PowerShell here-string: a here-string forces its
+          # content to column 1, which escapes YAML's `run: |` block scalar and makes the bare
+          # `---` line below read as a YAML document separator. That broke the workflow parse
+          # outright when this step was first written.
+          # Single-quoted lines are literal (backticks stay backticks for markdown code spans);
+          # double-quoted lines are the only ones that interpolate $v.
+          $bt = [char]0x60
+          $fence = "$bt$bt$bt"
+          $notice = @(
+            '',
+            '---',
+            '',
+            '## Windows Sensor Asset',
+            '',
+            '### UNSIGNED BINARY NOTICE',
+            '',
+            "The ${bt}quirk-windows-$v.zip${bt} asset contains a Windows onedir bundle (${bt}quirk.exe${bt})",
+            'that is **NOT Authenticode-signed**.',
+            '',
+            '- **SmartScreen warning:** Windows may display a "Windows protected your PC"',
+            "  prompt when running ${bt}install.ps1${bt} or ${bt}quirk.exe${bt} for the first time.",
+            '  Click "More info" and then "Run anyway" to proceed.',
+            '- **Authenticode signing is DEFERRED** to a future milestone spike.',
+            '  The binary is built reproducibly from source via this GitHub Actions',
+            '  workflow — operators who require signed binaries should build from source',
+            '  until Authenticode signing is implemented.',
+            '',
+            '### Quick install (PowerShell, no admin required)',
+            '',
+            "${fence}powershell",
+            '# 1. Download and unpack the zip',
+            "Expand-Archive -Path quirk-windows-$v.zip -DestinationPath C:\quirk-install",
+            '',
+            '# 2. Install — registers per-user Scheduled Task',
+            'cd C:\quirk-install',
+            # Both continuation lines use the SAME double-quoted interpolation form. The
+            # `'literal' + $bt` concatenation form was tried and produced a stray bare-backtick
+            # line in the real dry-run output (run 34783338643) — caught only because this step
+            # is dry-run testable. Do not "simplify" one of these back to concatenation.
+            "pwsh -File install.ps1 $bt",
+            "  -ConsoleUrl https://<console-host>:8512 $bt",
+            '  -EnrollmentToken <per-sensor-token>',
+            $fence,
+            '',
+            'See the Windows sensor deployment section in the Operators Guide',
+            '(docs/operators-guide.md §8.8) for full install / Scheduled Task /',
+            'uninstall documentation.'
+          ) -join "`n"
+
+          $body = ($section -join "`n") + $notice
+          Set-Content -Path release-notes.md -Value $body -Encoding utf8
+          if (-not (Test-Path release-notes.md) -or (Get-Item release-notes.md).Length -eq 0) {
+            Write-Error "release-notes.md was not written"; exit 1
+          }
+          Write-Output "Composed release notes for $v ($($section.Count) CHANGELOG lines + unsigned-binary notice)"
+
       - name: Upload dry-run zip artifact
         # Uploads the assembled zip as an inspectable workflow artifact on any run that is
         # NOT a real tag push, so a workflow_dispatch dry-run's output is inspectable without
@@ -298,7 +408,11 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: quirk-windows-dry-run
-          path: quirk-windows-*.zip
+          # 999.109: release-notes.md rides along so a dry-run proves what the real release
+          # body WILL say, before a tag push makes it public and permanent.
+          path: |
+            quirk-windows-*.zip
+            release-notes.md
 
       - name: Attach zip to GitHub Release
         # Deliberately tests the triggering EVENT, not just the ref shape — see the identical
@@ -311,38 +425,13 @@ jobs:
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1 (verified via GitHub API)
         with:
           files: quirk-windows-*.zip
-          # Release notes documenting unsigned status + Authenticode deferral
-          # T-118-SIGN: accepted risk; explicitly documented per v5.6 milestone decision
-          body: |
-            ## Windows Sensor Asset
-
-            ### UNSIGNED BINARY NOTICE
-
-            The `quirk-windows-*.zip` asset contains a Windows onedir bundle (`quirk.exe`)
-            that is **NOT Authenticode-signed**.
-
-            - **SmartScreen warning:** Windows may display a "Windows protected your PC"
-              prompt when running `install.ps1` or `quirk.exe` for the first time.
-              Click "More info" and then "Run anyway" to proceed.
-            - **Authenticode signing is DEFERRED** to a future milestone spike.
-              The binary is built reproducibly from source via this GitHub Actions
-              workflow — operators who require signed binaries should build from source
-              until Authenticode signing is implemented.
-
-            ### Quick install (PowerShell, no admin required)
-
-            ```powershell
-            # 1. Download and unpack the zip
-            Expand-Archive -Path quirk-windows-<version>.zip -DestinationPath C:\quirk-install
-
-            # 2. Install — registers per-user Scheduled Task
-            cd C:\quirk-install
-            pwsh -File install.ps1 `
-              -ConsoleUrl https://<console-host>:8512 `
-              -EnrollmentToken <per-sensor-token>
-            ```
-
-            See the Windows sensor deployment section in the Operators Guide
-            (docs/operators-guide.md §8.8) for full install / Scheduled Task /
-            uninstall documentation.
+          # 999.109: the release body is now COMPOSED (see the "Compose release notes from
+          # CHANGELOG" step above) rather than hardcoded here -- the CHANGELOG's `## [x.y.z]`
+          # section followed by the unsigned-binary notice, with the version interpolated into
+          # the install snippet instead of a literal `<version>` placeholder.
+          #
+          # T-118-SIGN: the unsigned-binary risk is still accepted and still documented per the
+          # v5.6 milestone decision -- that notice moved into the composing step, it was not
+          # dropped. Do not reintroduce a static `body:` here; it silently overrides body_path.
+          body_path: release-notes.md
           token: ${{ secrets.GITHUB_TOKEN }}
