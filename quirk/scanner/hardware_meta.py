@@ -15,8 +15,18 @@ import datetime
 STALENESS_THRESHOLD_DAYS: int = 90
 
 HARDWARE_MATRIX = {
+    # NOTE: this top-level date is COMPUTED — it is min() of the entries'
+    # last_verified dates, never bumped in its own right, so the staleness gate
+    # cannot read greener than the weakest vendor (Phase 203 D-01). The
+    # invariant is enforced by
+    # tests/test_hardware_staleness.py::test_hardware_matrix_top_level_is_min_of_entries.
     "last_verified": "2026-06-13",
-    "source_url": "https://www.nsa.gov/Cybersecurity/CNSA-2-0/",
+    # source_url corrected 2026-09-13: the prior
+    # https://www.nsa.gov/Cybersecurity/CNSA-2-0/ redirects to the generic
+    # /Cybersecurity/ index (verified in a real browser — the long-documented
+    # HTTP 403 to non-browser agents was bot-blocking only, and Chrome did get
+    # through). This is the live post-quantum landing page.
+    "source_url": "https://www.nsa.gov/Cybersecurity/Post-Quantum-Cryptography/",
     "entries": [
         {
             "vendor": "F5",
