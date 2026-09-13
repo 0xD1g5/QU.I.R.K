@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: in_progress
-last_updated: "2026-09-13T18:30:00.000Z"
+last_updated: "2026-09-13T19:40:00.000Z"
 last_activity: 2026-09-13
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 13
-  completed_plans: 13
-  percent: 33
+  completed_phases: 3
+  total_plans: 20
+  completed_plans: 17
+  percent: 50
 ---
 
 # Project State
@@ -2131,8 +2131,94 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-13
-Stopped at: **Phase 204 COMPLETE and closed, verification `passed` 4/4.** Mid-run of
+Last session: 2026-09-13 (resumed)
+Stopped at: **Phase 205 (Guard Integrity) is COMPLETE — 7 of 7 plans, verification `passed` 5/5,
+`205-VERIFICATION.md` and `205-VALIDATION.md` both written (`nyquist_compliant: true`, zero pending
+rows), so the close gate is satisfied.** GUARD-01 and GUARD-02 are both `[x]` with traceability
+rows Closed, hand-edited. On branch `phase-205-guard-integrity` → **PR #14, 56 commits**, 2 of them
+unpushed at the moment of writing. Branch-honesty guard clean: the standing
+`git rev-list --count origin/main..main` check returns **0**.
+
+**Phase 205 grew from 5 plans to 7.** Two orchestrator-authored correctives were added
+mid-execution, each operator-approved, neither with a PLAN.md: **205-02b** (prose-keyed extraction)
+and **205-06** (disposition-box + citation-line extraction). The phase's headline finding is that
+**three of its four original ROADMAP criteria stated premises that were FALSE** — criterion 1's
+capability already existed, criterion 2 was unbuildable (no "old single-`::` pattern" ever existed),
+and criterion 3 was both unsatisfiable as worded *and* rested on a false "vacuous today" premise.
+All three are corrected in place in `ROADMAP.md` in the Phase-204 "Outcome, corrected from this
+criterion's original wording" shape, with the originals quoted verbatim. Criterion 4 was **proven**,
+not falsified.
+
+**205-06 is the one worth remembering.** Verifying 205-05's close-out claims by *running* them
+turned up 4 real vitest citations where the handoff and `205-RED-PROOF.md` both recorded 0 — because
+that 0 was measured with the guard's own extractor. Chasing it found the real root cause: citation
+extraction gated on **both** `[x] SKIP` and the **Result** line, so **the guard was verifying 74 of
+140 coverage claims (47% unguarded)**, including every vitest one. All 66 unguarded citations were
+re-derived independently and proved **honest** — no coverage was ever falsely claimed — but nothing
+would have caught a rename, and Phase 206 was about to write 28 more citations into the blind
+region. Also fixed: the execution leg failed on `-t`-filtered siblings (4 cited titles in a 19-test
+file gave `skipped == 15`), a defect structurally invisible to 205-04's CI red-proof because that
+induction's test sat alone in its own file. Live figures now: **143** citations guarded (from 71),
+**0** unresolvable, corpus **892** cases, guard suite **35 passed** + 1 pre-existing failure.
+
+**The same defect class has now been found on FIVE axes in this repo's own test suite** — prose
+phrasing, marker selection, disposition box, citation line, and title-quoting dialect. Every time, a
+hand-derived list of sites missed an instance a run-time source scan found. That is the identical
+lesson CLAUDE.md records for the GSD toolchain, now independently confirmed here. Do not trust a
+count in a planning document, a summary, or this file: re-derive it.
+
+**Frontmatter `progress:` recomputed from the filesystem, not carried forward.** `percent` is
+**phase-based** (3 of 6 = 50), matching this milestone's stated convention. `total_plans: 20` =
+203's 7 + 204's 6 + 205's 7. `completed_plans: 17` counts only plans with a SUMMARY.md on disk.
+
+**FINDING, filed not fixed — Phase 203's plan-level bookkeeping disagrees with its phase-level
+closure.** 203 is marked Complete and has both `203-VERIFICATION.md` and `203-VALIDATION.md`, but
+**203-05, 203-06 and 203-07 have no SUMMARY.md and are still `[ ]` unchecked in ROADMAP.md.** Their
+*work* did land, absorbed into consolidated commits rather than executed per-plan — `ae0cf377`
+(closes 203+204, backfills Series 203 = 203-07's scope), `7170136a` + `ac8fd0df` (vendor
+re-verification = 203-05's attestation scope), and STALE-01/STALE-02 closure (203-06's scope). So
+`completed_plans: 17` **understates delivery** while `completed_phases: 3` is accurate. This is
+recorded rather than reconciled because retro-writing three SUMMARY.md files for work done under a
+different structure would fabricate a record, and flipping three checkboxes without one would repeat
+the `phase.complete` defect class this project already tracks. Phase 205 did not touch it. Decide at
+the v5.24 milestone close whether to backfill or to record the absorption in ROADMAP.md.
+
+**Repaired this session: local `main` had drifted 47 commits ahead of `origin/main`** — an executor
+committed Phase 205 work directly onto `main` while it was checked out (reflog `main@{0}` was
+`cd25564f docs(205-03)`). Nothing was ever pushed; `origin/main` stayed at `5f625595`. Reset with
+`git branch -f main origin/main` after confirming `main` was an ancestor of `HEAD` (lossless) and
+not the checked-out branch; `HEAD` unmoved, tree clean. **This matters beyond tidiness: it silently
+defeated the branch-honesty check** — `git log main..<branch>` under-reported 54 commits as 7. The
+cheap standing guard is `git rev-list --count origin/main..main`, which must be `0` before any
+`main..<branch>` count is cited as phase-complete evidence.
+
+Next action: **push the 2 unpushed commits, then operator review/merge of PR #14** (56 commits
+spanning Phases 203, 204, 205). Then **Phase 206** (Dashboard UI Coverage Drain) via
+`/gsd-autonomous --from 206 --to 206`. **Phase 207 is operator-led MANUAL by standing decision — an
+autonomous runner must HALT before it.**
+
+**Phase 206 inherits a materially better guard than it was planned against.** Its 28 dashboard
+vitest citations will be existence- AND execution-checked wherever they are written — any disposition
+box, Result line or Notes line — and the vitest execution leg is now genuinely non-vacuous. Two
+mechanics 206 must know: a vitest citation's title segment **must be double-quoted** and must be the
+**bare `it()` title**, not the `describe > title` full name (the guard matches the first argument of
+`it()`/`test()`/`describe()`); and `docs/uat-disposition-ledger.jsonl` plus
+`docs/uat-coverage-gaps.md` are both corpus-coupled and must be synced/regenerated in the same
+change.
+
+Three pre-existing red CI nodes carry unchanged, all verified not attributable to Phases 203/204/205:
+BACK-51 backlog-gate token from `a6530843` (v5.23 close; this branch touches no
+`.planning/milestones/` file — fix is small and separate); minio pull denial (environmental); and
+pytest 9.0.2 skip-report format in `test_non_vacuity_skipped_substitute_is_flagged`. **The third was
+mechanically proven unrelated** — Phase 205's `git diff` touches zero lines of
+`_skipped_report_lines`, `_run_pytest_nodes`, `parse_pytest_summary`, or that test — and was
+deliberately NOT fixed opportunistically despite sitting immediately adjacent to this phase's edits.
+
+**205-06 was not verified in CI.** Its red proof is local; PR #14's next run observes it. The
+`VITEST_TOOLCHAIN_AVAILABLE` skip path cannot reproduce on this machine (toolchain present), so any
+claim about that path is CI-only evidence.
+
+Prior (2026-09-13): **Phase 204 COMPLETE and closed, verification `passed` 4/4.** Mid-run of
 `/gsd-autonomous --from 204 --to 206`; next action is Phase 205 (Guard Integrity), which has no
 phase directory yet — it needs discuss -> plan -> execute. Phase 206 follows, then the run HALTS:
 **Phase 207 is operator-led MANUAL by standing decision and an autonomous runner must not enter

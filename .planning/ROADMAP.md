@@ -229,7 +229,7 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
   covering every series, behind a written verdict on which source of truth it reads and a gate that
   keeps it from falling behind again.
 
-- [ ] **Phase 205: Guard Integrity** - The citation and CI-execution guards stop making real
+- [x] **Phase 205: Guard Integrity** - The citation and CI-execution guards stop making real
   coverage uncitable, before any tests are written against them.
 
 - [ ] **Phase 206: Dashboard UI Coverage Drain** - The 28 jsdom-tractable series-7 cases get real
