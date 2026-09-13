@@ -379,8 +379,12 @@ jobs:
             '',
             '# 2. Install — registers per-user Scheduled Task',
             'cd C:\quirk-install',
+            # Both continuation lines use the SAME double-quoted interpolation form. The
+            # `'literal' + $bt` concatenation form was tried and produced a stray bare-backtick
+            # line in the real dry-run output (run 34783338643) — caught only because this step
+            # is dry-run testable. Do not "simplify" one of these back to concatenation.
             "pwsh -File install.ps1 $bt",
-            '  -ConsoleUrl https://<console-host>:8512 ' + $bt,
+            "  -ConsoleUrl https://<console-host>:8512 $bt",
             '  -EnrollmentToken <per-sensor-token>',
             $fence,
             '',
