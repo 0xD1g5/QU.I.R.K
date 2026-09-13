@@ -50,9 +50,9 @@ HARDWARE_MATRIX = {
             "model_pattern": r"FortiGate|FortiOS",
             "pqc_status": "partial",
             "eol_date": None,
-            "last_verified": "2026-06-13",
-            "source_url": "https://docs.fortinet.com/document/fortigate/7.6.0/administration-guide/761917/post-quantum-preshared-keys",
-            "notes": "FortiOS 7.4+ supports post-quantum pre-shared keys (PQPPK) for IPsec IKEv2; TLS PQC not yet supported. HTTP mgmt via /api/v2/cmdb/system/status.",
+            "last_verified": "2026-09-13",
+            "source_url": "https://docs.fortinet.com/document/fortigate/8.0.0/administration-guide/527690/post-quantum-preshared-key-support",
+            "notes": "FortiOS supports post-quantum preshared keys (PPK, RFC 8784) for IPsec IKEv2 from 6.0+ without EAP; PPK with IKEv2 EAP requires 8.0.0+ (silently not applied on earlier releases even with 'ppk require'). FortiOS 7.6.1+ additionally supports PQC KEM for IPsec key exchange (RFC 9370 / RFC 9242, ML-KEM per NIST FIPS 203) — a separate, parallel mechanism to PPK. TLS/management-plane PQC not addressed by the vendor IPsec documentation. HTTP mgmt via /api/v2/cmdb/system/status. source_url corrected 2026-09-13: the prior 7.6.0/761917 URL silently redirects to the guide's 'Getting started' page with HTTP 200 rather than 404ing; 8.0.0/527690 is the live replacement. notes corrected 2026-09-13: the prior '7.4+ PQPPK' version floor was wrong (vendor states 6.0+), and PQC KEM support was absent entirely.",
         },
         {
             "vendor": "Juniper",
