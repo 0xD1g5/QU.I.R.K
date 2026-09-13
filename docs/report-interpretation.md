@@ -1798,3 +1798,84 @@ helps a reader distinguish "who prepared this" from "what was found":
 Every field is independently optional — an unset field simply does not render its line/row, on any
 surface. If none of the `report.branding.*` fields are set, all three surfaces render exactly as
 they did before Phase 200.
+
+## 25. Finding Storyline Drawer (Phase 202, v5.23 — STORY-01/STORY-02)
+
+### What it is, and where it opens from
+
+The dashboard's findings table has a `Storyline` column. Clicking (or activating by keyboard) the
+button in that column opens a drawer in place — the operator never leaves the findings view. The
+drawer narrates the finding's quantum-risk story, using the same narrative catalogs the
+CLI/HTML/DOCX report uses (`ALGO_IMPACT_MAP` / `REMEDIATION_CATALOG`, introduced in Phase 99), and
+shows the finding's score-lift attribution. It is an interactive dashboard affordance only — it is
+**not** part of the PDF/DOCX/HTML report, and a reader should not look for it in a deliverable.
+
+### The theme framing — read this before trusting the number
+
+The number shown in the drawer's attribution panel is **the owning remediation theme's total
+lift, conditioned on resolving every constituent finding in that theme** — not this finding's own
+contribution. The drawer states this explicitly, verbatim:
+
+> +{N} pts when all {N} findings in this theme are resolved
+>
+> This is the theme's total lift, not this finding's individual contribution. Resolving this
+> finding alone does not yield the full amount.
+
+**No per-finding share is shown, because none exists to show.** Score lifts are not linear in the
+number of constituent findings a theme has, so dividing the theme's lift by its finding count would
+fabricate a number the scoring engine never computed — and the resulting shares would not sum back
+to the theme's real total even if you added them all up. This is the same class of problem Phase
+201's score-lift math was built to avoid on the roadmap page, applied to the per-finding drawer.
+
+The drawer also shows a closure sentence — `N of N findings in this theme are verified closed` —
+which is the same closure state the remediation roadmap page reports for that theme. It is not
+computed separately for the drawer; it is the same number.
+
+### Why most findings show no narrative — and why that is correct, not broken
+
+The narrative catalogs (`ALGO_IMPACT_MAP` / `REMEDIATION_CATALOG`) are keyed by
+**cryptographic-algorithm keyword** — RSA, ECDSA, DH, DSA, hash-algorithm names, and similar —
+matched against a finding's title, description, category, and check ID. They were never keyed by
+finding title. That means the highest-volume finding classes in a typical scan — plaintext HTTP,
+legacy TLS versions, expired or expiring certificates, self-signed certificates, and certificates
+issued by an untrusted CA — carry no algorithm keyword and legitimately show:
+
+> No catalog narrative exists for this finding type yet — the Description and Remediation fields
+> above are the available guidance.
+
+**This is faithful consistency with the deliverable, not a gap in the drawer.** The client-facing
+report has no narrative for those same finding classes either — the report engine's own
+`ALGO_IMPACT_MAP` lookup is the identical keyword match. An honest absence in the drawer means the
+dashboard and the report are telling the same story for the same finding, which is exactly what
+this feature was built to guarantee (Phase 202's D-05 decision: no fourth narrative generator was
+ever written to paper over this). Findings whose title or description names a specific algorithm —
+undersized RSA keys, and any non-RSA quantum-vulnerable algorithm (ECDSA, DSA, DH) — are the classes
+that reliably do carry narrative text.
+
+The attribution panel (theme, lift, closure) is independent of the narrative and always renders in
+full even when the narrative is absent — an absent narrative never hides or blanks the attribution.
+
+### The one-theme rule
+
+A finding can, in the underlying data, belong to more than one remediation theme at once. When that
+happens, the drawer shows **the specific, title-based theme** and never the `high-impact-findings`
+severity catch-all — and it does not mention that a second theme also exists. Showing two
+conditioned lift numbers side by side for the same finding would make the non-additivity point above
+substantially harder to convey, which is the whole reason the theme framing exists.
+
+**The one exception:** when the `high-impact-findings` severity catch-all is a finding's **only**
+matching theme — for example, a TLS certificate using an undersized RSA key, which is HIGH severity
+but is not a constituent of any specific title-based theme — the drawer renders that catch-all theme.
+Suppressing it in that case would tell the operator the finding maps to no remediation theme at all,
+which is false: it demonstrably has one, with a real lift. An operator who reads the one-theme rule
+above and then sees a finding attributed to "Triage high-impact findings" should read that as this
+exception, not a contradiction.
+
+### What "Not mapped to a remediation theme" means
+
+A distinct message — `Not mapped to a remediation theme — no score-lift attribution exists for this
+finding` — appears when no persisted remediation theme claims the finding in this scan at all (for
+example, a certificate issued by an untrusted CA, which is MEDIUM severity and outside every theme's
+constituency). This is a genuinely different case from the honest-absence narrative message above:
+one says "no story text exists for this algorithm class," the other says "no theme owns this finding
+at all, so there is no lift number to show."

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,12 +15,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { FindingsSkeleton } from "./findings.skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { StorylineSections } from "@/components/FindingStorylineSections"
+import { useFindingStoryline } from "@/hooks/useFindingStoryline"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -38,6 +40,50 @@ export function FindingsPage() {
   const [protocolFilter, setProtocolFilter] = useState("ALL")
   const [segmentFilter, setSegmentFilter] = useState("all")
   const [selectedFinding, setSelectedFinding] = useState<FindingItem | null>(null)
+
+  // Phase 202-06 / F1-F7 focus contract. TanStack row ids default to the
+  // row's index in `findings`, which stays stable across a render (data
+  // order is only re-derived from filters, not shuffled), so a Map keyed by
+  // `row.id` is a safe per-row registry of each row's Storyline trigger
+  // button. `triggerRefs`, `registerTrigger`, and `openStoryline` are all
+  // stable references (useRef / useCallback with empty deps), so including
+  // them in the memoized `columns` array's deps below does not defeat
+  // TanStack's referential-stability requirement (D-25/IN-03) — the array
+  // identity still only changes once, on mount.
+  const triggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+
+  const registerTrigger = useCallback((rowId: string, el: HTMLButtonElement | null) => {
+    if (el) {
+      triggerRefs.current.set(rowId, el)
+    } else {
+      triggerRefs.current.delete(rowId)
+    }
+  }, [])
+
+  // F6: which trigger button to restore focus to when the Sheet closes.
+  // Set on every open (both F2's row click and a direct trigger click) and
+  // read back in the SheetContent's onCloseAutoFocus below.
+  const lastTriggerRef = useRef<HTMLButtonElement | null>(null)
+
+  // F2/F6: a row-click (or trigger-click) open must focus that row's own
+  // Storyline button BEFORE setting open state, because the Sheet is
+  // state-controlled (no SheetTrigger) — Radix's FocusScope would otherwise
+  // restore focus to whatever was focused pre-open (`<body>` for a mouse
+  // click on a non-focusable row), not the row's trigger. Belt-and-braces
+  // with the explicit onCloseAutoFocus restore below: Radix's own default
+  // onCloseAutoFocus handler (DialogContentModal) unconditionally calls
+  // event.preventDefault() and tries context.triggerRef.current?.focus() —
+  // which is null with no <SheetTrigger>, so without our own
+  // onCloseAutoFocus handler, focus is silently dropped to <body> on close
+  // rather than falling back to FocusScope's own previously-focused-element
+  // restoration (that fallback path is unreachable once defaultPrevented is
+  // true).
+  const openStoryline = useCallback((finding: FindingItem, rowId: string) => {
+    const trigger = triggerRefs.current.get(rowId) ?? null
+    lastTriggerRef.current = trigger
+    trigger?.focus()
+    setSelectedFinding(finding)
+  }, [])
 
   // Derive sorted, deduped list of segments from findings
   const distinctSegments = useMemo(() => {
@@ -62,6 +108,13 @@ export function FindingsPage() {
     }
     return filtered
   }, [data, severityFilter, protocolFilter, segmentFilter])
+
+  const {
+    data: storylineData,
+    loading: storylineLoading,
+    error: storylineError,
+    retry: retryStoryline,
+  } = useFindingStoryline(selectedFinding)
 
   // D-25 (IN-03): memoize columns for stable reference identity across renders
   // (TanStack Table relies on referential stability of the columns array).
@@ -95,7 +148,47 @@ export function FindingsPage() {
       },
     },
     { accessorKey: "source", header: "Source" },
-  ], [])
+    {
+      id: "storyline",
+      header: "Storyline",
+      cell: ({ row }) => {
+        const finding = row.original
+        const label = `${finding.title} at ${finding.host}:${finding.port}`
+        if (finding.id == null) {
+          // A6 / S7: no stable id — this finding cannot be fetched, so the
+          // trigger is disabled rather than opening a drawer that can never
+          // load. Live state: identity-protocol findings (KERBEROS/SAML/
+          // DNSSEC) carry no id at all.
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled
+              aria-label={`Storyline unavailable for ${label}`}
+              title="Storyline unavailable — this finding has no stable identifier in this scan."
+            >
+              Storyline
+            </Button>
+          )
+        }
+        return (
+          <Button
+            ref={(el) => registerTrigger(row.id, el)}
+            variant="ghost"
+            size="sm"
+            aria-haspopup="dialog"
+            aria-label={`Open storyline for ${label}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              openStoryline(finding, row.id)
+            }}
+          >
+            Storyline
+          </Button>
+        )
+      },
+    },
+  ], [registerTrigger, openStoryline])
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table returns non-memoizable functions; known React Compiler limitation
   const table = useReactTable({
@@ -190,7 +283,15 @@ export function FindingsPage() {
               <TableRow
                 key={row.id}
                 className="cursor-pointer hover:bg-accent/5"
-                onClick={() => setSelectedFinding(row.original)}
+                onClick={() => {
+                  // A6/S7: identity-protocol findings (KERBEROS/SAML/DNSSEC)
+                  // carry no stable id and cannot be fetched. The Storyline
+                  // button column guards this; the row click must guard it
+                  // identically, or clicking any other cell in the row opens
+                  // a drawer that can never load (WR-01).
+                  if (row.original.id == null) return
+                  openStoryline(row.original, row.id)
+                }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="text-sm py-2">
@@ -216,13 +317,32 @@ export function FindingsPage() {
 
       {/* Finding detail Sheet */}
       <Sheet open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
-        <SheetContent style={{ width: 480 }}>
+        <SheetContent
+          className="w-full sm:w-[480px] sm:max-w-[480px] flex flex-col"
+          onCloseAutoFocus={(e) => {
+            e.preventDefault()
+            lastTriggerRef.current?.focus()
+          }}
+        >
           {selectedFinding && (
             <>
               <SheetHeader>
                 <SheetTitle className="text-base">{selectedFinding.title}</SheetTitle>
+                <SheetDescription>
+                  {selectedFinding.host}:{selectedFinding.port}
+                  {selectedFinding.protocol ? ` — ${selectedFinding.protocol}` : ""}
+                </SheetDescription>
               </SheetHeader>
-              <div className="mt-4 space-y-3 text-sm">
+              {/* tabIndex={0} is required, not decorative: this is a real scrolling
+                  container (overflow-y-auto), and axe's scrollable-region-focusable
+                  (serious, WCAG 2.1.1/2.1.3) fires without it — a keyboard user could
+                  not scroll the drawer body independently of the page. Caught by
+                  202-07's own a11y capture against this exact div. Unlike the
+                  already-accepted instances of this rule in ACCEPTED-VIOLATIONS.md,
+                  which are the app-wide shadcn Table wrapper (components/ui/table.tsx:9)
+                  and need a cross-component focus-order pass, this container is
+                  single-site and owned here, so it is FIXED rather than ledgered. */}
+              <div tabIndex={0} className="mt-4 flex-1 overflow-y-auto min-h-0 space-y-4 text-sm">
                 <div className="flex gap-2 items-center">
                   <Badge className={`${SEVERITY_STYLES[selectedFinding.severity] ?? ""} text-xs`}>
                     {selectedFinding.severity}
@@ -247,6 +367,12 @@ export function FindingsPage() {
                     <p className="text-foreground">Algorithm classified as: <strong>{selectedFinding.quantum_risk}</strong></p>
                   </div>
                 )}
+                <StorylineSections
+                  data={storylineData}
+                  loading={storylineLoading}
+                  error={storylineError}
+                  onRetry={retryStoryline}
+                />
               </div>
             </>
           )}

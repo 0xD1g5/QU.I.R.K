@@ -16,12 +16,28 @@ import { baselineFilename, isPlaceholderJustification } from './baseline-diff.mj
 const A11Y_DIR = __dirname
 const ACCEPTED_VIOLATIONS_MD = path.resolve(A11Y_DIR, 'ACCEPTED-VIOLATIONS.md')
 const REGEN_COMMAND = 'npm run a11y:baseline'
-const routes: Array<{ slug: string; path: string }> = JSON.parse(
+interface RouteEntry {
+  slug: string
+  path: string
+  interaction?: { slug: string; trigger: string; awaitSelector: string }
+}
+
+const routes: RouteEntry[] = JSON.parse(
   readFileSync(path.resolve(A11Y_DIR, 'routes.json'), 'utf-8'),
 )
 
+// Phase 202-07 (T-202-29) — the ledger-visibility gap this closes: a baseline slug not
+// derived here is INVISIBLE to ACCEPTED-VIOLATIONS.md's freshness check, becoming an
+// accepted violation nobody ever reviews. Every route's own `slug` AND its optional
+// `interaction.slug` (e.g. the findings-storyline drawer capture) are included —
+// derived from routes.json programmatically, never hand-listed as a literal string
+// (D-08's forbidden sixth instance of this repo's hand-maintained-list failure mode).
+function allBaselineSlugs(): string[] {
+  return routes.flatMap((route) => [route.slug, ...(route.interaction ? [route.interaction.slug] : [])])
+}
+
 function loadDefaultBaselines() {
-  return routes.map(({ slug }) => {
+  return allBaselineSlugs().map((slug) => {
     const baselinePath = path.resolve(A11Y_DIR, baselineFilename(slug, 'default'))
     const baseline = existsSync(baselinePath)
       ? JSON.parse(readFileSync(baselinePath, 'utf-8'))
@@ -93,7 +109,7 @@ describe('ACCEPTED-VIOLATIONS.md freshness (A11Y-01 / D-05)', () => {
   })
 
   it('no entry stores a selector — no key named "target" appears anywhere in any committed baseline (D-01, D-02)', () => {
-    for (const { slug } of routes) {
+    for (const slug of allBaselineSlugs()) {
       const baselinePath = path.resolve(A11Y_DIR, baselineFilename(slug, 'default'))
       if (!existsSync(baselinePath)) continue
       const raw = readFileSync(baselinePath, 'utf-8')

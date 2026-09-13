@@ -36,6 +36,7 @@ from quirk.dashboard.api.routes import (
     scan,
     schedules,
     sensor,
+    storyline,
     trends,
 )
 
@@ -129,6 +130,7 @@ def create_app(db_path: str | None = None) -> FastAPI:
     application.include_router(connectors.router, prefix="/api")
     application.include_router(pdf.router, prefix="/api")
     application.include_router(scan.router, prefix="/api")
+    application.include_router(storyline.router, prefix="/api")
     application.include_router(hardware_drift.router, prefix="/api")
     application.include_router(exposure_map.router, prefix="/api")
     application.include_router(trends.router, prefix="/api")

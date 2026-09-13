@@ -2960,3 +2960,22 @@ or denormalized "is shared" column to keep in sync. The resulting "Key Reuse" se
 the CLI technical markdown, the HTML report, and the DOCX report — **not** the dashboard UI in
 this release. It is advisory-only and never affects the readiness score; see
 `docs/report-interpretation.md` §21 for the client-facing explanation of how to read it.
+
+## 19. Finding Storyline Drawer (Phase 202, v5.23 — STORY-01/STORY-02)
+
+Every row in the dashboard findings table has a `Storyline` button in its rightmost column. Opening
+it is fully keyboard-operable: `Tab` to the button and press `Enter` (or click it), and a drawer
+opens in place without leaving the findings view. Pressing `Escape` closes the drawer and returns
+focus to the row's `Storyline` button, so keyboard navigation is never lost.
+
+If the button is disabled with a tooltip reading "Storyline unavailable — this finding has no
+stable identifier in this scan," that finding has no addressable ID for this scan (a known case:
+identity-protocol findings such as Kerberos/SAML/DNSSEC). No action fixes this from the UI — it is
+a property of how that finding was derived, not a bug in this scan.
+
+In brief: the drawer shows the finding's narrative (when the algorithm-keyword catalogs have one —
+most findings legitimately do not, and a blank narrative is normal, not an error) plus its
+score-lift attribution — the owning remediation theme's total lift, conditioned on every finding in
+that theme being resolved, never this one finding's individual share. See
+`docs/report-interpretation.md` §25 for the full explanation of the theme framing, why most
+findings show no narrative, and the one-theme display rule.

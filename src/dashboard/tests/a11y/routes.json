@@ -1,6 +1,14 @@
 [
   { "slug": "root",          "path": "/" },
-  { "slug": "findings",      "path": "/findings" },
+  {
+    "slug": "findings",
+    "path": "/findings",
+    "interaction": {
+      "slug": "findings-storyline",
+      "trigger": "table tbody button[aria-haspopup=\"dialog\"]",
+      "awaitSelector": "[role=\"dialog\"]"
+    }
+  },
   { "slug": "identity",      "path": "/identity" },
   { "slug": "motion",        "path": "/motion" },
   { "slug": "data-at-rest",  "path": "/data-at-rest" },

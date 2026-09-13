@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-12 (Phase 201 Plan 08 — Series 201 added: 11 score-lift-roadmap-re-frame
+**Last Updated:** 2026-09-12 (Phase 202 Plan 08 — Series 202 added: 12 finding-storyline-drawer
+cases covering STORY-01 (per-finding drawer opened from the findings table, keyed by `(endpoint id,
+title)`, catalog-sourced narrative with honest absence as the common case) and STORY-02 (theme-framed
+score-lift attribution — never a per-finding share — the D-08/D-09 one-theme/catch-all-only tie-break,
+and the opened-drawer a11y baseline capture); 7 automated `[x] PASS` cases citing real
+`pytest --collect-only`-resolvable node IDs against 202-01/202-03/202-05-SUMMARY.md evidence, 3
+operator-approved `[x] PASS` cases citing 202-07-SUMMARY.md's verbatim operator-approved checkpoint
+evidence (trigger-opens-in-place, attribution/disclaimer rendering, and the opened-drawer a11y
+capture itself), and 2 honest `[x] SKIP (GAP — no substitute coverage)` cases (keyboard/focus-return
+contract and the disabled-trigger state) where the only automated coverage is vitest and no operator
+walkthrough covers the specific behavior. Earlier: Phase 201 Plan 08 — Series 201 added: 11 score-lift-roadmap-re-frame
 cases covering LIFT-01 (per-item `(+N pts)` real-rescore badge, honest absence for unmodelable
 items), LIFT-02 (independent-rescore aggregate projection and its non-additivity), LIFT-03 (the
 ADVISORY-02 forward-projection firewall and the real-score-surface isolation), LIFT-04 (BACK-51 —
@@ -27594,3 +27604,409 @@ house convention (matching Series 200's UAT-200-01/02 precedent), so it is dispo
 201-06-SUMMARY.md's verbatim recorded operator approval rather than a fabricated pytest citation.
 None was checked PASS without being run or without a cited operator approval, and no allowlist or
 gate-code change was made.
+
+## Series 202: Finding Storyline Drawer (Phase 202 — v5.23)
+
+Covers STORY-01 (operator can open a per-finding storyline drawer from the dashboard findings table
+without leaving the findings view, keyed by `(CryptoEndpoint.id, title)` since `FindingItem.id` is
+not unique per finding, with narrative sourced only from the existing Phase-99 catalogs and honest
+absence for finding classes those catalogs do not cover) and STORY-02 (the drawer's score-lift
+attribution is theme-framed — the owning remediation theme's total conditioned lift, never a
+per-finding share — with the D-08 tie-break preferring the specific theme over the
+`high-impact-findings` severity catch-all, the D-09 catch-all-only exception, and an a11y baseline
+capture of the opened drawer).
+
+### UAT-202-01: Storyline Column Opens a Drawer In Place
+
+**ID:** UAT-202-01
+**Title:** The findings table has a `Storyline` column whose button opens a drawer in place,
+without leaving the findings view
+**Maps to:** STORY-01
+
+**What to test:** clicking (or keyboard-activating) a row's `Storyline` button opens a Sheet
+drawer over/within the findings page — the operator is never navigated to a different route.
+
+**Steps:** covered by `src/dashboard/src/pages/__tests__/findings-storyline.test.tsx` (real
+`userEvent` clicks and keyboard activation, asserting a `role="dialog"` mounts with the finding's
+title) and corroborated live by 202-07's opened-drawer a11y capture, whose captured DOM contains
+`<div class="mt-4 flex-1 overflow-y-auto min-h-0 space-y-4 text-sm">` — the scroll region 202-06
+added *inside* the Sheet on the findings route — proving the captured page is the findings page
+with the drawer open, not a navigated-away route or an error/404 state.
+
+**Pass Criteria:** the drawer's DOM (Sheet dialog + its scroll region) is present in the same
+document as the findings table, with no route change.
+
+**Falsifiability:** this case turns red if the captured DOM after triggering shows a 404/error
+state, a different route, or no dialog role at all.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Operator-approved (Phase 202 Task 3 checkpoint) + Automated (202-08 phase-execution plan)
+**Notes:** The only automated coverage is vitest (`findings-storyline.test.tsx`), which per this
+repo's UAT-gate grammar cannot be cited as a DEFERRED pytest node. Dispositioned PASS on
+202-07-SUMMARY.md's operator-approved checkpoint evidence: "The capture demonstrably baselined the
+OPENED DRAWER, not a 404 or error state. Proof is the axe evidence sample itself: `<div class="mt-4
+flex-1 overflow-y-auto min-h-0 space-y-4 text-sm">` — the scroll region 202-06 added *inside* the
+Sheet." (202-07-SUMMARY.md, "Task 3 — CHECKPOINT DISCHARGED"). The vitest suite is corroborating,
+not the gate-passing citation.
+
+---
+
+### UAT-202-02: Keyboard-Operable Trigger, Escape Closes, Focus Returns to the Row
+
+**ID:** UAT-202-02
+**Title:** The `Storyline` trigger is keyboard-reachable and keyboard-operable; Escape closes the
+drawer and focus returns to the triggering row's button
+**Maps to:** STORY-01 / success criterion 4
+
+**What to test:** `Tab` reaches the trigger, `Enter` opens the drawer, `Escape` closes it, and
+`document.activeElement` is the same trigger button afterward — across both keyboard-initiated and
+mouse-initiated opens, and across all three close paths (Escape, Close button, overlay click).
+
+**Steps:** covered exclusively by `findings-storyline.test.tsx`'s F1-F9 focus-contract tests (real
+`userEvent` keyboard/pointer events against jsdom's real `FocusScope` implementation — 202-06's
+SUMMARY explicitly records "No jsdom limitation needed naming for F4 or F7"). No operator walkthrough
+in this phase performed a manual keyboard/focus-return check — 202-07's operator checkpoint verified
+the a11y *capture* (axe violations against the opened DOM), not manual Tab/Escape navigation.
+
+**Pass Criteria:** would require either a DEFERRED citation to a backend pytest node (none exists —
+this is pure frontend focus-management behavior) or an operator walkthrough of the specific
+keyboard/focus-return path.
+
+**Falsifiability:** this case would turn red if a future manual walkthrough found focus lost to
+`<body>` after any close path, or the trigger unreachable by `Tab`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; no operator walkthrough exercised keyboard Tab/Escape/focus-return, and vitest coverage cannot be cited as a DEFERRED pytest node)
+**Date:** 2026-09-12  **Tester:** Automated review, honest gap (202-08 phase-execution plan)
+**Notes:** `findings-storyline.test.tsx`'s F1-F9 suite passes green in jsdom (13/13, no jsdom
+limitations named), which is real, valuable regression coverage — but per the UAT corpus's own
+disposition rules a vitest-only case may not be inflated to a DEFERRED PASS. GAP is the honest
+disposition, not a defect report.
+
+---
+
+### UAT-202-03: Narrative Text Is Byte-Identical to the Report Catalog
+
+**ID:** UAT-202-03
+**Title:** A finding whose description carries an algorithm keyword shows narrative text
+byte-identical to the report catalog's, proving no fourth narrative generator was written
+**Maps to:** STORY-01
+
+**What to test:** for the undersized-RSA finding class, the drawer's `narrative` /
+`quantum_impact` / `remediation_guidance` fields equal `ALGO_IMPACT_MAP["RSA"]` /
+`REMEDIATION_CATALOG["RSA"]` verbatim — the same Phase-99 catalogs the CLI/HTML/DOCX report reads.
+
+**Steps:** covered by an automated test asserting the response fields equal the catalog values
+verbatim — no manual execution required.
+
+**Pass Criteria:** `narrative`, `quantum_impact`, and `remediation_guidance` match the catalog
+tuple's composed text exactly, with no dashboard-layer rewording.
+
+**Falsifiability:** this case turns red if the drawer's text diverges from the catalog (a fourth
+narrative generator), which D-05 explicitly prohibits.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_narrative_present_undersized_rsa_matches_catalog_verbatim`
+(collect-only resolves 1 test; executed green), per `202-03-SUMMARY.md`'s catalog-tuple-index →
+response-field mapping table.
+
+---
+
+### UAT-202-04: Honest Absence for Plaintext-HTTP, Attribution Still Fully Populated
+
+**ID:** UAT-202-04
+**Title:** A plaintext-HTTP finding shows the honest-absence narrative string, not an empty panel
+and not invented text, while the attribution block remains fully populated
+**Maps to:** STORY-01 / D-07
+
+**What to test:** plaintext-HTTP carries no `_ALGO_KEYWORDS` hit (it is not keyed by algorithm), so
+`narrative`/`quantum_impact`/`remediation_guidance` are `None`, and the route still returns 200 with
+the theme-attribution fields populated independently.
+
+**Steps:** covered by an automated test requesting the storyline for a plaintext-HTTP finding and
+asserting the narrative fields are `None` with a 200 status — no manual execution required.
+
+**Pass Criteria:** narrative fields are `None` (not an empty string, not fabricated text); response
+status is 200, not an error.
+
+**Falsifiability:** this case turns red if the route 500s on a no-narrative finding, or if narrative
+text is fabricated for a class the catalog does not cover.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_narrative_absent_plaintext_http_returns_200_with_nulls`
+(collect-only resolves 1 test; executed green), per `202-01-SUMMARY.md`'s reachability census (D-07:
+plaintext HTTP is one of the highest-volume classes with no algorithm keyword) and
+`202-03-SUMMARY.md`'s D-07 absence-as-consistency framing.
+
+---
+
+### UAT-202-05: `(endpoint id, title)` Disambiguation
+
+**ID:** UAT-202-05
+**Title:** Requesting a storyline for one of two findings sharing a `CryptoEndpoint.id` returns
+that finding's own storyline, not the other's
+**Maps to:** STORY-01 / D-06
+
+**What to test:** one endpoint fires both the undersized-RSA finding (narrative present) and the
+self-signed finding (narrative absent), sharing one `id`; requesting `(id, title)` for each returns
+two genuinely different response bodies.
+
+**Steps:** covered by an automated test seeding both findings on one endpoint and asserting the two
+`(id, title)` requests resolve to different, correct storylines — no manual execution required.
+
+**Pass Criteria:** the RSA-titled request returns populated narrative fields; the self-signed-titled
+request (same `id`) returns `None` narrative fields — proving title, not id alone, resolves the
+finding.
+
+**Falsifiability:** this case turns red if both requests return the same body, which would mean the
+route is keying on `id` alone (D-06's exact failure mode: `FindingItem.id` is `CryptoEndpoint.id`,
+shared across 2-4 findings per endpoint).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_disambiguation_same_endpoint_id_different_title_different_storyline`
+(collect-only resolves 1 test; executed green), per `202-03-SUMMARY.md`'s disambiguation-proof
+section (chosen deliberately over a narrative-absent/narrative-absent pairing that "cannot fail").
+
+---
+
+### UAT-202-06: Attribution Block Shows Theme, Lift, Closure, and Disclaimer — Never a Per-Finding Share
+
+**ID:** UAT-202-06
+**Title:** The attribution block shows the theme name, the conditioned lift sentence, the closure
+sentence, and the non-individual-contribution disclaimer; no per-finding share appears anywhere
+**Maps to:** STORY-02
+
+**What to test:** rendered attribution panel contains the theme title, `+N pts when all N findings
+in this theme are resolved`, `N of N findings in this theme are verified closed`, and the disclaimer
+beginning "This is the theme's total lift" — with no divided/fractional per-finding number anywhere.
+
+**Steps:** covered by `finding-storyline-sections.test.tsx`'s Invariant 1 (lift number and its
+condition clause share one block-level element), Invariant 2 (disclaimer co-presence across every
+enumerated state), and Invariant 3 (a live division-mutation RED transcript: `7 / 2 = 3.5` was
+injected and the trip-wire test failed, then reverted). 202-07's operator-approved checkpoint
+package explicitly presented this exact rendered content (theme title "Eliminate plaintext HTTP
+exposure", `+7 pts when all 5 findings...`, `2 of 5 findings...`, and the disclaimer) for visual
+confirmation before approval.
+
+**Pass Criteria:** all four elements present in the same panel; no number equal to
+`theme_score_lift / theme_finding_count` (or any other divided quantity) appears anywhere in the
+panel text.
+
+**Falsifiability:** this case turns red if a per-finding share number appears, or if the disclaimer
+is absent from any state that has a lift number.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Operator-approved (Phase 202 Task 3 checkpoint) + Automated (202-08 phase-execution plan)
+**Notes:** The rendering assertions are vitest-only (Invariants 1-3, `finding-storyline-sections.test.tsx`)
+and per this repo's UAT-gate grammar cannot be cited as a DEFERRED pytest node. Dispositioned PASS
+on 202-07-SUMMARY.md's operator-approved checkpoint package, which explicitly displayed this exact
+content (theme title, `+7 pts...`, `2 of 5...`, and the disclaimer text) for the operator's visual
+confirmation prior to approval. The vitest Invariant-3 division trip-wire (a real RED/GREEN
+falsification, not merely a passing assertion) is strong corroborating evidence, not the
+gate-passing citation.
+
+---
+
+### UAT-202-07: Drawer's Lift Number Equals the Roadmap Surface's Number
+
+**ID:** UAT-202-07
+**Title:** The drawer's lift number equals the roadmap surface's number for the same theme and the
+same scan
+**Maps to:** STORY-02
+
+**What to test:** for a given scan and slug, `GET /api/scan/latest`'s roadmap node `score_lift` and
+`GET /api/findings/{id}/storyline`'s `theme_score_lift` are numerically identical.
+
+**Steps:** covered by an automated test comparing two live API responses (not two internal function
+calls) for the same monkeypatched lift value — no manual execution required.
+
+**Pass Criteria:** `story_data["theme_score_lift"] == roadmap_node["score_lift"]` for the same slug
+and scan.
+
+**Falsifiability:** this case turns red if the two surfaces ever diverge — the exact drift class
+Phase 201 built the shared `lift_context_for_scan` helper to prevent.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_numeric_equality_with_roadmap_surface`
+(collect-only resolves 1 test; executed green), per `202-05-SUMMARY.md`'s numeric-equality test
+comparing two live API responses (`GET /api/scan/latest` vs. the storyline endpoint).
+
+---
+
+### UAT-202-08: Multi-Theme Finding Shows the Specific Theme, Never the Catch-All
+
+**ID:** UAT-202-08
+**Title:** A finding in two themes shows the specific theme and never `Triage high-impact findings`
+**Maps to:** STORY-02 / D-08
+
+**What to test:** a finding whose fingerprint matches both a specific title-based theme (e.g.
+`self-signed-certificates`) and `high-impact-findings` renders the specific theme's slug, never the
+catch-all's.
+
+**Steps:** covered by an automated test that derives the expected winner from
+`REMEDIATION_CONSTITUENCY` at run time (not a hand-written literal slug), with a non-vacuity guard —
+no manual execution required.
+
+**Pass Criteria:** `theme_slug == expected_winner` (the non-severity slug) and `theme_slug !=
+"high-impact-findings"`.
+
+**Falsifiability:** this case turns red if the catch-all ever wins the tie-break, or if the test's
+own seeded fixture stops containing one severity and one non-severity slug (the non-vacuity guard
+would catch that).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_tie_break_prefers_specific_theme_derived_from_data`
+(collect-only resolves 1 test; executed green), per `202-05-SUMMARY.md`'s D-08 tie-break
+implementation, verified live against `./quirk-output/quirk.db` at 28/67 (41%) multi-theme
+fingerprints, all 28 pairing the catch-all with exactly one specific slug.
+
+---
+
+### UAT-202-09: No-Modelable-Lift Theme Shows No Number and Says Why
+
+**ID:** UAT-202-09
+**Title:** A theme with no modelable lift shows no number and says why; nothing renders as `0`,
+`N/A`, or a dash
+**Maps to:** STORY-02
+
+**What to test:** when `compute_item_lifts` has no delta entry for the matched slug,
+`theme_score_lift` stays `None` (never `0`) at the API layer, and the drawer renders the A2 absence
+string rather than a fabricated number.
+
+**Steps:** covered by an automated test patching `compute_item_lifts` to omit the slug and asserting
+`theme_score_lift is None` — no manual execution required.
+
+**Pass Criteria:** `theme_score_lift` is `None`, never `0` or a negative sentinel.
+
+**Falsifiability:** this case turns red if a modelable-lift absence is ever rendered as `0`, which
+this codebase's standing contract (`schemas.py:496-501`) treats as a fabricated value, not an
+honest absence.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_theme_score_lift_null_when_no_modelable_delta`
+(collect-only resolves 1 test; executed green), per `202-05-SUMMARY.md`'s A2 test description. The
+A2 absence-string rendering itself (`FindingStorylineSections.tsx`) is asserted by vitest's
+State-Matrix parametrised tests, corroborating but not the gate-passing citation.
+
+---
+
+### UAT-202-10: Pre-Fingerprint-Table Scan Yields Honest Absence, Not an Error
+
+**ID:** UAT-202-10
+**Title:** A scan whose DB predates the remediation fingerprint table yields honest absence and a
+working drawer, not an error
+**Maps to:** STORY-02
+
+**What to test:** with `RemediationItemFingerprint`'s table dropped (simulating a pre-migration DB),
+the storyline route still returns 200 with all six `theme_*` fields `None` and the narrative section
+unaffected.
+
+**Steps:** covered by an automated test performing a real `Table.drop(engine)` (not a patched
+exception) and asserting graceful 200 degradation — no manual execution required.
+
+**Pass Criteria:** response status 200; all `theme_*` fields `None`; `narrative` still populated for
+findings that would otherwise have one.
+
+**Falsifiability:** this case turns red if a missing/empty fingerprint table causes a 500, which
+would mean an older scan's dashboard becomes unusable for this feature rather than gracefully
+degrading.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Automated (202-08 phase-execution plan)
+**Notes:** Confirmed via
+`tests/test_dashboard_finding_storyline.py::test_missing_fingerprint_table_degrades_to_200_with_narrative_intact`
+(collect-only resolves 1 test; executed green), per `202-05-SUMMARY.md`'s real
+`OperationalError: no such table` exercise (not simulated with a patch), proving S6 independence
+(narrative intact while attribution degrades).
+
+---
+
+### UAT-202-11: No-Stable-Identifier Finding Renders a Disabled Trigger
+
+**ID:** UAT-202-11
+**Title:** A finding with no stable identifier renders a disabled trigger with its explanatory
+tooltip, and the drawer does not open
+**Maps to:** STORY-01
+
+**What to test:** when `finding.id == null` (e.g. an identity-protocol finding from
+`_derive_identity_findings()`), the `Storyline` button renders `disabled` with
+`title="Storyline unavailable — this finding has no stable identifier in this scan."`, and clicking
+it never opens the drawer.
+
+**Steps:** covered by `findings-storyline.test.tsx`'s A6/S7 test (asserts the exact tooltip string
+and that `queryByRole("dialog")` stays absent after a click) — no backend test exists for this
+frontend-only rendering branch, and no operator walkthrough in this phase specifically exercised the
+disabled-trigger path.
+
+**Pass Criteria:** would require either a DEFERRED citation to a backend pytest node (none exists —
+`id == null` is a frontend rendering branch, not an API behavior) or an operator walkthrough of this
+specific disabled-trigger state.
+
+**Falsifiability:** this case would turn red if a future manual walkthrough found the disabled
+trigger clickable, or the tooltip text wrong/missing.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; no operator walkthrough exercised the disabled-trigger state, and vitest coverage cannot be cited as a DEFERRED pytest node)
+**Date:** 2026-09-12  **Tester:** Automated review, honest gap (202-08 phase-execution plan)
+**Notes:** `findings-storyline.test.tsx`'s A6/S7 test passes green in jsdom, which is real,
+valuable regression coverage — but per the UAT corpus's own disposition rules a vitest-only case
+may not be inflated to a DEFERRED PASS. GAP is the honest disposition, not a defect report.
+
+---
+
+### UAT-202-12: Opened Drawer Passes the A11y Baseline Capture; Empty/Loading Variants Skip Explicitly
+
+**ID:** UAT-202-12
+**Title:** The opened drawer passes the a11y baseline capture, and the `empty`/`loading` variants
+skip the interaction explicitly
+**Maps to:** success criterion 4
+
+**What to test:** `npm run a11y:baseline` / `npm run a11y:check` against the findings route's
+opened-drawer interaction reports zero unaccepted violations, and the `empty`/`loading` route
+variants log an explicit, loud skip line rather than silently no-op-ing.
+
+**Steps:** this IS the 202-07 Task 3 blocking human-verify checkpoint — baselines and the
+`ACCEPTED-VIOLATIONS.md` ledger were regenerated, the freshness test was observed failing as STALE
+before regeneration (proving the derivation is live, not vacuous), and the three variant gates were
+run and reviewed by the operator before approval.
+
+**Pass Criteria:** the `findings-storyline` baseline shows 0 rule(s) / `entries: []`; the harness log
+carries explicit `SKIP [findings-storyline] (variant: empty|loading): interaction skipped by design`
+lines; `accepted-violations-freshness` and `fixture-coverage` both green.
+
+**Falsifiability:** this case turns red if a real, unaccepted axe violation exists in the captured
+opened-drawer DOM, or if a variant skip is silent rather than logged.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-12  **Tester:** Operator-approved (Phase 202 Task 3 checkpoint, approved 2026-09-12)
+**Notes:** Confirmed via 202-07-SUMMARY.md's "Task 3 — CHECKPOINT DISCHARGED" record: one real
+phase-introduced a11y defect (`scrollable-region-focusable`, serious) was found and FIXED (commit
+`9e51519a`) rather than ledgered, because the shared-wrapper blast-radius justification other
+accepted instances of that rule rely on does not transfer to this single-site container. Post-fix
+evidence: `findings-storyline` baseline 0 rule(s), `entries: []`, console 0;
+`accepted-violations-freshness` + `fixture-coverage` 14/14 green against the original ledger (a
+0-entry baseline needs no ledger section); frontend suite 49/49 files, exit 0, re-run 3x.
+
+---
+
+**Series 202 disposition.** 7 cases (UAT-202-03/04/05/07/08/09/10) are `[x] PASS`, confirmed via
+real, currently-collectible `pytest --collect-only` node IDs cited above, each verified before being
+written here. 3 cases (UAT-202-01/06/12) are honest operator-approved `[x] PASS` dispositions,
+citing 202-07-SUMMARY.md's verbatim operator-approved checkpoint evidence where that evidence
+demonstrably covers the specific behavior (the opened-drawer-in-place proof, the exact attribution/
+disclaimer content shown to the operator, and the a11y capture checkpoint itself). 2 cases
+(UAT-202-02, UAT-202-11) are `[x] SKIP (GAP — no substitute coverage)` — both have real, passing
+vitest coverage, but per this repo's UAT-gate grammar a vitest citation cannot pass the integrity
+gate's execution leg, and no operator walkthrough in this phase specifically exercised either
+behavior (keyboard/focus-return; the disabled-trigger state). Neither GAP was inflated to a PASS
+with a fabricated citation, and no allowlist or gate-code change was made.

@@ -25,9 +25,9 @@ function makeData(overrides: Partial<ScanLatestResponse> = {}): ScanLatestRespon
     },
     confidence: { confidence_score: 85, confidence_rating: "HIGH", factor_breakdown: {} },
     findings: [
-      { host: "a", port: 443, severity: "CRITICAL", title: "x", quantum_risk: "Vulnerable" },
-      { host: "b", port: 443, severity: "HIGH", title: "y", quantum_risk: "At Risk" },
-      { host: "c", port: 22, severity: "MEDIUM", title: "z", quantum_risk: "Vulnerable" },
+      { id: 1, host: "a", port: 443, severity: "CRITICAL", title: "x", quantum_risk: "Vulnerable" },
+      { id: 2, host: "b", port: 443, severity: "HIGH", title: "y", quantum_risk: "At Risk" },
+      { id: 3, host: "c", port: 22, severity: "MEDIUM", title: "z", quantum_risk: "Vulnerable" },
     ],
     certificates: [],
     cbom_components: [],
@@ -86,7 +86,7 @@ describe("ExecutiveVerdict", () => {
       <ExecutiveVerdict
         data={makeData({
           score: { ...makeData().score, score: 88, rating: "EXCELLENT" },
-          findings: [{ host: "a", port: 443, severity: "LOW", title: "x", quantum_risk: "Safe" }],
+          findings: [{ id: 1, host: "a", port: 443, severity: "LOW", title: "x", quantum_risk: "Safe" }],
         })}
       />,
     )

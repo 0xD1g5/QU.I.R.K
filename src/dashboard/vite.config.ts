@@ -18,6 +18,11 @@ function a11yFixture(): Plugin {
     const hardwareDriftFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-hardware-drift.json'), 'utf8')
     const vendorTrendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-vendor-trends.json'), 'utf8')
     const compareFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-compare.json'), 'utf8')
+    // Phase 202-07 — /api/findings/{id}/storyline fixture (STORY-01/STORY-02, D-04).
+    // Loaded lazily here alongside the fixtures above, same WR-05 rationale. Serves a
+    // fully-populated S1 storyline so the a11y opened-drawer capture baselines a real
+    // attribution panel rather than the S8 error state behind an unmatched-request 404.
+    const storylineFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-storyline.json'), 'utf8')
     const noCache = (r: ServerResponse) => r.setHeader('Cache-Control', 'no-store')
     return (req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
       const variant = process.env.VITE_A11Y_FIXTURE_VARIANT
@@ -119,6 +124,16 @@ function a11yFixture(): Plugin {
         }
         noCache(res); res.setHeader('Content-Type', 'application/json')
         res.end(compareFixture)
+        return
+      }
+      // Phase 202-07 — /api/findings/{id}/storyline fixture (STORY-01/STORY-02, D-04).
+      // Placed before the QRAMM block below; no existing prefix (checked above) is a
+      // prefix of "/api/findings", and none of the QRAMM prefixes below could shadow it
+      // either, so ordering relative to them is not load-bearing — kept here for
+      // proximity to the other per-page-data handlers.
+      if (req.url?.startsWith('/api/findings')) {
+        noCache(res); res.setHeader('Content-Type', 'application/json')
+        res.end(storylineFixture)
         return
       }
       // QRAMM API fixtures — matched in specificity order (longest prefix first)

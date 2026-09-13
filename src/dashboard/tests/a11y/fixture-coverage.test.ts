@@ -40,6 +40,13 @@ const HOOK_TARGETS: HookFetchTarget[] = [
     hookFile: "useCompareData.ts",
     urlPrefix: extractTemplateLiteralPrefix("useCompareData.ts"),
   },
+  // Phase 202-07 — the storyline drawer's fetch target (STORY-01/STORY-02, D-04). Without
+  // this handler, the opened-drawer a11y capture would 404 and silently baseline the S8
+  // error state instead of the populated attribution panel.
+  {
+    hookFile: "useFindingStoryline.ts",
+    urlPrefix: extractTemplateLiteralPrefix("useFindingStoryline.ts"),
+  },
 ]
 
 function extractQuotedConstUrl(hookFile: string): string {
@@ -83,10 +90,35 @@ describe("a11y fixture middleware covers every /hardware + /compare fetch target
     },
   )
 
-  it("has three distinct handler prefixes for the hardware-drift, vendor-trends, and compare endpoints", () => {
+  it("has four distinct handler prefixes for the hardware-drift, vendor-trends, compare, and findings-storyline endpoints", () => {
     expect(viteConfigSource).toContain("/api/hardware/drift")
     expect(viteConfigSource).toContain("/api/hardware/vendor-trends")
     expect(viteConfigSource).toContain("/api/compare")
+    expect(viteConfigSource).toContain("/api/findings")
+  })
+
+  it("fixture-storyline.json parses and carries all ten locked FindingStoryline keys", () => {
+    const storyline = JSON.parse(
+      readFileSync(path.resolve(__dirname, "fixture-storyline.json"), "utf-8"),
+    )
+    const lockedKeys = [
+      "finding_id",
+      "narrative",
+      "quantum_impact",
+      "remediation_guidance",
+      "theme_slug",
+      "theme_title",
+      "theme_score_lift",
+      "theme_finding_count",
+      "theme_closed_count",
+      "finding_position",
+    ]
+    for (const key of lockedKeys) {
+      expect(key in storyline, `fixture-storyline.json is missing locked key "${key}"`).toBe(true)
+    }
+    // UI-SPEC Assumption A4: finding_position is always null in production — a fabricated
+    // position would baseline a DOM that cannot occur.
+    expect(storyline.finding_position).toBeNull()
   })
 
   it("fixture files referenced by the new handlers are non-empty and well-shaped", () => {

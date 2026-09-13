@@ -43,7 +43,17 @@ export interface ConfidenceData {
 }
 
 export interface FindingItem {
-  id?: number
+  // Phase 202-02 / STORY-01 / D-06 / 201-UI-E2: corrected from `id?: number`.
+  // `id` is `CryptoEndpoint.id`, NOT a per-finding identifier — multiple
+  // FindingItems derived from the same endpoint share one id
+  // (_derive_findings() in routes/scan.py assigns id=ep.id in a loop over
+  // endpoints, and _derive_identity_findings()' results are appended
+  // without an id= at all, so identity findings arrive with id: null).
+  // It is the storyline fetch key (202-02/202-03), and the undefined-vs-null
+  // distinction sits exactly where the UI-SPEC's A6 disabled-trigger
+  // decision is made: `undefined` would mean "field absent" while `null`
+  // means "genuinely no stable id" — collapsing those was 201-UI-E2's defect.
+  id: number | null
   host: string
   port: number
   severity: string
@@ -55,6 +65,29 @@ export interface FindingItem {
   source?: string
   sensor_id?: string | null
   segment?: string | null
+}
+
+// Phase 202-02 / STORY-01, STORY-02 / D-01, D-06, D-07 — 202-UI-SPEC.md's
+// "Type Contract", locked verbatim (field names, order, and shape are NOT
+// Claude's discretion; only the discretion grant in D-01 applies to naming
+// choices made BEFORE this spec existed). Every field is
+// required-and-nullable (`T | null`), never optional (`?:`), per 201-UI-E2:
+// `?:` admits `undefined` alongside `null` and the type system stops
+// enforcing honest absence. The Pydantic mirror (202-03) must always
+// serialise every field explicitly (never `exclude_none`) so this TS type
+// stays honest — a field the backend "forgot" to compute must arrive as an
+// explicit `null`, never simply missing from the JSON body.
+export interface FindingStoryline {
+  finding_id: number
+  narrative: string | null
+  quantum_impact: string | null
+  remediation_guidance: string | null
+  theme_slug: string | null
+  theme_title: string | null
+  theme_score_lift: number | null
+  theme_finding_count: number | null
+  theme_closed_count: number | null
+  finding_position: number | null
 }
 
 export interface CertItem {
