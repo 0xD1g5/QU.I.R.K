@@ -28199,7 +28199,16 @@ currently-collectible `pytest --collect-only` node IDs re-verified in plan 204-0
 tree, corroborated by `.planning/phases/204-worklist-truth-derivation/204-RED-PROOF.md`'s recorded
 RED/revert inductions for UAT-204-02. No GAP or DEFERRED disposition was needed for this series —
 every claim this phase makes about its own gates and artifacts is backed by a real, currently-passing
-test node, not an operator walkthrough or a vitest-only citation. Live figures (878 case headings,
-GAP 76, OBSOLETE 2, `arithmetic_ok: True`) are recomputed values, not transcribed from any prior
-draft — see `docs/uat-coverage-reconciliation.md`'s own provenance section for why these numbers
+test node, not an operator walkthrough or a vitest-only citation. Figures quoted at plan-close
+(882 case headings, GAP 76, OBSOLETE 2, `arithmetic_ok: True`) were recomputed, not carried
+forward — see `docs/uat-coverage-reconciliation.md`'s own provenance section for why these numbers
 must be recomputed rather than cited forward.
+
+This paragraph originally read `878 case headings` — the pre-Series-204 count, already superseded
+by the 882 stated 50 lines above it in UAT-204-03's own Notes, in the same sentence asserting these
+figures were "not transcribed from any prior draft." Caught by phase 204's verifier and corrected
+on 2026-09-13. It is recorded rather than quietly overwritten because it is the third stale-count
+defect this phase produced about itself (after UAT-204-01's crashing pass-criteria command and
+UAT-204-03's own stale Notes count), and the cheapest possible demonstration of why COV-01/COV-02
+had to make the worklist derive itself instead of relying on prose discipline: prose written by the
+very agents enforcing the rule still drifted, three times, inside one phase.
