@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.23
-milestone_name: Deliverable Experience
-status: milestone_complete
-last_updated: "2026-09-13T01:30:00.000Z"
+milestone: v5.24
+milestone_name: UAT Coverage Drain
+status: planning
+last_updated: "2026-09-13T02:30:00.000Z"
 last_activity: 2026-09-13
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -87,11 +87,33 @@ Also carried, not in `audit-open`'s scope:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-19)
+See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.23 Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11 — verification `passed` 8/8; TRIAGE-10/TRIAGE-11 both `[x]` (fractional scores round-trip via Optional[float] widening across merge/trends/scan transports + SubscoreSlot null-honest gauges; combined connectors+advanced overlay regression test green); full suite 4845 passed / 0 failed; code review resolved (4 warnings + 5 infos fixed, commits cd777242/a8181d5b/8867bd91/e8918400); UAT Series 199 added (1 honest GAP: UAT-199-05 em-dash browser rendering); backlog-reconciliation gate re-greened after v5.22-archive drift (c2d4ee81). Percent is phase-based (1/4) this milestone. Phase 200 (Report Branding & Templates) COMPLETE 2026-09-11 — verification `human_needed`→operator-approved (5/5 must-haves; UAT-200-01/02/11 approved in a live branded-report walkthrough); RPT-01..05 all `[x]`; SSTI gate GO (13/13 payloads contained under unconditional SandboxedEnvironment); 999.105 Tier 2 NO-GO recorded in HORIZON (RPT-F-01 stays spike-gated); report profiles + `--report-profile` CLI shipped; code review resolved (3 warnings + 4 infos fixed incl. the WR-03 SSTI-marker vacuity, 2 accepted-advisory); full suite 4909/0 (empty failing SET); TRIAGE-149 order-pollution avoided by patching the PDF leg at the writer seam in the new test files. Also this session: 999.108 (main-CI-red connector-gate regressions) fixed+closed (cfdd5438), 999.109 (static release bodies) filed P2. Phase 202 (Finding Storyline Drawer) COMPLETE 2026-09-12 — **v5.23 is now 4/4 phases, 28/28 plans**. Verification `human_needed` -> **operator-approved** after a live LAN walkthrough (4/4 must-haves); STORY-01/STORY-02 `[x]`. 8 plans in 5 waves, executed serially (`use_worktrees=false`). **Criteria 2 and 3 shipped under operator-confirmed reframings, not literal ROADMAP wording** — criterion 3's per-finding lift is not honestly implementable (`score_lift` is keyed by remediation THEME covering N findings), so D-01 frames it as "+N pts when all M findings in this theme are resolved", D-08 prefers a specific theme over the `high-impact-findings` catch-all, D-09 renders the catch-all when it is the only theme; criterion 2's narrative is USUALLY ABSENT (catalogs keyed by crypto-algorithm keyword), accepted as consistency with the report (D-07). ROADMAP's criterion-3 wording is now stale -- doc correction pending. Research falsified two LOCKED decisions before planning: `FindingItem.id` IS `CryptoEndpoint.id` (9 `id=ep.id` sites in one loop, 2-4 findings share an id) so D-02's route could not identify a finding -> D-06 keys it `(id, title)` with a title-translation bridge; and 41% of fingerprints are multi-theme -> D-08/D-09. Post-execution: code review 0 critical / 2 warning both FIXED (a row click bypassing the A6 disabled trigger; a cross-surface equality test that passed BY CONSTRUCTION because it patched the shared producer) / 1 info advisory; UI review **23/24**, 5 pillars 4/4, 2 actionable warnings fixed. **The a11y capture found a REAL serious WCAG 2.1.1/2.1.3 violation** on the drawer's own scroll region -- fixed with `tabIndex={0}` rather than ledgered, because the app-wide blast-radius justification covering the two existing ledger entries does not apply to a single-site container. Failing-node SET: **1** (the operator-deferred HARDWARE_MATRIX staleness trip). Two `test_pqc_discriminator` nodes also failed once and were proven a pre-existing collection-time-`skipif` flake, filed as a todo -- the suite mutates its own lab dependency via `test_chaos_lab_idempotency`. **4 new todos filed:** the `skipif` flake; `FindingItem.id` non-uniqueness (a latent trap for any future per-finding feature, worked around not fixed); a DOCUMENTED-NOT-CLOSED `scan_run_id` divergence where the roadmap shows a lift and the drawer shows none for the same finding on legacy/distributed-sensor rows (a characterization test pins it -- a green test does NOT mean resolved); and an A1 copy nuance the operator spotted on live data (it asserts "not mapped to a theme" where for an *unbridged* title the honest claim is "theme undeterminable" -- all 4 findings in the canonical DB hit this path). Also recorded: 202-03's executor ran a prohibited `git stash` (self-reported, recovered, nothing lost), and one frontend test failed once then never reproduced across 12 runs -- unidentified, NOT diagnosed. Next: **v5.23 milestone lifecycle** -- audit -> complete -> cleanup, every write BY HAND (`milestone.complete` is UNSAFE). Reminders: all mutating GSD state/roadmap/phase verbs remain UNSAFE on this machine; hand-write closes under pre-image + signature-diff.
+**Current focus:** v5.24 UAT Coverage Drain OPENED 2026-09-13 — defining requirements, no phase
+started. Anchor: write the missing tests behind the honest UAT GAPs and make the gap worklist derive
+itself. Live measurement at open (not carried from the stale worklist doc): **70 GAP-annotated cases
+across 878 total** in `docs/UAT-SERIES.md`, of which **25 sit in series 164–202** that
+`docs/uat-coverage-gaps.md` — scoped to series 1–163, claiming 57 — has never absorbed; accrual is
+roughly 1.4 GAPs per phase. Opens with a catalog re-verification drain: `HARDWARE_MATRIX` is 91/90
+days and `tests/test_hardware_staleness.py` is RED on `main` right now, with `hw_cve.py`'s 30-day
+cadence tripping ≈2026-10-02 mid-milestone. Phase numbering continues at **203**.
+**Predecessor merged before any v5.24 artifact was written:** v5.23's 155 commits had been sitting
+in stacked PRs #12 → #13; #13's base was the stack branch, not `main`, so it was retargeted before
+merging (`623fa502`, `5f625595`). `git log main..<branch>` is 0 — phase-complete evidence for this
+milestone is branch-honest from the start. Boundary doc review: version drift PASS (5.21.0
+consistent — correct, since v5.22/v5.23 cut no tag); 2 coverage gaps found and carried as doc tasks
+(ROADMAP's Phase 202 criterion-3 wording is stale — shipped theme-level, not per-finding; 999.112's
+precondition note in `docs/report-interpretation.md` undelivered); Obsidian PASS with 2 pending
+(7/7 guides verified byte-identical after frontmatter stripping — mtime and file size both gave
+false staleness signals; vault `Roadmap.md`/`Requirements.md` and the hub callout stale, resolved by
+this boundary's own writes). Reminders: all mutating GSD `state.*`/`phase.complete`/
+`milestone.complete` verbs remain UNSAFE on this machine — this frontmatter and Current Position
+rewrite was hand-written under the pre-image + signature-diff protocol, both named signatures
+checked clean.
+
+Previous (v5.23, closed 2026-09-12): Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11 — verification `passed` 8/8; TRIAGE-10/TRIAGE-11 both `[x]` (fractional scores round-trip via Optional[float] widening across merge/trends/scan transports + SubscoreSlot null-honest gauges; combined connectors+advanced overlay regression test green); full suite 4845 passed / 0 failed; code review resolved (4 warnings + 5 infos fixed, commits cd777242/a8181d5b/8867bd91/e8918400); UAT Series 199 added (1 honest GAP: UAT-199-05 em-dash browser rendering); backlog-reconciliation gate re-greened after v5.22-archive drift (c2d4ee81). Percent is phase-based (1/4) this milestone. Phase 200 (Report Branding & Templates) COMPLETE 2026-09-11 — verification `human_needed`→operator-approved (5/5 must-haves; UAT-200-01/02/11 approved in a live branded-report walkthrough); RPT-01..05 all `[x]`; SSTI gate GO (13/13 payloads contained under unconditional SandboxedEnvironment); 999.105 Tier 2 NO-GO recorded in HORIZON (RPT-F-01 stays spike-gated); report profiles + `--report-profile` CLI shipped; code review resolved (3 warnings + 4 infos fixed incl. the WR-03 SSTI-marker vacuity, 2 accepted-advisory); full suite 4909/0 (empty failing SET); TRIAGE-149 order-pollution avoided by patching the PDF leg at the writer seam in the new test files. Also this session: 999.108 (main-CI-red connector-gate regressions) fixed+closed (cfdd5438), 999.109 (static release bodies) filed P2. Phase 202 (Finding Storyline Drawer) COMPLETE 2026-09-12 — **v5.23 is now 4/4 phases, 28/28 plans**. Verification `human_needed` -> **operator-approved** after a live LAN walkthrough (4/4 must-haves); STORY-01/STORY-02 `[x]`. 8 plans in 5 waves, executed serially (`use_worktrees=false`). **Criteria 2 and 3 shipped under operator-confirmed reframings, not literal ROADMAP wording** — criterion 3's per-finding lift is not honestly implementable (`score_lift` is keyed by remediation THEME covering N findings), so D-01 frames it as "+N pts when all M findings in this theme are resolved", D-08 prefers a specific theme over the `high-impact-findings` catch-all, D-09 renders the catch-all when it is the only theme; criterion 2's narrative is USUALLY ABSENT (catalogs keyed by crypto-algorithm keyword), accepted as consistency with the report (D-07). ROADMAP's criterion-3 wording is now stale -- doc correction pending. Research falsified two LOCKED decisions before planning: `FindingItem.id` IS `CryptoEndpoint.id` (9 `id=ep.id` sites in one loop, 2-4 findings share an id) so D-02's route could not identify a finding -> D-06 keys it `(id, title)` with a title-translation bridge; and 41% of fingerprints are multi-theme -> D-08/D-09. Post-execution: code review 0 critical / 2 warning both FIXED (a row click bypassing the A6 disabled trigger; a cross-surface equality test that passed BY CONSTRUCTION because it patched the shared producer) / 1 info advisory; UI review **23/24**, 5 pillars 4/4, 2 actionable warnings fixed. **The a11y capture found a REAL serious WCAG 2.1.1/2.1.3 violation** on the drawer's own scroll region -- fixed with `tabIndex={0}` rather than ledgered, because the app-wide blast-radius justification covering the two existing ledger entries does not apply to a single-site container. Failing-node SET: **1** (the operator-deferred HARDWARE_MATRIX staleness trip). Two `test_pqc_discriminator` nodes also failed once and were proven a pre-existing collection-time-`skipif` flake, filed as a todo -- the suite mutates its own lab dependency via `test_chaos_lab_idempotency`. **4 new todos filed:** the `skipif` flake; `FindingItem.id` non-uniqueness (a latent trap for any future per-finding feature, worked around not fixed); a DOCUMENTED-NOT-CLOSED `scan_run_id` divergence where the roadmap shows a lift and the drawer shows none for the same finding on legacy/distributed-sensor rows (a characterization test pins it -- a green test does NOT mean resolved); and an A1 copy nuance the operator spotted on live data (it asserts "not mapped to a theme" where for an *unbridged* title the honest claim is "theme undeterminable" -- all 4 findings in the canonical DB hit this path). Also recorded: 202-03's executor ran a prohibited `git stash` (self-reported, recovered, nothing lost), and one frontend test failed once then never reproduced across 12 runs -- unidentified, NOT diagnosed. Next: **v5.23 milestone lifecycle** -- audit -> complete -> cleanup, every write BY HAND (`milestone.complete` is UNSAFE). Reminders: all mutating GSD state/roadmap/phase verbs remain UNSAFE on this machine; hand-write closes under pre-image + signature-diff.
 
 Previous (v5.22, closed 2026-09-11): Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Phase 197 (Connector Parity Tail) COMPLETE 2026-09-10 — verification `passed` 9/9; 999.104 Tier 2 CLOSED (all 37 residual connector fields dashboard-settable via lockstep-widened overlay; PARITY-05/06/07 `[x]`). D-13 walkthrough operator-approved (one env finding: Vault/K8s optional extras were missing from .venv — installed hvac/kubernetes/google-cloud-container/azure-mgmt-containerservice, zero code changes; visible-but-disabled contract worked as designed). Code review: 1 critical (pairlist length-bound DoS gap) + 2 minor, all fixed (7f6be242/87cf7371/fffe151f), review resolved. Phase 198 COMPLETE 2026-09-11 — verification `passed` 9/9; 999.104 Tier 3 CLOSED (19 fields shipped: 11 timeouts + 2 backoff + 5 concurrency + tls_designated_ports; 3 recorded intentional-gaps); GATE-04 green end-to-end, full-suite failing-node SET now EMPTY (former local-only RED fixed by U+2011 escaping, 9 files); D-08 walkthrough operator-approved. Review resolved (2 warnings fixed by orchestrator, 2 infos accepted-advisory). v5.22 CLOSED 2026-09-11 (audit passed 10/10; archives in `.planning/milestones/v5.22-*`; REQUIREMENTS.md removed for next milestone; NO v5.22 tag by design). Cleanup (phase-dir archival) next, then `/gsd-new-milestone`. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Unpushed main commits accumulate since the release push — batch-push at next checkpoint or milestone close.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
@@ -1163,10 +1185,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Ready to plan Phase 199
+Phase: Not started (defining requirements)
 Plan: —
-Status: Roadmap created — ready to plan
-Last activity: 2026-09-11 — Milestone v5.23 roadmap created (Phases 199-202)
+Status: Defining requirements
+Last activity: 2026-09-13 — Milestone v5.24 UAT Coverage Drain started
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
