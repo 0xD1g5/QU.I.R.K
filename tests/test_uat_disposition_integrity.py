@@ -106,8 +106,26 @@ RESULT_RE = re.compile(
 )
 
 # A real pytest node reference: <path ending .py>::<test name>, where the
-# test-name segment may end in a single `*` glob.
-NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?")
+# test-name segment may end in a single `*` glob. The optional trailing
+# `(?:::[\w*]+)?` group admits a class-scoped second segment
+# (`Class::method`) -- 205-CONTEXT.md's <falsification> block proved this
+# ALREADY resolves end-to-end; do not remove it (see
+# test_node_ref_re_pins_two_colon_class_scoped_capability, D-01).
+#
+# 205-01, D-02 empirical probe (re-run against the live interpreter before
+# this fix; recorded here, not the CONTEXT's original unverified "silently
+# skipped" paraphrase, per this phase's own falsification discipline):
+#   ann = "...DEFERRED — covered by tests/test_scratch.py::test_bar[y]"
+#   NODE_REF_RE.findall(ann) -> ['tests/test_scratch.py::test_bar']   # TRUNCATED at '[' -- '[' is not in [\w*]
+#   NODE_REF_RE.fullmatch(that truncated string) -> True              # so find_unresolvable_node_refs's
+#                                                                      # `continue` guard never fires
+#   fnmatch.filter({'tests/test_scratch.py::test_bar[y]'}, 'tests/test_scratch.py::test_bar') -> []
+#   => reported unresolvable, naming a phantom string the document never contained.
+# This is a MISLEADING DIAGNOSTIC, not a silent skip: the ref IS checked, but
+# against the wrong (truncated) string. The trailing `(?:\[[^\]\n]*\])?` group
+# below closes this by admitting the literal bracket into the match, so the
+# real (untruncated) node id is what gets checked.
+NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?(?:\[[^\]\n]*\])?")
 
 # A vitest test reference under src/dashboard/src/**/__tests__/*.test.tsx.
 # The title segment MUST be double-quoted -- see module docstring (D-05) for
@@ -191,17 +209,27 @@ def find_deferrals_without_node_ref(lines):
 
 def find_unresolvable_node_refs(lines, node_id_set):
     """Return [(lineno, case_id, ref)] for every PYTEST node reference that
-    fails to resolve (via fnmatch, so a `*` glob matching zero nodes counts
-    as unresolvable) against ``node_id_set``. Vitest refs (D-05) are
+    fails to resolve against ``node_id_set``. Vitest refs (D-05) are
     deliberately skipped here -- they are not pytest-node-shaped and are
-    checked separately by find_unresolvable_vitest_refs()."""
+    checked separately by find_unresolvable_vitest_refs().
+
+    D-02: a ref containing a literal `*` keeps glob semantics (fnmatch, so a
+    glob matching zero nodes counts as unresolvable). A ref with no `*` --
+    including one carrying a literal `[param]` bracket -- is checked by
+    EXACT set membership instead. fnmatch would otherwise misinterpret a
+    literal `[...]` bracket as a glob character class, which could silently
+    accept (or reject) a bracketed citation for the wrong reason."""
     bad = []
     for lineno, case_id, _ann, refs in iter_deferred_covered(lines):
         for ref in refs:
             if not NODE_REF_RE.fullmatch(ref):
                 continue
-            if not fnmatch.filter(node_id_set, ref):
-                bad.append((lineno, case_id, ref))
+            if "*" in ref:
+                if not fnmatch.filter(node_id_set, ref):
+                    bad.append((lineno, case_id, ref))
+            else:
+                if ref not in node_id_set:
+                    bad.append((lineno, case_id, ref))
     return bad
 
 
@@ -618,6 +646,76 @@ def test_negative_control_well_formed_deferral_is_accepted():
     ]
     assert find_deferrals_without_node_ref(synthetic) == []
     assert find_unresolvable_node_refs(synthetic, {"tests/test_real.py::test_ok"}) == []
+
+
+def test_node_ref_re_pins_two_colon_class_scoped_capability():
+    """D-01: pin the ALREADY-WORKING two-`::` class-scoped node syntax so a
+    future narrowing of NODE_REF_RE back to single-`::` fails loudly here
+    instead of silently resurrecting the `Class*method` glob-workaround
+    class. 205-CONTEXT.md's <falsification> block proved end-to-end (against
+    the live interpreter, before this plan existed) that this already
+    resolves -- this test LOCKS that fact down as a regression guard; it
+    does not "fix" anything. Manually verified this goes RED against a
+    hypothetical narrowed `re.compile(r"tests/[\\w/]+\\.py::[\\w*]+")` (no
+    trailing optional group): `fullmatch` returns None for the ref below."""
+    ref = "tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_rsa_2048_produces_medium"
+    assert NODE_REF_RE.fullmatch(ref)
+    synthetic = [
+        "### UAT-205-01: Example\n",
+        f"**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by {ref})\n",
+    ]
+    assert find_unresolvable_node_refs(synthetic, {ref}) == []
+
+
+def test_negative_control_bracket_citation_resolves_exactly():
+    """D-02 positive case: a literal, bracket-bearing pytest node id (the
+    exact string `pytest --collect-only` prints for a parametrized test) now
+    resolves exactly against the real node id, rather than being truncated
+    at `[` and existence-checked as a phantom substring (see the empirical
+    probe recorded above NODE_REF_RE). Before the fix this citation was
+    reported unresolvable, naming the truncated phantom
+    'tests/test_scratch.py::test_bar' -- not the ref actually written."""
+    ref = "tests/test_scratch.py::test_bar[y]"
+    synthetic = [
+        "### UAT-205-02: Example\n",
+        f"**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by {ref})\n",
+    ]
+    assert find_unresolvable_node_refs(synthetic, {ref}) == []
+
+
+def test_negative_control_bracket_citation_wrong_param_still_rejected():
+    """D-02 negative case: widening to admit literal brackets must not
+    create a false accept -- a citation of the wrong parametrize value is
+    still correctly flagged unresolvable."""
+    synthetic = [
+        "### UAT-205-03: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_scratch.py::test_bar[wrong-param])\n",
+    ]
+    bad = find_unresolvable_node_refs(synthetic, {"tests/test_scratch.py::test_bar[y]"})
+    assert bad == [(2, "UAT-205-03", "tests/test_scratch.py::test_bar[wrong-param]")]
+
+
+def test_negative_control_live_glob_citations_unaffected_by_bracket_widening():
+    """Regression: the two live trailing-`*` parametrized-glob citation
+    shapes (UAT-96-01 at docs/UAT-SERIES.md:12002, UAT-179-04 at :21731)
+    must keep resolving via the fnmatch glob branch, unchanged by the
+    bracket widening (`*`-containing refs keep glob semantics)."""
+    synthetic = [
+        "### UAT-205-04: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by "
+        "tests/test_rest_fuzzer_gate.py::test_confirm_required_exact_string_rejects_bad_input*)\n",
+        "### UAT-205-05: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by "
+        "tests/test_scan_scope_signature.py::test_digest_sensitivity_matrix_cfg_mutations*)\n",
+    ]
+    node_id_set = {
+        "tests/test_rest_fuzzer_gate.py::test_confirm_required_exact_string_rejects_bad_input[case0]",
+        "tests/test_scan_scope_signature.py::test_digest_sensitivity_matrix_cfg_mutations[caseA]",
+    }
+    assert find_unresolvable_node_refs(synthetic, node_id_set) == []
 
 
 def test_negative_control_no_substitute_coverage_is_exempt_not_flagged():
