@@ -7433,7 +7433,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `jq 'all(.[]; .description != null and (.description | length > 0))'` outputs `true` against the latest findings file.
 - Spot-checking three finding entries shows a 1-3 sentence plain-English explanation of the cryptographic risk in `description`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext::test_every_finding_has_non_empty_description)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext::test_every_finding_has_non_empty_description and src/dashboard/src/components/__tests__/phase205-redproof.test.tsx::"deliberately fails to prove the vitest execution leg runs in CI")
 **Date:** __________  **Tester:** __________
 **Notes:**
 
