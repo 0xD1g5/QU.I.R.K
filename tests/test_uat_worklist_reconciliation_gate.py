@@ -14,8 +14,8 @@ This module is that second, independent check: it re-derives its own parser from
 fails and names the case id, its ``**Result:**`` line number, and the regeneration command.
 
 HOW TO FIX A FAILURE: run
-``python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md`` (substitute
-``.venv/bin/python`` locally) and commit the regenerated file. If the failure persists after
+``.venv/bin/python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md`` and commit
+the regenerated file. If the failure persists after
 regeneration, the generator's own enumeration (``scripts/uat_corpus.py``) has a bug distinct from
 this gate's -- investigate both parsers independently rather than reconciling one to the other.
 
@@ -82,7 +82,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 UAT_SERIES_PATH = REPO_ROOT / "docs" / "UAT-SERIES.md"
 WORKLIST_PATH = REPO_ROOT / "docs" / "uat-coverage-gaps.md"
 
-REGEN_COMMAND = "python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md"
+REGEN_COMMAND = ".venv/bin/python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md"
 
 # ---------------------------------------------------------------------------
 # Parsing primitives -- independently re-derived from 204-04-PLAN.md's

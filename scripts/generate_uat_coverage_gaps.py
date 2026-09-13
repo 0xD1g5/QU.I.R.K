@@ -19,7 +19,7 @@ tests/test_uat_coverage_gaps_freshness.py meaningful): no wall-clock timestamp, 
 the output, a stable sort (series numerically, then case id), a single trailing newline, and LF line
 endings throughout.
 
-Regenerate with: `python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md`
+Regenerate with: `.venv/bin/python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md`
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from scripts import uat_corpus as corpus
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "docs" / "uat-coverage-gaps.md"
-REGEN_COMMAND = "python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md"
+REGEN_COMMAND = ".venv/bin/python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md"
 
 # Built on top of the imported case-ID grammar -- not a second, divergent case-ID pattern. Captures
 # only the free-text title trailing the heading's case id, for display purposes.
