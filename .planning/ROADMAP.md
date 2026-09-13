@@ -321,7 +321,12 @@ Plans:
      substitute tests running, not skipping on `VITEST_TOOLCHAIN_AVAILABLE`.
   4. A deliberately broken vitest substitute citation fails that CI job, proving execution rather
      than existence-checking closed the asymmetry.
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
+  - [ ] 205-01-PLAN.md — GUARD-01: pin two-`::` (D-01) and close the parametrized-bracket truncation defect (D-02) in the checker
+  - [ ] 205-02-PLAN.md — GUARD-01: convert the 7 confirmed globs to real node references (D-03), regenerate the coupled worklist
+  - [ ] 205-03-PLAN.md — GUARD-02: add Node to the Linux Full Suite job (D-04), fix the dangling skip_registry.py citation (D-07)
+  - [ ] 205-04-PLAN.md — GUARD-02: real CI red-proof — execution leg runs and fails on a deliberately broken substitute (D-05/D-06)
+  - [ ] 205-05-PLAN.md — Close-out: correct criteria 1-2 with evidence, flip REQUIREMENTS.md traceability, docs + Obsidian sync
 
 ### Phase 206: Dashboard UI Coverage Drain
 **Goal**: The 28 jsdom-tractable series-7 dashboard cases carry real vitest coverage of the
