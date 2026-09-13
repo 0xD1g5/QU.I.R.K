@@ -2046,7 +2046,7 @@ All of these services show status `Up` or `running`:
 - `pgp_sym_encrypt` function was used (visible in table schema or seed script)
 - Service is a valid scan target for future database-level crypto detection (BACK-12)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5615,7 +5615,7 @@ CLI-side reproduction of this case could exist at all) is an explicitly deferred
 - CBOM grows with each scan (more algorithms discovered)
 - Dashboard reflects latest scan on each page refresh
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -6419,7 +6419,7 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 - `grep -c 'compose --profile "\*" down' quantum-chaos-enterprise-lab/lab.sh` returns at least 2 (one for `down`, one for `reset`).
 - `bash -n quantum-chaos-enterprise-lab/lab.sh` exits 0 (script parses cleanly).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose orphan-sweep integration test verifying lab.sh down/reset leave zero quirk-lab containers -- inherently requires running Docker, out of scope per D-01)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a live docker-compose orphan-sweep integration test verifying lab.sh down/reset leave zero quirk-lab containers -- inherently requires running Docker, out of scope per D-01)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -9628,7 +9628,7 @@ All tests are automated (pytest). No chaos lab required.
 - Card does NOT appear when there are no partial failures.
 - All badges have accessible aria-labels.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (frontend component test for ScannerStatusCard needed -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend component test for ScannerStatusCard -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding)
 **Date:** —  **Tester:** —
 
 ---
@@ -10429,7 +10429,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 6 and 7 both true; commit lands; README still embeds correctly when rendered on github.com.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent)
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-09: Asciinema demo recorded + README link updated (LAUNCH-01)
@@ -10543,7 +10543,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Six-row decomposition table renders; values match the CLI markdown (UAT-88-01) and the dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (no test asserts the HTML report actually renders the six-row subscore decomposition table, /25 per row, divide-by-1.5 rollup -- quirk/reports/templates/report.html.j2 lines 409-420 emit exactly this markup, but only data-layer parity in test_score_render_parity.py and markdown presence in test_score_transparency.py are covered by pytest, not the HTML template render output itself)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs an HTML-template render assertion proving the six pillar subscores hygiene, modern_tls, identity_trust, agility_signals, data_at_rest, data_in_motion each render as their own /25 row with the domains_assessed/domains_total divided-by-score_divisor rollup sentence in quirk/reports/templates/report.html.j2, ~lines 499-528 as of 2026-09-13 -- drifted from the ledger's stale 409-420 citation, spot-checked against live source -- the isolation property is the actual rendered HTML output, which neither test_score_render_parity.py data-layer parity nor test_score_transparency.py markdown presence exercises)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10559,7 +10559,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Decomposition table renders intact in the PDF; overall reconciles across PDF / HTML / dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (no pytest coverage exists for PDF rendering of the decomposition table at all -- Playwright PDF generation is not exercised by any test; same underlying gap as UAT-88-02 one layer further downstream)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a Playwright PDF-render assertion proving the same six pillar-subscore rows and rollup sentence documented at UAT-88-02 survive HTML-to-PDF conversion intact, no truncation or layout break -- the isolation property is PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion; no pytest coverage exercises Playwright PDF generation at all)
 **Date:** _____________  **Tester:** _____________
 
 
@@ -10599,7 +10599,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 - Each weak config file matches the documented ciphers (postgres/redis/kafka).
 - README + `expected_results_v4.md` document all three with ports and expected findings (no drift — CLAUDE.md lab-sync).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -12161,7 +12161,7 @@ deleting either series must not delete the detection, per Phase 175 D-03
 - No `Strict-Transport-Security` header on `/probe` responses.
 - `docker-compose.yml` contains `profiles: ["fuzz-target"]` and `ports: "20100:8000"`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01)
 **Date:** _____________  **Tester:** _____________
 
 ---

@@ -162,3 +162,67 @@ corrected id noted as a hypothesis) and do not invent a document case for it.
 above before citing any number from this document in a future plan, review, or milestone close —
 never transcribe these numbers forward without recomputing them, exactly as this document itself
 had to correct two prior documents' transcribed 70.
+
+## Per-case verdicts (COV-03)
+
+**Plan 204-02, Task 1.** Live `reconcile()` re-derivation before this task started confirmed
+wave 1's 204-01-SUMMARY.md sets exactly: **8** cause-2 conflicts (doc `DEFERRED`, ledger `GAP`) and
+**4** cause-3 unannotated cases (doc no GAP-attributable annotation, ledger `GAP`) — the same 12
+ids `204-CONTEXT.md`'s D-01/D-05 named plus `UAT-89-01-01` (D-06's withdrawal). No reconciler
+finding diverged from the wave-1 prediction this time.
+
+**The single structural finding that resolved all 8 cause-2 conflicts identically:** none of the 8
+`DEFERRED` annotations in the document ever cited a substitute node (no `covered by <node>` clause
+anywhere in any of them). Every one of the 8 annotations *textually reads* `DEFERRED — no
+substitute coverage; needs a ...` — i.e. the annotation's own content is GAP-shaped prose (openly
+admitting no substitute exists) that was mechanically mislabeled with the `DEFERRED` token instead
+of `GAP`. `scripts/uat_corpus.py::classify_annotation()` classifies purely on the leading token, so
+it read these as `DEFERRED` even though the ledger's structured `outcome` field (and the sentence
+right after the em-dash) always said `GAP`. There is no case here where "the substitute holds" —
+every verdict is "no substitute was ever cited; ledger was right; rewrite `DEFERRED` to `GAP`,
+same body text unchanged." Per critical rule 3 (`sensors-loading.test.tsx` standard): a citation
+that resolves to nothing is not a substitute, and here there was never even a citation to resolve.
+
+Applying the project's standing anti-fabrication guard's own contract
+(`tests/test_uat_disposition_integrity.py::test_ledger_matches_document`, which asserts the
+ledger's `evidence` field is byte-identical to the document's own annotation for every id) meant
+each of these fixes also required updating the corresponding `docs/uat-disposition-ledger.jsonl`
+row's `evidence` field to match the corrected annotation — not to re-derive the outcome (the
+`outcome: "GAP"` field was already correct and untouched) but to keep the ledger internally
+consistent with its own `outcome` field, which its `evidence` prose had drifted from. This is a
+ledger data-quality fix, not "extending the ledger forward" (D-02's rejected idea) — it edits an
+existing row's free-text field to agree with that same row's structured field, for ids the ledger
+already covers (series ≤158).
+
+| Case | Prior doc annotation | Ledger outcome | Substitute checked | Verdict | Evidence |
+|---|---|---|---|---|---|
+| UAT-11-02 | `DEFERRED — no substitute coverage; needs a multi-run progressive-discovery integration test...` | GAP | None cited — annotation named no `covered by` node | **GAP** (ledger was right) | Annotation's own text already says "no substitute coverage"; token corrected DEFERRED→GAP, body unchanged |
+| UAT-41-03 | `DEFERRED — no substitute coverage; needs a live docker-compose orphan-sweep integration test...` | GAP | None cited | **GAP** | Same pattern; body unchanged |
+| UAT-5-19 | `DEFERRED — no substitute coverage; needs a pgcrypto column-level crypto detector...` | GAP | None cited | **GAP** | Same pattern; `grep -rn "pgp_sym_encrypt" quirk/` confirms no detector exists, matching the annotation's own claim |
+| UAT-85-08 | `DEFERRED — no substitute coverage; needs a real browser screenshot capture...` | GAP | None cited | **GAP** | Same pattern; body unchanged |
+| UAT-89-01-01 | `DEFERRED — no substitute coverage; needs a live docker-compose bring-up plus healthcheck...` | GAP | None cited | **GAP** | Same pattern; three-segment id confirmed real (D-06), not re-litigated |
+| UAT-96-08 | `DEFERRED — no substitute coverage; needs a live docker-compose bring-up of the fuzz-target...` | GAP | None cited | **GAP** | Same pattern; body unchanged |
+| UAT-67-04 | (unannotated: `frontend component test for ScannerStatusCard needed...`, no GAP/DEFERRED/OBSOLETE token) | GAP | N/A — cause 3, no citation ever present | **GAP** (D-05: explicit annotation established, not inherited silently) | `grep -rln "ScannerStatusCard"` under `src/dashboard/src/**/__tests__/` returns zero hits — no component test file exists at all, confirming the case's own claim |
+| UAT-88-02 | (unannotated, generic HTML-render gap prose, no token) | GAP | N/A — cause 3 | **GAP**, rewritten to name the subscore set and isolation property for Phase 208 (per plan Task 1 instruction) | `grep -n "subscore" quirk/reports/templates/report.html.j2` shows the six-row table lives at **~lines 499-528** (`hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, `data_in_motion`), not the ledger's stale `409-420` citation (drift confirmed live, 2026-09-13) — isolation property: the rendered HTML output itself, uncovered by either `test_score_render_parity.py` (data-layer parity only) or `test_score_transparency.py` (markdown presence only) |
+| UAT-88-03 | (unannotated, generic PDF-render gap prose, no token) | GAP | N/A — cause 3 | **GAP**, rewritten to reference UAT-88-02's now-named subscore set and state its own downstream isolation property | `grep -rln "playwright" tests/` was checked; no test exercises PDF generation of the decomposition table — isolation property: PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion |
+| UAT-5-18 | `DEFERRED — no substitute coverage; needs a Vault Transit unit test for an rsa-1024 key type...` | GAP | None cited | **Retired, see Task 2** (D-11 COV-09 retirement — `rsa-1024` does not exist as a Vault Transit key type at all) | Left untouched in Task 1; resolved to `OBSOLETE` in Task 2 |
+| UAT-47-04 | `DEFERRED — no substitute coverage; the interactive nmap y/N wizard prompt...no longer exists...` | GAP | None cited | **Retired, see Task 2** (D-11 — prompt superseded by `--discovery`) | Left untouched in Task 1; resolved to `OBSOLETE` in Task 2 |
+| UAT-92-01 | (unannotated, one-time-historical-gate prose, no token) | GAP | N/A — cause 3 | **Retired, see Task 2** (D-11 — one-time v5.0.0 tag-creation event, not repeatable) | Left untouched in Task 1; resolved to `OBSOLETE` in Task 2 |
+
+**Findings vs. CONTEXT.md's prediction:** none. The reconciler's live cause-2/cause-3 sets matched
+wave 1's re-derivation exactly (8 and 4, with `UAT-89-01-01` in cause 2 per D-06's withdrawal) —
+no case the reconciler flagged was unpredicted, and no predicted case went unflagged.
+
+**Post-Task-1 live state** (9 of 12 cases resolved to `GAP`, 3 left for Task 2's `OBSOLETE`
+retirement): `reconcile()` reports cause 2 = 2 (`UAT-47-04`, `UAT-5-18`) and cause 3 = 1
+(`UAT-92-01`) — exactly the three COV-09 retirements, and nothing else. Arithmetic closes
+(`arithmetic_ok: True`). `tests/test_uat_zero_undispositioned_gate.py`,
+`tests/test_uat_series_format.py`, `tests/test_uat_corpus_parser.py`, and
+`tests/test_uat_disposition_integrity.py` (except the documented pre-existing pytest 9.0.2 node)
+all pass at this point.
+
+## Retirements (COV-09)
+
+See `204-02-SUMMARY.md` and `tests/test_uat_obsolete_grammar.py` for the three retirements
+(`UAT-92-01`, `UAT-47-04`, `UAT-5-18`), their spot-checked reasons, and the OBSOLETE grammar that
+keeps them out of the open-GAP count.
