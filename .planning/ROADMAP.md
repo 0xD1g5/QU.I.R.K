@@ -278,7 +278,13 @@ derived artifact over the whole corpus, with a written verdict on what it reads.
   4. `UAT-92-01`, `UAT-47-04`, and `UAT-5-18` read as recorded OBSOLETE carrying their reason, and
      the regenerated worklist no longer counts them among open GAPs — a recorded retirement, never a
      quiet deletion.
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 204-01-PLAN.md — COV-03 run-time corpus/ledger parser + the written reconciliation verdict
+- [ ] 204-02-PLAN.md — per-case DEFERRED-vs-GAP verdicts, OBSOLETE grammar, COV-09 retirements
+- [ ] 204-03-PLAN.md — COV-01 worklist generator + byte-reproducibility drift gate
+- [ ] 204-04-PLAN.md — COV-02 standing reconciliation gate + recorded RED demonstration
+- [ ] 204-05-PLAN.md — docs checklist, Obsidian sync, hand-edited requirement/roadmap/state closure
 
 ### Phase 205: Guard Integrity
 **Goal**: The two guards whose own limitations make real coverage uncitable are fixed, before the
