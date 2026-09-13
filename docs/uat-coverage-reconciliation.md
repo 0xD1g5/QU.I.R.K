@@ -223,6 +223,38 @@ all pass at this point.
 
 ## Retirements (COV-09)
 
-See `204-02-SUMMARY.md` and `tests/test_uat_obsolete_grammar.py` for the three retirements
-(`UAT-92-01`, `UAT-47-04`, `UAT-5-18`), their spot-checked reasons, and the OBSOLETE grammar that
-keeps them out of the open-GAP count.
+**Plan 204-02, Task 2.** `204-CONTEXT.md`'s D-11 named three retirement candidates. Per-case
+spot-checking against current source (required by 204-02-PLAN.md's Task 2 `<action>` block) found
+**one of the three reasons false** — the corrected disposition is **2 retirements, not 3**. This
+is recorded as a finding, not silently absorbed: the plan's own frontmatter `must_haves.truths`
+line ("`UAT-92-01`, `UAT-47-04` and `UAT-5-18` read as recorded OBSOLETE") is **not fully
+satisfied as originally written** for `UAT-47-04` specifically, and that is the correct outcome —
+retiring a case on a disproven premise would be exactly the "quiet deletion wearing a token"
+Threat T-204-05 exists to prevent.
+
+| Case | Verdict | Reason | Evidence command / check |
+|---|---|---|---|
+| `UAT-92-01` | **Retired OBSOLETE** | One-time historical release gate for the v5.0.0 tag-creation event (Phase 92); the event already happened and is not repeatable | `git tag -l v5.0.0` (tag exists); `git ls-remote --tags origin v5.0.0` (non-empty — the tag **has** since been pushed to origin by a later release, contradicting the case's own "not pushed" Pass Criteria); `grep 'version = "5.15.0"' pyproject.toml` (current version has moved on) |
+| `UAT-5-18` | **Retired OBSOLETE** | HashiCorp Vault Transit has no `rsa-1024` key type at all — only `rsa-2048`/`3072`/`4096` — so the case's own dual-flag premise (weak key size AND quantum-vulnerable on an `rsa-1024` Transit key) is untestable against real Vault | `grep -n "rsa-1024\|rsa-2048\|rsa-3072\|rsa-4096" quirk/scanner/vault_connector.py` — QUIRK's own Transit key-type classification table (lines 66-68) carries `rsa-2048`/`3072`/`4096` entries and **no `rsa-1024` entry at all**, corroborating the claim from the implementation side (the D-11-provided reason is about an external vendor API QUIRK cannot query offline; this is the strongest available in-repo corroboration) |
+| `UAT-47-04` | **NOT retired — corrected to GAP** | D-11's stated reason ("the interactive nmap y/N wizard prompt this case describes no longer exists ... superseded by `--discovery`") is **false**. `quirk/interactive.py`'s `enable_nmap = _prompt_bool(...)  # D-06` call site is exactly this prompt — a single global y/N toggle, not per-target — and it is still live, reached via `run_scan.py`'s wizard-mode branch (`run_scan.py:1908`, `cfg, scan_profile = interactive_config()`). `--discovery` is a **separate** CLI-mode-only flag (`run_scan.py:1532`) for non-interactive `--config` runs; it does not supersede the wizard prompt, it coexists with it. A real substitute exists (`tests/test_interactive_validate_routes.py::test_interactive_py_enable_nmap_defaults_true`) but only regression-locks the `default=True` value, not the case's own "exactly one prompt regardless of target count" / "CONSULTING_TLS_PORTS fallback" Pass Criteria — so per D-04's own standard (a citation that doesn't fully cover the case's subject is not full coverage) this stays an honest **GAP**, corrected in wording, rather than a fabricated `DEFERRED` or a false `OBSOLETE` | `grep -n "enable_nmap = _prompt_bool" quirk/interactive.py`; `grep -n "interactive_config" run_scan.py`; `grep -n -- "--discovery" run_scan.py`; `python -m pytest tests/test_interactive_validate_routes.py::test_interactive_py_enable_nmap_defaults_true -q` (passes, but only covers the default value) |
+
+**Grammar shape applied** (per `204-02-PLAN.md`'s `<interfaces>` block, D-12):
+
+    **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (OBSOLETE — <reason>; retired by COV-09 phase 204)
+
+`scripts/uat_corpus.py::classify_annotation()` already classified this token as its own
+disposition (built ahead of need in 204-01). This plan extended `reconcile()` with a fifth cause
+(`doc_obsolete_ledger_gap`) and a separate `retired_obsolete_ids` total so an OBSOLETE case is
+excluded from `doc_gap_ids` (the open-GAP count) while still being accounted for in the
+arithmetic-closure check against the ledger's stale `outcome: GAP` rows (the ledger is historical
+evidence and was deliberately NOT rewritten to `OBSOLETE` — only the document and its own
+`evidence` field, where D-04's earlier fixes required lockstep sync, were touched).
+`tests/test_uat_obsolete_grammar.py` (16 tests) is the mechanical proof: OBSOLETE parses as its
+own disposition, is invisible to both `ALL_EMPTY_RESULT_RE` (zero-undispositioned gate) and
+`CANONICAL_RESULT_RE` (format gate) re-derived independently, is excluded from
+`reconcile()`'s open-GAP set, requires a non-empty reason, and a non-vacuous live-corpus leg
+enumerates the actual OBSOLETE cases from the file at run time (currently 2, not a hard-coded 3).
+
+Post-retirement live totals: `OBSOLETE: 2` in `disposition_counts`; `retired_obsolete_total: 2`;
+`cause5_doc_obsolete_ledger_gap: 2`; `arithmetic_ok: True`. Re-run
+`.venv/bin/python -m scripts.uat_corpus reconcile` before citing any of these numbers forward.

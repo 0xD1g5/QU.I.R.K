@@ -2020,7 +2020,7 @@ All of these services show status `Up` or `running`:
 - `aes256` key detected and classified (quantum-vulnerable via Grover)
 - All three keys appear as components in the CBOM output
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a Vault Transit unit test for an rsa-1024 key type. tests/test_vault_connector.py::test_transit_key_rsa2048_no_severity and test_transit_key_aes256_no_severity cover the rsa-2048/aes256 classification but HashiCorp Vault Transit does not support an rsa-1024 key type at all -- only rsa-2048/3072/4096 -- so the case's own rsa-1024 weak-plus-quantum-vulnerable dual-flag premise may be untestable against real Vault)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (OBSOLETE — HashiCorp Vault Transit has no rsa-1024 key type at all, only rsa-2048/3072/4096, confirmed against quirk/scanner/vault_connector.py's own classification table which carries no rsa-1024 entry, so the case's rsa-1024 weak-plus-quantum-vulnerable dual-flag premise is untestable against real Vault; retired by COV-09 phase 204)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -7266,7 +7266,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - If `n` selected, scan uses CONSULTING_TLS_PORTS fallback (17 ports).
 - If `y` selected, nmap is invoked once for all targets combined.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; the interactive nmap y/N wizard prompt this case describes no longer exists in run_scan.py -- it was superseded by the --discovery builtin-or-nmap CLI flag per D-09, Phase 47/121, so there is no prompt-count code path left to unit test)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; corrected 2026-09-13 from a prior OBSOLETE candidacy that mis-claimed this prompt no longer exists -- quirk/interactive.py's enable_nmap = _prompt_bool call, tagged D-06, is exactly this wizard's single global nmap y/N prompt and is still live, reached via run_scan.py's wizard-mode call to interactive_config at run_scan.py line 1908; --discovery is a separate CLI-mode flag for non-interactive --config runs, not a supersession of the wizard prompt. tests/test_interactive_validate_routes.py::test_interactive_py_enable_nmap_defaults_true only regression-locks the default=True value, not the appears-exactly-once-per-N-targets or CONSULTING_TLS_PORTS-fallback behavior this case's own Pass Criteria require -- needs a real wizard-mode integration test asserting exactly one prompt regardless of target count)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -11268,7 +11268,7 @@ Expect: tag listed, type = tag (annotated), ls-remote empty (not pushed), versio
 - `grep 'version = "5.0.0"' pyproject.toml` → match.
 - `grep '## \[5.0.0\]' CHANGELOG.md` → match.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (case is a one-time historical release gate for the v5.0.0 tag creation event from Phase 92, already completed per its own Notes field -- tag created locally after operator approval; running its Automated gate today against the current v5.15.0 state naturally fails 2 of 5 checks -- pyproject version now 5.15.0, and the v5.0.0 tag has since been pushed to origin by a later release -- this is expected temporal drift from 15+ subsequent releases, not a live coverage gap, but no substitute test can re-verify a historical one-time event)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (OBSOLETE — one-time historical release gate for the v5.0.0 tag creation event from Phase 92, already completed per its own Notes field; git tag -l v5.0.0 and git ls-remote --tags origin v5.0.0 confirm the tag exists and has since been pushed to origin by a later release, contradicting the case's own not-pushed Pass Criteria, and pyproject is now 5.15.0 -- this is expected temporal drift from 15+ subsequent releases and the event is not repeatable; retired by COV-09 phase 204)
 **Date:**   **Tester:**
 **Notes:** Gated behind checkpoint:human-verify at Phase 92 Plan 02 execution. Tag created locally after operator approval at the final close-out HEAD.
 

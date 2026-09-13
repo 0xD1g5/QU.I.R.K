@@ -231,6 +231,8 @@ class Reconciliation:
     doc_deferred_ledger_gap: list  # cause 2: doc DEFERRED, ledger GAP
     doc_unannotated_ledger_gap: list  # cause 3: doc SKIP_OTHER (no notes gap), ledger GAP
     ledger_ids_absent_from_doc: list  # cause 4: ledger id matches no heading
+    doc_obsolete_ledger_gap: list  # cause 5: doc OBSOLETE (COV-09 retirement), ledger GAP
+    retired_obsolete_ids: list  # ALL doc-OBSOLETE cases, whether or not a ledger row exists
     arithmetic_ok: bool
     arithmetic_detail: dict
 
@@ -296,18 +298,42 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
     # Cause 4: ledger id matches no document heading at all.
     ledger_ids_absent_from_doc = sorted(cid for cid in ledger_by_id if cid not in by_id)
 
+    # Cause 5 (204-02, D-12): doc retired the case OBSOLETE (COV-09), ledger still says GAP.
+    # An OBSOLETE case is NOT an open doc-GAP (excluded from is_gap/doc_gap_ids by design) so it
+    # would otherwise fall out of both arithmetic directions below -- retired work must be
+    # accounted for, not silently dropped from the closure check.
+    doc_obsolete_ledger_gap = sorted(
+        cid
+        for cid, row in ledger_by_id.items()
+        if row.get("outcome") == "GAP" and cid in by_id and by_id[cid].disposition == "OBSOLETE"
+    )
+    # ALL doc-OBSOLETE cases, whether or not the ledger ever had a row for them (an OBSOLETE case
+    # in a series beyond the ledger's max series is still retired, just never had cause-1-style
+    # ledger coverage to begin with).
+    retired_obsolete_ids = sorted(
+        (c.case_id for c in cases if c.disposition == "OBSOLETE"), key=lambda cid: by_id[cid].heading_lineno
+    )
+
     ledger_gap_ids = sorted(cid for cid, row in ledger_by_id.items() if row.get("outcome") == "GAP")
     ledger_gap_in_doc = [cid for cid in ledger_gap_ids if cid in by_id]
     ledger_gap_not_in_doc = [cid for cid in ledger_gap_ids if cid not in by_id]
 
     # Arithmetic closure, direction 1: every ledger-GAP id in the document falls into exactly one
-    # of {already doc-GAP, cause-2 DEFERRED-conflict, cause-3 unannotated-conflict}.
-    accounted_ledger_gap = set(doc_gap_with_ledger_row) | set(doc_deferred_ledger_gap) | set(doc_unannotated_ledger_gap)
+    # of {already doc-GAP, cause-2 DEFERRED-conflict, cause-3 unannotated-conflict,
+    # cause-5 OBSOLETE-retirement}.
+    accounted_ledger_gap = (
+        set(doc_gap_with_ledger_row)
+        | set(doc_deferred_ledger_gap)
+        | set(doc_unannotated_ledger_gap)
+        | set(doc_obsolete_ledger_gap)
+    )
     ledger_gap_direction_ok = set(ledger_gap_in_doc).issubset(accounted_ledger_gap) and (
         len(ledger_gap_in_doc) == len(set(ledger_gap_in_doc) & accounted_ledger_gap)
     )
 
     # Arithmetic closure, direction 2: doc-GAP total = (has a ledger row) + (no ledger row, cause 1).
+    # OBSOLETE cases are never counted here -- retired_obsolete is reported separately (D-12: a
+    # retired case must never reappear as drainable work, i.e. never inflate doc_gap_total).
     doc_direction_ok = len(doc_gap_ids) == len(doc_gap_with_ledger_row) + len(doc_gap_without_ledger_row)
 
     arithmetic_detail = {
@@ -320,6 +346,8 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         "cause2_doc_deferred_ledger_gap": len(doc_deferred_ledger_gap),
         "cause3_doc_unannotated_ledger_gap": len(doc_unannotated_ledger_gap),
         "cause4_ledger_ids_absent_from_doc": len(ledger_ids_absent_from_doc),
+        "cause5_doc_obsolete_ledger_gap": len(doc_obsolete_ledger_gap),
+        "retired_obsolete_total": len(retired_obsolete_ids),
     }
 
     arithmetic_ok = doc_direction_ok and ledger_gap_direction_ok
@@ -336,6 +364,8 @@ def reconcile(cases: list, ledger_rows: list) -> Reconciliation:
         doc_deferred_ledger_gap=doc_deferred_ledger_gap,
         doc_unannotated_ledger_gap=doc_unannotated_ledger_gap,
         ledger_ids_absent_from_doc=ledger_ids_absent_from_doc,
+        doc_obsolete_ledger_gap=doc_obsolete_ledger_gap,
+        retired_obsolete_ids=retired_obsolete_ids,
         arithmetic_ok=arithmetic_ok,
         arithmetic_detail=arithmetic_detail,
     )
@@ -364,6 +394,8 @@ def _print_reconciliation(r: Reconciliation) -> None:
     print(f"Cause 2 -- doc DEFERRED, ledger GAP: {len(r.doc_deferred_ledger_gap)} {r.doc_deferred_ledger_gap}")
     print(f"Cause 3 -- doc unannotated, ledger GAP: {len(r.doc_unannotated_ledger_gap)} {r.doc_unannotated_ledger_gap}")
     print(f"Cause 4 -- ledger id absent from document: {len(r.ledger_ids_absent_from_doc)} {r.ledger_ids_absent_from_doc}")
+    print(f"Cause 5 -- doc OBSOLETE (COV-09 retirement), ledger GAP: {len(r.doc_obsolete_ledger_gap)} {r.doc_obsolete_ledger_gap}")
+    print(f"Retired OBSOLETE (all, excluded from open-GAP count): {len(r.retired_obsolete_ids)} {r.retired_obsolete_ids}")
     print(f"Arithmetic detail: {r.arithmetic_detail}")
     print(f"Arithmetic closes: {r.arithmetic_ok}")
     if not r.arithmetic_ok:
