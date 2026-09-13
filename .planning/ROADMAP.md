@@ -174,8 +174,25 @@ schedule slack.
   suite 4960 passed / 1 failed, that one being an unrelated 91-day HARDWARE_MATRIX staleness trip,
   operator-deferred with a record. 4 deferred items recorded, incl. `int(delta)` lift truncation.
 
-- [ ] **Phase 202: Finding Storyline Drawer** - Operator can open a per-finding narrative drawer
-  on the dashboard findings table, showing the finding's story and its score-lift attribution.
+- [x] **Phase 202: Finding Storyline Drawer** (completed 2026-09-12) - Operator can open a per-finding
+  narrative drawer on the dashboard findings table, showing the finding's story and its score-lift
+  attribution. 8/8 plans; verification `human_needed` → **operator-approved** after a live LAN walkthrough
+  (4/4 must-haves). STORY-01/STORY-02 Complete.
+  **Criteria 2 and 3 were satisfied under operator-confirmed reframings, not their literal wording** —
+  criterion 3's per-finding number is not honestly implementable (`score_lift` is keyed by remediation
+  THEME covering N findings), so D-01 reframes it as "+N pts when all M findings in this theme are
+  resolved", D-08 prefers a specific theme over the `high-impact-findings` catch-all, and D-09 renders the
+  catch-all when it is a finding's only theme. Criterion 2's narrative is *usually absent* (catalogs are
+  keyed by crypto-algorithm keyword), accepted as consistency with the report rather than a failure (D-07).
+  ROADMAP's criterion-3 wording is now stale relative to what shipped — flagged for a doc correction.
+  Post-execution: code review 0 critical / 2 warning (both fixed — a row click bypassing the A6 disabled
+  trigger, and a cross-surface equality test that passed by construction) / 1 info accepted-advisory;
+  UI review **23/24** with 5 pillars at 4/4 and its 2 actionable warnings fixed. The a11y capture found a
+  REAL serious WCAG 2.1.1/2.1.3 violation on the drawer's own scroll region — fixed with `tabIndex={0}`
+  rather than ledgered, since the app-wide justification covering the two existing ledger entries does not
+  apply to a single-site container. Failing-node SET: 1 (the operator-deferred HARDWARE_MATRIX staleness
+  trip). 4 new todos filed, incl. a documented-not-closed `scan_run_id` divergence between the drawer and
+  the roadmap surface, and an A1 copy nuance the operator spotted on live data.
 
 ## Phase Details
 
@@ -393,7 +410,7 @@ Plans:
 | 199. Wave A Correctness Drain | 5/5 | Complete | 2026-09-11 |
 | 200. Report Branding & Templates | 7/7 | Complete | 2026-09-11 |
 | 201. Score-Lift Roadmap Re-frame | 8/8 | Complete | 2026-09-12 |
-| 202. Finding Storyline Drawer | 8/8 | Plans complete, verification pending | - |
+| 202. Finding Storyline Drawer | 8/8 | Complete | 2026-09-12 |
 
 ## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
 

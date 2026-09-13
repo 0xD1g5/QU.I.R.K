@@ -62,10 +62,10 @@ new score-lift math.
 
 ### Finding Storyline Drawer (STORY — 999.102, unblocked: 999.98 shipped v5.21 Phase 191)
 
-- [ ] **STORY-01**: Operator can open a per-finding storyline drawer from the dashboard
+- [x] **STORY-01**: Operator can open a per-finding storyline drawer from the dashboard
       findings table, with narrative sourced from the existing Phase-99 catalogs
       (`ALGO_IMPACT_MAP` / `REMEDIATION_CATALOG`) — no forked fourth narrative generator
-- [ ] **STORY-02**: The drawer shows the finding's score-lift attribution, consuming LIFT-01's
+- [x] **STORY-02**: The drawer shows the finding's score-lift attribution, consuming LIFT-01's
       per-item number (sequenced after the LIFT phase)
 
 ## v2 Requirements
@@ -109,8 +109,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIFT-03 | Phase 201 | Complete |
 | LIFT-04 | Phase 201 | Complete |
 | LIFT-05 | Phase 201 | Complete |
-| STORY-01 | Phase 202 | Pending |
-| STORY-02 | Phase 202 | Pending |
+| STORY-01 | Phase 202 | Complete |
+| STORY-02 | Phase 202 | Complete |
 
 **Coverage:**
 - v1 requirements: 14 total
