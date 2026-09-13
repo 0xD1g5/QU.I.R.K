@@ -1,66 +1,76 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-13T13:40:54.866Z",
-  "phase": "204",
-  "phase_name": "Worklist Truth & Derivation",
-  "phase_dir": ".planning/phases/204-worklist-truth-derivation",
-  "plan": 1,
+  "timestamp": "2026-09-13T18:59:55.644Z",
+  "phase": "205",
+  "phase_name": "Guard Integrity",
+  "phase_dir": ".planning/phases/205-guard-integrity",
+  "plan": 5,
   "task": 0,
-  "total_tasks": 5,
+  "total_tasks": 6,
   "status": "paused",
+  "branch": "phase-205-guard-integrity",
+  "pr": "https://github.com/0xD1g5/QU.I.R.K/pull/14",
   "completed_tasks": [
-    {"id": 0, "name": "Phase 203 Catalog Freshness Drain (whole phase)", "status": "done", "commit": "b7cd2817"},
-    {"id": 1, "name": "204 discuss - CONTEXT.md with D-01..D-12 auto-selected", "status": "done", "commit": "untracked artifact"},
-    {"id": 2, "name": "204 plan - 5 plans in 5 sequential waves", "status": "done", "commit": "17824493"}
+    {"id": 0, "name": "Phase 204 Worklist Truth & Derivation (whole phase, incl. close + review + fixes)", "status": "done", "commit": "18344389"},
+    {"id": 1, "name": "Phase 203 retroactive close (backfilled 203-VERIFICATION.md, Series 203, STALE-02 flip)", "status": "done", "commit": "ae0cf377"},
+    {"id": 2, "name": "STALE-01 closed — all 8 HARDWARE_MATRIX vendors re-verified, staleness gate green on merit", "status": "done", "commit": "fa1792f7"},
+    {"id": 3, "name": "205 discuss — 205-CONTEXT.md with D-01..D-08, 3 operator-answered", "status": "done", "commit": "untracked artifact"},
+    {"id": 4, "name": "205 plan — 5 plans in 3 waves", "status": "done", "commit": "57edd2fd"},
+    {"id": 5, "name": "205-01 GUARD-01 core: pin two-:: capability, fix bracket-truncation phantom diagnostic", "status": "done", "commit": "8561e306"},
+    {"id": 6, "name": "205-02 convert 7 Class*method globs to real node refs + ledger sync", "status": "done", "commit": "d986b349"},
+    {"id": 7, "name": "205-02b corrective: widen citation extraction (6 unguarded citations, 5 API-security)", "status": "done", "commit": "f36e0067"},
+    {"id": 8, "name": "205-03 Node in Linux Full Suite (D-04) + dangling item-12 citation fix (D-07)", "status": "done", "commit": "cd25564f"},
+    {"id": 9, "name": "205-04 real CI red-proof — criterion 4 PROVEN, induction reverted byte-identical", "status": "done", "commit": "a822f01c"}
   ],
   "remaining_tasks": [
-    {"id": 3, "name": "204-01 COV-03 parser + reconciliation verdict", "status": "not_started"},
-    {"id": 4, "name": "204-02 per-case verdicts + OBSOLETE grammar + COV-09 retirements", "status": "not_started"},
-    {"id": 5, "name": "204-03 COV-01 generator + byte-reproducibility drift gate", "status": "not_started"},
-    {"id": 6, "name": "204-04 COV-02 standing gate + RED proof", "status": "not_started"},
-    {"id": 7, "name": "204-05 docs/vault/planning closure (autonomous:no - operator review checkpoint)", "status": "not_started"},
-    {"id": 8, "name": "Phase 205 Guard Integrity", "status": "not_started"},
-    {"id": 9, "name": "Phase 206 Dashboard UI Coverage Drain", "status": "not_started"},
-    {"id": 10, "name": "Phase 207 Browser-Only Coverage Verdict - MANUAL, operator-led, do NOT autonomously enter", "status": "not_started"}
+    {"id": 10, "name": "205-05 close-out — correct ROADMAP criteria 1/2/3, flip REQUIREMENTS, UAT Series 205, Obsidian sync (autonomous:false — operator review checkpoint)", "status": "not_started"},
+    {"id": 11, "name": "Phase 205 verification + validation artifacts (205-VERIFICATION.md, 205-VALIDATION.md) — REQUIRED by the pre-commit close gate", "status": "not_started"},
+    {"id": 12, "name": "Phase 206 Dashboard UI Coverage Drain — the 28 jsdom-tractable series-7 cases", "status": "not_started"},
+    {"id": 13, "name": "Phase 207 Browser-Only Coverage Verdict — MANUAL, operator-led, an autonomous runner must HALT before it", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "Staleness gate tests/test_hardware_staleness.py::test_hardware_matrix_not_stale is RED (92/90 days) and will stay red through Phases 204-208",
+      "description": "Python CI is RED on main and on this PR: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg fails on BACK-51::Phases in .planning/milestones/v5.23-ROADMAP.md",
       "type": "external",
-      "workaround": "DELIBERATE. Dated deferral recorded in STATE.md. 7 of 8 HARDWARE_MATRIX vendor source documents are gone or access-gated. Under D-01 the top-level date is min() of the entries so it cannot go green. Do NOT clear it by bumping a date or setting QUIRK_CI_STALENESS_OVERRIDE_DATE."
+      "workaround": "PRE-EXISTING, verified. Introduced by commit a6530843 (v5.23 milestone close, 2026-09-12), confirmed an ancestor of origin/main; this branch touches no file under .planning/milestones/. Same defect class Phase 198 GATE-04 fixed by escaping example IDs with U+2011 non-breaking hyphens; it recurred in a newly-archived file. Do NOT attribute it to Phases 203/204/205. Fix is a small separate change: escape or ledger the BACK-51 token."
+    },
+    {
+      "description": "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[storage-s3] fails in CI — minio image pull denied by Docker Hub",
+      "type": "external",
+      "workaround": "Documented environmental class. Not a code defect. Compare failing-node SETS on a healthy daemon, never raw pass counts."
     },
     {
       "description": "tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged fails under pytest 9.0.2",
       "type": "technical",
-      "workaround": "PRE-EXISTING, proven by re-running at pre-phase commit 4c743f74 in a detached worktree. Not a Phase 203/204 regression. Tracked in .planning/todos/pending/pytest-9-breaks-uat-nonvacuity-skip-reporting.md. Do not misattribute it."
+      "workaround": "PRE-EXISTING, skip-report format dependency. It lives at :836-857 in the SAME module Phase 205 edits, immediately above the vitest block — so it will be adjacent to any further work here. Do not fix opportunistically, do not misattribute. Tracked in .planning/todos/pending/pytest-9-breaks-uat-nonvacuity-skip-reporting.md"
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Re-source 7 rotted HARDWARE_MATRIX vendor source_urls",
-      "context": "Operator decision 2026-09-13: operator takes this half personally. Work matrix in .planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md. Deferred until after Phases 204-208.",
+      "action": "Review and merge PR #14 (54 commits, Phases 203-205)",
+      "context": "Branch phase-205-guard-integrity. All work committed and pushed; working tree clean. Linux Full Suite is red on the two pre-existing failures above only.",
+      "blocking": false
+    },
+    {
+      "action": "Run plan 205-05 (autonomous:false)",
+      "context": "The planner flagged it as an operator review checkpoint because it hand-edits ROADMAP.md / REQUIREMENTS.md. It now carries THREE ROADMAP corrections, not one — criteria 1, 2 and 3 were all falsified.",
       "blocking": false
     },
     {
       "action": "Phase 207 must be run manually, operator-led",
-      "context": "Operator decision 2026-09-13. Its Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. An autonomous runner must HALT after Phase 206.",
+      "context": "Standing operator decision 2026-09-13. Its Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. An autonomous runner must HALT after Phase 206.",
       "blocking": true
-    },
-    {
-      "action": "Review plan 204-05 (autonomous:no)",
-      "context": "The planner flagged it as an operator review checkpoint because it edits REQUIREMENTS/ROADMAP/STATE.",
-      "blocking": false
     }
   ],
   "decisions": [
-    {"decision": "v5.24 runs in two autonomous segments with a hard manual stop at Phase 207", "rationale": "Playwright adoption is a CI toolchain commitment the operator retains", "phase": "v5.24"},
-    {"decision": "Phase 203 used Chrome browser automation in the main session, not worktree subagents", "rationale": "mcp__claude-in-chrome__* tools do not exist inside worktree-isolated subagents; a fanned-out executor would silently fall back to HTTP and hit 403s", "phase": "203"},
-    {"decision": "HARDWARE_MATRIX top-level last_verified = min() of entry dates, enforced by a test", "rationale": "The gate structurally cannot read greener than the weakest vendor. This is why the gate is honestly red rather than falsely green at 1-of-8 verified.", "phase": "203"},
-    {"decision": "STALE-01 left PARTIAL and its requirement NOT flipped", "rationale": "1 of 8 vendors verified. Flipping it would be the same falsehood as bumping the date.", "phase": "203"},
-    {"decision": "Source-rot work split: operator owns URL re-sourcing, QUIRK owns doc_id structural fix", "rationale": "Operator decision 2026-09-13; re-sourcing alone buys one release cycle because all 7 rotted URLs were deep links into version-numbered doc trees", "phase": "203"},
-    {"decision": "COV-03 verdict: collapse to docs/UAT-SERIES.md as single authoritative source, resolve the 12 discrepancies INTO the document", "rationale": "Picking a winner between ledger and document institutionalises the ambiguity; the ledger structurally cannot cover series 164+ without hand-maintenance", "phase": "204"}
+    {"decision": "GUARD-01 reframed and the real defect absorbed (D-01/D-02)", "rationale": "ROADMAP criteria 1-2 assumed NODE_REF_RE could not parse Class::method. It always could — proven end-to-end. The real defects were a phantom truncation diagnostic and prose-keyed citation extraction.", "phase": "205"},
+    {"decision": "Widen the guard's citation extraction beyond the 'DEFERRED — covered by' prose form (D-08)", "rationale": "Six citations — five of them Series 58 API-security tests — were never existence- or execution-checked. All six proved honest when finally checked.", "phase": "205"},
+    {"decision": "Add Node to the Linux Full Suite job rather than relocating the vitest legs (D-04)", "rationale": "dashboard-quality.yml is path-filtered on src/dashboard/**, so a PR touching only docs/UAT-SERIES.md — exactly when a vitest citation breaks — would not trigger it.", "phase": "205"},
+    {"decision": "Branch + PR rather than pushing to main", "rationale": "Operator choice. The red-proof requires deliberately pushing a RED commit; main's PR protection is bypassable in this repo, so a broken commit could land on the default branch by accident.", "phase": "205"},
+    {"decision": "205-04 executed inline by the orchestrator, not delegated", "rationale": "It pushes a deliberately-red commit to a remote and interprets CI logs. Two subagents had already violated explicit git constraints this session.", "phase": "205"},
+    {"decision": "IPMI keeps pqc_status=unsupported but on a narrower basis", "rationale": "The 'closed cipher-suite table with no extension point' claim is FALSE — all three algorithm tables reserve C0h-FFh for OEM. But the OEM range is unreachable through the 6-bit [5:0] field carrying it, a self-contradiction in the spec. Verified against the 644-page specification itself.", "phase": "operator"}
   ],
   "uncommitted_files": [],
-  "next_action": "Execute plan 204-01 (COV-03 parser + reconciliation verdict). Read .planning/phases/204-worklist-truth-derivation/204-CONTEXT.md FIRST — especially the corrected measurement baseline and the ID-shapes table — then 204-01-PLAN.md.",
-  "context_notes": "Phase 203 closed with STALE-02 complete and STALE-01 partial; the staleness gate is deliberately red. Phase 204 is planned but not started. The single most important thing for a resuming agent: this session's own scouting parser silently dropped 37 of 878 UAT cases by assuming IDs match UAT-<int>-<int>, which produced confidently wrong counts and a false accusation that ROADMAP.md had drifted. ROADMAP.md was right on every count. That error is the exact defect Phase 204 exists to eliminate, and it is recorded as a blocking constraint."
+  "next_action": "Execute plan 205-05 (close-out). Read .planning/phases/205-guard-integrity/205-CONTEXT.md FIRST — its <falsification> block and D-02's CORRECTED mechanism — then 205-RED-PROOF.md's 'criterion 3 is not satisfiable as literally worded' finding, then 205-05-PLAN.md. After 205-05, Phase 205 still needs 205-VERIFICATION.md and 205-VALIDATION.md or its close gate will block, exactly as Phase 203's did.",
+  "context_notes": "THREE of Phase 205's four ROADMAP criteria were falsified before or during execution, each time by RUNNING code rather than reading it: (1) NODE_REF_RE already parsed Class::method; (2) there was no 'old single-:: pattern' to pin against; (3) criterion 3 is unsatisfiable because the corpus holds ZERO vitest citations and CI's `pytest -q` never names skips. Only criterion 4 survived contact, and it turned out to carry criterion 3 — a skipped test cannot shell out to vitest run. The single most transferable lesson: an enumeration derived from the artifact being audited inherits that artifact's blind spot. The recon found 7 Class*method globs because it used the guard's own extractor; there were 8, and finding the 8th exposed 6 entirely unguarded citations. Verify every executor claim independently — this session caught a crashing pass-criteria command, a stale count, an unsanctioned worktree, and a prohibited git stash, all self-reported or found by spot-check."
 }
