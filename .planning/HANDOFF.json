@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-09-13T13:40:54.866Z",
+  "phase": "204",
+  "phase_name": "Worklist Truth & Derivation",
+  "phase_dir": ".planning/phases/204-worklist-truth-derivation",
+  "plan": 1,
+  "task": 0,
+  "total_tasks": 5,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 0, "name": "Phase 203 Catalog Freshness Drain (whole phase)", "status": "done", "commit": "b7cd2817"},
+    {"id": 1, "name": "204 discuss - CONTEXT.md with D-01..D-12 auto-selected", "status": "done", "commit": "untracked artifact"},
+    {"id": 2, "name": "204 plan - 5 plans in 5 sequential waves", "status": "done", "commit": "17824493"}
+  ],
+  "remaining_tasks": [
+    {"id": 3, "name": "204-01 COV-03 parser + reconciliation verdict", "status": "not_started"},
+    {"id": 4, "name": "204-02 per-case verdicts + OBSOLETE grammar + COV-09 retirements", "status": "not_started"},
+    {"id": 5, "name": "204-03 COV-01 generator + byte-reproducibility drift gate", "status": "not_started"},
+    {"id": 6, "name": "204-04 COV-02 standing gate + RED proof", "status": "not_started"},
+    {"id": 7, "name": "204-05 docs/vault/planning closure (autonomous:no - operator review checkpoint)", "status": "not_started"},
+    {"id": 8, "name": "Phase 205 Guard Integrity", "status": "not_started"},
+    {"id": 9, "name": "Phase 206 Dashboard UI Coverage Drain", "status": "not_started"},
+    {"id": 10, "name": "Phase 207 Browser-Only Coverage Verdict - MANUAL, operator-led, do NOT autonomously enter", "status": "not_started"}
+  ],
+  "blockers": [
+    {
+      "description": "Staleness gate tests/test_hardware_staleness.py::test_hardware_matrix_not_stale is RED (92/90 days) and will stay red through Phases 204-208",
+      "type": "external",
+      "workaround": "DELIBERATE. Dated deferral recorded in STATE.md. 7 of 8 HARDWARE_MATRIX vendor source documents are gone or access-gated. Under D-01 the top-level date is min() of the entries so it cannot go green. Do NOT clear it by bumping a date or setting QUIRK_CI_STALENESS_OVERRIDE_DATE."
+    },
+    {
+      "description": "tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged fails under pytest 9.0.2",
+      "type": "technical",
+      "workaround": "PRE-EXISTING, proven by re-running at pre-phase commit 4c743f74 in a detached worktree. Not a Phase 203/204 regression. Tracked in .planning/todos/pending/pytest-9-breaks-uat-nonvacuity-skip-reporting.md. Do not misattribute it."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Re-source 7 rotted HARDWARE_MATRIX vendor source_urls",
+      "context": "Operator decision 2026-09-13: operator takes this half personally. Work matrix in .planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md. Deferred until after Phases 204-208.",
+      "blocking": false
+    },
+    {
+      "action": "Phase 207 must be run manually, operator-led",
+      "context": "Operator decision 2026-09-13. Its Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. An autonomous runner must HALT after Phase 206.",
+      "blocking": true
+    },
+    {
+      "action": "Review plan 204-05 (autonomous:no)",
+      "context": "The planner flagged it as an operator review checkpoint because it edits REQUIREMENTS/ROADMAP/STATE.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {"decision": "v5.24 runs in two autonomous segments with a hard manual stop at Phase 207", "rationale": "Playwright adoption is a CI toolchain commitment the operator retains", "phase": "v5.24"},
+    {"decision": "Phase 203 used Chrome browser automation in the main session, not worktree subagents", "rationale": "mcp__claude-in-chrome__* tools do not exist inside worktree-isolated subagents; a fanned-out executor would silently fall back to HTTP and hit 403s", "phase": "203"},
+    {"decision": "HARDWARE_MATRIX top-level last_verified = min() of entry dates, enforced by a test", "rationale": "The gate structurally cannot read greener than the weakest vendor. This is why the gate is honestly red rather than falsely green at 1-of-8 verified.", "phase": "203"},
+    {"decision": "STALE-01 left PARTIAL and its requirement NOT flipped", "rationale": "1 of 8 vendors verified. Flipping it would be the same falsehood as bumping the date.", "phase": "203"},
+    {"decision": "Source-rot work split: operator owns URL re-sourcing, QUIRK owns doc_id structural fix", "rationale": "Operator decision 2026-09-13; re-sourcing alone buys one release cycle because all 7 rotted URLs were deep links into version-numbered doc trees", "phase": "203"},
+    {"decision": "COV-03 verdict: collapse to docs/UAT-SERIES.md as single authoritative source, resolve the 12 discrepancies INTO the document", "rationale": "Picking a winner between ledger and document institutionalises the ambiguity; the ledger structurally cannot cover series 164+ without hand-maintenance", "phase": "204"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Execute plan 204-01 (COV-03 parser + reconciliation verdict). Read .planning/phases/204-worklist-truth-derivation/204-CONTEXT.md FIRST — especially the corrected measurement baseline and the ID-shapes table — then 204-01-PLAN.md.",
+  "context_notes": "Phase 203 closed with STALE-02 complete and STALE-01 partial; the staleness gate is deliberately red. Phase 204 is planned but not started. The single most important thing for a resuming agent: this session's own scouting parser silently dropped 37 of 878 UAT cases by assuming IDs match UAT-<int>-<int>, which produced confidently wrong counts and a false accusation that ROADMAP.md had drifted. ROADMAP.md was right on every count. That error is the exact defect Phase 204 exists to eliminate, and it is recorded as a blocking constraint."
+}
