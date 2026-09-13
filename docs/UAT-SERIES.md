@@ -28067,8 +28067,12 @@ for `docs/error-codes.md`, `severity-bands.json`, and `score-strings.json`.
 (two independent runs over a synthetic fixture diff empty) and
 `::test_uat_coverage_gaps_is_current` (live regeneration diffed against the committed file).
 
-**Pass Criteria:** both cited nodes pass; `.venv/bin/python scripts/generate_uat_coverage_gaps.py |
-diff - docs/uat-coverage-gaps.md` produces no output.
+**Pass Criteria:** both cited nodes pass; `.venv/bin/python -m scripts.generate_uat_coverage_gaps |
+diff - docs/uat-coverage-gaps.md` produces no output. (The generator does
+`from scripts import uat_corpus` internally, so it must be invoked as a module with `-m`; running
+`.venv/bin/python scripts/generate_uat_coverage_gaps.py` directly raises `ModuleNotFoundError: No
+module named 'scripts'` rather than producing empty diff output — see `docs/uat-coverage-gaps.md`'s
+own generated "Regenerate with:" line for the correct form.)
 
 **Falsifiability:** this case turns red if the generator embeds a timestamp/path, if dict ordering
 makes two runs diverge, or if the committed file drifts from a fresh regeneration.
@@ -28076,8 +28080,12 @@ makes two runs diverge, or if the committed file drifts from a fresh regeneratio
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-13  **Tester:** Automated (204-01/204-03-SUMMARY.md)
 **Notes:** Re-verified live in plan 204-05:
-`.venv/bin/python scripts/generate_uat_coverage_gaps.py | diff - docs/uat-coverage-gaps.md`
-produced no output at plan-close time.
+`.venv/bin/python -m scripts.generate_uat_coverage_gaps | diff - docs/uat-coverage-gaps.md`
+produced no output at plan-close time. (An earlier draft of this Notes line and the Pass Criteria
+above cited the direct-script invocation, which crashes with `ModuleNotFoundError` rather than
+running — a crash also produces no stdout, so that observation could not actually distinguish pass
+from failure. Corrected same-plan after the orchestrator verified the crash live; the underlying
+byte-reproducibility claim itself was never in question — only the cited command was wrong.)
 
 ---
 
@@ -28141,11 +28149,13 @@ a per-case verdict is found to cite evidence that does not actually support it.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-13  **Tester:** Automated (204-01/204-02-SUMMARY.md, docs/uat-coverage-reconciliation.md)
-**Notes:** Re-run live at plan 204-05 close: `arithmetic_ok: True`, 878 case headings, GAP total 76
-(64 Result-line + 12 Notes-line-only) under the widened 204-04b rule — the reconciliation doc's own
-provenance section documents that these totals drift and must be recomputed, never transcribed
-forward; this note follows that instruction rather than restating the doc's own (now-superseded)
-66-total snapshot.
+**Notes:** Re-run live at plan 204-05 close, after this same plan's Series 204 additions: `arithmetic_ok: True`,
+**882** case headings (878 before this plan's own 4 new cases; `reconcile()` counts every heading
+including this series), GAP total unchanged at 76 (64 Result-line + 12 Notes-line-only — the 4 new
+Series 204 cases are all PASS, so the drain count does not move) under the widened 204-04b rule —
+the reconciliation doc's own provenance section documents that these totals drift and must be
+recomputed, never transcribed forward; this note follows that instruction rather than restating the
+doc's own (now-superseded) 66-total snapshot.
 
 ---
 
