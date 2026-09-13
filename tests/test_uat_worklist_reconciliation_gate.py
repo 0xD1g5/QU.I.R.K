@@ -35,6 +35,23 @@ WHY GAP IS A PASSING DISPOSITION, NOT A VIOLATION: this gate polices *unabsorbed
 disposition (CLAUDE.md's UAT Corpus Integrity Gate section). The violation this gate catches is a
 GAP case the worklist does not know about, i.e. the worklist has silently fallen behind the corpus.
 
+CORRECTIVE PLAN 204-04b -- GAP ENUMERATION WIDENED TO MATCH THE ADJUDICATED RULE: 204-04's first
+cut scoped GAP enumeration to the case's own ``**Result:**`` line only, per an explicit
+interpretation of its own ``<interfaces>`` block. That scoping left 12 real, honestly-GAP cases
+-- ones whose checked SKIP box carries no Result-line annotation at all, with the GAP string
+living only on the case's own ``**Notes:**`` line (the Phase 185/186 "Recorded honestly..."
+cases) -- outside this gate's independent re-verification, even though
+``scripts/uat_corpus.py::CaseRecord.is_gap`` and ``docs/uat-coverage-reconciliation.md`` section 2
+both adopt the broader "Result-line annotation OR own-Notes-line GAP string" rule as the
+project's single adjudicated attribution rule. An orchestrator-run live probe (appending a
+Notes-only GAP case absent from the worklist) confirmed this gate stayed GREEN against it --
+exactly the un-absorbed-and-uncaught condition COV-02 exists to fail on. This module now
+independently re-derives the SAME broadened rule (still importing nothing from
+``scripts/uat_corpus.py``): ``enumerate_gap_cases()`` includes both Result-line GAP annotations
+and Notes-line-only GAP cases, and the non-vacuity guard is split into two always-on legs -- one
+per field -- so a silent regression in either half's parser cannot hide behind the other half
+still matching something.
+
 WHY OBSOLETE CASES ARE NOT REQUIRED TO BE ABSORBED INTO THE OPEN-GAP TABLE (D-12): a retirement is
 not an un-absorbed gap -- it is dispositioned work that has been explicitly excluded from the
 drainable-gap population, with its own reason recorded in the worklist's separate "Retired
@@ -92,6 +109,17 @@ OBSOLETE_PREFIX_RE = re.compile(r"^\s*\**\s*OBSOLETE\s*[—-]\s*")
 GAP_ANNOTATION_SUBSTRING_EM = "GAP — no substitute coverage"
 GAP_ANNOTATION_SUBSTRING_HYPHEN = "GAP - no substitute coverage"
 
+# The case's own **Notes:** line -- the first one encountered after its own **Result:** line and
+# before the next case heading. Independently re-derived from docs/uat-coverage-reconciliation.md
+# section 2 / scripts/uat_corpus.py's NOTES_LINE_RE, not imported.
+NOTES_LINE_RE = re.compile(r"^\*\*Notes:\*\*\s*(.*)$")
+
+# Search (not anchored match) for the GAP string anywhere within a case's own Notes line content --
+# matching the adjudicated rule's own shape (scripts/uat_corpus.py's GAP_STRING_RE searches, it does
+# not require the GAP text to open the line, since Notes-line prose commonly reads e.g.
+# "GAP — no substitute coverage. Probe case ..." with trailing sentences after it).
+NOTES_GAP_STRING_RE = re.compile(r"GAP\s*[—-]\s*no substitute coverage", re.IGNORECASE)
+
 # Worklist table-row shape: `| UAT-<id> | <series> | <title> | <reason> |`. This shape is shared
 # by both the Open GAP Worklist and the Retired (OBSOLETE) tables in
 # docs/uat-coverage-gaps.md, so a single row parser covers both sections.
@@ -100,19 +128,34 @@ WORKLIST_ROW_RE = re.compile(r"^\|\s*(" + CASE_ID_PATTERN + r")\s*\|")
 
 def parse_case_dispositions(lines: list[str]) -> list[dict]:
     """Walk the document once; return one record per case with its own
-    **Result:** line's disposition and 1-based line number.
+    **Result:** line's disposition and 1-based line number, additionally promoted to GAP when the
+    case's own **Notes:** line (the first one between its **Result:** line and the next case
+    heading) carries the GAP string and the Result line itself carried no annotation.
 
     Disposition in {"PASS", "FAIL", "GAP", "OBSOLETE", "DEFERRED", "SKIP_OTHER",
-    "UNDISPOSITIONED"}. Scoped to the **Result:** LINE ONLY (never case body text) --
-    matching tests/test_uat_zero_undispositioned_gate.py's own documented scoping discipline,
-    which is what makes this immune to the UAT-151-01 body-literal-checkbox trap.
+    "UNDISPOSITIONED"}. The Result-line classification is scoped to the **Result:** LINE ONLY
+    (never case body text) -- matching tests/test_uat_zero_undispositioned_gate.py's own
+    documented scoping discipline, which is what makes this immune to the UAT-151-01
+    body-literal-checkbox trap. The Notes-line promotion is likewise scoped to the case's own,
+    single, immediately-following Notes line -- never any later prose in the case body -- per the
+    adjudicated rule in docs/uat-coverage-reconciliation.md section 2 (204-04b, COV-02 widening).
+
+    Each record also carries ``gap_source`` -- ``"result"`` when the GAP disposition came from the
+    Result line's own annotation, ``"notes"`` when it was promoted from an unannotated SKIP by its
+    own Notes line, ``None`` otherwise -- and ``notes_lineno``, the 1-based line number of that
+    Notes line when one was found (``None`` if no Notes line was ever seen for this case). Callers
+    that only need the original Result-line-only behavior can ignore both fields.
     """
     records: list[dict] = []
     current_case_id: str | None = None
+    open_record: dict | None = None
+    notes_captured = False
     for i, line in enumerate(lines, start=1):
         m = HEADING_RE.match(line)
         if m:
             current_case_id = m.group(1)
+            open_record = None
+            notes_captured = False
             continue
         m = RESULT_DETAIL_RE.match(line)
         if m and current_case_id is not None:
@@ -131,16 +174,64 @@ def parse_case_dispositions(lines: list[str]) -> list[dict]:
                 disposition = "PASS"
             elif fail_box.lower() == "x":
                 disposition = "FAIL"
-            records.append({"case_id": current_case_id, "lineno": i, "disposition": disposition})
+            record = {
+                "case_id": current_case_id,
+                "lineno": i,
+                "disposition": disposition,
+                "notes_lineno": None,
+                "gap_source": "result" if disposition == "GAP" else None,
+            }
+            records.append(record)
+            open_record = record
+            notes_captured = False
+            continue
+        if open_record is not None and not notes_captured:
+            m = NOTES_LINE_RE.match(line)
+            if m:
+                notes_captured = True
+                if open_record["disposition"] == "SKIP_OTHER" and NOTES_GAP_STRING_RE.search(
+                    m.group(1)
+                ):
+                    open_record["disposition"] = "GAP"
+                    open_record["notes_lineno"] = i
+                    open_record["gap_source"] = "notes"
     return records
 
 
 def enumerate_gap_cases(lines: list[str]) -> dict[str, int]:
-    """{case_id: result_lineno} for every GAP-dispositioned case."""
+    """{case_id: lineno} for every GAP-dispositioned case, under the adjudicated Result-line-OR-
+    own-Notes-line rule (docs/uat-coverage-reconciliation.md section 2). The reported line number
+    is the line carrying the actual GAP annotation: the Result line for a Result-line GAP, the
+    Notes line for a Notes-line-only GAP -- both point at where a human should look."""
+    result: dict[str, int] = {}
+    for r in parse_case_dispositions(lines):
+        if r["disposition"] != "GAP":
+            continue
+        result[r["case_id"]] = r["notes_lineno"] if r["gap_source"] == "notes" else r["lineno"]
+    return result
+
+
+def enumerate_result_line_gap_cases(lines: list[str]) -> dict[str, int]:
+    """{case_id: result_lineno} for GAP cases whose GAP annotation lives on their own **Result:**
+    line. A strict subset of ``enumerate_gap_cases()`` -- factored out so the non-vacuity guard can
+    watch this field independently of the Notes-line field."""
     return {
         r["case_id"]: r["lineno"]
         for r in parse_case_dispositions(lines)
-        if r["disposition"] == "GAP"
+        if r["disposition"] == "GAP" and r["gap_source"] == "result"
+    }
+
+
+def enumerate_notes_only_gap_cases(lines: list[str]) -> dict[str, int]:
+    """{case_id: notes_lineno} for GAP cases whose GAP annotation lives ONLY on their own
+    **Notes:** line (Result line carries no annotation at all). A strict subset of
+    ``enumerate_gap_cases()`` -- factored out so the non-vacuity guard can watch this field
+    independently of the Result-line field. This is the 204-04b widening's own core addition: the
+    12 cases 204-04's first cut left outside this gate's independent re-verification."""
+    return {
+        r["case_id"]: r["notes_lineno"]
+        for r in parse_case_dispositions(lines)
+        if r["disposition"] == "GAP" and r["gap_source"] == "notes"
     }
 
 
@@ -218,7 +309,12 @@ def test_non_vacuity_guard_over_live_corpus(uat_series_lines):
     docs/UAT-SERIES.md contains the literal GAP annotation substring anywhere, this gate's own
     enumeration must find at least one GAP case. A silently-broken or narrowed enumeration that
     matches zero cases while the corpus plainly contains GAP text must never read as 'nothing to
-    enforce' -- that is the exact truncating-regex failure mode this phase exists to eliminate."""
+    enforce' -- that is the exact truncating-regex failure mode this phase exists to eliminate.
+
+    This leg watches the COMBINED enumeration (``enumerate_gap_cases()``, both fields). It is
+    deliberately kept alongside -- not replaced by -- the two field-scoped legs below: a total
+    that stays non-zero can still hide one field silently regressing to zero while the other field
+    keeps it afloat, which is exactly the hole 204-04b closes with the split legs."""
     full_text = "".join(uat_series_lines)
     contains_gap_text = (
         GAP_ANNOTATION_SUBSTRING_EM in full_text or GAP_ANNOTATION_SUBSTRING_HYPHEN in full_text
@@ -230,6 +326,46 @@ def test_non_vacuity_guard_over_live_corpus(uat_series_lines):
             "substring but enumerate_gap_cases() found zero cases. The enumeration parser in "
             "this file is the suspect -- a silently-non-matching regex must never read as "
             "'nothing to enforce'. (COV-02 / T-204-13)"
+        )
+
+
+def test_non_vacuity_guard_result_line_field(uat_series_lines):
+    """204-04b field-scoped non-vacuity leg (1 of 2): if any **Result:** line in the live corpus
+    carries the GAP annotation substring, ``enumerate_result_line_gap_cases()`` must find at least
+    one case. ALWAYS RUNS -- no skipif, no marker gate."""
+    result_line_gap_text_present = any(
+        RESULT_DETAIL_RE.match(line)
+        and (
+            GAP_ANNOTATION_SUBSTRING_EM in line or GAP_ANNOTATION_SUBSTRING_HYPHEN in line
+        )
+        for line in uat_series_lines
+    )
+    enumerated = enumerate_result_line_gap_cases(uat_series_lines)
+    if result_line_gap_text_present and not enumerated:
+        pytest.fail(
+            "Non-vacuity guard tripped: a **Result:** line in docs/UAT-SERIES.md contains the "
+            "GAP annotation substring but enumerate_result_line_gap_cases() found zero cases. "
+            "(COV-02 / T-204-13, 204-04b field-scoped leg 1/2)"
+        )
+
+
+def test_non_vacuity_guard_notes_only_field(uat_series_lines):
+    """204-04b field-scoped non-vacuity leg (2 of 2) -- the leg that closes the exact blind spot
+    the orchestrator demonstrated live: if any **Notes:** line in the live corpus carries the GAP
+    annotation substring, ``enumerate_notes_only_gap_cases()`` must find at least one case. ALWAYS
+    RUNS -- no skipif, no marker gate. Without this leg, a regression that silently zeroed out
+    ONLY the Notes-line half of the parser would read as a clean pass, because
+    ``test_non_vacuity_guard_over_live_corpus`` would still see the Result-line half's non-zero
+    count and stay green -- precisely the condition the orchestrator's probe case proved live."""
+    notes_gap_text_present = any(
+        NOTES_LINE_RE.match(line) and NOTES_GAP_STRING_RE.search(line) for line in uat_series_lines
+    )
+    enumerated = enumerate_notes_only_gap_cases(uat_series_lines)
+    if notes_gap_text_present and not enumerated:
+        pytest.fail(
+            "Non-vacuity guard tripped: a **Notes:** line in docs/UAT-SERIES.md contains the "
+            "GAP annotation substring but enumerate_notes_only_gap_cases() found zero cases. "
+            "(COV-02 / T-204-13, 204-04b field-scoped leg 2/2)"
         )
 
 
@@ -325,7 +461,15 @@ def test_fixture_obsolete_case_absent_from_worklist_does_not_fail():
     empty_worklist = "| Case ID | Series | Case Title | Coverage That Would Be Needed |\n|---|---|---|---|\n"
     assert find_unabsorbed_gaps(corpus, empty_worklist) == []
     dispositions = parse_case_dispositions(corpus)
-    assert dispositions == [{"case_id": "UAT-9003-01", "lineno": 2, "disposition": "OBSOLETE"}]
+    assert dispositions == [
+        {
+            "case_id": "UAT-9003-01",
+            "lineno": 2,
+            "disposition": "OBSOLETE",
+            "notes_lineno": None,
+            "gap_source": None,
+        }
+    ]
 
 
 def test_fixture_deferred_case_absent_from_worklist_does_not_fail():
@@ -335,6 +479,70 @@ def test_fixture_deferred_case_absent_from_worklist_does_not_fail():
     ]
     empty_worklist = "| Case ID | Series | Case Title | Coverage That Would Be Needed |\n|---|---|---|---|\n"
     assert find_unabsorbed_gaps(corpus, empty_worklist) == []
+
+
+def test_fixture_notes_only_gap_case_is_enumerated_and_unabsorbed():
+    """204-04b's core addition: a case whose **Result:** SKIP box is checked with NO parenthetical
+    annotation at all, whose GAP string lives only on its own **Notes:** line, must be enumerated
+    as GAP and reported as unabsorbed against an empty worklist -- the exact shape of both the 12
+    real Phase 185/186 cases and the orchestrator's live UAT-ORCHCHECK-1-01 probe case."""
+    corpus = [
+        "### UAT-9008-01: A Notes-only GAP case, no Result-line annotation\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP\n",
+        "\n",
+        "**Notes:** GAP — no substitute coverage. Recorded honestly, needs a new detector.\n",
+    ]
+    empty_worklist = "| Case ID | Series | Case Title | Coverage That Would Be Needed |\n|---|---|---|---|\n"
+
+    gap_ids = enumerate_gap_cases(corpus)
+    assert gap_ids == {"UAT-9008-01": 4}, gap_ids
+
+    notes_only = enumerate_notes_only_gap_cases(corpus)
+    assert notes_only == {"UAT-9008-01": 4}, notes_only
+
+    result_line_only = enumerate_result_line_gap_cases(corpus)
+    assert result_line_only == {}, result_line_only
+
+    offenders = find_unabsorbed_gaps(corpus, empty_worklist)
+    assert offenders == [("UAT-9008-01", 4)], offenders
+
+    # Hyphen-form GAP text is also recognized (matching the Result-line grammar's own hyphen
+    # tolerance -- GAP_ANNOTATION_SUBSTRING_HYPHEN).
+    corpus_hyphen = [
+        "### UAT-9008-02: A Notes-only GAP case, hyphen form\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP\n",
+        "**Notes:** GAP - no substitute coverage; needs a new detector.\n",
+    ]
+    assert enumerate_gap_cases(corpus_hyphen) == {"UAT-9008-02": 3}
+
+
+def test_fixture_result_line_gap_case_is_not_counted_as_notes_only():
+    """A Result-line-annotated GAP case must NOT show up in enumerate_notes_only_gap_cases() even
+    if it also happens to have a Notes line -- the two field-scoped enumerations must stay
+    disjoint, matching test_fixture_notes_only_gap_case_is_enumerated_and_unabsorbed()'s
+    disjointness in the other direction."""
+    corpus = [
+        "### UAT-9009-01: A Result-line GAP case with an unrelated Notes line\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs work)\n",
+        "**Notes:** Unrelated commentary, no GAP text here.\n",
+    ]
+    assert enumerate_result_line_gap_cases(corpus) == {"UAT-9009-01": 2}
+    assert enumerate_notes_only_gap_cases(corpus) == {}
+    assert enumerate_gap_cases(corpus) == {"UAT-9009-01": 2}
+
+
+def test_fixture_unannotated_skip_with_unrelated_notes_stays_skip_other():
+    """An unannotated SKIP box whose Notes line does NOT carry the GAP string must stay
+    SKIP_OTHER, never silently promoted to GAP -- the promotion is conditioned on the GAP string
+    actually being present, not merely on the Result line being unannotated."""
+    corpus = [
+        "### UAT-9010-01: Unannotated SKIP, unrelated Notes text\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP\n",
+        "**Notes:** Manual verification pending, nothing to do with coverage.\n",
+    ]
+    dispositions = parse_case_dispositions(corpus)
+    assert dispositions[0]["disposition"] == "SKIP_OTHER"
+    assert enumerate_gap_cases(corpus) == {}
 
 
 def test_fixture_pass_case_absent_from_worklist_does_not_fail():
