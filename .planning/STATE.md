@@ -2076,13 +2076,10 @@ were taken by the operator on 2026-09-13 before any phase work; the authoritativ
 ROADMAP.md's "Autonomy Plan" section, restated here because this is the file a resuming session
 reads first.
 
-1. **Phase 203 in-session first** — discuss→plan→execute driven from the main session with **no
-   worktree fan-out**. STALE-01's source re-verification uses Chrome browser automation
-   (`mcp__claude-in-chrome__*`) because NSA / `media.defense.gov` 403s non-browser agents, and
-   those tools do not exist inside a worktree subagent — `/gsd-autonomous` would dispatch 203 to
-   one and silently fall back to HTTP. A source still unreadable through the browser is a dated,
-   reasoned deferral — never a bumped `last_verified`.
-2. `/gsd-autonomous --from 204 --to 206` — phases 204, 205, 206, then **halt**.
+1. ~~Phase 203 in-session~~ — **DONE 2026-09-13.** STALE-02 complete; STALE-01 **partial**
+   (1 of 8 vendors verified, 7 source documents gone/access-gated). Staleness gate deliberately
+   RED under the dated deferral recorded above. 9 commits, `9e2e6bd9`..`61668268`.
+2. **NEXT: `/gsd-autonomous --from 204 --to 206`** — phases 204, 205, 206, then **halt**.
 3. **Phase 207 is manual and operator-led** — deliberately de-scoped from autonomous execution. Its
    Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. Do not
    let an autonomous runner advance into it.
@@ -2091,3 +2088,11 @@ reads first.
 
 Superseded: the previous entry here ("v5.23 requirements definition → roadmap") completed at the
 v5.23 close; v5.23 merged to `main` 2026-09-13 via PRs #12/#13.
+
+**Deferred to after Phases 204-208 (operator decision 2026-09-13):** the `HARDWARE_MATRIX` source
+rot is split — the **operator takes the URL re-sourcing**, QUIRK takes the structural fix
+(`doc_id` decoupled from `source_url`, plus per-entry `evidence`). See
+`.planning/todos/pending/hardware-matrix-doc-id-decouple-url-from-identity.md` and
+`hardware-matrix-source-urls-broadly-rotted.md`. Neither blocks v5.24's remaining phases, but note
+they run against a RED staleness gate rather than the green baseline Phase 203 was sequenced to
+provide.
