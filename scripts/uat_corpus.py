@@ -16,8 +16,21 @@ able to make two independent artifacts agree with each other while both are wron
 Case-ID grammar (NOT the truncating `UAT-[0-9]*-[0-9]*` form that dropped 37 of 878 cases during
 this phase's own scouting -- see 204-CONTEXT.md's correction notice):
 
-    CASE_ID_PATTERN = r"UAT-[A-Za-z0-9.]+(?:-[A-Za-z0-9.]+)*"
+    CASE_ID_PATTERN = r"UAT-(?:[0-9]+(?:\\.[0-9]+)?|[A-Za-z][A-Za-z0-9]{0,11})(?:-(?:[0-9]+(?:\\.[0-9]+)?|[A-Za-z][A-Za-z0-9]{0,11}))*"
     HEADING_RE      = re.compile(r"^### *(" + CASE_ID_PATTERN + r"):?")
+
+Each hyphen-segment is bounded (WR-04 in 204-REVIEW.md): either numeric with an optional single
+decimal point, or a short (<=12 char) alphabetic token. This still covers all four documented
+shapes -- named-prefix (UAT-COMPLY-52-01, UAT-Q-53-01), decimal (UAT-56.1-01, UAT-186.1-03),
+backlog (UAT-999.83-01), three-segment (UAT-89-01-01) -- while closing the original defect: a
+heading whose title is written without a colon/leading-space separator (e.g.
+`### UAT-9-01-SomeWordWithoutASpace`) could, under the old unbounded `[A-Za-z0-9.]+` segment
+class, have the ENTIRE remaining title silently absorbed as a spurious hyphen segment with no
+upper bound. The bounded grammar caps any such residual bleed to at most one short (<=12 char)
+segment instead of unbounded growth with the title's length. Every real heading in the corpus
+today separates the case id from its title with `: ` or a bare space, which the segment
+alternation does not match at all, so this bound never triggers in practice (see
+tests/test_uat_corpus_parser.py's live-corpus cross-check).
 
 Series extraction is alpha-prefix-aware: the series is the FIRST all-numeric (optionally one
 decimal point) hyphen-segment after `UAT-`. A named-prefix id's series is the first numeric
@@ -57,7 +70,10 @@ LEDGER_PATH = REPO_ROOT / "docs" / "uat-disposition-ledger.jsonl"
 
 # --- Grammar, independently re-derived from 204-01-PLAN.md's <interfaces> block -----------------
 
-CASE_ID_PATTERN = r"UAT-[A-Za-z0-9.]+(?:-[A-Za-z0-9.]+)*"
+CASE_ID_PATTERN = (
+    r"UAT-(?:[0-9]+(?:\.[0-9]+)?|[A-Za-z][A-Za-z0-9]{0,11})"
+    r"(?:-(?:[0-9]+(?:\.[0-9]+)?|[A-Za-z][A-Za-z0-9]{0,11}))*"
+)
 HEADING_RE = re.compile(r"^### *(" + CASE_ID_PATTERN + r"):?")
 
 # Canonical Result-line grammar (scripts/uat_series_normalize.py::CANONICAL_RESULT_RE lockstep).

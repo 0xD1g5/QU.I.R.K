@@ -57,6 +57,63 @@ def test_series_three_segment():
 
 
 # ---------------------------------------------------------------------------
+# WR-04 (204-REVIEW.md): CASE_ID_PATTERN must stay bounded per-segment so a
+# heading's free-text title cannot bleed into the case ID when the title is
+# written without a colon or leading-space separator, while still parsing
+# every documented shape.
+# ---------------------------------------------------------------------------
+
+
+def test_case_id_pattern_does_not_swallow_the_whole_title_without_separator():
+    """WR-04's chosen fix bounds each hyphen-segment to <=12 chars (numeric-with-optional-dot,
+    or a short alphabetic token) instead of the old unbounded `[A-Za-z0-9.]+`. That closes the
+    original defect -- an ENTIRE free-text title silently absorbed into the case id, with no
+    upper bound on how much of it bled in. A title shorter than the 12-char bound can still
+    partially leak (a documented, bounded residual -- see the module docstring), but it can no
+    longer swallow an arbitrarily long title the way the unbounded grammar could."""
+    lines = _lines(
+        """
+### UAT-9-01-SomeWordWithoutASpaceThatIsMuchLongerThanTwelveCharacters
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+"""
+    )
+    c = list(uat_corpus.iter_cases(lines))[0]
+    assert c.case_id != "UAT-9-01-SomeWordWithoutASpaceThatIsMuchLongerThanTwelveCharacters", (
+        "the bounded grammar must not swallow the entire title the way the old unbounded "
+        "[A-Za-z0-9.]+ segment class could"
+    )
+    assert len(c.case_id) - len("UAT-9-01") <= 13, (
+        "any residual bleed must be bounded to at most one short (<=12 char) segment, not "
+        "unbounded growth with the title length"
+    )
+
+
+@pytest.mark.parametrize(
+    "case_id",
+    [
+        "UAT-COMPLY-52-01",
+        "UAT-Q-53-01",
+        "UAT-56.1-01",
+        "UAT-186.1-03",
+        "UAT-999.83-01",
+        "UAT-89-01-01",
+        "UAT-5-18",
+    ],
+)
+def test_case_id_pattern_still_parses_all_four_documented_shapes(case_id):
+    """The bounded WR-04 grammar must not narrow any real shape -- named-prefix, decimal,
+    backlog, three-segment, plain numeric."""
+    lines = _lines(
+        f"""
+### {case_id}: some title
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+"""
+    )
+    c = list(uat_corpus.iter_cases(lines))[0]
+    assert c.case_id == case_id
+
+
+# ---------------------------------------------------------------------------
 # iter_cases -- heading / result / boxes / annotation / disposition
 # ---------------------------------------------------------------------------
 
