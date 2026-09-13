@@ -520,16 +520,22 @@ def test_iter_cases_total_matches_independent_heading_count():
 
     cases = list(uat_corpus.iter_cases(lines))
     assert len(cases) == independent_count
-    # Cross-check against the shell-level grep count this phase's constraints are pinned to.
-    # Bumped 878 -> 882 in plan 204-05 (Series 204's 4 cases), then 882 -> 887 at Phase 204's
-    # close-out (Series 203's 5 backfilled cases). Recompute, never transcribe.
+    # 205-06: the frozen literal pin that used to sit here is GONE, discharging
+    # .planning/todos/pending/uat-corpus-parser-test-pins-a-literal-count.md.
     #
-    # NOTE: this literal pin has now required a hand-bump twice in a single day, and it catches
-    # nothing that the `independent_count` assertion three lines above does not already catch --
-    # that one derives its expectation from the corpus at run time and so never goes stale. Corpus
-    # growth is not a defect. Replacing this line with the derived check is tracked in
-    # .planning/todos/pending/uat-corpus-parser-test-pins-a-literal-count.md
-    assert len(cases) == 887
+    # It was hand-bumped 878 -> 882 -> 887 in a single day and would have needed a FOURTH bump to
+    # 892 for Series 205 -- which is how it was found: it turned `Linux Full Suite` red on nothing
+    # but corpus growth. It caught nothing the `independent_count` assertion above does not already
+    # catch, and that one derives its expectation from the corpus at run time so it cannot go stale.
+    # Corpus growth is not a defect.
+    #
+    # What replaces it is a lower bound, not another equality: it asserts the corpus is non-trivial
+    # (so a parser returning [] or a truncated read cannot pass vacuously) without encoding a figure
+    # that rots. The exact-count guarantee lives in the derived assertion above.
+    assert len(cases) > 800, (
+        f"only {len(cases)} cases parsed -- suspiciously few for this corpus; a truncated read or a "
+        "broken heading regex would look like this"
+    )
     # No duplicate IDs.
     ids = [c.case_id for c in cases]
     assert len(ids) == len(set(ids))
@@ -537,8 +543,11 @@ def test_iter_cases_total_matches_independent_heading_count():
 
 def test_run_reconcile_against_real_corpus_arithmetic_closes():
     r = uat_corpus.run_reconcile()
-    # Bumped 878 -> 882 in plan 204-05 (Series 204's 4 cases), then 882 -> 887 at Phase 204's
-    # close-out (Series 203's 5 backfilled cases). See the sibling test above for the
-    # recompute-not-transcribe rationale and the todo tracking this pin's removal.
-    assert r.total_headings == 887
+    # 205-06: frozen `== 887` pin removed for the reason documented in the sibling test above.
+    # The heading total is cross-checked against an INDEPENDENTLY recomputed count here rather than
+    # against a literal, so corpus growth can never turn this red on its own.
+    lines = (REPO_ROOT / "docs" / "UAT-SERIES.md").read_text(encoding="utf-8").splitlines()
+    independent_heading_re = re.compile(r"^### +UAT-[A-Za-z0-9.]+(?:-[A-Za-z0-9.]+)*")
+    assert r.total_headings == sum(1 for line in lines if independent_heading_re.match(line))
+    assert r.total_headings > 800
     assert r.arithmetic_ok is True

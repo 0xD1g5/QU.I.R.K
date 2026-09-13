@@ -22680,12 +22680,22 @@ occurrence (a stale-surplus row) — proven directly by 182-07's own RED-before-
 which ledgered `boldProgressPattern` `"anchored"` while it was still unpatched and watched the gate
 fail with the exact site, function, and line number named.
 
-**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned -x -q` — 1 passed, run during 182-09 phase-gate close-out)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned -x -q` — 1 passed, run during 182-09 phase-gate close-out -- CI-EXEMPT: the whole module skips via GSD_TOOLCHAIN_AVAILABLE when ~/.claude/get-shit-done/ is absent, which is always so in the Linux Full Suite job — it provisions no operator toolchain, so CI cannot prove this substitute; it passes on an operator machine)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-03  **Tester:** Automated (182-07 plan execution; re-verified 182-09 phase-gate close-out)
 **Notes:** This case is honestly executable here (not a `SKIP`) — the gate is a standing pytest
-node in the repository's own test suite, not a manual or environment-gated procedure. Ran directly
+node in the repository's own test suite, not a manual procedure. Ran directly
 during this close-out plan rather than deferred; `10 passed` in the full `test_gsd_state_patch.py`
 module confirms it is not regressed by 182-08's live re-demonstration.
+**Correction (205-06):** the sentence above originally read "not a manual or **environment-gated**
+procedure". That was FALSE — this node is precisely environment-gated: the whole
+`test_gsd_state_patch.py` module skips via `GSD_TOOLCHAIN_AVAILABLE` when `~/.claude/get-shit-done/`
+is absent, which is always so in the `Linux Full Suite` CI job, since it provisions no operator
+toolchain. The claim went unchallenged for as long as the citation was invisible to the guard. Phase
+205-06 widened citation checking to PASS-checked Result-line citations, the execution leg then ran
+this node in CI, and the honest skip turned `Linux Full Suite` red — the gate working, not breaking.
+The limitation is now DECLARED in the Result annotation above with a `CI-EXEMPT:` marker, so the page
+states what CI does not prove. The substitute remains real and passing on an operator machine; per
+CLAUDE.md, a skip in CI "is not a pass and must not be read as one".
 
 ---
 
