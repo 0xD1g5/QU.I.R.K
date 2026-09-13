@@ -12,7 +12,7 @@ querying every release rather than trusting the filed figure: the boilerplate is
 v5.8.0, v5.12.0, v5.15.0, v5.18.0, v5.19.0 and v5.21.0**. `v5.11.0` already carries a proper custom
 body and must be left alone. All 7 have matching `## [x.y.z]` CHANGELOG sections.
 
-Implemented (commits `7b9eb4cc`, `bd0cb3ba`): a "Compose release notes from CHANGELOG" step writes
+Implemented (commits `7b9eb4cc`, `06c5ead1`): a "Compose release notes from CHANGELOG" step writes
 `release-notes.md`, and the attach step consumes it via `body_path`. Two things the fix shape below
 did not anticipate:
 
