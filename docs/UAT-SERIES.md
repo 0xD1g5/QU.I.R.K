@@ -28040,6 +28040,179 @@ with a fabricated citation, and no allowlist or gate-code change was made.
 
 ---
 
+## Series 203: Catalog Freshness Drain (Phase 203 — v5.24)
+
+> **Backfilled 2026-09-13 during Phase 204's close-out.** Phase 203 shipped without a UAT series —
+> `203-07-PLAN.md` Task 2 and CLAUDE.md's mandatory per-phase step were never executed, which the
+> repo's `verify_phase_gates` hook caught only when a later commit touched these paths. Phase 203's
+> backfilled `203-VERIFICATION.md` records this as one of its gaps (status `gaps_found`).
+>
+> **Phase 203 was a PARTIAL success and this series says so.** STALE-02 was fully discharged;
+> STALE-01 verified 1 of 8 vendors because 7 vendor source documents are gone. The staleness gate is
+> RED by design under a dated deferral. A series of all-PASS cases here would be a fabrication.
+
+### UAT-203-01: Firmware CVE Catalog Re-Verified Against the Live NVD API (STALE-02)
+
+**ID:** UAT-203-01
+**Title:** `quirk/scanner/hw_cve.py` carries a current `last_verified` and its 30-day staleness gate passes
+**Maps to:** STALE-02
+
+**What to test:** the firmware CVE correlation catalog was re-verified against its real source (the
+live NVD API), all 6 rows re-confirmed, a bounded CRITICAL/HIGH delta query run for new entries, and
+`last_verified` moved to the verification date — not bumped to clear a gate.
+
+**Steps:** `tests/test_cve_staleness.py::test_cve_table_not_stale` plus
+`::test_cve_table_meta_shape`; evidence in
+`.planning/phases/203-catalog-freshness-drain/203-NVD-EVIDENCE.md` (2 control queries, 6/6 row
+re-checks, 8 bounded delta queries).
+
+**Pass Criteria:** `.venv/bin/python -m pytest -q tests/test_cve_staleness.py` passes, and
+`grep '"last_verified"' quirk/scanner/hw_cve.py` shows the verification date.
+
+**Falsifiability:** red if the date were bumped without the NVD evidence file, or if the 30-day
+cadence lapses.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (backfilled; independently re-run at backfill time)
+**Notes:** Re-verified at backfill: `tests/test_cve_staleness.py` → 6 passed;
+`last_verified = "2026-09-13"` confirmed in source.
+
+---
+
+### UAT-203-02: Top-Level `last_verified` Is `min()` of Per-Entry Dates, Enforced by Test (D-01/D-02)
+
+**ID:** UAT-203-02
+**Title:** `HARDWARE_MATRIX`'s top-level freshness date cannot read greener than its weakest vendor entry
+**Maps to:** STALE-01
+
+**What to test:** the structural invariant that makes a partial re-verification honest. Each vendor
+entry carries its own `last_verified`; the top-level date is the `min()` of them, so verifying one
+vendor cannot make the catalog look verified. This is why the gate is honestly RED at 1-of-8 rather
+than falsely green.
+
+**Steps:** `tests/test_hardware_staleness.py::test_hardware_matrix_top_level_is_min_of_entries`,
+`::test_min_violation_detected_when_top_level_is_newer`,
+`::test_min_violation_detected_when_top_level_is_older`,
+`::test_no_min_violation_when_dates_diverge_but_top_level_is_oldest`,
+`::test_missing_key_detected_when_entry_omits_last_verified`.
+
+**Pass Criteria:** all five nodes pass, including the negative controls that prove the invariant
+detects a violation rather than vacuously passing.
+
+**Falsifiability:** red if the top-level date could be set independently of the entries — which is
+precisely the mechanism that would let a future session clear the gate by editing one field.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (backfilled)
+**Notes:** Re-verified at backfill: `tests/test_hardware_staleness.py` → 8 passed, 1 failed; all
+five nodes cited here are among the 8 passing. The single failure is `test_hardware_matrix_not_stale`,
+dispositioned separately at UAT-203-04.
+
+---
+
+### UAT-203-03: The One Verifiable Vendor Was Wrong, and Was Corrected (STALE-01)
+
+**ID:** UAT-203-03
+**Title:** Fortinet's entry was corrected on two counts after being read at its real source
+**Maps to:** STALE-01
+
+**What to test:** re-verification means comparing the entry against the vendor's own current
+document and correcting what is wrong — not confirming the URL resolves. Fortinet was the only one
+of 8 vendors whose document could be read, and it was wrong twice: the version floor was recorded as
+7.4+ when the vendor states 6.0+, and an entire capability (PQC KEM / ML-KEM, 7.6.1+) was missing.
+
+**Steps:** read `quirk/scanner/hardware_meta.py`'s Fortinet entry; cross-check against
+`.planning/phases/203-catalog-freshness-drain/203-ATTESTATION.md`'s per-vendor row.
+
+**Pass Criteria:** source shows the corrected version floor, the added ML-KEM capability, and a
+corrected `source_url` with an inline provenance note.
+
+**Falsifiability:** red if the entry were merely re-dated without the substantive corrections — the
+exact failure mode a URL-liveness check would miss.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated + browser (backfilled; source re-read at backfill)
+**Notes:** A 1-for-1 sample finding two errors in the only checkable vendor is the strongest
+argument in this phase for not assuming the other 7 entries are accurate.
+
+---
+
+### UAT-203-04: The Staleness Gate Is RED Under a Recorded Deferral, Not Cleared (STALE-01)
+
+**ID:** UAT-203-04
+**Title:** `test_hardware_matrix_not_stale` fails for the documented reason, and no date was bumped and no override was set
+**Maps to:** STALE-01
+
+**What to test:** the honesty property. With 7 vendors unverified the gate MUST be red, and the
+correct response is a dated deferral in `STATE.md` — never a bumped `last_verified` and never
+`QUIRK_CI_STALENESS_OVERRIDE_DATE`. Per CLAUDE.md, a recorded deferral is honest and a bumped date
+fabricates a human attestation.
+
+**Steps:** run `.venv/bin/python -m pytest -q tests/test_hardware_staleness.py` and confirm
+`test_hardware_matrix_not_stale` fails on the age assertion; confirm the deferral block exists in
+`.planning/STATE.md`; confirm `QUIRK_CI_STALENESS_OVERRIDE_DATE` is never set live in the repo.
+
+**Pass Criteria:** the gate is red *for the age/min-invariant reason specifically*, the deferral is
+recorded and dated, and no override is set outside test fixtures.
+
+**Falsifiability:** this case turns red if the gate ever goes green without 8 vendors carrying
+current dates — which would mean someone cleared it the prohibited way.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (backfilled)
+**Notes:** This case PASSES *because* the gate fails — the assertion under test is the honesty of
+the deferral, not the greenness of the catalog. Re-verified at backfill: failure message is
+"92 days old (>90)"; `203-VERIFICATION.md` independently confirmed the override variable appears
+only in test fixtures and documentation describing the mechanism, never set live.
+
+---
+
+### UAT-203-05: Seven Vendor Entries Remain Unverified — Honest Absence
+
+**ID:** UAT-203-05
+**Title:** 7 of 8 `HARDWARE_MATRIX` vendors could not be re-verified because their source documents are gone
+**Maps to:** STALE-01
+
+**What to test:** whether each of F5, Cisco, Palo Alto, Juniper, HPE, Intel/IPMI and Thales has been
+re-verified against a current authoritative document on the vendor's own domain, per D-03's
+claim-match bar.
+
+**Steps:** none available. The documents do not exist at their recorded URLs: 6 are dead or silently
+moved, 1 (Juniper) is behind a support login. Chrome reached every host successfully — including the
+NSA page that returns HTTP 403 to non-browser clients — so this is document rot, not a tooling limit.
+Three of the rot patterns return **HTTP 200** while serving unrelated content (Cisco: "No Data Found";
+Intel: a product selector; Fortinet's old URL silently 301'd to "Getting started"), so no status-code
+check can substitute.
+
+**Pass Criteria:** each entry's `pqc_status` and `notes` confirmed against a current vendor document.
+**Not achievable until the URLs are re-sourced.**
+
+**Falsifiability:** closes when all 8 entries carry current dates and the `min()`-derived top-level
+date makes `test_hardware_matrix_not_stale` green on its own merits.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; 7 of 8 vendor source documents are gone or access-gated, so no test can assert these entries match their sources. The operator owns re-sourcing per a 2026-09-13 decision — work matrix in `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`, structural fix tracked separately in `hardware-matrix-doc-id-decouple-url-from-identity.md`. Evidence: `203-ATTESTATION.md`, `203-RECON-source-reachability.md`)
+**Date:** 2026-09-13  **Tester:** Browser-assisted reconnaissance (backfilled)
+**Notes:** An honest GAP, not a failure of the phase. The phase's bounded design (D-04: one attempt
+per rotted URL) deliberately fenced this off rather than letting re-verification become an
+open-ended URL hunt. Re-sourcing alone buys roughly one release cycle — all 7 rotted URLs were deep
+links into version-numbered documentation trees that vendors rotate every release, which is the
+argument for the `doc_id` structural fix.
+
+---
+
+**Series 203 disposition.** 4 `[x] PASS` and 1 honest `[x] SKIP (GAP)`. The GAP is the phase's
+actual headline outcome and is recorded as such rather than softened. Two cases are worth reading
+together: UAT-203-04 passes *because* a gate fails, and UAT-203-05 records why it fails. A series
+that reported Phase 203 as a clean pass would have inverted the one thing the phase established —
+that 7 of 8 vendor attestations in this catalog currently rest on documents nobody can read.
+
+This series was backfilled during Phase 204's close-out after `verify_phase_gates` blocked a commit
+on its absence. The gate was right, and it caught a mandatory per-phase step that had been skipped
+~12 commits earlier without anything noticing — the same class of silent drift the v5.24 milestone
+exists to eliminate, occurring in the milestone's own first phase.
+
+---
+
 ## Series 204: Worklist Truth & Derivation (Phase 204 — v5.24)
 
 Covers COV-01 (the gap worklist is a run-time-regenerated, byte-reproducible artifact rather than a

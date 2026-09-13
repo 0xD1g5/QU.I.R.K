@@ -392,9 +392,15 @@ def test_iter_cases_total_matches_independent_heading_count():
     cases = list(uat_corpus.iter_cases(lines))
     assert len(cases) == independent_count
     # Cross-check against the shell-level grep count this phase's constraints are pinned to.
-    # Bumped 878 -> 882 in plan 204-05: Series 204 added 4 new `### UAT-` case headings
-    # (UAT-204-01..04). Recompute, never transcribe, if this ever goes stale again.
-    assert len(cases) == 882
+    # Bumped 878 -> 882 in plan 204-05 (Series 204's 4 cases), then 882 -> 887 at Phase 204's
+    # close-out (Series 203's 5 backfilled cases). Recompute, never transcribe.
+    #
+    # NOTE: this literal pin has now required a hand-bump twice in a single day, and it catches
+    # nothing that the `independent_count` assertion three lines above does not already catch --
+    # that one derives its expectation from the corpus at run time and so never goes stale. Corpus
+    # growth is not a defect. Replacing this line with the derived check is tracked in
+    # .planning/todos/pending/uat-corpus-parser-test-pins-a-literal-count.md
+    assert len(cases) == 887
     # No duplicate IDs.
     ids = [c.case_id for c in cases]
     assert len(ids) == len(set(ids))
@@ -402,7 +408,8 @@ def test_iter_cases_total_matches_independent_heading_count():
 
 def test_run_reconcile_against_real_corpus_arithmetic_closes():
     r = uat_corpus.run_reconcile()
-    # Bumped 878 -> 882 in plan 204-05 (Series 204's 4 new case headings). See the sibling
-    # test above for the recompute-not-transcribe rationale.
-    assert r.total_headings == 882
+    # Bumped 878 -> 882 in plan 204-05 (Series 204's 4 cases), then 882 -> 887 at Phase 204's
+    # close-out (Series 203's 5 backfilled cases). See the sibling test above for the
+    # recompute-not-transcribe rationale and the todo tracking this pin's removal.
+    assert r.total_headings == 887
     assert r.arithmetic_ok is True

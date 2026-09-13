@@ -8,13 +8,13 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 882
-- Disposition counts: DEFERRED 39, FAIL 5, GAP 64, OBSOLETE 2, PASS 687, SKIP_OTHER 85
-- Open GAP (drainable) cases: 76
+- Total case headings: 887
+- Disposition counts: DEFERRED 39, FAIL 5, GAP 65, OBSOLETE 2, PASS 691, SKIP_OTHER 85
+- Open GAP (drainable) cases: 77
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (76 cases, all series)
+## Open GAP Worklist (77 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
@@ -94,6 +94,7 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-199-05 | 199 | Unassessed Per-Segment Gauge Renders as an Em-Dash, Not a NaN Arc | no substitute coverage. `199-04-SUMMARY.md` confirms the production change |
 | UAT-202-02 | 202 | Keyboard-Operable Trigger, Escape Closes, Focus Returns to the Row | no substitute coverage; no operator walkthrough exercised keyboard Tab/Escape/focus-return, and vitest coverage cannot be cited as a DEFERRED pytest node |
 | UAT-202-11 | 202 | No-Stable-Identifier Finding Renders a Disabled Trigger | no substitute coverage; no operator walkthrough exercised the disabled-trigger state, and vitest coverage cannot be cited as a DEFERRED pytest node |
+| UAT-203-05 | 203 | Seven Vendor Entries Remain Unverified — Honest Absence | no substitute coverage; 7 of 8 vendor source documents are gone or access-gated, so no test can assert these entries match their sources. The operator owns re-sourcing per a 2026-09-13 decision — work matrix in `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`, structural fix tracked separately in `hardware-matrix-doc-id-decouple-url-from-identity.md`. Evidence: `203-ATTESTATION.md`, `203-RECON-source-reachability.md` |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 

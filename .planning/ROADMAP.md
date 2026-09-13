@@ -222,10 +222,10 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 
 ### Phases
 
-- [ ] **Phase 203: Catalog Freshness Drain** - Every date-gated staleness catalog is green against
+- [x] **Phase 203: Catalog Freshness Drain** - Every date-gated staleness catalog is green against
   genuinely re-read sources, so the coverage work runs on a green baseline.
 
-- [ ] **Phase 204: Worklist Truth & Derivation** - The gap worklist becomes a derived artifact
+- [x] **Phase 204: Worklist Truth & Derivation** - The gap worklist becomes a derived artifact
   covering every series, behind a written verdict on which source of truth it reads and a gate that
   keeps it from falling behind again.
 

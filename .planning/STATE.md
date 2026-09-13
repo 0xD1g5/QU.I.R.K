@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: planning
-last_updated: "2026-09-13T03:00:00.000Z"
+status: in_progress
+last_updated: "2026-09-13T18:30:00.000Z"
 last_activity: 2026-09-13
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 2
+  total_plans: 13
+  completed_plans: 13
+  percent: 33
 ---
 
 # Project State
@@ -1230,10 +1230,83 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Ready to plan Phase 203
-Plan: —
-Status: Roadmap created — ready to plan
-Last activity: 2026-09-13 — Milestone v5.24 roadmap created (Phases 203-208, 15/15 requirements mapped)
+Phase: Phase 204 COMPLETE (2 of 6 phases done — 203, 204). Next: Phase 205 Guard Integrity
+Plan: 6 of 6 complete (204-01..204-05 plus 204-04b, an orchestrator-authored corrective plan)
+Status: Phase 204 verification `passed` 4/4 — proceeding to Phase 205 under
+`/gsd-autonomous --from 204 --to 206`
+Last activity: 2026-09-13 — Phase 204 closed; UAT gap worklist is now a derived artifact behind two
+standing gates
+
+### Phase 204 (2026-09-13) — Worklist Truth & Derivation, COMPLETE, verification `passed` 4/4
+
+12 commits (`257b6011`..`8629d9ea`). COV-01/COV-02/COV-03/COV-09 all closed in `REQUIREMENTS.md`.
+`docs/uat-coverage-gaps.md` is no longer hand-maintained — it is generated from
+`docs/UAT-SERIES.md` at run time and byte-reproducible, verified independently by the orchestrator
+and again by the verifier.
+
+**Live figures at close — recompute, never cite these forward.** Run
+`.venv/bin/python -m scripts.uat_corpus reconcile`. At close: **882** case headings, **76** open
+GAP (64 Result-line + 12 Notes-line-only), **2** OBSOLETE retirements, causes 2/3/4 all **0**,
+arithmetic closes in both directions.
+
+**The documented drain target of 70 was wrong in both directions, and the corrections are the
+phase's real output:**
+
+- 70 came from attributing any GAP string inside a case's section span. That over-counts by 4 —
+  `UAT-193-10`, `UAT-199-06`, `UAT-200-11`, `UAT-202-12` are each the last case of a series whose
+  trailing summary paragraph quotes a *different* case's GAP. None carries its own GAP disposition.
+  The adjudicated rule is "GAP on the case's own `**Result:**` line OR its own `**Notes:**` line".
+- Cause 2 was **8** conflicts, not the 7 in `204-CONTEXT.md`'s D-01 table. The eighth,
+  `UAT-89-01-01`, has a three-segment ID that was invisible to every prior hand-count. **None of
+  the 8 ever cited a substitute** — each annotation literally read `DEFERRED — no substitute
+  coverage`, i.e. GAP-shaped prose wearing the wrong token. The ledger had been right about all 8.
+- Ledger truth: **378** rows, true max series **158** — not the "377-row / series 1-163" every
+  prior doc stated. Per D-02 it is now historical evidence only, never a live generator input.
+
+**COV-09 shipped TWO retirements, not the three D-11 named, and that is the correct outcome.**
+`UAT-92-01` and `UAT-5-18` are recorded OBSOLETE with reasons. `UAT-47-04` was **refused**:
+D-11's stated reason ("the interactive nmap y/N prompt no longer exists, superseded by
+`--discovery`") is factually false — `quirk/interactive.py:176`'s `enable_nmap = _prompt_bool(...)`
+is still live via `run_scan.py:1908`'s wizard branch, and `--discovery` (`run_scan.py:1532`) is a
+separate coexisting CLI-mode flag. Corrected to an honest GAP instead. Operator reviewed and
+approved this at 204-05's blocking checkpoint; the verifier then re-derived it from source
+independently rather than accepting the approval as proof. ROADMAP criterion 4 and COV-09 were
+hand-edited to record the corrected outcome with its evidence — not silently absorbed into "3".
+
+**A real blind spot was found in the COV-02 gate AFTER 204-04 shipped it, and closed by 204-04b.**
+The gate enumerated GAPs from `**Result:**` lines only, so the 12 Notes-line-only cases sat outside
+its independent re-verification. The orchestrator proved it live: a Notes-only GAP case absent from
+the worklist left the gate green at 13 passed. 204-04b widened the enumeration to both fields,
+extended the always-on non-vacuity guard to cover both, and recorded a third RED induction. The
+same probe now fails the gate correctly. **The gate still imports nothing from `scripts/`** — its
+independence from the generator is the whole point, and closing the hole by sharing the generator's
+parser would have traded one defect for a worse one.
+
+**Three stale-count / unrunnable-citation defects were produced BY THIS PHASE, about itself, and
+all three were caught and fixed:** `UAT-204-01`'s pass-criteria cited
+`.venv/bin/python scripts/generate_uat_coverage_gaps.py`, which raises `ModuleNotFoundError` (the
+generator must be run as `-m scripts.generate_uat_coverage_gaps`) — a crashing command emits no
+stdout, so it could read as a pass while proving nothing; `UAT-204-03`'s Notes cited a stale 878;
+and Series 204's closing paragraph cited 878 inside a sentence asserting its figures were "not
+transcribed from any prior draft". Two were found only because cited commands were *executed*
+rather than read. This is the strongest available argument for why COV-01/COV-02 derive the
+worklist mechanically: prose discipline, applied by the very agents enforcing it, drifted three
+times inside one phase.
+
+**Accepted gap, dated 2026-09-13 — Phase 203 artifacts.** `203-05/06/07-PLAN.md` have no matching
+`SUMMARY.md`, so `gsd-sdk query roadmap.analyze` reports Phase 203 as `partial`. The underlying
+work IS committed (`aba59882`, `d63a2a72`, `6c25ef95`, `61668268`, `b7cd2817`). No SUMMARY content
+was fabricated. Phase 203's ROADMAP checkbox was hand-ticked at this close because the phase is
+genuinely complete; the missing artifacts are recorded here rather than invented. A future session
+wanting `roadmap.analyze` to read clean must backfill them from those commits — or accept this
+note as the disposition.
+
+**Still red by design:** `tests/test_hardware_staleness.py::test_hardware_matrix_not_stale`
+(HARDWARE_MATRIX deferral — 7 of 8 vendor source documents gone; operator owns the URL
+re-sourcing, tracked in `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`).
+**Still failing pre-existing:**
+`tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged`
+(pytest 9.0.2 skip-report format). Neither is Phase 204's, neither may be "fixed" to clear a gate.
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
@@ -2031,7 +2104,20 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-09-13
-Stopped at: Phase 203 context gathered — 7 decisions captured (D-01..D-07) across all 4 offered gray areas. Key locks: per-entry `last_verified` with top-level = min(entries) so the gate cannot read greener than the weakest vendor (D-01), enforced by two new tests (D-02); verification bar is claim-match not reachability (D-03); one bounded attempt per rotted URL (D-04); vendors unreachable after Chrome escalate to the operator with an honest dated red deferral as fallback (D-05); hw_cve = confirm 6 rows + bounded NVD delta since 2026-09-02 (D-06); scope stays hardware_meta + hw_cve (D-07). NO blockers. Next: plan Phase 203. Written by hand — `state.record-session` not used (unsafe verb class, see Deferred Items).
+Stopped at: **Phase 204 COMPLETE and closed, verification `passed` 4/4.** Mid-run of
+`/gsd-autonomous --from 204 --to 206`; next action is Phase 205 (Guard Integrity), which has no
+phase directory yet — it needs discuss -> plan -> execute. Phase 206 follows, then the run HALTS:
+**Phase 207 is operator-led MANUAL by standing decision and an autonomous runner must not enter
+it.** Phase 204 shipped `scripts/uat_corpus.py`, `scripts/generate_uat_coverage_gaps.py`, a
+generated `docs/uat-coverage-gaps.md`, `docs/uat-coverage-reconciliation.md`, and two standing
+gates (generator-drift + COV-02 worklist reconciliation). Full detail in `## Current Position`
+above, including the 70->76 correction, the 2-not-3 retirement outcome, the COV-02 blind spot found
+and closed by 204-04b, and the three self-inflicted stale-count defects. **Before citing any UAT
+count anywhere, run `.venv/bin/python -m scripts.uat_corpus reconcile`** — the numbers in this file
+are timestamped measurements, not facts. STATE.md and ROADMAP.md were hand-written under the
+pre-image + signature-diff protocol; no mutating GSD verb was invoked at any point in Phase 204.
+
+Prior (2026-09-13): Phase 203 context gathered — 7 decisions captured (D-01..D-07) across all 4 offered gray areas. Key locks: per-entry `last_verified` with top-level = min(entries) so the gate cannot read greener than the weakest vendor (D-01), enforced by two new tests (D-02); verification bar is claim-match not reachability (D-03); one bounded attempt per rotted URL (D-04); vendors unreachable after Chrome escalate to the operator with an honest dated red deferral as fallback (D-05); hw_cve = confirm 6 rows + bounded NVD delta since 2026-09-02 (D-06); scope stays hardware_meta + hw_cve (D-07). NO blockers. Next: plan Phase 203. Written by hand — `state.record-session` not used (unsafe verb class, see Deferred Items).
 Resume file: .planning/phases/203-catalog-freshness-drain/203-CONTEXT.md
 
 v5.24 autonomy segmentation (operator, 2026-09-13): Phase 203 runs IN-SESSION (Chrome tools are

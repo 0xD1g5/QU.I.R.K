@@ -36,7 +36,7 @@ threshold). A red staleness gate is a poor backdrop for a coverage-integrity mil
       really verified. A correction found is a success, not a failure.
       `tests/test_hardware_staleness.py` green.
 
-- [ ] **STALE-02**: `quirk/scanner/hw_cve.py` is re-verified in the same pass so its 30-day cadence
+- [x] **STALE-02**: `quirk/scanner/hw_cve.py` is re-verified in the same pass so its 30-day cadence
       does not trip mid-milestone, and the ages of **all** date-gated catalogs are recomputed from
       source (`grep -rln "STALENESS_THRESHOLD_DAYS" quirk/`) rather than read off CLAUDE.md's
       hand-maintained list — that list said "eight" and omitted `hardware_meta.py` until a live CI
@@ -211,8 +211,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STALE-01 | Phase 203 | Pending |
-| STALE-02 | Phase 203 | Pending |
+| STALE-01 | Phase 203 | **PARTIAL — deliberately not closed** (1 of 8 vendors verified; 7 source documents gone. `tests/test_hardware_staleness.py::test_hardware_matrix_not_stale` is RED by design under a dated deferral in STATE.md. Operator owns URL re-sourcing — `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`) |
+| STALE-02 | Phase 203 | Closed (203-02) — `hw_cve.py` `last_verified` 2026-09-13, 6/6 rows re-verified against the live NVD API, `tests/test_cve_staleness.py` 6 passed. Flipped 2026-09-13 by Phase 204's close-out after Phase 203's backfilled verification found it left Pending despite being fully discharged |
 | COV-01 | Phase 204 | Closed (204-03) |
 | COV-02 | Phase 204 | Closed (204-04/204-04b) |
 | COV-03 | Phase 204 | Closed (204-01/204-02) |
