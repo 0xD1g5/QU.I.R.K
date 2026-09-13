@@ -14083,15 +14083,16 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 
 **Steps:**
 1. Run scanned_at preservation test:
-   - `pytest tests/test_merge_scan.py::test_scanned_at_not_mutated -q`
+   - `pytest tests/test_merge_scan.py::test_scanned_at_preserved -q`
+   - (the originally-named `test_scanned_at_not_mutated` never existed; see the Result annotation)
 
 **Expected:** After `merge_scan()` completes, every source `CryptoEndpoint.scanned_at` value in the DB is identical to its pre-merge value. The `MergeRun` row is written but no `CryptoEndpoint` row's `scanned_at` is rewritten.
 
 **Pass Criteria:**
-- `test_scanned_at_not_mutated`: all pre-merge scanned_at values unchanged post-merge
-- `pytest tests/test_merge_scan.py -q` reports 8 passed, 0 failed
+- `test_scanned_at_preserved`: all pre-merge scanned_at values unchanged post-merge
+- `pytest tests/test_merge_scan.py -q` reports 11 passed, 0 failed
 
-**Result:** - [x] PASS (2026-08-28 named node tests/test_merge_scan.py::test_scanned_at_not_mutated does not exist -- real equivalent tests/test_merge_scan.py::test_scanned_at_preserved located, run, exit 0 1 passed; full file exit 0, 11 passed)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 named node `test_scanned_at_not_mutated` in tests/test_merge_scan.py does not exist -- real equivalent tests/test_merge_scan.py::test_scanned_at_preserved located, run, exit 0 1 passed; full file exit 0, 11 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -25499,7 +25500,7 @@ headings (Identity, Cloud, Database, Email & Broker, OT/ICS, Source & API) in fi
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > renders connectors under their category headings in the six-heading fixed order`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"renders connectors under their category headings in the six-heading fixed order"`.
 
 ---
 
@@ -25512,7 +25513,7 @@ headings (Identity, Cloud, Database, Email & Broker, OT/ICS, Source & API) in fi
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > disables an unavailable connector's switch and shows its reason + install hint as visible text`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"disables an unavailable connector's switch and shows its reason + install hint as visible text"`.
 
 ---
 
@@ -25560,7 +25561,7 @@ with the credential field empty
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > shows a masked, not-saved credential input when a credentialed connector is turned ON, and removes it when turned OFF`, which asserts the input's `type="password"` masking and "not saved" copy. The full post-submission "Run again"-reopens-empty round trip is asserted by construction (the form holds no persisted credential state to repopulate from) rather than by a dedicated end-to-end test.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"shows a masked, not-saved credential input when a credentialed connector is turned ON, and removes it when turned OFF"`, which asserts the input's `type="password"` masking and "not saved" copy. The full post-submission "Run again"-reopens-empty round trip is asserted by construction (the form holds no persisted credential state to repopulate from) rather than by a dedicated end-to-end test.
 
 ---
 
@@ -25607,7 +25608,7 @@ input when toggled on
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > renders the ambient-auth note and no input element for an ambient-auth cloud connector when ON`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"renders the ambient-auth note and no input element for an ambient-auth cloud connector when ON"`.
 
 ---
 
