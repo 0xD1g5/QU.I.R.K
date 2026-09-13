@@ -111,11 +111,24 @@ derive itself so it can never silently accumulate again.
 **Phase Numbering:** Continues from v5.23's last phase (202). Integer phases only — v5.24 starts
 at Phase 203.
 
-**Measurement basis (live parse of `docs/UAT-SERIES.md`, 2026-09-13):** 878 case headings; **70**
-carry a `GAP — no substitute coverage` annotation; **45** of those are series ≤163 and **25** are
-series 164–202; **31** are series-7 dashboard-UI cases, of which **28** are jsdom-tractable and
-**3** are not. Where a count here disagrees with a prior document, the disagreement is a finding to
-investigate (COV-03), not an error in either.
+**Measurement basis: recompute, do not transcribe.** This block previously carried frozen literal
+counts (878 case headings, 70 GAP-annotated, 45/25 series split). Phase 204 (COV-03) adjudicated the
+GAP-attribution rule those counts left ambiguous and found the frozen 70 itself superseded twice in
+the same phase — first to 66 under the Result-or-own-Notes-line rule, then to 76 once plan 204-04b
+widened the standing gate to actually enumerate the 12 Notes-line-only cases. A frozen number in this
+block is the exact defect COV-01/COV-02 exist to prevent, reproduced in the document that states the
+lesson. Run the following before citing any count from this milestone, in any phase, review, or
+close:
+
+```
+.venv/bin/python -m scripts.uat_corpus reconcile
+```
+
+See `docs/uat-coverage-reconciliation.md` for the full adjudication (which source is authoritative,
+how the divergence decomposes, and the arithmetic-closure proof) and
+`docs/uat-coverage-gaps.md` for the live, regenerated worklist. Where a count from this command
+disagrees with a prior document, the disagreement is a finding to investigate, not an error in
+either — record it the way `docs/uat-coverage-reconciliation.md` itself does.
 
 **Structure rationale:** Catalog freshness opens the milestone because
 `tests/test_hardware_staleness.py` is RED on `main` right now (91 days against a 90-day threshold)
@@ -275,16 +288,24 @@ derived artifact over the whole corpus, with a written verdict on what it reads.
   3. A standing gate fails when a GAP-dispositioned case exists that the worklist does not name, and
      it has been demonstrated RED against a real un-absorbed case before being accepted as green —
      never satisfied by narrowing its own enumeration.
-  4. `UAT-92-01`, `UAT-47-04`, and `UAT-5-18` read as recorded OBSOLETE carrying their reason, and
-     the regenerated worklist no longer counts them among open GAPs — a recorded retirement, never a
-     quiet deletion.
-**Plans**: 5 plans
+  4. **Outcome, corrected from this criterion's original wording:** `UAT-92-01` and `UAT-5-18` read
+     as recorded OBSOLETE carrying their reason, and the regenerated worklist no longer counts them
+     among open GAPs — a recorded retirement, never a quiet deletion. `UAT-47-04`'s proposed reason
+     was checked against source (`quirk/interactive.py`, `run_scan.py`) and found false — the
+     described prompt is still live — so it was corrected to an honest `GAP` instead of retired on a
+     false premise. This is the correct outcome per this same criterion's own "never a quiet
+     deletion" standard, recorded as a finding, not silently absorbed into "3 retirements." See
+     `docs/uat-coverage-reconciliation.md`'s "Retirements (COV-09)" section for the evidence.
+**Plans**: 6 plans (204-04b is an orchestrator-authored corrective plan, added after a live probe
+found a real scoping gap in 204-04's first gate version)
 Plans:
-- [ ] 204-01-PLAN.md — COV-03 run-time corpus/ledger parser + the written reconciliation verdict
-- [ ] 204-02-PLAN.md — per-case DEFERRED-vs-GAP verdicts, OBSOLETE grammar, COV-09 retirements
-- [ ] 204-03-PLAN.md — COV-01 worklist generator + byte-reproducibility drift gate
-- [ ] 204-04-PLAN.md — COV-02 standing reconciliation gate + recorded RED demonstration
-- [ ] 204-05-PLAN.md — docs checklist, Obsidian sync, hand-edited requirement/roadmap/state closure
+- [x] 204-01-PLAN.md — COV-03 run-time corpus/ledger parser + the written reconciliation verdict
+- [x] 204-02-PLAN.md — per-case DEFERRED-vs-GAP verdicts, OBSOLETE grammar, COV-09 retirements
+- [x] 204-03-PLAN.md — COV-01 worklist generator + byte-reproducibility drift gate
+- [x] 204-04-PLAN.md — COV-02 standing reconciliation gate + recorded RED demonstration
+- [x] 204-04b — corrective: widen the COV-02 gate to close the Notes-line-only GAP blind spot
+      (no PLAN.md — orchestrator-authored corrective plan; see 204-04b-SUMMARY.md)
+- [x] 204-05-PLAN.md — docs checklist, Obsidian sync, hand-edited requirement/roadmap/state closure
 
 ### Phase 205: Guard Integrity
 **Goal**: The two guards whose own limitations make real coverage uncitable are fixed, before the

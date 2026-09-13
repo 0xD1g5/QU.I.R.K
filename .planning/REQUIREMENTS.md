@@ -44,18 +44,28 @@ threshold). A red staleness gate is a poor backdrop for a coverage-integrity mil
 
 ### Coverage Worklist Integrity
 
-- [ ] **COV-01**: `docs/uat-coverage-gaps.md` is **regenerated from the live corpus** and covers
+- [x] **COV-01**: `docs/uat-coverage-gaps.md` is **regenerated from the live corpus** and covers
       every series, not just 1–163. The generator reads `docs/UAT-SERIES.md` (and/or the ledger, per
       COV-03's verdict) at run time; the committed file is its output. Enumeration loses entries and
       derivation does not — this project has been bitten by hand-maintained site lists at least five
       separate times.
+      **Closed Phase 204 plan 204-03**: `scripts/generate_uat_coverage_gaps.py` +
+      `tests/test_uat_coverage_gaps_freshness.py` (byte-reproducibility + drift gate, mirrors the
+      `error-codes.md`/`severity-bands.json`/`score-strings.json` precedent). Re-verified live at
+      204-05 close: `scripts/generate_uat_coverage_gaps.py` output diffs empty against the committed
+      file.
 
-- [ ] **COV-02**: a standing gate fails when a GAP-dispositioned case exists that the regenerated
+- [x] **COV-02**: a standing gate fails when a GAP-dispositioned case exists that the regenerated
       worklist does not name, so the worklist cannot silently fall behind the corpus again. Same
       derived-gate shape as the shipped backlog-reconciliation gate: it must fail for the honest
       reason (a real un-absorbed case), never be satisfied by narrowing its own enumeration.
+      **Closed Phase 204 plans 204-04/204-04b**: `tests/test_uat_worklist_reconciliation_gate.py` +
+      `.planning/phases/204-worklist-truth-derivation/204-RED-PROOF.md` (three recorded RED
+      inductions — numeric id, non-numeric id, Notes-line-only GAP — with md5 pre/post byte-identical
+      reverts). 204-04b widened the gate's own enumeration after a live orchestrator probe found a
+      real scoping gap in 204-04's first version; see 204-05-SUMMARY.md for the closure record.
 
-- [ ] **COV-03**: the GAP-count disagreement between the two sources of truth is reconciled with
+- [x] **COV-03**: the GAP-count disagreement between the two sources of truth is reconciled with
       per-case evidence. `docs/uat-coverage-gaps.md` reports **57** GAP rows for series 1–163 from
       `docs/uat-disposition-ledger.jsonl`'s `outcome` field; parsing the document's own
       `GAP — no substitute coverage` annotations for the same series gives **45**. The on-disk
@@ -63,6 +73,15 @@ threshold). A red staleness gate is a poor backdrop for a coverage-integrity mil
       cannot distinguish a verified substitute from an honest absence. The requirement is a written
       verdict naming which source is authoritative, why they diverged, and which count the drain is
       measured against — not a silent pick.
+      **Closed Phase 204 plan 204-01/204-02**: `docs/uat-coverage-reconciliation.md` is the written
+      verdict — `docs/UAT-SERIES.md` is the single authoritative source going forward (D-02), the
+      12-case divergence decomposes into 5 named causes with arithmetic closure asserted
+      programmatically, and all 12 cases were resolved into the document with per-case evidence. The
+      **57**/**45** figures above are this requirement's own historical measurement and are left
+      unedited; the live re-derived counts have moved twice since (66, then 76 once 204-04b widened
+      the standing gate's own enumeration) — recompute via
+      `.venv/bin/python -m scripts.uat_corpus reconcile` before citing any GAP count, per
+      `docs/uat-coverage-reconciliation.md`'s own provenance section.
 
 ### Dashboard UI Coverage
 
@@ -115,13 +134,24 @@ gate, not the coverage, is the defect.
 
 ### Worklist Hygiene
 
-- [ ] **COV-09**: rows that can never close are retired as recorded OBSOLETE with evidence, not
-      carried as perpetual GAPs: `UAT-92-01` (a one-time historical v5.0.0 tag-creation gate — the
-      event already happened and is not repeatable), `UAT-47-04` (the interactive nmap y/N prompt no
-      longer exists, superseded by the `--discovery` flag), `UAT-5-18` (HashiCorp Vault Transit has
-      no `rsa-1024` key type at all, so the case's own dual-flag premise is untestable). A GAP that
-      can never close is noise in the worklist, not honesty — but the retirement must be a recorded
-      decision with its reason, never a quiet deletion.
+- [x] **COV-09**: rows that can never close are retired as recorded OBSOLETE with evidence, not
+      carried as perpetual GAPs. **Closed Phase 204 plan 204-02 with a corrected, evidenced outcome —
+      2 retirements, not the 3 originally proposed below:** `UAT-92-01` (a one-time historical
+      v5.0.0 tag-creation gate — the event already happened and is not repeatable) and `UAT-5-18`
+      (HashiCorp Vault Transit has no `rsa-1024` key type at all, so the case's own dual-flag premise
+      is untestable) were retired `SKIP (OBSOLETE — <reason>)`, structurally distinct from GAP in
+      both the document grammar and `scripts/uat_corpus.py::reconcile()`
+      (`tests/test_uat_obsolete_grammar.py`). The third candidate named below,
+      `UAT-47-04` (originally proposed as "the interactive nmap y/N prompt no longer exists,
+      superseded by the `--discovery` flag"), was checked against source per this requirement's own
+      "recorded decision" standard and found **false**: `quirk/interactive.py`'s
+      `enable_nmap = _prompt_bool(...)` prompt is still live via `run_scan.py`'s wizard-mode path
+      (`run_scan.py:1908`); `--discovery` is a separate, coexisting CLI-mode-only flag
+      (`run_scan.py:1532`), not a supersession. `UAT-47-04` was corrected to an honest `GAP` instead
+      of retired on a false premise — see `docs/uat-coverage-reconciliation.md`'s "Retirements
+      (COV-09)" section for the full evidence trail. A GAP that can never close is noise in the
+      worklist, not honesty — but the retirement must be a recorded decision with its reason, never a
+      quiet deletion, which is exactly what the `UAT-47-04` correction demonstrates.
 
 ### Carried Doc Debt (from the v5.23 boundary review)
 
@@ -183,15 +213,15 @@ Which phases cover which requirements. Populated during roadmap creation.
 |-------------|-------|--------|
 | STALE-01 | Phase 203 | Pending |
 | STALE-02 | Phase 203 | Pending |
-| COV-01 | Phase 204 | Pending |
-| COV-02 | Phase 204 | Pending |
-| COV-03 | Phase 204 | Pending |
+| COV-01 | Phase 204 | Closed (204-03) |
+| COV-02 | Phase 204 | Closed (204-04/204-04b) |
+| COV-03 | Phase 204 | Closed (204-01/204-02) |
 | COV-04 | Phase 206 | Pending |
 | COV-05 | Phase 207 | Pending |
 | COV-06 | Phase 208 | Pending |
 | COV-07 | Phase 208 | Pending |
 | COV-08 | Phase 208 | Pending |
-| COV-09 | Phase 204 | Pending |
+| COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
 | GUARD-01 | Phase 205 | Pending |
 | GUARD-02 | Phase 205 | Pending |
 | DOC-01 | Phase 208 | Pending |
