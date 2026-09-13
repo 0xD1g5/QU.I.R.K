@@ -27,7 +27,7 @@ finding to investigate (COV-03), not as an error in either.
 threshold). A red staleness gate is a poor backdrop for a coverage-integrity milestone, and
 `hw_cve.py`'s 30-day cadence trips ≈2026-10-02 — mid-milestone — if not handled in the same pass.
 
-- [ ] **STALE-01**: `HARDWARE_MATRIX` is re-verified against **all 8 per-vendor `source_url`s**
+- [x] **STALE-01**: `HARDWARE_MATRIX` is re-verified against **all 8 per-vendor `source_url`s**
       (F5, Cisco, Palo Alto, Fortinet, Juniper, HPE, Intel, Thales) plus the top-level NSA CNSA 2.0
       page — not the NSA page alone, since the per-vendor entries are the catalog's actual
       PQC-readiness claims. Any source that could not be reached is **named explicitly in the commit
@@ -211,7 +211,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STALE-01 | Phase 203 | **PARTIAL — deliberately not closed** (1 of 8 vendors verified; 7 source documents gone. `tests/test_hardware_staleness.py::test_hardware_matrix_not_stale` is RED by design under a dated deferral in STATE.md. Operator owns URL re-sourcing — `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`) |
+| STALE-01 | Phase 203 (partial) + operator re-sourcing 2026-09-13 | **Closed 2026-09-13** — all 8 vendors re-verified against current authoritative documents on their own domains; top-level date recomputed to `min()` of the entries; `tests/test_hardware_staleness.py` 9/9 green **on its own merits** (no date bumped, `QUIRK_CI_STALENESS_OVERRIDE_DATE` never set). The Phase 203 dated deferral is discharged. **Five of five claims checked were wrong** — F5 and Cisco understated, Palo Alto INVERTED (the NGFW strips PQC rather than supporting it), HPE wrong on three counts, IPMI's "no extension point" false. Commit `fa1792f7` |
 | STALE-02 | Phase 203 | Closed (203-02) — `hw_cve.py` `last_verified` 2026-09-13, 6/6 rows re-verified against the live NVD API, `tests/test_cve_staleness.py` 6 passed. Flipped 2026-09-13 by Phase 204's close-out after Phase 203's backfilled verification found it left Pending despite being fully discharged |
 | COV-01 | Phase 204 | Closed (204-03) |
 | COV-02 | Phase 204 | Closed (204-04/204-04b) |

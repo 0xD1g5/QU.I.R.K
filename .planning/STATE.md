@@ -17,7 +17,35 @@ progress:
 
 ## Deferred Items
 
-### Phase 203 (2026-09-13) — STALE-01 partially discharged; staleness gate RED by design
+### Phase 203 (2026-09-13) — ⚠️ SUPERSEDED: this deferral is DISCHARGED as of 2026-09-13
+
+> **DISCHARGED — do not act on the deferral described below.** The operator re-sourced the seven
+> rotted vendor documents by hand the same day, and the orchestrator verified the eighth (IPMI)
+> against the specification itself. **All 8 entries now carry `2026-09-13`, the top-level date was
+> recomputed to `min()` of the entries, and `tests/test_hardware_staleness.py` passes 9/9 on its own
+> merits** — no date was bumped and `QUIRK_CI_STALENESS_OVERRIDE_DATE` was never set. STALE-01 is
+> **Complete** in `REQUIREMENTS.md`. Commit `fa1792f7`.
+>
+> **The headline finding is not that the URLs rotted — it is that five of five claims checked were
+> WRONG, in both directions.** F5 (`unsupported` -> `partial`; the "core TMOS does not support PQC"
+> claim had been false since Feb 2025, sixteen months before its own `last_verified` date), Cisco
+> (`unsupported` -> `partial`, IPsec RFC 9370 from ASA 9.20(1)), **Palo Alto (claim INVERTED — the
+> entry said PAN-OS supports X25519MLKEM768 for TLS decryption; the NGFW actually STRIPS PQC groups
+> from ClientHello and drops PQC-only sessions, making it a downgrade point rather than a capable
+> device)**, HPE (wrong generation, wrong mechanism, unsourced version floor), and IPMI (the
+> "closed cipher-suite table with no extension point" claim is false — all three algorithm tables
+> reserve `C0h-FFh` for OEM; status stays `unsupported` on the narrower basis that the OEM range is
+> unreachable through the 6-bit `[5:0]` field carrying it, a self-contradiction in the spec).
+> Fortinet was likewise wrong on two counts in Phase 203. **Assume no entry in a catalog like this
+> is right until read.**
+>
+> Three of the rotted URLs served **HTTP 200 on the wrong subject**, so no status-code link check
+> could ever have caught any of it. The `doc_id` structural fix
+> (`.planning/todos/pending/hardware-matrix-doc-id-decouple-url-from-identity.md`) remains open and
+> is now better motivated, not less: re-sourcing bought one release cycle, and the claims were the
+> real rot.
+>
+> The historical record of the deferral follows, unedited.
 
 `tests/test_hardware_staleness.py::test_hardware_matrix_not_stale` is **RED and deliberately left
 red.** This is a **recorded, dated deferral, not a bumped date** — per CLAUDE.md §Staleness Review
