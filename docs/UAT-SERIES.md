@@ -3519,7 +3519,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 - Badge colors differentiate safety levels
 - Badge tooltip or description available
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_rsa_2048_produces_medium and tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_ecdsa_256_produces_medium)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_rsa_2048_produces_medium and tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_ecdsa_256_produces_medium)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4104,7 +4104,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 - Identity findings also appear in the main `findings` array (deduplication optional)
 - No `500` error on the endpoint when identity data is absent
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::IdentityFindingModelTests*test_scan_latest_response_has_identity_findings)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::IdentityFindingModelTests::test_scan_latest_response_has_identity_findings)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -6100,7 +6100,7 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 - `identity_findings` array is non-empty (empty array is a FAIL)
 - No HTTP 404 from `/api/scan/latest`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::Issue3ScanWindowRegressionTest*test_saml_visible_with_earlier_dnssec, verified pass 2026-08-27 -- asserts SAML and DNSSEC present in /api/scan/latest identity_findings[] protocols via the same SESSION_BRACKET code path; the sibling test_issue3_scan_window_returns_all_identity_protocols in the same class additionally requires impacket, not installed in this environment, and was excluded to avoid a skip)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_saml_visible_with_earlier_dnssec, verified pass 2026-08-27 -- asserts SAML and DNSSEC present in /api/scan/latest identity_findings[] protocols via the same SESSION_BRACKET code path; the sibling test_issue3_scan_window_returns_all_identity_protocols in the same class additionally requires impacket, not installed in this environment, and was excluded to avoid a skip)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -7433,7 +7433,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `jq 'all(.[]; .description != null and (.description | length > 0))'` outputs `true` against the latest findings file.
 - Spot-checking three finding entries shows a 1-3 sentence plain-English explanation of the cryptographic risk in `description`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext*test_every_finding_has_non_empty_description)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext::test_every_finding_has_non_empty_description)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7488,7 +7488,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `grep -c 'Per NIST IR 8547' findings-*.json` returns at least `1` when quantum-vulnerable findings are present.
 - For each quantum-vulnerable entry, both substrings appear in its `recommendation` field.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext*test_quantum_vulnerable_findings_cite_fips and tests/test_risk_engine.py::TestBuildFinding*test_quantum_vulnerable_appends_deprecation_phrase)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext::test_quantum_vulnerable_findings_cite_fips and tests/test_risk_engine.py::TestBuildFinding::test_quantum_vulnerable_appends_deprecation_phrase)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -10752,7 +10752,7 @@ self-signed RSA-2048 cert. grpc-go advertises ALPN `h2`. sslyze should complete 
 - Certificate subject is `CN=grpc-tls.chaos.local` with RSA-2048 key.
 - Expected quantum-readiness finding: RSA-2048 cert (MEDIUM, TLS-02).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_rsa_2048_produces_medium, verified pass 2026-08-27 -- covers the RSA-2048 MEDIUM quantum-vulnerable classification the case asserts; the gRPC/ALPN transport negotiation itself is TLS-transport-agnostic and not separately gated scanner logic)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_rsa_2048_produces_medium, verified pass 2026-08-27 -- covers the RSA-2048 MEDIUM quantum-vulnerable classification the case asserts; the gRPC/ALPN transport negotiation itself is TLS-transport-agnostic and not separately gated scanner logic)
 **Date:** _____________  **Tester:** _____________
 
 ---
