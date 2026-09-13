@@ -141,6 +141,23 @@ REQ_ID_ONLY_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[0-9]+)+$")
 # scripts/uat_disposition_apply.py's own evidence validator.
 DEFERRED_COVERED_PREFIXES = ("DEFERRED — covered by ", "DEFERRED - covered by ")
 
+# D-06 (legal, exempt): a 'no substitute coverage' annotation carries no
+# coverage claim by design -- but its free-text explanation MAY still
+# mention a real node in passing (e.g. "the only candidate,
+# tests/test_x.py::test_y, is unconditionally skipped per TRIAGE-149" --
+# live at docs/UAT-SERIES.md:7463 and :15961). 205-02b's widened, prefix-free
+# node-shaped-ref sweep (see iter_deferred_covered) would otherwise treat
+# that incidental mention as a coverage citation and existence/execution
+# check it -- exactly the false positive this prefix list exists to
+# prevent. Checked BEFORE the node-ref sweep, not after, so these
+# annotations never reach it regardless of what they happen to mention.
+NO_SUBSTITUTE_COVERAGE_PREFIXES = (
+    "GAP — no substitute coverage",
+    "GAP - no substitute coverage",
+    "DEFERRED — no substitute coverage",
+    "DEFERRED - no substitute coverage",
+)
+
 NODE_ID_LINE_RE = re.compile(r"^tests/[\w/.-]+\.py::\S+$")
 
 
@@ -173,27 +190,49 @@ def iter_results(lines):
 
 def iter_deferred_covered(lines):
     """Yield (lineno, case_id, annotation, refs) for every SKIP-checked
-    Result line whose annotation is a 'DEFERRED — covered by ...' deferral.
-    ``refs`` is the list of node references extracted via NODE_REF_RE
-    (pytest) AND VITEST_REF_RE (D-05, vitest) combined -- a deferral may
-    cite either kind, or both, without special-casing the caller. May be
-    empty, e.g. for a bare-requirement-ID substitute -- that emptiness is
-    exactly what find_deferrals_without_node_ref() below flags.
+    Result line that names a substitute -- EITHER phrased as a
+    'DEFERRED — covered by ...' deferral, OR any other SKIP annotation that
+    simply cites a node-shaped reference directly (the plain
+    ``[x] SKIP (tests/foo.py::test_bar -- verified passing)`` form used by
+    several UAT-58-* / UAT-89-02-02 cases). ``refs`` is the list of node
+    references extracted via NODE_REF_RE (pytest) AND VITEST_REF_RE (D-05,
+    vitest) combined -- a citation may use either kind, or both, without
+    special-casing the caller.
 
-    'DEFERRED — no substitute coverage' annotations (D-06, legal) are
-    deliberately NOT yielded here -- they carry no node reference by design
-    and are exempt from existence/execution checks."""
+    205-02b: this used to key extraction on the 'DEFERRED — covered by'
+    PROSE PHRASING alone, so a real, verified node reference cited in plain
+    SKIP prose (no 'DEFERRED —' prefix at all) was never existence- or
+    execution-checked -- a proven blind spot (6 live citations, 5 of them
+    API-security tests). Extraction is now keyed on EITHER condition:
+
+      1. the annotation starts with a DEFERRED_COVERED_PREFIXES prefix (kept
+         so a bare-requirement-ID substitute like 'DEFERRED — covered by
+         DISC-01' still yields with an EMPTY refs list -- that emptiness is
+         exactly what find_deferrals_without_node_ref() below flags), OR
+      2. the annotation contains at least one node-shaped reference, however
+         phrased -- UNLESS the annotation starts with a
+         NO_SUBSTITUTE_COVERAGE_PREFIXES prefix (D-06, checked first, see
+         that constant's docstring): a GAP/DEFERRED 'no substitute coverage'
+         annotation's free-text explanation may incidentally MENTION a real
+         node (to say it does NOT cover the case, or as related-but-
+         insufficient evidence) without that mention being a coverage claim.
+
+    'DEFERRED — no substitute coverage' / 'GAP — no substitute coverage'
+    annotations (D-06, legal) remain correctly EXEMPT: branch 1 doesn't
+    match their prose, and branch 2 is explicitly skipped for them
+    regardless of what they happen to mention."""
     for lineno, case_id, groups in iter_results(lines):
         if groups["skip_box"] != "x":
             continue
         ann = groups["skip_ann"]
         if not ann:
             continue
-        for prefix in DEFERRED_COVERED_PREFIXES:
-            if ann.startswith(prefix):
-                refs = NODE_REF_RE.findall(ann) + VITEST_REF_RE.findall(ann)
-                yield lineno, case_id, ann, refs
-                break
+        if any(ann.startswith(prefix) for prefix in NO_SUBSTITUTE_COVERAGE_PREFIXES):
+            continue
+        refs = NODE_REF_RE.findall(ann) + VITEST_REF_RE.findall(ann)
+        is_covered_prefix = any(ann.startswith(prefix) for prefix in DEFERRED_COVERED_PREFIXES)
+        if is_covered_prefix or refs:
+            yield lineno, case_id, ann, refs
 
 
 def find_deferrals_without_node_ref(lines):
@@ -532,9 +571,24 @@ def ledger_rows() -> list[dict]:
 def collected_node_ids() -> set[str]:
     """The real collect-only node ID set, collected exactly once per test
     session (collection over ~3700 nodes costs a few seconds; re-collecting
-    per test would be wasteful and is explicitly disallowed by the plan)."""
+    per test would be wasteful and is explicitly disallowed by the plan).
+
+    205-02b: passes `-m ""` (an empty marker expression, which OVERRIDES
+    `pyproject.toml`'s `addopts = -m 'not slow'` rather than being additive
+    with it -- same semantics CLAUDE.md's UAT Corpus Integrity Gate section
+    documents for the `Linux Full Suite` CI job). Without this, the default
+    addopts filter silently DESELECTS every `@pytest.mark.slow` node from
+    this set -- a pure collection-time artifact, unrelated to whether the
+    node actually exists. Widening iter_deferred_covered's extraction
+    surfaced this: 4 real, collectible `@pytest.mark.slow` integration-test
+    citations (UAT-5-20/21/22, UAT-44-03) were reported "unresolvable" by
+    `find_unresolvable_node_refs` purely because this fixture's node-ID set
+    excluded slow-marked tests, not because the citations were wrong.
+    EXISTENCE-checking is a `--collect-only` operation -- no test body runs
+    -- so filtering by marker here serves no purpose and only produces false
+    unresolvable reports."""
     proc = run_fork_safe(
-        [sys.executable, "-m", "pytest", "--collect-only", "-q", str(REPO_ROOT / "tests")],
+        [sys.executable, "-m", "pytest", "--collect-only", "-q", "-m", "", str(REPO_ROOT / "tests")],
         timeout=180,
     )
     if proc.returncode != 0:
@@ -844,6 +898,63 @@ def test_negative_control_mixed_pytest_and_vitest_refs_in_one_annotation():
     ]
     assert find_unresolvable_node_refs(synthetic, {"tests/test_real.py::test_ok"}) == []
     assert find_unresolvable_vitest_refs(synthetic) == []
+
+
+def test_negative_control_plain_skip_node_citation_is_now_extracted():
+    """205-02b: the proven blind spot. Before this fix, iter_deferred_covered
+    only extracted refs from annotations phrased 'DEFERRED — covered by
+    ...'. A plain ``[x] SKIP (tests/foo.py::test_bar -- verified passing)``
+    citation -- no 'DEFERRED —' prefix at all -- was silently NEVER yielded,
+    so find_unresolvable_node_refs and the execution leg (test_substitute_
+    nodes_pass) never checked it. This is the exact shape of 6 live
+    citations (UAT-58-01/02/03/04/06, UAT-89-02-02), 5 of them API-security
+    tests. Manually verified this test goes RED against the pre-fix
+    iter_deferred_covered (prefix-gated `for prefix in
+    DEFERRED_COVERED_PREFIXES: if ann.startswith(prefix): ...`): refs would
+    be []` because the synthetic annotation below starts with neither
+    prefix string.
+
+    This is a positive control, proving the widened form now WORKS -- not
+    to be confused with a negative control (which would prove something is
+    correctly REJECTED)."""
+    synthetic = [
+        "### UAT-58-01: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(tests/test_api_auth.py::test_mutating_route_returns_401_without_token "
+        "-- verified passing)\n",
+    ]
+    results = list(iter_deferred_covered(synthetic))
+    assert len(results) == 1
+    _lineno, case_id, ann, refs = results[0]
+    assert case_id == "UAT-58-01"
+    assert refs == ["tests/test_api_auth.py::test_mutating_route_returns_401_without_token"]
+    # And it flows through to the existence check exactly like a
+    # 'DEFERRED — covered by' citation would.
+    assert find_unresolvable_node_refs(
+        synthetic, {"tests/test_api_auth.py::test_mutating_route_returns_401_without_token"}
+    ) == []
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == [
+        (2, "UAT-58-01", "tests/test_api_auth.py::test_mutating_route_returns_401_without_token")
+    ]
+
+
+def test_negative_control_no_substitute_coverage_stays_exempt_even_mentioning_a_node():
+    """205-02b guard against over-widening: a D-06 'no substitute coverage'
+    annotation's free-text explanation may incidentally MENTION a real node
+    (to say it does NOT cover the case) without that being a coverage
+    citation -- live at docs/UAT-SERIES.md:7463 and :15961. The widened,
+    prefix-free node-shaped-ref sweep must not sweep these in; they are
+    caught by NO_SUBSTITUTE_COVERAGE_PREFIXES, checked before the sweep."""
+    synthetic = [
+        "### UAT-7-99: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(GAP — no substitute coverage; the only candidate, "
+        "tests/test_reports_writer.py::test_html_report_has_description_column, "
+        "is unconditionally skipped per TRIAGE-149)\n",
+    ]
+    assert list(iter_deferred_covered(synthetic)) == []
+    assert find_deferrals_without_node_ref(synthetic) == []
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == []
 
 
 # ---------------------------------------------------------------------------

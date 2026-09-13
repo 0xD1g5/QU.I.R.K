@@ -10691,7 +10691,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 **Pass Criteria:**
 - `identity_weak_etype_count >= 1` against the live KDC.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (tests/test_identity_surface.py::IdentityEvidenceCounterTests*test_kerberos_weak_etype_counted -- verified passing; tests the identity_weak_etype_count>=1 counting logic directly against synthetic RC4-HMAC evidence, without requiring impacket or a live KDC; the case's own title already declares itself environment-gated/deferred)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (tests/test_identity_surface.py::IdentityEvidenceCounterTests::test_kerberos_weak_etype_counted -- verified passing; tests the identity_weak_etype_count>=1 counting logic directly against synthetic RC4-HMAC evidence, without requiring impacket or a live KDC; the case's own title already declares itself environment-gated/deferred)
 **Date:** _____________  **Tester:** _____________
 
 ---
