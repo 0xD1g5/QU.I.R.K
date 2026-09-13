@@ -249,7 +249,14 @@ rest of the milestone runs against a green baseline rather than a standing red g
      any catalog that list omits is reported as a finding.
   5. Every gate in `.github/workflows/python-staleness.yml` is green, or any remaining red is a
      dated, reasoned deferral recorded in STATE.md — never cleared by bumping a date.
-**Plans**: TBD
+**Plans**: 7 plans in 6 waves (main session only, `use_worktrees=false` — Chrome tools do not exist in worktree subagents)
+  - [ ] 203-01-PLAN.md — D-02 invariant tests (+ red-proof) and SC#4 catalog enumeration
+  - [ ] 203-02-PLAN.md — STALE-02: hw_cve NVD re-verification with a control query
+  - [ ] 203-03-PLAN.md — Cisco + Fortinet verification (browser-independent)
+  - [ ] 203-04-PLAN.md — Chrome pass: 6 vendors + NSA top-level, D-05 escalation (BROWSER GATED)
+  - [ ] 203-05-PLAN.md — Apply the attestation record; computed top-level min(); per-vendor commit
+  - [ ] 203-06-PLAN.md — Full staleness gate, D-07 trip-date table, deferrals, requirements
+  - [ ] 203-07-PLAN.md — Docs checklist verdict, UAT Series 203, Obsidian sync
 
 ### Phase 204: Worklist Truth & Derivation
 **Goal**: The gap worklist stops being a hand-maintained snapshot of series 1–163 and becomes a
