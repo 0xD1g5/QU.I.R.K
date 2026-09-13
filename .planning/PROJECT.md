@@ -1,12 +1,24 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-11)
+## Current State (updated 2026-09-13)
 
-**v5.23 Deliverable Experience — OPENED 2026-09-11.** Capability cycle: reporting-engine
-customization (999.105 Tier 1), score-lift migration-roadmap re-frame (999.101), finding
-storyline drawer (999.102), gated by a small Wave A drain (trends/merge int-coercion +
-overlay CI regression test). Sequencing commitment: v5.24 = UAT Coverage Drain. See
-`## Current Milestone` below. **Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11** —
+**v5.24 UAT Coverage Drain — OPENED 2026-09-13.** Ops/integrity cycle, following four
+capability-leaning milestones. Anchor: write the missing tests behind the honest UAT GAPs and make
+the gap worklist derive itself. Live measurement at open: **70 GAP-annotated cases across 878**,
+25 of them in series 164–202 that `docs/uat-coverage-gaps.md` (scoped to series 1–163, claiming 57)
+has never absorbed. Opens with a catalog re-verification drain because
+`tests/test_hardware_staleness.py` is RED on `main` at 91/90 days. Phase numbering continues at
+**203**. See `## Current Milestone` below.
+
+**v5.23 Deliverable Experience — development complete 2026-09-12, audit `gaps_found`, merged to
+`main` 2026-09-13.** All 4 phases (199–202), 28 plans, 14/14 requirements, 4/4 Nyquist-compliant,
+5/6 integration seams with **1 blocker accepted by the operator at close** (999.111 — drawer and
+roadmap disagree on score-lift where endpoints lack a shared `scan_run_id`; missing rather than
+wrong information, pinned by a characterization test). 999.112 filed P3. The milestone's best
+process outcome was **research falsifying two LOCKED decisions before any plan ran**: `FindingItem.id`
+turned out to be `CryptoEndpoint.id` with 2–4 findings sharing one, so the drawer's planned route
+could never have identified a finding; and 41% of fingerprints proved multi-theme, so "the owning
+theme" was never a data-model invariant. **Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11** —
 TRIAGE-10/TRIAGE-11 validated: fractional scores round-trip via Optional[float] transport
 widening (merge/trends/scan + TS mirrors, null-honest SubscoreSlot gauges), combined
 connectors+advanced overlay regression test green; verification passed 8/8, full suite
@@ -170,7 +182,92 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.23 Deliverable Experience
+## Current Milestone: v5.24 UAT Coverage Drain
+
+**Opened:** 2026-09-13, after a boundary pass that ran the doc-review template and a PM review of
+HORIZON's Open-Item Ledger.
+
+**Boundary doc review (2026-09-13):**
+- **Version drift — PASS.** `pyproject.toml`, `README.md`, `docs/UAT-SERIES.md` header, and
+  `CHANGELOG.md`'s top entry all read **5.21.0**, which is correct: v5.22 and v5.23 deliberately
+  cut no tag (`release.yml` fires on `v[0-9]*`; two-component tags silently no-op'd at v5.13/v5.14),
+  so 5.21.0 remains the last published release. `docs/getting-started.md` carries no version
+  string, only a correct `(v5.23+)` feature marker.
+- **Coverage gaps — 2 found, both carried into this milestone as doc tasks.** (a) `ROADMAP.md`'s
+  Phase 202 criterion-3 wording is stale — it says per-finding score-lift, but the shipped
+  behaviour is theme-level (`score_lift` is keyed by remediation theme covering N findings; see
+  v5.23 D-01/D-08/D-09). (b) 999.112's fix shape is undelivered — `docs/report-interpretation.md`
+  still lacks the precondition note that LIFT-05's four-surface numeric-equality guarantee holds
+  only for *unmodified* report templates.
+- **Obsidian — PASS with 2 pending.** All 7 synced guides verified **byte-identical to source**
+  after frontmatter stripping (mtime and file size both gave false staleness signals — the 107-byte
+  delta is the injected frontmatter). Phase notes 199–202 all present. Vault `Roadmap.md` and
+  `Requirements.md` are stale at 2026-09-11 and the `_QUIRK-Hub.md` callout needs a refresh — both
+  resolved by this boundary's own writes.
+
+**Predecessor merged first.** v5.23's 155 commits sat unmerged in stacked PRs #12 → #13 at this
+boundary. Both were merged to `main` on 2026-09-13 (`623fa502`, `5f625595`) before any v5.24
+artifact was written, so phase-complete evidence for this milestone is branch-honest from the
+start — `git log main..<branch>` is the only check that distinguishes merged from unmerged work,
+and Phase 185's close-out was invisible for exactly this reason.
+
+**Goal:** Turn QU.I.R.K.'s release-gate document from a record of *what was checked* into a record
+of *what is covered* — write the missing tests behind the honest GAPs, and make the gap worklist
+derive itself so it can never silently accumulate again.
+
+**Target features:**
+- **Catalog re-verification (opening drain, gating)** — `HARDWARE_MATRIX.last_verified` is 91/90
+  days and `tests/test_hardware_staleness.py` is RED on `main` right now; re-verify against all 8
+  per-vendor `source_url`s (not just the NSA page, which 403s non-browser agents) and check
+  `hw_cve.py` in the same pass — its 30-day cadence trips ≈2026-10-02, mid-milestone. A red
+  staleness gate is a poor backdrop for a coverage-integrity milestone. Never bump a date without
+  really re-verifying (CLAUDE.md §Staleness Review Cadence).
+- **Re-derive the gap worklist from the live corpus** — `docs/uat-coverage-gaps.md` is scoped to
+  series 1–163 and claims 57 GAPs. A live parse of `docs/UAT-SERIES.md` on 2026-09-13 finds **70
+  GAP-annotated cases across 878 total**, of which **25 sit in series 164–202** the worklist has
+  never absorbed, accruing at roughly 1.4 per phase. Derive it, gate it — a hand-maintained list of
+  sites is not a safeguard, in this file or anywhere else.
+- **Close the 31 series-7 dashboard-UI GAPs** — the largest coherent block. Phase 169-06 already
+  spent the vitest-citation dialect against all 31 and converted **zero**, having read every
+  `it()`/`test()` title in all 21 existing `.test.tsx` files: no genuine substitute exists today.
+  Three (`UAT-7-01`, `-17`, `-32`) describe headless-browser/real-PDF/full-navigation behaviour
+  jsdom cannot structurally exercise — they need Playwright or they stay honest GAPs.
+- **Fix the guards that make real coverage uncitable** — `NODE_REF_RE` cannot span a second `::`,
+  forcing `Class*method` glob workarounds instead of natural `Class::method` node syntax; and the
+  vitest `-m slow` execution leg never runs in CI because `Linux Full Suite` installs no Node, so
+  vitest substitutes are existence-checked only there. `dashboard-quality.yml` is the candidate home.
+- **Close the security- and report-relevant non-UI GAPs** — `UAT-104-04` (Jira SSRF guard is wired
+  but *never exercised*; no test anywhere constructs a `JiraChannel` with an RFC1918 URL);
+  `UAT-88-02`/`-03` (the six-row score-decomposition table has no render-output coverage in HTML
+  and none at all in PDF); `UAT-8-04`/`-05` (hygiene and identity-trust subscore isolation).
+- **Retire un-closable rows as recorded OBSOLETE, not perpetual GAPs** — `UAT-92-01` (a one-time
+  historical v5.0.0 tag-creation gate, not re-verifiable by any substitute), `UAT-47-04` (the
+  interactive nmap y/N prompt no longer exists — superseded by `--discovery`), `UAT-5-18` (Vault
+  Transit has no `rsa-1024` key type at all, so the case's own premise is untestable). A permanent
+  GAP that can never close is noise in the worklist, not honesty.
+
+**Key context:** Ops/integrity cycle, following four capability-leaning milestones (v5.20
+correctness → v5.21 capability → v5.22 capability tail → v5.23 capability). Drain-before-net-new is
+the standing PM preference and this item has been "important, not urgent" for three boundaries
+while the worklist kept growing — the BACK-89 invisibility pathology in slow motion. **v5.24 was
+committed as UAT Coverage Drain at the v5.23 boundary specifically so it could not slip a fourth
+time.** Phase numbering continues at **203**. Explicitly NOT opened, each by its own standing gate:
+999.105 Tier 2 report composition (NO-GO, ~15–16 plans, needs a guard-redesign spike first),
+999.107 Exposure Map Tier B (gated on 999.110's live data), 999.110 multi-host lab topology
+(considered as a GAP-enabler and set aside to keep the drain's anchor sharp), Tier 4 config-file
+parity, and detection breadth (no demand signal). CBOM minimum-elements watch item re-checked
+2026-09-13: no guidance landed yet (due ≈2026-12-19). `phase.complete`/`milestone.complete`/
+`state.*` verbs remain unsafe on this machine — every close is hand-written under the pre-image +
+signature-diff protocol.
+
+## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12
+
+**Closed 2026-09-12:** audit `gaps_found` — 14/14 requirements, 4/4 phases, 4/4 Nyquist-compliant,
+but 5/6 integration seams, with **one blocker accepted by the operator at close** rather than
+downgraded (999.111 — the roadmap surface and the storyline drawer disagree on score-lift where
+endpoints do not share a `scan_run_id`; the failure is *missing* rather than *wrong* information,
+and a characterization test pins it). 999.112 filed P3. Merged to `main` 2026-09-13 via PRs #12/#13.
+Section retained as the opening record.
 
 **Opened:** 2026-09-11, after a boundary pass that ran the doc-review template (version drift
 PASS — 5.21.0 consistent everywhere, correct since v5.22 deliberately cut no tag; coverage gaps
@@ -1297,7 +1394,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-11 — milestone v5.23 Deliverable Experience opened*
+*Last updated: 2026-09-13 — milestone v5.24 UAT Coverage Drain opened*
 
 ## Evolution
 

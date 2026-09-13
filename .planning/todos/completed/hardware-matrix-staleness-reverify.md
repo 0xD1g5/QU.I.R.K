@@ -3,10 +3,28 @@ type: todo
 created: 2026-09-12
 source: phase-201 plan 08 full-suite verification; operator-deferred at the orchestrator's close
 priority: medium
-requirement: none (standing staleness-cadence obligation, not a phase requirement)
+requirement: STALE-01 / STALE-02 (promoted into milestone v5.24 on 2026-09-13; was "none —
+  standing staleness-cadence obligation" while unpromoted)
+resolves_phase: 203
 ---
 
 # `HARDWARE_MATRIX.last_verified` is 91 days old (>90) — `tests/test_hardware_staleness.py` is RED on `main`
+
+> **STATUS UPDATE 2026-09-13 (Phase 203) — WORKED, NOT CLOSED.** This todo stays **pending**
+> because its acceptance criteria are genuinely unmet: the gate is not green and 7 of 8 vendors are
+> not re-verified. Moving it to `completed/` would be false.
+>
+> What Phase 203 did discharge: the "Worth folding in while here" `hw_cve` half is **done**
+> (re-verified 2026-09-13, next trip 2026-10-13). Fortinet was verified and **corrected** — its
+> recorded claim was wrong on two counts. The top-level NSA `source_url` was corrected.
+>
+> What blocks the rest: **the vendor documents are gone.** 6 of the 8 `source_url`s in the table
+> below are dead, silently moved, or serve HTTP 200 on the wrong subject; Juniper's is behind a
+> support login. This is now tracked in detail, with per-vendor evidence, in
+> **`hardware-matrix-source-urls-broadly-rotted.md`** (high) — read that one first; it supersedes
+> this todo's "what re-verification requires" table, which lists URLs that no longer resolve.
+>
+> Do NOT close this by bumping `last_verified`. STATE.md carries the dated deferral.
 
 **Operator decision 2026-09-12: deferred with a record.** Phase 201's close-out surfaced this; it
 is pure calendar drift, unrelated to anything Phase 201 changed, and a docs/close-out plan has no

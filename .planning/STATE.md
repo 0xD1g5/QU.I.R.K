@@ -1,21 +1,94 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.23
-milestone_name: Deliverable Experience
-status: milestone_complete
-last_updated: "2026-09-13T01:30:00.000Z"
+milestone: v5.24
+milestone_name: UAT Coverage Drain
+status: in_progress
+last_updated: "2026-09-13T19:40:00.000Z"
 last_activity: 2026-09-13
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 20
+  completed_plans: 17
+  percent: 50
 ---
 
 # Project State
 
 ## Deferred Items
+
+### Phase 203 (2026-09-13) — ⚠️ SUPERSEDED: this deferral is DISCHARGED as of 2026-09-13
+
+> **DISCHARGED — do not act on the deferral described below.** The operator re-sourced the seven
+> rotted vendor documents by hand the same day, and the orchestrator verified the eighth (IPMI)
+> against the specification itself. **All 8 entries now carry `2026-09-13`, the top-level date was
+> recomputed to `min()` of the entries, and `tests/test_hardware_staleness.py` passes 9/9 on its own
+> merits** — no date was bumped and `QUIRK_CI_STALENESS_OVERRIDE_DATE` was never set. STALE-01 is
+> **Complete** in `REQUIREMENTS.md`. Commit `fa1792f7`.
+>
+> **The headline finding is not that the URLs rotted — it is that five of five claims checked were
+> WRONG, in both directions.** F5 (`unsupported` -> `partial`; the "core TMOS does not support PQC"
+> claim had been false since Feb 2025, sixteen months before its own `last_verified` date), Cisco
+> (`unsupported` -> `partial`, IPsec RFC 9370 from ASA 9.20(1)), **Palo Alto (claim INVERTED — the
+> entry said PAN-OS supports X25519MLKEM768 for TLS decryption; the NGFW actually STRIPS PQC groups
+> from ClientHello and drops PQC-only sessions, making it a downgrade point rather than a capable
+> device)**, HPE (wrong generation, wrong mechanism, unsourced version floor), and IPMI (the
+> "closed cipher-suite table with no extension point" claim is false — all three algorithm tables
+> reserve `C0h-FFh` for OEM; status stays `unsupported` on the narrower basis that the OEM range is
+> unreachable through the 6-bit `[5:0]` field carrying it, a self-contradiction in the spec).
+> Fortinet was likewise wrong on two counts in Phase 203. **Assume no entry in a catalog like this
+> is right until read.**
+>
+> Three of the rotted URLs served **HTTP 200 on the wrong subject**, so no status-code link check
+> could ever have caught any of it. The `doc_id` structural fix
+> (`.planning/todos/pending/hardware-matrix-doc-id-decouple-url-from-identity.md`) remains open and
+> is now better motivated, not less: re-sourcing bought one release cycle, and the claims were the
+> real rot.
+>
+> The historical record of the deferral follows, unedited.
+
+`tests/test_hardware_staleness.py::test_hardware_matrix_not_stale` is **RED and deliberately left
+red.** This is a **recorded, dated deferral, not a bumped date** — per CLAUDE.md §Staleness Review
+Cadence, a deferral is honest and a bumped date is not.
+
+**What happened:** Phase 203 re-verified `HARDWARE_MATRIX` against its real sources through Chrome
+browser automation. **1 of 8 vendors verified** (Fortinet — and it was *wrong on two counts*, now
+corrected). **7 could not be read at their recorded URLs.** Chrome reached every host successfully,
+including the NSA page that HTTP 403s all non-browser clients — so this is not a tooling limit. The
+vendor documents are gone: 6 dead or silently moved, 1 behind a support login (Juniper).
+
+Under D-01 the top-level `last_verified` is `min()` of the entry dates, so 7 unverified vendors pin
+it at `2026-06-13` and the gate cannot go green. **That is the invariant working as designed.**
+A future session must NOT clear this by bumping the date or by setting
+`QUIRK_CI_STALENESS_OVERRIDE_DATE`.
+
+**Tracked as:** `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md` (high).
+Evidence: `.planning/phases/203-catalog-freshness-drain/203-ATTESTATION.md`.
+
+**STALE-02 is fully discharged** — `hw_cve` re-verified against the live NVD API, 6/6 rows
+confirmed, bounded CRITICAL/HIGH delta clean, date moved to `2026-09-13`.
+
+### D-07 — date-gated catalog trip dates (computed from source 2026-09-13)
+
+Recorded so a future session sees these coming rather than meeting a surprise red gate. The other
+seven catalogs were deliberately NOT re-verified in Phase 203 (D-07); only the two in STALE-01/02
+were in scope.
+
+| Catalog | `last_verified` | Threshold | Next trip |
+|---|---|---|---|
+| `quirk/scanner/hardware_meta.py` | 2026-06-13 | 90 | **already tripped 2026-09-11 — see deferral above** |
+| `quirk/scanner/hw_cve.py` | **2026-09-13** | 30 | 2026-10-13 *(was ≈2026-10-02; moved past the milestone)* |
+| `quirk/qramm/model_meta.py` | 2026-08-11 | 90 | 2026-11-09 |
+| `quirk/compliance/cmvp.py` | 2026-08-25 | 90 | 2026-11-23 — **never run `quirk compliance cmvp refresh`** (RVW-022) |
+| `quirk/scanner/snmp_meta.py` | 2026-09-02 | 90 | 2026-12-01 |
+| `quirk/scanner/pqc_deadlines.py` | 2026-09-02 | 90 | 2026-12-01 |
+| `quirk/compliance/__init__.py` | 2026-05-05 | 365 | 2027-05-05 |
+| `quirk/scanner/bacnet_vendors.py` | 2026-08-11 | 365 | 2027-08-11 |
+| `quirk/scanner/hardware_eol.py` | 2026-08-14 | 365 | 2027-08-14 |
+
+Enumerate with `grep -rln "^STALENESS_THRESHOLD_DAYS: int = " quirk/ --include="*.py" | grep -v __pycache__`
+— which returns exactly these 9. The broader form documented in CLAUDE.md returns 16 (it also
+matches reader modules and docstrings) and needs manual triage; see Phase 203's SC#4 finding.
 
 **Acknowledged at the v5.22 milestone close on 2026-09-11** (operator accepted audit status
 `passed`; 4 open artifacts deferred — the same carried set as v5.21 minus
@@ -87,11 +160,33 @@ Also carried, not in `audit-open`'s scope:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-19)
+See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.23 Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11 — verification `passed` 8/8; TRIAGE-10/TRIAGE-11 both `[x]` (fractional scores round-trip via Optional[float] widening across merge/trends/scan transports + SubscoreSlot null-honest gauges; combined connectors+advanced overlay regression test green); full suite 4845 passed / 0 failed; code review resolved (4 warnings + 5 infos fixed, commits cd777242/a8181d5b/8867bd91/e8918400); UAT Series 199 added (1 honest GAP: UAT-199-05 em-dash browser rendering); backlog-reconciliation gate re-greened after v5.22-archive drift (c2d4ee81). Percent is phase-based (1/4) this milestone. Phase 200 (Report Branding & Templates) COMPLETE 2026-09-11 — verification `human_needed`→operator-approved (5/5 must-haves; UAT-200-01/02/11 approved in a live branded-report walkthrough); RPT-01..05 all `[x]`; SSTI gate GO (13/13 payloads contained under unconditional SandboxedEnvironment); 999.105 Tier 2 NO-GO recorded in HORIZON (RPT-F-01 stays spike-gated); report profiles + `--report-profile` CLI shipped; code review resolved (3 warnings + 4 infos fixed incl. the WR-03 SSTI-marker vacuity, 2 accepted-advisory); full suite 4909/0 (empty failing SET); TRIAGE-149 order-pollution avoided by patching the PDF leg at the writer seam in the new test files. Also this session: 999.108 (main-CI-red connector-gate regressions) fixed+closed (cfdd5438), 999.109 (static release bodies) filed P2. Phase 202 (Finding Storyline Drawer) COMPLETE 2026-09-12 — **v5.23 is now 4/4 phases, 28/28 plans**. Verification `human_needed` -> **operator-approved** after a live LAN walkthrough (4/4 must-haves); STORY-01/STORY-02 `[x]`. 8 plans in 5 waves, executed serially (`use_worktrees=false`). **Criteria 2 and 3 shipped under operator-confirmed reframings, not literal ROADMAP wording** — criterion 3's per-finding lift is not honestly implementable (`score_lift` is keyed by remediation THEME covering N findings), so D-01 frames it as "+N pts when all M findings in this theme are resolved", D-08 prefers a specific theme over the `high-impact-findings` catch-all, D-09 renders the catch-all when it is the only theme; criterion 2's narrative is USUALLY ABSENT (catalogs keyed by crypto-algorithm keyword), accepted as consistency with the report (D-07). ROADMAP's criterion-3 wording is now stale -- doc correction pending. Research falsified two LOCKED decisions before planning: `FindingItem.id` IS `CryptoEndpoint.id` (9 `id=ep.id` sites in one loop, 2-4 findings share an id) so D-02's route could not identify a finding -> D-06 keys it `(id, title)` with a title-translation bridge; and 41% of fingerprints are multi-theme -> D-08/D-09. Post-execution: code review 0 critical / 2 warning both FIXED (a row click bypassing the A6 disabled trigger; a cross-surface equality test that passed BY CONSTRUCTION because it patched the shared producer) / 1 info advisory; UI review **23/24**, 5 pillars 4/4, 2 actionable warnings fixed. **The a11y capture found a REAL serious WCAG 2.1.1/2.1.3 violation** on the drawer's own scroll region -- fixed with `tabIndex={0}` rather than ledgered, because the app-wide blast-radius justification covering the two existing ledger entries does not apply to a single-site container. Failing-node SET: **1** (the operator-deferred HARDWARE_MATRIX staleness trip). Two `test_pqc_discriminator` nodes also failed once and were proven a pre-existing collection-time-`skipif` flake, filed as a todo -- the suite mutates its own lab dependency via `test_chaos_lab_idempotency`. **4 new todos filed:** the `skipif` flake; `FindingItem.id` non-uniqueness (a latent trap for any future per-finding feature, worked around not fixed); a DOCUMENTED-NOT-CLOSED `scan_run_id` divergence where the roadmap shows a lift and the drawer shows none for the same finding on legacy/distributed-sensor rows (a characterization test pins it -- a green test does NOT mean resolved); and an A1 copy nuance the operator spotted on live data (it asserts "not mapped to a theme" where for an *unbridged* title the honest claim is "theme undeterminable" -- all 4 findings in the canonical DB hit this path). Also recorded: 202-03's executor ran a prohibited `git stash` (self-reported, recovered, nothing lost), and one frontend test failed once then never reproduced across 12 runs -- unidentified, NOT diagnosed. Next: **v5.23 milestone lifecycle** -- audit -> complete -> cleanup, every write BY HAND (`milestone.complete` is UNSAFE). Reminders: all mutating GSD state/roadmap/phase verbs remain UNSAFE on this machine; hand-write closes under pre-image + signature-diff.
+**Current focus:** v5.24 UAT Coverage Drain OPENED 2026-09-13 — defining requirements, no phase
+started. Anchor: write the missing tests behind the honest UAT GAPs and make the gap worklist derive
+itself. Live measurement at open (not carried from the stale worklist doc): **70 GAP-annotated cases
+across 878 total** in `docs/UAT-SERIES.md`, of which **25 sit in series 164–202** that
+`docs/uat-coverage-gaps.md` — scoped to series 1–163, claiming 57 — has never absorbed; accrual is
+roughly 1.4 GAPs per phase. Opens with a catalog re-verification drain: `HARDWARE_MATRIX` is 91/90
+days and `tests/test_hardware_staleness.py` is RED on `main` right now, with `hw_cve.py`'s 30-day
+cadence tripping ≈2026-10-02 mid-milestone. Phase numbering continues at **203**.
+**Predecessor merged before any v5.24 artifact was written:** v5.23's 155 commits had been sitting
+in stacked PRs #12 → #13; #13's base was the stack branch, not `main`, so it was retargeted before
+merging (`623fa502`, `5f625595`). `git log main..<branch>` is 0 — phase-complete evidence for this
+milestone is branch-honest from the start. Boundary doc review: version drift PASS (5.21.0
+consistent — correct, since v5.22/v5.23 cut no tag); 2 coverage gaps found and carried as doc tasks
+(ROADMAP's Phase 202 criterion-3 wording is stale — shipped theme-level, not per-finding; 999.112's
+precondition note in `docs/report-interpretation.md` undelivered); Obsidian PASS with 2 pending
+(7/7 guides verified byte-identical after frontmatter stripping — mtime and file size both gave
+false staleness signals; vault `Roadmap.md`/`Requirements.md` and the hub callout stale, resolved by
+this boundary's own writes). Reminders: all mutating GSD `state.*`/`phase.complete`/
+`milestone.complete` verbs remain UNSAFE on this machine — this frontmatter and Current Position
+rewrite was hand-written under the pre-image + signature-diff protocol, both named signatures
+checked clean.
+
+Previous (v5.23, closed 2026-09-12): Phase 199 (Wave A Correctness Drain) COMPLETE 2026-09-11 — verification `passed` 8/8; TRIAGE-10/TRIAGE-11 both `[x]` (fractional scores round-trip via Optional[float] widening across merge/trends/scan transports + SubscoreSlot null-honest gauges; combined connectors+advanced overlay regression test green); full suite 4845 passed / 0 failed; code review resolved (4 warnings + 5 infos fixed, commits cd777242/a8181d5b/8867bd91/e8918400); UAT Series 199 added (1 honest GAP: UAT-199-05 em-dash browser rendering); backlog-reconciliation gate re-greened after v5.22-archive drift (c2d4ee81). Percent is phase-based (1/4) this milestone. Phase 200 (Report Branding & Templates) COMPLETE 2026-09-11 — verification `human_needed`→operator-approved (5/5 must-haves; UAT-200-01/02/11 approved in a live branded-report walkthrough); RPT-01..05 all `[x]`; SSTI gate GO (13/13 payloads contained under unconditional SandboxedEnvironment); 999.105 Tier 2 NO-GO recorded in HORIZON (RPT-F-01 stays spike-gated); report profiles + `--report-profile` CLI shipped; code review resolved (3 warnings + 4 infos fixed incl. the WR-03 SSTI-marker vacuity, 2 accepted-advisory); full suite 4909/0 (empty failing SET); TRIAGE-149 order-pollution avoided by patching the PDF leg at the writer seam in the new test files. Also this session: 999.108 (main-CI-red connector-gate regressions) fixed+closed (cfdd5438), 999.109 (static release bodies) filed P2. Phase 202 (Finding Storyline Drawer) COMPLETE 2026-09-12 — **v5.23 is now 4/4 phases, 28/28 plans**. Verification `human_needed` -> **operator-approved** after a live LAN walkthrough (4/4 must-haves); STORY-01/STORY-02 `[x]`. 8 plans in 5 waves, executed serially (`use_worktrees=false`). **Criteria 2 and 3 shipped under operator-confirmed reframings, not literal ROADMAP wording** — criterion 3's per-finding lift is not honestly implementable (`score_lift` is keyed by remediation THEME covering N findings), so D-01 frames it as "+N pts when all M findings in this theme are resolved", D-08 prefers a specific theme over the `high-impact-findings` catch-all, D-09 renders the catch-all when it is the only theme; criterion 2's narrative is USUALLY ABSENT (catalogs keyed by crypto-algorithm keyword), accepted as consistency with the report (D-07). ROADMAP's criterion-3 wording is now stale -- doc correction pending. Research falsified two LOCKED decisions before planning: `FindingItem.id` IS `CryptoEndpoint.id` (9 `id=ep.id` sites in one loop, 2-4 findings share an id) so D-02's route could not identify a finding -> D-06 keys it `(id, title)` with a title-translation bridge; and 41% of fingerprints are multi-theme -> D-08/D-09. Post-execution: code review 0 critical / 2 warning both FIXED (a row click bypassing the A6 disabled trigger; a cross-surface equality test that passed BY CONSTRUCTION because it patched the shared producer) / 1 info advisory; UI review **23/24**, 5 pillars 4/4, 2 actionable warnings fixed. **The a11y capture found a REAL serious WCAG 2.1.1/2.1.3 violation** on the drawer's own scroll region -- fixed with `tabIndex={0}` rather than ledgered, because the app-wide blast-radius justification covering the two existing ledger entries does not apply to a single-site container. Failing-node SET: **1** (the operator-deferred HARDWARE_MATRIX staleness trip). Two `test_pqc_discriminator` nodes also failed once and were proven a pre-existing collection-time-`skipif` flake, filed as a todo -- the suite mutates its own lab dependency via `test_chaos_lab_idempotency`. **4 new todos filed:** the `skipif` flake; `FindingItem.id` non-uniqueness (a latent trap for any future per-finding feature, worked around not fixed); a DOCUMENTED-NOT-CLOSED `scan_run_id` divergence where the roadmap shows a lift and the drawer shows none for the same finding on legacy/distributed-sensor rows (a characterization test pins it -- a green test does NOT mean resolved); and an A1 copy nuance the operator spotted on live data (it asserts "not mapped to a theme" where for an *unbridged* title the honest claim is "theme undeterminable" -- all 4 findings in the canonical DB hit this path). Also recorded: 202-03's executor ran a prohibited `git stash` (self-reported, recovered, nothing lost), and one frontend test failed once then never reproduced across 12 runs -- unidentified, NOT diagnosed. Next: **v5.23 milestone lifecycle** -- audit -> complete -> cleanup, every write BY HAND (`milestone.complete` is UNSAFE). Reminders: all mutating GSD state/roadmap/phase verbs remain UNSAFE on this machine; hand-write closes under pre-image + signature-diff.
 
 Previous (v5.22, closed 2026-09-11): Phase 196 (Release v5.21.0) COMPLETE 2026-09-10 — verification `passed` 12/12; **v5.21.0 PUBLISHED to PyPI** (release run 34520340774 green ×3 jobs, Sigstore verified, tag pushed by operator, `main`==`origin/main`==tag==`f6562e23`+follow-ups). REL-02/REL-03/HOUSE-01/HUAT-01 all `[x]`; HUAT browser checks re-verified "Both PASS" against the released build; MILESTONES.md backfilled v5.18–v5.21 (live grep had found only v5.16/v5.17 — research and memory were both wrong); code review resolved (2 docs-only findings fixed in d019a11d). Phase 197 (Connector Parity Tail) COMPLETE 2026-09-10 — verification `passed` 9/9; 999.104 Tier 2 CLOSED (all 37 residual connector fields dashboard-settable via lockstep-widened overlay; PARITY-05/06/07 `[x]`). D-13 walkthrough operator-approved (one env finding: Vault/K8s optional extras were missing from .venv — installed hvac/kubernetes/google-cloud-container/azure-mgmt-containerservice, zero code changes; visible-but-disabled contract worked as designed). Code review: 1 critical (pairlist length-bound DoS gap) + 2 minor, all fixed (7f6be242/87cf7371/fffe151f), review resolved. Phase 198 COMPLETE 2026-09-11 — verification `passed` 9/9; 999.104 Tier 3 CLOSED (19 fields shipped: 11 timeouts + 2 backoff + 5 concurrency + tls_designated_ports; 3 recorded intentional-gaps); GATE-04 green end-to-end, full-suite failing-node SET now EMPTY (former local-only RED fixed by U+2011 escaping, 9 files); D-08 walkthrough operator-approved. Review resolved (2 warnings fixed by orchestrator, 2 infos accepted-advisory). v5.22 CLOSED 2026-09-11 (audit passed 10/10; archives in `.planning/milestones/v5.22-*`; REQUIREMENTS.md removed for next milestone; NO v5.22 tag by design). Cleanup (phase-dir archival) next, then `/gsd-new-milestone`. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Reminders: phase.complete/milestone.complete/state.* verbs remain UNSAFE — hand-write closes under pre-image + signature-diff. Unpushed main commits accumulate since the release push — batch-push at next checkpoint or milestone close.
 complete (6 of 9). Plan 06's operator walkthrough approved 2026-09-10 — MAP-01/MAP-02/MAP-03 all
@@ -1163,10 +1258,83 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Ready to plan Phase 199
-Plan: —
-Status: Roadmap created — ready to plan
-Last activity: 2026-09-11 — Milestone v5.23 roadmap created (Phases 199-202)
+Phase: Phase 204 COMPLETE (2 of 6 phases done — 203, 204). Next: Phase 205 Guard Integrity
+Plan: 6 of 6 complete (204-01..204-05 plus 204-04b, an orchestrator-authored corrective plan)
+Status: Phase 204 verification `passed` 4/4 — proceeding to Phase 205 under
+`/gsd-autonomous --from 204 --to 206`
+Last activity: 2026-09-13 — Phase 204 closed; UAT gap worklist is now a derived artifact behind two
+standing gates
+
+### Phase 204 (2026-09-13) — Worklist Truth & Derivation, COMPLETE, verification `passed` 4/4
+
+12 commits (`257b6011`..`8629d9ea`). COV-01/COV-02/COV-03/COV-09 all closed in `REQUIREMENTS.md`.
+`docs/uat-coverage-gaps.md` is no longer hand-maintained — it is generated from
+`docs/UAT-SERIES.md` at run time and byte-reproducible, verified independently by the orchestrator
+and again by the verifier.
+
+**Live figures at close — recompute, never cite these forward.** Run
+`.venv/bin/python -m scripts.uat_corpus reconcile`. At close: **882** case headings, **76** open
+GAP (64 Result-line + 12 Notes-line-only), **2** OBSOLETE retirements, causes 2/3/4 all **0**,
+arithmetic closes in both directions.
+
+**The documented drain target of 70 was wrong in both directions, and the corrections are the
+phase's real output:**
+
+- 70 came from attributing any GAP string inside a case's section span. That over-counts by 4 —
+  `UAT-193-10`, `UAT-199-06`, `UAT-200-11`, `UAT-202-12` are each the last case of a series whose
+  trailing summary paragraph quotes a *different* case's GAP. None carries its own GAP disposition.
+  The adjudicated rule is "GAP on the case's own `**Result:**` line OR its own `**Notes:**` line".
+- Cause 2 was **8** conflicts, not the 7 in `204-CONTEXT.md`'s D-01 table. The eighth,
+  `UAT-89-01-01`, has a three-segment ID that was invisible to every prior hand-count. **None of
+  the 8 ever cited a substitute** — each annotation literally read `DEFERRED — no substitute
+  coverage`, i.e. GAP-shaped prose wearing the wrong token. The ledger had been right about all 8.
+- Ledger truth: **378** rows, true max series **158** — not the "377-row / series 1-163" every
+  prior doc stated. Per D-02 it is now historical evidence only, never a live generator input.
+
+**COV-09 shipped TWO retirements, not the three D-11 named, and that is the correct outcome.**
+`UAT-92-01` and `UAT-5-18` are recorded OBSOLETE with reasons. `UAT-47-04` was **refused**:
+D-11's stated reason ("the interactive nmap y/N prompt no longer exists, superseded by
+`--discovery`") is factually false — `quirk/interactive.py:176`'s `enable_nmap = _prompt_bool(...)`
+is still live via `run_scan.py:1908`'s wizard branch, and `--discovery` (`run_scan.py:1532`) is a
+separate coexisting CLI-mode flag. Corrected to an honest GAP instead. Operator reviewed and
+approved this at 204-05's blocking checkpoint; the verifier then re-derived it from source
+independently rather than accepting the approval as proof. ROADMAP criterion 4 and COV-09 were
+hand-edited to record the corrected outcome with its evidence — not silently absorbed into "3".
+
+**A real blind spot was found in the COV-02 gate AFTER 204-04 shipped it, and closed by 204-04b.**
+The gate enumerated GAPs from `**Result:**` lines only, so the 12 Notes-line-only cases sat outside
+its independent re-verification. The orchestrator proved it live: a Notes-only GAP case absent from
+the worklist left the gate green at 13 passed. 204-04b widened the enumeration to both fields,
+extended the always-on non-vacuity guard to cover both, and recorded a third RED induction. The
+same probe now fails the gate correctly. **The gate still imports nothing from `scripts/`** — its
+independence from the generator is the whole point, and closing the hole by sharing the generator's
+parser would have traded one defect for a worse one.
+
+**Three stale-count / unrunnable-citation defects were produced BY THIS PHASE, about itself, and
+all three were caught and fixed:** `UAT-204-01`'s pass-criteria cited
+`.venv/bin/python scripts/generate_uat_coverage_gaps.py`, which raises `ModuleNotFoundError` (the
+generator must be run as `-m scripts.generate_uat_coverage_gaps`) — a crashing command emits no
+stdout, so it could read as a pass while proving nothing; `UAT-204-03`'s Notes cited a stale 878;
+and Series 204's closing paragraph cited 878 inside a sentence asserting its figures were "not
+transcribed from any prior draft". Two were found only because cited commands were *executed*
+rather than read. This is the strongest available argument for why COV-01/COV-02 derive the
+worklist mechanically: prose discipline, applied by the very agents enforcing it, drifted three
+times inside one phase.
+
+**Accepted gap, dated 2026-09-13 — Phase 203 artifacts.** `203-05/06/07-PLAN.md` have no matching
+`SUMMARY.md`, so `gsd-sdk query roadmap.analyze` reports Phase 203 as `partial`. The underlying
+work IS committed (`aba59882`, `d63a2a72`, `6c25ef95`, `61668268`, `b7cd2817`). No SUMMARY content
+was fabricated. Phase 203's ROADMAP checkbox was hand-ticked at this close because the phase is
+genuinely complete; the missing artifacts are recorded here rather than invented. A future session
+wanting `roadmap.analyze` to read clean must backfill them from those commits — or accept this
+note as the disposition.
+
+**Still red by design:** `tests/test_hardware_staleness.py::test_hardware_matrix_not_stale`
+(HARDWARE_MATRIX deferral — 7 of 8 vendor source documents gone; operator owns the URL
+re-sourcing, tracked in `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`).
+**Still failing pre-existing:**
+`tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged`
+(pytest 9.0.2 skip-report format). Neither is Phase 204's, neither may be "fixed" to clear a gate.
 
 ## v5.17 Phase Map (development complete 2026-09-01 — untagged)
 
@@ -1963,9 +2131,118 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-12
-Stopped at: Phase 201 at 7 of 8 plans — 201-06 operator walkthrough APPROVED 2026-09-12 (stale-cache root cause confirmed, not a defect), LIFT-05 hand-flipped [x], commit 0d1d3654. Paused on session limit with NO blockers and NO human action outstanding; plan 201-08 (close-out) is next.
-Resume file: .planning/HANDOFF.json (+ .planning/phases/201-score-lift-roadmap-re-frame/.continue-here.md)
+Last session: 2026-09-13 (resumed)
+Stopped at: **Phase 205 (Guard Integrity) is COMPLETE — 7 of 7 plans, verification `passed` 5/5,
+`205-VERIFICATION.md` and `205-VALIDATION.md` both written (`nyquist_compliant: true`, zero pending
+rows), so the close gate is satisfied.** GUARD-01 and GUARD-02 are both `[x]` with traceability
+rows Closed, hand-edited. On branch `phase-205-guard-integrity` → **PR #14, 56 commits**, 2 of them
+unpushed at the moment of writing. Branch-honesty guard clean: the standing
+`git rev-list --count origin/main..main` check returns **0**.
+
+**Phase 205 grew from 5 plans to 7.** Two orchestrator-authored correctives were added
+mid-execution, each operator-approved, neither with a PLAN.md: **205-02b** (prose-keyed extraction)
+and **205-06** (disposition-box + citation-line extraction). The phase's headline finding is that
+**three of its four original ROADMAP criteria stated premises that were FALSE** — criterion 1's
+capability already existed, criterion 2 was unbuildable (no "old single-`::` pattern" ever existed),
+and criterion 3 was both unsatisfiable as worded *and* rested on a false "vacuous today" premise.
+All three are corrected in place in `ROADMAP.md` in the Phase-204 "Outcome, corrected from this
+criterion's original wording" shape, with the originals quoted verbatim. Criterion 4 was **proven**,
+not falsified.
+
+**205-06 is the one worth remembering.** Verifying 205-05's close-out claims by *running* them
+turned up 4 real vitest citations where the handoff and `205-RED-PROOF.md` both recorded 0 — because
+that 0 was measured with the guard's own extractor. Chasing it found the real root cause: citation
+extraction gated on **both** `[x] SKIP` and the **Result** line, so **the guard was verifying 74 of
+140 coverage claims (47% unguarded)**, including every vitest one. All 66 unguarded citations were
+re-derived independently and proved **honest** — no coverage was ever falsely claimed — but nothing
+would have caught a rename, and Phase 206 was about to write 28 more citations into the blind
+region. Also fixed: the execution leg failed on `-t`-filtered siblings (4 cited titles in a 19-test
+file gave `skipped == 15`), a defect structurally invisible to 205-04's CI red-proof because that
+induction's test sat alone in its own file. Live figures now: **143** citations guarded (from 71),
+**0** unresolvable, corpus **892** cases, guard suite **35 passed** + 1 pre-existing failure.
+
+**The same defect class has now been found on FIVE axes in this repo's own test suite** — prose
+phrasing, marker selection, disposition box, citation line, and title-quoting dialect. Every time, a
+hand-derived list of sites missed an instance a run-time source scan found. That is the identical
+lesson CLAUDE.md records for the GSD toolchain, now independently confirmed here. Do not trust a
+count in a planning document, a summary, or this file: re-derive it.
+
+**Frontmatter `progress:` recomputed from the filesystem, not carried forward.** `percent` is
+**phase-based** (3 of 6 = 50), matching this milestone's stated convention. `total_plans: 20` =
+203's 7 + 204's 6 + 205's 7. `completed_plans: 17` counts only plans with a SUMMARY.md on disk.
+
+**FINDING, filed not fixed — Phase 203's plan-level bookkeeping disagrees with its phase-level
+closure.** 203 is marked Complete and has both `203-VERIFICATION.md` and `203-VALIDATION.md`, but
+**203-05, 203-06 and 203-07 have no SUMMARY.md and are still `[ ]` unchecked in ROADMAP.md.** Their
+*work* did land, absorbed into consolidated commits rather than executed per-plan — `ae0cf377`
+(closes 203+204, backfills Series 203 = 203-07's scope), `7170136a` + `ac8fd0df` (vendor
+re-verification = 203-05's attestation scope), and STALE-01/STALE-02 closure (203-06's scope). So
+`completed_plans: 17` **understates delivery** while `completed_phases: 3` is accurate. This is
+recorded rather than reconciled because retro-writing three SUMMARY.md files for work done under a
+different structure would fabricate a record, and flipping three checkboxes without one would repeat
+the `phase.complete` defect class this project already tracks. Phase 205 did not touch it. Decide at
+the v5.24 milestone close whether to backfill or to record the absorption in ROADMAP.md.
+
+**Repaired this session: local `main` had drifted 47 commits ahead of `origin/main`** — an executor
+committed Phase 205 work directly onto `main` while it was checked out (reflog `main@{0}` was
+`cd25564f docs(205-03)`). Nothing was ever pushed; `origin/main` stayed at `5f625595`. Reset with
+`git branch -f main origin/main` after confirming `main` was an ancestor of `HEAD` (lossless) and
+not the checked-out branch; `HEAD` unmoved, tree clean. **This matters beyond tidiness: it silently
+defeated the branch-honesty check** — `git log main..<branch>` under-reported 54 commits as 7. The
+cheap standing guard is `git rev-list --count origin/main..main`, which must be `0` before any
+`main..<branch>` count is cited as phase-complete evidence.
+
+Next action: **push the 2 unpushed commits, then operator review/merge of PR #14** (56 commits
+spanning Phases 203, 204, 205). Then **Phase 206** (Dashboard UI Coverage Drain) via
+`/gsd-autonomous --from 206 --to 206`. **Phase 207 is operator-led MANUAL by standing decision — an
+autonomous runner must HALT before it.**
+
+**Phase 206 inherits a materially better guard than it was planned against.** Its 28 dashboard
+vitest citations will be existence- AND execution-checked wherever they are written — any disposition
+box, Result line or Notes line — and the vitest execution leg is now genuinely non-vacuous. Two
+mechanics 206 must know: a vitest citation's title segment **must be double-quoted** and must be the
+**bare `it()` title**, not the `describe > title` full name (the guard matches the first argument of
+`it()`/`test()`/`describe()`); and `docs/uat-disposition-ledger.jsonl` plus
+`docs/uat-coverage-gaps.md` are both corpus-coupled and must be synced/regenerated in the same
+change.
+
+Three pre-existing red CI nodes carry unchanged, all verified not attributable to Phases 203/204/205:
+BACK-51 backlog-gate token from `a6530843` (v5.23 close; this branch touches no
+`.planning/milestones/` file — fix is small and separate); minio pull denial (environmental); and
+pytest 9.0.2 skip-report format in `test_non_vacuity_skipped_substitute_is_flagged`. **The third was
+mechanically proven unrelated** — Phase 205's `git diff` touches zero lines of
+`_skipped_report_lines`, `_run_pytest_nodes`, `parse_pytest_summary`, or that test — and was
+deliberately NOT fixed opportunistically despite sitting immediately adjacent to this phase's edits.
+
+**205-06 was not verified in CI.** Its red proof is local; PR #14's next run observes it. The
+`VITEST_TOOLCHAIN_AVAILABLE` skip path cannot reproduce on this machine (toolchain present), so any
+claim about that path is CI-only evidence.
+
+Prior (2026-09-13): **Phase 204 COMPLETE and closed, verification `passed` 4/4.** Mid-run of
+`/gsd-autonomous --from 204 --to 206`; next action is Phase 205 (Guard Integrity), which has no
+phase directory yet — it needs discuss -> plan -> execute. Phase 206 follows, then the run HALTS:
+**Phase 207 is operator-led MANUAL by standing decision and an autonomous runner must not enter
+it.** Phase 204 shipped `scripts/uat_corpus.py`, `scripts/generate_uat_coverage_gaps.py`, a
+generated `docs/uat-coverage-gaps.md`, `docs/uat-coverage-reconciliation.md`, and two standing
+gates (generator-drift + COV-02 worklist reconciliation). Full detail in `## Current Position`
+above, including the 70->76 correction, the 2-not-3 retirement outcome, the COV-02 blind spot found
+and closed by 204-04b, and the three self-inflicted stale-count defects. **Before citing any UAT
+count anywhere, run `.venv/bin/python -m scripts.uat_corpus reconcile`** — the numbers in this file
+are timestamped measurements, not facts. STATE.md and ROADMAP.md were hand-written under the
+pre-image + signature-diff protocol; no mutating GSD verb was invoked at any point in Phase 204.
+
+Prior (2026-09-13): Phase 203 context gathered — 7 decisions captured (D-01..D-07) across all 4 offered gray areas. Key locks: per-entry `last_verified` with top-level = min(entries) so the gate cannot read greener than the weakest vendor (D-01), enforced by two new tests (D-02); verification bar is claim-match not reachability (D-03); one bounded attempt per rotted URL (D-04); vendors unreachable after Chrome escalate to the operator with an honest dated red deferral as fallback (D-05); hw_cve = confirm 6 rows + bounded NVD delta since 2026-09-02 (D-06); scope stays hardware_meta + hw_cve (D-07). NO blockers. Next: plan Phase 203. Written by hand — `state.record-session` not used (unsafe verb class, see Deferred Items).
+Resume file: .planning/phases/203-catalog-freshness-drain/203-CONTEXT.md
+
+v5.24 autonomy segmentation (operator, 2026-09-13): Phase 203 runs IN-SESSION (Chrome tools are
+unavailable to worktree subagents), then `/gsd-autonomous --from 204 --to 206`, then Phase 207
+MANUAL, then `/gsd-autonomous --from 208`. See ROADMAP.md §"Autonomy Plan" and Operator Next Steps
+below. Second, smaller human touchpoint possible inside 203 itself via D-05 escalation — it fires
+only if a vendor advisory resists Chrome.
+
+Prior session (2026-09-12): Phase 201 at 7 of 8 plans — 201-06 operator walkthrough APPROVED
+(stale-cache root cause confirmed, not a defect), LIFT-05 hand-flipped [x], commit 0d1d3654.
+Resolved: v5.23 closed and merged to `main` 2026-09-13 via PRs #12/#13.
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
@@ -1994,4 +2271,28 @@ rounds (141-09) on 2026-08-03 — no longer pending.
 
 ## Operator Next Steps
 
-- v5.23 requirements definition → roadmap (in progress via /gsd-new-milestone)
+v5.24 UAT Coverage Drain is open (requirements + roadmap written 2026-09-13). Autonomy decisions
+were taken by the operator on 2026-09-13 before any phase work; the authoritative copy is
+ROADMAP.md's "Autonomy Plan" section, restated here because this is the file a resuming session
+reads first.
+
+1. ~~Phase 203 in-session~~ — **DONE 2026-09-13.** STALE-02 complete; STALE-01 **partial**
+   (1 of 8 vendors verified, 7 source documents gone/access-gated). Staleness gate deliberately
+   RED under the dated deferral recorded above. 9 commits, `9e2e6bd9`..`61668268`.
+2. **NEXT: `/gsd-autonomous --from 204 --to 206`** — phases 204, 205, 206, then **halt**.
+3. **Phase 207 is manual and operator-led** — deliberately de-scoped from autonomous execution. Its
+   Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. Do not
+   let an autonomous runner advance into it.
+4. `/gsd-autonomous --from 208` — resume autonomous for Phase 208 and the milestone audit/close,
+   once 207's verdict is recorded.
+
+Superseded: the previous entry here ("v5.23 requirements definition → roadmap") completed at the
+v5.23 close; v5.23 merged to `main` 2026-09-13 via PRs #12/#13.
+
+**Deferred to after Phases 204-208 (operator decision 2026-09-13):** the `HARDWARE_MATRIX` source
+rot is split — the **operator takes the URL re-sourcing**, QUIRK takes the structural fix
+(`doc_id` decoupled from `source_url`, plus per-entry `evidence`). See
+`.planning/todos/pending/hardware-matrix-doc-id-decouple-url-from-identity.md` and
+`hardware-matrix-source-urls-broadly-rotted.md`. Neither blocks v5.24's remaining phases, but note
+they run against a RED staleness gate rather than the green baseline Phase 203 was sequenced to
+provide.

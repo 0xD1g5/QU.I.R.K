@@ -78,7 +78,7 @@ A future phase can substitute a custom-built container with a spoofed Cisco bann
 | model | iLO5 |
 | fingerprint_method | http_mgmt |
 | confidence | high |
-| pqc_status | unsupported |
+| pqc_status | partial |
 | eol_date | (per HARDWARE_MATRIX HPE-iLO5 entry) |
 
 **Rationale:**
@@ -93,7 +93,20 @@ The `HARDWARE_MATRIX` HPE-iLO5 entry matches on `X-Device-Model: HPE-iLO5` heade
 `vendor="HPE"`, `model="iLO5"`, `confidence="high"` (exact model matched from HTTP header),
 `fingerprint_method="http_mgmt"`.
 
-HPE iLO 5 does not support PQC algorithms → `pqc_status="unsupported"`.
+`pqc_status="partial"` — propagated verbatim from the vendor-scoped `HARDWARE_MATRIX` HPE entry by
+`_apply_entry()`, which copies the entry's status onto the device without per-model reasoning.
+
+**Updated 2026-09-13.** This row previously read `unsupported`, which never matched what the scanner
+actually emitted: the HPE entry has been `partial` since it was written, and `_apply_entry()` has always
+copied it verbatim. That pre-existing oracle/catalog drift is corrected here rather than carried forward.
+
+Note the resulting semantics: iLO 5 itself is not PQC-capable, but the catalog holds one entry per
+vendor, so an iLO 5 device inherits the HPE-wide verdict. HPE's PQC (CNSA 2.0-aligned LMS for
+firmware-update signing) is an **iLO 7** feature and is not TLS transport crypto at all — see the HPE
+entry's `notes` in `hardware_meta.py`. Distinguishing per-model status would require the second-entry-
+per-vendor change that `quirk/models.py` flags as needing review against the
+`VendorPqcTrendEvent` coupling.
+
 `eol_date` is populated from the `HARDWARE_MATRIX` HPE-iLO5 entry per `hardware_meta.py`.
 
 This service exercises the **known-vendor positive code path** (HTTP management header match → HPE).
@@ -112,7 +125,7 @@ This service exercises the **known-vendor positive code path** (HTTP management 
 | model | (per HARDWARE_MATRIX Cisco IOS entry, or null if not mapped) |
 | fingerprint_method | snmp |
 | confidence | high |
-| pqc_status | unsupported |
+| pqc_status | partial |
 | eol_date | (per HARDWARE_MATRIX Cisco IOS 15.x entry) |
 
 **sysDescr OID (1.3.6.1.2.1.1.1.0):** `"Cisco IOS Software, Version 15.2(4)M3, RELEASE SOFTWARE (fc2)"`
@@ -127,7 +140,12 @@ the `HARDWARE_MATRIX` Cisco pattern (substring `"Cisco IOS Software"` or vendor 
 The scanner (queried with `--enable-snmp --snmp-community public`) retrieves sysDescr via GET
 on OID `1.3.6.1.2.1.1.1.0` → `vendor="Cisco"`, `fingerprint_method="snmp"`, `confidence="high"`.
 
-Cisco IOS 15.2 does not support PQC algorithms → `pqc_status="unsupported"`.
+`pqc_status="partial"` — propagated verbatim from the vendor-scoped `HARDWARE_MATRIX` Cisco entry.
+
+**Updated 2026-09-13.** The Cisco entry moved from `unsupported` to `partial` because Cisco Secure
+Firewall ASA supports Multiple Key Exchanges for IKEv2 (RFC 9370) from ASA 9.20(1). Cisco IOS 15.2
+itself predates that and is not PQC-capable, but as with the HPE row above the catalog is vendor-scoped,
+so this simulated device inherits the Cisco-wide verdict.
 
 This service exercises the **SNMP positive code path** (sysDescr OID match → Cisco vendor detection).
 Scan command:

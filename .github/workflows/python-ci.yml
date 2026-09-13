@@ -409,6 +409,22 @@ jobs:
         with:
           python-version: '3.11'
 
+      # D-04 (Phase 205): install the dashboard's Node toolchain so
+      # VITEST_TOOLCHAIN_AVAILABLE becomes True in this job and the vitest
+      # substitute-execution leg (tests/test_uat_disposition_integrity.py)
+      # actually runs here instead of skipping. Idiom copied verbatim from
+      # .github/workflows/dashboard-quality.yml's a11y job.
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/dashboard/package-lock.json
+
+      - name: Install dashboard dependencies
+        working-directory: src/dashboard
+        run: npm ci
+
       # D-01: .[all] only — identity (impacket) and hw (pysnmp) are
       # intentionally excluded from [all] (pyproject.toml lines 60-66, 129-132). Tests gated on those
       # extras take their skip path here; that is expected and still counts as green.
