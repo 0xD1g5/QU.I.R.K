@@ -2,12 +2,18 @@
 type: todo
 created: 2026-09-13
 source: multihost chaos-lab work (999.110 thin slice) — found while trying to make a demo score worse
-priority: P1  # raised from P2 2026-09-13 — see the CERT evidence below
+priority: high  # todos use high/medium/low; tracked at P1 in HORIZON.md as 999.113
 requirement: null
 resolves_phase: null
 ---
 
 # Readiness-score ratio penalties divide by PROBE count, not assessable endpoints
+
+**Tracked as `999.113` at P1 in `.planning/HORIZON.md`'s Open-Item Ledger** — the canonical source of
+truth for open items. This file holds the arithmetic and reproduction; the ledger row holds the
+priority. Sibling of **999.95** (the only other P1 ever assigned), *"Readiness score awards full
+25/25 to domains with zero evidence"*, closed 2026-09-08 by Phase 188 SCORE-06 — **that fix was
+incomplete**: it handled domains with NO evidence, not domains whose real evidence is diluted away.
 
 Found empirically, not by reading: every attempt to lower a lab readiness score by adding badly
 configured hosts either did nothing or made the score **go up**.
