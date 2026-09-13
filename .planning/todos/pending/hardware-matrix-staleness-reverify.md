@@ -3,7 +3,9 @@ type: todo
 created: 2026-09-12
 source: phase-201 plan 08 full-suite verification; operator-deferred at the orchestrator's close
 priority: medium
-requirement: none (standing staleness-cadence obligation, not a phase requirement)
+requirement: STALE-01 / STALE-02 (promoted into milestone v5.24 on 2026-09-13; was "none —
+  standing staleness-cadence obligation" while unpromoted)
+resolves_phase: 203
 ---
 
 # `HARDWARE_MATRIX.last_verified` is 91 days old (>90) — `tests/test_hardware_staleness.py` is RED on `main`
