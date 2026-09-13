@@ -174,3 +174,80 @@ def test_output_has_no_timestamp_or_absolute_path():
     lowered = worklist.lower()
     assert "generated on" not in lowered
     assert "generated at" not in lowered
+
+
+# --- Task 2: the generator-drift gate ---------------------------------------------------------
+
+
+def test_uat_coverage_gaps_exists():
+    assert UAT_COVERAGE_GAPS_MD.exists(), (
+        f"docs/uat-coverage-gaps.md is missing. Regenerate with: {generator.REGEN_COMMAND}"
+    )
+
+
+def test_uat_coverage_gaps_is_current():
+    """docs/uat-coverage-gaps.md must byte-match live generator output over the real corpus."""
+    generated = generator.generate().rstrip("\n")
+    current = UAT_COVERAGE_GAPS_MD.read_text().rstrip("\n")
+    assert generated == current, (
+        f"docs/uat-coverage-gaps.md is stale. Regenerate with: {generator.REGEN_COMMAND}"
+    )
+
+
+def test_uat_coverage_gaps_gate_is_not_vacuous(tmp_path):
+    """Prove the gate would actually catch drift THROUGH the real generator, not through a
+    hand-pasted copy of its payload shape (188 review WR-04). Take the REAL, live corpus text,
+    append one more real-shaped GAP case, run it through the generator's own entry point, and
+    assert the output moves away from the committed artifact. If this ever stops failing when the
+    generator is broken (e.g. it stops reading its own series_path argument, or stops reading the
+    file at all), the two freshness tests above would go vacuously green together with a stale
+    committed artifact -- this leg is what prevents that."""
+    real_text = corpus.UAT_SERIES_PATH.read_text(encoding="utf-8")
+    if not real_text.endswith("\n"):
+        real_text += "\n"
+    mutated_text = real_text + _case_block(
+        "UAT-999-99",
+        "Non-Vacuity Proof Case",
+        _gap_result("proves the gate reads through the real generator, not a pasted payload"),
+    )
+    fixture_path = tmp_path / "UAT-SERIES.md"
+    fixture_path.write_text(mutated_text, encoding="utf-8")
+
+    mutated_output = generator.generate(series_path=fixture_path)
+    committed = UAT_COVERAGE_GAPS_MD.read_text()
+
+    assert mutated_output != committed, (
+        "Appending a new GAP case to a copy of the live corpus and regenerating through "
+        "generator.generate(series_path=...) did NOT change the output -- the generator is no "
+        "longer reading its series_path argument (or no longer reading the file at all), so the "
+        "freshness gate above is vacuous."
+    )
+    assert "UAT-999-99" in mutated_output
+
+
+def test_no_obsolete_case_appears_in_live_open_gap_table():
+    """A fourth leg: enumerate OBSOLETE cases from the live corpus at run time (never a written
+    list) and assert none of them appear in the committed file's open-GAP table -- only in the
+    retired section. A regression that re-lists retired work as drainable must trip this."""
+    lines = corpus._read_lines(corpus.UAT_SERIES_PATH)
+    cases = list(corpus.iter_cases(lines))
+    obsolete_ids = [c.case_id for c in cases if c.disposition == "OBSOLETE"]
+    assert obsolete_ids, (
+        "No OBSOLETE-dispositioned case found in the live corpus -- this leg needs at least one "
+        "real retirement to be non-vacuous (COV-09 retired UAT-5-18 and UAT-92-01 in 204-02)."
+    )
+
+    committed = UAT_COVERAGE_GAPS_MD.read_text()
+    open_section = _open_gap_section(committed)
+    retired_section = _retired_section(committed)
+
+    for obsolete_id in obsolete_ids:
+        assert obsolete_id not in open_section, (
+            f"{obsolete_id} is dispositioned OBSOLETE but appears in the open-GAP table of the "
+            f"committed docs/uat-coverage-gaps.md -- retired work must never resurface as "
+            f"drainable. Regenerate with: {generator.REGEN_COMMAND}"
+        )
+        assert obsolete_id in retired_section, (
+            f"{obsolete_id} is dispositioned OBSOLETE in the live corpus but is missing from the "
+            f"committed file's retired section entirely. Regenerate with: {generator.REGEN_COMMAND}"
+        )
