@@ -486,6 +486,35 @@ into the interactive wizard. `--allow-internal-targets` is required because 10.8
 findings JSON, executive summary, technical findings, scorecard, roadmap, intelligence JSON, CBOM
 (JSON + XML), HTML, DOCX. **7 of 10 hosts carry actionable (non-INFO) findings.**
 
+### Score behaviour — the readiness score is RATIO-based and resists more-of-the-same
+
+Measured across four live runs on 2026-09-13 while trying to drive the score DOWN:
+
+| Estate | HIGH findings | Hygiene | Score |
+|---|---|---|---|
+| 10 hosts | 3 | 19/25 | 89 |
+| + S3/pg connectors completed | 3 | 19/25 | **91** (went UP) |
+| + RSA-1024, SHA-1, broken-chain, plaintext hosts | 5 | 19/25 | 91 |
+| + 6 plaintext intranet hosts | **11** | **19/25** | **91** |
+
+Adding badly configured hosts took HIGH findings from 3 to 11 and moved the score by **zero**.
+Every penalty in `quirk/intelligence/scoring.py` is `-_ratio(count, denom) * weight` where
+`denom = totals.endpoints` — the PROBE count (hosts x probed ports), 219 in the wide-port run. Ten
+plaintext endpoints therefore score `-(10/219)*18 = -0.82` against a 25-point budget.
+
+Two consequences worth knowing before demoing a score:
+
+1. **Widening `ports_tls` RAISES the score** on identical infrastructure — measured 89 (2 ports,
+   `endpoints=54`) vs 91 (10 ports, `endpoints=219`).
+2. **A diverse estate scores well by construction.** Tanking the number needs a high PROPORTION of
+   weak endpoints, not more weak endpoints — which trades away the topology richness this profile
+   exists to show.
+
+Whether `denom` should instead be `assessable_endpoint_count` (27 in the same run, a ~7-point swing
+on Hygiene alone) is an open question filed at
+`.planning/todos/pending/readiness-score-denominator-is-probe-count-not-assessable-endpoints.md`.
+**Do not "fix" the scorer to make this lab look worse.**
+
 ### LIMITATION — three hosts return INFO only (honest gap, not a fabricated expectation)
 
 `mh-db-finance` (Postgres), `mh-identity-dc` (LDAP) and `mh-ssh-jump` (SSH) are **reachable and

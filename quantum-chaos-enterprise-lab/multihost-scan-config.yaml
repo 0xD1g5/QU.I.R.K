@@ -44,7 +44,7 @@ assessment:
 scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443,389,636,2222,5432,6379,8080,9000,9001]
+  ports_tls: [443,80,389,636,2222,5432,6379,8080,9000,9001]
   include_sni: true
 
   tls_enum_mode: fast  # off|fast|deep
@@ -67,7 +67,17 @@ targets:
   cidrs:
     - "10.80.0.10/32"   # mh-edge-legacy      TLS 1.0/1.1 + weak ciphers
     - "10.80.0.11/32"   # mh-edge-expired     expired certificate
+    - "10.80.0.12/32"   # mh-edge-rsa1024     RSA-1024 key (weak)
+    - "10.80.0.13/32"   # mh-edge-sha1        SHA-1 signed cert
+    - "10.80.0.14/32"   # mh-edge-chainbroken missing intermediate
+    - "10.80.0.15/32"   # mh-legacy-intranet  plaintext HTTP only
+    - "10.80.0.16/32"   # mh-intranet-wiki        plaintext HTTP
+    - "10.80.0.17/32"   # mh-intranet-tickets     plaintext HTTP
+    - "10.80.0.18/32"   # mh-intranet-jenkins     plaintext HTTP
+    - "10.80.0.19/32"   # mh-intranet-fileshare   plaintext HTTP
     - "10.80.0.20/32"   # mh-app-crownjewel   modern TLS (the crown jewel)
+    - "10.80.0.21/32"   # mh-intranet-printsrv    plaintext HTTP
+    - "10.80.0.22/32"   # mh-intranet-monitoring  plaintext HTTP
     - "10.80.0.30/32"   # mh-db-finance       Postgres, no TLS
     - "10.80.0.31/32"   # mh-cache-session    Redis, no TLS/auth
     - "10.80.0.40/32"   # mh-identity-dc      LDAP cleartext
@@ -108,10 +118,26 @@ connectors:
 
   # Object storage: mh-storage-archive at 10.80.0.50, holding one SSE-S3 bucket and one
   # deliberately UNENCRYPTED bucket so the at-rest contrast is real rather than asserted.
+  #
+  # `aws_endpoint_url` is REQUIRED and is what was missing on the first pass. Without it the
+  # connector never talks to MinIO, no endpoint is classified `S3`, and — the part that actually
+  # matters for the score — `_dar_assessed()` reads protocol_counts for
+  # POSTGRESQL/MYSQL/RDS/S3/AZURE_BLOB/KUBERNETES/VAULT and returns False, so the whole
+  # Data at Rest domain is dropped from the rollup as UNASSESSED rather than scoring badly.
+  # Credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY on the prober (minioadmin).
   enable_s3: true
+  aws_region: us-east-1
+  aws_endpoint_url: http://10.80.0.50:9000
 
   # Database: mh-db-finance at 10.80.0.30 (Postgres, no TLS).
+  # `pg_targets` + scanner credentials are likewise required — `enable_db: true` alone probes
+  # nothing, which is why the host returned INFO only and POSTGRESQL never reached
+  # protocol_counts.
   enable_db: true
+  pg_targets:
+    - "10.80.0.30"
+  pg_scanner_user: finance
+  pg_scanner_password: finance
 
 output:
   directory: "/out"

@@ -1756,6 +1756,137 @@ services:
       labnet:
         ipv4_address: "10.80.0.70"
 
+
+  # --- (a) weak-crypto hosts, added 2026-09-13 -------------------------------------------------
+  # Cloned from phaseA's tls-rsa1024 / tls-sha1 / tls-missing-intermediate, which already carry
+  # working nginx configs and scenario certs on disk. These target the two domains that actually
+  # take deductions — Hygiene (19/25) and Modern TLS (20/25).
+  #
+  # They deliberately do NOT touch mh-app-crownjewel: its X25519MLKEM768 support comes from
+  # OpenSSL defaults in nginx:1.28.0, and showing the scanner RECOGNISE PQC-hybrid key exchange
+  # is a better demo moment than a lower number. These hosts carry OPENSSL_CONF=openssl-legacy.cnf
+  # precisely so they do NOT offer modern groups, which is what makes them weak.
+  mh-edge-rsa1024:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/phaseA/tls-rsa1024/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.12"
+
+  mh-edge-sha1:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/phaseA/tls-sha1/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.13"
+
+  mh-edge-chainbroken:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/phaseA/tls-missing-intermediate/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.14"
+
+  # Plaintext HTTP on its own host — the scorecard's "Remove plaintext HTTP exposure" driver.
+  mh-legacy-intranet:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.15"
+
+
+  # --- legacy intranet segment: plaintext HTTP at scale ----------------------------------------
+  # WHY SIX MORE HOSTS OF THE SAME KIND, when four weak-TLS hosts moved the score by zero:
+  # every penalty in quirk/intelligence/scoring.py is a RATIO over total endpoints
+  # (`denom = endpoints`, line 227). `hygiene_plaintext_http_ratio` is weighted 18.0, so four
+  # plaintext endpoints out of twenty scored -(4/20)*18 = -3.6 and produced Hygiene 19/25.
+  # Adding a few more BAD hosts of a NEW kind raises the numerator AND the denominator and barely
+  # moves the ratio — which is why the readiness score went UP from 89 to 91 when the RSA-1024,
+  # SHA-1, broken-chain and plaintext hosts were first added. The score dilutes.
+  #
+  # What actually lowers it is a higher PROPORTION of weak endpoints. This segment is also the
+  # most realistic thing in the lab: internal wikis, ticket systems, CI, file shares, print and
+  # monitoring servers speaking plaintext HTTP inside the perimeter is exactly what a real
+  # enterprise estate looks like, and it tells a truer story than a handful of broken certs.
+
+  mh-intranet-wiki:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.16"
+
+  mh-intranet-tickets:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.17"
+
+  mh-intranet-jenkins:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.18"
+
+  mh-intranet-fileshare:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.19"
+
+  mh-intranet-printsrv:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.21"
+
+  mh-intranet-monitoring:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.22"
+
   # Where the scan runs from. See the NO PUBLISHED PORTS note above for why a host-side scan
   # cannot substitute for this on macOS.
   mh-prober:
@@ -1768,6 +1899,13 @@ services:
     # minimal-capability posture segnet-gateway and sensor.Dockerfile already use.
     cap_add:
       - NET_RAW
+    environment:
+      # MinIO's lab credentials. The S3 connector reads these from the environment; without them
+      # `aws_endpoint_url` alone cannot enumerate buckets, Data at Rest stays UNASSESSED, and the
+      # readiness score is flatteringly high for the wrong reason.
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
     volumes:
       # Bind-mounted so the scan's SQLite DB survives on the host and `quirk serve` can read it.
       - ../quirk-output:/out
