@@ -752,6 +752,12 @@ quirk --targets-file targets.txt \
 - `GET /.well-known/jwks.json` — Exposes RS256 public key for alg-confusion probe
 - `GET /probe` — Accepts any `Authorization: Bearer <token>` without algorithm verification (always returns 200 OK)
 
+> **Note (2026-09-13):** both `pqc_status` values above changed from `unsupported` to `partial` when
+> `HARDWARE_MATRIX` was re-verified against live vendor sources. `pqc_status` is copied verbatim from the
+> **vendor-scoped** catalog entry by `_apply_entry()` — it is not reasoned per model — so the simulated
+> iLO 5 and IOS 15.2 devices inherit the HPE-wide and Cisco-wide verdicts rather than their own. See the
+> entries' `notes` in `quirk/scanner/hardware_meta.py` for what each verdict actually rests on.
+
 > **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
 > `_derive_all_profiles()` discovers `fuzz-target` dynamically from `docker-compose.yml`
 > at runtime via `yq` or the `grep` fallback.
@@ -819,8 +825,8 @@ config entry names for `auth_key_env`/`priv_key_env`.
 **Expected scanner findings:**
 
 - **hwcompat-ssh (port 20221):** `vendor=Unknown`, `fingerprint_method=ssh_banner`, `confidence=unknown`, `pqc_status=unknown` — the generic OpenSSH banner does not match any vendor pattern in `HARDWARE_MATRIX`; `vendor=Unknown` rows are never suppressed (D-06)
-- **hwcompat-http (port 20222):** `vendor=HPE`, `model=iLO5`, `fingerprint_method=http_mgmt`, `confidence=high`, `pqc_status=unsupported` — nginx serves `X-Device-Model: HPE-iLO5` and `Server: iLO/5.0` headers matching the HPE iLO5 HARDWARE_MATRIX entry
-- **hwcompat-snmp (port 20223), v2c path:** `vendor=Cisco`, `fingerprint_method=snmp`, `confidence=high`, `pqc_status=unsupported`, `snmp_version="v2c"` — sysDescr OID match on `"Cisco IOS Software"` substring + sysObjectID Cisco enterprise prefix `1.3.6.1.4.1.9`
+- **hwcompat-http (port 20222):** `vendor=HPE`, `model=iLO5`, `fingerprint_method=http_mgmt`, `confidence=high`, `pqc_status=partial` — nginx serves `X-Device-Model: HPE-iLO5` and `Server: iLO/5.0` headers matching the HPE iLO5 HARDWARE_MATRIX entry
+- **hwcompat-snmp (port 20223), v2c path:** `vendor=Cisco`, `fingerprint_method=snmp`, `confidence=high`, `pqc_status=partial`, `snmp_version="v2c"` — sysDescr OID match on `"Cisco IOS Software"` substring + sysObjectID Cisco enterprise prefix `1.3.6.1.4.1.9`
 - **hwcompat-snmp (port 20223), v3 auth+priv path (Phase 139):** same vendor/model match, plus `snmp_version="v3 auth+priv"`, `snmp_auth_protocol="SHA"`, `snmp_priv_protocol="AES"` when a valid `quirkv3user` credential is configured; a scan with wrong v3 credentials against this container yields `snmp_version="v3-failed-fell-back"` (D-03) rather than silently reporting v2c
 
 > **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —

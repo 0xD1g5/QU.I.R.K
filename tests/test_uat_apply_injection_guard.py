@@ -111,3 +111,21 @@ def test_canonical_result_re_still_accepts_legitimate_annotations(uda):
 
 def test_validate_evidence_still_accepts_ordinary_evidence(uda):
     assert uda._validate_evidence("PASS", "2026-08-28 ran locally, exit 0") is None
+
+
+def test_node_ref_re_stays_in_sync_with_checker(uda):
+    """205-01 (T-205-03): NODE_REF_RE is DELIBERATELY duplicated between this
+    writer and tests/test_uat_disposition_integrity.py's checker -- see both
+    modules' docstrings on guard independence. Neither file imports the
+    other's regex at runtime (this writer module is loaded via importlib.util
+    above, exactly like production; the checker module is imported here only
+    for this pinning test, which exists specifically to catch the two copies
+    drifting apart, not to make either depend on the other). If a future edit
+    widens or narrows one copy without the other, this test goes RED."""
+    from tests.test_uat_disposition_integrity import NODE_REF_RE as checker_node_ref_re
+
+    assert uda.NODE_REF_RE.pattern == checker_node_ref_re.pattern, (
+        "scripts/uat_disposition_apply.py's NODE_REF_RE has drifted from "
+        "tests/test_uat_disposition_integrity.py's -- both copies must be "
+        "edited in lockstep, independently (never via a shared import)"
+    )

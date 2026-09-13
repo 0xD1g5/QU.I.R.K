@@ -86,8 +86,17 @@ SERIES_SEGMENT_RE = re.compile(r"^[0-9]+(?:\.[0-9]+)?$")
 
 # Node-reference shape used by the DEFERRED/GAP evidence guard (D-02):
 # a real pytest node id, e.g. tests/test_foo.py::test_bar or with a
-# trailing `*` glob on the test-name segment.
-NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?")
+# trailing `*` glob on the test-name segment, an optional class-scoped
+# `::method` second segment (Class::method -- already resolved before this
+# widening; see 205-CONTEXT.md <falsification>), and now an optional
+# trailing literal `[param]` parametrize-bracket group (205-01, D-02) -- a
+# bracket-bearing citation is no longer truncated at `[` when matched. This
+# pattern is DELIBERATELY duplicated from (and must stay identical to, but
+# never import from) tests/test_uat_disposition_integrity.py's NODE_REF_RE
+# -- see that module's docstring on guard independence, and
+# tests/test_uat_apply_injection_guard.py for the pinning test that catches
+# the two copies drifting apart.
+NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?(?:\[[^\]\n]*\])?")
 # A bare requirement-ID-shaped token (all caps + digits + hyphens, no
 # tests/...py::... substring) -- NOT sufficient as a substitute (D-02).
 REQ_ID_ONLY_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[0-9]+)+$")

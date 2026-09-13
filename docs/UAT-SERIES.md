@@ -1,7 +1,27 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-12 (Phase 202 Plan 08 — Series 202 added: 12 finding-storyline-drawer
+**Last Updated:** 2026-09-13 (Phase 205 Plan 05 — Series 205 added: 5 guard-integrity cases covering
+GUARD-01 (two-`::` class-scoped syntax pinned against narrowing; the parametrized-bracket
+truncation defect that reported a phantom string closed) and GUARD-02 (the vitest substitute leg
+proven to EXECUTE in CI by a deliberate RED, not merely existence-checked). Read Series 205's
+disposition as a correction record: **three of Phase 205's four original ROADMAP criteria stated
+premises that were FALSE**, each falsified by running the thing it described. 205-06 additionally
+widened citation checking from SKIP-checked Result lines to every citation — the guard had been
+verifying 74 of 140 coverage claims, and all 4 of the corpus's real vitest citations
+(UAT-193-01/-02/-05/-08) sat in the blind region, which is why the execution leg wrongly read
+"vacuous". All 66 newly guarded citations were re-derived independently and proved honest. Also
+corrected UAT-110-04, whose pass-criteria command named a node that never existed.
+Previously (Phase 204 Plan 05 — Series 204 added): 4 worklist-truth-derivation
+cases covering COV-01 (byte-reproducible generated gap worklist), COV-02 (standing reconciliation
+gate demonstrated RED against three probe shapes before being trusted green), COV-03 (the written
+reconciliation verdict, arithmetic closure asserted programmatically), and COV-09 (OBSOLETE as a
+disposition structurally distinct from GAP, applied to exactly two retirements after a third
+candidate's stated reason was checked against source and found false, then corrected to GAP rather
+than forced to fit); all 4 automated `[x] PASS` citing real `pytest --collect-only`-resolvable node
+IDs re-verified live against the tree, corroborated by `204-RED-PROOF.md`'s recorded RED/revert
+inductions. Also documented the `SKIP (OBSOLETE — <reason>)` convention in the "How to Use This
+Document" section (previously only in a test file). Earlier: Phase 202 Plan 08 — Series 202 added: 12 finding-storyline-drawer
 cases covering STORY-01 (per-finding drawer opened from the findings table, keyed by `(endpoint id,
 title)`, catalog-sourced narrative with honest absence as the common case) and STORY-02 (theme-framed
 score-lift attribution — never a per-finding share — the D-08/D-09 one-theme/catch-all-only tie-break,
@@ -592,6 +612,24 @@ Pass Criteria: Specific measurable condition(s)
 - `- [x] PASS` — Test passed all criteria
 - `- [x] FAIL` — Test failed; document details in **Notes:**
 - `- [x] SKIP` — Test skipped; document reason in **Notes:**
+
+`SKIP` carries a parenthetical annotation naming which kind of skip it is. The two you will see
+most often are `GAP — no substitute coverage` (an honest absence — a valid, passing disposition;
+never checked without a real annotation) and `DEFERRED — covered by <node>` (a verified substitute
+test exists; name the exact node, not a same-area test with a similar title — see
+`docs/uat-coverage-reconciliation.md` for the rejection standard).
+
+A third annotation, `SKIP (OBSOLETE — <reason>)`, retires a case whose premise no longer holds —
+the scenario it tests cannot occur or cannot be reproduced (a one-time historical event already
+past, or a described behavior that never existed as claimed). It is structurally distinct from an
+open `GAP`: `scripts/uat_corpus.py::classify_annotation()` parses it as its own disposition,
+`scripts/generate_uat_coverage_gaps.py` excludes it from the open-GAP worklist so a retired case
+never reappears as drainable work on regeneration, and it still satisfies the zero-undispositioned
+gate (`tests/test_uat_zero_undispositioned_gate.py`) because the box is checked. Retiring a case
+is a product decision, not a cleanup — the reason must be evidenced and falsifiable (see Phase 204,
+where a proposed OBSOLETE retirement was checked against source and rejected as false, and the case
+was corrected to `GAP` instead). See `tests/test_uat_obsolete_grammar.py` for the mechanical
+contract.
 
 Fill in **Date:** and **Tester:** fields with today's date and your initials.
 
@@ -2020,7 +2058,7 @@ All of these services show status `Up` or `running`:
 - `aes256` key detected and classified (quantum-vulnerable via Grover)
 - All three keys appear as components in the CBOM output
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a Vault Transit unit test for an rsa-1024 key type. tests/test_vault_connector.py::test_transit_key_rsa2048_no_severity and test_transit_key_aes256_no_severity cover the rsa-2048/aes256 classification but HashiCorp Vault Transit does not support an rsa-1024 key type at all -- only rsa-2048/3072/4096 -- so the case's own rsa-1024 weak-plus-quantum-vulnerable dual-flag premise may be untestable against real Vault)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (OBSOLETE — HashiCorp Vault Transit has no rsa-1024 key type at all, only rsa-2048/3072/4096, confirmed against quirk/scanner/vault_connector.py's own classification table which carries no rsa-1024 entry, so the case's rsa-1024 weak-plus-quantum-vulnerable dual-flag premise is untestable against real Vault; retired by COV-09 phase 204)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -2046,7 +2084,7 @@ All of these services show status `Up` or `running`:
 - `pgp_sym_encrypt` function was used (visible in table schema or seed script)
 - Service is a valid scan target for future database-level crypto detection (BACK-12)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3492,7 +3530,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 - Badge colors differentiate safety levels
 - Badge tooltip or description available
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_rsa_2048_produces_medium and tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_ecdsa_256_produces_medium)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_rsa_2048_produces_medium and tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_ecdsa_256_produces_medium)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4077,7 +4115,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 - Identity findings also appear in the main `findings` array (deduplication optional)
 - No `500` error on the endpoint when identity data is absent
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::IdentityFindingModelTests*test_scan_latest_response_has_identity_findings)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::IdentityFindingModelTests::test_scan_latest_response_has_identity_findings)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -5615,7 +5653,7 @@ CLI-side reproduction of this case could exist at all) is an explicitly deferred
 - CBOM grows with each scan (more algorithms discovered)
 - Dashboard reflects latest scan on each page refresh
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent)
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -6040,10 +6078,18 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 - Output shows `3 passed, 0 failed`
 - `identity_findings[]` contains entries for KERBEROS, SAML, and DNSSEC even when the Kerberos endpoint is timestamped 30 s after the others (proves the 5-minute backward bracket covers the skew)
 
-**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-13 third leaf tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_issue3_scan_window_returns_all_identity_protocols -- CI-EXEMPT: it skips on `impacket not installed`, and impacket cannot be added to the CI environment — `quirk[identity]` is deliberately excluded from `quirk[all]` per Phase 45 / D-01 because impacket pulls pyOpenSSL, which downgrades cryptography and breaks the TLS scanner, so installing it to prove this one leaf would break the product under test. Passes on an operator machine with `quirk[identity]`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-03  **Tester:** Digs
 **Status:** Passed
-**Notes:** `.venv/bin/python -m pytest tests/test_identity_surface.py::Issue3ScanWindowRegressionTest -x -q` → 3 passed in 0.34s
+**Notes:** DEFERRED — covered by `tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_saml_visible_with_earlier_dnssec` and `tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_explicit_scan_id_uses_exact_second` — the two leaves CI can run, both strictly enforced. The third leaf is declared CI-EXEMPT on the Result line above, because CI genuinely cannot run it, not because it is unimportant. Originally run as the whole class: `.venv/bin/python -m pytest <the class> -x -q` → 3 passed in 0.34s, on an operator machine where `quirk[identity]` is installed.
+
+**Citation split (205-06) — why this was invisible until now.** The original class-scoped citation
+expanded to ZERO nodes under the old `fnmatch`-only expansion, so the execution leg never ran any of
+these three leaves. 205-06 fixed the expansion; the impacket-gated leaf then skipped in CI, and
+`Expected: All 3 tests … pass` turned out to be true only on an operator machine. The citation is now
+split rather than declared exempt wholesale, so CI keeps enforcing the 2 leaves it can actually run —
+declaring the whole class exempt would have silently surrendered that enforcement. The Expected line
+is left as written: it is accurate on an operator machine, and this note records that CI proves 2 of 3.
 
 ---
 
@@ -6073,7 +6119,7 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 - `identity_findings` array is non-empty (empty array is a FAIL)
 - No HTTP 404 from `/api/scan/latest`
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::Issue3ScanWindowRegressionTest*test_saml_visible_with_earlier_dnssec, verified pass 2026-08-27 -- asserts SAML and DNSSEC present in /api/scan/latest identity_findings[] protocols via the same SESSION_BRACKET code path; the sibling test_issue3_scan_window_returns_all_identity_protocols in the same class additionally requires impacket, not installed in this environment, and was excluded to avoid a skip)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_saml_visible_with_earlier_dnssec, verified pass 2026-08-27 -- asserts SAML and DNSSEC present in /api/scan/latest identity_findings[] protocols via the same SESSION_BRACKET code path; the sibling test_issue3_scan_window_returns_all_identity_protocols in the same class additionally requires impacket, not installed in this environment, and was excluded to avoid a skip)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -6419,7 +6465,7 @@ live-verified evidence. Do not attempt this suppression mechanism a third time.
 - `grep -c 'compose --profile "\*" down' quantum-chaos-enterprise-lab/lab.sh` returns at least 2 (one for `down`, one for `reset`).
 - `bash -n quantum-chaos-enterprise-lab/lab.sh` exits 0 (script parses cleanly).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose orphan-sweep integration test verifying lab.sh down/reset leave zero quirk-lab containers -- inherently requires running Docker, out of scope per D-01)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a live docker-compose orphan-sweep integration test verifying lab.sh down/reset leave zero quirk-lab containers -- inherently requires running Docker, out of scope per D-01)
 **Date:** __________  **Tester:** __________
 **Status:** Pending
 **Notes:**
@@ -7266,7 +7312,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - If `n` selected, scan uses CONSULTING_TLS_PORTS fallback (17 ports).
 - If `y` selected, nmap is invoked once for all targets combined.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; the interactive nmap y/N wizard prompt this case describes no longer exists in run_scan.py -- it was superseded by the --discovery builtin-or-nmap CLI flag per D-09, Phase 47/121, so there is no prompt-count code path left to unit test)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; corrected 2026-09-13 from a prior OBSOLETE candidacy that mis-claimed this prompt no longer exists -- quirk/interactive.py's enable_nmap = _prompt_bool call, tagged D-06, is exactly this wizard's single global nmap y/N prompt and is still live, reached via run_scan.py's wizard-mode call to interactive_config at run_scan.py line 1908; --discovery is a separate CLI-mode flag for non-interactive --config runs, not a supersession of the wizard prompt. tests/test_interactive_validate_routes.py::test_interactive_py_enable_nmap_defaults_true only regression-locks the default=True value, not the appears-exactly-once-per-N-targets or CONSULTING_TLS_PORTS-fallback behavior this case's own Pass Criteria require -- needs a real wizard-mode integration test asserting exactly one prompt regardless of target count)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7406,7 +7452,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `jq 'all(.[]; .description != null and (.description | length > 0))'` outputs `true` against the latest findings file.
 - Spot-checking three finding entries shows a 1-3 sentence plain-English explanation of the cryptographic risk in `description`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext*test_every_finding_has_non_empty_description)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext::test_every_finding_has_non_empty_description)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -7461,7 +7507,7 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - `grep -c 'Per NIST IR 8547' findings-*.json` returns at least `1` when quantum-vulnerable findings are present.
 - For each quantum-vulnerable entry, both substrings appear in its `recommendation` field.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext*test_quantum_vulnerable_findings_cite_fips and tests/test_risk_engine.py::TestBuildFinding*test_quantum_vulnerable_appends_deprecation_phrase)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestRichFindingContext::test_quantum_vulnerable_findings_cite_fips and tests/test_risk_engine.py::TestBuildFinding::test_quantum_vulnerable_appends_deprecation_phrase)
 **Date:** __________  **Tester:** __________
 **Notes:**
 
@@ -9628,7 +9674,7 @@ All tests are automated (pytest). No chaos lab required.
 - Card does NOT appear when there are no partial failures.
 - All badges have accessible aria-labels.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (frontend component test for ScannerStatusCard needed -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a frontend component test for ScannerStatusCard -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding)
 **Date:** —  **Tester:** —
 
 ---
@@ -10429,7 +10475,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 6 and 7 both true; commit lands; README still embeds correctly when rendered on github.com.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent)
 **Date:** _____________  **Tester:** _____________
 
 ### UAT-85-09: Asciinema demo recorded + README link updated (LAUNCH-01)
@@ -10543,7 +10589,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Six-row decomposition table renders; values match the CLI markdown (UAT-88-01) and the dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (no test asserts the HTML report actually renders the six-row subscore decomposition table, /25 per row, divide-by-1.5 rollup -- quirk/reports/templates/report.html.j2 lines 409-420 emit exactly this markup, but only data-layer parity in test_score_render_parity.py and markdown presence in test_score_transparency.py are covered by pytest, not the HTML template render output itself)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs an HTML-template render assertion proving the six pillar subscores hygiene, modern_tls, identity_trust, agility_signals, data_at_rest, data_in_motion each render as their own /25 row with the domains_assessed/domains_total divided-by-score_divisor rollup sentence in quirk/reports/templates/report.html.j2, ~lines 499-528 as of 2026-09-13 -- drifted from the ledger's stale 409-420 citation, spot-checked against live source -- the isolation property is the actual rendered HTML output, which neither test_score_render_parity.py data-layer parity nor test_score_transparency.py markdown presence exercises)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10559,7 +10605,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Decomposition table renders intact in the PDF; overall reconciles across PDF / HTML / dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (no pytest coverage exists for PDF rendering of the decomposition table at all -- Playwright PDF generation is not exercised by any test; same underlying gap as UAT-88-02 one layer further downstream)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a Playwright PDF-render assertion proving the same six pillar-subscore rows and rollup sentence documented at UAT-88-02 survive HTML-to-PDF conversion intact, no truncation or layout break -- the isolation property is PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion; no pytest coverage exercises Playwright PDF generation at all)
 **Date:** _____________  **Tester:** _____________
 
 
@@ -10599,7 +10645,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 - Each weak config file matches the documented ciphers (postgres/redis/kafka).
 - README + `expected_results_v4.md` document all three with ports and expected findings (no drift — CLAUDE.md lab-sync).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10664,7 +10710,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 **Pass Criteria:**
 - `identity_weak_etype_count >= 1` against the live KDC.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (tests/test_identity_surface.py::IdentityEvidenceCounterTests*test_kerberos_weak_etype_counted -- verified passing; tests the identity_weak_etype_count>=1 counting logic directly against synthetic RC4-HMAC evidence, without requiring impacket or a live KDC; the case's own title already declares itself environment-gated/deferred)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (tests/test_identity_surface.py::IdentityEvidenceCounterTests::test_kerberos_weak_etype_counted -- verified passing; tests the identity_weak_etype_count>=1 counting logic directly against synthetic RC4-HMAC evidence, without requiring impacket or a live KDC; the case's own title already declares itself environment-gated/deferred)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10725,7 +10771,7 @@ self-signed RSA-2048 cert. grpc-go advertises ALPN `h2`. sslyze should complete 
 - Certificate subject is `CN=grpc-tls.chaos.local` with RSA-2048 key.
 - Expected quantum-readiness finding: RSA-2048 cert (MEDIUM, TLS-02).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey*test_rsa_2048_produces_medium, verified pass 2026-08-27 -- covers the RSA-2048 MEDIUM quantum-vulnerable classification the case asserts; the gRPC/ALPN transport negotiation itself is TLS-transport-agnostic and not separately gated scanner logic)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_rsa_2048_produces_medium, verified pass 2026-08-27 -- covers the RSA-2048 MEDIUM quantum-vulnerable classification the case asserts; the gRPC/ALPN transport negotiation itself is TLS-transport-agnostic and not separately gated scanner logic)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -11268,7 +11314,7 @@ Expect: tag listed, type = tag (annotated), ls-remote empty (not pushed), versio
 - `grep 'version = "5.0.0"' pyproject.toml` → match.
 - `grep '## \[5.0.0\]' CHANGELOG.md` → match.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (case is a one-time historical release gate for the v5.0.0 tag creation event from Phase 92, already completed per its own Notes field -- tag created locally after operator approval; running its Automated gate today against the current v5.15.0 state naturally fails 2 of 5 checks -- pyproject version now 5.15.0, and the v5.0.0 tag has since been pushed to origin by a later release -- this is expected temporal drift from 15+ subsequent releases, not a live coverage gap, but no substitute test can re-verify a historical one-time event)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (OBSOLETE — one-time historical release gate for the v5.0.0 tag creation event from Phase 92, already completed per its own Notes field; git tag -l v5.0.0 and git ls-remote --tags origin v5.0.0 confirm the tag exists and has since been pushed to origin by a later release, contradicting the case's own not-pushed Pass Criteria, and pyproject is now 5.15.0 -- this is expected temporal drift from 15+ subsequent releases and the event is not repeatable; retired by COV-09 phase 204)
 **Date:**   **Tester:**
 **Notes:** Gated behind checkpoint:human-verify at Phase 92 Plan 02 execution. Tag created locally after operator approval at the final close-out HEAD.
 
@@ -12161,7 +12207,7 @@ deleting either series must not delete the detection, per Phase 175 D-03
 - No `Strict-Transport-Security` header on `/probe` responses.
 - `docker-compose.yml` contains `profiles: ["fuzz-target"]` and `ports: "20100:8000"`.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -14056,15 +14102,16 @@ display, scanned_at preservation (MERGE-05), and two-segment same-IP CBOM dedupl
 
 **Steps:**
 1. Run scanned_at preservation test:
-   - `pytest tests/test_merge_scan.py::test_scanned_at_not_mutated -q`
+   - `pytest tests/test_merge_scan.py::test_scanned_at_preserved -q`
+   - (the originally-named `test_scanned_at_not_mutated` never existed; see the Result annotation)
 
 **Expected:** After `merge_scan()` completes, every source `CryptoEndpoint.scanned_at` value in the DB is identical to its pre-merge value. The `MergeRun` row is written but no `CryptoEndpoint` row's `scanned_at` is rewritten.
 
 **Pass Criteria:**
-- `test_scanned_at_not_mutated`: all pre-merge scanned_at values unchanged post-merge
-- `pytest tests/test_merge_scan.py -q` reports 8 passed, 0 failed
+- `test_scanned_at_preserved`: all pre-merge scanned_at values unchanged post-merge
+- `pytest tests/test_merge_scan.py -q` reports 11 passed, 0 failed
 
-**Result:** - [x] PASS (2026-08-28 named node tests/test_merge_scan.py::test_scanned_at_not_mutated does not exist -- real equivalent tests/test_merge_scan.py::test_scanned_at_preserved located, run, exit 0 1 passed; full file exit 0, 11 passed)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-08-28 named node `test_scanned_at_not_mutated` in tests/test_merge_scan.py does not exist -- real equivalent tests/test_merge_scan.py::test_scanned_at_preserved located, run, exit 0 1 passed; full file exit 0, 11 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
@@ -22641,12 +22688,22 @@ occurrence (a stale-surplus row) — proven directly by 182-07's own RED-before-
 which ledgered `boldProgressPattern` `"anchored"` while it was still unpatched and watched the gate
 fail with the exact site, function, and line number named.
 
-**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned -x -q` — 1 passed, run during 182-09 phase-gate close-out)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-03 `.venv/bin/pytest tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned -x -q` — 1 passed, run during 182-09 phase-gate close-out -- CI-EXEMPT: the whole module skips via GSD_TOOLCHAIN_AVAILABLE when ~/.claude/get-shit-done/ is absent, which is always so in the Linux Full Suite job — it provisions no operator toolchain, so CI cannot prove this substitute; it passes on an operator machine)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-03  **Tester:** Automated (182-07 plan execution; re-verified 182-09 phase-gate close-out)
 **Notes:** This case is honestly executable here (not a `SKIP`) — the gate is a standing pytest
-node in the repository's own test suite, not a manual or environment-gated procedure. Ran directly
+node in the repository's own test suite, not a manual procedure. Ran directly
 during this close-out plan rather than deferred; `10 passed` in the full `test_gsd_state_patch.py`
 module confirms it is not regressed by 182-08's live re-demonstration.
+**Correction (205-06):** the sentence above originally read "not a manual or **environment-gated**
+procedure". That was FALSE — this node is precisely environment-gated: the whole
+`test_gsd_state_patch.py` module skips via `GSD_TOOLCHAIN_AVAILABLE` when `~/.claude/get-shit-done/`
+is absent, which is always so in the `Linux Full Suite` CI job, since it provisions no operator
+toolchain. The claim went unchallenged for as long as the citation was invisible to the guard. Phase
+205-06 widened citation checking to PASS-checked Result-line citations, the execution leg then ran
+this node in CI, and the honest skip turned `Linux Full Suite` red — the gate working, not breaking.
+The limitation is now DECLARED in the Result annotation above with a `CI-EXEMPT:` marker, so the page
+states what CI does not prove. The substitute remains real and passing on an operator machine; per
+CLAUDE.md, a skip in CI "is not a pass and must not be read as one".
 
 ---
 
@@ -25472,7 +25529,7 @@ headings (Identity, Cloud, Database, Email & Broker, OT/ICS, Source & API) in fi
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > renders connectors under their category headings in the six-heading fixed order`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"renders connectors under their category headings in the six-heading fixed order"`.
 
 ---
 
@@ -25485,7 +25542,7 @@ headings (Identity, Cloud, Database, Email & Broker, OT/ICS, Source & API) in fi
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > disables an unavailable connector's switch and shows its reason + install hint as visible text`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"disables an unavailable connector's switch and shows its reason + install hint as visible text"`.
 
 ---
 
@@ -25533,7 +25590,7 @@ with the credential field empty
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > shows a masked, not-saved credential input when a credentialed connector is turned ON, and removes it when turned OFF`, which asserts the input's `type="password"` masking and "not saved" copy. The full post-submission "Run again"-reopens-empty round trip is asserted by construction (the form holds no persisted credential state to repopulate from) rather than by a dedicated end-to-end test.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"shows a masked, not-saved credential input when a credentialed connector is turned ON, and removes it when turned OFF"`, which asserts the input's `type="password"` masking and "not saved" copy. The full post-submission "Run again"-reopens-empty round trip is asserted by construction (the form holds no persisted credential state to repopulate from) rather than by a dedicated end-to-end test.
 
 ---
 
@@ -25580,7 +25637,7 @@ input when toggled on
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-09  **Tester:** automated
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::ConnectorsPanel > renders the ambient-auth note and no input element for an ambient-auth cloud connector when ON`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/ConnectorsPanel.test.tsx::"renders the ambient-auth note and no input element for an ambient-auth cloud connector when ON"`.
 
 ---
 
@@ -28010,3 +28067,506 @@ vitest coverage, but per this repo's UAT-gate grammar a vitest citation cannot p
 gate's execution leg, and no operator walkthrough in this phase specifically exercised either
 behavior (keyboard/focus-return; the disabled-trigger state). Neither GAP was inflated to a PASS
 with a fabricated citation, and no allowlist or gate-code change was made.
+
+---
+
+## Series 203: Catalog Freshness Drain (Phase 203 — v5.24)
+
+> **Backfilled 2026-09-13 during Phase 204's close-out.** Phase 203 shipped without a UAT series —
+> `203-07-PLAN.md` Task 2 and CLAUDE.md's mandatory per-phase step were never executed, which the
+> repo's `verify_phase_gates` hook caught only when a later commit touched these paths. Phase 203's
+> backfilled `203-VERIFICATION.md` records this as one of its gaps (status `gaps_found`).
+>
+> **Phase 203 was a PARTIAL success and this series says so.** STALE-02 was fully discharged;
+> STALE-01 verified 1 of 8 vendors because 7 vendor source documents are gone. The staleness gate is
+> RED by design under a dated deferral. A series of all-PASS cases here would be a fabrication.
+
+### UAT-203-01: Firmware CVE Catalog Re-Verified Against the Live NVD API (STALE-02)
+
+**ID:** UAT-203-01
+**Title:** `quirk/scanner/hw_cve.py` carries a current `last_verified` and its 30-day staleness gate passes
+**Maps to:** STALE-02
+
+**What to test:** the firmware CVE correlation catalog was re-verified against its real source (the
+live NVD API), all 6 rows re-confirmed, a bounded CRITICAL/HIGH delta query run for new entries, and
+`last_verified` moved to the verification date — not bumped to clear a gate.
+
+**Steps:** `tests/test_cve_staleness.py::test_cve_table_not_stale` plus
+`::test_cve_table_meta_shape`; evidence in
+`.planning/phases/203-catalog-freshness-drain/203-NVD-EVIDENCE.md` (2 control queries, 6/6 row
+re-checks, 8 bounded delta queries).
+
+**Pass Criteria:** `.venv/bin/python -m pytest -q tests/test_cve_staleness.py` passes, and
+`grep '"last_verified"' quirk/scanner/hw_cve.py` shows the verification date.
+
+**Falsifiability:** red if the date were bumped without the NVD evidence file, or if the 30-day
+cadence lapses.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (backfilled; independently re-run at backfill time)
+**Notes:** Re-verified at backfill: `tests/test_cve_staleness.py` → 6 passed;
+`last_verified = "2026-09-13"` confirmed in source.
+
+---
+
+### UAT-203-02: Top-Level `last_verified` Is `min()` of Per-Entry Dates, Enforced by Test (D-01/D-02)
+
+**ID:** UAT-203-02
+**Title:** `HARDWARE_MATRIX`'s top-level freshness date cannot read greener than its weakest vendor entry
+**Maps to:** STALE-01
+
+**What to test:** the structural invariant that makes a partial re-verification honest. Each vendor
+entry carries its own `last_verified`; the top-level date is the `min()` of them, so verifying one
+vendor cannot make the catalog look verified. This is why the gate is honestly RED at 1-of-8 rather
+than falsely green.
+
+**Steps:** `tests/test_hardware_staleness.py::test_hardware_matrix_top_level_is_min_of_entries`,
+`::test_min_violation_detected_when_top_level_is_newer`,
+`::test_min_violation_detected_when_top_level_is_older`,
+`::test_no_min_violation_when_dates_diverge_but_top_level_is_oldest`,
+`::test_missing_key_detected_when_entry_omits_last_verified`.
+
+**Pass Criteria:** all five nodes pass, including the negative controls that prove the invariant
+detects a violation rather than vacuously passing.
+
+**Falsifiability:** red if the top-level date could be set independently of the entries — which is
+precisely the mechanism that would let a future session clear the gate by editing one field.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (backfilled)
+**Notes:** Re-verified at backfill: `tests/test_hardware_staleness.py` → 8 passed, 1 failed; all
+five nodes cited here are among the 8 passing. The single failure is `test_hardware_matrix_not_stale`,
+dispositioned separately at UAT-203-04.
+
+---
+
+### UAT-203-03: The One Verifiable Vendor Was Wrong, and Was Corrected (STALE-01)
+
+**ID:** UAT-203-03
+**Title:** Fortinet's entry was corrected on two counts after being read at its real source
+**Maps to:** STALE-01
+
+**What to test:** re-verification means comparing the entry against the vendor's own current
+document and correcting what is wrong — not confirming the URL resolves. Fortinet was the only one
+of 8 vendors whose document could be read, and it was wrong twice: the version floor was recorded as
+7.4+ when the vendor states 6.0+, and an entire capability (PQC KEM / ML-KEM, 7.6.1+) was missing.
+
+**Steps:** read `quirk/scanner/hardware_meta.py`'s Fortinet entry; cross-check against
+`.planning/phases/203-catalog-freshness-drain/203-ATTESTATION.md`'s per-vendor row.
+
+**Pass Criteria:** source shows the corrected version floor, the added ML-KEM capability, and a
+corrected `source_url` with an inline provenance note.
+
+**Falsifiability:** red if the entry were merely re-dated without the substantive corrections — the
+exact failure mode a URL-liveness check would miss.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated + browser (backfilled; source re-read at backfill)
+**Notes:** A 1-for-1 sample finding two errors in the only checkable vendor is the strongest
+argument in this phase for not assuming the other 7 entries are accurate.
+
+---
+
+### UAT-203-04: The Staleness Gate Is RED Under a Recorded Deferral, Not Cleared (STALE-01)
+
+**ID:** UAT-203-04
+**Title:** `test_hardware_matrix_not_stale` fails for the documented reason, and no date was bumped and no override was set
+**Maps to:** STALE-01
+
+**What to test:** the honesty property. With 7 vendors unverified the gate MUST be red, and the
+correct response is a dated deferral in `STATE.md` — never a bumped `last_verified` and never
+`QUIRK_CI_STALENESS_OVERRIDE_DATE`. Per CLAUDE.md, a recorded deferral is honest and a bumped date
+fabricates a human attestation.
+
+**Steps:** run `.venv/bin/python -m pytest -q tests/test_hardware_staleness.py` and confirm
+`test_hardware_matrix_not_stale` fails on the age assertion; confirm the deferral block exists in
+`.planning/STATE.md`; confirm `QUIRK_CI_STALENESS_OVERRIDE_DATE` is never set live in the repo.
+
+**Pass Criteria:** the gate is red *for the age/min-invariant reason specifically*, the deferral is
+recorded and dated, and no override is set outside test fixtures.
+
+**Falsifiability:** this case turns red if the gate ever goes green without 8 vendors carrying
+current dates — which would mean someone cleared it the prohibited way.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (backfilled)
+**Notes:** This case PASSES *because* the gate fails — the assertion under test is the honesty of
+the deferral, not the greenness of the catalog. Re-verified at backfill: failure message is
+"92 days old (>90)"; `203-VERIFICATION.md` independently confirmed the override variable appears
+only in test fixtures and documentation describing the mechanism, never set live.
+
+---
+
+### UAT-203-05: Seven Vendor Entries Remain Unverified — Honest Absence
+
+**ID:** UAT-203-05
+**Title:** 7 of 8 `HARDWARE_MATRIX` vendors could not be re-verified because their source documents are gone
+**Maps to:** STALE-01
+
+**What to test:** whether each of F5, Cisco, Palo Alto, Juniper, HPE, Intel/IPMI and Thales has been
+re-verified against a current authoritative document on the vendor's own domain, per D-03's
+claim-match bar.
+
+**Steps:** none available. The documents do not exist at their recorded URLs: 6 are dead or silently
+moved, 1 (Juniper) is behind a support login. Chrome reached every host successfully — including the
+NSA page that returns HTTP 403 to non-browser clients — so this is document rot, not a tooling limit.
+Three of the rot patterns return **HTTP 200** while serving unrelated content (Cisco: "No Data Found";
+Intel: a product selector; Fortinet's old URL silently 301'd to "Getting started"), so no status-code
+check can substitute.
+
+**Pass Criteria:** each entry's `pqc_status` and `notes` confirmed against a current vendor document.
+**Not achievable until the URLs are re-sourced.**
+
+**Falsifiability:** closes when all 8 entries carry current dates and the `min()`-derived top-level
+date makes `test_hardware_matrix_not_stale` green on its own merits.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; 7 of 8 vendor source documents are gone or access-gated, so no test can assert these entries match their sources. The operator owns re-sourcing per a 2026-09-13 decision — work matrix in `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`, structural fix tracked separately in `hardware-matrix-doc-id-decouple-url-from-identity.md`. Evidence: `203-ATTESTATION.md`, `203-RECON-source-reachability.md`)
+**Date:** 2026-09-13  **Tester:** Browser-assisted reconnaissance (backfilled)
+**Notes:** An honest GAP, not a failure of the phase. The phase's bounded design (D-04: one attempt
+per rotted URL) deliberately fenced this off rather than letting re-verification become an
+open-ended URL hunt. Re-sourcing alone buys roughly one release cycle — all 7 rotted URLs were deep
+links into version-numbered documentation trees that vendors rotate every release, which is the
+argument for the `doc_id` structural fix.
+
+---
+
+**Series 203 disposition.** 4 `[x] PASS` and 1 honest `[x] SKIP (GAP)`. The GAP is the phase's
+actual headline outcome and is recorded as such rather than softened. Two cases are worth reading
+together: UAT-203-04 passes *because* a gate fails, and UAT-203-05 records why it fails. A series
+that reported Phase 203 as a clean pass would have inverted the one thing the phase established —
+that 7 of 8 vendor attestations in this catalog currently rest on documents nobody can read.
+
+This series was backfilled during Phase 204's close-out after `verify_phase_gates` blocked a commit
+on its absence. The gate was right, and it caught a mandatory per-phase step that had been skipped
+~12 commits earlier without anything noticing — the same class of silent drift the v5.24 milestone
+exists to eliminate, occurring in the milestone's own first phase.
+
+---
+
+## Series 204: Worklist Truth & Derivation (Phase 204 — v5.24)
+
+Covers COV-01 (the gap worklist is a run-time-regenerated, byte-reproducible artifact rather than a
+hand-maintained snapshot), COV-02 (a standing gate that fails when a real GAP case is missing from
+the worklist, demonstrated RED before being accepted as green), COV-03 (a written reconciliation
+verdict adjudicating the document-vs-ledger GAP-count disagreement, with the arithmetic asserted
+programmatically), and COV-09 (OBSOLETE as a disposition structurally distinct from GAP, applied to
+exactly two retirements after a third candidate's stated reason was checked against source and
+found false).
+
+### UAT-204-01: `docs/uat-coverage-gaps.md` Is a Byte-Reproducible Generated Artifact
+
+**ID:** UAT-204-01
+**Title:** The gap worklist regenerates byte-identically from `docs/UAT-SERIES.md` at run time, and
+the committed file matches live regeneration
+**Maps to:** COV-01
+
+**What to test:** running `scripts/generate_uat_coverage_gaps.py` twice against the same corpus
+input produces byte-identical output (no timestamp, no absolute path, no incidental non-determinism
+such as dict/set ordering), and running it against the live tree reproduces the committed
+`docs/uat-coverage-gaps.md` exactly — the same generator-drift gate shape this project already uses
+for `docs/error-codes.md`, `severity-bands.json`, and `score-strings.json`.
+
+**Steps:** `tests/test_uat_coverage_gaps_freshness.py::test_two_runs_over_identical_fixture_are_byte_identical`
+(two independent runs over a synthetic fixture diff empty) and
+`::test_uat_coverage_gaps_is_current` (live regeneration diffed against the committed file).
+
+**Pass Criteria:** both cited nodes pass; `.venv/bin/python -m scripts.generate_uat_coverage_gaps |
+diff - docs/uat-coverage-gaps.md` produces no output. (The generator does
+`from scripts import uat_corpus` internally, so it must be invoked as a module with `-m`; running
+`.venv/bin/python scripts/generate_uat_coverage_gaps.py` directly raises `ModuleNotFoundError: No
+module named 'scripts'` rather than producing empty diff output — see `docs/uat-coverage-gaps.md`'s
+own generated "Regenerate with:" line for the correct form.)
+
+**Falsifiability:** this case turns red if the generator embeds a timestamp/path, if dict ordering
+makes two runs diverge, or if the committed file drifts from a fresh regeneration.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (204-01/204-03-SUMMARY.md)
+**Notes:** Re-verified live in plan 204-05:
+`.venv/bin/python -m scripts.generate_uat_coverage_gaps | diff - docs/uat-coverage-gaps.md`
+produced no output at plan-close time. (An earlier draft of this Notes line and the Pass Criteria
+above cited the direct-script invocation, which crashes with `ModuleNotFoundError` rather than
+running — a crash also produces no stdout, so that observation could not actually distinguish pass
+from failure. Corrected same-plan after the orchestrator verified the crash live; the underlying
+byte-reproducibility claim itself was never in question — only the cited command was wrong.)
+
+---
+
+### UAT-204-02: The COV-02 Standing Gate Was Demonstrated RED Before Being Trusted Green
+
+**ID:** UAT-204-02
+**Title:** `tests/test_uat_worklist_reconciliation_gate.py` fails when a real, un-absorbed GAP case
+exists in the corpus but not in the worklist, including a non-numeric-shaped id and a Notes-line-only
+GAP annotation, and the demonstration is reverted byte-identically
+**Maps to:** COV-02
+
+**What to test:** the gate's own non-vacuity — it must be shown capable of failing, not merely shown
+passing — against three distinct probe shapes: a plain numeric-id GAP case, a non-numeric-shaped id
+(named-prefix series), and a GAP annotation living only on a case's own `**Notes:**` line with no
+Result-line annotation (the blind spot plan 204-04b closed).
+
+**Steps:** `.planning/phases/204-worklist-truth-derivation/204-RED-PROOF.md` records three
+inductions — md5 pre-image of `docs/UAT-SERIES.md`, an induced case appended, the gate's own
+`AssertionError` text naming the induced case and its line number, `git checkout --` revert, md5
+post-image confirmed byte-identical. Corroborated live by
+`tests/test_uat_worklist_reconciliation_gate.py::test_gate_evaluates_a_non_trivial_number_of_real_cases`
+(non-vacuity against the real corpus) and the file's two field-scoped non-vacuity legs
+(`test_non_vacuity_guard_result_line_field`, `test_non_vacuity_guard_notes_only_field`).
+
+**Pass Criteria:** all three inductions in `204-RED-PROOF.md` show a genuine `AssertionError` naming
+the induced case, and all three md5 pre/post pairs are byte-identical after revert.
+
+**Falsifiability:** this case turns red if a future narrowing of the gate's enumeration makes any of
+the three probe shapes pass silently, or if the revert leaves the corpus mutated.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated, RED-proof protocol (204-04-SUMMARY.md, 204-04b-SUMMARY.md)
+**Notes:** Induction 3 (204-04b) is the load-bearing one — it re-demonstrated RED against the exact
+Notes-line-only, non-numeric-id shape an earlier version of the gate could not see, closing a real
+scoping gap 204-04-SUMMARY.md had flagged forward for this plan's review.
+
+---
+
+### UAT-204-03: The COV-03 Reconciliation Verdict Is Written, Evidenced, and Self-Correcting
+
+**ID:** UAT-204-03
+**Title:** `docs/uat-coverage-reconciliation.md` adjudicates the document-vs-ledger GAP-count
+disagreement with a stated authoritative-source verdict, a decomposed arithmetic closure asserted
+programmatically (not eyeballed), and per-case evidence for every resolved discrepancy
+**Maps to:** COV-03
+
+**What to test:** the verdict document states which source is authoritative going forward
+(`docs/UAT-SERIES.md`, per D-02 — the ledger retained as historical evidence only), decomposes the
+divergence into named causes whose counts sum correctly in both directions, and cites real
+grep/pytest evidence for each of the 12 originally-disputed cases rather than asserting outcomes.
+
+**Steps:** `.venv/bin/python -m scripts.uat_corpus reconcile`'s `arithmetic_ok` field, asserted by
+the reconciler itself rather than read by eye; `docs/uat-coverage-reconciliation.md` §3's cause
+table and §"Per-case verdicts" table.
+
+**Pass Criteria:** `reconcile()` reports `arithmetic_ok: True` against the live corpus; every
+per-case verdict in the reconciliation doc cites a real command or file:line, not a restated claim.
+
+**Falsifiability:** this case turns red if a future corpus edit breaks the arithmetic closure, or if
+a per-case verdict is found to cite evidence that does not actually support it.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (204-01/204-02-SUMMARY.md, docs/uat-coverage-reconciliation.md)
+**Notes:** Re-run live at plan 204-05 close, after this same plan's Series 204 additions: `arithmetic_ok: True`,
+**882** case headings (878 before this plan's own 4 new cases; `reconcile()` counts every heading
+including this series), GAP total unchanged at 76 (64 Result-line + 12 Notes-line-only — the 4 new
+Series 204 cases are all PASS, so the drain count does not move) under the widened 204-04b rule —
+the reconciliation doc's own provenance section documents that these totals drift and must be
+recomputed, never transcribed forward; this note follows that instruction rather than restating the
+doc's own (now-superseded) 66-total snapshot.
+
+---
+
+### UAT-204-04: OBSOLETE Is Structurally Distinct From GAP, Applied to Exactly Two Retirements
+
+**ID:** UAT-204-04
+**Title:** The `SKIP (OBSOLETE — <reason>)` annotation parses as its own disposition, is excluded
+from the open-GAP worklist, and was applied to exactly two of three originally-proposed retirements
+after the third's stated reason was checked against source and found false
+**Maps to:** COV-09
+
+**What to test:** `UAT-92-01` and `UAT-5-18` are recorded `OBSOLETE` with an evidenced,
+falsifiable reason each; `UAT-47-04` — originally proposed for retirement on the claim that its
+described interactive nmap prompt "no longer exists, superseded by `--discovery`" — was checked
+against `quirk/interactive.py` and `run_scan.py`, found still live (the prompt and `--discovery`
+are separate, coexisting code paths), and corrected to `GAP` rather than retired on a false premise.
+
+**Steps:** `tests/test_uat_obsolete_grammar.py::test_live_corpus_the_two_named_cov09_retirements_are_present_and_obsolete`
+(asserts exactly `UAT-92-01` and `UAT-5-18` are OBSOLETE, no more, no fewer) and
+`::test_live_corpus_uat_47_04_was_corrected_not_retired` (asserts `UAT-47-04` is `GAP`, not
+`OBSOLETE`, in the live corpus).
+
+**Pass Criteria:** both cited nodes pass against the live corpus; `reconcile()`'s
+`retired_obsolete_total` equals 2.
+
+**Falsifiability:** this case turns red if a future edit retires a third case without a checked,
+evidenced reason, or if `UAT-47-04` is retired rather than left as an honest GAP.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Automated (204-02-SUMMARY.md, docs/uat-coverage-reconciliation.md
+§"Retirements (COV-09)")
+**Notes:** This case documents a self-correction, not a clean outcome: the phase's own CONTEXT.md
+D-11 named three retirement candidates; per-case spot-checking (required by the plan's own Task 2
+action block) found one premise false and corrected the plan's own frontmatter claim rather than
+forcing the case to fit it. `reconcile()` confirms `retired_obsolete_total: 2` live at plan close.
+
+---
+
+**Series 204 disposition.** All 4 cases (UAT-204-01/02/03/04) are `[x] PASS`, each citing real,
+currently-collectible `pytest --collect-only` node IDs re-verified in plan 204-05 against the live
+tree, corroborated by `.planning/phases/204-worklist-truth-derivation/204-RED-PROOF.md`'s recorded
+RED/revert inductions for UAT-204-02. No GAP or DEFERRED disposition was needed for this series —
+every claim this phase makes about its own gates and artifacts is backed by a real, currently-passing
+test node, not an operator walkthrough or a vitest-only citation. Figures quoted at plan-close
+(882 case headings, GAP 76, OBSOLETE 2, `arithmetic_ok: True`) were recomputed, not carried
+forward — see `docs/uat-coverage-reconciliation.md`'s own provenance section for why these numbers
+must be recomputed rather than cited forward.
+
+This paragraph originally read `878 case headings` — the pre-Series-204 count, already superseded
+by the 882 stated 50 lines above it in UAT-204-03's own Notes, in the same sentence asserting these
+figures were "not transcribed from any prior draft." Caught by phase 204's verifier and corrected
+on 2026-09-13. It is recorded rather than quietly overwritten because it is the third stale-count
+defect this phase produced about itself (after UAT-204-01's crashing pass-criteria command and
+UAT-204-03's own stale Notes count), and the cheapest possible demonstration of why COV-01/COV-02
+had to make the worklist derive itself instead of relying on prose discipline: prose written by the
+very agents enforcing the rule still drifted, three times, inside one phase.
+
+---
+
+## Series 205: Guard Integrity (Phase 205 — v5.24)
+
+Covers GUARD-01 (the citation checker resolves natural `Class::method` pytest node syntax and no
+longer forces `ClassName*method_name` glob workarounds) and GUARD-02 (the vitest substitute leg
+*executes* in CI rather than being existence-checked only).
+
+**Read the disposition of this series as a correction record, not a clean sweep.** Three of Phase
+205's four original ROADMAP criteria stated premises that were FALSE, each falsified by running the
+thing it described rather than reading it. The corrected criteria live in `.planning/ROADMAP.md`;
+`205-CONTEXT.md`'s `<falsification>` block, `205-RED-PROOF.md` and `205-06-SUMMARY.md` hold the
+evidence. The cases below test what was actually built.
+
+### UAT-205-01: Two-`::` Class-Scoped Node Syntax Is Pinned Against Future Narrowing
+
+**ID:** UAT-205-01
+**Title:** `NODE_REF_RE` resolves `tests/foo.py::Class::method` and a regression test fails if that
+capability is ever narrowed away
+**Maps to:** GUARD-01
+
+**What to test:** that the class-scoped second `::` segment keeps working. This capability was
+never missing — the ROADMAP assumed it was, and an end-to-end probe before planning showed both the
+glob form and the natural form resolving to the same node. The risk is therefore *regression*, not
+absence, so the test pins the behaviour rather than introducing it.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_node_ref_re_pins_two_colon_class_scoped_capability`
+
+**Pass Criteria:** the cited node passes. Zero `ClassName*method_name` glob workarounds remain in
+`docs/UAT-SERIES.md` (all 8 converted); the 7 remaining trailing-wildcard globs are deliberate
+family wildcards and all resolve.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_node_ref_re_pins_two_colon_class_scoped_capability`.
+
+---
+
+### UAT-205-02: A Parametrized Citation Is Not Truncated Into a Phantom String
+
+**ID:** UAT-205-02
+**Title:** A citation carrying a literal `[param]` bracket resolves by exact membership, and a wrong
+parameter is still rejected
+**Maps to:** GUARD-01
+
+**What to test:** the real defect recon exposed. `NODE_REF_RE`'s name class excluded `[`, so
+`tests/foo.py::test_bar[y]` was truncated to `tests/foo.py::test_bar`, that truncated form
+`fullmatch`ed (so the skip guard never fired), and the checker then reported it unresolvable **while
+naming a phantom string the document never contained** — a misleading diagnostic, not a silent skip.
+The bracketed form is what `pytest --collect-only` prints, so it is now legal.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_negative_control_bracket_citation_resolves_exactly`
+and `::test_negative_control_bracket_citation_wrong_param_still_rejected` and
+`::test_negative_control_live_glob_citations_unaffected_by_bracket_widening`
+
+**Pass Criteria:** all three cited nodes pass — the correct bracketed citation resolves, a wrong
+parameter is still rejected, and admitting brackets did not loosen glob handling.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_negative_control_bracket_citation_resolves_exactly` and `tests/test_uat_disposition_integrity.py::test_negative_control_bracket_citation_wrong_param_still_rejected`.
+
+---
+
+### UAT-205-03: The Vitest Substitute Leg Executes In CI, Proven By A Deliberate RED
+
+**ID:** UAT-205-03
+**Title:** A vitest substitute citation that exists, is cited verbatim, and fails turns the
+`Linux Full Suite` CI job red — proving execution, not existence-checking
+**Maps to:** GUARD-02
+
+**What to test:** the asymmetry GUARD-02 closes. An existence-only check rejects a missing file or a
+missing title without running anything, so breaking a filename would have proven nothing. The
+induction had to be a vitest test that exists, is cited verbatim, **and fails** — a combination only
+an executing leg can detect. `Linux Full Suite` (not the path-filtered `dashboard-quality.yml`) is
+the home, because a PR touching only `docs/UAT-SERIES.md` — exactly when a citation breaks — would
+never trigger a `src/dashboard/**` filter.
+
+**Steps:** see `205-RED-PROOF.md`. CI run
+https://github.com/0xD1g5/QU.I.R.K/actions/runs/34774528505, job `Linux Full Suite`, conclusion
+failure; the log shows `vitest run <file> -t <title>` being invoked and the failure detected.
+Induction commit `baf863ca`, reverted byte-identical. Standing node:
+`tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass`
+
+**Pass Criteria:** the CI log shows vitest being invoked against the cited file and title (a test
+skipped on `VITEST_TOOLCHAIN_AVAILABLE` cannot shell out to vitest); `docs/UAT-SERIES.md` is
+byte-identical after revert; the standing node passes on a clean tree.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass`, corroborated by `205-RED-PROOF.md`'s recorded CI run and byte-identical revert.
+
+---
+
+### UAT-205-04: Every Coverage Citation Is Guarded, Whatever Its Disposition Box Or Line
+
+**ID:** UAT-205-04
+**Title:** A PASS-checked case citing a substitute on its Result line or Notes line is
+existence- and execution-checked, exactly as a SKIP-checked one is
+**Maps to:** GUARD-01, GUARD-02
+
+**What to test:** the third blind spot of this defect class found in this phase. Citation extraction
+gated on **both** `[x] SKIP` and the **Result** line, so a citation escaping either restriction was
+never checked. Measured against the live corpus, independently of the guard: 74 citations on
+SKIP-checked Result lines were checked; 51 on PASS-checked Result lines, 13 on PASS-checked Notes
+lines and 2 on SKIP-checked Notes lines were not — **74 of 140**. All 66 unguarded citations were
+re-derived independently and proved honest, so no coverage was ever falsely claimed; the defect was
+a gate that could not see them. All 4 of the corpus's real vitest citations
+(`UAT-193-01/-02/-05/-08`) were in that blind region, which is why the execution leg's own docstring
+read "vacuous today" — a vacuity measured with the audited component's own extractor.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_pass_checked_notes_line_citation_is_guarded`,
+`::test_pass_checked_result_line_citation_is_guarded`,
+`::test_no_substitute_coverage_exemption_also_applies_on_the_pass_path`, and
+`::test_class_scoped_and_parametrized_base_selectors_resolve`
+
+**Pass Criteria:** all four cited nodes pass. The widened iterator yields 137 citations where the
+SKIP-only one yielded 71; the D-06 incidental-mention exemption still holds on the PASS path (an
+honest annotation naming a node in order to say it does *not* exist is not flagged); class-scoped
+and parametrized-base selectors resolve by leaf-prefix. Red-proved: breaking a PASS-checked
+Notes-line vitest citation fails both legs while the SKIP-only iterator sees zero refs and stays
+green; reverted byte-identical.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_pass_checked_notes_line_citation_is_guarded` and `tests/test_uat_disposition_integrity.py::test_class_scoped_and_parametrized_base_selectors_resolve`.
+
+---
+
+### UAT-205-05: The Execution Leg Scores Cited Tests, Not `-t`-Filtered Siblings
+
+**ID:** UAT-205-05
+**Title:** Citing some tests in a many-test vitest file does not fail the execution leg on the
+siblings the `-t` filter excluded
+**Maps to:** GUARD-02
+
+**What to test:** a real defect in the execution leg that Phase 205's own CI red-proof could not
+expose. vitest reports every test excluded by `-t` as `status: "skipped"`, and `numPendingTests`
+folds those in — so citing 4 titles in the real 19-test `ConnectorsPanel.test.tsx` produced
+`skipped == 15` and tripped the leg's `skipped == 0` assertion on 15 tests nobody cited. 205-04's
+induction put its single failing test in a file **of its own**, so there were no siblings to filter
+and the aggregate happened to be correct. A guard exercised only against a one-test file has not
+been exercised. A *cited* test that is genuinely `.skip`/`.todo` must still be flagged, because a
+skip is never proof of coverage.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_vitest_cited_summary_ignores_filter_excluded_siblings`
+
+**Pass Criteria:** the cited node passes — file-level counts still report the filtered siblings as
+skipped, while the cited-only verdict reports them as irrelevant; a cited `.skip` is still flagged;
+and a cited title absent from the report is surfaced rather than silently ignored.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_cited_summary_ignores_filter_excluded_siblings`.

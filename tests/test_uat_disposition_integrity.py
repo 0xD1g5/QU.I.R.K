@@ -96,6 +96,11 @@ DASHBOARD_DIR = REPO_ROOT / "src" / "dashboard"
 CASE_ID_PATTERN = r"UAT-[A-Za-z0-9.]+(?:-[A-Za-z0-9.]+)*"
 HEADING_RE = re.compile(r"^### *(" + CASE_ID_PATTERN + r")")
 
+# The `**Notes:**` line prefix. 205-06: citations live here as often as on the
+# Result line -- 15 of the corpus's 140, and 4 of those were the only vitest
+# citations in the document. See iter_coverage_citations().
+NOTES_PREFIX = "**Notes:**"
+
 # Canonical **Result:** line, with named capture groups for each box state
 # and its (optional) trailing annotation.
 RESULT_RE = re.compile(
@@ -106,8 +111,26 @@ RESULT_RE = re.compile(
 )
 
 # A real pytest node reference: <path ending .py>::<test name>, where the
-# test-name segment may end in a single `*` glob.
-NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?")
+# test-name segment may end in a single `*` glob. The optional trailing
+# `(?:::[\w*]+)?` group admits a class-scoped second segment
+# (`Class::method`) -- 205-CONTEXT.md's <falsification> block proved this
+# ALREADY resolves end-to-end; do not remove it (see
+# test_node_ref_re_pins_two_colon_class_scoped_capability, D-01).
+#
+# 205-01, D-02 empirical probe (re-run against the live interpreter before
+# this fix; recorded here, not the CONTEXT's original unverified "silently
+# skipped" paraphrase, per this phase's own falsification discipline):
+#   ann = "...DEFERRED — covered by tests/test_scratch.py::test_bar[y]"
+#   NODE_REF_RE.findall(ann) -> ['tests/test_scratch.py::test_bar']   # TRUNCATED at '[' -- '[' is not in [\w*]
+#   NODE_REF_RE.fullmatch(that truncated string) -> True              # so find_unresolvable_node_refs's
+#                                                                      # `continue` guard never fires
+#   fnmatch.filter({'tests/test_scratch.py::test_bar[y]'}, 'tests/test_scratch.py::test_bar') -> []
+#   => reported unresolvable, naming a phantom string the document never contained.
+# This is a MISLEADING DIAGNOSTIC, not a silent skip: the ref IS checked, but
+# against the wrong (truncated) string. The trailing `(?:\[[^\]\n]*\])?` group
+# below closes this by admitting the literal bracket into the match, so the
+# real (untruncated) node id is what gets checked.
+NODE_REF_RE = re.compile(r"tests/[\w/]+\.py::[\w*]+(?:::[\w*]+)?(?:\[[^\]\n]*\])?")
 
 # A vitest test reference under src/dashboard/src/**/__tests__/*.test.tsx.
 # The title segment MUST be double-quoted -- see module docstring (D-05) for
@@ -122,6 +145,49 @@ REQ_ID_ONLY_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[0-9]+)+$")
 # Both em-dash and plain-hyphen spellings are accepted document text, per
 # scripts/uat_disposition_apply.py's own evidence validator.
 DEFERRED_COVERED_PREFIXES = ("DEFERRED — covered by ", "DEFERRED - covered by ")
+
+# 205-06: a DECLARED limitation for a substitute that cannot execute in CI.
+#
+# `UAT-182-03` cites tests/test_gsd_state_patch.py, whose whole module skips via
+# GSD_TOOLCHAIN_AVAILABLE when `~/.claude/get-shit-done/` is absent -- which is
+# always, in the `Linux Full Suite` job, because CI provisions no operator
+# toolchain. CLAUDE.md states plainly that such a skip "is not a pass and must
+# not be read as one". The coverage is nonetheless REAL: it executes, and
+# passes, on an operator machine.
+#
+# Three options were considered and two rejected. Re-dispositioning the case as
+# 'no substitute coverage' would understate reality (the substitute exists and
+# works). Silently exempting environment-skipped nodes from the skipped==0 rule
+# would be exactly the allowlist CLAUDE.md forbids -- it would let a genuinely
+# broken substitute pass unnoticed ANYWHERE in the corpus, not just here.
+#
+# So the limitation is DECLARED in the document, and the guard still enforces
+# everything it can:
+#   - the node must EXIST (unchanged -- the existence leg never exempts anything)
+#   - the node must never FAIL or ERROR (unchanged)
+#   - only the `skipped == 0` rule is relaxed, and only for declared citations
+#   - the marker must be followed by a non-empty reason, asserted against the
+#     live corpus, so it cannot degrade into a bare opt-out token
+# The declaration makes the page honest about what CI does not prove; it does
+# not make the guard trust it.
+CI_EXEMPT_MARKER = "CI-EXEMPT:"
+
+# D-06 (legal, exempt): a 'no substitute coverage' annotation carries no
+# coverage claim by design -- but its free-text explanation MAY still
+# mention a real node in passing (e.g. "the only candidate,
+# tests/test_x.py::test_y, is unconditionally skipped per TRIAGE-149" --
+# live at docs/UAT-SERIES.md:7463 and :15961). 205-02b's widened, prefix-free
+# node-shaped-ref sweep (see iter_deferred_covered) would otherwise treat
+# that incidental mention as a coverage citation and existence/execution
+# check it -- exactly the false positive this prefix list exists to
+# prevent. Checked BEFORE the node-ref sweep, not after, so these
+# annotations never reach it regardless of what they happen to mention.
+NO_SUBSTITUTE_COVERAGE_PREFIXES = (
+    "GAP — no substitute coverage",
+    "GAP - no substitute coverage",
+    "DEFERRED — no substitute coverage",
+    "DEFERRED - no substitute coverage",
+)
 
 NODE_ID_LINE_RE = re.compile(r"^tests/[\w/.-]+\.py::\S+$")
 
@@ -155,27 +221,126 @@ def iter_results(lines):
 
 def iter_deferred_covered(lines):
     """Yield (lineno, case_id, annotation, refs) for every SKIP-checked
-    Result line whose annotation is a 'DEFERRED — covered by ...' deferral.
-    ``refs`` is the list of node references extracted via NODE_REF_RE
-    (pytest) AND VITEST_REF_RE (D-05, vitest) combined -- a deferral may
-    cite either kind, or both, without special-casing the caller. May be
-    empty, e.g. for a bare-requirement-ID substitute -- that emptiness is
-    exactly what find_deferrals_without_node_ref() below flags.
+    Result line that names a substitute -- EITHER phrased as a
+    'DEFERRED — covered by ...' deferral, OR any other SKIP annotation that
+    simply cites a node-shaped reference directly (the plain
+    ``[x] SKIP (tests/foo.py::test_bar -- verified passing)`` form used by
+    several UAT-58-* / UAT-89-02-02 cases). ``refs`` is the list of node
+    references extracted via NODE_REF_RE (pytest) AND VITEST_REF_RE (D-05,
+    vitest) combined -- a citation may use either kind, or both, without
+    special-casing the caller.
 
-    'DEFERRED — no substitute coverage' annotations (D-06, legal) are
-    deliberately NOT yielded here -- they carry no node reference by design
-    and are exempt from existence/execution checks."""
+    205-02b: this used to key extraction on the 'DEFERRED — covered by'
+    PROSE PHRASING alone, so a real, verified node reference cited in plain
+    SKIP prose (no 'DEFERRED —' prefix at all) was never existence- or
+    execution-checked -- a proven blind spot (6 live citations, 5 of them
+    API-security tests). Extraction is now keyed on EITHER condition:
+
+      1. the annotation starts with a DEFERRED_COVERED_PREFIXES prefix (kept
+         so a bare-requirement-ID substitute like 'DEFERRED — covered by
+         DISC-01' still yields with an EMPTY refs list -- that emptiness is
+         exactly what find_deferrals_without_node_ref() below flags), OR
+      2. the annotation contains at least one node-shaped reference, however
+         phrased -- UNLESS the annotation starts with a
+         NO_SUBSTITUTE_COVERAGE_PREFIXES prefix (D-06, checked first, see
+         that constant's docstring): a GAP/DEFERRED 'no substitute coverage'
+         annotation's free-text explanation may incidentally MENTION a real
+         node (to say it does NOT cover the case, or as related-but-
+         insufficient evidence) without that mention being a coverage claim.
+
+    'DEFERRED — no substitute coverage' / 'GAP — no substitute coverage'
+    annotations (D-06, legal) remain correctly EXEMPT: branch 1 doesn't
+    match their prose, and branch 2 is explicitly skipped for them
+    regardless of what they happen to mention."""
     for lineno, case_id, groups in iter_results(lines):
         if groups["skip_box"] != "x":
             continue
         ann = groups["skip_ann"]
         if not ann:
             continue
-        for prefix in DEFERRED_COVERED_PREFIXES:
-            if ann.startswith(prefix):
-                refs = NODE_REF_RE.findall(ann) + VITEST_REF_RE.findall(ann)
-                yield lineno, case_id, ann, refs
-                break
+        if any(ann.startswith(prefix) for prefix in NO_SUBSTITUTE_COVERAGE_PREFIXES):
+            continue
+        refs = NODE_REF_RE.findall(ann) + VITEST_REF_RE.findall(ann)
+        is_covered_prefix = any(ann.startswith(prefix) for prefix in DEFERRED_COVERED_PREFIXES)
+        if is_covered_prefix or refs:
+            yield lineno, case_id, ann, refs
+
+
+def iter_coverage_citations(lines):
+    """Yield (lineno, case_id, annotation, refs) for EVERY coverage citation
+    in the document, wherever it lives -- the superset
+    ``iter_deferred_covered`` is the SKIP-only subset of.
+
+    205-06: `iter_deferred_covered` gates on ``skip_box == "x"`` and reads
+    only the **Result:** line's SKIP annotation. That is two independent
+    restrictions, and a citation escaping EITHER one was never existence- or
+    execution-checked. Measured against the live corpus before this fix:
+
+        Result line, [x] SKIP  ->  74 citations   (the only ones checked)
+        Result line, [x] PASS  ->  51 citations   INVISIBLE
+        Notes line,  [x] PASS  ->  13 citations   INVISIBLE
+        Notes line,  [x] SKIP  ->   2 citations   INVISIBLE
+
+    So the guard verified 74 of 140 -- 47% of the corpus's coverage claims
+    were unguarded, including all 4 real vitest citations (UAT-193-01/-02/
+    -05/-08), which is why the vitest execution leg read "vacuous today"
+    when the document had in fact carried executable substitutes since
+    Series 193 landed. All 66 were re-derived independently of this module
+    and proved honest at the time of the fix; the defect was never a false
+    coverage claim, only a gate that could not see them.
+
+    This is the THIRD axis this defect class has been found on, after the
+    prose-phrasing axis (205-02b, 6 citations) and the marker-selection axis
+    (205-02b's `collected_node_ids` `-m ""` fix, 4 citations). Per CLAUDE.md
+    §GSD `state.*` Verb Integrity's standing lesson, the axes that have ever
+    produced a miss are enumerated here deliberately rather than left to a
+    future reader's recollection: prose phrasing, marker selection,
+    disposition box, citation line, and title-quoting dialect.
+
+    A PASS-checked case citing a node is making exactly the same coverage
+    claim a SKIP-checked one is -- "this automated test is what stands in for
+    the manual steps" -- so it earns the same verification. The D-06
+    incidental-mention exemption (NO_SUBSTITUTE_COVERAGE_PREFIXES) is applied
+    identically on every path.
+
+    ``iter_deferred_covered`` is deliberately NOT widened: its SKIP-specific
+    semantics are load-bearing for find_deferrals_without_node_ref(), whose
+    "'covered by' deferral naming zero refs" rule is a DEFERRED-grammar check
+    that would mis-flag PASS-checked cases. The resolution legs point here;
+    the grammar leg stays there."""
+    notes_by_case: dict[str, tuple[int, str]] = {}
+    current_id = None
+    for i, line in enumerate(lines, start=1):
+        hm = HEADING_RE.match(line)
+        if hm:
+            current_id = hm.group(1)
+            continue
+        if current_id and line.startswith(NOTES_PREFIX):
+            notes_by_case.setdefault(current_id, (i, line[len(NOTES_PREFIX) :].strip()))
+
+    seen: set[tuple[int, str]] = set()
+    for lineno, case_id, groups in iter_results(lines):
+        anns = []
+        for box, ann_key in (("pass_box", "pass_ann"), ("fail_box", "fail_ann"), ("skip_box", "skip_ann")):
+            if groups[box] == "x" and groups[ann_key]:
+                anns.append((lineno, groups[ann_key]))
+        note = notes_by_case.get(case_id)
+        if note:
+            anns.append(note)
+        for ann_lineno, ann in anns:
+            if not ann:
+                continue
+            if any(ann.startswith(prefix) for prefix in NO_SUBSTITUTE_COVERAGE_PREFIXES):
+                continue
+            refs = NODE_REF_RE.findall(ann) + VITEST_REF_RE.findall(ann)
+            is_covered_prefix = any(ann.startswith(prefix) for prefix in DEFERRED_COVERED_PREFIXES)
+            if not (is_covered_prefix or refs):
+                continue
+            key = (ann_lineno, ann)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield ann_lineno, case_id, ann, refs
 
 
 def find_deferrals_without_node_ref(lines):
@@ -191,16 +356,45 @@ def find_deferrals_without_node_ref(lines):
 
 def find_unresolvable_node_refs(lines, node_id_set):
     """Return [(lineno, case_id, ref)] for every PYTEST node reference that
-    fails to resolve (via fnmatch, so a `*` glob matching zero nodes counts
-    as unresolvable) against ``node_id_set``. Vitest refs (D-05) are
+    fails to resolve against ``node_id_set``. Vitest refs (D-05) are
     deliberately skipped here -- they are not pytest-node-shaped and are
-    checked separately by find_unresolvable_vitest_refs()."""
+    checked separately by find_unresolvable_vitest_refs().
+
+    D-02: a ref containing a literal `*` keeps glob semantics (fnmatch, so a
+    glob matching zero nodes counts as unresolvable). A ref with no `*` --
+    including one carrying a literal `[param]` bracket -- is checked by
+    EXACT set membership instead. fnmatch would otherwise misinterpret a
+    literal `[...]` bracket as a glob character class, which could silently
+    accept (or reject) a bracketed citation for the wrong reason.
+
+    205-06: reads iter_coverage_citations() (every citation, any disposition
+    box, Result or Notes line) rather than the SKIP-only
+    iter_deferred_covered(). Also resolves two forms that are legal pytest
+    selectors but are NOT leaf node IDs, so they never appear in a
+    `--collect-only` set and were reported unresolvable for the wrong reason:
+
+      - a CLASS-SCOPED selector (`file.py::ClassName`, no method), which
+        selects every test in that class -- UAT-38-01 cites
+        `tests/test_identity_surface.py::Issue3ScanWindowRegressionTest`,
+        a real class with 3 real leaf tests beneath it.
+      - a PARAMETRIZED BASE (`file.py::test_name` where the collected nodes
+        are `test_name[case]`), the sibling of 205-01's bracket-truncation
+        fix approached from the citation side.
+
+    Both resolve by leaf-prefix membership. A ref resolving this way is
+    genuinely runnable -- `pytest <ref>` selects the leaves -- so accepting
+    it is correct, not a loosened gate."""
     bad = []
-    for lineno, case_id, _ann, refs in iter_deferred_covered(lines):
+    for lineno, case_id, _ann, refs in iter_coverage_citations(lines):
         for ref in refs:
             if not NODE_REF_RE.fullmatch(ref):
                 continue
-            if not fnmatch.filter(node_id_set, ref):
+            if "*" in ref:
+                if not fnmatch.filter(node_id_set, ref):
+                    bad.append((lineno, case_id, ref))
+            elif ref not in node_id_set and not any(
+                node.startswith(ref + "::") or node.startswith(ref + "[") for node in node_id_set
+            ):
                 bad.append((lineno, case_id, ref))
     return bad
 
@@ -228,9 +422,14 @@ def find_unresolvable_vitest_refs(lines):
     source. A pure source-text check -- deliberately does NOT shell out to
     Node for existence (that is reserved for the execution leg,
     _run_vitest_nodes, which actually proves the test PASSES rather than
-    merely exists)."""
+    merely exists).
+
+    205-06: reads iter_coverage_citations() for the same reason
+    find_unresolvable_node_refs() does -- all 4 of the corpus's real vitest
+    citations are PASS-checked Notes-line citations and were invisible to the
+    SKIP-only iterator."""
     bad = []
-    for lineno, case_id, _ann, refs in iter_deferred_covered(lines):
+    for lineno, case_id, _ann, refs in iter_coverage_citations(lines):
         for ref in refs:
             if not VITEST_REF_RE.fullmatch(ref):
                 continue
@@ -425,11 +624,63 @@ def parse_vitest_summary(data: dict) -> dict:
     }
 
 
-def _vitest_assertion_lines(data: dict) -> list[str]:
-    """Non-passed assertion result lines, for failure-message context."""
+def vitest_cited_summary(data: dict, cited_names) -> tuple[dict, list[str]]:
+    """Score ONLY the cited tests, by exact `assertionResults[].title` match
+    (that field is verbatim the `it()`/`test()` first argument, i.e. exactly
+    what a citation names). Returns (counts, cited-but-absent-titles).
+
+    205-06: parse_vitest_summary()'s FILE-LEVEL counts cannot be used to
+    judge a citation, because vitest reports every test filtered OUT by `-t`
+    as `status: "skipped"`, which `numPendingTests` folds in. Citing 4 titles
+    in the real 19-test ConnectorsPanel.test.tsx therefore produced
+    `skipped == 15` and tripped the execution leg's `skipped == 0` assertion
+    on 15 tests nobody cited and nobody intended to run.
+
+    This defect was structurally invisible to 205-04's CI red-proof: that
+    induction put its single deliberately-failing test in a file OF ITS OWN,
+    so there were no sibling tests for `-t` to filter out and the aggregate
+    happened to equal the cited-only figure. A guard exercised only against a
+    one-test file has not been exercised. Recorded here rather than in a
+    SUMMARY alone because the same trap applies to any future filter-based
+    execution leg in this module.
+
+    A cited test that is `.skip`/`.todo` in source still reports `skipped`
+    here and is still correctly flagged -- a skip is never proof of coverage.
+    The distinction this function draws is between "the test I cited did not
+    run" and "a test I never cited did not run"; only the former is a defect.
+    """
+    wanted = set(cited_names)
+    counts = {"passed": 0, "failed": 0, "skipped": 0, "total": 0}
+    seen: set[str] = set()
+    for tr in data.get("testResults", []):
+        for a in tr.get("assertionResults", []):
+            title = a.get("title")
+            if title not in wanted:
+                continue
+            seen.add(title)
+            counts["total"] += 1
+            status = a.get("status")
+            if status == "passed":
+                counts["passed"] += 1
+            elif status == "failed":
+                counts["failed"] += 1
+            else:
+                counts["skipped"] += 1
+    return counts, sorted(wanted - seen)
+
+
+def _vitest_assertion_lines(data: dict, cited_names=None) -> list[str]:
+    """Non-passed assertion result lines, for failure-message context.
+
+    205-06: when ``cited_names`` is given, restricted to cited tests. The
+    unrestricted form listed every `-t`-filtered sibling as "skipped: ...",
+    burying the real signal under 15 lines of irrelevance in the live case."""
+    wanted = None if cited_names is None else set(cited_names)
     lines = []
     for tr in data.get("testResults", []):
         for a in tr.get("assertionResults", []):
+            if wanted is not None and a.get("title") not in wanted:
+                continue
             if a.get("status") != "passed":
                 lines.append(f"{a.get('status')}: {a.get('fullName')}")
     return lines
@@ -473,11 +724,27 @@ def _run_vitest_nodes(
         data = {}
         if out_path.exists() and out_path.stat().st_size:
             data = json.loads(out_path.read_text(encoding="utf-8"))
-        summary = parse_vitest_summary(data)
+        # 205-06: score the CITED tests only -- see vitest_cited_summary()
+        # for why the file-level counts are unusable under a `-t` filter.
+        cited_names = [n for _, n in file_and_names]
+        summary, missing = vitest_cited_summary(data, cited_names)
         combined = proc.stdout + "\n" + proc.stderr
-        assertion_lines = _vitest_assertion_lines(data)
+        assertion_lines = _vitest_assertion_lines(data, cited_names)
         if assertion_lines:
             combined += "\n" + "\n".join(assertion_lines)
+        if missing:
+            combined += "\n" + "\n".join(
+                f"absent from report (cited but never collected): {name}" for name in missing
+            )
+            # A cited title the report never mentions did not run. Surface it
+            # as a failure rather than letting passed==0 read as "collected
+            # nothing" for an ambiguous reason.
+            summary["failed"] += len(missing)
+        file_counts = parse_vitest_summary(data)
+        combined += (
+            f"\n[205-06] cited={summary} "
+            f"file-level={file_counts} (file-level skipped includes -t-filtered siblings)"
+        )
         return summary, combined
     finally:
         out_path.unlink(missing_ok=True)
@@ -504,9 +771,24 @@ def ledger_rows() -> list[dict]:
 def collected_node_ids() -> set[str]:
     """The real collect-only node ID set, collected exactly once per test
     session (collection over ~3700 nodes costs a few seconds; re-collecting
-    per test would be wasteful and is explicitly disallowed by the plan)."""
+    per test would be wasteful and is explicitly disallowed by the plan).
+
+    205-02b: passes `-m ""` (an empty marker expression, which OVERRIDES
+    `pyproject.toml`'s `addopts = -m 'not slow'` rather than being additive
+    with it -- same semantics CLAUDE.md's UAT Corpus Integrity Gate section
+    documents for the `Linux Full Suite` CI job). Without this, the default
+    addopts filter silently DESELECTS every `@pytest.mark.slow` node from
+    this set -- a pure collection-time artifact, unrelated to whether the
+    node actually exists. Widening iter_deferred_covered's extraction
+    surfaced this: 4 real, collectible `@pytest.mark.slow` integration-test
+    citations (UAT-5-20/21/22, UAT-44-03) were reported "unresolvable" by
+    `find_unresolvable_node_refs` purely because this fixture's node-ID set
+    excluded slow-marked tests, not because the citations were wrong.
+    EXISTENCE-checking is a `--collect-only` operation -- no test body runs
+    -- so filtering by marker here serves no purpose and only produces false
+    unresolvable reports."""
     proc = run_fork_safe(
-        [sys.executable, "-m", "pytest", "--collect-only", "-q", str(REPO_ROOT / "tests")],
+        [sys.executable, "-m", "pytest", "--collect-only", "-q", "-m", "", str(REPO_ROOT / "tests")],
         timeout=180,
     )
     if proc.returncode != 0:
@@ -552,7 +834,9 @@ def test_substitute_nodes_resolve(uat_series_lines, collected_node_ids):
 def test_vitest_substitute_refs_resolve(uat_series_lines):
     """D-05 fast leg: every vitest reference in the document must resolve
     (file exists, quoted title found in source) -- no subprocess needed.
-    Vacuous today (zero vitest citations exist until 169-06 spends this
+    Non-vacuous since 205-06 (4 real citations; the prior "vacuous today"
+    reading came from the SKIP-only extractor, not the document).
+    Historical note -- the original wording said zero citations exist until 169-06 spends this
     capability); see module docstring on non-vacuity."""
     bad = find_unresolvable_vitest_refs(uat_series_lines)
     assert bad == [], f"{len(bad)} vitest substitute reference(s) do not resolve: {bad}"
@@ -618,6 +902,76 @@ def test_negative_control_well_formed_deferral_is_accepted():
     ]
     assert find_deferrals_without_node_ref(synthetic) == []
     assert find_unresolvable_node_refs(synthetic, {"tests/test_real.py::test_ok"}) == []
+
+
+def test_node_ref_re_pins_two_colon_class_scoped_capability():
+    """D-01: pin the ALREADY-WORKING two-`::` class-scoped node syntax so a
+    future narrowing of NODE_REF_RE back to single-`::` fails loudly here
+    instead of silently resurrecting the `Class*method` glob-workaround
+    class. 205-CONTEXT.md's <falsification> block proved end-to-end (against
+    the live interpreter, before this plan existed) that this already
+    resolves -- this test LOCKS that fact down as a regression guard; it
+    does not "fix" anything. Manually verified this goes RED against a
+    hypothetical narrowed `re.compile(r"tests/[\\w/]+\\.py::[\\w*]+")` (no
+    trailing optional group): `fullmatch` returns None for the ref below."""
+    ref = "tests/test_risk_engine.py::TestQuantumVulnerableCertKey::test_rsa_2048_produces_medium"
+    assert NODE_REF_RE.fullmatch(ref)
+    synthetic = [
+        "### UAT-205-01: Example\n",
+        f"**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by {ref})\n",
+    ]
+    assert find_unresolvable_node_refs(synthetic, {ref}) == []
+
+
+def test_negative_control_bracket_citation_resolves_exactly():
+    """D-02 positive case: a literal, bracket-bearing pytest node id (the
+    exact string `pytest --collect-only` prints for a parametrized test) now
+    resolves exactly against the real node id, rather than being truncated
+    at `[` and existence-checked as a phantom substring (see the empirical
+    probe recorded above NODE_REF_RE). Before the fix this citation was
+    reported unresolvable, naming the truncated phantom
+    'tests/test_scratch.py::test_bar' -- not the ref actually written."""
+    ref = "tests/test_scratch.py::test_bar[y]"
+    synthetic = [
+        "### UAT-205-02: Example\n",
+        f"**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by {ref})\n",
+    ]
+    assert find_unresolvable_node_refs(synthetic, {ref}) == []
+
+
+def test_negative_control_bracket_citation_wrong_param_still_rejected():
+    """D-02 negative case: widening to admit literal brackets must not
+    create a false accept -- a citation of the wrong parametrize value is
+    still correctly flagged unresolvable."""
+    synthetic = [
+        "### UAT-205-03: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_scratch.py::test_bar[wrong-param])\n",
+    ]
+    bad = find_unresolvable_node_refs(synthetic, {"tests/test_scratch.py::test_bar[y]"})
+    assert bad == [(2, "UAT-205-03", "tests/test_scratch.py::test_bar[wrong-param]")]
+
+
+def test_negative_control_live_glob_citations_unaffected_by_bracket_widening():
+    """Regression: the two live trailing-`*` parametrized-glob citation
+    shapes (UAT-96-01 at docs/UAT-SERIES.md:12002, UAT-179-04 at :21731)
+    must keep resolving via the fnmatch glob branch, unchanged by the
+    bracket widening (`*`-containing refs keep glob semantics)."""
+    synthetic = [
+        "### UAT-205-04: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by "
+        "tests/test_rest_fuzzer_gate.py::test_confirm_required_exact_string_rejects_bad_input*)\n",
+        "### UAT-205-05: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by "
+        "tests/test_scan_scope_signature.py::test_digest_sensitivity_matrix_cfg_mutations*)\n",
+    ]
+    node_id_set = {
+        "tests/test_rest_fuzzer_gate.py::test_confirm_required_exact_string_rejects_bad_input[case0]",
+        "tests/test_scan_scope_signature.py::test_digest_sensitivity_matrix_cfg_mutations[caseA]",
+    }
+    assert find_unresolvable_node_refs(synthetic, node_id_set) == []
 
 
 def test_negative_control_no_substitute_coverage_is_exempt_not_flagged():
@@ -748,6 +1102,303 @@ def test_negative_control_mixed_pytest_and_vitest_refs_in_one_annotation():
     assert find_unresolvable_vitest_refs(synthetic) == []
 
 
+def test_negative_control_plain_skip_node_citation_is_now_extracted():
+    """205-02b: the proven blind spot. Before this fix, iter_deferred_covered
+    only extracted refs from annotations phrased 'DEFERRED — covered by
+    ...'. A plain ``[x] SKIP (tests/foo.py::test_bar -- verified passing)``
+    citation -- no 'DEFERRED —' prefix at all -- was silently NEVER yielded,
+    so find_unresolvable_node_refs and the execution leg (test_substitute_
+    nodes_pass) never checked it. This is the exact shape of 6 live
+    citations (UAT-58-01/02/03/04/06, UAT-89-02-02), 5 of them API-security
+    tests. Manually verified this test goes RED against the pre-fix
+    iter_deferred_covered (prefix-gated `for prefix in
+    DEFERRED_COVERED_PREFIXES: if ann.startswith(prefix): ...`): refs would
+    be []` because the synthetic annotation below starts with neither
+    prefix string.
+
+    This is a positive control, proving the widened form now WORKS -- not
+    to be confused with a negative control (which would prove something is
+    correctly REJECTED)."""
+    synthetic = [
+        "### UAT-58-01: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(tests/test_api_auth.py::test_mutating_route_returns_401_without_token "
+        "-- verified passing)\n",
+    ]
+    results = list(iter_deferred_covered(synthetic))
+    assert len(results) == 1
+    _lineno, case_id, ann, refs = results[0]
+    assert case_id == "UAT-58-01"
+    assert refs == ["tests/test_api_auth.py::test_mutating_route_returns_401_without_token"]
+    # And it flows through to the existence check exactly like a
+    # 'DEFERRED — covered by' citation would.
+    assert find_unresolvable_node_refs(
+        synthetic, {"tests/test_api_auth.py::test_mutating_route_returns_401_without_token"}
+    ) == []
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == [
+        (2, "UAT-58-01", "tests/test_api_auth.py::test_mutating_route_returns_401_without_token")
+    ]
+
+
+def test_pass_checked_notes_line_citation_is_guarded():
+    """205-06 positive control, and the shape of the proven blind spot: a
+    PASS-checked case citing a substitute on its **Notes:** line.
+
+    All 4 of the corpus's real vitest citations (UAT-193-01/-02/-05/-08) are
+    exactly this shape, which is why the vitest execution leg's docstring read
+    "vacuous today" while the document had carried executable substitutes
+    since Series 193. `iter_deferred_covered` gates on ``skip_box == "x"`` AND
+    reads only the Result line, so this citation escapes on BOTH counts.
+
+    The two iterators are asserted to DISAGREE here deliberately -- that
+    divergence is the fix, and pinning it means a future narrowing of
+    iter_coverage_citations back toward SKIP-only cannot pass silently."""
+    synthetic = [
+        "### UAT-193-01: Example\n",
+        "**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP\n",
+        "**Date:** 2026-09-09  **Tester:** automated\n",
+        "**Notes:** DEFERRED — covered by tests/test_real.py::test_ok.\n",
+    ]
+    # Pre-fix behaviour, pinned: the SKIP-only iterator cannot see it at all.
+    assert list(iter_deferred_covered(synthetic)) == []
+    # Post-fix behaviour: the widened iterator does.
+    results = list(iter_coverage_citations(synthetic))
+    assert len(results) == 1
+    _lineno, case_id, _ann, refs = results[0]
+    assert case_id == "UAT-193-01"
+    assert refs == ["tests/test_real.py::test_ok"]
+    # ...and it reaches the existence check, in both directions.
+    assert find_unresolvable_node_refs(synthetic, {"tests/test_real.py::test_ok"}) == []
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == [
+        (4, "UAT-193-01", "tests/test_real.py::test_ok")
+    ]
+
+
+def test_pass_checked_result_line_citation_is_guarded():
+    """205-06: the larger half of the blind spot -- 51 of the corpus's 140
+    citations sit in a PASS-checked Result-line annotation. A PASS-checked
+    case naming an automated node is making the same coverage claim a
+    SKIP-checked one is, and earns the same verification."""
+    synthetic = [
+        "### UAT-200-01: Example\n",
+        "**Result:** - [x] PASS (2026-09-01 tests/test_real.py::test_ok run, exit 0)  "
+        "- [ ] FAIL  - [ ] SKIP\n",
+    ]
+    assert list(iter_deferred_covered(synthetic)) == []
+    refs = [r for _, _, _, rs in iter_coverage_citations(synthetic) for r in rs]
+    assert refs == ["tests/test_real.py::test_ok"]
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == [
+        (2, "UAT-200-01", "tests/test_real.py::test_ok")
+    ]
+
+
+def test_no_substitute_coverage_exemption_also_applies_on_the_pass_path():
+    """205-06 guard against over-widening, the PASS-path twin of
+    test_negative_control_no_substitute_coverage_stays_exempt_even_mentioning_a_node.
+
+    Widening extraction to PASS-checked cases means the D-06 incidental-
+    mention exemption has to hold there too. This is not hypothetical:
+    UAT-110-04's real Result annotation names a node in order to say it does
+    NOT exist ("named node ... does not exist -- real equivalent ... located"),
+    and an unexempted widening reported that dead name as an unresolvable
+    citation -- flagging an honest record as a defect."""
+    synthetic = [
+        "### UAT-99-01: Example\n",
+        "**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP\n",
+        "**Notes:** GAP — no substitute coverage; the only candidate, "
+        "tests/test_real.py::test_ok, asserts something else entirely.\n",
+    ]
+    assert list(iter_coverage_citations(synthetic)) == []
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == []
+
+
+def partition_ci_exempt_refs(lines):
+    """Split every cited ref into (enforced, ci_exempt) by whether its own
+    annotation carries a CI_EXEMPT_MARKER declaration. 205-06.
+
+    A ref cited in BOTH an exempt and a non-exempt annotation lands in
+    `enforced` -- the strict reading wins, so one declaration cannot quietly
+    relax a node another case depends on."""
+    enforced: set[str] = set()
+    exempt: set[str] = set()
+    for _lineno, _case_id, ann, refs in iter_coverage_citations(lines):
+        target = exempt if CI_EXEMPT_MARKER in ann else enforced
+        target.update(refs)
+    return enforced, exempt - enforced
+
+
+def find_ci_exempt_declarations_without_reason(lines):
+    """Return [(lineno, case_id)] for every CI-EXEMPT declaration that names no
+    reason after the marker. 205-06: this is what stops the marker degrading
+    into a bare opt-out token -- an exemption must say WHY CI cannot run the
+    substitute, in the document, where a reader sees it."""
+    bad = []
+    for lineno, case_id, ann, _refs in iter_coverage_citations(lines):
+        if CI_EXEMPT_MARKER not in ann:
+            continue
+        reason = ann.split(CI_EXEMPT_MARKER, 1)[1].strip().rstrip(").")
+        if len(reason) < 15:
+            bad.append((lineno, case_id))
+    return bad
+
+
+def test_ci_exempt_declarations_name_a_reason(uat_series_lines):
+    """205-06: every CI-EXEMPT citation in the live corpus states why."""
+    assert find_ci_exempt_declarations_without_reason(uat_series_lines) == []
+
+
+def test_ci_exempt_partition_is_strict_by_default():
+    """205-06: the CI-EXEMPT relaxation applies ONLY to declared citations, and
+    the strict reading wins on any conflict.
+
+    This is the test that keeps the marker from becoming the allowlist
+    CLAUDE.md forbids: an undeclared citation is still enforced, and a node
+    that some OTHER case cites without a declaration stays enforced even if one
+    case declares it."""
+    synthetic = [
+        "### UAT-1-01: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_a.py::test_plain)\n",
+        "### UAT-1-02: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_b.py::test_gated "
+        "-- CI-EXEMPT: requires the operator GSD toolchain, honestly skipped in CI)\n",
+        "### UAT-1-03: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_b.py::test_gated)\n",
+    ]
+    enforced, exempt = partition_ci_exempt_refs(synthetic)
+    assert "tests/test_a.py::test_plain" in enforced
+    # Cited WITHOUT a declaration by UAT-1-03, so the strict reading wins.
+    assert "tests/test_b.py::test_gated" in enforced
+    assert exempt == set()
+
+    # With the undeclared citation removed, the declaration takes effect.
+    enforced, exempt = partition_ci_exempt_refs(synthetic[:4])
+    assert exempt == {"tests/test_b.py::test_gated"}
+    assert "tests/test_b.py::test_gated" not in enforced
+
+    # A declaration with no reason is rejected.
+    assert find_ci_exempt_declarations_without_reason(synthetic[2:4]) == []
+    no_reason = [
+        "### UAT-1-04: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(DEFERRED — covered by tests/test_b.py::test_gated -- CI-EXEMPT:)\n",
+    ]
+    assert find_ci_exempt_declarations_without_reason(no_reason) == [(2, "UAT-1-04")]
+
+
+def test_ci_exempt_does_not_hide_a_failing_substitute(tmp_path):
+    """205-06 RED-proof for the CI-EXEMPT relaxation itself.
+
+    The relaxation must weaken EXACTLY one rule -- `skipped == 0` -- and nothing
+    else. If a declared-exempt substitute FAILS rather than skips, the exempt
+    run's own `failed == 0` assertion must still catch it. Without this proof the
+    marker would be indistinguishable from the blanket allowlist CLAUDE.md
+    forbids, and a broken substitute could hide behind a declaration.
+
+    Proven by executing a deliberately-failing node through the same helper the
+    exempt branch uses, rather than by reading the branch."""
+    scratch = tmp_path / "test_scratch_exempt_fail.py"
+    scratch.write_text("def test_deliberately_fails():\n    assert 1 == 2\n")
+    node = f"{scratch}::test_deliberately_fails"
+
+    _rc, output = _run_pytest_nodes({node})
+    summary = parse_pytest_summary(output)
+    assert summary["failed"] == 1, (
+        "a declared CI-EXEMPT substitute that FAILS must still be caught -- the "
+        f"exemption relaxes only the skip rule:\n{output[-2000:]}"
+    )
+    assert summary["skipped"] == 0, "this control must fail, not skip, or it proves nothing"
+
+
+def test_class_scoped_and_parametrized_base_selectors_resolve():
+    """205-06: two legal pytest selectors that are NOT leaf node IDs, so they
+    never appear in a `--collect-only` set and were reported unresolvable for
+    the wrong reason. UAT-38-01 cites the class-scoped form against a real
+    3-test class."""
+    leaves = {
+        "tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_a",
+        "tests/test_identity_surface.py::Issue3ScanWindowRegressionTest::test_b",
+        "tests/test_param.py::test_matrix[case-one]",
+    }
+    synthetic = [
+        "### UAT-38-01: Example\n",
+        "**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP\n",
+        "**Notes:** DEFERRED — covered by "
+        "tests/test_identity_surface.py::Issue3ScanWindowRegressionTest.\n",
+        "### UAT-38-02: Example\n",
+        "**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP\n",
+        "**Notes:** DEFERRED — covered by tests/test_param.py::test_matrix.\n",
+    ]
+    assert find_unresolvable_node_refs(synthetic, leaves) == []
+    # A class that genuinely has no leaves is still correctly unresolvable.
+    assert find_unresolvable_node_refs(synthetic, {"tests/test_other.py::test_z"}) != []
+
+
+def test_vitest_cited_summary_ignores_filter_excluded_siblings():
+    """205-06: the execution-leg defect 205-04's red-proof could not expose.
+
+    vitest reports every test excluded by `-t` as `status: "skipped"`, and
+    `numPendingTests` folds those in -- so citing 4 titles in the real
+    19-test ConnectorsPanel.test.tsx yielded `skipped == 15` and tripped the
+    leg's `skipped == 0` assertion on 15 tests nobody cited. 205-04's
+    induction put its single failing test in a file of its own, so there were
+    no siblings to filter and the aggregate happened to be correct.
+
+    A CITED test that is genuinely `.skip`/`.todo` must still be flagged --
+    asserted below -- because a skip is never proof of coverage."""
+    report = {
+        "numTotalTests": 3,
+        "numPassedTests": 1,
+        "numFailedTests": 0,
+        "numPendingTests": 2,
+        "testResults": [
+            {
+                "assertionResults": [
+                    {"title": "cited and passing", "fullName": "P cited and passing", "status": "passed"},
+                    {"title": "never cited", "fullName": "P never cited", "status": "skipped"},
+                    {"title": "cited but skipped", "fullName": "P cited but skipped", "status": "skipped"},
+                ]
+            }
+        ],
+    }
+    # File-level counts are what the old code used -- wrong for a filtered run.
+    assert parse_vitest_summary(report)["skipped"] == 2
+
+    counts, missing = vitest_cited_summary(report, ["cited and passing"])
+    assert (counts["passed"], counts["skipped"], counts["failed"]) == (1, 0, 0)
+    assert missing == []
+
+    # A cited .skip is still caught.
+    counts, missing = vitest_cited_summary(report, ["cited and passing", "cited but skipped"])
+    assert counts["skipped"] == 1
+    assert missing == []
+
+    # A cited title absent from the report is reported, not silently ignored.
+    _counts, missing = vitest_cited_summary(report, ["typo in the citation"])
+    assert missing == ["typo in the citation"]
+
+
+def test_negative_control_no_substitute_coverage_stays_exempt_even_mentioning_a_node():
+    """205-02b guard against over-widening: a D-06 'no substitute coverage'
+    annotation's free-text explanation may incidentally MENTION a real node
+    (to say it does NOT cover the case) without that being a coverage
+    citation -- live at docs/UAT-SERIES.md:7463 and :15961. The widened,
+    prefix-free node-shaped-ref sweep must not sweep these in; they are
+    caught by NO_SUBSTITUTE_COVERAGE_PREFIXES, checked before the sweep."""
+    synthetic = [
+        "### UAT-7-99: Example\n",
+        "**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP "
+        "(GAP — no substitute coverage; the only candidate, "
+        "tests/test_reports_writer.py::test_html_report_has_description_column, "
+        "is unconditionally skipped per TRIAGE-149)\n",
+    ]
+    assert list(iter_deferred_covered(synthetic)) == []
+    assert find_deferrals_without_node_ref(synthetic) == []
+    assert find_unresolvable_node_refs(synthetic, node_id_set=set()) == []
+
+
 # ---------------------------------------------------------------------------
 # Task 2: execution check + non-vacuity proof
 # ---------------------------------------------------------------------------
@@ -756,34 +1407,76 @@ def test_negative_control_mixed_pytest_and_vitest_refs_in_one_annotation():
 @pytest.mark.slow
 def test_substitute_nodes_pass(uat_series_lines, collected_node_ids):
     """Deselected by default (addopts = -m 'not slow'); run explicitly with
-    `-m slow`. Runs the deduplicated union of every named substitute node in
-    ONE subprocess and asserts a clean pass -- failed==0, errors==0,
-    skipped==0 (a skip is never proof of coverage), passed>=1. With zero
-    deferrals present (today) it passes trivially without invoking pytest."""
-    node_refs = sorted(
-        {ref for _, _, _, refs in iter_deferred_covered(uat_series_lines) for ref in refs}
-    )
-    if not node_refs:
+    `-m slow`. Runs the deduplicated union of every named substitute node and
+    asserts a clean pass -- failed==0, errors==0, skipped==0 (a skip is never
+    proof of coverage), passed>=1.
+
+    205-06, two fixes, both found by this leg turning CI red once it finally had
+    the whole corpus to chew on rather than the SKIP-only subset:
+
+    1. **Expansion was blind to non-glob multi-level refs.**
+       `fnmatch.filter(collected_node_ids, ref)` matches nothing for a ref with
+       no `*`, so a class-scoped (`file.py::Class`) or parametrized-base
+       (`file.py::test_name`) citation contributed ZERO nodes to the run. The
+       aggregate `assert expanded` stayed green because other refs filled it, so
+       those citations were existence-checked but never executed. Expansion now
+       adds exact matches and leaf-prefix descendants alongside glob matches.
+
+    2. **CI-EXEMPT citations are run separately.** See CI_EXEMPT_MARKER. A
+       declared citation may SKIP (the declaration says CI cannot run it) but
+       must still never FAIL or ERROR. Everything undeclared keeps the strict
+       skipped==0 rule."""
+    enforced_refs, exempt_refs = partition_ci_exempt_refs(uat_series_lines)
+    if not enforced_refs and not exempt_refs:
         return  # nothing to execute yet -- see module docstring
 
-    expanded: set[str] = set()
-    for ref in node_refs:
-        expanded.update(fnmatch.filter(collected_node_ids, ref))
-    assert expanded, f"no nodes expanded from refs {node_refs}"
+    def expand(refs):
+        out: set[str] = set()
+        for ref in sorted(refs):
+            if "*" in ref:
+                out.update(fnmatch.filter(collected_node_ids, ref))
+            else:
+                out.update(
+                    node
+                    for node in collected_node_ids
+                    if node == ref or node.startswith(ref + "::") or node.startswith(ref + "[")
+                )
+        return out
 
-    _rc, output = _run_pytest_nodes(expanded)
-    summary = parse_pytest_summary(output)
-    tail = output[-4000:]
-    skipped_lines = _skipped_report_lines(output)
+    enforced = expand(enforced_refs)
+    exempt = expand(exempt_refs) - enforced
+    assert enforced or exempt, f"no nodes expanded from refs {sorted(enforced_refs | exempt_refs)}"
 
-    assert summary["failed"] == 0, f"substitute node(s) failed:\n{tail}"
-    assert summary["errors"] == 0, f"substitute node(s) errored:\n{tail}"
-    assert summary["skipped"] == 0, (
-        "substitute node(s) skipped -- a skip is NOT proof of coverage; pick "
-        "a different substitute or record 'DEFERRED — no substitute "
-        f"coverage' instead:\n" + "\n".join(skipped_lines) + f"\n{tail}"
-    )
-    assert summary["passed"] >= 1, f"substitute run collected nothing:\n{tail}"
+    if enforced:
+        _rc, output = _run_pytest_nodes(enforced)
+        summary = parse_pytest_summary(output)
+        tail = output[-4000:]
+        skipped_lines = _skipped_report_lines(output)
+
+        assert summary["failed"] == 0, f"substitute node(s) failed:\n{tail}"
+        assert summary["errors"] == 0, f"substitute node(s) errored:\n{tail}"
+        assert summary["skipped"] == 0, (
+            "substitute node(s) skipped -- a skip is NOT proof of coverage; pick "
+            "a different substitute, record 'DEFERRED — no substitute coverage', "
+            "or -- only if the substitute genuinely cannot run in CI -- declare it "
+            f"with '{CI_EXEMPT_MARKER} <reason>' in the annotation:\n"
+            + "\n".join(skipped_lines)
+            + f"\n{tail}"
+        )
+        assert summary["passed"] >= 1, f"substitute run collected nothing:\n{tail}"
+
+    if exempt:
+        # Declared CI-exempt: a skip is permitted and expected HERE, and only
+        # here. Failures and errors are not, so a declaration cannot hide a
+        # broken substitute -- it only records that CI does not prove this one.
+        _rc, output = _run_pytest_nodes(exempt)
+        summary = parse_pytest_summary(output)
+        tail = output[-4000:]
+        assert summary["failed"] == 0, f"CI-exempt substitute node(s) FAILED:\n{tail}"
+        assert summary["errors"] == 0, f"CI-exempt substitute node(s) ERRORED:\n{tail}"
+        assert summary["passed"] + summary["skipped"] >= 1, (
+            f"CI-exempt substitute run collected nothing:\n{tail}"
+        )
 
 
 def test_non_vacuity_demonstration_existence_vs_execution(tmp_path):
@@ -949,12 +1642,19 @@ def test_vitest_substitute_nodes_pass(uat_series_lines):
     """Vitest analogue of test_substitute_nodes_pass (D-05). Deduplicates
     every named vitest substitute across the real document and runs them in
     ONE subprocess, asserting a clean pass -- failed==0, skipped==0,
-    passed>=1. Vacuous today (zero vitest citations exist until 169-06
-    spends this capability); see module docstring on non-vacuity."""
+    passed>=1.
+
+    205-06: NO LONGER VACUOUS. This docstring previously read "Vacuous today
+    (zero vitest citations exist until 169-06 spends this capability)" -- and
+    that was measured with this module's own SKIP-only extractor, which could
+    not see the 4 real vitest citations the corpus has carried since Series
+    193 (UAT-193-01/-02/-05/-08, ConnectorsPanel.test.tsx). The claim was
+    true of the guard's view and false of the document. See
+    iter_coverage_citations()."""
     refs = sorted(
         {
             ref
-            for _, _, _, refs in iter_deferred_covered(uat_series_lines)
+            for _, _, _, refs in iter_coverage_citations(uat_series_lines)
             for ref in refs
             if VITEST_REF_RE.fullmatch(ref)
         }

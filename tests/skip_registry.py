@@ -481,46 +481,49 @@ ALLOWED_SKIPS = [
         "test_vitest_non_vacuity_passing_substitute_is_not_flagged",
         "environment_capability",
         "VITEST_TOOLCHAIN_AVAILABLE is False (npm not on PATH and/or "
-        "src/dashboard/node_modules absent) -- the Linux Full Suite CI job "
-        "never installs the dashboard's Node toolchain. This is the "
-        "documented, non-blocking gap tracked in docs/uat-coverage-gaps.md "
-        "(item 12): the vitest substitute-execution leg only "
-        "existence-checks in CI rather than actually running, so this "
-        "positive-control skip does not mean the passing-substitute "
-        "behaviour was exercised there.",
+        "src/dashboard/node_modules absent) on THIS machine/environment. "
+        "As of Phase 205 (D-04), the Linux Full Suite CI job DOES install "
+        "the dashboard's Node toolchain (see CLAUDE.md 'UAT Corpus "
+        "Integrity Gate (UATREC-04)'), so this positive-control test "
+        "executes for real there; this skip only reflects a local "
+        "toolchain gap on the machine that produced this skip report, not "
+        "a CI-wide limitation.",
     ),
     (
         "test_uat_disposition_integrity.py",
         "test_vitest_non_vacuity_skipped_substitute_is_flagged",
         "environment_capability",
         "VITEST_TOOLCHAIN_AVAILABLE is False in this environment for the "
-        "same reason as the sibling non-vacuity tests in this file -- CI "
-        "does not install npm/node_modules under src/dashboard/. Per "
-        "docs/uat-coverage-gaps.md (item 12), this is a documented, "
-        "non-blocking gap: the vitest 'a skip must never count as coverage' "
-        "constraint mirror only existence-checks in CI, it is not executed.",
+        "same reason as the sibling non-vacuity tests in this file -- no "
+        "npm/node_modules available locally. As of Phase 205 (D-04), the "
+        "Linux Full Suite CI job installs the dashboard's Node toolchain "
+        "(see CLAUDE.md 'UAT Corpus Integrity Gate (UATREC-04)'), so this "
+        "'a skip must never count as coverage' constraint mirror executes "
+        "for real in CI; this skip is a local-environment gap only.",
     ),
     (
         "test_uat_disposition_integrity.py",
         "test_vitest_non_vacuity_failing_substitute_is_flagged",
         "environment_capability",
         "VITEST_TOOLCHAIN_AVAILABLE is False in this environment for the "
-        "same reason as the sibling non-vacuity tests in this file -- CI "
-        "does not install npm/node_modules under src/dashboard/. Per "
-        "docs/uat-coverage-gaps.md (item 12), this is a documented, "
-        "non-blocking gap: the vitest failing-substitute detection leg only "
-        "existence-checks in CI, it is not executed.",
+        "same reason as the sibling non-vacuity tests in this file -- no "
+        "npm/node_modules available locally. As of Phase 205 (D-04), the "
+        "Linux Full Suite CI job installs the dashboard's Node toolchain "
+        "(see CLAUDE.md 'UAT Corpus Integrity Gate (UATREC-04)'), so this "
+        "failing-substitute detection leg executes for real in CI; this "
+        "skip is a local-environment gap only.",
     ),
     (
         "test_uat_disposition_integrity.py",
         "test_vitest_substitute_nodes_pass",
         "environment_capability",
-        "VITEST_TOOLCHAIN_AVAILABLE is False in this environment -- CI does "
-        "not install npm/node_modules under src/dashboard/. Per "
-        "docs/uat-coverage-gaps.md (item 12), this is a documented, "
-        "non-blocking gap: the vitest analogue of the real-document "
-        "substitute-node pass proof only existence-checks in CI rather than "
-        "actually running every named vitest substitute.",
+        "VITEST_TOOLCHAIN_AVAILABLE is False in this environment -- no "
+        "npm/node_modules available locally. As of Phase 205 (D-04), the "
+        "Linux Full Suite CI job installs the dashboard's Node toolchain "
+        "(see CLAUDE.md 'UAT Corpus Integrity Gate (UATREC-04)'), so the "
+        "real-document analogue of this substitute-node pass proof "
+        "actually runs every named vitest substitute there; this skip is "
+        "a local-environment gap only.",
     ),
     (
         "test_target_cli.py",
