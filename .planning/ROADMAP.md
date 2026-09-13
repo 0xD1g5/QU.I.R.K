@@ -37,6 +37,7 @@
 - ✅ **v5.20 Release & Correctness Drain** — Phases 187–190, 18 plans (shipped 2026-09-08; v5.19.0 published to PyPI 2026-09-07) → `.planning/milestones/v5.20-ROADMAP.md`
 - ✅ **v5.21 Dashboard Parity & Exposure Capability** — Phases 191–195, 42 plans (development complete 2026-09-10; audit tech_debt accepted 13/13; Tier B deferred → 999.107) → `.planning/milestones/v5.21-ROADMAP.md`
 - ✅ **v5.22 Release & Parity Tail** — Phases 196–198, 13 plans (shipped 2026-09-11; v5.21.0 published to PyPI 2026-09-10; audit passed 10/10) → `.planning/milestones/v5.22-ROADMAP.md`
+- ✅ **v5.23 Deliverable Experience** — Phases 199–202, 28 plans (development complete 2026-09-12; audit `gaps_found` 14/14, 1 blocker operator-accepted; merged to main 2026-09-13) → `.planning/milestones/v5.23-ROADMAP.md`
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -93,54 +94,68 @@ is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
 
-## Current Milestone: v5.23 Deliverable Experience
+## Current Milestone: v5.24 UAT Coverage Drain
 
-**Opened:** 2026-09-11, after a boundary pass that ran the doc-review template (version drift
-PASS — 5.21.0 consistent everywhere, correct since v5.22 deliberately cut no tag; coverage gaps
-PASS — Phases 196–198 each ran the per-phase doc checklist; Obsidian PASS — phase notes 196–198
-present, guides + Roadmap/Requirements/UAT-Series synced 2026-09-11, hub callout refresh queued
-for when this roadmap exists) and a PM review of HORIZON's Open-Item Ledger (2 stale rows
-corrected at this boundary: 999.97 closed by v5.20 Phase 189 QRK-CONFIG-001/002; the
-backlog-reconciliation derived-gate todo discharged by Phase 189/198 GATE-04).
+**Opened:** 2026-09-13, after a boundary pass that ran the doc-review template (version drift
+PASS — 5.21.0 consistent across `pyproject.toml`, `README.md`, `docs/UAT-SERIES.md`, and
+`CHANGELOG.md`, correct because v5.22 and v5.23 deliberately cut no tag; coverage gaps — 2 found,
+both carried in as DOC-01/DOC-02; Obsidian PASS with 2 pending, all 7 synced guides verified
+byte-identical to source after frontmatter stripping) and a PM review of HORIZON's Open-Item
+Ledger. v5.23's 155 commits were merged to `main` (`623fa502`, `5f625595`) **before** any v5.24
+artifact was written, so phase-complete evidence in this milestone is branch-honest from the start.
 
-**Goal:** Give the consulting deliverable a dedicated makeover — operator-controlled report
-composition and branding, a score-lift-framed migration roadmap, and a finding storyline
-drawer — after a small gating drain of carried correctness debt.
+**Goal:** Turn QU.I.R.K.'s release-gate document from a record of *what was checked* into a record
+of *what is covered* — write the missing tests behind the honest GAPs, and make the gap worklist
+derive itself so it can never silently accumulate again.
 
-**Phase Numbering:** Continues from v5.22's last phase (198). Integer phases only — v5.23 starts
-at Phase 199.
+**Phase Numbering:** Continues from v5.23's last phase (202). Integer phases only — v5.24 starts
+at Phase 203.
 
-**Structure rationale (per `.planning/research/SUMMARY.md`):** Wave A drain goes first because
-scoring-adjacent correctness bugs (trends.py/merge.py int-coercion) compound with new
-scoring-adjacent features (score-lift) if left unresolved. Report branding/templates (999.105
-Tier 1) goes second because it is the lowest-risk, highest-reuse phase — additive `ExecContent`
-fields, zero coupling to scoring — and establishes the optional-field/parity-safe extension
-pattern the score-lift and drawer phases both depend on; its SandboxedEnvironment (RPT-02) and
-containment guard (RPT-03) are in-phase go/no-go gates, not follow-ups, and RPT-05's Tier 2 spike
-rides the same phase as a decision-doc-only deliverable. Score-lift re-frame (999.101 + BACK-51)
-goes third because it is scoring-adjacent and the highest-credibility-risk item in the milestone —
-sequencing it after Tier 1 means the config/branding extension pattern is already proven, and
-opening with a short spike resolves the driver→roadmap-item join approach before renderer code is
-written. The storyline drawer goes last because it consumes LIFT-01's per-item score-lift number
-(richer with that data available) and carries the most a11y-review overhead, so it gets the most
-schedule slack.
+**Measurement basis (live parse of `docs/UAT-SERIES.md`, 2026-09-13):** 878 case headings; **70**
+carry a `GAP — no substitute coverage` annotation; **45** of those are series ≤163 and **25** are
+series 164–202; **31** are series-7 dashboard-UI cases, of which **28** are jsdom-tractable and
+**3** are not. Where a count here disagrees with a prior document, the disagreement is a finding to
+investigate (COV-03), not an error in either.
+
+**Structure rationale:** Catalog freshness opens the milestone because
+`tests/test_hardware_staleness.py` is RED on `main` right now (91 days against a 90-day threshold)
+and `hw_cve.py`'s 30-day cadence trips ≈2026-10-02, mid-milestone — a red staleness gate is a poor
+backdrop for a coverage-integrity milestone, and the operator chose an opening drain over a tail
+one for exactly that reason. Worklist truth goes second because COV-03's verdict on *which* source
+of truth is authoritative is a hard prerequisite for writing the generator (COV-01) and its gate
+(COV-02) at all — the generator cannot be written until it is decided what it reads. Guard
+integrity goes third because GUARD-01 makes `Class::method` node syntax citable and GUARD-02 makes
+the vitest leg actually execute in CI; writing 28 vitest tests first and then discovering their
+citations need glob workarounds, or that CI never ran them, is avoidable rework. The 28-case
+dashboard drain follows as the largest single block, sized for multiple plans rather than pretended
+to be one unit of work. The 3 jsdom-impossible cases get their own slot because "should we adopt
+Playwright" is a different toolchain question from "write a vitest test", and its honest outcome may
+be that no substitute can exist. The non-UI security/report gaps plus the two carried doc
+corrections close the milestone.
 
 **Standing constraints carried into this milestone (see `CLAUDE.md` for full detail):**
 
-- `phase.complete`/`milestone.complete`/`state.*` GSD verbs remain unsafe on this machine
-  (semantic defect class — well-formed but wrong values). Every phase/milestone close in this
-  milestone is hand-written under the pre-image + signature-diff protocol.
+- All mutating GSD `state.*` / `roadmap.*` / `phase.complete` / `milestone.complete` verbs remain
+  UNSAFE on this machine (semantic defect class — well-formed but *wrong* values; both textual
+  corruption signatures read clean on them). Every phase and milestone close here is hand-written
+  under the pre-image + signature-diff protocol.
 
-- Score firewall: projected/simulated score-lift values must never persist into or feed any real
-  score surface (LIFT-03's forward-projection guard, mirroring ADVISORY-01/ADVISORY-02).
+- `requirements mark-complete` over-flips multi-phase requirements — hand-flip and verify
+  `REQUIREMENTS.md` by hand after any call touching a requirement spanning more than one phase.
 
-- Operator-supplied template directories are a new SSTI/RCE trust boundary, not a repeat of the
-  hardened scan-data-XSS class — `SandboxedEnvironment` plus a dedicated SSTI payload test is a
-  go/no-go gate inside Phase 200, not a follow-up.
+- **Never bump a `last_verified` date without actually re-verifying against the `source_url`.** The
+  date is an attestation; bumping it to clear a red gate fabricates that attestation. A recorded
+  deferral is honest, a bumped date is not. Load-bearing for Phase 203 specifically.
 
-- Any filesystem-path-shaped branding/template field must be routed through a named,
-  dashboard-exclusion guard (the `assessment.logo_path` lesson, `schemas.py:991`) — not tribal
-  knowledge.
+- **A hand-derived list of sites is not a safeguard** — only a scan that regenerates its occurrence
+  set from source at run time is. Fifth naming of this lesson; the direct rationale for COV-01/02.
+
+- **An honest GAP beats a fabricated PASS, every time.** A corpus reading 100% PASS would be worth
+  nothing. A test whose title merely resembles a case is not coverage (the `sensors-loading.test.tsx`
+  vs `UAT-7-34` rejection standard).
+
+- `docs/UAT-SERIES.md` stays 100% dispositioned — `tests/test_uat_zero_undispositioned_gate.py`
+  rides the `Linux Full Suite` job and cannot be bypassed.
 
 - Any `src/dashboard/*.tsx` change needs `npm run build` + `npm run lint` in `src/dashboard/`
   before the change is considered complete (FastAPI serves pre-built statics).
@@ -148,269 +163,169 @@ schedule slack.
 - Per-phase docs/UAT-SERIES.md/Obsidian close-out tasks are mandatory (CLAUDE.md's Per-Phase
   Documentation Checklist) — every phase below carries them.
 
-- Sequencing commitment recorded in HORIZON's rationale log: v5.24 = UAT Coverage Drain
-  (`docs/uat-coverage-gaps.md`, 57+ GAPs) — not folded into this milestone.
-
 ### Phases
 
-- [x] **Phase 199: Wave A Correctness Drain** (completed 2026-09-11) - Fractional scores survive the trend/merge paths
-  end to end, and a combined connectors+advanced overlay CI regression test closes the v5.22
-  tech-debt item, before score-lift math builds on the same scoring paths.
+- [ ] **Phase 203: Catalog Freshness Drain** - Every date-gated staleness catalog is green against
+  genuinely re-read sources, so the coverage work runs on a green baseline.
 
-- [x] **Phase 200: Report Branding & Templates** (completed 2026-09-11) - Operator can brand reports, override templates
-  through a sandboxed environment, and save reusable report profiles; a written go/no-go resolves
-  999.105 Tier 2's feasibility.
+- [ ] **Phase 204: Worklist Truth & Derivation** - The gap worklist becomes a derived artifact
+  covering every series, behind a written verdict on which source of truth it reads and a gate that
+  keeps it from falling behind again.
 
-- [x] **Phase 201: Score-Lift Roadmap Re-frame** (completed 2026-09-12) - Every remediation roadmap
-  item and its aggregate projection carry a real, non-additive, firewalled score-lift number from one
-  unified categorization builder, rendered consistently across all four surfaces. All 8 plans
-  executed; verification `passed` 5/5 (201-VERIFICATION.md), LIFT-01..LIFT-05 all Complete, BACK-51
-  closed by recorded decision. Post-execution: code review 0 critical / 2 warning (WR-01 dead
-  double-rescore in build_exec_markdown fixed, WR-02 accepted-advisory) + 2 info accepted-advisory;
-  UI review 20/24 with all 4 warnings fixed (UI-SPEC fractional formatting, required score types,
-  real flex badge row, off-grid margin removed). One genuine in-phase regression found and fixed
-  after the last plan: 201-05's surface tests hit the TRIAGE-149 Playwright order-pollution class
-  and are now patched at the writer seam (d1f1351f) — it had been misfiled as pre-existing. Full
-  suite 4960 passed / 1 failed, that one being an unrelated 91-day HARDWARE_MATRIX staleness trip,
-  operator-deferred with a record. 4 deferred items recorded, incl. `int(delta)` lift truncation.
+- [ ] **Phase 205: Guard Integrity** - The citation and CI-execution guards stop making real
+  coverage uncitable, before any tests are written against them.
 
-- [x] **Phase 202: Finding Storyline Drawer** (completed 2026-09-12) - Operator can open a per-finding
-  narrative drawer on the dashboard findings table, showing the finding's story and its score-lift
-  attribution. 8/8 plans; verification `human_needed` → **operator-approved** after a live LAN walkthrough
-  (4/4 must-haves). STORY-01/STORY-02 Complete.
-  **Criteria 2 and 3 were satisfied under operator-confirmed reframings, not their literal wording** —
-  criterion 3's per-finding number is not honestly implementable (`score_lift` is keyed by remediation
-  THEME covering N findings), so D-01 reframes it as "+N pts when all M findings in this theme are
-  resolved", D-08 prefers a specific theme over the `high-impact-findings` catch-all, and D-09 renders the
-  catch-all when it is a finding's only theme. Criterion 2's narrative is *usually absent* (catalogs are
-  keyed by crypto-algorithm keyword), accepted as consistency with the report rather than a failure (D-07).
-  ROADMAP's criterion-3 wording is now stale relative to what shipped — flagged for a doc correction.
-  Post-execution: code review 0 critical / 2 warning (both fixed — a row click bypassing the A6 disabled
-  trigger, and a cross-surface equality test that passed by construction) / 1 info accepted-advisory;
-  UI review **23/24** with 5 pillars at 4/4 and its 2 actionable warnings fixed. The a11y capture found a
-  REAL serious WCAG 2.1.1/2.1.3 violation on the drawer's own scroll region — fixed with `tabIndex={0}`
-  rather than ledgered, since the app-wide justification covering the two existing ledger entries does not
-  apply to a single-site container. Failing-node SET: 1 (the operator-deferred HARDWARE_MATRIX staleness
-  trip). 4 new todos filed, incl. a documented-not-closed `scan_run_id` divergence between the drawer and
-  the roadmap surface, and an A1 copy nuance the operator spotted on live data.
+- [ ] **Phase 206: Dashboard UI Coverage Drain** - The 28 jsdom-tractable series-7 cases get real
+  vitest tests asserting what each case actually describes.
+
+- [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
+  either real browser coverage or a reasoned permanent disposition.
+
+- [ ] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
+  gaps are covered and the two carried doc corrections land.
 
 ## Phase Details
 
-### Phase 199: Wave A Correctness Drain
-
-**Goal**: Fractional scores survive the trend/merge paths end to end, and a combined
-connectors+advanced overlay CI regression test exists — closing two carried correctness defects
-before new score-lift math is built on the same scoring-adjacent paths.
-**Depends on**: Nothing (gating — first phase, per PROJECT.md's sequencing decision)
-**Requirements**: TRIAGE-10, TRIAGE-11
+### Phase 203: Catalog Freshness Drain
+**Goal**: Every date-gated staleness catalog is green and attested against its real sources, so the
+rest of the milestone runs against a green baseline rather than a standing red gate.
+**Depends on**: Nothing (first phase)
+**Requirements**: STALE-01, STALE-02
 **Success Criteria** (what must be TRUE):
+  1. `tests/test_hardware_staleness.py` passes on `main`, and `HARDWARE_MATRIX`'s `last_verified`
+     reflects only what was really re-read — all 8 per-vendor `source_url`s (F5, Cisco, Palo Alto,
+     Fortinet, Juniper, HPE, Intel, Thales) attempted, plus the top-level NSA CNSA 2.0 page.
+  2. The commit message names, per vendor, every source that could not be reached — a reader can
+     tell "verified" from "unreachable" without opening the diff. NSA / `media.defense.gov` 403s to
+     non-browser agents are an expected obstacle to be named, never a silent skip.
+  3. `quirk/scanner/hw_cve.py` is re-verified in the same pass, so its 30-day cadence does not trip
+     mid-milestone (its next trip moves past the milestone rather than landing ≈2026-10-02).
+  4. The set of date-gated catalogs checked is enumerated from source at run time
+     (`grep -rln "STALENESS_THRESHOLD_DAYS" quirk/`), not read off CLAUDE.md's hand-maintained list;
+     any catalog that list omits is reported as a finding.
+  5. Every gate in `.github/workflows/python-staleness.yml` is green, or any remaining red is a
+     dated, reasoned deferral recorded in STATE.md — never cleared by bumping a date.
+**Plans**: TBD
 
-  1. A scan producing a fractional readiness score (e.g. 71.4) round-trips unchanged through
-     `quirk/intelligence/trends.py` and the sensor `merge.py` path — no int-coercion truncation —
-     proven by a regression test that fails against the pre-fix code.
-
-  2. `ScanSession.score`, `TrendSessionPoint.score`, and `MergeLatestData.per_segment_scores`
-     preserve float precision through persistence and read paths, closing the surface named in
-     `188-05-SUMMARY.md`.
-
-  3. A CI test exercises the connectors overlay and the advanced-scan-fields overlay **combined**
-     on one scan submission, asserting both the job YAML and the effective-config preview reflect
-     both overlays simultaneously — closing the v5.22 milestone-audit tech-debt item.
-
-  4. `docs/UAT-SERIES.md` gains a Series 199 entry and the touched files' Obsidian counterparts
-     are re-synced.
-
-**Plans**: 5 plans (4 waves)
-
-Plans:
-**Wave 1**
-
-- [x] 199-01-PLAN.md — TRIAGE-10 failing-first regression suite (4 surfaces × fractional/null) + RED evidence
-- [x] 199-03-PLAN.md — TRIAGE-11 combined connectors+advanced overlay regression test (job YAML + effective-config)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 199-02-PLAN.md — Widen score transport types; remove the 6 int-truncation / fabricated-0 sites; update legacy int-assertions
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 199-04-PLAN.md — TS type mirrors + SubscoreSlot null per-segment gauge + dashboard rebuild
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 199-05-PLAN.md — Docs note, UAT Series 199, Obsidian vault sync + phase note, hand-flipped checkboxes
-
-### Phase 200: Report Branding & Templates
-
-**Goal**: Operator can customize the consulting report's branding and override its templates from
-a local, sandboxed template directory, save the combination as a reusable named profile, and the
-milestone has a written, evidence-based go/no-go for 999.105 Tier 2 before any of that work is
-scoped.
-**Depends on**: Phase 199
-**Requirements**: RPT-01, RPT-02, RPT-03, RPT-04, RPT-05
+### Phase 204: Worklist Truth & Derivation
+**Goal**: The gap worklist stops being a hand-maintained snapshot of series 1–163 and becomes a
+derived artifact over the whole corpus, with a written verdict on what it reads.
+**Depends on**: Phase 203
+**Requirements**: COV-03, COV-01, COV-02, COV-09
 **Success Criteria** (what must be TRUE):
+  1. A written verdict names which source is authoritative — `docs/uat-disposition-ledger.jsonl`'s
+     `outcome` field (57 for series 1–163) or the document's own `GAP — no substitute coverage`
+     annotations (45 for the same series) — explains the divergence with per-case evidence, and
+     states which count the drain is measured against. COV-03 lands before COV-01/COV-02: the
+     generator cannot be written until it is decided what it reads.
+  2. `docs/uat-coverage-gaps.md` is regenerated by a committed generator that reads the live corpus
+     at run time and covers every series including 164+; re-running the generator on a clean tree
+     reproduces the committed file byte-for-byte.
+  3. A standing gate fails when a GAP-dispositioned case exists that the worklist does not name, and
+     it has been demonstrated RED against a real un-absorbed case before being accepted as green —
+     never satisfied by narrowing its own enumeration.
+  4. `UAT-92-01`, `UAT-47-04`, and `UAT-5-18` read as recorded OBSOLETE carrying their reason, and
+     the regenerated worklist no longer counts them among open GAPs — a recorded retirement, never a
+     quiet deletion.
+**Plans**: TBD
 
-  1. Operator can set client branding (logo, client/engagement identity, cover details) via
-     config, and it renders consistently across every report surface that supports it — CLI
-     carries the identity fields it can honestly render as text, HTML/PDF and DOCX render the full
-     branding set.
+### Phase 205: Guard Integrity
+**Goal**: The two guards whose own limitations make real coverage uncitable are fixed, before the
+28-test block is written against them.
+**Depends on**: Phase 203 (green baseline); independent of Phase 204's generator work
+**Requirements**: GUARD-01, GUARD-02
+**Success Criteria** (what must be TRUE):
+  1. A disposition citing natural `Class::method` pytest node syntax resolves, and at least one
+     existing `ClassName*method_name` glob workaround is converted to the real node reference.
+  2. `NODE_REF_RE`'s new behaviour is pinned by a test that fails against the old single-`::`
+     pattern, so the workaround class cannot silently return.
+  3. The vitest `-m slow` execution leg actually **executes** in CI — a CI run log shows vitest
+     substitute tests running, not skipping on `VITEST_TOOLCHAIN_AVAILABLE`.
+  4. A deliberately broken vitest substitute citation fails that CI job, proving execution rather
+     than existence-checking closed the asymmetry.
+**Plans**: TBD
 
-  2. Operator can point `report.template_dir` at a local directory to override HTML/PDF report
-     templates; templates render through a `SandboxedEnvironment` with the existing autoescape
-     discipline preserved on the same Environment instance, and a dedicated SSTI payload test
-     proves containment (not just a green `test_report_injection_hardening.py`).
-
-  3. A path-traversal-shaped branding or template path field is rejected with a clear error, and
-     all such fields are excluded from any dashboard-exposed config surface by one named, tested
-     guard function — not by absence alone.
-
-  4. Operator can save a named report profile bundling branding + template settings and select it
-     by name on a later engagement, without re-entering the same values.
-
-  5. A written go/no-go decision document exists for 999.105 Tier 2 (section-composition
-     profiles), explicitly addressing how the zero-CRITICAL congruence guard
-     (`writer.py:307,:927`) and the presence-based parity test suite would need to be redesigned.
-
-**Plans**: 7 plans (4 waves)
-
-Plans:
-**Wave 1**
-
-- [x] 200-01-PLAN.md — SandboxedEnvironment swap + ChoiceLoader template override + dedicated SSTI payload gate (RPT-02)
-- [x] 200-02-PLAN.md — `report:` config section, CONFIG-003/004, named path guard, runtime-enumeration dashboard-exclusion sweep (RPT-01/03/04)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 200-03-PLAN.md — Branding on HTML/PDF + DOCX (cover logo, identity block, header/footer) + cross-surface presence tests (RPT-01)
-- [x] 200-04-PLAN.md — Identity text on the executive/scorecard markdown and the Rich console summary (RPT-01)
-- [x] 200-05-PLAN.md — Report profiles: storage module, `quirk report profile save|list`, `--report-profile`, explicit-config-wins merge (RPT-04)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 200-06-PLAN.md — 999.105 Tier 2 go/no-go decision doc + tracked HORIZON.md row (RPT-05)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 200-07-PLAN.md — Docs (configuration/operators/getting-started/report-interpretation), UAT Series 200, Obsidian sync + phase note, validation close + hand-flipped checkboxes
-
+### Phase 206: Dashboard UI Coverage Drain
+**Goal**: The 28 jsdom-tractable series-7 dashboard cases carry real vitest coverage of the
+behaviour each case actually describes.
+**Depends on**: Phase 205 (citations resolve; vitest executes in CI), Phase 204 (worklist measures
+the drain)
+**Requirements**: COV-04
+**Success Criteria** (what must be TRUE):
+  1. Each of the 28 cases has a vitest test asserting that case's own subject, and its disposition
+     cites that node — not a same-pattern/wrong-subject neighbour. Phase 169-06 spent this dialect
+     against all 31 and converted zero, so every conversion here is a newly written test.
+  2. Each new test has been shown to fail when the behaviour it claims to cover is broken, rather
+     than assumed to be meaningful because it is green.
+  3. Phase 204's regenerated worklist shows the jsdom-tractable series-7 GAP count at zero, derived
+     from the corpus rather than asserted in prose.
+  4. Any case that resists honest conversion is re-dispositioned with its reason instead of covered
+     by an approximate test.
+**Plans**: TBD (largest single block in the milestone — expect several plans, not one)
 **UI hint**: yes
 
-### Phase 201: Score-Lift Roadmap Re-frame
-
-**Goal**: The remediation roadmap frames every item, and its aggregate projection, by real
-quantified score movement rather than generic severity ranking — computed by the real scoring
-function, never additive, never crossing into the live score — with one unified categorization
-system feeding every surface.
-**Depends on**: Phase 199, Phase 200
-**Requirements**: LIFT-01, LIFT-02, LIFT-03, LIFT-04, LIFT-05
+### Phase 207: Browser-Only Coverage Verdict
+**Goal**: The 3 structurally jsdom-impossible cases stop being ambiguous — either real browser
+coverage exists, or a reasoned permanent disposition says why it never can.
+**Depends on**: Phase 206
+**Requirements**: COV-05
 **Success Criteria** (what must be TRUE):
-
-  1. Every remediation roadmap item displays a score-lift number computed by a real, read-only
-     second call to `compute_readiness_score()` over synthetic evidence — never a heuristic
-     mapping table.
-
-  2. The aggregate projected score shown alongside the roadmap is its own independent rescore
-     call — never a sum of per-item lifts — correctly reflecting the 25-point subscore clamp's
-     non-additive behavior.
-
-  3. A new forward-projection firewall test (ADVISORY-02-style, mirroring
-     `test_remediation_advisory_guard.py`) proves no projected/simulated score value can persist
-     into or feed any real score surface.
-
-  4. CLI, HTML, DOCX, and dashboard roadmap surfaces all agree on the same NOW/NEXT/LATER
-     categorization for a given scan, sourced from one categorization function — the
-     `build_phased_roadmap()`/`categorize_waves()` duality (BACK-51) is resolved by an explicit,
-     recorded decision, not an accident of which function a later phase happens to touch.
-
-  5. Score-lift renders on the dashboard roadmap surface (with its own `routes/scan.py` wiring),
-     consistent with the report-surface numbers for the same scan.
-
-**Plans**: 8 plans (5 waves)
+  1. A written toolchain verdict decides Playwright-E2E versus permanent GAP for `UAT-7-01` (SPA
+     mounts without a blank screen), `UAT-7-17` (click Export PDF, assert a valid downloaded PDF),
+     and `UAT-7-32` (zero console errors across every route), naming each option's cost and CI
+     implications.
+  2. Where the verdict is Playwright, the case has an E2E test that runs in CI and its disposition
+     cites that node; where it is not, the case carries a recorded permanent disposition naming why
+     no substitute can exist. A fabricated PASS is never acceptable.
+  3. Phase 204's worklist and gate treat a recorded permanent disposition distinctly from an open
+     GAP, so these cases stop reappearing as drainable work every regeneration.
+**Plans**: TBD
 **UI hint**: yes
 
-Plans:
-**Wave 1**
-
-- [x] 201-01-PLAN.md — Wave 0: ADVISORY-02 forward-projection firewall (RED-verified) + LIFT-01/02 unit spec, failing-first
-- [x] 201-03-PLAN.md — BACK-51: delete categorize_waves, re-derive console Migration Waves from roadmap items, update 8 patching test files, pin one-categorization-source
-
-**Wave 2**
-
-- [x] 201-02-PLAN.md — quirk/intelligence/score_lift.py: 9 slug-keyed evidence deltas + independent aggregate rescore
-
-**Wave 3**
-
-- [x] 201-04-PLAN.md — dashboard API wiring: RoadmapNode.score_lift, top-level projected_score, slug join, degrade-to-absence
-- [x] 201-05-PLAN.md — content model fields + writer/executive lift attachment + CLI markdown and scorecard rendering
-
-**Wave 4**
-
-- [x] 201-06-PLAN.md — roadmap.tsx lift badge + Projected Score card, print.tsx, vitest, rebuilt statics, operator walkthrough
-- [x] 201-07-PLAN.md — HTML + DOCX rendering and four-surface numeric-equality / non-additivity check
-
-**Wave 5**
-
-- [x] 201-08-PLAN.md — docs, UAT Series 201, HORIZON BACK-51 closure, Obsidian sync, phase note, validation close + checkbox flips
-
-### Phase 202: Finding Storyline Drawer
-
-**Goal**: Operator can open a per-finding storyline drawer from the dashboard findings table that
-narrates the finding's quantum-risk story and its score-lift attribution, reusing the existing
-narrative catalogs rather than forking a new one.
-**Depends on**: Phase 201 (consumes LIFT-01's per-item score-lift number)
-**Requirements**: STORY-01, STORY-02
+### Phase 208: Security, Report Coverage & Doc Debt
+**Goal**: The security- and report-relevant non-UI gaps are genuinely exercised, and the two doc
+corrections carried from the v5.23 boundary review land.
+**Depends on**: Phase 205 (citation syntax), Phase 204 (worklist measures the drain)
+**Requirements**: COV-06, COV-07, COV-08, DOC-01, DOC-02
 **Success Criteria** (what must be TRUE):
-
-  1. Operator can open a per-finding storyline drawer directly from the dashboard findings table
-     without navigating away from the findings view.
-
-  2. The drawer's narrative is sourced from the existing Phase-99 `ALGO_IMPACT_MAP` /
-     `REMEDIATION_CATALOG` catalogs — no forked fourth narrative generator, keeping the deliverable
-     and the live dashboard telling the same story for the same finding.
-
-  3. The drawer displays the finding's score-lift attribution, consuming Phase 201's LIFT-01
-     per-item number.
-
-  4. The drawer's open/close/focus interaction passes a new a11y baseline capture consistent with
-     the project's existing WCAG AA discipline.
-
-**Plans:** 8 plans in 5 waves
-
-Plans:
-
-**Wave 1**
-
-- [x] 202-01-PLAN.md — dashboard->CLI finding-title bridge + run-time source-scan gate + constituency reachability census
-- [x] 202-02-PLAN.md — FindingStoryline TS contract, FindingItem.id nullability fix, useFindingStoryline hook
-
-**Wave 2**
-
-- [x] 202-03-PLAN.md — GET /api/findings/{id}/storyline: schema, auth-gated route, catalog narrative, (id,title) disambiguation
-- [x] 202-04-PLAN.md — StorylineSections component: all 8 states, Invariants 1-3, division trip-wire
-
-**Wave 3**
-
-- [x] 202-05-PLAN.md — theme attribution join: fingerprint lookup, D-08 tie-break, item_progress, shared lift context
-- [x] 202-06-PLAN.md — findings.tsx: Storyline trigger column, Sheet description/width/scroll, focus contract, rebuilt statics
-
-**Wave 4**
-
-- [x] 202-07-PLAN.md — a11y harness opened-drawer capture: fixture handler, HOOK_TARGETS, interaction step, baselines
-
-**Wave 5**
-
-- [x] 202-08-PLAN.md — docs, UAT Series 202, Obsidian sync, phase note, backlog todos, validation close
-
-**UI hint**: yes
+  1. A test constructs a `JiraChannel` with an internal/RFC1918 `jira_url` and asserts
+     `validate_external_url` raises — and `UAT-104-04`'s own `-k ssrf` filter now collects it, where
+     today it matches 0 of 8.
+  2. The six-row score-decomposition table is asserted at **render-output** level in the HTML report
+     and in the Playwright PDF, cited by `UAT-88-02` and `UAT-88-03` respectively — the PDF leg has
+     no pytest coverage of this table at all today.
+  3. The hygiene subscore (plaintext ratio) and identity-trust subscore (mTLS bonus) are each
+     asserted **in isolation**, holding other evidence fixed, rather than inferred from movement in
+     the overall score (`UAT-8-04` / `UAT-8-05`).
+  4. Phase 202's criterion-3 wording reads at remediation-**theme** level, matching what shipped
+     (v5.23 D-01/D-08/D-09), in `.planning/milestones/v5.23-ROADMAP.md` — where that text now lives
+     after archival — and in the Obsidian vault copy.
+  5. `docs/report-interpretation.md` states the 999.112 precondition: LIFT-05's four-surface
+     numeric-equality guarantee holds only for **unmodified** report templates, because RPT-02's
+     override is a full-file override that can drop the roadmap section with nothing validating its
+     presence. Synced to `20_Dev-Work/QUIRK/Guides/Report-Interpretation.md`.
+**Plans**: TBD
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 199. Wave A Correctness Drain | 5/5 | Complete | 2026-09-11 |
-| 200. Report Branding & Templates | 7/7 | Complete | 2026-09-11 |
-| 201. Score-Lift Roadmap Re-frame | 8/8 | Complete | 2026-09-12 |
-| 202. Finding Storyline Drawer | 8/8 | Complete | 2026-09-12 |
+| 203. Catalog Freshness Drain | 0/? | Not started | - |
+| 204. Worklist Truth & Derivation | 0/? | Not started | - |
+| 205. Guard Integrity | 0/? | Not started | - |
+| 206. Dashboard UI Coverage Drain | 0/? | Not started | - |
+| 207. Browser-Only Coverage Verdict | 0/? | Not started | - |
+| 208. Security, Report Coverage & Doc Debt | 0/? | Not started | - |
+
+## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12
+
+Archived at `.planning/milestones/v5.23-ROADMAP.md`. Phases 199–202, 28 plans; 14/14 requirements,
+4/4 phases Nyquist-compliant. Audit `gaps_found` — 5/6 integration seams, with **one blocker
+accepted by the operator at close** rather than downgraded (999.111 — the roadmap surface and the
+storyline drawer disagree on score-lift where endpoints do not share a `scan_run_id`; the failure is
+*missing* rather than *wrong* information, pinned by a characterization test). 999.112 filed P3 and
+carried into v5.24 as DOC-02. Merged to `main` 2026-09-13 via PRs #12/#13. No v5.23 git tag by
+design (release.yml fires on `v[0-9]*`).
 
 ## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
 

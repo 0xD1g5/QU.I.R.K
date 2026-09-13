@@ -181,26 +181,26 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STALE-01 | TBD | Pending |
-| STALE-02 | TBD | Pending |
-| COV-01 | TBD | Pending |
-| COV-02 | TBD | Pending |
-| COV-03 | TBD | Pending |
-| COV-04 | TBD | Pending |
-| COV-05 | TBD | Pending |
-| COV-06 | TBD | Pending |
-| COV-07 | TBD | Pending |
-| COV-08 | TBD | Pending |
-| COV-09 | TBD | Pending |
-| GUARD-01 | TBD | Pending |
-| GUARD-02 | TBD | Pending |
-| DOC-01 | TBD | Pending |
-| DOC-02 | TBD | Pending |
+| STALE-01 | Phase 203 | Pending |
+| STALE-02 | Phase 203 | Pending |
+| COV-01 | Phase 204 | Pending |
+| COV-02 | Phase 204 | Pending |
+| COV-03 | Phase 204 | Pending |
+| COV-04 | Phase 206 | Pending |
+| COV-05 | Phase 207 | Pending |
+| COV-06 | Phase 208 | Pending |
+| COV-07 | Phase 208 | Pending |
+| COV-08 | Phase 208 | Pending |
+| COV-09 | Phase 204 | Pending |
+| GUARD-01 | Phase 205 | Pending |
+| GUARD-02 | Phase 205 | Pending |
+| DOC-01 | Phase 208 | Pending |
+| DOC-02 | Phase 208 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15 ✓
+- Unmapped: 0 ✓
 
 ## Standing Constraints Carried Into This Milestone
 
