@@ -162,6 +162,14 @@ def generate(series_path: Optional[Path] = None) -> str:
 
 
 def main(argv=None) -> int:
+    # Windows consoles default to the cp1252 codec, which cannot encode every Unicode glyph this
+    # generator emits (GAP/OBSOLETE annotations carry em-dashes). Same guard as run_scan.py:12-22
+    # and CLAUDE.md's "Windows frozen-build gotchas" note.
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
     sys.stdout.write(generate())
     return 0
 
