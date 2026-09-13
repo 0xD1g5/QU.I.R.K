@@ -313,20 +313,73 @@ Plans:
 **Depends on**: Phase 203 (green baseline); independent of Phase 204's generator work
 **Requirements**: GUARD-01, GUARD-02
 **Success Criteria** (what must be TRUE):
-  1. A disposition citing natural `Class::method` pytest node syntax resolves, and at least one
-     existing `ClassName*method_name` glob workaround is converted to the real node reference.
-  2. `NODE_REF_RE`'s new behaviour is pinned by a test that fails against the old single-`::`
-     pattern, so the workaround class cannot silently return.
-  3. The vitest `-m slow` execution leg actually **executes** in CI — a CI run log shows vitest
-     substitute tests running, not skipping on `VITEST_TOOLCHAIN_AVAILABLE`.
+
+> **Three of these four criteria stated a premise that turned out to be FALSE**, each falsified by
+> *executing* the thing it described rather than by reading the code. The original wording is
+> retained verbatim below every correction — this is a recorded correction, never a quiet re-scope,
+> the same shape Phase 204 used for its own criterion 4. Evidence:
+> `.planning/phases/205-guard-integrity/205-CONTEXT.md`'s `<falsification>` block,
+> `205-RED-PROOF.md`, and `205-06-SUMMARY.md`.
+
+  1. **Outcome, corrected from this criterion's original wording.** Original: *"A disposition citing
+     natural `Class::method` pytest node syntax resolves, and at least one existing
+     `ClassName*method_name` glob workaround is converted to the real node reference."* The first
+     clause was **already true before this phase began** — `NODE_REF_RE`'s optional
+     `(?:::[\w*]+)?` segment has always admitted a class-scoped second `::`, proven end-to-end with
+     both forms resolving to the same node (205-CONTEXT `<falsification>`). The `Class*method` globs
+     were a stylistic habit, not a workaround the guard forced. Corrected criterion, and what was
+     delivered: **all 8 `Class*method` glob workarounds are converted to real `Class::method`
+     references and 0 remain**, verified against a fresh `pytest --collect-only` and re-counted with
+     a grep independent of the guard's own extractor. The 7 trailing-wildcard globs that remain are
+     legitimate family wildcards — 6 select a group of sibling functions sharing a name prefix, and
+     one (`IdentityEvidenceCounterTests*`) deliberately selects a whole class's 5 tests. None is a
+     `Class*method` workaround, and all 7 resolve. The count was 7 in planning; the 8th
+     was found only because 205-02b stopped enumerating with the audited component's own code
+     (205-01, 205-02, 205-02b).
+  2. **Outcome, corrected from this criterion's original wording.** Original: *"`NODE_REF_RE`'s new
+     behaviour is pinned by a test that fails against the old single-`::` pattern, so the workaround
+     class cannot silently return."* **Unbuildable as written — there is no old single-`::`
+     pattern**, so there is nothing for such a test to fail against. Corrected criterion, and what
+     was delivered: the two-`::` capability is pinned by a regression test against future
+     *narrowing* (`test_node_ref_re_pins_two_colon_class_scoped_capability`), and the **real** defect
+     recon exposed is closed — a parametrized citation was truncated at `[` and then reported
+     unresolvable while **naming a phantom string the document never contained**. Bracketed
+     parametrized IDs are now legal, matching what `pytest --collect-only` actually prints (205-01).
+  3. **Outcome, corrected from this criterion's original wording.** Original: *"The vitest `-m slow`
+     execution leg actually **executes** in CI — a CI run log shows vitest substitute tests running,
+     not skipping on `VITEST_TOOLCHAIN_AVAILABLE`."* **Not satisfiable as literally worded, and its
+     unstated premise was also false.** Two findings, in order: (a) `pytest -q` does not print skip
+     reasons, so no ordinary run's log can distinguish a `VITEST_TOOLCHAIN_AVAILABLE` skip from any
+     other skip (205-RED-PROOF); (b) the leg was believed "vacuous today — zero vitest citations
+     exist", and **that measurement was taken with the guard's own extractor.** The document has in
+     fact carried **4 real vitest citations since Series 193** (`UAT-193-01/-02/-05/-08`,
+     `ConnectorsPanel.test.tsx`), invisible because extraction was keyed on SKIP-checked **Result**
+     lines only. Corrected criterion, and what was delivered: **the execution leg is genuinely
+     non-vacuous — it now runs 4 real cited vitest tests** — and criterion 4's red-proof supplies
+     strictly stronger evidence than the log this criterion asked for, since a skipped test cannot
+     shell out to `vitest run` (205-03, 205-04, 205-06).
   4. A deliberately broken vitest substitute citation fails that CI job, proving execution rather
-     than existence-checking closed the asymmetry.
-**Plans**: 5 plans in 3 waves
-  - [ ] 205-01-PLAN.md — GUARD-01: pin two-`::` (D-01) and close the parametrized-bracket truncation defect (D-02) in the checker
-  - [ ] 205-02-PLAN.md — GUARD-01: convert the 7 confirmed globs to real node references (D-03), regenerate the coupled worklist
-  - [ ] 205-03-PLAN.md — GUARD-02: add Node to the Linux Full Suite job (D-04), fix the dangling skip_registry.py citation (D-07)
-  - [ ] 205-04-PLAN.md — GUARD-02: real CI red-proof — execution leg runs and fails on a deliberately broken substitute (D-05/D-06)
-  - [ ] 205-05-PLAN.md — Close-out: correct criteria 1-2 with evidence, flip REQUIREMENTS.md traceability, docs + Obsidian sync
+     than existence-checking closed the asymmetry. **Not falsified — PROVEN.** Evidence:
+     `205-RED-PROOF.md`, CI run
+     https://github.com/0xD1g5/QU.I.R.K/actions/runs/34774528505, job `Linux Full Suite`, whose log
+     shows CI invoking `vitest run` against the cited file and title and detecting the failure;
+     induction reverted byte-identical.
+  5. **Added by 205-06, not in the original criteria.** Every coverage citation in the corpus is
+     guarded, whatever its disposition box or line. The guard checked **74 of 140** claims; 66 were
+     unguarded, including all 4 vitest ones. All 66 were re-derived independently and proved honest,
+     so no coverage was ever falsely claimed — but a rename would not have been caught, and Phase
+     206 writes 28 more citations against this guard. Red-proved: a broken PASS-checked Notes-line
+     citation fails both legs, where the previous SKIP-only iterator saw zero refs and stayed green
+     (205-06).
+**Plans**: 7 plans in 4 waves (205-02b and 205-06 are orchestrator-authored correctives, added
+mid-execution after live probes found real gaps — neither has a PLAN.md)
+  - [x] 205-01-PLAN.md — GUARD-01: pin two-`::` (D-01) and close the parametrized-bracket truncation defect (D-02) in the checker
+  - [x] 205-02-PLAN.md — GUARD-01: convert the 7 confirmed globs to real node references (D-03), regenerate the coupled worklist
+  - [x] 205-02b — corrective: widen citation extraction beyond the `DEFERRED — covered by` prose form (D-08); convert the 8th glob; fix `collected_node_ids` inheriting `-m 'not slow'` (see 205-02b-SUMMARY.md)
+  - [x] 205-03-PLAN.md — GUARD-02: add Node to the Linux Full Suite job (D-04), fix the dangling skip_registry.py citation (D-07)
+  - [x] 205-04-PLAN.md — GUARD-02: real CI red-proof — execution leg runs and fails on a deliberately broken substitute (D-05/D-06)
+  - [x] 205-06 — corrective: guard PASS-checked and Notes-line citations (66 newly guarded, 4 vitest); class-scoped/parametrized-base resolution; fix the `-t`-filtered-sibling defect in the execution leg (see 205-06-SUMMARY.md)
+  - [x] 205-05-PLAN.md — Close-out: correct criteria 1-3 with evidence, flip REQUIREMENTS.md traceability, docs + Obsidian sync
 
 ### Phase 206: Dashboard UI Coverage Drain
 **Goal**: The 28 jsdom-tractable series-7 dashboard cases carry real vitest coverage of the

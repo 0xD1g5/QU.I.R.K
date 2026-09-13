@@ -1,7 +1,18 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-13 (Phase 204 Plan 05 — Series 204 added: 4 worklist-truth-derivation
+**Last Updated:** 2026-09-13 (Phase 205 Plan 05 — Series 205 added: 5 guard-integrity cases covering
+GUARD-01 (two-`::` class-scoped syntax pinned against narrowing; the parametrized-bracket
+truncation defect that reported a phantom string closed) and GUARD-02 (the vitest substitute leg
+proven to EXECUTE in CI by a deliberate RED, not merely existence-checked). Read Series 205's
+disposition as a correction record: **three of Phase 205's four original ROADMAP criteria stated
+premises that were FALSE**, each falsified by running the thing it described. 205-06 additionally
+widened citation checking from SKIP-checked Result lines to every citation — the guard had been
+verifying 74 of 140 coverage claims, and all 4 of the corpus's real vitest citations
+(UAT-193-01/-02/-05/-08) sat in the blind region, which is why the execution leg wrongly read
+"vacuous". All 66 newly guarded citations were re-derived independently and proved honest. Also
+corrected UAT-110-04, whose pass-criteria command named a node that never existed.
+Previously (Phase 204 Plan 05 — Series 204 added): 4 worklist-truth-derivation
 cases covering COV-01 (byte-reproducible generated gap worklist), COV-02 (standing reconciliation
 gate demonstrated RED against three probe shapes before being trusted green), COV-03 (the written
 reconciliation verdict, arithmetic closure asserted programmatically), and COV-09 (OBSOLETE as a
@@ -28386,3 +28397,158 @@ defect this phase produced about itself (after UAT-204-01's crashing pass-criter
 UAT-204-03's own stale Notes count), and the cheapest possible demonstration of why COV-01/COV-02
 had to make the worklist derive itself instead of relying on prose discipline: prose written by the
 very agents enforcing the rule still drifted, three times, inside one phase.
+
+---
+
+## Series 205: Guard Integrity (Phase 205 — v5.24)
+
+Covers GUARD-01 (the citation checker resolves natural `Class::method` pytest node syntax and no
+longer forces `ClassName*method_name` glob workarounds) and GUARD-02 (the vitest substitute leg
+*executes* in CI rather than being existence-checked only).
+
+**Read the disposition of this series as a correction record, not a clean sweep.** Three of Phase
+205's four original ROADMAP criteria stated premises that were FALSE, each falsified by running the
+thing it described rather than reading it. The corrected criteria live in `.planning/ROADMAP.md`;
+`205-CONTEXT.md`'s `<falsification>` block, `205-RED-PROOF.md` and `205-06-SUMMARY.md` hold the
+evidence. The cases below test what was actually built.
+
+### UAT-205-01: Two-`::` Class-Scoped Node Syntax Is Pinned Against Future Narrowing
+
+**ID:** UAT-205-01
+**Title:** `NODE_REF_RE` resolves `tests/foo.py::Class::method` and a regression test fails if that
+capability is ever narrowed away
+**Maps to:** GUARD-01
+
+**What to test:** that the class-scoped second `::` segment keeps working. This capability was
+never missing — the ROADMAP assumed it was, and an end-to-end probe before planning showed both the
+glob form and the natural form resolving to the same node. The risk is therefore *regression*, not
+absence, so the test pins the behaviour rather than introducing it.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_node_ref_re_pins_two_colon_class_scoped_capability`
+
+**Pass Criteria:** the cited node passes. Zero `ClassName*method_name` glob workarounds remain in
+`docs/UAT-SERIES.md` (all 8 converted); the 7 remaining trailing-wildcard globs are deliberate
+family wildcards and all resolve.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_node_ref_re_pins_two_colon_class_scoped_capability`.
+
+---
+
+### UAT-205-02: A Parametrized Citation Is Not Truncated Into a Phantom String
+
+**ID:** UAT-205-02
+**Title:** A citation carrying a literal `[param]` bracket resolves by exact membership, and a wrong
+parameter is still rejected
+**Maps to:** GUARD-01
+
+**What to test:** the real defect recon exposed. `NODE_REF_RE`'s name class excluded `[`, so
+`tests/foo.py::test_bar[y]` was truncated to `tests/foo.py::test_bar`, that truncated form
+`fullmatch`ed (so the skip guard never fired), and the checker then reported it unresolvable **while
+naming a phantom string the document never contained** — a misleading diagnostic, not a silent skip.
+The bracketed form is what `pytest --collect-only` prints, so it is now legal.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_negative_control_bracket_citation_resolves_exactly`
+and `::test_negative_control_bracket_citation_wrong_param_still_rejected` and
+`::test_negative_control_live_glob_citations_unaffected_by_bracket_widening`
+
+**Pass Criteria:** all three cited nodes pass — the correct bracketed citation resolves, a wrong
+parameter is still rejected, and admitting brackets did not loosen glob handling.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_negative_control_bracket_citation_resolves_exactly` and `tests/test_uat_disposition_integrity.py::test_negative_control_bracket_citation_wrong_param_still_rejected`.
+
+---
+
+### UAT-205-03: The Vitest Substitute Leg Executes In CI, Proven By A Deliberate RED
+
+**ID:** UAT-205-03
+**Title:** A vitest substitute citation that exists, is cited verbatim, and fails turns the
+`Linux Full Suite` CI job red — proving execution, not existence-checking
+**Maps to:** GUARD-02
+
+**What to test:** the asymmetry GUARD-02 closes. An existence-only check rejects a missing file or a
+missing title without running anything, so breaking a filename would have proven nothing. The
+induction had to be a vitest test that exists, is cited verbatim, **and fails** — a combination only
+an executing leg can detect. `Linux Full Suite` (not the path-filtered `dashboard-quality.yml`) is
+the home, because a PR touching only `docs/UAT-SERIES.md` — exactly when a citation breaks — would
+never trigger a `src/dashboard/**` filter.
+
+**Steps:** see `205-RED-PROOF.md`. CI run
+https://github.com/0xD1g5/QU.I.R.K/actions/runs/34774528505, job `Linux Full Suite`, conclusion
+failure; the log shows `vitest run <file> -t <title>` being invoked and the failure detected.
+Induction commit `baf863ca`, reverted byte-identical. Standing node:
+`tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass`
+
+**Pass Criteria:** the CI log shows vitest being invoked against the cited file and title (a test
+skipped on `VITEST_TOOLCHAIN_AVAILABLE` cannot shell out to vitest); `docs/UAT-SERIES.md` is
+byte-identical after revert; the standing node passes on a clean tree.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass`, corroborated by `205-RED-PROOF.md`'s recorded CI run and byte-identical revert.
+
+---
+
+### UAT-205-04: Every Coverage Citation Is Guarded, Whatever Its Disposition Box Or Line
+
+**ID:** UAT-205-04
+**Title:** A PASS-checked case citing a substitute on its Result line or Notes line is
+existence- and execution-checked, exactly as a SKIP-checked one is
+**Maps to:** GUARD-01, GUARD-02
+
+**What to test:** the third blind spot of this defect class found in this phase. Citation extraction
+gated on **both** `[x] SKIP` and the **Result** line, so a citation escaping either restriction was
+never checked. Measured against the live corpus, independently of the guard: 74 citations on
+SKIP-checked Result lines were checked; 51 on PASS-checked Result lines, 13 on PASS-checked Notes
+lines and 2 on SKIP-checked Notes lines were not — **74 of 140**. All 66 unguarded citations were
+re-derived independently and proved honest, so no coverage was ever falsely claimed; the defect was
+a gate that could not see them. All 4 of the corpus's real vitest citations
+(`UAT-193-01/-02/-05/-08`) were in that blind region, which is why the execution leg's own docstring
+read "vacuous today" — a vacuity measured with the audited component's own extractor.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_pass_checked_notes_line_citation_is_guarded`,
+`::test_pass_checked_result_line_citation_is_guarded`,
+`::test_no_substitute_coverage_exemption_also_applies_on_the_pass_path`, and
+`::test_class_scoped_and_parametrized_base_selectors_resolve`
+
+**Pass Criteria:** all four cited nodes pass. The widened iterator yields 137 citations where the
+SKIP-only one yielded 71; the D-06 incidental-mention exemption still holds on the PASS path (an
+honest annotation naming a node in order to say it does *not* exist is not flagged); class-scoped
+and parametrized-base selectors resolve by leaf-prefix. Red-proved: breaking a PASS-checked
+Notes-line vitest citation fails both legs while the SKIP-only iterator sees zero refs and stays
+green; reverted byte-identical.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_pass_checked_notes_line_citation_is_guarded` and `tests/test_uat_disposition_integrity.py::test_class_scoped_and_parametrized_base_selectors_resolve`.
+
+---
+
+### UAT-205-05: The Execution Leg Scores Cited Tests, Not `-t`-Filtered Siblings
+
+**ID:** UAT-205-05
+**Title:** Citing some tests in a many-test vitest file does not fail the execution leg on the
+siblings the `-t` filter excluded
+**Maps to:** GUARD-02
+
+**What to test:** a real defect in the execution leg that Phase 205's own CI red-proof could not
+expose. vitest reports every test excluded by `-t` as `status: "skipped"`, and `numPendingTests`
+folds those in — so citing 4 titles in the real 19-test `ConnectorsPanel.test.tsx` produced
+`skipped == 15` and tripped the leg's `skipped == 0` assertion on 15 tests nobody cited. 205-04's
+induction put its single failing test in a file **of its own**, so there were no siblings to filter
+and the aggregate happened to be correct. A guard exercised only against a one-test file has not
+been exercised. A *cited* test that is genuinely `.skip`/`.todo` must still be flagged, because a
+skip is never proof of coverage.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_vitest_cited_summary_ignores_filter_excluded_siblings`
+
+**Pass Criteria:** the cited node passes — file-level counts still report the filtered siblings as
+skipped, while the cited-only verdict reports them as irrelevant; a cited `.skip` is still flagged;
+and a cited title absent from the report is surfaced rather than silently ignored.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_cited_summary_ignores_filter_excluded_siblings`.

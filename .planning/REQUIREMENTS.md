@@ -106,15 +106,28 @@ finding this category acts on: no genuine substitute exists today, so the tests 
 Both items are cases where a guard's own limitation is what makes real coverage uncitable — the
 gate, not the coverage, is the defect.
 
-- [ ] **GUARD-01**: `NODE_REF_RE` in `tests/test_uat_disposition_integrity.py` resolves natural
+- [x] **GUARD-01**: `NODE_REF_RE` in `tests/test_uat_disposition_integrity.py` resolves natural
       `Class::method` pytest node syntax (it currently cannot span a second `::`), retiring the
       `ClassName*method_name` glob workaround class-based substitutes were forced to use.
+      **The parenthetical was FALSE and is retained as the record of what was believed**: the
+      optional `(?:::[\w*]+)?` segment always spanned a second `::`, proven end-to-end before
+      planning. Closed on the corrected basis — 8 of 8 glob workarounds converted (0 remain), the
+      capability pinned against future *narrowing*, and the real defect recon exposed (a
+      parametrized citation truncated at `[` and reported unresolvable naming a phantom string)
+      closed. 205-06 additionally made citation-checking reach every citation, not only
+      SKIP-checked Result lines — 66 previously unguarded claims, all proved honest. See
+      ROADMAP Phase 205 criteria 1-2 and 5.
 
-- [ ] **GUARD-02**: the vitest `-m slow` execution leg actually **executes** in CI rather than being
+- [x] **GUARD-02**: the vitest `-m slow` execution leg actually **executes** in CI rather than being
       existence-checked only. `Linux Full Suite` installs no Node, so `VITEST_TOOLCHAIN_AVAILABLE`
       is False there; `dashboard-quality.yml` already exists and is the candidate home. This closes
       the existence-vs-execution asymmetry that pytest substitutes already had removed, reappearing
       one layer down for vitest.
+      **Closed via `Linux Full Suite`, NOT `dashboard-quality.yml`** (D-04): that workflow is
+      path-filtered on `src/dashboard/**`, so a PR touching only `docs/UAT-SERIES.md` — precisely
+      when a vitest citation breaks — would never trigger it. Red-proved in CI (run
+      34774528505). The leg was also believed vacuous; it was not — 4 real citations existed and
+      were invisible to the guard's own extractor (205-06).
 
 ### Security & Report Coverage
 
@@ -222,8 +235,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-07 | Phase 208 | Pending |
 | COV-08 | Phase 208 | Pending |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
-| GUARD-01 | Phase 205 | Pending |
-| GUARD-02 | Phase 205 | Pending |
+| GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |
+| GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Pending |
 | DOC-02 | Phase 208 | Pending |
 

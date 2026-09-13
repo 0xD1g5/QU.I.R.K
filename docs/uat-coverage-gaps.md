@@ -8,8 +8,8 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 887
-- Disposition counts: DEFERRED 39, FAIL 5, GAP 65, OBSOLETE 2, PASS 691, SKIP_OTHER 85
+- Total case headings: 892
+- Disposition counts: DEFERRED 39, FAIL 5, GAP 65, OBSOLETE 2, PASS 696, SKIP_OTHER 85
 - Open GAP (drainable) cases: 77
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
