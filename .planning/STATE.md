@@ -1985,9 +1985,19 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-12
-Stopped at: Phase 201 at 7 of 8 plans — 201-06 operator walkthrough APPROVED 2026-09-12 (stale-cache root cause confirmed, not a defect), LIFT-05 hand-flipped [x], commit 0d1d3654. Paused on session limit with NO blockers and NO human action outstanding; plan 201-08 (close-out) is next.
-Resume file: .planning/HANDOFF.json (+ .planning/phases/201-score-lift-roadmap-re-frame/.continue-here.md)
+Last session: 2026-09-13
+Stopped at: Phase 203 context gathered — 7 decisions captured (D-01..D-07) across all 4 offered gray areas. Key locks: per-entry `last_verified` with top-level = min(entries) so the gate cannot read greener than the weakest vendor (D-01), enforced by two new tests (D-02); verification bar is claim-match not reachability (D-03); one bounded attempt per rotted URL (D-04); vendors unreachable after Chrome escalate to the operator with an honest dated red deferral as fallback (D-05); hw_cve = confirm 6 rows + bounded NVD delta since 2026-09-02 (D-06); scope stays hardware_meta + hw_cve (D-07). NO blockers. Next: plan Phase 203. Written by hand — `state.record-session` not used (unsafe verb class, see Deferred Items).
+Resume file: .planning/phases/203-catalog-freshness-drain/203-CONTEXT.md
+
+v5.24 autonomy segmentation (operator, 2026-09-13): Phase 203 runs IN-SESSION (Chrome tools are
+unavailable to worktree subagents), then `/gsd-autonomous --from 204 --to 206`, then Phase 207
+MANUAL, then `/gsd-autonomous --from 208`. See ROADMAP.md §"Autonomy Plan" and Operator Next Steps
+below. Second, smaller human touchpoint possible inside 203 itself via D-05 escalation — it fires
+only if a vendor advisory resists Chrome.
+
+Prior session (2026-09-12): Phase 201 at 7 of 8 plans — 201-06 operator walkthrough APPROVED
+(stale-cache root cause confirmed, not a defect), LIFT-05 hand-flipped [x], commit 0d1d3654.
+Resolved: v5.23 closed and merged to `main` 2026-09-13 via PRs #12/#13.
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
