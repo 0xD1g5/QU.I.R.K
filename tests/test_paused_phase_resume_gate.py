@@ -120,6 +120,14 @@ def test_roadmap_phase_boxes_are_parseable() -> None:
         "format likely changed; _PHASE_BOX_RE needs updating. Until it is, "
         "RESUME-01 and RESUME-02 below are not actually checking anything."
     )
+    # RESUME-02 resolves the archive path from this key. If it ever goes missing,
+    # fail HERE rather than letting RESUME-02 skip — a silent skip on the
+    # archive check is precisely the invisibility this gate exists to prevent.
+    assert _current_milestone() is not None, (
+        "No `milestone:` key in .planning/STATE.md frontmatter. RESUME-02 cannot "
+        "resolve which milestone archive to police without it, so the archive "
+        "check would pass without checking anything."
+    )
 
 
 def test_resume_01_paused_phase_box_stays_unchecked() -> None:
@@ -146,8 +154,10 @@ def test_resume_01_paused_phase_box_stays_unchecked() -> None:
 def test_resume_02_open_milestone_is_not_archived() -> None:
     """RESUME-02: do not archive a milestone that still has unchecked phases."""
     version = _current_milestone()
-    if version is None:
-        pytest.skip("No `milestone:` key in STATE.md frontmatter — nothing to resolve")
+    # Guaranteed non-None by test_roadmap_phase_boxes_are_parseable's control
+    # assertion. Asserted rather than skipped: a skip here would silently retire
+    # the archive check (Phase 184 D-01/D-09 — do not add skip markers).
+    assert version is not None, "unreachable: guarded by the positive-control test"
 
     unchecked = sorted(
         (num for num, box in _phase_boxes().items() if box == " "),
