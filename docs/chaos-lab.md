@@ -1229,11 +1229,27 @@ are no host ports to list, by design.
 
 ```bash
 PROFILE_ARGS="--profile multihost" ./lab.sh up
+
+# Rebuild the prober first if any quirk/ code changed since the image was built —
+# `lab.sh up` runs `compose up -d` with NO `--build` and silently reuses a stale image.
+docker compose -p chaoslab --profile multihost build mh-prober
+docker compose -p chaoslab --profile multihost up -d --force-recreate mh-prober
+
 docker exec chaoslab-mh-prober-1 \
   quirk --config /scan-config.yaml --allow-internal-targets --allow-cleartext-broker-probe
 # reports land in ./quirk-output (bind-mounted to /out); then, on the host:
-quirk serve --db-path quirk-output/quirk.db
+quirk serve --port 8512 --no-open
 ```
+
+**`quirk serve` has no `--db-path` flag** — its only options are `--port`, `--host`, `--no-open`
+and `--insecure`; it discovers the canonical `./quirk-output/quirk.db` itself. This section printed
+`quirk serve --db-path quirk-output/quirk.db` until 2026-09-14; that command exits 2 with
+`unrecognized arguments`.
+
+**The `-p chaoslab` on the rebuild commands is required.** Without it, compose derives the project
+name from the directory and tags a different image (`quantum-chaos-enterprise-lab-mh-prober`) that
+the running `chaoslab-mh-prober-1` container never picks up — the rebuild appears to succeed and
+changes nothing.
 
 Two flags are not optional here. `--config` is **required** — `quirk` has no `scan` subcommand and
 no `--targets` flag, and without `--config` it drops into the interactive wizard.
@@ -1251,9 +1267,25 @@ returned INFO-only for every non-TLS host.
 `enable_kerberos` and `enable_dnssec` are explicitly **false**: this subnet has no KDC and no
 resolver, and a connector aimed at a host that cannot answer yields silence or a misleading finding.
 
-**Expected scanner findings:** see the oracle. **Note its coverage gap** — the oracle's per-host
-table documents the original ten hosts plus the prober, and has not been extended to the twenty
-hosts added when the estate grew to 31 targets. Those rows need a measured run, not an assumed one.
+**Expected scanner findings:** see the oracle. **The former coverage gap is CLOSED as of
+2026-09-14** — the oracle's per-host table now carries all 31 targets, every row derived from a
+measured run (`findings-20260914-142606.json`) rather than inferred from the compose file.
+
+**Measured aggregate (2026-09-14, scoring v3):** 400 findings — 5 CRITICAL / 14 HIGH / 33 MEDIUM /
+16 LOW / 332 INFO across 37 hosts (31 subnet targets + 6 connector pseudo-hosts); 370 endpoints,
+38 assessable; readiness **15/100 POOR** (`computed 61, limited to 15 by 5 open CRITICAL findings`).
+
+**Scoring v3 changed this profile's headline number by 76 points.** The same estate scored 91/100
+under the superseded v2 model. If a scan here reports ~91, the prober image is stale — rebuild it
+per the commands above and re-check
+`docker exec chaoslab-mh-prober-1 python -c "from quirk.intelligence.scoring import SCORING_VERSION; print(SCORING_VERSION)"`.
+
+**The oracle records three classes of honest gap** — hosts that return INFO only; postures that are
+*scored but never reported* (the unencrypted S3 bucket and the plaintext Postgres both reach
+`evidence_summary` but emit no finding); and postures with no distinguishing detection (SHA-1 and
+broken-chain hosts are indistinguishable from a generic host). It also records a **CLI-vs-dashboard
+score divergence** measured on the same run. Read those sections before quoting any number from this
+profile in front of a client.
 
 See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-multihost`
 
