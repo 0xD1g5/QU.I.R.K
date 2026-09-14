@@ -147,7 +147,22 @@ export function ExposureMapPage() {
       getComputedStyle(document.documentElement).getPropertyValue(name).trim()
     const dsHigh = cssVar("--ds-high") || "#d4893a"        // key-reuse amber
     const dsMedium = cssVar("--ds-medium") || "#8892a4"    // hardware-bridge / node slate
-    const accent = `hsl(${cssVar("--accent") || "180 37% 47%"})`  // crown-jewel / selection teal
+    // Crown-jewel / selection teal. MUST come from the HEX token, not from
+    // `hsl(${--accent})`. Cytoscape draws to <canvas> with its own color parser,
+    // which does NOT support the modern space-separated hsl() syntax — and
+    // `--accent` is stored as raw components ("180 37% 47%"), so building
+    // `hsl(180 37% 47%)` from it parses to BLACK, silently. Verified live
+    // 2026-09-14: space-separated -> rgb(0,0,0), comma-separated ->
+    // rgb(76,164,164), hex -> rgb(75,168,168).
+    //
+    // This had been broken since Phase 195 and was invisible because no data
+    // ever set is_crown_jewel, so the badge shipped never once rendered
+    // (195-06 recorded it as an honest GAP for exactly that reason). It is the
+    // same defect class 195-06 already fixed once — Cytoscape cannot resolve
+    // CSS custom properties because it is not CSS — pointed one step further:
+    // resolving the var() is necessary but not sufficient if the RESULT is
+    // still a syntax Cytoscape cannot read. Prefer hex tokens here, always.
+    const accent = cssVar("--ds-accent") || "#4ba8a8"
     const dsCritical = cssVar("--ds-critical") || "#e05555"       // shared-CA taxonomy hue
     const dsBgElevated = cssVar("--ds-bg-elevated") || "#1e2129"  // CA hub fill
 
@@ -363,10 +378,52 @@ export function ExposureMapPage() {
                       className="inline-block w-4 h-0.5"
                       style={{
                         background:
+                          "repeating-linear-gradient(to right, var(--ds-critical) 0 2px, transparent 2px 4px)",
+                      }}
+                    />
+                    Shared certificate authority
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-4 h-0.5"
+                      style={{
+                        background:
                           "repeating-linear-gradient(to right, var(--ds-medium) 0 3px, transparent 3px 6px)",
                       }}
                     />
                     Hardware crypto-bridge
+                  </div>
+                </div>
+                <h2 style={{ fontSize: 16, fontWeight: 600, marginTop: 12 }}>Node types</h2>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-3 h-3 rounded-sm"
+                      style={{ background: "var(--ds-medium)" }}
+                    />
+                    Scanned endpoint
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-3 h-3"
+                      style={{
+                        background: "var(--ds-bg-elevated)",
+                        border: "1px solid var(--ds-critical)",
+                        clipPath:
+                          "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
+                      }}
+                    />
+                    Certificate authority
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-3 h-3 rounded-sm"
+                      style={{
+                        background: "var(--ds-medium)",
+                        outline: "2px solid var(--ds-accent)",
+                      }}
+                    />
+                    Crown jewel
                   </div>
                 </div>
               </CardContent>
