@@ -4,7 +4,7 @@ milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
 last_updated: "2026-09-14T00:16:11.594Z"
-last_activity: 2026-09-13
+last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 2
@@ -2168,7 +2168,36 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-13 (resumed)
+Last session: 2026-09-14 — **Phase 209 (Deliverable Reachability) OPENED and context gathered.**
+Net-new phase, added to v5.24 mid-milestone by operator decision. Origin: the operator asked where
+the v5.23 reporting milestone had surfaced in the dashboard, and the answer was that it had not.
+**The consulting-grade report pipeline and the dashboard's Export button share zero code** —
+`write_reports()` emits `report-{stamp}.html/.pdf/.docx` + CBOM to `cfg.output.directory`, while
+`POST /api/export/pdf` Playwright-prints the React `/print` page (540 lines, a summary view). Grep
+for `FileResponse` / `.docx` / `report-*.html` across `quirk/dashboard/api/routes/`: **zero hits.**
+RPT-01..05 shipped entirely CLI/config-side, which was a documented scope exclusion (RPT-03 guards
+the dashboard exclusion as a path-traversal surface), not an oversight.
+
+New requirements **DELIV-01** (auth-gated read-only artifact route, named+tested containment guard)
+and **DELIV-02** (dashboard downloads, latest scan only). 11 decisions captured (D-01..D-11) across
+6 gray areas. Three scouting findings are load-bearing and were NOT known at phase-open:
+(1) report artifacts are stamped with **render time**, not `scan_run_id` (`writer.py:476` vs
+`:479-491`) and nothing on disk associates them — this is what limits the phase to the latest scan;
+(2) dashboard auth is **Bearer/`X-API-Key` header**, so a plain `<a download>` 401s and the browser
+can save the 401 body as a `.pdf`; (3) `validate_report_path_field` is a **load-time config** guard
+with no request-time role, so DELIV-01's guard is genuinely new code. Requirements coverage 15 → 17,
+`total_phases` 6 → 7. Commit `2b3f9653`. Phase artifacts (`209-CONTEXT.md`,
+`209-DISCUSSION-LOG.md`) are untracked per repo convention.
+Written by hand — `state.record-session` not used (unsafe verb class, see Deferred Items).
+Resume file: .planning/phases/209-deliverable-reachability/209-CONTEXT.md
+Next: `/gsd-plan-phase 209`.
+
+**Note for whoever resumes:** Phase 206 remains PAUSED at 5/13 for demo prep (client demo
+2026-09-18). Phase 209 was opened *during* that pause and does not resume 206. Unlike 206, 209 is
+plausibly demo-visible — a branded PDF downloadable from the dashboard is a demo asset — but that
+was not the stated reason for opening it and should not be assumed as a priority signal.
+
+Prior session: 2026-09-13 (resumed)
 Stopped at: **Phase 205 (Guard Integrity) is COMPLETE — 7 of 7 plans, verification `passed` 5/5,
 `205-VERIFICATION.md` and `205-VALIDATION.md` both written (`nyquist_compliant: true`, zero pending
 rows), so the close gate is satisfied.** GUARD-01 and GUARD-02 are both `[x]` with traceability
