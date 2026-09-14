@@ -123,6 +123,8 @@ export function FindingsPage() {
     {
       accessorKey: "severity",
       header: "Severity",
+      // TEMPORARY(206-03): induce red-proof — REVERTED IN THE NEXT COMMIT (constant comparator, order never changes)
+      sortingFn: () => 0,
       cell: ({ row }) => (
         <Badge className={`${SEVERITY_STYLES[row.original.severity] ?? ""} font-semibold text-xs`}>
           {row.original.severity}
@@ -132,7 +134,7 @@ export function FindingsPage() {
     { accessorKey: "host", header: "Host" },
     { accessorKey: "port", header: "Port" },
     { accessorKey: "title", header: "Title" },
-    { accessorKey: "protocol", header: "Protocol" },
+    // TEMPORARY(206-03): induce red-proof — REVERTED IN THE NEXT COMMIT (dropped Protocol column)
     {
       accessorKey: "quantum_risk",
       header: "Quantum Risk",
@@ -201,7 +203,8 @@ export function FindingsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 25 } },
+    // TEMPORARY(206-03): induce red-proof — REVERTED IN THE NEXT COMMIT (pageSize 25 -> 100)
+    initialState: { pagination: { pageSize: 100 } },
   })
 
   if (loading) return <FindingsSkeleton />
