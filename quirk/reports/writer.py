@@ -11,6 +11,7 @@ from quirk.reports.executive import build_exec_markdown, resolve_identity_pairs
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
 from quirk.reports.content_model import build_exec_content, ReportCongruenceError, NOT_COMPUTED_STATEMENT, effective_score_divisor  # D-03 / D-06 / Phase 188 SCORE-06
+from quirk.reports.content_model import rollup_computed_score  # 2026-09-14: capped rollup must still divide correctly
 from quirk.reports.coverage import load_scan_coverage  # Phase 192 Plan 07 (OBS-02)
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
@@ -393,7 +394,19 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     # to the legacy fixed divisor for a pre-188 compat dict with no score_divisor key.
     _divisor = effective_score_divisor(_score_total, score.get("score_divisor"))
     if _divisor:
-        lines.append(f"\n**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_score_total} / 100**\n")
+        # The right-hand side must be what the division ACTUALLY produces. Until
+        # 2026-09-14 this substituted the capped score, so a capped estate
+        # rendered "76 ÷ 1.25 = 15 / 100" (the division gives 61). See
+        # rollup_computed_score()'s docstring and
+        # tests/test_rollup_arithmetic_is_true.py.
+        _computed = rollup_computed_score(raw_sum, _divisor)
+        if _computed is not None and _computed != _score_total:
+            lines.append(
+                f"\n**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_computed}**, "
+                f"capped to **{_score_total} / 100**\n"
+            )
+        else:
+            lines.append(f"\n**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_score_total} / 100**\n")
 
     lines.append("## Why this score\n")
     for d in (drivers or []):

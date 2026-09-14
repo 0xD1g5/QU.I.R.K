@@ -12,6 +12,7 @@ from jinja2.sandbox import SandboxedEnvironment
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
 from quirk.reports.content_model import ExecContent, assert_congruent, NOT_COMPUTED_STATEMENT, effective_score_divisor, effective_domain_counts  # D-03 / Phase 98: shared content model
+from quirk.reports.content_model import rollup_computed_score  # 2026-09-14: capped rollup must still divide correctly
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: NVD link helper
 from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reason  # Phase 184.4 D-05
 
@@ -1271,6 +1272,11 @@ def render_html_report(
         projected_score=projected_score,
         subscores=subscores_ctx,  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
         raw_sum=raw_sum,  # WR-03 / IN-01: shared rollup numerator (matches CLI markdown)
+        # 2026-09-14: what `raw_sum ÷ score_divisor` ACTUALLY produces, before any
+        # cap. The template rendered `= total_score`, which is false on a capped
+        # estate ("76 ÷ 1.25 = 15"; the division gives 61). Same shared helper the
+        # CLI/DOCX surfaces use, so all four agree by construction.
+        rollup_computed=rollup_computed_score(raw_sum, score_divisor),
         # Phase 188 SCORE-06 / 188-03: coverage-disclosure seam — dynamic divisor
         # (never the retired fixed rollup literal), the assessed-domain count, and the
         # once-composed disclosure/not-computed sentences.

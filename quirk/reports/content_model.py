@@ -599,6 +599,47 @@ def effective_score_divisor(
     return _LEGACY_FULL_COVERAGE_DIVISOR
 
 
+def rollup_computed_score(
+    raw_sum: Optional[int], divisor: Optional[float]
+) -> Optional[int]:
+    """The score the rollup arithmetic ACTUALLY produces, before any cap.
+
+    Every surface renders the rollup as `raw_sum ÷ divisor = <score>`, and until
+    2026-09-14 every surface substituted the **capped** score into it. On a
+    capped estate that sentence is simply false: the multihost reference estate
+    rendered `76 ÷ 1.25 = 15 / 100`, and 76 ÷ 1.25 is 61. 15 is what the
+    consequence ceiling compressed 61 down to. A reader who checks the division
+    — and in a scoring conversation someone does — finds an apparent arithmetic
+    error on the page.
+
+    The defect is older than scoring v3 but was mostly invisible under v2,
+    because a computed score usually already sat inside its cap band and the
+    equation held by coincidence. v3 caps hard and often, so it now shows on
+    most real estates.
+
+    This mirrors `quirk/intelligence/scoring.py`'s own pre-cap derivation
+    (`total_score = int(round(sum(assessed) / (domains_assessed * 25) * 100))`
+    at scoring.py:666, where `score_divisor = domains_assessed * 25 / 100`, so
+    `sum / (d*25) * 100` and `raw_sum / divisor` are the same quantity). It is
+    re-derived here rather than read from the model because the pre-cap value is
+    not exposed as a structured key — it currently survives only inside the
+    `rating_cap_reason` prose as "(computed N)", and parsing prose back into a
+    number would be worse than reproducing one documented line of arithmetic.
+
+    **If `compute_readiness_score()` ever changes how the pre-cap total is
+    derived, this must change with it.** That coupling is not left to memory:
+    `tests/test_rollup_arithmetic_is_true.py` asserts this helper agrees with
+    the model's own "(computed N)" for a capped estate, so a divergence fails a
+    test rather than silently misprinting a client report.
+
+    Returns None when either input is missing (not-computed score), matching
+    `effective_score_divisor()`'s contract so callers can guard once.
+    """
+    if raw_sum is None or not divisor:
+        return None
+    return int(round(raw_sum / divisor))
+
+
 # Phase 188 SCORE-06 / plan 188-03: legacy full-coverage domain count, paired
 # with _LEGACY_FULL_COVERAGE_DIVISOR above (1.5 == 6 * 25 / 100).
 _LEGACY_FULL_COVERAGE_DOMAINS: int = 6

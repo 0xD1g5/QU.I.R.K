@@ -14,6 +14,7 @@ from quirk.reports.content_model import assert_congruent  # WR-05: fail-closed g
 from quirk.reports.html_renderer import build_algorithm_inventory  # Phase 81 / CMVP-06: shared inventory builder
 from quirk.reports.content_model import ExecContent  # D-03 / Phase 98: shared content model
 from quirk.reports.content_model import NOT_COMPUTED_STATEMENT, effective_score_divisor  # Phase 188 SCORE-06 / 188-03
+from quirk.reports.content_model import rollup_computed_score  # 2026-09-14: capped rollup must still divide correctly
 
 # D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
 _INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
@@ -349,10 +350,21 @@ def build_exec_markdown(
         # keeps rendering unchanged for callers that never adopted SCORE-06.
         _divisor = effective_score_divisor(exec_content.score_total, exec_content.score_divisor)
         if _divisor:
-            lines.append(
-                f"**Rollup:** {exec_content.raw_sum} ÷ {_divisor:g}"
-                f" = **{exec_content.score_total} / 100**"
-            )
+            # 2026-09-14: the right-hand side must be what the division actually
+            # produces. Substituting the capped score rendered false arithmetic
+            # on every capped estate ("76 ÷ 1.25 = 15"; the division gives 61).
+            # The Cap reason line below still carries the WHY.
+            _computed = rollup_computed_score(exec_content.raw_sum, _divisor)
+            if _computed is not None and _computed != exec_content.score_total:
+                lines.append(
+                    f"**Rollup:** {exec_content.raw_sum} ÷ {_divisor:g}"
+                    f" = **{_computed}**, capped to **{exec_content.score_total} / 100**"
+                )
+            else:
+                lines.append(
+                    f"**Rollup:** {exec_content.raw_sum} ÷ {_divisor:g}"
+                    f" = **{exec_content.score_total} / 100**"
+                )
         # D-09 / 184.4-06: annotate a capped band beside the arithmetic that would
         # otherwise contradict it (BACK-89 in mirror image). Structured value from
         # quirk.severity_bands.cap_reason() via compute_readiness_score() — never
@@ -405,7 +417,15 @@ def build_exec_markdown(
         # effective_score_divisor's docstring).
         _divisor = effective_score_divisor(_score_total, score_raw.get("score_divisor"))
         if _divisor:
-            lines.append(f"**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_score_total} / 100**")
+            # Same true-arithmetic rule as the exec_content branch above.
+            _computed = rollup_computed_score(raw_sum, _divisor)
+            if _computed is not None and _computed != _score_total:
+                lines.append(
+                    f"**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_computed}**, "
+                    f"capped to **{_score_total} / 100**"
+                )
+            else:
+                lines.append(f"**Rollup:** {raw_sum} ÷ {_divisor:g} = **{_score_total} / 100**")
         # D-09 / 184.4-06: same cap-reason annotation as the exec_content branch,
         # so both surfaces agree (see comment above).
         # 184.4 WR-01: this branch reads score_raw by necessity — it is the

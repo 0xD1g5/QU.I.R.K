@@ -516,7 +516,14 @@
          Phase 188 SCORE-06 / 188-03: score_divisor is dynamic (never the retired fixed rollup literal) —
          it agrees with the headline because both are read from the same computed-once
          score_raw values, never re-derived here. #}
+      {# 2026-09-14: the right-hand side is the value the division actually
+         produces (rollup_computed), not the capped headline. Rendering the
+         capped score here made the equation false on every capped estate. #}
+      {%- if rollup_computed is not none and rollup_computed != total_score %}
+      {{ raw_sum }} &divide; {{ score_divisor }} = <strong>{{ rollup_computed }}</strong>, capped to <strong>{{ total_score }} / 100</strong>
+      {%- else %}
       {{ raw_sum }} &divide; {{ score_divisor }} = <strong>{{ total_score }} / 100</strong>
+      {%- endif %}
     </p>
     {# Phase 98 / TRANS-02 / D-03: Rollup formula explanation block — static prose, no sanitize.
        Phase 188 SCORE-06 / 188-03: the assessed-count and divisor are now interpolated —

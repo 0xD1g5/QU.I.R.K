@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: staleness caveat metadata
 from quirk.reports.content_model import NOT_COMPUTED_STATEMENT, effective_score_divisor  # Phase 188 SCORE-06 / 188-03
+from quirk.reports.content_model import rollup_computed_score  # 2026-09-14: capped rollup must still divide correctly
 # Phase 200 / RPT-01: shared logo size cap (T-200-10) — reused, not re-defined.
 # Not a docx import, safe at module level.
 from quirk.reports.html_renderer import _MAX_LOGO_BYTES
@@ -748,10 +749,21 @@ def render_docx_report(
         score_total, getattr(exec_content, "score_divisor", None) if exec_content else None
     )
     if score_divisor:
-        doc.add_paragraph(
-            f"{raw_sum} ÷ {score_divisor:g} = {score_total} / 100",
-            style="Normal",
-        )
+        # 2026-09-14: render what the division actually produces. Substituting
+        # the capped score printed false arithmetic into client DOCX reports on
+        # every capped estate. The Cap reason paragraph below carries the WHY.
+        _computed = rollup_computed_score(raw_sum, score_divisor)
+        if _computed is not None and _computed != score_total:
+            doc.add_paragraph(
+                f"{raw_sum} ÷ {score_divisor:g} = {_computed}, "
+                f"capped to {score_total} / 100",
+                style="Normal",
+            )
+        else:
+            doc.add_paragraph(
+                f"{raw_sum} ÷ {score_divisor:g} = {score_total} / 100",
+                style="Normal",
+            )
     elif score_total is None:
         doc.add_paragraph(NOT_COMPUTED_STATEMENT, style="Normal")
     scoring_version = getattr(exec_content, "scoring_version", None) if exec_content else None
