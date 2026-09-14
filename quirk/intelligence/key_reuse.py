@@ -39,8 +39,23 @@ from sqlalchemy import func
 from quirk.models import CryptoEndpoint
 
 
-def compute_key_reuse_clusters(session: Any) -> dict:
+def compute_key_reuse_clusters(session: Any, scan_run_id: Any = None) -> dict:
     """Derive key-reuse clusters from persisted SPKI fingerprints.
+
+    ``scan_run_id`` is OPT-IN scoping, added 2026-09-14. When ``None`` (the
+    default) this aggregates across every scan in the database — D-03's
+    deliberate choice, which ``quirk/reports/writer.py::_load_key_reuse``
+    depends on ("key reuse [is] a global, cross-scan query rather than a
+    scan-scoped one"). When a ``scan_run_id`` is supplied, every query below is
+    filtered to that run.
+
+    The exposure map opts in; the report surface does not. That asymmetry is
+    deliberate, because the two answer different questions: a report asks "has
+    this key ever been seen reused", the map draws "the estate as this scan
+    found it". Rendering the cross-scan answer on the map drew endpoints the
+    displayed scan never touched, and manufactured self-edges when one endpoint
+    appeared once per run and was all-paired against itself. See
+    ``tests/test_exposure_map_scan_scoping.py`` for the measured shape.
 
     Returns, with ALL THREE keys ALWAYS present (never sparse):
         {
@@ -63,30 +78,45 @@ def compute_key_reuse_clusters(session: Any) -> dict:
 
     Read-only: this function persists nothing and performs no writes.
     """
+    # One place that decides what "in scope" means, so the four queries below
+    # cannot drift apart — a partially-scoped derivation (clusters filtered but
+    # members not, say) would silently reintroduce the cross-scan members this
+    # parameter exists to exclude.
+    def _in_scope(query):
+        if scan_run_id is None:
+            return query
+        return query.filter(CryptoEndpoint.scan_run_id == scan_run_id)
+
     total = (
-        session.query(func.count(CryptoEndpoint.id))
-        .filter(CryptoEndpoint.protocol == "TLS")
+        _in_scope(
+            session.query(func.count(CryptoEndpoint.id))
+            .filter(CryptoEndpoint.protocol == "TLS")
+        )
         .scalar()
         or 0
     )
     fingerprinted = (
-        session.query(func.count(CryptoEndpoint.id))
-        .filter(
-            CryptoEndpoint.protocol == "TLS",
-            CryptoEndpoint.cert_spki_fingerprint.isnot(None),
+        _in_scope(
+            session.query(func.count(CryptoEndpoint.id))
+            .filter(
+                CryptoEndpoint.protocol == "TLS",
+                CryptoEndpoint.cert_spki_fingerprint.isnot(None),
+            )
         )
         .scalar()
         or 0
     )
 
     dupe_fingerprints = (
-        session.query(
-            CryptoEndpoint.cert_spki_fingerprint,
-            func.count(CryptoEndpoint.id).label("member_count"),
-        )
-        .filter(
-            CryptoEndpoint.protocol == "TLS",
-            CryptoEndpoint.cert_spki_fingerprint.isnot(None),  # D-12: exclude NULL
+        _in_scope(
+            session.query(
+                CryptoEndpoint.cert_spki_fingerprint,
+                func.count(CryptoEndpoint.id).label("member_count"),
+            )
+            .filter(
+                CryptoEndpoint.protocol == "TLS",
+                CryptoEndpoint.cert_spki_fingerprint.isnot(None),  # D-12: exclude NULL
+            )
         )
         .group_by(CryptoEndpoint.cert_spki_fingerprint)
         .having(func.count(CryptoEndpoint.id) >= 2)
@@ -100,10 +130,12 @@ def compute_key_reuse_clusters(session: Any) -> dict:
     clusters = []
     for fingerprint, member_count in dupe_fingerprints:
         members = (
-            session.query(CryptoEndpoint)
-            .filter(
-                CryptoEndpoint.protocol == "TLS",
-                CryptoEndpoint.cert_spki_fingerprint == fingerprint,
+            _in_scope(
+                session.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.protocol == "TLS",
+                    CryptoEndpoint.cert_spki_fingerprint == fingerprint,
+                )
             )
             .order_by(CryptoEndpoint.host.asc(), CryptoEndpoint.port.asc())
             .all()

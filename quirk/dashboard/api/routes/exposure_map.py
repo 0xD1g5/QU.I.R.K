@@ -15,8 +15,9 @@ the scoring-weights constant.
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
@@ -30,10 +31,23 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 
 
 @router.get("/exposure-map", response_model=ExposureMapResponse)
-def get_exposure_map(db: Session = Depends(get_db)) -> ExposureMapResponse:
+def get_exposure_map(
+    scan_id: Optional[str] = Query(
+        default=None,
+        description="ISO timestamp scan_run_id to map; omit for the latest scan",
+    ),
+    db: Session = Depends(get_db),
+) -> ExposureMapResponse:
     """GET /api/exposure-map — verified-only nodes/edges (MAP-02).
 
     Auth: inherited from router-level require_auth (do NOT add per-route).
+
+    Without ``?scan_id=``: maps the LATEST scan. With it: maps that scan, so
+    the map can be pinned to whichever scan another surface is displaying.
+    Until 2026-09-14 this route aggregated every scan in the database, which
+    rendered 1225 edges across 27 nodes on a 24-scan database — 32% of them
+    self-edges and 95% duplicates — against 19 edges across 12 nodes for the
+    single scan actually being shown.
 
     Calls the importable ``derive_exposure_map`` orchestrator (never
     reimplements derivation logic route-side). When there are zero verified
@@ -46,7 +60,7 @@ def get_exposure_map(db: Session = Depends(get_db)) -> ExposureMapResponse:
     exposure" (mirrors hardware_drift/scan.py bridge handling).
     """
     try:
-        result = derive_exposure_map(db)
+        result = derive_exposure_map(db, scan_run_id=scan_id)
         nodes = [ExposureNode(**node) for node in result.get("nodes", [])]
         edges = [ExposureEdge(**edge) for edge in result.get("edges", [])]
     except Exception:

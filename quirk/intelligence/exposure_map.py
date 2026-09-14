@@ -40,7 +40,10 @@ from quirk.cbom.bridge import (
     _detect_crypto_bridges,
     _find_matching_gateway,
 )
+from sqlalchemy import func
+
 from quirk.intelligence.key_reuse import compute_key_reuse_clusters
+from quirk.models import CryptoEndpoint
 from quirk.models_util import latest_successful_hardware_devices
 
 
@@ -55,18 +58,37 @@ def _device_label(host: str, vendor: str | None, model: str | None) -> str:
     return " ".join(parts) if parts else host
 
 
-def derive_key_reuse_edges(session: Any) -> List[Dict[str, Any]]:
+def derive_key_reuse_edges(
+    session: Any, scan_run_id: Any = None
+) -> List[Dict[str, Any]]:
     """Derive key-reuse edges from ``compute_key_reuse_clusters`` VERBATIM.
 
     Each cluster contributes one edge per unique pair of members (all-pairs
     — the common cluster size is 2-3 members, per 195-RESEARCH.md Open
     Question 1's recommendation). Node ids are ``f"{host}:{port}"``.
 
+    ``scan_run_id`` scopes the underlying cluster derivation to one scan. See
+    ``compute_key_reuse_clusters``' docstring for why the default is unscoped.
+
+    Two invariants are enforced on the way out, UNCONDITIONALLY — they hold
+    even for an unscoped call, so a caller that legitimately wants cross-scan
+    edges still cannot produce a self-loop or a repeated pair:
+
+    1. **No self-edges.** An endpoint is never "key-reuse related" to itself.
+       Before 2026-09-14 these were 32% of the rendered graph (390 of 1225 on
+       the multihost estate): node ids are ``f"{host}:{port}"``, one endpoint
+       yields one row per scan run, and all-pairs paired those rows against
+       each other — every such pair collapsing to ``A -> A``.
+    2. **No duplicate pairs.** Deduplicated on ``(source, target, edge_type)``
+       treating the pair as unordered. 1169 of those 1225 edges (95%) were
+       duplicate rows describing just 56 distinct pairs.
+
     Returns ``[]`` when there is no key reuse — never omitted, never
     fabricated.
     """
-    result = compute_key_reuse_clusters(session)
+    result = compute_key_reuse_clusters(session, scan_run_id=scan_run_id)
     edges: List[Dict[str, Any]] = []
+    seen_pairs: set[tuple[str, str, str]] = set()
 
     for cluster in result["clusters"]:
         fingerprint = cluster["fingerprint"]
@@ -79,10 +101,18 @@ def derive_key_reuse_edges(session: Any) -> List[Dict[str, Any]]:
             for j in range(i + 1, len(members)):
                 a = members[i]
                 b = members[j]
+                source = f"{a['host']}:{a['port']}"
+                target = f"{b['host']}:{b['port']}"
+                if source == target:
+                    continue  # invariant 1
+                pair_key = (*sorted((source, target)), "key_reuse")
+                if pair_key in seen_pairs:
+                    continue  # invariant 2
+                seen_pairs.add(pair_key)
                 edges.append(
                     {
-                        "source": f"{a['host']}:{a['port']}",
-                        "target": f"{b['host']}:{b['port']}",
+                        "source": source,
+                        "target": target,
                         "edge_type": "key_reuse",
                         "evidence": evidence,
                     }
@@ -179,8 +209,39 @@ def derive_hardware_bridge_edges(session: Any) -> List[Dict[str, Any]]:
     return edges
 
 
-def derive_exposure_map(session: Any) -> Dict[str, Any]:
+def latest_scan_run_id(session: Any) -> Any:
+    """The most recent ``scan_run_id`` present on any endpoint, or None.
+
+    Resolved by ``MAX(scan_run_id)`` on the stored ISO-8601 key, NOT by the
+    ``SESSION_BRACKET`` time-window used by
+    ``quirk/dashboard/api/routes/scan.py::get_latest_scan``. That window
+    deliberately spans multiple ``scan_run_id`` values to accommodate legacy
+    NULL-keyed rows, and it is the mechanism by which two scans taken less than
+    five minutes apart merge into one apparent result. The exposure map needs
+    exactly one scan, so it must not inherit that behaviour.
+
+    Returns None when no row carries a ``scan_run_id`` (an all-legacy
+    database), which callers treat as "do not scope" rather than "scope to
+    nothing" — scoping to nothing would render an empty map and read as
+    verified zero exposure.
+    """
+    return (
+        session.query(func.max(CryptoEndpoint.scan_run_id)).scalar()
+    )
+
+
+def derive_exposure_map(session: Any, scan_run_id: Any = None) -> Dict[str, Any]:
     """Derive the full v1 exposure map: nodes + verified-only edges.
+
+    ``scan_run_id`` selects the scan to describe. When omitted, the LATEST
+    scan is resolved and used — the map answers "the estate as this scan found
+    it", so aggregating every scan in the database is not a neutral default.
+    Before 2026-09-14 it did exactly that: on a 24-scan database the map
+    rendered 1225 edges across 27 nodes, including a host with zero rows in the
+    scan being displayed, where the scoped answer is 19 edges across 12 nodes.
+
+    Pass a ``scan_run_id`` explicitly to pin the map to the same scan another
+    surface is showing.
 
     Returns, with BOTH keys ALWAYS present (never sparse):
         {
@@ -195,7 +256,15 @@ def derive_exposure_map(session: Any) -> Dict[str, Any]:
 
     Read-only: this function persists nothing and performs no writes.
     """
-    key_reuse_edges = derive_key_reuse_edges(session)
+    if scan_run_id is None:
+        scan_run_id = latest_scan_run_id(session)
+
+    key_reuse_edges = derive_key_reuse_edges(session, scan_run_id=scan_run_id)
+    # derive_hardware_bridge_edges is deliberately NOT given scan_run_id: it
+    # reads HardwareDevice rows through latest_successful_hardware_devices(),
+    # which already resolves its own latest-per-host scope, and it already
+    # carries a seen_pairs dedupe. Measured 2026-09-14, every one of the 1225
+    # defective edges was key_reuse — this path contributed none of them.
     hardware_bridge_edges = derive_hardware_bridge_edges(session)
     edges = key_reuse_edges + hardware_bridge_edges
 
