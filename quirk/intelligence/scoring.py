@@ -474,16 +474,28 @@ def compute_readiness_score(
     dar_assessed = _dar_assessed(protocol_counts)
     motion_assessed = _motion_assessed(protocol_counts)
 
-    category_table: Dict[str, Tuple[int, bool]] = {
-        "hygiene": (hygiene_score, endpoints_assessed),
-        "modern_tls": (modern_tls_score, endpoints_assessed),
-        "identity_trust": (identity_trust_score, identity_assessed),
-        "agility_signals": (agility_score, endpoints_assessed),
-        "data_at_rest": (dar_score, dar_assessed),
-        "data_in_motion": (motion_score, motion_assessed),
+    # 999.115 P5c — each domain's DRIVERS travel in this same table, alongside
+    # its score and its assessed flag. They used to be assembled separately, a
+    # few lines below, by concatenating every `*_drivers` list unconditionally;
+    # nothing consulted the assessed flags, so a domain excluded from the
+    # headline (subscore None, absent from the rescale denominator) could still
+    # supply the single largest driver in the client-facing explanation. The
+    # score disowned the domain while the narrative cited it.
+    #
+    # Carrying all three together is the fix rather than filtering afterwards:
+    # a future seventh domain gets consistent treatment by construction, and
+    # the subscore and the driver list cannot disagree about what was assessed
+    # because they now read the same tuple.
+    category_table: Dict[str, Tuple[int, bool, List[Tuple[str, int]]]] = {
+        "hygiene": (hygiene_score, endpoints_assessed, hygiene_drivers),
+        "modern_tls": (modern_tls_score, endpoints_assessed, modern_tls_drivers),
+        "identity_trust": (identity_trust_score, identity_assessed, identity_trust_drivers),
+        "agility_signals": (agility_score, endpoints_assessed, agility_drivers),
+        "data_at_rest": (dar_score, dar_assessed, dar_drivers),
+        "data_in_motion": (motion_score, motion_assessed, motion_drivers),
     }
     domains_total = len(category_table)
-    assessed_scores = {name: score for name, (score, ok) in category_table.items() if ok}
+    assessed_scores = {name: score for name, (score, ok, _) in category_table.items() if ok}
     domains_assessed = len(assessed_scores)
 
     total_score: Optional[int]
@@ -520,9 +532,17 @@ def compute_readiness_score(
 
     coverage_disclosure = f"{domains_assessed} of {domains_total} domains assessed"
 
-    all_drivers: List[Tuple[str, int]] = (
-        hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers + dar_drivers + motion_drivers
-    )
+    # 999.115 P5c — drivers come from ASSESSED domains only, read out of the
+    # same `category_table` that produces `subscores` below. An unassessed
+    # domain contributes no driver, because the headline makes no claim about
+    # it: citing it in the explanation would be the narrative asserting what
+    # the number explicitly declined to.
+    all_drivers: List[Tuple[str, int]] = [
+        driver
+        for _, (_, ok, drivers) in category_table.items()
+        if ok
+        for driver in drivers
+    ]
     all_drivers_sorted = sorted(all_drivers, key=lambda x: (-abs(x[1]), x[0]))
     top_drivers = [{"reason": reason, "points": points} for reason, points in all_drivers_sorted[:5]]
 
@@ -533,7 +553,7 @@ def compute_readiness_score(
     # surface must branch explicitly on `value is None` and substitute "—"
     # itself (see executive.py/writer.py/docx_renderer.py/report.html.j2).
     subscores: Dict[str, Optional[int]] = {
-        name: (score if ok else None) for name, (score, ok) in category_table.items()
+        name: (score if ok else None) for name, (score, ok, _) in category_table.items()
     }
 
     return {

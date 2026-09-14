@@ -769,23 +769,15 @@ def test_p5b_drivers_are_ordered_by_magnitude_and_never_zero():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: LATENT, not live. compute_readiness_score "
-        "concatenates dar_drivers and motion_drivers into the client-facing "
-        "driver list unconditionally, without consulting the same assessed "
-        "predicate that sets those domains' subscores to None. A domain "
-        "excluded from the headline can therefore supply its top driver. "
-        "Confirmed unreachable from the live producer TODAY: every dar_* and "
-        "motion_* counter in quirk/intelligence/evidence.py is incremented "
-        "inside the same per-endpoint loop that increments protocol_counts "
-        "(evidence.py:183 vs 295-355), so a non-zero counter implies its "
-        "protocol was observed. This test guards the scorer's own contract "
-        "against a FUTURE second producer (e.g. a cloud connector writing "
-        "counts outside that loop) silently breaking the coupling."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 when the fix landed.
+# Was a LATENT defect: compute_readiness_score concatenated dar_/motion_
+# drivers into the client-facing list without consulting the assessed
+# predicate, so a domain excluded from the headline could supply its top
+# driver. Fixed by carrying each domain's drivers inside `category_table`
+# alongside its score and assessed flag, so the subscore and the driver
+# list read the same tuple and cannot disagree about what was assessed.
+# It was unreachable from the live producer only through an incidental
+# coupling in evidence.py; that coincidence is no longer load-bearing.
 def test_p5c_no_driver_is_attributed_to_a_domain_excluded_from_the_headline():
     """P5(c) — the explanation must not cite evidence the score disowned.
 
