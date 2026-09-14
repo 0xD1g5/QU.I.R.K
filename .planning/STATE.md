@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-14T00:16:11.594Z"
+last_updated: "2026-09-14T18:30:08Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 30
-  completed_plans: 17
+  total_plans: 38
+  completed_plans: 18
   percent: 33
 ---
 
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 206 — Dashboard UI Coverage Drain
+**Current focus:** Phase 209 — Deliverable Reachability
 started. Anchor: write the missing tests behind the honest UAT GAPs and make the gap worklist derive
 itself. Live measurement at open (not carried from the stale worklist doc): **70 GAP-annotated cases
 across 878 total** in `docs/UAT-SERIES.md`, of which **25 sit in series 164–202** that
@@ -1258,12 +1258,20 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 206 (Dashboard UI Coverage Drain) — **PAUSED at 5 of 13 plans, deliberately, for demo prep**
-Plan: 5 of 13 complete (206-01, 02, 03, 05, 06). Remaining: 04, 07, 08, 09, 10, 11, 12, 13
-Status: Paused 2026-09-13 by operator decision — a client demo on 2026-09-18 takes the week, and
-Phase 206 delivers no demo-visible value. Resume with `/gsd-autonomous --from 206 --to 206`.
-Last activity: 2026-09-13 — Phase 206 paused mid-Wave-2; pivoted to demo readiness (999.113 score
-denominator, chaos-lab merge, /print sidebar)
+Phase: 209 (Deliverable Reachability) — EXECUTING
+Plan: 2 of 8
+Status: Executing Phase 209 on branch `phase-209-deliverable-reachability`
+Last activity: 2026-09-14 — 209-01 (Wave 0 RED test scaffolding, DELIV-01) COMPLETE. Wrote
+`tests/test_reports_download_route.py` (21 legs: manifest, download, 3-part containment guard,
+auth) against the not-yet-existing `GET /api/reports/latest/*` route — collects cleanly, first run
+was 1 passed (route-independent negative control) / 21 failed for the right reason. One deviation:
+split the plan's single negative-control test into two functions so the route-independent half
+could satisfy the acceptance criterion requiring it to pass today. Commit `8134dcb5`. See
+`209-01-SUMMARY.md`. Next: 209-02 (Wave 0, parallel).
+
+**Phase 206 remains PAUSED at 5 of 13 — 209 does not resume it.** `state.begin-phase` overwrote
+this block's former 206 pause summary; the full record survives immediately below under
+"### Phase 206 PAUSE RECORD". Resume 206 with `/gsd-autonomous --from 206 --to 206`.
 
 ### Phase 206 PAUSE RECORD (2026-09-13) — everything needed to resume
 
@@ -2191,6 +2199,37 @@ with no request-time role, so DELIV-01's guard is genuinely new code. Requiremen
 Written by hand — `state.record-session` not used (unsafe verb class, see Deferred Items).
 Resume file: .planning/phases/209-deliverable-reachability/209-CONTEXT.md
 Next: `/gsd-plan-phase 209`.
+
+**Continued 2026-09-14 (autonomous, `--only 209`): UI design contract APPROVED.**
+`209-UI-SPEC.md` written by `gsd-ui-researcher` and verified by `gsd-ui-checker` — **6/6 dimensions
+PASS, zero recommendations, zero revision iterations.** Surface is deliberately small: a five-button
+`variant="outline" size="sm"` group (HTML / PDF / DOCX / CBOM JSON / CBOM XML) placed left of the
+existing Export PDF button on `executive.tsx`, reusing `handleExportPdf`'s blob/object-URL mechanics
+per D-07. Notable restraint call: **shadcn `DropdownMenu` was rejected because it is not installed
+in this codebase** and adding it would breach the zero-new-dependency constraint. Per-format
+loading state, not one global flag, so a slow DOCX cannot block HTML. Manifest shape
+(`GET /api/reports/latest/manifest`) and download shape (`GET /api/reports/latest/{format}`) are
+specified concretely so the planner need not re-derive field names. Artifact untracked per repo
+convention. Next: `/gsd-plan-phase 209`.
+
+**`state.record-session` re-demonstrated as unsafe THIS session — new evidence, same verb the line
+above already distrusted.** Invoked once with a pre-image taken per CLAUDE.md §TOOL-05's standing
+rule; the diff showed **four** defects in a single call and STATE.md was restored byte-identical
+from the pre-image:
+
+1. **Frontmatter key `last_activity` silently DROPPED** — corruption signature (b), reappearing via
+   a verb outside the Phase-182 patched write paths.
+
+2. **`completed_plans` 17 → 22 with zero plans completed**, and **`percent` 33 → 29 in the opposite
+   direction** — a counter rising while its own percentage falls cannot both be right. Same
+   semantic class as the `state.planned-phase` drift already on file: every written value is
+   syntactically well-formed and simply wrong.
+
+3. **`status: executing` → `paused`** while a phase was actively executing.
+4. The human-readable `Last session:` narrative paragraph was **overwritten with a bare ISO
+   timestamp** — information destroyed, not merely misstated.
+No bold-field regex misfired, so corruption signature (a) read CLEAN throughout. The
+pre-image-and-diff protocol is what caught this; a green anchoring test never would have.
 
 **Note for whoever resumes:** Phase 206 remains PAUSED at 5/13 for demo prep (client demo
 2026-09-18). Phase 209 was opened *during* that pause and does not resume 206. Unlike 206, 209 is
