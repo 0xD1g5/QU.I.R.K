@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-14T18:59:00Z"
+last_updated: "2026-09-14T19:10:12Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 38
-  completed_plans: 19
-  percent: 50
+  completed_plans: 20
+  percent: 53
 ---
 
 # Project State
@@ -1259,9 +1259,35 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 209 (Deliverable Reachability) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Executing Phase 209 on branch `phase-209-deliverable-reachability`
-Last activity: 2026-09-14 — 209-02 (Wave 0 RED frontend test scaffolding, DELIV-02) COMPLETE. Wrote
+Last activity: 2026-09-14 — 209-03 (Wave 1, backend route implementation, DELIV-01) COMPLETE. Built
+`quirk/dashboard/api/routes/reports.py` (manifest + download routes), `ReportFormatAvailability`/
+`ReportManifestResponse` in `schemas.py`, and registered `reports.router` in `app.py` — turned 21 of
+Wave 0's 22 RED tests GREEN. `quirk/reports/writer.py` untouched throughout (verified via
+`git diff --stat` at task start and end). Verified `output_files` entry count directly from
+`writer.py:1043-1048`: **12 entries**, 5 served by this route (cbom-json/cbom-xml/html/pdf/docx), 7
+out of scope by design (findings/stats/exec-summary/tech-findings/scorecard/roadmap/intelligence).
+Route uses Starlette's `{fmt:path}` converter (not the plain `{fmt}` PATTERNS snippet) plus a custom
+`_LiteralPathNotFoundRoute` class converting FastAPI's default 422-on-Literal-mismatch into 404 —
+both needed to close containment gaps the plain converter leaves open for URL-encoded slash
+payloads. One test-fixture bug fixed (1-char `stamp[-2:]` -> `stamp[-4:-2]` slice typo in
+`tests/test_reports_download_route.py`'s `ended_utc` construction, which made the test's own
+asserted literal unsatisfiable by any correct implementation of this plan's own locked
+`scan_time = ended_utc` decision) — disclosed as Deviation 1 in `209-03-SUMMARY.md`. **One test leg
+stays RED, fully disclosed, not fixed:**
+`test_containment_traversal_payloads_404[../../../etc/passwd]` — httpx/RFC 3986 client-side
+dot-segment normalization rewrites this payload to `/etc/passwd` before the request is even
+constructed, so no server-side code (in or out of this plan's scope) can distinguish it from a
+direct request to that path; fixing it would require changing `app.py`'s app-wide SPA catch-all,
+explicitly out of scope and a "changing a SHARED derivation to fix ONE consumer" anti-pattern.
+Full-suite regression: 5168 passed / 42 skipped / 75 xfailed / 5 xpassed / **18 failed** — 16 of 18
+pre-existing/environmental (13 Docker chaos-lab idempotency, `test_back_star_ci_enforced_leg`,
+`test_lookup_single_known_returns_zero`, `test_non_vacuity_skipped_substitute_is_flagged`, zero
+overlap with this plan's 3 changed files) + the 1 disclosed containment leg above. Commits
+`c443d417`, `e3c4cc43`, `80b731e0`. See `209-03-SUMMARY.md`. Next: 209-04/209-05 (UI wiring +
+containment-gate writeup, Wave 2).
+Previous: 209-02 (Wave 0 RED frontend test scaffolding, DELIV-02) COMPLETE. Wrote
 `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx` (10 legs across 2
 describe blocks: render/availability — 5-button labels, scan-time disclosure known/unknown,
 per-format unavailable reason, D-10 fresh-install copy; interaction — single download + object-URL
