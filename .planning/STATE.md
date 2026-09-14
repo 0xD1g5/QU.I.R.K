@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: in_progress
-last_updated: "2026-09-13T19:40:00.000Z"
+status: executing
+last_updated: "2026-09-14T00:16:11.594Z"
 last_activity: 2026-09-13
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 20
+  completed_phases: 2
+  total_plans: 30
   completed_plans: 17
-  percent: 50
+  percent: 33
 ---
 
 # Project State
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.24 UAT Coverage Drain OPENED 2026-09-13 — defining requirements, no phase
+**Current focus:** Phase 206 — Dashboard UI Coverage Drain
 started. Anchor: write the missing tests behind the honest UAT GAPs and make the gap worklist derive
 itself. Live measurement at open (not carried from the stale worklist doc): **70 GAP-annotated cases
 across 878 total** in `docs/UAT-SERIES.md`, of which **25 sit in series 164–202** that
@@ -1258,12 +1258,47 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Phase 204 COMPLETE (2 of 6 phases done — 203, 204). Next: Phase 205 Guard Integrity
-Plan: 6 of 6 complete (204-01..204-05 plus 204-04b, an orchestrator-authored corrective plan)
-Status: Phase 204 verification `passed` 4/4 — proceeding to Phase 205 under
-`/gsd-autonomous --from 204 --to 206`
-Last activity: 2026-09-13 — Phase 204 closed; UAT gap worklist is now a derived artifact behind two
-standing gates
+Phase: 206 (Dashboard UI Coverage Drain) — **PAUSED at 5 of 13 plans, deliberately, for demo prep**
+Plan: 5 of 13 complete (206-01, 02, 03, 05, 06). Remaining: 04, 07, 08, 09, 10, 11, 12, 13
+Status: Paused 2026-09-13 by operator decision — a client demo on 2026-09-18 takes the week, and
+Phase 206 delivers no demo-visible value. Resume with `/gsd-autonomous --from 206 --to 206`.
+Last activity: 2026-09-13 — Phase 206 paused mid-Wave-2; pivoted to demo readiness (999.113 score
+denominator, chaos-lab merge, /print sidebar)
+
+### Phase 206 PAUSE RECORD (2026-09-13) — everything needed to resume
+
+**Branch:** `phase-206-dashboard-ui-coverage` (24 commits ahead of `main`). All work is COMMITTED;
+the working tree was clean at pause. Phase artifacts (PLAN/SUMMARY/CONTEXT/red-proof) are
+gitignored by design — they live on disk only, so do not `git clean` this branch.
+
+**Done (5 plans, 8 UAT cases dispositioned):** 206-01 (enabling: `AppShell` exported, two
+evidence-backed jsdom shims, red-proof fragment convention), 206-02 (Executive: 7-03 full, 7-04 and
+7-05 partial), 206-03 (Findings A: 7-06, 7-07, 7-24), 206-05 (Certificates+Identity: 7-10 partial,
+7-34 full, 7-12 honest non-conversion), 206-06 (CBOM table: 7-25, 7-26).
+
+**Remaining (8 plans):** 206-04 (Findings B: 7-08, 7-09, 7-37), 206-07 (CBOM graph: 7-14, 7-27,
+7-28), 206-08 (Roadmap: 7-15, 7-16, 7-29), 206-09 (Hardware: 7-40, 7-41), 206-10 (Shell: 7-20,
+7-22, 7-31 + 7-23 reclassification), 206-11 (Print+style: 7-30, 7-21), 206-12 (evidence assembly,
+defect todos), 206-13 (disposition flips, worklist regen, docs+vault sync).
+
+**Critical invariant on resume:** NO disposition has been flipped in `docs/UAT-SERIES.md`, by
+design. All three coupled doc artifacts are fenced into 206-13, which runs last — a disposition
+must never be flipped before the test it cites exists and has been red-proved. Verify that fence
+still holds before resuming.
+
+**Test baseline at pause:** 59 vitest files, 414 passed, 2 skipped (from 49/404 at phase start).
+`npm run build` and `npm run lint` green. Every red-proof source mutation was reverted and verified
+byte-identical.
+
+**Product defects found by this phase so far** — these are the phase's real yield and outlive the
+pause: `UAT-7-12` certificates expiry sort ABSENT (todo filed), `UAT-7-10` self-signed cert flagging
+ABSENT (todo filed), CBOM table zero-match empty state ABSENT (todo filed), `UAT-7-30` sidebar
+renders on `/print` and the PDF export uses that route (D-A2, todo due in 206-11), `UAT-7-05`
+spec/UI drift (4 gauges in 1 card, no descriptions), `UAT-7-04` severity chart renders no numeric
+count text.
+
+**Also unmerged on this branch:** commit `8a28d1c7`, a Phase 203 audit change (re-disposition
+`UAT-203-05` GAP→PASS, close the stale re-sourcing todo) made in a separate session, since paused.
 
 ### Phase 204 (2026-09-13) — Worklist Truth & Derivation, COMPLETE, verification `passed` 4/4
 
@@ -1284,10 +1319,12 @@ phase's real output:**
   `UAT-193-10`, `UAT-199-06`, `UAT-200-11`, `UAT-202-12` are each the last case of a series whose
   trailing summary paragraph quotes a *different* case's GAP. None carries its own GAP disposition.
   The adjudicated rule is "GAP on the case's own `**Result:**` line OR its own `**Notes:**` line".
+
 - Cause 2 was **8** conflicts, not the 7 in `204-CONTEXT.md`'s D-01 table. The eighth,
   `UAT-89-01-01`, has a three-segment ID that was invisible to every prior hand-count. **None of
   the 8 ever cited a substitute** — each annotation literally read `DEFERRED — no substitute
   coverage`, i.e. GAP-shaped prose wearing the wrong token. The ledger had been right about all 8.
+
 - Ledger truth: **378** rows, true max series **158** — not the "377-row / series 1-163" every
   prior doc stated. Per D-02 it is now historical evidence only, never a live generator input.
 
@@ -2279,10 +2316,12 @@ reads first.
 1. ~~Phase 203 in-session~~ — **DONE 2026-09-13.** STALE-02 complete; STALE-01 **partial**
    (1 of 8 vendors verified, 7 source documents gone/access-gated). Staleness gate deliberately
    RED under the dated deferral recorded above. 9 commits, `9e2e6bd9`..`61668268`.
+
 2. **NEXT: `/gsd-autonomous --from 204 --to 206`** — phases 204, 205, 206, then **halt**.
 3. **Phase 207 is manual and operator-led** — deliberately de-scoped from autonomous execution. Its
    Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. Do not
    let an autonomous runner advance into it.
+
 4. `/gsd-autonomous --from 208` — resume autonomous for Phase 208 and the milestone audit/close,
    once 207's verdict is recorded.
 
