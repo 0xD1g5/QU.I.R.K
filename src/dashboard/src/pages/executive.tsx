@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Download, Loader2, AlertTriangle } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
@@ -32,6 +33,50 @@ const SEVERITY_COLORS: Record<string, string> = {
   MEDIUM: "hsl(38 92% 50%)",
   LOW: "hsl(213 94% 68%)",
   INFO: "hsl(240 5% 46%)",
+}
+
+// Phase 209 DELIV-02: the report-download control. Matches the manifest shape
+// locked in 209-UI-SPEC.md's Interaction Contract (implemented by 209-03's
+// GET /api/reports/latest/manifest).
+type ReportFormatKey = "html" | "pdf" | "docx" | "cbom-json" | "cbom-xml"
+
+interface ReportFormatAvailability {
+  available: boolean
+  reason: string | null
+}
+
+interface ReportManifest {
+  scan_time: string | null
+  stamp: string | null
+  formats: Record<ReportFormatKey, ReportFormatAvailability>
+}
+
+const REPORT_FORMATS: { key: ReportFormatKey; label: string; extension: string }[] = [
+  { key: "html", label: "HTML", extension: "html" },
+  { key: "pdf", label: "PDF", extension: "pdf" },
+  { key: "docx", label: "DOCX", extension: "docx" },
+  { key: "cbom-json", label: "CBOM (JSON)", extension: "cdx.json" },
+  { key: "cbom-xml", label: "CBOM (XML)", extension: "cdx.xml" },
+]
+
+// D-10: the honest pre-scan/degrade-to-safe-empty-value manifest — never a
+// blank control, never a silent crash.
+const NO_SCAN_REASON = "No scan has run yet."
+
+function fallbackManifest(): ReportManifest {
+  return {
+    scan_time: null,
+    stamp: null,
+    formats: REPORT_FORMATS.reduce((acc, f) => {
+      acc[f.key] = { available: false, reason: NO_SCAN_REASON }
+      return acc
+    }, {} as Record<ReportFormatKey, ReportFormatAvailability>),
+  }
+}
+
+function allFormatsUnavailable(manifest: ReportManifest | null): boolean {
+  if (!manifest) return true
+  return REPORT_FORMATS.every((f) => !manifest.formats[f.key]?.available)
 }
 
 const CONFIDENCE_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -139,12 +184,25 @@ export function ExecutivePage() {
   const [pdfExporting, setPdfExporting] = useState(false)
   const [pdfMessage, setPdfMessage] = useState<string | null>(null)
 
+  // Phase 209 DELIV-02: report-download control state. Per-format loading is
+  // a Set (not a single nullable string) — the concurrency leg requires two
+  // simultaneous in-flight downloads to be independently observable.
+  const [manifest, setManifest] = useState<ReportManifest | null>(null)
+  const [downloadingFormats, setDownloadingFormats] = useState<Set<string>>(new Set())
+  const [downloadMessage, setDownloadMessage] = useState<string | null>(null)
+
   // D-06 (WR-05): track revoke timer + blob URL in refs so a useEffect
   // cleanup releases both on unmount. Prevents the setTimeout from firing
   // after the component is gone and prevents blob URL leaks when the user
   // navigates away mid-download.
   const revokeTimerRef = useRef<number | null>(null)
   const blobUrlRef = useRef<string | null>(null)
+
+  // Phase 209 DELIV-02: generalizes the single blob/timer ref pair above to a
+  // per-format map, since up to five downloads can be in flight/pending
+  // revocation at once. The single-pair refs above are NOT removed — the
+  // Export PDF button still uses them.
+  const downloadBlobsRef = useRef<Map<string, { url: string; timer: number }>>(new Map())
 
   useEffect(() => {
     return () => {
@@ -156,8 +214,79 @@ export function ExecutivePage() {
         URL.revokeObjectURL(blobUrlRef.current)
         blobUrlRef.current = null
       }
+      for (const { url, timer } of downloadBlobsRef.current.values()) {
+        clearTimeout(timer)
+        URL.revokeObjectURL(url)
+      }
+      downloadBlobsRef.current.clear()
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadManifest() {
+      try {
+        const resp = await fetchApi("/api/reports/latest/manifest")
+        if (resp.ok) {
+          const data = (await resp.json()) as ReportManifest
+          if (!cancelled) setManifest(data)
+          return
+        }
+      } catch {
+        // fall through to the honest degrade below
+      }
+      if (!cancelled) setManifest(fallbackManifest())
+    }
+    loadManifest()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function handleDownloadFormat(fmt: ReportFormatKey, extension: string) {
+    setDownloadingFormats((prev) => {
+      const next = new Set(prev)
+      next.add(fmt)
+      return next
+    })
+    setDownloadMessage(null)
+    try {
+      const resp = await fetchApi(`/api/reports/latest/${fmt}`)
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => null)
+        const detail = coerceErrorDetail(body)
+        const looksUseful =
+          body && typeof body === "object" && typeof (body as { detail?: unknown }).detail === "string"
+        setDownloadMessage(
+          looksUseful
+            ? `Download failed: ${detail}`
+            : "Could not reach the report file. Try again."
+        )
+        return
+      }
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `quirk-report.${extension}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      const timer = window.setTimeout(() => {
+        URL.revokeObjectURL(url)
+        downloadBlobsRef.current.delete(fmt)
+      }, 100)
+      downloadBlobsRef.current.set(fmt, { url, timer })
+    } catch {
+      setDownloadMessage("Could not reach the report file. Try again.")
+    } finally {
+      setDownloadingFormats((prev) => {
+        const next = new Set(prev)
+        next.delete(fmt)
+        return next
+      })
+    }
+  }
 
   async function handleExportPdf() {
     setPdfExporting(true)
@@ -257,6 +386,73 @@ export function ExecutivePage() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {/* Phase 209 DELIV-02: real report-artifact downloads, distinct from
+              the Export PDF button below (which prints the dashboard view).
+              Placed to the LEFT per 209-UI-SPEC.md's locked layout. The whole
+              group is gated on `manifest !== null` (rather than rendering
+              buttons pre-emptively with a guessed disabled/enabled default)
+              so a button's accessible name never exists in the DOM before its
+              real availability is known — avoids a stale-click race against
+              the async manifest fetch. */}
+          {manifest && (
+          <>
+          <span className="text-sm text-muted-foreground">
+            {allFormatsUnavailable(manifest)
+              ? "No report artifacts yet — run a scan first."
+              : manifest.scan_time
+                ? `Report from scan: ${formatInstantDate(manifest.scan_time)}`
+                : "Report artifacts found — scan time unknown"}
+          </span>
+          <TooltipProvider>
+          <div className="flex items-center gap-2" aria-label="Download report artifacts" role="group">
+            {REPORT_FORMATS.map(({ key, label, extension }) => {
+              const avail = manifest.formats[key]
+              const isAvailable = avail?.available ?? false
+              const isLoading = downloadingFormats.has(key)
+              const reason = avail?.reason ?? null
+
+              const buttonEl = (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!isAvailable || isLoading}
+                  onClick={isAvailable ? () => handleDownloadFormat(key, extension) : undefined}
+                >
+                  {isLoading ? (
+                    <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Preparing…</>
+                  ) : (
+                    <><Download className="mr-1 h-4 w-4" /> {label}</>
+                  )}
+                </Button>
+              )
+
+              if (isAvailable) {
+                return <span key={key}>{buttonEl}</span>
+              }
+
+              // Unavailable: disabled buttons are not natively focusable, so
+              // the reason is wrapped in a focusable span per the standard
+              // Radix pattern (matches the Phase 202 drawer scroll-region
+              // fix) — keyboard- and screen-reader-reachable, and `title`
+              // keeps the reason in the DOM even when the tooltip is closed.
+              return (
+                <Tooltip key={key}>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0} title={reason ?? undefined}>
+                      {buttonEl}
+                    </span>
+                  </TooltipTrigger>
+                  {reason && <TooltipContent>{reason}</TooltipContent>}
+                </Tooltip>
+              )
+            })}
+          </div>
+          </TooltipProvider>
+          </>
+          )}
+          {downloadMessage && (
+            <span className="text-sm text-muted-foreground">{downloadMessage}</span>
+          )}
           {pdfMessage && (
             <span className="text-sm text-muted-foreground">{pdfMessage}</span>
           )}
