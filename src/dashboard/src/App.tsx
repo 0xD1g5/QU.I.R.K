@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthProvider"
 import { useAuth } from "@/context/auth-context"
@@ -45,6 +45,7 @@ import { SensorsPage } from "@/pages/sensors"
 export function AppShell() {
   const { status } = useAuth()
   const vertical = useVertical()
+  const location = useLocation()
 
   if (status === "loading") {
     return <div className="min-h-screen bg-background" />
@@ -52,6 +53,32 @@ export function AppShell() {
 
   if (status === "unauthenticated") {
     return <LoginPage />
+  }
+
+  // /print renders WITHOUT the dashboard chrome.
+  //
+  // `/print` is not a dashboard page — it is the client deliverable that
+  // `POST /api/export/pdf` renders to PDF by pointing headless Chromium at it
+  // (quirk/dashboard/api/routes/pdf.py). Mounted inside the shell below, every
+  // exported PDF carried the navigation sidebar down its left edge plus the
+  // shell's `ml-12 lg:ml-60` content offset, because nothing in `src/` has ever
+  // defined a `print:hidden` rule or an `@media print` block.
+  //
+  // Fixed structurally rather than with CSS deliberately. Hiding the sidebar
+  // from PrintPage's own <style> block would couple the deliverable to the
+  // sidebar's class names and to Tailwind's generated margin utilities —
+  // rename either and the sidebar silently reappears in client PDFs, a
+  // regression whose only symptom is visual and whose only witness is the
+  // client.
+  //
+  // This branch sits INSIDE `status === "authenticated"` on purpose, and must
+  // stay there. The PDF renderer opens a cookie-less Playwright context and
+  // reaches this route only through AuthProvider's documented auth-disabled
+  // passthrough (no token + 200 → authenticated). Hoisting `/print` above the
+  // auth gate to "simplify" this would quietly turn an authenticated view into
+  // an anonymous one.
+  if (location.pathname.replace(/\/+$/, "") === "/print") {
+    return <PrintPage />
   }
 
   // status === "authenticated" — render full dashboard
@@ -73,7 +100,9 @@ export function AppShell() {
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/exposure-map" element={<ExposureMapPage />} />
             <Route path="/trends" element={<TrendsPage />} />
-            <Route path="/print" element={<PrintPage />} />
+            {/* /print is handled above, chrome-free — see the comment in AppShell.
+                Deliberately NOT registered here: a second registration inside the
+                shell would render the sidebar again for any path that reached it. */}
             <Route path="/qramm" element={<OrgProfilePage />} />
             <Route path="/qramm/assessment" element={<AssessmentPage />} />
             <Route path="/schedules" element={<SchedulesPage />} />
