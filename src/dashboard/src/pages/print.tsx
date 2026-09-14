@@ -451,9 +451,19 @@ export function PrintPage() {
         {/* Section 2: Executive Summary */}
         <div className="print-section">
           <h2>Executive Summary</h2>
+          {/* SCORE-06 honest-absence: an unassessed subscore renders as an em-dash,
+              never as a zero and never as NOTHING. These seven sites rendered the
+              raw value, so a null printed as empty space under its label — which
+              reads as a broken report rather than as "we did not assess this".
+              `docs/report-interpretation.md` documents the em-dash convention and
+              `executive.tsx`'s SubscoreSlot already implements it; print.tsx was
+              the outlier. Observed live on a real 370-endpoint scan, where
+              `data_in_motion` printed as a bare label with no number above it.
+              999.115 makes this MORE visible, not less: excluding unassessed
+              domains from the headline is exactly what produces the nulls. */}
           <div className="score-row">
             <div className="score-item">
-              <div className="score-number">{score.score}</div>
+              <div className="score-number">{score.score ?? "—"}</div>
               <div className="score-label">Overall Readiness ({score.rating})</div>
               {/* SCORE-04 / D-09/D-10 (184.4): band-cap reason, shown when the
                   band was capped by an open CRITICAL finding (BAND severity floor). */}
@@ -462,27 +472,27 @@ export function PrintPage() {
               )}
             </div>
             <div className="score-item">
-              <div className="score-number">{score.subscores.hygiene}</div>
+              <div className="score-number">{score.subscores.hygiene ?? "—"}</div>
               <div className="score-label">Hygiene</div>
             </div>
             <div className="score-item">
-              <div className="score-number">{score.subscores.modern_tls}</div>
+              <div className="score-number">{score.subscores.modern_tls ?? "—"}</div>
               <div className="score-label">Modern TLS</div>
             </div>
             <div className="score-item">
-              <div className="score-number">{score.subscores.identity_trust}</div>
+              <div className="score-number">{score.subscores.identity_trust ?? "—"}</div>
               <div className="score-label">Identity</div>
             </div>
             <div className="score-item">
-              <div className="score-number">{score.subscores.agility_signals}</div>
+              <div className="score-number">{score.subscores.agility_signals ?? "—"}</div>
               <div className="score-label">Agility</div>
             </div>
             <div className="score-item">
-              <div className="score-number">{score.subscores.data_at_rest}</div>
+              <div className="score-number">{score.subscores.data_at_rest ?? "—"}</div>
               <div className="score-label">Data at Rest</div>
             </div>
             <div className="score-item">
-              <div className="score-number">{score.subscores.data_in_motion}</div>
+              <div className="score-number">{score.subscores.data_in_motion ?? "—"}</div>
               <div className="score-label">Data in Motion</div>
             </div>
           </div>
