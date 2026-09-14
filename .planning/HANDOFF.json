@@ -1,15 +1,15 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-14T02:00:59.876Z",
-  "phase": "demo-prep",
-  "phase_name": "Demo readiness for 2026-09-18 client presentation (Phase 206 PAUSED, see 999.114)",
+  "timestamp": "2026-09-14T03:12:39.715Z",
+  "phase": "999.115-scoring-model",
+  "phase_name": "999.115 readiness-score model fix (demo-prep line; Phase 206 PAUSED, see 999.114)",
   "phase_dir": ".planning",
-  "plan": 2,
-  "task": 1,
-  "total_tasks": 4,
+  "plan": 1,
+  "task": 7,
+  "total_tasks": 9,
   "status": "paused",
-  "branch": "main",
-  "commits_ahead_of_origin": 44,
+  "branch": "scoring-999.115-model-fix",
+  "commits_ahead_of_origin": 47,
   "completed_tasks": [
     {
       "id": 1,
@@ -70,9 +70,83 @@
       "name": "Calibration ladder R1-R5 \u2014 all rungs operator-set (blind), encoded + red-proved; R5 ceiling 40->30",
       "status": "done",
       "commit": "240581b8"
+    },
+    {
+      "id": 10,
+      "name": "Backout path: tag pre-999.115-scoring-model + branch scoring-999.115-model-fix (main untouched)",
+      "status": "done",
+      "commit": "-"
+    },
+    {
+      "id": 11,
+      "name": "Full-suite BASELINE captured before any edit \u2014 7 failures, NONE in scoring",
+      "status": "done",
+      "commit": "-"
+    },
+    {
+      "id": 12,
+      "name": "P8 \u2014 undetermined cert key types no longer score as best-case",
+      "status": "done",
+      "commit": "58f58a13"
+    },
+    {
+      "id": 13,
+      "name": "P5c \u2014 drivers no longer cite domains the headline disowned",
+      "status": "done",
+      "commit": "1b1e114d"
+    },
+    {
+      "id": 14,
+      "name": "Repair 2 fixtures that only passed under the P5c defect",
+      "status": "done",
+      "commit": "88cec9b2"
+    },
+    {
+      "id": 15,
+      "name": "C \u2014 absolute consequence ceiling, COMPRESSED not clamped",
+      "status": "done",
+      "commit": "d92e928b"
+    },
+    {
+      "id": 16,
+      "name": "PQC ceiling + prevalence curve D + removal of agility_high_impact_ratio; ladder 5/5",
+      "status": "done",
+      "commit": "523dd818"
+    },
+    {
+      "id": 17,
+      "name": "Record the Phase 184.4 D-03 supersession (operator-approved)",
+      "status": "done",
+      "commit": "6f59077b"
+    },
+    {
+      "id": 18,
+      "name": "Isolate the severity-floor contract test from the PQC ceiling",
+      "status": "done",
+      "commit": "43480cbd"
     }
   ],
   "remaining_tasks": [
+    {
+      "id": 19,
+      "name": "RESUME HERE \u2014 repair 11 non-property scoring tests (list in .continue-here.md)",
+      "status": "not_started"
+    },
+    {
+      "id": 20,
+      "name": "Regenerate golden fixtures (CBOM + score-strings.json) and bump SCORING_VERSION past 2.0",
+      "status": "not_started"
+    },
+    {
+      "id": 21,
+      "name": "Full-suite run; compare failing-node SET against the captured baseline of 7",
+      "status": "not_started"
+    },
+    {
+      "id": 22,
+      "name": "File P2b (endpoint dilution) as a todo \u2014 NOT fixed by any of the six changes",
+      "status": "not_started"
+    },
     {
       "id": 10,
       "name": "/print sidebar product defect fix (affects exported PDFs)",
@@ -86,30 +160,30 @@
   ],
   "blockers": [
     {
-      "description": "main CI has one remaining red: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE \u2014 BACK-51 is properly closed at HORIZON.md:49; the gate keys on (ID, title) and is matching a narrative prose line in the ARCHIVED v5.23-ROADMAP.md that literally says 'BACK-51 closed by recorded decision'.",
+      "description": "11 non-property scoring tests are RED on the branch, deliberately. The model has stopped moving; they are pinned values D's curve shifted, plus the D-03 family, plus one PQC-ceiling collision. Full list and classification in .planning/.continue-here.md.",
       "type": "technical",
-      "workaround": "Not fixed deliberately \u2014 the honest fix is at the gate (prose asserting closure is not an open-item declaration), which is a real code change with test implications and was out of the demo scope. Filed for v5.25 at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md"
+      "workaround": "Repair them as task 19. Do NOT weaken a model change to make one pass without re-reading why it is red."
     },
     {
-      "description": "The readiness score's usable range is ~85-100. Denominator fix moved the 31-host vulnerable estate 91 -> 87 against an operator calibration target of < 30 (tightened from < 40 on 2026-09-14). Necessary but not sufficient.",
+      "description": "P2b (observing more healthy endpoints still RAISES the score) is NOT fixed by any of the six changes and remains open.",
       "type": "technical",
-      "workaround": "Tracked as 999.115 at P1 with four candidate model shapes. Must be chosen BY MEASUREMENT against the calibration ladder (task 9, COMPLETE 2026-09-14), not by argument. Do NOT tune weights to hit a number (D5)."
+      "workaround": "File as a todo (task 22). It is a denominator/absolute-exposure problem in assessable_endpoint_count, a separate fix from 999.115's model work."
     },
     {
-      "description": "Calibration ladder measured 2026-09-14: all five rungs land in ONE band, EXCELLENT, spanning 15 points (R1=100, R2=95, R3=91, R4=85, R5=87). Only R1 hits target. Ladder is also NOT monotonic \u2014 R4 (neglected, 2 CRITICAL) scores 85, BELOW R5 (multihost, 5 CRITICAL/14 HIGH) at 87.",
+      "description": "main CI red: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE (BACK-51 is closed at HORIZON.md:49; the gate matches narrative prose in the ARCHIVED v5.23-ROADMAP.md).",
       "type": "technical",
-      "workaround": "Not a bug to patch \u2014 this IS 999.115's measurement, now standing as xfail(strict=True) properties in tests/test_score_properties.py. Choose the model shape (A/B/C/D) against these, by measurement. Caveat on the monotonicity node: part of that specific inversion is fixture-borne (R5's zero cert key-type counts are a documented reconstruction approximation) \u2014 re-measure, do not assume it closes."
+      "workaround": "Filed for v5.25 at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md. Present in the captured baseline too."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Decide whether to push main to origin",
-      "context": "38 commits ahead, nothing pushed. Includes the 999.113 score fix, both branch merges, and the resume gate. Pushing to main is outward-facing; memory records that main branch protection is bypassable, so a push succeeds silently.",
+      "action": "Decide whether to push main to origin (and whether to open a PR for this branch)",
+      "context": "main is 47 commits ahead of origin and unpushed, so a PR today would show this branch's 7 commits PLUS those 47. Either push main first or keep the work local. The tag + branch already provide backout either way. Pushing to main is outward-facing; memory records that main branch protection is bypassable, so a push succeeds silently.",
       "blocking": false
     },
     {
       "action": "Choose client-facing vs presenter-notes framing for the scoring-derivation summary",
-      "context": "Default plan is layered: client-safe narrative first, appendix with arithmetic/weights/known-limits after. Operator can redirect.",
+      "context": "Default plan is layered: client-safe narrative first, appendix with arithmetic/weights/known-limits after.",
       "blocking": false
     }
   ],
@@ -143,9 +217,34 @@
       "decision": "Choose the next scoring model BY MEASUREMENT, not argument",
       "rationale": "Attempt #1 (Phase 188 SCORE-06) failed because nothing could tell whether a change had helped \u2014 ~3,200 lines of scoring tests were green the whole time the score was blind.",
       "phase": "demo-prep"
+    },
+    {
+      "decision": "Reverse Phase 184.4 D-03 \u2014 severity now caps the NUMBER, not only the band",
+      "rationale": "Operator-approved 2026-09-14. D-03's separation produced the product's central incoherence: a catastrophic estate whose number said 87 (numerically EXCELLENT) while its label said FAIR. Superseded, not deleted; D-03's rationale is preserved in full.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "COMPRESS into [0, ceiling], never CLAMP to it",
+      "rationale": "Found by measurement, not design. A hard min(score, ceiling) made the score INERT on capped estates \u2014 remediation lift +0, all three calibration profiles collapsed to one number. The roadmap would have shown '+0 points' against every recommendation the product makes. Without compression the change is a regression.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "Ceiling thresholds derived from BAND_THRESHOLDS, not hardcoded",
+      "rationale": "'Cap at POOR' IS FAIR-1; 'cap at FAIR' IS MODERATE-1. Reading them via _top_of_band() collapses the free-parameter count from four to one (DEEP_CRITICAL_CEILING=25, from the operator's R5 rung) and makes a future band rebalance carry them along.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "PQC as a CEILING, never a bonus",
+      "rationale": "Forced, not preferred: agility_pqc_hybrid_bonus is already the joint-largest bonus at 8.0 and measurement showed PQC adoption moving the score by exactly 0, because _apply_weighted_impacts clamps each domain at 25 and a clean estate is already there. Any bonus is absorbed the same way.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "Remove agility_high_impact_ratio rather than re-denominate it",
+      "rationale": "999.113 D1(d) fixed its denominator, which was right and insufficient \u2014 ANY ratio there carries the defect, because a finding count is not a population badness is proportional to. _consequence_ceiling() now carries that signal absolutely. Measured: removing it closes P1 with the ladder intact; removing it WITHOUT the ceiling closes nothing.",
+      "phase": "999.115"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Task 10, the /print sidebar defect (App.tsx:60 renders <Sidebar/> unconditionally and /print is a <Route> inside that shell at App.tsx:76; no print:hidden or @media print anywhere in src/; print.tsx's PRINT_CSS has no sidebar rule). Affects exported PDFs. Then task 11, the scoring-derivation summary. The scoring MODEL work itself (999.115 candidates A/B/C/D) is NOT demo scope \u2014 the instrument is built and the gap is now measured, which is what Friday needs.",
-  "context_notes": "Operator instruction 'lets pick up at the property suite p1-p6 when resuming' is DISCHARGED \u2014 tests/test_score_properties.py is committed at e1716d78, red-proved by execution (9 failed / 9 passed under --runxfail). Convention to know before touching it: 9 properties carry xfail(strict=True), each reason string holding its measured number. Strict means a future model fix XPASSes and HARD-FAILS, forcing promotion to a green gate \u2014 that is deliberate, do not relax it to non-strict. Measured on the multihost estate and now standing in the suite: P4 87 vs the <40 ceiling (the deliverable); P4b 87 >= 85 so the NUMERIC band is EXCELLENT and only cap_band_for_severity's CRITICAL override shows the client FAIR; P6 full remediation spans just 13 points (87 -> 100) without changing band, against a narrowest published band width of 15; P2b dilution SURVIVED 999.113 through assessable_endpoint_count (+20/+100/+500 healthy endpoints -> 89/91/93); P1 has 8 monotonicity violations where MEDIUM and LOW findings RAISE the score. Two things found that inspection had missed: the P1 LOW cases (found by sweeping, not reading) and P5c, a NEW latent defect \u2014 the scorer appends dar_/motion_ drivers to the client-facing list without consulting the assessed predicate, so a domain excluded from the headline can supply its top driver; unreachable today only through an incidental coupling in evidence.py that nothing pinned until now. Still true: do not start the model work by picking a shape, and 999.113 D5 (no tuning to a target) governs the ladder as much as the weights."
+  "next_action": "Task 19: repair the 11 red non-property scoring tests listed in .planning/.continue-here.md. The model is FINAL and must not move to accommodate them \u2014 each is a pinned value, a D-03-family expectation, or a PQC-ceiling collision, and each should be corrected to assert the new behaviour with the OLD expectation quoted in its docstring (the pattern already used in test_scoring_orthogonal_contract.py). Then task 20 (golden fixtures + SCORING_VERSION), task 21 (full-suite SET comparison against the captured baseline of 7), task 22 (file P2b).",
+  "context_notes": "All SIX model changes are landed and the calibration ladder is 5/5: R1 100 EXCELLENT / R2 78 GOOD / R3 46 FAIR / R4 24 POOR / R5 18 POOR, every capped score disclosing what capped it via rating_cap_reason. The model has stopped moving; what remains is test repair and release hygiene, not design. TWO THINGS A RESUMING AGENT MUST NOT UNDO. (1) The ceiling COMPRESSES, it does not clamp \u2014 a hard min() looks simpler and destroys remediation lift and profile sensitivity on exactly the estates that most need them; this was measured, not predicted. (2) My earlier claim that the candidate simulation reached 27/27 was WRONG and is corrected in the commit log: that run used a clamp, and an inert score trivially satisfies a property asserting the score does not rise. P2b survives all six changes. Backout is three-layered: tag pre-999.115-scoring-model, branch scoring-999.115-model-fix (main is untouched at b2050898), and one revertable commit per change. A clean full-suite BASELINE was captured before any edit \u2014 7 failures, none in scoring \u2014 at /Users/digs/.claude/jobs/26f4a6a4/tmp/baseline-failing-set.txt; the full suite takes ~19 minutes. Standing rules that still govern: 999.113 D5 (never tune to a target), and the ladder's five rungs are four-fifths synthetic so the SHAPE is evidenced but the CONSTANTS are a first fit."
 }
