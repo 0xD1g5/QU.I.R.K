@@ -12,10 +12,22 @@ from quirk.severity_bands import (
 # Phase 188 SCORE-06 — scoring formula version marker. Bumped whenever the
 # aggregation shape changes (exclude-and-rescale replaces the fixed / 1.5
 # rollup). NO back-migration of stored historical scores (CONTEXT.md locked
-# decision) — this marker lets every report surface disclose that pre-5.20
-# scores are not comparable to post-5.20 scores.
-SCORING_VERSION = "2.0"
-SCORING_VERSION_NOTE = "scoring v2 — not comparable with pre-5.20 scores"
+# decision) — this marker lets every report surface disclose that scores from
+# different scoring versions are not comparable to each other.
+#
+# 999.115 bumped this 2.0 -> 3.0, and the bump is not bookkeeping: it is the
+# mechanism that makes the change honest. Six model changes landed together and
+# every one of them moves the number on every estate the product has ever
+# scored — the 31-host reference estate went 87 -> 18. The reference ladder
+# moved R2 95 -> 78, R3 91 -> 46, R4 85 -> 24.
+#
+# It is also what discharges Phase 184.4 D-03's second argument for capping the
+# band rather than the number. D-03 valued comparability across scans and was
+# right to; 999.115 supersedes it by DISCLOSING the discontinuity rather than
+# avoiding it forever, which is the honest form of the same concern. See
+# .planning/decisions/999.115-severity-caps-the-number-supersedes-184.4-D-03.md
+SCORING_VERSION = "3.0"
+SCORING_VERSION_NOTE = "scoring v3 — not comparable with v2 or earlier scores"
 
 # Phase 188 SCORE-06 / plan 188-03: the once-composed not-computed statement
 # lives in quirk.reports.content_model, NOT here — html_renderer.py,
