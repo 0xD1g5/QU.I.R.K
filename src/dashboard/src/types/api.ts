@@ -714,6 +714,8 @@ export interface ExposureNode {
   id: string
   label: string
   is_crown_jewel: boolean
+  /** "endpoint" (a scanned host:port) | "ca" (a certificate-authority hub). */
+  node_type?: "endpoint" | "ca"
 }
 
 export type ExposureEdgeType = "key_reuse" | "hardware_bridge"

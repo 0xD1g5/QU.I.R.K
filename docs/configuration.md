@@ -8,7 +8,8 @@ The file has six top-level blocks: `assessment`, `scan`, `targets`, `connectors`
 
 ## Assessment Block (required)
 
-All four keys are required. They appear in every report header and deliverable.
+All four required keys appear in every report header and deliverable. `crown_jewels` is
+optional.
 
 | Key | Type | Example | Required | Description |
 |-----|------|---------|----------|-------------|
@@ -16,6 +17,7 @@ All four keys are required. They appear in every report header and deliverable.
 | `data_classification` | string | `"confidential"` | Yes | One of: `public`, `internal`, `confidential`, `regulated` |
 | `report_owner` | string | `"ACME Corp"` | Yes | Client name as it appears in the report |
 | `timezone` | string | `"America/New_York"` | Yes | IANA timezone for report timestamps (e.g. `"Europe/London"`, `"UTC"`) |
+| `crown_jewels` | list of strings | `["10.0.0.20", "payments.example.com"]` | No | Systems whose compromise actually matters. Highlighted on the dashboard's Quantum Exposure Map. Default `[]` |
 
 ```yaml
 assessment:
@@ -27,7 +29,27 @@ assessment:
   #   report.branding.logo_path is the preferred field as of Phase 200 (v5.23). This
   #   assessment.logo_path key is still honored when report.branding.logo_path is unset — it is
   #   not being removed — but new configs should set report.branding.logo_path instead.
+  crown_jewels:
+    - "10.0.0.20"
+    - "payments.example.com"
 ```
+
+### `crown_jewels` (optional)
+
+The systems whose compromise actually matters for this engagement — hosts, IPs, or FQDNs.
+They render with an accent ring on the dashboard's **Quantum Exposure Map**, so the graph
+shows what is at stake rather than only what is connected.
+
+**This is declared, never inferred.** No probe can discover which system a client cares
+about, so QU.I.R.K. does not guess. Leaving the list empty marks nothing — the map says so by
+marking nothing rather than nominating a "most important" host it has no basis to choose.
+
+Matching is on the **host portion** of an endpoint, so `"10.0.0.20"` marks that host on every
+port it was found on. A certificate-authority hub node is never marked, whatever is declared:
+a crown jewel is a system the client owns, not an issuer identity.
+
+If the config cannot be read, nothing is marked. Marking the wrong node is worse than marking
+none.
 
 ---
 

@@ -23,6 +23,20 @@ class AssessmentCfg:
     report_owner: str
     timezone: str
     logo_path: str | None = None  # Phase 100 / D-01 — optional path to local image file
+    # 2026-09-14: operator-declared crown jewels — the systems whose compromise
+    # actually matters for this engagement. Hosts / IPs / FQDNs.
+    #
+    # This is an ENGAGEMENT fact, not scan data: no probe can discover which
+    # system a client cares about, so it is declared, never inferred. Phase 195
+    # built the crown-jewel rendering and deferred the data (Tier B, backlog
+    # 999.107) because the then-cross-scan map appeared to need a persistence
+    # layer. The map became scan-scoped on 2026-09-14, and a declaration read at
+    # render time needs no persistence at all — so the deferral's premise no
+    # longer holds and this closes the cheap half of it.
+    #
+    # Default [] is honest absence: nothing is marked, and the map says so by
+    # marking nothing, rather than guessing a "most important" host.
+    crown_jewels: list[str] = field(default_factory=list)
 
 
 @dataclass

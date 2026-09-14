@@ -246,3 +246,192 @@ def test_zero_reuse_still_returns_both_keys():
     finally:
         session.close()
         engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# Shared-CA hub nodes (2026-09-14) and operator-declared crown jewels.
+# ---------------------------------------------------------------------------
+
+def _tls(host, port, issuer, scan_run_id=RUN_NEW, fingerprint=None):
+    return CryptoEndpoint(
+        host=host,
+        port=port,
+        protocol="TLS",
+        cert_issuer=issuer,
+        cert_subject=f"CN={host}",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048,
+        cert_spki_fingerprint=fingerprint,
+        scan_run_id=scan_run_id,
+    )
+
+
+_CA_DN = "CN=ChaosLab-RootCA,OU=CA,O=ChaosLab,L=Lab,ST=NY,C=US"
+
+
+def test_shared_ca_is_a_hub_not_all_pairs():
+    """N endpoints under one CA produce N edges, not N*(N-1)/2.
+
+    All-pairs over the reference estate's 10-member CA group would be 45 edges
+    — rebuilding the edge explosion the scoping fix removed. A hub is linear.
+    """
+    from quirk.intelligence.exposure_map import derive_shared_ca_edges
+
+    engine, session = _make_session()
+    try:
+        session.add_all([_tls(f"10.0.0.{i}", 443, _CA_DN) for i in range(1, 11)])
+        session.commit()
+
+        nodes, edges = derive_shared_ca_edges(session, scan_run_id=RUN_NEW)
+        assert len(nodes) == 1, f"expected one CA hub, got {nodes}"
+        assert len(edges) == 10, (
+            f"hub must emit one edge per dependant (10), not all-pairs (45); "
+            f"got {len(edges)}"
+        )
+        assert all(e["source"] == nodes[0]["id"] for e in edges)
+        assert nodes[0]["node_type"] == "ca"
+        assert nodes[0]["label"] == "ChaosLab-RootCA", (
+            f"hub label should be the CN, not the full DN: {nodes[0]['label']!r}"
+        )
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_ca_with_a_single_dependant_is_not_a_shared_point_of_compromise():
+    from quirk.intelligence.exposure_map import derive_shared_ca_edges
+
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.1", 443, _CA_DN),
+            _tls("10.0.0.2", 443, "CN=Other-CA"),
+        ])
+        session.commit()
+
+        nodes, edges = derive_shared_ca_edges(session, scan_run_id=RUN_NEW)
+        assert nodes == [] and edges == []
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_ca_hub_id_cannot_collide_with_an_endpoint():
+    """Hub ids are `ca:`-prefixed; endpoint ids are `host:port`."""
+    from quirk.intelligence.exposure_map import derive_shared_ca_edges
+
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.1", 443, _CA_DN),
+            _tls("10.0.0.2", 443, _CA_DN),
+        ])
+        session.commit()
+
+        nodes, _ = derive_shared_ca_edges(session, scan_run_id=RUN_NEW)
+        assert nodes[0]["id"].startswith("ca:")
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_shared_ca_respects_scan_scoping():
+    from quirk.intelligence.exposure_map import derive_shared_ca_edges
+
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.1", 443, _CA_DN, scan_run_id=RUN_OLD),
+            _tls("10.0.0.2", 443, _CA_DN, scan_run_id=RUN_OLD),
+            _tls("10.0.0.3", 443, _CA_DN, scan_run_id=RUN_NEW),
+            _tls("10.0.0.4", 443, _CA_DN, scan_run_id=RUN_NEW),
+        ])
+        session.commit()
+
+        _, edges = derive_shared_ca_edges(session, scan_run_id=RUN_NEW)
+        targets = {e["target"] for e in edges}
+        assert targets == {"10.0.0.3:443", "10.0.0.4:443"}
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_one_endpoint_scanned_twice_is_one_dependant():
+    """The same de-duplication discipline as the key-reuse self-edge fix."""
+    from quirk.intelligence.exposure_map import derive_shared_ca_edges
+
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.1", 443, _CA_DN),
+            _tls("10.0.0.1", 443, _CA_DN),  # same endpoint, duplicate row
+            _tls("10.0.0.2", 443, _CA_DN),
+        ])
+        session.commit()
+
+        _, edges = derive_shared_ca_edges(session, scan_run_id=RUN_NEW)
+        assert len(edges) == 2, f"duplicate rows became duplicate dependants: {edges}"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_crown_jewel_marks_declared_host_on_every_port():
+    """A declaration names a SYSTEM, so it matches on the host portion."""
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.20", 443, _CA_DN),
+            _tls("10.0.0.99", 443, _CA_DN),
+        ])
+        session.commit()
+
+        result = derive_exposure_map(session, crown_jewels=["10.0.0.20"])
+        marked = {n["id"] for n in result["nodes"] if n["is_crown_jewel"]}
+        assert marked == {"10.0.0.20:443"}, f"got {marked}"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_no_declaration_marks_nothing():
+    """Honest absence — never guess a 'most important' host."""
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.20", 443, _CA_DN),
+            _tls("10.0.0.99", 443, _CA_DN),
+        ])
+        session.commit()
+
+        for declaration in (None, [], ["", "  "]):
+            result = derive_exposure_map(session, crown_jewels=declaration)
+            assert not any(n["is_crown_jewel"] for n in result["nodes"]), declaration
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_a_ca_hub_is_never_a_crown_jewel():
+    """A crown jewel is a system the client owns, not an issuer identity."""
+    engine, session = _make_session()
+    try:
+        session.add_all([
+            _tls("10.0.0.20", 443, _CA_DN),
+            _tls("10.0.0.21", 443, _CA_DN),
+        ])
+        session.commit()
+
+        # Declare the CA's own CN — it must still not be marked.
+        result = derive_exposure_map(
+            session, crown_jewels=["ChaosLab-RootCA", _CA_DN, "10.0.0.20"]
+        )
+        for n in result["nodes"]:
+            if n["node_type"] == "ca":
+                assert not n["is_crown_jewel"], n
+        assert any(
+            n["is_crown_jewel"] for n in result["nodes"] if n["node_type"] == "endpoint"
+        )
+    finally:
+        session.close()
+        engine.dispose()

@@ -17,6 +17,20 @@ assessment:
   #   NOTE: report.branding.logo_path (below) is the preferred field as of
   #   Phase 200 — this assessment.logo_path key is honored as a deprecated
   #   fallback when report.branding.logo_path is unset.
+  #
+  # Crown jewels — the systems whose compromise actually matters here. Hosts,
+  # IPs or FQDNs. These are highlighted on the dashboard's Quantum Exposure Map
+  # so the graph shows what is at stake, not just what is connected.
+  #
+  # This is declared, never inferred: no probe can discover which system a
+  # client cares about. Leave it empty and nothing is marked — the map says so
+  # by marking nothing rather than guessing.
+  #
+  # Matched on the host portion, so "10.0.0.20" marks 10.0.0.20 on every port.
+  crown_jewels: []
+  #   crown_jewels:
+  #     - "10.0.0.20"
+  #     - "payments.example.com"
 
 # -- Report branding & templates --------------------------------------------
 # Phase 200 / RPT-01/RPT-03/RPT-04: every key below is optional. Omitting

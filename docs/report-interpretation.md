@@ -1750,26 +1750,70 @@ never a guess, never an inferred network path.
 
 ### What it shows
 
-Nodes are scanned endpoints (host:port). Edges connect two nodes **only** when this scan's own
+Nodes are scanned endpoints (`host:port`), plus **certificate-authority hub nodes** (hexagonal,
+labelled with the CA's CN) added in v5.24. Edges connect nodes **only** when this scan's own
 data proves a concrete relationship between them — there is no topology probing, no `nmap`-style
 reachability inference, and no fabricated or assumed path. Every edge that renders carries a
 citable evidence string, shown on hover.
 
 ### The edge taxonomy
 
-Two edge types ship in this release, each with a distinct color and line style so a consultant can
-explain at a glance *why* a line exists:
+Three edge types ship, each with a distinct color AND line style so a consultant can explain at a
+glance *why* a line exists, and so the distinctions survive colorblindness and grayscale printing:
 
 | Edge type | Appearance | What it means |
 |-----------|------------|----------------|
 | Key-reuse cluster | amber, solid | The two endpoints share the same TLS certificate SPKI SHA-256 fingerprint — the same key material is doing double duty, and compromising one endpoint's key compromises the other's too. Backed by the same derivation `docs/report-interpretation.md` §21 documents for the CLI/HTML/DOCX "Key Reuse" section. |
 | Hardware crypto-bridge chain | gray, dashed | A hardware device confirmed (via ARP-evidenced topology, never inferred) to bridge a legacy, non-upgradeable backend behind a PQC-capable front end. Dashed styling (not just color) keeps the distinction legible for colorblind users. |
+| Shared certificate authority | red, dotted | Two or more endpoints present certificates issued by the same CA. Drawn as a **hub**: one hexagonal CA node with one edge per dependant, never all-pairs. |
+
+The severity palette is used here purely as a **taxonomy** — three distinguishable relationship
+kinds. An exposure edge carries no severity and never feeds any score; a red dotted edge is not
+"worse" than an amber one, it is a different *kind* of relationship.
+
+#### Why shared-CA matters, and why it is a hub
+
+A CA's signing key is the highest-value quantum target in an estate. Breaking it lets an attacker
+**forge a trusted certificate for every dependant** — without touching those endpoints, and
+without any victim seeing an invalid certificate. It is a strictly larger blast radius than key
+reuse, and in practice a strictly larger cluster: on the reference chaos-lab estate the largest
+key-reuse cluster spans 5 endpoints while the largest shared-CA group spans 10.
+
+The hub shape is deliberate. All-pairs over a 10-member group is 45 edges; over a realistic
+enterprise CA it is thousands. A hub is one edge per dependant — linear, legible, and a truer
+picture of the relationship, which is *one* CA with *many* dependants rather than a mesh of peers.
 
 A third edge type — **operator-declared reachability** (red, solid) — is specified in the phase's
 UI contract but was **not shipped this release**. The Phase 195 spike (`195-SPIKE-DECISION.md`)
 found the declaration UX and its persistence layer would cost roughly two additional plans, and
 deferred it to a future release; the map ships with the two verified edge types above only, and
 there is currently no "declared reachability" legend row or red edge anywhere in this tab.
+
+### Crown jewels (v5.24)
+
+Endpoints named in `assessment.crown_jewels` render with an accent-teal ring. This is an
+**operator declaration, never an inference** — no probe can discover which system a client cares
+about, so QU.I.R.K. does not guess. An empty declaration marks nothing, and that is the honest
+result rather than a nominated "most important" host. CA hub nodes are never marked, whatever is
+declared: a crown jewel is a system the client owns, not an issuer identity. See
+`docs/configuration.md` §Assessment Block.
+
+The most useful reading is often what a crown jewel is **not** connected to. On the reference
+estate the declared crown jewel has no key-reuse edge at all — it is the healthiest host on the
+subnet — and its single relationship is a shared-CA edge. The exposure is not in the host; it is
+in the authority that vouches for it.
+
+### Scan scoping (v5.24)
+
+The map describes **one scan**. Before v5.24 it aggregated every scan in the database, which on a
+24-scan database rendered 1225 edges across 27 nodes — 32% of them an endpoint joined to *itself*,
+95% duplicate rows, and including hosts the displayed scan never touched. The same data scoped to
+one scan is 19 edges across 12 nodes. Pass `?scan_id=<ISO timestamp>` to pin the map to a specific
+scan; omit it for the latest.
+
+Note this differs deliberately from the **report** surface's Key Reuse section (§21), which stays
+cross-scan by design (D-03): a report asks "has this key ever been seen reused", while the map
+draws "the estate as this scan found it".
 
 ### Reading the per-edge evidence
 
@@ -1788,8 +1832,8 @@ material or hardware-bridge evidence — the tab does not render an empty, confu
 It shows:
 
 > **No path data available**
-> No verified key-reuse clusters or confirmed hardware crypto-bridge chains were found in this
-> scan. Nothing is fabricated or inferred here — check back after a scan surfaces reusable keys or
+> No verified key-reuse clusters, shared certificate authorities, or confirmed hardware
+> crypto-bridge chains were found in this scan. Nothing is fabricated or inferred here — check back after a scan surfaces reusable keys or
 > hardware bridge evidence.
 
 Read this exactly like any other honest-absence state in this product: it is not a failure or a

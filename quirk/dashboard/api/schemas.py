@@ -440,7 +440,15 @@ class VendorPqcTrendResponse(BaseModel):
 # recorded DECISION: DEFERRED (Tier B / declared_reachability parked for v2),
 # so this tuple stays Tier-A-only — do not add "declared_reachability" unless
 # a future spike records DECISION: GO.
-EDGE_TYPES: tuple[str, ...] = ("key_reuse", "hardware_bridge")
+EDGE_TYPES: tuple[str, ...] = ("key_reuse", "hardware_bridge", "shared_ca")
+
+# Node kinds. "endpoint" is a scanned host:port; "ca" is a certificate-authority
+# HUB introduced 2026-09-14 for shared-issuer relationships. The hub shape is
+# deliberate: the largest shared-CA group in the reference estate has 10 members,
+# and drawing that all-pairs would be 45 edges — re-creating the very edge
+# explosion the same-day scoping fix removed. A hub is 10 edges, scales linearly,
+# and reads as what it is: one CA, many dependants.
+NODE_TYPES: tuple[str, ...] = ("endpoint", "ca")
 
 
 class ExposureNode(BaseModel):
@@ -452,6 +460,16 @@ class ExposureNode(BaseModel):
     id: str
     label: str
     is_crown_jewel: bool = False
+    # 2026-09-14. Defaults to "endpoint" so every pre-existing caller and stored
+    # payload keeps its previous meaning without migration.
+    node_type: str = "endpoint"
+
+    @field_validator("node_type")
+    @classmethod
+    def _validate_node_type(cls, v: str) -> str:
+        if v not in NODE_TYPES:
+            raise ValueError(f"node_type must be one of {NODE_TYPES}, got {v!r}")
+        return v
 
 
 class ExposureEdge(BaseModel):

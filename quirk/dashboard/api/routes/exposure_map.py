@@ -15,6 +15,7 @@ the scoring-weights constant.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -28,6 +29,28 @@ from quirk.intelligence.exposure_map import derive_exposure_map
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_auth)])
+
+
+def _declared_crown_jewels() -> list:
+    """Operator-declared crown jewels from config, or ``[]``.
+
+    Mirrors the lazy-import + QUIRK_CONFIG_PATH + broad-except idiom
+    `routes/jobs.py` already uses for `security.trusted_targets`.
+
+    Fails to ``[]`` on ANY error, which is the honest direction for this field:
+    an unreadable config must mark nothing rather than mark something
+    arbitrary, and a crown-jewel badge is a claim about what the client cares
+    about. Marking the wrong node is worse than marking none.
+    """
+    try:
+        from quirk.config import load_config  # lazy import — avoids cycles
+
+        cfg_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+        cfg = load_config(cfg_path)
+        return list(getattr(cfg.assessment, "crown_jewels", None) or [])
+    except Exception:
+        logger.debug("crown-jewel declaration unreadable; marking none", exc_info=True)
+        return []
 
 
 @router.get("/exposure-map", response_model=ExposureMapResponse)
@@ -60,7 +83,9 @@ def get_exposure_map(
     exposure" (mirrors hardware_drift/scan.py bridge handling).
     """
     try:
-        result = derive_exposure_map(db, scan_run_id=scan_id)
+        result = derive_exposure_map(
+            db, scan_run_id=scan_id, crown_jewels=_declared_crown_jewels()
+        )
         nodes = [ExposureNode(**node) for node in result.get("nodes", [])]
         edges = [ExposureEdge(**edge) for edge in result.get("edges", [])]
     except Exception:

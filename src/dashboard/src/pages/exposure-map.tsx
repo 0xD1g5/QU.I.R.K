@@ -27,6 +27,7 @@ try {
 const EDGE_TYPE_LABEL: Record<string, string> = {
   key_reuse: "Key-reuse cluster",
   hardware_bridge: "Hardware crypto-bridge",
+  shared_ca: "Shared certificate authority",
 }
 
 export function ExposureMapPage() {
@@ -117,7 +118,15 @@ export function ExposureMapPage() {
     const elements: cytoscape.ElementDefinition[] = []
     for (const n of nodes) {
       elements.push({
-        data: { id: n.id, label: n.label, isCrownJewel: n.is_crown_jewel ? "true" : "false" },
+        data: {
+          id: n.id,
+          label: n.label,
+          isCrownJewel: n.is_crown_jewel ? "true" : "false",
+          // "endpoint" | "ca". Defaulted here as well as server-side so an
+          // older cached payload without the field still renders as a host
+          // rather than vanishing from the nodeType selectors.
+          nodeType: n.node_type ?? "endpoint",
+        },
         group: "nodes",
       })
     }
@@ -139,6 +148,8 @@ export function ExposureMapPage() {
     const dsHigh = cssVar("--ds-high") || "#d4893a"        // key-reuse amber
     const dsMedium = cssVar("--ds-medium") || "#8892a4"    // hardware-bridge / node slate
     const accent = `hsl(${cssVar("--accent") || "180 37% 47%"})`  // crown-jewel / selection teal
+    const dsCritical = cssVar("--ds-critical") || "#e05555"       // shared-CA taxonomy hue
+    const dsBgElevated = cssVar("--ds-bg-elevated") || "#1e2129"  // CA hub fill
 
     // Pitfall 5: rankDir MUST be "LR" (attack-path narrative reads
     // left-to-right), not roadmap.tsx's "TB".
@@ -173,6 +184,22 @@ export function ExposureMapPage() {
             "border-width": 0,
           },
         },
+        // CA hub — a certificate authority, NOT a scanned host. Distinguished
+        // by SHAPE first (hexagon vs roundrectangle) so the distinction
+        // survives grayscale and color-vision deficiency, with a darker fill as
+        // a secondary cue. Narrower than a host node because its label is a CN,
+        // not a host:port.
+        {
+          selector: "node[nodeType='ca']",
+          style: {
+            "shape": "hexagon",
+            "background-color": dsBgElevated,
+            "border-width": 2,
+            "border-color": dsCritical,
+            "width": 130,
+            "height": 64,
+          },
+        },
         // Crown-jewel badge — small accent-teal ring overlay, not a full recolor.
         {
           selector: "node[isCrownJewel='true']",
@@ -198,6 +225,23 @@ export function ExposureMapPage() {
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
             "line-style": "solid",
+          },
+        },
+        // Shared-CA edges are dotted and use the critical hue. Per the D-11
+        // note on ExposureEdge, an edge carries no severity — the severity
+        // palette is used here as a TAXONOMY (amber / gray / red = three
+        // distinguishable relationship kinds), exactly as key_reuse and
+        // hardware_bridge already use it. Dotted vs solid vs dashed keeps the
+        // three separable without relying on hue.
+        {
+          selector: "edge[edgeType='shared_ca']",
+          style: {
+            "width": 2,
+            "line-color": dsCritical,
+            "target-arrow-color": dsCritical,
+            "target-arrow-shape": "triangle",
+            "curve-style": "bezier",
+            "line-style": "dotted",
           },
         },
         {

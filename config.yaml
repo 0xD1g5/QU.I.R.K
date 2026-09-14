@@ -21,6 +21,17 @@ assessment:
   data_classification: "confidential"   # public|internal|confidential|regulated
   report_owner: "CLIENT NAME"
   timezone: "America/New_York"
+  # Crown jewels — highlighted on the dashboard's Quantum Exposure Map.
+  # Declared, never inferred: no probe can discover which system a client cares
+  # about. Empty marks nothing, which is honest absence rather than a guess.
+  #
+  # 10.80.0.20 is the chaos lab's `mh-app-crownjewel` (multihost profile) — the
+  # deliberately-healthiest host on that subnet. It is listed here so the map
+  # demonstrates the crown-jewel path against real data; the point the map makes
+  # is that this host's certificate is issued by a CA that also signs nine
+  # others, so the exposure concentrates on the CA rather than on the host.
+  crown_jewels:
+    - "10.80.0.20"
 
 scan:
   timeout_seconds: 5
