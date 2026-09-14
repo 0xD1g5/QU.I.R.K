@@ -1,4 +1,5 @@
-"""P1-P7 — readiness-score PROPERTY suite: does the number carry the MEANING?
+"""P1-P8 + calibration ladder — readiness-score PROPERTY suite: does the number
+carry the MEANING?
 
 Backlog: ``999.115`` (P1, ``.planning/HORIZON.md``) — "the readiness score's
 usable range is ~85-100, so real-world badness is compressed into the top 15
@@ -28,17 +29,33 @@ makes P4's floor unreachable also makes P7's ceiling unearned — the model stop
 registering signal at both extremes, which is the whole of 999.115's argument
 stated twice.
 
-CALIBRATION LADDER — WHAT IS SET AND WHAT IS NOT
-------------------------------------------------
-Operator-set, and NOT for code to revise:
+P8 adds a fifth instance, found by decomposing the ladder's own ordering
+violation rather than by inspection: an estate whose certificate key types are
+UNREPORTED scores 100 — the same as fully-modern ECDSA, and 5 points above the
+same estate honestly reporting RSA-only. Absence scoring as the best case is
+999.95's exact signature, recurring at signal granularity after Phase 188
+SCORE-06 closed it at domain granularity.
 
-    2026-09-13  the multihost reference estate must score below 40   (P4)
-    2026-09-14  "no PQC, no 100"                                     (P7a)
+CALIBRATION LADDER — COMPLETE AS OF 2026-09-14
+-----------------------------------------------
+Operator-set, supplied BLIND (each estate described in infrastructure terms,
+with no score shown), and NOT for code to revise:
 
-Still unset, and deliberately absent rather than guessed: the middle rungs —
-a well-run estate with minor drift, a typical enterprise, a neglected one.
-Code cannot self-certify what score should alarm a client, and a rung invented
-here would make the ladder circular.
+    R1  pristine, PQC-ready      EXCELLENT     2026-09-14
+    R2  well-run, no PQC         GOOD          2026-09-14
+    R3  typical enterprise       FAIR          2026-09-14
+    R4  neglected                POOR          2026-09-14
+    R5  multihost (31 hosts)     score < 30    2026-09-14 (was < 40, 2026-09-13)
+
+R5's ceiling tightened because R4's POOR target made 40 non-binding — R5 is
+strictly worse infrastructure than R4, so a monotonic ladder could not leave
+R5's ceiling above R4's floor. The operator resolved it downward.
+
+THE HEADLINE RESULT, measured 2026-09-14 against these bands: **every rung
+lands in ONE band, EXCELLENT, spanning 15 points (85..100)** — pristine and
+quantum-ready through to a purpose-built 31-host catastrophe, all graded the
+same. Only R1 hits its target. And the ladder is **not monotonic**: R4 (85)
+scores below R5 (87), the strictly worse estate.
 
 ``tests/test_scoring_correctness.py::test_score_always_bounded_1000_iterations``
 is passed perfectly by a function that ignores its argument and returns the
@@ -57,19 +74,22 @@ through them; do not begin by picking a shape.
 
 READING THE ``xfail`` MARKERS — THEY ARE THE DELIVERABLE
 ---------------------------------------------------------
-Eleven test nodes below are marked ``@pytest.mark.xfail(strict=True)``. That is
-NOT a way to hide a failure — it is how a known calibration gap is kept
+Many of the test nodes below are marked ``@pytest.mark.xfail(strict=True)``.
+That is NOT a way to hide a failure — it is how a known calibration gap is kept
 *standing and numeric* instead of decaying into prose:
 
   * Today they fail, and ``strict=True`` records each as XFAIL with the
     measured number in its reason string. ``main`` CI stays honest rather than
-    carrying eleven permanent reds (this project has documented how corrosive a
-    normalised red gate is).
+    carrying a bank of permanent reds (this project has documented how
+    corrosive a normalised red gate is).
 
-  * Do NOT maintain a count of them anywhere but here, and re-derive this one
-    rather than trusting it: ``pytest -q tests/test_score_properties.py`` prints
-    the live figure. A hand-maintained list of sites is not a safeguard — this
-    project has been bitten by that five separate times (CLAUDE.md).
+  * No count is stated here, deliberately. An earlier revision of this
+    docstring said "Five", then "Eleven", and was wrong within one working
+    session both times. Re-derive it — ``pytest -q
+    tests/test_score_properties.py`` prints the live figure — and do not
+    reintroduce a number anyone has to remember to update. A hand-maintained
+    list of sites is not a safeguard; this project has been bitten by that five
+    separate times (CLAUDE.md).
   * When a model change lands, a fixed property XPASSes — and ``strict=True``
     turns an unexpected pass into a **hard failure**. Nobody can quietly
     improve the model without coming back here, deleting the marker, and
@@ -113,17 +133,24 @@ from quirk.severity_bands import BAND_THRESHOLDS, band_for_score
 # between test modules couples two suites' fixtures to each other; if you
 # change one, change both, and re-measure — P4's numbers are keyed to it.
 #
-# These are the FIRST TWO RUNGS of the calibration ladder. The remaining rungs
-# (a pristine PQC-ready estate, a typical enterprise) need the operator's
-# consulting judgement and are deliberately absent — code cannot self-certify
-# what score should alarm a client.
+# `_multihost_evidence()` is rung R5 of the calibration ladder; R1-R4 are built
+# from `_base_estate()` further down. All five target bands were set by the
+# operator — code cannot self-certify what score should alarm a client.
 # ---------------------------------------------------------------------------
 
-# Operator-set bottom rung (2026-09-13): the multihost reference estate must
-# score below this. Not negotiable by code, and NOT to be relaxed to make a
-# test pass — 999.113 D5 forbids tuning to a target, and that applies to the
-# target as much as to the weights.
-MULTIHOST_CALIBRATION_CEILING = 40
+# Operator-set bottom rung: the multihost reference estate must score below
+# this. Not negotiable by code, and NOT to be relaxed to make a test pass —
+# 999.113 D5 forbids tuning to a target, and that applies to the target as
+# much as to the weights.
+#
+# TIGHTENED 2026-09-14, from 40 to 30. The original 40 (set 2026-09-13) is
+# recorded here rather than overwritten, because the reason it moved is the
+# useful part: setting R4 "neglected" to POOR (< 35) made 40 non-binding. R5 is
+# strictly worse infrastructure than R4 — 5 CRITICAL and 14 HIGH against R4's
+# 2 CRITICAL, 29% of certificates expired — so a ladder that stayed monotonic
+# could not leave R5's ceiling above R4's floor. The operator resolved it
+# downward rather than relaxing R4.
+MULTIHOST_CALIBRATION_CEILING = 30
 
 
 def _multihost_evidence() -> Dict[str, Any]:
@@ -198,6 +225,156 @@ def _pqc_ready_estate() -> Dict[str, Any]:
     ev = _remediated_multihost_evidence()
     ev["pqc_hybrid_endpoint_count"] = ev["assessable_endpoint_count"]
     return ev
+
+
+# ---------------------------------------------------------------------------
+# THE CALIBRATION LADDER — rungs R1-R4, target bands set by the operator
+# 2026-09-14 (R5 is the multihost estate above, set 2026-09-13).
+#
+# Every rung shares ONE estate SHAPE: 40 assessable endpoints, 40 observed
+# certificates, and the same protocol mix so all six domains are assessed in
+# every rung. Only the WEAKNESSES vary. That is deliberate — if the shape moved
+# between rungs, `domains_assessed` would move the rescale denominator and the
+# rungs would stop being comparable to each other, which is the one thing a
+# ladder must be.
+#
+# The bands were supplied BLIND, before any rung was scored, so the ladder is
+# an independent instrument rather than a description of the current model.
+# ---------------------------------------------------------------------------
+
+def _base_estate() -> Dict[str, Any]:
+    """The shared skeleton: 40 healthy endpoints, all six domains assessed."""
+    return {
+        "totals": {"endpoints": 400, "findings": 100},
+        "protocol_counts": {
+            "TLS": 40, "SSH": 4, "UNKNOWN": 0,
+            "POSTGRESQL": 2, "S3": 1, "KUBERNETES": 1, "VAULT": 1,
+            "KERBEROS": 1, "SAML": 1, "DNSSEC": 1,
+            "SMTP-STARTTLS": 1, "KAFKA-TLS": 1,
+        },
+        "assessable_endpoint_count": 40,
+        "plaintext_http_count": 0,
+        "http_on_tls_port_count": 0,
+        "mtls_present_count": 0,
+        "cert_key_type_counts": {"RSA": 0, "ECDSA": 40},
+        "certificate_observations": {
+            "certs_observed": 40, "expired_count": 0,
+            "expiring_count": 0, "self_signed_count": 0,
+        },
+        "scan_error": {"count": 0, "rate": 0.0},
+        "finding_severity_counts": {
+            "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 100,
+        },
+    }
+
+
+def _r1_pristine_pqc_ready() -> Dict[str, Any]:
+    """R1 — target band EXCELLENT.
+
+    TLS 1.3 throughout, hybrid X25519MLKEM768 observed on every endpoint,
+    ECDSA certificates, mTLS enforced, nothing expired or self-signed, no
+    plaintext, no finding above INFO. There is no further work to recommend.
+    """
+    ev = _base_estate()
+    ev["pqc_hybrid_endpoint_count"] = 40
+    ev["mtls_present_count"] = 40
+    return ev
+
+
+def _r2_well_run_no_pqc() -> Dict[str, Any]:
+    """R2 — target band GOOD.
+
+    Hygienically spotless but quantum-blind: RSA certificates, no PQC key
+    exchange anywhere, two of forty certificates inside their renewal window,
+    a handful of MEDIUM findings, zero HIGH or CRITICAL.
+
+    This is the rung the operator's "no PQC, no 100" decision makes load
+    bearing: the gap between R1 and R2 is *exactly* what post-quantum
+    readiness is worth, with classical hygiene held near-perfect.
+    """
+    ev = _base_estate()
+    ev["cert_key_type_counts"] = {"RSA": 40, "ECDSA": 0}
+    ev["certificate_observations"]["expiring_count"] = 2
+    ev["finding_severity_counts"]["MEDIUM"] = 5
+    ev["totals"]["findings"] = 105
+    return ev
+
+
+def _r3_typical_enterprise() -> Dict[str, Any]:
+    """R3 — target band FAIR.
+
+    The estate most engagements actually meet: one legacy TLS endpoint, two of
+    forty certificates already expired, self-signed certificates on internal
+    services, a plaintext admin page, a dozen MEDIUM findings and three HIGH,
+    no CRITICAL. Real gaps, nothing on fire.
+    """
+    ev = _base_estate()
+    ev["cert_key_type_counts"] = {"RSA": 40, "ECDSA": 0}
+    ev["certificate_observations"] = {
+        "certs_observed": 40, "expired_count": 2,
+        "expiring_count": 3, "self_signed_count": 6,
+    }
+    ev["plaintext_http_count"] = 1
+    ev["finding_severity_counts"] = {
+        "CRITICAL": 0, "HIGH": 3, "MEDIUM": 12, "LOW": 1, "INFO": 100,
+    }
+    ev["totals"]["findings"] = 116
+    return ev
+
+
+def _r4_neglected() -> Dict[str, Any]:
+    """R4 — target band POOR.
+
+    An estate that has stopped being maintained: eight expired certificates,
+    twelve self-signed, five plaintext services, legacy TLS widespread, an
+    unencrypted database connection, two CRITICAL findings.
+
+    Note the ordering constraint this rung creates. R4 is strictly BETTER
+    infrastructure than R5 (the 31-host multihost estate: 5 CRITICAL, 14 HIGH,
+    29% of certificates expired), so a POOR target here implies R5 must score
+    at or below R4 — tightening R5's original 2026-09-13 ceiling of 40. Both
+    are asserted; `test_ladder_is_monotonic` is what enforces the relationship.
+    """
+    ev = _base_estate()
+    ev["cert_key_type_counts"] = {"RSA": 40, "ECDSA": 0}
+    ev["certificate_observations"] = {
+        "certs_observed": 40, "expired_count": 8,
+        "expiring_count": 5, "self_signed_count": 12,
+    }
+    ev["plaintext_http_count"] = 5
+    ev["http_on_tls_port_count"] = 2
+    ev["protocol_counts"]["UNKNOWN"] = 2
+    ev["dar_db_plaintext_count"] = 1
+    ev["finding_severity_counts"] = {
+        "CRITICAL": 2, "HIGH": 8, "MEDIUM": 20, "LOW": 6, "INFO": 100,
+    }
+    ev["totals"]["findings"] = 136
+    return ev
+
+
+# Operator-set target bands, 2026-09-14, supplied blind. The ladder runs from
+# best to worst; `_multihost_evidence` is the fifth rung and keeps its own
+# separately-set numeric ceiling (P4).
+CALIBRATION_LADDER = (
+    ("R1 pristine, PQC-ready", _r1_pristine_pqc_ready, "EXCELLENT"),
+    ("R2 well-run, no PQC", _r2_well_run_no_pqc, "GOOD"),
+    ("R3 typical enterprise", _r3_typical_enterprise, "FAIR"),
+    ("R4 neglected", _r4_neglected, "POOR"),
+)
+
+
+def _band_range(band: str) -> tuple:
+    """Inclusive (low, high) score range for a band, derived from
+    `BAND_THRESHOLDS` rather than restated — so a threshold change moves the
+    ladder's targets with it instead of silently invalidating them."""
+    ordered = sorted(BAND_THRESHOLDS.items(), key=lambda kv: -kv[1])
+    for index, (name, low) in enumerate(ordered):
+        if name == band:
+            high = 100 if index == 0 else ordered[index - 1][1] - 1
+            return (low, high)
+    if band == "POOR":
+        return (0, min(BAND_THRESHOLDS.values()) - 1)
+    raise AssertionError(f"unknown band {band!r}; known: {list(BAND_THRESHOLDS)} + POOR")
 
 
 def _score(evidence: Dict[str, Any]) -> int:
@@ -452,10 +629,11 @@ def test_p3_an_estate_with_criticals_scores_below_an_all_medium_estate():
     strict=True,
     reason=(
         "999.115 / measured 2026-09-14: the multihost reference estate scores "
-        "87 against an operator calibration ceiling of 40. THIS FAILURE IS THE "
+        "87 against an operator calibration ceiling of 30 (tightened from 40 "
+        "on 2026-09-14 when R4's POOR target made 40 non-binding). THIS FAILURE IS THE "
         "DELIVERABLE — it converts 'most people will see 87 and say not bad' "
         "into a standing numeric statement of exactly how far off calibration "
-        "the model is. 999.113 moved it 91 -> 87; the remaining 47 points are "
+        "the model is. 999.113 moved it 91 -> 87; the remaining 57 points are "
         "999.115's subject. Do NOT relax the ceiling to make this pass."
     ),
 )
@@ -464,8 +642,9 @@ def test_p4_the_multihost_reference_estate_scores_below_the_calibration_ceiling(
 
     31 hosts built to be as bad as the product can detect: 5 CRITICAL and 14
     HIGH findings, 29% of certificates expired, 18% self-signed, plaintext
-    HTTP in production. The operator's judgement, recorded 2026-09-13, is that
-    such an estate must score **below 40** — it should alarm a client on
+    HTTP in production. The operator's judgement is that such an estate must
+    score **below 30** (set 2026-09-13 as 40, tightened 2026-09-14 when R4's
+    POOR target made 40 non-binding) — it should alarm a client on
     sight, with no report-reading required.
 
     It scores 87.
@@ -813,4 +992,205 @@ def test_p7b_adopting_pqc_improves_the_score():
         "agility_pqc_hybrid_bonus weight of 8.0 is computed and then absorbed "
         "by the 25-point subscore clamp — the product cannot reward the "
         "single transition it exists to recommend."
+    )
+
+
+# ---------------------------------------------------------------------------
+# THE LADDER ITSELF — R1..R5 against the operator's blind-set bands.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "rung_name,builder,target_band",
+    [
+        pytest.param(*CALIBRATION_LADDER[0], id="R1-pristine-EXCELLENT"),
+        pytest.param(
+            *CALIBRATION_LADDER[1], id="R2-well-run-GOOD",
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason=(
+                    "999.115 / measured 2026-09-14: R2 scores 95, band "
+                    "EXCELLENT, against a target band of GOOD (70-84). A "
+                    "quantum-blind estate reads as top-of-scale."
+                ),
+            ),
+        ),
+        pytest.param(
+            *CALIBRATION_LADDER[2], id="R3-typical-FAIR",
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason=(
+                    "999.115 / measured 2026-09-14: R3 scores 91, band "
+                    "EXCELLENT, against a target band of FAIR (35-54). Off by "
+                    "37 points and three whole bands."
+                ),
+            ),
+        ),
+        pytest.param(
+            *CALIBRATION_LADDER[3], id="R4-neglected-POOR",
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason=(
+                    "999.115 / measured 2026-09-14: R4 scores 85, band "
+                    "EXCELLENT, against a target band of POOR (0-34). An "
+                    "estate with 8 expired certificates, 5 plaintext services "
+                    "and 2 CRITICAL findings earns the product's top grade."
+                ),
+            ),
+        ),
+    ],
+)
+def test_ladder_rung_lands_in_its_target_band(rung_name, builder, target_band):
+    """Each reference estate must score inside the band the operator assigned.
+
+    The bands were supplied BLIND on 2026-09-14 — described in infrastructure
+    terms (certificates, protocols, findings) with no score shown — so they
+    measure the model rather than describing it. That ordering is the whole
+    reason these targets mean anything, and it is why the failures below are
+    evidence rather than opinion.
+
+    Only R1 passes. The other three are not near-misses: R3 is three bands and
+    37 points from target, and R4 — eight expired certificates, five plaintext
+    services, widespread legacy TLS, two CRITICAL findings — earns EXCELLENT.
+    """
+    low, high = _band_range(target_band)
+    score = _score(builder())
+
+    assert low <= score <= high, (
+        f"{rung_name} scored {score} (band {band_for_score(score)}), outside "
+        f"its operator-assigned target band {target_band} ({low}-{high})."
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "999.115 / measured 2026-09-14: the ladder is NOT monotonic. R4 "
+        "(neglected, 2 CRITICAL) scores 85 while R5 (multihost: 5 CRITICAL, 14 "
+        "HIGH, 29% of certificates expired) scores 87 — the strictly worse "
+        "estate scores HIGHER. Decomposed: it is NOT the DAR penalty (removing "
+        "R4's dar_db_plaintext_count leaves it at 85). It is agility_signals, "
+        "13 vs 21: R4 honestly reports RSA-only certificates and takes the "
+        "-8.0 agility_rsa_only_penalty, while R5's recorded fixture carries "
+        "cert_key_type_counts {RSA: 0, ECDSA: 0} and so triggers neither the "
+        "penalty nor the bonus. See test_p8_* for that asymmetry isolated. "
+        "CAVEAT for whoever fixes this: R5's zero key-type counts are a "
+        "documented reconstruction approximation in the recorded fixture, so "
+        "part of this specific inversion is fixture-borne — re-measure rather "
+        "than assuming the gap closes."
+    ),
+)
+def test_ladder_is_monotonic():
+    """Worse infrastructure must never score higher than better infrastructure.
+
+    This is the property that makes a ladder a ladder. Band targets can all be
+    wrong together and still leave a usable *ordering*; an ordering violation
+    means the score is not measuring estate quality along a single axis at all.
+
+    Asserted across all five rungs rather than the four that share a shape,
+    because R5 is the rung with real recorded measurements behind it and
+    excluding it would make the property easier by construction.
+    """
+    ladder = [(name, _score(builder())) for name, builder, _ in CALIBRATION_LADDER]
+    ladder.append(("R5 multihost", _score(_multihost_evidence())))
+
+    inversions = [
+        f"{ladder[i][0]}={ladder[i][1]} < {ladder[i + 1][0]}={ladder[i + 1][1]}"
+        for i in range(len(ladder) - 1)
+        if ladder[i][1] < ladder[i + 1][1]
+    ]
+
+    assert not inversions, (
+        "the calibration ladder is not monotonic — worse infrastructure scored "
+        "higher than better infrastructure in "
+        f"{len(inversions)} place(s):\n  " + "\n  ".join(inversions)
+        + f"\n  full ladder: {ladder}"
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "999.115 / measured 2026-09-14: the ENTIRE ladder — pristine and "
+        "PQC-ready through to a 31-host purpose-built catastrophe — lands in "
+        "ONE band, EXCELLENT, spanning 15 points (85..100). This is the single "
+        "clearest statement of 999.115 available: every estate a consultant "
+        "will ever scan gets the same grade."
+    ),
+)
+def test_ladder_spans_more_than_one_band():
+    """The ladder must distinguish its own rungs by band, not just by digits.
+
+    A score whose entire realistic range fits inside one band has no
+    discriminating power in the only vocabulary the client is given. The
+    product can still print different numbers, but "EXCELLENT" is what gets
+    read aloud, put on a slide, and remembered.
+
+    Deliberately weak as stated — it asks only for MORE THAN ONE band across
+    the full quality range, not for the five the ladder was built with. A
+    property this easy failing is the finding.
+    """
+    scores = [_score(builder()) for _, builder, _ in CALIBRATION_LADDER]
+    scores.append(_score(_multihost_evidence()))
+    bands = {band_for_score(s) for s in scores}
+
+    assert len(bands) > 1, (
+        f"all {len(scores)} ladder rungs — from a pristine PQC-ready estate to "
+        f"a purpose-built catastrophic one — land in the single band "
+        f"{bands.pop()!r}. Scores: {scores} (spread {max(scores) - min(scores)} "
+        "points across the entire range of infrastructure quality)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# P8 — ABSENT EVIDENCE MUST NOT OUTSCORE HONEST BAD EVIDENCE.
+#
+# Found by decomposing the R4/R5 ladder inversion above, not by inspection.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "999.115 / measured 2026-09-14: an estate whose certificate key types "
+        "are UNREPORTED scores 100 — identical to fully-modern ECDSA, and 5 "
+        "points ABOVE the same estate honestly reporting RSA-only (95). The "
+        "certificates exist in every case (certs_observed=40); only their key "
+        "types are unknown. compute_readiness_score gates the -8.0 "
+        "agility_rsa_only_penalty on `rsa_count > 0 and ecdsa_count == 0`, so "
+        "all-zero key-type counts satisfy neither that branch nor the ECDSA "
+        "bonus branch, and the estate simply escapes."
+    ),
+)
+def test_p8_unknown_key_types_do_not_outscore_honest_rsa_reporting():
+    """P8 — the 999.95 defect class, third recurrence.
+
+    999.95 was "domains with ZERO evidence score 25/25", closed by Phase 188
+    SCORE-06 with per-domain assessed predicates. 999.113 was the same shape
+    one level down: domains with REAL evidence scoring 25/25 because their
+    ratios divided by a probe count. This is the same shape one level down
+    again — a single SIGNAL, rather than a whole domain, where absence is
+    scored as though it were the best case.
+
+    The consequence is an incentive, which is worse than an inaccuracy: a scan
+    that fails to determine key types produces a better client-facing number
+    than one that succeeds and finds RSA. Nothing in the product tells the
+    reader which of the two they are looking at.
+
+    `_endpoints_assessed` and friends exist precisely to distinguish "assessed
+    and fine" from "not assessed". No equivalent exists at signal granularity.
+    """
+    honest_rsa = _base_estate()
+    honest_rsa["cert_key_type_counts"] = {"RSA": 40, "ECDSA": 0}
+
+    unknown_keys = _base_estate()
+    unknown_keys["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0}
+
+    honest_score = _score(honest_rsa)
+    unknown_score = _score(unknown_keys)
+
+    assert unknown_score <= honest_score, (
+        f"an estate with UNREPORTED certificate key types scored "
+        f"{unknown_score}, above the same estate honestly reporting RSA-only "
+        f"at {honest_score}. Failing to determine the key type is worth "
+        f"{unknown_score - honest_score} points more than determining it and "
+        "finding RSA."
     )
