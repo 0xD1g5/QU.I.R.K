@@ -1,0 +1,169 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-09-14T14:07:59.399Z",
+  "phase": "demo-prep",
+  "phase_name": "Demo prep for the 2026-09-18 client demo (Phase 206 PAUSED at 5/13; v5.24 phases 203/204/205 COMPLETE)",
+  "phase_dir": ".planning",
+  "plan": 1,
+  "task": 1,
+  "total_tasks": 7,
+  "status": "paused",
+  "branch": "main",
+  "head": "a4eb5a57",
+  "completed_tasks": [
+    {
+      "id": 0.1,
+      "name": "999.115 tasks 19-22: repair 11 red scoring tests, bump SCORING_VERSION 2.0->3.0, full-suite SET comparison, file P2b",
+      "status": "done",
+      "commit": "c0ffff01/778ff5e4/62f201fd/929aa03f/e63fe1e9/d74fdc37"
+    },
+    {
+      "id": 0.2,
+      "name": "Found and fixed a REAL model defect the handoff had mislabelled a stale pin: the consequence ceiling had a cliff AT itself",
+      "status": "done",
+      "commit": "c47aa6c1"
+    },
+    {
+      "id": 0.3,
+      "name": "Promoted 7 fixed properties xfail->green; kept P2b open and strengthened it against a vacuous pass",
+      "status": "done",
+      "commit": "929aa03f"
+    },
+    {
+      "id": 0.4,
+      "name": "/print renders without dashboard chrome (sidebar + ml-12/ml-60 gutter were in every exported client PDF)",
+      "status": "done",
+      "commit": "93e5afb1"
+    },
+    {
+      "id": 0.5,
+      "name": "/print renders unassessed subscores as an em-dash, not empty space (found by verifying 0.4 against a real scan)",
+      "status": "done",
+      "commit": "609c1bbe"
+    },
+    {
+      "id": 0.6,
+      "name": "Friday scoring-derivation summary, layered client-safe / presenter-notes",
+      "status": "done",
+      "commit": "a496b224"
+    },
+    {
+      "id": 0.7,
+      "name": "Pushed main to origin (content-neutral merge of a diverged origin/main) and merged PR #17",
+      "status": "done",
+      "commit": "fe5da328/a5ffc9f0"
+    },
+    {
+      "id": 0.8,
+      "name": "PR #18 — closed the 3 multihost chaos-lab docs/config gates red on main",
+      "status": "done",
+      "commit": "17b1c49c/a4eb5a57"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 1,
+      "name": "Run a REAL multihost chaos-lab scan end to end (lab.sh up -> mh-prober scan -> quirk serve). This one action feeds tasks 2, 3 and 4.",
+      "status": "not_started"
+    },
+    {
+      "id": 2,
+      "name": "Rebuild expected_results_v4.md's multihost per-host table from the MEASURED output — it documents 10 of 31 hosts",
+      "status": "not_started"
+    },
+    {
+      "id": 3,
+      "name": "Add a sixth, NON-SYNTHETIC calibration ladder rung from that real scan (4 of the current 5 are constructed)",
+      "status": "not_started"
+    },
+    {
+      "id": 4,
+      "name": "Rehearse the demo path and eyeball the exported /print PDF (this is the same run as task 1 — confirm, do not re-scan)",
+      "status": "not_started"
+    },
+    {
+      "id": 5,
+      "name": "HYGIENE: retire 2 stale pending todos into .planning/todos/completed/",
+      "status": "not_started"
+    },
+    {
+      "id": 6,
+      "name": "HYGIENE: STATE.md frontmatter says completed_phases: 2; ROADMAP shows 3 ([x] on 203/204/205)",
+      "status": "not_started"
+    },
+    {
+      "id": 7,
+      "name": "HYGIENE: decide BACK-51 gate false positive — the LAST red on main",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "main CI red: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE — BACK-51 IS closed at HORIZON.md:49; the gate keys on (ID, title) and matches a narrative prose line in the ARCHIVED v5.23-ROADMAP.md. It is the only remaining red on main.",
+      "type": "technical",
+      "workaround": "Filed for v5.25 at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md. Task 7 is to decide whether to fix it now (it is the last thing between main and a fully green suite) or leave it filed."
+    },
+    {
+      "description": "P2b OPEN by design — observing more healthy endpoints still raises the COMPUTED score (71->74->78->82) with every weakness count held identical. The consequence ceiling MASKS it in the emitted number (18/18/20/20), so it reads like a fix and is not one.",
+      "type": "technical",
+      "workaround": "Filed with a spike-first plan at .planning/todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md. NOT demo-blocking. Do not promote its xfail."
+    },
+    {
+      "description": "Python CI on main (a4eb5a57) was still in_progress when this handoff was written. Dashboard Quality and Python Staleness Gate both PASSED.",
+      "type": "external",
+      "workaround": "Re-check on resume: gh run list --branch main --limit 8. Expected result is 1 failing node (the BACK-51 false positive above), down from 5 before today."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Confirm the demo script / walkthrough you actually intend to give on 2026-09-18",
+      "context": "Task 4 rehearses the path I inferred (lab.sh up -> prober scan -> quirk serve -> /print PDF). If your Friday walkthrough differs, the rehearsal should follow yours instead.",
+      "blocking": false
+    },
+    {
+      "action": "Cap-reason layout in /print — you said 'fine for now'",
+      "context": "The rating_cap_reason string sits inside the first .score-item (text-align:center; min-width:80px), so its length stretches that flex cell and wraps the score row oddly. Cosmetic, legible, but visible at the demo and now fires on most estates. Re-raise only if you change your mind.",
+      "blocking": false
+    },
+    {
+      "action": "Feature branches scoring-999.115-model-fix and fix-chaos-lab-docs-drift were left undeleted",
+      "context": "Deliberate: tag pre-999.115-scoring-model plus those branches keep the backout path intact through the demo. Worth deleting afterward.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "A test the previous handoff listed as a stale pin was NOT stale — it caught a real model defect",
+      "rationale": "test_identity_surface::test_weak_kerberos_lowers_score exposed a live P1 violation: the compression guard read `total_score > _ceiling`, applying compression only ABOVE the ceiling. A piecewise linear map is not order-preserving, so computed 84 emitted 84 while computed 85 emitted 71, and nothing in [85,100] ever emitted more than 84. Every well-run estate scored below a mediocre one. The ladder could not see it — all five rungs already computed above their own ceilings — which is why the fix moves the ladder by zero points.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "Register P2b's xfail rather than delete the marker",
+      "rationale": "Every other entry in tests/skip_registry.py records an environment gap; P2b is a known OPEN DEFECT kept numeric so it cannot decay into prose. First xfail the ledger has carried, hence the new known_open_defect category. The gate checks both directions, so when P2b is fixed and the marker deleted, the entry becomes an orphan and fails — it cannot outlive the defect.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "Do NOT promote P2b's [20] parameter despite it XPASSing",
+      "rationale": "It passed by a rounding coincidence — round(25*71/100) and round(25*74/100) both land on 18 under half-to-even — while the computed score still rose. Promoting it would encode a rounding artifact as a green gate. The property now also asserts the pre-ceiling value via _computed_score() and fails honestly at all three parameters.",
+      "phase": "999.115"
+    },
+    {
+      "decision": "Fix /print structurally (don't mount the chrome) rather than with CSS",
+      "rationale": "Hiding the sidebar from PrintPage's own <style> block would couple the client deliverable to sidebar class names and Tailwind margin utilities; rename either and the sidebar silently reappears in client PDFs, a regression whose only witness is the client. The early return stays INSIDE status === 'authenticated' — the PDF renderer reaches /print only via the documented auth-disabled passthrough, so hoisting it above the gate would turn an authenticated view anonymous.",
+      "phase": "demo-prep"
+    },
+    {
+      "decision": "Do not resume Phase 206 before the demo",
+      "rationale": "206 is internal dashboard test coverage with zero demo-visible value, and the pause reason has not expired — the demo is 2026-09-18. Resuming it would spend the last clear runway on work no client sees.",
+      "phase": "demo-prep"
+    },
+    {
+      "decision": "A real multihost scan is the highest-value next action because it pays three times",
+      "rationale": "It fills the oracle's 20-host gap with MEASURED findings (the only honest way to write them), supplies a sixth non-synthetic calibration rung against constants that are currently a first fit, and rehearses the exact demo path. Tasks 1-4 are therefore one run, not four.",
+      "phase": "demo-prep"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Task 1: bring up the multihost chaos-lab profile and run a real scan from mh-prober — `PROFILE_ARGS=\"--profile multihost\" ./lab.sh up`, then `docker exec chaoslab-mh-prober-1 quirk --config /scan-config.yaml --allow-internal-targets --allow-cleartext-broker-probe`. Capture the full per-host finding output; tasks 2, 3 and 4 all consume it. Do NOT hand-write expected findings for any host you have not measured.",
+  "context_notes": "Everything shipped today is MERGED to main (a4eb5a57) and pushed. Scoring v3 is live: ladder 5/5 (R1 100 / R2 78 / R3 46 / R4 24 / R5 18), every capped score disclosing what capped it. main CI went from 5 failing nodes to an expected 1. THREE THINGS A RESUMING AGENT SHOULD NOT MISREAD. (1) Four of the five ladder rungs are SYNTHETIC — the shape (consequence must be absolute) is well evidenced, the constants are a first fit; task 3 exists to start retiring that caveat before the number is shown to a client. (2) `pytest -k \"scor\"` misses a THIRD of the scoring surface — 12 of the 36 test files that import quirk.intelligence.scoring have no 'scor' in the path, and two real regressions hid there through an entire pause while that documented check was being followed. Select with $(grep -rln \"quirk.intelligence.scoring\" tests/). (3) 999.113 D5 still governs: never tune to a target. Fitting to operator-set blind calibration bands is the ladder's intended use; adjusting weights because a number demos well is not, and the two are easy to confuse now that a fitting harness exists."
+}
