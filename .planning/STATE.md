@@ -1259,9 +1259,32 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 209 (Deliverable Reachability) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Executing Phase 209 on branch `phase-209-deliverable-reachability`
-Last activity: 2026-09-14 — 209-03 (Wave 1, backend route implementation, DELIV-01) COMPLETE. Built
+Last activity: 2026-09-14 — 209-04 (Wave 2, report-download UI, DELIV-02) COMPLETE. Added the
+five-format download button group (HTML/PDF/DOCX/CBOM (JSON)/CBOM (XML)) to
+`src/dashboard/src/pages/executive.tsx`'s header row, to the left of the unmodified Export PDF
+button. Manifest fetch on mount with D-03/D-10 honest fallback degrade; per-format downloads go
+through `fetchApi` -> `resp.ok` check -> `Blob` -> object URL -> synthetic `<a download>` (D-07 —
+zero bare `<a href="/api/reports...">`, grep-asserted 0); per-format loading via `Set<string>`
+(not a single boolean) so a slow DOCX never blocks HTML/PDF; per-format blob/timer cleanup via a
+`Map` ref extending (not replacing) the existing single-pair `blobUrlRef`/`revokeTimerRef` Export
+PDF still uses. Turned all 10/10 of plan 02's RED vitest legs GREEN. Gated the whole group's
+render on `manifest !== null` (rather than a guessed enabled/disabled default while loading) —
+empirically the only choice that avoids a `findByRole`-matches-before-fetch-settles race across
+every leg (see 209-04-SUMMARY.md's design note for the full trace). Two deviations, both caught by
+running the FULL vitest suite + `npm run build` (not just the two targeted test files) per the
+plan's own acceptance criteria: (1) Task 1's new Tooltip import collided with recharts' own
+`Tooltip` already used by the Severity Breakdown chart — fixed by aliasing the shadcn imports
+(`UiTooltip` etc.) rather than renaming the recharts one, since a first attempt at the latter
+silently broke `executive-tooltip-contrast-guard.test.ts`'s static source-scan regex; (2) a
+pre-existing TS control-flow narrowing bug in 209-02's RED test file (`let` reassigned only inside
+a Promise executor narrowing to `never`) blocked `tsc -b`, which had never run against that file
+before this plan's build step — fixed by boxing the resolver in an object. Full suite: 63 files /
+438 tests passed, 0 failed. `tsc -b`, `npm run lint`, `npm run build` all clean; dashboard bundle
+rebuilt and committed. Commits `8a67cb7c`, `57dabee5`. See `209-04-SUMMARY.md`. Next: 209-05
+(Wave 2, containment-gate writeup, DELIV-01).
+Previous: 209-03 (Wave 1, backend route implementation, DELIV-01) COMPLETE. Built
 `quirk/dashboard/api/routes/reports.py` (manifest + download routes), `ReportFormatAvailability`/
 `ReportManifestResponse` in `schemas.py`, and registered `reports.router` in `app.py` — turned 21 of
 Wave 0's 22 RED tests GREEN. `quirk/reports/writer.py` untouched throughout (verified via

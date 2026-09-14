@@ -497,7 +497,7 @@ Plans:
 - [x] 209-01-PLAN.md — Wave 0: backend route test scaffolding (manifest/download/containment/auth, RED)
 - [x] 209-02-PLAN.md — Wave 0: Executive-page download-control vitest scaffolding (RED)
 - [x] 209-03-PLAN.md — Wave 1: reports.py route module, manifest schema, app.py registration
-- [ ] 209-04-PLAN.md — Wave 2: five-format download control on the Executive page
+- [x] 209-04-PLAN.md — Wave 2: five-format download control on the Executive page
 - [ ] 209-05-PLAN.md — Wave 2: containment gate artifact + RPT-03 sweep extension + export-pdf regression
 - [ ] 209-06-PLAN.md — Wave 3: operator docs, artifact-inventory correction, Obsidian sync
 - [ ] 209-07-PLAN.md — Wave 4: manual verification against the real output directory (2 checkpoints)
@@ -514,7 +514,7 @@ Plans:
 | 206. Dashboard UI Coverage Drain | 0/? | Not started | - |
 | 207. Browser-Only Coverage Verdict | 0/? | Not started | - |
 | 208. Security, Report Coverage & Doc Debt | 0/? | Not started | - |
-| 209. Deliverable Reachability | 3/8 | In progress | - |
+| 209. Deliverable Reachability | 4/8 | In progress | - |
 
 ## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12
 
