@@ -1,4 +1,4 @@
-"""P1-P6 — readiness-score PROPERTY suite: does the number carry the MEANING?
+"""P1-P7 — readiness-score PROPERTY suite: does the number carry the MEANING?
 
 Backlog: ``999.115`` (P1, ``.planning/HORIZON.md``) — "the readiness score's
 usable range is ~85-100, so real-world badness is compressed into the top 15
@@ -20,6 +20,26 @@ accident rather than by a test:
     999.113  (2026-09-13)          domains with REAL evidence scored 25/25
     999.115  (this file's subject) realistic badness compressed at the top
 
+P7 adds a fourth instance found by this very suite, at the opposite end of the
+scale: a hygiene-perfect estate with ZERO post-quantum readiness scores 100 on
+a Quantum Infrastructure Readiness Kit, and adopting hybrid PQC key exchange
+everywhere is worth 0 points. Same saturating ``_clamp(total, 0.0, 25.0)`` that
+makes P4's floor unreachable also makes P7's ceiling unearned — the model stops
+registering signal at both extremes, which is the whole of 999.115's argument
+stated twice.
+
+CALIBRATION LADDER — WHAT IS SET AND WHAT IS NOT
+------------------------------------------------
+Operator-set, and NOT for code to revise:
+
+    2026-09-13  the multihost reference estate must score below 40   (P4)
+    2026-09-14  "no PQC, no 100"                                     (P7a)
+
+Still unset, and deliberately absent rather than guessed: the middle rungs —
+a well-run estate with minor drift, a typical enterprise, a neglected one.
+Code cannot self-certify what score should alarm a client, and a rung invented
+here would make the ladder circular.
+
 ``tests/test_scoring_correctness.py::test_score_always_bounded_1000_iterations``
 is passed perfectly by a function that ignores its argument and returns the
 constant ``91``. That is the gap this file closes: these are the assertions
@@ -37,14 +57,19 @@ through them; do not begin by picking a shape.
 
 READING THE ``xfail`` MARKERS — THEY ARE THE DELIVERABLE
 ---------------------------------------------------------
-Five properties below are marked ``@pytest.mark.xfail(strict=True)``. That is
+Eleven test nodes below are marked ``@pytest.mark.xfail(strict=True)``. That is
 NOT a way to hide a failure — it is how a known calibration gap is kept
 *standing and numeric* instead of decaying into prose:
 
   * Today they fail, and ``strict=True`` records each as XFAIL with the
     measured number in its reason string. ``main`` CI stays honest rather than
-    carrying five permanent reds (this project has documented how corrosive a
+    carrying eleven permanent reds (this project has documented how corrosive a
     normalised red gate is).
+
+  * Do NOT maintain a count of them anywhere but here, and re-derive this one
+    rather than trusting it: ``pytest -q tests/test_score_properties.py`` prints
+    the live figure. A hand-maintained list of sites is not a safeguard — this
+    project has been bitten by that five separate times (CLAUDE.md).
   * When a model change lands, a fixed property XPASSes — and ``strict=True``
     turns an unexpected pass into a **hard failure**. Nobody can quietly
     improve the model without coming back here, deleting the marker, and
@@ -158,6 +183,20 @@ def _remediated_multihost_evidence() -> Dict[str, Any]:
         "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 330,
     }
     ev["totals"]["findings"] = 330
+    return ev
+
+
+def _pqc_ready_estate() -> Dict[str, Any]:
+    """`_remediated_multihost_evidence()` plus demonstrated PQC readiness.
+
+    Identical infrastructure and identical hygiene — the ONLY difference is
+    that hybrid X25519MLKEM768 key exchange is observed on every endpoint.
+    This is the top rung of the calibration ladder, and the pair
+    (`_remediated_multihost_evidence()`, this) isolates what post-quantum
+    adoption is worth to the headline number.
+    """
+    ev = _remediated_multihost_evidence()
+    ev["pqc_hybrid_endpoint_count"] = ev["assessable_endpoint_count"]
     return ev
 
 
@@ -685,4 +724,93 @@ def test_p6b_the_full_remediation_span_is_at_least_one_band_wide():
         f"31-host estate spans only {span} points ({before} -> {after}), less "
         f"than the narrowest published band width of {narrowest_band_width}. "
         f"Band thresholds: {dict(BAND_THRESHOLDS)}."
+    )
+
+
+# ---------------------------------------------------------------------------
+# P7 — QUANTUM READINESS MUST REGISTER.
+#
+# Operator calibration decision, 2026-09-14: "no PQC, no 100". Recorded here
+# rather than only in a planning document because this file is the ladder, and
+# a rung that lives in prose is a rung that drifts — this project has been
+# bitten five separate times by exactly that (see CLAUDE.md).
+#
+# This is a CALIBRATION input, not a model shape. It says what the top of the
+# scale MEANS; it does not say which of 999.115's candidates (A/B/C/D) should
+# deliver it. "Do not begin by picking a shape" still holds.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "999.115 / measured 2026-09-14: a hygiene-perfect estate with ZERO "
+        "post-quantum readiness scores 100 on a Quantum Infrastructure "
+        "Readiness Kit. Operator decision 2026-09-14: 'no PQC, no 100'. "
+        "Remove this marker when the model earns the top of its own scale."
+    ),
+)
+def test_p7a_a_zero_pqc_estate_does_not_reach_the_top_of_the_scale():
+    """P7(a) — 100 must mean quantum-ready, on a quantum-readiness product.
+
+    The estate under test is immaculate by every classical measure: TLS 1.3,
+    ECDSA certificates, zero expired or self-signed, no plaintext, no findings
+    above INFO. It also has no post-quantum key exchange anywhere — it is
+    exactly as exposed to harvest-now-decrypt-later as it was before the
+    engagement began.
+
+    It scores 100.
+
+    The product's name is the argument. A client who is shown a perfect score
+    by a tool called a Quantum Infrastructure Readiness Kit has been told
+    their post-quantum posture is complete, and it has not begun.
+    """
+    score = _score(_remediated_multihost_evidence())
+
+    assert score < 100, (
+        f"an estate with zero PQC-hybrid key exchange scored {score}/100 on a "
+        "quantum-readiness assessment. The top of the scale is reachable "
+        "without doing any post-quantum work at all."
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "999.115 / measured 2026-09-14: adopting hybrid X25519MLKEM768 on "
+        "EVERY endpoint moves the score by 0 points (100 -> 100). The "
+        "agility_pqc_hybrid_bonus of 8.0 exists and is computed, but "
+        "agility_signals is already at its 25/25 ceiling, so "
+        "_apply_weighted_impacts' _clamp(total, 0.0, 25.0) absorbs it "
+        "entirely. Same saturation mechanism as P4's unreachable floor, "
+        "pointed at the ceiling."
+    ),
+)
+def test_p7b_adopting_pqc_improves_the_score():
+    """P7(b) — the mechanism under P7(a), and P1's positive mirror.
+
+    P1 asserts that discovering a weakness must never RAISE the score. This
+    asserts the converse: performing a real, expensive, product-recommended
+    security improvement must LOWER nothing and must move the number.
+
+    Two estates, identical in every field except that one has hybrid
+    X25519MLKEM768 observed on every assessable endpoint. `SCORE_WEIGHTS`
+    prices that at `agility_pqc_hybrid_bonus = 8.0` — the joint-largest bonus
+    in the table — and the delta is 0, because the subscore it feeds is
+    already clamped at its 25-point ceiling.
+
+    This is worth separating from P7(a) because the two fail for different
+    reasons and will be fixed by different changes: P7(a) is a statement about
+    what 100 should require, P7(b) is a statement about a weight that is
+    computed and then discarded. A model change could satisfy one and not the
+    other, and the suite should say which.
+    """
+    without_pqc = _score(_remediated_multihost_evidence())
+    with_pqc = _score(_pqc_ready_estate())
+
+    assert with_pqc > without_pqc, (
+        f"adopting hybrid PQC key exchange on every endpoint moved the score "
+        f"{without_pqc} -> {with_pqc} (delta {with_pqc - without_pqc}). The "
+        "agility_pqc_hybrid_bonus weight of 8.0 is computed and then absorbed "
+        "by the 25-point subscore clamp — the product cannot reward the "
+        "single transition it exists to recommend."
     )
