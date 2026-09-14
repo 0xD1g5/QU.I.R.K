@@ -1003,7 +1003,21 @@ def test_scanned_at_offset_reaches_get_scans_wire():
 # ---------------------------------------------------------------------------
 
 def _floor_clean_endpoint_kwargs(i: int, now, scan_run_id: str) -> dict:
-    """A single clean TLS endpoint: fresh ECDSA cert, TLS 1.3, no weak ciphers."""
+    """A single clean TLS endpoint: fresh ECDSA cert, TLS 1.3, no weak ciphers.
+
+    999.115: also PQC-ready. These three severity-floor tests are about the
+    CONSEQUENCE ceiling, and the new "no PQC, no 100" ceiling was capping the
+    same fixtures at 84 for an unrelated reason — including the *uncapped*
+    control, which began reporting a rating_cap_reason while carrying no
+    CRITICAL at all. Marking the clean endpoint PQC-ready keeps every cap
+    except the mechanism under test out of the fixture (43480cbd precedent).
+
+    Reachable, not invented: `build_evidence_summary` increments
+    `pqc_hybrid_endpoint_count` from the literal `service_detail` marker
+    "pqc-hybrid-detected" (evidence.py, PQC-02 D-05), which the scanner emits
+    for a TLS endpoint negotiating X25519MLKEM768 — exactly what these
+    endpoints otherwise describe.
+    """
     from datetime import timedelta
 
     return dict(
@@ -1011,6 +1025,7 @@ def _floor_clean_endpoint_kwargs(i: int, now, scan_run_id: str) -> dict:
         port=443,
         protocol="TLS",
         scan_error=None,
+        service_detail="pqc-hybrid-detected",   # 999.115, see docstring
         tls_version="TLSv1.3",
         cipher_suite="TLS_AES_256_GCM_SHA384",
         tls_weak_ciphers_present=False,
@@ -1038,13 +1053,29 @@ def _floor_critical_endpoint_kwargs(now, scan_run_id: str) -> dict:
     return kwargs
 
 
-def test_list_scans_high_score_with_one_critical_returns_fair_and_cap_reason():
+def test_list_scans_high_score_with_one_critical_is_capped_with_cap_reason():
     """184.4-07 Task 3: /api/scans (the list_scans site fixed in Task 1) must
-    return rating='FAIR' (not 'EXCELLENT') and a non-null rating_cap_reason
-    for a session scoring >= 85 with one open CRITICAL finding -- proving the
-    dashboard history band agrees with what a report for the same scan would
-    show. Pre-fix (findings-less build_evidence_summary(eps)) this would
-    have scored severity-blind and stayed EXCELLENT."""
+    return a capped rating (not 'EXCELLENT') and a non-null rating_cap_reason
+    for a session whose COMPUTED score is >= 85 while it carries one open
+    CRITICAL finding -- proving the dashboard history band agrees with what a
+    report for the same scan would show. Pre-fix (findings-less
+    build_evidence_summary(eps)) this would have scored severity-blind and
+    stayed EXCELLENT.
+
+    999.115 — renamed from `..._returns_fair_and_cap_reason`. Phase 184.4 D-03
+    capped the BAND only, so this returned FAIR while the number stayed 94;
+    D-03 is superseded (operator-approved 2026-09-14) and
+    `_consequence_ceiling()` now caps the NUMBER first, compressing 94 -> 32
+    with the band derived from it as POOR. The old name asserted the opposite
+    of what the test now checks.
+
+    The `>= 85` precondition is preserved in MEANING rather than deleted: it
+    was always "EXCELLENT before the cap", and that value now lives in
+    `rating_cap_reason`'s disclosed `(computed NN)` rather than in the emitted
+    score. It is parsed out and asserted below rather than pinned, so the
+    fixture still cannot drift out from under the test.
+    """
+    import re
     from datetime import datetime, timezone
 
     client, TestingSession = _drift_client_and_session()
@@ -1064,16 +1095,33 @@ def test_list_scans_high_score_with_one_critical_returns_fair_and_cap_reason():
     assert run_id in items
     item = items[run_id]
 
-    assert item["score"] >= 85, (
-        f"Fixture must reproduce the documented score >= 85 EXCELLENT-before-cap "
-        f"precondition; got {item['score']!r}."
+    reason = item.get("rating_cap_reason")
+    assert reason, (
+        "/api/scans must carry a non-null rating_cap_reason when the score is capped."
     )
-    assert item["rating"] == "FAIR", (
-        f"/api/scans rating {item['rating']!r} must be FAIR (capped), not the "
-        "raw EXCELLENT a severity-blind evidence summary would have produced."
+    assert "CRITICAL" in reason, (
+        f"The cap must be attributed to the open CRITICAL finding; got {reason!r}."
     )
-    assert item.get("rating_cap_reason"), (
-        "/api/scans must carry a non-null rating_cap_reason when the band is capped."
+    _computed = re.search(r"computed (\d+)", reason)
+    assert _computed, (
+        "rating_cap_reason must disclose the pre-cap number as '(computed NN)', or a "
+        f"capped score reads as a computed one; got {reason!r}."
+    )
+    assert int(_computed.group(1)) >= 85, (
+        "Fixture must reproduce the documented EXCELLENT-before-cap precondition: a "
+        f"computed score >= 85 carrying one open CRITICAL. Got {_computed.group(1)}."
+    )
+    # 999.115: was `rating == "FAIR"` under D-03's band-only cap. The band is now
+    # derived from the capped NUMBER, so it reads POOR and agrees with it.
+    assert item["rating"] == "POOR", (
+        f"/api/scans rating {item['rating']!r} must be POOR — derived from the "
+        f"consequence-capped score {item['score']!r}, not the raw EXCELLENT a "
+        "severity-blind evidence summary would have produced."
+    )
+    assert item["score"] < 85, (
+        f"The emitted score {item['score']!r} must be the CAPPED value, not the "
+        "computed one — the whole point of superseding D-03 is that the number and "
+        "the label no longer disagree."
     )
 
 
@@ -1104,9 +1152,14 @@ def test_list_scans_no_critical_returns_uncapped_null_reason():
 def test_compare_scans_caps_only_the_side_carrying_the_critical():
     """184.4-07 Task 3: /compare (the two compare_scans sites fixed in Task 1)
     must derive findings PER SIDE -- side A (with the CRITICAL) comes back
-    FAIR/capped, side B (clean) comes back uncapped and DIFFERENT from side A.
+    capped, side B (clean) comes back uncapped and DIFFERENT from side A.
     A shared or swapped findings list between the two sides would make both
-    sides agree, which this test is specifically designed to catch."""
+    sides agree, which this test is specifically designed to catch.
+
+    999.115 — side A's expected band moved FAIR -> POOR. Phase 184.4 D-03
+    capped the BAND only; the superseding `_consequence_ceiling()` caps the
+    NUMBER first and the band is derived from it. The per-side isolation this
+    test exists to prove is untouched — only the band A lands in moved."""
     from datetime import datetime, timedelta, timezone
 
     client, TestingSession = _drift_client_and_session()
@@ -1132,14 +1185,15 @@ def test_compare_scans_caps_only_the_side_carrying_the_critical():
     assert resp.status_code == 200
     body = resp.json()
 
-    assert body["scan_a"]["rating"] == "FAIR", (
-        f"Side A carries the CRITICAL and must be capped to FAIR; got "
+    # 999.115: was `== "FAIR"` under D-03's band-only cap.
+    assert body["scan_a"]["rating"] == "POOR", (
+        f"Side A carries the CRITICAL and must be capped to POOR; got "
         f"{body['scan_a']['rating']!r}."
     )
     assert body["scan_a"].get("rating_cap_reason"), (
         "Side A must carry a non-null rating_cap_reason."
     )
-    assert body["scan_b"]["rating"] != "FAIR", (
+    assert body["scan_b"]["rating"] != "POOR", (
         f"Side B is clean and must NOT be capped; got {body['scan_b']['rating']!r}."
     )
     assert not body["scan_b"].get("rating_cap_reason"), (
