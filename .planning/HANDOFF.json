@@ -18,7 +18,8 @@
     {"id": 5, "name": "999.113 red-proof commit pair", "status": "done", "commit": "a49c7dd6/9fadfaa2"},
     {"id": 6, "name": "Remove unregistered skip marker from the resume gate", "status": "done", "commit": "c5a2dbe0"},
     {"id": 7, "name": "File 999.115 (usable-range compression) at P1; close 999.113", "status": "done", "commit": "546804bc"},
-    {"id": 8, "name": "Scoring property suite P1-P6 — tests/test_score_properties.py, red-proved", "status": "done", "commit": "e1716d78"}
+    {"id": 8, "name": "Scoring property suite P1-P6 — tests/test_score_properties.py, red-proved", "status": "done", "commit": "e1716d78"},
+    {"id": 8.1, "name": "P7 'no PQC, no 100' — operator calibration rung set 2026-09-14, encoded + red-proved", "status": "done", "commit": "e9ffa3b2"}
   ],
   "remaining_tasks": [
     {"id": 9, "name": "Calibration ladder — named reference estates, operator bottom rung: multihost < 40", "status": "not_started"},
@@ -39,7 +40,7 @@
   ],
   "human_actions_pending": [
     {"action": "Decide whether to push main to origin", "context": "38 commits ahead, nothing pushed. Includes the 999.113 score fix, both branch merges, and the resume gate. Pushing to main is outward-facing; memory records that main branch protection is bypassable, so a push succeeds silently.", "blocking": false},
-    {"action": "Set the calibration ladder's remaining bands", "context": "Operator set the bottom rung (multihost < 40). The middle rungs (pristine PQC-ready estate, typical enterprise) still need consulting judgement — code cannot self-certify what score should alarm a client.", "blocking": true},
+    {"action": "Set the calibration ladder's remaining bands (R1-R4)", "context": "TWO rungs now set: multihost < 40 (2026-09-13, P4) and 'no PQC, no 100' (2026-09-14, P7a, committed e9ffa3b2). STILL BLOCKING: R1 pristine PQC-ready / R2 well-run with minor drift / R3 typical enterprise / R4 neglected. Operator chose the blind-template path — supply a target band per rung BEFORE being shown what each currently scores, or the ladder anchors on the broken model and stops being an independent instrument. Code must not invent these: a self-certified rung makes the ladder circular.", "blocking": true},
     {"action": "Choose client-facing vs presenter-notes framing for the scoring-derivation summary", "context": "Default plan is layered: client-safe narrative first, appendix with arithmetic/weights/known-limits after. Operator can redirect.", "blocking": false}
   ],
   "decisions": [
