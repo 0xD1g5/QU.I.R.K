@@ -42,7 +42,7 @@ import { SensorsPage } from "@/pages/sensors"
  * ScanProvider + QRAMMProvider are inside AuthProvider so their API calls
  * are already guarded by the auth gate.
  */
-function AppShell() {
+export function AppShell() {
   const { status } = useAuth()
   const vertical = useVertical()
 
