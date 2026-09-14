@@ -103,6 +103,17 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
+    # 999.115 P8 — certificates observed but NO key type determined for any of
+    # them. This value is DERIVED, not chosen: it must be >=
+    # agility_rsa_only_penalty, or the model rewards not looking. If failing to
+    # determine a key type cost less than determining it and finding RSA, a
+    # scan that gave up would outscore one that succeeded, and the perverse
+    # incentive the P8 fix exists to remove would survive the fix. Equal
+    # severity is the weakest value that removes it — an undetermined property
+    # is treated as the worst case it could be, which is what a security
+    # assessment should assume. Raising it above 8.0 is defensible; lowering it
+    # is not. See tests/test_score_properties.py::test_p8_*.
+    "agility_unverified_key_type_penalty": 8.0,
     "agility_has_ecdsa_bonus": 4.0,
     "agility_pqc_hybrid_bonus": 8.0,   # Phase 90 PQC-03 — X25519MLKEM768 ceiling anchor
     "agility_weak_jwt_alg_ratio": 6.0,      # Phase 94 SCORE-01 — alg:none / quantum-vulnerable alg in bearer token
@@ -359,6 +370,23 @@ def compute_readiness_score(
         agility_impacts.append(("RSA-only certificate posture", -w["agility_rsa_only_penalty"]))
     elif ecdsa_count > 0:
         agility_impacts.append(("ECDSA adoption signal", w["agility_has_ecdsa_bonus"]))
+    elif cert_denom > 0:
+        # 999.115 P8 — certificates WERE observed but no key type was
+        # determined for any of them. Before this branch existed, such a scan
+        # matched neither arm above and so took neither the penalty nor the
+        # bonus: it scored identically to a fully-modern ECDSA estate, and
+        # strictly better than one that honestly reported RSA. See
+        # tests/test_score_properties.py::test_p8_*, which measured a clean
+        # estate scoring 100 with unreported key types against 95 with
+        # RSA-only.
+        #
+        # Guarded on `cert_denom > 0` so a scan that observed NO certificates
+        # at all is untouched — that is genuine absence of the subject, which
+        # `_identity_assessed` already handles, not a failure to determine a
+        # property of certificates that are right there.
+        agility_impacts.append(
+            ("Certificate key types undetermined", -w["agility_unverified_key_type_penalty"])
+        )
     if pqc_hybrid_count > 0:
         agility_impacts.append(("PQC-hybrid key exchange (X25519MLKEM768)", w["agility_pqc_hybrid_bonus"]))
 

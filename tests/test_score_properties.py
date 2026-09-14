@@ -51,11 +51,17 @@ R5's ceiling tightened because R4's POOR target made 40 non-binding — R5 is
 strictly worse infrastructure than R4, so a monotonic ladder could not leave
 R5's ceiling above R4's floor. The operator resolved it downward.
 
-THE HEADLINE RESULT, measured 2026-09-14 against these bands: **every rung
-lands in ONE band, EXCELLENT, spanning 15 points (85..100)** — pristine and
-quantum-ready through to a purpose-built 31-host catastrophe, all graded the
-same. Only R1 hits its target. And the ladder is **not monotonic**: R4 (85)
-scores below R5 (87), the strictly worse estate.
+THE BASELINE RESULT — measured 2026-09-14 against the model as it stood
+BEFORE any 999.115 fix, and recorded here as the motivation for the work, not
+as a current reading: every rung landed in ONE band, EXCELLENT, spanning 15
+points (85..100) — pristine and quantum-ready through to a purpose-built
+31-host catastrophe, all graded the same. Only R1 hit its target, and the
+ladder was not monotonic (R4=85 below R5=87, the strictly worse estate).
+
+**Do not read the line above as the score's behaviour today.** Fixes are
+landing incrementally, each promoting its property from `xfail` to a green
+gate. For a current reading, run the suite — the pass/xfail split IS the live
+measurement, which is the whole reason this file exists.
 
 ``tests/test_scoring_correctness.py::test_score_always_bounded_1000_iterations``
 is passed perfectly by a function that ignores its argument and returns the
@@ -673,16 +679,14 @@ def test_p4_the_multihost_reference_estate_scores_below_the_calibration_ceiling(
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: the multihost estate's NUMERIC band is "
-        "EXCELLENT (87 >= the 85 EXCELLENT threshold). The client sees 'FAIR' "
-        "only because cap_band_for_severity() overrides the label for open "
-        "CRITICALs. The number and the label disagree about the same estate, "
-        "and the number is the one that survives into a slide deck."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 by the P8 fix.
+# Was: R5 scored 87 (numeric band EXCELLENT) — only the CRITICAL band cap hid it.
+# Resolved because R5 fell 87 -> 81 once undetermined certificate key types
+# stopped scoring as best-case. NOTE ON ROBUSTNESS: R5's recorded fixture has
+# undetermined key types, so it takes the new assessment-gap penalty; a REAL
+# scan of that estate would determine them and take the RSA-only penalty
+# instead. Both are priced 8.0 by derivation, so R5 lands at 81 either way —
+# the outcome does not depend on which path applies.
 def test_p4b_a_catastrophic_estate_does_not_land_in_the_top_numeric_band():
     """P4(b) — the number must not contradict the label.
 
@@ -832,15 +836,14 @@ def test_p5c_no_driver_is_attributed_to_a_domain_excluded_from_the_headline():
 # P6 — SENSITIVITY. A material posture change must move the number materially.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: remediating EVERY detectable weakness "
-        "on the 31-host vulnerable estate moves it 87 -> 100 and leaves the "
-        "numeric band unchanged at EXCELLENT (threshold 85). An entire "
-        "remediation programme does not cross a single band boundary."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 by the P8 fix.
+# Was: full remediation moved 87 -> 100 without changing band.
+# Resolved because R5 fell 87 -> 81 once undetermined certificate key types
+# stopped scoring as best-case. NOTE ON ROBUSTNESS: R5's recorded fixture has
+# undetermined key types, so it takes the new assessment-gap penalty; a REAL
+# scan of that estate would determine them and take the RSA-only penalty
+# instead. Both are priced 8.0 by derivation, so R5 lands at 81 either way —
+# the outcome does not depend on which path applies.
 def test_p6a_full_remediation_changes_the_numeric_band():
     """P6(a) — the engagement's whole value must be visible in the verdict.
 
@@ -866,16 +869,14 @@ def test_p6a_full_remediation_changes_the_numeric_band():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: the full-remediation span on the "
-        "multihost estate is 13 points (87 -> 100), narrower than the "
-        "narrowest published band width of 15 (EXCELLENT 85 <- GOOD 70). "
-        "Every weakness the product detects, on a purpose-built catastrophic "
-        "estate, is collectively worth less than one band."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 by the P8 fix.
+# Was: the full-remediation span was 13 points, under the narrowest band width of 15.
+# Resolved because R5 fell 87 -> 81 once undetermined certificate key types
+# stopped scoring as best-case. NOTE ON ROBUSTNESS: R5's recorded fixture has
+# undetermined key types, so it takes the new assessment-gap penalty; a REAL
+# scan of that estate would determine them and take the RSA-only penalty
+# instead. Both are priced 8.0 by derivation, so R5 lands at 81 either way —
+# the outcome does not depend on which path applies.
 def test_p6b_the_full_remediation_span_is_at_least_one_band_wide():
     """P6(b) — the same property as a number, for tracking progress.
 
@@ -1061,24 +1062,14 @@ def test_ladder_rung_lands_in_its_target_band(rung_name, builder, target_band):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: the ladder is NOT monotonic. R4 "
-        "(neglected, 2 CRITICAL) scores 85 while R5 (multihost: 5 CRITICAL, 14 "
-        "HIGH, 29% of certificates expired) scores 87 — the strictly worse "
-        "estate scores HIGHER. Decomposed: it is NOT the DAR penalty (removing "
-        "R4's dar_db_plaintext_count leaves it at 85). It is agility_signals, "
-        "13 vs 21: R4 honestly reports RSA-only certificates and takes the "
-        "-8.0 agility_rsa_only_penalty, while R5's recorded fixture carries "
-        "cert_key_type_counts {RSA: 0, ECDSA: 0} and so triggers neither the "
-        "penalty nor the bonus. See test_p8_* for that asymmetry isolated. "
-        "CAVEAT for whoever fixes this: R5's zero key-type counts are a "
-        "documented reconstruction approximation in the recorded fixture, so "
-        "part of this specific inversion is fixture-borne — re-measure rather "
-        "than assuming the gap closes."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 by the P8 fix.
+# Was: R4 (85) scored BELOW R5 (87) — the strictly worse estate scored higher.
+# Resolved because R5 fell 87 -> 81 once undetermined certificate key types
+# stopped scoring as best-case. NOTE ON ROBUSTNESS: R5's recorded fixture has
+# undetermined key types, so it takes the new assessment-gap penalty; a REAL
+# scan of that estate would determine them and take the RSA-only penalty
+# instead. Both are priced 8.0 by derivation, so R5 lands at 81 either way —
+# the outcome does not depend on which path applies.
 def test_ladder_is_monotonic():
     """Worse infrastructure must never score higher than better infrastructure.
 
@@ -1107,16 +1098,14 @@ def test_ladder_is_monotonic():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: the ENTIRE ladder — pristine and "
-        "PQC-ready through to a 31-host purpose-built catastrophe — lands in "
-        "ONE band, EXCELLENT, spanning 15 points (85..100). This is the single "
-        "clearest statement of 999.115 available: every estate a consultant "
-        "will ever scan gets the same grade."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 by the P8 fix.
+# Was: all five rungs landed in the single band EXCELLENT, spanning 15 points.
+# Resolved because R5 fell 87 -> 81 once undetermined certificate key types
+# stopped scoring as best-case. NOTE ON ROBUSTNESS: R5's recorded fixture has
+# undetermined key types, so it takes the new assessment-gap penalty; a REAL
+# scan of that estate would determine them and take the RSA-only penalty
+# instead. Both are priced 8.0 by derivation, so R5 lands at 81 either way —
+# the outcome does not depend on which path applies.
 def test_ladder_spans_more_than_one_band():
     """The ladder must distinguish its own rungs by band, not just by digits.
 
@@ -1147,19 +1136,16 @@ def test_ladder_spans_more_than_one_band():
 # Found by decomposing the R4/R5 ladder inversion above, not by inspection.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: an estate whose certificate key types "
-        "are UNREPORTED scores 100 — identical to fully-modern ECDSA, and 5 "
-        "points ABOVE the same estate honestly reporting RSA-only (95). The "
-        "certificates exist in every case (certs_observed=40); only their key "
-        "types are unknown. compute_readiness_score gates the -8.0 "
-        "agility_rsa_only_penalty on `rsa_count > 0 and ecdsa_count == 0`, so "
-        "all-zero key-type counts satisfy neither that branch nor the ECDSA "
-        "bonus branch, and the estate simply escapes."
-    ),
-)
+# PROMOTED to a standing green gate 2026-09-14 — the xfail(strict=True) marker
+# was removed when the fix landed, which is the workflow this file's header
+# describes: strict mode turned the fix into an XPASS failure and forced this
+# edit rather than letting the improvement land unremarked.
+#
+# Was: "an estate whose certificate key types are UNREPORTED scores 100 —
+# identical to fully-modern ECDSA, and 5 points ABOVE the same estate honestly
+# reporting RSA-only (95)". Fixed by the `elif cert_denom > 0` arm in
+# compute_readiness_score's key-type branch, priced at
+# agility_unverified_key_type_penalty.
 def test_p8_unknown_key_types_do_not_outscore_honest_rsa_reporting():
     """P8 — the 999.95 defect class, third recurrence.
 
