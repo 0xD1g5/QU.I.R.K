@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from quirk.severity_bands import band_for_score, cap_band_for_severity, cap_reason
+from quirk.severity_bands import (
+    BAND_THRESHOLDS,
+    band_for_score,
+    cap_band_for_severity,
+    cap_reason,
+)
 
 # Phase 188 SCORE-06 — scoring formula version marker. Bumped whenever the
 # aggregation shape changes (exclude-and-rescale replaces the fixed / 1.5
@@ -164,6 +169,93 @@ def _rating(score: int) -> str:
     function returns", it doesn't — read `compute_readiness_score()` instead.
     """
     return band_for_score(score)
+
+
+# ---------------------------------------------------------------------------
+# 999.115 candidate C — ABSOLUTE CONSEQUENCE CEILING.
+#
+# The model before this was purely PREVALENCE-based: every penalty was
+# `ratio x weight`, so five CRITICAL findings in a 17-host estate and five in a
+# 500-host estate were treated as differently severe. No consultant reads them
+# that way — the attacker needs one. Measured consequence: a 31-host estate
+# built to be as bad as this product can detect scored 87/100, and the entire
+# calibration ladder from "pristine and quantum-ready" to "purpose-built
+# catastrophe" collapsed into the single band EXCELLENT across 15 points.
+#
+# This is NOT a new mechanism. `cap_band_for_severity()` already applies
+# exactly this reasoning — an open CRITICAL floors the emitted BAND at FAIR
+# regardless of prevalence. That compensation is what produced the incoherent
+# "87 — FAIR": the word said one thing while the digits said EXCELLENT. C
+# extends the existing idea from the band to the number, so the two agree.
+#
+# THE VALUES ARE DERIVED, NOT CHOSEN — with one exception. "Cap at POOR" IS
+# `FAIR - 1`; "cap at FAIR" IS `MODERATE - 1`. Reading them out of
+# BAND_THRESHOLDS rather than restating them as 34/54/69 means a future band
+# rebalance moves these with it, and collapses the free-parameter count from
+# four to one. The exception is DEEP_CRITICAL_CEILING below.
+#
+# Calibration provenance: the ladder in tests/test_score_properties.py, whose
+# target bands were set by the operator on 2026-09-14 and supplied BLIND —
+# each estate described in infrastructure terms with no score shown. Evidence
+# and the full candidate comparison:
+# .planning/decisions/999.115-scoring-model-candidate-measurements.md
+#
+# STANDING CAVEAT, do not lose it: the ladder has five rungs, four of them
+# synthetic. Fitting even one parameter to five observations is weak
+# validation. What is well-evidenced is the SHAPE — that consequence must be
+# absolute rather than proportional. The thresholds below should be re-derived
+# against real-scan rungs before anyone treats them as settled.
+
+# The single free parameter. Sourced from the operator's R5 rung: the 31-host
+# multihost reference estate (5 CRITICAL / 14 HIGH / 29% of certificates
+# expired) must score below 30. Not derivable from BAND_THRESHOLDS, because it
+# expresses "deep inside POOR", which the bands do not subdivide.
+DEEP_CRITICAL_CEILING: int = 25
+
+# How many open CRITICAL findings constitute a catastrophic estate rather than
+# a bad one. Also from the R5 rung, which carries 5.
+DEEP_CRITICAL_COUNT: int = 5
+
+
+def _top_of_band(band: str) -> int:
+    """Highest score that still falls inside `band`.
+
+    Derived from `BAND_THRESHOLDS` so the ceilings below cannot drift away from
+    the published bands. POOR is the implicit floor and has no threshold entry
+    of its own (see `quirk/severity_bands.py`), so its top is one below the
+    lowest named threshold.
+    """
+    higher = [v for v in BAND_THRESHOLDS.values() if v > BAND_THRESHOLDS.get(band, -1)]
+    if band not in BAND_THRESHOLDS:        # POOR
+        return min(BAND_THRESHOLDS.values()) - 1
+    return (min(higher) - 1) if higher else 100
+
+
+def _consequence_ceiling(critical_count: int, high_count: int) -> Tuple[Optional[int], Optional[str]]:
+    """999.115 C — the highest score an estate may hold given its ABSOLUTE
+    count of high-consequence findings, irrespective of how small a proportion
+    of the estate they represent.
+
+    Returns `(ceiling, reason)`, or `(None, None)` when no ceiling applies.
+    The reason string is client-facing: it must say what capped the score, so
+    a capped number is never mistaken for a computed one.
+    """
+    if critical_count >= DEEP_CRITICAL_COUNT:
+        return DEEP_CRITICAL_CEILING, (
+            f"{critical_count} open CRITICAL findings"
+        )
+    if critical_count >= 1:
+        return _top_of_band("POOR"), (
+            f"{critical_count} open CRITICAL finding"
+            f"{'s' if critical_count > 1 else ''}"
+        )
+    if high_count >= 3:
+        return _top_of_band("FAIR"), f"{high_count} open HIGH findings"
+    if high_count >= 1:
+        return _top_of_band("MODERATE"), (
+            f"{high_count} open HIGH finding{'s' if high_count > 1 else ''}"
+        )
+    return None, None
 
 
 def _apply_weighted_impacts(
@@ -516,6 +608,34 @@ def compute_readiness_score(
     else:
         score_divisor = domains_assessed * 25 / 100
         total_score = int(round(sum(assessed_scores.values()) / (domains_assessed * 25) * 100))
+
+        # 999.115 C — apply the absolute consequence ceiling BEFORE the band is
+        # derived, so the number and the label agree. Ordering matters: capping
+        # after `_rating()` would reproduce exactly the incoherence this change
+        # exists to remove (a score of 87 wearing the word FAIR).
+        _high_count = max(0, _as_int(sev.get("HIGH", 0)))
+        _ceiling, _ceiling_reason = _consequence_ceiling(
+            max(0, _as_int(sev.get("CRITICAL", 0))), _high_count
+        )
+        # COMPRESS into [0, ceiling] rather than clamp to it. This distinction
+        # is load-bearing and was found by measurement, not by design: a hard
+        # `min(score, ceiling)` destroys every gradient below the ceiling, so on
+        # exactly the estates that most need remediation the score becomes
+        # INERT. Measured on the 31-host reference estate under a hard clamp:
+        # renewing every expired certificate moved the score +0, eliminating all
+        # plaintext HTTP moved it +0, and the strict/balanced/lenient
+        # calibration profiles collapsed to a single identical number. The
+        # product's remediation roadmap would have shown "+0 points" against
+        # every recommendation it makes.
+        #
+        # Compression bounds the maximum just as firmly — a 5-CRITICAL estate
+        # still cannot exceed DEEP_CRITICAL_CEILING — while preserving ordering,
+        # remediation lift, and profile sensitivity within the permitted range.
+        consequence_capped_from: Optional[int] = None
+        if _ceiling is not None and total_score > _ceiling:
+            consequence_capped_from = total_score
+            total_score = int(round(_ceiling * total_score / 100))
+
         numeric_band = _rating(total_score)
 
         # Phase 184.4 D-01/D-02/D-03/D-06/D-09: severity floor on the BAND only.
@@ -529,6 +649,23 @@ def compute_readiness_score(
         critical_count = max(0, _as_int(sev.get("CRITICAL", 0)))
         rating = cap_band_for_severity(numeric_band, critical_count)
         rating_cap_reason = cap_reason(numeric_band, rating, critical_count, total_score)
+
+        # 999.115 C — a capped NUMBER must disclose that it was capped, or a
+        # client reads it as computed. `rating_cap_reason` is the existing
+        # channel for exactly this (report surfaces already render it as
+        # "Score capped: {reason}" — Phase 194-03), so the consequence cap
+        # reuses it rather than adding a key no surface reads yet.
+        #
+        # It takes precedence over the band-cap reason when both apply: after C,
+        # the band cap will usually NOT fire, because the number has already
+        # fallen into the band that cap would have forced. Where it does fire,
+        # the consequence cap is the more specific and more actionable
+        # explanation — it names the finding count that set the ceiling.
+        if consequence_capped_from is not None:
+            rating_cap_reason = (
+                f"{_ceiling_reason} — score limited to {total_score} "
+                f"(computed {consequence_capped_from})"
+            )
 
     coverage_disclosure = f"{domains_assessed} of {domains_total} domains assessed"
 
