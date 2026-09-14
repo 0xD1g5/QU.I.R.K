@@ -30,8 +30,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   INFO: "bg-[hsl(240_5%_46%)] text-white",
 }
 
-// TEMPORARY(206-05): induce red-proof — REVERTED IN THE NEXT COMMIT
-const PROTOCOLS = ["KERBEROS", "SAML"] as const
+const PROTOCOLS = ["KERBEROS", "SAML", "DNSSEC"] as const
 
 function getProtocolStatus(findings: IdentityFinding[], protocol: string) {
   const pf = findings.filter((f) => f.protocol === protocol)
