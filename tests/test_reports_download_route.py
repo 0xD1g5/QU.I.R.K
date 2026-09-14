@@ -72,7 +72,7 @@ def _write_stamp_group(outdir: Path, stamp: str, *, formats, run_stats: bool = T
     if run_stats:
         run_stats_payload = {
             "started_utc": f"2026-09-14T04:{stamp[-4:-2]}:00.000000+00:00",
-            "ended_utc": f"2026-09-14T04:{stamp[-2:]}:13.439767+00:00",
+            "ended_utc": f"2026-09-14T04:{stamp[-4:-2]}:13.439767+00:00",
             "profile": "standard",
             "score_profile": "balanced",
             "safe_mode": False,
