@@ -5,6 +5,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [Unreleased]
+
+### Fixed
+
+- **Readiness-score ratio denominators now divide by the population their numerator is drawn
+  from, not by the scan's probe count** (999.113). **Every readiness score this product has ever
+  emitted was computed under the old semantics and will not match a re-score under the new one —
+  this is not a rounding tweak, it is a change to what the number means.** Previously, 34 of the
+  35 ratio penalties that make up the readiness score divided by `totals.endpoints` — the count
+  of hosts x probed ports, including ports where nothing was found — rather than by the actual
+  population the numerator counts (certificates, assessable endpoints, or non-informational
+  findings). The practical effect: widening a scan's port list, or adding more badly-configured
+  hosts to an already-scanned estate, diluted every real weakness proportionally and could make
+  the score go UP even though nothing about the infrastructure improved. Measured example: a
+  31-host estate with 5 CRITICAL / 14 HIGH / 33 MEDIUM findings and 29% of its certificates
+  expired scored 91/100 with the Identity subscore at a perfect 25/25 under the old semantics.
+  Certificate-family ratios (expired/expiring/self-signed certificates) now divide by the number
+  of certificates actually observed; endpoint-family ratios (plaintext HTTP, HTTP-on-TLS, legacy
+  TLS, unknown services, mTLS) now divide by the assessable (non-advisory, non-unreachable)
+  endpoint count; the high-impact-findings ratio now divides by actionable (non-informational)
+  findings instead of all findings. If you have a stored or previously-delivered score from before
+  this release, it is not directly comparable to a score computed after it — re-scan or re-score
+  the underlying evidence if you need an up-to-date number. See
+  `.planning/decisions/999.113-denominator-semantics.md` for the full rationale; domain/connector
+  ratios (database, storage, Kubernetes, Vault, email, broker, Kerberos, SAML, DNSSEC, S/MIME,
+  AD CS) move to a strict improvement over the old denominator but are not yet population-correct
+  — tracked as a follow-up.
+
 ## [5.21.0] - 2026-09-10
 
 Two development-complete milestones, shipped as a single release: v5.20's readiness-score
