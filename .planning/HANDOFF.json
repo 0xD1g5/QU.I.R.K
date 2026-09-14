@@ -1,76 +1,56 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-13T18:59:55.644Z",
-  "phase": "205",
-  "phase_name": "Guard Integrity",
-  "phase_dir": ".planning/phases/205-guard-integrity",
-  "plan": 5,
-  "task": 0,
-  "total_tasks": 6,
+  "timestamp": "2026-09-14T02:00:59.876Z",
+  "phase": "demo-prep",
+  "phase_name": "Demo readiness for 2026-09-18 client presentation (Phase 206 PAUSED, see 999.114)",
+  "phase_dir": ".planning",
+  "plan": 2,
+  "task": 1,
+  "total_tasks": 4,
   "status": "paused",
-  "branch": "phase-205-guard-integrity",
-  "pr": "https://github.com/0xD1g5/QU.I.R.K/pull/14",
+  "branch": "main",
+  "commits_ahead_of_origin": 38,
   "completed_tasks": [
-    {"id": 0, "name": "Phase 204 Worklist Truth & Derivation (whole phase, incl. close + review + fixes)", "status": "done", "commit": "18344389"},
-    {"id": 1, "name": "Phase 203 retroactive close (backfilled 203-VERIFICATION.md, Series 203, STALE-02 flip)", "status": "done", "commit": "ae0cf377"},
-    {"id": 2, "name": "STALE-01 closed — all 8 HARDWARE_MATRIX vendors re-verified, staleness gate green on merit", "status": "done", "commit": "fa1792f7"},
-    {"id": 3, "name": "205 discuss — 205-CONTEXT.md with D-01..D-08, 3 operator-answered", "status": "done", "commit": "untracked artifact"},
-    {"id": 4, "name": "205 plan — 5 plans in 3 waves", "status": "done", "commit": "57edd2fd"},
-    {"id": 5, "name": "205-01 GUARD-01 core: pin two-:: capability, fix bracket-truncation phantom diagnostic", "status": "done", "commit": "8561e306"},
-    {"id": 6, "name": "205-02 convert 7 Class*method globs to real node refs + ledger sync", "status": "done", "commit": "d986b349"},
-    {"id": 7, "name": "205-02b corrective: widen citation extraction (6 unguarded citations, 5 API-security)", "status": "done", "commit": "f36e0067"},
-    {"id": 8, "name": "205-03 Node in Linux Full Suite (D-04) + dangling item-12 citation fix (D-07)", "status": "done", "commit": "cd25564f"},
-    {"id": 9, "name": "205-04 real CI red-proof — criterion 4 PROVEN, induction reverted byte-identical", "status": "done", "commit": "a822f01c"}
+    {"id": 1, "name": "Pause Phase 206 with a mechanical resume guarantee", "status": "done", "commit": "6bda9dfa"},
+    {"id": 2, "name": "Merge chaos-lab branch (MinIO quay.io fix + 31-host multihost estate)", "status": "done", "commit": "37a8c496"},
+    {"id": 3, "name": "Merge phase-206 branch to main so the resume gate actually runs in CI", "status": "done", "commit": "5d91e1e6"},
+    {"id": 4, "name": "999.113 denominator fix — ratios divide by their own population", "status": "done", "commit": "0b0ed1c7"},
+    {"id": 5, "name": "999.113 red-proof commit pair", "status": "done", "commit": "a49c7dd6/9fadfaa2"},
+    {"id": 6, "name": "Remove unregistered skip marker from the resume gate", "status": "done", "commit": "c5a2dbe0"},
+    {"id": 7, "name": "File 999.115 (usable-range compression) at P1; close 999.113", "status": "done", "commit": "546804bc"}
   ],
   "remaining_tasks": [
-    {"id": 10, "name": "205-05 close-out — correct ROADMAP criteria 1/2/3, flip REQUIREMENTS, UAT Series 205, Obsidian sync (autonomous:false — operator review checkpoint)", "status": "not_started"},
-    {"id": 11, "name": "Phase 205 verification + validation artifacts (205-VERIFICATION.md, 205-VALIDATION.md) — REQUIRED by the pre-commit close gate", "status": "not_started"},
-    {"id": 12, "name": "Phase 206 Dashboard UI Coverage Drain — the 28 jsdom-tractable series-7 cases", "status": "not_started"},
-    {"id": 13, "name": "Phase 207 Browser-Only Coverage Verdict — MANUAL, operator-led, an autonomous runner must HALT before it", "status": "not_started"}
+    {"id": 8, "name": "Scoring property suite P1-P6 — RESUME HERE (operator instruction)", "status": "not_started"},
+    {"id": 9, "name": "Calibration ladder — named reference estates, operator bottom rung: multihost < 40", "status": "not_started"},
+    {"id": 10, "name": "/print sidebar product defect fix (affects exported PDFs)", "status": "not_started"},
+    {"id": 11, "name": "Scoring-derivation summary artifact for the Friday discussion", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "Python CI is RED on main and on this PR: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg fails on BACK-51::Phases in .planning/milestones/v5.23-ROADMAP.md",
-      "type": "external",
-      "workaround": "PRE-EXISTING, verified. Introduced by commit a6530843 (v5.23 milestone close, 2026-09-12), confirmed an ancestor of origin/main; this branch touches no file under .planning/milestones/. Same defect class Phase 198 GATE-04 fixed by escaping example IDs with U+2011 non-breaking hyphens; it recurred in a newly-archived file. Do NOT attribute it to Phases 203/204/205. Fix is a small separate change: escape or ledger the BACK-51 token."
-    },
-    {
-      "description": "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[storage-s3] fails in CI — minio image pull denied by Docker Hub",
-      "type": "external",
-      "workaround": "Documented environmental class. Not a code defect. Compare failing-node SETS on a healthy daemon, never raw pass counts."
-    },
-    {
-      "description": "tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged fails under pytest 9.0.2",
+      "description": "main CI has one remaining red: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE — BACK-51 is properly closed at HORIZON.md:49; the gate keys on (ID, title) and is matching a narrative prose line in the ARCHIVED v5.23-ROADMAP.md that literally says 'BACK-51 closed by recorded decision'.",
       "type": "technical",
-      "workaround": "PRE-EXISTING, skip-report format dependency. It lives at :836-857 in the SAME module Phase 205 edits, immediately above the vitest block — so it will be adjacent to any further work here. Do not fix opportunistically, do not misattribute. Tracked in .planning/todos/pending/pytest-9-breaks-uat-nonvacuity-skip-reporting.md"
+      "workaround": "Not fixed deliberately — the honest fix is at the gate (prose asserting closure is not an open-item declaration), which is a real code change with test implications and was out of the demo scope. Filed for v5.25 at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md"
+    },
+    {
+      "description": "The readiness score's usable range is ~85-100. Denominator fix moved the 31-host vulnerable estate 91 -> 87 against an operator calibration target of < 40. Necessary but not sufficient.",
+      "type": "technical",
+      "workaround": "Tracked as 999.115 at P1 with four candidate model shapes. Must be chosen BY MEASUREMENT against the calibration ladder (task 9), not by argument. Do NOT tune weights to hit a number (D5)."
     }
   ],
   "human_actions_pending": [
-    {
-      "action": "Review and merge PR #14 (54 commits, Phases 203-205)",
-      "context": "Branch phase-205-guard-integrity. All work committed and pushed; working tree clean. Linux Full Suite is red on the two pre-existing failures above only.",
-      "blocking": false
-    },
-    {
-      "action": "Run plan 205-05 (autonomous:false)",
-      "context": "The planner flagged it as an operator review checkpoint because it hand-edits ROADMAP.md / REQUIREMENTS.md. It now carries THREE ROADMAP corrections, not one — criteria 1, 2 and 3 were all falsified.",
-      "blocking": false
-    },
-    {
-      "action": "Phase 207 must be run manually, operator-led",
-      "context": "Standing operator decision 2026-09-13. Its Playwright-vs-permanent-GAP verdict is a CI toolchain commitment the operator retains. An autonomous runner must HALT after Phase 206.",
-      "blocking": true
-    }
+    {"action": "Decide whether to push main to origin", "context": "38 commits ahead, nothing pushed. Includes the 999.113 score fix, both branch merges, and the resume gate. Pushing to main is outward-facing; memory records that main branch protection is bypassable, so a push succeeds silently.", "blocking": false},
+    {"action": "Set the calibration ladder's remaining bands", "context": "Operator set the bottom rung (multihost < 40). The middle rungs (pristine PQC-ready estate, typical enterprise) still need consulting judgement — code cannot self-certify what score should alarm a client.", "blocking": true},
+    {"action": "Choose client-facing vs presenter-notes framing for the scoring-derivation summary", "context": "Default plan is layered: client-safe narrative first, appendix with arithmetic/weights/known-limits after. Operator can redirect.", "blocking": false}
   ],
   "decisions": [
-    {"decision": "GUARD-01 reframed and the real defect absorbed (D-01/D-02)", "rationale": "ROADMAP criteria 1-2 assumed NODE_REF_RE could not parse Class::method. It always could — proven end-to-end. The real defects were a phantom truncation diagnostic and prose-keyed citation extraction.", "phase": "205"},
-    {"decision": "Widen the guard's citation extraction beyond the 'DEFERRED — covered by' prose form (D-08)", "rationale": "Six citations — five of them Series 58 API-security tests — were never existence- or execution-checked. All six proved honest when finally checked.", "phase": "205"},
-    {"decision": "Add Node to the Linux Full Suite job rather than relocating the vitest legs (D-04)", "rationale": "dashboard-quality.yml is path-filtered on src/dashboard/**, so a PR touching only docs/UAT-SERIES.md — exactly when a vitest citation breaks — would not trigger it.", "phase": "205"},
-    {"decision": "Branch + PR rather than pushing to main", "rationale": "Operator choice. The red-proof requires deliberately pushing a RED commit; main's PR protection is bypassable in this repo, so a broken commit could land on the default branch by accident.", "phase": "205"},
-    {"decision": "205-04 executed inline by the orchestrator, not delegated", "rationale": "It pushes a deliberately-red commit to a remote and interprets CI logs. Two subagents had already violated explicit git constraints this session.", "phase": "205"},
-    {"decision": "IPMI keeps pqc_status=unsupported but on a narrower basis", "rationale": "The 'closed cipher-suite table with no extension point' claim is FALSE — all three algorithm tables reserve C0h-FFh for OEM. But the OEM range is unreachable through the 6-bit [5:0] field carrying it, a self-contradiction in the spec. Verified against the 644-page specification itself.", "phase": "operator"}
+    {"decision": "Pause Phase 206 at 5 of 13 plans", "rationale": "Client demo 2026-09-18 takes the week; Phase 206 is internal test coverage and delivers zero demo-visible value.", "phase": "206"},
+    {"decision": "Guarantee the resume with a TEST, not a note", "rationale": "BACK-A11Y-01 was invisible ~3 months after a v5.0 archive; BACK-89 drifted P2->P1 invisible for 3.5 months; v5.24 slipped three boundaries. In every case the work WAS written down — writing it down is what failed.", "phase": "206"},
+    {"decision": "999.113 D1 — every ratio divides by the population its own numerator is drawn from", "rationale": "Not a new principle: agility_high_impact_ratio already did it, and _endpoints_assessed's docstring already instructed it. 34 sites were inconsistent with the one site and the one docstring that already said it.", "phase": "demo-prep"},
+    {"decision": "999.113 D1(d) — agility_high_impact_ratio ALSO had the defect", "rationale": "Orchestrator initially and wrongly fenced it off as 'the one site that was always correct'. It divided 19 high-impact findings by 398 TOTAL findings, 330 of them INFO. Found by arithmetic during implementation, not by inspection.", "phase": "demo-prep"},
+    {"decision": "999.113 D5 — do not tune to a target", "rationale": "The lab score must move because the denominator became meaningful, not because someone picked a number that demos well. Held: the executor reported 87 against a <40 target and changed no weights.", "phase": "demo-prep"},
+    {"decision": "Choose the next scoring model BY MEASUREMENT, not argument", "rationale": "Attempt #1 (Phase 188 SCORE-06) failed because nothing could tell whether a change had helped — ~3,200 lines of scoring tests were green the whole time the score was blind.", "phase": "demo-prep"}
   ],
   "uncommitted_files": [],
-  "next_action": "Execute plan 205-05 (close-out). Read .planning/phases/205-guard-integrity/205-CONTEXT.md FIRST — its <falsification> block and D-02's CORRECTED mechanism — then 205-RED-PROOF.md's 'criterion 3 is not satisfiable as literally worded' finding, then 205-05-PLAN.md. After 205-05, Phase 205 still needs 205-VERIFICATION.md and 205-VALIDATION.md or its close gate will block, exactly as Phase 203's did.",
-  "context_notes": "THREE of Phase 205's four ROADMAP criteria were falsified before or during execution, each time by RUNNING code rather than reading it: (1) NODE_REF_RE already parsed Class::method; (2) there was no 'old single-:: pattern' to pin against; (3) criterion 3 is unsatisfiable because the corpus holds ZERO vitest citations and CI's `pytest -q` never names skips. Only criterion 4 survived contact, and it turned out to carry criterion 3 — a skipped test cannot shell out to vitest run. The single most transferable lesson: an enumeration derived from the artifact being audited inherits that artifact's blind spot. The recon found 7 Class*method globs because it used the guard's own extractor; there were 8, and finding the 8th exposed 6 entirely unguarded citations. Verify every executor claim independently — this session caught a crashing pass-criteria command, a stale count, an unsanctioned worktree, and a prohibited git stash, all self-reported or found by spot-check."
+  "next_action": "Build the scoring property suite P1-P6 in tests/, red-proved against current main so P1/P2/P4/P6 demonstrably FAIL today. P4 (dynamic range) encodes 'the multihost reference estate scores below 40' and must fail at 87 — that failing test IS the deliverable.",
+  "context_notes": "Operator explicitly instructed: 'lets pick up at the property suite p1-p6 when resuming'. The strategic frame that matters: the existing scoring suite asserts mechanism, bounds and rendering but never MEANING — test_score_always_bounded_1000_iterations is passed perfectly by a function returning the constant 91. The property suite is the missing test class and the instrument that makes every subsequent model decision measurable. Do not start by picking a model shape."
 }
