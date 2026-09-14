@@ -91,7 +91,8 @@ export function CertificatesPage() {
                   <TableCell className="text-sm font-mono text-xs">{subjectCN}</TableCell>
                   <TableCell className="text-sm">{issuerCN}</TableCell>
                   <TableCell className={`text-sm ${expiryClass} flex items-center gap-1`}>
-                    {(daysToExpiry !== null && daysToExpiry < 30) && <AlertTriangle className="h-3 w-3" />}
+                    {/* TEMPORARY(206-05): induce red-proof — REVERTED IN THE NEXT COMMIT */}
+                    {false && <AlertTriangle className="h-3 w-3" />}
                     {expiry ? formatDateOnly(cert.cert_not_after) : "—"}
                   </TableCell>
                   <TableCell className="text-xs font-mono">
