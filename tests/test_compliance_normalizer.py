@@ -58,7 +58,17 @@ def test_same_identity_bearing_title_still_collapses_under_compliance_policy():
 
 
 def test_title_identity_class_is_exhaustive_and_closed_vocabulary():
-    assert len(TITLE_IDENTITY_CLASS) == 22
+    # 23 since 2026-09-14: "Weak SAML encryption certificate: -" was added
+    # alongside the pre-existing signing title, because a SAML IdP publishes a
+    # KeyDescriptor per USE and the encryption row was being mis-titled
+    # "signing".
+    #
+    # NOTE: this literal is a tripwire, not the real exhaustiveness check —
+    # `tests/test_compliance_title_join.py::test_every_interpolated_title_is_classified`
+    # is, and it regenerates its occurrence set from the source AST on every run
+    # (in both directions: unclassified AND stale). Bumping this number without
+    # that gate passing proves nothing.
+    assert len(TITLE_IDENTITY_CLASS) == 23
     assert set(TITLE_IDENTITY_CLASS.values()) <= {
         "NORMALIZE",
         "PRESERVE_IDENTITY",

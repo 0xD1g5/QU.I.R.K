@@ -395,6 +395,27 @@ def finding_by_id_and_title(
     return ep, None
 
 
+def _saml_key_use(service_detail: str) -> Optional[str]:
+    """The SAML KeyDescriptor `use` recorded on this endpoint row, if any.
+
+    The SAML scanner writes `service_detail` as pipe-delimited tokens, e.g.
+    `http://host:8080/.../metadata.php|use=signing|serial=109f9643...`. An IdP
+    commonly publishes the SAME certificate under two KeyDescriptors (one
+    `use=signing`, one `use=encryption`, identical serial), which produces two
+    endpoint rows for one key.
+
+    Returns the lowercased use ("signing" / "encryption" / any future value), or
+    None when no `use=` token is present. Per SAML 2.0 metadata, an omitted
+    `use` means the key is valid for both purposes — callers should treat None
+    as "unspecified", never as a specific use.
+    """
+    for token in (service_detail or "").split("|"):
+        token = token.strip()
+        if token.startswith("use="):
+            return token[4:].strip().lower() or None
+    return None
+
+
 def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityFinding]:
     """Synthesize identity protocol findings from KERBEROS/SAML/DNSSEC endpoints.
 
@@ -478,24 +499,62 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
                     algorithm="SHA1",
                 ))
             elif alg not in OIDC_ALG_SEVERITY and size is not None and isinstance(size, int) and size < 2048:
-                results.append(IdentityFinding(
+                # 2026-09-14: a SAML IdP publishes a KeyDescriptor per USE, so one
+                # certificate can appear as two endpoint rows (use=signing and
+                # use=encryption, identical serial). This branch runs per ROW, so
+                # the encryption row was previously titled "Weak SAML SIGNING
+                # certificate" — a claim about the wrong key use, on a surface a
+                # client reads. Title the row for the use it actually describes.
+                #
+                # DELIBERATELY NOT FIXED HERE: the two rows still produce two
+                # CRITICAL findings for ONE weak key, and CRITICAL count drives
+                # the score cap. Collapsing them changes the emitted score, so it
+                # is tracked separately (option C) rather than slipped in behind a
+                # string fix. `evidence.py`'s saml_weak_signing_count double-counts
+                # the same key into the score ratio (option D), also tracked.
+                #
+                # The two constructor calls below are deliberately NOT collapsed
+                # into one with a computed `title=`. `tests/fixtures/
+                # chaos_lab_findings.py::collect_dashboard_titles` walks the AST
+                # for `title=` keywords holding an f-string LITERAL; a title built
+                # into a local variable first is invisible to it, which would hide
+                # BOTH templates from the classification gate rather than register
+                # the new one. Keeping each f-string at its call site is what makes
+                # the gate able to see them.
+                _shared = dict(
                     host=ep.host,
                     port=ep.port,
                     severity="CRITICAL",
-                    title=f"Weak SAML signing certificate: {alg}-{size}",
                     protocol="SAML",
-                    description=(
-                        f"SAML signing certificate uses {size}-bit {alg} key, "
-                        f"below the 2048-bit minimum for RSA."
-                    ),
                     remediation=(
-                        "Replace IdP signing certificate with RSA-2048 minimum "
+                        "Replace the IdP certificate with RSA-2048 minimum "
                         "or switch to ECDSA P-256."
                     ),
                     quantum_risk="Vulnerable",
                     source="saml",
                     algorithm=f"{alg}-{size}" if size else alg,
-                ))
+                )
+                if _saml_key_use(sd) == "encryption":
+                    results.append(IdentityFinding(
+                        title=f"Weak SAML encryption certificate: {alg}-{size}",
+                        description=(
+                            f"SAML encryption certificate uses {size}-bit {alg} key, "
+                            f"below the 2048-bit minimum for RSA."
+                        ),
+                        **_shared,
+                    ))
+                else:
+                    # Absent `use` means the key is valid for BOTH purposes per
+                    # SAML 2.0 metadata; the pre-existing wording is kept for that
+                    # case so this change alters exactly one thing.
+                    results.append(IdentityFinding(
+                        title=f"Weak SAML signing certificate: {alg}-{size}",
+                        description=(
+                            f"SAML signing certificate uses {size}-bit {alg} key, "
+                            f"below the 2048-bit minimum for RSA."
+                        ),
+                        **_shared,
+                    ))
 
         elif proto == "DNSSEC":
             alg = (ep.cert_pubkey_alg or "").upper()

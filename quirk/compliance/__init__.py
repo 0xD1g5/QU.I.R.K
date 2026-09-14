@@ -242,6 +242,14 @@ TITLE_IDENTITY_CLASS: Dict[str, str] = {
     "OIDC RS-family algorithm: ": "PRESERVE_IDENTITY",
     # scan.py:412 — alg/size stable.
     "Weak SAML signing certificate: -": "PRESERVE_IDENTITY",
+    # 2026-09-14 — sibling of the line above. A SAML IdP publishes a
+    # KeyDescriptor per USE, so the SAME certificate can appear as two endpoint
+    # rows (use=signing, use=encryption, identical serial); the encryption row
+    # was previously mis-titled "signing". PRESERVE_IDENTITY by the rule stated
+    # above: `use` is a DISCRIMINATOR, not volatile — two genuinely different
+    # findings at one (host, port) can differ only in that segment, and it does
+    # not change between re-scans. alg/size stable, as for the signing title.
+    "Weak SAML encryption certificate: -": "PRESERVE_IDENTITY",
     # scan.py:459 — DISCRIMINATOR: a zone can hit several
     # _DNSSEC_WEAK_MAP conditions.
     "DNSSEC: ": "PRESERVE_IDENTITY",
