@@ -2,12 +2,48 @@
 type: todo
 created: 2026-09-13
 source: phase-203 plans 03/04 — Chrome-driven source re-verification (STALE-01)
-priority: high
-requirement: STALE-01 (partially discharged — 1 of 8 vendors verified)
+priority: closed
+requirement: STALE-01 (CLOSED 2026-09-13 — all 8 vendors verified, commit fa1792f7)
 resolves_phase: null
 ---
 
 # 7 of 8 `HARDWARE_MATRIX` vendor `source_url`s are dead, moved, or access-gated
+
+> ## CLOSED 2026-09-13 — all 8 vendors re-sourced and re-verified (commit `fa1792f7`)
+>
+> **Everything below is the work matrix as written before the work was done. It is retained as the
+> record of what was found and planned, not as outstanding work.** A reader landing here should not
+> start re-sourcing URLs — that is finished.
+>
+> **Outcome: the re-verification was not a rubber stamp — five of five claims checked were wrong.**
+>
+> | Vendor | Recorded claim | After re-verification |
+> |---|---|---|
+> | **F5** | "core TMOS does **not** support PQC" | **Inverted.** X25519MLKEM768 both TLS sides from 17.5.1; SecP256r1MLKEM768 / SecP384r1MLKEM1024 from 21.1.0. Not default-enabled. Stays `partial` (no PQC signature algorithms) |
+> | **Palo Alto** | `partial` — "supports X25519MLKEM768 for TLS decryption" | **Inverted, and not like-for-like -> `unsupported`.** The NGFW *strips* PQC/hybrid groups from the ClientHello and *drops* PQC-only sessions. It is a **PQC downgrade point** |
+> | **Cisco** | `unsupported` | `partial` — ASA supports Multiple Key Exchanges for IKEv2 (RFC 9370) from 9.20(1). Roadmap clause dropped, not re-sourced |
+> | **Juniper** | `unsupported` | `partial` — Junos OS **Evolved** 25.4R1: ML-DSA-87 image signing + hybrid `sntrup761x25519-sha512` SSH KEX on ACX/PTX/QFX. "Quantum Buffer" is *not* PQC |
+> | **HPE** | `partial` — "iLO 6 hybrid TLS via fw 1.60+" | Wrong on **three** counts: it is **iLO 7**, via **LMS**, for **firmware-update signing**. No source anywhere for the `1.60+` floor |
+> | **Thales** | `partial` — "firmware 7.7.1+" | Floor wrong — the 7.7.1 CRN contains no PQC content at all. Real floors: **7.9.0** (ML-KEM/ML-DSA), **7.8.9** (LMS-HSS, a family the entry omitted entirely) |
+> | **Fortinet** | version floor "7.4+" | Corrected in Phase 203 to "6.0+ without EAP"; ML-KEM/RFC 9370 added |
+> | **IPMI** | `VENDOR-SILENT`, "closed table, no extension point" | **Verified against the spec PDF itself.** The "no extension point" claim was **false** — an OEM range C0h-FFh exists. Stays `unsupported` on a narrower, better basis: the algorithm-number field is six bits ([5:0]), so C0h = 192 cannot be represented in it — the spec contradicts itself, and is terminal at v2.0 rev 1.1 |
+>
+> **Item 3 of this todo ("what actually closes this") is discharged:** the IPMI 2.0 spec's
+> cipher-suite tables (13-17/13-18/13-19) were read directly and the structural claim was not merely
+> confirmed but *corrected*; `source_url` now points at the spec PDF (HTTP 200, `application/pdf`,
+> 644 pages, no redirect) rather than the retired Intel doc-tree page.
+>
+> **Verification evidence:** `tests/test_hardware_staleness.py` 9/9 green on its own merits —
+> `HARDWARE_MATRIX["last_verified"] == 2026-09-13 == min()` of all 8 entries, no date bumped,
+> `QUIRK_CI_STALENESS_OVERRIDE_DATE` never set. `UAT-203-05` re-dispositioned GAP -> PASS.
+> STALE-01 Closed in `.planning/REQUIREMENTS.md`.
+>
+> **NOT closed by this — still open, deliberately:** the durability problem. All 7 rotted URLs were
+> deep links into version-numbered documentation trees that vendors rotate every release, so
+> re-sourcing buys roughly one cycle. The structural fix (decouple document *identity* from *URL*,
+> plus a content-aware link check — three of the rot patterns returned HTTP 200 while serving the
+> wrong subject) is tracked separately and remains pending:
+> `.planning/todos/pending/hardware-matrix-doc-id-decouple-url-from-identity.md`.
 
 > **OWNERSHIP + SCHEDULING, operator decision 2026-09-13.** The **operator is taking the URL
 > re-sourcing personally** — do not spend a QUIRK phase on it. QUIRK's half is the structural fix

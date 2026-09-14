@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-13 (Phase 205 Plan 05 — Series 205 added: 5 guard-integrity cases covering
+**Last Updated:** 2026-09-13 (Phase 203 audit — Series 203 re-dispositioned: UAT-203-05 GAP -> PASS on its own stated falsifiability condition after the operator's re-sourcing pass `fa1792f7` verified all 8 `HARDWARE_MATRIX` vendors and turned the staleness gate green on its own merits; **five of five vendor claims checked were wrong**, Palo Alto inverted. UAT-203-04's PASS stands with its premise marked SUPERSEDED — the gate going green *with* all 8 dated is precisely the event its falsifiability clause named, and the prohibited clearing path was available and not taken. Open GAP total drops by one. Prior: Phase 205 Plan 05 — Series 205 added: 5 guard-integrity cases covering
 GUARD-01 (two-`::` class-scoped syntax pinned against narrowing; the parametrized-bracket
 truncation defect that reported a phantom string closed) and GUARD-02 (the vitest substitute leg
 proven to EXECUTE in CI by a deliberate RED, not merely existence-checked). Read Series 205's
@@ -28190,43 +28190,75 @@ current dates — which would mean someone cleared it the prohibited way.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-13  **Tester:** Automated (backfilled)
-**Notes:** This case PASSES *because* the gate fails — the assertion under test is the honesty of
-the deferral, not the greenness of the catalog. Re-verified at backfill: failure message is
+**Notes:** This case PASSES *because* the gate failed — the assertion under test is the honesty of
+the deferral, not the greenness of the catalog. Re-verified at backfill: failure message was
 "92 days old (>90)"; `203-VERIFICATION.md` independently confirmed the override variable appears
 only in test fixtures and documentation describing the mechanism, never set live.
 
+**SUPERSEDED 2026-09-13 (premise only; disposition stands).** Later the same day the operator's
+re-sourcing pass (`fa1792f7`) verified all 8 vendors and the gate went GREEN — so the state this
+case's title describes is historical, not current. The PASS stands and is *strengthened* rather than
+invalidated: this case's falsifiability condition was "turns red if the gate ever goes green
+**without** 8 vendors carrying current dates," and the discharge is the event that tested it. The
+gate went green *with* all 8 dated and attested, `last_verified` advanced only by real
+re-verification, and `QUIRK_CI_STALENESS_OVERRIDE_DATE` was never set. The prohibited clearing path
+was available and was not taken. Current-state coverage now lives in UAT-203-05.
+
 ---
 
-### UAT-203-05: Seven Vendor Entries Remain Unverified — Honest Absence
+### UAT-203-05: All Eight Vendor Entries Re-Verified Against Current Sources (STALE-01)
 
 **ID:** UAT-203-05
-**Title:** 7 of 8 `HARDWARE_MATRIX` vendors could not be re-verified because their source documents are gone
+**Title:** Every `HARDWARE_MATRIX` vendor entry matches a current authoritative document on the vendor's own domain
 **Maps to:** STALE-01
 
 **What to test:** whether each of F5, Cisco, Palo Alto, Juniper, HPE, Intel/IPMI and Thales has been
 re-verified against a current authoritative document on the vendor's own domain, per D-03's
 claim-match bar.
 
-**Steps:** none available. The documents do not exist at their recorded URLs: 6 are dead or silently
-moved, 1 (Juniper) is behind a support login. Chrome reached every host successfully — including the
-NSA page that returns HTTP 403 to non-browser clients — so this is document rot, not a tooling limit.
-Three of the rot patterns return **HTTP 200** while serving unrelated content (Cisco: "No Data Found";
-Intel: a product selector; Fortinet's old URL silently 301'd to "Getting started"), so no status-code
-check can substitute.
+**Steps:** read each of the 8 entries' `source_url` in `quirk/scanner/hardware_meta.py` and confirm
+the document it resolves to supports that entry's `pqc_status`, version floor and `notes`; then run
+`.venv/bin/python -m pytest -q tests/test_hardware_staleness.py`.
 
-**Pass Criteria:** each entry's `pqc_status` and `notes` confirmed against a current vendor document.
-**Not achievable until the URLs are re-sourced.**
+**History — why this case was a GAP until 2026-09-13.** At Phase 203's close, 7 of 8 recorded URLs
+were dead, silently moved, or access-gated, so no test could assert the entries matched their
+sources. Three of the rot patterns returned **HTTP 200** while serving unrelated content (Cisco: "No
+Data Found"; Intel: a product selector; Fortinet's old URL silently 301'd to "Getting started"), so
+no status-code check could substitute. Chrome reached every host successfully — including the NSA
+page that returns HTTP 403 to non-browser clients — confirming document rot rather than a tooling
+limit. The re-sourcing was then executed by the operator in a browser session.
+
+**Pass Criteria:** each entry's `pqc_status` and `notes` confirmed against a current vendor document,
+all 8 carrying current `last_verified` dates, and the `min()`-derived top-level date making
+`test_hardware_matrix_not_stale` green on its own merits — no date bumped, no override set.
 
 **Falsifiability:** closes when all 8 entries carry current dates and the `min()`-derived top-level
 date makes `test_hardware_matrix_not_stale` green on its own merits.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; 7 of 8 vendor source documents are gone or access-gated, so no test can assert these entries match their sources. The operator owns re-sourcing per a 2026-09-13 decision — work matrix in `.planning/todos/pending/hardware-matrix-source-urls-broadly-rotted.md`, structural fix tracked separately in `hardware-matrix-doc-id-decouple-url-from-identity.md`. Evidence: `203-ATTESTATION.md`, `203-RECON-source-reachability.md`)
-**Date:** 2026-09-13  **Tester:** Browser-assisted reconnaissance (backfilled)
-**Notes:** An honest GAP, not a failure of the phase. The phase's bounded design (D-04: one attempt
-per rotted URL) deliberately fenced this off rather than letting re-verification become an
-open-ended URL hunt. Re-sourcing alone buys roughly one release cycle — all 7 rotted URLs were deep
-links into version-numbered documentation trees that vendors rotate every release, which is the
-argument for the `doc_id` structural fix.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-13  **Tester:** Browser-assisted re-sourcing (operator), commit `fa1792f7`
+**Notes:** **Re-dispositioned GAP -> PASS on 2026-09-13**, on this case's own stated falsifiability
+condition: "closes when all 8 entries carry current dates and the `min()`-derived top-level date
+makes `test_hardware_matrix_not_stale` green on its own merits." That condition is met exactly —
+`HARDWARE_MATRIX["last_verified"] == 2026-09-13 == min()` of all 8 entries, and
+`tests/test_hardware_staleness.py` is 9/9 green with no date bumped and
+`QUIRK_CI_STALENESS_OVERRIDE_DATE` never set.
+
+The re-verification was not a rubber stamp: **five of five claims checked were wrong.** F5 and Cisco
+were understated; **Palo Alto was inverted** (the NGFW *strips* PQC groups from the ClientHello and
+drops PQC-only sessions — a downgrade point, not a partially-capable device); HPE was wrong on three
+counts (iLO 7 not iLO 6, via LMS, for firmware-update signing, with no source for the recorded
+`1.60+` floor); Thales's version floor was wrong and omitted LMS-HSS entirely; and IPMI's "closed
+table with no extension point" claim was false (an OEM range C0h-FFh does exist). IPMI stays
+`unsupported` on a narrower, better-supported basis: the algorithm-number field is six bits
+([5:0]), so C0h = 192 cannot be represented in it at all — the specification contradicts itself,
+and it is terminal at v2.0 rev 1.1.
+
+The durability caveat from the original GAP still stands and is **not** closed by this PASS:
+re-sourcing alone buys roughly one release cycle, because the recorded URLs are deep links into
+version-numbered documentation trees that vendors rotate every release. The structural fix is
+tracked separately in `.planning/todos/pending/hardware-matrix-doc-id-decouple-url-from-identity.md`.
+Evidence: `203-ATTESTATION.md`, `203-RECON-source-reachability.md`, commit `fa1792f7`.
 
 ---
 
