@@ -194,10 +194,18 @@ unassessed and what to do about it:
   - `data_in_motion` — needs the email or broker scanners (§6.2) enabled and reachable.
   If a report consistently shows fewer than 6 of 6 domains assessed, check `connectors:` in your
   config for these scanners before treating the score as final.
-- **Scores are not comparable across scoring versions.** A lower number after upgrading to scoring
-  v2 may simply reflect honest exclusion of previously-fabricated points, not a regression — do not
-  compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s Unreleased entry for
-  the full migration decision record.
+- **Scores are not comparable across scoring versions.** A lower number after a scoring-version
+  upgrade may simply reflect honest exclusion of previously-fabricated points, not a regression —
+  do not compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s Unreleased
+  entry for the full migration decision record.
+- **Scoring v3 lowers scores substantially, by design.** Expect a large drop on estates carrying
+  open CRITICAL/HIGH findings, and a cap at the top of GOOD on any estate with no observed hybrid
+  post-quantum key exchange. Two changes drive it: consequence is now **absolute** rather than
+  proportional (a high count of CRITICAL/HIGH findings sets a ceiling irrespective of estate size),
+  and "no PQC, no 100" is enforced on a quantum-readiness product. On the project's 31-host
+  reference estate the score moved 87 → 18. Whenever a ceiling binds, the score carries a reason
+  naming the finding set that capped it and the uncapped figure, so a capped number is never
+  mistaken for a computed one.
 
 ### 3.1.2 Previewing what a scan will run with — the Effective config panel (PARITY-01, Phase 192)
 
