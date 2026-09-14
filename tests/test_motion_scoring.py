@@ -188,6 +188,13 @@ def test_top_drivers_surfaces_motion():
     from quirk.intelligence.scoring import compute_readiness_score
     result = compute_readiness_score({
         "totals": {"endpoints": 4, "findings": 4},
+        # 999.115 P5c: populate protocol_counts so data_in_motion is actually
+        # ASSESSED. Drivers now come only from assessed domains, so a fixture
+        # carrying motion counters without any motion protocol observed
+        # describes a state the real evidence builder cannot produce — and this
+        # test previously passed only because the driver list ignored the
+        # assessed predicate entirely.
+        "protocol_counts": {"KAFKA-PLAIN": 4},
         "motion_broker_plaintext_count": 4,
     }, profile="balanced")
     labels = [d["reason"] for d in result.get("drivers", [])]
