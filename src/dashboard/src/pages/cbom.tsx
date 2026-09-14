@@ -68,7 +68,7 @@ function CbomTable({ components }: CbomTableProps) {
   const filtered = useMemo(() => {
     return components.filter((c) => {
       const matchQs = qsFilter === "all" || c.quantum_safety === qsFilter
-      const matchSearch = !search || c.algorithm.toLowerCase().includes(search.toLowerCase())
+      const matchSearch = !search || c.algorithm.includes(search)
       return matchQs && matchSearch
     })
   }, [components, qsFilter, search])
