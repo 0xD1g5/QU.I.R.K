@@ -2,7 +2,14 @@
 
 **Filed:** 2026-09-14 (operator asked whether the map has value "when it looks like a spider web")
 **Priority:** P1 for demo credibility — the map is a visual centerpiece and is currently unreadable
-**Status:** open, fully diagnosed and quantified
+**Status:** **items 1-3 FIXED and pushed 2026-09-14 (commit 8ceaef8d)** — item 4 (hub-per-key
+layout) remains open and optional. This file is retained as the measurement record; do not treat
+the 1225-edge figures below as current.
+
+**Verified after the fix, same database and scan:** 12 nodes / 19 edges / 0 self-edges / 0
+duplicate rows, every node belonging to the displayed scan. That matches the 19-edge/12-node figure
+predicted from the diagnosis BEFORE any code changed, which is the strongest evidence the root
+cause was correctly identified rather than merely patched around.
 
 ## The answer to "is there value here"
 
@@ -71,15 +78,21 @@ urgent.
 
 ## Fix, in priority order
 
-1. **Scope to a single scan.** Filter `compute_key_reuse_clusters` by `scan_run_id`, defaulting to
+1. ~~**Scope to a single scan.**~~ **DONE (8ceaef8d).** Opt-in `scan_run_id` on
+   `compute_key_reuse_clusters`; `derive_exposure_map` resolves the latest when none is given; the
+   route accepts `?scan_id=`. The cross-scan default is preserved for reports (D-03) and pinned by
+   a test. Original note follows.
+
+   ORIGINAL: Filter `compute_key_reuse_clusters` by `scan_run_id`, defaulting to
    the latest, and ideally accept `?scan_id=` so the map matches whichever scan the rest of the
    dashboard is showing. This alone takes 1225 -> 19.
    - Check how `get_latest_scan` resolves "latest" before copying it — it uses a
      `SESSION_BRACKET` time window with no `scan_run_id` filter and has its own merge defect
      (see `cli-dashboard-score-divergence-same-scan.md`). Do not inherit that bug.
-2. **Drop self-edges unconditionally.** `source == target` is never meaningful; guard it in
+2. ~~**Drop self-edges unconditionally.**~~ **DONE (8ceaef8d)** — enforced even for unscoped calls. `source == target` is never meaningful; guard it in
    `derive_key_reuse_edges` regardless of scoping, as defence in depth.
-3. **Deduplicate edges** on `(source, target, edge_type)`.
+3. ~~**Deduplicate edges** on `(source, target, edge_type)`.~~ **DONE (8ceaef8d)** — pair treated as
+   unordered, enforced even for unscoped calls.
 4. **Optional — hub-per-key layout.** Render one node per shared key with an edge to each member
    (star), instead of all-pairs. 12 edges instead of 19 here, and it scales linearly rather than
    quadratically if a real client estate has a 50-endpoint cluster. It also reads better: "this one
@@ -89,8 +102,8 @@ urgent.
 Items 2 and 3 are unambiguous correctness fixes with no judgment call. Item 1 is the one that
 matters most. Item 4 is a design improvement worth doing before a real client estate is mapped.
 
-## Demo note (2026-09-18)
+## Demo note (2026-09-18) — RESOLVED
 
-Until at least items 1-3 land, the Exposure Map should be **skipped or shown with a caveat** —
-it currently implies a density of key reuse that the scanned estate does not have, which is the
-opposite of the honesty posture the rest of the product holds to.
+Items 1-3 landed, so the earlier advice to skip the map no longer applies. The map now renders 12
+nodes and 19 edges for the demo estate: three shared keys, the largest spanning five endpoints.
+That is a showable finding — one key compromise takes five endpoints with it.

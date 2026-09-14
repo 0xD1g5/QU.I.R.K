@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-14T16:05:00.000Z",
+  "timestamp": "2026-09-14T17:20:00.000Z",
   "phase": "demo-prep",
   "phase_name": "Demo prep for the 2026-09-18 client demo (Phase 206 PAUSED at 5/13; v5.24 phases 203/204/205 COMPLETE)",
   "phase_dir": ".planning",
@@ -9,7 +9,7 @@
   "total_tasks": 7,
   "status": "paused",
   "branch": "main",
-  "head": "344f7b30",
+  "head": "8ceaef8d",
   "completed_tasks": [
     {
       "id": 0.1,
@@ -82,6 +82,24 @@
       "name": "PARTIAL \u2014 demo path rehearsed to a live dashboard on :8512 (/print returns 200). Visual PDF eyeball is user-led and NOT done.",
       "status": "partial",
       "commit": "n/a"
+    },
+    {
+      "id": 9,
+      "name": "Rollup equation fixed \u2014 every surface rendered `raw_sum / divisor = <capped score>`, which is false arithmetic on a capped estate (76/1.25=61, printed 15). One shared helper, five render sites, guard test ties the re-derivation to the model's own '(computed N)'.",
+      "status": "done",
+      "commit": "3627fa1a"
+    },
+    {
+      "id": 10,
+      "name": "SAML option B \u2014 the use=encryption row is no longer titled 'Weak SAML SIGNING certificate'. Counts and score deliberately unchanged (7 CRITICAL / 19 before and after). C and D tracked for after the next milestone.",
+      "status": "done",
+      "commit": "819f31da"
+    },
+    {
+      "id": 11,
+      "name": "Exposure map items 1-3 \u2014 scan scoping (opt-in, report default preserved per D-03), self-edge guard, edge dedupe. Live: 27 nodes/1225 edges -> 12 nodes/19 edges, 390 self-edges -> 0, 1169 dupes -> 0.",
+      "status": "done",
+      "commit": "aa711299/8ceaef8d"
     }
   ],
   "remaining_tasks": [
@@ -111,8 +129,18 @@
       "status": "not_started"
     },
     {
-      "id": 8,
-      "name": "NEW P1: CLI vs dashboard score divergence (15/5-CRITICAL vs 19/7-CRITICAL on the SAME scan). See todo cli-dashboard-score-divergence-same-scan.md. Client-visible on 2026-09-18.",
+      "id": 12,
+      "name": "OPTIONAL: exposure map item 4 \u2014 hub-per-key star layout. Scales linearly instead of quadratically; matters only if a real client estate has a large cluster. Not needed for the demo.",
+      "status": "not_started"
+    },
+    {
+      "id": 13,
+      "name": "AFTER NEXT MILESTONE: SAML options C+D (one cert = one finding; stop double-counting into the score ratio). Both move the emitted score.",
+      "status": "not_started"
+    },
+    {
+      "id": 14,
+      "name": "BIGGER: CLI vs dashboard divergence is ARCHITECTURAL \u2014 engine/findings_evaluator.py has zero SAML/Kerberos/DNSSEC rules while the dashboard route has all three, and the two name the same condition differently. Probably its own phase.",
       "status": "not_started"
     }
   ],
@@ -120,7 +148,7 @@
     {
       "description": "CLI and dashboard report DIFFERENT scores for the SAME single clean scan: report 15/100 with 5 CRITICAL, dashboard 19/100 with 7 CRITICAL. ROOT CAUSE FOUND: the SAML IdP publishes ONE certificate (serial 109f9643...) under two `use` values (signing + encryption), so crypto_endpoints holds two rows and scan.py:480-498 emits one CRITICAL per ROW \u2014 one weak 1024-bit key becomes two CRITICALs, and CRITICAL count drives the score cap. The use=encryption row is also mislabelled 'Weak SAML SIGNING certificate'. Separately the CLI omits the SAML finding entirely despite scoring it. SESSION_BRACKET=5min is a THIRD, independent issue that merges scans under 5 minutes apart (34 certs, 14 CRITICAL) \u2014 it is NOT what causes the 15-vs-19 gap.",
       "type": "technical",
-      "workaround": "DEMO (2026-09-18): scan ONCE; do not show the CLI number and the dashboard number side by side. Both say POOR so the narrative holds. Do NOT attempt the dedupe fix before the demo without a deliberate plan \u2014 it changes CRITICAL counts and therefore scores and fixtures. Filed at .planning/todos/pending/cli-dashboard-score-divergence-same-scan.md with the fix shape."
+      "workaround": "DEMO (2026-09-18): scan ONCE; do not show the CLI number and the dashboard number side by side. Both say POOR so the narrative holds. Option B shipped (819f31da) \u2014 the titles are now accurate \u2014 but the 15-vs-19 gap is ARCHITECTURAL (two finding producers with different rule sets), not the duplicate, so it remains. Filed at .planning/todos/pending/cli-dashboard-score-divergence-same-scan.md and saml-one-certificate-counted-twice-c-and-d.md"
     },
     {
       "description": "main CI red: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE \u2014 BACK-51 IS closed at HORIZON.md:49; the gate keys on (ID, title) and matches a narrative prose line in the ARCHIVED v5.23-ROADMAP.md. It is the only remaining red on main.",
@@ -184,7 +212,7 @@
     "quantum-chaos-enterprise-lab/scripts/gen_multihost_oracle_table.py",
     ".planning/todos/pending/ (3 new)"
   ],
-  "next_action": "Rehearse the operator's CONFIRMED 7-segment walkthrough (see demo_walkthrough_confirmed) end to end against the live lab, and decide the segment 5->6 number-disagreement stance: either fix the SAML double-count deliberately (changes scores and fixtures \u2014 needs a plan) or demo from one surface. Then the hygiene tail 5-7.",
+  "next_action": "Nothing is blocking. Optional pre-demo polish: decide on the 90.5% scan-error wording. Otherwise the hygiene tail (tasks 5-7) and then post-milestone items 12-14.",
   "context_notes": "SCORING v3 IS THE STORY. The multihost estate scored 91/100 under v2 and scores 15/100 POOR under v3 on IDENTICAL evidence \u2014 a 76-point move that fixes the P1 denominator blindness the oracle documented. The old demo guidance ('lead with findings, the score is misleading') is now REVERSED and the oracle says so. THREE THINGS A RESUMING AGENT SHOULD NOT MISREAD. (1) A stale prober image silently reproduces 91/100 with no warning and exit 0 \u2014 always verify SCORING_VERSION inside the container before quoting a score, and use `-p chaoslab` or the rebuild tags the wrong image and does nothing. (2) The per-host oracle rows now carry measured finding TITLES, not just counts, because the previous rows had the COUNT right and the MEANING wrong for two hosts (the S3 host's 2 HIGHs are plaintext-HTTP, not the unencrypted bucket; the Redis host's MEDIUM is a blocked handshake, not a cleartext-broker finding). (3) `pytest -k \"scor\"` still misses a third of the scoring surface \u2014 select with $(grep -rln \"quirk.intelligence.scoring\" tests/); that selection ran green at 439 passed / 3 xfailed after these edits.",
   "demo_walkthrough_confirmed": {
     "date": "2026-09-18",
@@ -204,7 +232,10 @@
       "Segment 5->6 HAZARD: the CLI prints 15/100 with 5 CRITICAL and the dashboard prints 19/100 with 7 CRITICAL for the SAME single clean scan. This is NOT the SESSION_BRACKET merge \u2014 it reproduces on one clean run with 17 certs. Root cause is the SAML double-count (see blockers).",
       "Because the scan is 19s, the 5-minute SESSION_BRACKET merge is EASY to trigger by accident. Two scans inside 5 minutes make the dashboard read 14 CRITICAL / 34 certificates. Scan ONCE, or pin the dashboard with ?scan_id=.",
       "Segment 6 is the strongest material available: scoring v3 moved this estate from 91/100 (v2, flattering and wrong) to 15/100 POOR with named drivers. Verify SCORING_VERSION inside the prober first \u2014 a stale image silently reproduces 91.",
-      "Segment 4: the oracle now honestly records which lab hosts do NOT demonstrate what their names imply (SHA-1 and broken-chain hosts are indistinguishable from a generic host; the crown jewel is indistinguishable from the legacy-TLS hosts). Know these before a technical audience asks."
+      "Segment 4: the oracle now honestly records which lab hosts do NOT demonstrate what their names imply (SHA-1 and broken-chain hosts are indistinguishable from a generic host; the crown jewel is indistinguishable from the legacy-TLS hosts). Know these before a technical audience asks.",
+      "Segment 6: the scorecard/exec/HTML/DOCX rollup now reads '76 / 1.25 = 61, capped to 15 / 100' \u2014 it divides correctly. It printed '= 15' until 2026-09-14, which a client checking the arithmetic would have caught.",
+      "Segment 5 or 7: the Exposure Map is now SHOWABLE (it was going to be skipped). 12 nodes, 19 edges, three shared keys, the largest spanning five endpoints \u2014 'one key compromise takes five endpoints with it' is the line.",
+      "Known roadmap wording to have an answer for: the NOW item 'Stabilize scan reliability \u2014 scan error rate is 90.5%' reads as though the scanner failed, when it is really 335 of 370 probed ports being closed on an 11-port sweep. Not changed; decide whether to reword or just have the explanation ready."
     ]
   }
 }
