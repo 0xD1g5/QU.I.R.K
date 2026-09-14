@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-14T19:10:12Z"
+last_updated: "2026-09-14T19:54:54Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 38
-  completed_plans: 20
-  percent: 53
+  completed_plans: 21
+  percent: 55
 ---
 
 # Project State
@@ -1259,9 +1259,39 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 209 (Deliverable Reachability) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Executing Phase 209 on branch `phase-209-deliverable-reachability`
-Last activity: 2026-09-14 — 209-04 (Wave 2, report-download UI, DELIV-02) COMPLETE. Added the
+Last activity: 2026-09-14 — 209-05 (Wave 2, containment-gate writeup, DELIV-01) COMPLETE. Closed
+ROADMAP criteria 2, 5, 6 with EXECUTED evidence, not assertion. Extended the RPT-03 run-time sweep
+(`tests/test_report_path_guard.py`) to a second axis — `reports.router`'s path PARAMETERS, not just
+schema FIELDS — with a mutation check proving the assertion helper can detect an offender; demonstrated
+non-vacuity live (renamed `reports.py`, watched the sweep fail with a named ImportError, restored,
+confirmed empty diff). Wrote `209-CONTAINMENT-GATE.md` (217 lines) from an EXECUTED payload run
+against the live route (fastapi 0.135.2 / starlette 1.0.0 / Python 3.14.7, all read at run time) —
+6 payloads, each with an OBSERVED status code and the actual request path the client sent; named
+both `test_containment_route_signature_has_no_str_path_param` (the genuine regression tripwire) and
+the route-level 404 sweep (tautological today by design — D-04's Literal enum makes an unlisted
+string's 404 a type-system fact, not a demonstrated block) explicitly, stating in writing that a test
+which can never fail is not a guard. **Adjudicated the one inherited RED containment node**
+(`test_containment_traversal_payloads_404[../../../etc/passwd]`, left RED-and-disclosed by 209-03):
+independently re-confirmed httpx/RFC 3986 dot-segment normalization collapses the payload to
+`/etc/passwd` client-side before any request is constructed — no server-side code can ever see the
+original string — and reframed it as `pytest.mark.xfail(strict=True, reason=...)` citing the gate,
+rather than leaving it an unexplained RED node or deleting it. Proved criterion 5 (empty
+`git diff --stat` on `pdf.py` vs phase-start `b3fce546`, 3 pdf test files green, route table still
+shows `/api/export/pdf` unshadowed by `reports.router`). **Independently re-ran the full suite**
+(`pytest -q -m ""`, 1150.38s) rather than trusting 209-03's documented baseline: 5186 passed / 3
+failed / 76 xfailed — the 3 failing nodes are a strict subset of 209-03's 18-node baseline
+(`test_back_star_ci_enforced_leg`, `test_lookup_single_known_returns_zero`,
+`test_non_vacuity_skipped_substitute_is_flagged`), with the 13 Docker chaos-lab nodes absent
+(healthy daemon this session — environmental, not code) and the traversal node now counted under
+xfailed instead of failed — a discrepancy from the raw baseline number, reported as a finding per
+this project's "compare SETS never counts" discipline, not silently reconciled. Zero new failures
+introduced. One Rule-3 deviation: added the `xfail` to `tests/test_reports_download_route.py`
+(outside this plan's declared `files_modified`) because Task 2's own acceptance criteria required the
+containment sweep to exit 0, which was unsatisfiable while the inherited RED node stayed unexplained.
+Commits `28dfb6af`, `557f362a`. See `209-05-SUMMARY.md`. Next: 209-06 (docs closure).
+Previous: 209-04 (Wave 2, report-download UI, DELIV-02) COMPLETE. Added the
 five-format download button group (HTML/PDF/DOCX/CBOM (JSON)/CBOM (XML)) to
 `src/dashboard/src/pages/executive.tsx`'s header row, to the left of the unmodified Export PDF
 button. Manifest fetch on mount with D-03/D-10 honest fallback degrade; per-format downloads go
