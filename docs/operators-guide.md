@@ -416,6 +416,65 @@ client:
   to a future release given the added persistence/CRUD/UX cost. Everything currently on this tab is
   derived read-time from existing scan data; there is nothing to configure or maintain for it.
 
+### 3.1.7 Report deliverable downloads (DELIV-01/DELIV-02, Phase 209, v5.24)
+
+The Executive page's header row carries a five-format download button group — HTML, PDF, DOCX,
+CBOM (JSON), CBOM (XML) — beside the pre-existing Export PDF button. It is backed by two new,
+auth-gated endpoints under `quirk/dashboard/api/routes/reports.py`. See
+`docs/report-interpretation.md` §26 for what each format contains and the difference between these
+downloads and the Export PDF button; this section documents the endpoints themselves.
+
+**`GET /api/reports/latest/manifest`** — returns every format's availability, never empty and
+never 404/500:
+
+```json
+{
+  "scan_time": "2026-09-14T04:22:13.439767+00:00",
+  "stamp": "20260914-041322",
+  "formats": {
+    "html":      {"available": true,  "reason": null},
+    "pdf":       {"available": true,  "reason": null},
+    "docx":      {"available": false, "reason": "DOCX requires the optional extra: pip install quirk[docx]"},
+    "cbom-json": {"available": true,  "reason": null},
+    "cbom-xml":  {"available": true,  "reason": null}
+  }
+}
+```
+
+An unreadable config or a missing output directory degrades to every format reporting `available:
+false` with reason `"No scan has run yet."` rather than raising an error — the same
+fail-to-safe-empty-value discipline `docs/report-interpretation.md` §23 documents for the Exposure
+Map's crown-jewel loader.
+
+**`GET /api/reports/latest/{format}`** — downloads one artifact. `{format}` accepts exactly five
+values: `html`, `pdf`, `docx`, `cbom-json`, `cbom-xml`, returning `text/html`,
+`application/pdf`, the DOCX OOXML media type, and `application/json`/`application/xml`
+respectively. **Any other value returns 404, by design** — the route never accepts a filename or
+path fragment from the client; it resolves the on-disk filename itself from a fixed
+format-to-template map, so an unlisted or malformed value is a routing miss, not a validation
+error to work around. There is no way to request an older scan's artifacts through this route (see
+below).
+
+**Auth is required, same as every other dashboard API route** (§2.4) — a Bearer token or
+`X-API-Key` header. A plain browser navigation to the URL, or a naive `curl` without the header,
+returns `401` — and a saved `401` response body looks exactly like a corrupt download. The correct
+invocation:
+
+```bash
+curl -H "Authorization: Bearer $QUIRK_API_TOKEN" \
+  -o report.pdf \
+  "http://localhost:8000/api/reports/latest/pdf"
+```
+
+**Latest-scan-only, and why.** Both endpoints always resolve to the most recently rendered artifact
+group — there is no scan-id or filename parameter, and none can be safely added without revisiting
+this design. The report artifacts are stamped with the moment `write_reports()` rendered them, not
+with `scan_run_id` (the scan's own start time); on a long scan those two instants can differ by the
+scan's full duration, and **nothing on disk associates a `scan_run_id` with the artifact stamp it
+produced**. Until that association exists, serving "the report for scan X" is not something this
+API can do honestly, and a future scan-id-scoped route would need it built first, not just added to
+this router's path.
+
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
 `--fuzz` enables active REST crypto-posture probing against discovered OpenAPI

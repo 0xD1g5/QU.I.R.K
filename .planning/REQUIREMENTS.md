@@ -178,6 +178,33 @@ gate, not the coverage, is the defect.
       because RPT-02's operator override is a full-file override that can drop the roadmap section
       and nothing validates its presence.
 
+### Deliverable Reachability (net-new, added mid-milestone 2026-09-14)
+
+Opened by operator decision after a walkthrough found the dashboard's Export control and the
+consulting-grade report pipeline share **zero code**. `write_reports()` emits
+`report-{stamp}.html` / `.pdf` / `.docx` plus the CBOM into `cfg.output.directory`, while
+`POST /api/export/pdf` Playwright-prints the React `/print` page (540 lines) — a summary view,
+not the ~6,100-line renderer output. No route under `quirk/dashboard/api/routes/` serves the
+on-disk artifacts (verified by grep for `FileResponse` / `.docx` / `report-*.html`: zero hits).
+The richest output the product makes is unreachable from the UI.
+
+- [ ] **DELIV-01**: An authenticated, read-only API route serves the report artifacts a scan
+      already wrote to `cfg.output.directory` — HTML, PDF, DOCX, and the CycloneDX CBOM — with
+      containment enforced so no path outside that directory can ever be served, regardless of
+      the requested format or name. Containment is a **named, tested guard**, following RPT-03's
+      precedent rather than relying on the absence of an obvious traversal.
+
+- [ ] **DELIV-02**: The dashboard offers those formats as downloads, so a UI-only operator
+      reaches the same deliverables a CLI operator gets. Scope is the **latest** scan's artifacts
+      only; per-scan-history access needs an artifact↔`scan_run_id` association that may not exist
+      on disk, and is explicitly deferred rather than assumed.
+
+**Explicitly out of scope for this phase** (named so a later reader can tell deferral from
+oversight): relabelling or replacing the existing "Export PDF" button, which today reads as
+"export the report" while doing "print the dashboard view"; and any dashboard-side setting of
+`report.branding.*` or `report.template_dir`, which RPT-03 deliberately excluded from the API as
+a path-traversal surface and which this phase must not reopen.
+
 ## v2 Requirements
 
 Deferred to future milestones. Tracked in `.planning/HORIZON.md`'s Open-Item Ledger, which is the
@@ -239,10 +266,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Pending |
 | DOC-02 | Phase 208 | Pending |
+| DELIV-01 | Phase 209 | Pending |
+| DELIV-02 | Phase 209 | Pending |
 
 **Coverage:**
-- v1 requirements: 15 total
-- Mapped to phases: 15 ✓
+- v1 requirements: 17 total (15 at milestone open + DELIV-01/02 added 2026-09-14)
+- Mapped to phases: 17 ✓
 - Unmapped: 0 ✓
 
 ## Standing Constraints Carried Into This Milestone

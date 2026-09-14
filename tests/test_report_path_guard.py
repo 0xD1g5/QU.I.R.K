@@ -293,3 +293,198 @@ def test_mutation_check_sweep_detects_an_injected_path_field():
         "the sweep's own detection logic failed to catch an injected "
         "path-shaped field — a guard that cannot fail is not a guard"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 209 Plan 05 (DELIV-01) — RPT-03 sweep, second axis: PARAMETERS.
+#
+# Phase 209 added `quirk/dashboard/api/routes/reports.py`, a dashboard route
+# that serves files from `cfg.output.directory`. RPT-03's exclusion now has a
+# second axis: not only "no path-shaped FIELD on a dashboard schema" (the
+# sweep above) but also "no path-shaped PARAMETER on a dashboard route" — a
+# route can leak the same class of surface a schema field can, just via a
+# `{fmt}`-style path segment instead of a JSON body field. This section
+# mirrors the file's existing register exactly: run-time regeneration
+# (`reports.router.routes` walked fresh on every test run, never a
+# hand-written route list), non-vacuity assertions, named offenders on
+# failure, and a mutation check proving the assertion helper can actually
+# detect an injected offender.
+# ---------------------------------------------------------------------------
+
+import typing as _typing
+
+
+def _enumerate_report_route_path_params():
+    """Walk `quirk.dashboard.api.routes.reports.router.routes` at run time,
+    returning, for each route, the set of `{...}`-shaped path-parameter names
+    paired with their resolved annotation from the endpoint function's
+    signature. Never a hand-written route list — a future route added to
+    this router is picked up automatically."""
+    from quirk.dashboard.api.routes import reports
+
+    entries = []
+    for route in reports.router.routes:
+        path = getattr(route, "path", "")
+        if "{" not in path:
+            continue
+        endpoint = getattr(route, "endpoint", None)
+        if endpoint is None:
+            continue
+        hints = _typing.get_type_hints(endpoint, include_extras=True)
+        param_names = (
+            list(route.param_convertors.keys())
+            if hasattr(route, "param_convertors")
+            else []
+        )
+        for name in param_names:
+            entries.append((path, name, hints.get(name)))
+    return entries
+
+
+def test_report_route_enumeration_is_not_vacuous():
+    """A sweep that finds nothing is indistinguishable from a broken import
+    or a route module that silently failed to register — must never pass
+    silently."""
+    from quirk.dashboard.api.routes import reports
+
+    all_routes = list(reports.router.routes)
+    assert all_routes, (
+        "VACUOUS SWEEP: quirk.dashboard.api.routes.reports.router has zero "
+        "routes — this cannot be a working report-download router"
+    )
+
+    parameterised = _enumerate_report_route_path_params()
+    assert parameterised, (
+        "VACUOUS SWEEP: no parameterised ({...}) route found on "
+        "reports.router — the download route's path-parameter surface "
+        "could not be enumerated, so nothing downstream is actually being "
+        "checked"
+    )
+
+
+def test_report_route_path_params_are_enum_constrained():
+    """Every path parameter on reports.router must be Literal- or
+    Enum-typed, never bare str/Path/Any — D-04's containment guard depends
+    on this. The Literal's member set is asserted exactly, so widening the
+    enum (e.g. adding a 6th format) is a deliberate, test-visible act."""
+    import enum
+
+    expected_members = {"html", "pdf", "docx", "cbom-json", "cbom-xml"}
+    entries = _enumerate_report_route_path_params()
+    assert entries, "enumeration must never be vacuous"
+
+    for path, name, annotation in entries:
+        assert annotation is not str, (
+            f"route {path!r} parameter {name!r} is bare `str` — RPT-03's "
+            "second axis requires a Literal/Enum-typed path parameter"
+        )
+        assert annotation not in (None, _typing.Any), (
+            f"route {path!r} parameter {name!r} has no usable annotation "
+            f"({annotation!r}) — cannot be a Path/Any-typed free-form param"
+        )
+
+        origin = _typing.get_origin(annotation)
+        if origin is _typing.Literal:
+            members = set(_typing.get_args(annotation))
+        elif isinstance(annotation, type) and issubclass(annotation, enum.Enum):
+            members = {member.value for member in annotation}
+        else:
+            pytest.fail(
+                f"route {path!r} parameter {name!r} annotation {annotation!r} "
+                "is neither typing.Literal nor an enum.Enum subclass"
+            )
+
+        assert members == expected_members, (
+            f"route {path!r} parameter {name!r} member set {members} != "
+            f"expected {expected_members} — a widened/narrowed enum must be "
+            "a deliberate, test-visible act"
+        )
+
+
+def test_report_route_exposes_no_branding_or_template_surface():
+    """Criterion 6's proof: RPT-03's dashboard exclusion still holds AFTER
+    Phase 209, checked by a test rather than by a diff. No route on
+    reports.router may expose a path segment, query parameter, or
+    request-body model naming any PATH_FIELD_REGISTRY member, and the
+    module's own source text must contain no reference to report.branding
+    or report.template_dir."""
+    import inspect
+
+    from quirk.dashboard.api.routes import reports
+
+    for route in reports.router.routes:
+        path = getattr(route, "path", "")
+        for member in PATH_FIELD_REGISTRY:
+            assert member not in path, (
+                f"route path {path!r} references path-shaped field "
+                f"{member!r} — RPT-03 containment violation"
+            )
+
+        endpoint = getattr(route, "endpoint", None)
+        if endpoint is None:
+            continue
+        try:
+            sig = inspect.signature(endpoint)
+        except (TypeError, ValueError):
+            continue
+        for param_name, param in sig.parameters.items():
+            assert param_name not in PATH_FIELD_REGISTRY, (
+                f"route {path!r} endpoint parameter {param_name!r} is a "
+                "path-shaped field name — RPT-03 containment violation"
+            )
+            annotation = param.annotation
+            if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+                for field_name in annotation.model_fields:
+                    assert field_name not in PATH_FIELD_REGISTRY, (
+                        f"route {path!r} request-body model "
+                        f"{annotation.__name__}.{field_name} is a "
+                        "path-shaped field name — RPT-03 containment "
+                        "violation"
+                    )
+
+    source_text = inspect.getsource(reports)
+    assert "report.branding" not in source_text, (
+        "reports.py source text references report.branding — RPT-03 "
+        "containment violation"
+    )
+    assert "report.template_dir" not in source_text, (
+        "reports.py source text references report.template_dir — RPT-03 "
+        "containment violation"
+    )
+
+
+def test_mutation_check_report_route_sweep_detects_a_str_path_param():
+    """Proves the parameter-annotation assertion helper is not vacuously
+    green: constructs a throwaway APIRouter with a deliberately offending
+    str-typed path parameter and asserts the same shape of check used above
+    flags it. Without this, a sweep that silently passes on everything is
+    indistinguishable from a working one."""
+    from fastapi import APIRouter
+
+    scratch_router = APIRouter()
+
+    @scratch_router.get("/scratch/{leaked}")
+    def _scratch_endpoint(leaked: str) -> dict:  # pragma: no cover - never called
+        return {"leaked": leaked}
+
+    offenders = []
+    for route in scratch_router.routes:
+        path = getattr(route, "path", "")
+        if "{" not in path:
+            continue
+        endpoint = getattr(route, "endpoint", None)
+        hints = _typing.get_type_hints(endpoint, include_extras=True)
+        param_names = (
+            list(route.param_convertors.keys())
+            if hasattr(route, "param_convertors")
+            else []
+        )
+        for name in param_names:
+            annotation = hints.get(name)
+            if annotation is str:
+                offenders.append(f"{path}:{name}")
+
+    assert offenders == ["/scratch/{leaked}:leaked"], (
+        "the mutation-check sweep failed to detect an injected str-typed "
+        "path parameter — a guard that cannot fail is not a guard"
+    )
