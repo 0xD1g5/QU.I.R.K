@@ -228,7 +228,8 @@ export function ExecutivePage() {
     acc[f.severity] = (acc[f.severity] ?? 0) + 1
     return acc
   }, {})
-  const chartData = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"].map((s) => ({
+  // TEMPORARY(206-02): induce red-proof — REVERTED IN THE NEXT COMMIT (dropped CRITICAL)
+  const chartData = ["HIGH", "MEDIUM", "LOW", "INFO"].map((s) => ({
     severity: s,
     count: severityCounts[s] ?? 0,
   }))
@@ -390,7 +391,8 @@ export function ExecutivePage() {
                 variant={CONFIDENCE_BADGE_VARIANT[confidence.confidence_rating] ?? "outline"}
                 className="mt-1 text-xs font-semibold"
               >
-                {confidence.confidence_rating === "HIGH" ? "High Confidence"
+                {/* TEMPORARY(206-02): induce red-proof — REVERTED IN THE NEXT COMMIT */}
+                {confidence.confidence_rating === "HIGH" ? "TEMPORARY-206-02-BROKEN-CONFIDENCE"
                   : confidence.confidence_rating === "MEDIUM" ? "Medium Confidence"
                   : confidence.confidence_rating === "LOW" ? "Low Confidence"
                   : confidence.confidence_rating === "VERY_LOW" ? "Very Low Confidence"
@@ -438,7 +440,7 @@ export function ExecutivePage() {
             <SubscoreSlot score={score.subscores.hygiene} label="Hygiene" maxValue={25} />
             <SubscoreSlot score={score.subscores.modern_tls} label="Modern TLS" maxValue={25} />
             <SubscoreSlot score={score.subscores.identity_trust} label="Identity" maxValue={25} />
-            <SubscoreSlot score={score.subscores.agility_signals} label="Agility" maxValue={25} />
+            {/* TEMPORARY(206-02): induce red-proof — REVERTED IN THE NEXT COMMIT (dropped Agility) */}
             <SubscoreSlot score={score.subscores.data_at_rest} label="Data at Rest" maxValue={25} />
             <SubscoreSlot score={score.subscores.data_in_motion} label="Data in Motion" maxValue={25} />
             {/* Phase 111: Per-segment gauges — only rendered when merge data present.
