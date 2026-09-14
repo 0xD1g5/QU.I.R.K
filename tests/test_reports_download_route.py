@@ -272,7 +272,22 @@ def test_download_unavailable_format_does_not_serve_a_wrong_file(tmp_path, monke
 @pytest.mark.parametrize(
     "payload",
     [
-        "../../../etc/passwd",
+        pytest.param(
+            "../../../etc/passwd",
+            marks=pytest.mark.xfail(
+                reason=(
+                    "209-CONTAINMENT-GATE.md disposition (a): httpx (and every "
+                    "RFC 3986 §5.3/6.2.2.3-compliant HTTP client, browsers "
+                    "included) removes dot-segments from this payload BEFORE "
+                    "constructing the request — the client sends a literal "
+                    "GET /etc/passwd, indistinguishable server-side from a "
+                    "direct request to that path. Not expressible over HTTP "
+                    "against this server; not a server-side containment gap. "
+                    "See 209-CONTAINMENT-GATE.md for the full disposition."
+                ),
+                strict=True,
+            ),
+        ),
         "%2e%2e%2f%2e%2e%2fconfig.yaml",
         "..%2F..%2Fetc%2Fpasswd",
         "report-20260914-041322.html",
