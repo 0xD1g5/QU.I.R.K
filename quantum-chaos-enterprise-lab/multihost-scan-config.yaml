@@ -1,0 +1,173 @@
+# QU.I.R.K. scan config for the chaos lab's `multihost` profile (999.110 thin slice).
+#
+# Run it from INSIDE the prober, which is the only vantage point that can see the
+# 10.80.0.0/24 subnet (bridge networks are not routable from a macOS Docker Desktop host):
+#
+#   PROFILE_ARGS="--profile multihost" ./lab.sh up
+#   docker compose --profile multihost exec mh-prober \
+#     quirk scan --config /repo-lab/multihost-scan-config.yaml
+#
+# `--config` is REQUIRED: without it `quirk scan` drops into the interactive wizard.
+# There is no `--targets` flag and no positional target argument.
+#
+# Paths are container paths. /out is bind-mounted to ./quirk-output at the repo root, so after
+# the scan the DB is readable from the host:
+#
+#   quirk serve --db-path quirk-output/quirk.db
+#
+# Derived from the repo-root config.yaml so it inherits every other default; only `targets.cidrs`,
+# `output.directory` and `output.db_path` differ.
+# quirk-lab-config: true
+#
+# This file is the repo's chaos-lab working config -- it is NOT the shipped
+# default. `quirk/config_template.yaml` is the shipped default; `quirk init`
+# copies that file verbatim with no branching (Phase 184.2 D-13). Any
+# connector divergence from the template below must be listed in this
+# file's own exception list with a reason, or
+# tests/test_config_connector_drift.py's D-13 gate fails.
+#
+# lab-only connector exceptions:
+#   enable_kerberos: armed true against the chaos lab's kerberos profile (samba-dc KDC on 127.0.0.1:88/389, Phase 89 LAB-06); the shipped template ships this false pending a quirk[identity] install
+#   kerberos_targets: points at the chaos lab kerberos profile's samba-dc KDC on 127.0.0.1 (Phase 89 LAB-06)
+#   saml_targets: points at the chaos lab saml profile's simplesamlphp IdP metadata endpoint on localhost:8080 (Phase 89 LAB-06)
+#   dnssec_targets: points at the chaos lab dnssec profile's weak.example.com / unsigned.example.com fixtures (Phase 89 LAB-06)
+#   dnssec_resolver: routes DNSSEC queries to the chaos lab dnssec profile's bind9 resolver on 127.0.0.1:15353 (Phase 89 LAB-06)
+
+# vertical: healthcare
+
+assessment:
+  name: "Quantum Crypto Readiness - CLIENT NAME"
+  data_classification: "confidential"   # public|internal|confidential|regulated
+  report_owner: "CLIENT NAME"
+  timezone: "America/New_York"
+
+scan:
+  timeout_seconds: 5
+  concurrency: 200
+  ports_tls: [443,80,389,636,2222,3306,5432,6379,8080,9000,9001]
+  include_sni: true
+
+  tls_enum_mode: fast  # off|fast|deep
+
+  fingerprint_timeout_seconds: 2
+  fingerprint_concurrency: 200
+
+  tls_timeout_seconds: 5
+  tls_concurrency: 150
+
+  ssh_timeout_seconds: 5
+  ssh_concurrency: 100
+
+targets:
+  fqdns:
+  # The ten real hosts as explicit /32s. Deliberately NOT "10.80.0.0/24":
+  # a full sweep of the subnet found 254 phantom hosts (10 INFO findings each, 2572 total) and
+  # reported the Docker bridge gateway at .1 as a CRITICAL — noise that buries the real topology
+  # and makes the Exposure Map unreadable. Verified by running both ways.
+  cidrs:
+    - "10.80.0.10/32"   # mh-edge-legacy      TLS 1.0/1.1 + weak ciphers
+    - "10.80.0.11/32"   # mh-edge-expired     expired certificate
+    - "10.80.0.12/32"   # mh-edge-rsa1024     RSA-1024 key (weak)
+    - "10.80.0.13/32"   # mh-edge-sha1        SHA-1 signed cert
+    - "10.80.0.14/32"   # mh-edge-chainbroken missing intermediate
+    - "10.80.0.15/32"   # mh-legacy-intranet  plaintext HTTP only
+    - "10.80.0.16/32"   # mh-intranet-wiki        plaintext HTTP
+    - "10.80.0.17/32"   # mh-intranet-tickets     plaintext HTTP
+    - "10.80.0.18/32"   # mh-intranet-jenkins     plaintext HTTP
+    - "10.80.0.19/32"   # mh-intranet-fileshare   plaintext HTTP
+    - "10.80.0.20/32"   # mh-app-crownjewel   modern TLS (the crown jewel)
+    - "10.80.0.21/32"   # mh-intranet-printsrv    plaintext HTTP
+    - "10.80.0.22/32"   # mh-intranet-monitoring  plaintext HTTP
+    - "10.80.0.30/32"   # mh-db-finance       Postgres, no TLS
+    - "10.80.0.31/32"   # mh-cache-session    Redis, no TLS/auth
+    - "10.80.0.40/32"   # mh-identity-dc      LDAP cleartext
+    - "10.80.0.41/32"   # mh-saml-idp         SAML IdP
+    - "10.80.0.50/32"   # mh-storage-archive  S3 + unencrypted bucket
+    - "10.80.0.60/32"   # mh-pki-ca           step-ca
+    - "10.80.0.70/32"   # mh-ssh-jump         SSH
+    - "10.80.0.101/32"  # mh-vpn-gateway      EXPIRED cert
+    - "10.80.0.102/32"  # mh-mail-relay       EXPIRED cert
+    - "10.80.0.103/32"  # mh-vendor-portal    EXPIRED cert
+    - "10.80.0.104/32"  # mh-backup-console   EXPIRED cert
+    - "10.80.0.105/32"  # mh-devtest-api      self-signed
+    - "10.80.0.106/32"  # mh-staging-web      self-signed
+    - "10.80.0.107/32"  # mh-iot-controller   self-signed
+    - "10.80.0.108/32"  # mh-erp-frontend     legacy TLS
+    - "10.80.0.109/32"  # mh-hr-portal        legacy TLS
+    - "10.80.0.110/32"  # mh-payroll          legacy TLS
+    - "10.80.0.111/32"  # mh-db-hr            MySQL plaintext
+  include_ips: []
+  exclude_ips: []
+
+connectors:
+  enable_aws: false
+  enable_azure: false
+
+  # Connector targets below are rewritten for the multihost subnet. The repo-root config.yaml
+  # points them all at 127.0.0.1/localhost, which is correct for the single-host lab and WRONG
+  # here — a connector aimed at loopback silently finds nothing rather than erroring.
+
+  # Kerberos: DISABLED. This profile has no KDC (mh-identity-dc is LDAP-only, port 389/636).
+  # Left off rather than aimed at a host that cannot answer — a connector pointed at the wrong
+  # service produces either silence or a misleading finding, and neither belongs in a demo.
+  enable_kerberos: false
+
+  # DNSSEC: DISABLED for the same reason — no bind9 resolver on this subnet.
+  enable_dnssec: false
+
+  # SAML IdP: mh-saml-idp at 10.80.0.41.
+  enable_saml: true
+  saml_targets:
+    - "http://10.80.0.41:8080/simplesaml/saml2/idp/metadata.php"
+
+  # Broker/cache: mh-cache-session (Redis, no TLS, no auth) at 10.80.0.31.
+  # Per Phase 190/TRIAGE-06 the entry may be a bare host — the scanner's per-family default
+  # ports still apply, and an explicit port would be ADDED to that list, never replace it.
+  enable_broker: true
+  broker_targets:
+    - "10.80.0.31"
+
+  # Object storage: mh-storage-archive at 10.80.0.50, holding one SSE-S3 bucket and one
+  # deliberately UNENCRYPTED bucket so the at-rest contrast is real rather than asserted.
+  #
+  # `aws_endpoint_url` is REQUIRED and is what was missing on the first pass. Without it the
+  # connector never talks to MinIO, no endpoint is classified `S3`, and — the part that actually
+  # matters for the score — `_dar_assessed()` reads protocol_counts for
+  # POSTGRESQL/MYSQL/RDS/S3/AZURE_BLOB/KUBERNETES/VAULT and returns False, so the whole
+  # Data at Rest domain is dropped from the rollup as UNASSESSED rather than scoring badly.
+  # Credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY on the prober (minioadmin).
+  enable_s3: true
+  aws_region: us-east-1
+  aws_endpoint_url: http://10.80.0.50:9000
+
+  # Database: mh-db-finance at 10.80.0.30 (Postgres, no TLS).
+  # `pg_targets` + scanner credentials are likewise required — `enable_db: true` alone probes
+  # nothing, which is why the host returned INFO only and POSTGRESQL never reached
+  # protocol_counts.
+  enable_db: true
+  pg_targets:
+    - "10.80.0.30"
+  pg_scanner_user: finance
+  pg_scanner_password: finance
+
+output:
+  directory: "/out"
+  db_path: "/out/quirk.db"   # canonical — matches dashboard/doctor/console resolution (Phase 74 D-05)
+
+intelligence:
+  intelligence_version: "3.9.0"
+  profile: "balanced"        # lenient|balanced|strict
+  calibration_overrides: {}
+
+# Phase 121: Server-policy flag for internal target scanning.
+# Set to false on machines that also scan untrusted client environments.
+security:
+  allow_internal_targets: true
+
+# Console behavior settings (Phase 114 AUTOMERGE-02)
+console:
+  auto_merge:
+    enabled: true                        # default: ON (D-07); set false to require manual `quirk sensor merge`
+    trigger_condition: all-sensors-in    # "all-sensors-in" | "cadence-window" (D-08)
+    # cadence_window_minutes: 1440       # used only when trigger_condition: cadence-window
+    #                                    # defaults to per-sensor expected_cadence_minutes (D-09)

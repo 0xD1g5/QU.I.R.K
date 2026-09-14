@@ -984,7 +984,15 @@ services:
   # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
   # ===========================================================================================
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # quay.io, NOT Docker Hub: MinIO withdrew `minio/minio` and `minio/mc` from Docker Hub.
+    # Verified 2026-09-13 — the Docker Hub API returns `{"message":"object not found"}` for BOTH
+    # repositories, and a pull fails with `pull access denied ... repository does not exist`. This
+    # broke `test_profile_re_up_is_idempotent[storage-s3]` on every CI run; it had been carried as
+    # an "environmental / Docker Hub rate limit" flake, which was wrong — the images are gone, so
+    # the profile could never have come up again.
+    # The exact pinned tag exists on quay.io and was verified with `docker manifest inspect`, so
+    # the CHAOS-05 image-pin discipline is preserved (no drift to :latest).
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     profiles: ["storage-s3"]
     command: server /data --console-address ":9001"
     environment:
@@ -1002,7 +1010,8 @@ services:
       start_period: 10s
 
   minio-seed:
-    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # quay.io for the same reason as the `minio` service above — see that comment.
+    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
     profiles: ["storage-s3"]
     restart: "no"
     depends_on:
@@ -1533,8 +1542,530 @@ services:
       segnet-live:
         ipv4_address: "10.70.0.20"
 
+
+  # ===========================================================================================
+  # PHASE 999.110 (thin slice) — MULTI-HOST TOPOLOGY (profile: multihost)
+  #
+  # WHY THIS EXISTS
+  # The rest of this lab is one IP with many open ports: 90 services across 29 profiles, almost
+  # all publishing onto the Docker host. From a scanner's vantage point that is a single host,
+  # which makes per-host grouping, attribution and inventory untestable — and makes the Quantum
+  # Exposure Map visual far less compelling than the platform actually is.
+  #
+  # This profile presents TEN INDEPENDENT HOSTS on their own subnet, each carrying a different
+  # crypto posture, chosen to span the scanner's finding domains rather than to maximise count:
+  #
+  #   10.80.0.10  mh-edge-legacy       TLS 1.0/1.1 + weak ciphers      data in motion (TLS)
+  #   10.80.0.11  mh-edge-expired      expired certificate             certificate lifecycle
+  #   10.80.0.20  mh-app-crownjewel    modern TLS, healthy             in motion (the CROWN JEWEL)
+  #   10.80.0.30  mh-db-finance        Postgres, no TLS                data at rest (database)
+  #   10.80.0.31  mh-cache-session     Redis, no TLS/auth              in motion (broker/cache)
+  #   10.80.0.40  mh-identity-dc       LDAP on 389, cleartext          identity
+  #   10.80.0.41  mh-saml-idp          SAML IdP metadata               identity (federation)
+  #   10.80.0.50  mh-storage-archive   S3 + one UNENCRYPTED bucket     data at rest (object)
+  #   10.80.0.60  mh-pki-ca            step-ca CA surface              PKI / certificate authority
+  #   10.80.0.70  mh-ssh-jump          SSH, weak host-key posture      in motion (SSH)
+  #   10.80.0.200 mh-prober            QU.I.R.K. sensor image          where the scan runs from
+  #
+  # WHY IT IS A SIDE PROFILE, NOT A RE-HOMING OF THE EXISTING 90 SERVICES
+  # 999.110's full shape re-homes every service onto a logical host. That is effort M and its own
+  # oracles rewrite — 29 profiles' `expected_results_*.md` gain per-host expectations. This slice
+  # gets the demonstrable capability (N hosts, real per-host attribution) while touching NOTHING
+  # that already works. It is additive by construction, and it is the generalisation of the
+  # `segmented-network` precedent below, which has used static `ipv4_address` since Phase 152.
+  #
+  # NO PUBLISHED PORTS — DELIBERATE, AND THE KEY SAFETY PROPERTY
+  # Every service below uses `expose:`, never `ports:`. Publishing would collapse ten hosts back
+  # onto 127.0.0.1 and defeat the entire point, AND would risk colliding with the ~60 host ports
+  # the other 29 profiles already claim. The cost is that the subnet is not reachable from a
+  # macOS Docker Desktop host, which is exactly why `mh-prober` exists: the scan runs from inside
+  # the network, the same pattern `segnet-prober` established in Phase 152 after a live smoke test
+  # proved host-side probing gave the wrong answer.
+  #
+  # HOW TO RUN A SCAN (the demo path)
+  #   PROFILE_ARGS="--profile multihost" ./lab.sh up
+  #   docker compose --profile multihost exec mh-prober quirk scan --config /scan-config.yaml
+  #
+  # `--config` is REQUIRED — without it `quirk scan` drops into the interactive wizard. There is
+  # no `--targets` flag and no positional target argument (an earlier revision of this comment
+  # claimed otherwise; corrected after running it). The config lives at
+  # ./multihost-scan-config.yaml and is mounted read-only into the prober.
+  #
+  # /out is bind-mounted to ./quirk-output at the repo root, so afterwards the DB is readable
+  # from the host:  quirk serve --db-path quirk-output/quirk.db
+  # ===========================================================================================
+
+  mh-edge-legacy:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.10"
+
+  mh-edge-expired:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.11"
+
+  # The crown jewel: deliberately the HEALTHIEST host on the subnet. The story this profile tells
+  # is not "everything is broken" — it is that the exposure concentrates on the paths leading TO
+  # this host, which is what makes the Exposure Map worth looking at.
+  mh-app-crownjewel:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/modern/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.20"
+
+  mh-db-finance:
+    image: postgres:16.6
+    profiles: ["multihost"]
+    environment:
+      POSTGRES_DB: finance
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+    expose:
+      - "5432"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.30"
+
+  mh-cache-session:
+    image: redis:7.4.1-alpine
+    profiles: ["multihost"]
+    expose:
+      - "6379"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.31"
+
+  mh-identity-dc:
+    image: osixia/openldap:1.5.0
+    profiles: ["multihost"]
+    environment:
+      LDAP_ORGANISATION: "ChaosLab Finance"
+      LDAP_DOMAIN: "finance.chaos.local"
+      LDAP_ADMIN_PASSWORD: "admin"
+    expose:
+      - "389"
+      - "636"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.40"
+
+  mh-saml-idp:
+    image: kenchan0130/simplesamlphp:1.19.7
+    profiles: ["multihost"]
+    environment:
+      SIMPLESAMLPHP_SP_ENTITY_ID: "https://sp.finance.chaos.local"
+      SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: "https://sp.finance.chaos.local/acs"
+    volumes:
+      - ./simplesamlphp/cert/server.crt:/var/www/simplesamlphp/cert/server.crt:ro
+      - ./simplesamlphp/cert/server.key:/var/www/simplesamlphp/cert/server.key:ro
+    expose:
+      - "8080"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.41"
+
+  mh-storage-archive:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    profiles: ["multihost"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_KMS_SECRET_KEY: "lab-key:e6QwR1eRz0t8u3y2z6mP/m4G2D8jH7yB3KvN0aN8z7M="
+    expose:
+      - "9000"
+      - "9001"
+    healthcheck:
+      # `local`, NOT `archive`. This check runs INSIDE the MinIO container, where MinIO's bundled
+      # mc has its own built-in `local` alias. `archive` is the alias the SEED script creates in a
+      # different container; using it here made the host permanently unhealthy and blocked the
+      # whole profile on first bring-up.
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.50"
+
+  mh-storage-seed:
+    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+    profiles: ["multihost"]
+    restart: "no"
+    depends_on:
+      mh-storage-archive:
+        condition: service_healthy
+    volumes:
+      - ./storage/minio-seed-multihost.sh:/minio-seed.sh:ro
+    entrypoint: ["/bin/sh", "/minio-seed.sh"]
+    networks:
+      - labnet
+
+  mh-pki-ca:
+    image: smallstep/step-ca:0.28.1
+    profiles: ["multihost"]
+    environment:
+      DOCKER_STEPCA_INIT_NAME: ChaosLab-Finance-CA
+      DOCKER_STEPCA_INIT_DNS_NAMES: "mh-pki-ca,10.80.0.60,localhost"
+      DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT: "true"
+    volumes:
+      # Separate volume from the `identity` profile's stepca_data on purpose: sharing it would
+      # let one profile's CA state leak into the other's expectations.
+      - mh_stepca_data:/home/step
+    expose:
+      - "9000"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.60"
+
+  mh-ssh-jump:
+    image: lscr.io/linuxserver/openssh-server:10.2_p1-r0-ls225
+    profiles: ["multihost"]
+    environment:
+      - PASSWORD_ACCESS=true
+      - USER_NAME=jump
+      - USER_PASSWORD=jump
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    expose:
+      - "2222"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.70"
+
+
+  # --- (a) weak-crypto hosts, added 2026-09-13 -------------------------------------------------
+  # Cloned from phaseA's tls-rsa1024 / tls-sha1 / tls-missing-intermediate, which already carry
+  # working nginx configs and scenario certs on disk. These target the two domains that actually
+  # take deductions — Hygiene (19/25) and Modern TLS (20/25).
+  #
+  # They deliberately do NOT touch mh-app-crownjewel: its X25519MLKEM768 support comes from
+  # OpenSSL defaults in nginx:1.28.0, and showing the scanner RECOGNISE PQC-hybrid key exchange
+  # is a better demo moment than a lower number. These hosts carry OPENSSL_CONF=openssl-legacy.cnf
+  # precisely so they do NOT offer modern groups, which is what makes them weak.
+  mh-edge-rsa1024:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/phaseA/tls-rsa1024/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.12"
+
+  mh-edge-sha1:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/phaseA/tls-sha1/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.13"
+
+  mh-edge-chainbroken:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/phaseA/tls-missing-intermediate/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.14"
+
+  # Plaintext HTTP on its own host — the scorecard's "Remove plaintext HTTP exposure" driver.
+  mh-legacy-intranet:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.15"
+
+
+  # --- legacy intranet segment: plaintext HTTP at scale ----------------------------------------
+  # WHY SIX MORE HOSTS OF THE SAME KIND, when four weak-TLS hosts moved the score by zero:
+  # every penalty in quirk/intelligence/scoring.py is a RATIO over total endpoints
+  # (`denom = endpoints`, line 227). `hygiene_plaintext_http_ratio` is weighted 18.0, so four
+  # plaintext endpoints out of twenty scored -(4/20)*18 = -3.6 and produced Hygiene 19/25.
+  # Adding a few more BAD hosts of a NEW kind raises the numerator AND the denominator and barely
+  # moves the ratio — which is why the readiness score went UP from 89 to 91 when the RSA-1024,
+  # SHA-1, broken-chain and plaintext hosts were first added. The score dilutes.
+  #
+  # What actually lowers it is a higher PROPORTION of weak endpoints. This segment is also the
+  # most realistic thing in the lab: internal wikis, ticket systems, CI, file shares, print and
+  # monitoring servers speaking plaintext HTTP inside the perimeter is exactly what a real
+  # enterprise estate looks like, and it tells a truer story than a handful of broken certs.
+
+  mh-intranet-wiki:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.16"
+
+  mh-intranet-tickets:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.17"
+
+  mh-intranet-jenkins:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.18"
+
+  mh-intranet-fileshare:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.19"
+
+  mh-intranet-printsrv:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.21"
+
+  mh-intranet-monitoring:
+    image: httpd:2.4.63
+    profiles: ["multihost"]
+    expose:
+      - "80"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.22"
+
+
+  # --- (a2) "purposely built vulnerable" estate, 2026-09-13 -------------------------------------
+  # The first weak-host batch moved HIGH findings 3 -> 11 and the readiness score by ZERO, because
+  # hygiene/modern-TLS penalties are ratios over `totals.endpoints` (the probe count, 219) and a
+  # diverse estate dilutes itself.
+  #
+  # These hosts target the CERT-based subscores instead, which divide by `certs_observed` — the
+  # smallest denominator in quirk/intelligence/scoring.py, and therefore the strongest HONEST lever:
+  #   identity_expired_ratio      14.0
+  #   identity_self_signed_ratio   9.0
+  #   modern_tls_legacy_versions_ratio 14.0
+  # Nothing about the scorer is modified. The lab simply becomes what it claims to be: a
+  # deliberately vulnerable estate, with mh-app-crownjewel left as the one healthy host so the
+  # contrast — and the scanner's PQC recognition on it — still lands.
+
+  mh-vpn-gateway:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.101"
+
+  mh-mail-relay:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.102"
+
+  mh-vendor-portal:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.103"
+
+  mh-backup-console:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.104"
+
+  mh-devtest-api:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.105"
+
+  mh-staging-web:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.106"
+
+  mh-iot-controller:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.107"
+
+  mh-erp-frontend:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.108"
+
+  mh-hr-portal:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.109"
+
+  mh-payroll:
+    image: nginx:1.28.0
+    profiles: ["multihost"]
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.110"
+
+  # Plaintext MySQL — DAR db_plaintext. Cloned from the existing mysql-ssl-off service.
+  mh-db-hr:
+    image: mysql:8.0.40
+    profiles: ["multihost"]
+    environment:
+      MYSQL_ROOT_PASSWORD: hr
+      MYSQL_DATABASE: hr
+    expose:
+      - "3306"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.111"
+
+  # Where the scan runs from. See the NO PUBLISHED PORTS note above for why a host-side scan
+  # cannot substitute for this on macOS.
+  mh-prober:
+    build:
+      context: ..
+      dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
+    profiles: ["multihost"]
+    entrypoint: []
+    # NET_RAW so nmap-backed TLS/SSH scanning works; deliberately NOT --privileged, matching the
+    # minimal-capability posture segnet-gateway and sensor.Dockerfile already use.
+    cap_add:
+      - NET_RAW
+    environment:
+      # MinIO's lab credentials. The S3 connector reads these from the environment; without them
+      # `aws_endpoint_url` alone cannot enumerate buckets, Data at Rest stays UNASSESSED, and the
+      # readiness score is flatteringly high for the wrong reason.
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      # Bind-mounted so the scan's SQLite DB survives on the host and `quirk serve` can read it.
+      - ../quirk-output:/out
+      - ./multihost-scan-config.yaml:/scan-config.yaml:ro
+    command: ["sh", "-c", "tail -f /dev/null"]
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.200"
 volumes:
   id_postgres_data:
+  # 999.110 thin slice: multihost profile's own CA state, kept separate from stepca_data
+  mh_stepca_data:
   stepca_data:
   registry_data:
   gitea_data:
@@ -1572,3 +2103,17 @@ networks:
       driver: default
       config:
         - subnet: "10.71.0.0/24"
+
+  # -----------------------------------------------------------------------
+  # 999.110 (thin slice) — multihost topology network
+  # A third custom bridge, deliberately outside segnet-live (10.70.0.0/24) and
+  # segnet-dead (10.71.0.0/24) so the two profiles can never contend for an
+  # address, and outside Docker's default bridge (172.17.0.0/16).
+  # Ten static host addresses + a prober; see the `mh-*` services above.
+  # -----------------------------------------------------------------------
+  labnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.80.0.0/24"
