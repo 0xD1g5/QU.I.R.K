@@ -234,6 +234,16 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 
 - [ ] **Phase 206: Dashboard UI Coverage Drain** - The 28 jsdom-tractable series-7 cases get real
   vitest tests asserting what each case actually describes.
+  **⏸ PAUSED 2026-09-13 at 5 of 13 plans — RESUME WITH `/gsd-autonomous --from 206 --to 206`.**
+  Paused by operator decision for the 2026-09-18 client demo, NOT abandoned. Work is committed on
+  branch `phase-206-dashboard-ui-coverage` (24 commits); phase artifacts are gitignored and live on
+  disk only — do not `git clean` that branch. Done: 206-01/02/03/05/06 (8 UAT cases dispositioned,
+  vitest 404 → 414 passing). Remaining: 206-04/07/08/09/10/11/12/13. No disposition has been flipped
+  in `docs/UAT-SERIES.md` by design — all three coupled doc artifacts are fenced into 206-13, which
+  runs last. Enforced mechanically by `tests/test_paused_phase_resume_gate.py` (RESUME-01/02/03),
+  which fails if this box is checked while STATE.md still holds the pause record, or if v5.24 is
+  archived while any phase here is unchecked. Tracked at P2 as **999.114** in HORIZON.md.
+  Full pause record: `.planning/STATE.md` § "Phase 206 PAUSE RECORD".
 
 - [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
