@@ -446,6 +446,121 @@ PROFILE_ARGS="--profile database" ./lab.sh up
 
 ---
 
+## Profile: multihost
+
+*999.110 thin slice — TEN INDEPENDENT HOSTS on their own `/24` (`labnet`, 10.80.0.0/24), each with a
+different crypto posture, chosen to span the scanner's finding domains. Additive: it re-homes nothing
+and touches no other profile's expectations.*
+
+**No published ports.** Every service uses `expose:` only, so the subnet is unreachable from a macOS
+Docker Desktop host by design. Scans run from `mh-prober`, the same pattern `segmented-network`
+established in Phase 152.
+
+```bash
+PROFILE_ARGS="--profile multihost" ./lab.sh up
+docker exec chaoslab-mh-prober-1 \
+  quirk --config /scan-config.yaml --allow-internal-targets --allow-cleartext-broker-probe
+# reports land in ./quirk-output (bind-mounted to /out); then on the host:
+#   quirk serve --db-path quirk-output/quirk.db
+```
+
+Note `quirk` takes no `scan` subcommand and no `--targets` flag — `--config` is required or it drops
+into the interactive wizard. `--allow-internal-targets` is required because 10.80.0.0/24 is RFC1918.
+
+| Host IP | Service | Posture under test | Finding domain | Expected condition / tag | Observed 2026-09-13 |
+|---------|---------|--------------------|----------------|--------------------------|---------------------|
+| 10.80.0.10 | mh-edge-legacy | nginx, TLS 1.0/1.1 + weak ciphers | data in motion (TLS) | weak protocol/cipher findings | MEDIUM:2 LOW:1 |
+| 10.80.0.11 | mh-edge-expired | nginx, expired certificate | certificate lifecycle | expired-cert finding | **CRITICAL:1** MEDIUM:2 LOW:1 |
+| 10.80.0.20 | mh-app-crownjewel | nginx, modern TLS | in motion — the CROWN JEWEL | healthiest host on the subnet | MEDIUM:2 LOW:1 |
+| 10.80.0.30 | mh-db-finance | Postgres 16.6, no TLS | data at rest (database) | see LIMITATION below | INFO only |
+| 10.80.0.31 | mh-cache-session | Redis 7.4.1, no TLS/auth | in motion (broker/cache) | cleartext broker finding | MEDIUM:1 |
+| 10.80.0.40 | mh-identity-dc | OpenLDAP, 389 cleartext + 636 | identity | see LIMITATION below | INFO only |
+| 10.80.0.41 | mh-saml-idp | simplesamlphp IdP metadata | identity (federation) | SAML signing/assertion finding | **HIGH:1** |
+| 10.80.0.50 | mh-storage-archive | MinIO; 1 SSE-S3 + 1 UNENCRYPTED bucket | data at rest (object) | unencrypted-bucket finding | **HIGH:2** |
+| 10.80.0.60 | mh-pki-ca | step-ca 0.28.1 | PKI / CA | CA surface findings | MEDIUM:3 |
+| 10.80.0.70 | mh-ssh-jump | OpenSSH server | in motion (SSH) | see LIMITATION below | INFO only |
+| 10.80.0.200 | mh-prober | QU.I.R.K. sensor image | n/a — scan origin | not a target | n/a |
+
+**Aggregate observed (2026-09-13, live run):** 13 hosts scanned, **106 findings**, 1 CRITICAL /
+3 HIGH / 10 MEDIUM, readiness **89/100** capped at FAIR by the open CRITICAL. Reports generated:
+findings JSON, executive summary, technical findings, scorecard, roadmap, intelligence JSON, CBOM
+(JSON + XML), HTML, DOCX. **7 of 10 hosts carry actionable (non-INFO) findings.**
+
+### Score behaviour — the readiness score is RATIO-based and resists more-of-the-same
+
+Measured across four live runs on 2026-09-13 while trying to drive the score DOWN:
+
+| Estate | HIGH findings | Hygiene | Score |
+|---|---|---|---|
+| 10 hosts | 3 | 19/25 | 89 |
+| + S3/pg connectors completed | 3 | 19/25 | **91** (went UP) |
+| + RSA-1024, SHA-1, broken-chain, plaintext hosts | 5 | 19/25 | 91 |
+| + 6 plaintext intranet hosts | **11** | **19/25** | **91** |
+| + 11 expired/self-signed/legacy hosts (31 hosts, 5 CRITICAL) | **14** | **19/25** | **91** |
+
+**Final estate: 31 purpose-built vulnerable hosts, 5 CRITICAL / 14 HIGH / 33 MEDIUM / 16 LOW / 330
+INFO — and the readiness score is still 91/100 with EVERY subscore byte-identical to the 10-host
+run.** `certificate_observations` reports `certs_observed: 17, expired_count: 5` — 29% of the
+estate's certificates expired — and Identity scored a perfect 25/25, because
+`identity_expired_ratio` (weight 14.0) divides by `endpoints = 370` (the probe count):
+`-(5/370)*14 = -0.19`, which rounds away. The same evidence over `certs_observed` would be
+`-(5/17)*14 = -4.1`.
+
+**The scanner detects everything correctly; only the SCORE is blind to it.** This is now filed at
+**P1**. Demo guidance: lead with the FINDINGS (5 CRITICAL, 14 HIGH, per-host attribution, CBOM,
+roadmap), not the headline score, until the denominator question is settled.
+
+Adding badly configured hosts took HIGH findings from 3 to 11 and moved the score by **zero**.
+Every penalty in `quirk/intelligence/scoring.py` is `-_ratio(count, denom) * weight` where
+`denom = totals.endpoints` — the PROBE count (hosts x probed ports), 219 in the wide-port run. Ten
+plaintext endpoints therefore score `-(10/219)*18 = -0.82` against a 25-point budget.
+
+Two consequences worth knowing before demoing a score:
+
+1. **Widening `ports_tls` RAISES the score** on identical infrastructure — measured 89 (2 ports,
+   `endpoints=54`) vs 91 (10 ports, `endpoints=219`).
+2. **A diverse estate scores well by construction.** Tanking the number needs a high PROPORTION of
+   weak endpoints, not more weak endpoints — which trades away the topology richness this profile
+   exists to show.
+
+Whether `denom` should instead be `assessable_endpoint_count` (27 in the same run, a ~7-point swing
+on Hygiene alone) is an open question filed at
+`.planning/todos/pending/readiness-score-denominator-is-probe-count-not-assessable-endpoints.md`.
+**Do not "fix" the scorer to make this lab look worse.**
+
+### LIMITATION — three hosts return INFO only (honest gap, not a fabricated expectation)
+
+`mh-db-finance` (Postgres), `mh-identity-dc` (LDAP) and `mh-ssh-jump` (SSH) are **reachable and
+correctly inventoried** — the prober's TCP probe confirms all three OPEN, and each yields 9 INFO
+findings — but none produces an actionable finding in this configuration. `enable_db` is set and the
+port is in `ports_tls`, and it still did not fire. Not diagnosed further; the port-scope ↔
+connector-suppression interaction (Phase 121) is the prime suspect and is named as a known unknown in
+`.planning/backlog/999.110-multi-host-lab-topology/IDEA.md`.
+
+This row exists so the oracle records what the lab ACTUALLY produces rather than what the host
+line-up implies it should. Do not "fix" the oracle to claim findings these hosts do not emit.
+
+### Scan config
+
+`multihost-scan-config.yaml` (mounted read-only at `/scan-config.yaml`). Two deliberate departures
+from the repo-root `config.yaml`, both established by running it both ways:
+
+1. **Targets are the ten hosts as explicit `/32`s, not `10.80.0.0/24`.** A full sweep reported
+   **257** hosts and **2572** findings — 254 phantom addresses at 10 INFO each, plus the Docker
+   bridge gateway at `.1` surfacing a spurious CRITICAL. The `/32` list yields 106 findings on 13
+   hosts.
+2. **`ports_tls` is retargeted** to `[443,389,636,2222,5432,6379,8080,9000,9001]`. The repo default
+   is tuned for the single-host lab's published ports and contains none of 389/636/5432/6379/9000,
+   which is why the first run returned INFO-only for every non-TLS host.
+
+`enable_kerberos` and `enable_dnssec` are explicitly **false**: this profile has no KDC and no
+resolver, and a connector aimed at a host that cannot answer yields silence or a misleading finding.
+
+**Reference:** `docker-compose.yml` `mh-*` services + the `labnet` network. Generalises the
+`segmented-network` static-`ipv4_address` precedent (Phase 152, DISC-09/DISC-10).
+
+---
+
 ## Profile: storage-s3
 
 *MinIO S3-compatible server. Seed creates `encrypted-bucket` (SSE-S3) + `unencrypted-bucket` (no SSE) for STOR-01.*
