@@ -155,13 +155,39 @@ same layout slot a real gauge would occupy — a `0` there would misrepresent an
 > If a domain shows as not assessed, that's a to-do for widening scan coverage, not a finding about
 > your posture in that area."
 
-**Scores are not comparable with pre-5.20 scores.** Because the aggregation formula itself
-changed — not just the underlying findings — a score computed under scoring v2 is not directly
-comparable to one computed before it, even for the identical estate. Every scoring-v2 output
-carries a version marker (`scoring v2 — not comparable with pre-5.20 scores`) for exactly this
-reason; see `CHANGELOG.md`'s Unreleased entry for the full migration decision record. QU.I.R.K.
-does not back-migrate historical database rows to make old and new scores artificially comparable
-— compare trend lines only within the same scoring version.
+**Scores are not comparable across scoring versions.** Because the aggregation formula itself
+changes — not just the underlying findings — a score computed under one scoring version is not
+directly comparable to one computed under another, even for the identical estate. Every output
+carries a version marker (currently `scoring v3 — not comparable with v2 or earlier scores`) for
+exactly this reason; see `CHANGELOG.md`'s Unreleased entry for the full migration decision record.
+QU.I.R.K. does not back-migrate historical database rows to make old and new scores artificially
+comparable — compare trend lines only within the same scoring version.
+
+**Scoring v3 moves every score downward, and that is the intended correction.** v3 makes two
+changes a client will notice:
+
+- **Consequence is now absolute, not proportional.** Previously every penalty was
+  `prevalence × weight`, so five CRITICAL findings counted less in a large estate than in a small
+  one. An attacker needs one. A high count of open CRITICAL or HIGH findings now sets a **ceiling**
+  on the score regardless of how small a fraction of the estate they represent. The ceiling
+  *compresses* the score into the permitted range rather than flattening it, so remediation still
+  moves the number — a capped estate is not a frozen one.
+- **A perfect classical score no longer reaches 100.** An estate with no observed hybrid
+  post-quantum key exchange is capped at the top of GOOD. On a quantum-readiness assessment, 100
+  has to mean quantum-ready; an estate that is immaculate by every classical measure is still
+  exactly as exposed to harvest-now-decrypt-later as it was before the engagement began.
+
+**A capped score always says so.** Whenever a ceiling binds, the score is accompanied by a reason
+naming what capped it and disclosing the uncapped figure — for example *"5 open CRITICAL findings
+— score limited to 18 (computed 81)"*. A capped number is never presented as a computed one.
+
+> **Client Conversation — Why the score dropped after an upgrade:**
+> "Your infrastructure didn't get worse and we didn't start grading harder for its own sake. The
+> old formula measured what *proportion* of your estate was affected, which meant a serious problem
+> could be diluted by everything around it that happened to be fine. It now measures consequence
+> directly, because an attacker only needs the one. Where a cap applies, the report tells you which
+> finding set it and what the number would otherwise have been — and clearing that finding set
+> lifts the cap."
 
 **Gauge colors now agree with the report band (SCORE-07).** The dashboard's overall-score gauge
 used to derive its green/amber/red boundaries independently of the report's EXCELLENT/GOOD/

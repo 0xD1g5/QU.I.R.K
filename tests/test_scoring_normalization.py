@@ -35,10 +35,20 @@ def _max_subscore_evidence() -> dict:
     identity_trust; hygiene/modern_tls/agility are assessed by endpoints > 0
     alone) while leaving every impact counter at its zero default, so all six
     subscores are still cleanly 25 with domains_assessed == 6.
+
+    999.115 P7a: also PQC-ready. This fixture exists to exercise the
+    NORMALIZATION formula (sum / divisor), and the new "no PQC, no 100"
+    ceiling was capping its result at 84 for a reason that has nothing to do
+    with normalization — the arithmetic under test was still correct, it was
+    just no longer the last thing to touch the number. Marking it PQC-ready
+    keeps every ceiling except the mechanism under test out of the fixture
+    (43480cbd precedent). Reachable: endpoints == 1, so one hybrid-KEX
+    endpoint is a state the real evidence builder can produce.
     """
     return {
         "totals": {"endpoints": 1, "findings": 0},
         "protocol_counts": {"POSTGRESQL": 1, "KAFKA-PLAIN": 1, "KERBEROS": 1},
+        "pqc_hybrid_endpoint_count": 1,   # 999.115, see docstring
     }
 
 
@@ -184,9 +194,16 @@ def test_overall_score_canonical_example_120_to_80(monkeypatch):
     # fully-assessed evidence as _max_subscore_evidence() so all six
     # categories are assessed (domains_assessed == 6, divisor == 1.5,
     # identical to the pre-188 fixed-divisor formula this test locks).
+    #
+    # 999.115 P7a: PQC-ready for the same reason as _max_subscore_evidence() —
+    # this test locks the AGGREGATION FORMULA, and the "no PQC, no 100" ceiling
+    # would otherwise compress 80 -> 67 for a reason that has nothing to do with
+    # aggregation. Kept inline rather than switched to _max_subscore_evidence()
+    # so the divisor this test pins stays visible at the call site.
     result = compute_readiness_score({
         "totals": {"endpoints": 1, "findings": 0},
         "protocol_counts": {"POSTGRESQL": 1, "KAFKA-PLAIN": 1, "KERBEROS": 1},
+        "pqc_hybrid_endpoint_count": 1,   # 999.115, see above
     })
 
     assert result["score"] == 80, (

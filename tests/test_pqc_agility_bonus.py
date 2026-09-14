@@ -16,17 +16,38 @@ from quirk.intelligence.scoring import compute_readiness_score
 def _base_evidence(**overrides):
     """Evidence dict with a moderate agility penalty to leave room for the PQC bonus uplift.
 
-    Includes HIGH findings at 50% of the finding population so the agility
-    subscore starts below 25 without being floored at 0 — giving the +8 PQC
-    bonus visible uplift headroom while remaining clamped at 25.
+    The headroom must come from a penalty that actually lands on
+    `agility_signals`, or the subscore saturates at its 25-point clamp and the
+    +8 bonus becomes invisible — an uplift assertion against two saturated 25s
+    is `25 > 25`, which is what this fixture produced until 999.115 repaired it.
+
+    999.115 — the headroom source CHANGED. It used to be 2 HIGH findings out of
+    4 total, driving `agility_high_impact_ratio` to 0.5 for a -7 penalty. That
+    term was REMOVED by 999.115 (`523dd818`): as a prevalence measure it diluted
+    as its denominator grew and was the sole remaining cause of P1, and
+    `_consequence_ceiling()` now carries the high-impact signal absolutely
+    instead. With it gone the fixture's only agility penalty vanished, agility
+    returned to a clean 25 for BOTH arms, and both uplift tests broke.
+
+    The headroom now comes from `agility_unknown_ratio` (weight 6.0): 2 UNKNOWN
+    services out of 4 assessable endpoints = 0.5, bent by the prevalence curve,
+    landing agility at 21 and leaving the +8.0 bonus visibly observable (21 ->
+    25). `UNKNOWN` also feeds `modern_tls`, which is harmless here and does not
+    weaken TestPqcAgilityOrthogonality: both arms carry the SAME unknown count,
+    so every non-agility subscore stays identical between them, which is exactly
+    what that class asserts.
+
+    The finding_severity_counts entry is kept — it no longer creates the
+    headroom, but removing it would change what the consequence ceiling does to
+    these fixtures' headline scores, and these tests are about the subscore.
     """
     ev = {
         "totals": {"endpoints": 4, "findings": 4},
-        "protocol_counts": {},
+        # 999.115: 2 UNKNOWN of 4 assessable endpoints is the agility headroom.
+        "protocol_counts": {"UNKNOWN": 2},
         "certificate_observations": {},
         "cert_key_type_counts": {},
         "scan_error": {"rate": 0.0},
-        # 2 HIGH findings out of 4 total → high_impact_ratio=0.5 → -14*0.5=-7 penalty
         "finding_severity_counts": {"HIGH": 2},
     }
     ev.update(overrides)

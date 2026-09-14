@@ -7,6 +7,47 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+### Changed
+
+- **Readiness scoring is now v3: consequence is absolute rather than proportional, and a
+  quantum-blind estate can no longer score 100** (999.115). **`SCORING_VERSION` is bumped `2.0` →
+  `3.0`, and every score this product has ever emitted moves — substantially, and downward.** This
+  is a change to what the number *means*, not a recalibration of it. Under v2 every penalty was
+  `prevalence × weight`, so a serious problem was diluted by everything around it that happened to
+  be fine: five open CRITICAL findings counted for less in a large estate than in a small one, and
+  the product's strongest possible statement about a catastrophic 31-host estate was the incoherent
+  "87 — FAIR", the digits saying one thing and the label another. Six changes land together:
+  - An **absolute consequence ceiling** keyed to the *count* of open CRITICAL/HIGH findings, applied
+    to the score before the band is derived so the number and the label can never disagree again.
+    Its thresholds are derived from the published band table rather than chosen. The ceiling
+    **compresses** the score into the permitted range rather than clamping it flat — a capped estate
+    still gains points for remediation, and still responds to the strict/balanced/lenient profiles.
+  - **"No PQC, no 100"** — an estate with no observed hybrid post-quantum key exchange is capped at
+    the top of GOOD. Implemented as a ceiling rather than a bonus because the existing +8.0 PQC
+    bonus was being absorbed entirely by the per-domain 25-point clamp and moved the score by
+    exactly zero.
+  - A **non-linear prevalence curve**, so a small-but-real prevalence is no longer treated as
+    proportionally trivial.
+  - **Undetermined certificate key types no longer score as best-case**, so the model stops
+    rewarding not looking.
+  - **`agility_high_impact_ratio` removed** rather than re-denominated — a finding count is not a
+    population that badness is proportional to, and consequence now reaches the number directly.
+  - **Report drivers can no longer cite a domain the headline excluded as unassessed.**
+
+  Phase 184.4's decision that severity caps the *band* but never the *number* is **superseded**; its
+  rationale is preserved in full at
+  `.planning/decisions/999.115-severity-caps-the-number-supersedes-184.4-D-03.md`. Its
+  comparability argument is discharged by the version marker rather than abandoned — every report
+  surface discloses that v3 and v2 scores are not comparable, and QU.I.R.K. does not back-migrate
+  stored rows. **Whenever a ceiling binds, the score carries a reason naming the finding set that
+  capped it and the uncapped figure** (e.g. *"5 open CRITICAL findings — score limited to 18
+  (computed 81)"*), so a capped number is never delivered as a computed one. Measured against
+  operator-set calibration bands, supplied blind: a pristine PQC-ready estate 100 (EXCELLENT), a
+  well-run estate with no PQC 78 (GOOD), a typical enterprise 46 (FAIR), a neglected estate 24
+  (POOR), and the 31-host purpose-built vulnerable estate 87 → **18**. If you hold a previously
+  delivered score, re-scan or re-score the evidence before comparing it to anything produced after
+  this release.
+
 ### Fixed
 
 - **Readiness-score ratio denominators now divide by the population their numerator is drawn

@@ -87,6 +87,14 @@ def test_dar_score_includes_storage_drivers():
     from quirk.intelligence.scoring import compute_readiness_score
     evidence = {
         "totals": {"endpoints": 4, "findings": 1},
+        # 999.115 P5c: populate protocol_counts so data_at_rest is actually
+        # ASSESSED. Drivers are now drawn only from assessed domains — a domain
+        # the headline excludes (subscore None) may no longer supply one. This
+        # is the same correction Phase 188 SCORE-06 applied to
+        # test_dar_storage_unencrypted_ratio_applied below (see its docstring);
+        # this test and test_top_drivers_surfaces_motion were missed by that
+        # sweep and passed only because the driver list ignored assessment.
+        "protocol_counts": {"S3": 4},
         "dar_storage_unencrypted_count": 2,
         "dar_storage_aws_managed_count": 1,
         "dar_db_plaintext_count": 0,

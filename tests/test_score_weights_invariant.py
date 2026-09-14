@@ -31,9 +31,28 @@ def test_score_weights_sum_invariant():
     Phase 96 SCORE-01: bumped from 299.0 -> 303.0 (+4.0) for active REST fuzz agility signal:
       - agility_fuzz_crypto_posture_ratio: +1 entry at +4.0
     Net delta = +1 entry / +4.0 sum (40 -> 41, 299.0 -> 303.0).
+
+    999.115 P8: bumped from 303.0 -> 311.0 (+8.0) for the undetermined-key-type
+    assessment gap:
+      - agility_unverified_key_type_penalty: +1 entry at +8.0
+    Net delta = +1 entry / +8.0 sum (41 -> 42, 303.0 -> 311.0). The value is
+    derived rather than chosen — it must be >= agility_rsa_only_penalty or the
+    model rewards not looking; see the comment at its definition site.
+
+    999.115 C: dropped from 311.0 -> 297.0 (-14.0) by REMOVING
+    agility_high_impact_ratio. As a prevalence measure it diluted whenever its
+    denominator grew, which made discovering MEDIUM and LOW findings RAISE the
+    score. High-impact findings now reach the number absolutely, through
+    _consequence_ceiling(), so re-denominating the ratio would have been
+    fixing a term that no longer has a job. Net delta = -1 entry / -14.0 sum
+    (42 -> 41, 311.0 -> 297.0).
+
+    NOTE the coincidence, so nobody reads it as a no-op: the entry COUNT
+    returned to 41, the same value it held before either change. The two
+    deltas are unrelated and the SUM did not return (303.0 -> 297.0).
     """
-    assert abs(sum(SCORE_WEIGHTS.values()) - 303.0) < 1e-9, (
-        f"SCORE_WEIGHTS sum drifted from 303.0 to {sum(SCORE_WEIGHTS.values())}. "
+    assert abs(sum(SCORE_WEIGHTS.values()) - 297.0) < 1e-9, (
+        f"SCORE_WEIGHTS sum drifted from 297.0 to {sum(SCORE_WEIGHTS.values())}. "
         "Per D-04 this is intentional — update this test ONLY if rebalance is documented."
     )
 
@@ -52,5 +71,11 @@ def test_score_weights_count_invariant():
     Phase 95 SCORE-01: bumped from 39 -> 40 (+1) for agility_codesign_weak_algo_ratio.
 
     Phase 96 SCORE-01: bumped from 40 -> 41 (+1) for agility_fuzz_crypto_posture_ratio.
+
+    999.115 P8: bumped from 41 -> 42 (+1) for agility_unverified_key_type_penalty.
+
+    999.115 C: dropped from 42 -> 41 (-1) by removing agility_high_impact_ratio.
+    Back at 41 by coincidence, not by reversal — see the sum invariant's
+    docstring above, where the sum shows the two changes were not a round trip.
     """
     assert len(SCORE_WEIGHTS) == 41

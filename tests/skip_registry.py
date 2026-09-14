@@ -113,6 +113,20 @@ ALLOWED_SKIPS = [
     ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", 'python-docx not installed'),
     ("test_report_render_undetermined_hosts.py", "test_cross_surface_parity_undetermined_count", "optional_extra", "python-docx not installed"),
     ("test_scheduler_cmd.py", "test_signal_sets_stop_flag", "live_infra", "SIGTERM not supported on Windows"),
+    # 999.115 P2b — the ONE remaining xfail in the scoring property suite, and the
+    # first xfail this ledger has ever carried. It is not an environment gap: it is a
+    # standing, measured statement of a KNOWN OPEN DEFECT, kept numeric rather than
+    # allowed to decay into prose. Observing more HEALTHY endpoints still raises the
+    # computed score with every weakness count held identical (71 -> 74 -> 78 -> 82);
+    # the consequence ceiling masks most of it in the emitted number (18/18/20/20) but
+    # does not fix it. `strict=True` means the day it starts passing, it HARD-FAILS and
+    # somebody must come back here and promote it — which is exactly what happened to
+    # the seven sibling properties 999.115 closed, none of which were ever registered
+    # here because they were removed rather than kept. Do NOT relax strict mode, and do
+    # NOT widen this entry to the file: the other properties in it are green gates.
+    # Root cause and proposed fix:
+    # .planning/todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md
+    ("test_score_properties.py", "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints", "known_open_defect", "999.115 P2b: scan-depth dilution survives all six model changes; xfail(strict=True) keeps the gap standing and numeric. See .planning/todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v2c_happy_path_parses_last_octet_ip", "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v3_path_uses_usm_and_v3arch_walk_cmd", "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_bounds_oversized_table_at_max_entries", "optional_extra", "pysnmp not installed"),

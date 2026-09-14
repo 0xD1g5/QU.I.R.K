@@ -137,6 +137,29 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         modern_tls/agility_signals are unaffected because this fixture carries no plaintext-HTTP,
         legacy-TLS, or high-impact-finding signal to divide. sum(24, 24, 25, 23) = 96;
         96 / (4 * 25) * 100 = 96.0 -> round() = 96.
+
+        999.115 moved the pin a THIRD time, 96 -> 76, from two independent causes that
+        compose. Recorded here rather than silently re-derived, as the two moves above were.
+
+        Cause 1 — the prevalence curve (change D). Ratio-shaped impacts are now bent by
+        `ratio ** PREVALENCE_CURVE_EXPONENT` (0.5) before being weighted, so a small-but-real
+        prevalence registers a larger penalty than a straight-line ratio gave it. This fixture
+        carries exactly that shape: `modern_tls` moves 24 -> 22 and `data_in_motion` 23 -> 20.
+        `hygiene` (24) and `agility_signals` (25) are unmoved — hygiene's signal is already at
+        a ratio the curve barely bends, and agility_signals was already a clean 25.
+        sum(24, 22, 25, 20) = 91; 91 / (4 * 25) * 100 = 91.0 -> COMPUTED 91.
+
+        Cause 2 — the PQC readiness ceiling (P7a, "no PQC, no 100"). This fixture observes no
+        hybrid key exchange (`pqc_hybrid_endpoint_count == 0`), so its ceiling is the top of
+        GOOD, 84. The ceiling COMPRESSES rather than clamps: round(84 * 91 / 100) = round(76.44)
+        = 76, and `rating_cap_reason` discloses the pre-cap 91.
+
+        The fixture is deliberately NOT marked PQC-ready to isolate it, unlike the fixtures in
+        test_scoring_normalization.py and test_score_coverage_disclosure.py. Those exercise one
+        named mechanism and want every other ceiling out of the way; this test is a DRIFT CANARY
+        for _PROTOCOL_KEYS and the coverage counters, so it should pin whatever the real pipeline
+        emits end-to-end, ceilings included. Isolating it would narrow exactly the surface it
+        exists to watch.
         """
         evidence = build_evidence_summary(_build_endpoints(), [])
 
@@ -162,7 +185,20 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         )
 
         score = compute_readiness_score(evidence)
-        self.assertEqual(score["score"], 96)
+        self.assertEqual(score["score"], 76)   # 999.115: was 96, see docstring
+        # Pin the per-domain subscores too, so a future move lands on the domain that
+        # actually moved instead of only on the aggregate. This is what would have
+        # localised the 96 -> 76 move to curve D without a probe.
+        self.assertEqual(score["subscores"]["hygiene"], 24)
+        self.assertEqual(score["subscores"]["modern_tls"], 22)
+        self.assertEqual(score["subscores"]["agility_signals"], 25)
+        self.assertEqual(score["subscores"]["data_in_motion"], 20)
+        # And pin the disclosed pre-cap number, so a ceiling change is distinguishable
+        # from a subscore change at the assertion site.
+        self.assertEqual(
+            score["rating_cap_reason"],
+            "no post-quantum key exchange observed — score limited to 76 (computed 91)",
+        )
         self.assertEqual(score["domains_assessed"], 4)
         self.assertEqual(score["domains_total"], 6)
         self.assertEqual(score["score_divisor"], 1.0)

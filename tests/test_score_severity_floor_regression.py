@@ -104,9 +104,27 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
 
     Asserts only that the fixture reproduces the documented defect
     conditions (a CRITICAL `TLS certificate expired` finding present, and a
-    real numeric score of 81, pinned per SCORE-06's derivation above)
-    without invoking `write_reports` at all, so the fixture cannot silently
-    drift out from under the regression test below.
+    pinned real numeric score) without invoking `write_reports` at all, so
+    the fixture cannot silently drift out from under the regression test
+    below.
+
+    999.115 — the pinned value moved 81 -> 34, and the SHAPE of the
+    precondition moved with it. The old pin of 81 and the old
+    `score >= 70` guard both encoded Phase 184.4 D-03: severity capped the
+    BAND only, so the NUMBER had to stay above GOOD for the band cap to have
+    something to cap. D-03 is superseded (operator-approved 2026-09-14, see
+    `.planning/decisions/999.115-severity-caps-the-number-supersedes-184.4-D-03.md`)
+    — `_consequence_ceiling()` now caps the number BEFORE the band is
+    derived, so one open CRITICAL compresses this estate to 34, the top of
+    POOR, and the band follows the number down instead of contradicting it.
+
+    Two further changes fed the same value. `agility_high_impact_ratio` was
+    removed by 999.115, so agility_signals returns to a clean 25 and the
+    COMPUTED score is now 100 rather than 81 (sum(25, 25, 25) / (3*25) * 100).
+    The defect condition the fixture exists to reproduce is unchanged and in
+    fact sharper: an estate whose hygiene arithmetic says 100 while it carries
+    an open CRITICAL. It is now asserted through `rating_cap_reason`, which
+    discloses the pre-cap number, rather than through a raw `score >= 70`.
     """
     endpoints = _clean_endpoints()
     findings = _reproduction_findings()
@@ -121,18 +139,33 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
         "Fixture must carry the documented CRITICAL finding "
         "'TLS certificate expired' (Phase 184.2 UAT-184.2-05 reproduction)."
     )
-    assert score_raw["score"] == 81, (
+    # 999.115: was `== 81` under D-03 (band-only cap, agility_high_impact_ratio
+    # still present). Now the consequence ceiling caps the NUMBER: 1 open
+    # CRITICAL -> _top_of_band("POOR") == 34, compressed from a computed 100.
+    assert score_raw["score"] == 34, (
         f"Fixture's real numeric score {score_raw['score']} no longer matches the "
-        "derived post-SCORE-06 value of 81 (see the module-level comment above for "
-        "the arithmetic: sum(25, 25, 11) / (3*25) * 100 = 81.33 -> 81). A different "
-        "value here means either the fixture or the rescale formula moved."
+        "derived post-999.115 value of 34. Derivation: hygiene=25, modern_tls=25, "
+        "agility_signals=25 (agility_high_impact_ratio removed by 999.115); "
+        "identity/dar/motion unassessed; sum(25,25,25) / (3*25) * 100 = 100 computed, "
+        "then _consequence_ceiling(critical=1) = _top_of_band('POOR') = 34 applied by "
+        "COMPRESSION (round(34 * 100 / 100)). A different value here means the "
+        "fixture, the rescale formula, or the ceiling moved."
     )
-    assert score_raw["score"] >= 70, (
-        f"Fixture's real numeric score {score_raw['score']} dropped below GOOD (70) "
-        "— the fixture no longer reproduces the documented defect conditions (a "
-        "numeric band above FAIR, capped down to FAIR by the severity floor for one "
-        "open CRITICAL). Adjust the clean endpoint count in _clean_endpoints() to "
-        "restore it."
+    # The documented defect condition — hygiene arithmetic says the estate is
+    # excellent while an open CRITICAL sits in it — is now asserted through the
+    # disclosed pre-cap number, not through the post-cap one. Under D-03 the
+    # post-cap number WAS the pre-cap number, so `score >= 70` could stand in
+    # for this; after 999.115 those are two different values and the assertion
+    # has to name the one it means.
+    assert score_raw["rating_cap_reason"] == (
+        "1 open CRITICAL finding — score limited to 34 (computed 100)"
+    ), (
+        "The fixture must still reproduce the documented defect conditions: a "
+        "computed score in EXCELLENT territory carrying one open CRITICAL, with the "
+        "cap disclosed. Got: "
+        f"{score_raw.get('rating_cap_reason')!r} (score {score_raw['score']}). "
+        "Adjust the clean endpoint count in _clean_endpoints() if the computed value "
+        "has drifted below 85."
     )
 
 
@@ -146,7 +179,19 @@ def test_regression_fixture_reproduces_the_documented_defect_conditions():
 # deleted per D-13 / plan 184.4-04's own reason string.
 # ---------------------------------------------------------------------------
 def test_high_score_with_one_critical_still_produces_a_report(tmp_path):
-    """D-13: score >= 85 with one open CRITICAL must still produce a report.
+    """D-13: a computed score >= 85 with one open CRITICAL must still produce a report.
+
+    999.115 — the CONTRACT under test is unchanged and still the point of this
+    test: `write_reports()` must not halt with `ReportCongruenceError` on this
+    scan, and the executive markdown must actually land on disk. What moved is
+    the MECHANISM that makes the headline congruent. Under Phase 184.4 D-02 the
+    number stayed at 81 and `cap_band_for_severity()` overrode the band down to
+    exactly FAIR. D-03 is superseded (operator-approved 2026-09-14), so
+    `_consequence_ceiling()` now caps the NUMBER first and the band follows it
+    to POOR — which is why the old `rating == "FAIR"` assertion below is now
+    `== "POOR"`. Both satisfy the congruence guard; the new one satisfies it
+    without the number and the label disagreeing, which is the whole reason
+    D-03 was reversed.
 
     Drives the REAL `compute_readiness_score()` (never mocked) through the REAL
     `write_reports()` end-to-end. Only the peripheral CBOM I/O is patched, exactly
@@ -220,18 +265,28 @@ def test_high_score_with_one_critical_still_produces_a_report(tmp_path):
     evidence = build_evidence_summary(endpoints, findings)
     score_raw = compute_readiness_score(evidence, profile="balanced", weights=None)
     assert score_raw["rating"] != "EXCELLENT", (
-        f"Real numeric score is {score_raw['score']} (>= 85) with one open "
-        "CRITICAL finding, yet compute_readiness_score() still emits band "
-        f"{score_raw['rating']!r} instead of capping it below EXCELLENT. D-01/D-02 "
-        "require min(numeric_band, severity_cap) to yield FAIR for any CRITICAL >= 1."
+        f"Real numeric score is {score_raw['score']} with one open CRITICAL "
+        "finding, yet compute_readiness_score() still emits band "
+        f"{score_raw['rating']!r} instead of capping below EXCELLENT."
     )
-    assert score_raw["rating"] == "FAIR", (
-        f"Expected the severity-floor-capped band to be exactly 'FAIR' per D-02 "
-        f"(least-destructive band the congruence guard accepts for CRITICAL >= 1), "
-        f"got {score_raw['rating']!r}."
+    # 999.115: was `== "FAIR"` per D-02, when the cap moved the band only and
+    # FAIR was the least-destructive band the congruence guard accepts. The
+    # consequence ceiling now moves the NUMBER to 34 and the band is derived
+    # FROM it, so POOR is the honest label rather than an override.
+    assert score_raw["rating"] == "POOR", (
+        "Expected the consequence-ceiling-capped band to be exactly 'POOR' — the "
+        "band derived from the capped number 34, not overridden onto an uncapped "
+        f"81 as D-02 did. Got {score_raw['rating']!r} at score {score_raw['score']}."
     )
-    assert score_raw["rating_cap_reason"] and "FAIR" in score_raw["rating_cap_reason"], (
-        "Expected a non-empty structured rating_cap_reason naming FAIR (D-09), got "
+    # 999.115: was `"FAIR" in rating_cap_reason` (D-09's band-naming form). The
+    # consequence cap's reason is more specific and more actionable — it names
+    # the finding count that set the ceiling and discloses the pre-cap number,
+    # so a capped 34 can never be read as a computed one.
+    assert score_raw["rating_cap_reason"] == (
+        "1 open CRITICAL finding — score limited to 34 (computed 100)"
+    ), (
+        "Expected a structured rating_cap_reason naming the CRITICAL count that set "
+        f"the ceiling and disclosing the pre-cap number, got "
         f"{score_raw.get('rating_cap_reason')!r}."
     )
 
