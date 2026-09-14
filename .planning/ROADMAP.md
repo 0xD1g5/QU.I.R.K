@@ -491,7 +491,7 @@ serving, not the coverage drain)
      deferral from oversight.
   6. No dashboard-settable `report.branding.*` or `report.template_dir` surface is introduced;
      RPT-03's dashboard exclusion still holds after this phase, proven by the guard test it added.
-**Plans**: 7 plans
+**Plans**: 8 plans
 
 Plans:
 - [ ] 209-01-PLAN.md — Wave 0: backend route test scaffolding (manifest/download/containment/auth, RED)
@@ -501,6 +501,7 @@ Plans:
 - [ ] 209-05-PLAN.md — Wave 2: containment gate artifact + RPT-03 sweep extension + export-pdf regression
 - [ ] 209-06-PLAN.md — Wave 3: operator docs, artifact-inventory correction, Obsidian sync
 - [ ] 209-07-PLAN.md — Wave 4: manual verification against the real output directory (2 checkpoints)
+- [ ] 209-08-PLAN.md — Wave 5: CLAUDE.md Mandatory Phase Completion Steps — UAT Series 209, worklist regeneration, Obsidian phase note
 **UI hint**: yes
 
 ## Progress
