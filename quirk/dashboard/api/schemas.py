@@ -1330,3 +1330,20 @@ class ScanCoverageResponse(BaseModel):
     ran: int
     skipped: int
     phases: List[ScanCoveragePhase]
+
+
+# ---- Report Artifact Manifest (Phase 209 / DELIV-01) ----
+# GET /api/reports/latest/manifest response shapes. No path-shaped field
+# names — the served filenames stay server-side (D-04/D-05); `stamp` is an
+# opaque token, not a path.
+
+
+class ReportFormatAvailability(BaseModel):
+    available: bool
+    reason: Optional[str] = None
+
+
+class ReportManifestResponse(BaseModel):
+    scan_time: Optional[str] = None
+    stamp: Optional[str] = None
+    formats: Dict[str, ReportFormatAvailability]
