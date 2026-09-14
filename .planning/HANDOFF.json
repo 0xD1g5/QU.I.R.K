@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-14T17:20:00.000Z",
+  "timestamp": "2026-09-14T17:15:00.000Z",
   "phase": "demo-prep",
   "phase_name": "Demo prep for the 2026-09-18 client demo (Phase 206 PAUSED at 5/13; v5.24 phases 203/204/205 COMPLETE)",
   "phase_dir": ".planning",
@@ -9,7 +9,7 @@
   "total_tasks": 7,
   "status": "paused",
   "branch": "main",
-  "head": "8ceaef8d",
+  "head": "efefc615",
   "completed_tasks": [
     {
       "id": 0.1,
@@ -100,14 +100,21 @@
       "name": "Exposure map items 1-3 \u2014 scan scoping (opt-in, report default preserved per D-03), self-edge guard, edge dedupe. Live: 27 nodes/1225 edges -> 12 nodes/19 edges, 390 self-edges -> 0, 1169 dupes -> 0.",
       "status": "done",
       "commit": "aa711299/8ceaef8d"
+    },
+    {
+      "id": 15,
+      "name": "Exposure map A+B: shared-CA HUB nodes (new edge type) + operator-declared crown jewels via assessment.crown_jewels. Live: 18 nodes / 34 edges; ChaosLab-RootCA carries 10 dependants; 10.80.0.20:443 marked.",
+      "status": "done",
+      "commit": "5d77bbfc"
+    },
+    {
+      "id": 16,
+      "name": "OPERATOR-FOUND BUG: the crown-jewel ring rendered BLACK. Cytoscape cannot parse space-separated hsl(); --accent is raw components. Broken since Phase 195, invisible because no data ever set is_crown_jewel. Also fixed the legend (was missing shared_ca) and added a non-vacuous source-scan guard.",
+      "status": "done",
+      "commit": "efefc615"
     }
   ],
   "remaining_tasks": [
-    {
-      "id": 3.1,
-      "name": "Add R6 (the measured 2026-09-14 evidence) to the calibration ladder \u2014 plan is in the filed todo; update BOTH duplicated fixture copies",
-      "status": "not_started"
-    },
     {
       "id": 4.1,
       "name": "USER: eyeball the exported /print PDF and confirm the Friday walkthrough matches the rehearsed path",
@@ -125,22 +132,27 @@
     },
     {
       "id": 7,
-      "name": "HYGIENE: decide BACK-51 gate false positive \u2014 the LAST red on main",
+      "name": "HYGIENE: decide BACK-51 gate false positive \u2014 the last red on main",
       "status": "not_started"
     },
     {
       "id": 12,
-      "name": "OPTIONAL: exposure map item 4 \u2014 hub-per-key star layout. Scales linearly instead of quadratically; matters only if a real client estate has a large cluster. Not needed for the demo.",
+      "name": "OPTIONAL: exposure map item 4 \u2014 hub-per-key star layout for key_reuse. Only matters if a real client estate has a large cluster.",
       "status": "not_started"
     },
     {
       "id": 13,
-      "name": "AFTER NEXT MILESTONE: SAML options C+D (one cert = one finding; stop double-counting into the score ratio). Both move the emitted score.",
+      "name": "AFTER NEXT MILESTONE (operator-scheduled): SAML options C+D \u2014 one cert = one finding, and stop double-counting into the score ratio. Both move the emitted score.",
       "status": "not_started"
     },
     {
       "id": 14,
-      "name": "BIGGER: CLI vs dashboard divergence is ARCHITECTURAL \u2014 engine/findings_evaluator.py has zero SAML/Kerberos/DNSSEC rules while the dashboard route has all three, and the two name the same condition differently. Probably its own phase.",
+      "name": "BIGGER, probably its own phase: CLI vs dashboard divergence is ARCHITECTURAL \u2014 engine/findings_evaluator.py has zero SAML/Kerberos/DNSSEC rules while the dashboard route has all three, and they name the same condition differently.",
+      "status": "not_started"
+    },
+    {
+      "id": 17,
+      "name": "DECIDE before demo: the roadmap NOW item 'Stabilize scan reliability \u2014 scan error rate is 90.5%' reads as though the scanner failed. It is 335 of 370 probed ports being closed on an 11-port sweep. Reword, or have the explanation ready.",
       "status": "not_started"
     }
   ],
@@ -151,14 +163,14 @@
       "workaround": "DEMO (2026-09-18): scan ONCE; do not show the CLI number and the dashboard number side by side. Both say POOR so the narrative holds. Option B shipped (819f31da) \u2014 the titles are now accurate \u2014 but the 15-vs-19 gap is ARCHITECTURAL (two finding producers with different rule sets), not the duplicate, so it remains. Filed at .planning/todos/pending/cli-dashboard-score-divergence-same-scan.md and saml-one-certificate-counted-twice-c-and-d.md"
     },
     {
-      "description": "main CI red: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE \u2014 BACK-51 IS closed at HORIZON.md:49; the gate keys on (ID, title) and matches a narrative prose line in the ARCHIVED v5.23-ROADMAP.md. It is the only remaining red on main.",
-      "type": "technical",
-      "workaround": "Filed for v5.25 at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md. Task 7 is to decide whether to fix it now (it is the last thing between main and a fully green suite) or leave it filed."
-    },
-    {
       "description": "P2b OPEN by design \u2014 observing more healthy endpoints still raises the COMPUTED score (71->74->78->82) with every weakness count held identical. The consequence ceiling MASKS it in the emitted number (18/18/20/20), so it reads like a fix and is not one.",
       "type": "technical",
       "workaround": "Filed with a spike-first plan at .planning/todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md. NOT demo-blocking. Do not promote its xfail."
+    },
+    {
+      "description": "main CI: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE \u2014 BACK-51 IS closed at HORIZON.md:49; the gate keys on (ID, title) and scrapes a narrative prose line out of the ARCHIVED v5.23-ROADMAP.md, extracting the bare word 'Phases' as the title. Expected to be the only red.",
+      "type": "technical",
+      "workaround": "Filed at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md. Task 7 is to decide fix-now vs leave-filed. NOTE: Python CI for efefc615 was still in_progress at pause; re-check with `gh run list --branch main --limit 6` and read the CHECK TABLE, never a wrapper's exit code."
     }
   ],
   "human_actions_pending": [
@@ -203,17 +215,36 @@
       "decision": "A real multihost scan is the highest-value next action because it pays three times",
       "rationale": "It fills the oracle's 20-host gap with MEASURED findings (the only honest way to write them), supplies a sixth non-synthetic calibration rung against constants that are currently a first fit, and rehearses the exact demo path. Tasks 1-4 are therefore one run, not four.",
       "phase": "demo-prep"
+    },
+    {
+      "decision": "Fix the rollup equation with ONE shared helper across five render sites, not five parallel edits",
+      "rationale": "Five copies of the same arithmetic is the drift this codebase keeps getting bitten by. The helper re-derives the pre-cap value because the model does not expose it as a structured key (it survives only inside rating_cap_reason prose as '(computed N)'), and a test ties the re-derivation to that prose so a scoring.py change fails a test instead of misprinting a client report.",
+      "phase": "demo-prep"
+    },
+    {
+      "decision": "SAML option B only (titles), NOT C or D, before the demo",
+      "rationale": "B changes a wrong CLAIM with zero count/score impact. C and D change CRITICAL counts and therefore the emitted score and the ladder fixtures \u2014 not something to slip in four days before a client demo. Operator scheduled them for after the next milestone.",
+      "phase": "demo-prep"
+    },
+    {
+      "decision": "Exposure map scoping is OPT-IN; the cross-scan default is preserved",
+      "rationale": "writer.py's _load_key_reuse documents D-03 \u2014 key reuse is deliberately a global cross-scan query for REPORTS. A report asks 'has this key ever been seen reused'; the map draws 'the estate as this scan found it'. Changing the shared default would have silently altered every report while fixing a visualization. Pinned by test_default_is_still_cross_scan_for_the_report_surface.",
+      "phase": "demo-prep"
+    },
+    {
+      "decision": "Shared CA is drawn as a HUB, not all-pairs",
+      "rationale": "All-pairs over the reference estate's 10-member CA group is 45 edges \u2014 more than the entire key-reuse graph \u2014 and would have rebuilt the spider web cleared the same day. A hub is linear in members and truer: one CA with many dependants, not a mesh of peers.",
+      "phase": "demo-prep"
+    },
+    {
+      "decision": "Crown jewels are declared in config and read at render time, with no persistence layer",
+      "rationale": "Phase 195 deferred crown jewels (Tier B, backlog 999.107) because the then-CROSS-SCAN map appeared to need persistence. The map became scan-scoped on 2026-09-14, so that premise lapsed \u2014 a declaration read at render time needs no persistence at all. The renderer had been complete the whole time. Watch for this generally: a deferral's premise can expire without anyone revisiting the decision.",
+      "phase": "demo-prep"
     }
   ],
-  "uncommitted_files": [
-    "docs/chaos-lab.md",
-    "quantum-chaos-enterprise-lab/README.md",
-    "quantum-chaos-enterprise-lab/expected_results_v4.md",
-    "quantum-chaos-enterprise-lab/scripts/gen_multihost_oracle_table.py",
-    ".planning/todos/pending/ (3 new)"
-  ],
-  "next_action": "Nothing is blocking. Optional pre-demo polish: decide on the 90.5% scan-error wording. Otherwise the hygiene tail (tasks 5-7) and then post-milestone items 12-14.",
-  "context_notes": "SCORING v3 IS THE STORY. The multihost estate scored 91/100 under v2 and scores 15/100 POOR under v3 on IDENTICAL evidence \u2014 a 76-point move that fixes the P1 denominator blindness the oracle documented. The old demo guidance ('lead with findings, the score is misleading') is now REVERSED and the oracle says so. THREE THINGS A RESUMING AGENT SHOULD NOT MISREAD. (1) A stale prober image silently reproduces 91/100 with no warning and exit 0 \u2014 always verify SCORING_VERSION inside the container before quoting a score, and use `-p chaoslab` or the rebuild tags the wrong image and does nothing. (2) The per-host oracle rows now carry measured finding TITLES, not just counts, because the previous rows had the COUNT right and the MEANING wrong for two hosts (the S3 host's 2 HIGHs are plaintext-HTTP, not the unencrypted bucket; the Redis host's MEDIUM is a blocked handshake, not a cleartext-broker finding). (3) `pytest -k \"scor\"` still misses a third of the scoring surface \u2014 select with $(grep -rln \"quirk.intelligence.scoring\" tests/); that selection ran green at 439 passed / 3 xfailed after these edits.",
+  "uncommitted_files": [],
+  "next_action": "Nothing is blocking and the tree is clean. Highest-value next: task 17 (decide the 90.5% scan-error wording) then the hygiene tail 5-7. Re-check Python CI for efefc615 first \u2014 it was still running at pause.",
+  "context_notes": "Nine commits this session, all pushed, tree clean. THE DEMO IS 2026-09-18 and the walkthrough is CONFIRMED and recorded under demo_walkthrough_confirmed \u2014 rehearse THAT, not an inferred path. FIVE THINGS A RESUMING AGENT SHOULD NOT MISREAD. (1) Scoring v3 is the story: the same estate scored 91/100 under v2 and 15/100 POOR under v3 on identical evidence, which fixes the P1 denominator blindness the oracle documented \u2014 the old 'lead with findings, the score is misleading' guidance is REVERSED and the oracle says so. (2) A stale prober image silently reproduces 91/100 with exit 0 and no warning; always verify SCORING_VERSION INSIDE the container, and rebuild with `-p chaoslab` or compose tags a different image and does nothing. (3) The CLI and dashboard disagree on the SAME clean scan (15/5-CRITICAL vs 19/7-CRITICAL). Option B fixed the wrong TITLE but the gap is ARCHITECTURAL \u2014 two finding producers with different rule sets \u2014 so it remains. Scan ONCE (SESSION_BRACKET merges scans under 5 minutes apart) and do not show both surfaces side by side. (4) `pytest -k \"scor\"` still misses a third of the scoring surface; select with $(grep -rln \"quirk.intelligence.scoring\" tests/). (5) HARD-REFRESH the dashboard after any frontend change \u2014 a cached index.html serves a stale bundle, which is why the crown-jewel ring appeared still-broken after it was fixed. The deepest lesson of the session: the ring rendered BLACK for months while the API, the unit tests and the bundle were all green \u2014 only looking at rendered pixels caught it, because the failure was a valid property holding a wrong value.",
   "demo_walkthrough_confirmed": {
     "date": "2026-09-18",
     "duration_target": "30-45 minutes",
