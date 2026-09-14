@@ -75,6 +75,12 @@ def _full_coverage_evidence() -> dict:
     return {
         "totals": {"endpoints": 10, "findings": 0},
         "protocol_counts": dict(_FULL_COVERAGE_PROTOCOL_COUNTS),
+        # 999.115 P7a: PQC-ready, so the "no PQC, no 100" ceiling does not
+        # confound a test about exclude-and-rescale. Same isolation reasoning
+        # as 43480cbd — keep every cap except the mechanism under test out of
+        # the fixture. Reachable: endpoints == 10, so hybrid KEX on all ten is
+        # a state the real evidence builder can produce.
+        "pqc_hybrid_endpoint_count": 10,
     }
 
 
@@ -123,6 +129,18 @@ def test_endpoint_wide_group_excludes_together():
     just one. With endpoints == 0 but the three independent predicates still satisfied
     (identity/dar/motion protocol_counts present), domains_assessed == 3 and score_divisor
     == 0.75.
+
+    999.115 P7a — the headline expectation was `score == 100` before the "no PQC, no 100"
+    ceiling landed. It is now 84 (top of GOOD). Unlike this file's other exclusion tests,
+    this fixture is NOT marked PQC-ready to isolate it: `totals.endpoints == 0` means there
+    is no endpoint on which hybrid key exchange could have been observed, so a positive
+    `pqc_hybrid_endpoint_count` here would describe a state the real evidence builder
+    cannot produce. The ceiling binding is correct, not incidental — a scan that reached
+    zero endpoints has demonstrated no post-quantum readiness whatsoever.
+
+    The exclusion invariant this test exists for is untouched: the headline is still
+    unchanged by excluding three clean domains, because the remaining three are clean 25s.
+    Only the value the invariant holds AT moved, 100 -> 84.
     """
     evidence = {
         "totals": {"endpoints": 0, "findings": 0},
@@ -144,7 +162,15 @@ def test_endpoint_wide_group_excludes_together():
             f"{category} must remain assessed (clean 25) when only the endpoint-wide "
             f"group is excluded, got {result['subscores'][category]}"
         )
-    assert result["score"] == 100
+    # 999.115 P7a: was `== 100` before the PQC ceiling. See the docstring for why this
+    # fixture is corrected rather than marked PQC-ready.
+    assert result["score"] == 84
+    assert result["rating_cap_reason"] == (
+        "no post-quantum key exchange observed — score limited to 84 (computed 100)"
+    ), (
+        "A capped headline must disclose WHAT capped it, or a client reads 84 as a "
+        f"computed number. Got: {result['rating_cap_reason']!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
