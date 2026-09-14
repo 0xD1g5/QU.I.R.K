@@ -127,6 +127,16 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         fixture scored 98 — sum of all six subscores including two fabricated full-25s for
         data_at_rest/identity_trust, divided by the fixed 1.5 — an expected rescale move per
         RESEARCH Pitfall 4, not a regression.)
+
+        999.113 (D1/D2) moved the pin AGAIN, from 97 to 96 — a second, unrelated cause,
+        recorded here rather than silently re-derived. `data_in_motion`'s
+        `motion_email_plaintext_ratio` (and the other domain/connector ratios, D3) now divide by
+        `assessable_endpoint_count` (7 in this fixture) instead of `totals.endpoints` (9) — a
+        smaller, more honest denominator that makes the SAME real plaintext-email weakness
+        register as a slightly larger penalty. `data_in_motion` moves 24 -> 23; hygiene/
+        modern_tls/agility_signals are unaffected because this fixture carries no plaintext-HTTP,
+        legacy-TLS, or high-impact-finding signal to divide. sum(24, 24, 25, 23) = 96;
+        96 / (4 * 25) * 100 = 96.0 -> round() = 96.
         """
         evidence = build_evidence_summary(_build_endpoints(), [])
 
@@ -152,7 +162,7 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         )
 
         score = compute_readiness_score(evidence)
-        self.assertEqual(score["score"], 97)
+        self.assertEqual(score["score"], 96)
         self.assertEqual(score["domains_assessed"], 4)
         self.assertEqual(score["domains_total"], 6)
         self.assertEqual(score["score_divisor"], 1.0)

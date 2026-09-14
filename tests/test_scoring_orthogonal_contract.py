@@ -118,9 +118,15 @@ def test_severity_floor_caps_band_not_score():
     other evidence input fixed, must change `rating` (EXCELLENT -> FAIR) but
     leave `score` and every `subscores` value byte-identical.
 
-    `findings` is fixed at 1000 so the pre-existing `high_impact` /
+    `finding_severity_counts["MEDIUM"]` is fixed at 1000 (999.113 D1(d) —
+    `agility_high_impact_ratio` now divides by the non-INFO finding count
+    derived from `finding_severity_counts`, not `totals.findings`, so padding
+    `totals.findings` alone no longer dilutes this ratio; MEDIUM is used
+    instead because it counts toward that denominator but is not otherwise
+    read by any other ratio in scoring.py, unlike LOW which also feeds
+    `modern_tls`'s `legacy_tls_count`) so the pre-existing `high_impact` /
     `agility_high_impact_ratio` ratio contribution (D-03) from a single
-    CRITICAL rounds to zero (`-1/1000 * 14.0 = -0.014`, clamped/rounded away)
+    CRITICAL rounds to zero (`-1/1001 * 14.0 = -0.014`, clamped/rounded away)
     — isolating the band-cap mechanism under test from that ratio's own,
     intentional, much smaller effect on the number. This is not evading D-03;
     it is testing D-01's "the cap moves the band, not the number" claim
@@ -132,7 +138,7 @@ def test_severity_floor_caps_band_not_score():
         "finding_severity_counts": {
             "CRITICAL": 0,
             "HIGH": 0,
-            "MEDIUM": 0,
+            "MEDIUM": 1000,
             "LOW": 0,
             "INFO": 0,
         },
@@ -150,7 +156,7 @@ def test_severity_floor_caps_band_not_score():
         "finding_severity_counts": {
             "CRITICAL": 1,
             "HIGH": 0,
-            "MEDIUM": 0,
+            "MEDIUM": 1000,
             "LOW": 0,
             "INFO": 0,
         },
