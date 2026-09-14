@@ -398,6 +398,39 @@ def _score(evidence: Dict[str, Any]) -> int:
     return int(result["score"])
 
 
+def _computed_score(evidence: Dict[str, Any]) -> int:
+    """The score BEFORE any ceiling compressed it — the emitted score when no
+    ceiling applies, otherwise the `(computed NN)` value the ceiling disclosed.
+
+    999.115 added this so a property can look underneath the consequence
+    ceiling. The ceiling is a bound on the emitted number, not a repair of the
+    arithmetic beneath it, so a property about that arithmetic (P2b's dilution)
+    must read the pre-cap value or it silently starts measuring the ceiling
+    instead of the defect.
+
+    Parsed from `rating_cap_reason` rather than read from a dedicated key
+    because that string is the ONLY channel the scorer currently exposes it
+    through — and its exact format is already pinned by
+    tests/test_score_severity_floor_regression.py and
+    tests/test_evidence_coverage_regression.py, so a format change fails
+    loudly there rather than silently degrading this helper. If a future phase
+    promotes the pre-cap number to a first-class key, read it here instead.
+    """
+    import re
+
+    result = compute_readiness_score(evidence)
+    assert result["score"] is not None, (
+        "fixture assessed zero domains — the instrument is broken, not the "
+        f"subject. coverage: {result['coverage_disclosure']}"
+    )
+    reason = result.get("rating_cap_reason") or ""
+    match = re.search(r"computed (\d+)", reason)
+    if match is None:
+        # No ceiling bound this estate, so the emitted score IS the computed one.
+        return int(result["score"])
+    return int(match.group(1))
+
+
 # ---------------------------------------------------------------------------
 # CONTROL — required by .planning/.continue-here.md's blocking constraint.
 # ---------------------------------------------------------------------------
@@ -433,23 +466,28 @@ def test_control_probe_can_distinguish_a_healthy_estate_from_a_broken_one():
 # P1 — MONOTONICITY. Adding a real weakness must never RAISE the score.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: 8 violations on the multihost estate. "
-        "agility_high_impact_ratio divides HIGH+CRITICAL by actionable_denom "
-        "(CRITICAL+HIGH+MEDIUM+LOW), so MEDIUM and LOW findings enlarge the "
-        "denominator while appearing in NO numerator of that ratio — each one "
-        "discovered dilutes the high-impact ratio. Measured: +50 MEDIUM moves "
-        "agility_signals 21 -> 22; +100 MEDIUM moves the HEADLINE 87 -> 88; "
-        "+1000 MEDIUM moves it 87 -> 89; +50/+100/+1000 LOW move agility_signals "
-        "21 -> 22/23/24. The LOW cases were NOT predicted by inspection — LOW "
-        "does feed a numerator elsewhere (modern_tls legacy-versions), so its "
-        "headline effect is net-negative and it masks a real subscore "
-        "regression. Found by sweeping, not by reading. Remove this marker "
-        "when a model change makes the property pass."
-    ),
-)
+# PROMOTED 999.115, 2026-09-14 — was xfail(strict=True). This is now a standing
+# green gate.
+#
+# The recorded failure, preserved because it is what the fix has to keep being
+# true about: 8 violations on the multihost estate. agility_high_impact_ratio
+# divided HIGH+CRITICAL by actionable_denom (CRITICAL+HIGH+MEDIUM+LOW), so
+# MEDIUM and LOW findings enlarged the denominator while appearing in NO
+# numerator of that ratio — each one discovered diluted the high-impact ratio.
+# Measured: +50 MEDIUM moved agility_signals 21 -> 22; +100 MEDIUM moved the
+# HEADLINE 87 -> 88; +1000 MEDIUM moved it 87 -> 89; +50/+100/+1000 LOW moved
+# agility_signals 21 -> 22/23/24. The LOW cases were NOT predicted by
+# inspection. Found by sweeping, not by reading.
+#
+# Closed by REMOVING agility_high_impact_ratio entirely (523dd818) rather than
+# re-denominating it: any ratio in that slot carries the defect, because a
+# finding COUNT is not a population that badness is proportional to.
+# _consequence_ceiling() carries the high-impact signal absolutely instead.
+#
+# NON-VACUITY (blocking constraint 2): this property asserts a score does NOT
+# rise, so it would be satisfied by a score that cannot move. On this same
+# estate the score demonstrably moves — full remediation spans 18 -> 78, and
+# per-fix lift is +1 (renew all certs) / +2 (remove all plaintext).
 def test_p1_adding_findings_never_raises_the_score():
     """P1 — discovering more genuine weakness must not improve the verdict.
 
@@ -537,14 +575,18 @@ def test_p2a_score_is_independent_of_the_raw_probe_count(probe_count):
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "999.115 / measured 2026-09-14: 999.113 removed the probe count as a "
-        "denominator but the replacement, assessable_endpoint_count, ALSO "
-        "grows with scan depth. Holding every weakness fixed and adding only "
-        "healthy assessable endpoints: 38 -> 58 endpoints moves the score "
-        "87 -> 89; -> 138 moves it to 91; -> 538 moves it to 93. The estate's "
-        "absolute exposure (6 plaintext endpoints, 5 expired certs) is "
-        "unchanged throughout. This is 999.115's 'no concept of CONSEQUENCE, "
-        "only PREVALENCE' gap, measured."
+        "999.115 / RE-MEASURED 2026-09-14 after all six model changes: STILL "
+        "OPEN. 999.113 removed the probe count as a denominator but the "
+        "replacement, assessable_endpoint_count, ALSO grows with scan depth. "
+        "Holding every weakness fixed and adding only healthy assessable "
+        "endpoints, the COMPUTED score rises monotonically at every step: "
+        "71 -> 74 (+20) -> 78 (+100) -> 82 (+500). The consequence ceiling "
+        "MASKS most of that in the emitted number (18 -> 18 -> 20 -> 20) but "
+        "does not remove it — the estate's absolute exposure (6 plaintext "
+        "endpoints, 5 expired certs, 5 CRITICAL) is unchanged throughout. "
+        "This is 999.115's 'no concept of CONSEQUENCE, only PREVALENCE' gap, "
+        "and it is a denominator problem in assessable_endpoint_count, a "
+        "separate fix from 999.115's model work."
     ),
 )
 @pytest.mark.parametrize("extra_healthy_endpoints", [20, 100, 500])
@@ -567,6 +609,22 @@ def test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints(
     This is exactly the axis 999.115 candidate (C) — an absolute severity term
     extending `cap_band_for_severity`'s reasoning from the band to the number —
     exists to address. It will still fail under candidate (D) alone.
+
+    999.115 CLOSING NOTE — C landed and P2b SURVIVED it, so this property stays
+    xfail. The assertion below now checks the COMPUTED score as well as the
+    emitted one, and that addition is load-bearing rather than cosmetic.
+    Asserting the emitted number alone, the `extra=20` case began PASSING after
+    the ceiling landed — not because dilution stopped (the computed score still
+    rose 71 -> 74) but because the DEEP_CRITICAL_CEILING compression rounds both
+    to 18: round(25 * 71/100) = 18 and round(25 * 74/100) = 18 under
+    half-to-even. A green gate resting on that coincidence would report the
+    defect as fixed at one parameter and open at two.
+
+    That is the exact hazard `.planning/.continue-here.md`'s second blocking
+    constraint names — a property asserting a score does not RISE, satisfied by
+    a number that cannot move far enough to show it. The ceiling is a MASK on
+    this defect, not a fix for it, and the property has to look underneath the
+    mask to keep saying something true.
     """
     base = _multihost_evidence()
     wider = copy.deepcopy(base)
@@ -582,6 +640,15 @@ def test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints(
         f"RAISED the score from {base_score} to {wider_score} while every "
         "weakness count stayed identical. Scanning more ports improved the "
         "client's grade without improving the client's security."
+    )
+    base_computed = _computed_score(base)
+    wider_computed = _computed_score(wider)
+    assert wider_computed <= base_computed, (
+        f"observing {extra_healthy_endpoints} additional healthy endpoints "
+        f"raised the PRE-CEILING score from {base_computed} to {wider_computed} "
+        "while every weakness count stayed identical. The emitted number may "
+        "hide this behind the consequence ceiling, but the dilution is still "
+        "there and will surface on any estate the ceiling does not bind."
     )
 
 
@@ -631,18 +698,22 @@ def test_p3_an_estate_with_criticals_scores_below_an_all_medium_estate():
 # P4 — DYNAMIC RANGE. The operator's calibration bottom rung.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: the multihost reference estate scores "
-        "87 against an operator calibration ceiling of 30 (tightened from 40 "
-        "on 2026-09-14 when R4's POOR target made 40 non-binding). THIS FAILURE IS THE "
-        "DELIVERABLE — it converts 'most people will see 87 and say not bad' "
-        "into a standing numeric statement of exactly how far off calibration "
-        "the model is. 999.113 moved it 91 -> 87; the remaining 57 points are "
-        "999.115's subject. Do NOT relax the ceiling to make this pass."
-    ),
-)
+# PROMOTED 999.115, 2026-09-14 — was xfail(strict=True). Standing green gate.
+#
+# The recorded failure: the multihost reference estate scored 87 against an
+# operator calibration ceiling of 30 (tightened from 40 on 2026-09-14 when R4's
+# POOR target made 40 non-binding). That failure was the deliverable — it turned
+# "most people will see 87 and say not bad" into a standing numeric statement of
+# how far off calibration the model was. 999.113 moved it 91 -> 87; 999.115's
+# six changes moved it 87 -> 18.
+#
+# The ceiling was NOT relaxed to make this pass, which the original reason
+# string explicitly forbade. It still reads 30.
+#
+# NON-VACUITY (blocking constraint 2): this asserts a score stays BELOW a
+# bound, which a pinned-low score would satisfy trivially. It does not apply
+# here — the same estate spans 18 -> 78 under full remediation, and its three
+# calibration profiles return three distinct numbers (16/18/19).
 def test_p4_the_multihost_reference_estate_scores_below_the_calibration_ceiling():
     """P4 — dynamic range, against the one rung the operator has set.
 
@@ -912,15 +983,16 @@ def test_p6b_the_full_remediation_span_is_at_least_one_band_wide():
 # deliver it. "Do not begin by picking a shape" still holds.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: a hygiene-perfect estate with ZERO "
-        "post-quantum readiness scores 100 on a Quantum Infrastructure "
-        "Readiness Kit. Operator decision 2026-09-14: 'no PQC, no 100'. "
-        "Remove this marker when the model earns the top of its own scale."
-    ),
-)
+# PROMOTED 999.115, 2026-09-14 — was xfail(strict=True). Standing green gate.
+#
+# The recorded failure: a hygiene-perfect estate with ZERO post-quantum
+# readiness scored 100 on a Quantum Infrastructure Readiness Kit. Operator
+# decision 2026-09-14: "no PQC, no 100".
+#
+# Closed by _pqc_readiness_ceiling() (523dd818) — a CEILING at the top of GOOD,
+# not a bonus. The threshold is derived from BAND_THRESHOLDS rather than chosen:
+# it is the operator's R2 rung ("well-run, no PQC" targets GOOD) expressed
+# through the published bands.
 def test_p7a_a_zero_pqc_estate_does_not_reach_the_top_of_the_scale():
     """P7(a) — 100 must mean quantum-ready, on a quantum-readiness product.
 
@@ -945,18 +1017,17 @@ def test_p7a_a_zero_pqc_estate_does_not_reach_the_top_of_the_scale():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / measured 2026-09-14: adopting hybrid X25519MLKEM768 on "
-        "EVERY endpoint moves the score by 0 points (100 -> 100). The "
-        "agility_pqc_hybrid_bonus of 8.0 exists and is computed, but "
-        "agility_signals is already at its 25/25 ceiling, so "
-        "_apply_weighted_impacts' _clamp(total, 0.0, 25.0) absorbs it "
-        "entirely. Same saturation mechanism as P4's unreachable floor, "
-        "pointed at the ceiling."
-    ),
-)
+# PROMOTED 999.115, 2026-09-14 — was xfail(strict=True). Standing green gate.
+#
+# The recorded failure: adopting hybrid X25519MLKEM768 on EVERY endpoint moved
+# the score by 0 points (100 -> 100). agility_pqc_hybrid_bonus of 8.0 existed
+# and was computed, but agility_signals was already at its 25/25 ceiling, so
+# _apply_weighted_impacts' _clamp(total, 0.0, 25.0) absorbed it entirely.
+#
+# That measurement is what FORCED the ceiling shape in P7(a): any bonus, of any
+# size, is absorbed the same way. A ceiling is the only shape that survives the
+# subscore clamp. Adopting PQC now moves the score by lifting the ceiling off
+# it, rather than by adding points underneath one.
 def test_p7b_adopting_pqc_improves_the_score():
     """P7(b) — the mechanism under P7(a), and P1's positive mirror.
 
@@ -995,41 +1066,37 @@ def test_p7b_adopting_pqc_improves_the_score():
 @pytest.mark.parametrize(
     "rung_name,builder,target_band",
     [
+        # PROMOTED 999.115, 2026-09-14 — R2, R3 and R4 were each
+        # xfail(strict=True) and are now standing green gates. The whole ladder
+        # is 5/5: R1 100 EXCELLENT / R2 78 GOOD / R3 46 FAIR / R4 24 POOR /
+        # R5 18 (below its ceiling of 30, asserted by P4).
+        #
+        # Recorded failures, preserved because they are the distance the six
+        # model changes actually closed — every one of these estates used to
+        # earn the product's top grade:
+        #   R2 scored 95, band EXCELLENT, against a target of GOOD (70-84).
+        #      A quantum-blind estate read as top-of-scale.
+        #   R3 scored 91, band EXCELLENT, against a target of FAIR (35-54).
+        #      Off by 37 points and three whole bands.
+        #   R4 scored 85, band EXCELLENT, against a target of POOR (0-34). An
+        #      estate with 8 expired certificates, 5 plaintext services and
+        #      2 CRITICAL findings earned the product's top grade.
+        #
+        # The target bands were NOT moved to meet the model. They were set
+        # blind by the operator on 2026-09-14 — estates described in
+        # infrastructure terms, no scores shown — which is what makes this
+        # ladder a measurement rather than a description, and what makes these
+        # three promotions mean something.
+        #
+        # Standing caveat, unchanged by the promotion: four of the five rungs
+        # are synthetic. The SHAPE this ladder evidences (consequence must be
+        # absolute, not proportional) is well supported; the CONSTANTS are a
+        # first fit. Add real-scan rungs before treating the thresholds as
+        # settled.
         pytest.param(*CALIBRATION_LADDER[0], id="R1-pristine-EXCELLENT"),
-        pytest.param(
-            *CALIBRATION_LADDER[1], id="R2-well-run-GOOD",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    "999.115 / measured 2026-09-14: R2 scores 95, band "
-                    "EXCELLENT, against a target band of GOOD (70-84). A "
-                    "quantum-blind estate reads as top-of-scale."
-                ),
-            ),
-        ),
-        pytest.param(
-            *CALIBRATION_LADDER[2], id="R3-typical-FAIR",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    "999.115 / measured 2026-09-14: R3 scores 91, band "
-                    "EXCELLENT, against a target band of FAIR (35-54). Off by "
-                    "37 points and three whole bands."
-                ),
-            ),
-        ),
-        pytest.param(
-            *CALIBRATION_LADDER[3], id="R4-neglected-POOR",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    "999.115 / measured 2026-09-14: R4 scores 85, band "
-                    "EXCELLENT, against a target band of POOR (0-34). An "
-                    "estate with 8 expired certificates, 5 plaintext services "
-                    "and 2 CRITICAL findings earns the product's top grade."
-                ),
-            ),
-        ),
+        pytest.param(*CALIBRATION_LADDER[1], id="R2-well-run-GOOD"),
+        pytest.param(*CALIBRATION_LADDER[2], id="R3-typical-FAIR"),
+        pytest.param(*CALIBRATION_LADDER[3], id="R4-neglected-POOR"),
     ],
 )
 def test_ladder_rung_lands_in_its_target_band(rung_name, builder, target_band):
