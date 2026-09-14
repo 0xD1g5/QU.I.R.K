@@ -162,6 +162,11 @@ def test_severity_floor_caps_band_and_score():
     """
     base_evidence = {
         "totals": {"endpoints": 10, "findings": 1000},
+        # 999.115: PQC-ready, so the "no PQC, no 100" ceiling does not confound
+        # a test about the SEVERITY ceiling. Same isolation reasoning the
+        # MEDIUM=1000 pin uses — keep every other cap out of the mechanism
+        # under test.
+        "pqc_hybrid_endpoint_count": 10,
         "finding_severity_counts": {
             "CRITICAL": 0,
             "HIGH": 0,
@@ -180,6 +185,7 @@ def test_severity_floor_caps_band_and_score():
 
     capped_evidence = {
         "totals": {"endpoints": 10, "findings": 1000},
+        "pqc_hybrid_endpoint_count": 10,   # 999.115, as above
         "finding_severity_counts": {
             "CRITICAL": 1,
             "HIGH": 0,
