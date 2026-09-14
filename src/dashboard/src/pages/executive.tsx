@@ -7,7 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip as UiTooltip,
+  TooltipContent as UiTooltipContent,
+  TooltipProvider as UiTooltipProvider,
+  TooltipTrigger as UiTooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Download, Loader2, AlertTriangle } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
@@ -205,6 +210,7 @@ export function ExecutivePage() {
   const downloadBlobsRef = useRef<Map<string, { url: string; timer: number }>>(new Map())
 
   useEffect(() => {
+    const downloadBlobs = downloadBlobsRef.current
     return () => {
       if (revokeTimerRef.current !== null) {
         clearTimeout(revokeTimerRef.current)
@@ -214,11 +220,11 @@ export function ExecutivePage() {
         URL.revokeObjectURL(blobUrlRef.current)
         blobUrlRef.current = null
       }
-      for (const { url, timer } of downloadBlobsRef.current.values()) {
+      for (const { url, timer } of downloadBlobs.values()) {
         clearTimeout(timer)
         URL.revokeObjectURL(url)
       }
-      downloadBlobsRef.current.clear()
+      downloadBlobs.clear()
     }
   }, [])
 
@@ -403,7 +409,7 @@ export function ExecutivePage() {
                 ? `Report from scan: ${formatInstantDate(manifest.scan_time)}`
                 : "Report artifacts found — scan time unknown"}
           </span>
-          <TooltipProvider>
+          <UiTooltipProvider>
           <div className="flex items-center gap-2" aria-label="Download report artifacts" role="group">
             {REPORT_FORMATS.map(({ key, label, extension }) => {
               const avail = manifest.formats[key]
@@ -436,18 +442,18 @@ export function ExecutivePage() {
               // fix) — keyboard- and screen-reader-reachable, and `title`
               // keeps the reason in the DOM even when the tooltip is closed.
               return (
-                <Tooltip key={key}>
-                  <TooltipTrigger asChild>
+                <UiTooltip key={key}>
+                  <UiTooltipTrigger asChild>
                     <span tabIndex={0} title={reason ?? undefined}>
                       {buttonEl}
                     </span>
-                  </TooltipTrigger>
-                  {reason && <TooltipContent>{reason}</TooltipContent>}
-                </Tooltip>
+                  </UiTooltipTrigger>
+                  {reason && <UiTooltipContent>{reason}</UiTooltipContent>}
+                </UiTooltip>
               )
             })}
           </div>
-          </TooltipProvider>
+          </UiTooltipProvider>
           </>
           )}
           {downloadMessage && (

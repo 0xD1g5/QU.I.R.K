@@ -303,11 +303,14 @@ describe("ExecutivePage — DELIV-02 report download group (interaction state ma
   })
 
   it("only the clicked format enters the loading state", async () => {
-    let resolveDocx: ((v: DownloadResult) => void) | null = null
+    // Boxed in an object (rather than a bare `let`) to sidestep a TS control-flow
+    // narrowing quirk where a `let` reassigned only inside a Promise executor
+    // narrows to `never` at the later read site.
+    const docxResolver: { fn: ((v: DownloadResult) => void) | null } = { fn: null }
     downloadImpl = (fmt: string) => {
       if (fmt === "docx") {
         return new Promise<DownloadResult>((resolve) => {
-          resolveDocx = resolve
+          docxResolver.fn = resolve
         })
       }
       return defaultDownloadImpl()
@@ -330,7 +333,7 @@ describe("ExecutivePage — DELIV-02 report download group (interaction state ma
 
     // Resolve the hung promise so the test does not leave an unhandled
     // pending state behind for later tests.
-    resolveDocx?.({ ok: true, blob: async () => new Blob(["x"]) })
+    docxResolver.fn?.({ ok: true, blob: async () => new Blob(["x"]) })
     await waitFor(() => expect(screen.queryByRole("button", { name: /Preparing…/ })).not.toBeInTheDocument())
   })
 
