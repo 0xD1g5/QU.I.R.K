@@ -499,7 +499,7 @@ Plans:
 - [x] 209-03-PLAN.md — Wave 1: reports.py route module, manifest schema, app.py registration
 - [x] 209-04-PLAN.md — Wave 2: five-format download control on the Executive page
 - [x] 209-05-PLAN.md — Wave 2: containment gate artifact + RPT-03 sweep extension + export-pdf regression
-- [ ] 209-06-PLAN.md — Wave 3: operator docs, artifact-inventory correction, Obsidian sync
+- [x] 209-06-PLAN.md — Wave 3: operator docs, artifact-inventory correction, Obsidian sync
 - [ ] 209-07-PLAN.md — Wave 4: manual verification against the real output directory (2 checkpoints)
 - [ ] 209-08-PLAN.md — Wave 5: CLAUDE.md Mandatory Phase Completion Steps — UAT Series 209, worklist regeneration, Obsidian phase note
 **UI hint**: yes
@@ -514,7 +514,7 @@ Plans:
 | 206. Dashboard UI Coverage Drain | 0/? | Not started | - |
 | 207. Browser-Only Coverage Verdict | 0/? | Not started | - |
 | 208. Security, Report Coverage & Doc Debt | 0/? | Not started | - |
-| 209. Deliverable Reachability | 5/8 | In progress | - |
+| 209. Deliverable Reachability | 6/8 | In progress | - |
 
 ## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12
 

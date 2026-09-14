@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-14T19:54:54Z"
+last_updated: "2026-09-14T20:44:00Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 38
-  completed_plans: 21
-  percent: 55
+  completed_plans: 22
+  percent: 58
 ---
 
 # Project State
@@ -1259,9 +1259,35 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 209 (Deliverable Reachability) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Executing Phase 209 on branch `phase-209-deliverable-reachability`
-Last activity: 2026-09-14 — 209-05 (Wave 2, containment-gate writeup, DELIV-01) COMPLETE. Closed
+Last activity: 2026-09-14 — 209-06 (Wave 3, operator docs + artifact-inventory correction + Obsidian
+sync) COMPLETE. Re-derived `write_reports()`'s `output_files` list from a fresh grep against
+`quirk/reports/writer.py` this session (not copied from any prior source) — **observed 12 entries**,
+confirming plan 03's independently-recorded count and RESEARCH.md's claim; **CONTEXT.md's 7-item
+Phase Boundary prose is the source that undercounted**, missing the 5 markdown/intelligence
+artifacts (`executive-summary`, `technical-findings`, `scorecard`, `roadmap`, `intelligence`).
+Re-confirmed the served enum stays fixed at exactly 5 (`html`/`pdf`/`docx`/`cbom-json`/`cbom-xml`)
+via the plan-03 acceptance command. Wrote `209-ARTIFACT-INVENTORY.md` (gitignored phase artifact)
+with the full table, the D-02 stamp-vs-`scan_run_id` binding constraint, and the `ended_utc`-vs-
+report-body-`max(scanned_at)` scan-time proxy distinction. `docs/report-interpretation.md` gained
+§26 (five downloadable formats, three verbatim D-09 unavailable-reason strings, three scan-time-line
+forms, D-02 cause, D-07 auth caveat, and — satisfying criterion 5 — an explicit written deferral:
+"Export PDF is not the same thing as these downloads... a deliberately deferred item, not an
+oversight"). `docs/operators-guide.md` gained §3.1.7 documenting both new endpoints (example
+manifest JSON, 404-by-design for any unlisted format, a correct authenticated `curl` invocation, and
+the D-02 latest-scan-only cause restated at endpoint level). `tests/test_error_codes_freshness.py`
+re-confirmed green (3 passed) — no error code added, no regeneration needed. Both docs re-synced
+directly to the Obsidian vault filesystem (`/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Guides/`),
+verified byte-identical to their `docs/` sources after stripping the 8-line frontmatter block (two
+clean diffs). `docs/api-reference.md` deferral recorded in `209-06-SUMMARY.md` per CLAUDE.md's
+documentation checklist (file does not exist; interim docs live in `docs/operators-guide.md` §3.1.7,
+same precedent Phase 193 set for `GET /api/connectors/availability`). DELIV-01/DELIV-02 left
+`Pending` in REQUIREMENTS.md — this plan's own `requirements-completed: []` reflects that the
+functional requirement was already satisfied by 209-03/209-04, and flipping the checkbox is left to
+209-07/209-08 per the multi-plan-requirement hand-verification convention. Zero deviations from
+plan. Commit `e1411e93`. See `209-06-SUMMARY.md`. Next: 209-07 (manual verification, 2 checkpoints).
+Previous: 209-05 (Wave 2, containment-gate writeup, DELIV-01) COMPLETE. Closed
 ROADMAP criteria 2, 5, 6 with EXECUTED evidence, not assertion. Extended the RPT-03 run-time sweep
 (`tests/test_report_path_guard.py`) to a second axis — `reports.router`'s path PARAMETERS, not just
 schema FIELDS — with a mutation check proving the assertion helper can detect an offender; demonstrated
