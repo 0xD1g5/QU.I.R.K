@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-14T18:30:08Z"
+last_updated: "2026-09-14T18:59:00Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 38
-  completed_plans: 18
-  percent: 33
+  completed_plans: 19
+  percent: 50
 ---
 
 # Project State
@@ -1259,15 +1259,25 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 209 (Deliverable Reachability) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Executing Phase 209 on branch `phase-209-deliverable-reachability`
-Last activity: 2026-09-14 — 209-01 (Wave 0 RED test scaffolding, DELIV-01) COMPLETE. Wrote
+Last activity: 2026-09-14 — 209-02 (Wave 0 RED frontend test scaffolding, DELIV-02) COMPLETE. Wrote
+`src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx` (10 legs across 2
+describe blocks: render/availability — 5-button labels, scan-time disclosure known/unknown,
+per-format unavailable reason, D-10 fresh-install copy; interaction — single download + object-URL
+lifecycle, per-format independent loading state, D-07 non-200-never-downloads trap with both
+server-detail and unparseable-body fallback copy, and per-format concurrent blob-cleanup-on-unmount)
+against the not-yet-existing Executive-page download group — collects cleanly, no import error,
+0 passed / 10 failed, all because the buttons do not exist yet. One deviation: dropped an unused
+`opts` parameter flagged by `npm run lint` before committing. `executive.tsx` was NOT touched.
+Commit `61a9ae8f`. See `209-02-SUMMARY.md`.
+Previous: 209-01 (Wave 0 RED backend test scaffolding, DELIV-01) COMPLETE 2026-09-14 — wrote
 `tests/test_reports_download_route.py` (21 legs: manifest, download, 3-part containment guard,
 auth) against the not-yet-existing `GET /api/reports/latest/*` route — collects cleanly, first run
 was 1 passed (route-independent negative control) / 21 failed for the right reason. One deviation:
 split the plan's single negative-control test into two functions so the route-independent half
 could satisfy the acceptance criterion requiring it to pass today. Commit `8134dcb5`. See
-`209-01-SUMMARY.md`. Next: 209-02 (Wave 0, parallel).
+`209-01-SUMMARY.md`. Next: 209-03 (backend route implementation, Wave 1).
 
 **Phase 206 remains PAUSED at 5 of 13 — 209 does not resume it.** `state.begin-phase` overwrote
 this block's former 206 pause summary; the full record survives immediately below under
