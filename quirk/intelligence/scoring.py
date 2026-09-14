@@ -105,7 +105,6 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "motion_broker_plaintext_ratio": 14.0,   # Phase 34 D-03 — KAFKA-PLAIN / AMQP-PLAIN / REDIS-PLAIN
     "motion_broker_weak_tls_ratio": 8.0,     # Phase 34 D-03 — TLSv1.0/1.1/SSLv3 on broker
     "motion_broker_weak_cipher_ratio": 6.0,  # Phase 34 D-03 — HIGH-only cipher (A5)
-    "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
     # 999.115 P8 — certificates observed but NO key type determined for any of
@@ -148,10 +147,37 @@ def _as_float(v: Any) -> float:
         return 0.0
 
 
+# 999.115 candidate D — the prevalence response curve.
+#
+# `penalty = ratio x weight` is LINEAR, so it treats 30%-of-certificates-expired
+# as exactly six times worse than 5%. No consultant reads it that way: 5% is
+# hygiene drift, 30% is an organisation that has lost control of its PKI. Alarm
+# is steeply non-linear in prevalence; the model drew a straight line through
+# the origin.
+#
+# Applying `ratio ** PREVALENCE_CURVE_EXPONENT` bends that line so low
+# prevalence registers proportionally harder. Measured contributions, on the
+# calibration ladder:
+#   - it reduces SATURATION (subscores pinned at 0 or 25), keeping per-domain
+#     numbers informative rather than flat — this was D's expected benefit
+#   - it narrows, though does not eliminate, the P2b dilution effect whereby
+#     observing more healthy endpoints improves the score without any change in
+#     absolute exposure
+#
+# What D does NOT do, measured rather than assumed: it never fixes ladder
+# monotonicity at any exponent, and it never moves R2 (a hygienically spotless
+# but quantum-blind estate has no prevalence to curve). D is a refinement. The
+# consequence ceiling is the fix.
+#
+# The exponent is insensitive across 0.4-0.6; 0.5 is the midpoint of that
+# measured-stable range, not a tuned value.
+PREVALENCE_CURVE_EXPONENT: float = 0.5
+
+
 def _ratio(num: int, den: int) -> float:
     if den <= 0:
         return 0.0
-    return max(0.0, num / den)
+    return max(0.0, num / den) ** PREVALENCE_CURVE_EXPONENT
 
 
 def _clamp(v: float, lo: float, hi: float) -> float:
@@ -258,6 +284,32 @@ def _consequence_ceiling(critical_count: int, high_count: int) -> Tuple[Optional
     return None, None
 
 
+def _pqc_readiness_ceiling(pqc_hybrid_count: int) -> Tuple[Optional[int], Optional[str]]:
+    """999.115 P7a — "no PQC, no 100". Operator decision, 2026-09-14.
+
+    An estate with no observed hybrid post-quantum key exchange cannot reach
+    the top of the scale on a *quantum* readiness assessment. Before this, a
+    hygiene-perfect but quantum-blind estate scored 100 — as exposed to
+    harvest-now-decrypt-later as it was before the engagement began, and told
+    so by a perfect grade.
+
+    Implemented as a CEILING and not as a larger bonus, and that is forced
+    rather than preferred: `agility_pqc_hybrid_bonus` is already 8.0, the
+    joint-largest bonus in SCORE_WEIGHTS, and measurement showed adopting PQC
+    on every endpoint moved the score by exactly 0 points, because
+    `_apply_weighted_impacts` clamps each domain at 25.0 and a clean estate is
+    already there. Any bonus is absorbed the same way. A ceiling is the only
+    shape that survives the clamp.
+
+    The threshold is derived, not chosen: the top of GOOD. That is the
+    operator's R2 rung — "well-run, no PQC" targets GOOD — expressed through
+    `BAND_THRESHOLDS` rather than restated as a number.
+    """
+    if pqc_hybrid_count > 0:
+        return None, None
+    return _top_of_band("GOOD"), "no post-quantum key exchange observed"
+
+
 def _apply_weighted_impacts(
     impacts: List[Tuple[str, float]],
     score_cap: float = 25.0,
@@ -356,30 +408,25 @@ def compute_readiness_score(
     # .planning/todos/pending/999.113-domain-connector-ratio-denominator-is-approximate.md
     domain_denom = endpoint_denom
     #
-    # D1(d) -- found during implementation by arithmetic, not by inspection,
-    # and initially (wrongly) treated as out of scope / already correct.
-    # `agility_high_impact_ratio` divides high-impact (HIGH+CRITICAL) findings
-    # by `max(findings, 1)`, where `findings` is `totals.findings` -- the
-    # TOTAL finding count INCLUDING INFO. INFO count scales with scan depth
-    # the same way `totals.endpoints` does, so this site carries exactly the
-    # defect D1 exists to fix, just expressed through a different population:
-    # on the 31-host estate, 19 HIGH+CRITICAL findings against 398 total
-    # findings (330 of them INFO) register as 4.8%, not the 27.9% they are
-    # against the 68 non-INFO (i.e. actionable) findings. The honest
-    # population for "high-impact findings" is ACTIONABLE findings -- LOW
-    # severity and above -- derived from `finding_severity_counts`, which is
-    # already destructured as `sev` above. Guarded the same way every other
-    # family denom is: an all-INFO (or empty) scan yields `actionable_denom
-    # == 0`, and `_ratio()` returns 0.0 rather than fabricating a penalty or
-    # dividing by zero.
-    actionable_denom = max(
-        0,
-        _as_int(sev.get("CRITICAL", 0))
-        + _as_int(sev.get("HIGH", 0))
-        + _as_int(sev.get("MEDIUM", 0))
-        + _as_int(sev.get("LOW", 0)),
-    )
-
+    #
+    # 999.115 -- `actionable_denom` and `agility_high_impact_ratio` are GONE.
+    # 999.113 D1(d) corrected this ratio's denominator from `totals.findings`
+    # (which includes INFO, and so scaled with scan depth) to the actionable
+    # finding count. That was right, and insufficient: ANY ratio here carries
+    # the same defect, because a finding count is not a population that badness
+    # is proportional to. As a prevalence measure it diluted whenever the
+    # denominator grew, which made discovering MEDIUM and LOW findings RAISE
+    # the score -- the sole remaining cause of P1
+    # (tests/test_score_properties.py::test_p1_*).
+    #
+    # It is removed rather than re-denominated because
+    # `_consequence_ceiling()` now carries the high-impact signal ABSOLUTELY,
+    # in the currency that signal actually has: how many CRITICAL and HIGH
+    # findings exist, not what fraction of the finding list they represent.
+    # Measured: removing the term closes P1 with the calibration ladder intact,
+    # and removing it WITHOUT the ceiling closes nothing -- the two changes only
+    # work together. See
+    # .planning/decisions/999.115-scoring-model-candidate-measurements.md.
     plaintext_http_count = max(0, _as_int(evidence.get("plaintext_http_count", 0)))
     http_on_tls_count = max(0, _as_int(evidence.get("http_on_tls_port_count", 0)))
     mtls_present_count = max(0, _as_int(evidence.get("mtls_present_count", 0)))
@@ -387,13 +434,11 @@ def compute_readiness_score(
 
     unknown_count = max(0, _as_int(protocol_counts.get("UNKNOWN", 0)))
     legacy_tls_count = max(0, _as_int(sev.get("LOW", 0)))
-    # Phase 184.4 D-03: this CRITICAL count also feeds the severity band cap
-    # applied to `rating` below (near `total_score = ...`). That cap moves the
-    # BAND; this ratio moves the NUMBER — they are orthogonal, not a double
-    # count. Do NOT remove CRITICAL from `high_impact` to "avoid overlap".
-    # See the cap site below and `quirk/severity_bands.py::cap_band_for_severity()`
-    # for the full rationale.
-    high_impact = max(0, _as_int(sev.get("HIGH", 0)) + _as_int(sev.get("CRITICAL", 0)))
+    # 999.115: `high_impact` is gone with the ratio it fed. CRITICAL and HIGH
+    # counts now reach the score through `_consequence_ceiling()`, which reads
+    # `sev` directly at the cap site below. Phase 184.4 D-03's "do NOT remove
+    # CRITICAL from high_impact to avoid overlap" warning is retired with it:
+    # there is no longer a second path for it to overlap WITH.
 
     expired_count = max(0, _as_int(cert_obs.get("expired_count", 0)))
     expiring_count = max(0, _as_int(cert_obs.get("expiring_count", 0)))
@@ -455,7 +500,6 @@ def compute_readiness_score(
     pqc_hybrid_count = max(0, _as_int(evidence.get("pqc_hybrid_endpoint_count", 0)))
 
     agility_impacts: List[Tuple[str, float]] = [
-        ("High-impact findings", -_ratio(high_impact, actionable_denom) * w["agility_high_impact_ratio"]),
         ("Unknown service inventory", -_ratio(unknown_count, endpoint_denom) * w["agility_unknown_ratio"]),
     ]
     if rsa_count > 0 and ecdsa_count == 0:
@@ -614,9 +658,18 @@ def compute_readiness_score(
         # after `_rating()` would reproduce exactly the incoherence this change
         # exists to remove (a score of 87 wearing the word FAIR).
         _high_count = max(0, _as_int(sev.get("HIGH", 0)))
-        _ceiling, _ceiling_reason = _consequence_ceiling(
-            max(0, _as_int(sev.get("CRITICAL", 0))), _high_count
-        )
+        _candidate_ceilings = [
+            _consequence_ceiling(
+                max(0, _as_int(sev.get("CRITICAL", 0))), _high_count
+            ),
+            _pqc_readiness_ceiling(pqc_hybrid_count),
+        ]
+        # Lowest ceiling binds, and its reason is the one disclosed. Collecting
+        # them in a list rather than nesting conditionals means a future third
+        # ceiling is one entry, and cannot silently take precedence over an
+        # existing one by being written earlier in an if/elif chain.
+        _applicable = [(c, r) for c, r in _candidate_ceilings if c is not None]
+        _ceiling, _ceiling_reason = min(_applicable, default=(None, None))
         # COMPRESS into [0, ceiling] rather than clamp to it. This distinction
         # is load-bearing and was found by measurement, not by design: a hard
         # `min(score, ceiling)` destroys every gradient below the ceiling, so on
@@ -638,14 +691,17 @@ def compute_readiness_score(
 
         numeric_band = _rating(total_score)
 
-        # Phase 184.4 D-01/D-02/D-03/D-06/D-09: severity floor on the BAND only.
-        # The number (`total_score`) never moves here. Any open CRITICAL finding
-        # caps the emitted band at FAIR (never a graduated ladder — see
-        # `cap_band_for_severity()`). This is orthogonal to, and does NOT
-        # double-count, the `high_impact`/`agility_high_impact_ratio` contribution
-        # above (D-03): that path already moved `total_score` down; this path
-        # only changes the label attached to it. `critical_count` is read from
-        # the `sev` mapping already in scope above (D-06) — no new parameter.
+        # Phase 184.4 D-01/D-02/D-06/D-09, as amended by 999.115. The band cap
+        # below is now usually a NO-OP: the consequence ceiling has already
+        # moved the number into the band this would otherwise have forced. It
+        # is kept as defence in depth — a second, independent guarantee that a
+        # CRITICAL-bearing estate cannot be labelled EXCELLENT — and removing it
+        # would discard that for no benefit.
+        #
+        # D-03's "this must not double-count `agility_high_impact_ratio`"
+        # rationale no longer applies: that term was removed by 999.115 (see the
+        # note where `high_impact` is derived), so there is no other path by
+        # which consequence reaches the number.
         critical_count = max(0, _as_int(sev.get("CRITICAL", 0)))
         rating = cap_band_for_severity(numeric_band, critical_count)
         rating_cap_reason = cap_reason(numeric_band, rating, critical_count, total_score)

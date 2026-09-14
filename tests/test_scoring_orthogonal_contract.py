@@ -18,7 +18,7 @@ This parametrized test suite forward-locks that contract in perpetuity.
 from __future__ import annotations
 
 import pytest
-from quirk.intelligence.scoring import compute_readiness_score
+from quirk.intelligence.scoring import _top_of_band, compute_readiness_score
 
 # Phase 188 SCORE-06: one representative protocol_counts literal per
 # assessed-predicate (KERBEROS for identity_trust, POSTGRESQL for
@@ -107,16 +107,43 @@ def test_subscore_orthogonality(category, trigger_key, trigger_value, clean_cate
         )
 
 
-def test_severity_floor_caps_band_not_score():
-    """Phase 184.4 D-03: the severity floor caps the BAND only, never the score.
+def test_severity_floor_caps_band_and_score():
+    """999.115: the severity floor caps the SCORE, and the band follows it.
 
-    Executable form of "the floor caps the band, not the number" — this is what
-    fails loudly if a future contributor "simplifies" `high_impact` per RESEARCH
-    Pitfall 2, or moves the cap onto `total_score` instead of `rating`.
+    **This test formerly asserted the opposite**, as
+    `test_severity_floor_caps_band_not_score`, and it was renamed rather than
+    edited in place so the reversal cannot be mistaken for a drifted
+    expectation. Its original words, kept verbatim because they are the reason
+    the reversal was noticed at all:
 
-    Toggling `finding_severity_counts["CRITICAL"]` between 0 and 1, with every
-    other evidence input fixed, must change `rating` (EXCELLENT -> FAIR) but
-    leave `score` and every `subscores` value byte-identical.
+        "Phase 184.4 D-03: the severity floor caps the BAND only, never the
+         score. Executable form of 'the floor caps the band, not the number' —
+         this is what fails loudly if a future contributor 'simplifies'
+         `high_impact` per RESEARCH Pitfall 2, or moves the cap onto
+         `total_score` instead of `rating`. Toggling
+         `finding_severity_counts['CRITICAL']` between 0 and 1, with every
+         other evidence input fixed, must change `rating` (EXCELLENT -> FAIR)
+         but leave `score` and every `subscores` value byte-identical."
+
+    It did fail loudly, on the first attempt to move the cap, which is the
+    system working. D-03 is **superseded, not deleted** — see
+    `.planning/decisions/999.115-severity-caps-the-number-supersedes-184.4-D-03.md`
+    for the full rationale, and `REQUIREMENTS.md`'s D-03 entry, which stands as
+    the historical record.
+
+    The short version: separating the two produced the product's central
+    incoherence — a purpose-built catastrophic estate whose number said 87
+    (numerically EXCELLENT) while its label said FAIR. Two statements about one
+    estate, disagreeing, with the number being the half that survives into a
+    slide. A band cap exists BECAUSE the number was already known to be wrong;
+    999.115 moves the correction to where the defect is.
+
+    What is asserted now: toggling CRITICAL between 0 and 1, every other input
+    fixed, must move BOTH the score and the rating, and must disclose the cap.
+    The SUBSCORES must still be untouched — that half of the orthogonality
+    contract is unchanged and still load-bearing, because a consequence ceiling
+    is a statement about the estate as a whole, not about any one domain's
+    evidence.
 
     `finding_severity_counts["MEDIUM"]` is fixed at 1000 (999.113 D1(d) —
     `agility_high_impact_ratio` now divides by the non-INFO finding count
@@ -163,18 +190,35 @@ def test_severity_floor_caps_band_not_score():
     }
     capped = compute_readiness_score(capped_evidence)
 
-    assert capped["rating"] == "FAIR", (
-        f"Expected the CRITICAL=1 case to cap to FAIR per D-02, got {capped['rating']!r}."
-    )
     assert capped["rating"] != uncapped["rating"], (
         "Toggling CRITICAL 0->1 must change the emitted rating."
     )
-    assert capped["score"] == uncapped["score"], (
-        "D-01/D-03 violated: the numeric score moved when only the band should "
-        f"have capped. uncapped={uncapped['score']} capped={capped['score']}."
+    assert capped["rating"] == "POOR", (
+        "999.115 C: a single open CRITICAL caps the score into POOR, so the "
+        f"band follows the number there. Got {capped['rating']!r} "
+        f"(score {capped['score']})."
+    )
+    assert capped["score"] < uncapped["score"], (
+        "999.115 C violated: the numeric score did NOT move when a CRITICAL "
+        f"finding appeared. uncapped={uncapped['score']} capped={capped['score']}. "
+        "This is the assertion that replaced D-03's `==`; if it is failing, the "
+        "consequence ceiling is not reaching total_score."
+    )
+    assert capped["score"] <= _top_of_band("POOR"), (
+        f"score {capped['score']} exceeds the top of POOR "
+        f"({_top_of_band('POOR')}) despite an open CRITICAL finding."
     )
     assert capped["subscores"] == uncapped["subscores"], (
-        "D-01/D-03 violated: a subscore moved when only the band should have "
-        f"capped. uncapped={uncapped['subscores']} capped={capped['subscores']}."
+        "Orthogonality contract violated: a SUBSCORE moved. The consequence "
+        "ceiling is a statement about the whole estate and must never reach "
+        "per-domain evidence. This half of D-03 is unchanged. "
+        f"uncapped={uncapped['subscores']} capped={capped['subscores']}."
     )
-    assert capped["rating_cap_reason"] and "FAIR" in capped["rating_cap_reason"]
+    assert capped["rating_cap_reason"], (
+        "a capped score MUST disclose that it was capped, or a client reads it "
+        "as computed"
+    )
+    assert "CRITICAL" in capped["rating_cap_reason"], (
+        "the disclosure must name what capped the score; got "
+        f"{capped['rating_cap_reason']!r}"
+    )
