@@ -1193,6 +1193,72 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-grpc-tls`
 
 ---
 
+### 3.32 multihost Profile (v5.24 — 999.110)
+
+The `multihost` profile is structurally unlike every other profile in this document: it is a whole
+**simulated enterprise estate** rather than a single weakness fixture. It brings up **33 containers
+on a dedicated `/24`** (`labnet`, `10.80.0.0/24`), each with a static address and its own crypto
+posture, so the scanner sees a realistic topology instead of a pile of services on `localhost`.
+
+**No published host ports.** Every service uses `expose:` only, so the subnet is deliberately
+unreachable from a macOS Docker Desktop host. Scans run from **`mh-prober`** (`10.80.0.200`), a
+container built from this repo — the same in-network vantage point the `segmented-network` profile
+established in Phase 152. This is why the profile has no port table like the sections above: there
+are no host ports to list, by design.
+
+| Host | Service | Posture under test | Finding domain |
+|------|---------|--------------------|----------------|
+| 10.80.0.10 | mh-edge-legacy | TLS 1.0/1.1 + weak ciphers | data in motion |
+| 10.80.0.11 | mh-edge-expired | expired certificate | certificate lifecycle |
+| 10.80.0.12–.14 | mh-edge-rsa1024 / -sha1 / -chainbroken | RSA-1024, SHA-1, broken chain | certificate quality |
+| 10.80.0.15–.22 | mh-legacy-intranet, mh-intranet-* | plaintext HTTP only | hygiene |
+| 10.80.0.20 | mh-app-crownjewel | modern TLS — the healthiest host | in motion (contrast case) |
+| 10.80.0.30 | mh-db-finance | PostgreSQL 16.6, no TLS | data at rest (database) |
+| 10.80.0.31 | mh-cache-session | Redis 7.4.1, no TLS/auth | in motion (broker/cache) |
+| 10.80.0.40 | mh-identity-dc | OpenLDAP, 389 cleartext + 636 | identity |
+| 10.80.0.41 | mh-saml-idp | simplesamlphp IdP metadata | identity (federation) |
+| 10.80.0.50 | mh-storage-archive | MinIO: 1 SSE-S3 + 1 UNENCRYPTED bucket | data at rest (object) |
+| 10.80.0.60 | mh-pki-ca | step-ca 0.28.1 | PKI / CA |
+| 10.80.0.70 | mh-ssh-jump | OpenSSH jump host | in motion (SSH) |
+| 10.80.0.101–.104 | mh-vpn-gateway, mh-mail-relay, mh-vendor-portal, mh-backup-console | expired certificates | certificate lifecycle |
+| 10.80.0.105–.107 | mh-devtest-api, mh-staging-web, mh-iot-controller | self-signed certificates | certificate provenance |
+| 10.80.0.108–.110 | mh-erp-frontend, mh-hr-portal, mh-payroll | legacy TLS | data in motion |
+| 10.80.0.111 | mh-db-hr | MySQL 8.0.40, plaintext | data at rest (database) |
+
+**Start and scan:**
+
+```bash
+PROFILE_ARGS="--profile multihost" ./lab.sh up
+docker exec chaoslab-mh-prober-1 \
+  quirk --config /scan-config.yaml --allow-internal-targets --allow-cleartext-broker-probe
+# reports land in ./quirk-output (bind-mounted to /out); then, on the host:
+quirk serve --db-path quirk-output/quirk.db
+```
+
+Two flags are not optional here. `--config` is **required** — `quirk` has no `scan` subcommand and
+no `--targets` flag, and without `--config` it drops into the interactive wizard.
+`--allow-internal-targets` is **required** because `10.80.0.0/24` is RFC1918 space, which the
+scanner refuses by default.
+
+**Why the scan config targets 31 explicit `/32`s and not `10.80.0.0/24`.** Established by running it
+both ways: a full subnet sweep reported **257 hosts and 2572 findings** — 254 phantom addresses at
+10 INFO each, plus the Docker bridge gateway at `.1` surfacing a spurious CRITICAL. That buries the
+real topology and makes the Exposure Map unreadable. `ports_tls` is likewise retargeted to
+`[443,80,389,636,2222,3306,5432,6379,8080,9000,9001]`; the repo default is tuned for the single-host
+lab's published ports and contains none of 389/636/3306/5432/6379/9000, which is why a first run
+returned INFO-only for every non-TLS host.
+
+`enable_kerberos` and `enable_dnssec` are explicitly **false**: this subnet has no KDC and no
+resolver, and a connector aimed at a host that cannot answer yields silence or a misleading finding.
+
+**Expected scanner findings:** see the oracle. **Note its coverage gap** — the oracle's per-host
+table documents the original ten hosts plus the prober, and has not been extended to the twenty
+hosts added when the estate grew to 31 targets. Those rows need a measured run, not an assumed one.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-multihost`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.

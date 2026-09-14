@@ -1584,9 +1584,9 @@ services:
   #
   # HOW TO RUN A SCAN (the demo path)
   #   PROFILE_ARGS="--profile multihost" ./lab.sh up
-  #   docker compose --profile multihost exec mh-prober quirk scan --config /scan-config.yaml
+  #   docker compose --profile multihost exec mh-prober quirk --config /scan-config.yaml
   #
-  # `--config` is REQUIRED — without it `quirk scan` drops into the interactive wizard. There is
+  # `--config` is REQUIRED — without it `quirk` drops into the interactive wizard. There is
   # no `--targets` flag and no positional target argument (an earlier revision of this comment
   # claimed otherwise; corrected after running it). The config lives at
   # ./multihost-scan-config.yaml and is mounted read-only into the prober.
