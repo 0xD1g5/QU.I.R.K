@@ -330,8 +330,17 @@ def test_projected_aggregate_equals_independent_rescore(tmp_path):
 def test_surface_visible_non_additivity_on_clamp_binding_fixture(tmp_path):
     """LIFT-02, proven at the surface, not just at the score_lift.py unit
     boundary: on the clamp-binding fixture, the sum of surface-visible
-    per-item lifts (parsed out of the CLI markdown) strictly exceeds the
-    surface-visible aggregate delta (parsed projected minus base)."""
+    per-item lifts (parsed out of the CLI markdown) differs strictly from the
+    surface-visible aggregate delta (parsed projected minus base).
+
+    999.115 — direction flipped from `>` to `<`, mirroring
+    tests/test_score_lift.py::test_lifts_are_not_additive_on_a_clamp_binding_fixture.
+    See that test's docstring for the full derivation: the consequence ceiling
+    lifts only when the last HIGH finding is resolved, which belongs to the
+    combination rather than to any single item, so the whole now exceeds the
+    sum of the parts. The surface-level contract this test exists to prove —
+    that the CLI markdown's own numbers are non-additive, and therefore that
+    the projection is not computed by summing them — is unchanged."""
     evidence = _clamp_binding_evidence()
     (
         items,
@@ -357,10 +366,18 @@ def test_surface_visible_non_additivity_on_clamp_binding_fixture(tmp_path):
     surface_projected = int(cli_m.group(1))
     surface_aggregate_delta = surface_projected - base_score
 
-    assert surface_lift_sum > surface_aggregate_delta, (
-        "LIFT-02 VIOLATION: surface-visible per-item lift sum does not "
-        f"strictly exceed the surface-visible aggregate delta on the "
-        f"clamp-binding fixture. sum={surface_lift_sum} "
+    assert surface_lift_sum != surface_aggregate_delta, (
+        "LIFT-02 VIOLATION: surface-visible per-item lift sum equals the "
+        f"surface-visible aggregate delta on the clamp-binding fixture, which "
+        f"means the surface is (or could be) summing the parts. "
+        f"sum={surface_lift_sum} aggregate_delta={surface_aggregate_delta} "
+        f"(base={base_score}, projected={surface_projected})"
+    )
+    # 999.115: was `>`. See the docstring for why the direction flipped.
+    assert surface_lift_sum < surface_aggregate_delta, (
+        "LIFT-02 direction changed: surface-visible per-item lift sum is no "
+        f"longer BELOW the surface-visible aggregate delta on the clamp-binding "
+        f"fixture. sum={surface_lift_sum} "
         f"aggregate_delta={surface_aggregate_delta} "
         f"(base={base_score}, projected={surface_projected})"
     )

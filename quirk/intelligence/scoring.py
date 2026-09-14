@@ -684,8 +684,23 @@ def compute_readiness_score(
         # Compression bounds the maximum just as firmly — a 5-CRITICAL estate
         # still cannot exceed DEEP_CRITICAL_CEILING — while preserving ordering,
         # remediation lift, and profile sensitivity within the permitted range.
+        # The guard is `is not None` and NOT `total_score > _ceiling`. Compressing
+        # only ABOVE the ceiling reintroduces the clamp's defect in a subtler form:
+        # it puts a cliff exactly AT the ceiling, because the mapping is
+        # discontinuous there. Measured with ceiling 84: a computed 84 emitted 84,
+        # a computed 85 emitted 71, and nothing in the whole computed range
+        # [85, 100] ever emitted more than 84 — so every well-run estate scored
+        # BELOW a mediocre one. Found 2026-09-14 by
+        # test_identity_surface::test_weak_kerberos_lowers_score, which caught a
+        # live P1 violation the property suite's own fixtures do not cover: adding
+        # three weak-Kerberos findings moved that estate 77 -> 84.
+        #
+        # Compression is a linear map of [0, 100] onto [0, ceiling]. That map is
+        # only order-preserving if it is applied across the WHOLE range; applying
+        # it piecewise makes it non-monotonic, which is the one property the
+        # ceiling exists to protect.
         consequence_capped_from: Optional[int] = None
-        if _ceiling is not None and total_score > _ceiling:
+        if _ceiling is not None:
             consequence_capped_from = total_score
             total_score = int(round(_ceiling * total_score / 100))
 

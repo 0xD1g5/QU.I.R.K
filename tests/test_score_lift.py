@@ -344,6 +344,31 @@ def test_aggregate_projection_equals_one_independent_rescore() -> None:
 
 
 def test_lifts_are_not_additive_on_a_clamp_binding_fixture() -> None:
+    """LIFT-02's stated reason: per-item lifts do NOT sum to the aggregate, so
+    `compute_projected_score` must do one all-resolved rescore instead of adding
+    the parts up.
+
+    999.115 — the non-additivity still holds and is if anything larger, but its
+    DIRECTION flipped, so the assertion moved from `>` to `<`. Measured on this
+    fixture: sum(lifts) = 54 against an aggregate delta of 64 (base 20 ->
+    projected 84).
+
+    Why it flipped. Two non-linearities act on this fixture and they pull
+    opposite ways. The per-subscore 25-point clamp (the one this fixture is
+    named for, and the only one that existed when this test was written) makes
+    parts SUM HIGH: several items each claim credit for the same clamped
+    headroom. 999.115's consequence ceiling adds a second, stronger one pulling
+    the other way: the base is ceiling-bound at 20 by `1 open HIGH finding`, and
+    no SINGLE item resolves the last HIGH, so no single lift can raise the
+    ceiling — but resolving everything does, and the ceiling jumps from the top
+    of MODERATE (69) to the PQC ceiling (84). That step belongs to the
+    combination, never to any part, so the whole exceeds the sum.
+
+    This is product-visible and deliberate: on a ceiling-bound estate the
+    roadmap's per-item numbers now UNDERSTATE the total, and the honest reading
+    is "clearing your last HIGH finding lifts the cap". Understating each step
+    is the safer direction of the two for a client-facing roadmap.
+    """
     evidence = _clamp_binding_evidence()
     items = _items(evidence)
 
@@ -351,7 +376,21 @@ def test_lifts_are_not_additive_on_a_clamp_binding_fixture() -> None:
     lifts = compute_item_lifts(evidence, items)
     projected = compute_projected_score(evidence, items)
 
-    assert sum(lifts.values()) > (projected - base)
+    # The LIFT-02 contract proper: not additive, in either direction.
+    assert sum(lifts.values()) != (projected - base), (
+        "LIFT-02 requires the projection to be one all-resolved rescore. If the "
+        "parts now sum exactly to the whole, either both non-linearities stopped "
+        "binding on this fixture or the projection is summing the parts."
+    )
+    # Pin the direction too, so a future flip is a visible failure and not a
+    # silent change in what the roadmap tells a client. Was `>` before 999.115.
+    assert sum(lifts.values()) < (projected - base), (
+        f"Expected superadditivity on a ceiling-bound fixture: sum(lifts)="
+        f"{sum(lifts.values())} should be BELOW the aggregate delta "
+        f"{projected - base} (base={base}, projected={projected}), because "
+        "lifting the consequence ceiling requires resolving the last HIGH "
+        "finding and so belongs to no individual item."
+    )
 
 
 # ---------------------------------------------------------------------------
