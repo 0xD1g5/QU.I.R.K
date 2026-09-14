@@ -5,9 +5,9 @@
 #
 #   PROFILE_ARGS="--profile multihost" ./lab.sh up
 #   docker compose --profile multihost exec mh-prober \
-#     quirk scan --config /repo-lab/multihost-scan-config.yaml
+#     quirk --config /repo-lab/multihost-scan-config.yaml
 #
-# `--config` is REQUIRED: without it `quirk scan` drops into the interactive wizard.
+# `--config` is REQUIRED: without it `quirk` drops into the interactive wizard.
 # There is no `--targets` flag and no positional target argument.
 #
 # Paths are container paths. /out is bind-mounted to ./quirk-output at the repo root, so after
@@ -26,12 +26,37 @@
 # file's own exception list with a reason, or
 # tests/test_config_connector_drift.py's D-13 gate fails.
 #
+# NOTE (999.110 follow-up): the exception list below was inherited verbatim from the
+# repo-root config.yaml when this file was derived from it, and so described THAT
+# file's divergences rather than this one's. The D-13 gate checks both directions and
+# caught both halves: nine real divergences undeclared, and four entries
+# (enable_kerberos, kerberos_targets, dnssec_targets, dnssec_resolver) describing drift
+# this file does not have. Rewritten from the gate's own output rather than by copying
+# again. Every entry below is a divergence this file actually carries.
+#
+# FORMAT WARNING: `_parse_lab_exceptions()` stops at the FIRST line after the header
+# that is not an entry, so the entries must follow `# lab-only connector exceptions:`
+# CONTIGUOUSLY. Any prose or blank `#` line inserted between them silently truncates
+# the list, and every entry below the break reads as undeclared. Keep commentary here,
+# above the header — not inside it.
+#
 # lab-only connector exceptions:
-#   enable_kerberos: armed true against the chaos lab's kerberos profile (samba-dc KDC on 127.0.0.1:88/389, Phase 89 LAB-06); the shipped template ships this false pending a quirk[identity] install
-#   kerberos_targets: points at the chaos lab kerberos profile's samba-dc KDC on 127.0.0.1 (Phase 89 LAB-06)
-#   saml_targets: points at the chaos lab saml profile's simplesamlphp IdP metadata endpoint on localhost:8080 (Phase 89 LAB-06)
-#   dnssec_targets: points at the chaos lab dnssec profile's weak.example.com / unsigned.example.com fixtures (Phase 89 LAB-06)
-#   dnssec_resolver: routes DNSSEC queries to the chaos lab dnssec profile's bind9 resolver on 127.0.0.1:15353 (Phase 89 LAB-06)
+#   saml_targets: points at THIS profile's mh-saml-idp at 10.80.0.41:8080, not the single-host lab's localhost:8080 IdP (999.110)
+#   enable_dnssec: false here, true in the template — this subnet has no bind9 resolver, and a DNSSEC connector aimed at a host that cannot answer produces silence or a misleading finding
+#   enable_db: true — mh-db-finance (PostgreSQL) at 10.80.0.30 is a first-class target of this profile; the template ships it false
+#   pg_targets: 10.80.0.30, the multihost subnet's PostgreSQL host (template ships none)
+#   pg_scanner_user: lab fixture credential for mh-db-finance; the template ships none because there is no default database to scan
+#   pg_scanner_password: as above — a throwaway chaos-lab value, not a secret
+#   enable_s3: true — mh-storage-archive holds one SSE-S3 and one deliberately UNENCRYPTED bucket so the at-rest contrast is real; the template ships it false
+#   aws_endpoint_url: http://10.80.0.50:9000, the profile's MinIO endpoint; the template ships none so the real AWS endpoint is used
+#   aws_region: us-east-1, required by the S3 client against MinIO; the template ships none
+#   broker_targets: 10.80.0.31, this profile's Redis (mh-cache-session); the template ships none
+#
+# (End of the exception list — nothing may be inserted above this line inside the
+# block.) enable_kerberos is deliberately NOT listed: it is false here AND false in
+# the template, so it does not diverge. Its inline comment below explains why this
+# profile leaves it off. Adding it back would be a stale entry and the gate would
+# fail from the other side.
 
 # vertical: healthcare
 
