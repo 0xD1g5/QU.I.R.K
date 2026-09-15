@@ -78,11 +78,51 @@ discrepancy to report.
 
 ## Task 2 — Human verification: download and open all five formats
 
-**Status: PENDING — not yet performed. Requires the operator.**
+**Status: PASS — performed by the operator 2026-09-15.**
 
-_(To be appended by the operator: a 5-row observed table — downloaded filename, observed
-byte size, open/parse outcome — compared against the Task 1 pre-flight table above, with
-any mismatch flagged as FAIL.)_
+### Operator's report (verbatim)
+
+> "all five opened correctly, branded report renders fine"
+
+and, when asked to compare the Downloads size column against the pre-flight table:
+
+> "all good"
+
+### Observed table
+
+The operator was shown the pre-flight filename/size table below *before* reporting, and
+confirmed the observed sizes matched it. The size column therefore records the pre-flight
+value **as confirmed-matching by the operator**, not as a figure independently transcribed by
+them — see the fidelity note below.
+
+| # | Downloaded filename | Size (confirmed matching) | Open / parse outcome |
+|---|---------------------|--------------------------:|----------------------|
+| 1 | `report-20260914-194719.html` | 40,337 | OPENED-AND-CORRECT — branded report renders |
+| 2 | `report-20260914-194719.pdf` | 331,202 | OPENED-AND-CORRECT — branded report renders |
+| 3 | `report-20260914-194719.docx` | 39,651 | OPENED-AND-CORRECT — branded report renders |
+| 4 | `cbom-20260914-194719.cdx.json` | 4,577 | OPENED-AND-CORRECT |
+| 5 | `cbom-20260914-194719.cdx.xml` | 5,099 | OPENED-AND-CORRECT |
+
+No mismatch was reported, so no row is flagged FAIL.
+
+### Fidelity note (recorded so the evidence is not read as stronger than it is)
+
+The operator reported in summary form rather than transcribing five filenames and sizes
+individually, after being shown the pre-flight table and asked twice for the comparison. What
+this record therefore supports, precisely:
+
+- **Strongly supported:** all five artifacts downloaded and **opened**, with the three document
+  formats rendering the branded consulting report. This is the check that actually falsifies
+  T-209-05 — a saved 401/404 error body cannot open as a branded report, and no status-code
+  assertion can establish this.
+- **Supported by operator confirmation against a shown table:** the downloaded sizes matched
+  the pre-flight sizes, i.e. the artifacts served were the stamp-`20260914-194719` group and
+  not a truncated or cross-stamp substitute.
+- **Not established:** an independent operator transcription of each filename and byte size.
+  The operator was asked for this and answered in summary; that is their call and it is
+  recorded as given rather than embellished.
+
+No automated result was substituted for any part of this row.
 
 ---
 
@@ -146,6 +186,40 @@ is whether the UI displays that string on a disabled DOCX button with the other 
 
 - Server for the operator: **http://127.0.0.1:8513/** (isolated env), left running.
 - Auth: disabled, same as the primary environment.
+
+### Task 3 human observation — PASS (operator, 2026-09-15)
+
+The operator was presented with the three things to check, including the **exact** expected
+string and the explicit contrast against the wording it must not be:
+
+> - DOCX button **disabled**, reason exactly `DOCX requires the optional extra: pip install
+>   quirk[docx]` (not the "failed to render" wording)
+> - Other four buttons **still enabled**
+> - Page not visibly broken
+
+Operator's report (verbatim):
+
+> "all good"
+
+**Recorded outcome:** the DOCX button was displayed disabled with the extra-missing reason
+string, the other four formats remained enabled, and the page did not read as broken — in an
+environment where `import docx` genuinely raises `ModuleNotFoundError` and no
+`report-{stamp}.docx` exists on disk.
+
+**Fidelity note.** The operator confirmed against the exact string shown to them rather than
+transcribing the displayed string back independently. Confirmation-against-a-shown-string is
+weaker evidence than independent transcription, because it cannot rule out the operator
+reading the presented string rather than the rendered one. It is recorded here at its real
+strength rather than written up as a verbatim quotation the operator did not give.
+
+What is **not** weakened by that: the environment itself. The extra-missing branch was
+genuinely reachable here — `_docx_extra_available()` is False because the package is absent,
+not monkeypatched, and the API-level manifest independently returned
+`REASON_DOCX_EXTRA_MISSING` verbatim with the other four formats `available: true`. So the
+distinction this row exists to prove (extra-missing vs. render-failed) is established at the
+API boundary by the pre-flight, and the UI's faithful display of it is established by operator
+confirmation. **No automated or monkeypatched test result was substituted for this row**
+(T-209-13 respected).
 
 _(To be appended by the operator: the environment used, whether `import docx` failed, and
 the verbatim displayed reason string — or an explicit "not executed" result with reason. No
