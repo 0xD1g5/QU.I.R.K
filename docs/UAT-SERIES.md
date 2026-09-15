@@ -1,7 +1,15 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-13 (Phase 203 audit — Series 203 re-dispositioned: UAT-203-05 GAP -> PASS on its own stated falsifiability condition after the operator's re-sourcing pass `fa1792f7` verified all 8 `HARDWARE_MATRIX` vendors and turned the staleness gate green on its own merits; **five of five vendor claims checked were wrong**, Palo Alto inverted. UAT-203-04's PASS stands with its premise marked SUPERSEDED — the gate going green *with* all 8 dated is precisely the event its falsifiability clause named, and the prohibited clearing path was available and not taken. Open GAP total drops by one. Prior: Phase 205 Plan 05 — Series 205 added: 5 guard-integrity cases covering
+**Last Updated:** 2026-09-15 (Phase 209 — Series 209 added: 7 deliverable-reachability cases covering
+DELIV-01 (manifest + five-format download API over the artifacts `write_reports()` already writes,
+structural path containment with a live negative control, RPT-03's dashboard exclusion re-proven) and
+DELIV-02 (the Executive-page download control). **Two cases are `Tester: Digs` and dispositioned only
+from recorded human observation** — UAT-209-04 (five formats downloaded and OPENED, the check a green
+test cannot make) and UAT-209-05 (the DOCX extra-missing reason seen against a genuinely absent
+extra, where the passing monkeypatched node is deliberately NOT cited). UAT-209-02 records one XFAIL
+parametrized leg as an honest not-expressible-over-HTTP result rather than a hidden gap. Prior:
+Phase 203 audit — Series 203 re-dispositioned: UAT-203-05 GAP -> PASS on its own stated falsifiability condition after the operator's re-sourcing pass `fa1792f7` verified all 8 `HARDWARE_MATRIX` vendors and turned the staleness gate green on its own merits; **five of five vendor claims checked were wrong**, Palo Alto inverted. UAT-203-04's PASS stands with its premise marked SUPERSEDED — the gate going green *with* all 8 dated is precisely the event its falsifiability clause named, and the prohibited clearing path was available and not taken. Open GAP total drops by one. Prior: Phase 205 Plan 05 — Series 205 added: 5 guard-integrity cases covering
 GUARD-01 (two-`::` class-scoped syntax pinned against narrowing; the parametrized-bracket
 truncation defect that reported a phantom string closed) and GUARD-02 (the vitest substitute leg
 proven to EXECUTE in CI by a deliberate RED, not merely existence-checked). Read Series 205's
@@ -28602,3 +28610,238 @@ and a cited title absent from the report is surfaced rather than silently ignore
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-13  **Tester:** automated
 **Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_cited_summary_ignores_filter_excluded_siblings`.
+
+---
+
+## Series 209: Deliverable Reachability (Phase 209 — v5.24)
+
+Covers DELIV-01 (a read-only, authenticated manifest + download API over the report artifacts
+`write_reports()` already writes to `cfg.output.directory`) and DELIV-02 (the Executive-page
+five-format download control that makes them reachable without a shell).
+
+**The one thing a reader is most likely to get wrong:** the Executive page's pre-existing
+**"Export PDF" button is a DIFFERENT pipeline** and is untouched by this phase. It Playwright-prints
+the dashboard's own React summary view; it has never produced the consulting-grade branded report.
+The five new buttons serve the real on-disk deliverables. Relabelling "Export PDF" to say what it
+actually does is a **recorded deferral, not an oversight** — see UAT-209-06 and
+`209-06-SUMMARY.md`.
+
+Two cases in this series are `**Tester:** Digs` and are dispositioned **only** from
+`209-MANUAL-VERIFICATION.md`'s recorded human observation. The monkeypatched automated test for the
+DOCX extra-missing branch exists and passes, and is deliberately **not** cited as evidence for
+UAT-209-05 — plan 209-07 forbids that substitution (T-209-13) and so does this series.
+
+### UAT-209-01: Manifest and Download Endpoints Serve Real On-Disk Artifacts, Auth-Gated
+
+**ID:** UAT-209-01
+**Title:** `GET /api/reports/latest/manifest` reports per-format availability and
+`GET /api/reports/latest/{format}` serves the exact on-disk bytes, both behind `require_auth`
+**Maps to:** DELIV-01
+
+**What to test:** ROADMAP criterion 1 — that the route serves the files `write_reports()` already
+wrote, with **no second rendering path** introduced. The manifest must pick the newest *run-stats*
+group rather than the newest *file*, so a format never comes from a different scan than its siblings.
+
+**Steps:** `tests/test_reports_download_route.py::test_manifest_reports_all_five_formats_available`
+and `tests/test_reports_download_route.py::test_download_serves_exact_bytes_for_each_format` and
+`tests/test_reports_download_route.py::test_manifest_picks_newest_run_stats_group_not_newest_file`
+and `tests/test_reports_download_route.py::test_auth_required_without_token_401`
+
+**Pass Criteria:** all cited nodes pass. Downloaded bytes are byte-identical to the on-disk
+artifact; the manifest's stamp comes from the newest `run-stats-*.json`; an unauthenticated request
+gets 401 rather than the file.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_reports_download_route.py::test_manifest_reports_all_five_formats_available` and `tests/test_reports_download_route.py::test_download_serves_exact_bytes_for_each_format` and `tests/test_reports_download_route.py::test_auth_required_without_token_401`.
+
+---
+
+### UAT-209-02: Path Containment Is a Named, Tested Guard With a Live Negative Control
+
+**ID:** UAT-209-02
+**Title:** The `Literal`-typed format enum 404s every non-member, and a negative control proves the
+traversal class is real rather than assumed absent
+**Maps to:** DELIV-01
+
+**What to test:** ROADMAP criterion 2, whose whole point is that **tribal-knowledge absence is not a
+guard** (RPT-03's `assessment.logo_path` lesson). A test asserting "no traversal is reachable" proves
+nothing unless something demonstrates the traversal class exists in the first place — hence the
+negative control showing a naive `join` *does* escape, paired with proof the route never takes that
+path.
+
+**Steps:** `tests/test_reports_download_route.py::test_containment_traversal_payloads_404[%2e%2e%2f%2e%2e%2fconfig.yaml]`
+and `tests/test_reports_download_route.py::test_containment_negative_control_naive_join_does_escape`
+and `tests/test_reports_download_route.py::test_containment_negative_control_route_never_takes_naive_join_path`
+and `tests/test_reports_download_route.py::test_containment_route_signature_has_no_str_path_param`
+
+**Pass Criteria:** the cited nodes pass. The route signature carries no `str` path parameter, so
+containment is structural rather than filter-based.
+
+**One parametrized leg is XFAIL and that is the honest result, not a gap being hidden:**
+`test_containment_traversal_payloads_404[../../../etc/passwd]` is expected-to-fail because httpx —
+and every RFC 3986 §5.3 / §6.2.2.3-compliant client, browsers included — removes dot-segments
+*before* constructing the request. The client sends a literal `GET /etc/passwd`, indistinguishable
+server-side from a direct request to that path. It is **not expressible over HTTP against this
+server and is not a server-side containment gap**; the encoded variants that ARE expressible are
+cited above and pass. Full disposition (a) in `209-CONTAINMENT-GATE.md`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_reports_download_route.py::test_containment_negative_control_naive_join_does_escape` and `tests/test_reports_download_route.py::test_containment_route_signature_has_no_str_path_param`.
+
+---
+
+### UAT-209-03: The Five-Format Control Renders With Locked Labels and Verbatim Reasons
+
+**ID:** UAT-209-03
+**Title:** The Executive page renders five download buttons, disables unavailable formats with
+their verbatim reason, and never creates an object URL for a non-200 response
+**Maps to:** DELIV-02
+
+**What to test:** ROADMAP criterion 4 — that an unavailable format says **which** and **why**, never
+an empty list reading as "no report exists" and never a 404 body saved as a `.pdf`. Per-format
+independence matters too: one format's failure must not disable or hang the other four.
+
+**Steps:** `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx::"renders all five download buttons with the locked labels"`
+and `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx::"renders an unavailable format disabled with its verbatim reason"`
+and `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx::"a non-200 download never creates an object URL and surfaces the failure copy"`
+and `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx::"only the clicked format enters the loading state"`
+
+**Pass Criteria:** all cited vitest nodes pass. The fresh-install case shows explanatory copy rather
+than an empty control, and a non-200 response surfaces failure copy instead of saving a blob.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** automated
+**Notes:** DEFERRED — covered by `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx::"renders all five download buttons with the locked labels"` and `src/dashboard/src/pages/__tests__/executive-report-downloads.test.tsx::"a non-200 download never creates an object URL and surfaces the failure copy"`.
+
+---
+
+### UAT-209-04: A UI-Only Operator Downloads All Five Formats and OPENS Each One
+
+**ID:** UAT-209-04
+**Title:** Against a real scan's output directory, an operator reaches five real branded
+deliverables from the dashboard alone and every one opens
+**Maps to:** DELIV-02
+
+**What to test:** ROADMAP criterion 3. **This case exists because a green test cannot establish it.**
+A saved 401/404 error body passes every status-code and content-type assertion while being a useless
+file; only opening the real bytes falsifies that (threat T-209-05). Verified against an actual scan's
+output directory, never a fixture.
+
+**Steps:** `209-MANUAL-VERIFICATION.md` Tasks 1-2. A pre-flight table of filenames, byte sizes and
+sha256 hashes for stamp group `20260914-194719` was recorded **before** any human observation, so the
+check compared against fixed facts rather than confirming its own expectation (T-209-12). The
+operator then downloaded all five formats from `http://127.0.0.1:8512/` and opened each.
+
+**Pass Criteria:** all five download, sizes match the pre-flight table, and each opens — HTML/PDF/DOCX
+rendering the full branded consulting report (not a dashboard print view, not blank, not a JSON error
+blob), both CBOM files parsing as CycloneDX.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** Digs
+**Notes:** Operator-observed, recorded in `209-MANUAL-VERIFICATION.md` § Task 2: all five downloaded
+and OPENED correctly — `report-20260914-194719.html` (40,337), `.pdf` (331,202), `.docx` (39,651),
+`cbom-20260914-194719.cdx.json` (4,577), `.cdx.xml` (5,099); branded report renders. Sizes confirmed
+matching the pre-flight table. The record carries a fidelity note: the operator confirmed against the
+shown table rather than transcribing each size independently, so the *opening* of all five is
+directly attested while the sizes rest on confirmation-against-a-shown-table. Recorded at that
+strength deliberately rather than written up as stronger. No automated result substituted.
+
+---
+
+### UAT-209-05: The DOCX-Unavailable Reason Is Honest Against a Genuinely Missing Extra
+
+**ID:** UAT-209-05
+**Title:** In an environment where `python-docx` genuinely is not installed, the DOCX button is
+disabled with the extra-missing reason — not the render-failed reason — and the other four stay enabled
+**Maps to:** DELIV-02
+
+**What to test:** ROADMAP criterion 4's honesty claim. `_format_availability` distinguishes three
+causes, and the extra-missing branch requires **two** conditions at once: the `.docx` file absent AND
+`importlib.util.find_spec("docx")` returning None. Deleting the file alone on a docx-capable machine
+yields `REASON_RENDER_FAILED` — the very string this case exists to distinguish it from.
+
+**Steps:** `209-MANUAL-VERIFICATION.md` Task 3. An isolated venv (Python 3.14.7) was staged with
+`pip install .` then `pip install ".[dashboard]"`, `[docx]` deliberately omitted — `[all]` was
+avoided because `pyproject.toml` bundles `[docx]` into it. `import docx` raises `ModuleNotFoundError`;
+the staged output directory holds the other four artifacts with the `.docx` absent. Observed at
+`http://127.0.0.1:8513/`.
+
+**Pass Criteria:** the DOCX button is disabled showing exactly
+`DOCX requires the optional extra: pip install quirk[docx]`, the other four formats remain enabled,
+and the page does not read as broken.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** Digs
+**Notes:** Operator-observed, recorded in `209-MANUAL-VERIFICATION.md` § Task 3. The extra-missing
+branch was genuinely reachable — the package is absent, not monkeypatched — and the isolated
+environment's manifest independently returned the extra-missing reason verbatim with the other four
+formats `available: true`. The monkeypatched automated node
+`tests/test_reports_download_route.py::test_manifest_docx_missing_extra_reason` exists and passes but
+is **deliberately NOT cited as evidence here**, per plan 209-07's T-209-13 prohibition. Fidelity note
+in the record: the operator confirmed against the exact string shown to them rather than transcribing
+the rendered string independently.
+
+---
+
+### UAT-209-06: No Second Rendering Path, and the Export-PDF Mislabel Is a Written Deferral
+
+**ID:** UAT-209-06
+**Title:** `quirk/reports/writer.py` is byte-identical and `POST /api/export/pdf` behaviour is
+unchanged; the misleading "Export PDF" label is recorded as a deliberate deferral
+**Maps to:** DELIV-01
+
+**What to test:** ROADMAP criterion 5, both halves. The phase must serve existing artifacts rather
+than grow a second renderer, and a later reader must be able to tell **deferral from oversight** for
+the Export-PDF label.
+
+**Steps:** `tests/test_pdf_export.py::test_pdf_export_graceful_degradation` and
+`tests/test_pdf_render_hardening.py::test_render_pdf_returns_false_on_playwright_error` and
+`tests/test_pdf_render_hardening.py::test_render_pdf_closes_browser_in_finally` and
+`tests/test_pdf_render_hardening.py::test_render_pdf_import_error_returns_false`. The written
+deferral lives in `docs/report-interpretation.md` §26 and `209-06-SUMMARY.md`.
+
+**Pass Criteria:** the cited nodes pass, the existing export endpoint is unchanged, and the
+Export-PDF relabelling is recorded in writing as a known deferred item.
+
+**Why the live-Playwright nodes are NOT cited here:**
+`tests/test_pdf_export.py::test_pdf_export_endpoint` and all three
+`tests/test_pdf_metadata_constants.py` nodes are **TRIAGE-149-skipped** (flaky Playwright
+`PlaywrightContextManager` singleton torn down by an earlier full-suite test; order-dependent, passes
+standalone — see `docs/test-triage-149.md`). A skipped node is **not** proof of coverage, and citing
+one would manufacture a citation that never executes. The nodes cited above all genuinely run. This
+narrows what the automated evidence covers — the export endpoint's graceful-degradation and
+render-hardening paths are executed; its live end-to-end Playwright render is not, and is
+TRIAGE-149's open item rather than this phase's.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_pdf_export.py::test_pdf_export_graceful_degradation` and `tests/test_pdf_render_hardening.py::test_render_pdf_returns_false_on_playwright_error` and `tests/test_pdf_render_hardening.py::test_render_pdf_closes_browser_in_finally`.
+
+---
+
+### UAT-209-07: RPT-03's Dashboard Exclusion Still Holds After This Phase
+
+**ID:** UAT-209-07
+**Title:** No dashboard-settable `report.branding.*` or `report.template_dir` surface exists, and the
+new report route exposes no path-shaped parameter — proven by a mutation-check sweep
+**Maps to:** DELIV-01
+
+**What to test:** ROADMAP criterion 6. Adding a report-serving route is exactly the change most
+likely to erode RPT-03's deliberate exclusion of branding/template configuration from the dashboard.
+The guard is non-vacuous by construction: sweep tests assert the enumeration finds something, and
+mutation checks confirm an injected path field would actually be caught.
+
+**Steps:** `tests/test_report_path_guard.py::test_report_route_exposes_no_branding_or_template_surface`
+and `tests/test_report_path_guard.py::test_report_route_path_params_are_enum_constrained` and
+`tests/test_report_path_guard.py::test_mutation_check_report_route_sweep_detects_a_str_path_param`
+and `tests/test_report_path_guard.py::test_report_route_enumeration_is_not_vacuous`
+
+**Pass Criteria:** all cited nodes pass — no branding/template surface, every route path param
+enum-constrained, and the mutation check proves the sweep would detect an injected `str` path param
+rather than passing vacuously.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-15  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_report_path_guard.py::test_report_route_exposes_no_branding_or_template_surface` and `tests/test_report_path_guard.py::test_mutation_check_report_route_sweep_detects_a_str_path_param`.
