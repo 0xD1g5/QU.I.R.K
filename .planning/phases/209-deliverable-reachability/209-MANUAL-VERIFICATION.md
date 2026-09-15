@@ -88,12 +88,64 @@ any mismatch flagged as FAIL.)_
 
 ## Task 3 — Human verification: DOCX-unavailable reason against a genuinely missing extra
 
-**Status: PENDING — not yet performed. Requires the operator.**
+**Status: PENDING — human observation not yet performed. Requires the operator.**
 
-`python-docx` IS importable on this machine (confirmed by the manifest above:
-`"docx":{"available":true,...}`), so this machine cannot produce the extra-missing branch
-without a separate environment. See the checkpoint payload for the proposed isolated-venv
-approach.
+`python-docx` IS importable on the primary machine environment (confirmed by the manifest
+above: `"docx":{"available":true,...}`), so the primary environment cannot produce the
+extra-missing branch. A separate isolated environment was therefore staged.
+
+### Task 3 pre-flight (staged 2026-09-15, BEFORE any human observation)
+
+Recorded to the same standard as Task 1: the environment facts and the API-level response are
+written down first, so the operator's UI observation compares against fixed facts. **This
+pre-flight is NOT a substitute for the human check** — the checkpoint requires the reason
+string to be observed as *displayed in the UI*, and the automated/monkeypatched test is
+explicitly forbidden as evidence for this row (T-209-13).
+
+**Isolated environment:**
+
+- Location: `$CLAUDE_JOB_DIR/tmp/209-task3/` (venv + output dir + config)
+- Python: **3.14.7**
+- Install: `pip install .` then `pip install ".[dashboard]"` from this source tree —
+  **`[docx]` extra deliberately NOT installed**; `[all]` was avoided because it bundles
+  `[docx]` (`pyproject.toml:125`).
+- `import docx` result: **`ModuleNotFoundError: No module named 'docx'`** — verified twice,
+  after each install step. The extra is genuinely absent, not monkeypatched.
+- Installed wheel verified self-contained: `dashboard/static/index.html` sha256
+  `3b40cd6e…60836`, **identical to the source-tree build**, so the operator sees the current
+  bundle and not a stale one; `dashboard/api/routes/reports.py` present in the wheel.
+- Output directory: staged copy of stamp group `20260914-194719` containing **four** artifacts
+  (`.html`, `.pdf`, `.cdx.json`, `.cdx.xml`) plus `run-stats-20260914-194719.json` —
+  **`report-20260914-194719.docx` deliberately absent.**
+
+Both branch conditions in `_format_availability` (`reports.py:197-211`) therefore hold at once:
+the `.docx` file is absent AND `_docx_extra_available()` is False. With the file absent but the
+extra present, the code would return `REASON_RENDER_FAILED` instead — the confusable string
+this row exists to distinguish.
+
+**Staging error found and corrected before the operator was involved:** the first staged
+`config.yaml` was a minimal `output.directory`-only stub. `load_config` raised
+`KeyError: 'assessment'`, and `_output_directory()`'s documented broad-except degraded it to
+`None`, producing a plausible-looking all-formats `"No scan has run yet."` manifest. Had this
+been handed to the operator unprobed, they would have verified the wrong branch entirely. The
+config was rebuilt from the repo's real `config.yaml` with only `output.directory` overridden.
+
+**Live manifest response from the isolated environment (verbatim):**
+
+```
+curl -s http://127.0.0.1:8513/api/reports/latest/manifest
+```
+
+```json
+{"scan_time":"2026-09-14T19:47:19.492308+00:00","stamp":"20260914-194719","formats":{"html":{"available":true,"reason":null},"pdf":{"available":true,"reason":null},"docx":{"available":false,"reason":"DOCX requires the optional extra: pip install quirk[docx]"},"cbom-json":{"available":true,"reason":null},"cbom-xml":{"available":true,"reason":null}}}
+```
+
+At the API level the reason string matches `REASON_DOCX_EXTRA_MISSING` (`reports.py:109`)
+exactly, and the other four formats remain `available: true`. **What remains for the operator
+is whether the UI displays that string on a disabled DOCX button with the other four enabled.**
+
+- Server for the operator: **http://127.0.0.1:8513/** (isolated env), left running.
+- Auth: disabled, same as the primary environment.
 
 _(To be appended by the operator: the environment used, whether `import docx` failed, and
 the verbatim displayed reason string — or an explicit "not executed" result with reason. No
