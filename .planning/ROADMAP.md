@@ -250,7 +250,7 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 
 - [ ] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
   gaps are covered and the two carried doc corrections land.
-- [ ] **Phase 209: Deliverable Reachability** - The consulting-grade report artifacts a scan already
+- [x] **Phase 209: Deliverable Reachability** - The consulting-grade report artifacts a scan already
   writes to disk become downloadable from the dashboard.
 
 ## Phase Details
@@ -500,8 +500,8 @@ Plans:
 - [x] 209-04-PLAN.md — Wave 2: five-format download control on the Executive page
 - [x] 209-05-PLAN.md — Wave 2: containment gate artifact + RPT-03 sweep extension + export-pdf regression
 - [x] 209-06-PLAN.md — Wave 3: operator docs, artifact-inventory correction, Obsidian sync
-- [ ] 209-07-PLAN.md — Wave 4: manual verification against the real output directory (2 checkpoints)
-- [ ] 209-08-PLAN.md — Wave 5: CLAUDE.md Mandatory Phase Completion Steps — UAT Series 209, worklist regeneration, Obsidian phase note
+- [x] 209-07-PLAN.md — Wave 4: manual verification against the real output directory (2 checkpoints)
+- [x] 209-08-PLAN.md — Wave 5: CLAUDE.md Mandatory Phase Completion Steps — UAT Series 209, worklist regeneration, Obsidian phase note
 **UI hint**: yes
 
 ## Progress

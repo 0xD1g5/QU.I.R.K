@@ -188,13 +188,13 @@ not the ~6,100-line renderer output. No route under `quirk/dashboard/api/routes/
 on-disk artifacts (verified by grep for `FileResponse` / `.docx` / `report-*.html`: zero hits).
 The richest output the product makes is unreachable from the UI.
 
-- [ ] **DELIV-01**: An authenticated, read-only API route serves the report artifacts a scan
+- [x] **DELIV-01**: An authenticated, read-only API route serves the report artifacts a scan
       already wrote to `cfg.output.directory` — HTML, PDF, DOCX, and the CycloneDX CBOM — with
       containment enforced so no path outside that directory can ever be served, regardless of
       the requested format or name. Containment is a **named, tested guard**, following RPT-03's
       precedent rather than relying on the absence of an obvious traversal.
 
-- [ ] **DELIV-02**: The dashboard offers those formats as downloads, so a UI-only operator
+- [x] **DELIV-02**: The dashboard offers those formats as downloads, so a UI-only operator
       reaches the same deliverables a CLI operator gets. Scope is the **latest** scan's artifacts
       only; per-scan-history access needs an artifact↔`scan_run_id` association that may not exist
       on disk, and is explicitly deferred rather than assumed.
@@ -266,8 +266,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Pending |
 | DOC-02 | Phase 208 | Pending |
-| DELIV-01 | Phase 209 | Pending |
-| DELIV-02 | Phase 209 | Pending |
+| DELIV-01 | Phase 209 | Complete |
+| DELIV-02 | Phase 209 | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total (15 at milestone open + DELIV-01/02 added 2026-09-14)
