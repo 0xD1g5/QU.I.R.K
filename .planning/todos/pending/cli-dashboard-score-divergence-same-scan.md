@@ -89,3 +89,36 @@ count, and the certificate inventory**, which is the client-visible part.
 Both scan runs of 2026-09-14 in `quirk-output/`; per-host extraction at
 `$CLAUDE_JOB_DIR/tmp/perhost.py`. Recorded in
 `quantum-chaos-enterprise-lab/expected_results_v4.md` under "Cross-surface parity".
+
+## ESCALATION 2026-09-16 — Phase 209 dissolved the mitigation's premise
+
+The "do not put the two surfaces side by side" mitigation above was written when the report score
+lived in a terminal and the dashboard score lived in a browser. **Phase 209 (merged `197cfb99`)
+put both on the same page, one click apart**, as adjacent download buttons on the executive view:
+
+| Artifact | Button | Score | CRITICALs |
+|---|---|---|---|
+| `report-{stamp}.pdf` (consulting-grade, CLI pipeline) | one of the five Phase 209 downloads | **15 / 100** | 5 |
+| Export PDF (Playwright print of `/print`, dashboard pipeline) | Export PDF, immediately adjacent | **19 / 100** | 7 |
+
+Reproduced 2026-09-16 on scan stamp `20260916-145333`, a single clean 18s multihost run (no
+SESSION_BRACKET merge — verified 12 minutes between runs):
+
+- `quirk-output/scorecard-20260916-145333.md` — `**Readiness Score:** **15 / 100**`,
+  `5 open CRITICAL findings — score limited to 15 (computed 61)`
+- `GET /api/scan/latest` — `19 POOR`, `7 open CRITICAL findings — score limited to 19 (computed 76)`
+- `/Users/digs/Downloads/quirk-report-2026-09-16-2.pdf` (exported via the UI button) — carries the
+  19/76 pair, confirming the divergence reaches a **client-deliverable artifact**, not just a screen.
+
+Note the near-miss that makes this easy to misread: the report's PRE-CAP value is 76 (`76 ÷ 1.25 =
+61`) and the dashboard's POST-cap computed value is also 76. The same number appears in both
+surfaces meaning different things.
+
+**Why this raises priority:** an operator can follow the recorded mitigation exactly — scan once,
+don't show both surfaces — and still hand a client two PDFs with different headline scores, because
+both are now downloadable from one screen without ever "showing" the other surface.
+
+**Demo mitigation superseded, 2026-09-18:** in segment 7, use the five Phase 209 downloads (the
+consulting-grade report, 15/100) and do NOT press Export PDF in the same session. If asked why both
+exist, the honest answer is that they are two different pipelines and consolidating them is tracked
+work, not an accident discovered live.
