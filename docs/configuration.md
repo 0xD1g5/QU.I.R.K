@@ -1867,6 +1867,19 @@ Leaving the key absent is identical to setting it to `false`.
 
 > **Note on naming:** The config field `slack_webhook_env: QUIRK_SLACK_WEBHOOK` means "read the webhook URL from the env var named `QUIRK_SLACK_WEBHOOK`". You can use any env var name — the convention shown above is recommended.
 
+### Operational environment variables
+
+These are not secrets — they change runtime behaviour and have no config-file equivalent.
+
+| Env var name | Default | Purpose |
+|---|---|---|
+| `QUIRK_OUTPUT_DIR` | `output` | Base directory the **scheduler** writes run output to (`quirk/cli/scheduler_cmd.py`). Note this default is independent of `output.directory` in the YAML config — if you have moved `output.directory` to `quirk-output`, set this to match, or scheduled runs will write somewhere else. |
+| `QUIRK_SERVE_HOST` | unset | Host the dashboard is reachable on, used when building the URL allowlist (`quirk/util/url_allowlist.py`). Set it when serving behind a reverse proxy whose hostname differs from the bind address. |
+| `QUIRK_SERVE_PORT` | unset | Companion to `QUIRK_SERVE_HOST` for the same allowlist. |
+
+Two further variables — `QUIRK_SENSOR_IP_ALLOWLIST` and `QUIRK_HSTS` — are **security** controls and
+are documented in [Admin Guide §3.5](admin-guide.md#35-hardening-environment-variables).
+
 ### Security controls
 
 | Control | Description |

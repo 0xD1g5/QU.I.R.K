@@ -223,6 +223,30 @@ the response.
 
 ---
 
+## 3.5 Hardening Environment Variables
+
+Two security controls are configured only by environment variable — there is no config-file
+equivalent and no CLI flag, so an operator who does not know they exist cannot switch them on.
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `QUIRK_SENSOR_IP_ALLOWLIST` | unset (no IP restriction) | Comma-separated IPs/CIDRs permitted to authenticate as a sensor. Read by `quirk/dashboard/api/middleware/sensor_auth.py`. With it unset, a valid token is accepted from **any** source address — token possession is the only control. Set it to your sensor subnets for defence in depth alongside the token. |
+| `QUIRK_HSTS` | unset (header not sent) | Set to `1`/`true` to emit `Strict-Transport-Security` on dashboard responses. Read by `quirk/dashboard/api/middleware/security_headers.py`. **Only enable behind TLS** — HSTS on a plain-HTTP deployment locks browsers out of a host they cannot reach over HTTPS. |
+
+```bash
+export QUIRK_SENSOR_IP_ALLOWLIST="10.20.0.0/24,10.20.1.15"
+export QUIRK_HSTS=1        # TLS-terminated deployments only
+quirk serve --port 8512
+```
+
+Both are read at request time by middleware, so they must be set in the environment of the
+`quirk serve` process — exporting them in a different shell has no effect.
+
+See [Configuration](configuration.md) for the non-security `QUIRK_*` variables
+(`QUIRK_SERVE_HOST`, `QUIRK_SERVE_PORT`, `QUIRK_OUTPUT_DIR`).
+
+---
+
 ## 4. SNMP Setup
 
 ### 4.1 Network Requirements
