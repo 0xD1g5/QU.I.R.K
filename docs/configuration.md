@@ -1115,7 +1115,7 @@ Controls where QU.I.R.K. writes reports, CBOM files, and its internal database.
 
 ```yaml
 output:
-  directory: "output"
+  directory: "quirk-output"
   db_path: "./quirk-output/quirk.db"
 ```
 
@@ -1753,7 +1753,7 @@ connectors:
   enable_recurring_otics: false
 
 output:
-  directory: "output"
+  directory: "quirk-output"
   db_path: "./quirk-output/quirk.db"
 
 intelligence:
@@ -1960,7 +1960,7 @@ Export findings from the most recent scan to your SIEM at any time:
 quirk export --siem
 
 # Specify an explicit findings file
-quirk export --siem --input output/findings-2026-05-25-120000.json
+quirk export --siem --input quirk-output/findings-2026-05-25-120000.json
 
 # Specify the output directory to search for the latest findings file
 quirk export --siem --output-dir /var/lib/quirk/output
@@ -2053,7 +2053,7 @@ exits with code 2 — no ImportError traceback is raised.
 ```bash
 export QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
 export QUIRK_DB_PATH=/var/lib/quirk/quirk.db
-quirk ticket create --input output/findings-2026-05-25-120000.json
+quirk ticket create --input quirk-output/findings-2026-05-25-120000.json
 ```
 
 ### `ticketing.jira` config block
@@ -2125,7 +2125,7 @@ Create Jira issues from a completed scan's findings file:
 quirk ticket create
 
 # Specify an explicit findings file
-quirk ticket create --input output/findings-2026-05-25-120000.json
+quirk ticket create --input quirk-output/findings-2026-05-25-120000.json
 
 # Specify the output directory to search for the latest findings file
 quirk ticket create --output-dir /var/lib/quirk/output
@@ -2206,7 +2206,7 @@ exits with code 2 — no ImportError traceback is raised.
 ```bash
 export QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
 export QUIRK_DB_PATH=/var/lib/quirk/quirk.db
-quirk ticket create --backend servicenow --input output/findings-2026-05-25-120000.json
+quirk ticket create --backend servicenow --input quirk-output/findings-2026-05-25-120000.json
 ```
 
 ### `ticketing.servicenow` config block
@@ -2277,7 +2277,7 @@ Create ServiceNow incidents from a completed scan's findings file:
 quirk ticket create --backend servicenow
 
 # Specify an explicit findings file
-quirk ticket create --backend servicenow --input output/findings-2026-05-25-120000.json
+quirk ticket create --backend servicenow --input quirk-output/findings-2026-05-25-120000.json
 
 # Specify the output directory to search for the latest findings file
 quirk ticket create --backend servicenow --output-dir /var/lib/quirk/output
