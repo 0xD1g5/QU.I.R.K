@@ -11,7 +11,8 @@ Full installation reference for all supported platforms.
 | Python 3.10 or higher | — | Check: `python3 --version` |
 | pip | 21.3 or higher | Required for self-referential extras resolution (used by `pip install 'quirk-scanner[all]'`); pip 22.2+ recommended for the `--report` JSON test in CI |
 | git | Any recent version | Required to clone the repo |
-| Docker Desktop | Optional | Required only for the chaos lab |
+| Docker | Optional | Required only for the chaos lab. **Docker Desktop** on macOS/Windows; **Docker Engine + Compose plugin** on Linux — see [Docker on Linux](#docker-on-linux-chaos-lab-only) |
+| Free disk (chaos lab) | ~25 GB | Only if running the chaos lab: its images total ~20 GB, the `multihost` prober alone is ~3.5 GB. The scanner itself needs ~2 GB |
 | OS (for PDF export) | macOS 10.15+, Ubuntu 20.04+, Windows 10 via WSL2 | Playwright Chromium requirement |
 
 ---
@@ -101,6 +102,54 @@ Chromium that actually launches, a `report-*.pdf` carrying real PDF magic bytes,
 and every dashboard download returning HTTP 200 with a non-empty body. It also
 reports where reality diverged from this document. Run it only on a throwaway
 machine — it installs system packages.
+
+---
+
+## Docker on Linux (chaos lab only)
+
+Skip this unless you are running the chaos lab. The scanner itself needs no Docker.
+
+The System Requirements table above says "Docker Desktop" for macOS and Windows —
+**on Linux you want Docker Engine plus the Compose plugin instead.** Docker Desktop
+for Linux exists but is not what the lab expects, and `docker-compose` (the old
+standalone v1 binary) is not the same thing as the `docker compose` plugin the lab
+scripts call.
+
+```bash
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+**Run Docker without sudo** (the lab scripts assume this):
+
+```bash
+sudo usermod -aG docker "$USER"
+```
+
+Log out and back in — group membership is only applied at login. `newgrp docker`
+works for the current shell if you would rather not.
+
+**Verify:**
+
+```bash
+docker run --rm hello-world
+docker compose version        # must succeed; `docker-compose version` is the wrong binary
+```
+
+> **Check your free disk before starting the lab.** Its images total roughly 20 GB
+> and the `multihost` profile's prober image alone is ~3.5 GB. A VM sized for the
+> scanner will run out of space partway through `docker pull`, which surfaces as a
+> confusing mid-pull failure rather than a clear "out of disk" message. Give the
+> volume 40 GB if you intend to run more than one profile.
+
+See [Chaos Lab Operator Guide](chaos-lab.md) for profiles, ports and scanning.
 
 ---
 

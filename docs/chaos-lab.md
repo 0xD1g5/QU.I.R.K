@@ -15,7 +15,13 @@ The lab is organized into profiles. The **core** profile is always-on and provid
 
 **Prerequisites:**
 
-- Docker Desktop (macOS/Windows) or Docker Engine + Docker Compose plugin (Linux)
+- Docker Desktop (macOS/Windows) or Docker Engine + Docker Compose plugin (Linux).
+  On Linux, see [Docker on Linux](installation.md#docker-on-linux-chaos-lab-only) for
+  install steps — `docker-compose` (the standalone v1 binary) is **not** the same thing
+  as the `docker compose` plugin `lab.sh` calls
+- **~25 GB free disk, 40 GB if running more than one profile.** The lab's images total
+  roughly 20 GB and the `multihost` prober alone is ~3.5 GB. Running out mid-`docker pull`
+  surfaces as a confusing layer error, not a clear out-of-disk message
 - Docker socket accessible at `/var/run/docker.sock`
 - `lab.sh` script in the lab directory (wraps `docker compose` with standard project name `chaoslab`)
 - For hardware scanning profiles (`hwcompat`): `pip install quirk-scanner[hw]` — installs the SNMP probe libraries (`pysnmp` 7)
@@ -1251,10 +1257,20 @@ name from the directory and tags a different image (`quantum-chaos-enterprise-la
 the running `chaoslab-mh-prober-1` container never picks up — the rebuild appears to succeed and
 changes nothing.
 
-Two flags are not optional here. `--config` is **required** — `quirk` has no `scan` subcommand and
-no `--targets` flag, and without `--config` it drops into the interactive wizard.
-`--allow-internal-targets` is **required** because `10.80.0.0/24` is RFC1918 space, which the
-scanner refuses by default.
+`--config` is **required** — `quirk` has no `scan` subcommand and no `--targets` flag, and without
+`--config` it drops into the interactive wizard.
+
+**`--allow-internal-targets` is NOT required with this config, despite what this section said until
+2026-09-16.** The claim was that `10.80.0.0/24` is RFC1918 space which the scanner refuses by
+default — the refusal is real, but `multihost-scan-config.yaml:190` already sets
+`allow_internal_targets: true`, so the flag is redundant here. Verified by running the scan without
+it: 37 hosts, 5 CRITICAL, 15/100, no refusal. Passing it anyway is harmless.
+
+The flag *is* required when you point `quirk` at RFC1918 space using a config that does **not** set
+`allow_internal_targets` — which is why it appears elsewhere in this document.
+
+`--allow-cleartext-broker-probe` is likewise not needed for the headline result; it enables an
+additional cleartext broker probe and does not change the score on this estate.
 
 **Why the scan config targets 31 explicit `/32`s and not `10.80.0.0/24`.** Established by running it
 both ways: a full subnet sweep reported **257 hosts and 2572 findings** — 254 phantom addresses at
