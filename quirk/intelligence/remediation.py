@@ -33,7 +33,7 @@ REMEDIATION_KIND_SLUGS: Dict[str, str] = {
     "Remove plaintext HTTP exposure": "plaintext-http-exposure",                            # NOW    10
     "Triage high-impact findings": "high-impact-findings",                                  # NOW    20
     "Replace expired certificates": "expired-certificates",                                 # NOW    30
-    "Stabilize scan reliability": "scan-reliability",                                       # NOW    40
+    "Increase scan coverage": "scan-reliability",                                           # NOW    40
     "Classify unknown open services": "unknown-open-services",                              # NEXT   50
     "Renew near-expiry certificates": "near-expiry-certificates",                           # NEXT   60
     "Migrate self-signed certificates to managed PKI": "self-signed-certificates",           # NEXT   70
