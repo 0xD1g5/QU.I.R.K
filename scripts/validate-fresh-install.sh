@@ -108,6 +108,15 @@ skip() {
   printf '  %sSKIP%s %s\n' "${Y}" "${Z}" "$1"
 }
 
+# WARN: proceed, but say so. Used where a precondition is tight rather than
+# violated -- failing the whole run on a survivable condition is its own bug.
+warn() {
+  RESULT_NAME+=("${CURRENT}"); RESULT_STATE+=("WARN"); RESULT_NOTE+=("$1")
+  printf '  %sWARN%s %s\n' "${Y}" "${Z}" "$1"
+  [ -n "${2:-}" ] && printf '       %s%s%s\n' "${DIM}" "$2" "${Z}"
+  return 0
+}
+
 info() { printf '  %s%s%s\n' "${DIM}" "$1" "${Z}"; }
 
 diverge() {
@@ -180,13 +189,44 @@ else
   fail "python3 not found" "sudo apt-get install -y python3"
 fi
 
-AVAIL_KB="$(df -Pk "${REPO_ROOT}" 2>/dev/null | awk 'NR==2 {print $4}')"
-if [ -n "${AVAIL_KB}" ]; then
-  AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
-  if [ "${AVAIL_GB}" -ge 5 ]; then
-    pass "disk ${AVAIL_GB}G available"
+# DISK, not memory. Thresholds are measured, not guessed: a clone is ~250M,
+# a venv with [all] is ~620M, playwright's chromium cache is ~0.5-1G, and the
+# apt deps for chromium are a few hundred M -- about 2G all in. Below 3G is
+# genuinely likely to hit ENOSPC mid-install; 3-6G works but leaves little room.
+#
+# Two filesystems matter, and they are often not the same one: the repo (venv,
+# scan output) and $HOME (playwright installs to ~/.cache/ms-playwright).
+disk_free_gb() {
+  df -Pk "$1" 2>/dev/null | awk 'NR==2 {printf "%d", $4/1024/1024}'
+}
+disk_mount() {
+  df -Pk "$1" 2>/dev/null | awk 'NR==2 {print $6}'
+}
+
+REPO_GB="$(disk_free_gb "${REPO_ROOT}")"
+HOME_GB="$(disk_free_gb "${HOME}")"
+REPO_MNT="$(disk_mount "${REPO_ROOT}")"
+HOME_MNT="$(disk_mount "${HOME}")"
+
+if [ -z "${REPO_GB}" ]; then
+  skip "disk free space not detectable"
+else
+  if [ "${REPO_MNT}" = "${HOME_MNT}" ]; then
+    DISK_DESC="disk ${REPO_GB}G free on ${REPO_MNT} (repo and \$HOME share it)"
+    TIGHT_GB="${REPO_GB}"
   else
-    fail "only ${AVAIL_GB}G available" "chromium plus deps needs several GB; free space first"
+    DISK_DESC="disk ${REPO_GB}G free on ${REPO_MNT} (repo), ${HOME_GB}G on ${HOME_MNT} (\$HOME)"
+    if [ "${HOME_GB}" -lt "${REPO_GB}" ]; then TIGHT_GB="${HOME_GB}"; else TIGHT_GB="${REPO_GB}"; fi
+  fi
+
+  if [ "${TIGHT_GB}" -ge 6 ]; then
+    pass "${DISK_DESC}"
+  elif [ "${TIGHT_GB}" -ge 3 ]; then
+    warn "${DISK_DESC} — tight but workable" \
+         "needs ~2G: clone ~250M + venv[all] ~620M + chromium ~0.5-1G + apt deps ~300M"
+  else
+    fail "${DISK_DESC} — too little free DISK space" \
+         "needs ~2G free; this is disk, not RAM. Grow the volume or free space, then re-run."
   fi
 fi
 
@@ -454,6 +494,7 @@ while [ "${i}" -lt "${#RESULT_NAME[@]}" ]; do
   case "${state}" in
     PASS) col="${G}" ;;
     FAIL) col="${R}" ;;
+    WARN) col="${Y}" ;;
     *)    col="${Y}" ;;
   esac
   printf '  %s%-4s%s  %-46s %s%s\n' "${col}" "${state}" "${Z}" "${RESULT_NAME[$i]}" "${DIM}" "${RESULT_NOTE[$i]}${Z}"
