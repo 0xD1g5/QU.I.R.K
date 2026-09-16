@@ -25,6 +25,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -92,12 +93,19 @@ def _write_minimal_config(tmp_path: Path, outdir: Path) -> Path:
     overridden, to point at the isolated tmp_path output dir.
     """
     config_text = _REPO_CONFIG_PATH.read_text()
-    assert 'directory: "output"' in config_text, (
-        "fixture assumes repo config.yaml has output.directory == \"output\""
-    )
     outdir_str = str(outdir).replace("\\", "\\\\")
-    config_text = config_text.replace(
-        'directory: "output"', f'directory: "{outdir_str}"'
+    # Replace whatever output.directory holds rather than pinning its literal
+    # value: this fixture overrides the directory regardless, so pinning bought
+    # no drift signal and turned any config.yaml edit into a failing test here.
+    config_text, _subs = re.subn(
+        r'^(\s*)directory:\s*"[^"]*"',
+        lambda m: f'{m.group(1)}directory: "{outdir_str}"',
+        config_text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    assert _subs == 1, (
+        "fixture could not find an output.directory line in the repo config.yaml"
     )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_text)
