@@ -619,6 +619,25 @@ Compose profiles, with an oracle of expected findings per profile.
 
 ## 5. Troubleshooting
 
+### 5.0 Looking up an error code
+
+Scanner advisories and failures carry a bracketed code such as `[QRK-INSTALL-001]` or
+`[QRK-CONFIG-001]`. To see the full catalogue — every code, its meaning, and its
+remediation — without leaving the terminal:
+
+```bash
+quirk errors                 # human-readable table
+quirk errors --dump-md       # the Markdown source of docs/error-codes.md
+```
+
+`docs/error-codes.md` is generated from this command, and a CI gate asserts the committed
+file byte-matches the live output — so the catalogue and the code cannot drift apart. If
+you are reading a code that is not in the file, regenerate rather than hand-editing:
+
+```bash
+quirk errors --dump-md > docs/error-codes.md
+```
+
 ### 5.1 Scan failures
 
 - **Permission denied on a target** — confirm the QU.I.R.K. host can reach the port;

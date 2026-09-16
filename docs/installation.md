@@ -193,7 +193,7 @@ pip install 'quirk-scanner[all]'
 **4. Verify:**
 
 ```bash
-quirk --version      # → QU.I.R.K. v5.5.0
+quirk --version      # → QU.I.R.K. v<version>  (matches pyproject.toml)
 quirk doctor         # health check: confirms the environment and lists optional tools
 ```
 
@@ -262,7 +262,9 @@ Install only what you need:
 
 | Capability | Install command |
 |------------|----------------|
-| All optional scanners (recommended for consultants) | `pip install 'quirk-scanner[all]'` — installs cloud + cbom + db + motion + redis + dashboard + adcs + docx + notify + tickets. **Excludes `[identity]`** because impacket transitively downgrades the cryptography library and breaks the TLS scanner, and **excludes `[api]`** because the schemathesis active fuzzer requires explicit opt-in. Includes Playwright browser binaries via `[dashboard]` (~250 MB). |
+| All optional scanners (recommended for consultants) | `pip install 'quirk-scanner[all]'` — installs adcs + cbom + cloud + dashboard + db + docx + motion + notify + redis + tickets. That is **10 of the 17 extras**; see the row below for what it leaves out. Includes Playwright browser binaries via `[dashboard]` (~250 MB). |
+| **What `[all]` does _not_ install** | Seven extras are excluded. `[identity]` and `[api]` are deliberate — see [Why `[all]` excludes `[identity]`](#why-all-excludes-identity) and the active-fuzzer opt-in. **`[hw]`** (pysnmp, pymodbus, bacpypes3 — hardware/SNMP/Modbus/BACnet scanning, and the chaos lab's `hwcompat` profile) and **`[kafka]`** (kafka-python) are simply not in `[all]`, which surprises people. `[broker]` needs only `redis`, already present; `[email]` has no dependencies at all; `[dev]` is build tooling. |
+| Everything except `[identity]` | `pip install -e '.[all,hw,kafka,api]'` — the full scanner surface in one venv. Resolves cleanly. Add `,identity` only after reading the `[identity]` note below. |
 | Web dashboard + PDF export | `pip install -e '.[dashboard]'` (included in Quick Start) |
 | Identity surface scanners (Kerberos, SAML/OIDC, DNSSEC) | `pip install -e '.[identity]'` — installs `impacket`, `lxml`, `signxml`, `dnspython[dnssec]` |
 | Container scanning | `pip install syft` (requires Syft CLI on PATH) |
