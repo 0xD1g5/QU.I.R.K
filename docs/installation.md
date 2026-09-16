@@ -274,14 +274,34 @@ Install only what you need:
 
 ### Why `[all]` excludes `[identity]`
 
-The `[identity]` extra pulls `impacket`, which transitively depends on `pyOpenSSL`. `pyOpenSSL`'s
-pin range forces a downgrade of the `cryptography` library that QUIRK ships with as a base
-dependency. That downgrade silently breaks the TLS scanner (loss of TLS 1.3 / X25519 cipher
-enumeration), so `[all]` intentionally **excludes `[identity]`** to keep the default consultant
-install safe.
+The `[identity]` extra pulls `impacket`, which transitively depends on `pyOpenSSL`. `[all]`
+intentionally **excludes `[identity]`** to keep the default consultant install safe.
 
-If you need both the full scanner surface **and** Kerberos / impacket-backed scanners,
-install them in **two separate virtual environments**:
+> **Corrected 2026-09-16 — the original reason for this exclusion no longer holds.** This section
+> previously read: *"`pyOpenSSL`'s pin range forces a downgrade of the `cryptography` library that
+> QUIRK ships with as a base dependency. That downgrade silently breaks the TLS scanner (loss of
+> TLS 1.3 / X25519 cipher enumeration)."* That was almost certainly true when written — older
+> `pyOpenSSL` releases did cap `cryptography` upward. **`pyOpenSSL` 26 requires
+> `cryptography<47,>=46.0.0`, which is a floor, not a cap.** Measured in a virtualenv holding both
+> `[all]` and `impacket`: `cryptography` resolved to 46.0.6 (above the `>=44.0` base pin),
+> `pip check` reported no broken requirements, and a live scan enumerated `X25519MLKEM768` — the
+> exact capability the old text said was lost.
+>
+> The exclusion is **kept** as a conservative default, and
+> `tests/test_install_all_excludes_impacket.py` still guards it. What changed is that the two-venv
+> split below is now a **fallback, not a requirement**.
+
+**Try one virtualenv first.** On current dependency versions you can usually install everything
+together:
+
+```bash
+pip install -e '.[all,hw,kafka,api,identity]'
+pip check                                                    # expect: No broken requirements found
+python -c "import cryptography; print(cryptography.__version__)"   # expect >= 44
+```
+
+If `pip check` reports a conflict, or `cryptography` resolves below 44, fall back to **two separate
+virtual environments**:
 
 ```bash
 # venv 1 — full scan surface (recommended default)
@@ -294,7 +314,11 @@ pip install 'quirk-scanner[identity]'
 ```
 
 This isolation keeps the cryptography library in venv 1 at the version the TLS scanner
-requires, while venv 2 can carry the older pinned version impacket needs.
+requires, while venv 2 can carry whatever version impacket's dependency chain resolves to.
+
+**Verify rather than assume, in either arrangement.** `pip check` plus the `cryptography` version
+print above is the test — the failure mode this section guards against is silent, so a green install
+log is not evidence.
 
 A CI regression test (`tests/test_install_all_excludes_impacket.py`) guards this exclusion;
 attempts to add `quirk-scanner[identity]` to `[all]` will fail the test.

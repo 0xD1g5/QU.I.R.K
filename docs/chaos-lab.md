@@ -1326,6 +1326,88 @@ To list every profile defined in the compose file (live read — never out of da
 
 ---
 
+## 4.5 Which addresses do I scan?
+
+The lab uses **two different addressing models**, and the one you get depends on the profile.
+Knowing which you are in is the difference between a working scan and an empty one.
+
+### `0.0.0.0:9443->443/tcp` is not an address
+
+`docker ps` shows port mappings in Docker's *publishing* notation:
+
+```
+0.0.0.0    :9443     ->    443/tcp
+   ↑          ↑              ↑
+ bind on   HOST port     container's
+  all       ← scan        internal
+interfaces   THIS           port
+```
+
+`0.0.0.0` means "bound on every host interface". **You scan `127.0.0.1` on the host port** — the
+number to the *left* of the arrow. The right-hand number is internal to the container and is not
+reachable from outside it.
+
+### Model A — most profiles: one address, many ports
+
+```
+chaoslab-tls-modern-1       0.0.0.0:443->443/tcp     ->  127.0.0.1:443
+chaoslab-tls-legacy-1       0.0.0.0:8443->443/tcp    ->  127.0.0.1:8443
+chaoslab-tls-expired-1      0.0.0.0:9443->443/tcp    ->  127.0.0.1:9443
+chaoslab-tls-selfsigned-1   0.0.0.0:10443->443/tcp   ->  127.0.0.1:10443
+```
+
+Every service is a different **port on the same address**, which is why
+`scan-configs/config-lab-core.yaml` reads `cidrs: [127.0.0.1]` and carries a long explicit port
+list. In Model A the ports *are* the topology. Section 5 below is the full map.
+
+### Model B — the `multihost` profile: many addresses, standard ports
+
+Look at the port column for these containers and note what is missing:
+
+```
+chaoslab-mh-devtest-api-1     80/tcp, 443/tcp      <- NO leading 0.0.0.0:
+chaoslab-mh-edge-chainbroken-1  80/tcp, 443/tcp
+```
+
+Exposed, but **not published**. They are unreachable from the host. Instead each gets a real
+address on a private bridge network:
+
+```
+10.80.0.10   mh-edge-legacy
+10.80.0.101  mh-vpn-gateway
+10.80.0.102  mh-mail-relay
+...
+10.80.0.200  mh-prober        <- the scan runs from HERE
+```
+
+This is why `mh-prober` exists. A Docker bridge network is not routable from a macOS or Windows
+host, so the scan must originate *inside* it — hence
+`docker exec chaoslab-mh-prober-1 quirk --config /scan-config.yaml` rather than running `quirk` on
+the host. On Linux the bridge is often reachable from the host directly, but the prober is the
+supported path on every platform and is what the multihost scan config assumes.
+
+### Do not scan `10.80.0.0/24`
+
+`multihost-scan-config.yaml` targets **explicit `/32`s, not the subnet**, and the comment in that
+file records why: a full subnet sweep reported **257 hosts and 2,572 findings** — 254 phantom
+addresses with 10 INFO findings each, plus the Docker bridge gateway at `.1` reported as a
+CRITICAL. That noise buries the real topology.
+
+Use the shipped config for whichever profile you are running:
+
+| Running | Config | Scans |
+|---------|--------|-------|
+| core / jwt / registry / source / storage / … | `scan-configs/config-lab-*.yaml` | `127.0.0.1` plus host ports |
+| `multihost` | `multihost-scan-config.yaml`, **from inside the prober** | 31 explicit `10.80.0.x/32`s |
+
+To see any running profile's map yourself:
+
+```bash
+docker ps --format '{{.Names}}\t{{.Ports}}'
+```
+
+---
+
 ## 5. Complete Port Reference
 
 All lab ports across all profiles, sorted by port number:
