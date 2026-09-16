@@ -86,6 +86,22 @@ quirk --help
 quirk serve --help
 ```
 
+**Verify properly (recommended on a fresh VM):**
+
+`quirk --help` proves the console script installed; it does not prove the install
+*works*. Report rendering in particular can fail silently — a scan will exit 0 and
+write every artifact except the PDF if Chromium's system libraries are missing.
+
+```bash
+scripts/validate-fresh-install.sh --yes
+```
+
+Nine checks, each asserting an observable outcome rather than an exit code: a
+Chromium that actually launches, a `report-*.pdf` carrying real PDF magic bytes,
+and every dashboard download returning HTTP 200 with a non-empty body. It also
+reports where reality diverged from this document. Run it only on a throwaway
+machine — it installs system packages.
+
 ---
 
 ## Parrot OS / Kali / Debian (PEP 668)
