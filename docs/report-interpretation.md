@@ -1949,3 +1949,90 @@ example, a certificate issued by an untrusted CA, which is MEDIUM severity and o
 constituency). This is a genuinely different case from the honest-absence narrative message above:
 one says "no story text exists for this algorithm class," the other says "no theme owns this finding
 at all, so there is no lift number to show."
+
+## 26. Downloading report deliverables from the dashboard (Phase 209, v5.24 — DELIV-01/DELIV-02)
+
+### The five downloadable formats
+
+The Executive page's header row carries a button group — **HTML, PDF, DOCX, CBOM (JSON), CBOM
+(XML)** — beside the existing Export PDF button. Each button downloads a file `write_reports()`
+already wrote to the scan's output directory during the scan itself. **There is no second
+rendering path.** Clicking a button does not generate anything new; it retrieves a file that has
+existed on disk since the scan completed.
+
+| Format | Contents |
+|---|---|
+| HTML | The full consulting-grade report — every section this document describes (executive summary, scorecard, findings, remediation roadmap, and every phase-numbered section above), rendered as a single self-contained HTML file. |
+| PDF | The same full report, rendered to PDF. |
+| DOCX | The same full report, rendered to a Word document — requires the server to have the `[docx]` optional extra installed; see the unavailable-reasons table below for what happens when it is not. |
+| CBOM (JSON) | The CycloneDX Cryptography Bill of Materials, JSON encoding. |
+| CBOM (XML) | The same CBOM, XML encoding. |
+
+HTML, PDF, and DOCX are three renderings of the **same** report content — pick whichever format
+suits the destination (email a PDF, publish an HTML page, hand a client an editable DOCX). They are
+not three different reports.
+
+### "Export PDF" is not the same thing as these downloads
+
+**This is a deliberately deferred item, not an oversight.** The pre-existing "Export PDF" button on
+the Executive page reads as "export the report," but it does something different: it
+Playwright-prints the dashboard's own Executive summary view (the React `/print` page, a
+few-hundred-line dashboard summary) to a PDF. It is not the same artifact as the "PDF" button in the
+new download group above, which serves the full ~6,000-line consulting-grade renderer output that
+`write_reports()` produces.
+
+Relabelling or replacing the Export PDF button was explicitly out of scope for the phase that added
+these downloads (see `.planning/phases/209-deliverable-reachability/209-CONTEXT.md`'s Deferred
+Ideas). The two buttons now sit side by side on purpose — placing the real report next to the
+dashboard-print button makes the labelling gap visible rather than hiding it, and is meant to make
+this deferral easy to rediscover and close in a future phase, not something a future reader has to
+puzzle out from scratch. If you want the full report, use one of the five new download buttons, not
+Export PDF.
+
+### Formats can be unavailable, with a reason
+
+Any of the five formats may be shown disabled, with the reason visible in a tooltip. The three
+reasons you may see, quoted verbatim from the UI:
+
+- `No scan has run yet.` — no scan has completed on this server yet, so no artifacts exist at all.
+  This is the state a fresh install shows; it is not an error.
+- `DOCX requires the optional extra: pip install quirk[docx]` — the server does not have the
+  `[docx]` optional extra installed. Every other format is unaffected.
+- `This format failed to render for the latest scan. Check server logs.` — the scan ran, and other
+  formats rendered successfully, but this one specifically failed (for example, PDF rendering
+  requires Playwright, which can fail independently of everything else).
+
+A disabled button with a reason is never a silent empty control and never a 404 body saved as a
+`.pdf` — the manifest that drives this button group always reports every format's real state.
+
+### The scan-time line
+
+Above the button group, a line discloses which scan's artifacts you are about to download:
+
+- `Report from scan: {date}` — the normal case; `{date}` is the scan's run-stats `ended_utc`.
+- `Report artifacts found — scan time unknown` — artifacts exist on disk, but the run-stats file
+  that would carry the scan's timestamp is itself missing (for example, after an interrupted or
+  crashed run). The report is still real and still downloadable; only its recorded timestamp is
+  unknown, and that is disclosed rather than invented.
+- `No report artifacts yet — run a scan first.` — no artifacts exist at all (same underlying
+  condition as the `No scan has run yet.` per-format reason above).
+
+### Only the latest scan is reachable, and why
+
+These downloads always serve the **most recent** scan's artifacts — there is no way to download a
+report from an older scan through the dashboard. This is a real, permanent constraint, not a
+missing feature the next phase will casually add: the files `write_reports()` writes are named with
+the moment the report was *rendered* (`report-{stamp}.html`, etc.), not the scan's own identifier
+(`scan_run_id`). On a long scan those two instants can differ by the scan's full duration, and
+**nothing on disk associates a `scan_run_id` with the artifact stamp it produced** — no index file,
+no manifest, no join key. Per-scan history would need that association built first; see
+`docs/operators-guide.md` for the endpoint-level documentation of this same constraint.
+
+### Auth is required — a plain browser link will fail
+
+These downloads are served by an auth-gated API, the same as every other dashboard route — a
+Bearer token or `X-API-Key` header is required. The dashboard's own download buttons already attach
+this header for you. If you try to fetch a report artifact yourself with a bare `curl` command or a
+plain browser navigation to the URL, you will get a `401` response instead of a file — and a saved
+`401` response body looks exactly like a corrupt or truncated download. See
+`docs/operators-guide.md` for the correct authenticated `curl` invocation.

@@ -250,6 +250,8 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 
 - [ ] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
   gaps are covered and the two carried doc corrections land.
+- [x] **Phase 209: Deliverable Reachability** - The consulting-grade report artifacts a scan already
+  writes to disk become downloadable from the dashboard.
 
 ## Phase Details
 
@@ -466,6 +468,42 @@ corrections carried from the v5.23 boundary review land.
      presence. Synced to `20_Dev-Work/QUIRK/Guides/Report-Interpretation.md`.
 **Plans**: TBD
 
+### Phase 209: Deliverable Reachability
+**Goal**: A dashboard-only operator can download the same report deliverables a CLI operator gets,
+so the richest output QU.I.R.K. produces stops being invisible from the UI.
+**Depends on**: Nothing in this milestone (net-new, added 2026-09-14; touches report-artifact
+serving, not the coverage drain)
+**Requirements**: DELIV-01, DELIV-02
+**Success Criteria** (what must be TRUE):
+  1. A read-only, authenticated route serves `report-{stamp}.html`, `.pdf`, `.docx`, and the
+     CycloneDX CBOM from `cfg.output.directory` — the files `write_reports()` already writes, with
+     no second rendering path introduced.
+  2. Path containment is a **named, tested guard** with a RED-demonstrated traversal case, not an
+     assertion that no traversal is reachable. RPT-03's precedent: the `assessment.logo_path`
+     lesson was that tribal-knowledge absence is not a guard.
+  3. The dashboard offers the formats as downloads and a UI-only operator reaches a real branded
+     deliverable — verified against an actual scan's output directory, not a fixture.
+  4. When a scan has produced no artifacts (fresh install, scan not yet run, DOCX extra absent),
+     the UI says which formats are unavailable and why — never an empty list that reads as "no
+     report exists" nor a download that yields a 404 body saved as a `.pdf`.
+  5. The existing `POST /api/export/pdf` behaviour is unchanged, and the phase records in writing
+     that its misleading label is a known, deliberately deferred item — so a later reader can tell
+     deferral from oversight.
+  6. No dashboard-settable `report.branding.*` or `report.template_dir` surface is introduced;
+     RPT-03's dashboard exclusion still holds after this phase, proven by the guard test it added.
+**Plans**: 8 plans
+
+Plans:
+- [x] 209-01-PLAN.md — Wave 0: backend route test scaffolding (manifest/download/containment/auth, RED)
+- [x] 209-02-PLAN.md — Wave 0: Executive-page download-control vitest scaffolding (RED)
+- [x] 209-03-PLAN.md — Wave 1: reports.py route module, manifest schema, app.py registration
+- [x] 209-04-PLAN.md — Wave 2: five-format download control on the Executive page
+- [x] 209-05-PLAN.md — Wave 2: containment gate artifact + RPT-03 sweep extension + export-pdf regression
+- [x] 209-06-PLAN.md — Wave 3: operator docs, artifact-inventory correction, Obsidian sync
+- [x] 209-07-PLAN.md — Wave 4: manual verification against the real output directory (2 checkpoints)
+- [x] 209-08-PLAN.md — Wave 5: CLAUDE.md Mandatory Phase Completion Steps — UAT Series 209, worklist regeneration, Obsidian phase note
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -476,6 +514,7 @@ corrections carried from the v5.23 boundary review land.
 | 206. Dashboard UI Coverage Drain | 0/? | Not started | - |
 | 207. Browser-Only Coverage Verdict | 0/? | Not started | - |
 | 208. Security, Report Coverage & Doc Debt | 0/? | Not started | - |
+| 209. Deliverable Reachability | 6/8 | In progress | - |
 
 ## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12
 
