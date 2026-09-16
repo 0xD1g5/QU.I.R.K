@@ -259,7 +259,12 @@ if [ "${SELF_CHECK}" -eq 1 ]; then
   VENV_PY="${PY}"
 else
   if [ -d "${VENV_DIR}" ]; then
-    diverge "${VENV_DIR} already existed — this is not a fresh host; reusing it"
+    # NOT a doc divergence: that section exists to feed findings back into
+    # docs/installation.md, and "a venv already existed" says nothing about the
+    # doc. It says this run is not a clean-host validation -- which is a caveat
+    # on the RESULT, so it belongs in the summary as a WARN.
+    warn "${VENV_DIR} already existed — reusing it, so this is not a clean-host run" \
+         "you re-ran the script, or created the venv by hand first. For a true fresh-install result: rm -rf ${VENV_DIR} validate-output && re-run"
   else
     if ! python3 -m venv "${VENV_DIR}"; then
       fail "python3 -m venv ${VENV_DIR} failed" "sudo apt-get install -y python3-venv"
