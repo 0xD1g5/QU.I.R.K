@@ -390,6 +390,12 @@ def test_evidence_only_items_stay_not_observed(tmp_path):
             RemediationItem(
                 slug="scan-reliability",
                 scan_run_id=PRIOR_SCAN_ID,
+                # Deliberately the PRE-RENAME title: this row models history
+                # persisted before the item was retitled to "Increase scan
+                # coverage". Closure is keyed by `slug` (remediation.py D-01 --
+                # rewording a title must not re-key history), so a prior-scan row
+                # carrying the old title must still close. Do not "fix" this to
+                # match the current title; that would delete the coverage.
                 title="Stabilize scan reliability",
                 phase="NOW",
                 priority=40,

@@ -148,6 +148,14 @@ def build_phased_roadmap(
     high_impact = max(0, _as_int(sev.get("HIGH", 0)) + _as_int(sev.get("CRITICAL", 0)))
     legacy_tls_count = max(0, _as_int(sev.get("LOW", 0)))
     scan_error_rate = max(0.0, min(1.0, _as_float(scan_error.get("rate", 0.0))))
+    # 999.113 tail: `scan_error` is set on ANY probed port that yielded no crypto
+    # evidence -- overwhelmingly ports where nothing was listening, not scanner
+    # faults. Carry the evidenced count so the item can say which it is instead of
+    # reporting a closed-port sweep as unreliability. The RATE is deliberately left
+    # alone: it is a scoring input (scoring.py:483, :490) and changing it here would
+    # move the emitted score.
+    scan_error_count = max(0, _as_int(scan_error.get("count", 0)))
+    evidenced_count = max(0, endpoints - scan_error_count)
     tls_enum_cov = max(
         0.0,
         min(1.0, _as_float(evidence.get("tls_enum_coverage_ratio", 1.0))),
@@ -210,11 +218,14 @@ def build_phased_roadmap(
         _add_candidate(
             items,
             phase="NOW",
-            title="Stabilize scan reliability",
+            title="Increase scan coverage",
             why=_why(
                 (
-                    f"Scan error rate is {round(scan_error_rate * 100, 1)}%, "
-                    "which weakens evidence quality."
+                    f"Only {evidenced_count} of {endpoints} probed ports "
+                    f"({round(100.0 - scan_error_rate * 100, 1)}%) returned crypto "
+                    f"evidence; the remaining {round(scan_error_rate * 100, 1)}% were "
+                    "closed, unreachable, or not listening. Low assessable coverage "
+                    "weakens evidence quality."
                 ),
                 _driver_hint(reasons, ("scan error", "visibility blocker")),
             ),
