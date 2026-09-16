@@ -35,6 +35,26 @@ WORKDIR /quirk
 COPY . /quirk/
 RUN pip install --no-cache-dir ".[all]"
 
+# Chromium + its OS libraries, for report-{stamp}.pdf.
+#
+# `.[all]` pulls in `[dashboard]`, which includes the playwright PYTHON package
+# -- but that package alone renders nothing. The browser binary is a separate
+# download (`playwright install`) and its ~19 system shared libraries are a
+# third thing again (`playwright install-deps`, which needs apt and therefore
+# root). Without the deps the binary exists and fails at exec with
+# "libglib-2.0.so.0: cannot open shared object file".
+#
+# That failure was INVISIBLE: render_pdf_report() catches PlaywrightError and
+# returns False, writer.py then sets pdf_path = None, and the scan exits 0 with
+# every other artifact written and no warning. Graceful degradation intended for
+# "playwright not installed" silently absorbed "playwright installed but
+# unlaunchable", so every containerised scan quietly produced no PDF.
+#
+# Split across the USER boundary on purpose: install-deps needs root for apt;
+# the browser download must land in the quirk user's ~/.cache/ms-playwright,
+# which is where playwright looks at run time.
+RUN playwright install-deps chromium
+
 # Run as a non-root user.
 # nmap TCP/SYN scanning requires raw socket access — this is granted via
 # cap_add: [NET_RAW] in docker-compose.distributed.yml instead of running
@@ -44,6 +64,9 @@ RUN useradd --create-home --shell /bin/bash quirk
 
 USER quirk
 WORKDIR /home/quirk
+
+# Browser binary into ~/.cache/ms-playwright (see the install-deps note above).
+RUN playwright install chromium
 
 # Default CMD is informative — compose overrides `command:` per service:
 #   console:  ["serve", "--host", "0.0.0.0", "--port", "8512"]
