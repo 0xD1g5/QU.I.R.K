@@ -78,7 +78,12 @@ connectors:
   dnssec_resolver: "127.0.0.1:15353"
 
 output:
-  directory: "output"
+  # Must sit alongside db_path: Phase 209's report-download route resolves
+  # report artifacts from THIS directory while the dashboard reads the DB from
+  # db_path. When they disagreed ("output" vs "quirk-output"), the download
+  # buttons served a stale report from a different scan than the dashboard was
+  # displaying -- 200 OK on every format, silently the wrong estate.
+  directory: "quirk-output"
   db_path: "quirk-output/quirk.db"   # canonical — matches dashboard/doctor/console resolution (Phase 74 D-05)
 
 intelligence:
