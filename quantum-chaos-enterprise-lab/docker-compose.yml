@@ -2035,6 +2035,173 @@ services:
       labnet:
         ipv4_address: "10.80.0.111"
 
+  # ── Phase 2026-09-17: connector-coverage hosts ────────────────────────────────
+  # Added so the multihost profile exercises the Identity, Data at Rest, Motion and
+  # Findings connectors, not just TLS/SSH. Each is a DEDICATED mh-* instance with NO
+  # published ports, mirroring how mh-db-finance duplicates the `database` profile's
+  # Postgres rather than dual-homing it. Dual-homing was rejected: it would make these
+  # hosts reachable both from the host and from inside the subnet, eroding the property
+  # that makes this profile a topology exercise — and samba-dc's published :88 already
+  # collides with a host-side reservation on macOS, which an unpublished instance avoids.
+  #
+  # Address plan follows the existing blocks: .4x identity, .6x security infrastructure,
+  # .9x application/API, .12x messaging.
+
+  # Kerberos KDC — realm QUIRK.LAB. Sits beside mh-identity-dc (.40) and mh-saml-idp (.41).
+  mh-kdc:
+    build:
+      context: ./samba
+      dockerfile: Dockerfile
+    profiles: ["multihost"]
+    # 88/udp is declared for documentation parity with the Dockerfile's EXPOSE; on a
+    # bridge network `expose` does not gate container-to-container traffic either way.
+    # Observed 2026-09-17: the Kerberos connector's UDP AS-REQ probe times out against
+    # this container and it falls back to TCP, which succeeds — the scan yields a
+    # KERBEROS endpoint with service_detail "kerberos-no-preauth". Enctype enumeration
+    # via the UDP path is therefore not exercised here; not investigated further.
+    expose:
+      - "88"
+      - "88/udp"
+      - "389"
+    healthcheck:
+      test: ["CMD-SHELL", "smbclient -L localhost -N 2>/dev/null | grep -q QUIRK || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.42"
+
+  # HashiCorp Vault (dev mode) — transit keys, PKI root, auth methods. Beside mh-pki-ca (.60).
+  mh-vault:
+    image: hashicorp/vault:1.17
+    profiles: ["multihost"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    cap_add:
+      - IPC_LOCK
+    command: ["vault", "server", "-dev"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8200/v1/sys/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.61"
+
+  # Seeds mh-vault with the same transit keys / PKI root / auth mounts the `vault`
+  # profile's vault-30-seed creates, so the connector finds real material to classify.
+  mh-vault-seed:
+    image: hashicorp/vault:1.17
+    profiles: ["multihost"]
+    restart: "no"
+    depends_on:
+      mh-vault:
+        condition: service_healthy
+    volumes:
+      - ./vault/seed.sh:/seed.sh:ro
+    environment:
+      VAULT_ADDR: "http://mh-vault:8200"
+      VAULT_TOKEN: "root"
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+    entrypoint: ["/bin/sh", "/seed.sh"]
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.62"
+
+  # JWT / API token endpoints — one per algorithm defect, matching the `jwt` profile.
+  mh-jwt-rs256:
+    build:
+      context: ./jwt/rs256
+    profiles: ["multihost"]
+    restart: unless-stopped
+    expose:
+      - "8000"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.90"
+
+  mh-jwt-hs256:
+    build:
+      context: ./jwt/hs256
+    profiles: ["multihost"]
+    restart: unless-stopped
+    expose:
+      - "8000"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.91"
+
+  mh-jwt-rsa1024:
+    build:
+      context: ./jwt/rsa1024
+    profiles: ["multihost"]
+    restart: unless-stopped
+    expose:
+      - "8000"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.92"
+
+  mh-jwt-algnone:
+    build:
+      context: ./jwt/algnone
+    profiles: ["multihost"]
+    restart: unless-stopped
+    expose:
+      - "8000"
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.93"
+
+  # Mail — Postfix (SMTP/SMTPS/submission) and Dovecot (IMAP/POP3 ± TLS). The email
+  # scanner takes no target fields: it derives hosts from the TLS-scanned target list,
+  # so BOTH addresses must appear in targets.cidrs for these to be probed.
+  mh-postfix:
+    build:
+      context: ../labs/email
+      dockerfile: Dockerfile
+    profiles: ["multihost"]
+    expose:
+      - "25"
+      - "465"
+      - "587"
+    volumes:
+      - ../labs/email/certs/postfix.crt:/etc/postfix/certs/postfix.crt:ro
+      - ../labs/email/certs/postfix.key:/etc/postfix/certs/postfix.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "postfix status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.120"
+
+  mh-dovecot:
+    build:
+      context: ../labs/email
+      dockerfile: Dockerfile
+    profiles: ["multihost"]
+    command: ["/usr/sbin/dovecot", "-F"]
+    environment:
+      OPENSSL_CONF: /etc/dovecot/openssl-tls12-only.cnf
+    expose:
+      - "143"
+      - "993"
+      - "110"
+      - "995"
+    volumes:
+      - ../labs/email/certs/dovecot.crt:/etc/dovecot/private/dovecot.crt:ro
+      - ../labs/email/certs/dovecot.key:/etc/dovecot/private/dovecot.key:ro
+    networks:
+      labnet:
+        ipv4_address: "10.80.0.121"
+
   # Where the scan runs from. See the NO PUBLISHED PORTS note above for why a host-side scan
   # cannot substitute for this on macOS.
   mh-prober:

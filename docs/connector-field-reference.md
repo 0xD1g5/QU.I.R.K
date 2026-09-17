@@ -73,9 +73,17 @@ single-host lab, SimpleSAMLphp serves on port **8080**.
 
 | Field | | Value |
 |---|---|---|
-| Kerberos Targets | **required** | KDC host (port 88) |
+| Kerberos Targets | **required** | `10.80.0.42` (multihost, realm `QUIRK.LAB`) |
 
-Requires `quirk-scanner[identity]`. **Disabled in the multihost profile** — that subnet has no KDC.
+Requires `quirk-scanner[identity]` for impacket. Note `[all]` **deliberately excludes**
+`[identity]`, so an `[all]`-only install — including the chaos lab's own `mh-prober` image —
+cannot scan Kerberos. Install with `pip install -e ".[all,identity]"` as a single resolution
+rather than adding `[identity]` incrementally; see the `sslyze`/`cryptography` note in
+[configuration.md](configuration.md).
+
+On macOS the standalone `kerberos` profile is skipped by `lab.sh`, because macOS runs its own
+KDC on `:88` and that profile publishes the port. The multihost `mh-kdc` publishes no ports and
+is unaffected.
 
 ### DNSSEC — `enable_dnssec`
 
@@ -141,7 +149,7 @@ UNASSESSED — the score is then flatteringly high for the wrong reason.
 
 | Field | | Single-host `vault` profile |
 |---|---|---|
-| Vault Address | **required** | `http://localhost:28200` |
+| Vault Address | **required** | `http://localhost:28200` (single-host) · `http://10.80.0.61:8200` (multihost) |
 | Vault Transit Mount | optional | `transit` |
 | Verify Vault TLS certificate | optional | off for the dev-mode lab server |
 
@@ -194,6 +202,10 @@ dashboard refuses the submission outright rather than degrading.
 No detail fields. The email scanner derives its hosts from the TLS-scanned target list and probes
 its own fixed 7-port table (25, 465, 587, 143, 993, 110, 995). Requires `sslyze`.
 
+**Because it derives hosts from the target list, the mail hosts must appear in `targets`** — in
+the multihost profile that is `10.80.0.120` (Postfix: SMTP/SMTPS/submission) and `10.80.0.121`
+(Dovecot: IMAP/POP3 ± TLS).
+
 ---
 
 ## Findings tab
@@ -202,9 +214,15 @@ its own fixed 7-port table (25, 465, 587, 143, 993, 110, 995). Requires `sslyze`
 
 | Field | | Single-host `jwt` profile |
 |---|---|---|
-| JWT Targets | **required** | `http://localhost:20001/token` … `20004/token` |
+| JWT Targets | **required** | `http://localhost:20001` … `20004` (single-host) · `http://10.80.0.90:8000` … `.93:8000` (multihost) |
 
-Full token-endpoint URLs, not hosts.
+**Base URLs, not token URLs.** The connector probes JWKS paths
+(`/.well-known/jwks.json`, `/oauth/jwks`, `/.well-known/openid-configuration`) by
+concatenating them onto each target, so a target ending in `/token` makes it request
+`/token/.well-known/jwks.json` and find nothing.
+
+Also requires `security.allow_internal_targets: true` for any private or loopback IdP —
+the JWKS probe runs the SSRF guard on every candidate URL.
 
 ### Container images — `enable_container` · Source code — `enable_source`
 

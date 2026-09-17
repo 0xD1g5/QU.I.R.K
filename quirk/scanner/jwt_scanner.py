@@ -125,6 +125,7 @@ def _fetch_jwks(
     verify_tls: bool = True,
     auth_headers: Optional[dict] = None,
     auth_query: Optional[tuple] = None,
+    allow_internal: bool = False,
 ) -> tuple[Optional[list], Optional[str], list[str]]:
     """Probe JWKS paths against base_url.
 
@@ -170,7 +171,7 @@ def _fetch_jwks(
         # CR-03: validate every base probe URL before fetching — SSRF guard, materially
         # more important now that credentials are attached. Previously only the
         # OIDC-followed jwks_uri was validated, leaving the base probe URLs unchecked.
-        _vr_base = validate_external_url(url)
+        _vr_base = validate_external_url(url, allow_internal=allow_internal)
         if not _vr_base.ok:
             continue
         try:
@@ -196,7 +197,7 @@ def _fetch_jwks(
                 jwks_uri = data.get("jwks_uri")
                 if not jwks_uri:
                     continue
-                _vr = validate_external_url(jwks_uri)
+                _vr = validate_external_url(jwks_uri, allow_internal=allow_internal)
                 if not _vr.ok:
                     continue
                 fetched_urls.append(jwks_uri)
@@ -226,6 +227,7 @@ def scan_jwt_endpoint(
     *,
     allow_insecure_jwks: bool = False,
     cred_ctx=None,
+    allow_internal: bool = False,
 ) -> List[CryptoEndpoint]:
     """Fetch JWKS from base_url and return one CryptoEndpoint per key.
 
@@ -254,6 +256,7 @@ def scan_jwt_endpoint(
         verify_tls=verify_tls,
         auth_headers=_auth_headers if _auth_headers else None,
         auth_query=_auth_query,
+        allow_internal=allow_internal,
     )
     if not keys:
         if allow_insecure_jwks and fetched_urls:
@@ -326,6 +329,7 @@ def scan_jwt_targets(
     *,
     allow_insecure_jwks: bool = False,
     cred_ctx=None,
+    allow_internal: bool = False,
 ) -> List[CryptoEndpoint]:
     """Scan a list of JWT API base URLs and return all CryptoEndpoints found.
 
@@ -351,6 +355,7 @@ def scan_jwt_targets(
                 logger=logger,
                 allow_insecure_jwks=allow_insecure_jwks,
                 cred_ctx=cred_ctx,
+                allow_internal=allow_internal,
             )
             results.extend(eps)
         except Exception as exc:

@@ -253,6 +253,14 @@ case "${cmd}" in
     # macOS ships its own KDC bound to *:88 — the `kerberos` profile collides.
     # Skip it on Darwin unless the user explicitly opts in. See BACK-89 for the
     # full remap that makes this unconditional.
+    #
+    # NOTE (2026-09-17): this skip applies to the standalone `kerberos` profile only,
+    # because that profile PUBLISHES 88:88. The `multihost` profile's mh-kdc runs the
+    # same image with no published ports, so it is unaffected by the collision and is
+    # NOT filtered here — multihost Kerberos works on macOS. Three provisioning bugs
+    # were fixed in samba/ to make either profile start at all (packaged smb.conf role
+    # mismatch, missing samba-ad-provision, and overlayfs NT-ACL xattr); before that
+    # the kerberos profile could not provision on any platform.
     _skipped=""
     if [[ "$(uname -s)" == "Darwin" && "${LAB_INCLUDE_KERBEROS:-0}" != "1" ]]; then
       _filtered=()
