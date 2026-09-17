@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-15 (Phase 209 — Series 209 added: 7 deliverable-reachability cases covering
+**Last Updated:** 2026-09-17 (UAT-32-04 steps corrected — the case staged the stdlib email fallback by uninstalling sslyze, a premise `run_scan.py:3869-3872` makes unreachable: with sslyze absent the email phase is skipped outright, so `_scan_one_fallback_email()` is never called and the live procedure could not have passed as written. It had been dispositioned PASS on `pytest -k fallback`, a substitute that calls the fallback directly and cannot observe the phase-level skip. Steps now target the three genuinely reachable `return None` paths in `_scan_one_sslyze_email()`, with sslyze installed; the live end-to-end leg is recorded as an honest GAP because the shipped chaos lab cannot stage it deterministically (its Postfix offers RSA-only ciphers the stdlib client will not negotiate). Found while tracing the undeclared-`sslyze` packaging defect. Earlier: 2026-09-15 Phase 209 — Series 209 added: 7 deliverable-reachability cases covering
 DELIV-01 (manifest + five-format download API over the artifacts `write_reports()` already writes,
 structural path containment with a live negative control, RPT-03's dashboard exclusion re-proven) and
 DELIV-02 (the Executive-page download control). **Two cases are `Tester: Digs` and dispositioned only
@@ -2805,44 +2805,76 @@ egress, OR locally `sudo pfctl` / `iptables` drop on 25 only). Other email ports
 
 ---
 
-### UAT-32-04: Stdlib Fallback — sslyze Uninstalled
+### UAT-32-04: Stdlib Fallback — sslyze Probe Returns None
 
-> Added Phase 32 (2026-04-27): Validates EMAIL-07 — when sslyze is not installed, the email
-> scanner falls through to `smtplib`/`imaplib`/`poplib` STARTTLS handshakes (and direct TLS
-> for the implicit-TLS ports), and still extracts TLS version + cipher + cert from the
-> `ssl.SSLSocket`. Note: stdlib's default `ssl.create_default_context()` excludes RSA-kex
-> ciphers, so against the chaos lab's RSA-only allowlist the Postfix ports may handshake-fail
-> via fallback — the test target should be a server that accepts at least one
-> stdlib-compatible cipher.
+> Added Phase 32 (2026-04-27): Validates EMAIL-07 — when the sslyze probe yields no result for
+> an endpoint, the email scanner falls through to `smtplib`/`imaplib`/`poplib` STARTTLS
+> handshakes (and direct TLS for the implicit-TLS ports), and still extracts TLS version +
+> cipher + cert from the `ssl.SSLSocket`.
+>
+> **Steps corrected 2026-09-17.** This case previously staged the fallback by *uninstalling
+> sslyze*. That premise was never reachable and the case could not have passed as written:
+> `run_scan.py:3869-3872` checks `email_scanner.SSLYZE_AVAILABLE` and sets `cfg_email_skip =
+> True`, so with sslyze absent the email phase is skipped in its entirety and
+> `_scan_one_fallback_email()` is never called. The `SslyzeScanner is None` branch at
+> `email_scanner.py:122` is therefore dead code from the orchestrator's perspective — it is
+> reachable only by calling the scanner module directly. The case was nonetheless dispositioned
+> PASS in 2026-08-27 on `pytest -k fallback`, a substitute that invokes the fallback directly
+> and so cannot observe the phase-level skip that invalidated the live steps. Found 2026-09-17
+> while tracing why `sslyze` was undeclared in `pyproject.toml`; the three unit tests were
+> always correct (their docstrings read "When sslyze returns None") — only this case's steps
+> were wrong.
+>
+> The genuinely reachable triggers, all with sslyze **installed**, are the three other
+> `return None` paths in `_scan_one_sslyze_email()`: an empty `results` list; a
+> `server_result.scan_status != ServerScanStatusEnum.COMPLETED` (logs `sslyze ERROR for
+> host:port — using fallback`); or the broad `except Exception` handler (logs `sslyze exception
+> ... — using fallback`). `_scan_one_email()` dispatches to the fallback on `ep is None` from
+> any of them.
+>
+> Note: stdlib's default `ssl.create_default_context()` excludes RSA-kex ciphers, so against the
+> chaos lab's RSA-only Postfix allowlist the fallback handshake **fails** with
+> `SSLV3_ALERT_HANDSHAKE_FAILURE` and records a `scan_error` rather than a cipher (see
+> `labs/email/expected_results.md` §"sslyze required for full enumeration"). The shipped lab is
+> therefore not a usable target for demonstrating a *successful* fallback row.
 
-**Prerequisites:** A virtualenv with `quirk` installed but WITHOUT sslyze
-(`pip uninstall -y sslyze`). A reachable mail server with at least one TLS 1.2 PFS cipher
-acceptable to the stdlib client (e.g. a real ISP mail server, OR a Postfix lab variant with
-ECDHE enabled — see `labs/email/postfix/main.cf` for the cipher excludes to relax).
+**Prerequisites:** sslyze **installed** (it is a core dependency as of v5.22 — do NOT uninstall
+it to run this case; that stages the unreachable path described above). For the live leg only: a
+reachable mail server that sslyze's bundled OpenSSL fails to complete against while the stdlib
+client can still negotiate — e.g. the `ERROR_NO_CONNECTIVITY` class of sslyze failure recorded at
+`quirk/scanner/pqc_probe.py:5-6`.
 
 **Steps:**
-1. `pip uninstall -y sslyze` in the project venv.
-2. `python -c "from quirk.scanner.email_scanner import SSLYZE_AVAILABLE; print(SSLYZE_AVAILABLE)"`
-   — confirm `False`.
-3. Run `quirk --config email_uat.yaml --profile standard --verbose` against the
-   stdlib-compatible target.
-4. Inspect logs for fallback path indicators (no sslyze imports referenced).
-5. Inspect output rows: at least one row has non-NULL `tls_version` and `cipher_suite`
-   captured via the stdlib path.
-6. Re-install sslyze: `pip install sslyze`.
+
+*Automated leg (the real coverage):*
+1. `python -m pytest tests/test_email_scanner.py -q -k fallback`
+2. Confirm 3 passed. Each test mocks the sslyze probe to return `None` — the reachable
+   trigger — and asserts the stdlib path populates the endpoint.
+
+*Live leg (see Pass Criteria — currently a known gap):*
+3. Point the scanner at a mail host where sslyze's probe errors for at least one of the 7
+   `EMAIL_PORTS`, with `--verbose`.
+4. Confirm the log carries `sslyze ERROR for <host>:<port> — using fallback` or
+   `sslyze exception ... — using fallback` for that endpoint.
+5. Inspect output rows: that endpoint has non-NULL `tls_version` and `cipher_suite` captured
+   via the stdlib path.
 
 **Expected:**
-- Scanner does not crash on missing sslyze.
-- At least one `CryptoEndpoint` row populated by the stdlib fallback path with
-  `tls_version` and `cipher_suite` non-NULL.
+- A `None` return from the sslyze probe routes to `_scan_one_fallback_email()` rather than
+  aborting the endpoint; the scanner does not crash.
+- At least one `CryptoEndpoint` row populated by the stdlib fallback path with `tls_version`
+  and `cipher_suite` non-NULL.
 - `_peer_metadata()` extracts `version()` / `cipher()` / `getpeercert()` from the underlying
   `ssl.SSLSocket`.
 
 **Pass Criteria:**
 - `python -m pytest tests/test_email_scanner.py -q -k fallback` — 3 fallback tests green.
-- Live sslyze-uninstalled scan produces ≥1 row with non-NULL `tls_version`.
+- Live leg: **GAP — no substitute coverage.** The reachable trigger requires a target that
+  fails for sslyze but succeeds for the stdlib client, which the shipped chaos lab cannot stage
+  deterministically (its Postfix offers RSA-only ciphers the stdlib client will not negotiate).
+  Recorded honestly rather than papered over; the automated leg is not claimed to cover it.
 
-**Result:** - [x] PASS (2026-08-27 tests/test_email_scanner.py -k fallback exit 0, 3 passed)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-17 steps corrected — the prior live procedure staged an unreachable code path; automated leg re-run: tests/test_email_scanner.py -k fallback exit 0, 3 passed. Live end-to-end leg remains unexercised and is dispositioned GAP in Pass Criteria above, matching UAT-32-03's treatment of its own unexercised leg.)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:**
 
