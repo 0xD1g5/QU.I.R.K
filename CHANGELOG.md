@@ -65,7 +65,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
   wheels for cp310-cp314 across macOS arm64, manylinux, musllinux and win_amd64, so no supported
   platform needs a toolchain. Operators with an existing install must re-run `pip install` —
   updating source alone will not install it, since `pyproject.toml` is install-time metadata the
-  running code never consults.
+  running code never consults. **Note the transitive constraint:** sslyze pins
+  `cryptography<47`, so the effective core window is now `44.0 <= cryptography < 47`. A clean
+  install is unaffected even with `[identity]` — pip resolves cryptography 46.0.7 alongside
+  pyOpenSSL 26.2.0, which accepts it. An *incremental* `pip install sslyze` into an environment
+  already holding pyOpenSSL >= 26.4 (which requires `cryptography>=49`) will downgrade
+  cryptography and leave pyOpenSSL unsatisfied, because pip's resolver does not reconsider
+  already-installed distributions; re-run the full install command to re-resolve, then
+  `pip check`. QUIRK imports pyOpenSSL nowhere, so only impacket-backed Kerberos/AD scanning is
+  affected while the environment is inconsistent.
 - **Optional-dependency install hints no longer name a command that cannot fix the failure.**
   `email_scanner.py` and `broker_scanner.py` told operators to run `pip install 'quirk[motion]'`
   for a missing `sslyze` — the wrong package name (`quirk-scanner`) and an extras group that

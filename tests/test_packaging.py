@@ -1,6 +1,7 @@
 """Phase 7 — BRAND-04: packaging and installability tests."""
 import importlib
 import os
+import tomllib
 
 
 def test_run_scan_importable():
@@ -39,13 +40,21 @@ def test_pyproject_has_rich():
 # ---------------------------------------------------------------------------
 
 def _core_deps_section():
-    """Return just the [project] dependencies list text (before optional-dependencies)."""
+    """Return the [project] dependencies as newline-joined requirement specifiers.
+
+    Parsed via tomllib rather than sliced out of the raw file text. The raw-text
+    slice this replaced included COMMENTS, so a comment that merely *mentioned* a
+    package read as a declaration *of* it: the `sslyze` entry's caveat comment
+    explains its interaction with impacket's pyOpenSSL chain, and that prose alone
+    tripped `test_impacket_not_in_core_deps` even though impacket is nowhere in
+    `dependencies`. These tests assert what is DECLARED; parse the declarations.
+    Every `in` / `not in` check below works unchanged against the specifier text
+    (e.g. "dnspython" in "dnspython[dnssec]>=2.8.0").
+    """
     root = os.path.join(os.path.dirname(__file__), "..")
-    pyproject = open(os.path.join(root, "pyproject.toml")).read()
-    # Slice from 'dependencies = [' up to ']' before '[project.optional-dependencies]'
-    start = pyproject.index("dependencies = [")
-    end = pyproject.index("[project.optional-dependencies]")
-    return pyproject[start:end]
+    with open(os.path.join(root, "pyproject.toml"), "rb") as fh:
+        data = tomllib.load(fh)
+    return "\n".join(data["project"]["dependencies"])
 
 
 def test_dnspython_in_core_deps():
