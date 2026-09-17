@@ -33,6 +33,17 @@ dependencies = [
     "platformdirs>=4.3.0",   # Phase 108 SENSOR-05: cross-OS config/data dirs
     "tenacity>=8.2.0",       # Phase 108 SENSOR-02: retry with exponential backoff
     "zstandard>=0.22.0",     # Phase 108 SENSOR-02/03/04: zstd payload compression
+    # sslyze is the PRIMARY TLS engine (quirk/scanner/tls_scanner.py) and the only
+    # engine for the email + broker TLS probes. It was undeclared until v5.22: the
+    # scanners' ImportError guards degraded silently (TLS fell back to stdlib ssl;
+    # email/broker were refused outright by the dashboard availability gate), so a
+    # clean `pip install quirk-scanner` shipped a degraded scanner with no error.
+    # Floor is 6.2.0: _scan_one_sslyze normalizes both the pre-6.3 string and the
+    # 6.3+ submodule shape of `sslyze.__version__` (see docs/test-triage-149.md).
+    # Binary dep nassl ships wheels for cp310-cp314 on macOS arm64, manylinux
+    # x86_64/aarch64, musllinux and win_amd64 — no toolchain needed on any
+    # supported platform.
+    "sslyze>=6.2.0",
 ]
 
 [project.optional-dependencies]
@@ -94,6 +105,10 @@ db = [
     "PyMySQL>=1.1.0",
 ]
 motion = ["quirk-scanner[email]", "quirk-scanner[broker]", "quirk-scanner[kafka]"]
+# Intentionally empty as of v5.22: the email scanner's only third-party dependency
+# was sslyze, now a core dependency (see above). Kept as a named group so
+# `quirk-scanner[email]` and `[motion]` keep resolving for existing installs and docs.
+# NOT a placeholder — do not "fill it in" without a real dependency to add.
 email = []
 broker = ["redis>=5.0"]
 kafka = ["kafka-python>=2.0"]

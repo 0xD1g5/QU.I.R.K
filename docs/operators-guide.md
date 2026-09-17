@@ -97,10 +97,10 @@ quirk --config config.yaml  # use the generated config
 | Extra | Adds | Typical use |
 |-------|------|-------------|
 | `quirk-scanner[dashboard]` | FastAPI server + Playwright PDF rendering | Local web dashboard, PDF reports |
-| `quirk-scanner[identity]` | impacket, dnspython, signxml | Kerberos / SAML / DNSSEC scanners (install separately — not in `[all]`) |
-| `quirk-scanner[cloud]` | google-cloud-kms, hvac, kubernetes | GCP KMS, HashiCorp Vault, Kubernetes connectors |
-| `quirk-scanner[db]` | psycopg, mysql-connector-python | Postgres / MySQL TLS-mode + RDS scanning |
-| `quirk-scanner[motion]` | aiokafka, pika, redis, azure-servicebus, boto3 SQS | Email scanner + broker scanner (Kafka / AMQP / Redis / Service Bus / SQS) |
+| `quirk-scanner[identity]` | impacket, ldap3 | Kerberos / AD CS scanners (install separately — not in `[all]`). SAML / DNSSEC need no extra: `signxml`, `lxml` and `dnspython` are core dependencies. |
+| `quirk-scanner[cloud]` | google-api-python-client, google-auth, azure-mgmt-storage, kubernetes, google-cloud-container, azure-mgmt-containerservice, hvac | GCP, Azure Blob/AKS, Kubernetes and HashiCorp Vault connectors |
+| `quirk-scanner[db]` | psycopg2-binary, PyMySQL | Postgres / MySQL TLS-mode + RDS scanning |
+| `quirk-scanner[motion]` | redis, kafka-python (via `[broker]` + `[kafka]`) | Broker scanner (Kafka / Redis). The email scanner and all broker **TLS** probing need no extra — `sslyze` is a core dependency as of v5.22. |
 | `quirk-scanner[all]` | Everything above **except** `[identity]` | One-shot enterprise install |
 
 ### 2.3 Vertical editions (v5.6+)
@@ -654,7 +654,9 @@ quirk errors --dump-md > docs/error-codes.md
   optional dependencies (`sslyze`, `kafka-python`, `redis`), not just `sslyze`, and the smime/adcs
   connectors emit the signal for the first time (both previously failed silently with only a bare
   log line). If you enable a connector and see this advisory, install the named extra
-  (`pip install quirk-scanner[motion]` for broker/email, `quirk-scanner[adcs]` for smime/adcs)
+  (`pip install quirk-scanner[motion]` for the broker's Kafka/Redis clients,
+  `quirk-scanner[adcs]` for smime/adcs; a missing `sslyze` means a broken install —
+  it is a core dependency, so reinstall `quirk-scanner` rather than adding an extra)
   or leave the connector disabled.
 - **`[QRK-CONFIG-001]` on startup — non-numeric `scan.ports_tls` / `scan.tls_designated_ports`
   entry** — as of v5.20 (Phase 189, TRIAGE-04), a port-list value that isn't a bare integer or a
@@ -830,8 +832,8 @@ inline subsection below the table.
 | DNSSEC | DNSKEY / DS / RRSIG | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | `quirk-scanner[identity]` | (algorithm + chain findings) |
 | Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` | (etype findings) |
 | SAML | SAML IdP signing/digest algorithms | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | `quirk-scanner[identity]` | (signature-alg findings) |
-| Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `timeouts.email_seconds` | `quirk-scanner[motion]` | "STARTTLS downgrade risk on SMTP" |
-| Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
+| Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `timeouts.email_seconds` | `sslyze` (core) | "STARTTLS downgrade risk on SMTP" |
+| Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `sslyze` (core) + `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
 | AWS | ACM certs, KMS keys, CloudFront, ELB | `connectors.enable_aws`, `aws_region`, `aws_profile` | `boto3` (core) | (KMS / cert findings) — see [`docs/connectors/aws.md`](connectors/aws.md) |
 | Azure | Key Vault keys + certs, App Gateway TLS | `connectors.enable_azure`, `azure_subscription_id`, `azure_keyvault_urls` | (varies) | — see [`docs/connectors/azure.md`](connectors/azure.md) |
 | GCP | KMS + GCS storage encryption | `connectors.enable_gcp`, `gcp_project_id` | `quirk-scanner[cloud]` | (no dedicated doc yet) |
@@ -952,7 +954,7 @@ non-conformant primitives. Requires `quirk-scanner[identity]`.
 Probes 7 email-TLS ports per target — SMTP `25`/`465`/`587`, IMAP `143`/`993`, POP3
 `110`/`995` — handling both implicit TLS and STARTTLS upgrades. Findings include
 "STARTTLS downgrade risk on SMTP", missing implicit-TLS on submission, and weak
-ciphers on the negotiated channel. Requires `quirk-scanner[motion]`.
+ciphers on the negotiated channel. Requires no extra — `sslyze` is a core dependency.
 
 #### Broker scanner
 
@@ -960,7 +962,8 @@ Probes message-broker endpoints across five protocol families: Kafka (configurab
 listeners), AMQP (RabbitMQ), Redis, Azure Service Bus (per `broker_azure_namespaces`),
 and Amazon SQS (per `broker_sqs_regions`). Findings include plaintext-listener
 detection, weak TLS configuration, and missing authentication. Gated by
-`connectors.enable_broker=true` and requires `quirk-scanner[motion]`.
+`connectors.enable_broker=true` and requires `quirk-scanner[motion]` for its Kafka/Redis
+clients (`sslyze`, which drives the TLS probe itself, is a core dependency).
 
 **Non-default ports (Phase 190, TRIAGE-06):** each family's default port table is fixed; to
 also probe a broker running on a non-standard port, list it in `connectors.broker_targets`
