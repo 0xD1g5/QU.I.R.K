@@ -51,12 +51,33 @@
 #   aws_endpoint_url: http://10.80.0.50:9000, the profile's MinIO endpoint; the template ships none so the real AWS endpoint is used
 #   aws_region: us-east-1, required by the S3 client against MinIO; the template ships none
 #   broker_targets: 10.80.0.31, this profile's Redis (mh-cache-session); the template ships none
+#   mysql_targets: 10.80.0.111, this profile's MySQL (mh-db-hr); the template ships none
+#   mysql_scanner_user: lab fixture credential for mh-db-hr, which seeds no dedicated scanner account
+#   mysql_scanner_password: as above — a throwaway chaos-lab value, not a secret
+#   enable_kerberos: true — mh-kdc at 10.80.0.42 serves realm QUIRK.LAB; the template ships it false and this file shipped false until 2026-09-17, when the KDC was added to the profile
+#   kerberos_targets: 10.80.0.42, this profile's KDC (mh-kdc); the template ships none
+#   enable_vault: true — mh-vault at 10.80.0.61 holds transit keys, a PKI root and auth mounts; the template ships it false
+#   vault_addr: http://10.80.0.61:8200, this profile's Vault; the template ships none
+#   vault_token: dev-mode root token for mh-vault — a throwaway chaos-lab value, not a secret
+#   vault_transit_mount: transit, the mount mh-vault-seed populates; the template ships none
+#   vault_tls_verify: false — mh-vault runs dev mode over plain HTTP, so certificate verification has nothing to verify
+#   jwt_targets: the four mh-jwt-* JWKS base URLs at 10.80.0.90-.93:8000; the template ships none (note enable_jwt itself does NOT diverge — the template already ships it true)
 #
 # (End of the exception list — nothing may be inserted above this line inside the
-# block.) enable_kerberos is deliberately NOT listed: it is false here AND false in
-# the template, so it does not diverge. Its inline comment below explains why this
-# profile leaves it off. Adding it back would be a stale entry and the gate would
-# fail from the other side.
+# block.)
+#
+# CORRECTED 2026-09-17: this note previously read "enable_kerberos is deliberately NOT
+# listed: it is false here AND false in the template, so it does not diverge." That was
+# true until mh-kdc was added to the profile on 2026-09-17; enable_kerberos is now true
+# here and still false in the template, so it DOES diverge and is listed above. The note
+# is kept rather than deleted because it records the gate's other direction: a declared
+# key that stops diverging becomes a STALE entry and fails just as loudly. Ten further
+# entries landed in the same change (mysql_*, kerberos_targets, vault_*).
+#
+# Enumerated from the gate, not by hand: pytest truncates the assertion list, so reading
+# the failure output reported ONE undeclared key when there were eleven. Recompute with
+#   _divergent_connector_keys(_file_connectors_block(path), _template_connectors_block())
+# from tests/test_config_connector_drift.py rather than trusting the printed failure.
 
 # vertical: healthcare
 
@@ -120,7 +141,16 @@ targets:
     - "10.80.0.108/32"  # mh-erp-frontend     legacy TLS
     - "10.80.0.109/32"  # mh-hr-portal        legacy TLS
     - "10.80.0.110/32"  # mh-payroll          legacy TLS
-    - "10.80.0.111/32"  # mh-db-hr            MySQL plaintext
+    - "10.80.0.111/32"   # mh-db-hr            MySQL, ssl-off
+    # Connector-coverage hosts added 2026-09-17.
+    - "10.80.0.42/32"    # mh-kdc              Kerberos KDC (QUIRK.LAB)
+    - "10.80.0.61/32"    # mh-vault            HashiCorp Vault (dev)
+    - "10.80.0.90/32"    # mh-jwt-rs256        JWT RS256
+    - "10.80.0.91/32"    # mh-jwt-hs256        JWT HS256
+    - "10.80.0.92/32"    # mh-jwt-rsa1024      JWT RSA-1024
+    - "10.80.0.93/32"    # mh-jwt-algnone      JWT alg=none
+    - "10.80.0.120/32"   # mh-postfix          SMTP / SMTPS / submission
+    - "10.80.0.121/32"   # mh-dovecot          IMAP / POP3 ± TLS  # mh-db-hr            MySQL plaintext
   include_ips: []
   exclude_ips: []
 
@@ -135,7 +165,15 @@ connectors:
   # Kerberos: DISABLED. This profile has no KDC (mh-identity-dc is LDAP-only, port 389/636).
   # Left off rather than aimed at a host that cannot answer — a connector pointed at the wrong
   # service produces either silence or a misleading finding, and neither belongs in a demo.
-  enable_kerberos: false
+  # Kerberos: mh-kdc at 10.80.0.42, realm QUIRK.LAB.
+  # Enabled 2026-09-17. Previously false with the note "no KDC on this subnet" — there is
+  # one now. NOTE this connector needs `quirk-scanner[identity]` for impacket, which `[all]`
+  # deliberately excludes (pyOpenSSL/cryptography chain). The prober image installs `.[all]`
+  # and therefore CANNOT scan this host; run from a scanner that has [identity] installed, or
+  # accept a missing-extra advisory for this one connector.
+  enable_kerberos: true
+  kerberos_targets:
+    - "10.80.0.42"
 
   # DNSSEC: DISABLED for the same reason — no bind9 resolver on this subnet.
   enable_dnssec: false
@@ -174,6 +212,59 @@ connectors:
     - "10.80.0.30"
   pg_scanner_user: finance
   pg_scanner_password: finance
+
+  # mh-db-hr at 10.80.0.111 (mysql:8.0.40, MYSQL_ROOT_PASSWORD=hr, MYSQL_DATABASE=hr).
+  # Added 2026-09-17: the host was already in targets.cidrs and already had a container in the
+  # multihost profile, but `mysql_targets` was absent, so `enable_db: true` probed Postgres only
+  # and MySQL never reached protocol_counts — the same "enable_* alone probes nothing" trap the
+  # pg_targets comment above records, pointed at the other engine. Verified against the live
+  # container before being written here: scan_mysql_targets(["10.80.0.111"], user="root",
+  # password="hr") returns one endpoint, protocol=MYSQL, service_detail="MySQL/ssl-off",
+  # severity=HIGH.
+  #
+  # `root` is used because this container seeds no dedicated scanner account, unlike the
+  # single-host `database` profile's mysql-ssl-off (quirk_scanner/quirk_scanner). A read-only
+  # scanner grant would be better practice; it needs an init script on the container, which is a
+  # lab change rather than a config one.
+  mysql_targets:
+    - "10.80.0.111"
+  mysql_scanner_user: root
+  mysql_scanner_password: hr
+
+  # Vault: mh-vault at 10.80.0.61 (dev mode, root token), seeded by mh-vault-seed with the
+  # same transit keys / PKI root / auth mounts the single-host `vault` profile uses.
+  # Added 2026-09-17. Expected: exportable transit key MEDIUM, RSA<4096 PKI root HIGH,
+  # dev-token auth HIGH, userpass auth MEDIUM. Needs quirk-scanner[cloud] for hvac.
+  enable_vault: true
+  vault_addr: "http://10.80.0.61:8200"
+  vault_token: "root"
+  vault_transit_mount: "transit"
+  vault_tls_verify: false
+
+  # JWT/API endpoints: one per algorithm defect, mirroring the `jwt` profile's four
+  # services. Added 2026-09-17.
+  #
+  # These are BASE URLs, not token URLs. The connector probes JWKS paths
+  # (/.well-known/jwks.json, /oauth/jwks, /.well-known/openid-configuration) by
+  # concatenating them onto each target, so a target ending in /token makes it request
+  # /token/.well-known/jwks.json and find nothing. Measured against the live services:
+  # "http://10.80.0.90:8000/token" -> 0 endpoints, "http://10.80.0.90:8000" -> 1.
+  # docs/chaos-lab.md documented the /token form for the single-host profile; corrected
+  # in the same change.
+  enable_jwt: true
+  jwt_targets:
+    - "http://10.80.0.90:8000"   # RS256    — baseline
+    - "http://10.80.0.91:8000"   # HS256    — symmetric
+    - "http://10.80.0.92:8000"   # RSA-1024 — undersized key
+    - "http://10.80.0.93:8000"   # alg=none — unsigned
+
+  # Email: mh-postfix (10.80.0.120) and mh-dovecot (10.80.0.121). Added 2026-09-17.
+  # The email scanner takes NO target fields — it derives hosts from the TLS-scanned
+  # target list, which is why both addresses are added to targets.cidrs above. It then
+  # probes its own fixed 7-port table (25/465/587/143/993/110/995) against each.
+  # Needs sslyze; the prober image lacks it until the [all] extras rebuild lands
+  # (sslyze became a core dependency 2026-09-17).
+  enable_email: true
 
 output:
   directory: "/out"
