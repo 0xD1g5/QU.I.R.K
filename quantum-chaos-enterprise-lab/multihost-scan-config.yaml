@@ -51,12 +51,33 @@
 #   aws_endpoint_url: http://10.80.0.50:9000, the profile's MinIO endpoint; the template ships none so the real AWS endpoint is used
 #   aws_region: us-east-1, required by the S3 client against MinIO; the template ships none
 #   broker_targets: 10.80.0.31, this profile's Redis (mh-cache-session); the template ships none
+#   mysql_targets: 10.80.0.111, this profile's MySQL (mh-db-hr); the template ships none
+#   mysql_scanner_user: lab fixture credential for mh-db-hr, which seeds no dedicated scanner account
+#   mysql_scanner_password: as above — a throwaway chaos-lab value, not a secret
+#   enable_kerberos: true — mh-kdc at 10.80.0.42 serves realm QUIRK.LAB; the template ships it false and this file shipped false until 2026-09-17, when the KDC was added to the profile
+#   kerberos_targets: 10.80.0.42, this profile's KDC (mh-kdc); the template ships none
+#   enable_vault: true — mh-vault at 10.80.0.61 holds transit keys, a PKI root and auth mounts; the template ships it false
+#   vault_addr: http://10.80.0.61:8200, this profile's Vault; the template ships none
+#   vault_token: dev-mode root token for mh-vault — a throwaway chaos-lab value, not a secret
+#   vault_transit_mount: transit, the mount mh-vault-seed populates; the template ships none
+#   vault_tls_verify: false — mh-vault runs dev mode over plain HTTP, so certificate verification has nothing to verify
+#   jwt_targets: the four mh-jwt-* JWKS base URLs at 10.80.0.90-.93:8000; the template ships none (note enable_jwt itself does NOT diverge — the template already ships it true)
 #
 # (End of the exception list — nothing may be inserted above this line inside the
-# block.) enable_kerberos is deliberately NOT listed: it is false here AND false in
-# the template, so it does not diverge. Its inline comment below explains why this
-# profile leaves it off. Adding it back would be a stale entry and the gate would
-# fail from the other side.
+# block.)
+#
+# CORRECTED 2026-09-17: this note previously read "enable_kerberos is deliberately NOT
+# listed: it is false here AND false in the template, so it does not diverge." That was
+# true until mh-kdc was added to the profile on 2026-09-17; enable_kerberos is now true
+# here and still false in the template, so it DOES diverge and is listed above. The note
+# is kept rather than deleted because it records the gate's other direction: a declared
+# key that stops diverging becomes a STALE entry and fails just as loudly. Ten further
+# entries landed in the same change (mysql_*, kerberos_targets, vault_*).
+#
+# Enumerated from the gate, not by hand: pytest truncates the assertion list, so reading
+# the failure output reported ONE undeclared key when there were eleven. Recompute with
+#   _divergent_connector_keys(_file_connectors_block(path), _template_connectors_block())
+# from tests/test_config_connector_drift.py rather than trusting the printed failure.
 
 # vertical: healthcare
 
