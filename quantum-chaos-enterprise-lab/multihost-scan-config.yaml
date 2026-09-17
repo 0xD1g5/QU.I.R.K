@@ -175,6 +175,24 @@ connectors:
   pg_scanner_user: finance
   pg_scanner_password: finance
 
+  # mh-db-hr at 10.80.0.111 (mysql:8.0.40, MYSQL_ROOT_PASSWORD=hr, MYSQL_DATABASE=hr).
+  # Added 2026-09-17: the host was already in targets.cidrs and already had a container in the
+  # multihost profile, but `mysql_targets` was absent, so `enable_db: true` probed Postgres only
+  # and MySQL never reached protocol_counts — the same "enable_* alone probes nothing" trap the
+  # pg_targets comment above records, pointed at the other engine. Verified against the live
+  # container before being written here: scan_mysql_targets(["10.80.0.111"], user="root",
+  # password="hr") returns one endpoint, protocol=MYSQL, service_detail="MySQL/ssl-off",
+  # severity=HIGH.
+  #
+  # `root` is used because this container seeds no dedicated scanner account, unlike the
+  # single-host `database` profile's mysql-ssl-off (quirk_scanner/quirk_scanner). A read-only
+  # scanner grant would be better practice; it needs an init script on the container, which is a
+  # lab change rather than a config one.
+  mysql_targets:
+    - "10.80.0.111"
+  mysql_scanner_user: root
+  mysql_scanner_password: hr
+
 output:
   directory: "/out"
   db_path: "/out/quirk.db"   # canonical — matches dashboard/doctor/console resolution (Phase 74 D-05)
