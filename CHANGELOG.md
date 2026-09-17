@@ -50,6 +50,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ### Fixed
 
+- **`sslyze` is now a declared dependency — it drives the primary TLS scanner and every
+  email/broker TLS probe, but was declared nowhere in `pyproject.toml`.** Not in core
+  `dependencies`, and not in any extras group (`email` was an empty list; `broker` held only
+  `redis`), so a clean `pip install quirk-scanner` — with or without extras — never installed it.
+  Nothing failed loudly because every consumer guards the import: the TLS scanner degraded
+  silently to its stdlib `ssl`+`cryptography` fallback, shipping the flagship scanner in reduced
+  mode with no error, while the email and broker connectors were refused outright by the
+  dashboard availability gate ("Scan rejected: Email / SMTP is not available in this
+  environment"). Across an 82-package dry-run resolution, `quirk-scanner` is the only package
+  that requires `sslyze` — there was no transitive path, so it worked in practice only where
+  sslyze happened to already be present. Declared in **core** (floor `>=6.2.0`, matching the
+  `__version__`-shape normalization already in `_scan_one_sslyze`); binary dep `nassl` ships
+  wheels for cp310-cp314 across macOS arm64, manylinux, musllinux and win_amd64, so no supported
+  platform needs a toolchain. Operators with an existing install must re-run `pip install` —
+  updating source alone will not install it, since `pyproject.toml` is install-time metadata the
+  running code never consults. **Note the transitive constraint:** sslyze pins
+  `cryptography<47`, so the effective core window is now `44.0 <= cryptography < 47`. A clean
+  install is unaffected even with `[identity]` — pip resolves cryptography 46.0.7 alongside
+  pyOpenSSL 26.2.0, which accepts it. An *incremental* `pip install sslyze` into an environment
+  already holding pyOpenSSL >= 26.4 (which requires `cryptography>=49`) will downgrade
+  cryptography and leave pyOpenSSL unsatisfied, because pip's resolver does not reconsider
+  already-installed distributions; re-run the full install command to re-resolve, then
+  `pip check`. QUIRK imports pyOpenSSL nowhere, so only impacket-backed Kerberos/AD scanning is
+  affected while the environment is inconsistent.
+- **Optional-dependency install hints no longer name a command that cannot fix the failure.**
+  `email_scanner.py` and `broker_scanner.py` told operators to run `pip install 'quirk[motion]'`
+  for a missing `sslyze` — the wrong package name (`quirk-scanner`) and an extras group that
+  never contained sslyze. A contract test asserted the literal `"pip install 'quirk["`, pinning
+  the false hint in place; it now asserts the message *shape* rather than the payload.
+  `docs/operators-guide.md`'s extras table was regenerated from `pyproject.toml`, which revealed
+  all four of its rows had drifted (`[identity]` listed two core dependencies as extras;
+  `[cloud]` named a package it does not contain).
+
 - **Readiness-score ratio denominators now divide by the population their numerator is drawn
   from, not by the scan's probe count** (999.113). **Every readiness score this product has ever
   emitted was computed under the old semantics and will not match a re-score under the new one —

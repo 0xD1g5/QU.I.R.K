@@ -33,6 +33,36 @@ dependencies = [
     "platformdirs>=4.3.0",   # Phase 108 SENSOR-05: cross-OS config/data dirs
     "tenacity>=8.2.0",       # Phase 108 SENSOR-02: retry with exponential backoff
     "zstandard>=0.22.0",     # Phase 108 SENSOR-02/03/04: zstd payload compression
+    # sslyze is the PRIMARY TLS engine (quirk/scanner/tls_scanner.py) and the only
+    # engine for the email + broker TLS probes. It was undeclared until v5.22: the
+    # scanners' ImportError guards degraded silently (TLS fell back to stdlib ssl;
+    # email/broker were refused outright by the dashboard availability gate), so a
+    # clean `pip install quirk-scanner` shipped a degraded scanner with no error.
+    # Floor is 6.2.0: _scan_one_sslyze normalizes both the pre-6.3 string and the
+    # 6.3+ submodule shape of `sslyze.__version__` (see docs/test-triage-149.md).
+    # Binary dep nassl ships wheels for cp310-cp314 on macOS arm64, manylinux
+    # x86_64/aarch64, musllinux and win_amd64 — no toolchain needed on any
+    # supported platform.
+    # CAVEAT — sslyze pins `cryptography<47,>=43`, a genuine UPPER cap, so declaring
+    # it here caps `cryptography` at <47 for EVERY install (core floor above is >=44.0,
+    # so the effective window is 44.0 <= cryptography < 47). Measured, not assumed:
+    # cryptography 46.x enumerates X25519MLKEM768 fine (commit 3775b662, live scan), so
+    # the TLS scanner is not degraded.
+    #
+    # A CLEAN install stays consistent even with [identity]: `pip install -e ".[all,identity]"`
+    # resolves sslyze 6.3.1 + cryptography 46.0.7 + pyOpenSSL 26.2.0, and 26.2.0 requires
+    # `cryptography<49,>=46.0.0` — satisfied. pip backtracks pyOpenSSL rather than failing.
+    # Verified by --report dry-run 2026-09-17.
+    #
+    # The failure mode is INCREMENTAL installs into an existing environment. pip's resolver
+    # does not reconsider already-installed distributions, so `pip install sslyze` into a venv
+    # already holding pyOpenSSL 26.4.0 (which requires `cryptography>=49`) downgrades
+    # cryptography to 46.x and leaves pyOpenSSL unsatisfied — pip says exactly this in its own
+    # warning. Observed live on an operator VM 2026-09-17 (cryptography 50.0.1 -> 46.0.7).
+    # Remedy is to RE-RESOLVE the environment (re-run the full `pip install -e ".[extras]"`)
+    # and confirm with `pip check` — not to pin around it. QUIRK imports pyOpenSSL nowhere;
+    # only impacket-backed Kerberos/AD scanning is at risk while the env is inconsistent.
+    "sslyze>=6.2.0",
 ]
 
 [project.optional-dependencies]
@@ -94,6 +124,10 @@ db = [
     "PyMySQL>=1.1.0",
 ]
 motion = ["quirk-scanner[email]", "quirk-scanner[broker]", "quirk-scanner[kafka]"]
+# Intentionally empty as of v5.22: the email scanner's only third-party dependency
+# was sslyze, now a core dependency (see above). Kept as a named group so
+# `quirk-scanner[email]` and `[motion]` keep resolving for existing installs and docs.
+# NOT a placeholder — do not "fill it in" without a real dependency to add.
 email = []
 broker = ["redis>=5.0"]
 kafka = ["kafka-python>=2.0"]

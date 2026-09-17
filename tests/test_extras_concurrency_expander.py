@@ -56,8 +56,20 @@ class _Cfg:
 
 @pytest.mark.parametrize("mod", [email_scanner, broker_scanner, container_scanner, source_scanner])
 def test_extras_messages_use_unified_format(mod):
+    """WR-11: every optional-dependency hint shares one actionable shape.
+
+    The assertion deliberately stops at ``pip install '`` and does NOT require
+    the ``quirk[`` extras form. It used to, and that hardcoded a hint which was
+    false for two of the four modules: email/broker pointed operators at
+    ``pip install 'quirk[motion]'`` for a MISSING ``sslyze``, but sslyze was
+    declared in no extras group at all (``email = []``, ``broker = [redis]``),
+    so the suggested command could never fix the failure it was printed for.
+    sslyze is a core dependency as of v5.22; the hints now name the real
+    package. Locking the extras-bracket literal here is what let the false
+    hint pass CI for ~9 milestones — assert the SHAPE, not the payload.
+    """
     src = inspect.getsource(mod)
-    assert "is not installed — pip install 'quirk[" in src, (
+    assert "is not installed — pip install '" in src, (
         f"{mod.__name__} missing unified extras-error message format"
     )
 
