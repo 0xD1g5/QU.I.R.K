@@ -2,7 +2,7 @@
 
 **Filed:** 2026-09-17 (demo-prep, noticed while opening PR #31)
 **Priority:** P1 — a permanently-red gate is one that stops being read
-**Status:** open
+**Status:** RESOLVED 2026-09-20
 
 ## What is failing
 
@@ -38,3 +38,28 @@ Identify the one unreconciled `BACK-*` ID and either close it with evidence or l
 HORIZON.md's Open-Item Ledger — whichever is true. Note there is already a related pending todo,
 `backlog-gate-false-positive-on-archived-roadmap-prose.md`, which may or may not be the same
 defect; check before treating them as separate.
+
+---
+
+## RESOLVED 2026-09-20 — root cause fixed, `main` is green
+
+Closed by PR #33 (`de9e4f1d`), which fixed the root cause diagnosed in the companion todo
+`backlog-gate-false-positive-on-archived-roadmap-prose.md` (now in `completed/`): archived-roadmap
+NARRATIVE PROSE was minting phantom `ID::heading` keys for already-closed IDs. `BACK-51` is closed
+with evidence at `HORIZON.md:49`; the key `BACK-51::Phases` came from a sentence in
+`v5.23-ROADMAP.md` describing that closure.
+
+This todo was the SYMPTOM; that one was the DEFECT. Both are now closed.
+
+**Evidence — #33's Linux Full Suite, run 2: `5127 passed, 0 failed`.** First clean full suite in
+this repo since Phase 203. The count reconciles exactly against `main` @ `e1ebe2c4` (5122 passed,
+1 failed): the failing gate test converts to a pass (+1/-1) and the narrowing ships 4 new tests,
+giving 5122 + 1 + 4 = 5127 with the failing-node set empty. Skipped held at 108, confirming no
+skip was quietly substituted for the fix.
+
+**Not fully resolved by this, and deliberately left open elsewhere:** a green `main` means the CI
+signal is READABLE again, not that the suite is healthy in general.
+`tests/test_fuzz_cli_safety.py::test_no_fuzz_flag_no_fuzz_errors` still times out locally (30s
+subprocess) while passing in CI, unexplained; and the vitest `-m slow` leg still substitute-checks
+by existence only in CI, because the `Linux Full Suite` job never installs Node for
+`src/dashboard/` — tracked in `docs/uat-coverage-gaps.md`.
