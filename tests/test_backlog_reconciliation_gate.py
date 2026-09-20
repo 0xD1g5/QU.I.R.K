@@ -758,17 +758,27 @@ def test_archived_roadmap_table_row_survives_narrowing(tmp_path):
 
 def test_narrowing_is_not_vacuous_on_the_real_corpus():
     """Prove the narrowing actually fires here, rather than being dead code that
-    happens to sit next to a green gate."""
+    happens to sit next to a green gate.
+
+    Deliberately carries NO skip guard for an empty corpus. The sibling
+    `test_non_vacuity_guard_over_tracked_sources` faces the same possibility and
+    degrades to a conditional failure rather than skipping, because in this
+    module a skip reads as a pass -- the exact confusion T-189-11 exists to
+    prevent. An empty enumeration here fails loudly instead; `_git_tracked_files`
+    already falls back to an on-disk glob and warns when git is unavailable, so
+    reaching zero paths means something is wrong and worth hearing about.
+    """
     paths = (
         _git_tracked_files(".planning/milestones/*-ROADMAP.md")
         + _git_tracked_files(".planning/milestones/*-REQUIREMENTS.md")
         + _git_tracked_files(".planning/milestones/*-phases/**/*.md")
     )
-    if not paths:
-        pytest.skip("no tracked milestone sources on this checkout")
-
     kept = _enumerate_back_ids(paths)
-    assert kept, "enumeration returned nothing -- see the non-vacuity guard"
+    assert kept, (
+        "enumeration returned nothing over "
+        f"{len(paths)} milestone source(s) -- the narrowing cannot be shown to "
+        "fire, and the non-vacuity guard (T-189-10) is the test to read next"
+    )
     assert not any(
         entry["id"] == "BACK-51" and entry["title"] == "Phases"
         for entry in kept.values()
