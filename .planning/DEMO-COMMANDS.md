@@ -12,6 +12,12 @@ updated: 2026-09-15
 
 # Demo Command Runbook
 
+> **SUPERSEDED 2026-09-20.** The demo was delivered 2026-09-18. The authoritative walkthrough is
+> `docs/demo-runbook-2026-09-18.md` on `main`. This file is retained only for its **arm64 /
+> Apple Silicon** material, which exists in no other file and is pending a move into
+> `docs/chaos-lab.md` — see `.planning/DEMO-PREP-HARVEST.md` §5.1 and §7.
+
+
 Every command needed to go from a cold Ubuntu VM to a finished demo and back to a clean
 machine. No talk track — that lives in `DEMO-RUNBOOK.md`.
 

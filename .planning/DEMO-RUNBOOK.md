@@ -11,6 +11,12 @@ updated: 2026-09-15
 
 # Demo Runbook — colleague presentation
 
+> **SUPERSEDED 2026-09-20.** The demo was delivered 2026-09-18. The authoritative walkthrough is
+> `docs/demo-runbook-2026-09-18.md` on `main`. This file is retained only for its **arm64 /
+> Apple Silicon** material, which exists in no other file and is pending a move into
+> `docs/chaos-lab.md` — see `.planning/DEMO-PREP-HARVEST.md` §5.1 and §7.
+
+
 Segment structure is the operator-confirmed seven-segment walkthrough recorded in
 `HANDOFF.json` (`demo_walkthrough_confirmed`, confirmed 2026-09-14). This file adds
 timings, talk tracks, the exact commands, and the hazards that bite during the live
