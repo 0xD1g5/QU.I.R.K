@@ -90,7 +90,16 @@ assessment:
 scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443,80,389,636,2222,3306,5432,6379,8080,9000,9001]
+  # 465/993/995 (implicit-TLS mail) added 2026-09-17 alongside mh-postfix (.120) and
+  # mh-dovecot (.121). They are NOT decorative: those two hosts serve ONLY mail ports, so
+  # with no mail port in this list they never survive fingerprinting as TLS candidates —
+  # and run_scan.py:3893 derives the email scanner's host list from the surviving TLS
+  # candidates (`email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))`), not from
+  # targets.cidrs. Observed before the fix: "email TLS scans: 147 tasks (21 hosts x 7
+  # ports)", 0/147 successful — the scanner probed 21 non-mail hosts while the two real
+  # mail servers were absent. Adding a host to targets.cidrs and setting enable_email is
+  # NOT sufficient; the host must first earn a TLS candidacy.
+  ports_tls: [443,80,389,636,2222,3306,5432,6379,8080,9000,9001,465,993,995]
   include_sni: true
 
   tls_enum_mode: fast  # off|fast|deep
