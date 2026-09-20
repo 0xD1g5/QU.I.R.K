@@ -1,231 +1,68 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-16T19:58:04.020Z",
-  "phase": "demo-prep-and-doc-reconciliation",
-  "phase_name": "Demo prep for the 2026-09-18 client demo, Ubuntu VM install validation, and a five-guide documentation reconciliation. NOT a GSD phase — Phase 209 is COMPLETE and MERGED; Phase 206 remains PAUSED at 5/13.",
+  "timestamp": "2026-09-20T13:43:02.173Z",
+  "phase": "post-demo-resumption",
+  "phase_name": "Post-demo resumption — NOT a GSD phase. Phase 206 remains PAUSED at 5/13 (HORIZON 999.114). This handoff sequences the merge pipeline repair and the demo-prep defect tail ahead of resuming 206.",
   "phase_dir": ".planning",
-  "plan": 1,
-  "task": 13,
-  "total_tasks": 17,
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 4,
   "status": "paused",
-  "branch": "docs-master-guide",
-  "head": "148afccf (origin/main); working branch docs-master-guide is PR #30",
-  "supersedes": "The previous HANDOFF.json (2026-09-14, demo-prep at 5/7). Its `demo_walkthrough_confirmed` block is NOT lost — it is now committed as docs/demo-runbook-2026-09-18.md and published as an artifact. Read the runbook, not this file, for the demo.",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Phase 209 (Deliverable Reachability) MERGED to main. Took PR #19 out of draft, superseded the obsolete 'do not merge' comment with the criteria-3/4 evidence, pushed 6 unpushed commits. Verified the single red check (BACK-51) was failing-node-SET-identical on the branch's own merge-base before merging.",
-      "status": "done",
-      "commit": "197cfb99"
-    },
-    {
-      "id": 2,
-      "name": "Task 17 — the roadmap NOW item 'Stabilize scan reliability — scan error rate is 90.5%' read as scanner failure. Measured the real decomposition against the live DB: of 370 probed ports, 308 not listening, 23 absent optional extra, 4 genuine failures, 35 assessed. Retitled to 'Increase scan coverage'; metric deliberately untouched because scan_error_rate is a scoring input. Emitted score verified byte-identical at 15/100.",
-      "status": "done",
-      "commit": "c791e6e6"
-    },
-    {
-      "id": 3,
-      "name": "OUTPUT DIRECTORY SPLIT — the five Phase 209 download buttons served artifacts from ./output while the dashboard displayed a scan whose artifacts were in ./quirk-output. Every format returned 200 with the wrong estate's report. config.yaml's own db_path already said quirk-output and was marked canonical; directory did not.",
-      "status": "done",
-      "commit": "84b7f175"
-    },
-    {
-      "id": 4,
-      "name": "SENSOR IMAGE COULD NOT RENDER PDF, SILENTLY. playwright's Python package was installed via [all]->[dashboard]; the browser binary and 19 system libraries were not. render_pdf_report() caught the launch error, returned False, writer.py set pdf_path=None, scan exited 0 with 11 artifacts and no warning. Fixed in sensor.Dockerfile; verified from a RECREATED container: 0 missing libs, 12 output files.",
-      "status": "done",
-      "commit": "1bfd0dd0"
-    },
-    {
-      "id": 5,
-      "name": "Demo run-of-show written — docs/demo-runbook-2026-09-18.md plus a published artifact. Seven segments with timing, commands, hazards placed where they bite, Q&A prep and recovery. Every figure measured on the rehearsal run (stamp 20260916-145333).",
-      "status": "done",
-      "commit": "7915fc27"
-    },
-    {
-      "id": 6,
-      "name": "scripts/validate-fresh-install.sh — nine checks that assert observable outcomes rather than exit codes. Check 7 (report-*.pdf exists with %PDF magic bytes) is the one that would have caught task 4 in minutes.",
-      "status": "done",
-      "commit": "882ce3db"
-    },
-    {
-      "id": 7,
-      "name": "Disk check had three defects, all found by the operator on the first real run: the message never said 'disk' (read as RAM); the 5G threshold was guessed not measured (real need ~2G); and it read only REPO_ROOT's filesystem while playwright installs to $HOME — on the authoring machine that reported 538G instead of 18G, wrong by 30x. Added a WARN state.",
-      "status": "done",
-      "commit": "3047d868"
-    },
-    {
-      "id": 8,
-      "name": "venv-reuse was mis-filed as a DOC DIVERGENCE. That section exists to feed docs/installation.md; an existing venv says nothing about the doc. Recategorised to WARN so the divergence list stays actionable.",
-      "status": "done",
-      "commit": "1d2886b9"
-    },
-    {
-      "id": 9,
-      "name": "Three doc gaps found standing the lab up on Ubuntu: no Linux Docker install path (the table said 'Docker Desktop', a macOS/Windows product); the lab's ~20GB image footprint was never stated; and --allow-internal-targets was documented as required when multihost-scan-config.yaml:190 already sets allow_internal_targets: true.",
-      "status": "done",
-      "commit": "2d37379c"
-    },
-    {
-      "id": 10,
-      "name": "DOC RECONCILIATION — five guides, 6,292 lines, audited claim-by-claim against the app at 5.21.0. Published as an artifact. 9 verified findings, 6 false positives recorded rather than deleted.",
-      "status": "done",
-      "commit": "artifact 67fbfd65-4951-47e6-a785-19f150ebbf13"
-    },
-    {
-      "id": 11,
-      "name": "Reconciliation fixes, mechanical half (PR #28): version literal v5.5.0 -> v<version>; configuration.md directory 'output' -> 'quirk-output' plus 5 example paths; extras table now names all 7 exclusions plus an install-everything command; quirk errors documented at operators-guide §5.0.",
-      "status": "done",
-      "commit": "789690d0"
-    },
-    {
-      "id": 12,
-      "name": "Reconciliation fixes, judgment half (PR #29): the [identity] exclusion rationale was FALSIFIED (pyOpenSSL 26 requires cryptography>=46 — a floor, not a cap; pip check clean; live scan enumerated X25519MLKEM768). Exclusion kept, reason corrected in place with the original quoted, two-venv softened to a fallback. Five QUIRK_* env vars documented — 2 security in admin-guide §3.5, 3 operational in configuration.md. chaos-lab §4.5 'Which addresses do I scan?' added.",
-      "status": "done",
-      "commit": "148afccf"
-    },
-    {
-      "id": 13,
-      "name": "Master guide GENERATED, not hand-merged — scripts/build_master_guide.py + docs/quirk-master-guide.md (6,513 lines) + 11 tests proven non-vacuous by mutation. PR #30 OPEN, awaiting the operator's read on how one document feels versus five.",
-      "status": "in_progress",
-      "progress": "PR #30 open; code complete and tested; awaiting evaluation, not more work"
-    }
+    {"id": 0, "name": "Demo prep — 2026-09-18 client demo delivered successfully", "status": "done", "commit": "c419db9d"},
+    {"id": 0, "name": "sslyze declared as a core dependency (was declared nowhere)", "status": "done", "commit": "15e49e96"},
+    {"id": 0, "name": "UAT-32-04 steps corrected — staged an unreachable code path", "status": "done", "commit": "c3da4376"},
+    {"id": 0, "name": "cryptography<47 cap documented", "status": "done", "commit": "5f3b1635"},
+    {"id": 0, "name": "docs/connector-field-reference.md + multihost MySQL target", "status": "done", "commit": "25af2b1a"},
+    {"id": 0, "name": "9 connector hosts added to multihost + 4 blocking bug fixes", "status": "done", "commit": "1ebd08fb"},
+    {"id": 0, "name": "11 connector divergences declared", "status": "done", "commit": "af8549f8"},
+    {"id": 0, "name": "verify_multihost_scan.py — 14 DB-level checks", "status": "done", "commit": "a4ae35d6"},
+    {"id": 0, "name": "implicit-TLS mail ports so the email scanner sees the mail hosts", "status": "done", "commit": "a955153a"},
+    {"id": 0, "name": "five demo-prep findings filed as todos", "status": "done", "commit": "c419db9d"}
   ],
   "remaining_tasks": [
-    {
-      "id": 14,
-      "name": "OPERATOR: evaluate docs/quirk-master-guide.md (or vault Guides/Complete-Guide.md) and decide — merge PR #30, or close it. If merged, the natural follow-up is a CI freshness gate asserting the committed master byte-matches a fresh generate, matching the four existing generator-drift gates.",
-      "status": "not_started"
-    },
-    {
-      "id": 15,
-      "name": "OPERATOR: paste the SUMMARY table from the Ubuntu VM run of scripts/validate-fresh-install.sh — specifically checks 4 (Playwright), 7 (PDF) and 8 (downloads). Asked for twice, never received. 'No doc divergences' is NOT the same as 'all checks passed'.",
-      "status": "not_started"
-    },
-    {
-      "id": 16,
-      "name": "VM BLOCKED ON DISK: 4GB free, the lab needs ~25GB (images total ~20GB; the multihost prober alone is 3.5GB). Grow the volume to 40GB before attempting lab bring-up there.",
-      "status": "not_started"
-    },
-    {
-      "id": 17,
-      "name": "HYGIENE (deferred by the operator until after the walkthrough): STATE.md frontmatter completed_phases:3 vs ROADMAP's 4 checked boxes; ROADMAP Progress table badly stale (shows 203/204/205 as '0/? Not started'); retire the superseded 2026-09-14 .continue-here/HANDOFF; confirm-or-close todo 999.113 which looks fixed-but-never-retired at P1.",
-      "status": "not_started"
-    }
+    {"id": 1, "name": "STEP 1 — merge PR #31, then RETARGET PR #32 to main (GitHub does NOT auto-retarget when the base branch survives the merge). Also triage the unrelated open PR #30.", "status": "not_started"},
+    {"id": 2, "name": "STEP 2 — fix the red CI gate on main: one unreconciled BACK-* ID failing test_back_star_ci_enforced_leg. Check first whether backlog-gate-false-positive-on-archived-roadmap-prose.md is the same defect.", "status": "not_started"},
+    {"id": 3, "name": "STEP 3 — land the two P1 lab todos: saml-idp-image-is-amd64-only-no-platform-declared, and lab-sh-up-silently-reuses-stale-prober-image.", "status": "not_started"},
+    {"id": 4, "name": "STEP 4 — resume Phase 206 via /gsd-autonomous --from 206 --to 206; verify the 206-13 disposition fence first. 8 of 13 plans remain.", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "TWO CLIENT-DELIVERABLE PDFs WITH DIFFERENT HEADLINE SCORES, ONE CLICK APART. The five Phase 209 downloads serve the consulting report at 15/100 with 5 CRITICAL; the Export PDF button beside them serves 19/100 with 7 CRITICAL. Same scan. Architectural — quirk/engine/findings_evaluator.py has zero SAML/Kerberos/DNSSEC rules while quirk/dashboard/api/routes/scan.py has all three. Phase 209 DISSOLVED the recorded mitigation ('do not show the two surfaces side by side') by putting both on one screen. Near-miss: 76 appears in BOTH surfaces meaning different things — the report's pre-cap value and the dashboard's post-cap computed value.",
+      "description": "main's CI is red on tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg for at least three consecutive runs, so every PR inherits a failing required check and CI is unusable as a merge signal.",
       "type": "technical",
-      "workaround": "DEMO 2026-09-18: in segment 7 use the five downloads and do NOT press Export PDF in the same session. Recorded in the runbook and appended to .planning/todos/pending/cli-dashboard-score-divergence-same-scan.md."
+      "workaround": "Read a red X on #31/#32 as inherited, not caused: git stash -> run -> git stash pop, and compare failing-node SETS rather than pass counts. STEP 2 fixes it properly."
     },
     {
-      "description": "Ubuntu VM has 4GB free disk; the chaos lab needs ~25GB. Running out surfaces as a confusing mid-pull layer error, not an out-of-disk message.",
-      "type": "external",
-      "workaround": "Grow the VM volume to 40GB. Documented in docs/installation.md and chaos-lab.md prerequisites as of PR #27."
+      "description": "Phase 206 disposition fence: NO disposition has been flipped in docs/UAT-SERIES.md by design. All three coupled doc artifacts are fenced into 206-13, which runs last, because a disposition must never be flipped before the test it cites exists and has been red-proved.",
+      "type": "technical",
+      "workaround": "Verify the fence still holds before resuming 206. Not a defect — an invariant to confirm."
     },
     {
-      "description": "main CI: tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg. DIAGNOSED FALSE POSITIVE — BACK-51 IS closed at HORIZON.md:49; the gate keys on (ID, title) and scrapes narrative prose out of the ARCHIVED v5.23-ROADMAP.md, extracting the bare word 'Phases' as the title. Verified failing-node-SET-identical on every PR merged this session, including the merge-base.",
+      "description": "tests/test_fuzz_cli_safety.py::test_no_fuzz_flag_no_fuzz_errors fails LOCALLY with a 30s subprocess timeout but passes in CI. Shape suggests contention with the running chaos lab; unconfirmed.",
       "type": "technical",
-      "workaround": "Not a required check — only 'Windows Sensor Smoke' is. Filed at .planning/todos/pending/backlog-gate-false-positive-on-archived-roadmap-prose.md. Decide fix-now vs leave-filed in the hygiene pass."
+      "workaround": "Deselect it when comparing local failing-node sets; it also fails on stashed clean main."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Evaluate the master guide and decide PR #30",
-      "context": "docs/quirk-master-guide.md, 6,513 lines, also in the vault as Guides/Complete-Guide.md. The real questions: does one document beat five, or does the contents page just become the new file list? Does the reading order hold? Closing it costs one PR and touches nothing else — the five sources stay canonical either way.",
+      "action": "Decide whether to cut a version. NOT done deliberately.",
+      "context": "CHANGELOG [Unreleased] already contains scoring v3 (SCORING_VERSION 2.0 -> 3.0, every score moves downward). Stamping a version now ships that as a side effect of a dependency fix. Operator chose to hold; the choice of number (5.22.0 by precedent vs 6.0.0 by SemVer) is theirs.",
       "blocking": false
     },
     {
-      "action": "Send the validate-fresh-install.sh SUMMARY table from the VM",
-      "context": "Checks 4, 7 and 8 are the whole reason the script exists. If check 7 passed on Ubuntu it is the strongest evidence yet that the install path works end to end, and that today's PDF failure was container-specific rather than platform-wide.",
-      "blocking": false
-    },
-    {
-      "action": "Cap-reason layout in /print — you said 'fine for now'",
-      "context": "Carried from the previous handoff. rating_cap_reason sits inside the first .score-item (text-align:center; min-width:80px) so its length stretches that flex cell and wraps the score row oddly. Cosmetic, legible, visible at the demo, and it now fires on most estates.",
-      "blocking": false
-    },
-    {
-      "action": "Feature branches left undeleted",
-      "context": "scoring-999.115-model-fix and fix-chaos-lab-docs-drift, plus this session's eight merged branches. Deliberate through the demo — tag pre-999.115-scoring-model keeps the backout path intact. Worth pruning afterwards.",
+      "action": "On the operator VM after any reboot: re-run `docker run --privileged --rm tonistiigi/binfmt --install amd64`.",
+      "context": "binfmt is not persistent there. Without it mh-saml-idp cannot start (amd64-only image on aarch64) and SAML drops out of the Identity tab.",
       "blocking": false
     }
   ],
   "decisions": [
-    {
-      "decision": "Merge Phase 209 despite a red Linux Full Suite",
-      "rationale": "The single failure was verified failing-node-SET-identical on the branch's own merge-base be3cff54 — the same node, same message — so the branch introduced zero new failures. Only 'Windows Sensor Smoke' is a required check and it passed. A count comparison would have looked identical while proving nothing; the SET comparison is what justified the merge.",
-      "phase": "demo-prep"
-    },
-    {
-      "decision": "Fix task 17's presentation string but NOT the metric",
-      "rationale": "scan_error_rate is a scoring input (scoring.py:483 weight 6.0, :490 weight 5.0). Recomputing it moves the emitted score — the counterfactual at the true 1.1% is 18/100 rather than 15/100. Four days before a client demo, changing a displayed sentence is a different risk class from changing a scored quantity. Verified byte-identical afterwards.",
-      "phase": "demo-prep"
-    },
-    {
-      "decision": "Align config.yaml's output.directory to quirk-output rather than the other way",
-      "rationale": "The chaos lab bind-mounts ../quirk-output to /out and multihost-scan-config.yaml writes to /out, so lab scans already land there — the directory db_path had already called canonical. Moving db_path instead would have broken the lab.",
-      "phase": "demo-prep"
-    },
-    {
-      "decision": "Fix the missing PDF in the Dockerfile, not just the running container",
-      "rationale": "The docker exec fix was ephemeral — one `compose down` and PDF rendering silently disappears again mid-demo. It also fixes the SHIPPED sensor image for every user, since any containerised deployment had the same silent gap.",
-      "phase": "demo-prep"
-    },
-    {
-      "decision": "The master guide is GENERATED, never hand-merged",
-      "rationale": "A hand-merged master is stale the moment anyone edits a source, leaving two contradictory descriptions of the same behaviour — the exact drift class this session's reconciliation existed to remove. Deriving it means the master cannot DISAGREE with its sources, only lag them, and the lag is one command wide. It also preserves the five sources as canonical, so CLAUDE.md's doc checklist and the Obsidian sync table need no changes.",
-      "phase": "doc-reconciliation"
-    },
-    {
-      "decision": "Keep the [identity] exclusion but correct its stated reason",
-      "rationale": "The reason was falsified — pyOpenSSL 26 requires cryptography<47,>=46.0.0, a floor not a cap; cryptography resolved to 46.0.6; pip check clean; a live scan enumerated X25519MLKEM768, the capability the doc said was lost. But the exclusion is still a defensible conservative default and a CI test guards it. Deleting the wrong claim was rejected in favour of quoting it in the correction: a wrong claim that silently disappears cannot be learned from.",
-      "phase": "doc-reconciliation"
-    },
-    {
-      "decision": "Record the six doc-audit false positives rather than discarding them",
-      "rationale": "Every one looked like real drift: '5.5.7' was an OID fragment, '5.3.1' a section number, `quirk hardware` hits were NEGATIVE references saying the command does not exist, and a reported '76 undocumented config fields' was purely an extractor artifact. Without the record the next audit re-finds all six and spends the same time disproving them.",
-      "phase": "doc-reconciliation"
-    },
-    {
-      "decision": "Split the reconciliation fixes across two PRs",
-      "rationale": "Four were mechanical find-and-replace; three required a judgment call (softening a documented safety instruction, choosing where security env vars belong, writing a conceptual section that did not exist). Mixing them would have buried the three that deserve real review under four that do not.",
-      "phase": "doc-reconciliation"
-    }
+    {"decision": "sslyze declared in core dependencies rather than the [email] extras group", "rationale": "Matches operators-guide's long-standing (until then false) 'sslyze (core)' claim for the TLS row; a bare install was silently running the flagship TLS scanner on its stdlib fallback with no error.", "phase": "post-demo-resumption"},
+    {"decision": "New multihost services are dedicated mh-* instances with no published ports, not dual-homed existing services", "rationale": "Dual-homing would make hosts reachable both from the host and inside the subnet, eroding the topology exercise — and would have inherited samba-dc's published :88, which collides with the KDC macOS itself runs.", "phase": "post-demo-resumption"},
+    {"decision": "No version bump cut", "rationale": "[Unreleased] already holds scoring v3; cutting a version would release a scoring overhaul as a side effect of a dependency fix.", "phase": "post-demo-resumption"},
+    {"decision": "PRs #31 and #32 kept separate rather than combined", "rationale": "#31 stays a clean dependency fix. Cost is the stacked-PR retarget hazard, which STEP 1 handles explicitly.", "phase": "post-demo-resumption"},
+    {"decision": "DNSSEC / S-MIME / AD CS multihost hosts not started", "rationale": "Each needs wiring beyond a static IP (resolver config, LDAP search bases, seeded certs). Half-landing three unknowns into a working lab hours before a demo was the wrong trade.", "phase": "post-demo-resumption"}
   ],
   "uncommitted_files": [],
-  "next_action": "Nothing is blocking and the tree is clean. Highest-value next: the operator reads docs/quirk-master-guide.md and decides PR #30 (merge or close). In parallel, the VM needs its volume grown to 40GB before the lab can be stood up there. The demo is 2026-09-18 — docs/demo-runbook-2026-09-18.md is the rehearsed path; do not reconstruct it from this file.",
-  "context_notes": "THE DEMO IS 2026-09-18 and docs/demo-runbook-2026-09-18.md is the authoritative walkthrough — every figure in it was measured on scan stamp 20260916-145333 (18.4s, 37 hosts/370 ports, 5 CRITICAL/14 HIGH/33 MEDIUM, 15/100 POOR, 12 artifacts). Eleven PRs merged this session (#19-#29); #30 open. THE ONE LESSON THAT GENERALISES: exit code is not evidence. Three defects found today all exited 0 — a stale prober reporting 91/100 under superseded scoring v2, download routes serving the wrong directory with HTTP 200 on every format, and a scan writing eleven artifacts with no PDF. Each had a confident success hiding a wrong outcome, which is the same shape as the crown-jewel ring that rendered black for months while API, tests and bundle were all green. SECOND LESSON, learned repeatedly today: a count produced by the tool under audit is not a measurement. Six doc-audit findings dissolved under a second method, including a '76 undocumented fields' figure that was pure extractor artifact; and three of my own verification commands were wrong in ways that looked right ($? through a pipe captured tail, a lingering cd produced 127, and zsh does not word-split unquoted parameters so a 53-file pytest selection silently ran zero tests). ENVIRONMENT AT PAUSE: 42 lab containers up on macOS with a freshly rebuilt prober (SCORING_VERSION 3.0 verified inside); dashboard detached on :8512 (PID 90054, nohup, survives the session); today's scan artifacts in quirk-output/ stamped 20260916-145333.",
-  "environment_state": {
-    "chaos_lab": "42 containers up, project chaoslab, profile multihost. Prober image rebuilt 2026-09-16 from the fixed sensor.Dockerfile with playwright chromium + system deps baked in. SCORING_VERSION verified 3.0 INSIDE the container. Safe to tear down and rebuild — the PDF fix is in the image, not the running container.",
-    "dashboard": "quirk serve on 127.0.0.1:8512, PID 90054, started with nohup so it survives the session. Serving scan stamp 20260916-145333. Operator auth DISABLED (no QUIRK_API_TOKEN).",
-    "scan_artifacts": "quirk-output/ — 12 files at stamp 20260916-145333 including report-*.pdf (779KB, verified %PDF). All five dashboard download formats verified HTTP 200 with correct content types."
-  },
-  "blocking_constraints": [
-    {
-      "name": "Exit code is not evidence",
-      "severity": "blocking",
-      "discovered": "Three separate live failures on 2026-09-16, each exiting 0",
-      "mitigation": "Assert the observable outcome, never the exit code: a launched browser, a file with %PDF magic bytes, an HTTP 200 carrying a non-empty body of the right type. scripts/validate-fresh-install.sh is built entirely on this principle."
-    },
-    {
-      "name": "A count produced by the audited tool is not a measurement",
-      "severity": "blocking",
-      "discovered": "Six doc-audit false positives, including a '76 undocumented config fields' figure that was entirely an extractor artifact",
-      "mitigation": "Re-derive every count with a second, independent method before recording it. Disagreement between the two IS the finding."
-    },
-    {
-      "name": "A self-check that exercises only the skip path proves nothing",
-      "severity": "blocking",
-      "discovered": "validate-fresh-install.sh --self-check passed while skipping all nine checks",
-      "mitigation": "Mutation-test the guard. Break the thing it watches and confirm the test goes red. Used on both the install script's harness and the master-guide fence tracker (breaking the tracker kills 4 of 11 tests)."
-    },
-    {
-      "name": "zsh does not word-split unquoted parameter expansions",
-      "severity": "advisory",
-      "discovered": "pytest $sel passed 53 paths as ONE argument and ran zero tests, reporting '2 warnings in 0.00s' which tails like a clean run",
-      "mitigation": "Use ${=sel}, and confirm the summary reports an 'N passed' count rather than only warnings."
-    }
-  ]
+  "next_action": "STEP 1: `gh pr merge 31`, then IMMEDIATELY `gh pr edit 32 --base main` and confirm #32's diff still shows only its own three commits. Do not assume GitHub retargeted it — it auto-retargets only when the base branch is deleted on merge, and this exact trap cost a stacked PR at the v5.23 close.",
+  "context_notes": "The demo is over and went well; the time pressure that shaped the last few days is gone. The four-step order is deliberate: steps 1-2 restore trust in the merge pipeline (nine fixes stranded behind a stacked PR, and a CI signal nobody can read), and only then does resuming Phase 206 make sense — its eventual PR lands into the same pipeline otherwise. The through-line of every demo-prep finding: four separate defects were the same shape, something that works on every maintainer machine and fails on a clean host (undeclared sslyze, a Kerberos profile skipped on macOS so nobody ran it, an amd64-only image Docker Desktop emulates silently, a JWT connector blocked against exactly the private addresses every lab uses). The operator's clean aarch64 Linux VM is the most valuable test surface this project has gained in a while. Compiled view: https://claude.ai/code/artifact/ea676963-6c66-46e9-a90d-cca89726537e"
 }
