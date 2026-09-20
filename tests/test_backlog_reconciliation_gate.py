@@ -80,6 +80,26 @@ CLOSURE SEMANTICS (locked by 189-CONTEXT.md, non-negotiable):
       title keyword with the matching line/heading, so one title's closure evidence cannot
       silently close a same-ID, different-title item.
 
+ARCHIVED-ROADMAP PROSE NARROWING (added 2026-09-20, see `_drop_archived_prose_duplicates`):
+the title-keying above has a cost that went undiagnosed for three phases. Because an archived
+roadmap NARRATES history ("...LIFT-01..LIFT-05 all Complete, BACK-51 closed by recorded
+decision"), every such sentence mints a fresh `ID::nearest-heading` key for an ID already
+closed under a different title -- a key that can never find matching evidence. `BACK-51::Phases`
+kept `main` red across Phases 203/204/205 while BACK-51 was demonstrably closed at
+HORIZON.md:49. Bare mentions whose sources are ALL archived `milestones/*-ROADMAP.md` are
+therefore dropped, but ONLY for IDs also cited outside an archived roadmap, and NEVER for real
+table-row declarations. Measured on the tracked corpus: 27 keys / 10 IDs -> 18 keys / the same
+10 IDs; offenders 1 -> 0; the non-vacuity guard still sees 18 keys.
+
+    Two things this narrowing must not become, each held by a mutation-proven test:
+      - an exemption list -- `test_archived_prose_narrowing_still_catches_a_live_unclosed_id`
+      - a silent coverage drop -- `test_archived_roadmap_only_id_keeps_its_coverage` (this is
+        the `BACK-86` case: cited nowhere but archived prose, and it stays gated) and
+        `test_archived_roadmap_table_row_survives_narrowing`.
+    Note the literal reading of the original proposal -- "structured rows only" -- was checked
+    and REJECTED: no ID in the tracked corpus has a table row at all, so it would enumerate
+    ZERO and fail the non-vacuity guard, the exact T-189-10 shape.
+
 HOUSE PRECEDENTS COPIED: `tests/test_uat_zero_undispositioned_gate.py` (name-every-offender
 failure style, riding `pytest -q -m ""` for zero new CI wiring); `tests/test_gsd_state_patch.py`
 (the honest-skip-names-the-path idiom; the run-time source-scan-not-a-written-list idiom).
@@ -182,6 +202,61 @@ def _title_keywords(title: str) -> set[str]:
     return set(_TITLE_KEYWORD_RE.findall(title.lower()))
 
 
+def _is_archived_roadmap(path: Path) -> bool:
+    """True for `.planning/milestones/<era>-ROADMAP.md` -- a historical record.
+
+    The LIVE roadmap is `.planning/ROADMAP.md`, which is not under
+    `milestones/` and is therefore never archived by this predicate.
+
+    Keyed on the parent directory's NAME rather than on equality with the
+    absolute `MILESTONES_DIR`, so the narrowing can be exercised from a
+    `tmp_path` fixture. A predicate only reachable via the real repo layout
+    is a predicate whose negative control cannot be written.
+    """
+    return path.parent.name == "milestones" and path.name.endswith("-ROADMAP.md")
+
+
+def _drop_archived_prose_duplicates(result: dict) -> dict:
+    """Phase 206-era fix: archived-roadmap PROSE must not manufacture obligations.
+
+    An archived roadmap narrates history ("...LIFT-01..LIFT-05 all Complete,
+    BACK-51 closed by recorded decision"). Because keys are `ID::nearest-heading`,
+    every such sentence mints a NEW key for an ID that is already closed under a
+    different title elsewhere, and that key can never find matching closure
+    evidence. That is how `BACK-51::Phases` kept CI red on `main` across Phases
+    203/204/205 while BACK-51 was demonstrably closed at HORIZON.md:49.
+
+    Two constraints make this a narrowing of *noise*, not of *coverage*:
+
+      1. Only BARE mentions are dropped. A real `| BACK-N | Title |` table row in
+         an archived roadmap is a structured declaration, not narration, and is
+         always kept -- the full-corpus leg's `v3.9`-`v5.0` roadmaps carry exactly
+         those.
+      2. Only IDs that are ALSO cited outside archived roadmaps are dropped. An ID
+         whose sole citation anywhere is archived-roadmap prose keeps its key and
+         stays gated. Without this clause `BACK-86` -- cited only in
+         `v5.23-ROADMAP.md` -- would silently leave the gate's coverage entirely,
+         which is the "archived roadmaps swallow backlog items" failure this repo
+         has already been bitten by once.
+
+    Measured on the tracked corpus at 2026-09-20: 27 keys over 10 IDs -> 18 keys
+    over the SAME 10 IDs, offenders 1 -> 0.
+    """
+    archived_prose = {
+        key
+        for key, entry in result.items()
+        if not entry["table_row"] and all(_is_archived_roadmap(p) for p in entry["sources"])
+    }
+    cited_elsewhere = {
+        entry["id"] for key, entry in result.items() if key not in archived_prose
+    }
+    return {
+        key: entry
+        for key, entry in result.items()
+        if not (key in archived_prose and entry["id"] in cited_elsewhere)
+    }
+
+
 def _enumerate_back_ids(roadmap_paths: list[Path]) -> dict:
     """Enumerate BACK-* IDs from `roadmap_paths` at call time.
 
@@ -247,12 +322,26 @@ def _enumerate_back_ids(roadmap_paths: list[Path]) -> dict:
                 key = f"{back_id}::{title}"
                 entry = result.setdefault(
                     key,
-                    {"id": back_id, "title": title, "era": stem, "self_closed": False, "sources": set()},
+                    {
+                        "id": back_id,
+                        "title": title,
+                        "era": stem,
+                        "self_closed": False,
+                        "sources": set(),
+                        # Whether this key was ever declared by a real
+                        # `| BACK-N | Title |` row, as opposed to being
+                        # synthesized from a bare mention plus its nearest
+                        # heading. _drop_archived_prose_duplicates() keeps
+                        # table-row declarations unconditionally.
+                        "table_row": False,
+                    },
                 )
                 entry["sources"].add(path)
+                if tm:
+                    entry["table_row"] = True
                 if CHECKED_BOX_RE.match(line) and _boundary_search(back_id, line):
                     entry["self_closed"] = True
-    return result
+    return _drop_archived_prose_duplicates(result)
 
 
 def _enumerate_999_ids(backlog_dir: Path) -> dict:
@@ -569,3 +658,128 @@ def test_is_ledgered_collision_requires_title_keyword_on_row():
     assert not _is_ledgered(new_item, horizon, disambiguate=True), (
         "an unrelated same-ID item must not hide behind the old ledger row"
     )
+
+
+# ---------------------------------------------------------------------------
+# Archived-roadmap prose narrowing (2026-09-20): `BACK-51::Phases`.
+#
+# These four tests are the price of narrowing enumeration. Narrowing a gate's
+# input set to turn it green is the exact anti-pattern Phase 204's COV-02 work
+# existed to stop, so the narrowing ships with a negative control proving what
+# it must STILL catch, and two coverage tests proving what it must NOT drop.
+# ---------------------------------------------------------------------------
+
+
+def _milestones(tmp_path):
+    d = tmp_path / "milestones"
+    d.mkdir()
+    return d
+
+
+def test_archived_prose_narrowing_still_catches_a_live_unclosed_id(tmp_path):
+    """NEGATIVE CONTROL (mandatory): a genuinely-unclosed BACK-* cited in a
+    NON-archived source must still be enumerated and still reach _offenders.
+
+    If this ever goes green-by-omission the narrowing has become an exemption
+    list, which is the failure mode it was written to avoid.
+    """
+    ms = _milestones(tmp_path)
+    (ms / "v9.0-ROADMAP.md").write_text(
+        "## Phases\nBACK-9100 closed by recorded decision\n", encoding="utf-8"
+    )
+    live = ms / "v9.0-REQUIREMENTS.md"
+    live.write_text("## Standing Drain\nBACK-9100 is still open\n", encoding="utf-8")
+
+    entries = _enumerate_back_ids([ms / "v9.0-ROADMAP.md", live])
+
+    assert "BACK-9100::Phases" not in entries, "archived prose key should be dropped"
+    assert "BACK-9100::Standing Drain" in entries, (
+        "the live, non-archived citation must survive the narrowing"
+    )
+    # _offenders() formats sources relative to REPO_ROOT and so cannot take
+    # tmp_path inputs; assert the same invariant through the two predicates it
+    # is built from. Surviving enumeration while being neither closed nor
+    # ledgered is exactly what makes an entry an offender.
+    entry = entries["BACK-9100::Standing Drain"]
+    closed, _ = _is_closed(entry, [live], disambiguate=False)
+    assert not closed, "nothing closes BACK-9100 in the live source"
+    assert not _is_ledgered(entry, "(empty ledger)", disambiguate=False), (
+        "an empty ledger must not satisfy the ledgered leg"
+    )
+
+
+def test_archived_roadmap_only_id_keeps_its_coverage(tmp_path):
+    """BACK-86 protection: an ID whose ONLY citation anywhere is archived-roadmap
+    prose must stay enumerated. Dropping it would remove it from the gate
+    silently -- the 'archived roadmaps swallow backlog items' failure."""
+    ms = _milestones(tmp_path)
+    only = ms / "v9.1-ROADMAP.md"
+    only.write_text("## Phases\nBACK-9200 promoted into v9.2\n", encoding="utf-8")
+
+    entries = _enumerate_back_ids([only])
+    assert {e["id"] for e in entries.values()} == {"BACK-9200"}, (
+        "an archived-roadmap-only ID must not be narrowed away"
+    )
+
+
+def test_archived_roadmap_table_row_survives_narrowing(tmp_path):
+    """A real `| BACK-N | Title |` row is a structured declaration, not
+    narration, and is kept even in an archived roadmap even when the same ID is
+    cited elsewhere. The full-corpus leg's v3.9-v5.0 roadmaps carry these.
+
+    The second declaration must itself be a TABLE ROW in a non-archived file,
+    not a bare mention: `_enumerate_back_ids`'s shape-2 suppression already
+    discards bare mentions for any ID that has a table row anywhere, so a
+    bare-mention fixture leaves the ID with a single archived-roadmap-only key,
+    which the `cited_elsewhere` clause keeps on its own. That fixture passes
+    whether or not the table-row protection exists -- verified by mutation on
+    2026-09-20, where removing the protection left it green.
+    """
+    ms = _milestones(tmp_path)
+    archived = ms / "v9.2-ROADMAP.md"
+    archived.write_text(
+        "## Backlog\n| BACK-9300 | Real declared title | open |\n", encoding="utf-8"
+    )
+    other = ms / "v9.2-REQUIREMENTS.md"
+    other.write_text(
+        "## Elsewhere\n| BACK-9300 | A second declared title | open |\n",
+        encoding="utf-8",
+    )
+
+    entries = _enumerate_back_ids([archived, other])
+    assert "BACK-9300::A second declared title" in entries, (
+        "fixture precondition: the non-archived declaration must enumerate, "
+        "otherwise this test cannot exercise the protection at all"
+    )
+    assert "BACK-9300::Real declared title" in entries, (
+        "a table-row declaration must never be narrowed away as prose"
+    )
+
+
+def test_narrowing_is_not_vacuous_on_the_real_corpus():
+    """Prove the narrowing actually fires here, rather than being dead code that
+    happens to sit next to a green gate.
+
+    Deliberately carries NO skip guard for an empty corpus. The sibling
+    `test_non_vacuity_guard_over_tracked_sources` faces the same possibility and
+    degrades to a conditional failure rather than skipping, because in this
+    module a skip reads as a pass -- the exact confusion T-189-11 exists to
+    prevent. An empty enumeration here fails loudly instead; `_git_tracked_files`
+    already falls back to an on-disk glob and warns when git is unavailable, so
+    reaching zero paths means something is wrong and worth hearing about.
+    """
+    paths = (
+        _git_tracked_files(".planning/milestones/*-ROADMAP.md")
+        + _git_tracked_files(".planning/milestones/*-REQUIREMENTS.md")
+        + _git_tracked_files(".planning/milestones/*-phases/**/*.md")
+    )
+    kept = _enumerate_back_ids(paths)
+    assert kept, (
+        "enumeration returned nothing over "
+        f"{len(paths)} milestone source(s) -- the narrowing cannot be shown to "
+        "fire, and the non-vacuity guard (T-189-10) is the test to read next"
+    )
+    assert not any(
+        entry["id"] == "BACK-51" and entry["title"] == "Phases"
+        for entry in kept.values()
+    ), "BACK-51::Phases should be narrowed away"
