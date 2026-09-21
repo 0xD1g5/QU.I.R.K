@@ -15,6 +15,8 @@ from quirk.reports.content_model import rollup_computed_score  # 2026-09-14: cap
 from quirk.reports.coverage import load_scan_coverage  # Phase 192 Plan 07 (OBS-02)
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
+from quirk.build_stamp import scanner_build_stamp
+from quirk.intelligence.scoring import SCORING_VERSION
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
@@ -1033,6 +1035,17 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         summary_table.add_row("Cap reason", _cap_reason_row)
     summary_table.add_row("Confidence", f"{total_conf}/100")
     summary_table.add_row("Platform version", PLATFORM_VERSION)
+    # Stale-scanner identification (2026-09-20). A chaos-lab scan once reported
+    # 91/100 from a prober image built before the v3 scoring change; the same
+    # evidence scores 15/100 under v3. It exited 0 and warned about nothing,
+    # and "Platform version" read 5.21.0 in BOTH cases because pyproject.toml
+    # had not bumped since the PyPI release -- a released version string names
+    # the release, not the code running. These two rows make the score
+    # self-identifying: the scoring model is the decisive datum (always
+    # knowable, and alone sufficient to have caught that scan), the build SHA
+    # the corroborating one.
+    summary_table.add_row("Scoring model", f"v{SCORING_VERSION}")
+    summary_table.add_row("Scanner build", scanner_build_stamp())
     # Phase 200 Plan 04 / RPT-01: identity rows, each individually conditional —
     # a cfg with no report.branding section emits no rows, matching the
     # executive/scorecard byte-identical contract for this table's text.

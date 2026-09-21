@@ -35,6 +35,22 @@ WORKDIR /quirk
 COPY . /quirk/
 RUN pip install --no-cache-dir ".[all]"
 
+# Build identity, so a scan from this image self-identifies.
+#
+# A prober image built before the v3 scoring change once produced a confident
+# 91/100 (the same evidence scores 15/100 under v3), exit 0, no warning. The
+# reports printed `Platform version 5.21.0` either way, because pyproject.toml
+# had not bumped since the PyPI release -- a released version names the
+# release, not the code running. quirk.build_stamp reads this env var first
+# precisely here, where any .git in the build context describes the context
+# rather than the installed code.
+#
+# Pass it at build time; without it the scan honestly prints "unknown":
+#   docker compose -p chaoslab --profile multihost build \
+#     --build-arg QUIRK_BUILD_SHA="$(git rev-parse HEAD)" mh-prober
+ARG QUIRK_BUILD_SHA=""
+ENV QUIRK_BUILD_SHA=${QUIRK_BUILD_SHA}
+
 # Chromium + its OS libraries, for report-{stamp}.pdf.
 #
 # `.[all]` pulls in `[dashboard]`, which includes the playwright PYTHON package
