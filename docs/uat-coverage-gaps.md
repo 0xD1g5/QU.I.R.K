@@ -8,48 +8,22 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 899
-- Disposition counts: DEFERRED 39, FAIL 5, GAP 64, OBSOLETE 2, PASS 704, SKIP_OTHER 85
-- Open GAP (drainable) cases: 76
+- Total case headings: 904
+- Disposition counts: DEFERRED 39, FAIL 7, GAP 38, OBSOLETE 2, PASS 732, SKIP_OTHER 86
+- Open GAP (drainable) cases: 51
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (76 cases, all series)
+## Open GAP Worklist (51 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
 | UAT-5-19 | 5 | Storage Profile — PostgreSQL pgcrypto Reachability | no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage |
 | UAT-7-01 | 7 | Dashboard Loads — No Blank Screen | no substitute coverage; needs a headless-browser render check that the SPA mounts without a blank screen or console errors |
-| UAT-7-03 | 7 | Executive Page — Score Gauge | no substitute coverage; needs a frontend component test asserting the score gauge renders a 0-100 value with EXCELLENT/GOOD/MODERATE/FAIR/POOR label and confidence badge |
-| UAT-7-04 | 7 | Executive Page — Severity Chart | no substitute coverage; needs a frontend chart test asserting severity counts render and match findings JSON |
-| UAT-7-05 | 7 | Executive Page — Score Driver Cards | no substitute coverage; needs a frontend test asserting the 4 driver cards render with subscore values totaling <= 100 |
-| UAT-7-06 | 7 | Findings Page — Table Renders | no substitute coverage; needs a frontend table test asserting findings rows render with the documented columns and row count parity |
-| UAT-7-07 | 7 | Findings Page — Sorting | no substitute coverage; needs a frontend interaction test asserting column-header click toggles ascending/descending severity sort |
-| UAT-7-08 | 7 | Findings Page — Filtering | no substitute coverage; needs a frontend interaction test asserting the severity filter input narrows visible rows |
-| UAT-7-09 | 7 | Findings Page — Detail Slide-out | no substitute coverage; needs a frontend interaction test asserting row click opens a detail slide-out panel with full finding fields |
-| UAT-7-10 | 7 | Certificates Page — Inventory Table | no substitute coverage; needs a frontend table test asserting the certificate inventory renders with expiry/self-signed indicators |
-| UAT-7-12 | 7 | Certificates Page — Expiry Sorting | no substitute coverage; needs a frontend interaction test asserting expiry-column sort ordering on the certificates table |
-| UAT-7-14 | 7 | CBOM Page — Graph Visualization | no substitute coverage; needs a frontend Cytoscape graph render/interaction test for the CBOM page |
-| UAT-7-15 | 7 | Roadmap Page — DAG Visualization | no substitute coverage; needs a frontend DAG render test asserting NOW/NEXT/LATER color coding on the roadmap page |
-| UAT-7-16 | 7 | Roadmap Page — Node Detail Panel | no substitute coverage; needs a frontend interaction test asserting node click opens the roadmap detail panel with Why/owner/deps |
 | UAT-7-17 | 7 | PDF Export — Generate Report | no substitute coverage; needs a headless-browser test that clicks Export PDF and asserts a valid downloaded PDF |
-| UAT-7-20 | 7 | Dashboard — SPA Routing | no substitute coverage; needs a frontend SPA routing test asserting a direct navigation to /findings renders without a full reload |
-| UAT-7-21 | 7 | Dashboard Theme — No Hardcoded Colors | no substitute coverage; needs a frontend style-audit test asserting no hardcoded hex colors on major components |
-| UAT-7-22 | 7 | Dark/Light Theme Toggle | no substitute coverage; needs a frontend interaction test asserting theme toggle persists via localStorage across reload |
-| UAT-7-23 | 7 | Sidebar Responsive Collapse | no substitute coverage; needs a frontend responsive-layout test asserting sidebar collapse at the 1024px breakpoint |
-| UAT-7-24 | 7 | Findings Page — Pagination | no substitute coverage; needs a frontend pagination test asserting 25-row pages and working next/prev controls |
-| UAT-7-25 | 7 | CBOM Page — Algorithm Search | no substitute coverage; needs a frontend interaction test asserting the CBOM algorithm search box filters rows case-insensitively |
-| UAT-7-26 | 7 | CBOM Page — Quantum Safety Filter | no substitute coverage; needs a frontend interaction test asserting the quantum-safety dropdown filters the CBOM table |
-| UAT-7-27 | 7 | CBOM Graph — Node Interaction | no substitute coverage; needs a frontend Cytoscape node-click test asserting the detail panel updates per node type |
-| UAT-7-28 | 7 | CBOM Graph — Zoom Controls | no substitute coverage; needs a frontend interaction test asserting zoom in/out/fit and scroll-wheel controls on the CBOM graph |
-| UAT-7-29 | 7 | Roadmap — Node Drag | no substitute coverage; needs a frontend drag-interaction test asserting roadmap node drag keeps edges connected |
-| UAT-7-30 | 7 | Print View | no substitute coverage; needs a frontend render test asserting the /print route renders a single-column layout with page breaks |
-| UAT-7-31 | 7 | Dashboard Page Title and Branding | no substitute coverage; needs a frontend render test asserting tab title, wordmark, and favicon branding |
+| UAT-7-23 | 7 | Sidebar Responsive Collapse | no substitute coverage; the sidebar collapse is a pure Tailwind `lg:` breakpoint with no `matchMedia` or `useMediaQuery` listener, so jsdom — which evaluates no media queries and has no layout engine — renders byte-identical DOM above and below 1024px. Reclassified 2026-09-21 out of the jsdom-tractable set and routed to Phase 207's operator-led browser verdict |
+| UAT-7-29 | 7 | Roadmap — Node Drag | no substitute coverage; node drag is entirely internal to the real Cytoscape renderer and `roadmap.tsx` registers no drag, `grab`, `free`, `position` or `dragfree` handler and never reads or writes node positions. Reclassified 2026-09-21 out of the jsdom-tractable set and routed to Phase 207's operator-led browser verdict |
 | UAT-7-32 | 7 | No JavaScript Console Errors — All Pages | no substitute coverage; needs a full-navigation headless-browser test asserting zero console errors across every dashboard route |
-| UAT-7-34 | 7 | Identity Page — Protocol Summary Cards (No Scan Data) | no substitute coverage; needs a frontend empty-state test asserting the 3 identity protocol cards render Not Scanned without crashing on an empty identity_findings array |
-| UAT-7-37 | 7 | Findings Page — Protocol Filter | no substitute coverage; needs a frontend interaction test asserting the Findings-page protocol dropdown narrows rows and combines with the severity filter |
-| UAT-7-40 | 7 | Hardware Tab — Page Loads with Advisory Banner (HWCOMPAT-07) | no substitute coverage; needs a frontend render test asserting the /hardware advisory banner text and sidebar entry |
-| UAT-7-41 | 7 | Hardware Tab — Device Table with Tier Badges (HWCOMPAT-07) | no substitute coverage; needs a frontend table test asserting hardware device columns, tier badge colors, and tier-then-vendor sort order |
 | UAT-8-04 | 8 | Hygiene Subscore — Plaintext Ratio | no substitute coverage; needs a scoring unit test isolating the hygiene subscore specifically, not the overall score, below 25 when plaintext HTTP endpoints exist, proportional to count |
 | UAT-8-05 | 8 | mTLS Bonus — Identity Trust Subscore | no substitute coverage; needs a scoring unit test isolating the identity_trust subscore increase attributable to mtls_present_count alone, holding all other evidence fixed |
 | UAT-9-06 | 9 | HTML Report — Visual Quality | no substitute coverage; needs a visual/browser render check of the HTML report dark theme, layout, and mobile responsiveness |
@@ -94,6 +68,7 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-199-05 | 199 | Unassessed Per-Segment Gauge Renders as an Em-Dash, Not a NaN Arc | no substitute coverage. `199-04-SUMMARY.md` confirms the production change |
 | UAT-202-02 | 202 | Keyboard-Operable Trigger, Escape Closes, Focus Returns to the Row | no substitute coverage; no operator walkthrough exercised keyboard Tab/Escape/focus-return, and vitest coverage cannot be cited as a DEFERRED pytest node |
 | UAT-202-11 | 202 | No-Stable-Identifier Finding Renders a Disabled Trigger | no substitute coverage; no operator walkthrough exercised the disabled-trigger state, and vitest coverage cannot be cited as a DEFERRED pytest node |
+| UAT-206-05 | 206 | Partial Conversions Are Qualified With Verbatim Uncovered Bullets | no substitute coverage. A standing gate asserting that every qualified PASS quotes |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 

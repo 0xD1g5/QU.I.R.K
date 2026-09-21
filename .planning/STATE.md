@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-15T14:05:00Z"
-last_activity: 2026-09-15
+last_updated: "2026-09-21T09:50:00Z"
+last_activity: 2026-09-21
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 5
   total_plans: 38
-  completed_plans: 25
-  percent: 66
+  completed_plans: 33
+  percent: 87
 ---
 
 # Project State
@@ -1425,44 +1425,55 @@ split the plan's single negative-control test into two functions so the route-in
 could satisfy the acceptance criterion requiring it to pass today. Commit `8134dcb5`. See
 `209-01-SUMMARY.md`. Next: 209-03 (backend route implementation, Wave 1).
 
-**Phase 206 remains PAUSED at 5 of 13 — 209 does not resume it.** `state.begin-phase` overwrote
-this block's former 206 pause summary; the full record survives immediately below under
-"### Phase 206 PAUSE RECORD". Resume 206 with `/gsd-autonomous --from 206 --to 206`.
+**Phase 206 was PAUSED at 5 of 13 when this 209 note was written; it is now COMPLETE** (2026-09-21) — see the Phase 206 completion record below. The pause record this sentence formerly pointed at was removed on close, as RESUME-01 requires.
 
-### Phase 206 PAUSE RECORD (2026-09-13) — everything needed to resume
+### Phase 206 (2026-09-21) — Dashboard UI Coverage Drain, COMPLETE, 13 of 13 plans
 
-**Branch:** `phase-206-dashboard-ui-coverage` (24 commits ahead of `main`). All work is COMMITTED;
-the working tree was clean at pause. Phase artifacts (PLAN/SUMMARY/CONTEXT/red-proof) are
-gitignored by design — they live on disk only, so do not `git clean` this branch.
+**RESUMED AND CLOSED.** The pause record that stood here is removed deliberately, not lost:
+`tests/test_paused_phase_resume_gate.py` (RESUME-01) fails if a PAUSE RECORD coexists with a
+checked ROADMAP box, and the gate's own guidance is to remove the record and say why in
+ROADMAP.md. The why is recorded there.
 
-**Done (5 plans, 8 UAT cases dispositioned):** 206-01 (enabling: `AppShell` exported, two
-evidence-backed jsdom shims, red-proof fragment convention), 206-02 (Executive: 7-03 full, 7-04 and
-7-05 partial), 206-03 (Findings A: 7-06, 7-07, 7-24), 206-05 (Certificates+Identity: 7-10 partial,
-7-34 full, 7-12 honest non-conversion), 206-06 (CBOM table: 7-25, 7-26).
+**Outcome: 25 of 28 cases converted. SC#1 is recorded NOT MET AS WRITTEN, deliberately.** Two
+cases left the jsdom-tractable set with reproduced evidence — UAT-7-23 (pure Tailwind breakpoint,
+no `matchMedia` listener, so jsdom can assert nothing) and UAT-7-29 (`roadmap.tsx` registers no
+grab/free/dragfree/position handler at all). Both route to Phase 207. UAT-7-12 deliberately STAYS
+in the denominator: its blocker is an absent product feature, not a jsdom limitation, and a real
+browser would find the same missing control. Presenting 25/25 against a shrunk denominator was
+available and was not taken. Two operator-accepted overrides are recorded in `206-VALIDATION.md`.
 
-**Remaining (8 plans):** 206-04 (Findings B: 7-08, 7-09, 7-37), 206-07 (CBOM graph: 7-14, 7-27,
-7-28), 206-08 (Roadmap: 7-15, 7-16, 7-29), 206-09 (Hardware: 7-40, 7-41), 206-10 (Shell: 7-20,
-7-22, 7-31 + 7-23 reclassification), 206-11 (Print+style: 7-30, 7-21), 206-12 (evidence assembly,
-defect todos), 206-13 (disposition flips, worklist regen, docs+vault sync).
+**Dispositions:** 6 unqualified PASS · 18 qualified PASS (uncovered Pass Criteria quoted verbatim
+from `docs/UAT-SERIES.md`'s own text, not from the fragments' paraphrases) · 2 FAIL (UAT-7-21
+colour-token debt, published via a deliberate `it.fails` so it self-invalidates when fixed;
+UAT-7-12 absent feature) · 2 GAP reclassified to Phase 207.
 
-**Critical invariant on resume:** NO disposition has been flipped in `docs/UAT-SERIES.md`, by
-design. All three coupled doc artifacts are fenced into 206-13, which runs last — a disposition
-must never be flipped before the test it cites exists and has been red-proved. Verify that fence
-still holds before resuming.
+**Measurements, all independently re-derived at close:** series-7 GAPs 31 → 5, remaining set
+exactly {7-01, 7-17, 7-23, 7-29, 7-32}; jsdom-tractable series-7 GAPs **0**;
+`docs/uat-coverage-gaps.md` byte-identical to its generator; 13 TEMPORARY commits with 13 matching
+reverts (anchored grep — the unanchored form returns 27 because an ordinary commit quotes the
+string); all product mutations net to zero. Python suite **5195 passed, 0 failed**; vitest 78
+files, **453 passed, 0 failed**.
 
-**Test baseline at pause:** 59 vitest files, 414 passed, 2 skipped (from 49/404 at phase start).
-`npm run build` and `npm run lint` green. Every red-proof source mutation was reverted and verified
-byte-identical.
+**Product code is unchanged** apart from one `export` keyword on `AppShell` (enabling plan 206-01)
+and jsdom shims in `test-setup.ts`. This phase wrote tests; where a test revealed a defect it was
+FILED, not fixed. Six product defects were filed, notably `roadmap.tsx` ignoring
+`data.roadmap.edges` entirely and synthesising phase-sequencing arrows an operator would read as
+dependency prerequisites.
 
-**Product defects found by this phase so far** — these are the phase's real yield and outlive the
-pause: `UAT-7-12` certificates expiry sort ABSENT (todo filed), `UAT-7-10` self-signed cert flagging
-ABSENT (todo filed), CBOM table zero-match empty state ABSENT (todo filed), `UAT-7-30` sidebar
-renders on `/print` and the PDF export uses that route (D-A2, todo due in 206-11), `UAT-7-05`
-spec/UI drift (4 gauges in 1 card, no descriptions), `UAT-7-04` severity chart renders no numeric
-count text.
+**Stale planning artifact found and corrected:** CONTEXT decision D-A2 declared the `/print`
+sidebar defect live. It was fixed by `93e5afb1` on 2026-09-14 — one day after CONTEXT was
+gathered. Re-running D-A2's own four commands falsified it, so UAT-7-30 is PASS and the todo
+D-A2 mandated was deliberately NOT filed.
 
-**Also unmerged on this branch:** commit `8a28d1c7`, a Phase 203 audit change (re-disposition
-`UAT-203-05` GAP→PASS, close the stale re-sourcing todo) made in a separate session, since paused.
+**Verification:** `206-VERIFICATION.md`, status `human_needed`, PASS in substance — 16 of 17
+derived truths verified, none falsifiable under adversarial re-derivation. Its one finding (four
+cited nodes were pre-existing and un-red-proved) was closed by red-proving those seams rather than
+by disclosure, at operator decision.
+
+**Work landed on branch `phase-206-resume-wave2-5`, not the branch this record formerly named.**
+`phase-206-dashboard-ui-coverage` was already merged to `main` before the resume began — the prior
+pause record's claim that it was "24 commits ahead of main" was already stale when written
+(`git log main..phase-206-dashboard-ui-coverage` returns 0).
 
 ### Phase 204 (2026-09-13) — Worklist Truth & Derivation, COMPLETE, verification `passed` 4/4
 
