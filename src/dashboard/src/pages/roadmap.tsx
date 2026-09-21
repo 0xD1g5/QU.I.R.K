@@ -55,9 +55,9 @@ try {
 }
 
 const PHASE_COLORS: Record<string, string> = {
-  NOW:   "hsl(0, 72%, 51%)",
-  NEXT:  "hsl(0, 72%, 51%)",
-  LATER: "hsl(0, 72%, 51%)",
+  NOW:   "hsl(0, 72%, 51%)",    // Red — Immediate
+  NEXT:  "hsl(38, 92%, 50%)",   // Amber — Short-term
+  LATER: "hsl(142, 71%, 45%)",  // Green — Long-term
 }
 
 const PHASE_LABEL: Record<string, string> = {
@@ -215,7 +215,7 @@ export function RoadmapPage() {
         "line-color": "hsl(210, 100%, 65%)",
         "target-arrow-color": "hsl(210, 100%, 65%)",
       })
-      setSelected(nodes[0] ?? null)
+      setSelected(nodeById[nodeId] ?? null)
     })
 
     cyRef.current.on("tap", (evt) => {
