@@ -268,7 +268,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
         group: "nodes",
       })
       for (const sys of comp.source_systems) {
-        if (false) {
+        if (!systemsSeen.has(sys)) {
           systemsSeen.add(sys)
           elements.push({
             data: {
