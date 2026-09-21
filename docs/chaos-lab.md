@@ -208,11 +208,24 @@ Add these targets to your config.yaml to scan JWT endpoints:
 connectors:
   enable_jwt: true
   jwt_targets:
-    - "http://localhost:20001/token"
-    - "http://localhost:20002/token"
-    - "http://localhost:20003/token"
-    - "http://localhost:20004/token"
+    - "http://localhost:20001"
+    - "http://localhost:20002"
+    - "http://localhost:20003"
+    - "http://localhost:20004"
+
+security:
+  allow_internal_targets: true
 ```
+
+> **Corrected 2026-09-17.** Two defects made this profile unscannable as previously
+> documented. First, the targets were written as `.../token`: the connector probes JWKS
+> paths by concatenating them onto each target, so `/token` made it request
+> `/token/.well-known/jwks.json` and find nothing. Measured against the live services —
+> `"http://localhost:20001/token"` returns 0 endpoints, `"http://localhost:20001"`
+> returns 1. Second, the JWKS probe runs `validate_external_url()` on every candidate
+> URL, and `allow_internal` was never threaded to it, so `localhost` was rejected as
+> RC_LOOPBACK regardless of config — the `security` block above is now required, and the
+> scanner passes the flag through as of the same change.
 
 ---
 
@@ -1202,7 +1215,7 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-grpc-tls`
 ### 3.32 multihost Profile (v5.24 — 999.110)
 
 The `multihost` profile is structurally unlike every other profile in this document: it is a whole
-**simulated enterprise estate** rather than a single weakness fixture. It brings up **33 containers
+**simulated enterprise estate** rather than a single weakness fixture. It brings up **42 containers
 on a dedicated `/24`** (`labnet`, `10.80.0.0/24`), each with a static address and its own crypto
 posture, so the scanner sees a realistic topology instead of a pile of services on `localhost`.
 
@@ -1230,6 +1243,38 @@ are no host ports to list, by design.
 | 10.80.0.105–.107 | mh-devtest-api, mh-staging-web, mh-iot-controller | self-signed certificates | certificate provenance |
 | 10.80.0.108–.110 | mh-erp-frontend, mh-hr-portal, mh-payroll | legacy TLS | data in motion |
 | 10.80.0.111 | mh-db-hr | MySQL 8.0.40, plaintext | data at rest (database) |
+| 10.80.0.42 | mh-kdc | Samba AD DC, realm `QUIRK.LAB` | identity (Kerberos) |
+| 10.80.0.61–.62 | mh-vault, mh-vault-seed | Vault 1.17 dev: transit keys, PKI root, auth mounts | data at rest (secrets) |
+| 10.80.0.90–.93 | mh-jwt-rs256 / -hs256 / -rsa1024 / -algnone | JWKS: RS256, HS256, RSA-1024, alg=none | API / token signing |
+| 10.80.0.120 | mh-postfix | SMTP 25 / SMTPS 465 / submission 587 | in motion (email) |
+| 10.80.0.121 | mh-dovecot | IMAP 143 / IMAPS 993 / POP3 110 / POP3S 995, TLS 1.2 cap | in motion (email) |
+
+**Connector coverage (added 2026-09-17).** The nine hosts above were added so the profile
+exercises the Identity, Data at Rest, Motion and Findings *connectors*, not just TLS and SSH.
+Each is a dedicated `mh-*` instance with **no published ports**, mirroring how `mh-db-finance`
+duplicates the `database` profile's Postgres rather than dual-homing it. Verified against the
+live subnet from `mh-prober` rather than assumed:
+
+| Connector | Result |
+|---|---|
+| `enable_vault` | 6 endpoints — exportable transit key MEDIUM, PKI root + intermediate HIGH, token auth HIGH, userpass MEDIUM |
+| `enable_jwt` | 4 endpoints, one JWKS per algorithm defect |
+| `enable_email` | 14 endpoints (7 ports × 2 hosts); 4 carry TLS data via the stdlib fallback |
+| `enable_db` (MySQL) | `MySQL/ssl-off`, HIGH — previously missing because `mysql_targets` was unset |
+| `enable_kerberos` | 1 endpoint, `kerberos-no-preauth` |
+
+Three caveats worth knowing before relying on these:
+
+- **Kerberos needs `quirk-scanner[identity]`**, which `[all]` deliberately excludes. `mh-prober`
+  installs `.[all]`, so the prober **cannot** scan `10.80.0.42` without an extra install. The
+  connector's UDP AS-REQ probe also times out against this container and falls back to TCP, which
+  succeeds; UDP-path enctype enumeration is not exercised.
+- **Email and broker need `sslyze`.** It became a core dependency on 2026-09-17; prober images
+  built before that lack it, and `run_scan.py` skips the email phase entirely when it is missing.
+- **Postfix's ports do not negotiate under the stdlib fallback** — it offers RSA-only ciphers that
+  `ssl.create_default_context()` excludes. With `sslyze` installed they enumerate normally. This
+  is the same behaviour `labs/email/expected_results.md` records for the single-host profile.
+
 
 **Start and scan:**
 

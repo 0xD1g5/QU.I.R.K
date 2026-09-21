@@ -3,6 +3,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         samba \
+        samba-ad-provision \
         samba-dsdb-modules \
         samba-vfs-modules \
         winbind \

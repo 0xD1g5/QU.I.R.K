@@ -3160,6 +3160,12 @@ def main():
                 logger=logger,
                 allow_insecure_jwks=cfg.security.allow_insecure_jwks,
                 cred_ctx=cred_ctx,          # Phase 93 / AUTH-01: None when unauthenticated (D-14 closure capture)
+                # The JWKS probe runs validate_external_url() on every candidate URL. Without
+                # this the guard rejects RFC1918/loopback unconditionally, so the connector could
+                # never scan an internal IdP — including the chaos lab's own documented `jwt`
+                # profile at http://localhost:2000x. Threaded here to match how every other
+                # internal-capable scanner consumes the same operator opt-in.
+                allow_internal=cfg.security.allow_internal_targets,
             )
         jwt_endpoints = _wrapped_phase(
             run_stats, "jwt_scanning", "jwt_scanner",
