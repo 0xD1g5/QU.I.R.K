@@ -302,7 +302,9 @@ Two further pieces of evidence that the criterion was honoured in spirit, not ju
   came from re-running D-A2's own commands at execution time instead of citing the decision
   forward.
 
-Five product defects were filed rather than fixed, per CONTEXT's test-only fence:
+Six product defects were filed rather than fixed, per CONTEXT's test-only fence (the numeral
+read "Five" until 2026-09-21 while the list below named six; the list was right — corrected per
+206-VERIFICATION.md Finding 2):
 `certificates-expiry-sort-absent.md`, `certificates-self-signed-flag-absent.md`,
 `cbom-table-no-results-empty-state-absent.md`, `lifecycle-event-row-unknown-event-type-crash.md`,
 `roadmap-detail-panel-owner-and-dependencies-absent.md`, plus this plan's

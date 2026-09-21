@@ -51,8 +51,10 @@ ROADMAP, or any plan's prose.** Nothing is reconciled toward 28.
 | Ledger body rows (≥ red-proved cases, because one case may carry two mutations) | **26** | `grep -c '^\| UAT-7-' 206-RED-PROOF.md` |
 | Honestly non-converted (no test written) | **3** — `UAT-7-12`, `UAT-7-23`, `UAT-7-29` | set difference: the 28-case inventory in `206-CONTEXT.md` § domain minus the 25 derived above |
 | Reclassified OUT of the jsdom-tractable set | **2** — `UAT-7-23`, `UAT-7-29` | `grep -l 'jsdom-tractable set' red-proof/*.md` → `roadmap`, `shell` (a narrower pattern quoting the bolded phrase verbatim returns only `roadmap` — the `shell` fragment bolds it as `**leaves the jsdom-tractable set**`, so the `**` breaks the match; this is why the loose form is the one recorded) |
-| TEMPORARY red-proof commits | **13** | `git log --oneline --grep='^TEMPORARY(206-' \| wc -l` |
-| Matching revert commits | **13** | `git log --oneline --grep='Revert "TEMPORARY(206-' \| wc -l` |
+| TEMPORARY red-proof commits (this phase's own conversions) | **13** | `git log --oneline --grep='^TEMPORARY(206-[0-9]' \| wc -l` |
+| Matching revert commits | **13** | `git log --oneline --grep='^Revert "TEMPORARY(206-[0-9]' \| wc -l` |
+| TEMPORARY commits for the RETROACTIVE appendix below (NOT conversions) | **2** | `git log --oneline --grep='^TEMPORARY(206-RETRO-' \| wc -l` |
+| Matching reverts for the appendix | **2** | `git log --oneline --grep='^Revert "TEMPORARY(206-RETRO-' \| wc -l` |
 
 ### Reconciliation of the two counts SC#2 requires to be equal
 
@@ -82,9 +84,17 @@ All 13 TEMPORARY commits and all 13 reverts resolve, and each row's pair is
 `TEMPORARY(206-NN)` / `Revert "TEMPORARY(206-NN)"` with the **same** plan number `NN` as the
 fragment that recorded it. Every SHA cited in the 26 rows passed `git cat-file -e <sha>^{commit}`.
 
-One caution for a future reader: `git log --grep="TEMPORARY(206-"` (unanchored) returns **27**, not
-26. The 27th is `5de6b563 test(206-05): red-prove UAT-7-10/7-34, …`, an ordinary plan commit whose
-*body* quotes the string. Anchor the pattern (`--grep='^TEMPORARY(206-'`) to get the real 13.
+Two cautions for a future reader:
+
+1. `git log --grep="TEMPORARY(206-"` (unanchored) returns **27**, not 26. The 27th is
+   `5de6b563 test(206-05): red-prove UAT-7-10/7-34, …`, an ordinary plan commit whose *body*
+   quotes the string. Anchor the pattern to get the real count.
+2. **Anchoring alone is no longer enough, as of 2026-09-21.** The retroactive appendix below
+   added two more anchored `^TEMPORARY(206-…` pairs, so `--grep='^TEMPORARY(206-'` now returns
+   **15**, not 13. The 13 conversion pairs are `^TEMPORARY(206-[0-9]`; the 2 appendix pairs are
+   `^TEMPORARY(206-RETRO-`. This is itself an instance of the standing lesson in `CLAUDE.md`:
+   a recorded derivation command can go stale the moment new commits land, so re-run it and
+   read the number it gives today rather than the number written beside it.
 
 ### Fragment completeness
 
@@ -103,3 +113,59 @@ count its plan was assigned. No fragment is missing and no fragment is short:
 | `hardware` | 2 | 7-40, 7-41 |
 | `shell` | 3 | 7-20, 7-22, 7-31 (7-23 non-converted, evidence section only) |
 | `print-style` | 3 | 7-30 (×2 mutations), 7-21 |
+
+---
+
+## Appendix — retroactive red-proof of four PRE-EXISTING cited nodes
+
+**These rows are NOT conversions and are deliberately excluded from every tally above.** They are
+formatted so that none of the tally's derivation commands pick them up (no row here begins
+`| UAT-7-`), because counting them as conversions would inflate the 25 this phase actually wrote.
+
+`206-VERIFICATION.md` **Finding 1** recorded that four cited nodes across two cases were written by
+earlier phases and carried no red-proof row, and that `UAT-7-30`'s *unqualified* PASS therefore
+rested, for its decisive Criterion 1 ("No sidebar visible"), on a seam this phase never proved.
+The operator chose to **close** that gap by red-proving rather than to disclose or override. This
+appendix is that closure, performed on 2026-09-21 with the same method as the body table: mutate
+the PRODUCTION seam, run the cited node by name, confirm it fails **at its own named assertion
+line**, capture the verbatim failure, revert, and confirm the product file is byte-identical to
+the phase merge-base `68c048d0`.
+
+| Case | Pre-existing cited node (origin commit) | Mutation applied | Observed failure message | TEMPORARY commit | Revert commit |
+|------|------------|-------------------|---------------------------|-------------------|----------------|
+| *(pre-existing)* UAT-7-30 | `src/dashboard/src/__tests__/app-print-chrome.test.tsx::"renders the print page with NO sidebar on /print"` — written by `93e5afb1`, the print fix, 2026-09-14 | `App.tsx:80` — the `/print` short-circuit guard `if (location.pathname.replace(/\/+$/, "") === "/print")` changed to `if (false)`, so the branch that returns a bare `<PrintPage />` before the shell never runs; `<Route path="/print" element={<PrintPage />} />` was simultaneously registered back inside the sidebar shell's route table, reproducing the exact pre-`93e5afb1` structure in which `/print` rendered inside `AppShell`'s `<Sidebar />` + `<main className="ml-12 lg:ml-60">` chrome. | `AssertionError: expected <aside data-testid="sidebar"></aside> to be null` — `- Expected: null / + Received: <aside data-testid="sidebar">SIDEBAR</aside>`, fired at `app-print-chrome.test.tsx:65:38`, i.e. `expect(queryByTestId("sidebar")).toBeNull()`. The preceding line 64 (`expect(queryByTestId("print-page")).not.toBeNull()`) still PASSED, so the failure is specifically the no-sidebar criterion and not collateral damage to the node's setup. | `e178fcab` | `528802c8` |
+| *(pre-existing)* UAT-7-09 | `src/dashboard/src/pages/__tests__/findings-storyline.test.tsx::"F5 + F6 (Escape): SheetContent unmounts and focus returns to the exact triggering button"` — written by `2039d8f2`, phase 202-06, 2026-09-12 | `findings.tsx:319` — the detail Sheet's close seam `onOpenChange={(open) => !open && setSelectedFinding(null)}` replaced with the no-op `onOpenChange={() => {}}`, so a close request (Escape, the X button, or an overlay click) never clears `selectedFinding`, `open={!!selectedFinding}` stays true, and Radix never unmounts `SheetContent`. One mutation, three cited nodes. | `Error: expect(element).not.toBeInTheDocument() — expected document not to contain element, found <div role="dialog" …>` with the still-mounted drawer dumped in full (heading `TLS certificate uses undersized RSA key`), fired at `findings-storyline.test.tsx:211:46`, i.e. `expect(screen.queryByRole("dialog")).not.toBeInTheDocument()` — the panel-unmount assertion itself, not the focus-restoration assertion on the line below it. | `036e46d2` | `7fc9173b` |
+| *(pre-existing)* UAT-7-09 | `findings-storyline.test.tsx::"F6 via the Close button: focus returns to the exact triggering button"` — `2039d8f2`, phase 202-06 | *(same single mutation — `findings.tsx:319` `onOpenChange` neutered)* | Same `Error: expect(element).not.toBeInTheDocument()`, fired at `findings-storyline.test.tsx:226:46` — this node's own `expect(screen.queryByRole("dialog")).not.toBeInTheDocument()`, reached after `await user.click(screen.getByRole("button", { name: "Close" }))`. | `036e46d2` | `7fc9173b` |
+| *(pre-existing)* UAT-7-09 | `findings-storyline.test.tsx::"F6 via an overlay click: focus returns to the exact triggering button"` — `2039d8f2`, phase 202-06 | *(same single mutation)* | Same `Error: expect(element).not.toBeInTheDocument()`, fired at `findings-storyline.test.tsx:245:46` — this node's own unmount assertion, reached after clicking the `.fixed.inset-0.z-50` overlay. | `036e46d2` | `7fc9173b` |
+
+### What the appendix proves, and what it does not
+
+- **It proves the seams hold.** Both seams are real load-bearing product code: break the `/print`
+  short-circuit and the sidebar comes back into the client PDF; break the Sheet's `onOpenChange`
+  and the detail panel never closes. In each case the cited node went red **at the assertion it is
+  cited for**, which is the standard the body table's 26 rows are held to.
+- **`UAT-7-30`'s unqualified PASS is therefore justified and stays unqualified.** Criterion 1 is
+  covered by a node that has now been shown to fail when the behaviour it names breaks. No
+  disposition changes as a result of this appendix; `docs/UAT-SERIES.md`, the ledger and the
+  worklist are untouched.
+- **It does NOT convert these into phase-206 conversions.** SC#1's tally stays at 25 of 28, and
+  the claim that "every conversion here is a newly written test" is unchanged — the point of
+  Finding 1 was never that the count was wrong, only that four *inherited* citations carried no
+  proof. They now do.
+- **A fourth node in `app-print-chrome.test.tsx`** (`"renders no sidebar-offset wrapper on /print"`)
+  and the trailing-slash node also went red under the UAT-7-30 mutation. That is expected — the
+  mutation removes the whole chrome-free branch — and is recorded here only so a future reader is
+  not surprised by the run's `4 failed` / `1 failed` totals. The cited node's failure was checked
+  line-by-line, not inferred from the file going red.
+
+### Post-revert verification
+
+```
+$ git diff 68c048d0 HEAD -- src/dashboard/src/App.tsx src/dashboard/src/pages/findings.tsx
+(no output — both product files are byte-identical to the phase merge-base)
+
+$ npx vitest run src/__tests__/app-print-chrome.test.tsx \
+                src/pages/__tests__/findings-storyline.test.tsx
+ Test Files  2 passed (2)
+      Tests  22 passed (22)
+```
