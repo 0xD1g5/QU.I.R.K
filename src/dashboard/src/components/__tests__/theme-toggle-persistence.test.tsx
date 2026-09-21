@@ -26,7 +26,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { getStoredTheme } from "@/components/theme-context"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-// The app's real storage key, as passed by App.tsx's ThemeProvider.
+// The app's real storage key, as passed by App.tsx:130's ThemeProvider.
 const STORAGE_KEY = "quirk-ui-theme"
 
 beforeEach(() => {
