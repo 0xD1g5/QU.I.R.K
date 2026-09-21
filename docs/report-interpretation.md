@@ -2036,3 +2036,63 @@ this header for you. If you try to fetch a report artifact yourself with a bare 
 plain browser navigation to the URL, you will get a `401` response instead of a file — and a saved
 `401` response body looks exactly like a corrupt or truncated download. See
 `docs/operators-guide.md` for the correct authenticated `curl` invocation.
+
+---
+
+## 27. Which scanner produced this score (v5.24 — scan summary identity rows)
+
+The CLI scan summary ends with three identity rows. Two of them are new, and they exist to answer
+a question the report could not previously answer at all: **which build of the scanner produced
+this number?**
+
+```
+Platform version   5.21.0
+Scoring model      v3.0
+Scanner build      a612e60fd3a2
+```
+
+### Why "Platform version" is not enough
+
+`Platform version` is the released package version. It names **the release, not the code that
+ran.** `pyproject.toml` does not bump on every change, so a scanner running months of unreleased
+commits still prints the version of the last PyPI release.
+
+That gap is not theoretical. On 2026-09-14 a chaos-lab scan reported a confident **91/100**. The
+same evidence scores **15/100** under the scoring model that had been on `main` since earlier that
+day — the scan was running a container image built before the change. It exited `0`, wrote eleven
+report artifacts, and warned about nothing. `Platform version` read `5.21.0` in both the stale and
+the current case, so nothing in the output distinguished them; only the magnitude betrayed it, and
+only to a reader who already knew both numbers.
+
+### Scoring model
+
+The scoring model version, read live from the scanner's own `SCORING_VERSION` constant.
+
+**This is the row that matters for comparing scores.** Scores from different models are not
+comparable — v3 is materially stricter than v2, and essentially every estate scores lower under
+it. If you are comparing a scan against an earlier one, compare this row first. If it differs, the
+two numbers do not measure the same thing, and a "score improvement" or "regression" between them
+is an artifact of the model change rather than a change in your estate.
+
+### Scanner build
+
+The commit the running scanner was built from, resolved in this order:
+
+1. `$QUIRK_BUILD_SHA`, baked in at image build time — preferred inside a container, where a `.git`
+   directory (if any) describes the build *context* rather than the installed code.
+2. The repository's `.git`, for an editable or development checkout.
+3. `unknown`, for an installed wheel with neither.
+
+**`unknown` is a deliberate, honest answer, not a defect.** A normal `pip install quirk-scanner`
+has no commit to report. The value is never substituted with the package version — doing so would
+recreate precisely the ambiguity these rows exist to remove.
+
+To make a container image self-identifying, pass the SHA at build time:
+
+```bash
+docker compose -p chaoslab --profile multihost build \
+  --build-arg QUIRK_BUILD_SHA="$(git rev-parse HEAD)" mh-prober
+```
+
+Without the `--build-arg`, the image still builds and scans normally; its summary simply reports
+`Scanner build unknown`.

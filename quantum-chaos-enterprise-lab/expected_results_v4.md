@@ -527,7 +527,7 @@ so detection here is reproducible and the scoring-model change moved no finding.
 | 10.80.0.30 | mh-db-finance | Postgres 16.6, no TLS | _INFO only — no actionable finding_ | INFO:11 |
 | 10.80.0.31 | mh-cache-session | Redis 7.4.1, no TLS/auth | handshake blocked | MEDIUM:1 INFO:11 |
 | 10.80.0.40 | mh-identity-dc | OpenLDAP, 389 cleartext + 636 | _INFO only — no actionable finding_ | INFO:11 |
-| 10.80.0.41 | mh-saml-idp | simplesamlphp IdP metadata | **plaintext HTTP** | **HIGH:1** INFO:10 |
+| 10.80.0.41 | mh-saml-idp | simplesamlphp IdP metadata ⚠️ amd64-only image — see note below | **plaintext HTTP** | **HIGH:1** INFO:10 |
 | 10.80.0.50 | mh-storage-archive | MinIO; 1 SSE-S3 + 1 UNENCRYPTED bucket | **plaintext HTTP** | **HIGH:2** INFO:9 |
 | 10.80.0.60 | mh-pki-ca | step-ca 0.28.1 | expiring <30d, untrusted CA, QV ECDSA key | MEDIUM:3 INFO:11 |
 | 10.80.0.70 | mh-ssh-jump | OpenSSH server | _INFO only — no actionable finding_ | INFO:11 |
@@ -543,6 +543,15 @@ so detection here is reproducible and the scoring-model change moved no finding.
 | 10.80.0.110 | mh-payroll | legacy TLS | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.111 | mh-db-hr | MySQL plaintext | unknown service | MEDIUM:1 INFO:10 |
 | 10.80.0.200 | mh-prober | QU.I.R.K. sensor image | _n/a — scan origin, not a target_ | n/a |
+
+> **⚠️ `mh-saml-idp` on aarch64 Linux.** `kenchan0130/simplesamlphp:1.19.7` is published for
+> **amd64 only** — the one image of this lab's 28 without arm64, verified against the registry
+> manifests. On a plain aarch64 Linux host with no binfmt handler it exits 255 with
+> `exec format error`, and the SAML rows above read **0 findings** instead of `HIGH:1 INFO:10`.
+> That is an environment gap, **not** an oracle error: register emulation
+> (`docker run --privileged --rm tonistiigi/binfmt --install amd64`) and re-run before filing a
+> divergence. Docker Desktop on Apple Silicon emulates this silently, so the numbers above are
+> what a Mac sees without any extra step. See `docs/chaos-lab.md` §3.32.
 
 **Aggregate observed (2026-09-14, live run, scoring v3):** 37 hosts scanned / 0 undetermined,
 **400 findings** — **5 CRITICAL / 14 HIGH / 33 MEDIUM / 16 LOW / 332 INFO**; 370 endpoints,

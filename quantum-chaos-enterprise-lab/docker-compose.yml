@@ -1672,6 +1672,15 @@ services:
 
   mh-saml-idp:
     image: kenchan0130/simplesamlphp:1.19.7
+    # amd64-only upstream image -- the ONLY non-arm64 image in this lab.
+    # Declared explicitly so the intent is in the file rather than left to
+    # Compose's host-platform warning. On Docker Desktop for Apple Silicon this
+    # is emulated silently and nothing indicates it; on a plain aarch64 Linux
+    # host with no binfmt handler the ELF cannot execute at all and the
+    # container exits 255 with "exec format error", taking SAML out of the scan
+    # as "0 endpoints" rather than as an error. See docs/chaos-lab.md 3.32 for
+    # the binfmt prerequisite aarch64 Linux hosts must register first.
+    platform: linux/amd64
     profiles: ["multihost"]
     environment:
       SIMPLESAMLPHP_SP_ENTITY_ID: "https://sp.finance.chaos.local"

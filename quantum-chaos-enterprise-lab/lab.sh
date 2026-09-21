@@ -21,7 +21,13 @@ usage() {
 Usage: ./lab.sh <command> [options]
 
 Commands:
-  up              Start the lab (docker compose up -d)
+  up [flags]      Start the lab (docker compose up -d). Extra flags are passed
+                  straight to compose — notably --build, which rebuilds the
+                  locally-built prober. Every other service is a pinned public
+                  image, so --build only affects the prober in practice.
+                  Without it, up reuses an existing prober image no matter how
+                  far quirk/ has moved; a warning fires when that image
+                  predates the newest commit touching quirk/.
   all             Start ALL profiles at once — every service, every vulnerability
   profiles        Print all known docker-compose profiles (one per line)
   certs           Generate all chaos-lab self-signed certs (mTLS CA/client +
@@ -49,6 +55,7 @@ Options (via env vars):
 Examples:
   ./lab.sh up
   PROFILE_ARGS="--profile identity" ./lab.sh up
+  PROFILE_ARGS="--profile multihost" ./lab.sh up --build   # rebuild the prober
   ./lab.sh certs
   ./lab.sh profiles
   ./lab.sh status
@@ -218,6 +225,65 @@ PY
   return 0
 }
 
+# --- Stale locally-built image detection -------------------------------------
+#
+# `up` runs `compose up -d`, which reuses any existing image regardless of how
+# far the repo has moved. Every service in this lab is a pinned public image
+# EXCEPT the prober, which is built from this checkout -- so the prober is the
+# only one that can silently run stale code.
+#
+# That is not hypothetical: on 2026-09-14 a multihost scan reported a confident
+# 91/100 from a prober built before the v3 scoring change. The same evidence
+# scores 15/100 under v3. Exit 0, eleven artifacts, no warning of any kind.
+#
+# This warns; it does not rebuild. A blanket rebuild would cost a 1.4 GB build
+# context on every `up` even on a cache hit. Pass `--build` (now forwarded to
+# compose) when the warning fires, or rebuild just the prober:
+#   docker compose -p chaoslab --profile multihost build mh-prober
+_warn_if_prober_stale() {
+  case "${PROFILE_ARGS}" in *multihost*) ;; *) return 0 ;; esac
+  command -v docker >/dev/null 2>&1 || return 0
+  command -v git >/dev/null 2>&1 || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+
+  local image created commit_ts
+  image="${PROJECT_NAME}-mh-prober"
+  created="$(docker image inspect -f '{{.Created}}' "${image}" 2>/dev/null)" || return 0
+  [ -n "${created}" ] || return 0
+
+  # Newest commit touching scanner code. If the working tree is dirty this is
+  # still a lower bound -- uncommitted changes are strictly newer.
+  # Derived from BASH_SOURCE, not from `..` of the CWD: the rest of this script
+  # assumes it is run from the lab directory, but a warning that silently stops
+  # working when it is not would be worse than no warning.
+  local repo_root
+  repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || return 0
+  commit_ts="$(git -C "${repo_root}" log -1 --format=%ct -- quirk/ 2>/dev/null)" || return 0
+  [ -n "${commit_ts}" ] || return 0
+
+  # Date math in python3 rather than `date`: the -j/-f vs -d split between
+  # macOS and GNU makes portable epoch conversion in shell genuinely awkward,
+  # and docker reports nanosecond-precision RFC3339 that BSD date rejects.
+  if python3 -c "
+import sys, datetime
+raw = sys.argv[1].strip().replace('Z', '+00:00')
+head, sep, rest = raw.partition('.')
+if sep:  # trim sub-second precision to 6 digits for fromisoformat
+    frac = rest[:6].ljust(6, '0')
+    tz = rest.lstrip('0123456789')
+    raw = f'{head}.{frac}{tz}'
+built = datetime.datetime.fromisoformat(raw).timestamp()
+sys.exit(0 if built < float(sys.argv[2]) else 1)
+" "${created}" "${commit_ts}" 2>/dev/null; then
+    echo "⚠️  Image '${image}' was built BEFORE the newest commit touching quirk/." >&2
+    echo "    It will scan with stale scanner code and report a score from whatever" >&2
+    echo "    model was current when it was built -- silently, exit 0, no warning in" >&2
+    echo "    the scan itself. Check the 'Scoring model' / 'Scanner build' rows in the" >&2
+    echo "    scan summary, and rebuild with:" >&2
+    echo "      PROFILE_ARGS=\"${PROFILE_ARGS}\" ./lab.sh up --build" >&2
+  fi
+}
+
 cmd="${1:-}"
 shift || true
 
@@ -229,8 +295,15 @@ case "${cmd}" in
     fi
     ensure_lab_certs
     ensure_profile_certs
+    # Warn BEFORE starting, so the operator can re-run with --build rather than
+    # discover it after a scan has already produced a plausible wrong number.
+    # Skipped when --build was passed, since that rebuild resolves it.
+    case " $* " in *" --build "*) ;; *) _warn_if_prober_stale ;; esac
     echo "🚀 Starting lab: project=${PROJECT_NAME} file=${COMPOSE_FILE} profiles='${PROFILE_ARGS}'"
-    compose up -d
+    # "$@" forwards compose flags -- notably `--build`, which `up` previously
+    # had no way to reach, making a stale locally-built prober unavoidable
+    # without dropping to raw `docker compose`.
+    compose up -d "$@"
     echo "✅ Lab started."
     compose ps
     ;;
@@ -282,7 +355,10 @@ case "${cmd}" in
     if [[ -n "${_skipped}" ]]; then
       echo "   ⏭  Skipped on macOS: ${_skipped} (set LAB_INCLUDE_KERBEROS=1 to include; see BACK-89)"
     fi
-    compose up -d
+    # `all` includes the multihost profile, so it starts the locally-built
+    # prober and carries the same stale-image hazard as `up`. Same treatment.
+    case " $* " in *" --build "*) ;; *) _warn_if_prober_stale ;; esac
+    compose up -d "$@"
     echo "✅ Full chaos lab started."
     compose ps
     ;;
