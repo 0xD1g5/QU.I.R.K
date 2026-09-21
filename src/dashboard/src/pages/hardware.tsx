@@ -190,8 +190,8 @@ export function HardwarePage() {
     const findings = data?.hardware_findings ?? []
     return [...findings].sort(
       (a, b) =>
-        (TIER_ORDER[a.remediation_tier] ?? 99) - (TIER_ORDER[b.remediation_tier] ?? 99) ||
-        a.vendor.localeCompare(b.vendor),
+        (TIER_ORDER[b.remediation_tier] ?? 99) - (TIER_ORDER[a.remediation_tier] ?? 99) ||
+        b.vendor.localeCompare(a.vendor),
     )
   }, [data])
 
@@ -229,12 +229,6 @@ export function HardwarePage() {
         </p>
       </div>
 
-      <div
-        role="note"
-        className="rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300"
-      >
-        Hardware findings are advisory-only and do not affect the readiness score.
-      </div>
 
       {hasBridgeConfirmed && (
         <div
