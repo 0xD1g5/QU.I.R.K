@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-21 (Phase 206 dashboard-UI coverage drain — Series 7 re-dispositioned across 28 cases, every flip citing a vitest node that was first red-proved by mutating the PRODUCTION source it exercises and observing the cited node go red. **24 PASS** (5 unqualified, 18 QUALIFIED with their uncovered Pass Criteria bullets quoted verbatim in Notes, and UAT-7-30 on a two-node citation), **2 FAIL** (UAT-7-21 on 95 hardcoded colour literals, recorded by a deliberately `it.fails` audit node so the verdict is published rather than hidden and self-invalidates when the product is fixed; UAT-7-12 on an absent Expiry-sort control) and **2 GAP** (UAT-7-23 and UAT-7-29, reclassified OUT of the jsdom-tractable set — a pure Tailwind breakpoint and renderer-internal drag respectively — and routed to Phase 207's browser verdict). Read the qualifications, not the boxes: **only 6 of the 24 PASS cases are full coverage.** The phase-level criterion "each of the 28 cases has a vitest test" is recorded NOT MET AS WRITTEN, at 25 of 28; it is deliberately not reported as 25/25 against the revised denominator of 26. UAT-7-12 stays IN that denominator because its blocker is an absent feature, not a jsdom limit — a real browser would find the same missing control. 206-CONTEXT.md decision D-A2 is recorded as STALE and REVERSED: it ruled UAT-7-30 a confirmed sidebar-in-PDF defect on 2026-09-13, and commit 93e5afb1 fixed it structurally on 2026-09-14, one day later. Open series-7 GAPs: 31 -> 5. Earlier: 2026-09-17 (UAT-32-04 steps corrected — the case staged the stdlib email fallback by uninstalling sslyze, a premise `run_scan.py:3869-3872` makes unreachable: with sslyze absent the email phase is skipped outright, so `_scan_one_fallback_email()` is never called and the live procedure could not have passed as written. It had been dispositioned PASS on `pytest -k fallback`, a substitute that calls the fallback directly and cannot observe the phase-level skip. Steps now target the three genuinely reachable `return None` paths in `_scan_one_sslyze_email()`, with sslyze installed; the live end-to-end leg is recorded as an honest GAP because the shipped chaos lab cannot stage it deterministically (its Postfix offers RSA-only ciphers the stdlib client will not negotiate). Found while tracing the undeclared-`sslyze` packaging defect. Earlier: 2026-09-15 Phase 209 — Series 209 added: 7 deliverable-reachability cases covering
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 DELIV-01 (manifest + five-format download API over the artifacts `write_reports()` already writes,
 structural path containment with a live negative control, RPT-03's dashboard exclusion re-proven) and
 DELIV-02 (the Executive-page download control). **Two cases are `Tester: Digs` and dispositioned only
@@ -589,7 +589,7 @@ validation against the reconfigured `hwcompat-snmp` chaos-lab target found and f
 defects that no unit test had caught: a missing pysnmp `ContextData()` argument (every live v3
 probe was silently failing into `v3-failed-fell-back`) and an `hwcompat-snmp` container startup
 double-bind. Earlier: Phase 138.2 COMPLETE — gap closure: LIVE-03 fix — two Obsidian vault guide notes (`Guides/Getting-Started.md`, `Guides/Operators-Guide.md`) were stale relative to their `docs/` sources; re-synced both verbatim with standard guide frontmatter (`updated: 2026-07-30`), verified via content spot-check grep (not mtime alone) for `Optional: Hardware Scanning` / `[hw]` and `CNSA 2.0 Remediation Tiers` respectively; `Guides/Architecture.md` left untouched (already current from Phase 138.1); LIVE-03 ledger row re-attributed to Phase 138.2; no new UAT test case added — docs-only vault-sync fix verified via targeted content grep rather than a new gating scenario. Earlier: Phase 138.1 COMPLETE — gap closure: CORE-04 fix — `docs/architecture.md` §12 "CNSA 2.0 Remediation Tiers" subsection had its tier severity ordering completely INVERTED relative to `quirk/scanner/hardware_tier.py::assign_tier()` and the correct `docs/operators-guide.md` §9.2; rewrote the 4 tier bullets so Tier 1 = HIGH/no-PQC-path/replace-2030 (most urgent) → Tier 3 = LOW/already-PQC-capable (best case) → Tier N/A = INFO/EOL-before-migration-window, matching ground truth; cross-document consistency re-verified against both the scanner code and operators-guide.md; all other §12 prose (Signal Chain, Crypto-bridge detection, CBOM Integration) unchanged; vault Guides/Architecture.md note created (previously absent); CORE-04 ledger row re-attributed to Phase 138.1; no new UAT test case added — docs-only correctness fix verified via targeted cross-reference rather than a new gating scenario. Earlier: Phase 138 COMPLETE — Chaos Lab Docs + Living Docs System: docs/chaos-lab.md §3.22 hwcompat Profile section added (hwcompat-ssh/20221, hwcompat-http/20222, hwcompat-snmp/20223/udp, Net-SNMP Cisco IOS sim, PROFILE_ARGS start command, expected scanner findings, port table rows); pip install quirk-scanner[hw] prerequisite added to §1 + §3.22; Obsidian Guides/Chaos-Lab.md synced; CLAUDE.md Per-Phase Documentation Checklist + Milestone-Boundary Doc Review Template added; LAB-01/LAB-02/LIVE-01/LIVE-02/LIVE-03 closed; UAT-138-01..02 added. Earlier: Phase 137 COMPLETE — Admin Guide: docs/admin-guide.md created (Prerequisites, §1 Deploy Console quirk serve port 8512 + /api/health, §2 Enroll Sensors two-step console→sensor workflow + > **WARNING:** one-time token, §3 Manage Sensor Auth four subsections issuance/revocation/rotation/compromise, §4 SNMP Setup UDP 161 + SNMPv2c scope + 5-item troubleshooting checklist); ADMIN-01/02/03 closed; UAT-137-02..04 added. Earlier: Report Interpretation §10 Hardware Inventory: docs/report-interpretation.md §10 added (DEVICE/FIRMWARE CBOM hierarchy, HardwareInventory dashboard fields, advisory-only score relationship, Client Conversation sidebox); OPS-04 closed; UAT-137-01 added. Earlier: Phase 136 COMPLETE — Operators Guide Expansion: docs/operators-guide.md §9 Hardware Scanning added (§9.1 SNMP enable, §9.2 CNSA 2.0 tiers, §9.3 crypto-bridge detection); OPS-01/02/03 closed; UAT-136-01..03 added. Earlier: Phase 135 COMPLETE — Core Docs Refresh: README bumped to v5.8.0 (Beta removed), What's New v5.6/v5.7/v5.8 section, hardware fingerprinting + CNSA 2.0 + crypto-bridge + [hw] extras bullet, CBOM DEVICE/FIRMWARE output bullet; CHANGELOG [5.8.0] and [5.7.0] entries added (most-recent-first, [5.6.0] preserved); docs/getting-started.md Optional Hardware Scanning section with [hw] install and explicit not-in-[all] note; docs/architecture.md §12 Hardware Scanning (SSH→HTTP→SNMP signal cascade, SNMP probe sysDescr/sysName/sysObjectID, CBOM DEVICE parent + FIRMWARE children, advisory-only sentence) + mermaid HardwareScan node added; 6 pre-existing stale sections corrected (fabricated migration names, wrong quirk/hwcompat/ path, inverted crypto-bridge description, dashboard 9→19 routes, 4→10 route modules, PLATFORM_VERSION dynamic import); CORE-01..04 complete. Earlier: Phase 134 COMPLETE — CBOM DEVICE Component Hierarchy: Pass 4 DEVICE parent + FIRMWARE child nesting (hw/device/ + hw/firmware/ bom_refs, DEVICE=quirk:hw-tier only, FIRMWARE=all quirk:hw-* props); HardwareComponent Pydantic model + _derive_hw_components helper in API; hardware_devices on ScanLatestResponse; HardwareInventory React component with [DEVICE]/[FIRMWARE] badge rows in CBOM tab Table sub-tab; React.Fragment key fix; DEVICE→FIRMWARE CycloneDX dependency entries; 278 CBOM tests GREEN; UAT-134-01..02 added. Earlier: Phase 133 COMPLETE — SNMP Hardware Fingerprinting: snmp_scanner module (probe_snmp_target/scan_snmp_targets/parse_sysdescr + advisory import guard D-03); HardwareDevice ORM +4 nullable SNMP columns + additive migration; run_scan --enable-snmp phase; hwcompat-snmp Net-SNMP chaos lab container (Cisco IOS sysDescr, port 20223/udp); CBOM Pass 4 quirk:hw-snmp-oid property (D-11 conditional on snmp_sysdescr non-null); writer.py SNMP field serialization; snmp_meta.py staleness gate (SNMP_VENDOR_MATRIX 5 entries, STALENESS_THRESHOLD_DAYS=90); [hw] extras isolation (D-08 pysnmp/sysdescrparser excluded from [all]); 13/13 non-slow contract tests GREEN; UAT-133-01..06 added. Earlier: Phase 132 COMPLETE — Frontend Report Polish: AUDIT-14 sessionStorage auth migration (AuthProvider.tsx + api.ts) + CSP header (security_headers.py default-src/script-src/object-src/base-uri); AUDIT-15 HTML report cover-page fix (margin-top:auto→40px, min-height:100vh removed). UAT-132-01..04 added. Earlier: Phase 131 Plan 01 COMPLETE — Dashboard API hardening: AUDIT-06 idle-bucket eviction in RateLimitMiddleware (rate_limit.py sweep del self._buckets on each dispatch); AUDIT-07 POST /api/jobs target validation (parse_target_tokens 422 on invalid/empty, stripped storage); AUDIT-08 sensor push UUID shape re-validation (400 before any DB write). UAT-131-06..08 added. Earlier: Phase 131 Plan 03 COMPLETE — SIEM delivery hardening: AUDIT-13 CEF extension space escaping (formatter.py .replace(" ", "\\s") appended to _cef_escape_extension chain per CISA guidance); AUDIT-11 SIEM transport SSRF guard (transport.py validate_external_url(allow_internal=True) before socket.socket() blocks 169.254.0.0/16 metadata/link-local while allowing RFC1918 + loopback collectors); AUDIT-09 CWE-367 accepted-risk TOCTOU comment (url_allowlist.py on-prem + PinnedIPAdapter + smtplib rationale). UAT-131-03..05 added. Earlier: Phase 130 COMPLETE — Code Quality + Scanner Fixes: SP-07 codesign column rename (quirk/db.py codesign_scan_json column + init_db additive migration, pre-migration DB survives); SP-08 fuzzer dedup (rest_fuzzer.py deduplication of HSTS/http-creds findings ≤1 per run); SP-09 Kerberos TCP fallback doc (quirk/scanners/kerberos_scanner.py _probe_kdc RFC 4120 §7.2.1 fallback comment); AUDIT-04 CR WR-03 DOCX exception logging (docx_renderer.py module-level logger, silent bare-pass excepts replaced with logger.warning(exc_info=True)); AUDIT-05 CR WR-04 SOURCE algo-hint granularity (cbom/builder.py _extract_algo_from_rule_id adds rsa-1024/2048/3072/4096 and aes-192 granular entries before bare fallbacks); UAT-130-01..05 added. Earlier: Phase 129 COMPLETE — Crypto-Bridge Detection + CBOM Pass 4: quirk/cbom/bridge.py _detect_crypto_bridges() pure function (/24 subnet heuristic, partial_only conservative invariant, D-02 non-mutation, D-04 upstream_mitigated deferred to v5.8); quirk/cbom/builder.py HARDWARE_PROTOCOLS frozenset + Pass 4 FIRMWARE component emission (quirk:hw-vendor/pqc-supported/remediation-tier/bridge-status properties) + HARDWARE added to Pass 2/Pass 3 skip-tuples; writer.py + merge/scan.py caller sites wired with _detect_crypto_bridges(); executive.py conditional bridge disclaimer when partial_only detected; 10 tests GREEN (6 bridge detection + 4 Pass 4); CycloneDX 1.6 JSON schema validation passes; HWCOMPAT-03/05 complete. UAT-129-01..02 added. Earlier: Phase 128 COMPLETE — Remediation Tiers + Report Surfacing: hardware_tier.py assign_tier() pure function (Tier 1/2/3/N-A + D-04 confidence cap low/unknown→Tier 2 max + VENDOR-SILENT discretion); remediation_tier column on HardwareDevice ORM (default "Tier N/A"); run_scan.py tier assignment + _print_hardware_summary() CLI advisory block "[Hardware Advisory — not scored]"; ExecContent.hardware_devices advisory field in content_model.py; writer.py MAX(scanned_at)±1s scoped query + CNSA 2.0 deadline strings; render_hardware_section() in html_renderer.py with html.escape() XSS guards; Hardware PQC Advisory paragraph in executive.py Strategic Recommendations; 7-column advisory table in docx_renderer.py; HardwareFinding Pydantic schema + hardware_findings on ScanLatestResponse; _derive_hardware_findings() in scan.py API route; hardware.tsx dashboard tab (advisory banner, TIER/PQC/CONF badge styles, Tier-1-first sort); sidebar Hardware entry + App.tsx /hardware route; HWCOMPAT-SCORE-LOCK confirmed: hardware never in SCORE_WEIGHTS/compute_readiness_score(); 17/17 hardware tests GREEN; 16/16 verification criteria PASS; code review fixes: CR-01 XSS escaping, CR-02 scan-scope bug, WR-01 default alignment; HWCOMPAT-04/07 complete. Earlier: Phase 127 COMPLETE — Hardware Fingerprinting Foundation: hardware_meta.py PQC matrix (8 appliance vendors — F5/Cisco/Palo Alto/Fortinet/Juniper/HPE/IPMI/Thales Luna, STALENESS_THRESHOLD_DAYS=90, per-row last_verified + source_url, CI gate in python-staleness.yml HWCOMPAT-06); HardwareDevice ORM table (12 D-07 columns, auto-created, advisory-only D-01); hardware_scanner.py (fingerprint_one reads SSH banner from service_detail before classified_details overwrite, _probe_http_mgmt best-effort urllib on ports 443/8443/8080/80, fingerprint_hardware ThreadPoolExecutor batch, vendor=Unknown never suppressed D-06, VENDOR-SILENT first-class pqc_status D-08); run_scan.py wired (fingerprint_hardware inside _run_ssh_phase before service_detail overwrite, _hw_batch closure accumulator, non-fatal DB persist after _flush_stage_endpoints); hwcompat chaos lab profile (openssh-server:10.2_p1-r0-ls225 port 20221 → Unknown path, nginx:1.28.0 port 20222 X-Device-Model:HPE-iLO5 → known-vendor path, hwcompat/nginx.conf, expected_results_hwcompat.md oracle, README.md updated, lab.sh NOT modified D-15 auto-derive, CHAOS-05 pinned); 9/9 unit tests GREEN; 13/13 verification criteria PASS; HWCOMPAT-01/02/06 complete. Earlier: Phase 126 COMPLETE — Audit Ledger Closeout + Dashboard Quality: All 86 findings in AUDIT-TASKS.md given final disposition (7/7 criticals CLOSED; 26 warnings CLOSED; 11 deferred → v5.8 with rationale; 2 wont-fix); QC-06 two dead sort() calls removed in cmvp.py coverage_for_algorithm; FE-01 deleteSchedule no longer swallows errors (try/catch removed, non-ok throws Error); FE-03 Compare subscores tab now shows real per-scan values (CompareScanSummary extended with subscores, backend populates sub_a/sub_b, frontend reads data.scan_a/scan_b.subscores[key]); FE-04 ScoreGauge numeral clamped to Math.min(score, maxValue); Dashboard Quality CI unblocked. Earlier: Phase 125 COMPLETE — Posture Defaults + Distributed Edge Cases: POSTURE-02 GCP HttpError(403) → scan_error CryptoEndpoint in _scan_kms/_scan_cloud_sql/_scan_gcs (gcp_connector.py); AWS ClientError AccessDenied → scan_error CryptoEndpoint in _scan_kms (aws_connector.py); DIST-01 MAX(id) secondary tiebreak in _assemble_union subquery (merge/scan.py) guarantees one row per sensor on same-second timestamp tie; DIST-02 run.scan_id db.commit() wrapped in try/except in dispatch_notifications (dispatcher.py) so fan-out continues on transient DB error; 5 new tests GREEN, zero regressions. Earlier: Phase 124 COMPLETE — Scoring & Evidence Correctness: SCOREFIX-01 missing severity → LOW + warning (coverage.py), SCOREFIX-02 QRAMM partial-answer 0.0 injection before compute_dimension_score (qramm.py router; scoring.py kernel untouched), SCOREFIX-03 EdDSA (Ed25519/Ed448) credits ECDSA agility bucket (evidence.py), SCOREFIX-04 AES_CCM_8 decomposes to AES-*-CCM-8 before bare CCM in _ENC_MAP + classifier (builder.py, classifier.py), SCOREFIX-05 populate_cvi_suggestions session_created_at temporal anchor prevents cross-engagement contamination (evidence_bridge.py + qramm.py router); 12 new tests GREEN, zero regressions. Earlier: Phase 123 COMPLETE — SSRF & URL-Allowlist Hardening: SSRF-01 raw-socket validate+pin (rest_fuzzer.py), SSRF-02 GCP metadata aliases regression-lock, SSRF-03 path-shaped image ref rejection (subprocess_input.py), SSRF-04 console self-SSRF block in _classify_ip (url_allowlist.py), SSRF-05 resolved_ip ValidationResult field + PinnedIPAdapter (pinned_adapter.py + rest_fuzzer.py 3-session mounts); 154 tests GREEN. Earlier: Phase 122 COMPLETE — Address Tech Debt + Milestone Closeout: 11 bounded 2026-05-27 audit findings fixed — CR-01 TLS-enum +20 confidence bonus gated on tls_count > 0 (quirk/intelligence/confidence.py), CE-01 advisory finding on valid-cred empty AKS cluster list, CE-02 base64 redaction tightened so AWS ARNs/resource IDs survive safe_str, CE-03 Vault PKI SHA-1 reason populated independently of RSA severity (both causes appended), CE-05 safe-mode concurrency fallback aligned 100→200 baseline, QC-01 explicit int() cast on Integer-column write in qramm/evidence_bridge.py, QC-04 function-level ≤4.0 clamp on compute_overall_score, QC-05 compliance staleness gate moved into production (check_compliance_staleness() raises on stale AND malformed last_verified; wired into status_report), WR-01 md_cell strips DEL 0x7f + C1 0x80–0x9f, WR-06 html_renderer no-exec_content fallback reads canonical "score" key, stub-label confirmed already absent from AWS/Azure interactive prompts; version bumped 5.5.2.5→5.6.0 (pyproject.toml sole SoT, 6 parity surfaces pass tests/test_version.py); CHANGELOG [5.6.0] + docs/release-notes/5.6.0.md + v5.6 milestone archive pair; AUDIT-TASKS.md ledger 10 rows closed with commit SHAs, 18 rows deferred → v5.7; v5.6 Distributed Completion + Public Launch milestone SHIPPED. Earlier: Phase 121 COMPLETE — Port-Scope Discovery Control: four dashboard scan scopes (common/top1000[default]/all/custom), scope-aware nmap arg construction (--top-ports 1000 / -p- / -p csv), zero-result completion signal (explicit terminal message instead of stale-data anchor), port_spec_override token validation (T-121-T-05), GET /api/jobs/{job_id}/result-summary endpoint, security.allow_internal_targets config flag; PORT-01..13 requirements complete; UAT-121-01..05 added. Earlier: Quick task 260611-g0b COMPLETE — healthcare vertical branch merged into main (true no-ff merge, branch deleted) + refactored into runtime vertical config: `get_vertical()` in quirk/config.py (QUIRK_VERTICAL env → YAML `vertical` → "general"), unauth `GET /api/config`, `src/dashboard/src/lib/verticals.ts` descriptor registry + VerticalProvider context gating sidebar/route/scan-preset/executive surfaces; general installs identical to pre-merge UI; UAT-7-38..39 added. Earlier: Phase 118 Plan 03 COMPLETE — Release Pipeline + Operator Docs: release.yml extended with windows-package job (windows-latest, contents:write, onedir build + zip assembly + softprops/action-gh-release@v2 with unsigned/Authenticode-deferral release notes); operators-guide.md §8.8 Windows zip + Scheduled Task deployment section (install.ps1 params, Scheduled Task, uninstall.ps1 -KeepConfig, at-rest token ACL security note, cross-ref §8.1.1); UAT-118-02..04 added. Earlier: Phase 118 Plan 02 COMPLETE — Frozen Sensor E2E Auth: windows-sensor-e2e CI job (windows-latest, needs: windows-sensor-build); downloads quirk-windows-onedir; QUIRK_DB_PATH at job env-level; uvicorn readiness poll on GET /api/health; console enroll token masked via ::add-mask::; frozen quirk.exe sensor enroll + sensor push auth round-trip over loopback HTTP with --allow-internal-console; UAT-118-01 added (deferred human-verify). Earlier: Phase 118 Plan 01 COMPLETE — Windows Operator Zip + Scheduled Task Installer: zip-assembly step in windows-sensor-build (quirk-windows-zip artifact); packaging/windows/install.ps1 (per-user LOCALAPPDATA install + daily Scheduled Task); uninstall.ps1; sensor.sample.yaml; UAT-118 series started. Earlier: Phase 117 Plan 01 COMPLETE — Windows Production Build + Smoke: windows-sensor-build CI job (--onedir, no continue-on-error) + frozen-exe smoke (--version/--help) + quirk-windows-onedir artifact upload; pyinstaller==6.20.0 pinned in pyproject.toml [dev]; UAT-116-04 check 3 updated (pyinstaller now intentionally in [dev] group); UAT-117-01..03 added. Earlier: Phase 116 Plan 02 COMPLETE — Windows Packaging Spike assessment: docs/windows-packaging-spike.md covering PyInstaller spec viability, hidden-import surface, Scheduled Task vs Service (D-04), CI validation results (pyinstaller-spike-evidence artifact), v5.6 effort estimate (~4-5 days); GO conditional on live CI build; evidence-only warning (D-06); UAT-116-01..04 added. Earlier: Phase 115 Plan 03 COMPLETE — LAB-01 weak-TLS segment-b distributed lab target: tls-weak-b service nginx:1.28.0 + nginx/legacy/nginx.conf at 10.20.0.20 on segment-b; sensor-config-b.yaml with include_ips=[10.20.0.20] mounted to sensor-b only; distributed-e2e.sh Test 7 per-segment isolation assertion; expected_results_distributed.md LAB-01 oracle section + tls-weak-b Services table row; README distributed section updated; no lab.sh ALL_PROFILES change required (distributed arm delegates generically); UAT-115-03 added. Earlier: Phase 115 Plan 02 COMPLETE — CMVP Packaging + Scheduler Arg Fix (STAB-02, STAB-03): cmvp_cache.json declared as compliance/*.json package-data in pyproject.toml; _load_cache migrated to importlib.resources with monkeypatch-compatible override hook; scheduler_cmd drops --target/--output from run_scan subprocess (unrecognized arguments); fail-fast guard marks run failed when scan_config_path is None; test_scheduler_cmd_drops_target_and_output static regression guard added to test_scheduler_posix_fixes.py; UAT-115-01..02 added. Earlier: Phase 114 Plan 03 COMPLETE — Auto-Merge Operator Docs + Oracle + UAT (AUTOMERGE-03): operators-guide.md §8.9 Automatic Merge (toggle, two trigger conditions, default-ON, in-flight safety, IntegrationDelivery auto_merge audit rows, manual merge unchanged); expected_results_distributed.md oracle updated with auto-merge MergeRun + auto_merge audit row firing after sensor-b push, manual Step 3 retained as regression proof; UAT-114-01..03 added. Earlier: Phase 113 COMPLETE — Per-Sensor Authentication (AUTH-01..04): SHA-256 per-sensor token on POST /api/sensor/push via require_sensor_auth middleware; revoked_at nullable column on sensor_tokens; revoke-sensor CLI subcommand; sensor_push_router split (D-01/D-02); enroll printout corrected to per-sensor push credential; operators-guide §8.1.1 per-sensor migration; expected_results_distributed.md oracle updated; UAT-113-01..05 added. Earlier: Phase 112 COMPLETE — Distributed Chaos-Lab + Stabilization (LAB-01/02/03, STAB-01/03): distributed two-network compose topology with crypto.internal DNS-alias mechanism (docker-compose.distributed.yml); patch-pinned sensor.Dockerfile; distributed-e2e.sh enroll→push→merge orchestrator; lab.sh distributed arm; tests/test_distributed_topology.py CI floor (10 tests); expected_results_distributed.md oracle; README distributed section; docs/operators-guide.md §8 (distributed workflow + Windows sensor + air-gap + settings 999.59); datetime.utcnow() eliminated from quirk/ (sensor_cmd.py:296 → datetime.now(timezone.utc)); platformdirs/tenacity/zstandard confirmed pinned in core; UAT-112-01..05 added. Earlier: Phase 111 COMPLETE — Console Dashboard Awareness (DASH-01/02/03): sensor registry endpoint GET /api/sensor/registry with current/stale/unknown push-status; GET /api/merge/latest with per-segment Option-A score recompute and coverage_warning; NULL-safe ?segment= filter on /api/scan/latest; sensor_id/segment nullable fields on FindingItem/CbomComponent; Sensors page (/sensors) with registry table + text+color status badges; useSensorRegistry + useMergeLatest cancellation-safe hooks; segment filter Select on Findings and CBOM pages; per-segment ScoreGauges (maxValue=100) + non-dismissible amber coverage_warning banner (role=alert) on Executive page; npm run build exits 0, vitest sensors-loading.test.tsx 3/3 PASS; UAT-111-01..03 added; human-UAT checkpoint (visual UI-SPEC confirmation) deferred. Earlier: Phase 110 COMPLETE — Cross-Sensor Merge CLI (MERGE-05): quirk sensor merge thin-wrapper over merge_scan() (Option-A union, D-06 seam); prints Merged scan_id, Score+rating, WARNING+missing sensors on coverage_warning non-null; no merge logic inlined (T-110-08 grep gate); tests/test_merge_cli.py 4 tests all pass; UAT-110-01..06 added. Earlier: Phase 109 COMPLETE — Console Ingestion API (CONSOLE-01..05): POST /api/sensor/push with router-level auth (401 gating), full §6 failure ladder (413/409/422/404/200), IntegrationDelivery audit on every branch, extra='ignore' version-skew graceful, safe_str AST gate extended to console_cmd.py + sensor.py; quirk console enroll provisioning tests (sensors+sensor_tokens rows, SHA-256 hash-only, duplicate clean exit); UAT-109-01..04 added. Earlier: Phase 108 COMPLETE — Sensor Push CLI + Windows CI (SENSOR-01..06): quirk sensor enroll/push/export-results + quirk console import-results CLI surface; HMAC-signed zstd-compressed wire envelope over httpx verify=True HTTPS with tenacity retry (5xx/network, never 4xx); bounded file-per-payload store-and-forward spool (100 files/500 MB, oldest-eviction); byte-identical .qpush air-gap export/import with single _ingest_envelope seam; windows-latest GitHub Actions hard gate (no continue-on-error) running backslash-payload + clean-shutdown smoke tests; KeyboardInterrupt handler in run_sensor exits 130; static test_windows_ci_hardgate.py prevents gate softening; UAT-108-01..05 added. Earlier: Phase 107 COMPLETE — Distributed Data Model (MODEL-01..04): first code-shipping phase of the v5.4 milestone; landed the sensor-tracking SQLite schema — nullable sensor_id(indexed)/segment on CryptoEndpoint + sensors/sensor_tokens/sensor_pushes tables (CASCADE FKs, unique payload_id) via the existing _ADDITIVE_MIGRATIONS/_ensure_columns single-source-of-truth pattern and an explicit idempotent ix_crypto_endpoints_sensor_id step in init_db; proven strictly additive + backward-compatible (pre-v5.4 DB migrates with no data loss, identical compute_readiness_score), CASCADE-delete and payload_id-uniqueness enforced, allowlist still rejects poisoned DDL; 31-test tests/test_sensor_schema.py suite, verification passed 9/9; zero new dependencies; UAT-107-01 added. Earlier: Phase 106 COMPLETE — Architecture Documentation (ARCH-01..04): no-code gating anchor for the v5.4 Distributed On-Prem Scanner milestone; single deliverable docs/architecture-distributed.md (395 lines, 10 locked sections + 2 Mermaid diagrams) authored from 106-CONTEXT.md decisions D-01..D-15 — wire payload schema (payload_id/pushed_at/received_at/schema_version/sensor_version), HMAC-SHA256 X-Sensor-Signature, additive (sensor_id, host, port) data-model keying on CryptoEndpoint, one-time-use SHA-256 enrollment tokens, ingest dedup(409)/replay(±15-min HTTPS-only)/body-limit(413)/extra='ignore' version-skew policy, manual `quirk sensor merge` + standalone merge_scan() Option A unified scoring, forbidden-additions list (Celery/Redis/MQTT/RabbitMQ/PostgreSQL/JWT-per-sensor/mTLS/tenant_id/sbommerge/CycloneDX-CLI-merge/pywin32-Service), Windows floor(OS-agnostic+windows-latest hard gate)/ceiling(→v5.5 PyInstaller); every cited code seam verified against the live repo (2 drifted citations corrected: SIGTERM/SIGINT handler + serve intercept), ## Requirement Coverage table added, synced to Obsidian Reference/Distributed-Architecture.md; zero runtime code shipped; UAT-106-01 added. Milestone v5.4 STARTED. Earlier: Phase 105 COMPLETE — ServiceNow Ticketing (TICKET-02): ServiceNowChannel(TicketingChannel) subclass via stdlib urllib Table API (quirk/ticketing/servicenow.py), ServiceNowTicketingCfg dataclass + _parse_servicenow_cfg https-only enforcement (quirk/ticketing/config.py), --backend {jira,servicenow} argparse flag + conditional dispatch (quirk/cli/ticket_cmd.py), 9 mocked-urllib tests + 3 CLI dispatch tests; docs/configuration.md ServiceNow Ticketing section, docs/sample-config.yaml ticketing.servicenow block; UAT-105-01..02 added. Milestone v5.3 Adoption & Integration Surface COMPLETE. Earlier: Phase 104 COMPLETE — Jira Ticketing (TICKET-01, TICKET-03, TICKET-04): TicketingChannel ABC + SHA-256 fingerprint dedup (quirk/ticketing/base.py), JiraTicketingCfg dataclass (quirk/ticketing/config.py), JiraChannel with lazy jira import + SSRF guard + cloud/server auth + JQL label dedup (quirk/ticketing/jira.py), `quirk ticket create` CLI (quirk/cli/ticket_cmd.py), run_scan.py interception, jira>=3.10.5 [tickets] extra (joined into [all]), optional_extra REGISTRY entry (tickets), slow CI guard (test_install_all_includes_tickets.py), docs/configuration.md Jira Ticketing section, docs/sample-config.yaml ticketing.jira block; UAT-104-01..04 added. Earlier: Phase 103 COMPLETE — SIEM Export via syslog/CEF (SIEM-01, SIEM-02): CEF:0 formatter with ISEC-03 explicit field whitelist (no cert PEM/SANs/compliance), syslog UDP/TCP transport (RFC 3164 <PRI> framing), dispatcher (per-finding CEF loop, single audit row, full failure isolation), `quirk export --siem` CLI, after-scan scheduler hook, run_scan.py interception, docs/configuration.md SIEM Export section, docs/sample-config.yaml siem block; UAT-103-01..04 added. Earlier: Phase 102 COMPLETE — Dashboard Auth + UX + Score Tax (AUTH-01..03, TRANS-04): quirk token generate/rotate/show CLI (secrets.token_urlsafe(32), YAML round-trip write-back); X-API-Key header support in require_auth with hmac.compare_digest precedence over bearer; route-coverage CI gate for all /api/* routes; CLI executive score section sourced from shared exec_content (TRANS-04); React login surface (AuthProvider mount probe, LoginPage per UI-SPEC, sidebar Sign-out, AppShell auth guard, X-API-Key fetch layer, mid-session 401 logout dispatch, dashboard statics rebuilt); UAT-102-01..07 added. Earlier: Phase 101 COMPLETE — Notification Fan-Out + Security Foundation (NOTIFY-01..07, ISEC-01..04): dispatcher with conservative trigger (new HIGH/CRITICAL or score regression beyond floor, never fires on first scan), per-channel fan-out (Slack, email, webhook) with per-channel failure isolation, safe_str audit rows in integration_deliveries, scheduler hook after final db.commit() wrapped in try/except, docs/configuration.md Notifications section; UAT-101-01..04 added. Earlier: Phase 100 COMPLETE — Professional & Editable Report Delivery (FMT-01..03): branded PDF cover page with configurable logo region (AssessmentCfg.logo_path, base64-embed, _load_logo_b64 graceful-omit), print CSS for A4 pagination (break-inside: avoid, thead table-header-group, fixed-layout 7-column findings table), DOCX auto-emit every run (quirk/reports/docx_renderer.py, python-docx [docx] optional extra, render_docx_report lazy import + graceful skip, logo placeholder paragraph, Heading 1/2 sections, native Word tables, exec_content D-10 single pipeline), writer.py DOCX wiring (render_docx_report call after PDF step, docx_path in output_files), pyproject.toml [docx] extra + [all] inclusion; UAT-100-01..04 added. Earlier: Phase 99 COMPLETE — Per-Finding Context + Code-Signing Expiry (CTX-01..03): `quantum_risk` field injected via `_build_finding` chokepoint (ALGO_IMPACT_MAP [2] index), catalog-sourced remediation (REMEDIATION_CATALOG), conditional NIST boilerplate (D-05), `_classify_codesign_severity` expiry branch (expired=HIGH, approaching=MEDIUM, stacking), `evaluate_codesign_endpoints()` first-class findings, run_scan.py wiring, Quantum Risk column in CLI markdown (technical.py FALLBACK_QR) + HTML All Findings table + HTML Top Findings .quantum-risk-block, CSS .quantum-risk-block/.quantum-risk-label added to report.html.j2, render-parity gate (tests/test_quantum_risk_render_parity.py 5 tests), expected_results_v4.md ldaps codesign section updated with expiry detection paths; UAT-99-01..04 added. Earlier: Phase 98 COMPLETE — Executive Narrative + Score Transparency (EXEC-01..04, TRANS-01..03): shared ExecContent content model (quirk/reports/content_model.py), ALGO_IMPACT_MAP/EFFORT_IMPACT_MAP static maps, congruence guard (_check_congruence), writer.py seam, CLI narrative/risks/roadmap (executive.py), HTML narrative-block/risks-list/rollup-formula/priority-labels (html_renderer.py + report.html.j2), cross-surface parity test (tests/test_cross_surface_parity.py); UAT-98-01..05 added. Earlier: Phase 97 COMPLETE — v5.1 Tech-Debt Cleanup (TD-01, TD-02): corrected from_cli env-var docstring (D-01/WR-02), documented accepted str-copy proliferation at decode sites (D-02/WR-03), _append_query_param pre-existing-param reject (D-03/WR-04), sentinel leak test real-path scrub + PDF coverage-gap annotation (D-04/WR-05), scheduler parse-based fail-closed auth-reject for any file extension (D-05/WR-06), REST fuzzer cascade counter now increments on connection exceptions (D-06/TD-02); UAT-97-01..04 added. Earlier: Phase 96 COMPLETE — Active REST Fuzzing (FUZZ-01..04, SCORE-01, LAB-01): --fuzz/--fuzz-jwt-alg-confusion/--fuzz-budget CLI flags, CONFIRM gate + non-TTY hard-abort, six safety guardrails, REST_FUZZ CBOM phantom-component skip, agility_fuzz_crypto_posture_ratio SCORE_WEIGHTS 299.0->303.0 (+4.0/+1), fuzz-target chaos-lab profile (port 20100), docs/configuration.md REST Fuzzing section, docs/chaos-lab.md fuzz-target profile entry; UAT-96-01..08 added. Earlier: Phase 95 COMPLETE — Code-Signing Certificate Inventory (CSIGN-01..03, SCORE-01, LAB-01): --inventory-code-signing flag, CODE-SIGN/weak-algorithm HIGH finding, SCORE_WEIGHTS 293.0->299.0 (+agility_codesign_weak_algo_ratio 6.0), ldaps chaos fixture; UAT-95-01..02 added. Earlier: Phase 94 COMPLETE — OpenAPI & Bearer Token Analysis (TOKEN-01..03, SPEC-01..03, SCORE-01, PKG-01). Plan 03: docs/getting-started.md updated with §5 analyze-token command and §6 --openapi-spec flag usage; docs/configuration.md updated with OpenAPI Spec Analysis section (openapi_spec_path config block, [api] extras group, security hardening table, findings produced table); UAT Series 94 added (UAT-94-01 analyze-token RS256, UAT-94-02 alg:none CRITICAL exit, UAT-94-03 opaque token, UAT-94-04 OpenAPI local file findings, UAT-94-05 out-of-scope URL rejection, UAT-94-06 $ref SSRF guard, UAT-94-07 oversize spec rejection, UAT-94-08 schemathesis exclusion from [all]); Obsidian Phase-94 note written; UAT-Series synced to vault. Earlier: Phase 93 COMPLETE — Credential Infrastructure (AUTH-01..04). Plan 04: docs/configuration.md updated with authenticated scanning section (--auth-bearer/--auth-api-key/--auth-api-key-query/--auth-basic, reference-not-secret model, ephemeral-only invariant, QRK-SCHED-AUTH-001 scheduler rejection); UAT Series 93 added (UAT-93-01 authenticated scan run, UAT-93-02 credential scrubbing verification, UAT-93-03 scheduler rejection); vault sync; Phase-93 Obsidian note and Roadmap note synced. Earlier: Phase 92 COMPLETE — v5.0 Close-out (REL-01). Plan 02: docs/UAT-SERIES.md updated for v5.0 (version strings, oqs-nginx profile, five Phase-89 profiles); vault sync; Phase-92 Obsidian note and Roadmap note synced; UAT-92-01 added for local v5.0.0 tag verification. Plan 01: pyproject.toml bumped to 5.0.0 (all three surfaces agree — importlib.metadata + quirk --version); towncrier built ## [5.0.0] CHANGELOG section from five phase fragments (87-91); docs/release-notes/5.0.0.md written with OQS-nginx PQC-hybrid scoring-ceiling headline. Closes REL-01. Earlier: Phase 91 COMPLETE — Code Cleanup + Bookkeeping (CLEAN-01..04). Plan 03 bookkeeping close-out: Obsidian phase note updated to status: complete; docs/UAT-SERIES.md updated with Phase 91 test coverage and UAT Series 91 section; vault sync to UAT-Series.md via printf-prepend pattern; UAT-SERIES.md committed via docs(phase-91). Earlier: Phase 91 Plan 02 COMPLETE — Code Cleanup Tier-B + D-02b Catalogue (CLEAN-02). UAT-91-06: _extract_cert_key_type() deleted from quirk/reports/writer.py and unused RichText import removed (vulture-confirmed, no production callers; test_cert_pubkey_fix.py deleted); UAT-91-07: Phase 77 D-15 conflict resolved option-a — IntelligenceReport schema dataclasses PRESERVED per CI gate in tests/test_intelligence_public_api.py; BACK-52 schema-deletion portion recorded superseded-by-D-15 in CONCERNS.md + REQUIREMENTS.md; UAT-91-08: docs/dead-code-candidates.md created with full vulture 2.16 repo-wide catalogue separating 100%/90% high-signal from 60% scanner-dispatch false positives (report-only, no deletions); UAT-91-09: clean-venv smoke passed (import quirk, quirk --version, quirk doctor — no import errors); full suite 44 failed/1876 passed (no new failures vs pre-plan baseline). Closes CLEAN-02. Earlier: Phase 91 Plan 01 COMPLETE — Code Cleanup Tier-A (CLEAN-01/03/04). UAT-91-01: conftest QUIRK_DB_PATH isolation eliminates 7 collection errors without QUIRK_DB_PATH set (collection-time + autouse fixture); UAT-91-02: python -W error::DeprecationWarning -m pytest tests/test_dashboard_scan_history.py passes (9 utcnow calls replaced with datetime.now(timezone.utc)); UAT-91-03: v3.5.1 user-visible string removed from operator_context.py; UAT-91-04: phases 87/88/89/90-VALIDATION.md carry nyquist_compliant: true; UAT-91-05: jwt_scanner.py has WHY: advisory at both httpx.get call sites, allow_insecure_jwks documented in operators-guide.md + configuration.md. Closes CLEAN-01, CLEAN-03, CLEAN-04. Earlier: Phase 90 COMPLETE — OQS-Nginx PQC Hybrid (PQC-01/02/03). Plan 01: UAT-90-01-01 added (oqs-nginx chaos-lab profile, digest-pinned, X25519MLKEM768, ML-DSA-65 — human-verify PASSED). Plan 02: UAT-90-02-01 added (PQC probe detects X25519MLKEM768 on OpenSSL >= 3.5; advisory fallback on older hosts; 19 automated tests — all pass). Plan 03: UAT-90-03-01 added (agility PQC-hybrid bonus 8.0 makes oqs-nginx scan score 25 agility vs 18 classical — 12 automated tests pass; score invariant 37/283.0). Plan 04: UAT-90-04-01 added (D-04 consulting before/after demo oracle finalized; discriminator test proves no false positive against classical TLS; 9 tests pass; live before/after human-verified — agility 25 vs 17/18). Closes PQC-01, PQC-02, PQC-03. Earlier: Phase 89 complete — chaos-lab-profiles, LAB-01..06. Plan 01: postgres-tls/redis-tls/kafka-tls weak-TLS profiles (UAT-89-01-01). Plan 02: identity-evidence end-to-end — DNSSEC+SAML counters live-verified non-zero, kerberos etype deferred (UAT-89-02-01..02); live run surfaced + fixed a latent custom-Logger crash that silently zeroed identity counters (quirk/logging_util.py). Plan 03: grpc-tls LAB-05 profile + LAB-03 smtp-starttls already-covered closure (UAT-89-03-01..02).)
-**Last Updated:** 2026-05-11 (Phase 64.1 wrap: 5 audit BLOCKER code fixes with regression tests — CR-03 algo hints corrected (des→DES, AES-256/AES-128 added), BL-03 staleness date comparison via fromisoformat, BL-04 years clamp at both input sites, CR-05 session window corrected to timedelta(milliseconds=1) matching SQLite strftime('%f') 3-digit ms precision, CR-08 init_db idempotency. 14 remaining BLOCKERs disposed with D-06 rationale (13 deferred-v4.9, 1 wont-fix). Zero bare-open BLOCKERs remain in AUDIT-TASKS.md. UAT-64-01..04 pass criteria and subsection references unchanged — precision fix is internal to backend session grouping. 32/32 regression tests pass. Earlier: Phase 64 wrap: UAT-64-01..04 added for Trend Analysis Foundation — UAT-64-01 multi-scan timeline chart renders on /trends (TREND-01): 7-line LineChart visible with oldest-left/newest-right ordering and tooltip with full timestamp + 7 scores + finding counts; UAT-64-02 regression chip visible on dashboard home / (TREND-02): RegressionAlertChip appears above score gauge with correct message and "View trends →" link when new_high > 0 or score_delta <= -5; UAT-64-03 per-session dismissal persists across page refresh (TREND-02): chip disappears on × click, stays hidden after refresh, localStorage key set to "1"; UAT-64-04 new scan with regression shows fresh chip after prior dismissal (TREND-02): S2 chip appears because localStorage key encodes S1 timestamp. All 4/4 PASS by Digs 2026-05-10. Two bugs fixed during UAT: nassl.set_tlsext_host_name None TypeError on Python 3.14 (tls_scanner.py) and severity=None endpoints causing Pydantic 500 on /api/trends (trends.py). Closes TREND-01, TREND-02. Earlier: Phase 63 wrap: UAT-63-01..04 added for Scheduled / Continuous Scanning — UAT-63-01 quirk schedule add/list CLI round-trip (SCHED-01): schedule row persists to scheduled_scans table and appears in list; UAT-63-02 quirk scheduler run dispatcher (SCHED-02): due schedules dispatched via subprocess, status transitions pending→running→completed, disabled schedules skipped, stale rows recovered on startup; UAT-63-03 /api/schedules REST surface (SCHED-01/SCHED-03): GET returns next_run_at+last_run_status, POST validates cron+name uniqueness, PATCH flips enabled flag, DELETE cascades runs; UAT-63-04 dashboard /schedules page (SCHED-03): table renders all columns, Switch toggle round-trips to PATCH, delete dialog confirmed, Calendar sidebar nav present. 40/40 tests automated (7 CLI + 6 scheduler + 11 API + 16 auth). Manual UAT-63-02 dispatcher + UAT-63-04 browser walkthrough deferred to live session. Closes SCHED-01, SCHED-02, SCHED-03. Earlier: Phase 62 wrap: UAT-62-01..04 added for React Hook Cancellation Pattern — UAT-62-01 scan-switch stale-data safety (HOOK-01): switching scans mid-fetch always displays most-recently-selected scan data; UAT-62-02 QRAMM debounce coalescing (HOOK-02): 20 rapid edits within 300ms result in exactly 1 POST to /api/qramm/assessment/draft; UAT-62-03 auto-fill confirm badge removal (HOOK-03): confirm removes badge without triggering full QRAMM session refetch; UAT-62-04 cancellation guard CI check (HOOK-04): npm run lint:hooks exits 0 on clean hooks directory and exits 1 on broken fixture. All 4 test cases cover HOOK-01..04. Automated via Vitest+MSW tests and check-cancelled-guards.sh CI script. Closes HOOK-01, HOOK-02, HOOK-03, HOOK-04. Audit ledger rows BR-01..BR-06, WR-01, WR-03, WR-14 closed. Earlier: Phase 61 wrap: UAT-61-01..02 added for CBOM Coverage + Report Sanitization — UAT-61-01 CBOM emits algorithm components for all scanned protocol families (CBOM-COVER-01: 14 families, parametrized per-family coverage gate); UAT-61-02 technical report survives adversarial GFM scanner banners (REPORT-SAN-01/02: pipes, newlines, CRLF, control chars all sanitized via md_cell()). All 4/4 tests automated. Closes CBOM-COVER-01, CBOM-COVER-02, REPORT-SAN-01, REPORT-SAN-02. Audit ledger rows CR-01, CR-02, CR-07 closed. Earlier: Phase 60 wrap: UAT-60-01..04 added for Score Arithmetic Correctness — UAT-60-01 score clamping property test (1,000 iterations, SCORE-01); UAT-60-02 zero-TLS confidence fallback produces 0.0 points (SCORE-02/SCORE-03); UAT-60-03 QRAMM multiplier 400 guard fires before DB access (SCORE-02); UAT-60-04 maturity-band parametrized sweep covers all five labels (SCORE-04). All 45/45 tests automated. Closes SCORE-01, SCORE-02, SCORE-03, SCORE-04. Audit ledger rows BL-01, BL-02, CR-04, CR-06, WR-05 closed. Earlier: Phase 59 wrap: UAT-59-01..03 added for Credential Leakage Sweep — UAT-59-01 safe_str scrubs sensitive exception messages (LEAK-01); UAT-59-02 all scanner callsites route through safe_str across 9 files (LEAK-02); UAT-59-03 AST CI gate catches future scan_error bypass attempts (LEAK-03). All 32/32 tests automated. Closes LEAK-01, LEAK-02, LEAK-03. Earlier: Phase 58 wrap: UAT-58-01..07 added for Dashboard API Hardening — UAT-58-01 bearer token auth (HARDEN-API-01); UAT-58-02 CSRF header enforcement (HARDEN-API-01); UAT-58-03 CORS allowlist (HARDEN-API-02); UAT-58-04 rate limiting (HARDEN-API-03); UAT-58-05 quirk init path-traversal guard (HARDEN-API-04); UAT-58-06 PDF SSRF port guard (HARDEN-API-05); UAT-58-07 @file target guard (HARDEN-API-06). Closes audit blockers CR-01, CR-02, CR-03, CR-09. Earlier: Phase 54 wrap: UAT-54-01..05 added for QRAMM Assessment UI + Scorecard — UAT-54-01 end-to-end Org Profile form submission + navigation + Resume card; UAT-54-02 120-question rendering (4 tabs × 3 sections × 10 questions); UAT-54-03 debounced persistence (300ms) + restore-on-reload; UAT-54-04 auto-fill badge state transitions (Auto-filled → Modified → Confirmed); UAT-54-05 Scorecard Calculate Score → RadarChart + dimension table. All 5/5 PASS by Digs 2026-05-08. Closes QRAMM-08, QRAMM-09, QRAMM-10, QRAMM-11. Also: "Organisation Size" label corrected to "Organization Size" in qramm-profile.tsx. Earlier: Phase 56.1 wrap: UAT-56.1-01..03 added for CI Staleness Gate Workflow — UAT-56.1-01 `.github/workflows/python-staleness.yml` exists and parses as valid YAML; UAT-56.1-02 pytest gate trips on stale model under `QUIRK_CI_STALENESS_OVERRIDE_DATE=2030-01-01` override and passes without override (real `today()` within 90 days of `last_verified`); UAT-56.1-03 "Python Staleness Gate" workflow appears in GitHub Actions UI and shows green run on latest commit. Closes QRAMM-06, QRAMM-07, COMPLY-08 (CI-protected). Earlier: Phase 56 wrap: UAT-56-01..03 added for PDF Export QRAMM Section — UAT-56-01 QRAMM Governance section appears in /print PDF (scored session path: radar SVG + Dimension Scorecard + 8-row compliance table + 8 per-framework detail tables); UAT-56-02 no-session placeholder copy when no QRAMM session scored; UAT-56-03 existing /print sections regression-free after Phase 56. Closes QRAMM-16. Earlier: Phase 55 wrap: UAT-55-01..04 added for QRAMM Compliance Mapping View — UAT-55-01 compliance-map API returns 96 rows with correct shape; UAT-55-02 unscored state renders banner + all em-dashes; UAT-55-03 scored state renders CVI numeric scores + SGRM/DPE/ITR em-dashes; UAT-55-04 quirk qramm status CLI exits 0/1. Closes QRAMM-15. Two post-phase bugs fixed: unscored banner CTA (Calculate Score button added to ComplianceMapTab) and Recharts Radar conditional-mount crash (opacity toggle instead of JSX conditional). Earlier: Phase 53 wrap: UAT-Q-53-01..02 added for QRAMM Evidence Bridge — UAT-Q-53-01 evidence_bridge auto-populates 30 CVI suggestions on session create (QRAMM-12); UAT-Q-53-02 confirmation flips badge state and updates maturity score (QRAMM-13/14). Closes QRAMM-12..14. Earlier: Phase 52 human UAT complete: UAT-COMPLY-52-01..02, UAT-DOCS-52-03, UAT-DEBT-52-04..06 all marked PASS by Digs 2026-05-06. D-01 FIPS certified-tier deviation accepted. Phase 52 fully closed. Earlier 2026-05-05: Phase 52 wrap: UAT-COMPLY-52-01..02 added for CBOM FIPS 140-3 status annotation and SOC2+ISO 27001:2022 mapping coverage; UAT-DOCS-52-03 added for quirk doctor exit semantics; UAT-DEBT-52-04..06 added for lab.sh PROFILE_ARGS CLI override, run-stats fields, and SAML lxml migration. Closes COMPLY-10..12, DOCS-05, DEBT-02..04. v4.7 Compliance Uplift & Health Check milestone complete. Earlier: Phase 50 wrap: UAT-50-NN added for Enterprise Documentation — UAT-50-01 architecture.md presence + section coverage; UAT-50-02 operators-guide.md presence + section coverage; UAT-50-03 vault Reference/ sync verification (`Reference/Architecture.md` + `Reference/Operators-Guide.md` with `type: reference` frontmatter and `_QUIRK-Hub.md` wikilinks); UAT-50-04 compliance maintenance citation completeness (PCI SSC + ECFR + NIST CSRC source URLs, `quirk compliance status` CLI, `STALENESS_THRESHOLD_DAYS` constant, `tests/test_compliance_freshness.py` path, and a worked PCI-DSS 4.0.1 → 4.1 upgrade example). Closes DOCS-01..04. v4.6 Enterprise Readiness milestone complete. Earlier: Phase 49 wrap: UAT-49-01..05 added for Compliance Mapping — UAT-49-01 schema gate (every COMPLIANCE_MAP entry has framework + control + version + last_verified + source_url); UAT-49-02 freshness gate (no entry's last_verified older than STALENESS_THRESHOLD_DAYS = 365); UAT-49-03 title-join gate (every emitted finding title is in COMPLIANCE_MAP or UNMAPPED_TITLES); UAT-49-04 `quirk compliance status` CLI smoke (text + JSON formats); UAT-49-05 HTML/PDF Compliance Summary section visual + smoke. Closes COMPLY-01..09. Compliance map maintenance cadence + regulator-revision upgrade procedure are documented in docs/operators-guide.md (Phase 50). Earlier: Phase 48 wrap: UAT-48-01..04 added for Rich Finding Context — UAT-48-01 every finding in `findings-*.json` carries a non-empty `description`; UAT-48-02 HTML All Findings table contains `<th>Description</th>` adjacent to Recommendation; UAT-48-03 every quantum-vulnerable finding's recommendation cites `FIPS 203/204/205` and `Per NIST IR 8547`; UAT-48-04 `tests/test_pqc_terminology_gate.py` passes clean and fails the build when stale terminology is injected into either gated source file. Closes CONTEXT-01..04. Earlier: Phase 47 wrap: UAT-47-01..08 added for Nmap Discovery + Multi-Target Wizard + CBOM JSON Validation — UAT-47-01 CSV targets through wizard; UAT-47-02 @file targets ingestion; UAT-47-03 --targets-file non-interactive; UAT-47-04 nmap y/N prompt appears once; UAT-47-05 missing nmap binary — no crash, ADVISORY row, consulting-ports fallback; UAT-47-06 targets x ports > 10000 shows confirm prompt in TTY mode; UAT-47-07 CBOM JSON validates via post-write JsonStrictValidator; UAT-47-08 pip install quirk[cbom] install_hint actionable. Closes DISCOVER-01..04, MULTI-01..05. Earlier: Phase 46 wrap: UAT-46-01..05 added for TLS Finding Gaps — UAT-46-01 expired-cert produces CRITICAL finding (TLS-FIND-01) at chaos lab `tls-cert-defects` port 13444; UAT-46-02 self-signed cert produces HIGH "TLS certificate is self-signed" finding at port 13445 AND emits NO untrusted-CA finding on the same endpoint (D-04 mutual exclusivity, TLS-FIND-02); UAT-46-03 untrusted-CA cert produces MEDIUM "TLS certificate issued by untrusted CA" finding at port 13446 (TLS-FIND-03); UAT-46-04 RSA-1024 cert produces HIGH "TLS certificate uses undersized RSA key" finding at port 13447 (TLS-FIND-04); UAT-46-05 D-02 multi-defect independence — a single endpoint with multiple cert defects emits one finding per class with no rollup. Closes TLS-FIND-01..07. Earlier: Phase 45 wrap: UAT-1-09/10/11 added for Install-Day UX — UAT-1-09 clean-venv `pip install quirk` (no extras) TLS-only scan against chaos lab `tls-modern` produces zero ImportError/ModuleNotFoundError in HTML report (INSTALL-01); UAT-1-10 Coverage Gaps advisories surface as a dedicated `<h2>` section in the HTML report when `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` are true and matching extras absent — each row's Recommendation column contains the literal `pip install quirk[<extra>]`, advisories are filtered out of the All Findings table, and readiness score is unchanged versus running with the same scanners disabled (INSTALL-02 + INSTALL-04 + D-07 score-exclusion); UAT-1-11 `pip install quirk[all]` in a fresh venv excludes impacket (`python -c "import impacket"` raises ModuleNotFoundError) while `import fastapi, psycopg2, googleapiclient, hvac, kubernetes` all succeed (INSTALL-03). Closes INSTALL-01..04. Earlier: Phase 44 wrap: UAT-44-01..04 added for UAT Debt Automation — UAT-44-01 Phase 27 DB integration tests (PostgreSQL+MySQL ssl-off via `QUIRK_DB_INTEGRATION=1`); UAT-44-02 Phase 25 Kerberos/SAML traceability annotations (existing tests annotated with UAT-25 closure trail); UAT-44-03 Phase 30 Vault live integration test (5-finding spec against vault-30 :28200 via `QUIRK_VAULT_INTEGRATION=1`); UAT-44-04 Phase 31 trends flat-wire-format pytest test (in-memory SQLite, no chaos lab needed). Closes UAT-01..04. v4.5 Reliability & Gap Closure milestone complete. Earlier: Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v5.0. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -4550,7 +4550,7 @@ The **hue** half of this bullet is not asserted; the tier *value* half is. jsdom
 
 ## Series 129: Crypto-Bridge Detection + CBOM Pass 4 (Phase 129)
 
-**Last Updated:** 2026-06-14
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-129-01: Bridge Detection — partial_only classification
 
@@ -9981,7 +9981,7 @@ All tests are automated (pytest). No chaos lab required.
 
 ## Phase 999.83 — Chaos Lab Service Config Drift (BACK-90)
 
-**Last Updated:** 2026-05-15
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-999.83-01: Chaos Lab Service Config Drift (BACK-90)
 
@@ -10008,7 +10008,7 @@ Closes the four pre-existing chaos-lab service config drift bugs surfaced under 
 
 ## Phase 999.84 — Chaos Lab macOS Host-Mount Compat (BACK-91)
 
-**Last Updated:** 2026-05-15
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-999.84-01: Chaos Lab macOS Host-Mount Compat (BACK-91)
 
@@ -10034,7 +10034,7 @@ Closes the three pre-existing macOS Docker Desktop bind-mount failures surfaced 
 
 ## Phase 78 — HTML/PDF Injection Hardening (HARDEN-01..06)
 
-**Last Updated:** 2026-05-16
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 Closes the v4.10 hardening phase: every scanner-controlled string that reaches an HTML, PDF, or markdown deliverable now passes through a documented sanitization chokepoint (`quirk/util/sanitize.py::sanitize_scanner_text`), with an AST CI gate that fails the build when a future PR adds a `{{ x | safe }}` without paired `| sanitize`, or when a markdown→HTML library is introduced to deps without paired sanitize wiring (D-78-R1 forward guard).
 
@@ -10150,7 +10150,7 @@ Closes the v4.10 hardening phase: every scanner-controlled string that reaches a
 
 ## Phase 79 — S/MIME LDAP Discovery Scanner (SMIME-01..08)
 
-**Last Updated:** 2026-05-16
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 Closes the v4.10 S/MIME phase: QU.I.R.K. now enumerates AD `userCertificate` and `userSMIMECertificate` LDAP attributes, classifies each cert via the shared weak-crypto predicates, and emits `protocol="SMIME"` IdentityFindings + a populated `smime_scan_json` blob. The phase ships with three test files (`tests/test_smime_scanner.py`, `tests/test_smime_no_envelope_leak.py`, `tests/test_smime_ast_gate.py`), an `smime` chaos lab profile (Plan 79-01), and a permanent AST CI gate that fails the build if any IMAP/SMTP/POP/email.* import sneaks into `quirk/scanner/smime_scanner.py`. No mailbox content is read at any point — the SMIME-04 privacy invariant is locked behind a content-absence test.
 
@@ -15580,7 +15580,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 
 ## UAT Series 130 — Code Quality + Scanner Fixes (Phase 130 — v5.8)
 
-**Last Updated:** 2026-06-14
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-130-01: Codesign scan data lands in codesign_scan_json + pre-migration DB survives (SP-07)
 
@@ -15730,7 +15730,7 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 
 ## UAT Series 131 — Dashboard Delivery Hardening (Phase 131 — v5.8)
 
-**Last Updated:** 2026-06-15
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-131-01: CLI sensor push rejects malformed sensor_id before network contact (AUDIT-10)
 
@@ -16857,7 +16857,7 @@ never promotes on subnet co-presence alone" language.
 
 ## UAT-141 Series — OT/ICS Fingerprinting: Modbus + BACnet (Phase 141)
 
-**Last Updated:** 2026-07-31
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-141-01: Foundation — extras, config flags, persistence columns (OTICS-01, OTICS-02, OTICS-06) — Automated + Human
 
@@ -17075,7 +17075,7 @@ fingerprinting was unreachable for any host with zero SSH-classified endpoints. 
 
 ## UAT-142 Series — Firmware CVE Correlation (Phase 142)
 
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-142-01: `quirk cve status` freshness + advisory-only report/dashboard CVE surface (CVE-01, CVE-02, CVE-03, CVE-04) — Automated + Human
 
@@ -17119,7 +17119,7 @@ walkthrough rather than automated render-presence checks alone.
 
 ## UAT-143 Series — Dashboard & Security Tail (Phase 143)
 
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-143-01: Persistent scan-date badge — every route, collapsed sidebar, empty state (TAIL-01) — Automated + Human
 
@@ -17243,7 +17243,7 @@ branch/tag and inspect the live log to close this row.
 
 ## Series 144: Chunked Discovery Core (Phase 144 — v5.11)
 
-**Last Updated:** 2026-08-11
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-144-01: Host-count reject gates relaxed + chunking primitives (DISC-01) — Automated
 
@@ -17398,7 +17398,7 @@ network segment (best paired with DISC-09's segmented-network lab profile), and/
 
 ## Series 145: Liveness Pre-Pass (Phase 145 — v5.11)
 
-**Last Updated:** 2026-08-10
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-145-01: Host-status parser + liveness probe primitives (DISC-03) — Automated
 
@@ -17519,7 +17519,7 @@ advisory line did not print. See 145-03-PLAN.md Task 3 for the full manual walkt
 
 ## Series 146: Progress, Scaling & Disclosure (Phase 146 — v5.11)
 
-**Last Updated:** 2026-08-11
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-146-01: Discovery batch-progress persistence + read path (DISC-04) — Automated
 
@@ -18286,7 +18286,7 @@ and the liveness pre-pass automatically, closing the v5.11 audit gap.
 
 ## Series 153: Release Tag Cut (Phase 153 — v5.12)
 
-**Last Updated:** 2026-08-14
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-153-01: Real v5.12.0 tag cut proves the repaired release pipeline end-to-end (RELEASE-01) — Human (live)
 
@@ -18374,7 +18374,7 @@ asset are both confirmed green and correct.
 
 ## Series 154: Identity & Data-Model Foundation (Phase 154 — v5.13)
 
-**Last Updated:** 2026-08-14
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-154-01: SSH host-key re-identification across a DHCP/re-IP change (HWLC-01, Success Criterion 1) — Automated
 
@@ -18534,7 +18534,7 @@ from the project's 90-day `STALENESS_THRESHOLD_DAYS` catalog-freshness conventio
 
 ## Series 155: Drift Detection + EOL Tracking (Phase 155 — v5.13)
 
-**Last Updated:** 2026-08-14
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-155-01: EOL catalog staleness gate (HWLC-08, HWLC-09) — Automated
 
@@ -18730,7 +18730,7 @@ extended to cover both new Phase 155 modules. See 155-04-SUMMARY.md.
 
 ## Series 156: Reporting & OT/ICS Safety (Phase 156 — v5.13)
 
-**Last Updated:** 2026-08-15
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-156-01: `min_gap_hours` derives 24h for the irregular weekday case, never the 84h average (HWLC-12) — Automated
 
@@ -19020,7 +19020,7 @@ untouched (`git diff --quiet` clean), no relocation needed. See 156-06-SUMMARY.m
 
 ## Series 157: Drift-Event Retention + Forecast Narrative Foundation (Phase 157 — v5.14)
 
-**Last Updated:** 2026-08-16
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-157-01: Drift-event retention purge deletes only rows older than the configured window (HWLC-16) — Automated
 
@@ -19172,7 +19172,7 @@ Items).
 
 ## Series 158: Sensor Fleet Drift Coverage (Phase 158 — v5.14)
 
-**Last Updated:** 2026-08-16
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-158-01: A sensor push carrying `hardware_devices` results in device rows visible on `/hardware` (HWLC-15) — Human
 
@@ -19273,7 +19273,7 @@ misread as confirmed-zero (`[]`). See 158-03-SUMMARY.md.
 
 ## Series 159: Check-in Scan Mode (Phase 159 — v5.14)
 
-**Last Updated:** 2026-08-17
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-159-01: `--check-in` re-probes only known devices, prints the check-in summary, and writes no readiness score/report (HWLC-13) — Automated
 
@@ -19400,7 +19400,7 @@ targeted verification run: 347 passed, 4 skipped (pre-existing, unrelated), 0 fa
 
 ## Series 160: Catalog-Level PQC Vendor Trend Tracking (Phase 160 — v5.14)
 
-**Last Updated:** 2026-08-18
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-160-01: `vendor_pqc_trend_events` table exists after `init_db()` (HWLC-17) — Automated
 
@@ -19517,7 +19517,7 @@ instead. See 160-03-SUMMARY.md.
 
 ## Series 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing (Phase 161 — v5.15)
 
-**Last Updated:** 2026-08-25
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-161-01: Notification opt-in is off by default (HWLC-14) — Automated
 
@@ -19684,7 +19684,7 @@ Note the review's traceback claim applies to `quirk --targets X` (argparse prefi
 
 ## Series 162: Check-in Scan Scheduling (Phase 162 — v5.15)
 
-**Last Updated:** 2026-08-25
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-162-01: A check-in schedule can be created without a target (HWLC-20) — Automated
 
@@ -19790,7 +19790,7 @@ existing columns render unchanged.
 > `output.db_path`). This is a pre-existing property of the whole Phase 67 resume system,
 > not something Phase 163 introduced.
 
-**Last Updated:** 2026-08-25
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-163-01: Batch checkpoint/resume test suites pass, existing parity lock unmodified (DISC-08) — Automated
 
@@ -19978,7 +19978,7 @@ Operator approved 2026-08-26 after reviewing the corrected §13 text (step 8).
 
 ## Series 164: First-Run Correctness (Phase 164 — v5.16)
 
-**Last Updated:** 2026-08-26
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-164-01: Dashboard empty-state command completes a real scan (FIRSTRUN-01) — Human + Automated
 
@@ -20202,7 +20202,7 @@ in 3.43s and is tracked as **GATE-03** in Phase 166; see
 
 ## Series 165: Accessibility Remediation (Phase 165 — v5.16)
 
-**Last Updated:** 2026-08-27
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-165-01: Count-budget accessibility gate exits 0 across all three fixture variants (A11Y-01, A11Y-03, A11Y-04, A11Y-05) — Automated
 
@@ -20304,7 +20304,7 @@ doc; it is exercised by UAT-165-01/03 but has no Obsidian vault counterpart, mat
 
 ## Series 166: Gate Robustness (Phase 166 — v5.16)
 
-**Last Updated:** 2026-08-27
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-166-01: E2E smoke gate completes inside its 180s budget on a developer machine (GATE-01) — Automated + Human
 
@@ -20423,7 +20423,7 @@ unaffected.
 
 ## Series 167: UAT Format Unification & Deduplication (Phase 167 — v5.16)
 
-**Last Updated:** 2026-08-27
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-167-01: Single canonical result format across the gating document (UATREC-01)
 
@@ -20520,7 +20520,7 @@ still-undispositioned cases is UATREC-03, out of scope for Phase 167 (see Phases
 
 ## Series 170: Traceability, Documentation & Runbook (Phase 170 — v5.16)
 
-**Last Updated:** 2026-08-28
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-170-01: CHANGELOG covers v5.9-v5.14 with honest release framing (TRACE-01)
 
@@ -20645,7 +20645,7 @@ complete. Phase 170 verification passed 5/5 after a gap-found/gap-closed cycle o
 
 ## Series 171: Resume UX Tail (Phase 171 — v5.16)
 
-**Last Updated:** 2026-08-28
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-171-01: Resuming an already-complete scan short-circuits cleanly (RESUME-05)
 
@@ -20719,7 +20719,7 @@ ledger rows agreeing before this Series was added.
 
 ## Series 172: Fuzzing & Disclosure Safety (Phase 172 — v5.17)
 
-**Last Updated:** 2026-08-29
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-172-01: `--fuzz` with non-interactive stdin hard-aborts before any scan work (SAFE-01)
 
@@ -20902,7 +20902,7 @@ ledger rows agreeing before this Series was added.
 
 ## Series 173: Scanner Scope & Config Correctness (Phase 173 — v5.17)
 
-**Last Updated:** 2026-08-29
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-173-01: CLI-narrowed `scan.ports_tls` and the standard/deep email/broker auto-enable (SCOPE-01)
 
@@ -21045,7 +21045,7 @@ four UAT corpus-integrity guard suites are recorded in the Task 3 checkpoint evi
 
 ## Series 174: Dashboard & API Correctness (Phase 174 — v5.17)
 
-**Last Updated:** 2026-08-29
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ### UAT-174-01: `/api/scans` scores each session under its own stored calibration (DASH-06)
 
@@ -23961,7 +23961,7 @@ Verifications table for the substitute human check.
 
 ## Series 185: A11y Baseline Environment (Phase 185 — v5.19)
 
-**Last Updated:** 2026-09-06
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 **Scope:** DRIFT-03 — a11y baselines are now regenerated on the Linux CI runner that actually
 enforces the gate (not a contributor's macOS machine), `/hardware` and `/compare` are onboarded
@@ -24213,7 +24213,7 @@ qualifying third sensor push, before a later scan run suppresses the drift row).
 
 ## Series 186.1: GSD Plain-Field Fallback Scoping (Phase 186.1 — v5.19)
 
-**Last Updated:** 2026-09-07
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 **Scope:** TOOL-01/TOOL-05 — the GSD toolchain's `stateReplaceField()`/`stateExtractField()` plain-
 field fallback was anchored but unscoped, deterministically clobbering `.planning/STATE.md` body
@@ -25441,7 +25441,7 @@ this plan's execution (40 tests total across six files, all passing); UAT-191-06
 developer's live, real-report visual confirmation of the checkpoint's four pass criteria. No case
 in this series was checked to satisfy the gate without a corresponding real result.
 
-**Last Updated:** 2026-09-08
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 
 ## Series 192: Config Visibility & Skip Observability (Phase 192 — v5.21, pending bump)
 
@@ -25920,7 +25920,7 @@ existing coverage and states precisely what integration path remains unexercised
 case in this series was checked to satisfy the corpus-integrity gate without a corresponding real
 result.
 
-**Last Updated:** 2026-09-09 (Phase 193 Plan 08 — Series 193 added: Connectors panel and
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 credential-entry dashboard UAT cases for PARITY-02/PARITY-03, 7 PASS / 3 honest GAP)
 
 ---
@@ -26137,7 +26137,7 @@ evidence that corroborates but does not substitute for a live visual confirmatio
 case in this series was checked to satisfy the corpus-integrity gate without a corresponding real
 result.
 
-**Last Updated:** 2026-09-09 (Phase 194 Plan 07 — Series 194 added: Advanced scan-fields panel,
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 Executive Verdict layer, and phantom-cert disclosure fix operator walkthrough for
 PARITY-04/VERDICT-01/DASH-09, 9 PASS / 3 honest GAP)
 
@@ -26306,7 +26306,7 @@ declaration UX) was never built this phase per the operator-confirmed DEFERRED s
 (UAT-195-07) — it is documented context, not a gap in this series' own scope. No case in this
 series was checked to satisfy the corpus-integrity gate without a corresponding real result.
 
-**Last Updated:** 2026-09-10 (Phase 195 Plan 07 — Series 195 added: Exposure Map dashboard tab
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 operator walkthrough for MAP-01/MAP-02/MAP-03, 5 PASS / 3 honest GAP-or-DEFERRED, transcribed from
 the 195-06 operator-approved checkpoint plus the score-firewall and evidence-required automated
 guards)
@@ -26710,7 +26710,7 @@ substitutes a false PASS for genuine coverage. The D-13 operator walkthrough (a 
 `checkpoint:human-verify` gate, not a UAT-series case) independently re-confirms the
 behaviorally-visible subset of this series live against the dashboard, per 197-04-PLAN.md Task 3.
 
-**Last Updated:** 2026-09-10 (Phase 197 Plan 04 — Series 197 added: 6 connector-detail-field
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 cases (job-YAML target reach, identifier/secret boundary round-trip, submit/preview 422 lockstep,
 delete-on-blank delta semantics, vault_tls_verify default-true, empty-targets amber hint), all
 honest `[x] SKIP` / `DEFERRED — covered by <test-node>` citing 197-01/02/03-SUMMARY.md test
@@ -26928,7 +26928,7 @@ The D-08 walkthrough was run live on 2026-09-11 and the operator responded verba
 "Approved — all steps match" across all 11 steps, closing the last open item in this phase; see
 `198-VALIDATION.md`'s sign-off and `198-04-SUMMARY.md` for the recorded approval.
 
-**Last Updated:** 2026-09-11 (Phase 198 Plan 04 — Series 198 added: 6 scan-behavior-parity-tail
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 cases (per-scanner timeouts grid + delta semantics, concurrency group, backoff base<=max 422,
 tls_designated_ports shared format validation, out-of-bounds 422 naming, GATE-04 full-corpus leg
 green), 5 honest `[x] SKIP` / `DEFERRED — covered by <test-node>` plus 1 `[x] PASS` citing
@@ -27148,7 +27148,7 @@ is an honest `[x] SKIP` / `GAP — no substitute coverage`: the production fix i
 case, and no allowlist or gate-code change was made to manufacture one. None was checked PASS
 without being run.
 
-**Last Updated:** 2026-09-11 (Phase 199 Plan 05 — Series 199 added: 6 Wave-A-correctness-drain
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 cases for TRIAGE-10 (fractional-score transport across `/api/merge/latest`, `/api/trends`,
 `/api/trends/timeline`, `/api/scans`, and honest-absence per-segment gauge rendering) and
 TRIAGE-11 (combined connectors+advanced overlay coexistence); 5 honest `[x] SKIP` /
@@ -27518,7 +27518,7 @@ presence, not appearance, and the visual-placement claim needs a live operator w
 UAT-200-11 because a decision document's argumentative soundness has no automatable truth
 condition. None was checked PASS without being run, and no allowlist or gate-code change was made.
 
-**Last Updated:** 2026-09-11 (Phase 200 Plan 07 — Series 200 added: 11 report-branding-templates
+**Last Updated:** 2026-09-21 (Phase 206 close — Series 206 added: 5 cases covering the dashboard UI coverage drain. 25 of 28 series-7 cases converted; SC#1 recorded NOT MET AS WRITTEN. Series-7 GAPs 31 → 5.)
 cases covering RPT-01 (HTML/PDF + DOCX + CLI branding, logo precedence), RPT-02 (template override,
 fallback, SSTI containment), RPT-03 (path-traversal guard, dashboard-exclusion sweep), RPT-04
 (report profile save/list/select, explicit-config-wins precedence), and RPT-05 (Tier 2 go/no-go
@@ -28838,6 +28838,130 @@ and a cited title absent from the report is surfaced rather than silently ignore
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-13  **Tester:** automated
 **Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_cited_summary_ignores_filter_excluded_siblings`.
+
+---
+
+## Series 206: Dashboard UI Coverage Drain (Phase 206 — v5.24)
+
+Covers COV-04 — the jsdom-tractable series-7 dashboard cases gain newly written vitest tests, and
+each case's disposition cites its own node.
+
+**Read this series as a partial drain with a recorded shortfall, not a clean sweep.** Phase 206
+converted **25 of 28** cases and its SC#1 is recorded **NOT MET AS WRITTEN**. Two cases left the
+jsdom-tractable set with reproduced evidence (UAT-7-23, UAT-7-29) and route to Phase 207; UAT-7-12
+deliberately STAYED in the denominator because its blocker is an absent product feature, not a
+jsdom limitation. Reporting 25/25 against a shrunk denominator was available and was not taken.
+Two operator-accepted overrides are recorded in `206-VALIDATION.md`. Evidence:
+`206-RED-PROOF.md`, `206-RECLASSIFICATION.md`, `206-VERIFICATION.md`.
+
+### UAT-206-01: Every Converted Disposition Cites a Vitest Node That Actually Resolves
+
+**ID:** UAT-206-01
+**Title:** The series-7 dispositions flipped by this phase cite bare double-quoted `it()` titles
+that the citation guard resolves, not `describe > title` compositions it cannot
+**Maps to:** COV-04
+
+**What to test:** that the conversion is citable, not merely claimed. The guard requires a bare
+double-quoted `it()` title; a composed title reads as a citation and resolves to nothing.
+
+**Steps:** `tests/test_uat_disposition_integrity.py::test_vitest_substitute_refs_resolve`
+
+**Pass Criteria:** the cited node passes with the vitest execution leg actually running (a skip
+here is not a pass). All 39 citations in the corpus resolve.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-21  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_disposition_integrity.py::test_vitest_substitute_refs_resolve`.
+
+---
+
+### UAT-206-02: The Coverage Worklist Is Regenerated, Never Hand-Matched
+
+**ID:** UAT-206-02
+**Title:** `docs/uat-coverage-gaps.md` is byte-identical to its generator after the disposition flips
+**Maps to:** COV-04
+
+**What to test:** that the drain is visible in the derived artifact rather than asserted in prose.
+Hand-editing the worklist to match the corpus trips the same gate from the other side.
+
+**Steps:** `tests/test_uat_coverage_gaps_freshness.py::test_uat_coverage_gaps_is_current`
+
+**Pass Criteria:** the cited node passes. Series-7 GAPs fall from 31 to 5, and the remaining set is
+exactly {UAT-7-01, UAT-7-17, UAT-7-23, UAT-7-29, UAT-7-32} — three structurally browser-only, two
+reclassified by this phase. jsdom-tractable series-7 GAPs: zero.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-21  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_coverage_gaps_freshness.py::test_uat_coverage_gaps_is_current`.
+
+---
+
+### UAT-206-03: The Corpus and the Worklist Agree on the GAP Set
+
+**ID:** UAT-206-03
+**Title:** Every GAP case in `docs/UAT-SERIES.md` is named by the worklist, so a case cannot be
+drained in one artifact while surviving in the other
+**Maps to:** COV-04
+
+**What to test:** the coupling itself. Three artifacts move together in this phase; a disposition
+flipped in the corpus but absent from the worklist would read as progress in both places.
+
+**Steps:** `tests/test_uat_worklist_reconciliation_gate.py::test_every_gap_case_is_named_by_the_worklist`
+
+**Pass Criteria:** the cited node passes; the corpus GAP set and the worklist GAP set are identical.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-21  **Tester:** automated
+**Notes:** DEFERRED — covered by `tests/test_uat_worklist_reconciliation_gate.py::test_every_gap_case_is_named_by_the_worklist`.
+
+---
+
+### UAT-206-04: The Colour-Token Audit Publishes a FAIL Rather Than a False PASS
+
+**ID:** UAT-206-04
+**Title:** The hardcoded-colour audit detects real violations and reports UAT-7-21 as FAIL, using
+`it.fails` so the failure is recorded without taking CI down over pre-existing product debt
+**Maps to:** COV-04
+
+**What to test:** that an honest FAIL survives contact with a green suite. The audit found **95
+literals across 9 files**; 45 of those are `print.tsx`'s by-design white deliverable, leaving a
+remediation headline of ~50 literals across 8 pages. The node is deliberately `it.fails`: it
+publishes the FAIL and self-invalidates (`Expect test to fail`) the moment the debt is repaired.
+
+**Steps:** `src/dashboard/src/components/__tests__/hardcoded-color-audit.test.tsx::"finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components"`
+
+**Pass Criteria:** the node's green result must NOT be read as the audit passing — it is green
+*because* the expected failure occurred. UAT-7-21's disposition is FAIL. Todo:
+`dashboard-hardcoded-colour-literals-bypass-theme-tokens.md`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-21  **Tester:** automated
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/hardcoded-color-audit.test.tsx::"finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components"`. The cited node passing means the audit's FAIL was correctly published; see UAT-7-21 for the disposition itself.
+
+---
+
+### UAT-206-05: Partial Conversions Are Qualified With Verbatim Uncovered Bullets
+
+**ID:** UAT-206-05
+**Title:** The 20 partially converted cases each quote their uncovered Pass Criteria bullets
+verbatim from this document, so an unqualified PASS is never attested over a partial test
+**Maps to:** COV-04
+
+**What to test:** that the qualification discipline holds. During execution the orchestrator's own
+brief claimed 6 partial conversions; a run-time parse of the red-proof fragments returned **20**.
+Following the brief would have shipped 12 unqualified PASS attestations over partially-covering
+tests. Verification machine-compared every quoted bullet against its case's own Pass Criteria and
+found 0 non-verbatim.
+
+**Pass Criteria:** no mechanical gate enforces verbatim qualification — the check that caught the
+drift was a one-off parse during verification, not a standing test.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP
+**Date:** 2026-09-21  **Tester:** automated
+**Notes:** GAP — no substitute coverage. A standing gate asserting that every qualified PASS quotes
+its uncovered bullets verbatim from this document does not exist. Recorded as a real gap rather
+than dispositioned against the one-off verification parse, which is evidence that it was true once,
+not that it stays true. Candidate for Phase 208's doc-debt scope.
 
 ---
 

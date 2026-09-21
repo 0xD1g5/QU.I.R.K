@@ -8,13 +8,13 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 899
-- Disposition counts: DEFERRED 39, FAIL 7, GAP 38, OBSOLETE 2, PASS 728, SKIP_OTHER 85
-- Open GAP (drainable) cases: 50
+- Total case headings: 904
+- Disposition counts: DEFERRED 39, FAIL 7, GAP 38, OBSOLETE 2, PASS 732, SKIP_OTHER 86
+- Open GAP (drainable) cases: 51
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (50 cases, all series)
+## Open GAP Worklist (51 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
@@ -68,6 +68,7 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-199-05 | 199 | Unassessed Per-Segment Gauge Renders as an Em-Dash, Not a NaN Arc | no substitute coverage. `199-04-SUMMARY.md` confirms the production change |
 | UAT-202-02 | 202 | Keyboard-Operable Trigger, Escape Closes, Focus Returns to the Row | no substitute coverage; no operator walkthrough exercised keyboard Tab/Escape/focus-return, and vitest coverage cannot be cited as a DEFERRED pytest node |
 | UAT-202-11 | 202 | No-Stable-Identifier Finding Renders a Disabled Trigger | no substitute coverage; no operator walkthrough exercised the disabled-trigger state, and vitest coverage cannot be cited as a DEFERRED pytest node |
+| UAT-206-05 | 206 | Partial Conversions Are Qualified With Verbatim Uncovered Bullets | no substitute coverage. A standing gate asserting that every qualified PASS quotes |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 

@@ -232,18 +232,28 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 - [x] **Phase 205: Guard Integrity** - The citation and CI-execution guards stop making real
   coverage uncitable, before any tests are written against them.
 
-- [ ] **Phase 206: Dashboard UI Coverage Drain** - The 28 jsdom-tractable series-7 cases get real
+- [x] **Phase 206: Dashboard UI Coverage Drain** - The 28 jsdom-tractable series-7 cases get real
   vitest tests asserting what each case actually describes.
-  **⏸ PAUSED 2026-09-13 at 5 of 13 plans — RESUME WITH `/gsd-autonomous --from 206 --to 206`.**
-  Paused by operator decision for the 2026-09-18 client demo, NOT abandoned. Work is committed on
-  branch `phase-206-dashboard-ui-coverage` (24 commits); phase artifacts are gitignored and live on
-  disk only — do not `git clean` that branch. Done: 206-01/02/03/05/06 (8 UAT cases dispositioned,
-  vitest 404 → 414 passing). Remaining: 206-04/07/08/09/10/11/12/13. No disposition has been flipped
-  in `docs/UAT-SERIES.md` by design — all three coupled doc artifacts are fenced into 206-13, which
-  runs last. Enforced mechanically by `tests/test_paused_phase_resume_gate.py` (RESUME-01/02/03),
-  which fails if this box is checked while STATE.md still holds the pause record, or if v5.24 is
-  archived while any phase here is unchecked. Tracked at P2 as **999.114** in HORIZON.md.
-  Full pause record: `.planning/STATE.md` § "Phase 206 PAUSE RECORD".
+  **COMPLETE 2026-09-21 — 13 of 13 plans. Resumed after the 2026-09-18 demo pause.**
+  The PAUSE RECORD was removed from `.planning/STATE.md` on close, as RESUME-01 requires; the why
+  is here. **Outcome: 25 of 28 converted, and SC#1 is recorded NOT MET AS WRITTEN — deliberately.**
+  UAT-7-23 (pure Tailwind breakpoint, no `matchMedia` listener) and UAT-7-29 (`roadmap.tsx`
+  registers no drag handler) left the jsdom-tractable set with reproduced evidence and route to
+  Phase 207. UAT-7-12 STAYS in the denominator: its blocker is an absent product feature, not a
+  jsdom limit. Reporting 25/25 against a shrunk denominator was available and was not taken; two
+  operator-accepted overrides are recorded in `206-VALIDATION.md`.
+  Dispositions: 6 unqualified PASS, 18 qualified PASS, 2 FAIL (7-21 colour debt via a deliberate
+  `it.fails`; 7-12 absent feature), 2 GAP reclassified. Series-7 GAPs 31 → 5, jsdom-tractable
+  series-7 GAPs **0**; `docs/uat-coverage-gaps.md` byte-identical to its generator; 13 TEMPORARY
+  commits with 13 matching reverts, all product mutations netting to zero. Python 5195 passed /
+  0 failed; vitest 453 passed / 0 failed. Product code unchanged but for one `export` keyword.
+  Six product defects were FILED not fixed — notably `roadmap.tsx` ignoring `data.roadmap.edges`
+  and synthesising dependency arrows. CONTEXT D-A2 was found STALE (the `/print` defect was fixed
+  by `93e5afb1`, one day after CONTEXT was gathered), so UAT-7-30 is PASS and D-A2's mandated todo
+  was deliberately not filed. Verification `206-VERIFICATION.md` — PASS in substance; its one
+  finding (four pre-existing cited nodes un-red-proved) was closed by red-proving, not disclosure.
+  Work landed on `phase-206-resume-wave2-5`; `phase-206-dashboard-ui-coverage` was already merged
+  before the resume, so the prior record's "24 commits ahead of main" was stale when written.
 
 - [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
@@ -411,19 +421,19 @@ the drain)
      by an approximate test.
 **Plans**: 13 plans in 5 waves
 Plans:
-- [ ] 206-01-PLAN.md — enabling: export AppShell (D-A4), evidence-based test-setup shim verdict, red-proof ledger skeleton + per-group fragment convention
-- [ ] 206-02-PLAN.md — Executive page: UAT-7-03, 7-04, 7-05 tests + red-proof
-- [ ] 206-03-PLAN.md — Findings A: UAT-7-06, 7-07, 7-24 tests + red-proof
-- [ ] 206-04-PLAN.md — Findings B (Radix): UAT-7-08, 7-09, 7-37 tests + red-proof
-- [ ] 206-05-PLAN.md — Certificates + Identity: UAT-7-10, 7-34 tests + UAT-7-12 feature-absence evidence
-- [ ] 206-06-PLAN.md — CBOM table tab: UAT-7-25, 7-26 tests + red-proof
-- [ ] 206-07-PLAN.md — CBOM graph (cytoscape mocked): UAT-7-14, 7-27, 7-28 partial coverage + named carve-outs
-- [ ] 206-08-PLAN.md — Roadmap graph (cytoscape mocked): UAT-7-15, 7-16, 7-29 coverage or honest non-conversion
-- [ ] 206-09-PLAN.md — Hardware: UAT-7-40, 7-41 tests + red-proof
-- [ ] 206-10-PLAN.md — Shell: UAT-7-20, 7-22, 7-31 tests + UAT-7-23 reclassification evidence
-- [ ] 206-11-PLAN.md — Print + style audit: UAT-7-30 (5 of 6 criteria, defect evidenced) and UAT-7-21 under the D-A1 carve-out
-- [ ] 206-12-PLAN.md — evidence assembly: red-proof ledger, 2 product-defect todos, reclassification record
-- [ ] 206-13-PLAN.md — FINAL (serial): disposition flips, ledger, worklist regen, all gates, docs checklist + Obsidian sync
+- [x] 206-01-PLAN.md — enabling: export AppShell (D-A4), evidence-based test-setup shim verdict, red-proof ledger skeleton + per-group fragment convention
+- [x] 206-02-PLAN.md — Executive page: UAT-7-03, 7-04, 7-05 tests + red-proof
+- [x] 206-03-PLAN.md — Findings A: UAT-7-06, 7-07, 7-24 tests + red-proof
+- [x] 206-04-PLAN.md — Findings B (Radix): UAT-7-08, 7-09, 7-37 tests + red-proof
+- [x] 206-05-PLAN.md — Certificates + Identity: UAT-7-10, 7-34 tests + UAT-7-12 feature-absence evidence
+- [x] 206-06-PLAN.md — CBOM table tab: UAT-7-25, 7-26 tests + red-proof
+- [x] 206-07-PLAN.md — CBOM graph (cytoscape mocked): UAT-7-14, 7-27, 7-28 partial coverage + named carve-outs
+- [x] 206-08-PLAN.md — Roadmap graph (cytoscape mocked): UAT-7-15, 7-16, 7-29 coverage or honest non-conversion
+- [x] 206-09-PLAN.md — Hardware: UAT-7-40, 7-41 tests + red-proof
+- [x] 206-10-PLAN.md — Shell: UAT-7-20, 7-22, 7-31 tests + UAT-7-23 reclassification evidence
+- [x] 206-11-PLAN.md — Print + style audit: UAT-7-30 (5 of 6 criteria, defect evidenced) and UAT-7-21 under the D-A1 carve-out
+- [x] 206-12-PLAN.md — evidence assembly: red-proof ledger, 2 product-defect todos, reclassification record
+- [x] 206-13-PLAN.md — FINAL (serial): disposition flips, ledger, worklist regen, all gates, docs checklist + Obsidian sync
 **UI hint**: yes
 
 ### Phase 207: Browser-Only Coverage Verdict
