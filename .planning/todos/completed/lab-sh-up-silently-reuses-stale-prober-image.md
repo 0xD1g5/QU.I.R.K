@@ -60,3 +60,58 @@ Same failure shape as the project's standing lesson that a green result about on
 asserted about a broader one (CLAUDE.md §GSD `state.*` clause (e)/(h): "the toolchain is patched"
 was only ever "one install of the toolchain is patched"). Here: "the lab runs current code" was only
 ever "the lab runs whatever was current when someone last rebuilt".
+
+---
+
+## RESOLVED 2026-09-20 — options 3 + 1, operator-selected
+
+The todo left three options undecided and noted "Option 3 is the one that generalises; 1 is the
+one that unblocks a demo." Both were taken.
+
+### Option 3 — stamp the build into scan output (the class fix)
+
+The scan summary now carries two rows beside `Platform version`:
+
+```
+Scoring model      v3.0            <- read live from SCORING_VERSION
+Scanner build      a612e60fd3a2    <- $QUIRK_BUILD_SHA, else .git, else "unknown"
+```
+
+`Scoring model` is the decisive one and is *always* knowable — it is a Python constant, needs no
+infrastructure, and alone would have caught the 91-vs-15 scan. The SHA corroborates.
+
+**`unknown` is deliberate.** The tempting fallback is the package version, so the row is never
+empty — but that substitution *is* the defect being fixed: `Platform version 5.21.0` printed
+identically for the stale and current scanner, so it read as an answer while carrying no
+information. An honest absence beats a value that cannot discriminate.
+
+`quirk/build_stamp.py` reads `.git` as plain files and never shells out. A scan has no reason to
+fork, this repo has a standing macOS fork()-after-Network.framework SIGSEGV hazard on any
+default-`close_fds` spawn, and `git` is usually absent from the slim images the stamp most needs
+to describe. The parser was cross-checked against `git rev-parse HEAD`: byte-identical.
+`sensor.Dockerfile` gains an `ARG`/`ENV` so a built image self-identifies.
+
+### Option 1 — `--build` passthrough plus a staleness warning
+
+`up` **and `all`** now forward `"$@"` to compose, so `./lab.sh up --build` works. `all` was
+included because it starts the multihost profile and therefore the same prober — fixing only `up`
+would have left the identical hazard one subcommand away.
+
+A pre-start warning fires when the prober image predates the newest commit touching `quirk/`. It
+warns rather than rebuilding (a blanket rebuild costs a 1.4 GB context on every `up`, even on a
+cache hit) and is suppressed when `--build` was passed. Every dependency (docker, git, python3) is
+checked and the function returns silently if any is absent — a warning is not worth breaking `up`
+over. The docs say plainly to treat `--build` as the reliable path and the warning as a backstop.
+
+Date logic verified on four cases, including the exact incident shape (image 2026-09-13, commit
+2026-09-14 → warns) and garbage input (→ silent).
+
+### Also recorded
+
+The todo's "second trap" — `docker compose build` without `-p chaoslab` tagging a different image
+and changing nothing — was already documented in `docs/chaos-lab.md` §3.32 and remains there. It
+is now less reachable, since `./lab.sh up --build` carries the right project name automatically.
+
+**Not locally verified:** `tests/test_chaos_lab_idempotency.py` parametrizes over
+`docker compose config --profiles` at collection time and collected 0 cases here, because the
+local Docker daemon is unresponsive. CI exercises it.

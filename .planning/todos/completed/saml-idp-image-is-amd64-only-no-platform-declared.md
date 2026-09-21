@@ -48,3 +48,36 @@ that would expose it was not in anyone's loop.
 
 The binfmt install was confirmed to work: after it, the container reached `Up`, `nc -zv
 10.80.0.41 8080` connected, and a rerun produced `SAML scan: 3 endpoints from 1 targets`.
+
+---
+
+## RESOLVED 2026-09-20
+
+All three prescribed steps actioned, plus the verification the todo's own enumeration implied.
+
+1. **`platform: linux/amd64` declared** on `mh-saml-idp` in `docker-compose.yml`, with an inline
+   comment naming the failure mode so the next reader does not have to find this file.
+2. **`docs/chaos-lab.md` §3.32 gains an aarch64 prerequisite subsection** — the binfmt command,
+   the persistent `qemu-user-binfmt` variant (with the `qemu-user-static`-is-a-virtual-package
+   trap), how the failure presents (exit 255, `exec format error`, SAML silently reporting
+   `0 endpoints` rather than erroring), and why Docker Desktop on Apple Silicon hides it.
+   `expected_results_v4.md` carries the same warning so an aarch64 reader seeing 0 findings
+   against an expected `HIGH:1` files an environment gap rather than an oracle error.
+3. **Step 3 (arm64-native SAML IdP image) NOT actioned** — the todo listed it as "consider", and
+   swapping the image would change what the oracle measures. Left open deliberately rather than
+   silently dropped.
+
+**The "exactly one non-arm64 image" claim was re-verified by an independent method.** The original
+enumeration read image metadata from a running Docker daemon on the maintainer's Mac. This one
+read manifest lists straight from the registries over HTTP — no daemon, no container, nothing an
+emulating host can influence. **28 of 28 lab images checked** across Docker Hub, quay.io, lscr.io
+and mcr.microsoft.com; exactly one lacks arm64, and it is `kenchan0130/simplesamlphp:1.19.7`.
+The two methods agree.
+
+Worth recording: the first pass of that sweep silently skipped the 6 images on non-Docker-Hub
+registries, so "1 of 28" would have been a confident number actually covering 22. The remaining
+registries were queried before the claim was written down — the same "read the whole artifact you
+generated" discipline the demo-prep anti-pattern table names.
+
+**The declaration does not supply the emulation.** It makes the requirement explicit rather than
+leaving it to a Compose warning; an aarch64 host still needs binfmt registered first.
