@@ -370,7 +370,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
     // Click handler — show detail panel
     cyRef.current.on("tap", "node", (evt) => {
       const node = evt.target
-      const d = elements.find((e) => e.group === "nodes")!.data as Record<string, any>
+      const d = node.data()
 
       // Highlight connected edges
       cyRef.current?.edges().removeClass("highlighted")
