@@ -77,8 +77,7 @@ export function AppShell() {
   // passthrough (no token + 200 → authenticated). Hoisting `/print` above the
   // auth gate to "simplify" this would quietly turn an authenticated view into
   // an anonymous one.
-  // TEMPORARY(206-RETRO-1): short-circuit bypassed — REVERTED IN THE NEXT COMMIT
-  if (false) {
+  if (location.pathname.replace(/\/+$/, "") === "/print") {
     return <PrintPage />
   }
 
@@ -101,7 +100,6 @@ export function AppShell() {
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/exposure-map" element={<ExposureMapPage />} />
             <Route path="/trends" element={<TrendsPage />} />
-            <Route path="/print" element={<PrintPage />} />
             {/* /print is handled above, chrome-free — see the comment in AppShell.
                 Deliberately NOT registered here: a second registration inside the
                 shell would render the sidebar again for any path that reached it. */}
