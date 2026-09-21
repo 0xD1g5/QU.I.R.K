@@ -98,10 +98,10 @@ export function FindingsPage() {
     if (!data?.findings) return []
     let filtered = data.findings
     if (severityFilter !== "ALL") {
-      filtered = filtered.filter((f) => f.severity === severityFilter)
+      filtered = filtered.filter(() => true) // RED-PROOF MUTATION (206-04, UAT-7-08): severity predicate always true
     }
     if (protocolFilter !== "ALL") {
-      filtered = filtered.filter((f) => f.protocol === protocolFilter)
+      filtered = data.findings.filter((f) => f.protocol === protocolFilter) // RED-PROOF MUTATION (206-04, UAT-7-37): protocol filter clobbers instead of intersecting
     }
     if (segmentFilter !== "all") {
       filtered = filtered.filter((f) => f.segment === segmentFilter)
@@ -290,7 +290,7 @@ export function FindingsPage() {
                   // identically, or clicking any other cell in the row opens
                   // a drawer that can never load (WR-01).
                   if (row.original.id == null) return
-                  openStoryline(row.original, row.id)
+                  openStoryline(findings[0], row.id) // RED-PROOF MUTATION (206-04, UAT-7-09): row click always selects the first finding
                 }}
               >
                 {row.getVisibleCells().map((cell) => (
