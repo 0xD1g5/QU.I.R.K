@@ -1,68 +1,93 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-20T13:43:02.173Z",
-  "phase": "post-demo-resumption",
-  "phase_name": "Post-demo resumption — NOT a GSD phase. Phase 206 remains PAUSED at 5/13 (HORIZON 999.114). This handoff sequences the merge pipeline repair and the demo-prep defect tail ahead of resuming 206.",
+  "timestamp": "2026-09-21T19:37:39.162Z",
+  "phase": "none-in-flight",
+  "phase_name": "No phase in flight. Phase 206 CLOSED and MERGED 2026-09-21. v5.24 stands at 5 of 7 phases; 207 and 208 remain unstarted. Tree clean on main.",
   "phase_dir": ".planning",
   "plan": 0,
-  "task": 0,
+  "task": 4,
   "total_tasks": 4,
   "status": "paused",
+  "supersedes": "The 2026-09-20 post-demo-resumption handoff. ALL FOUR of its steps are complete — do not re-run them. Its STEP 4 recommended `/gsd-autonomous --from 206 --to 206`; that recommendation was UNSAFE and was deliberately not followed. See blockers.",
   "completed_tasks": [
-    {"id": 0, "name": "Demo prep — 2026-09-18 client demo delivered successfully", "status": "done", "commit": "c419db9d"},
-    {"id": 0, "name": "sslyze declared as a core dependency (was declared nowhere)", "status": "done", "commit": "15e49e96"},
-    {"id": 0, "name": "UAT-32-04 steps corrected — staged an unreachable code path", "status": "done", "commit": "c3da4376"},
-    {"id": 0, "name": "cryptography<47 cap documented", "status": "done", "commit": "5f3b1635"},
-    {"id": 0, "name": "docs/connector-field-reference.md + multihost MySQL target", "status": "done", "commit": "25af2b1a"},
-    {"id": 0, "name": "9 connector hosts added to multihost + 4 blocking bug fixes", "status": "done", "commit": "1ebd08fb"},
-    {"id": 0, "name": "11 connector divergences declared", "status": "done", "commit": "af8549f8"},
-    {"id": 0, "name": "verify_multihost_scan.py — 14 DB-level checks", "status": "done", "commit": "a4ae35d6"},
-    {"id": 0, "name": "implicit-TLS mail ports so the email scanner sees the mail hosts", "status": "done", "commit": "a955153a"},
-    {"id": 0, "name": "five demo-prep findings filed as todos", "status": "done", "commit": "c419db9d"}
+    {"id": 1, "name": "STEP 1 — merged PR #31, retargeted #32 to main, triaged #30 into a real fix", "status": "done", "commit": "e1ebe2c4"},
+    {"id": 2, "name": "STEP 2 — fixed the BACK-* gate red on main since Phase 203; main readable again", "status": "done", "commit": "de9e4f1d"},
+    {"id": 3, "name": "STEP 3 — mh-saml-idp platform declaration + scan-output build stamping + lab.sh --build", "status": "done", "commit": "68c048d0"},
+    {"id": 4, "name": "STEP 4 — Phase 206 resumed and closed, 13/13 plans, 25 of 28 cases converted", "status": "done", "commit": "a3dd5944"},
+    {"id": 5, "name": "PR #30 master guide gained a 5th generator-drift gate; it caught real staleness within a day", "status": "done", "commit": "2af4f45e"},
+    {"id": 6, "name": "PR #32 connector field reference + multihost connector coverage", "status": "done", "commit": "b48ada0f"}
   ],
   "remaining_tasks": [
-    {"id": 1, "name": "STEP 1 — merge PR #31, then RETARGET PR #32 to main (GitHub does NOT auto-retarget when the base branch survives the merge). Also triage the unrelated open PR #30.", "status": "not_started"},
-    {"id": 2, "name": "STEP 2 — fix the red CI gate on main: one unreconciled BACK-* ID failing test_back_star_ci_enforced_leg. Check first whether backlog-gate-false-positive-on-archived-roadmap-prose.md is the same defect.", "status": "not_started"},
-    {"id": 3, "name": "STEP 3 — land the two P1 lab todos: saml-idp-image-is-amd64-only-no-platform-declared, and lab-sh-up-silently-reuses-stale-prober-image.", "status": "not_started"},
-    {"id": 4, "name": "STEP 4 — resume Phase 206 via /gsd-autonomous --from 206 --to 206; verify the 206-13 disposition fence first. 8 of 13 plans remain.", "status": "not_started"}
+    {"id": 1, "name": "Phase 207 — Browser-Only Coverage Verdict. The 3 structurally jsdom-impossible cases (UAT-7-01, 7-17, 7-32) PLUS 7-23 and 7-29 reclassified into it by Phase 206. OPERATOR-LED, explicitly de-scoped from autonomous execution per STATE.md.", "status": "not_started"},
+    {"id": 2, "name": "Phase 208 — Security, Report Coverage & Doc Debt. Candidate home for UAT-206-05's GAP (no standing gate asserts qualified PASSes quote their uncovered bullets verbatim).", "status": "not_started"},
+    {"id": 3, "name": "Six product defects filed not fixed this session — see human_actions_pending.", "status": "not_started"},
+    {"id": 4, "name": "Decide whether to cut a version. CHANGELOG [Unreleased] still holds scoring v3.", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "main's CI is red on tests/test_backlog_reconciliation_gate.py::test_back_star_ci_enforced_leg for at least three consecutive runs, so every PR inherits a failing required check and CI is unusable as a merge signal.",
+      "description": "`/gsd-autonomous --from N --to N` IS UNSAFE FOR RESUMING A MID-EXECUTION PHASE. Its plan step has NO `has_plans` gate — it calls gsd-plan-phase unconditionally and only checks has_plans afterwards. gsd-plan-phase itself only guards against replanning CLOSED phases (VERIFICATION status passed). A paused phase is not closed, so the planner would have run against Phase 206's 13 existing plans, 5 already executed, including the 206-13 disposition fence.",
       "type": "technical",
-      "workaround": "Read a red X on #31/#32 as inherited, not caused: git stash -> run -> git stash pop, and compare failing-node SETS rather than pass counts. STEP 2 fixes it properly."
+      "workaround": "Use `Skill(gsd-execute-phase, \"<N> --no-transition\")` directly. Its workflow line 321 filters `Skip plans where has_summary: true`, so it resumes correctly — it ran exactly the 8 incomplete plans. Note the asymmetry: the discuss step DOES skip on has_context; only plan lacks the matching gate."
     },
     {
-      "description": "Phase 206 disposition fence: NO disposition has been flipped in docs/UAT-SERIES.md by design. All three coupled doc artifacts are fenced into 206-13, which runs last, because a disposition must never be flipped before the test it cites exists and has been red-proved.",
+      "description": "`state.begin-phase` is called by execute-phase's validate_phase step and is NOT idempotent mid-phase — it resets progress.percent to 0 and rewrites 'Plan: 1 of N'. `phase.complete` writes well-formed WRONG values (it once marked a phase complete at 5/7 plans).",
       "type": "technical",
-      "workaround": "Verify the fence still holds before resuming 206. Not a defect — an invariant to confirm."
+      "workaround": "Skip both. Phase 206 was closed BY HAND. Take a STATE.md pre-image first and diff against the two named corruption signatures (garbled bold-field code span; dropped frontmatter key). All seven agents this session left STATE.md byte-identical."
     },
     {
-      "description": "tests/test_fuzz_cli_safety.py::test_no_fuzz_flag_no_fuzz_errors fails LOCALLY with a 30s subprocess timeout but passes in CI. Shape suggests contention with the running chaos lab; unconfirmed.",
+      "description": "Phases 203/204/205 do not reconcile individually: 7 plans/4 summaries, 5/6, 5/7. Totals match at 38/38. Five phase artifacts also carry placeholder text (203-VERIFICATION.md, 204-05-PLAN.md, 204-VERIFICATION.md, 204-VALIDATION.md, 205-05-PLAN.md).",
+      "type": "process",
+      "workaround": "Pre-existing, predates this session. Deliberately flagged rather than laundered into Phase 206's numbers. Needs its own pass before the v5.24 milestone close."
+    },
+    {
+      "description": "The vitest execution leg does NOT run in CI — the Linux Full Suite job never installs Node for src/dashboard/, so the 25 new citations are existence-checked there, not executed. They DID execute locally (75 passed, 0 skipped).",
       "type": "technical",
-      "workaround": "Deselect it when comparing local failing-node sets; it also fails on stashed clean main."
+      "workaround": "Documented pre-existing gap in docs/uat-coverage-gaps.md; not introduced by Phase 206. Run vitest locally before trusting a citation-guard green from CI."
+    },
+    {
+      "description": "Boot volume hit 99% (3.2 GiB free) mid-session and an ENOSPC blocked ALL Bash calls, since every call writes an output file first. Docker is NOT the cause — its data folder is relocated to /Volumes/Digs-1TB/DockerDesktop (167 GB there, 77% free). ~53 GiB on the boot volume is unaccounted for and needs root to see.",
+      "type": "environmental",
+      "workaround": "Operator freed ~4.6 GB (com.docker.install, npm cache, Trash) and more since; 18 GiB free at the Phase 206 run. Operator is investigating the 53 GiB and has declined to share root. If Bash starts failing with ENOSPC, this is why — it is NOT the scratch directory, which is 8 MB."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Decide whether to cut a version. NOT done deliberately.",
-      "context": "CHANGELOG [Unreleased] already contains scoring v3 (SCORING_VERSION 2.0 -> 3.0, every score moves downward). Stamping a version now ships that as a side effect of a dependency fix. Operator chose to hold; the choice of number (5.22.0 by precedent vs 6.0.0 by SemVer) is theirs.",
+      "action": "Decide whether to cut a version. Still NOT done, deliberately.",
+      "context": "CHANGELOG [Unreleased] holds scoring v3 (SCORING_VERSION 2.0 -> 3.0, every score moves downward). Stamping a version ships that as a side effect of unrelated fixes. The choice of number (5.22.0 by precedent vs 6.0.0 by SemVer) is the operator's.",
+      "blocking": false
+    },
+    {
+      "action": "Review six product defects filed but NOT fixed by Phase 206 (phase rule: tests only, file defects).",
+      "context": "Most consequential: roadmap.tsx IGNORES data.roadmap.edges entirely and synthesizes phase-sequencing arrows operators will read as dependency prerequisites. Also: LifecycleEventRow crashes the whole /hardware page on an unknown event_type with no error boundary above it (its sibling VendorTrendRow already defends the identical lookup with ??); ~50 colour literals bypass theme tokens across 8 pages; the roadmap detail panel's owner/dependencies are absent from the product AND the API schema; certificates expiry sort absent; verify-multihost footer conflates endpoint and finding severity.",
+      "blocking": false
+    },
+    {
+      "action": "Escalation 1 in 206-VERIFICATION.md is ACCEPTED BY OVERRIDE, not closed.",
+      "context": "The 28->26 denominator. Two operator-accepted overrides recorded in 206-VALIDATION.md with accepted_by: Digs, 2026-09-21. SC#1 remains recorded NOT MET AS WRITTEN at 25 of 28.",
       "blocking": false
     },
     {
       "action": "On the operator VM after any reboot: re-run `docker run --privileged --rm tonistiigi/binfmt --install amd64`.",
-      "context": "binfmt is not persistent there. Without it mh-saml-idp cannot start (amd64-only image on aarch64) and SAML drops out of the Identity tab.",
+      "context": "binfmt is not persistent there. Without it mh-saml-idp cannot start (amd64-only image on aarch64) and SAML drops out of the Identity tab as '0 endpoints' rather than as an error. Now documented in docs/chaos-lab.md 3.32 and flagged in expected_results_v4.md.",
+      "blocking": false
+    },
+    {
+      "action": "Phase 207 is OPERATOR-LED and explicitly de-scoped from autonomous execution.",
+      "context": "Per STATE.md Operator Next Steps. Its scope GREW this session: the 3 structurally browser-only cases PLUS UAT-7-23 and UAT-7-29, reclassified into it by Phase 206 with reproduced evidence.",
       "blocking": false
     }
   ],
   "decisions": [
-    {"decision": "sslyze declared in core dependencies rather than the [email] extras group", "rationale": "Matches operators-guide's long-standing (until then false) 'sslyze (core)' claim for the TLS row; a bare install was silently running the flagship TLS scanner on its stdlib fallback with no error.", "phase": "post-demo-resumption"},
-    {"decision": "New multihost services are dedicated mh-* instances with no published ports, not dual-homed existing services", "rationale": "Dual-homing would make hosts reachable both from the host and inside the subnet, eroding the topology exercise — and would have inherited samba-dc's published :88, which collides with the KDC macOS itself runs.", "phase": "post-demo-resumption"},
-    {"decision": "No version bump cut", "rationale": "[Unreleased] already holds scoring v3; cutting a version would release a scoring overhaul as a side effect of a dependency fix.", "phase": "post-demo-resumption"},
-    {"decision": "PRs #31 and #32 kept separate rather than combined", "rationale": "#31 stays a clean dependency fix. Cost is the stacked-PR retarget hazard, which STEP 1 handles explicitly.", "phase": "post-demo-resumption"},
-    {"decision": "DNSSEC / S-MIME / AD CS multihost hosts not started", "rationale": "Each needs wiring beyond a static IP (resolver config, LDAP search bases, seeded certs). Half-landing three unknowns into a working lab hours before a demo was the wrong trade.", "phase": "post-demo-resumption"}
+    {"decision": "Phase 206 resumed via gsd-execute-phase directly, NOT /gsd-autonomous", "rationale": "The autonomous wrapper calls plan-phase unconditionally; it would have replanned over 13 existing plans including the 206-13 disposition fence.", "phase": "206"},
+    {"decision": "SC#1 recorded NOT MET AS WRITTEN at 25 of 28", "rationale": "Two cases legitimately left the jsdom-tractable set, which would have made 25/25 arithmetically defensible. A phase that shrinks its denominator until it hits 100% teaches nothing.", "phase": "206"},
+    {"decision": "UAT-7-12 STAYS in the denominator despite not converting", "rationale": "Its blocker is an absent product feature, not a jsdom limitation — a real browser finds the same missing control. Moving it out would be silent-shrink wearing a reclassification's clothes.", "phase": "206"},
+    {"decision": "UAT-7-21 dispositioned FAIL with a deliberate it.fails node", "rationale": "Publishes the FAIL and self-invalidates when the colour debt is fixed, rather than taking CI down over pre-existing product debt. Its green result must NOT be read as the audit passing.", "phase": "206"},
+    {"decision": "The verifier's Finding 1 closed by RED-PROVING, not disclosure", "rationale": "Four cited nodes were pre-existing and un-red-proved, including UAT-7-30's decisive Criterion 1. Retro pairs labelled TEMPORARY(206-RETRO- so the original 13 stays independently derivable.", "phase": "206"},
+    {"decision": "Backlog gate fixed with a three-clause narrowing, not the todo's recommended option (b)", "rationale": "The todo's 'structured rows only' would have enumerated ZERO ids (no BACK id in the tracked corpus has a table row) and failed the non-vacuity guard. Even narrowed, plain (b) silently dropped BACK-86 from coverage. The third clause keeps every id covered.", "phase": "STEP 2"},
+    {"decision": "Build identity reports 'unknown' rather than falling back to the package version", "rationale": "That substitution IS the defect being fixed — Platform version 5.21.0 printed identically for the stale and the current scanner, so it read as an answer while carrying no information.", "phase": "STEP 3"},
+    {"decision": "Phase artifacts (SUMMARY, red-proof fragments) left UNTRACKED", "rationale": "Matches live siblings 203/205 (zero tracked) and 204 (only a .continue-here.md). Waves 2-3 tracked theirs by copying whichever sibling they read first — an orchestration gap, since neither brief specified it.", "phase": "206"}
   ],
   "uncommitted_files": [],
-  "next_action": "STEP 1: `gh pr merge 31`, then IMMEDIATELY `gh pr edit 32 --base main` and confirm #32's diff still shows only its own three commits. Do not assume GitHub retargeted it — it auto-retargets only when the base branch is deleted on merge, and this exact trap cost a stacked PR at the v5.23 close.",
-  "context_notes": "The demo is over and went well; the time pressure that shaped the last few days is gone. The four-step order is deliberate: steps 1-2 restore trust in the merge pipeline (nine fixes stranded behind a stacked PR, and a CI signal nobody can read), and only then does resuming Phase 206 make sense — its eventual PR lands into the same pipeline otherwise. The through-line of every demo-prep finding: four separate defects were the same shape, something that works on every maintainer machine and fails on a clean host (undeclared sslyze, a Kerberos profile skipped on macOS so nobody ran it, an amd64-only image Docker Desktop emulates silently, a JWT connector blocked against exactly the private addresses every lab uses). The operator's clean aarch64 Linux VM is the most valuable test surface this project has gained in a while. Compiled view: https://claude.ai/code/artifact/ea676963-6c66-46e9-a90d-cca89726537e"
+  "next_action": "No work is in flight. Tree clean on main at a3dd5944, zero open PRs, main CI green. Natural next steps: Phase 207 (operator-led, NOT autonomous) or Phase 208. Before either, consider the 203/204/205 reconciliation drift and the five placeholder-bearing phase artifacts — both will matter at the v5.24 milestone close.",
+  "context_notes": "This session's through-line: STALE BUT PLAUSIBLE RECORDS. Five separate planning artifacts were true when written and wrong when read — the checkpoint's '24 commits ahead of main' (the branch was already merged), the backlog todo's recommended fix (would have broken the gate it was meant to repair), CONTEXT D-A2 (the /print defect was fixed ONE DAY after CONTEXT was gathered), CLAUDE.md's generator-drift table (said four, now five), and the orchestrator's own partial-conversion count (claimed 6; a run-time parse of the fragments found 20 — following it would have shipped 12 unqualified PASS attestations over partially-covering tests). The only reliable defence was re-deriving from source at the moment of use. Every layer caught something the layer below missed, and the top layer was the orchestrator — which is the argument for instructing subordinate agents to distrust the brief they are handed. Also worth carrying forward: three plans' SUGGESTED red-proof mutations were inadequate because they turned something ELSE red; a mutation that fails the wrong assertion is worse than no mutation, because it looks like proof."
 }
