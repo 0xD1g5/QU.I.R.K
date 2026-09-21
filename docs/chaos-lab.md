@@ -1225,6 +1225,42 @@ container built from this repo — the same in-network vantage point the `segmen
 established in Phase 152. This is why the profile has no port table like the sections above: there
 are no host ports to list, by design.
 
+#### Prerequisite on aarch64 Linux: register amd64 emulation first
+
+**One service in this profile cannot start on a plain aarch64 Linux host without emulation
+registered.** `mh-saml-idp` uses `kenchan0130/simplesamlphp:1.19.7`, which upstream publishes for
+**amd64 only** — verified against the registry manifests for all 28 lab images, of which it is the
+only one lacking arm64. The compose file declares `platform: linux/amd64` so the requirement is
+explicit, but the declaration does not supply the emulation.
+
+Register it before bringing the profile up:
+
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install amd64
+
+# Persistent across reboots (the command above is NOT):
+sudo apt install -y qemu-user-binfmt     # NOT qemu-user-static — that is a virtual package
+```
+
+**This is not needed on Docker Desktop for Apple Silicon, which emulates amd64 silently** — which
+is exactly why it went unnoticed: the container ran for 33+ hours on a maintainer Mac, reporting
+`x86_64` from `uname -m` inside itself, with no warning anywhere.
+
+**How the failure presents if you skip this:** `chaoslab-mh-saml-idp-1` exits 255 immediately, the
+container log reads `exec /usr/local/bin/docker-php-entrypoint: exec format error`, and the scan
+reports `SAML fetch failed … [Errno 113] No route to host` followed by `SAML scan: 0 endpoints`.
+Nothing in the scan output names the real cause, and SAML silently drops out of the Identity
+domain rather than failing loudly. After registering binfmt, the same run yields
+`SAML scan: 3 endpoints from 1 targets`.
+
+To check an image's architectures yourself, read the image rather than the host — `uname -m`
+inside a container on an emulating host reports the *emulated* architecture and will tell you
+everything is fine:
+
+```bash
+docker inspect kenchan0130/simplesamlphp:1.19.7 --format '{{.Architecture}}'
+```
+
 | Host | Service | Posture under test | Finding domain |
 |------|---------|--------------------|----------------|
 | 10.80.0.10 | mh-edge-legacy | TLS 1.0/1.1 + weak ciphers | data in motion |
@@ -1279,10 +1315,15 @@ Three caveats worth knowing before relying on these:
 **Start and scan:**
 
 ```bash
-PROFILE_ARGS="--profile multihost" ./lab.sh up
+# --build rebuilds the locally-built prober. Every other service here is a
+# pinned public image, so --build only affects the prober in practice.
+PROFILE_ARGS="--profile multihost" ./lab.sh up --build
 
-# Rebuild the prober first if any quirk/ code changed since the image was built —
-# `lab.sh up` runs `compose up -d` with NO `--build` and silently reuses a stale image.
+# Without --build, `up` reuses an existing prober image no matter how far
+# quirk/ has moved. `lab.sh` now warns when that image predates the newest
+# commit touching quirk/, but the warning depends on docker, git and python3
+# all being present — treat --build as the reliable path, not the warning.
+# To rebuild the prober alone instead (note `-p chaoslab`, see below):
 docker compose -p chaoslab --profile multihost build mh-prober
 docker compose -p chaoslab --profile multihost up -d --force-recreate mh-prober
 
@@ -1340,6 +1381,13 @@ measured run (`findings-20260914-142606.json`) rather than inferred from the com
 under the superseded v2 model. If a scan here reports ~91, the prober image is stale — rebuild it
 per the commands above and re-check
 `docker exec chaoslab-mh-prober-1 python -c "from quirk.intelligence.scoring import SCORING_VERSION; print(SCORING_VERSION)"`.
+
+Since v5.24 you no longer have to recognise the number to catch this: the scan summary prints a
+**Scoring model** row (read live from `SCORING_VERSION`) and a **Scanner build** row next to
+`Platform version`. Check those first — `Platform version` alone cannot distinguish a stale
+scanner from a current one, because it names the last released version rather than the code
+running, and read `5.21.0` in both the stale and the current case. See
+`docs/report-interpretation.md` §27.
 
 **The oracle records three classes of honest gap** — hosts that return INFO only; postures that are
 *scored but never reported* (the unencrypted S3 bucket and the plaintext Postgres both reach
