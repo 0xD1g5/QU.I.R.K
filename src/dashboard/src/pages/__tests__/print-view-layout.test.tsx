@@ -9,26 +9,31 @@
  *   5. Content includes: score summary, findings, certificates, CBOM reference
  *   6. Background colors and borders render (print background styling enabled)
  *
- * It deliberately does NOT cover — and must never be read as covering —
- * criterion 1:
+ * It does NOT cover criterion 1:
  *
  *   1. No sidebar visible
  *
- * Criterion 1 is a CONFIRMED PRODUCT DEFECT (CONTEXT D-A2, re-confirmed by
- * command in `red-proof/206-RED-PROOF-print-style.md`): `App.tsx` renders
- * `<Sidebar />` unconditionally inside `AppShell`, `/print` is a `<Route>`
- * inside that shell, there is no `print:hidden` / `@media print` utility
- * anywhere in `src/`, and the `PRINT_CSS` injected below hides no
- * `aside`/`nav`. The sidebar therefore IS visible on /print.
+ * ...because criterion 1 cannot honestly be asserted from this mount point.
+ * `Sidebar` is never inside `PrintPage`'s own subtree — it is a sibling that
+ * `AppShell` mounts — so `expect(queryByTestId("sidebar")).toBeNull()` here
+ * would be trivially true whatever the shell does, and would prove nothing.
  *
- * Asserting "no sidebar" from a `render(<PrintPage />)` would be trivially
- * true — `Sidebar` is never inside `PrintPage`'s own subtree, it is a sibling
- * mounted by `AppShell` — so such an assertion would manufacture a green
- * result for the exact criterion the product fails. That is why it is absent
- * here and handled as evidence in the fragment instead.
+ * Criterion 1 IS covered, at the only mount point where it is meaningful, by
+ * `src/dashboard/src/__tests__/app-print-chrome.test.tsx` — which renders the
+ * real `AppShell` under `MemoryRouter` and pairs every absence assertion with
+ * a positive control on a dashboard route. UAT-7-30 therefore needs BOTH
+ * nodes cited; neither covers the case alone.
  *
- * UAT-7-30's recommended disposition is therefore FAIL, not PASS. A green run
- * of this node is coverage of five criteria, not a verdict on the case.
+ * STALE-DECISION NOTE (206-11, 2026-09-21). Phase 206's CONTEXT D-A2 records
+ * criterion 1 as a confirmed product defect and instructs that UAT-7-30 be
+ * dispositioned FAIL. That ruling was gathered on 2026-09-13 and was correct
+ * then. It was overtaken on 2026-09-14 by commit 93e5afb1
+ * ("fix(print): render /print without the dashboard chrome"), which moved
+ * `/print` out of the shell entirely: `App.tsx:80` now returns `<PrintPage />`
+ * before `<Sidebar />` at `App.tsx:87` is ever constructed. Re-verified by
+ * command at 206-11 execution time; evidence in
+ * `red-proof/206-RED-PROOF-print-style.md`. UAT-7-30's recommended
+ * disposition is PASS, and there is no defect left to file.
  */
 import { describe, it, expect, vi, afterEach } from "vitest"
 import { render, cleanup, within } from "@testing-library/react"
