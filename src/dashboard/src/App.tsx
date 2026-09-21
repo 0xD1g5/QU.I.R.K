@@ -90,7 +90,7 @@ export function AppShell() {
         <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-6">
           <Routes>
             <Route path="/" element={<ExecutivePage />} />
-            <Route path="/findings" element={<FindingsPage />} />
+            <Route path="/findings" element={<ExecutivePage />} />
             <Route path="/identity" element={<IdentityPage />} />
             <Route path="/motion" element={<MotionPage />} />
             <Route path="/hardware" element={<HardwarePage />} />

@@ -84,7 +84,7 @@ export function Sidebar() {
       <div className="flex items-center gap-2 px-3 lg:px-5 py-4 border-b border-border">
         {/* Full wordmark on wide sidebar */}
         <span className="text-accent font-black text-base hidden lg:block tracking-widest font-mono leading-none">
-          QU.I.R.K.
+          
         </span>
         {/* Monogram on narrow sidebar */}
         <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>

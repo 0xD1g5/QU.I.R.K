@@ -49,7 +49,7 @@ export function ThemeProvider({
   const value: ThemeProviderState = {
     theme,
     setTheme: (t: Theme) => {
-      localStorage.setItem(storageKey, t)
+      // TEMPORARY(206-10): persistence removed to induce red-proof
       setTheme(t)
     },
   }
