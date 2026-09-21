@@ -23,7 +23,7 @@ const QRAMM_DIMS = ["CVI", "SGRM", "DPE", "ITR"] as const
 // Static CSS string — pure constant, no user content interpolated
 const PRINT_CSS = [
   "body,html{background:#fff!important;color:#0a0a0a!important;font-family:Inter,-apple-system,sans-serif;font-size:14px}",
-  ".print-section{break-before:page;padding-top:24px}",
+  ".print-section{padding-top:24px}",
   ".print-section:first-child{break-before:avoid}",
   "h1{font-size:28px;font-weight:600;margin-bottom:8px}",
   "h2{font-size:20px;font-weight:600;margin-bottom:12px;margin-top:24px}",
@@ -51,6 +51,7 @@ const PRINT_CSS = [
   ".qramm-radar{margin:16px 0}",
   ".qramm-footnote{font-size:12px;color:#52525b;margin-top:8px;border-top:1px solid #e4e4e7;padding-top:8px}",
   ".qramm-detail-section{margin-top:16px}",
+  ".rp-probe{color:#abcdef}",
 ].join("")
 
 function PrintFindings({ findings }: { findings: FindingItem[] }) {
@@ -439,6 +440,7 @@ export function PrintPage() {
           </div>
         )}
 
+        <button type="button">Refresh</button>
         {/* Section 1: Cover */}
         <div className="print-section">
           <h1>QU.I.R.K. — Scan Results</h1>
