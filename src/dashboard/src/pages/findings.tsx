@@ -316,7 +316,8 @@ export function FindingsPage() {
       )}
 
       {/* Finding detail Sheet */}
-      <Sheet open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
+      {/* TEMPORARY(206-RETRO-2): close request ignored — REVERTED IN THE NEXT COMMIT */}
+      <Sheet open={!!selectedFinding} onOpenChange={() => {}}>
         <SheetContent
           className="w-full sm:w-[480px] sm:max-w-[480px] flex flex-col"
           onCloseAutoFocus={(e) => {
