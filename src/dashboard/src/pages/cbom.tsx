@@ -440,7 +440,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
 
       {/* Zoom controls — top-right */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => {}} aria-label="Zoom in">
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)} aria-label="Zoom in">
           <ZoomIn className="h-3 w-3" />
         </Button>
         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 0.8)} aria-label="Zoom out">
