@@ -454,6 +454,17 @@ coverage exists, or a reasoned permanent disposition says why it never can.
 **Plans**: TBD
 **UI hint**: yes
 
+**Inbound costed decision from Phase 208 (`UAT-88-03`, D-03, recorded 2026-09-22):** the Playwright
+PDF-render assertion for the score-decomposition table is materially cheaper than an open-ended
+design question. `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`, and
+`pypdf` is already a live runtime dependency (`pypdf>=4.0` under the `dashboard` extras, imports as
+`pypdf==6.11.0` in `.venv`), so PDF text extraction for the assertion needs **no new dependency**.
+The sole open question this phase inherits is a **yes/no on installing a Chromium browser in
+`.github/workflows/python-ci.yml`** — `~/Library/Caches/ms-playwright/` is empty and no Chromium
+install step exists in that workflow today; the only `setup-chrome` steps live in
+`dashboard-quality.yml`, which runs no pytest. Full record:
+`.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`.
+
 ### Phase 208: Security, Report Coverage & Doc Debt
 **Goal**: The security- and report-relevant non-UI gaps are genuinely exercised, and the two doc
 corrections carried from the v5.23 boundary review land.
@@ -466,6 +477,12 @@ corrections carried from the v5.23 boundary review land.
   2. The six-row score-decomposition table is asserted at **render-output** level in the HTML report
      and in the Playwright PDF, cited by `UAT-88-02` and `UAT-88-03` respectively — the PDF leg has
      no pytest coverage of this table at all today.
+     **NOT MET AS WRITTEN — recorded 2026-09-21 (Phase 208 D-04):** the HTML leg (`UAT-88-02`) is
+     delivered by `tests/test_score_decomposition_render.py` at render-output level; the Playwright
+     PDF leg (`UAT-88-03`) is re-scoped to Phase 207 as a costed yes/no on CI browser cost — see
+     `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md` for the full
+     record and the Phase 207 block below for the inbound handoff. The original criterion text above
+     is preserved unedited, per Phase 206's SC#1-at-25-of-28 precedent.
   3. The hygiene subscore (plaintext ratio) and identity-trust subscore (mTLS bonus) are each
      asserted **in isolation**, holding other evidence fixed, rather than inferred from movement in
      the overall score (`UAT-8-04` / `UAT-8-05`).
