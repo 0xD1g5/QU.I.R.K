@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-21T09:50:00Z"
-last_activity: 2026-09-21
+last_updated: "2026-09-22T03:22:49Z"
+last_activity: 2026-09-22
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 38
+  total_plans: 44
   completed_plans: 33
-  percent: 87
+  percent: 75
 ---
 
 # Project State
@@ -2343,7 +2343,71 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-09-14 — **Phase 209 (Deliverable Reachability) OPENED and context gathered.**
+Last session: 2026-09-21 (resumed) — **Session resumed via `/gsd-resume-work`; nothing was in
+flight.** `.planning/HANDOFF.json` (2026-09-21T19:37Z) reports the post-demo resumption COMPLETE at
+4/4, six PRs merged (#30-#35), tree clean on `main` at `a3dd5944`, zero open PRs, main CI green.
+v5.24 stands at 5 of 7 phases, 33/38 plans. No `.continue-here` checkpoint, no interrupted agent, no
+PLAN-without-SUMMARY.
+
+**Two stale records found while resuming, both left in place and flagged rather than edited:**
+(1) this file's own `## Current Position` still names Phase 209 as the frontier and describes Phase
+206 as PAUSED at 5/13 — both superseded by the 2026-09-21 Phase 206 completion record at line ~1430
+and by `ROADMAP.md`. (2) `## Operator Next Steps` item 4 still recommends
+`/gsd-autonomous --from 208`; HANDOFF.json's first blocker records that
+`/gsd-autonomous --from N --to N` is **unsafe for resuming a mid-execution phase** (its plan step
+has no `has_plans` gate and `gsd-plan-phase` only guards CLOSED phases). For a *fresh* phase like
+208 the wrapper is not hazardous, but `Skill(gsd-execute-phase, "<N> --no-transition")` is the
+recorded safe form for any resume.
+
+Operator chose **Phase 208 (Security, Report Coverage & Doc Debt)** as the next action — the only
+remaining v5.24 phase authorized for autonomous execution, since Phase 207 is operator-led by
+standing decision.
+
+**Phase 208 CONTEXT GATHERED (2026-09-21).** `208-CONTEXT.md` and `208-DISCUSSION-LOG.md` written
+to `.planning/phases/208-security-report-coverage-doc-debt/`, both untracked per repo convention
+(`.planning/` is gitignored at `.gitignore:75`; `git add -f` is forbidden for phase CONTEXT files).
+The operator declined per-area discussion and accepted the recommended option for all four gray
+areas, so each recommendation was grounded in a live source check taken *before* it was formed —
+16 decisions (D-01..D-16) recorded.
+
+**All five of the phase's ROADMAP/REQUIREMENTS premises were re-verified against the tree and all
+five HOLD** — unusual for this project, and worth stating positively given Phase 205 found three of
+its four criteria resting on false premises. `-k ssrf` genuinely matches 0 of 8 in
+`tests/test_ticketing_jira.py`; the six `/25` rows are at `report.html.j2:499-509`; both COV-08
+cases are genuinely GAP; the stale Phase 202 criterion-3 wording is where DOC-01 says it is; and
+`docs/report-interpretation.md` §7.1 genuinely lacks the 999.112 precondition.
+
+**The load-bearing finding is a blocker, not a gap.** ROADMAP Phase 208 criterion 2 requires the
+score-decomposition table asserted in HTML **and** in the Playwright PDF. The PDF leg is not
+deliverable in this phase and a test for it must not be written: `.github/workflows/python-ci.yml`
+(the job that runs `pytest -q -m ""`) installs **no browser** — the only `setup-chrome` steps are in
+`dashboard-quality.yml`, which runs vitest and no pytest — and `~/Library/Caches/ms-playwright/` is
+empty on this machine, so such a test would execute in neither place while being cited as coverage.
+Installing a browser to satisfy it would also decide Phase 207's reserved toolchain question as a
+side effect of a coverage phase. **Criterion 2 is therefore flagged NOT MET AS WRITTEN in advance
+(D-04)**, following Phase 206's precedent of recording the shortfall rather than shrinking the
+denominator. Phase 207 inherits a *cheaper* decision than it was scoped with: `render_pdf_report()`
+already exists at `html_renderer.py:1351` and `pypdf` is already a live dependency, so the sole
+remaining cost is the browser in CI.
+
+Two further items recorded for whoever plans this: `SCORING_VERSION` is **already `"3.0"`** at
+`quirk/intelligence/scoring.py:29` (the unreleased thing is the version *cut*, not the code — so
+COV-08 tests assert against v3 and there is no v2/v3 choice to make, despite what CHANGELOG
+`[Unreleased]` implies); and re-dispositioning the four UAT cases forces
+`docs/uat-coverage-gaps.md` regeneration or the freshness gate goes red (D-15).
+
+One self-inflicted miss is recorded in `208-CONTEXT.md` rather than hidden: the first COV-06 check
+ran a bare `pytest -k ssrf` across all of `tests/`, returned 77, and appeared to falsify the "0 of
+8" premise — a paraphrase of the case's filter, not the filter. This project's over-counting
+anti-pattern reproducing live *inside* the verification pass meant to catch it. Standing rule
+reinforced: run the case's verbatim command, never a reconstruction of it.
+
+Stopped at: Phase 208 context gathered; ready for `/gsd-plan-phase 208`.
+Written by hand — no `state.*` verb used; pre-image taken per CLAUDE.md §TOOL-05.
+Resume file: (none — see `.planning/HANDOFF.json`, deliberately retained as the most accurate
+state record until its content is folded into this file.)
+
+Prior session: 2026-09-14 — **Phase 209 (Deliverable Reachability) OPENED and context gathered.**
 Net-new phase, added to v5.24 mid-milestone by operator decision. Origin: the operator asked where
 the v5.23 reporting milestone had surfaced in the dashboard, and the answer was that it had not.
 **The consulting-grade report pipeline and the dashboard's Export button share zero code** —
