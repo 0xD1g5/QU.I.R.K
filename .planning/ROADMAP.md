@@ -476,7 +476,13 @@ corrections carried from the v5.23 boundary review land.
      numeric-equality guarantee holds only for **unmodified** report templates, because RPT-02's
      override is a full-file override that can drop the roadmap section with nothing validating its
      presence. Synced to `20_Dev-Work/QUIRK/Guides/Report-Interpretation.md`.
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves
+- [ ] 208-01-PLAN.md — COV-06: prove the Jira SSRF guard fires before construction (both directions + ordering)
+- [ ] 208-02-PLAN.md — COV-07: assert the six-row decomposition table and both rollup sentences at HTML render-output level
+- [ ] 208-03-PLAN.md — COV-08: isolate the hygiene plaintext-ratio and identity-trust mTLS subscores
+- [ ] 208-04-PLAN.md — DOC-01/DOC-02: the two doc corrections plus their Obsidian vault mirrors
+- [ ] 208-05-PLAN.md — UAT dispositions, UAT-88-03 costed handoff, and the D-15 worklist regeneration
+- [ ] 208-06-PLAN.md — criterion 2 recorded NOT MET AS WRITTEN, phase note, vault syncs, hand-edited STATE.md
 
 ### Phase 209: Deliverable Reachability
 **Goal**: A dashboard-only operator can download the same report deliverables a CLI operator gets,
