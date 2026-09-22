@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: executing
-last_updated: "2026-09-22T03:22:49Z"
+last_updated: "2026-09-22T13:45:00Z"
 last_activity: 2026-09-22
 progress:
   total_phases: 7
@@ -164,8 +164,10 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 209 — Deliverable Reachability
-started. Anchor: write the missing tests behind the honest UAT GAPs and make the gap worklist derive
+**Current focus:** Phase 208 — Security, Report Coverage & Doc Debt (COV-06/07/08, DOC-01/02).
+
+Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
+and make the gap worklist derive
 itself. Live measurement at open (not carried from the stale worklist doc): **70 GAP-annotated cases
 across 878 total** in `docs/UAT-SERIES.md`, of which **25 sit in series 164–202** that
 `docs/uat-coverage-gaps.md` — scoped to series 1–163, claiming 57 — has never absorbed; accrual is
@@ -1257,6 +1259,34 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   they are the corrupting verbs this phase exists to fix (CLAUDE.md TOOL-05).
 
 ## Current Position
+
+Phase: 208 (Security, Report Coverage & Doc Debt) — EXECUTING, started 2026-09-22
+Plan: 0 of 6 complete. Waves: 1 = 208-01/02/03/04, 2 = 208-05, 3 = 208-06 (checkpoint, `autonomous: false`).
+Status: Executing Phase 208 on branch `phase-208-security-report-coverage-doc-debt`, forked from
+local `main` at `58c4ba54` (which carries two unpushed `docs(208)` planning commits that
+`origin/main` does not have — branching off `origin/main` would have silently dropped them).
+`workflow.use_worktrees=false`, so all six plans run **sequentially on the main working tree**;
+there is no parallel isolation in this run despite `parallelization: true`.
+
+**`state.begin-phase` corrupted this file on 2026-09-22 and was reverted — TOOL-05 class, still
+live on this machine.** The verb was called once at phase start with a pre-image taken per
+CLAUDE.md §GSD. The diff showed: (a) **corruption signature (b) fired** — the frontmatter key
+`last_activity` was silently dropped; (b) semantic drift of the `progress:` counters in the wrong
+direction — `completed_phases` 5 -> **4**, `percent` 75 -> **57**, `completed_plans` 33 -> 38, all
+well-formed and all unverifiable against ground truth (an independent SUMMARY-file count across the
+v5.24 phase dirs does not reconcile with either value, so neither number was adopted); and (c) a
+**new, third symptom worth naming** — the body `Status:` field here was a *multi-line* value, and
+the write replaced only its first three lines, orphaning the trailing prose ("…that held this phase
+at 6/8…") beneath the newly written one-line `Status:`. Symptom (c) is neither named corruption
+signature: no bold-field code span was garbled and no key was dropped *by that particular write*.
+It is the plain-field body writer being line-scoped against a value that is not line-scoped.
+STATE.md was restored byte-identical (`shasum` 19828ff7…) and these fields hand-edited instead.
+
+**The Phase 209 record below is RETAINED, not superseded.** Phase 209 ran ahead of 208 and its work
+is **still unmerged** on branch `phase-209-deliverable-reachability`; this Phase 208 branch forks
+from `main` and therefore does not contain it.
+
+---
 
 Phase: 209 (Deliverable Reachability) — **ALL 8 PLANS COMPLETE 2026-09-15**
 Plan: 8 of 8 complete (209-01..209-08).
