@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: executing
-last_updated: "2026-09-22T13:45:00Z"
+status: ready_to_plan
+last_updated: "2026-09-22T18:00:00Z"
 last_activity: 2026-09-22
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 44
-  completed_plans: 33
-  percent: 75
+  completed_plans: 44
+  percent: 100
 ---
 
 # Project State
@@ -1260,13 +1260,36 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 208 (Security, Report Coverage & Doc Debt) — EXECUTING, started 2026-09-22
-Plan: 0 of 6 complete. Waves: 1 = 208-01/02/03/04, 2 = 208-05, 3 = 208-06 (checkpoint, `autonomous: false`).
-Status: Executing Phase 208 on branch `phase-208-security-report-coverage-doc-debt`, forked from
+Phase: 208 (Security, Report Coverage & Doc Debt) — COMPLETE, 2026-09-22 (Tasks 1-2 of plan 06;
+Task 3 is an operator checkpoint, awaiting response — see below).
+Plan: 6 of 6 complete (208-01..208-06). Waves: 1 = 208-01/02/03/04, 2 = 208-05, 3 = 208-06
+(checkpoint, `autonomous: false`).
+Status: Ran on branch `phase-208-security-report-coverage-doc-debt`, forked from
 local `main` at `58c4ba54` (which carries two unpushed `docs(208)` planning commits that
 `origin/main` does not have — branching off `origin/main` would have silently dropped them).
-`workflow.use_worktrees=false`, so all six plans run **sequentially on the main working tree**;
-there is no parallel isolation in this run despite `parallelization: true`.
+`workflow.use_worktrees=false`, so all six plans ran **sequentially on the main working tree**;
+there was no parallel isolation in this run despite `parallelization: true`. **Not merged/pushed —
+local commits only, per this plan's absolutely-no-remote-actions constraint.**
+
+**ROADMAP criterion 2 is recorded NOT MET AS WRITTEN, in place, original text preserved** — the
+HTML leg (`UAT-88-02`) shipped in 208-02; the Playwright PDF leg (`UAT-88-03`) is re-scoped to
+Phase 207 as a costed yes/no on CI browser cost. Full record:
+`.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. This follows
+Phase 206's SC#1-at-25-of-28 precedent — never a silent shrink.
+
+**Counter note, derived not incremented (per D-16's own instruction to count real
+`*-SUMMARY.md` files rather than trust an arithmetic increment):** a live count across
+`.planning/phases/2*/` on this branch gives 203=4, 204=6, 205=7, 206=13, 208=6, 209=8 = **44**
+`*-SUMMARY.md` files, which is exactly `total_plans: 44` — so `completed_plans` is set to 44 and
+`percent` to 100. **This reads as misleadingly complete and is flagged, not silently accepted:**
+`total_phases: 7` still counts Phase 207, which has not started and has 0 plans on disk, so
+`total_plans: 44` implicitly excludes Phase 207's not-yet-known plan count. `completed_phases: 6`
+counts 203/204/205/206/208/209 — including 209, whose 8 plans are complete but **still unmerged**
+on `phase-209-deliverable-reachability` (see the retained record below). Whether an unmerged
+phase should count toward `completed_plans`/`completed_phases` is the same "narrower definition
+than disk" ambiguity 209's own note below already flagged (17 vs 22, then 23 vs 28) — this edit
+does not resolve that ambiguity, it restates it against today's numbers rather than picking a side
+silently.
 
 **`state.begin-phase` corrupted this file on 2026-09-22 and was reverted — TOOL-05 class, still
 live on this machine.** The verb was called once at phase start with a pre-image taken per
@@ -2370,6 +2393,12 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 Resolved and removed (2026-08-10): one stale `quick_task` bookkeeping row (healthcare-vertical
 merge) confirmed complete via git history and removed — see 147-04-SUMMARY.md for the commit hash
 and disposition detail.
+
+Found at Phase 208 close (2026-09-22):
+
+| Category | Item | Status |
+|----------|------|--------|
+| costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
 
