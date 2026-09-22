@@ -161,3 +161,118 @@ def test_subscores_unaffected_by_clamp():
         assert 0 <= val <= 25, f"subscore {key}={val} outside [0, 25]"
     # The aggregated score must be clamped
     assert 0 <= result["score"] <= 100
+
+
+class SubscoreIsolationTests(unittest.TestCase):
+    """COV-08 / UAT-8-04 / UAT-8-05 — assert the `hygiene` and `identity_trust`
+    subscores directly, in isolation, never inferring them from movement in
+    the overall readiness score (D-10 — that inference is the exact defect
+    COV-08 exists to remove).
+
+    D-09: each test builds its OWN minimal synthetic evidence dict via a
+    private helper below, naming only the fields its target impact term
+    reads. `_base_evidence()` (module-level, used by ReadinessScoringTests /
+    ProfileWeightTests above) is never called here and no golden fixture is
+    mutated — every evidence key this class sets is visible in the test body,
+    and every key it does NOT set defaults to 0 via `evidence.get(key, 0)` in
+    `compute_readiness_score`, making the held-fixed set auditable without
+    opening the scorer.
+
+    Evidence key names below are read live from `quirk/intelligence/scoring.py`
+    (lines ~404-508) rather than trusted from 208-PATTERNS.md, which guessed
+    several wrong (e.g. kerberos_present_count / saml_present_count /
+    adcs_present_count do not exist).
+
+    Placed after the module-level `test_subscores_unaffected_by_clamp` function
+    (rather than immediately after `ProfileWeightTests`) so this class's own
+    body is the tail of the file — this keeps the D-10 self-check
+    (`awk '/class SubscoreIsolationTests/,0' ... | grep -c 'result\\["score"\\]'`)
+    from also sweeping up unrelated, pre-existing code below it.
+    """
+
+    def _hygiene_evidence(self, plaintext_count: int) -> dict:
+        # Varies ONLY plaintext_http_count. http_on_tls_port_count and
+        # scan_error.rate are held fixed at 0 so the "Plaintext HTTP
+        # exposure" term (hygiene_plaintext_http_ratio) is the only hygiene
+        # impact ever nonzero across the two calls this test makes.
+        return {
+            "totals": {"endpoints": 10},
+            "assessable_endpoint_count": 10,
+            "plaintext_http_count": plaintext_count,
+            "http_on_tls_port_count": 0,
+            "scan_error": {"rate": 0.0},
+        }
+
+    def test_hygiene_isolat_subscore_to_plaintext_ratio(self) -> None:
+        full_budget = compute_readiness_score(self._hygiene_evidence(0))
+        self.assertIsNotNone(full_budget["subscores"]["hygiene"])
+        self.assertEqual(full_budget["subscores"]["hygiene"], 25)
+
+        at_five = compute_readiness_score(self._hygiene_evidence(5))
+        hygiene_at_five = at_five["subscores"]["hygiene"]
+        self.assertIsNotNone(hygiene_at_five)
+        # UAT-8-04 bullet 1: "< 25 when >= 1 plaintext endpoint is present".
+        self.assertLess(hygiene_at_five, 25)
+
+        at_nine = compute_readiness_score(self._hygiene_evidence(9))
+        hygiene_at_nine = at_nine["subscores"]["hygiene"]
+        self.assertIsNotNone(hygiene_at_nine)
+        # UAT-8-04 bullet 2: "decreases proportionally" — strict monotonic
+        # decrease as plaintext_count rises with endpoint_denom held at 10.
+        self.assertLess(hygiene_at_nine, hygiene_at_five)
+
+        # D-10 guard: this method reads only result["subscores"]["hygiene"],
+        # never the overall score.
+
+    def _identity_trust_evidence(self, mtls_present_count: int) -> dict:
+        # `_identity_assessed()` requires certs_observed > 0 (or a nonzero
+        # _IDENTITY_PROTOCOL_KEYS count) or the identity_trust subscore comes
+        # back None and this test would be comparing nothing.
+        #
+        # self_signed_count=1 (out of certs_observed=10) is deliberately
+        # NON-zero: it gives the identity_trust subscore headroom BELOW the
+        # per-category cap of 25 (_apply_weighted_impacts score_cap=25.0) so
+        # the mTLS bonus term (a positive impact) has room to move the score
+        # upward and produce a genuine strict inequality. Verified live: with
+        # self_signed_count omitted (0), both mtls_present_count=0 and =5
+        # clamp to identity_trust=25 and the assertGreater below would be
+        # vacuously false — that is a fixture bug in the source plan, fixed
+        # here per Rule 1 (auto-fix bug), not a deviation from D-09's intent.
+        #
+        # Every OTHER identity_trust penalty-term evidence key is
+        # DELIBERATELY OMITTED and therefore held fixed at 0 via
+        # `evidence.get(key, 0)`: expired_count, expiring_count,
+        # identity_weak_etype_count (Kerberos), saml_weak_signing_count,
+        # dnssec_weak_algo_count, smime_weak_signing_count,
+        # smime_expired_count, smime_weak_key_count,
+        # adcs_weak_template_count, adcs_misconfig_count,
+        # adcs_weak_signing_count, adcs_coverage_gap_count.
+        return {
+            "totals": {"endpoints": 10},
+            "assessable_endpoint_count": 10,
+            "certificate_observations": {
+                "certs_observed": 10,
+                "self_signed_count": 1,
+            },
+            "mtls_present_count": mtls_present_count,
+        }
+
+    def test_identity_trust_subscore_mtls_isolat_bonus(self) -> None:
+        without_mtls = compute_readiness_score(self._identity_trust_evidence(0))
+        with_mtls = compute_readiness_score(self._identity_trust_evidence(5))
+
+        subscore_without = without_mtls["subscores"]["identity_trust"]
+        subscore_with = with_mtls["subscores"]["identity_trust"]
+        # None-subscore trap: if _identity_assessed() ever returned False,
+        # the subscore would be excluded (None) and assertGreater below would
+        # raise TypeError rather than silently proving nothing — but guard
+        # explicitly so the failure mode is legible.
+        self.assertIsNotNone(subscore_without)
+        self.assertIsNotNone(subscore_with)
+
+        # UAT-8-05's own pass criterion: strictly higher with
+        # mtls_present_count > 0 than at 0, all other evidence held fixed.
+        self.assertGreater(subscore_with, subscore_without)
+
+        # D-10 guard: this method reads only result["subscores"]["identity_trust"],
+        # never the overall score.
