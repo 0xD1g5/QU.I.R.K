@@ -9,6 +9,10 @@ Covers:
   - test_invalid_project_key_rejected: project_key with injection chars or lowercase → no channel (CR-01)
   - test_empty_project_key_rejected: empty project_key → no channel (WR-01)
   - test_invalid_auth_mode_rejected: unknown auth_mode → no channel (WR-02)
+  - test_ssrf_internal_url_blocked_without_allow_internal: Covers COV-06 / UAT-104-04:
+    RFC1918 jira_url with allow_internal=False raises ValueError before JIRA() is reached
+  - test_ssrf_internal_url_permitted_with_allow_internal: Covers COV-06 / UAT-104-04:
+    RFC1918 jira_url with allow_internal=True constructs successfully
 """
 from __future__ import annotations
 
@@ -370,3 +374,63 @@ def test_invalid_auth_mode_rejected() -> None:
         assert result is not None, (
             f"Expected JiraTicketingCfg for valid auth_mode={mode!r} but got None"
         )
+
+
+# ---------------------------------------------------------------------------
+# COV-06 / UAT-104-04 — SSRF guard executed proof
+# ---------------------------------------------------------------------------
+
+
+def test_ssrf_internal_url_blocked_without_allow_internal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RFC1918 jira_url with allow_internal=False raises ValueError('SSRF blocked...')
+    BEFORE the JIRA() constructor is ever reached (D-06 blocked direction, D-07 ordering).
+
+    Covers COV-06 / UAT-104-04: proves the SSRF guard at jira.py:62 fires before any
+    outbound TCP attempt, not merely that it exists.
+    """
+    monkeypatch.setenv("QUIRK_JIRA_USER", "user@example.com")
+    monkeypatch.setenv("QUIRK_JIRA_TOKEN", "tok_abc")
+
+    cfg = _make_cfg(jira_url="https://192.168.1.5", allow_internal=False)
+
+    class _RaisingJIRA:
+        """Stands in for the real JIRA class — reaching __init__ is itself a failure."""
+
+        def __init__(self, *a, **kw):
+            raise AssertionError(
+                "JIRA() constructor reached — SSRF guard did not short-circuit"
+            )
+
+    mock_jira_module = MagicMock()
+    mock_jira_module.JIRA = _RaisingJIRA
+
+    with patch.dict("sys.modules", {"jira": mock_jira_module}):
+        from quirk.ticketing.jira import JiraChannel  # import after patch is set
+
+        with pytest.raises(ValueError, match="SSRF blocked"):
+            JiraChannel(cfg)
+
+
+def test_ssrf_internal_url_permitted_with_allow_internal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RFC1918 jira_url with allow_internal=True constructs successfully — the guard's
+    permit direction (D-06). Proves a one-direction test would leave this unproven.
+
+    Covers COV-06 / UAT-104-04.
+    """
+    monkeypatch.setenv("QUIRK_JIRA_USER", "user@example.com")
+    monkeypatch.setenv("QUIRK_JIRA_TOKEN", "tok_abc")
+
+    cfg = _make_cfg(jira_url="https://192.168.1.5", allow_internal=True)
+    client = MagicMock()
+
+    channel = _build_channel(cfg, client)
+
+    # channel._client is only ever assigned the JIRA(...) constructor's return value
+    # (jira.py:62-74) — proves construction proceeded past the guard and the mocked
+    # JIRA class was actually called (it is a MagicMock configured to return `client`).
+    assert channel is not None
+    assert channel._client is client
