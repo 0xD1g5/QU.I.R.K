@@ -4899,7 +4899,8 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Hygiene subscore < 25 when ≥ 1 plaintext HTTP endpoint exists
 - Subscore decreases proportionally to number of HTTP endpoints
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a scoring unit test isolating the hygiene subscore specifically, not the overall score, below 25 when plaintext HTTP endpoints exist, proportional to count)
+**Result:** - [x] PASS (2026-09-21 `.venv/bin/python -m pytest tests/test_intelligence_scoring.py -q -k "hygiene_isolat"` — 1 passed, `SubscoreIsolationTests::test_hygiene_isolat_subscore_to_plaintext_ratio` asserts the hygiene subscore directly, never the overall score, below 25 with `hygiene_plaintext_http_ratio` present in the evidence and red-proved by zeroing the "Plaintext HTTP exposure" term at `quirk/intelligence/scoring.py:481`)  - [ ] FAIL  - [ ] SKIP
+
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4918,7 +4919,7 @@ and a legacy device (pqc_status in {unsupported, vendor-silent, unknown}) sharin
 - Identity Trust subscore is higher when mTLS endpoint is scanned
 - mTLS bonus noted in scorecard or intelligence JSON
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a scoring unit test isolating the identity_trust subscore increase attributable to mtls_present_count alone, holding all other evidence fixed)
+**Result:** - [x] PASS (2026-09-21 `.venv/bin/python -m pytest tests/test_intelligence_scoring.py -q -k "mtls_isolat"` — 1 passed, `SubscoreIsolationTests::test_identity_trust_subscore_mtls_isolat_bonus` asserts the identity_trust subscore increase attributable to `mtls_present_count` alone, holding all other evidence fixed, and red-proved by zeroing the "mTLS enforcement signals" term at `quirk/intelligence/scoring.py:498`)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -10825,7 +10826,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Six-row decomposition table renders; values match the CLI markdown (UAT-88-01) and the dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs an HTML-template render assertion proving the six pillar subscores hygiene, modern_tls, identity_trust, agility_signals, data_at_rest, data_in_motion each render as their own /25 row with the domains_assessed/domains_total divided-by-score_divisor rollup sentence in quirk/reports/templates/report.html.j2, ~lines 499-528 as of 2026-09-13 -- drifted from the ledger's stale 409-420 citation, spot-checked against live source -- the isolation property is the actual rendered HTML output, which neither test_score_render_parity.py data-layer parity nor test_score_transparency.py markdown presence exercises)
+**Result:** - [x] PASS (2026-09-21 `.venv/bin/python -m pytest tests/test_score_decomposition_render.py -q` — 3 passed, render-output-level HTML assertions proving the six pillar subscores hygiene, modern_tls, identity_trust, agility_signals, data_at_rest, data_in_motion each render as their own `/25` row with the domains_assessed/domains_total divided-by-score_divisor rollup sentence in `quirk/reports/templates/report.html.j2` lines 499-542, red-proved by three distinct mutations — deleting the Identity `<tr>` row, corrupting `rollup_computed_score`, and corrupting `effective_domain_counts`. Presence-not-appearance limit: this asserts the six labels, budget cells, and rollup sentences are present in the rendered HTML string, not visual layout/appearance — visual fidelity remains a human-UAT concern. Wider render surface: `tests/test_score_decomposition_render.py tests/test_score_render_parity.py tests/test_score_transparency.py tests/test_html_report.py tests/test_report_branding.py` — 38 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -10841,7 +10842,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Decomposition table renders intact in the PDF; overall reconciles across PDF / HTML / dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a Playwright PDF-render assertion proving the same six pillar-subscore rows and rollup sentence documented at UAT-88-02 survive HTML-to-PDF conversion intact, no truncation or layout break -- the isolation property is PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion; no pytest coverage exercises Playwright PDF generation at all)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a Playwright PDF-render assertion proving the same six pillar-subscore rows and rollup sentence documented at UAT-88-02 survive HTML-to-PDF conversion intact, no truncation or layout break -- the isolation property is PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion; no pytest coverage exercises Playwright PDF generation at all; costed handoff to Phase 207, D-03 re-verified 2026-09-22: `render_pdf_report` already exists at `quirk/reports/html_renderer.py:1351`, `pypdf>=4.0` is already declared under the `dashboard` extras and importable in `.venv` as `pypdf==6.11.0` so PDF text extraction needs no new dependency, and the sole remaining cost is installing a Chromium browser in the `python-ci.yml` pytest job — `~/Library/Caches/ms-playwright/` is empty and no Chromium install step exists in `python-ci.yml` today — which is Phase 207's reserved operator call)
 **Date:** _____________  **Tester:** _____________
 
 
@@ -13739,7 +13740,7 @@ Cross-surface parity confirms D-10 single content pipeline.
 - `grep -c "validate_external_url" quirk/ticketing/jira.py` >= 1
 - `grep -c "allow_internal" quirk/ticketing/jira.py` >= 1
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; Pass Criteria's -k ssrf filter against tests/test_ticketing_jira.py matches 0 of 8 collected tests: test_create_issue_per_finding, test_dedup_creates_once_then_comments, test_missing_extra_graceful_skip, test_credentials_not_in_logs, test_jql_project_key_quoted, test_invalid_project_key_rejected, test_empty_project_key_rejected, test_invalid_auth_mode_rejected -- none exercise an internal/RFC1918 jira_url. No test anywhere in tests/ constructs a JiraChannel with an internal URL to prove validate_external_url raises. quirk/ticketing/jira.py wiring confirmed via grep, validate_external_url x3, allow_internal x1, but that is source inspection, not an executed test)
+**Result:** - [x] PASS (2026-09-21 `.venv/bin/python -m pytest tests/test_ticketing_jira.py -x -q -k "ssrf"` — 2 passed, 8 deselected — `test_ssrf_internal_url_blocked_without_allow_internal` and `test_ssrf_internal_url_permitted_with_allow_internal` assert both directions of the guard at `quirk/ticketing/jira.py:62` against an RFC1918 `jira_url`, red-proved to fire before the JIRA constructor is reached in the blocked-direction mutation and to permit construction when `allow_internal=True` in the permit-direction mutation; full file `tests/test_ticketing_jira.py` — 10 passed)  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
 **Notes:**
 
