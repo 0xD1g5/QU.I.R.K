@@ -131,7 +131,7 @@ gate, not the coverage, is the defect.
 
 ### Security & Report Coverage
 
-- [ ] **COV-06**: `UAT-104-04` — a test constructs a `JiraChannel` with an internal/RFC1918
+- [x] **COV-06**: `UAT-104-04` — a test constructs a `JiraChannel` with an internal/RFC1918
       `jira_url` and asserts `validate_external_url` raises. The guard is confirmed **wired** by
       source inspection in `quirk/ticketing/jira.py`, but the case's own `-k ssrf` filter matches
       **0 of 8** collected tests: today nothing anywhere proves it actually fires. Security-relevant.
@@ -140,8 +140,18 @@ gate, not the coverage, is the defect.
       (`quirk/reports/templates/report.html.j2`) is asserted at **render-output** level in HTML, and
       in the Playwright PDF. Today only data-layer parity and markdown presence are covered; the PDF
       leg has no pytest coverage of this table at all.
+      **PARTIAL after Phase 208 (2026-09-22) — deliberately left unchecked.** The HTML leg landed
+      (`tests/test_score_decomposition_render.py`, 3 tests, red-proved by three distinct mutations;
+      `UAT-88-02` now PASS). The **Playwright PDF leg did NOT land** and `UAT-88-03` remains an
+      honest GAP, costed and handed to Phase 207: `render_pdf_report()` already exists at
+      `quirk/reports/html_renderer.py:1351` and `pypdf==6.11.0` is already installed, so the sole
+      remaining cost is a Chromium install in `python-ci.yml` — note `dashboard-quality.yml` has
+      Chromium steps but runs no pytest, so the browser exists in CI just not in the job that
+      would need it. This box stays `[ ]` until that leg ships; closing it now would mark a
+      two-legged requirement complete on one leg. Tracked as ROADMAP Phase 208 criterion 2,
+      recorded NOT MET AS WRITTEN — see `208-NOT-MET-AS-WRITTEN.md`.
 
-- [ ] **COV-08**: `UAT-8-04` / `UAT-8-05` — the hygiene subscore (plaintext ratio) and the
+- [x] **COV-08**: `UAT-8-04` / `UAT-8-05` — the hygiene subscore (plaintext ratio) and the
       identity-trust subscore (mTLS bonus) are each asserted **in isolation**, holding other evidence
       fixed, rather than inferred from movement in the overall score.
 
@@ -168,12 +178,12 @@ gate, not the coverage, is the defect.
 
 ### Carried Doc Debt (from the v5.23 boundary review)
 
-- [ ] **DOC-01**: `ROADMAP.md`'s Phase 202 criterion-3 wording is corrected from per-finding
+- [x] **DOC-01**: `ROADMAP.md`'s Phase 202 criterion-3 wording is corrected from per-finding
       score-lift to the theme-level behaviour actually shipped (`score_lift` is keyed by remediation
       theme covering N findings; v5.23 D-01/D-08/D-09). Recorded as stale in STATE.md at the v5.23
       close with the correction pending.
 
-- [ ] **DOC-02**: `docs/report-interpretation.md` gains the 999.112 precondition note — LIFT-05's
+- [x] **DOC-02**: `docs/report-interpretation.md` gains the 999.112 precondition note — LIFT-05's
       four-surface numeric-equality guarantee holds only for **unmodified** report templates,
       because RPT-02's operator override is a full-file override that can drop the roadmap section
       and nothing validates its presence.
@@ -258,14 +268,14 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-03 | Phase 204 | Closed (204-01/204-02) |
 | COV-04 | Phase 206 | Pending |
 | COV-05 | Phase 207 | Pending |
-| COV-06 | Phase 208 | Pending |
-| COV-07 | Phase 208 | Pending |
-| COV-08 | Phase 208 | Pending |
+| COV-06 | Phase 208 | Complete |
+| COV-07 | Phase 208 | Partial — HTML leg done; PDF leg -> Phase 207 |
+| COV-08 | Phase 208 | Complete |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
 | GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
-| DOC-01 | Phase 208 | Pending |
-| DOC-02 | Phase 208 | Pending |
+| DOC-01 | Phase 208 | Complete |
+| DOC-02 | Phase 208 | Complete |
 | DELIV-01 | Phase 209 | Complete |
 | DELIV-02 | Phase 209 | Complete |
 

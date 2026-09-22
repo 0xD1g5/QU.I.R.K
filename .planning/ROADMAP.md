@@ -258,8 +258,11 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 - [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
 
-- [ ] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
-  gaps are covered and the two carried doc corrections land.
+- [x] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
+  gaps are covered and the two carried doc corrections land. **Completed 2026-09-22 at 4 of 5
+  success criteria MET AS WRITTEN** — criterion 2 is recorded NOT MET AS WRITTEN (HTML leg
+  shipped, Playwright PDF leg costed and handed to Phase 207). Verified `passed`;
+  see `208-VERIFICATION.md` and `208-NOT-MET-AS-WRITTEN.md`.
 - [x] **Phase 209: Deliverable Reachability** - The consulting-grade report artifacts a scan already
   writes to disk become downloadable from the dashboard.
 
@@ -494,12 +497,12 @@ corrections carried from the v5.23 boundary review land.
      override is a full-file override that can drop the roadmap section with nothing validating its
      presence. Synced to `20_Dev-Work/QUIRK/Guides/Report-Interpretation.md`.
 **Plans**: 6 plans in 3 waves
-- [ ] 208-01-PLAN.md — COV-06: prove the Jira SSRF guard fires before construction (both directions + ordering)
-- [ ] 208-02-PLAN.md — COV-07: assert the six-row decomposition table and both rollup sentences at HTML render-output level
-- [ ] 208-03-PLAN.md — COV-08: isolate the hygiene plaintext-ratio and identity-trust mTLS subscores
-- [ ] 208-04-PLAN.md — DOC-01/DOC-02: the two doc corrections plus their Obsidian vault mirrors
-- [ ] 208-05-PLAN.md — UAT dispositions, UAT-88-03 costed handoff, and the D-15 worklist regeneration
-- [ ] 208-06-PLAN.md — criterion 2 recorded NOT MET AS WRITTEN, phase note, vault syncs, hand-edited STATE.md
+- [x] 208-01-PLAN.md — COV-06: prove the Jira SSRF guard fires before construction (both directions + ordering)
+- [x] 208-02-PLAN.md — COV-07: assert the six-row decomposition table and both rollup sentences at HTML render-output level
+- [x] 208-03-PLAN.md — COV-08: isolate the hygiene plaintext-ratio and identity-trust mTLS subscores
+- [x] 208-04-PLAN.md — DOC-01/DOC-02: the two doc corrections plus their Obsidian vault mirrors
+- [x] 208-05-PLAN.md — UAT dispositions, UAT-88-03 costed handoff, and the D-15 worklist regeneration
+- [x] 208-06-PLAN.md — criterion 2 recorded NOT MET AS WRITTEN, phase note, vault syncs, hand-edited STATE.md
 
 ### Phase 209: Deliverable Reachability
 **Goal**: A dashboard-only operator can download the same report deliverables a CLI operator gets,
@@ -546,7 +549,7 @@ Plans:
 | 205. Guard Integrity | 0/? | Not started | - |
 | 206. Dashboard UI Coverage Drain | 0/? | Not started | - |
 | 207. Browser-Only Coverage Verdict | 0/? | Not started | - |
-| 208. Security, Report Coverage & Doc Debt | 0/? | Not started | - |
+| 208. Security, Report Coverage & Doc Debt | 6/6 | Complete — 4/5 criteria as written | 2026-09-22 |
 | 209. Deliverable Reachability | 6/8 | In progress | - |
 
 ## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12

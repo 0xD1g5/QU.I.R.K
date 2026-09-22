@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: executing
-last_updated: "2026-09-22T18:30:00Z"
+status: ready_to_plan
+last_updated: "2026-09-22T19:30:00Z"
 last_activity: 2026-09-22
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 44
-  completed_plans: 33
-  percent: 75
+  completed_plans: 44
+  percent: 86
 ---
 
 # Project State
@@ -1260,13 +1260,34 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 208 (Security, Report Coverage & Doc Debt) — **EXECUTING, PAUSED AT AN OPERATOR
-CHECKPOINT** (plan 208-06 task 3). NOT complete: the checkpoint is unanswered, `208-06-SUMMARY.md`
-does not exist, no `208-VERIFICATION.md` exists, and ROADMAP's Phase 208 checkbox is correctly
-still `- [ ]`.
-Plan: 5 of 6 complete (208-01..208-05). 208-06 is mid-plan, 2 of 3 tasks done.
+Phase: 208 (Security, Report Coverage & Doc Debt) — **COMPLETE 2026-09-22, at 4 of 5 ROADMAP
+success criteria MET AS WRITTEN.** The operator approved the 208-06 checkpoint; `gsd-verifier`
+returned `status: passed` (`208-VERIFICATION.md`); the full suite is green at `5189 passed,
+23 skipped, 38 deselected, 72 xfailed, 4 xpassed`, exit 0 — a node set IDENTICAL to the
+pre-phase baseline, so no regressions.
+Plan: 6 of 6 complete (208-01..208-06).
 Waves: 1 = 208-01/02/03/04, 2 = 208-05, 3 = 208-06 (checkpoint, `autonomous: false`).
-Status: Running on branch `phase-208-security-report-coverage-doc-debt`, forked from
+
+**Criterion 2 is NOT MET AS WRITTEN and is recorded as such, not silently shrunk.** It required
+the six-row decomposition table asserted at render-output level in BOTH the HTML report AND the
+Playwright PDF. The HTML leg shipped (208-02, `UAT-88-02`); the PDF leg (`UAT-88-03`) stays an
+honest GAP, costed and handed to Phase 207. Note that `208-VERIFICATION.md`'s frontmatter reads
+`score: 5/5 must-haves verified` with the caveat in a parenthetical — **read that as 4 of 5 as
+written.** A future session scanning frontmatter alone would see `5/5` and miss the partial,
+which is the exact failure mode the NOT-MET-AS-WRITTEN record exists to prevent.
+
+**`percent` is deliberately phase-based (6 of 7 = 86), NOT plan-based, and this is a change of
+metric made on purpose rather than silently.** The plan-based figure would read `44/44 = 100%`
+for an INCOMPLETE milestone: `total_plans: 44` counts only plans that exist on disk, and Phase 207
+has not started and contributes 0, so the plan-based denominator is structurally incapable of
+expressing remaining work. `completed_plans: 44` is a live `*-SUMMARY.md` disk count
+(203=4, 204=6, 205=7, 206=13, 208=6, 209=8) — it INCLUDES Phase 209's 8 plans, which remain
+**unmerged** on `phase-209-deliverable-reachability`. That inclusion is the unresolved definition
+question flagged below; it is recorded, not settled. The prior value of 33 was inherited
+unverified and used a narrower definition than the disk glob — the 33 -> 44 jump is 11, not the 6
+this phase added, so the two numbers were never measuring the same thing.
+
+Status: Ran on branch `phase-208-security-report-coverage-doc-debt`, forked from
 local `main` at `58c4ba54` (which carries two unpushed `docs(208)` planning commits that
 `origin/main` does not have — branching off `origin/main` would have silently dropped them).
 `workflow.use_worktrees=false`, so all six plans ran **sequentially on the main working tree**;
