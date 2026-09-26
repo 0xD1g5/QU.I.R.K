@@ -373,7 +373,15 @@ def assert_spa_mounted(page) -> None:
     """
     content = page.content()
 
-    # (a) React actually mounted, rather than merely serving the shell. index.html's body is
+    # (a) The unbuilt-dashboard placeholder branch (app.py:176-184) is NOT what we are looking at.
+    assert _PLACEHOLDER_SIGNATURE not in content, (
+        f"D-04 mount guard: page content contains the literal placeholder signature "
+        f"'{_PLACEHOLDER_SIGNATURE}', which is the signature of quirk/dashboard/api/app.py's "
+        "unbuilt-dashboard branch — index.html was not found on disk. A vacuous pass was "
+        "prevented: the placeholder HTML loads fine and throws nothing."
+    )
+
+    # (b) React actually mounted, rather than merely serving the shell. index.html's body is
     #     exactly `<div id="root"></div>` plus the module script tag, so an empty #root means the
     #     bundle never executed.
     root_children = page.evaluate(
@@ -387,14 +395,6 @@ def assert_spa_mounted(page) -> None:
         "any 'no console errors' assertion would have passed against an empty page. Likely "
         "cause: a stale or untracked quirk/dashboard/static bundle, or a failed /assets mount "
         "(quirk/dashboard/api/app.py:161-168)."
-    )
-
-    # (b) The unbuilt-dashboard placeholder branch (app.py:176-184) is NOT what we are looking at.
-    assert _PLACEHOLDER_SIGNATURE not in content, (
-        f"D-04 mount guard: page content contains the literal placeholder signature "
-        f"'{_PLACEHOLDER_SIGNATURE}', which is the signature of quirk/dashboard/api/app.py's "
-        "unbuilt-dashboard branch — index.html was not found on disk. A vacuous pass was "
-        "prevented: the placeholder HTML loads fine and throws nothing."
     )
 
     # (c) Not the login form. QU.I.R.K. alone cannot distinguish these — LoginPage renders the
