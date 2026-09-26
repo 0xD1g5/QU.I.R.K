@@ -18,7 +18,8 @@ Helpers:
     ``chromium_page()``          — function-scoped context manager yielding a fresh Playwright page.
     ``seed_dashboard_db(path)``  — file-backed SQLite with scan data and *no identity data*.
     ``serve_dashboard(path)``    — context manager yielding a real ``http://127.0.0.1:<port>`` origin.
-    ``assert_spa_mounted(page)`` — D-04's MANDATORY vacuous-pass guard.
+    ``assert_spa_mounted(page)`` — D-04's MANDATORY vacuous-pass guard (dashboard shell routes).
+    ``assert_print_view_mounted(page)`` — the same guard for the chrome-free ``/print`` route.
     ``collect_console_errors(p)` — attaches listeners, returns a mutable error list.
 """
 from __future__ import annotations
@@ -58,6 +59,13 @@ _SIDEBAR_NAV = 'nav[aria-label="Dashboard navigation"]'
 _LOGIN_FORM = 'form[aria-label="Dashboard login"]'
 # Present on both the shell sidebar and LoginPage, so NOT sufficient alone — see D-04 below.
 _WORDMARK = "QU.I.R.K."
+
+# /print is chrome-free (App.tsx:80-82 returns <PrintPage/> above the shell), so it has no sidebar
+# nav and no `aside` wordmark. These are its own bundle-only mount signals — see
+# assert_print_view_mounted(). `body[data-ready="true"]` is the selector POST /api/export/pdf itself
+# waits on (quirk/dashboard/api/routes/pdf.py:87).
+_PRINT_READY = 'body[data-ready="true"]'
+_PRINT_HEADING = "QU.I.R.K. — Scan Results"
 
 # Identity findings are derived (not stored) — quirk/dashboard/api/routes/scan.py:419
 # `_derive_identity_findings` reads these CryptoEndpoint columns plus a KERBEROS/SAML/DNSSEC
