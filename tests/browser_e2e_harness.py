@@ -15,6 +15,8 @@ pytest nodes inside the required ``Linux Full Suite`` job, and an **erroring** n
 required job even under a ``CI-EXEMPT:`` declaration (D-10). A skipping node does not.
 
 Helpers:
+    ``skip_unless_chromium_installed()`` — skip BEFORE expensive setup; call it first in any
+                                   module-scoped fixture, where a later failure would be an ERROR.
     ``chromium_page()``          — function-scoped context manager yielding a fresh Playwright page.
     ``seed_dashboard_db(path)``  — file-backed SQLite with scan data and *no identity data*.
     ``serve_dashboard(path)``    — context manager yielding a real ``http://127.0.0.1:<port>`` origin.
@@ -81,6 +83,53 @@ _IDENTITY_PROTOCOLS = ("KERBEROS", "SAML", "DNSSEC")
 # ---------------------------------------------------------------------------
 # 1. Chromium
 # ---------------------------------------------------------------------------
+
+def skip_unless_chromium_installed() -> None:
+    """Skip the caller when the Chromium binary is absent — BEFORE any expensive setup runs.
+
+    W-10 (Phase 207). ``chromium_page()``'s skip lives in the *test body*, which is too late for
+    anything a module-scoped fixture does first. ``dashboard_origin`` starts a real uvicorn during
+    fixture **setup**, and ``serve_dashboard`` correctly calls ``pytest.fail`` when that server
+    never becomes ready — but a failure raised in fixture setup is reported by pytest as an
+    **ERROR**, and D-10's premise is that an ERROR reddens the required ``Linux Full Suite`` check
+    regardless of any ``CI-EXEMPT:`` disposition, while a SKIP does not.
+
+    Calling this first makes the whole server-start path **unreachable** in the required job rather
+    than merely unlikely to fail there. That is deliberately not the same fix as softening
+    ``serve_dashboard``'s ``pytest.fail`` into a skip: in the Browser E2E job, where Chromium is
+    installed on purpose, a dead server is a real defect and must stay loud. Both halves are
+    pinned by ``tests/test_browser_e2e_skip_contract.py``.
+
+    The "is Chromium here" test is ``os.path.exists(executable_path)`` — the same discriminator
+    ``chromium_page()`` already uses below to tell the expected missing-browser skip from a
+    transient launch failure. One notion of installed-ness, not two.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:  # pragma: no cover - exercised only on minimal installs
+        pytest.skip(
+            f"playwright is not importable ({exc}) — install the `dashboard` extras. "
+            "Expected in minimal installs; Phase 207 Tier-2 executes in the Browser E2E job."
+        )
+
+    try:
+        with sync_playwright() as p:
+            executable = p.chromium.executable_path
+            installed = os.path.exists(executable)
+    except Exception as exc:  # pragma: no cover - resolving a path is not expected to throw
+        pytest.skip(
+            f"Could not resolve the Chromium executable path ({type(exc).__name__}: {exc}); "
+            "treating Chromium as unavailable. Phase 207 Tier-2 executes for real in the "
+            "Browser E2E job (D-01/D-02)."
+        )
+
+    if not installed:
+        pytest.skip(
+            f"Chromium is not installed (looked for {executable}) — the expected state in "
+            "Linux Full Suite. Remedy: `python -m playwright install chromium`. Phase 207 Tier-2 "
+            "executes for real in the Browser E2E job (D-01/D-02)."
+        )
+
 
 @contextlib.contextmanager
 def chromium_page():

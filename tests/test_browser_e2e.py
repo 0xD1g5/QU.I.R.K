@@ -32,6 +32,7 @@ from tests.browser_e2e_harness import (
     diagnosing_mount_failure,
     seed_dashboard_db,
     serve_dashboard,
+    skip_unless_chromium_installed,
 )
 
 # UAT-7-32's route list, VERBATIM from docs/UAT-SERIES.md:4210 and in the order the case lists them.
@@ -77,7 +78,15 @@ def dashboard_origin(tmp_path_factory):
     MODULE-SCOPED on purpose. Sharing the *server process* across tests in this module is fine and
     desirable — the TRIAGE-149 Cluster-2 hazard is a shared *Playwright* context, not a shared
     server. Each test still gets its own browser via ``chromium_page()``.
+
+    W-10: the Chromium precheck comes FIRST, before any server is started. A failure raised during
+    module-scoped fixture setup is reported by pytest as an ERROR, and D-10 forbids an ERROR in the
+    required ``Linux Full Suite`` job where Chromium is absent. Skipping here makes
+    ``serve_dashboard``'s ``pytest.fail`` unreachable in that job, while leaving it loud in the
+    Browser E2E job — both halves pinned by ``tests/test_browser_e2e_skip_contract.py``.
     """
+    skip_unless_chromium_installed()
+
     tmp = tmp_path_factory.mktemp("browser_e2e")
     db_path = tmp / "quirk-e2e.db"
     seed_dashboard_db(db_path)
