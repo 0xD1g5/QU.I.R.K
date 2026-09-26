@@ -416,12 +416,43 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
         status = page.get_by_text("PDF saved to", exact=False).first
         status.wait_for(state="visible", timeout=15_000)
         status_text = (status.inner_text() or "").strip()
-        assert "failed" not in status_text.lower(), (
-            f"UAT-7-17: an error message is displayed after the click: {status_text!r}"
-        )
-        assert page.get_by_text("PDF export failed", exact=False).count() == 0, (
-            "UAT-7-17: the handler's failure message is on screen after a click that did produce "
-            "a download — investigate rather than ignoring it."
+
+        # ###################################################################
+        # W-01: THE TWO ASSERTIONS THAT USED TO SIT HERE COULD NOT FAIL.
+        #
+        # They were `"failed" not in status_text.lower()` and
+        # `get_by_text("PDF export failed").count() == 0`. `pdfMessage` is a single useState
+        # string (executive.tsx:190) rendered in exactly one span (executive.tsx:462-463), and
+        # the handler writes EITHER the success string (executive.tsx:321) or a failure string
+        # (:328-332), never both. The `wait_for` above has already blocked until the success
+        # string is on screen, so both checks interrogated a state the state machine had
+        # already guaranteed. Worse, both were ineffective even if reachable: the dominant real
+        # failure text is `coerceErrorDetail(body)`, which for the DASHBOARD-012 path reads
+        # "Playwright not installed for PDF export. Fix: Run pip install playwright && ..." and
+        # contains neither "failed" nor "PDF export failed".
+        #
+        # Replaced with an EXACT equality check on the status text, cross-referenced against the
+        # filename of the artifact actually downloaded. That can fail: against a changed
+        # directory prefix, a truncated or appended message, a status naming a different file
+        # than the one that downloaded, or any failure string.
+        #
+        # Deliberately NOT added: an "absence of DASHBOARD-012 anywhere on the page" assertion.
+        # In the success state reached here it would be one more assertion that cannot fail.
+        # The DASHBOARD-012 surface is instead interrogated where it can genuinely fire — the
+        # `expect_download` timeout handler above folds the on-screen status text into its
+        # failure message and names that error code explicitly.
+        #
+        # D-05 is respected: this asserts a filename and a fixed prefix. No score value, no
+        # CRITICAL count, no certificate count.
+        # ###################################################################
+        expected_status = f"PDF saved to ~/Downloads/{download.suggested_filename}"
+        assert status_text == expected_status, (
+            f"UAT-7-17: the on-screen status after a successful export should be exactly "
+            f"{expected_status!r} — naming the same file that was downloaded — but the status "
+            f"span reads {status_text!r}. Either the handler's success message changed shape, or "
+            f"it is reporting a different artifact than the one the browser saved, or a failure "
+            f"detail is being rendered into the same span "
+            f"(executive.tsx:328-332 writes failures there too)."
         )
 
         assert errors == [], (
