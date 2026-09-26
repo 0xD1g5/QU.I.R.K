@@ -247,9 +247,16 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
     # and recorded. Do not add such an assertion.
     ###########################################################################
     """
-    import pypdf
-
     with chromium_page() as page:
+        # Both imports live INSIDE the chromium_page() block, not at module level and not above it.
+        # `playwright` and `pypdf` are extras-only dependencies (pyproject.toml `dashboard`
+        # extras), so a module-level import breaks collection on a minimal install, and an import
+        # placed above this line would raise ImportError *before* chromium_page() gets the chance
+        # to skip — turning the intended SKIP into an ERROR, which reddens the required
+        # Linux Full Suite job even under a CI-EXEMPT declaration (D-10). Order is load-bearing.
+        import pypdf
+        from playwright.sync_api import TimeoutError as PwTimeoutError
+
         errors = collect_console_errors(page)
 
         page.goto(dashboard_origin)
@@ -265,9 +272,44 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
 
         # The server side renders the PDF through its own Playwright instance against /print, so
         # allow well past the UAT case's 10-30s budget before declaring the download absent.
-        with page.expect_download(timeout=120_000) as download_info:
-            export_button.click()
-        download = download_info.value
+        #
+        # The timeout is caught and re-raised as a diagnosable failure ON PURPOSE. A bare
+        # `TimeoutError: waiting for event "download"` says only that nothing downloaded — it does
+        # not say why, and the *why* is on screen: when POST /api/export/pdf returns non-200 the
+        # handler renders its failure detail into the same status span it uses for success and
+        # never creates the blob, so no download event can fire. Observed live during 207-03: one
+        # run burned the full 120s and reported only the opaque Playwright error, forcing a re-run
+        # to learn anything. The re-raise below folds the on-screen status text and every collected
+        # console/page/API error into the failure message so one red run is enough.
+        #
+        # NOTE: this is a diagnostic wrapper, NOT a softened assertion — the test still fails.
+        try:
+            with page.expect_download(timeout=120_000) as download_info:
+                export_button.click()
+            download = download_info.value
+        except PwTimeoutError as exc:
+            status_texts = [
+                text
+                for text in (
+                    (span.inner_text() or "").strip()
+                    for span in page.locator("span.text-sm").all()
+                )
+                if text
+            ]
+            raise AssertionError(
+                "UAT-7-17: clicking Export PDF fired no browser download within 120s "
+                f"({type(exc).__name__}). This is almost always a server-side export failure "
+                "rather than a download-interception problem: the handler only creates the blob "
+                "on a 200 response.\n"
+                f"  On-screen status text: {status_texts}\n"
+                f"  Collected console/page/API errors ({len(errors)}): {errors}\n"
+                "  If the status text names DASHBOARD-012 ('Playwright not installed for PDF "
+                "export'), read it with suspicion — that bucket also absorbs "
+                "connection-refused and timeout against the /print render target "
+                "(quirk/dashboard/api/routes/pdf.py:109-120), so it fires even with Playwright "
+                "installed and working. QUIRK_SERVE_PORT is already set by serve_dashboard; do "
+                "not re-litigate that."
+            ) from exc
 
         assert download.suggested_filename.startswith("quirk-report-"), (
             "UAT-7-17: the download's suggested filename should carry the handler's "
