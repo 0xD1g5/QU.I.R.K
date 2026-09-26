@@ -63,6 +63,11 @@ _ROUTE_HEADINGS = {
 _IDENTITY_PROTOCOL_LABELS = ("Kerberos", "SAML/OIDC", "DNSSEC")
 _IDENTITY_EMPTY_STATE = "No identity protocol findings in this scan"
 
+# A4 in PostScript points, and the tolerance Chromium's own `format="A4"` output needs: the observed
+# media box is 595.92 x 842.88, ~1pt over nominal 595 x 842 (Chromium rounds up from 210x297mm).
+_A4_POINTS = (595.0, 842.0)
+_A4_TOLERANCE_POINTS = 6.0
+
 
 @pytest.fixture(scope="module")
 def dashboard_origin(tmp_path_factory):
@@ -219,4 +224,107 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
             "UAT-7-32 requires ZERO console errors, zero page errors and zero failing /api/ "
             f"responses across all {len(_UAT_7_32_ROUTES)} routes (and the CBOM tab switch). "
             f"Collected {len(keyed_errors)}:\n  " + "\n  ".join(keyed_errors)
+        )
+
+
+def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
+    """UAT-7-17 — clicking Export PDF yields a real, structurally valid A4 PDF.
+
+    ###########################################################################
+    # D-05 ASSERTION CEILING — READ BEFORE "STRENGTHENING" THIS TEST.
+    #
+    # This test asserts STRUCTURAL PDF validity ONLY: a download fired, the bytes are a real PDF,
+    # it has pages, the page geometry is A4, the filename matches, and no error message rendered.
+    #
+    # It deliberately asserts NO score value, NO CRITICAL finding count and NO certificate count.
+    # The Export PDF button drives the *dashboard* pipeline, which is known to emit a different
+    # overall score and a different CRITICAL count than the consulting-grade report for the SAME
+    # scan — an open P1, reproduced twice, tracked at
+    # .planning/todos/pending/cli-dashboard-score-divergence-same-scan.md.
+    #
+    # Asserting any of those numbers would hard-code the value that P1's fix is supposed to change,
+    # and this test would then fight the fix when it lands. The apparent "weakness" is deliberate
+    # and recorded. Do not add such an assertion.
+    ###########################################################################
+    """
+    import pypdf
+
+    with chromium_page() as page:
+        errors = collect_console_errors(page)
+
+        page.goto(dashboard_origin)
+        page.wait_for_load_state("networkidle")
+        assert_spa_mounted(page)
+
+        export_button = page.get_by_role("button", name="Export PDF").first
+        export_button.wait_for(state="visible", timeout=10_000)
+        assert export_button.is_enabled(), (
+            "UAT-7-17: the Export PDF button is disabled before any click — it is only disabled "
+            "while an export is already in flight (pdfExporting)."
+        )
+
+        # The server side renders the PDF through its own Playwright instance against /print, so
+        # allow well past the UAT case's 10-30s budget before declaring the download absent.
+        with page.expect_download(timeout=120_000) as download_info:
+            export_button.click()
+        download = download_info.value
+
+        assert download.suggested_filename.startswith("quirk-report-"), (
+            "UAT-7-17: the download's suggested filename should carry the handler's "
+            f"`quirk-report-<date>.pdf` shape; observed {download.suggested_filename!r}."
+        )
+        assert download.suggested_filename.endswith(".pdf"), (
+            f"UAT-7-17: expected a .pdf suffix; observed {download.suggested_filename!r}."
+        )
+
+        saved = tmp_path / "uat-7-17-export.pdf"
+        download.save_as(saved)
+
+        assert saved.exists(), f"UAT-7-17: the download was not saved to {saved}."
+        size = saved.stat().st_size
+        assert size > 0, f"UAT-7-17: the downloaded PDF is empty (0 bytes) at {saved}."
+        assert saved.read_bytes()[:5] == b"%PDF-", (
+            "UAT-7-17: the downloaded file does not begin with the %PDF- magic bytes; first 16 "
+            f"bytes were {saved.read_bytes()[:16]!r}."
+        )
+
+        reader = pypdf.PdfReader(str(saved))
+        assert len(reader.pages) >= 1, (
+            f"UAT-7-17: the downloaded PDF parsed but has {len(reader.pages)} pages."
+        )
+
+        media_box = reader.pages[0].mediabox
+        width = float(media_box.width)
+        height = float(media_box.height)
+        portrait = (
+            abs(width - _A4_POINTS[0]) <= _A4_TOLERANCE_POINTS
+            and abs(height - _A4_POINTS[1]) <= _A4_TOLERANCE_POINTS
+        )
+        landscape = (
+            abs(width - _A4_POINTS[1]) <= _A4_TOLERANCE_POINTS
+            and abs(height - _A4_POINTS[0]) <= _A4_TOLERANCE_POINTS
+        )
+        assert portrait or landscape, (
+            "UAT-7-17 requires A4 page geometry. Observed media box "
+            f"{width:.2f} x {height:.2f} points; A4 is {_A4_POINTS[0]} x {_A4_POINTS[1]} "
+            f"(either orientation) within {_A4_TOLERANCE_POINTS} points."
+        )
+
+        # No error toast / error message. The handler writes BOTH its success text and its failure
+        # detail into the same status span, so assert the success shape positively rather than
+        # merely asserting the absence of a substring.
+        status = page.get_by_text("PDF saved to", exact=False).first
+        status.wait_for(state="visible", timeout=15_000)
+        status_text = (status.inner_text() or "").strip()
+        assert "failed" not in status_text.lower(), (
+            f"UAT-7-17: an error message is displayed after the click: {status_text!r}"
+        )
+        assert page.get_by_text("PDF export failed", exact=False).count() == 0, (
+            "UAT-7-17: the handler's failure message is on screen after a click that did produce "
+            "a download — investigate rather than ignoring it."
+        )
+
+        assert errors == [], (
+            "UAT-7-17: the Export PDF flow produced console/page/API errors:\n  "
+            + "\n  ".join(errors)
         )
