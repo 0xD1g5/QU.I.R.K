@@ -560,6 +560,28 @@ def assert_print_view_mounted(page) -> None:
         "serve_dashboard's AUTH PASSTHROUGH comment."
     )
 
+    # W-06: WAIT for the readiness flag; do not merely sample it. Callers reach this guard after
+    # waiting for `h1` visible, and on /print those two conditions are NOT the same moment:
+    #   * the `<h1>` renders when `!loading && !error && data` (print.tsx:402-415, :444);
+    #   * `data-ready` is set by a useEffect gated on
+    #     `data && !loading && !qrammLoading && !qrammError` (print.tsx:392-400) — a STRICTLY LATER
+    #     condition, from a second independent hook (useQRAMMPrintData), plus one more React commit.
+    # So h1-visible does not imply data-ready, and a non-waiting `count()` can sample a flag that is
+    # legitimately not set *yet* and report a mount failure that never happened. Probed 0/12 on a
+    # quiet machine — and a loaded CI runner is exactly where that margin disappears, which is the
+    # machine Wave 4 puts this on.
+    #
+    # Deliberately NOT applied to assert_spa_mounted's `count()`/`is_visible()` reads: there the
+    # shell renders *before* the route outlet, so h1-visible already implies the sidebar committed.
+    # That ordering runs the other way, and adding waits would buy nothing.
+    #
+    # The wait cannot mask a real failure. If the flag never appears the wait simply exhausts its
+    # budget and the named assertion below still fires with the real diagnosis.
+    try:
+        page.wait_for_selector(_PRINT_READY, state="attached", timeout=15_000)
+    except Exception:  # noqa: BLE001 - fall through to the named assertion below
+        pass
+
     assert page.locator(_PRINT_READY).count() > 0, (
         f"D-04 mount guard (/print): {_PRINT_READY} is absent — the print view never signalled "
         "readiness. This is the same selector POST /api/export/pdf waits on before rendering, so "

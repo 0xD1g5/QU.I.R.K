@@ -83,7 +83,10 @@ _ROUTE_HEADINGS = {
 _SEEDED_CERT_HOSTS = ("web01.seed.local", "web02.seed.local")
 _CERTIFICATES_EMPTY_STATE = "No TLS certificates discovered in this scan."
 
-# The three identity protocol cards (src/dashboard/src/pages/identity.tsx:33).
+# The three identity protocol DISPLAY labels, from PROTOCOL_LABELS at
+# src/dashboard/src/pages/identity.tsx:55-58. (I-02: this previously cited :33, which is
+# `const PROTOCOLS = ["KERBEROS", "SAML", "DNSSEC"]` — the uppercase keys, not these
+# labels. The assertions were always correct; the citation pointed at the wrong line.)
 _IDENTITY_PROTOCOL_LABELS = ("Kerberos", "SAML/OIDC", "DNSSEC")
 _IDENTITY_EMPTY_STATE = "No identity protocol findings in this scan"
 
@@ -310,8 +313,13 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
                 page.get_by_role("button", name="Zoom in").wait_for(
                     state="visible", timeout=10_000
                 )
+                # I-05: `visible`, not `attached` — an attached zero-size canvas would satisfy
+                # `attached` while showing nothing, and a cytoscape mount that produced no
+                # geometry is exactly the failure this wait is here to catch. `visible` requires a
+                # non-empty bounding box, and it WAITS for one rather than failing on a transient
+                # zero-size frame, so it is strictly stronger at no flake cost.
                 page.locator('div[role="tabpanel"] canvas').first.wait_for(
-                    state="attached", timeout=10_000
+                    state="visible", timeout=10_000
                 )
 
                 page.get_by_role("tab", name="Table").click()
@@ -329,6 +337,24 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
             "UAT-7-32 requires ZERO console errors, zero page errors and zero failing /api/ "
             f"responses across all {len(_UAT_7_32_ROUTES)} routes (and the CBOM tab switch). "
             f"Collected {len(keyed_errors)}:\n  " + "\n  ".join(keyed_errors)
+        )
+
+        # W-08: `keyed_errors` is built by slicing `errors[mark:]` at the END of each iteration, so
+        # anything delivered after the final route's slice — a late `pageerror`, or a trailing
+        # `>=400` /api/ response from the print view's own fetches — lands in `errors` and is never
+        # keyed. Asserting only on `keyed_errors` would therefore make a claim NARROWER than the
+        # unfiltered one this test exists to make, while reading exactly like the full claim.
+        #
+        # Asserted as a count reconciliation rather than by replacing the keyed assertion above:
+        # the per-route keying is what makes a red run diagnosable without a re-run, and this
+        # closes the tail without giving that up. The tail entries are unkeyed by construction —
+        # they belong to no route's slice — so they are reported raw.
+        tail = errors[len(keyed_errors):]
+        assert not tail, (
+            "UAT-7-32: console errors arrived AFTER the last route's slice was keyed, so the "
+            "per-route assertion above could not see them. The case's claim is unfiltered and "
+            f"these count against it. Collected {len(tail)} trailing:\n  "
+            + "\n  ".join(str(entry) for entry in tail)
         )
 
 
