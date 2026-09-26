@@ -289,6 +289,18 @@ def serve_dashboard(db_path, config_path=None):
     # ./quirk-output/quirk.db (threat T-207-06).
     child_env["QUIRK_DB_PATH"] = str(db_path)
 
+    # QUIRK_SERVE_PORT — REQUIRED, not optional. `quirk serve` sets it
+    # (quirk/dashboard/server.py:161); a bare `python -m uvicorn` does not, and this harness must
+    # reproduce the real serve environment. POST /api/export/pdf renders
+    # http://127.0.0.1:{QUIRK_SERVE_PORT or 8512}/print with its own Playwright instance
+    # (quirk/dashboard/api/routes/pdf.py:48). Without this line the export route dials the
+    # hardcoded 8512 default, nothing is listening there, and the connection-refused is mapped into
+    # the DASHBOARD-012 bucket — whose message reads "Playwright not installed for PDF export"
+    # even though Playwright is installed and working. That misleading 503 is what UAT-7-17's
+    # download interception hits: no download event ever fires, and the failure looks like a
+    # Playwright problem rather than a port problem. Found live during 207-03 Task 2.
+    child_env["QUIRK_SERVE_PORT"] = str(port)
+
     # AUTH PASSTHROUGH — READ THIS BEFORE CHANGING EITHER LINE BELOW. This is the single most
     # likely cause of a confusing Tier-2 failure. src/dashboard/src/context/AuthProvider.tsx
     # probes GET /api/scans on mount: 200 -> authenticated; 401 -> unauthenticated -> LoginPage
@@ -420,6 +432,63 @@ def assert_spa_mounted(page) -> None:
         f"D-04 mount guard: the sidebar wordmark '{_WORDMARK}' is not visible. A vacuous pass "
         "was prevented: the built bundle renders it at "
         "src/dashboard/src/components/sidebar.tsx:87 and nothing else does."
+    )
+
+
+def assert_print_view_mounted(page) -> None:
+    """D-04's vacuous-pass guard for the chrome-free ``/print`` route.
+
+    ``assert_spa_mounted()`` cannot be used on ``/print``: that route is intercepted **above** the
+    dashboard shell (``src/dashboard/src/App.tsx:80-82`` returns ``<PrintPage />`` before ``Sidebar``
+    or ``Routes`` are reached, with an in-code comment stating the omission is deliberate — a second
+    registration inside the shell would render the sidebar on the print view). So there is no
+    ``nav[aria-label="Dashboard navigation"]`` and no ``aside`` wordmark to assert, by design.
+
+    This is the same guard pointed at the print view's own bundle-only artifacts, so ``/print`` is
+    not the one route in the UAT-7-32 walk that can pass vacuously:
+      (a) the unbuilt-dashboard placeholder branch is not what we are looking at;
+      (b) React mounted (``#root`` has children);
+      (c) this is not ``LoginPage``;
+      (d) ``body[data-ready="true"]`` — the print view's own readiness flag, which only the built
+          bundle sets. ``POST /api/export/pdf`` waits on this exact selector
+          (``quirk/dashboard/api/routes/pdf.py:87``) before calling ``page.pdf()``;
+      (e) the print report heading is visible.
+    """
+    content = page.content()
+
+    assert _PLACEHOLDER_SIGNATURE not in content, (
+        f"D-04 mount guard (/print): page content contains the literal placeholder signature "
+        f"'{_PLACEHOLDER_SIGNATURE}' — quirk/dashboard/api/app.py's unbuilt-dashboard branch. "
+        "A vacuous pass was prevented: the placeholder HTML loads fine and throws nothing."
+    )
+
+    root_children = page.evaluate(
+        "() => { const r = document.getElementById('root');"
+        " return r ? r.children.length : -1; }"
+    )
+    assert root_children > 0, (
+        f"D-04 mount guard (/print): #root has {root_children} child elements (-1 means #root is "
+        "absent entirely), so React never mounted — no application JavaScript is on this page and "
+        "a 'zero console errors' assertion would pass vacuously."
+    )
+
+    assert page.locator(_LOGIN_FORM).count() == 0, (
+        "D-04 mount guard (/print): the login form is present, so AuthProvider's GET /api/scans "
+        "probe returned 401 and the SPA rendered LoginPage instead of the print view. See "
+        "serve_dashboard's AUTH PASSTHROUGH comment."
+    )
+
+    assert page.locator(_PRINT_READY).count() > 0, (
+        f"D-04 mount guard (/print): {_PRINT_READY} is absent — the print view never signalled "
+        "readiness. This is the same selector POST /api/export/pdf waits on before rendering, so "
+        "its absence means the print view did not finish rendering its data."
+    )
+
+    heading = page.locator("h1").first
+    assert heading.is_visible() and heading.inner_text().strip() == _PRINT_HEADING, (
+        f"D-04 mount guard (/print): expected the print report heading {_PRINT_HEADING!r} to be "
+        f"visible; observed {heading.inner_text().strip()!r}. Only the built bundle renders it "
+        "(src/dashboard/src/pages/print.tsx:444)."
     )
 
 
