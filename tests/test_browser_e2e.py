@@ -48,9 +48,24 @@ _UAT_7_32_ROUTES = (
 )
 
 # The `<h1>` each route's own page component renders. Asserting these is what makes the route walk
-# non-vacuous per route: a router outlet that rendered nothing, or a page that fell into its
-# no-data/error branch, produces a different heading (e.g. `/` renders "Executive Summary" only in
-# its `!data.score` branch — "QU.I.R.K. — Scan Results" means the scan payload actually loaded).
+# non-vacuous per route: a router outlet that rendered nothing, a page that never mounted, or an
+# error branch that renders no `h1` at all fails here on every route.
+#
+# W-09 — WHAT THE HEADING DOES *NOT* PROVE. An earlier version of this comment claimed a page that
+# "fell into its no-data/error branch produces a different heading". Verified against source, that
+# is true for only two of the seven:
+#   /          discriminates — executive.tsx:351 "Executive Summary" (no `data.score`) vs
+#              :380 "QU.I.R.K. — Scan Results" (payload loaded).
+#   /roadmap   discriminates — roadmap.tsx:241 "Remediation Roadmap" (empty) vs :252
+#              "Migration Roadmap" (loaded).
+#   /certificates  does NOT — certificates.tsx:42 and :54 render the IDENTICAL
+#              "Certificate Inventory" h1 in the empty and populated branches. Reproduced: with the
+#              `certificates` array emptied in the /api/scan/latest response and nothing else
+#              changed, this heading assertion still passes. Closed below by a positive content
+#              assertion; do not remove it and rely on the heading.
+#   /findings, /identity, /cbom, /print  single h1, so no discrimination is available. /identity is
+#              mitigated by its positive empty-state legs below, /cbom by its tab-panel assertions.
+# Read this before writing any disposition that claims what UAT-7-32 proves per route.
 _ROUTE_HEADINGS = {
     "/": "QU.I.R.K. — Scan Results",
     "/findings": "Findings",
@@ -60,6 +75,13 @@ _ROUTE_HEADINGS = {
     "/roadmap": "Migration Roadmap",
     "/print": "QU.I.R.K. — Scan Results",
 }
+
+# W-09's closure for /certificates — the only route whose heading discriminates nothing and that
+# had no other positive assertion. These literals are written out by hand rather than imported from
+# `seed_dashboard_db`: if both sides of the assertion read the same constant, a seeder that stopped
+# writing certificates would silently keep the test green.
+_SEEDED_CERT_HOSTS = ("web01.seed.local", "web02.seed.local")
+_CERTIFICATES_EMPTY_STATE = "No TLS certificates discovered in this scan."
 
 # The three identity protocol cards (src/dashboard/src/pages/identity.tsx:33).
 _IDENTITY_PROTOCOL_LABELS = ("Kerberos", "SAML/OIDC", "DNSSEC")
@@ -239,6 +261,37 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
                     f"read 'Not Scanned'. Expected at least {len(_IDENTITY_PROTOCOL_LABELS)} such "
                     f"badges, found {not_scanned.count()}. (Asserted as >= rather than == so "
                     "adding a fourth identity protocol does not spuriously redden this case.)"
+                )
+
+            if route == "/certificates":
+                # ###############################################################
+                # W-09: THE HEADING ABOVE PROVES NOTHING ON THIS ROUTE.
+                #
+                # certificates.tsx renders the identical `Certificate Inventory` h1 in both its
+                # empty branch (:42) and its populated branch (:54). Reproduced mechanically: with
+                # the `certificates` array emptied in the /api/scan/latest response and nothing
+                # else changed, the heading assertion above still passed, the EmptyStateCard
+                # rendered, and both seeded hosts were absent. So without the assertions below,
+                # UAT-7-32 would report a clean PASS for a /certificates page that silently
+                # stopped loading the data the fixture seeds.
+                #
+                # Asserted POSITIVELY (the seeded rows are on screen), with the empty-state
+                # absence second — the absence alone would also hold for a blank region.
+                # ###############################################################
+                for host in _SEEDED_CERT_HOSTS:
+                    cell = page.get_by_text(host, exact=False)
+                    assert cell.count() > 0 and cell.first.is_visible(), (
+                        f"UAT-7-32: /certificates must render the seeded certificate row for "
+                        f"{host!r}, and it is not visible. The heading assertion above CANNOT "
+                        "catch this — certificates.tsx renders the same h1 whether or not any "
+                        "certificates loaded. Either the seed stopped producing cert-bearing "
+                        "endpoints or the page fell into its empty branch."
+                    )
+                empty_state = page.get_by_text(_CERTIFICATES_EMPTY_STATE, exact=False)
+                assert empty_state.count() == 0, (
+                    "UAT-7-32: /certificates rendered its EmptyStateCard "
+                    f"({_CERTIFICATES_EMPTY_STATE!r}) while the fixture seeds two cert-bearing "
+                    "endpoints — the certificate payload did not reach the page."
                 )
 
             if route == "/cbom":
