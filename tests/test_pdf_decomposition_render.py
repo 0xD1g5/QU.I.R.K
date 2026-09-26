@@ -71,15 +71,32 @@ _FULL_SCORE_RAW = {
     "scoring_version": SCORING_VERSION,
 }
 
-# The six pillar row labels as they appear in the rendered decomposition table.
-_PILLAR_LABELS = (
-    "Hygiene",
-    "Modern TLS",
-    "Identity",
-    "Agility",
-    "Data at Rest",
-    "Data in Motion",
+# The six decomposition rows as the PDF text layer actually renders them: the row label,
+# then that pillar's subscore, then the `/25` per-pillar budget — e.g. `Hygiene 20 /25`.
+#
+# THE VALUES HERE ARE HAND-TYPED AND MUST STAY THAT WAY. They are deliberately NOT read
+# out of `_FULL_SCORE_RAW`: deriving the expectation from the same dict that is fed to the
+# renderer is self-referential and would pass against any mutation that changed both
+# sides at once. The fixture-sum guard in the test body catches a fixture edit that
+# strands these literals.
+#
+# WHY THE VALUES ARE ASSERTED AT ALL, AND NOT JUST THE LABELS (Phase 207 review W-02):
+# the six row labels are STATIC TEMPLATE TEXT. They render whether or not the matching
+# subscore exists — proved by mutation: deleting `subscores["data_at_rest"]` and
+# re-extracting the text layer still yields `Data at Rest`, so a label-only assertion
+# cannot detect a lost, zeroed or em-dashed row. Only the label-adjacent VALUE pair can.
+_PILLAR_ROWS = (
+    ("Hygiene", 20),
+    ("Modern TLS", 18),
+    ("Identity", 15),
+    ("Agility", 15),
+    ("Data at Rest", 10),
+    ("Data in Motion", 21),
 )
+
+# The six pillar row labels as they appear in the rendered decomposition table. Derived
+# from the hand-typed pairs above (still a literal in this module, never the fixture).
+_PILLAR_LABELS = tuple(label for label, _ in _PILLAR_ROWS)
 
 
 def _make_minimal_cfg(outdir: str):
@@ -154,8 +171,18 @@ def test_uat_88_03_decomposition_survives_pdf_render(tmp_path):
     fail loudly here rather than quietly weakening these assertions.
 
     The table straddles a PDF page break in the real render (the "Category Score Budget"
-    header repeats, with no row content lost), so asserting all six labels individually
-    across the joined multi-page text is also the no-truncation proof.
+    header repeats between the `Modern TLS` and `Identity` rows), so every row assertion
+    below runs against the JOINED multi-page text.
+
+    WHAT THE LABEL LEG DOES AND DOES NOT PROVE (corrected per Phase 207 review W-02). An
+    earlier revision of this docstring claimed that asserting all six labels individually
+    across the joined text "is also the no-truncation proof". It is not. The six labels are
+    static template text: they render whether or not the matching subscore exists, which
+    was established by mutation — with `subscores["data_at_rest"]` deleted, `Data at Rest`
+    is STILL in the extracted text layer. The label leg therefore proves only that no row's
+    *label* was lost or truncated at the page break. The no-truncation-of-DATA proof is the
+    per-row label-adjacent VALUE leg below (`_PILLAR_ROWS`), which is what fails when a row
+    goes missing, zero or em-dashed. Do not weaken it back to labels alone.
     """
     # Guard: if someone edits the fixture, this fails loudly instead of silently
     # invalidating the hand-computed literals below.
@@ -169,26 +196,47 @@ def test_uat_88_03_decomposition_survives_pdf_render(tmp_path):
 
     full_text = _extract_pdf_text(tmp_path)
 
+    # Normalise whitespace runs (the PDF text layer inserts line breaks at page/column
+    # boundaries) before any assertion that spans more than one token. Done ONCE here, and
+    # used by both the per-row leg and the rollup-sentence leg below.
+    normalised = re.sub(r"\s+", " ", full_text)
+
     # Section heading survived the render.
     assert "Score Decomposition" in full_text, (
         "Missing 'Score Decomposition' section heading in extracted PDF text"
     )
 
     # Each of the six pillar labels, asserted individually so a failure names the lost row.
+    # NOTE: the labels are static template text (see the docstring) — this leg proves the
+    # label survived the page break, NOT that the row carries data. That is the next leg.
     for label in _PILLAR_LABELS:
         assert label in full_text, (
             f"Missing decomposition row label in extracted PDF text: {label!r} "
             f"(row lost, or truncated at the table's page break)"
         )
 
+    # Each of the six pillar SUBSCORE VALUES, asserted as a label-adjacent pair so a lost,
+    # zeroed or em-dashed row fails a NAMED leg here rather than only showing up two legs
+    # later in the rollup arithmetic. Expected strings are built from the hand-typed
+    # literals in `_PILLAR_ROWS`, never from `_FULL_SCORE_RAW`.
+    #
+    # `/25` is included because it is the per-pillar budget the template renders right
+    # after the value; requiring the full `<label> <value> /25` triple is what makes this
+    # positional rather than a bare "the digit 20 appears somewhere in a 7-page document".
+    for label, value in _PILLAR_ROWS:
+        expected_row = f"{label} {value} /25"
+        assert expected_row in normalised, (
+            f"Missing decomposition row VALUE in extracted PDF text: expected the "
+            f"label-adjacent triple {expected_row!r}. The row label itself is static "
+            f"template text and asserting it alone cannot catch this, so if the label leg "
+            f"above passed and this failed, the row rendered WITHOUT its subscore (lost, "
+            f"zeroed, or em-dashed) — or the value changed."
+        )
+
     # Hand-computed, literal integers -- NOT read from _FULL_SCORE_RAW.
     raw_sum = 20 + 18 + 15 + 15 + 10 + 21  # == 99
     divisor = 1.5
     expected_rollup = round(raw_sum / divisor)  # == 66
-
-    # Normalise whitespace runs (the PDF text layer inserts line breaks at page/column
-    # boundaries) before the full-sentence assertion.
-    normalised = re.sub(r"\s+", " ", full_text)
 
     # Component tokens asserted separately FIRST, so a Chromium text-layer whitespace
     # change degrades to a precise failure rather than one opaque full-string mismatch.
