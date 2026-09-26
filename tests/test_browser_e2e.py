@@ -134,6 +134,26 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
             # interval — several of these pages fetch on mount.
             page.wait_for_load_state("networkidle")
 
+            # WAIT FOR THE ROUTE'S OWN CONTENT *BEFORE* ASSERTING THE MOUNT GUARD, NOT AFTER.
+            # `networkidle` does not imply React has committed a render — it means no in-flight
+            # requests, which on a fast local origin can be true while the bundle is still
+            # executing. Asserting the guard first would race React's first paint and the `#root`
+            # leg could fire with 0 children, a FALSE failure claiming the bundle never mounted.
+            # This ordering costs nothing and weakens no assertion: if the element never appears
+            # the wait raises, and if it appears the guard still has to pass.
+            #
+            # HONEST PROVENANCE: this ordering was written in response to an intermittent red
+            # observed during 207-03 (2 of 7 runs), but that failure's text was never captured and
+            # this race was NOT confirmed to be its cause — a 42-route-load probe reading
+            # `#root.children.length` immediately after `networkidle` found zero empty-root hits.
+            # The likelier cause was external: another actor was moving the Playwright browser
+            # cache aside in this same working tree during that window (it produced two spurious
+            # "Executable doesn't exist" skips here while the cache was demonstrably intact before
+            # and after). So treat this as a defensive ordering, not a diagnosed fix, and if this
+            # test ever goes intermittently red again, CAPTURE THE FAILURE TEXT before theorising.
+            heading = page.locator("h1" if route == "/print" else "main h1").first
+            heading.wait_for(state="visible", timeout=15_000)
+
             # D-04's vacuous-pass guard on EVERY route, not just the first. A route that silently
             # degraded to the placeholder branch or to LoginPage must fail here rather than pass by
             # having no JavaScript loaded to throw.
@@ -145,8 +165,6 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
             else:
                 assert_spa_mounted(page)
 
-            heading = page.locator("h1" if route == "/print" else "main h1").first
-            heading.wait_for(state="visible", timeout=10_000)
             observed_heading = (heading.inner_text() or "").strip()
             assert observed_heading == _ROUTE_HEADINGS[route], (
                 f"UAT-7-32: route {route} did not render its own page component — expected the "
