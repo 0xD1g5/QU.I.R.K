@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-26T18:58:43.331Z",
+  "timestamp": "2026-09-26T21:30:00.000Z",
   "phase": "207",
   "phase_name": "Browser-Only Coverage Verdict",
   "phase_dir": ".planning/phases/207-browser-only-coverage-verdict",
@@ -32,6 +32,12 @@
       "name": "207-03.5 corrective wave: 7 of 19 review findings fixed",
       "status": "done",
       "commit": "d034b555"
+    },
+    {
+      "id": "3.6",
+      "name": "207-03.6 blocking constraints: W-10 skip-never-error precheck + W-09 /certificates discrimination",
+      "status": "done",
+      "commit": "98f00b04"
     }
   ],
   "remaining_tasks": [
@@ -53,17 +59,17 @@
   ],
   "blockers": [
     {
-      "description": "W-10 OPEN: serve_dashboard's pytest.fail is in a module-scoped fixture, so a server that will not start produces an ERROR, not a skip. In the required Linux Full Suite job Chromium is absent but the server fixture still runs, and D-10's contract there is skip-never-error. Fix BEFORE Wave 4 wires CI or the required check can redden for an environmental reason.",
-      "type": "technical",
-      "workaround": "Convert the pytest.fail to a pytest.skip with an accurate reason, or move server startup inside the guarded test body. tests/browser_e2e_harness.py:385-389"
+      "description": "W-10 CLOSED (commit e063e4f0). dashboard_origin now calls skip_unless_chromium_installed() first, so serve_dashboard's pytest.fail is unreachable where Chromium is absent; it is deliberately NOT softened, so a dead server stays loud in the Browser E2E job. Both halves pinned by tests/test_browser_e2e_skip_contract.py, which reproduced the ERROR before the fix.",
+      "type": "resolved",
+      "workaround": "None needed. Re-verify with: PLAYWRIGHT_BROWSERS_PATH=<empty dir> pytest tests/test_browser_e2e.py -m '' -> expect skipped, never error."
     },
     {
-      "description": "W-09 OPEN: only 2 of 7 route-heading assertions discriminate a loaded page from its empty/degraded branch. /certificates renders an identical 'Certificate Inventory' h1 in both branches and nothing asserts the seeded certs rendered. This BOUNDS what a UAT-7-32 PASS may claim.",
-      "type": "technical",
-      "workaround": "Add one positive content assertion on /certificates and correct the over-claiming comment at tests/test_browser_e2e.py:48-51. Read before writing Wave 5's disposition."
+      "description": "W-09 CLOSED (commit 98f00b04). /certificates now asserts both seeded hosts visible plus EmptyStateCard absent; the _ROUTE_HEADINGS comment now names per route what the heading does and does not prove (2 of 7 discriminate). Reproduced first by emptying the certificates array in /api/scan/latest: the heading assertion still passed.",
+      "type": "resolved",
+      "workaround": "Wave 5's UAT-7-32 disposition may now claim the seeded certificate rows rendered. It still may NOT claim discrimination on /findings, /identity, /cbom, /print beyond their own positive legs."
     },
     {
-      "description": "W-06, W-08, I-02..I-08 OPEN - not defects in the code, but unreviewed by the corrective wave because the orchestrator's fix brief listed only 7 of 19 findings. Scoping omission, not a judgement that they are fine.",
+      "description": "W-06, W-08, I-02..I-08 STILL OPEN - unreviewed because the 207-03.5 fix brief listed only 7 of 19 findings. Scoping omission, not a judgement that they are fine.",
       "type": "technical",
       "workaround": "Read 207-REVIEW.md and the 207-03.5 addendum; triage the remainder before phase close."
     }
@@ -108,6 +114,6 @@
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Fix W-10 (tests/browser_e2e_harness.py:385-389 - pytest.fail in module-scoped fixture must not ERROR in the required job), then W-09's /certificates assertion, THEN execute 207-04.",
-  "context_notes": "Waves 1-3.5 are solid and independently re-verified by the orchestrator: 4 nodes collect and pass 3/3 consecutively (~9-10s, variance <0.15s), both gate legs behave (pass with Chromium, skip cleanly without), all 25 assertions are capable of failing, D-05 and D-10 hold, tree clean, no orphaned processes. The remaining waves mutate GATED artifacts (python-ci.yml, docs/UAT-SERIES.md, the disposition ledger), so errors get more expensive from here - which is why the open findings should be closed first. Session ran 16 commits. One orchestrator error is recorded in the anti-patterns table and must be read before dispatching any subagent."
+  "next_action": "Triage the remaining open findings (W-06, W-08, I-02..I-08) against 207-REVIEW.md, then execute 207-04-PLAN.md. W-10 and W-09 are CLOSED and no longer gate Wave 4.",
+  "context_notes": "Waves 1-3.5 are solid and independently re-verified by the orchestrator: 4 nodes collect and pass 3/3 consecutively (~9-10s, variance <0.15s), both gate legs behave (pass with Chromium, skip cleanly without), all 25 assertions are capable of failing, D-05 and D-10 hold, tree clean, no orphaned processes. The remaining waves mutate GATED artifacts (python-ci.yml, docs/UAT-SERIES.md, the disposition ledger), so errors get more expensive from here - which is why the open findings should be closed first. Session ran 16 commits. One orchestrator error is recorded in the anti-patterns table and must be read before dispatching any subagent. UPDATE 2026-09-26 (resumed session): the two blocking constraints are closed and each was reproduced mechanically BEFORE being fixed, not argued from the code. Verification in both CI job shapes: Chromium present -> 6 passed (4 Tier-2 nodes + 2 contract legs, 15.1s); Chromium absent -> 1 passed, 5 skipped, ZERO errors (3.1s). The new contract test EXECUTES in the required job rather than skipping there, so it adds required-job coverage of D-10 itself."
 }
