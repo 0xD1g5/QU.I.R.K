@@ -113,12 +113,37 @@ def chromium_page():
             browser = p.chromium.launch()
         except Exception as exc:  # Playwright Error / OSError / RuntimeError all land here.
             # Never let this propagate: an ERROR reddens the required Linux Full Suite job even
-            # under a CI-EXEMPT declaration (D-10), while a SKIP does not.
+            # under a CI-EXEMPT declaration (D-10), while a SKIP does not. That breadth is
+            # load-bearing and must NOT be narrowed.
+            #
+            # But breadth has a cost, observed live during 207-03: a *transient* launch failure on
+            # a machine where Chromium IS installed becomes a skip that is byte-identical to the
+            # intended "no Chromium here" skip. In the Browser E2E job (where Chromium is
+            # installed on purpose) that reads as green-with-no-coverage — the exact shape
+            # "a skip is not a pass" exists to catch, made invisible. Observed once in 8
+            # consecutive local runs and not reproduced in the following 8.
+            #
+            # So the skip stays a skip, but it now reports whether the executable was actually on
+            # disk. `NOT installed` = the expected Linux-Full-Suite skip. `IS present` = a
+            # transient launch failure that must be investigated, not read as expected.
+            try:
+                exe = p.chromium.executable_path
+                present = os.path.exists(exe)
+            except Exception:  # pragma: no cover - executable_path is not itself expected to throw
+                exe, present = "<unresolvable>", False
+            verdict = (
+                f"Chromium executable IS present at {exe} — this skip is therefore a TRANSIENT "
+                "launch failure, NOT the expected missing-browser skip. Investigate it; do not "
+                "read it as expected non-coverage."
+                if present
+                else f"Chromium executable is NOT installed (looked for {exe}) — this is the "
+                "expected state in Linux Full Suite."
+            )
             pytest.skip(
-                "Chromium browser binary not available — cannot launch headless Chromium "
+                "Cannot launch headless Chromium "
                 f"({type(exc).__name__}: {exc}). Remedy: `python -m playwright install chromium`. "
-                "This is the expected state in Linux Full Suite; Phase 207 Tier-2 executes for "
-                "real in the Browser E2E job (D-01/D-02)."
+                f"{verdict} Phase 207 Tier-2 executes for real in the Browser E2E job "
+                "(D-01/D-02)."
             )
         try:
             context = browser.new_context(viewport=_VIEWPORT)
