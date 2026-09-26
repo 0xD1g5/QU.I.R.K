@@ -29,6 +29,7 @@ from tests.browser_e2e_harness import (
     assert_spa_mounted,
     chromium_page,
     collect_console_errors,
+    diagnosing_mount_failure,
     seed_dashboard_db,
     serve_dashboard,
 )
@@ -92,10 +93,18 @@ def test_uat_7_01_spa_mounts_without_blank_screen(dashboard_origin):
 
         page.goto(dashboard_origin)
 
-        # UAT-7-01's own stated budget is "loads within 5 seconds".
-        page.get_by_text("QU.I.R.K.", exact=True).first.wait_for(
-            state="visible", timeout=5000
-        )
+        # UAT-7-01's own stated budget is "loads within 5 seconds". The 5s figure is the
+        # case's, so it is NOT widened here; the wrapper below changes only what a timeout
+        # REPORTS, never how long it waits.
+        #
+        # W-04: both states D-04 exists to catch make this wordmark never appear — the
+        # placeholder branch renders `QU.I.R.K. Dashboard`, which `exact=True` correctly
+        # refuses to match, and an unmounted bundle renders nothing at all. Without the
+        # wrapper both surface as an opaque 5s TimeoutError instead of their named cause.
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.get_by_text("QU.I.R.K.", exact=True).first.wait_for(
+                state="visible", timeout=5000
+            )
 
         # D-04: the mandatory vacuous-pass guard, before trusting anything else on this page.
         assert_spa_mounted(page)
@@ -142,6 +151,21 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
             # This ordering costs nothing and weakens no assertion: if the element never appears
             # the wait raises, and if it appears the guard still has to pass.
             #
+            # BUT THE ORDERING IS NOT FREE, and `0eddf3ba`'s claim that "this weakens nothing"
+            # was true of STRENGTH and false of DIAGNOSIS (Phase 207 review W-04). The heading
+            # locator on the six shell routes is `main h1`, and BOTH states D-04 exists to catch
+            # make it never appear:
+            #   (a) `index.html` missing -> app.py's placeholder branch (app.py:177-183) renders
+            #       no `<main>` at all;
+            #   (b) `/assets` unmounted / bundle 404s -> `#root` stays empty, no heading is
+            #       rendered anywhere.
+            # So on six of seven routes each one degraded from its named D-04 diagnosis to an
+            # opaque 15s Playwright TimeoutError. `diagnosing_mount_failure` restores the named
+            # diagnosis WITHOUT reverting the ordering: the wait is unchanged and still runs
+            # first, and on timeout the guard runs inside the handler so the failure names the
+            # placeholder branch / unmounted bundle / login form. If the guard passes, the
+            # timeout is re-raised — it is then the honest finding.
+            #
             # HONEST PROVENANCE: this ordering was written in response to an intermittent red
             # observed during 207-03 (2 of 7 runs), but that failure's text was never captured and
             # this race was NOT confirmed to be its cause — a 42-route-load probe reading
@@ -151,19 +175,20 @@ def test_uat_7_32_zero_console_errors_all_routes(dashboard_origin):
             # "Executable doesn't exist" skips here while the cache was demonstrably intact before
             # and after). So treat this as a defensive ordering, not a diagnosed fix, and if this
             # test ever goes intermittently red again, CAPTURE THE FAILURE TEXT before theorising.
+            # /print is chrome-free by design (App.tsx:80-82) — no sidebar nav exists to assert,
+            # so the guard's print-view variant is used there. Same four checks, plus the print
+            # view's own `body[data-ready="true"]` flag. Resolved BEFORE the wait so the timeout
+            # handler can report the right route's diagnosis.
+            guard = assert_print_view_mounted if route == "/print" else assert_spa_mounted
+
             heading = page.locator("h1" if route == "/print" else "main h1").first
-            heading.wait_for(state="visible", timeout=15_000)
+            with diagnosing_mount_failure(page, guard=guard):
+                heading.wait_for(state="visible", timeout=15_000)
 
             # D-04's vacuous-pass guard on EVERY route, not just the first. A route that silently
             # degraded to the placeholder branch or to LoginPage must fail here rather than pass by
             # having no JavaScript loaded to throw.
-            if route == "/print":
-                # /print is chrome-free by design (App.tsx:80-82) — no sidebar nav exists to
-                # assert, so the guard's print-view variant is used. Same four checks, plus the
-                # print view's own `body[data-ready="true"]` flag.
-                assert_print_view_mounted(page)
-            else:
-                assert_spa_mounted(page)
+            guard(page)
 
             observed_heading = (heading.inner_text() or "").strip()
             assert observed_heading == _ROUTE_HEADINGS[route], (
@@ -279,6 +304,21 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
 
         page.goto(dashboard_origin)
         page.wait_for_load_state("networkidle")
+
+        # W-05: WAIT FOR THE ROUTE'S OWN CONTENT BEFORE THE MOUNT GUARD. `networkidle` means no
+        # in-flight requests; it does NOT mean React has committed a render, and on a fast
+        # loopback origin both are true at once. Every leg of `assert_spa_mounted` is a
+        # NON-waiting read (`page.content()`, `page.evaluate()`, `locator.count()`,
+        # `locator.is_visible()`), so there is nothing to absorb a late commit and the `#root`
+        # leg can fire with 0 children — a FALSE failure claiming the bundle never mounted.
+        #
+        # `0eddf3ba` fixed exactly this shape in test_uat_7_32 and left this second call site
+        # untouched. test_uat_7_01 is safe only by accident: its wordmark wait implies a commit.
+        # The `diagnosing_mount_failure` wrapper is what keeps the added wait from swallowing
+        # D-04's named diagnosis into an opaque timeout — see its docstring.
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+
         assert_spa_mounted(page)
 
         export_button = page.get_by_role("button", name="Export PDF").first

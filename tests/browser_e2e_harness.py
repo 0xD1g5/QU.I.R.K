@@ -525,6 +525,48 @@ def assert_print_view_mounted(page) -> None:
     )
 
 
+@contextlib.contextmanager
+def diagnosing_mount_failure(page, guard=None):
+    """Convert an opaque Playwright ``TimeoutError`` from a content wait into D-04's NAMED
+    mount diagnosis, without weakening the wait.
+
+    WHY THIS EXISTS (Phase 207 review W-04). Every Tier-2 test waits on some route-specific
+    content — a heading, the wordmark — *before* asserting the D-04 mount guard, because
+    ``networkidle`` means "no in-flight requests", not "React has committed a render", and
+    asserting the guard first races first paint (the ``#root`` leg can fire with 0 children,
+    a FALSE failure claiming the bundle never mounted).
+
+    That ordering is correct, but on its own it has a cost: the two states D-04 exists to
+    catch BOTH make the awaited content never appear, so both surface as a 15-second
+    ``TimeoutError: waiting for locator("main h1")`` instead of their named cause:
+
+      (a) ``index.html`` missing -> ``quirk/dashboard/api/app.py``'s placeholder branch,
+          which renders no ``<main>`` at all, so ``main h1`` can never match;
+      (b) ``/assets`` not mounted / bundle 404s -> ``#root`` stays empty, so no route
+          heading is ever rendered.
+
+    Diagnosis is D-04's entire stated purpose ("turns that into a loud, **named** failure").
+    So the wait stays exactly as strong as it was, and on timeout the guard is run inside
+    the handler: if the page is in a state the guard can name, the test fails with that
+    named ``AssertionError`` instead of the timeout. If the guard PASSES — the SPA really did
+    mount and the awaited content genuinely never appeared — the original timeout is
+    re-raised unchanged, because then the timeout IS the honest finding.
+
+    Nothing here can convert a failure into a pass: both paths raise.
+    """
+    from playwright.sync_api import TimeoutError as PwTimeoutError
+
+    if guard is None:
+        guard = assert_spa_mounted
+    try:
+        yield
+    except PwTimeoutError:
+        # Raises AssertionError with the specific D-04 cause if there is one to name.
+        guard(page)
+        # The guard found nothing wrong, so the content wait's own timeout is the finding.
+        raise
+
+
 def collect_console_errors(page) -> list[str]:
     """Attach listeners and return a mutable list that accumulates error-level page problems.
 
