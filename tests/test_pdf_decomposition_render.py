@@ -10,9 +10,13 @@ no HTML markup, where the HTML source carries `&divide;` inside `<strong>` tags.
 port assertions between the two files verbatim.
 
 **This test requires a Chromium browser binary.** `render_pdf_report()` degrades
-gracefully to `False` when Playwright is not importable or the browser cannot launch
-(`quirk/reports/html_renderer.py:1351-1394`), so this module SKIPS cleanly in the
-required `Linux Full Suite` CI job, where Chromium is deliberately absent. It executes
+gracefully to `False` rather than raising -- it catches PlaywrightError /
+PlaywrightTimeoutError / OSError / RuntimeError from *any* source
+(`quirk/reports/html_renderer.py:1386-1391`), a missing browser binary being only the
+most common one -- so this module SKIPS cleanly in the required `Linux Full Suite` CI
+job, where Chromium is deliberately absent. See `_render_or_skip`: because that one
+return value covers several causes, the skip reason states the ambiguity and resolves
+whether a Chromium binary is actually on disk rather than asserting a cause. It executes
 for real only in the non-gating Browser E2E job added by Phase 207 Plan 04, per D-01 /
 D-02: the browser leg lives in its own job so the documented TRIAGE-149 order-dependent
 flake class cannot redden the check every PR must pass.
@@ -113,25 +117,88 @@ def _make_minimal_cfg(outdir: str):
     )
 
 
-def _render_or_skip(html_path: str, pdf_path: str) -> None:
-    """Render through render_pdf_report; skip if the Chromium binary is unavailable.
+def _chromium_verdict() -> str:
+    """Best-effort: report whether a Chromium binary is actually on disk here.
 
-    Mirrors `tests/test_pdf_metadata_constants.py:47-56` exactly. A `False` return means
-    Playwright is not importable or the browser binary is missing / cannot launch --
-    `render_pdf_report` catches PlaywrightError / TimeoutError / OSError / RuntimeError
-    internally and degrades to `False` rather than raising. Converting that to a skip
-    (never an error) is load-bearing: the citation guard treats an ERROR as fatal even
-    under a `CI-EXEMPT:` declaration, so an escaping exception here would redden the
-    required `Linux Full Suite` job regardless of how the disposition is annotated.
+    Mirrors the pattern `cf8c1224` added to `browser_e2e_harness.chromium_page()`. NEVER
+    RAISES -- every failure path returns a string, because this function is only ever
+    called on the way into a `pytest.skip` and an exception escaping it would convert that
+    intended SKIP into an ERROR (D-10).
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            exe = p.chromium.executable_path
+            present = os.path.exists(exe)
+    except Exception as exc:  # pragma: no cover - resolution is not itself expected to fail
+        return (
+            f"Could not resolve the Chromium executable path ({type(exc).__name__}: {exc}), "
+            "so this skip cannot say whether a browser is installed -- playwright itself may "
+            "not be importable, which is also an expected state on a minimal install."
+        )
+    if present:
+        return (
+            f"Chromium executable IS present at {exe}, so a MISSING BROWSER IS NOT THE "
+            "EXPLANATION here. Investigate this as a real render failure; do NOT read it as "
+            "expected non-coverage."
+        )
+    return (
+        f"Chromium executable is NOT installed (looked for {exe}) -- this is the expected "
+        "state in Linux Full Suite."
+    )
+
+
+def _render_or_skip(html_path: str, pdf_path: str) -> None:
+    """Render through render_pdf_report; skip if it degraded instead of producing a PDF.
+
+    Converting that degradation to a skip (never an error) is load-bearing: the citation
+    guard treats an ERROR as fatal even under a `CI-EXEMPT:` declaration, so an escaping
+    exception here would redden the required `Linux Full Suite` job regardless of how the
+    disposition is annotated. That contract is why the `except` in `_chromium_verdict` is
+    deliberately bare.
+
+    WHAT A `False` RETURN DOES AND DOES NOT TELL US (corrected per Phase 207 review W-03).
+    An earlier revision of this skip reason asserted a single cause -- "Chromium browser
+    binary not available". That is the *expected* cause in `Linux Full Suite`, but it is
+    not what the return value means: `render_pdf_report` catches
+    `(PlaywrightError, PlaywrightTimeoutError, OSError, RuntimeError)` from ANY source and
+    returns `False` (`quirk/reports/html_renderer.py:1386-1391`), so a template render
+    failure, a page-load timeout or a disk error all land in the same bucket. Naming one
+    cause in the reason string would send a future reader of a Browser E2E skip -- where
+    Chromium is installed on purpose -- looking for a browser that is right there. So the
+    reason now states the ambiguity and appends a resolved verdict on whether the binary
+    is actually on disk.
     """
     result = render_pdf_report(html_path, pdf_path)
     if result is False:
         pytest.skip(
-            "render_pdf_report returned False - Chromium browser binary not available "
-            "(Playwright runtime missing or cannot launch). This is the expected state "
-            "in Linux Full Suite; UAT-88-03 executes in the Browser E2E job (D-01/D-02)."
+            "render_pdf_report() degraded to False, so no PDF was produced and UAT-88-03 "
+            "cannot be asserted in this run. The return value does NOT identify a cause: "
+            "render_pdf_report catches PlaywrightError / PlaywrightTimeoutError / OSError / "
+            "RuntimeError from any source (quirk/reports/html_renderer.py:1386-1391), so a "
+            "missing Chromium binary, a template render failure, a page-load timeout and a "
+            f"disk error are indistinguishable here. {_chromium_verdict()} The expected "
+            "cause in Linux Full Suite is the missing binary; UAT-88-03 executes for real "
+            "in the Browser E2E job (D-01/D-02)."
         )
-    assert result is True
+
+    # ARTIFACT-LEVEL check, replacing an earlier `assert result is True` that could not
+    # fail (Phase 207 review I-01): `render_pdf_report` returns only True or False and the
+    # False branch has already skipped, so the old assertion had no reachable failing
+    # state. These two CAN fail -- they catch a renderer that reports success without
+    # leaving a usable file on disk, and they name that condition instead of letting it
+    # surface as an opaque pypdf parse error in the caller.
+    assert os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 0, (
+        f"render_pdf_report returned {result!r} (not False, so this is not the "
+        f"missing-browser skip path) but left no non-empty PDF at {pdf_path!r}."
+    )
+    with open(pdf_path, "rb") as fh:
+        magic = fh.read(5)
+    assert magic == b"%PDF-", (
+        f"render_pdf_report returned {result!r} but the file at {pdf_path!r} does not "
+        f"begin with the %PDF- magic bytes; first 5 bytes were {magic!r}."
+    )
 
 
 def _extract_pdf_text(tmp_path) -> str:
