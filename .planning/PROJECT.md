@@ -1,6 +1,16 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-13)
+## Current State (updated 2026-09-22)
+
+**Phase 208 complete 2026-09-22 — 4 of 5 success criteria met as written.** COV-06 (Jira SSRF
+guard proved to fire before construction), COV-08 (hygiene and identity-trust subscores asserted in
+isolation), DOC-01 and DOC-02 all closed. **COV-07 is PARTIAL and deliberately left open**: the
+six-row decomposition table is now asserted at render-output level in HTML, but the Playwright PDF
+leg is an honest GAP costed and handed to Phase 207 — so ROADMAP criterion 2 is recorded NOT MET AS
+WRITTEN rather than shrunk to fit what shipped. Open GAP count 51 -> 47. Phase 207 remains the only
+unstarted phase in v5.24; Phase 209 is complete but still unmerged on its own branch.
+
+
 
 **v5.24 UAT Coverage Drain — OPENED 2026-09-13.** Ops/integrity cycle, following four
 capability-leaning milestones. Anchor: write the missing tests behind the honest UAT GAPs and make

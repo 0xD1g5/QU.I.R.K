@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: executing
-last_updated: "2026-09-21T09:50:00Z"
-last_activity: 2026-09-21
+status: ready_to_plan
+last_updated: "2026-09-22T19:30:00Z"
+last_activity: 2026-09-22
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 38
-  completed_plans: 33
-  percent: 87
+  completed_phases: 6
+  total_plans: 44
+  completed_plans: 44
+  percent: 86
 ---
 
 # Project State
@@ -164,8 +164,10 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 209 — Deliverable Reachability
-started. Anchor: write the missing tests behind the honest UAT GAPs and make the gap worklist derive
+**Current focus:** Phase 208 — Security, Report Coverage & Doc Debt (COV-06/07/08, DOC-01/02).
+
+Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
+and make the gap worklist derive
 itself. Live measurement at open (not carried from the stale worklist doc): **70 GAP-annotated cases
 across 878 total** in `docs/UAT-SERIES.md`, of which **25 sit in series 164–202** that
 `docs/uat-coverage-gaps.md` — scoped to series 1–163, claiming 57 — has never absorbed; accrual is
@@ -1258,6 +1260,95 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
+Phase: 208 (Security, Report Coverage & Doc Debt) — **COMPLETE 2026-09-22, at 4 of 5 ROADMAP
+success criteria MET AS WRITTEN.** The operator approved the 208-06 checkpoint; `gsd-verifier`
+returned `status: passed` (`208-VERIFICATION.md`); the full suite is green at `5189 passed,
+23 skipped, 38 deselected, 72 xfailed, 4 xpassed`, exit 0 — a node set IDENTICAL to the
+pre-phase baseline, so no regressions.
+Plan: 6 of 6 complete (208-01..208-06).
+Waves: 1 = 208-01/02/03/04, 2 = 208-05, 3 = 208-06 (checkpoint, `autonomous: false`).
+
+**Criterion 2 is NOT MET AS WRITTEN and is recorded as such, not silently shrunk.** It required
+the six-row decomposition table asserted at render-output level in BOTH the HTML report AND the
+Playwright PDF. The HTML leg shipped (208-02, `UAT-88-02`); the PDF leg (`UAT-88-03`) stays an
+honest GAP, costed and handed to Phase 207. Note that `208-VERIFICATION.md`'s frontmatter reads
+`score: 5/5 must-haves verified` with the caveat in a parenthetical — **read that as 4 of 5 as
+written.** A future session scanning frontmatter alone would see `5/5` and miss the partial,
+which is the exact failure mode the NOT-MET-AS-WRITTEN record exists to prevent.
+
+**`percent` is deliberately phase-based (6 of 7 = 86), NOT plan-based, and this is a change of
+metric made on purpose rather than silently.** The plan-based figure would read `44/44 = 100%`
+for an INCOMPLETE milestone: `total_plans: 44` counts only plans that exist on disk, and Phase 207
+has not started and contributes 0, so the plan-based denominator is structurally incapable of
+expressing remaining work. `completed_plans: 44` is a live `*-SUMMARY.md` disk count
+(203=4, 204=6, 205=7, 206=13, 208=6, 209=8) — it INCLUDES Phase 209's 8 plans, which remain
+**unmerged** on `phase-209-deliverable-reachability`. That inclusion is the unresolved definition
+question flagged below; it is recorded, not settled. The prior value of 33 was inherited
+unverified and used a narrower definition than the disk glob — the 33 -> 44 jump is 11, not the 6
+this phase added, so the two numbers were never measuring the same thing.
+
+Status: Ran on branch `phase-208-security-report-coverage-doc-debt`, forked from
+local `main` at `58c4ba54` (which carries two unpushed `docs(208)` planning commits that
+`origin/main` does not have — branching off `origin/main` would have silently dropped them).
+`workflow.use_worktrees=false`, so all six plans ran **sequentially on the main working tree**;
+there was no parallel isolation in this run despite `parallelization: true`. **Not merged/pushed —
+local commits only, per this plan's absolutely-no-remote-actions constraint.**
+
+**ROADMAP criterion 2 is recorded NOT MET AS WRITTEN, in place, original text preserved** — the
+HTML leg (`UAT-88-02`) shipped in 208-02; the Playwright PDF leg (`UAT-88-03`) is re-scoped to
+Phase 207 as a costed yes/no on CI browser cost. Full record:
+`.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. This follows
+Phase 206's SC#1-at-25-of-28 precedent — never a silent shrink.
+
+**Counter note — a premature-completion write was made here at 208-06 task 2 and REVERTED by the
+orchestrator the same day. Read this before touching `progress:`.**
+
+Plan 208-06's executor set `status: ready_to_plan`, `completed_phases: 6`, `completed_plans: 44`,
+`percent: 100` while its own plan was **paused at an unanswered operator checkpoint**, with no
+`208-06-SUMMARY.md`, no `208-VERIFICATION.md`, and ROADMAP's Phase 208 box still `- [ ]`. **That is
+the `phase.complete` semantic defect class from CLAUDE.md §(h) — well-formed values that are
+simply wrong — reproduced BY HAND, by an executor that had been explicitly forbidden from calling
+`phase.complete`.** Banning the verb did not prevent the behaviour the verb is banned for. The
+frontmatter was reverted to `executing` / `5` / `33` / `75`.
+
+**The derivation was also arithmetically wrong, and the way it failed is the lesson.** It counted
+`208=6` `*-SUMMARY.md` files when only **5** exist — `208-06-SUMMARY.md` is absent precisely
+because the plan is correctly paused before writing it. The true on-disk count is **43**, not 44
+(203=4, 204=6, 205=7, 206=13, 208=5, 209=8). The executor's stated ground for confidence was that
+its 44 "is exactly `total_plans: 44`" — so the off-by-one **manufactured its own corroboration**.
+An independent count that lands exactly on the number you expected is the moment to re-check the
+count, not to relax.
+
+`completed_plans` is therefore left at its pre-phase value of **33, which remains UNVERIFIED** —
+deliberately not replaced with 43. Two unresolved definition questions have to be settled first,
+and settling them is not this phase's job: (1) whether Phase 209's 8 plans count while they are
+**still unmerged** on `phase-209-deliverable-reachability`, the same "narrower definition than
+disk" ambiguity 209's own retained note below already flagged (17 vs 22, then 23 vs 28); and
+(2) `total_phases: 7` still counts Phase 207, which has not started and has 0 plans on disk, so
+`total_plans: 44` already excludes Phase 207's unknown plan count — making any `percent` computed
+against it misleading in the complete direction. Recompute these at phase close, after
+verification, with the definition chosen explicitly rather than inferred from a disk glob.
+
+**`state.begin-phase` corrupted this file on 2026-09-22 and was reverted — TOOL-05 class, still
+live on this machine.** The verb was called once at phase start with a pre-image taken per
+CLAUDE.md §GSD. The diff showed: (a) **corruption signature (b) fired** — the frontmatter key
+`last_activity` was silently dropped; (b) semantic drift of the `progress:` counters in the wrong
+direction — `completed_phases` 5 -> **4**, `percent` 75 -> **57**, `completed_plans` 33 -> 38, all
+well-formed and all unverifiable against ground truth (an independent SUMMARY-file count across the
+v5.24 phase dirs does not reconcile with either value, so neither number was adopted); and (c) a
+**new, third symptom worth naming** — the body `Status:` field here was a *multi-line* value, and
+the write replaced only its first three lines, orphaning the trailing prose ("…that held this phase
+at 6/8…") beneath the newly written one-line `Status:`. Symptom (c) is neither named corruption
+signature: no bold-field code span was garbled and no key was dropped *by that particular write*.
+It is the plain-field body writer being line-scoped against a value that is not line-scoped.
+STATE.md was restored byte-identical (`shasum` 19828ff7…) and these fields hand-edited instead.
+
+**The Phase 209 record below is RETAINED, not superseded.** Phase 209 ran ahead of 208 and its work
+is **still unmerged** on branch `phase-209-deliverable-reachability`; this Phase 208 branch forks
+from `main` and therefore does not contain it.
+
+---
+
 Phase: 209 (Deliverable Reachability) — **ALL 8 PLANS COMPLETE 2026-09-15**
 Plan: 8 of 8 complete (209-01..209-08).
 Status: **Development complete. All six ROADMAP criteria MET.** The two blocking human checkpoints
@@ -2341,9 +2432,79 @@ Resolved and removed (2026-08-10): one stale `quick_task` bookkeeping row (healt
 merge) confirmed complete via git history and removed — see 147-04-SUMMARY.md for the commit hash
 and disposition detail.
 
+Found at Phase 208 close (2026-09-22):
+
+| Category | Item | Status |
+|----------|------|--------|
+| costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
+
 ## Session Continuity
 
-Last session: 2026-09-14 — **Phase 209 (Deliverable Reachability) OPENED and context gathered.**
+Last session: 2026-09-21 (resumed) — **Session resumed via `/gsd-resume-work`; nothing was in
+flight.** `.planning/HANDOFF.json` (2026-09-21T19:37Z) reports the post-demo resumption COMPLETE at
+4/4, six PRs merged (#30-#35), tree clean on `main` at `a3dd5944`, zero open PRs, main CI green.
+v5.24 stands at 5 of 7 phases, 33/38 plans. No `.continue-here` checkpoint, no interrupted agent, no
+PLAN-without-SUMMARY.
+
+**Two stale records found while resuming, both left in place and flagged rather than edited:**
+(1) this file's own `## Current Position` still names Phase 209 as the frontier and describes Phase
+206 as PAUSED at 5/13 — both superseded by the 2026-09-21 Phase 206 completion record at line ~1430
+and by `ROADMAP.md`. (2) `## Operator Next Steps` item 4 still recommends
+`/gsd-autonomous --from 208`; HANDOFF.json's first blocker records that
+`/gsd-autonomous --from N --to N` is **unsafe for resuming a mid-execution phase** (its plan step
+has no `has_plans` gate and `gsd-plan-phase` only guards CLOSED phases). For a *fresh* phase like
+208 the wrapper is not hazardous, but `Skill(gsd-execute-phase, "<N> --no-transition")` is the
+recorded safe form for any resume.
+
+Operator chose **Phase 208 (Security, Report Coverage & Doc Debt)** as the next action — the only
+remaining v5.24 phase authorized for autonomous execution, since Phase 207 is operator-led by
+standing decision.
+
+**Phase 208 CONTEXT GATHERED (2026-09-21).** `208-CONTEXT.md` and `208-DISCUSSION-LOG.md` written
+to `.planning/phases/208-security-report-coverage-doc-debt/`, both untracked per repo convention
+(`.planning/` is gitignored at `.gitignore:75`; `git add -f` is forbidden for phase CONTEXT files).
+The operator declined per-area discussion and accepted the recommended option for all four gray
+areas, so each recommendation was grounded in a live source check taken *before* it was formed —
+16 decisions (D-01..D-16) recorded.
+
+**All five of the phase's ROADMAP/REQUIREMENTS premises were re-verified against the tree and all
+five HOLD** — unusual for this project, and worth stating positively given Phase 205 found three of
+its four criteria resting on false premises. `-k ssrf` genuinely matches 0 of 8 in
+`tests/test_ticketing_jira.py`; the six `/25` rows are at `report.html.j2:499-509`; both COV-08
+cases are genuinely GAP; the stale Phase 202 criterion-3 wording is where DOC-01 says it is; and
+`docs/report-interpretation.md` §7.1 genuinely lacks the 999.112 precondition.
+
+**The load-bearing finding is a blocker, not a gap.** ROADMAP Phase 208 criterion 2 requires the
+score-decomposition table asserted in HTML **and** in the Playwright PDF. The PDF leg is not
+deliverable in this phase and a test for it must not be written: `.github/workflows/python-ci.yml`
+(the job that runs `pytest -q -m ""`) installs **no browser** — the only `setup-chrome` steps are in
+`dashboard-quality.yml`, which runs vitest and no pytest — and `~/Library/Caches/ms-playwright/` is
+empty on this machine, so such a test would execute in neither place while being cited as coverage.
+Installing a browser to satisfy it would also decide Phase 207's reserved toolchain question as a
+side effect of a coverage phase. **Criterion 2 is therefore flagged NOT MET AS WRITTEN in advance
+(D-04)**, following Phase 206's precedent of recording the shortfall rather than shrinking the
+denominator. Phase 207 inherits a *cheaper* decision than it was scoped with: `render_pdf_report()`
+already exists at `html_renderer.py:1351` and `pypdf` is already a live dependency, so the sole
+remaining cost is the browser in CI.
+
+Two further items recorded for whoever plans this: `SCORING_VERSION` is **already `"3.0"`** at
+`quirk/intelligence/scoring.py:29` (the unreleased thing is the version *cut*, not the code — so
+COV-08 tests assert against v3 and there is no v2/v3 choice to make, despite what CHANGELOG
+`[Unreleased]` implies); and re-dispositioning the four UAT cases forces
+`docs/uat-coverage-gaps.md` regeneration or the freshness gate goes red (D-15).
+
+One self-inflicted miss is recorded in `208-CONTEXT.md` rather than hidden: the first COV-06 check
+ran a bare `pytest -k ssrf` across all of `tests/`, returned 77, and appeared to falsify the "0 of
+8" premise — a paraphrase of the case's filter, not the filter. This project's over-counting
+anti-pattern reproducing live *inside* the verification pass meant to catch it. Standing rule
+reinforced: run the case's verbatim command, never a reconstruction of it.
+
+Stopped at: Phase 208 context gathered; ready for `/gsd-plan-phase 208`.
+Written by hand — no `state.*` verb used; pre-image taken per CLAUDE.md §TOOL-05.
+Resume file: (none — see `.planning/HANDOFF.json`, deliberately retained as the most accurate
+state record until its content is folded into this file.)
+
+Prior session: 2026-09-14 — **Phase 209 (Deliverable Reachability) OPENED and context gathered.**
 Net-new phase, added to v5.24 mid-milestone by operator decision. Origin: the operator asked where
 the v5.23 reporting milestone had surfaced in the dashboard, and the answer was that it had not.
 **The consulting-grade report pipeline and the dashboard's Export button share zero code** —

@@ -258,8 +258,11 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 - [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
 
-- [ ] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
-  gaps are covered and the two carried doc corrections land.
+- [x] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
+  gaps are covered and the two carried doc corrections land. **Completed 2026-09-22 at 4 of 5
+  success criteria MET AS WRITTEN** — criterion 2 is recorded NOT MET AS WRITTEN (HTML leg
+  shipped, Playwright PDF leg costed and handed to Phase 207). Verified `passed`;
+  see `208-VERIFICATION.md` and `208-NOT-MET-AS-WRITTEN.md`.
 - [x] **Phase 209: Deliverable Reachability** - The consulting-grade report artifacts a scan already
   writes to disk become downloadable from the dashboard.
 
@@ -454,6 +457,17 @@ coverage exists, or a reasoned permanent disposition says why it never can.
 **Plans**: TBD
 **UI hint**: yes
 
+**Inbound costed decision from Phase 208 (`UAT-88-03`, D-03, recorded 2026-09-22):** the Playwright
+PDF-render assertion for the score-decomposition table is materially cheaper than an open-ended
+design question. `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`, and
+`pypdf` is already a live runtime dependency (`pypdf>=4.0` under the `dashboard` extras, imports as
+`pypdf==6.11.0` in `.venv`), so PDF text extraction for the assertion needs **no new dependency**.
+The sole open question this phase inherits is a **yes/no on installing a Chromium browser in
+`.github/workflows/python-ci.yml`** — `~/Library/Caches/ms-playwright/` is empty and no Chromium
+install step exists in that workflow today; the only `setup-chrome` steps live in
+`dashboard-quality.yml`, which runs no pytest. Full record:
+`.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`.
+
 ### Phase 208: Security, Report Coverage & Doc Debt
 **Goal**: The security- and report-relevant non-UI gaps are genuinely exercised, and the two doc
 corrections carried from the v5.23 boundary review land.
@@ -466,6 +480,12 @@ corrections carried from the v5.23 boundary review land.
   2. The six-row score-decomposition table is asserted at **render-output** level in the HTML report
      and in the Playwright PDF, cited by `UAT-88-02` and `UAT-88-03` respectively — the PDF leg has
      no pytest coverage of this table at all today.
+     **NOT MET AS WRITTEN — recorded 2026-09-21 (Phase 208 D-04):** the HTML leg (`UAT-88-02`) is
+     delivered by `tests/test_score_decomposition_render.py` at render-output level; the Playwright
+     PDF leg (`UAT-88-03`) is re-scoped to Phase 207 as a costed yes/no on CI browser cost — see
+     `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md` for the full
+     record and the Phase 207 block below for the inbound handoff. The original criterion text above
+     is preserved unedited, per Phase 206's SC#1-at-25-of-28 precedent.
   3. The hygiene subscore (plaintext ratio) and identity-trust subscore (mTLS bonus) are each
      asserted **in isolation**, holding other evidence fixed, rather than inferred from movement in
      the overall score (`UAT-8-04` / `UAT-8-05`).
@@ -476,7 +496,13 @@ corrections carried from the v5.23 boundary review land.
      numeric-equality guarantee holds only for **unmodified** report templates, because RPT-02's
      override is a full-file override that can drop the roadmap section with nothing validating its
      presence. Synced to `20_Dev-Work/QUIRK/Guides/Report-Interpretation.md`.
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves
+- [x] 208-01-PLAN.md — COV-06: prove the Jira SSRF guard fires before construction (both directions + ordering)
+- [x] 208-02-PLAN.md — COV-07: assert the six-row decomposition table and both rollup sentences at HTML render-output level
+- [x] 208-03-PLAN.md — COV-08: isolate the hygiene plaintext-ratio and identity-trust mTLS subscores
+- [x] 208-04-PLAN.md — DOC-01/DOC-02: the two doc corrections plus their Obsidian vault mirrors
+- [x] 208-05-PLAN.md — UAT dispositions, UAT-88-03 costed handoff, and the D-15 worklist regeneration
+- [x] 208-06-PLAN.md — criterion 2 recorded NOT MET AS WRITTEN, phase note, vault syncs, hand-edited STATE.md
 
 ### Phase 209: Deliverable Reachability
 **Goal**: A dashboard-only operator can download the same report deliverables a CLI operator gets,
@@ -523,7 +549,7 @@ Plans:
 | 205. Guard Integrity | 0/? | Not started | - |
 | 206. Dashboard UI Coverage Drain | 0/? | Not started | - |
 | 207. Browser-Only Coverage Verdict | 0/? | Not started | - |
-| 208. Security, Report Coverage & Doc Debt | 0/? | Not started | - |
+| 208. Security, Report Coverage & Doc Debt | 6/6 | Complete — 4/5 criteria as written | 2026-09-22 |
 | 209. Deliverable Reachability | 6/8 | In progress | - |
 
 ## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12

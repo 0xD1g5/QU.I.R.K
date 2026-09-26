@@ -339,6 +339,19 @@ days" actions, the HTML and PDF reports, the DOCX report, the dashboard's roadma
 scan produces the same numbers on every one of these surfaces — a per-item badge or an aggregate
 that disagreed across surfaces would itself be a defect.
 
+**Precondition: the four-surface equality guarantee assumes unmodified templates (999.112).**
+The numeric-equality guarantee described above — the same badge and the same projected score on
+every one of the CLI, HTML/PDF, DOCX, and dashboard surfaces — holds only for **unmodified**
+report templates. The operator [`report.template_dir`](configuration.md#report-block-phase-200-v523--rpt-01rpt-02rpt-03rpt-04)
+override (RPT-02) is a **full-file** template override, not a section-level patch: an
+operator-authored `.j2` template can omit the migration roadmap section entirely, and nothing in
+the render pipeline validates that the section is present in the output. The report still renders
+successfully, with the score-lift roadmap simply absent — no error, no warning, and no test flags
+the omission. For a consulting-grade deliverable this means a client-facing report can ship
+missing the score-lift roadmap without any signal that it happened; an operator supplying a custom
+`template_dir` must manually verify the roadmap section survives in the rendered output before
+delivering it to a client.
+
 **The console "Migration Waves" table's second column changed meaning (BACK-51 / LIFT-04).**
 Before Phase 201, that column counted raw *findings* bucketed by severity (Critical/High/other),
 computed independently of the roadmap shown everywhere else in the report. As of Phase 201 it
