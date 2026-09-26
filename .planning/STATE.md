@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: ready_to_plan
-last_updated: "2026-09-26T14:45:00Z"
+last_updated: "2026-09-26T18:20:00Z"
 last_activity: 2026-09-26
 progress:
   total_phases: 7
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 208 — Security, Report Coverage & Doc Debt (COV-06/07/08, DOC-01/02).
+**Current focus:** Phase 207 — Browser-Only Coverage Verdict (COV-05). Context gathered 2026-09-26; operator-led, NOT autonomous.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1259,6 +1259,63 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   they are the corrupting verbs this phase exists to fix (CLAUDE.md TOOL-05).
 
 ## Current Position
+
+Phase: 207 (Browser-Only Coverage Verdict) — **CONTEXT GATHERED 2026-09-26, ready to plan.**
+Plan: 0 of ? — no plans written yet.
+
+**The operator-reserved toolchain verdict is MADE and recorded as D-01:** Playwright E2E in an
+**isolated, non-required CI job** — Chromium gets installed in CI, but the browser leg runs outside
+the required `Linux Full Suite` so its flake surface cannot redden the check every PR must pass.
+Three alternatives were costed and rejected (browser leg inside the full suite; permanent GAP for
+all three cases; a split GAP/Playwright verdict). Full record with the live evidence behind each
+option: `.planning/phases/207-browser-only-coverage-verdict/207-DISCUSSION-LOG.md`.
+
+Artifacts written, both **untracked per repo convention** (`.gitignore:75`; the only tracked
+`*-CONTEXT.md` files are 8 grandfathered ones under `.planning/milestones/v5.11-phases/` and
+`v5.12-phases/`):
+`207-CONTEXT.md` (9 locked decisions D-01..D-09) and `207-DISCUSSION-LOG.md`.
+
+**Phase 207 is operator-led and must NOT be run through `/gsd-autonomous`** —
+`.planning/ROADMAP.md:216` de-scopes it explicitly, and D-08 forbids worktree fan-out for two
+independent reasons (browser tooling is absent inside worktree subagents and silently falls back;
+and commit `21f12789` lives only on this branch). Branch `phase-207-browser-only-coverage-verdict`
+was **pushed to origin on 2026-09-26** so `execute-phase`'s fork-from-`origin/HEAD` cannot omit that
+commit. Verify with `git log main..HEAD` before closing.
+
+Three findings from the context scout that outlive this phase:
+
+1. **A vacuous-pass trap guards the whole Tier-2 leg (D-04).** `git ls-files src/dashboard/dist`
+   returns **0** — built statics are not committed. Without `npm run build`, the SPA catch-all at
+   `quirk/dashboard/api/app.py:170-184` serves a *placeholder* page and `/assets` is never mounted.
+   A naive `UAT-7-32` "zero console errors" test against that would pass with **no JavaScript
+   loaded at all.** Every Tier-2 test must first assert the real SPA mounted.
+
+2. **The isolated job is the structural cure for TRIAGE-149 Cluster 2 — 14 quarantined tests.**
+   `docs/test-triage-149.md:57-75` lists 14 tests skipped on one root cause (a shared
+   `PlaywrightContextManager` singleton torn down by an earlier full-suite test), every one recorded
+   "passing standalone". A separate pytest invocation means nothing has pre-torn-down the singleton.
+   Deliberately **deferred, not folded** — outside COV-05 — but near-free once this phase's job
+   exists. Highest-value item in `207-CONTEXT.md` `<deferred>`.
+
+3. **`CLAUDE.md` carries a stale claim of its own.** Its §UAT Corpus Integrity Gate "Known
+   limitation" paragraph says the `Linux Full Suite` job "never installs Node/npm for
+   `src/dashboard/`". Phase 205 D-04 added `Setup Node` + `npm ci` to that job
+   (`.github/workflows/python-ci.yml:414-428`, with a comment naming exactly that purpose). The
+   documented gap is closed and the warning outlived it — same drift class that file warns about.
+
+Also recorded: `gsd-sdk query todo.match-phase 207` returned **all 30** pending todos at an
+identical `0.6` score, every one titled "Untitled" — it returned the whole directory, keying on
+generic tokens ("phase", "cov", "2026"). An independent grep for this phase's real vocabulary
+(`playwright|e2e|console error|blank screen|export pdf`) returns **1** file. Do not read that
+matcher's hit count as signal at this phase's vocabulary.
+
+STATE.md was **hand-edited** for this entry. No mutating `gsd-sdk`/`gsd-tools.cjs` `state.*` verb
+was invoked, because CLAUDE.md clause (h) and the operator's own memory disagree on whether the
+shared body-writer's plain-field clobber is still live — when two records of a corruption class
+disagree, not invoking the verb is cheaper than adjudicating it. A pre-image was taken regardless
+and the full diff inspected.
+
+---
 
 Phase: 208 (Security, Report Coverage & Doc Debt) — **COMPLETE 2026-09-22, at 4 of 5 ROADMAP
 success criteria MET AS WRITTEN.** The operator approved the 208-06 checkpoint; `gsd-verifier`
