@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: ready_to_plan
-last_updated: "2026-09-22T19:30:00Z"
-last_activity: 2026-09-22
+last_updated: "2026-09-26T14:45:00Z"
+last_activity: 2026-09-26
 progress:
   total_phases: 7
   completed_phases: 6
@@ -1291,8 +1291,12 @@ Status: Ran on branch `phase-208-security-report-coverage-doc-debt`, forked from
 local `main` at `58c4ba54` (which carries two unpushed `docs(208)` planning commits that
 `origin/main` does not have — branching off `origin/main` would have silently dropped them).
 `workflow.use_worktrees=false`, so all six plans ran **sequentially on the main working tree**;
-there was no parallel isolation in this run despite `parallelization: true`. **Not merged/pushed —
-local commits only, per this plan's absolutely-no-remote-actions constraint.**
+there was no parallel isolation in this run despite `parallelization: true`. **MERGED to `main`
+2026-09-26 via PR #36** (`793736ad`), after the operator authorized shipping — all six CI checks
+green, including the `Linux Full Suite` job whose `-m ""` selects the 38 slow tests that
+`addopts = -m 'not slow'` deselects locally, and the `staleness` gate. During execution this line
+read "not merged/pushed — local commits only, per this plan's absolutely-no-remote-actions
+constraint"; that constraint governed the executors and was correct for them.
 
 **ROADMAP criterion 2 is recorded NOT MET AS WRITTEN, in place, original text preserved** — the
 HTML leg (`UAT-88-02`) shipped in 208-02; the Playwright PDF leg (`UAT-88-03`) is re-scoped to
@@ -1329,6 +1333,13 @@ disk" ambiguity 209's own retained note below already flagged (17 vs 22, then 23
 against it misleading in the complete direction. Recompute these at phase close, after
 verification, with the definition chosen explicitly rather than inferred from a disk glob.
 
+> **UPDATE 2026-09-26 — question (1) is RESOLVED; the paragraph above is left unedited as the
+> record of what was true on 2026-09-22.** Phase 209 is now merged: `git log
+> origin/main..origin/phase-209-deliverable-reachability` returns **0 commits**. Its 8 plans are
+> on `main`, so they count, and `completed_plans: 44` is correct on the disk-glob definition with
+> no ambiguity left in it. Question (2) still stands — `percent` remains phase-based (6 of 7 = 86)
+> precisely because `total_plans` cannot express Phase 207's unknown plan count.
+
 **`state.begin-phase` corrupted this file on 2026-09-22 and was reverted — TOOL-05 class, still
 live on this machine.** The verb was called once at phase start with a pre-image taken per
 CLAUDE.md §GSD. The diff showed: (a) **corruption signature (b) fired** — the frontmatter key
@@ -1343,9 +1354,12 @@ signature: no bold-field code span was garbled and no key was dropped *by that p
 It is the plain-field body writer being line-scoped against a value that is not line-scoped.
 STATE.md was restored byte-identical (`shasum` 19828ff7…) and these fields hand-edited instead.
 
-**The Phase 209 record below is RETAINED, not superseded.** Phase 209 ran ahead of 208 and its work
-is **still unmerged** on branch `phase-209-deliverable-reachability`; this Phase 208 branch forks
-from `main` and therefore does not contain it.
+**The Phase 209 record below is RETAINED, not superseded.** Phase 209 ran ahead of 208. As of
+2026-09-22 its work was still unmerged on `phase-209-deliverable-reachability` and the Phase 208
+branch forked from `main` did not contain it — **that is no longer true: Phase 209 merged, and
+`main` now carries both phases** (verified 2026-09-26, 0 commits on the 209 branch absent from
+`origin/main`). The record below is kept because its per-criterion detail and open items are still
+the authoritative account of 209; only its branch/merge status has moved on.
 
 ---
 
@@ -1358,8 +1372,10 @@ seen in an isolated env where `import docx` genuinely raises `ModuleNotFoundErro
 `209-MANUAL-VERIFICATION.md`; both carry a fidelity note recording that the operator confirmed
 against shown tables/strings rather than transcribing independently, so the record is not read as
 stronger than it is. No automated result was substituted for either (T-209-13 respected).
-Branch `phase-209-deliverable-reachability`, 25 commits, working tree clean. **NOT merged to
-`main`** — see the unauthorized-remote-actions note below before doing anything with `origin`.
+Branch `phase-209-deliverable-reachability`, 25 commits, working tree clean. **MERGED to `main`**
+— corrected 2026-09-26; this line read "NOT merged to `main`" from 2026-09-15 until then, and the
+unauthorized-remote-actions note below belongs to that earlier period. Verified by
+`git log origin/main..origin/phase-209-deliverable-reachability` returning 0 commits.
 
 **Open items carried out of phase 209 (none blocking, all deliberate):**
 
