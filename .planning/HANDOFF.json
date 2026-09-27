@@ -1,106 +1,49 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-27T15:00:00.000Z",
-  "scope": "milestone",
-  "phase": "none",
-  "phase_name": "milestone v5.24 (UAT Coverage Drain) \u2014 all 7 phases complete",
-  "phase_dir": ".planning",
-  "plan": 0,
-  "task": 0,
-  "total_tasks": 0,
-  "status": "awaiting_operator_decision",
-  "note": "This is a MILESTONE-level pause, not a mid-phase one. Phase 207's own .continue-here.md is a COMPLETED record -- do not read it as live work and do not overwrite it. The human-readable handoff for this pause is .planning/.continue-here.md.",
+  "timestamp": "2026-09-27T16:56:40.613Z",
+  "scope": "phase",
+  "phase": "207.1",
+  "phase_name": "Orphaned Browser-Only Coverage Drain",
+  "phase_dir": ".planning/phases/207.1-orphaned-browser-only-coverage-drain",
+  "plan": 3,
+  "task": 3,
+  "total_tasks": 3,
+  "status": "paused_awaiting_human_uat",
+  "note": "SUPERSEDES the 2026-09-27T15:00Z milestone-level pause that previously occupied this file. That pause read 'all 7 phases complete, awaiting operator decision'; the operator decision was taken, Phase 207.1 was INSERTED, and it has now executed to 3 of 3 plans. The human-readable handoff for THIS pause is the phase-local .continue-here.md, NOT .planning/.continue-here.md (which is the older milestone-level record) and NOT phase 207's (a completed record).",
+  "branch": "phase-207-browser-only-coverage-verdict",
+  "branch_note": "branching_strategy=none, so no phase branch was cut. This branch also carries the parked STATE.md fix 21f12789 and Phase 207's own work. Still UNPUSHED and UNMERGED.",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Phase 207 W-10 skip-never-error precheck, reproduced as 3 ERRORs first",
-      "status": "done",
-      "commit": "e063e4f0"
-    },
-    {
-      "id": 2,
-      "name": "Phase 207 W-09 /certificates discrimination, reproduced by emptying the payload",
-      "status": "done",
-      "commit": "98f00b04"
-    },
-    {
-      "id": 3,
-      "name": "Phase 207 triage of the 12 omitted findings -- 4 fixed, 2 accepted, 2 carried, 1 no-action",
-      "status": "done",
-      "commit": "10c0652d"
-    },
-    {
-      "id": 4,
-      "name": "Wave 4: non-gating Browser E2E job + narrowed the guard regex it tripped",
-      "status": "done",
-      "commit": "01526634"
-    },
-    {
-      "id": 5,
-      "name": "Wave 5: 3 full-suite-only failures fixed, then 4 CI-EXEMPT dispositions -- GAP 47->43",
-      "status": "done",
-      "commit": "e34e1903"
-    },
-    {
-      "id": 6,
-      "name": "Wave 6: docs, vault sync, phase note, VALIDATION/ROADMAP/REQUIREMENTS, verifier W-1..W-5",
-      "status": "done",
-      "commit": "8e436388"
-    }
+    {"id": 1, "name": "207.1-01 — UAT-7-23 measured sidebar collapse + red-proof control", "status": "done", "commit": "e3ecd21a"},
+    {"id": 2, "name": "207.1-02 — UAT-7-29 Cytoscape node drag + red-proof control", "status": "done", "commit": "3d1c64af"},
+    {"id": 3, "name": "207.1-03 — three coupled disposition artifacts, COV-10, docs + vault close-out", "status": "done", "commit": "25e7e170"}
   ],
   "remaining_tasks": [
+    {"id": 4, "name": "UAT-7-23 criterion 6 HUMAN-UAT walkthrough — operator-led visual confirmation of transition smoothness", "status": "not_started"},
+    {"id": 5, "name": "Record that verdict via ledger -> uat_disposition_apply -> regenerate coverage-gaps -> vault sync", "status": "not_started"},
+    {"id": 6, "name": "Re-run gsd-verifier; expect status passed, then mark phase complete in ROADMAP.md + STATE.md", "status": "not_started"}
+  ],
+  "blockers": [
     {
-      "id": 1,
-      "name": "DECIDE UAT-7-23 / UAT-7-29 -- orphaned between Phase 206 and 207; take this FIRST",
-      "status": "not_started"
-    },
-    {
-      "id": 2,
-      "name": "Merge phase-207-browser-only-coverage-verdict into main -- PR or direct push",
-      "status": "not_started"
-    },
-    {
-      "id": 3,
-      "name": "Milestone close: /gsd-audit-milestone -> /gsd-complete-milestone -> /gsd-new-milestone",
-      "status": "not_started"
+      "description": "Phase cannot be marked complete: verification returned human_needed at a 5/5 truth score. UAT-7-23 criterion 6 ('transition is smooth — no layout jumps or flicker') is routed to HUMAN-UAT per D-11, and every artifact records only the ROUTING decision, never a verdict.",
+      "type": "human_action",
+      "workaround": "None, and none should be invented. A recorded deferral is honest; a phase checkbox implying a verdict nobody gave is not."
     }
   ],
-  "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Decide the disposition of UAT-7-23 and UAT-7-29",
-      "context": "Phase 206 closed COV-04 at 25 of 28 with SC#1 recorded NOT MET AS WRITTEN, and routed these two to Phase 207. Phase 207's scope was UAT-7-01/7-17/7-32 + UAT-88-03 and never took them. Verified live: both still disposition=GAP, is_gap=True, both in docs/uat-coverage-gaps.md. Neither phase erred; the cases are orphaned BETWEEN them. They may now be tractable against the browser harness Phase 207 built -- nobody has assessed that. Options: a small Phase 207.1; recorded permanent GAPs; or promotion to the next milestone's backlog.",
+      "action": "Run the UAT-7-23 criterion 6 walkthrough: quirk serve, open http://127.0.0.1:8512/ in a REAL browser above 1024px, drag the window edge slowly leftward through the 1024px breakpoint and back, watching both the sidebar and the main content to its right. Report any jump, flicker, flash of unstyled content, or reflow that reads as a glitch.",
+      "context": "The claim is visual-perception with no mechanical referent in Playwright/bounding_box terms. The five mechanizable criteria ARE covered, which is why the case closes at a stated 5 of 6 rather than a bare PASS. Literal steps are in 207.1-HUMAN-UAT.md.",
       "blocking": true
-    },
-    {
-      "action": "Decide whether to open a PR or push phase-207 directly to main",
-      "context": "32 commits, close gate clean, both CI checkpoints already satisfied from workflow_dispatch run 36320908301. Opening a PR is outward-facing and was deliberately not done. main's own required check is already red on two Docker chaos-lab nodes, so any PR inherits a failing check. Commit 21f12789 exists only on this branch -- run `git log main..HEAD` before closing anything.",
-      "blocking": false
     }
   ],
   "decisions": [
-    {
-      "decision": "CI-EXEMPT wording states what is true HERE, not the precedents' 'CI cannot run this'",
-      "rationale": "CI DOES run these nodes, in the Browser E2E job. Borrowing the precedent phrasing would put a false statement in the honesty record.",
-      "phase": "207"
-    },
-    {
-      "decision": "UAT-88-03's TRIAGE-149 contamination is skipped NARROWLY in the test, not handled in production code",
-      "rationale": "Broadening what render_pdf_report catches would mask real failures for users to fix a test-ordering problem. Red-proved three ways.",
-      "phase": "207"
-    },
-    {
-      "decision": "COV-07 closed on its own written condition, by hand, cross-phase and surfaced not buried",
-      "rationale": "Its text says 'stays [ ] until that leg ships'; the leg shipped here. requirements mark-complete was NOT used -- no per-phase granularity, twice over-flipped here.",
-      "phase": "207"
-    },
-    {
-      "decision": "Criterion 1's verdict condensed INTO ROADMAP.md rather than pointed at",
-      "rationale": "Phase artifacts are git-untracked; a pointer to a file absent from a fresh clone is not a durable record.",
-      "phase": "207"
-    }
+    {"decision": "Rewrote UAT-7-29 criterion 5 to assert the node came to rest where the drag put it (pre + rendered_delta/zoom), and red-proved it by displacing the expectation 300px", "rationale": "Code review WR-01, confirmed independently: the original post.pos != pre.pos was ENTAILED by criterion 1 (mid != pre) and criterion 3 (post == mid), so it could never fail independently — and a dagre re-run relocating the node anywhere still satisfied it. A tautological criterion is worse than a missing one: a missing one fails a count, a tautological one passes the count, the test and every gate while adding zero falsifiability, under a Result line claiming five independent assertions.", "phase": "207.1", "commit": "057132e4"},
+    {"decision": "Reconciled both cases' **Notes:** prose with their flipped Result lines, retitling the superseded Phase 206 reclassification as history rather than deleting it", "rationale": "After plan 207.1-03 returned Self-Check: PASSED, UAT-7-29's Notes still said 'This case stays **GAP**' directly beneath a checked PASS box, and both cases read '**Tester:** ... no test written' beside a cited test. No gate catches this class — the reconciliation gate compares the Result line against the ledger row and the coverage-gaps set, and the ledger stores only the **Result** line. The analysis was retained because it is the record of WHY a browser was required, and 7-23's 5-of-6 close still depends on it.", "phase": "207.1", "commit": "9eaeabe1"},
+    {"decision": "Did NOT mark the phase complete; left ROADMAP.md's outer checkbox and STATE.md completed_phases unchanged, set STATE status to 'verifying'", "rationale": "Verification is human_needed. This is the same boundary the repo's own verify_phase_gates pre-commit hook enforced against plan 207.1-03 when it over-flipped those very fields.", "phase": "207.1", "commit": "ea84e683"},
+    {"decision": "Hand-edited STATE.md with a pre-image and full diff instead of calling any mutating gsd-sdk state verb", "rationale": "Three separate state-verb calls corrupted STATE.md during this phase. Hand-editing under the signature-diff protocol is the only method that has not.", "phase": "207.1", "commit": "ea84e683"},
+    {"decision": "Filed the multi-line-field-value truncation finding as a NEW pending todo rather than folding it into gsd-state-bold-field-search-unscoped-latent", "rationale": "That todo is about scoping on the bold axis; this is about value EXTENT on any axis. Collapsing them would erase the record that a third axis exists — the same staleness defect CLAUDE.md's TOOL section exists to prevent.", "phase": "207.1", "commit": "c56aa0ea"}
   ],
   "uncommitted_files": [],
-  "next_action": "Decide UAT-7-23 / UAT-7-29 FIRST -- it is the only decision that changes the milestone's permanent record. A useful first move is the assessment nobody has done: check whether either is now tractable against tests/browser_e2e_harness.py, since jsdom intractability was the original reason both were excluded. Then merge Phase 207, then the milestone close sequence. Do NOT use phase.complete or milestone.complete on this machine.",
-  "context_notes": "Milestone v5.24 is functionally complete: all 7 phases [x], 16 of 17 requirements closed, COV-04 the sole open one and deliberately partial at 25/28. Phase 207 closed this session with gsd-verifier PASSED WITH CONCERNS 5/5, all five concerns addressed before commit. The session's recurring lesson: every real defect found was a record asserting more than it proved, and none was caught by re-reading the reasoning that produced it -- each needed a DIFFERENT method. Two cautions for the resuming agent: a push to a feature branch triggers NO CI here (use `gh workflow run python-ci.yml --ref <branch>`), and continue-on-error:true makes the Browser E2E job report success even when steps fail, so read step-level conclusions and the numeric pass count, never the job verdict."
+  "next_action": "Ask the operator to run the UAT-7-23 criterion 6 walkthrough in 207.1-HUMAN-UAT.md and report what they saw. Do NOT mechanize it, do NOT approve it on their behalf, and do NOT hand-edit the Result line to record it.",
+  "context_notes": "Phase executed cleanly: 3 waves, 3 plans, 15 commits, full suite 5211 passed / 0 failed, all 5 ROADMAP success criteria VERIFIED against the codebase, COV-10 closed, open GAP count 43 -> 41. The two things worth carrying forward are not about the tests but about the process: (1) an executor's 'Self-Check: PASSED' was wrong twice in ways no gate caught, both found by orchestrator spot-checks reading the artifacts rather than the summaries; (2) the gsd-sdk state-verb hazard is live and produced a NEW axis of its defect class. Treat any Self-Check: PASSED as a claim to verify, never as evidence."
 }
