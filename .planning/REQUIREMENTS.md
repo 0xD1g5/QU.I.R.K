@@ -320,7 +320,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-01 | Phase 204 | Closed (204-03) |
 | COV-02 | Phase 204 | Closed (204-04/204-04b) |
 | COV-03 | Phase 204 | Closed (204-01/204-02) |
-| COV-04 | Phase 206 | Pending |
+| COV-04 | Phase 206 (+ COV-10/Phase 207.1) | **Closed at 27 of 28 — terminal, not pending.** SC#1 recorded NOT MET AS WRITTEN by design (206-NOT-MET-AS-WRITTEN.md); the checkbox stays `[ ]` deliberately so the 27-of-28 stays visible rather than being rounded to a pass. Of the 28: 24 vitest PASS + `UAT-7-21` (`hardcoded-color-audit.test.tsx:155`, a full-strength `it.fails`) = 25 closed by Phase 206; `UAT-7-23`/`UAT-7-29` closed by **COV-10 / Phase 207.1**, not by 206. The sole remainder is `UAT-7-12`, an **accepted product-absence FAIL** — `certificates.tsx` has no sort state, no column handler and no table library, so there is no behaviour to assert; kept in the denominator on purpose rather than shrinking it to report 25/25, with a remediation todo filed. Terminal disposition recorded 2026-09-27 at the v5.24 audit, which found this row still reading `Pending` and misrepresenting finished work as outstanding in a phase that will never run again. |
 | COV-05 | Phase 207 | Complete |
 | COV-06 | Phase 208 | Complete |
 | COV-07 | Phase 208 + 207 | Complete — HTML leg Phase 208; PDF leg Phase 207 |
