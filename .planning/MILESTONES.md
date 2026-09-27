@@ -1,5 +1,63 @@
 # Milestones
 
+## v5.23 Deliverable Experience (Development complete: 2026-09-12 — untagged)
+
+**BACKFILLED 2026-09-27.** This entry was missing. v5.23's archive files were all written at close
+(`v5.23-ROADMAP.md`, `v5.23-REQUIREMENTS.md`, `v5.23-MILESTONE-AUDIT.md`, `v5.23-phases/`) but no
+`## v5.23` section was ever added here, so the historical record jumped v5.22 -> v5.24. Reconstructed
+from those archive files and from git, not from recollection — every figure below is re-derived.
+
+**Phases completed:** 4 phases (199-202), plans per phase 5/7/8/8 = 28 execution units (counted from
+`.planning/milestones/v5.23-phases/*/` — PLAN and SUMMARY counts agree at every phase)
+**Requirements:** 14/14 satisfied (TRIAGE-10/11, RPT-01..05, LIFT-01..05, STORY-01/02)
+**Audit:** `gaps_found` (`.planning/milestones/v5.23-MILESTONE-AUDIT.md`) — requirements 14/14,
+phases 4/4, integration **5/6**, Nyquist 4/4. One **blocker accepted by the operator at close.**
+
+**Highlights:**
+- **Consulting-grade reporting shipped CLI/config-side (RPT-01..05)** — report branding and
+  templates. The dashboard exclusion was deliberate, not an oversight: RPT-03 guards it as a
+  path-traversal surface. That exclusion is what later created Phase 209 (Deliverable
+  Reachability) in v5.24, once the operator asked where the reporting milestone had surfaced in the
+  dashboard and the answer was that it had not.
+- **Score-lift roadmap re-frame (LIFT-01..05)** — projected-score deltas surfaced across the
+  roadmap surface.
+- **Finding storyline drawer (STORY-01/02)** — the per-finding narrative drawer.
+- **Merged to main via two PRs on 2026-09-12** — `623fa502` (PR #12, phases 199-201) and
+  `5f625595` (PR #13, phase 202). PR #13 was stacked and **did NOT auto-retarget** when its base
+  branch survived the merge; retarget explicitly in that situation rather than assuming GitHub does.
+
+**Accepted blocker at close — INT-01 (Phase 201 -> 202 seam), recorded OPEN, not fixed:**
+`scan_run_id` resolution diverges between the two surfaces. `lift_context_for_scan`
+(`quirk/dashboard/api/routes/scan.py:1268-1351`) filters `CryptoEndpoint.scan_run_id == scan_run_id`
+strictly and returns `{}` when falsy, while `get_latest_scan` (`:1703-1762`) resolves through a
+time-window bracket **with** fallbacks for legacy (`scan_run_id IS NULL`) and distributed-sensor
+rows — a materially different endpoint set. For any scan whose endpoints do not all share one
+`scan_run_id`, the roadmap page shows a real `score_lift` while the drawer shows `None` **for the
+same finding.** Graded blocker because it violates the milestone's own stated principle — "the
+deliverable and the live dashboard telling the same story for the same finding" — for a SHIPPED
+topology, the distributed console/sensor architecture in `docs/operators-guide.md` §8.1. The audit's
+own note is worth preserving: *"A green characterization test remains documentation, not a
+resolution"* (`tests/test_dashboard_finding_storyline.py:742` passes and does not cover this).
+
+**Known deferred items at close** (recorded here as accepted tech debt, all non-blocking):
+- **INT-02** (warning, 199->201): `compute_item_lifts` ends `lifts[slug] = int(delta)`
+  (`score_lift.py:164`) while `compute_projected_score` is typed `-> Optional[int]`, so Phase 201
+  **truncates** exactly the fractional scores Phase 199 widened to `Optional[float]`. Truncation
+  toward zero, not rounding: a true 4.8 delta displays as +4. Declined deliberately because the
+  number is operator-approved across four surfaces; needs an explicit truncate/round/render-fractional
+  decision, plus Python-vs-JS rounding parity pinned if fractional ever ships.
+- **201 deferred item 2**: data-at-rest's a11y baseline count is render-dependent — a third
+  observation (2026-08-27 count 1, 2026-09-02 count 2, 2026-09-12 count 1) with **zero code change**.
+  Strengthens the existing follow-up to replace the exact-count pin with a tolerance range.
+- **`HARDWARE_MATRIX.last_verified` 91 days old against a 90-day threshold** — the single node in the
+  full-suite failing SET at close. Operator-deferred with a record, and **the date was deliberately
+  NOT bumped**, because bumping without re-verifying fabricates the very attestation the field exists
+  to record.
+
+**NO v5.23 git tag** — consistent with v5.22's recorded rationale (`release.yml` fires on `v[0-9]*`
+and hardcodes a static release body). The milestone record lives here and in
+`.planning/milestones/`.
+
 ## v5.22 Release & Parity Tail (Shipped: 2026-09-11)
 
 **Phases completed:** 3 phases (196-198), plans per phase 5/4/4 = 13 execution units
