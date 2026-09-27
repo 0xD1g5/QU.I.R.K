@@ -765,3 +765,183 @@ def _select_draggable_candidate(page):
         "would silently steer this test onto the invisible `rank-` edge instead of failing."
     )
     return node_id, edge_id
+
+
+def test_uat_7_29_roadmap_node_drag(dashboard_origin):
+    """UAT-7-29 — dragging a roadmap node moves it, its visible edge follows in real time, and
+    nothing else on the canvas is disturbed.
+
+    Covers all FIVE of the case's pass criteria (docs/UAT-SERIES.md:4123-4149):
+      1. the dragged node's position changes
+      2. its connected (visible) edge's endpoint updates position in real-time, i.e. WHILE the
+         mouse is still down, not only after release (D-09)
+      3. the node's new position holds after mouse release (no snap-back)
+      4. the other three nodes on the canvas are byte-identical, pre-drag versus post-release
+      5. no layout reset occurs (dagre does not silently re-run and reassign the pre-drag layout)
+
+    The rejected data-layer-invariant substitute (docs/UAT-SERIES.md:4147) covered ZERO of these
+    five — "a citation whose carve-out list is the case's entire criteria set is a false
+    attestation, not a partial one." This test is written to clear that standard.
+    """
+    with chromium_page() as page:
+        page.goto(dashboard_origin + "/roadmap")
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+        assert_spa_mounted(page)
+
+        # SC#4 / D-08 — _cyreg resolution asserted BEFORE any mouse event.
+        _resolve_cy(page)
+
+        # D-07 — structural selection, never by index.
+        node_id, edge_id = _select_draggable_candidate(page)
+
+        # Pre-drag state: dragged node's position + its visible edge's sourceEndpoint (model
+        # coords, NOT the viewport-pixel rendered-endpoint variant), plus every OTHER node's
+        # position, captured as a single list for criterion 4's byte-identical comparison.
+        other_ids = page.evaluate(
+            "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
+            " return cy.nodes().map(n => n.id()).filter(id => id !== args.nodeId); }",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id},
+        )
+        assert other_ids, (
+            "UAT-7-29: expected at least one OTHER node on the canvas besides the dragged node "
+            f"{node_id!r} (the measured seed has 3) — criterion 4 cannot be asserted against an "
+            "empty list."
+        )
+        pre = page.evaluate(
+            "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
+            " return {"
+            "   pos: cy.$id(args.nodeId).position(),"
+            "   edge: cy.$id(args.edgeId).sourceEndpoint(),"
+            "   others: args.otherIds.map(id => cy.$id(id).position()),"
+            " }; }",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id, "otherIds": other_ids},
+        )
+        assert pre["edge"] is not None, (
+            f"UAT-7-29: pre-drag sourceEndpoint() for edge {edge_id!r} is None — the selected "
+            "edge has no usable endpoint geometry before any drag has occurred."
+        )
+
+        # Translate the node's model position to a real page (viewport) coordinate for
+        # page.mouse: container origin (getBoundingClientRect) + node's renderedPosition().
+        container_box = page.evaluate(
+            "(sel) => { const r = document.querySelector(sel).getBoundingClientRect();"
+            " return { x: r.x, y: r.y }; }",
+            _CY_CONTAINER_SELECTOR,
+        )
+        rendered = page.evaluate(
+            "(args) => document.querySelector(args.sel)._cyreg.cy.$id(args.nodeId).renderedPosition()",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id},
+        )
+        start_x = container_box["x"] + rendered["x"]
+        start_y = container_box["y"] + rendered["y"]
+
+        page.mouse.move(start_x, start_y)
+        page.mouse.down()
+        page.mouse.move(start_x + 100, start_y + 50, steps=10)
+
+        # MID-DRAG, mouse button still held (D-09). Sampling only after release would pass even
+        # if the renderer repainted edges once at the end, which is NOT what "connected edges
+        # update position in real-time" (criterion 2) says.
+        mid = page.evaluate(
+            "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
+            " return { pos: cy.$id(args.nodeId).position(), edge: cy.$id(args.edgeId).sourceEndpoint() }; }",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id},
+        )
+        page.mouse.up()
+
+        post = page.evaluate(
+            "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
+            " return {"
+            "   pos: cy.$id(args.nodeId).position(),"
+            "   edge: cy.$id(args.edgeId).sourceEndpoint(),"
+            "   others: args.otherIds.map(id => cy.$id(id).position()),"
+            " }; }",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id, "otherIds": other_ids},
+        )
+
+        # Criterion 1 — the node moves.
+        assert mid["pos"] != pre["pos"], (
+            f"UAT-7-29 criterion 1: expected node {node_id!r} to move mid-drag; pre={pre['pos']!r} "
+            f"mid={mid['pos']!r}."
+        )
+
+        # Criterion 2 — the visible connected edge updates in real time, WHILE the mouse is down,
+        # and its endpoint followed the node by approximately the same delta (not merely "changed").
+        assert mid["edge"] is not None and pre["edge"] is not None, (
+            f"UAT-7-29 criterion 2: edge {edge_id!r} sourceEndpoint() must be non-None both "
+            f"pre-drag and mid-drag; pre={pre['edge']!r} mid={mid['edge']!r}. A comparison whose "
+            "before and after are both None would 'pass' vacuously."
+        )
+        assert mid["edge"] != pre["edge"], (
+            f"UAT-7-29 criterion 2: expected edge {edge_id!r}'s sourceEndpoint() to change "
+            f"mid-drag; pre={pre['edge']!r} mid={mid['edge']!r}."
+        )
+        node_delta = (mid["pos"]["x"] - pre["pos"]["x"], mid["pos"]["y"] - pre["pos"]["y"])
+        edge_delta = (mid["edge"]["x"] - pre["edge"]["x"], mid["edge"]["y"] - pre["edge"]["y"])
+        # Tolerance is 25px, not the ~1px "exact lockstep" a naive reading of D-09/RESEARCH.md's
+        # prose might suggest. FINDING (observed live, this run): the edge is a bezier-style edge
+        # whose source anchor point is computed from the angle between source and target nodes,
+        # not simply offset from the source node's center — so as the node moves, the anchor point
+        # on its boundary shifts too, and the endpoint's raw delta is NOT identical to the node's
+        # raw delta on every axis. Measured this run: node_delta's y matched edge_delta's y
+        # EXACTLY (both axes' deltas agreed to 1e-9), while x diverged by ~19.6px on a 100px x
+        # offset (~20%). 25px comfortably covers that measured divergence while still failing a
+        # genuinely-decoupled endpoint (e.g. one that didn't move directionally with the node, or
+        # moved by only a few px on a 100px/50px drag). Direction (sign) agreement on both axes is
+        # asserted separately below as the sharper, geometry-independent form of "followed the
+        # node" that this test can make without overfitting to one edge's curve routing.
+        tolerance = 25.0
+        assert (
+            abs(node_delta[0] - edge_delta[0]) <= tolerance
+            and abs(node_delta[1] - edge_delta[1]) <= tolerance
+        ), (
+            f"UAT-7-29 criterion 2: expected edge {edge_id!r}'s endpoint to follow node "
+            f"{node_id!r} within tolerance; node_delta={node_delta!r} edge_delta={edge_delta!r} "
+            f"(tolerance={tolerance})."
+        )
+
+        def _sign(v):
+            return (v > 0) - (v < 0)
+
+        assert _sign(node_delta[0]) == _sign(edge_delta[0]) and _sign(node_delta[1]) == _sign(
+            edge_delta[1]
+        ), (
+            f"UAT-7-29 criterion 2: expected edge {edge_id!r}'s endpoint to move in the SAME "
+            f"direction as node {node_id!r} on both axes; node_delta={node_delta!r} "
+            f"edge_delta={edge_delta!r}."
+        )
+
+        # Criterion 3 — position (and edge endpoint) holds after release. No snap-back.
+        assert post["pos"] == mid["pos"], (
+            f"UAT-7-29 criterion 3: expected node {node_id!r}'s position to hold after release; "
+            f"mid={mid['pos']!r} post={post['pos']!r}."
+        )
+        assert post["edge"] == mid["edge"], (
+            f"UAT-7-29 criterion 3: expected edge {edge_id!r}'s sourceEndpoint() to hold after "
+            f"release; mid={mid['edge']!r} post={post['edge']!r}."
+        )
+
+        # Criterion 4 — the other nodes are byte-identical, pre-drag versus post-release.
+        assert pre["others"] == post["others"], (
+            f"UAT-7-29 criterion 4: expected the other nodes {other_ids!r} to be unaffected by "
+            f"dragging {node_id!r}; pre={pre['others']!r} post={post['others']!r}."
+        )
+
+        # Criterion 5 — no layout reset: the dragged node's post-release position must NOT equal
+        # its pre-drag position (dagre did not silently re-run and reassign the original layout
+        # coordinates). Criterion 4 holding for every untouched node is the second half of this
+        # evidence — a real layout reset would also move the other nodes, which criterion 4 above
+        # already rules out.
+        assert post["pos"] != pre["pos"], (
+            f"UAT-7-29 criterion 5: expected node {node_id!r}'s post-release position to differ "
+            f"from its pre-drag position (no layout reset); pre={pre['pos']!r} post={post['pos']!r}."
+        )
+
+        if pre["pos"] != {"x": 75, "y": 168} or pre["edge"] != {"x": 75, "y": 194}:
+            print(
+                "UAT-7-29 FINDING: pre-drag values disagree with the 2026-09-27 measurement "
+                f"recorded in CONTEXT.md/RESEARCH.md — node pre-drag position={pre['pos']!r} "
+                f"(expected {{'x': 75, 'y': 168}}), edge pre-drag sourceEndpoint={pre['edge']!r} "
+                "(expected {'x': 75, 'y': 194}). Reported per plan instruction, not adjusted."
+            )
