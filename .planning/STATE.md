@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: ready_to_plan
-last_updated: "2026-09-27T17:40:00Z"
+last_updated: "2026-09-27T18:20:00Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 8
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 207 — Browser-Only Coverage Verdict (COV-05). Context gathered 2026-09-26; operator-led, NOT autonomous.
+**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). Context gathered 2026-09-27; operator-led, NOT autonomous. Ready for `/gsd-plan-phase 207.1`.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
