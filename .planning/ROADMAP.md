@@ -68,7 +68,17 @@ client receives it from the report pipeline or the dashboard pipeline.
      `Operators-Guide.md`, vault `Digs` — and `docs/quirk-master-guide.md` is regenerated, since
      `operators-guide.md` is one of its five generator inputs and
      `tests/test_master_guide_freshness.py` gates the committed artifact byte-for-byte.
-**Plans**: TBD
+**Plans**: 8 plans in 6 waves
+
+Plans:
+- [ ] 210-01-PLAN.md — XSURF-01 written decision, decision-only, before any code change (wave 1)
+- [ ] 210-02-PLAN.md — extract evaluate_identity_endpoints() with the (host, port, serial) dedupe; route becomes a caller; CLI composition (wave 2)
+- [ ] 210-03-PLAN.md — dedupe evidence.py's independent saml_weak_signing_count (wave 3)
+- [ ] 210-04-PLAN.md — resolve latest-scan by scan_run_id, window as NULL-only fallback; two stale comments corrected (wave 3)
+- [ ] 210-05-PLAN.md — XSURF-04 three-number parity gate plus the required falsification (wave 4)
+- [ ] 210-06-PLAN.md — live multihost re-run recording both pipelines' numbers (wave 5, non-autonomous)
+- [ ] 210-07-PLAN.md — doc retarget per D-20, master-guide regeneration, vault sync (wave 5)
+- [ ] 210-08-PLAN.md — UAT-SERIES.md, Obsidian phase note, ground-truth completion check (wave 6)
 
 ### Phase 211: Denominator Correctness
 **Goal**: Every ratio penalty in the readiness score divides by the population its own numerator is
@@ -176,7 +186,7 @@ emits and whatever UI state ships — every other phase must land first)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 210. Cross-Surface Score Parity | 0/? | Not started | - |
+| 210. Cross-Surface Score Parity | 0/8 | Not started | - |
 | 211. Denominator Correctness | 0/? | Not started | - |
 | 212. Score Dilution — Decision Only | 0/? | Not started | - |
 | 213. Shipped Product Defects (Series 7) | 0/? | Not started | - |
