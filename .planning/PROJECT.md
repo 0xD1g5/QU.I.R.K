@@ -6,8 +6,9 @@
 mid-milestone insert 207.1), 53 plans, **17 of 18 requirements satisfied + COV-04 PARTIAL at 27 of 28**.
 Audit `tech_debt`: integration **4/4 seams WIRED with 0 blockers**, Nyquist 8/8 compliant, staleness
 green across all 9 date-gated catalogs. Merged to `origin/main` at `b262aa82`; archived to
-`.planning/milestones/v5.24-*`; `.planning/REQUIREMENTS.md` removed on purpose. **No milestone is open**
-— next action is `/gsd-new-milestone`. Open drainable GAPs **47 → 41**.
+`.planning/milestones/v5.24-*`; `.planning/REQUIREMENTS.md` removed on purpose. Open drainable GAPs
+**47 → 41**. **v5.25 Score Truth & Release Cut opened 2026-09-27** — see the Current Milestone
+section below.
 
 **What this milestone was actually about: evidence integrity, not features.** Nearly every phase exists
 because a coverage claim turned out to rest on something weaker than it looked — a worklist maintained
@@ -25,9 +26,13 @@ COV-04 asked for tests of *existing* behaviour; one of its 28 cases describes be
 does not have.
 
 **Three items are carried forward above any new feature**, because they affect the merge signal rather
-than the product: `release.yml` hardcodes a static release body (the standing reason three consecutive
-milestones are untagged, and the precondition for ever tagging again); a **flaky node inside the
-required CI job**; and `UAT-206-05`, where 18 of 24 COV-04 conversions are QUALIFIED PASSes with no
+than the product: ~~`release.yml` hardcodes a static release body~~ — **CORRECTED 2026-09-27 at the
+v5.25 boundary pass: this fix is already on `main`** (`release.yml:293` "Compose release notes from
+CHANGELOG" + `:436 body_path: release-notes.md`; the static `body:` is gone and `:343` hard-fails when
+the version's `## [x.y.z]` section is missing). `999.109`'s HORIZON ledger row, and this sentence,
+both outlived the fix by two weeks — the blocker is discharged and what remains is an actual release
+cut, not a workflow change. A **flaky node inside the required CI job**; and `UAT-206-05`, where 18 of
+24 COV-04 conversions are QUALIFIED PASSes with no
 mechanical guard on the qualification text. 35 items acknowledged as deferred at close — 33 todos + 1
 open debug session + 1 known false positive, all counted from disk because the close gate caps its own
 todo count at 5.
@@ -227,6 +232,68 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 `.planning/todos/pending/backlog-reconciliation-and-derived-gate.md`.
 
 </details>
+
+## Current Milestone: v5.25 Score Truth & Release Cut
+
+**Opened:** 2026-09-27, after a boundary pass that ran a PM review of HORIZON's Open-Item Ledger, the
+33 pending todos re-counted from disk, and the v5.24 audit's `tech_debt` set.
+
+**Goal:** Make the readiness score mean one thing on every surface a client can see, then ship it —
+the first tagged release since v5.21, carrying three milestones of accumulated work.
+
+**Target features:**
+
+- **One score, one number, every surface.** A single scan currently yields 15/100 + 5 CRITICAL from
+  the report pipeline and 19/100 + 7 CRITICAL from the dashboard pipeline. Three confirmed causes:
+  SAML emits one `IdentityFinding` per endpoint row (`routes/scan.py:480-498`) so one RSA-1024 key
+  becomes two CRITICALs and the `use=encryption` row is mistitled "signing"; the CLI omits the SAML
+  finding entirely while still scoring it (`identity_saml_weak_signing_ratio: 0.0054` with no
+  matching row in `findings-*.json`); and `SESSION_BRACKET = 5min` merges distinct scan runs on the
+  no-`scan_id` branch, inflating certificates 17 -> 34 and CRITICALs 7 -> 14.
+- **The denominator decision (999.113).** Every ratio penalty divides by `totals.endpoints` — a
+  probe count — rather than the population its numerator is drawn from. Measured: a 31-host estate
+  with 5 of 17 certificates expired scored Identity **25/25** and headline **91/100**, and four
+  successive rounds of adding real detected vulnerabilities moved every subscore by exactly zero.
+- **A written denominator decision for P2b, implementation deferred.** Adding only healthy endpoints
+  still raises the computed score (71 -> 82 across a 14x dilution); 999.115's consequence ceiling
+  masks it to 18 -> 20 without fixing it. Three candidates are unvalidated, so this milestone spikes
+  and decides rather than implements.
+- **The release cut.** Promote `CHANGELOG.md`'s `## [Unreleased]` to `## [5.25.0]`, bump `5.21.0`,
+  prove the CHANGELOG composer on a real tag push (it has only ever run on `workflow_dispatch`
+  dry-runs), and backfill the 7 public release bodies still carrying Windows-sensor boilerplate.
+- **The two shipped series-7 product defects** v5.24's audit recorded rather than absorbed:
+  `certificates.tsx` expiry-column sort (UAT-7-12, S) and the hardcoded colour literals bypassing
+  theme tokens (UAT-7-21 — the todo counts 50 across 8 files, the audit says 95 across 9; the
+  disagreement is itself a finding to re-derive).
+
+**Sequencing (operator decision, 2026-09-27): score first, release last.** A tag freezes whatever
+number the scorer emits, so the release is the final phase. The accepted risk is a fourth untagged
+milestone if the denominator work runs long; the rejected alternative was publishing the known
+15-vs-19 contradiction under a version number.
+
+**Key context and constraints:**
+
+- **999.113 D5 — never tune to a target.** Choose the denominator *by measurement against the
+  calibration ladder*, not by argument. Fixing a genuine double-count is correctness, not tuning —
+  but any plan doing so must state the distinction explicitly rather than leave it inferred.
+- **P2b is a spike, not a plan.** The right denominator is genuinely UNKNOWN (distinct hosts /
+  absolute exposure term / scan-scope normalisation). Reuse the existing ladder harness in
+  `tests/test_score_properties.py`; verify the control reproduces the baseline before trusting any
+  row. Do not weaken `test_p2b_...`'s pre-ceiling assertion — it exists so the ceiling cannot hide
+  the defect from its own test.
+- Changing any denominator re-scores every ladder rung, so **CBOM golden fixtures and
+  `score-strings.json` must be regenerated** (both generator-drift-gated), and
+  `_apply_weighted_impacts`' 25-point clamp will saturate more often.
+- **Never push a test tag** — `release.yml` fires on `v[0-9]*` and publishes to PyPI (Phase 187).
+  The version cut is operator-reserved.
+- `hw_cve.py` trips its 30-day gate around **2026-10-13**, inside this milestone's likely window.
+- The `SESSION_BRACKET` window is **load-bearing for legacy NULL-`scan_run_id` rows** — read
+  `get_latest_scan`'s docstring before narrowing it.
+
+**Explicitly out of scope:** net-new detection breadth (HORIZON Candidate B needs a demand signal
+that does not exist); Migration Execution (Candidate A needs a shaping pass and carries a 3x sizing
+question); `999.104` CLI/dashboard field parity; `999.110` multi-host lab topology; `999.107`
+reachability/crown-jewel declaration; the four GSD-toolchain todos (operator machine, not product).
 
 ## Previous Milestone: v5.24 UAT Coverage Drain — development complete 2026-09-27 (untagged)
 
