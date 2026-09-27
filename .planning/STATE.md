@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: ready_to_execute
+status: verifying
 last_updated: "2026-09-27T16:04:16.512Z"
 last_activity: 2026-09-27
 progress:
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). EXECUTING 2026-09-27: 3 plans in 3 waves, plan-checker PASSED. Operator-led, NOT autonomous. Sequential on the main tree (`workflow.use_worktrees=false`).
+**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). ALL 3 PLANS COMPLETE 2026-09-27; verification returned `human_needed` at a 5/5 truth score. **NOT marked complete.** `UAT-7-23` criterion 6 ("transition is smooth") is routed to HUMAN-UAT per D-11, and the artifacts record only the ROUTING decision, not a verdict — see `207.1-HUMAN-UAT.md` for the literal walkthrough. The phase closes once that verdict is recorded and verification re-runs `passed`.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1273,14 +1273,29 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **EXECUTING 2026-09-27. 3 plans in 3 waves
-(`207.1-01` UAT-7-23 + control, `207.1-02` UAT-7-29 + control, `207.1-03` disposition artifacts +
-docs/vault), plan-checker VERIFICATION PASSED with zero blockers.** Requirement **COV-10** (new).
-Plan: 2 of 3 complete (207.1-01: UAT-7-23 sidebar responsive collapse + red-proof control;
-207.1-02: UAT-7-29 Cytoscape roadmap node drag + red-proof control, all four nodes passing — see
-`207.1-01-SUMMARY.md` and `207.1-02-SUMMARY.md`) — executing in the main session on branch
-`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out). Next: 207.1-03
-(disposition artifacts + docs/vault sync).
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **ALL 3 PLANS COMPLETE 2026-09-27.
+Verification `human_needed` at 5 of 5 truths verified — 1 human item open, so the phase is NOT
+marked complete in ROADMAP.md and `completed_phases` is unchanged.** Requirement **COV-10** (new).
+Plan: 3 of 3 complete (207.1-01: UAT-7-23 measured sidebar collapse + red-proof control;
+207.1-02: UAT-7-29 Cytoscape node drag + red-proof control; 207.1-03: the three coupled disposition
+artifacts, COV-10, docs and vault close-out) — ran sequentially in the main session on branch
+`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out;
+`workflow.use_worktrees=false`, and plans 01/02 share `tests/test_browser_e2e.py` anyway).
+Next: the `207.1-HUMAN-UAT.md` walkthrough — operator-led, then re-run verification.
+
+**Two post-executor corrections the orchestrator made, both after a `Self-Check: PASSED`:**
+1. `9eaeabe1` — both cases' `**Notes:**` prose still contradicted their flipped Result lines (a
+   stale "This case stays **GAP**" under a checked PASS box; `**Tester:** ... no test written`
+   beside a cited test). No gate catches this class: the reconciliation gate compares the Result
+   line against the ledger row and the coverage-gaps set, and the ledger stores only the **Result**
+   line — Notes prose is in none of the three.
+2. `057132e4` — code review WR-01: `UAT-7-29`'s criterion 5 was a TAUTOLOGY. `post != pre` is
+   entailed by criterion 1 (`mid != pre`) and criterion 3 (`post == mid`), so it could never fail
+   independently, and a dagre re-run relocating the node anywhere still satisfied it. Rewritten to
+   assert the node came to rest where the drag put it, and RED-PROVED by displacing the
+   expectation. A tautological criterion is worse than a missing one: a missing criterion fails a
+   count, a tautological one passes the count, the test, and every gate while adding zero
+   falsifiability.
 
 **Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
 orphaned between COV-04 and COV-05. Phase 206 closed COV-04 at 25 of 28 and routed them to Phase 207;
