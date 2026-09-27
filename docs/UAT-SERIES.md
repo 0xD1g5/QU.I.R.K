@@ -3932,8 +3932,10 @@ Both are appearance claims jsdom cannot honestly assert: the theme is applied as
 - Transition is smooth (no layout jumps or flicker)
 
 **Result:** - [x] PASS (2026-09-27 verified: pytest tests/test_browser_e2e.py::test_uat_7_23_sidebar_responsive_collapse -q -m '' -- 1 passed with Chromium installed, 1 skipped with Chromium absent, zero failures and zero errors. Asserts MEASURED aside box widths: 240px at 1440px viewport, 48px at 900px viewport, 240px again on return -- explicitly NOT the class attribute, which is 'w-12 lg:w-60' at every viewport -- plus wordmark/monogram visibility inversion, the Radix portal tooltip's rendered text 'New Scan', and a collapsed-nav click routing to /findings. This case closes at 5 of 6: criterion 6, 'transition is smooth, no layout jumps or flicker', has no mechanical referent and is recorded HUMAN-UAT per Phase 207.1 D-11, not absorbed into the PASS. Red-proved by the paired control test_uat_7_23_control_no_viewport_change, which omits the resize and asserts the width stays unmoved at 240 -- CI-EXEMPT: this node DOES execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. That is a different and stronger position than the two earlier CI-EXEMPT precedents, which describe nodes CI genuinely never executes)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-21  **Tester:** Phase 206 reclassification — no test written  
-**Notes:** This case LEAVES the jsdom-tractable set. Recorded here so the SC#3 denominator change is visible and re-derivable rather than quietly assumed.
+**Date:** 2026-09-27  **Tester:** Phase 207.1 — real Playwright node written  
+**Notes:** Closed 2026-09-27 by Phase 207.1 (COV-10) at 5 of 6 criteria. The 2026-09-21 Phase 206 reclassification recorded below is retained as history, not as the current disposition — it was correct on its own terms and is what routed this case to a browser harness.
+
+**Superseded — 2026-09-21 Phase 206 reclassification.** This case LEAVES the jsdom-tractable set. Recorded here so the SC#3 denominator change is visible and re-derivable rather than quietly assumed.
 
 Commands run from the repository root on 2026-09-21 against the unmodified `sidebar.tsx`:
 
@@ -3950,7 +3952,9 @@ $ echo $?
 
 There is no JS state, no `matchMedia` listener and no `useMediaQuery` hook whose behaviour a render assertion could observe. The same pattern governs every other half of the case: the wordmark/monogram swap is `hidden lg:block` vs `lg:hidden` (sidebar.tsx lines 86 and 90) and the collapsed-state tooltips are `className="lg:hidden"` on `TooltipContent`. Every element the case asks about is present in the DOM in **both** states, distinguished only by which CSS rule a real browser would apply. Any jsdom test that appeared to tell the states apart would be asserting class strings — the banned source-text substitution wearing a render test's clothes.
 
-**Reclassification, not a shortfall.** The case was never jsdom-tractable; the original 28/3 split mis-graded it. Had the first grep returned a JS media-query listener the case would have been convertible and this block would say so; it did not. A GAP is a valid, dispositioned outcome — no box was checked to satisfy a gate. Joins the browser-only group alongside UAT-7-01, UAT-7-17, UAT-7-32 and UAT-7-29.
+**Reclassification, not a shortfall.** The case was never jsdom-tractable; the original 28/3 split mis-graded it. Had the first grep returned a JS media-query listener the case would have been convertible and this block would say so; it did not. A GAP was a valid, dispositioned outcome — no box was checked to satisfy a gate. It joined the browser-only group alongside UAT-7-01, UAT-7-17, UAT-7-32 and UAT-7-29.
+
+**That GAP is now closed.** Phase 207 built the real browser harness and flipped UAT-7-01, UAT-7-17 and UAT-7-32; Phase 207.1 (COV-10) flipped the two cases left orphaned between COV-04 and COV-05 — this one and UAT-7-29. The reasoning above stopped being load-bearing the moment a real layout engine was available; it is kept because it is the record of WHY a browser was required, and because the 5-of-6 close depends on it: criterion 6 ("transition is smooth — no layout jumps or flicker") still has no mechanical referent in any engine and is recorded HUMAN-UAT rather than absorbed into the PASS.
 
 
 ---
@@ -4139,14 +4143,18 @@ The node asserts that the page passes `userZoomingEnabled: true` and `userPannin
 - Layout does not reset on node release
 
 **Result:** - [x] PASS (2026-09-27 verified: pytest tests/test_browser_e2e.py::test_uat_7_29_roadmap_node_drag -q -m '' -- 1 passed with Chromium installed, 1 skipped with Chromium absent, zero failures and zero errors. Asserts a real Cytoscape node drag: the node moves, the visible phase- edge's sourceEndpoint is sampled MID-DRAG between the mouse-button press and release and found non-None, changed from pre-drag within tolerance, and moving in the same-sign direction on both axes; the position holds after release; the other three nodes stay byte-identical; and container._cyreg.cy is asserted resolved with a named diagnosis before any mouse event. Red-proved by the paired control test_uat_7_29_control_no_mousedown, which performs the same setup with the mouse-button press omitted and asserts both the node position and the edge endpoint stay unmoved -- CI-EXEMPT: this node DOES execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. That is a different and stronger position than the two earlier CI-EXEMPT precedents, which describe nodes CI genuinely never executes)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-21  **Tester:** Phase 206 reclassification — no test written  
-**Notes:** This case LEAVES the jsdom-tractable set. Recorded here so the SC#3 denominator change is visible and re-derivable rather than quietly assumed.
+**Date:** 2026-09-27  **Tester:** Phase 207.1 — real Playwright node written  
+**Notes:** Closed 2026-09-27 by Phase 207.1 (COV-10), all five criteria asserted. The 2026-09-21 Phase 206 reclassification recorded below is retained as history, not as the current disposition — its rejected-substitute analysis is the standard the new test had to clear.
+
+**Superseded — 2026-09-21 Phase 206 reclassification.** This case LEAVES the jsdom-tractable set. Recorded here so the SC#3 denominator change is visible and re-derivable rather than quietly assumed.
 
 `roadmap.tsx` hands an `elements` array with **no** `position` key to `cytoscape()` and lets dagre lay the graph out. Every one of this case's five Pass Criteria is a property of the renderer's own hit-testing, position bookkeeping and repaint, none of which a mocked `cytoscape` module performs. Requires a real browser.
 
 **The rejected alternative is recorded, because rejecting it is the honest act.** Plan 206-08 was offered a data-layer invariant — "every edge's `source` and `target` still resolve to nodes in the elements array independent of node positions" — and declined it on two grounds. First, it covers **zero** of this case's five Pass Criteria; a citation whose carve-out list is the case's entire criteria set is a false attestation, not a partial one. Second, "after a position update" has no referent in this product — positions exist in no state `roadmap.tsx` owns, so the test would have to synthesise an event the product never handles and then assert that an array built *before* that event is unchanged, which is faking the thing under test. That invariant is nonetheless real and IS already asserted, as a supporting assertion, inside UAT-7-15's cited node; it is simply not this case's subject.
 
-This case stays **GAP**, not DEFERRED — no substitute exists. Joins the browser-only group alongside UAT-7-01, UAT-7-17, UAT-7-32 and UAT-7-23.
+That is why this case stayed **GAP**, not DEFERRED — no substitute existed. It joined the browser-only group alongside UAT-7-01, UAT-7-17, UAT-7-32 and UAT-7-23.
+
+**That GAP is now closed.** Phase 207.1 (COV-10) wrote `test_uat_7_29_roadmap_node_drag` against the real Cytoscape renderer, asserting all five criteria — the bar this case's own rejected-substitute analysis set. One measured correction to the naive reading of criterion 2 is recorded in-code: the visible edge's `sourceEndpoint()` does NOT track the dragged node's delta 1:1. Over a 100px drag the y-delta matched exactly but x diverged ~19.6px, because the edge is bezier-styled and its source anchor is computed from the angle to the target node — so moving the source moves the anchor along the node's perimeter. The test therefore asserts a 25px tolerance PLUS an independent same-sign direction check on both axes, rather than an equality the renderer never promised.
 
 
 ---
