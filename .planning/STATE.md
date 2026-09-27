@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: ready_to_execute
-last_updated: "2026-09-27T18:35:00Z"
+last_updated: "2026-09-27T19:10:00Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 54
-  completed_plans: 51
+  completed_plans: 52
   percent: 88
 ---
 
@@ -1276,8 +1276,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **EXECUTING 2026-09-27. 3 plans in 3 waves
 (`207.1-01` UAT-7-23 + control, `207.1-02` UAT-7-29 + control, `207.1-03` disposition artifacts +
 docs/vault), plan-checker VERIFICATION PASSED with zero blockers.** Requirement **COV-10** (new).
-Plan: 1 of 3 — executing in the main session on branch
-`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out).
+Plan: 1 of 3 complete (207.1-01: UAT-7-23 sidebar responsive collapse + red-proof control, both
+passing — see `207.1-01-SUMMARY.md`) — executing in the main session on branch
+`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out). Next: 207.1-02
+(UAT-7-29 + control).
 
 **Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
 orphaned between COV-04 and COV-05. Phase 206 closed COV-04 at 25 of 28 and routed them to Phase 207;

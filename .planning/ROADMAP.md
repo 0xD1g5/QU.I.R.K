@@ -542,8 +542,8 @@ are this phase's entire toolchain — nothing new is provisioned)
      together — the three coupled artifacts from Phase 205 — and the freshness gate stays green.
 **Plans**: 3 plans in 3 waves (serialized — plans 01 and 02 both write
 `tests/test_browser_e2e.py`, so they cannot share a wave)
-- [ ] 207.1-01-PLAN.md — UAT-7-23: measured sidebar collapse across the 1024px breakpoint + its
-  no-viewport-change control (wave 1)
+- [x] 207.1-01-PLAN.md — UAT-7-23: measured sidebar collapse across the 1024px breakpoint + its
+  no-viewport-change control (wave 1) — complete 2026-09-27, both nodes passing
 - [ ] 207.1-02-PLAN.md — UAT-7-29: Cytoscape node drag with the visible edge sampled mid-drag +
   its no-mouse.down() control (wave 2)
 - [ ] 207.1-03-PLAN.md — two-sided gate, the three coupled disposition artifacts, COV-10, docs and
