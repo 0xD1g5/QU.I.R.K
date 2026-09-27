@@ -814,6 +814,7 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
             "   pos: cy.$id(args.nodeId).position(),"
             "   edge: cy.$id(args.edgeId).sourceEndpoint(),"
             "   others: args.otherIds.map(id => cy.$id(id).position()),"
+            "   zoom: cy.zoom(),"
             " }; }",
             {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id, "otherIds": other_ids},
         )
@@ -928,15 +929,33 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
             f"dragging {node_id!r}; pre={pre['others']!r} post={post['others']!r}."
         )
 
-        # Criterion 5 — no layout reset: the dragged node's post-release position must NOT equal
-        # its pre-drag position (dagre did not silently re-run and reassign the original layout
-        # coordinates). Criterion 4 holding for every untouched node is the second half of this
-        # evidence — a real layout reset would also move the other nodes, which criterion 4 above
-        # already rules out.
-        assert post["pos"] != pre["pos"], (
-            f"UAT-7-29 criterion 5: expected node {node_id!r}'s post-release position to differ "
-            f"from its pre-drag position (no layout reset); pre={pre['pos']!r} post={post['pos']!r}."
+        # Criterion 5 — no layout reset. This must be asserted against a value NOT already
+        # consumed by criteria 1 and 3, or it proves nothing: `post != pre` is implied by
+        # `mid != pre` (criterion 1) and `post == mid` (criterion 3), so it can never fail
+        # independently once those hold, and it would ALSO be satisfied by a dagre re-run that
+        # relocated the node to some arbitrary third position. Found by the Phase 207.1 code
+        # review (WR-01) — the original form was a tautology wearing a fifth criterion's clothes.
+        #
+        # The falsifiable claim is that the node ended up where the DRAG put it: the mouse moved
+        # (+100, +50) rendered pixels, which Cytoscape applies to the grabbed node's model
+        # position divided by the viewport zoom. A silent layout reset reassigns dagre's own
+        # coordinates and lands somewhere unrelated to the cursor, failing this.
+        expected_pos = {
+            "x": pre["pos"]["x"] + 100 / pre["zoom"],
+            "y": pre["pos"]["y"] + 50 / pre["zoom"],
+        }
+        layout_tolerance = 10
+        assert (
+            abs(post["pos"]["x"] - expected_pos["x"]) <= layout_tolerance
+            and abs(post["pos"]["y"] - expected_pos["y"]) <= layout_tolerance
+        ), (
+            f"UAT-7-29 criterion 5: expected node {node_id!r} to come to rest where the drag put "
+            f"it, not where a re-run layout would place it; pre={pre['pos']!r} "
+            f"post={post['pos']!r} expected~={expected_pos!r} zoom={pre['zoom']!r} "
+            f"(tolerance={layout_tolerance})."
         )
+        # Second half of the same evidence, and independent of the above: a real layout reset
+        # would also move every untouched node, which criterion 4 has already ruled out.
 
         if pre["pos"] != {"x": 75, "y": 168} or pre["edge"] != {"x": 75, "y": 194}:
             print(
