@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: ready_to_plan
-last_updated: "2026-09-26T18:20:00Z"
-last_activity: 2026-09-26
+last_updated: "2026-09-27T17:40:00Z"
+last_activity: 2026-09-27
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 44
-  completed_plans: 44
-  percent: 86
+  total_phases: 8
+  completed_phases: 7
+  total_plans: 51
+  completed_plans: 51
+  percent: 88
 ---
 
 # Project State
@@ -1258,7 +1258,79 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   Inserted by hand-edit; `state.patch` / `state.add-roadmap-evolution` deliberately NOT used —
   they are the corrupting verbs this phase exists to fix (CLAUDE.md TOOL-05).
 
+- Phase 207.1 inserted after Phase 207 (2026-09-27) — `UAT-7-23` and `UAT-7-29` are orphaned
+  between COV-04's jsdom-tractable set (which reclassified them OUT on 2026-09-21) and COV-05's
+  three named cases (Complete). New requirement **COV-10** rather than an amendment to either, so no
+  closed record is rewritten to absorb work it never covered. Inserted on a **measured** tractability
+  assessment against live Chromium, not a hypothesis. `gsd-sdk query phase.insert 207` wrote the
+  Phase Details block and left STATE.md untouched (verified by pre-image diff), but **wrote no
+  checklist row** — the `- [ ] **Phase 207.1: ...**` line under `## Phases` was added by hand. That
+  omission matters: the checklist, not the details block, is what milestone audits read for `[x]`.
+  `state.patch` / `state.add-roadmap-evolution` deliberately NOT used (UNSAFE verb class).
+
+  **This reopens v5.24.** The milestone stood at all 7 phases `[x]` and was paused awaiting this very
+  decision; the close sequence now sits behind Phase 207.1.
+
 ## Current Position
+
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **INSERTED 2026-09-27, ready to plan. Nothing
+written yet: 0 plans, no CONTEXT.md.** Requirement **COV-10** (new). Next: `/gsd-discuss-phase 207.1`.
+
+**Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
+orphaned between COV-04 and COV-05. Phase 206 closed COV-04 at 25 of 28 and routed them to Phase 207;
+Phase 207's scope was `UAT-7-01`/`7-17`/`7-32` + `UAT-88-03` and never took them. **Neither phase
+erred.** Both were reclassified out of the jsdom-tractable set on 2026-09-21 because jsdom evaluates
+no media queries and runs no Cytoscape renderer — a reason that stopped holding when Phase 207 shipped
+a real browser harness.
+
+**The verdict is measured, not argued.** Live Chromium, real built SPA, `assert_spa_mounted` passed
+first. `UAT-7-23`: `aside` 240px @1440 -> 48px @900 -> 240px back; wordmark/monogram visibility
+inverts; collapsed tooltip renders `"New Scan"`; collapsed nav click routes to `/findings`. Those are
+layout measurements, not the class-string assertions the original GAP note correctly banned.
+`UAT-7-29`: node `(75,168)` -> `(183.7,113.6)`; visible edge source endpoint `(75,194)` ->
+`(169.3,139.6)` **mid-drag**; position held after release; other three nodes byte-identical; and a
+control drag with no `mouse.down()` moved nothing, so the assertion can fail.
+
+**Three traps for whoever plans this, each found by a near-miss rather than by reasoning:**
+
+1. `cy.nodes()[0]`'s only connected edge is a `rank-` edge with `visible: false`, and invisible edges
+   return **no endpoint geometry** (`sourceEndpoint()` -> `{}`). My first probe read that empty result
+   and would have recorded a false intractability verdict. Select via
+   `connectedEdges().filter(e => e.visible())`.
+2. `container._cyreg.cy` is an **undocumented Cytoscape internal** — the only route to the live
+   instance, since `roadmap.tsx` keeps `cyRef` in a React ref and exposes nothing globally. Assert it
+   resolved; fail with a named diagnosis if a version bump removes it.
+3. `UAT-7-23` criterion 6 ("transition is smooth, no layout jumps or flicker") has **no mechanical
+   referent.** It stays human-UAT or is dropped explicitly. This case closes at **5 of 6** and the
+   partial must be stated, not absorbed.
+
+**Two records this assessment falsified, both left in place and corrected forward:**
+
+- **Phase 207 D-04's stated evidence was wrong.** It reasoned `git ls-files src/dashboard/dist`
+  returns 0, therefore built statics are not committed, therefore a vacuous-pass trap. But vite's
+  `outDir` is `../../quirk/dashboard/static` (`src/dashboard/vite.config.ts:194`) — `dist` is a path
+  vite never writes to. Those statics **are** committed: 14 tracked files, and a rebuild reproduced
+  them byte-identically (`git status` clean). The *guard* D-04 motivated is still right; its premise
+  was false. Consequence to check before it costs CI time: the `Browser E2E` job may need **no
+  `npm run build` step at all.**
+- **Phase 208's "`~/Library/Caches/ms-playwright/` is empty on this machine" is superseded** —
+  `chromium-1208` is installed and launches. True when written; Phase 207 changed it.
+
+**`completed_plans` was stale at 44 and is now 51, re-derived from disk.** The 44 came with its own
+per-phase breakdown (`203=4, 204=6, 205=7, 206=13, 208=6, 209=8`) which **omits Phase 207 entirely**;
+44 + 207's 7 = 51, matching the live glob exactly. `total_plans` is also 51 and `percent` stays
+**phase-based (7 of 8 = 88)**, for the reason already recorded below: Phase 207.1 has 0 plans on disk,
+so a plan-based denominator would read 100% for an incomplete milestone. The `-PLAN.md` glob returns
+**50**, not 51, and that asymmetry is fully explained — 203-05/06/07 are plans without summaries (the
+accepted, dated gap recorded at line ~1700 and ~2682: their scope landed under other commits), while
+205-02b, 205-06 and 207-03.5 are summaries without plan files.
+
+STATE.md was **hand-edited** for this entry. No mutating `state.*` verb was invoked — REQUIREMENTS.md's
+standing constraint holds them UNSAFE on this machine. A pre-image was taken and diffed against both
+named corruption signatures. `gsd-sdk query phase.insert` WAS used (it writes ROADMAP.md) and left
+STATE.md byte-identical, verified.
+
+---
 
 Phase: 207 (Browser-Only Coverage Verdict) — **CONTEXT GATHERED 2026-09-26, ready to plan.**
 Plan: 0 of ? — no plans written yet.

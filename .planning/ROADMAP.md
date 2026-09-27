@@ -258,6 +258,10 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 - [x] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
 
+- [ ] **Phase 207.1: Orphaned Browser-Only Coverage Drain** (INSERTED 2026-09-27) - the 2 cases
+  orphaned between COV-04's jsdom set and COV-05's named three get real Tier-2 browser coverage.
+  Inserted after a measured tractability assessment, not a hypothesis — see COV-10.
+
 - [x] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
   gaps are covered and the two carried doc corrections land. **Completed 2026-09-22 at 4 of 5
   success criteria MET AS WRITTEN** — criterion 2 is recorded NOT MET AS WRITTEN (HTML leg
@@ -509,6 +513,58 @@ The sole open question this phase inherits is a **yes/no on installing a Chromiu
 install step exists in that workflow today; the only `setup-chrome` steps live in
 `dashboard-quality.yml`, which runs no pytest. Full record:
 `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`.
+
+### Phase 207.1: Orphaned Browser-Only Coverage Drain (INSERTED 2026-09-27)
+**Goal**: `UAT-7-23` and `UAT-7-29` stop being orphaned between two requirements that never owned
+them, and become real Tier-2 browser tests against the harness Phase 207 already built.
+**Depends on**: Phase 207 (its `tests/browser_e2e_harness.py` and the non-gating `Browser E2E` job
+are this phase's entire toolchain — nothing new is provisioned)
+**Requirements**: COV-10
+**Success Criteria** (what must be TRUE):
+  1. `UAT-7-23` has a Tier-2 test asserting the collapse as **measured layout**, not class strings:
+     `aside` width 240px above the 1024px breakpoint and 48px below it, wordmark/monogram visibility
+     inverting with it, a collapsed-state tooltip rendering real text, and a nav click routing while
+     collapsed. The case's disposition cites that node. Criterion 6 of the case itself ("transition
+     is smooth") is recorded as human-UAT or explicitly dropped — **this case closes at 5 of 6 and
+     the partial is stated, never absorbed into a PASS.**
+  2. `UAT-7-29` has a Tier-2 test that drags a real Cytoscape node and asserts all five of the
+     case's criteria: the node moves, its **visible** edge's endpoint follows mid-drag, the position
+     holds after release, the other nodes are unchanged, and no layout reset occurs. The test selects
+     its edge via `connectedEdges().filter(e => e.visible())` — a `rank-` edge returns no endpoint
+     geometry and would make the edge-follow assertion silently unobservable.
+  3. Both tests are **proved capable of failing**, not merely observed passing — a control that
+     omits the triggering interaction (no `mouse.down()`; no viewport change) leaves the asserted
+     values unmoved. A test that cannot fail is the vacuous-pass trap D-04 exists to catch, and this
+     phase's two subjects are precisely where it would hide.
+  4. `container._cyreg.cy` is asserted to have resolved before use, failing with a named diagnosis
+     if a Cytoscape version bump removes that undocumented internal.
+  5. Both cases' `**Result:**` dispositions, `docs/uat-coverage-gaps.md`, and the UAT ledger move
+     together — the three coupled artifacts from Phase 205 — and the freshness gate stays green.
+**Plans**: not yet planned
+**UI hint**: yes
+
+**Why this phase exists, and why it is not a Phase 207 defect.** Phase 206 closed COV-04 at 25 of 28
+with SC#1 recorded NOT MET AS WRITTEN and routed these two cases to Phase 207. Phase 207's scope was
+`UAT-7-01`/`7-17`/`7-32` plus the inherited `UAT-88-03`, and it never took them. **Neither phase
+erred; the cases fell between them.** Both were reclassified out of the jsdom-tractable set on
+2026-09-21 on the correct ground that jsdom evaluates no media queries and runs no Cytoscape
+renderer — a reason that stopped being load-bearing the moment Phase 207 shipped a real browser.
+
+**The tractability verdict is measured, not argued** (2026-09-27, live Chromium, real built SPA,
+`assert_spa_mounted` passed first). `UAT-7-23`: 240px/48px/240px across 1440 -> 900 -> 1440, tooltip
+text `"New Scan"`, collapsed nav click -> `/findings`. `UAT-7-29`: node `(75,168)` -> `(183.7,113.6)`,
+visible edge source endpoint `(75,194)` -> `(169.3,139.6)` **mid-drag**, position held after release,
+other three nodes byte-identical, and a no-`mouse.down()` control moved nothing.
+
+**Two corrections to the record this assessment produced, both worth carrying.** (1) Phase 207
+D-04's stated evidence for the vacuous-pass trap — "`git ls-files src/dashboard/dist` returns 0,
+therefore built statics are not committed" — checked a path vite never writes to: `outDir` is
+`../../quirk/dashboard/static` (`src/dashboard/vite.config.ts:194`), and those statics **are**
+committed (14 tracked files; a rebuild reproduced them byte-identically). The guard D-04 motivated
+is still correct practice; its premise was false, and the `Browser E2E` job may not need an
+`npm run build` step at all — check before adding one. (2) Phase 208's record that
+`~/Library/Caches/ms-playwright/` is empty on this machine is superseded: `chromium-1208` is
+installed and launches. That record was true when written; Phase 207 changed it.
 
 ### Phase 208: Security, Report Coverage & Doc Debt
 **Goal**: The security- and report-relevant non-UI gaps are genuinely exercised, and the two doc

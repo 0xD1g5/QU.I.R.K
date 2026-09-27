@@ -194,6 +194,34 @@ gate, not the coverage, is the defect.
       worklist, not honesty — but the retirement must be a recorded decision with its reason, never a
       quiet deletion, which is exactly what the `UAT-47-04` correction demonstrates.
 
+- [ ] **COV-10**: the **2** cases orphaned between COV-04 and COV-05 — `UAT-7-23` (sidebar
+      responsive collapse at the 1024px breakpoint) and `UAT-7-29` (Cytoscape roadmap node drag) —
+      receive real Tier-2 browser coverage against the Phase 207 harness, or a recorded permanent
+      disposition. Neither requirement above ever owned them: both were reclassified OUT of COV-04's
+      **28** jsdom-tractable set on 2026-09-21, and COV-05 names exactly three cases (`UAT-7-01`,
+      `UAT-7-17`, `UAT-7-32`) and is Complete. **This is a new requirement rather than an amendment
+      to either**, because widening COV-04's "28" or reopening a Complete COV-05 would rewrite a
+      closed record to absorb work it never covered — the silent-shrink failure mode this milestone
+      has refused four times, pointed backwards.
+      **Tractability is measured, not assumed** (assessed 2026-09-27, live Chromium against the real
+      built SPA, after `assert_spa_mounted` passed): `UAT-7-23`'s `aside` measures **240px at 1440px
+      viewport and 48px at 900px**, wordmark/monogram visibility inverts with it, the collapsed-state
+      tooltip renders `"New Scan"`, and a nav click at 900px routes to `/findings` — layout facts, not
+      the class-string assertions the original GAP note correctly banned. `UAT-7-29`'s node drags
+      `(75,168)` -> `(183.7,113.6)`, its visible edge's source endpoint follows **mid-drag**
+      (`(75,194)` -> `(169.3,139.6)`), the position holds after release, and the other three nodes are
+      byte-identical throughout; a control drag with no `mouse.down()` moved nothing, so the assertion
+      can fail.
+      **Two known limits, recorded in advance rather than discovered at close.** (1) `UAT-7-23`
+      criterion 6 — "transition is smooth (no layout jumps or flicker)" — has no mechanical referent
+      and must stay human-UAT or be dropped explicitly; this requirement closes at **5 of 6** for that
+      case and an honest partial is the expected outcome, not a shortfall to be hidden. (2) `UAT-7-29`
+      reaches the live Cytoscape instance through `container._cyreg.cy`, an **undocumented internal**;
+      the test must assert it resolved and fail with a named diagnosis if a version bump removes it.
+      A third trap is load-bearing: `cy.nodes()[0]`'s only connected edge is a `rank-` edge with
+      `visible: false`, which returns **no endpoint geometry**, so the edge-follow criterion must
+      select via `connectedEdges().filter(e => e.visible())` or it silently cannot be observed.
+
 ### Carried Doc Debt (from the v5.23 boundary review)
 
 - [x] **DOC-01**: `ROADMAP.md`'s Phase 202 criterion-3 wording is corrected from per-finding
@@ -290,6 +318,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-07 | Phase 208 + 207 | Complete — HTML leg Phase 208; PDF leg Phase 207 |
 | COV-08 | Phase 208 | Complete |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
+| COV-10 | Phase 207.1 | Pending |
 | GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Complete |
@@ -298,8 +327,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DELIV-02 | Phase 209 | Complete |
 
 **Coverage:**
-- v1 requirements: 17 total (15 at milestone open + DELIV-01/02 added 2026-09-14)
-- Mapped to phases: 17 ✓
+- v1 requirements: 18 total (15 at milestone open + DELIV-01/02 added 2026-09-14 + COV-10 added
+  2026-09-27 for the two cases orphaned between COV-04 and COV-05)
+- Mapped to phases: 18 ✓
 - Unmapped: 0 ✓
 
 ## Standing Constraints Carried Into This Milestone
