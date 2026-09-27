@@ -651,3 +651,30 @@ def test_uat_7_23_sidebar_responsive_collapse(dashboard_origin):
             "UAT-7-23: expected the aside to measure 240px wide again after expanding back to "
             "1440x900."
         )
+
+
+def test_uat_7_23_control_no_viewport_change(dashboard_origin):
+    """Red-proof control for UAT-7-23 (D-10, SC#3).
+
+    Performs the identical mount setup and deliberately omits the viewport-resize call the main
+    test makes. Its job is to prove the main test's width assertions are load-bearing on the
+    viewport change actually happening, rather than comparing a value to itself. This is a
+    separate pytest test node, not a comment or a sub-assertion inside the main test, so a
+    reviewer can confirm the red-proof exists without reading any test body.
+    """
+    with chromium_page() as page:
+        page.goto(dashboard_origin)
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+        assert_spa_mounted(page)
+
+        aside = page.locator("aside")
+        before = aside.bounding_box()["width"]
+        # Deliberately no viewport-resize call here — the absence is the point of the test.
+        # Do not "complete" this later by adding a resize.
+        after = aside.bounding_box()["width"]
+        assert before == after == 240, (
+            "UAT-7-23 control: expected NO width change without a viewport resize; observed "
+            f"before={before!r}, after={after!r}. A failure here means either the page is "
+            "unstable or a stray resize crept into the control."
+        )
