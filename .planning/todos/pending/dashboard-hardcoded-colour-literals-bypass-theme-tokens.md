@@ -4,7 +4,7 @@ created: 2026-09-21
 source: phase-206 plan 12 (COV-04); the UAT-7-21 FAIL verdict produced by plan 206-11's audit
 priority: medium
 requirement: none (UAT-7-21 disposition input, not itself a requirement)
-resolves_phase: null
+resolves_phase: 213
 ---
 
 # 50 hardcoded colour literals across 8 dashboard pages bypass the theme tokens (UAT-7-21 FAILS)

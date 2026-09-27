@@ -1,3 +1,8 @@
+---
+type: todo
+resolves_phase: 210
+---
+
 # CLI and dashboard report DIFFERENT scores and CRITICAL counts for the same scan
 
 **Filed:** 2026-09-14 (demo-prep task 1, measured multihost run)

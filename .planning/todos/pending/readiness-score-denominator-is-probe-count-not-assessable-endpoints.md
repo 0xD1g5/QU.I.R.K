@@ -4,7 +4,7 @@ created: 2026-09-13
 source: multihost chaos-lab work (999.110 thin slice) — found while trying to make a demo score worse
 priority: high  # todos use high/medium/low; tracked at P1 in HORIZON.md as 999.113
 requirement: null
-resolves_phase: null
+resolves_phase: 211
 ---
 
 # Readiness-score ratio penalties divide by PROBE count, not assessable endpoints

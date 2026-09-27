@@ -1,3 +1,8 @@
+---
+type: todo
+resolves_phase: 210
+---
+
 # SAML: one certificate is counted twice, into both the finding list and the score
 
 **Filed:** 2026-09-14

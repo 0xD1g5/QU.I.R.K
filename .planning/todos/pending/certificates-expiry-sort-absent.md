@@ -5,6 +5,7 @@ source: phase-206 plan 05 (COV-04); filed at plan 206-05 close
 updated: 2026-09-21 — re-verified against live source by plan 206-12; literal grep output and Feasibility & Effort added
 priority: low
 requirement: none (UAT-7-12 disposition input, not itself a requirement)
+resolves_phase: 213
 ---
 
 # `certificates.tsx` has no expiry-column sort — UAT-7-12 describes an absent feature

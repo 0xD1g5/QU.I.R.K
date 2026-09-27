@@ -4,7 +4,7 @@ created: 2026-09-14
 source: 999.115 scoring-model work (task 22) — survived all six model changes
 priority: P1
 requirement: null
-resolves_phase: null
+resolves_phase: 212
 target: next milestone — the last open property in the P1-P8 suite
 ---
 
