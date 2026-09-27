@@ -194,7 +194,7 @@ gate, not the coverage, is the defect.
       worklist, not honesty — but the retirement must be a recorded decision with its reason, never a
       quiet deletion, which is exactly what the `UAT-47-04` correction demonstrates.
 
-- [ ] **COV-10**: the **2** cases orphaned between COV-04 and COV-05 — `UAT-7-23` (sidebar
+- [x] **COV-10**: the **2** cases orphaned between COV-04 and COV-05 — `UAT-7-23` (sidebar
       responsive collapse at the 1024px breakpoint) and `UAT-7-29` (Cytoscape roadmap node drag) —
       receive real Tier-2 browser coverage against the Phase 207 harness, or a recorded permanent
       disposition. Neither requirement above ever owned them: both were reclassified OUT of COV-04's
@@ -318,7 +318,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-07 | Phase 208 + 207 | Complete — HTML leg Phase 208; PDF leg Phase 207 |
 | COV-08 | Phase 208 | Complete |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
-| COV-10 | Phase 207.1 | Pending |
+| COV-10 | Phase 207.1 | Complete (207.1-01/207.1-02/207.1-03; UAT-7-23 closes 5 of 6, criterion 6 HUMAN-UAT) |
 | GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Complete |

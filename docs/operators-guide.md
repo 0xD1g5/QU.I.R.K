@@ -3071,9 +3071,9 @@ findings show no narrative, and the one-theme display rule.
 
 ---
 
-## 20. Browser E2E Tests (Phase 207, v5.24 — COV-05)
+## 20. Browser E2E Tests (Phase 207, v5.24 — COV-05, COV-10)
 
-Four UAT cases are structurally impossible to cover with the jsdom-based dashboard test runner —
+Six UAT cases are structurally impossible to cover with the jsdom-based dashboard test runner —
 they need a real browser engine. They are now covered by real Playwright tests:
 
 | Case | What it proves |
@@ -3082,9 +3082,20 @@ they need a real browser engine. They are now covered by real Playwright tests:
 | `UAT-7-32` | Zero console errors across all seven routes, plus the CBOM Table/Graph switch |
 | `UAT-7-17` | Clicking **Export PDF** yields a genuinely valid downloaded PDF |
 | `UAT-88-03` | The six score-decomposition rows survive HTML-to-PDF conversion, asserted by value |
+| `UAT-7-23` | The sidebar collapses at the 1024px breakpoint — asserted as **measured** `aside` box width (240px / 48px), never as the `class` attribute |
+| `UAT-7-29` | A real Cytoscape node drags and its visible edge's endpoint follows **mid-drag**, not merely after release |
 
 They live in `tests/test_browser_e2e.py` and `tests/test_pdf_decomposition_render.py`, with shared
 setup in `tests/browser_e2e_harness.py`.
+
+**`UAT-7-23` and `UAT-7-29` (Phase 207.1, COV-10) each ship with a dedicated red-proof control
+node** — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown`. A
+control performs the identical mount and setup with only the triggering interaction omitted (no
+viewport resize; no `mouse.down()`) and asserts the observed value stays unmoved. Its purpose is to
+prove the main test's assertions are capable of failing — a green result on a test that would also
+be green if nothing happened is the vacuous-pass trap this module's own D-04 exists to catch. Each
+control is its own pytest node with its own PASS/FAIL line, not a comment or sub-assertion inside
+the main test.
 
 ### Running them locally
 

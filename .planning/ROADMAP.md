@@ -546,8 +546,8 @@ are this phase's entire toolchain — nothing new is provisioned)
   no-viewport-change control (wave 1) — complete 2026-09-27, both nodes passing
 - [x] 207.1-02-PLAN.md — UAT-7-29: Cytoscape node drag with the visible edge sampled mid-drag +
   its no-mouse.down() control (wave 2) — complete 2026-09-27, all four nodes passing
-- [ ] 207.1-03-PLAN.md — two-sided gate, the three coupled disposition artifacts, COV-10, docs and
-  vault close-out (wave 3)
+- [x] 207.1-03-PLAN.md — two-sided gate, the three coupled disposition artifacts, COV-10, docs and
+  vault close-out (wave 3) — complete 2026-09-27, all 4 disposition integrity gates green
 **UI hint**: yes
 
 **Why this phase exists, and why it is not a Phase 207 defect.** Phase 206 closed COV-04 at 25 of 28

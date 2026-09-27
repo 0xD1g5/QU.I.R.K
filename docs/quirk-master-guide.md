@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,428 lines, in reading order.
+Five guides, 6,439 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -100,7 +100,7 @@ and the connector guides under [`connectors/`](connectors/).
   - [17. Rating Band Severity Floor (Phase 184.4, SCORE-04/SCORE-05)](#17-rating-band-severity-floor-phase-1844-score-04score-05)
   - [18. SPKI Fingerprint Capture and Key Reuse (Phase 191, SPKI-01/SPKI-02)](#18-spki-fingerprint-capture-and-key-reuse-phase-191-spki-01spki-02)
   - [19. Finding Storyline Drawer (Phase 202, v5.23 — STORY-01/STORY-02)](#19-finding-storyline-drawer-phase-202-v523-story-01story-02)
-  - [20. Browser E2E Tests (Phase 207, v5.24 — COV-05)](#20-browser-e2e-tests-phase-207-v524-cov-05)
+  - [20. Browser E2E Tests (Phase 207, v5.24 — COV-05, COV-10)](#20-browser-e2e-tests-phase-207-v524-cov-05-cov-10)
 - **[Administration](#administration)**
   - [Prerequisites](#prerequisites-6)
   - [1. Deploy the Console](#1-deploy-the-console)
@@ -6212,9 +6212,9 @@ findings show no narrative, and the one-theme display rule.
 
 ---
 
-### 20. Browser E2E Tests (Phase 207, v5.24 — COV-05)
+### 20. Browser E2E Tests (Phase 207, v5.24 — COV-05, COV-10)
 
-Four UAT cases are structurally impossible to cover with the jsdom-based dashboard test runner —
+Six UAT cases are structurally impossible to cover with the jsdom-based dashboard test runner —
 they need a real browser engine. They are now covered by real Playwright tests:
 
 | Case | What it proves |
@@ -6223,9 +6223,20 @@ they need a real browser engine. They are now covered by real Playwright tests:
 | `UAT-7-32` | Zero console errors across all seven routes, plus the CBOM Table/Graph switch |
 | `UAT-7-17` | Clicking **Export PDF** yields a genuinely valid downloaded PDF |
 | `UAT-88-03` | The six score-decomposition rows survive HTML-to-PDF conversion, asserted by value |
+| `UAT-7-23` | The sidebar collapses at the 1024px breakpoint — asserted as **measured** `aside` box width (240px / 48px), never as the `class` attribute |
+| `UAT-7-29` | A real Cytoscape node drags and its visible edge's endpoint follows **mid-drag**, not merely after release |
 
 They live in `tests/test_browser_e2e.py` and `tests/test_pdf_decomposition_render.py`, with shared
 setup in `tests/browser_e2e_harness.py`.
+
+**`UAT-7-23` and `UAT-7-29` (Phase 207.1, COV-10) each ship with a dedicated red-proof control
+node** — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown`. A
+control performs the identical mount and setup with only the triggering interaction omitted (no
+viewport resize; no `mouse.down()`) and asserts the observed value stays unmoved. Its purpose is to
+prove the main test's assertions are capable of failing — a green result on a test that would also
+be green if nothing happened is the vacuous-pass trap this module's own D-04 exists to catch. Each
+control is its own pytest node with its own PASS/FAIL line, not a comment or sub-assertion inside
+the main test.
 
 #### Running them locally
 
