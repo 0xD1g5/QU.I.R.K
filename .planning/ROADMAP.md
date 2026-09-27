@@ -540,7 +540,14 @@ are this phase's entire toolchain — nothing new is provisioned)
      if a Cytoscape version bump removes that undocumented internal.
   5. Both cases' `**Result:**` dispositions, `docs/uat-coverage-gaps.md`, and the UAT ledger move
      together — the three coupled artifacts from Phase 205 — and the freshness gate stays green.
-**Plans**: not yet planned
+**Plans**: 3 plans in 3 waves (serialized — plans 01 and 02 both write
+`tests/test_browser_e2e.py`, so they cannot share a wave)
+- [ ] 207.1-01-PLAN.md — UAT-7-23: measured sidebar collapse across the 1024px breakpoint + its
+  no-viewport-change control (wave 1)
+- [ ] 207.1-02-PLAN.md — UAT-7-29: Cytoscape node drag with the visible edge sampled mid-drag +
+  its no-mouse.down() control (wave 2)
+- [ ] 207.1-03-PLAN.md — two-sided gate, the three coupled disposition artifacts, COV-10, docs and
+  vault close-out (wave 3)
 **UI hint**: yes
 
 **Why this phase exists, and why it is not a Phase 207 defect.** Phase 206 closed COV-04 at 25 of 28
