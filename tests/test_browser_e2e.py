@@ -570,3 +570,84 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
             "UAT-7-17: the Export PDF flow produced console/page/API errors:\n  "
             + "\n  ".join(errors)
         )
+
+
+def test_uat_7_23_sidebar_responsive_collapse(dashboard_origin):
+    """UAT-7-23 — sidebar collapses/expands at the 1024px breakpoint (COV-10).
+
+    Asserted as MEASURED layout only (``bounding_box()["width"]``, visibility of the wordmark vs.
+    the monogram) — never via the ``class`` attribute. ``sidebar.tsx:78``'s class string
+    ``"w-12 lg:w-60"`` is present at EVERY viewport width; asserting it in a real browser would
+    reproduce the exact vacuity the original GAP note banned (D-04). Only a measured box
+    distinguishes the two states.
+
+    Covers 5 of the case's 6 pass criteria:
+      1. width collapses to 48px below 1024px and expands back to 240px above it
+      2. wordmark/monogram visibility inverts with the breakpoint
+      3. the collapsed-state "New Scan" tooltip renders through the Radix portal (D-05)
+      4. a nav click while collapsed still routes correctly (D-06)
+      5. re-crossing the breakpoint upward restores the expanded width
+
+    Criterion 6 ("transition is smooth — no layout jumps or flicker") has no mechanical referent
+    and is NOT asserted here. Per CONTEXT.md D-11 it is routed to HUMAN-UAT rather than dropped;
+    the case's own Result line records the 5-of-6 disposition.
+    """
+    with chromium_page() as page:
+        page.goto(dashboard_origin)
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+        assert_spa_mounted(page)
+
+        aside = page.locator("aside")
+        wordmark = aside.get_by_text("QU.I.R.K.", exact=True)
+        monogram = aside.get_by_text("Q", exact=True)
+
+        # Above the breakpoint: the harness's own hard-coded 1440x900 viewport (D-03).
+        assert aside.bounding_box()["width"] == 240, (
+            "UAT-7-23: expected the aside to measure 240px wide above the 1024px breakpoint "
+            "at 1440x900."
+        )
+        assert wordmark.is_visible(), "UAT-7-23: expected the QU.I.R.K. wordmark visible at 1440px."
+        assert not monogram.is_visible(), "UAT-7-23: expected the Q monogram hidden at 1440px."
+
+        # Cross below the breakpoint. No wait between the resize and the measurement: this is a
+        # pure Tailwind CSS media query with no matchMedia/useMediaQuery listener in the loop
+        # (verified live, 2026-09-27 — the new width is reported at 0ms, identical to a 50ms
+        # read). An unnecessary settle wait here would mask a future debounced-resize regression
+        # rather than test for its absence.
+        page.set_viewport_size({"width": 900, "height": 900})
+        assert aside.bounding_box()["width"] == 48, (
+            "UAT-7-23: expected the aside to measure 48px wide below the 1024px breakpoint "
+            "at 900x900."
+        )
+        assert monogram.is_visible(), "UAT-7-23: expected the Q monogram visible at 900px."
+        assert not wordmark.is_visible(), "UAT-7-23: expected the QU.I.R.K. wordmark hidden at 900px."
+
+        # Collapsed-state tooltip (D-05): reached through the Radix portal, on the PAGE not the
+        # sidebar subtree (TooltipContent portals outside <aside>). get_by_role("tooltip") is a
+        # single unambiguous match; get_by_text("New Scan", exact=True) matches 2 elements (the
+        # button's own CSS-hidden label span plus the portal content) and is forbidden.
+        new_scan_button = page.get_by_role("button", name="New Scan")
+        new_scan_button.hover()
+        tooltip = page.get_by_role("tooltip")
+        tooltip.wait_for(state="visible", timeout=2000)  # Radix has an ~700ms open delay
+        assert tooltip.inner_text().strip() == "New Scan", (
+            f"UAT-7-23: expected the collapsed-state tooltip text to be 'New Scan', got "
+            f"{tooltip.inner_text().strip()!r}."
+        )
+
+        # Collapsed nav-click leg (D-06): still at 900px. Use a NAV_ITEMS entry, not the New Scan
+        # button (which routes to /scan/new, not /findings).
+        page.get_by_label("Findings", exact=True).click()
+        page.wait_for_url("**/findings")
+        assert page.url.endswith("/findings"), (
+            f"UAT-7-23: expected the collapsed nav click to route to /findings, page.url is "
+            f"{page.url!r}."
+        )
+
+        # Cross back above the breakpoint.
+        page.set_viewport_size({"width": 1440, "height": 900})
+        assert aside.bounding_box()["width"] == 240, (
+            "UAT-7-23: expected the aside to measure 240px wide again after expanding back to "
+            "1440x900."
+        )
