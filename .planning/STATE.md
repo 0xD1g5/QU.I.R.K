@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: ready_to_plan
-last_updated: "2026-09-27T18:20:00Z"
+status: ready_to_execute
+last_updated: "2026-09-27T18:35:00Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 51
+  total_plans: 54
   completed_plans: 51
   percent: 88
 ---
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). Context gathered 2026-09-27; operator-led, NOT autonomous. Ready for `/gsd-plan-phase 207.1`.
+**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). Planned 2026-09-27: 3 plans in 3 waves, plan-checker PASSED. Operator-led, NOT autonomous. Ready for `/gsd-execute-phase 207.1`.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1273,8 +1273,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **INSERTED 2026-09-27, ready to plan. Nothing
-written yet: 0 plans, no CONTEXT.md.** Requirement **COV-10** (new). Next: `/gsd-discuss-phase 207.1`.
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **PLANNED 2026-09-27. 3 plans in 3 waves
+(`207.1-01` UAT-7-23 + control, `207.1-02` UAT-7-29 + control, `207.1-03` disposition artifacts +
+docs/vault), plan-checker VERIFICATION PASSED with zero blockers.** Requirement **COV-10** (new).
+Next: `/gsd-execute-phase 207.1` — in the main session on branch
+`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out).
 
 **Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
 orphaned between COV-04 and COV-05. Phase 206 closed COV-04 at 25 of 28 and routed them to Phase 207;
