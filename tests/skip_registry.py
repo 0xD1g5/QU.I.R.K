@@ -610,4 +610,42 @@ ALLOWED_SKIPS = [
         "surfaced as an honest skip instead of a hard failure coupling test "
         "success to the machine's package inventory.",
     ),
+    # --- Phase 207 (Browser-Only Coverage Verdict), Tier-2 browser E2E -------------------------
+    # These skips are the DESIGNED behaviour of D-01/D-02: the browser nodes execute for real in
+    # the non-gating Browser E2E job, which installs Chromium, and skip in Linux Full Suite, where
+    # Chromium is deliberately absent so the browser flake class cannot redden the required check.
+    # A skip here is not a pass; the coverage claim rests on the other job, and every disposition
+    # citing these nodes carries a CI-EXEMPT declaration saying exactly that (D-10).
+    (
+        "browser_e2e_harness.py",
+        "skip_unless_chromium_installed",
+        "environment_capability",
+        "Phase 207 W-10: skips BEFORE any server is started, so serve_dashboard's pytest.fail "
+        "cannot run in fixture setup where pytest would report it as an ERROR -- the one outcome "
+        "D-10 forbids in the required job. Runs for real in the Browser E2E job.",
+    ),
+    (
+        "browser_e2e_harness.py",
+        "chromium_page",
+        "environment_capability",
+        "Chromium binary absent, or an ImportError on the extras-only playwright package. The "
+        "skip reason distinguishes the two and flags a transient launch failure on a machine "
+        "where the executable IS present, so a real problem is not read as expected non-coverage.",
+    ),
+    (
+        "test_browser_e2e_skip_contract.py",
+        "test_tier2_still_reports_loudly_when_server_dies_and_chromium_is_present",
+        "environment_capability",
+        "Asserts the behaviour where Chromium IS installed -- that a server which will not start "
+        "is reported loudly rather than skipped. Meaningless where Chromium is absent, which is "
+        "Linux Full Suite; the sibling leg runs there and guards the skip-never-error contract.",
+    ),
+    (
+        "test_pdf_decomposition_render.py",
+        "_render_or_skip",
+        "environment_capability",
+        "render_pdf_report() degraded, so no PDF exists to assert UAT-88-03 against. The reason "
+        "string names whether the Chromium executable was actually on disk, because the return "
+        "value alone does not identify a cause. Runs for real in the Browser E2E job.",
+    ),
 ]

@@ -398,6 +398,13 @@ def serve_dashboard(db_path, config_path=None):
         config_path = os.path.join(str(db_path) + ".no-such-dir", "absent-config.yaml")
     child_env["QUIRK_CONFIG_PATH"] = str(config_path)
 
+    # close_fds=False is REQUIRED, not stylistic, and tests/test_cli_helper_usage.py enforces it.
+    # On this CPython build `_HAVE_POSIX_SPAWN_CLOSEFROM` is False, so with the default
+    # close_fds=True `posix_spawn` is NEVER selected and the child goes through fork() --
+    # reintroducing the macOS "fork() after Network.framework initialised" SIGSEGV. That crash is
+    # ordering-dependent: invisible in a standalone file run, reproducible only in a full unfiltered
+    # suite. No `cwd` is passed for the same reason. See
+    # .planning/milestones/v5.16-phases/164-first-run-correctness/164-FINDING-fork-crash.md.
     proc = subprocess.Popen(
         [
             sys.executable, "-m", "uvicorn", "quirk.dashboard.api.app:app",
@@ -406,6 +413,7 @@ def serve_dashboard(db_path, config_path=None):
         env=child_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        close_fds=False,
     )
     origin = f"http://127.0.0.1:{port}"
     try:

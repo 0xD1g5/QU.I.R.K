@@ -33,12 +33,13 @@ line, so the assertion cannot be fooled by wording changes in pytest's output.
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _TIER2_MODULE = "tests/test_browser_e2e.py"
@@ -88,20 +89,30 @@ def _run_tier2_module(tmp_path: Path, *, chromium: bool, uvicorn_ok: bool) -> li
         )
 
     report = tmp_path / "report.xml"
-    proc = subprocess.run(
+
+    # `run_fork_safe`, not a bare `subprocess.run`. On this CPython build `posix_spawn` is selected
+    # only when `close_fds` is False AND no `cwd` is passed; anything else goes through `fork()` and
+    # reintroduces the macOS "fork() after Network.framework initialised" SIGSEGV. That crash is
+    # ordering-dependent — invisible in a standalone file run, reproducible only in a full
+    # unfiltered suite — and `tests/test_cli_helper_usage.py` enforces both conditions with an AST
+    # gate. See 164-FINDING-fork-crash.md.
+    #
+    # Consequently there is NO `cwd`, so the module is addressed by ABSOLUTE path: a relative one
+    # would resolve against pytest's own invocation directory. pytest still walks up to the
+    # repo-root `conftest.py`, and that is what puts the repo root on `sys.path` and makes
+    # `from tests.browser_e2e_harness import ...` resolve inside the child (finding I-03).
+    proc = run_fork_safe(
         [
-            sys.executable, "-m", "pytest", _TIER2_MODULE,
+            sys.executable, "-m", "pytest", str(_REPO_ROOT / _TIER2_MODULE),
             "-p", "no:cacheprovider", "-q", f"--junit-xml={report}",
         ],
-        cwd=_REPO_ROOT,
         env=env,
-        capture_output=True,
         timeout=_SUBPROCESS_TIMEOUT_S,
     )
 
     assert report.exists(), (
         "the inner pytest run produced no JUnit report — it likely failed before collection.\n"
-        f"exit={proc.returncode}\nstdout:\n{proc.stdout.decode('utf-8', 'replace')[-4000:]}"
+        f"exit={proc.returncode}\nstdout:\n{proc.stdout[-4000:]}"
     )
 
     outcomes: list[tuple[str, str]] = []

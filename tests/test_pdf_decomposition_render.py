@@ -170,7 +170,39 @@ def _render_or_skip(html_path: str, pdf_path: str) -> None:
     reason now states the ambiguity and appends a resolved verdict on whether the binary
     is actually on disk.
     """
-    result = render_pdf_report(html_path, pdf_path)
+    # TRIAGE-149 CLUSTER 2 — the shared-Playwright-singleton contamination, hitting this node
+    # directly. Found 2026-09-27 by running the FULL suite rather than this file: standalone this
+    # node passes 3/3 in ~0.6s, but in an unfiltered suite run `sync_playwright().__enter__` raises
+    # `AttributeError: 'PlaywrightContextManager' object has no attribute '_playwright'` because an
+    # earlier test tore the singleton's greenlet/event-loop machinery down. That is the exact
+    # signature documented at docs/test-triage-149.md:57-75 for the other 14 victims.
+    #
+    # It matters here beyond tidiness: `render_pdf_report` catches PlaywrightError /
+    # PlaywrightTimeoutError / OSError / RuntimeError, and AttributeError is in NONE of those, so it
+    # propagated and the node FAILED rather than skipped — breaking D-10's skip-never-error contract
+    # in the required Linux Full Suite job. Observed failing in BOTH legs of the full suite.
+    #
+    # Narrow on purpose: only the two-token contamination signature is converted to a skip, and any
+    # other AttributeError is re-raised. A blanket `except AttributeError` here would hide a real
+    # renderer bug behind an environment-shaped skip. Coverage is not lost — this node executes for
+    # real in the Browser E2E job, a separate process where nothing has pre-torn-down the singleton,
+    # which is precisely the structural cure D-01/D-02 chose that job for.
+    try:
+        result = render_pdf_report(html_path, pdf_path)
+    except AttributeError as exc:
+        message = str(exc)
+        if "PlaywrightContextManager" not in message or "_playwright" not in message:
+            raise
+        pytest.skip(
+            "TRIAGE-149 Cluster 2: the shared Playwright singleton was torn down by an earlier "
+            f"test in this process, so sync_playwright() could not start -- {message}. This is "
+            "order-dependent contamination, NOT a defect in UAT-88-03 or in render_pdf_report: "
+            "this node passes standalone. It is skipped rather than failed because an ERROR or "
+            "FAILURE here reddens the required Linux Full Suite check regardless of any CI-EXEMPT "
+            "declaration, while a skip does not (D-10). UAT-88-03 executes for real in the "
+            "Browser E2E job (D-01/D-02), a separate process with no such contamination."
+        )
+
     if result is False:
         pytest.skip(
             "render_pdf_report() degraded to False, so no PDF was produced and UAT-88-03 "
