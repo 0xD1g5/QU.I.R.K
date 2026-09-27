@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-26T23:45:00.000Z",
+  "timestamp": "2026-09-27T01:30:00.000Z",
   "phase": "207",
   "phase_name": "Browser-Only Coverage Verdict",
   "phase_dir": ".planning/phases/207-browser-only-coverage-verdict",
-  "plan": 5,
-  "task": 5,
+  "plan": 6,
+  "task": 6,
   "total_tasks": 6,
   "status": "paused",
   "completed_tasks": [
@@ -50,14 +50,15 @@
       "name": "207-04 non-gating browser-e2e CI job + criterion-3 NOT-MET-AS-WRITTEN record",
       "status": "done",
       "commit": "01526634"
+    },
+    {
+      "id": 5,
+      "name": "207-05 four CI-EXEMPT dispositions + worklist regen + two-sided gate, plus 3 full-suite-only fixes",
+      "status": "done",
+      "commit": "e34e1903"
     }
   ],
   "remaining_tasks": [
-    {
-      "id": 5,
-      "name": "207-05 four ledger rows with CI-EXEMPT -> apply -> worklist regen",
-      "status": "not_started"
-    },
     {
       "id": 6,
       "name": "207-06 docs + Obsidian vault sync + VALIDATION row flips + operator checkpoint",
@@ -66,24 +67,14 @@
   ],
   "blockers": [
     {
-      "description": "W-10 CLOSED (commit e063e4f0). dashboard_origin now calls skip_unless_chromium_installed() first, so serve_dashboard's pytest.fail is unreachable where Chromium is absent; it is deliberately NOT softened, so a dead server stays loud in the Browser E2E job. Both halves pinned by tests/test_browser_e2e_skip_contract.py, which reproduced the ERROR before the fix.",
-      "type": "resolved",
-      "workaround": "None needed. Re-verify with: PLAYWRIGHT_BROWSERS_PATH=<empty dir> pytest tests/test_browser_e2e.py -m '' -> expect skipped, never error."
-    },
-    {
-      "description": "W-09 CLOSED (commit 98f00b04). /certificates now asserts both seeded hosts visible plus EmptyStateCard absent; the _ROUTE_HEADINGS comment now names per route what the heading does and does not prove (2 of 7 discriminate). Reproduced first by emptying the certificates array in /api/scan/latest: the heading assertion still passed.",
-      "type": "resolved",
-      "workaround": "Wave 5's UAT-7-32 disposition may now claim the seeded certificate rows rendered. It still may NOT claim discrimination on /findings, /identity, /cbom, /print beyond their own positive legs."
-    },
-    {
-      "description": "W-06, W-08, I-02..I-08 TRIAGED and dispositioned (207-03.7-TRIAGE.md, commit 10c0652d). 4 fixed (W-06 print readiness wait, W-08 console-error tail, I-05 canvas visibility, I-02 stale citation), 2 accepted with recorded reopen triggers (I-04 stdout PIPE at 9x headroom, I-06 port TOCTOU whose blast radius changed once W-10 closed), 2 carried as constraints on later waves (I-03, I-07), 1 no-action (I-08). Both new assertions were mutation-proved.",
-      "type": "resolved",
-      "workaround": "Two constraints must be honoured downstream. I-03 -> Wave 4 MUST invoke pytest from the repo root and must NOT pass --import-mode=importlib with a different rootdir; do not add tests/__init__.py. I-07 -> Waves 5/6 must NOT cite NODE-EVIDENCE's three-literal grep as the D-05 ceiling proof; the proof is the reviewer's full assertion enumeration."
-    },
-    {
       "description": "Wave 5 evidence must be copied from 207-NODE-EVIDENCE.md's 'CI job invocation' CLOSE-OUT section, NOT its summary table. W-10's fix moved the Chromium gate into fixture setup, so the skip strings the summary table quotes for UAT-7-01/7-32/7-17 are stale. Corrected in the close-out section. This is the W-11 defect class recurring.",
       "type": "technical",
       "workaround": "Use the close-out table's verbatim strings; they were re-measured 2026-09-26 with -rs."
+    },
+    {
+      "description": "RESOLVED in 112265be: three full-suite-only failures, two predating this wave. serve_dashboard's Popen lacked close_fds=False; UAT-88-03 FAILED rather than skipped on TRIAGE-149 Cluster 2 contamination because render_pdf_report does not catch AttributeError; four skip sites were unregistered. Full suite now exits 0 on BOTH legs with an EMPTY failing-node set.",
+      "type": "resolved",
+      "workaround": "None. Run the FULL suite, not the affected files -- both classes are ordering-dependent and invisible per-file."
     }
   ],
   "human_actions_pending": [
@@ -133,9 +124,14 @@
       "decision": "test_full_suite_ci_job_still_selects_all_markers's job-body regex was NARROWED, not the new job moved",
       "rationale": "The guard captured every indented line after its header to EOF, so any job defined after linux-full-suite was folded into the captured body -- anchored but unscoped. Moving the new job earlier would have silenced the symptom and left the trap armed for the next appended job. Red-proved both ways after narrowing: continue-on-error on linux-full-suite itself still fails, and removing its -m '' still fails.",
       "phase": "207"
+    },
+    {
+      "decision": "UAT-88-03's TRIAGE-149 contamination is converted to a NARROW skip in the test, not handled in production code",
+      "rationale": "render_pdf_report catches PlaywrightError/TimeoutError/OSError/RuntimeError but not AttributeError, so the contamination propagated and the node FAILED where D-10 requires a skip. Broadening production exception handling would mask real failures for users to fix a test-ordering problem. The skip matches only the two-token signature; an unrelated or half-matching AttributeError still re-raises -- red-proved in all three directions.",
+      "phase": "207"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Execute 207-05-PLAN.md: four ledger rows in docs/uat-disposition-ledger.jsonl with CI-EXEMPT evidence, applied via scripts/uat_disposition_apply.py apply (D-11, never hand-edit Result lines), then regenerate docs/uat-coverage-gaps.md. Expect the live GAP count to drop by 4. Bound by I-07, by W-09's wording limit, and by the stale-skip-string correction above.",
-  "context_notes": "Waves 1-3.5 are solid and independently re-verified by the orchestrator: 4 nodes collect and pass 3/3 consecutively (~9-10s, variance <0.15s), both gate legs behave (pass with Chromium, skip cleanly without), all 25 assertions are capable of failing, D-05 and D-10 hold, tree clean, no orphaned processes. The remaining waves mutate GATED artifacts (python-ci.yml, docs/UAT-SERIES.md, the disposition ledger), so errors get more expensive from here - which is why the open findings should be closed first. Session ran 16 commits. One orchestrator error is recorded in the anti-patterns table and must be read before dispatching any subagent. UPDATE 2026-09-26 (resumed session): the two blocking constraints are closed and each was reproduced mechanically BEFORE being fixed, not argued from the code. Verification in both CI job shapes: Chromium present -> 6 passed (4 Tier-2 nodes + 2 contract legs, 15.1s); Chromium absent -> 1 passed, 5 skipped, ZERO errors (3.1s). The new contract test EXECUTES in the required job rather than skipping there, so it adds required-job coverage of D-10 itself. UPDATE 2026-09-26 (triage): all 19 review findings are now dispositioned -- see 207-03.7-TRIAGE.md for the 12 the 03.5 brief omitted. Post-triage verification: Chromium present -> 6 passed (16.9s); absent -> 1 passed, 5 skipped, 0 errors (3.1s); 3/3 consecutive at 8.86-8.89s, variance 0.03s; no orphaned uvicorn. Process note worth keeping: the first W-06 mutation proof silently did not run because `timeout` does not exist on macOS, and the empty output read like 'no failure'. A mutation run that reports nothing has not passed -- it has not run."
+  "next_action": "Execute 207-06-PLAN.md -- autonomous: NO, it ends in a blocking operator checkpoint. Docs + Obsidian vault sync, phase note, VALIDATION row flips, the condensed criterion-1 verdict into ROADMAP.md, hand-verified COV-05. The checkpoint needs the REAL PR job log: Assumption A2 -- does playwright install --with-deps chromium work on ubuntu-latest -- and whether Linux Full Suite stays green with the four new citations. Neither is provable locally. NOTE for reading that log: UAT-88-03 is EXPECTED to SKIP in Linux Full Suite with the TRIAGE-149 reason, not to pass; the Browser E2E job is where it should be green.",
+  "context_notes": "Waves 1-3.5 are solid and independently re-verified by the orchestrator: 4 nodes collect and pass 3/3 consecutively (~9-10s, variance <0.15s), both gate legs behave (pass with Chromium, skip cleanly without), all 25 assertions are capable of failing, D-05 and D-10 hold, tree clean, no orphaned processes. The remaining waves mutate GATED artifacts (python-ci.yml, docs/UAT-SERIES.md, the disposition ledger), so errors get more expensive from here - which is why the open findings should be closed first. Session ran 16 commits. One orchestrator error is recorded in the anti-patterns table and must be read before dispatching any subagent. UPDATE 2026-09-26 (resumed session): the two blocking constraints are closed and each was reproduced mechanically BEFORE being fixed, not argued from the code. Verification in both CI job shapes: Chromium present -> 6 passed (4 Tier-2 nodes + 2 contract legs, 15.1s); Chromium absent -> 1 passed, 5 skipped, ZERO errors (3.1s). The new contract test EXECUTES in the required job rather than skipping there, so it adds required-job coverage of D-10 itself. UPDATE 2026-09-26 (triage): all 19 review findings are now dispositioned -- see 207-03.7-TRIAGE.md for the 12 the 03.5 brief omitted. Post-triage verification: Chromium present -> 6 passed (16.9s); absent -> 1 passed, 5 skipped, 0 errors (3.1s); 3/3 consecutive at 8.86-8.89s, variance 0.03s; no orphaned uvicorn. Process note worth keeping: the first W-06 mutation proof silently did not run because `timeout` does not exist on macOS, and the empty output read like 'no failure'. A mutation run that reports nothing has not passed -- it has not run. UPDATE 2026-09-27 (Wave 5): full suite exits 0 on BOTH legs, failing-node set EMPTY, 5251 nodes either way. GAP 47->43. The first two-leg run was RED with 3 failures, two of them dating to Waves 1-2 and invisible to every per-file verification done so far -- both classes are ordering-dependent. The recorded local baseline is stale for the THIRD time: its two documented nodes did not fail in either leg."
 }
