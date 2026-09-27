@@ -71,13 +71,30 @@ client receives it from the report pipeline or the dashboard pipeline.
 **Plans**: 8 plans in 6 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 210-01-PLAN.md — XSURF-01 written decision, decision-only, before any code change (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 210-02-PLAN.md — extract evaluate_identity_endpoints() with the (host, port, serial) dedupe; route becomes a caller; CLI composition (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 210-03-PLAN.md — dedupe evidence.py's independent saml_weak_signing_count (wave 3)
 - [ ] 210-04-PLAN.md — resolve latest-scan by scan_run_id, window as NULL-only fallback; two stale comments corrected (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 210-05-PLAN.md — XSURF-04 three-number parity gate plus the required falsification (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 210-06-PLAN.md — live multihost re-run recording both pipelines' numbers (wave 5, non-autonomous)
 - [ ] 210-07-PLAN.md — doc retarget per D-20, master-guide regeneration, vault sync (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 210-08-PLAN.md — UAT-SERIES.md, Obsidian phase note, ground-truth completion check (wave 6)
 
 ### Phase 211: Denominator Correctness

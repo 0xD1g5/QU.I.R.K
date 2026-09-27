@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
-status: planning
-last_updated: "2026-09-27T21:43:35.360Z"
+status: ready_to_execute
+last_updated: "2026-09-27T23:58:00.000Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
