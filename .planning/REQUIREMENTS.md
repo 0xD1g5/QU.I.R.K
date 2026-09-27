@@ -214,8 +214,16 @@ gate, not the coverage, is the defect.
       can fail.
       **Two known limits, recorded in advance rather than discovered at close.** (1) `UAT-7-23`
       criterion 6 — "transition is smooth (no layout jumps or flicker)" — has no mechanical referent
-      and must stay human-UAT or be dropped explicitly; this requirement closes at **5 of 6** for that
-      case and an honest partial is the expected outcome, not a shortfall to be hidden. (2) `UAT-7-29`
+      and must stay human-UAT or be dropped explicitly; this requirement closed at **5 of 6** for that
+      case and an honest partial was the expected outcome, not a shortfall to be hidden.
+      **DISCHARGED 2026-09-27 — the human-UAT item was run and PASSED, taking the case to 6 of
+      6.** The operator resized a real non-headless browser slowly through the 1024px breakpoint
+      in both directions and reported the sidebar and adjacent main content smooth, with no jump,
+      flicker, flash of unstyled content or glitching reflow; recorded in `207.1-HUMAN-UAT.md` and
+      in the case's own ledger evidence. The limit above is retained as written because it is the
+      record of WHY the item was routed rather than mechanized — and the routing is precisely what
+      made the sixth criterion closable. What the verdict does NOT do is create CI coverage: the
+      automated node still asserts five criteria, so a smoothness regression would redden no gate. (2) `UAT-7-29`
       reaches the live Cytoscape instance through `container._cyreg.cy`, an **undocumented internal**;
       the test must assert it resolved and fail with a named diagnosis if a version bump removes it.
       A third trap is load-bearing: `cy.nodes()[0]`'s only connected edge is a `rank-` edge with
@@ -318,7 +326,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-07 | Phase 208 + 207 | Complete — HTML leg Phase 208; PDF leg Phase 207 |
 | COV-08 | Phase 208 | Complete |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
-| COV-10 | Phase 207.1 | Complete (207.1-01/207.1-02/207.1-03; UAT-7-23 closes 5 of 6, criterion 6 HUMAN-UAT) |
+| COV-10 | Phase 207.1 | Complete (207.1-01/207.1-02/207.1-03; UAT-7-23 closes 6 of 6 — 5 mechanized, criterion 6 by operator HUMAN-UAT verdict 2026-09-27) |
 | GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Complete |

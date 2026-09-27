@@ -589,8 +589,15 @@ def test_uat_7_23_sidebar_responsive_collapse(dashboard_origin):
       5. re-crossing the breakpoint upward restores the expanded width
 
     Criterion 6 ("transition is smooth — no layout jumps or flicker") has no mechanical referent
-    and is NOT asserted here. Per CONTEXT.md D-11 it is routed to HUMAN-UAT rather than dropped;
-    the case's own Result line records the 5-of-6 disposition.
+    and is NOT asserted here. Per CONTEXT.md D-11 it is routed to HUMAN-UAT rather than dropped.
+    That HUMAN-UAT item was run and PASSED by operator verdict on 2026-09-27, taking the case from a
+    stated 5 of 6 to 6 of 6 -- see 207.1-HUMAN-UAT.md and the case's ledger evidence.
+
+    Do NOT read that verdict as coverage for this node. Criterion 6 remains unasserted here and
+    unassertable anywhere: a smoothness regression would not fail this test or any other. The
+    verdict is a one-time human observation, not a guard. If someone later wants a guard, it needs a
+    new mechanism -- not an added assertion on the five values below, which would be the proxy
+    substitution D-11 declined.
     """
     with chromium_page() as page:
         page.goto(dashboard_origin)

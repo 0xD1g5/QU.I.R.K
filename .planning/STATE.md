@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: verifying
-last_updated: "2026-09-27T16:04:16.512Z"
+status: phase_complete
+last_updated: "2026-09-27T22:10:00.000Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 54
   completed_plans: 54
   percent: 100
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). ALL 3 PLANS COMPLETE 2026-09-27; verification returned `human_needed` at a 5/5 truth score. **NOT marked complete.** `UAT-7-23` criterion 6 ("transition is smooth") is routed to HUMAN-UAT per D-11, and the artifacts record only the ROUTING decision, not a verdict — see `207.1-HUMAN-UAT.md` for the literal walkthrough. The phase closes once that verdict is recorded and verification re-runs `passed`.
+**Current focus:** Milestone v5.24 (UAT Coverage Drain) is at **8 of 8 phases complete** — Phase 207.1 closed 2026-09-27 at 5 of 5 success criteria MET AS WRITTEN, re-verified `passed` (5/5 must-haves, 0 blockers). `UAT-7-23` closes at **6 of 6**: criterion 6 ("transition is smooth") was routed to HUMAN-UAT per D-11 and then DISCHARGED by operator verdict the same day, recorded ledger-first. Next action is the operator's: close the milestone, or drain the todo backlog first — 32 pending, including a newly-filed flaky-required-check finding. No phase work is in flight.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1272,6 +1272,83 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
+
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **COMPLETE 2026-09-27 at 5 of 5 ROADMAP
+success criteria MET AS WRITTEN.** Re-verification returned `status: passed`, 5 of 5 must-haves, **0
+blockers** (`207.1-VERIFICATION.md`, which PREPENDS the re-verification and preserves the prior
+`human_needed` record verbatim beneath it rather than overwriting the history of why a re-run was
+needed). Requirement **COV-10** Complete. Milestone v5.24 now stands at **8 of 8 phases**.
+Plan: 3 of 3 complete. ROADMAP checkbox flipped **BY HAND** — `phase.complete` stays banned on this
+machine per CLAUDE.md §TOOL-05's semantic-defect clause.
+
+**What actually closed the phase: a human verdict, not a test.** `UAT-7-23` criterion 6 ("transition
+is smooth — no layout jumps or flicker") was routed to HUMAN-UAT by D-11 because it has no mechanical
+referent. The operator ran the walkthrough on 2026-09-27 and reported, verbatim: *"when drag the
+window around it looked smooth. no issues or glitches"* — a real non-headless browser resized slowly
+through the 1024px breakpoint in both directions, watching the sidebar and the main content beside it.
+The case goes from a stated **5 of 6 to 6 of 6**.
+
+**Recorded ledger-first, never by hand-editing a `**Result:**` line.** One line changed in
+`docs/uat-disposition-ledger.jsonl`; propagated by `scripts.uat_disposition_apply apply` as exactly 1
+rewrite at `docs/UAT-SERIES.md:3934`; `verify` then reported **378 ledger rows agree**.
+`docs/uat-coverage-gaps.md` regenerated **byte-identical** — the correct outcome, and worth naming
+because it looks like a no-op: the case was already `PASS`, so the GAP set never moved and the count
+stays 41. **A verdict closed a criterion, not a gap.** Those are different denominators and conflating
+them would have manufactured a coverage claim.
+
+**Four prose sites were corrected that no gate governs** — the `**Notes:**` line, the `**Tester:**`
+line, the `**Last Updated:**` header narrative, and the trailing "That GAP is now closed" paragraph.
+This is the class commit `9eaeabe1` had to fix during execution: the reconciliation gate compares the
+Result line against the ledger row and the coverage-gaps set, and the ledger stores only the Result
+line — Notes prose is in none of the three. The re-verifier then found a FIFTH instance of the same
+class inside the phase's own `207.1-HUMAN-UAT.md`, where a present-tense sentence still read "the
+artifacts record only the ROUTING decision ... not a verdict" directly beneath a PASS verdict. Fixed
+and past-tensed. **Five instances of one prose-drift class in a single phase, none gate-detectable.**
+
+**The stated residual, which must not be lost on the next read: the verdict creates NO CI coverage.**
+The automated node still asserts only the five measurable criteria. A future regression in transition
+smoothness would fail no test and redden no gate. The re-verifier confirmed the verdict was not
+laundered into an assertion, three independent ways: the entire diff to `tests/test_browser_e2e.py` is
+one docstring hunk with **zero executable lines changed**; a grep for
+`transition|animation|getComputedStyle|requestAnimationFrame|smooth|flicker|jank|screenshot|wait_for_timeout`
+returns 4 hits, all of them prose; and the new docstring explicitly forbids the substitution. That was
+the real hazard here — not a missing test, but the temptation to let a human verdict license a proxy
+assertion, which is the tautology class this same phase already caught and rewrote in `UAT-7-29`
+(`057132e4`).
+
+**A finding surfaced that is worse than the item being closed, and it is NOT this phase's.**
+`tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass` produced **14 failing
+vitest nodes** across seven dashboard pages, then **passed twice on the identical tree** — once
+standalone and once inside the very batch that had just failed. It is **INTERMITTENT**, and it runs
+in the REQUIRED `Linux Full Suite` job, because that job installs Node 24 + `npm ci` in
+`src/dashboard` (`python-ci.yml:417-426`) *before* `pytest -q -m ""` (`:437`). A flaky required check
+is nastier than a steady red: it cannot be diffed against a baseline and will be misattributed to
+whichever PR happens to catch it. Not branch-induced — identical 58-file vitest citation set between
+`main` and `HEAD`, and `git diff main..HEAD` empty for both the gate and all of `src/dashboard/`, so
+`main` is equally exposed. Filed at
+`.planning/todos/pending/260927-vitest-batched-run-fails-14-nodes-in-required-ci-job.md`.
+
+**Two records corrected while closing, both of which read as authoritative and were wrong.**
+(1) CLAUDE.md's §UAT Corpus Integrity Gate "Known limitation" claimed `Linux Full Suite` "never
+installs Node/npm" — stale since Phase 205 D-04, and the consequence of its closure is precisely the
+flaky required check above. Phase 207's context scout had already flagged this; it outlived the flag.
+(2) The recorded local failing-node baseline listed two nodes and did not list this one. That record
+has now been wrong three times, and the correction this time is stronger than "add a third row": a
+flaky node makes a failing-node SET a *sample*, so the standing advice "compare SETS" needs "re-run
+before concluding, in either direction" attached to it.
+
+`tests/skip_registry.py` (~497-534) still repeats the retired Node-absence claim and was deliberately
+NOT edited — that file keys skips by `(filename, lineno)` and a line shift breaks the gate. Flagged in
+the todo instead. Separately confirmed: the registry keys by
+`(filename, function_name, category, reason)` for the entries touched here, so this phase's docstring
+edit to `tests/test_browser_e2e.py` could not have broken it — `26 passed` on
+`test_browser_e2e_skip_contract.py` + `test_skip_registry.py`.
+
+STATE.md was **hand-edited** for this entry. No mutating `state.*` verb was invoked. A pre-image was
+taken and the **FULL diff** inspected — not a signature grep, per the 2026-09-27 finding that a
+multi-line field value can be truncated in a way signature greps cannot see.
+
+---
 
 Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **ALL 3 PLANS COMPLETE 2026-09-27.
 Verification `human_needed` at 5 of 5 truths verified — 1 human item open, so the phase is NOT
@@ -2613,6 +2690,41 @@ Found at Phase 208 close (2026-09-22):
 | costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
+
+Last session: 2026-09-27 (resumed) — **Session resumed via `/gsd-resume-work`. One blocking human
+item in flight.** `.planning/HANDOFF.json` (2026-09-27T16:56Z) is current and authoritative: Phase
+207.1 at 3 of 3 plans, `status: paused_awaiting_human_uat`, three remaining tasks all gated behind a
+single operator verdict (UAT-7-23 criterion 6, transition smoothness). No interrupted agent. Two
+`.continue-here.md` files exist (207 and 207.1); the 207.1 one is the live handoff, 207's is a
+completed record — HANDOFF.json says so explicitly and it is right.
+
+**One record corrected while resuming, and it is the load-bearing one.** HANDOFF.json's
+`branch_note` and this project's own memory both say branch `phase-207-browser-only-coverage-verdict`
+is "still UNPUSHED". That is **half true and the safe half is the false half**: the branch DOES have
+an upstream (`origin/phase-207-browser-only-coverage-verdict`, pushed 2026-09-26), but
+`git rev-list --left-right --count @{u}...HEAD` returns `0 20` — **20 local commits are unpushed**,
+including all three of 207.1's plan commits. The parked STATE.md fix `21f12789` is on this branch and
+confirmed NOT on `main`; 53 commits separate this branch from `main`. So the hazard the "UNPUSHED"
+note was written to guard against is live, just not for the reason stated: a fresh
+`execute-phase` fork from `origin/HEAD` would now lose 20 commits, not the whole branch.
+
+**VERDICT RECEIVED AND PHASE CLOSED, same session.** The operator ran the walkthrough and reported
+the transition smooth with no issues or glitches. Recorded ledger-first exactly as the plan below
+required, propagated, re-verified `passed` at 5/5 with 0 blockers, and the ROADMAP checkbox flipped by
+hand. `UAT-7-23` closes at 6 of 6. Full trace in this file's `## Current Position` entry for 207.1.
+
+Stopped at: **v5.24 complete at 8 of 8 phases, nothing in flight.** The next action is the operator's
+call — close the milestone (`/gsd-complete-milestone`), or drain todos first. One newly-filed item is
+worth reading before a milestone close, because it affects the merge signal itself: a flaky node in
+the REQUIRED CI job
+(`.planning/todos/pending/260927-vitest-batched-run-fails-14-nodes-in-required-ci-job.md`).
+Branch `phase-207-browser-only-coverage-verdict` is still UNMERGED to `main` and had 20 unpushed
+commits when this session began — verify with `git rev-list --left-right --count @{u}...HEAD` before
+trusting any "is it pushed?" check, since the branch DOES have an upstream.
+Written by hand — no `state.*` verb used; pre-image taken and full diff inspected per CLAUDE.md
+§TOOL-05.
+Resume file: `.planning/phases/207.1-orphaned-browser-only-coverage-drain/.continue-here.md`
+(plus `.planning/HANDOFF.json`, retained until this pause is discharged).
 
 Last session: 2026-09-21 (resumed) — **Session resumed via `/gsd-resume-work`; nothing was in
 flight.** `.planning/HANDOFF.json` (2026-09-21T19:37Z) reports the post-demo resumption COMPLETE at

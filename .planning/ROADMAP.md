@@ -258,9 +258,17 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
 - [x] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
 
-- [ ] **Phase 207.1: Orphaned Browser-Only Coverage Drain** (INSERTED 2026-09-27) - the 2 cases
+- [x] **Phase 207.1: Orphaned Browser-Only Coverage Drain** (INSERTED 2026-09-27) - the 2 cases
   orphaned between COV-04's jsdom set and COV-05's named three get real Tier-2 browser coverage.
   Inserted after a measured tractability assessment, not a hypothesis — see COV-10.
+  **COMPLETE 2026-09-27 at 5 of 5 success criteria MET AS WRITTEN.** Verified `passed` (5/5
+  must-haves, 0 blockers) — see `207.1-VERIFICATION.md`, which prepends the re-verification and
+  preserves the prior `human_needed` record beneath it. `UAT-7-23` closes at **6 of 6**: five
+  criteria mechanized, and criterion 6 ("transition is smooth") discharged by operator HUMAN-UAT
+  walkthrough the same day, recorded ledger-first. Checkbox flipped BY HAND — `phase.complete` is
+  banned on this machine per CLAUDE.md §TOOL-05's semantic-defect clause. **Stated residual:** the
+  criterion-6 verdict is a one-time human observation, not a guard; a smoothness regression would
+  redden no gate, and the automated node still asserts only the five measurable criteria.
 
 - [x] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
   gaps are covered and the two carried doc corrections land. **Completed 2026-09-22 at 4 of 5
@@ -527,6 +535,15 @@ are this phase's entire toolchain — nothing new is provisioned)
      collapsed. The case's disposition cites that node. Criterion 6 of the case itself ("transition
      is smooth") is recorded as human-UAT or explicitly dropped — **this case closes at 5 of 6 and
      the partial is stated, never absorbed into a PASS.**
+     **MET AS WRITTEN, then exceeded (2026-09-27).** Criterion 6 was recorded human-UAT, which is
+     what this criterion asked for; the case closed at a stated 5 of 6. The human-UAT item was then
+     run and **PASSED** — the operator resized a real non-headless browser slowly through the 1024px
+     breakpoint in both directions and reported the sidebar and adjacent main content smooth, with no
+     jump, flicker, flash of unstyled content or glitching reflow — taking the case to **6 of 6**.
+     Recorded in `207.1-HUMAN-UAT.md` and in the case's ledger evidence. The criterion text is left
+     as written: it was satisfied by the *routing*, and the routing is what made the sixth criterion
+     closable at all. The verdict creates no CI coverage — the automated node still asserts five
+     criteria, so a smoothness regression would redden no gate. That residual is stated, not absorbed.
   2. `UAT-7-29` has a Tier-2 test that drags a real Cytoscape node and asserts all five of the
      case's criteria: the node moves, its **visible** edge's endpoint follows mid-drag, the position
      holds after release, the other nodes are unchanged, and no layout reset occurs. The test selects
