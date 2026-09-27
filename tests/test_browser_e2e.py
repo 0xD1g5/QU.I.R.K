@@ -19,6 +19,29 @@ No pytest marker is registered and ``pyproject.toml`` is untouched on purpose: `
 runs ``pytest -q -m ""``, an empty marker expression that selects everything and overrides
 ``addopts``, so a marker cannot keep this file out of the required job. Physical job placement —
 selecting explicit file paths, which Plan 04 provides — is the only mechanism that works.
+
+Phase 207.1 / COV-10 note (added by plan 207.1-01, 2026-09-27): this module also gains ``UAT-7-23``
+(sidebar responsive collapse at the 1024px breakpoint) and, in a later plan, ``UAT-7-29``
+(Cytoscape roadmap node drag). Both land here rather than in a new module for the same D-02 reason
+as the cases above: the ``Browser E2E`` CI job selects tests by **explicit file path**
+(``.github/workflows/python-ci.yml:511``), so a new test module would run in no job at all until
+someone also edited CI.
+
+``seed_dashboard_db`` was **measured** on 2026-09-27 to already yield a roadmap of **4 nodes across
+3 phases (NOW x2, NEXT x1, LATER x1), 2 visible ``phase-`` edges and 1 invisible ``rank-`` edge** —
+exactly what ``UAT-7-29`` needs — so the seed is deliberately NOT extended (D-01). Extending it
+would put the four already-passing cases that share it (``UAT-7-01``, ``UAT-7-17``, ``UAT-7-32``,
+plus the ``_assert_no_identity_data`` empty-identity invariant) at risk to serve one new case.
+
+``cy.nodes()[0]`` is ``NOW-triage-high-impact-f``, whose ONLY connected edge is the invisible
+``rank-`` one, so any drag test selecting a node by index observes no edge geometry and its
+edge-follow assertion is silently unobservable. This is the trap ``.planning/REQUIREMENTS.md``
+COV-10 records at ``:221-223``.
+
+``chromium_page()`` stays function-scoped and un-parameterised (D-03): the harness's hard-coded
+1440x900 is already above the 1024px breakpoint, and ``UAT-7-23`` needs a *transition across* the
+breakpoint, which only a per-test ``page.set_viewport_size()`` can express. A ``viewport=``
+constructor parameter would fix one viewport and could not express a transition.
 """
 from __future__ import annotations
 
