@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
 status: ready_to_execute
-last_updated: "2026-09-27T19:10:00Z"
+last_updated: "2026-09-27T16:04:16.512Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 54
-  completed_plans: 52
-  percent: 88
+  completed_plans: 53
+  percent: 98
 ---
 
 # Project State
@@ -1276,10 +1276,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **EXECUTING 2026-09-27. 3 plans in 3 waves
 (`207.1-01` UAT-7-23 + control, `207.1-02` UAT-7-29 + control, `207.1-03` disposition artifacts +
 docs/vault), plan-checker VERIFICATION PASSED with zero blockers.** Requirement **COV-10** (new).
-Plan: 1 of 3 complete (207.1-01: UAT-7-23 sidebar responsive collapse + red-proof control, both
-passing — see `207.1-01-SUMMARY.md`) — executing in the main session on branch
-`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out). Next: 207.1-02
-(UAT-7-29 + control).
+Plan: 2 of 3 complete (207.1-01: UAT-7-23 sidebar responsive collapse + red-proof control;
+207.1-02: UAT-7-29 Cytoscape roadmap node drag + red-proof control, all four nodes passing — see
+`207.1-01-SUMMARY.md` and `207.1-02-SUMMARY.md`) — executing in the main session on branch
+`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out). Next: 207.1-03
+(disposition artifacts + docs/vault sync).
 
 **Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
 orphaned between COV-04 and COV-05. Phase 206 closed COV-04 at 25 of 28 and routed them to Phase 207;
@@ -2077,6 +2078,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 193 P02 | 20min | 2 tasks | 4 files |
 | Phase 193 P03 | 20min | 2 tasks | 2 files |
 | Phase 195 P05 | 55min | 2 tasks | 5 files |
+| Phase 207.1 P02 | 50m | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -2413,6 +2415,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: connectors and credentials kept as two separate Optional dict fields on ScanSubmitRequest, never merged, per D-11 (193-03)
 - [Phase ?]: 195-05: Tier A only per 195-SPIKE-DECISION.md DEFERRED — no declared_reachability edge type/legend row/crown-jewel declaration UX in exposure-map.tsx
 - [Phase ?]: 195-05: evidence citation implemented both as hover shadcn Tooltip AND an always-present sr-only edge list, satisfying D-09 hover + UI-SPEC Dimension 2 no-hover accessible fallback simultaneously
+- [Phase 207.1]: 207.1-02: widened UAT-7-29 criterion 2 tolerance to 25px + same-sign check (bezier edge anchor is angle-dependent, not a fixed node offset)
 
 ### Pending Todos
 

@@ -544,8 +544,8 @@ are this phase's entire toolchain — nothing new is provisioned)
 `tests/test_browser_e2e.py`, so they cannot share a wave)
 - [x] 207.1-01-PLAN.md — UAT-7-23: measured sidebar collapse across the 1024px breakpoint + its
   no-viewport-change control (wave 1) — complete 2026-09-27, both nodes passing
-- [ ] 207.1-02-PLAN.md — UAT-7-29: Cytoscape node drag with the visible edge sampled mid-drag +
-  its no-mouse.down() control (wave 2)
+- [x] 207.1-02-PLAN.md — UAT-7-29: Cytoscape node drag with the visible edge sampled mid-drag +
+  its no-mouse.down() control (wave 2) — complete 2026-09-27, all four nodes passing
 - [ ] 207.1-03-PLAN.md — two-sided gate, the three coupled disposition artifacts, COV-10, docs and
   vault close-out (wave 3)
 **UI hint**: yes
