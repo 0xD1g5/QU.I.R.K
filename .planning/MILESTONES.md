@@ -1,5 +1,87 @@
 # Milestones
 
+## v5.24 UAT Coverage Drain (Development complete: 2026-09-27 — untagged)
+
+**Phases completed:** 8 phases (203-209, including the mid-milestone insert **207.1**), 53 plans on
+disk / 54 SUMMARY files
+**Requirements:** **17/18 satisfied, 1 PARTIAL** (STALE-01/02, COV-01..03, COV-05..10, GUARD-01/02,
+DOC-01/02, DELIV-01/02 satisfied; **COV-04 PARTIAL at 27 of 28**)
+**Audit:** `tech_debt` (`.planning/milestones/v5.24-MILESTONE-AUDIT.md`) — requirements 17/18,
+phases 8/8, **integration 4/4 seams WIRED with 0 blockers**, Nyquist 8/8 compliant, staleness green
+across all 9 date-gated catalogs.
+**Scale:** 358 commits, 197 files, +35,835 / -1,565, 15 days (2026-09-12 -> 2026-09-27). Merged to
+`origin/main` at `b262aa82`.
+
+**What it was about:** not features — **evidence integrity.** Nearly every phase exists because a
+coverage claim turned out to rest on something weaker than it looked.
+
+**Highlights:**
+- **The gap worklist now derives itself (COV-01/02/03).** `docs/uat-coverage-gaps.md` is generated and
+  gated; it regenerates byte-identically. Open drainable GAPs went **47 -> 43 -> 41**. The `is_gap`
+  rule is adjudicated and two-branch — 28 `GAP` plus 13 `SKIP_OTHER` whose own Notes carry the GAP
+  string — which is why the worklist's internal "GAP 28" and its headline "41" both read correctly.
+- **Guards proven non-vacuous, not assumed (GUARD-01/02).** GUARD-01's stated premise was
+  **falsified** during execution and the requirement closed on measurement instead. GUARD-02's vitest
+  substitute-execution leg was proven to genuinely execute inside the **gating** `Linux Full Suite`
+  job and red-proved in CI.
+- **A real browser tier exists where jsdom structurally could not reach (COV-05, COV-10).** Playwright
+  harness with subprocess uvicorn on a real port, a DB seeder and an SPA-mount guard, in a
+  deliberately **non-gating** `Browser E2E` job so browser flake cannot redden the required check.
+  Seven cases converted across 207 and 207.1, **every one red-proved by a paired control** that omits
+  the triggering interaction rather than merely observed passing.
+- **The consulting-grade report artifacts became reachable (DELIV-01/02).** Before this, the report
+  pipeline and the dashboard shared zero code — `write_reports()` wrote to disk and no route served
+  it. Now an auth-gated read-only route with a containment guard stronger than path comparison:
+  client input is never joined into a path at all, only a server-side filename template, and enum
+  membership *is* the routing rule. Reachability was confirmed into the committed JS bundle, not just
+  in tests.
+- **Catalog freshness re-verified by hand (STALE-01/02), and the finding was not what anyone
+  expected.** Not that source URLs had rotted, but that **5 of 5 claims checked were WRONG, in both
+  directions** — most sharply Palo Alto, whose entry was **inverted**: it claimed PAN-OS supports
+  X25519MLKEM768 for TLS decryption, when the NGFW actually STRIPS PQC groups from ClientHello and
+  drops PQC-only sessions, making it a downgrade point rather than a capable device.
+- **A human verdict closed what no test could.** `UAT-7-23` criterion 6 ("transition is smooth — no
+  layout jumps or flicker") has no mechanical referent, so it was routed to HUMAN-UAT rather than
+  dropped or mechanized into a proxy assertion. The operator ran the walkthrough on 2026-09-27 and it
+  PASSED, taking the case to 6 of 6. The routing decision was the load-bearing one: dropping it would
+  have left a silent hole, and mechanizing it would have manufactured the verdict.
+
+**Known gaps (accepted, not hidden):**
+- **COV-04 closes at 27 of 28** with SC#1 recorded NOT MET AS WRITTEN and the checkbox left `- [ ]`
+  **on purpose**, so the shortfall stays visible rather than rounding to a pass. The sole remainder,
+  `UAT-7-12`, is an **accepted product-absence FAIL** — `certificates.tsx` has no sort state, no
+  column handler and no table library, so there is no behaviour to assert. Kept in the denominator
+  rather than shrinking it to report 25/25.
+- **Two shipped product-defect FAILs in series 7**, filed not fixed: `UAT-7-12` above and `UAT-7-21`
+  (95 hardcoded colour literals across 9 files, recorded via a full-strength `it.fails`).
+- **18 of 24 COV-04 conversions are QUALIFIED PASSes**, and the gate meant to police that honesty
+  does not exist — `UAT-206-05` is itself an open GAP. Coverage is real but shallower than a checked
+  box implies, with no mechanical guard on the qualification text. **Highest-value item for the next
+  milestone.**
+- **COV-05/COV-10 coverage is not CI-enforced** — `Browser E2E` is `continue-on-error: true` by
+  design, so a Playwright regression in those five cases cannot fail a PR.
+- **`UAT-7-23` criterion 6 has no regression guard.** The operator verdict is a one-time observation;
+  a smoothness regression would redden no gate. Stated at all ten sites claiming the 6-of-6 close.
+- **`203-05/06/07` have no SUMMARY and stay `- [ ]`** — CLOSED-WONTFIX by operator decision
+  2026-09-13, because retro-writing SUMMARYs would fabricate a record. Not to be re-raised.
+
+**Known deferred items at close: 35** — **33 pending todos + 1 open debug session + 1
+known-false-positive quick_task.** These counts were **re-derived from disk, not read from
+`gsd-sdk query audit-open`**, which reported 5 todos: its collector slices to 5 for display and then
+counts the truncated array (`query/audit-open.js:181`), so the figure it hands the close gate can
+never exceed 5. That defect is itself filed. **Prior milestone entries' "Known deferred items" counts
+should be re-derived rather than trusted — a value of `<= 5` is indistinguishable from a true small
+count.** Two of the 33 todos were filed during this close: the capped-count bug, and an intermittent
+failure of `test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass` (14 vitest nodes)
+that runs inside the **required** `Linux Full Suite` job — a flaky required check, which cannot be
+diffed against a baseline and gets misattributed to whichever PR catches it.
+
+**NO v5.24 git tag**, consistent with v5.22 and v5.23. `release.yml` fires on `v[0-9]*` and hardcodes
+a static release body, so every tagged release to date carries byte-identical wrong release notes —
+the open, investigated-but-unfixed defect in
+`.planning/debug/github-release-notes-and-ci-failures.md`, which is the same open debug session
+counted above. The milestone record lives here and in `.planning/milestones/`.
+
 ## v5.23 Deliverable Experience (Development complete: 2026-09-12 — untagged)
 
 **BACKFILLED 2026-09-27.** This entry was missing. v5.23's archive files were all written at close
