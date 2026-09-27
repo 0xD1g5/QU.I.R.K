@@ -945,3 +945,61 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
                 f"(expected {{'x': 75, 'y': 168}}), edge pre-drag sourceEndpoint={pre['edge']!r} "
                 "(expected {'x': 75, 'y': 194}). Reported per plan instruction, not adjusted."
             )
+
+
+def test_uat_7_29_control_no_mousedown(dashboard_origin):
+    """Red-proof control for UAT-7-29 (D-10, SC#3).
+
+    Performs the identical setup and mouse MOVEMENT as the main drag test and deliberately omits
+    the mouse-button press — the absence is the point of this test, so nobody should "complete" it
+    later by adding one. Its job is to prove the main test's assertions are load-bearing on
+    the drag actually occurring, rather than comparing a value to itself. This is a separate
+    pytest test node, not a comment or sub-assertion, so a reviewer can confirm the red-proof
+    exists without reading any test body.
+    """
+    with chromium_page() as page:
+        page.goto(dashboard_origin + "/roadmap")
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+        assert_spa_mounted(page)
+
+        _resolve_cy(page)
+        node_id, edge_id = _select_draggable_candidate(page)
+
+        before = page.evaluate(
+            "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
+            " return { pos: cy.$id(args.nodeId).position(), edge: cy.$id(args.edgeId).sourceEndpoint() }; }",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id},
+        )
+
+        container_box = page.evaluate(
+            "(sel) => { const r = document.querySelector(sel).getBoundingClientRect();"
+            " return { x: r.x, y: r.y }; }",
+            _CY_CONTAINER_SELECTOR,
+        )
+        rendered = page.evaluate(
+            "(args) => document.querySelector(args.sel)._cyreg.cy.$id(args.nodeId).renderedPosition()",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id},
+        )
+        start_x = container_box["x"] + rendered["x"]
+        start_y = container_box["y"] + rendered["y"]
+
+        page.mouse.move(start_x, start_y)
+        # Deliberately NO mouse-button press anywhere in this test — the omission is the point.
+        # Do not "complete" this control later by adding one.
+        page.mouse.move(start_x + 100, start_y + 50, steps=10)
+
+        after = page.evaluate(
+            "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
+            " return { pos: cy.$id(args.nodeId).position(), edge: cy.$id(args.edgeId).sourceEndpoint() }; }",
+            {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id},
+        )
+
+        assert before["pos"] == after["pos"], (
+            f"UAT-7-29 control: expected NO position change for node {node_id!r} without a "
+            f"mouse-button press; before={before['pos']!r} after={after['pos']!r}."
+        )
+        assert before["edge"] == after["edge"], (
+            f"UAT-7-29 control: expected NO sourceEndpoint() change for edge {edge_id!r} without "
+            f"a mouse-button press; before={before['edge']!r} after={after['edge']!r}."
+        )
