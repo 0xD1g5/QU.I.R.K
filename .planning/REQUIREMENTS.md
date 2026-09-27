@@ -212,21 +212,21 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| XSURF-01 | TBD | Pending |
-| XSURF-02 | TBD | Pending |
-| XSURF-03 | TBD | Pending |
-| XSURF-04 | TBD | Pending |
-| DENOM-01 | TBD | Pending |
-| DENOM-02 | TBD | Pending |
-| DENOM-03 | TBD | Pending |
-| DENOM-04 | TBD | Pending |
-| DILUTE-01 | TBD | Pending |
-| UIFIX-01 | TBD | Pending |
-| UIFIX-02 | TBD | Pending |
-| REL-01 | TBD | Pending |
-| REL-02 | TBD | Pending |
-| REL-03 | TBD | Pending |
-| REL-04 | TBD | Pending |
+| XSURF-01 | Phase 210 | Pending |
+| XSURF-02 | Phase 210 | Pending |
+| XSURF-03 | Phase 210 | Pending |
+| XSURF-04 | Phase 210 | Pending |
+| DENOM-01 | Phase 211 | Pending |
+| DENOM-02 | Phase 211 | Pending |
+| DENOM-03 | Phase 211 | Pending |
+| DENOM-04 | Phase 211 | Pending |
+| DILUTE-01 | Phase 212 | Pending |
+| UIFIX-01 | Phase 213 | Pending |
+| UIFIX-02 | Phase 213 | Pending |
+| REL-01 | Phase 214 | Pending |
+| REL-02 | Phase 214 | Pending |
+| REL-03 | Phase 214 | Pending |
+| REL-04 | Phase 214 | Pending |
 
 ---
 *Requirements defined: 2026-09-27*
