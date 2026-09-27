@@ -9,18 +9,16 @@ Every total below is computed by the generator at generation time from the live 
 ## Totals
 
 - Total case headings: 904
-- Disposition counts: DEFERRED 39, FAIL 7, GAP 30, OBSOLETE 2, PASS 740, SKIP_OTHER 86
-- Open GAP (drainable) cases: 43
+- Disposition counts: DEFERRED 39, FAIL 7, GAP 28, OBSOLETE 2, PASS 742, SKIP_OTHER 86
+- Open GAP (drainable) cases: 41
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (43 cases, all series)
+## Open GAP Worklist (41 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
 | UAT-5-19 | 5 | Storage Profile — PostgreSQL pgcrypto Reachability | no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage |
-| UAT-7-23 | 7 | Sidebar Responsive Collapse | no substitute coverage; the sidebar collapse is a pure Tailwind `lg:` breakpoint with no `matchMedia` or `useMediaQuery` listener, so jsdom — which evaluates no media queries and has no layout engine — renders byte-identical DOM above and below 1024px. Reclassified 2026-09-21 out of the jsdom-tractable set and routed to Phase 207's operator-led browser verdict |
-| UAT-7-29 | 7 | Roadmap — Node Drag | no substitute coverage; node drag is entirely internal to the real Cytoscape renderer and `roadmap.tsx` registers no drag, `grab`, `free`, `position` or `dragfree` handler and never reads or writes node positions. Reclassified 2026-09-21 out of the jsdom-tractable set and routed to Phase 207's operator-led browser verdict |
 | UAT-9-06 | 9 | HTML Report — Visual Quality | no substitute coverage; needs a visual/browser render check of the HTML report dark theme, layout, and mobile responsiveness |
 | UAT-11-02 | 11 | Multi-Profile Lab Run — Progressive Discovery | no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent |
 | UAT-36-04 | 36 | Executive summary shows 6 ScoreGauges with Data in Motion last | no substitute coverage; needs a frontend render test asserting exactly 6 ScoreGauge elements with Data in Motion last and an integer value |
