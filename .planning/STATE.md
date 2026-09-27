@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). Planned 2026-09-27: 3 plans in 3 waves, plan-checker PASSED. Operator-led, NOT autonomous. Ready for `/gsd-execute-phase 207.1`.
+**Current focus:** Phase 207.1 — Orphaned Browser-Only Coverage Drain (COV-10). EXECUTING 2026-09-27: 3 plans in 3 waves, plan-checker PASSED. Operator-led, NOT autonomous. Sequential on the main tree (`workflow.use_worktrees=false`).
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1273,10 +1273,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **PLANNED 2026-09-27. 3 plans in 3 waves
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **EXECUTING 2026-09-27. 3 plans in 3 waves
 (`207.1-01` UAT-7-23 + control, `207.1-02` UAT-7-29 + control, `207.1-03` disposition artifacts +
 docs/vault), plan-checker VERIFICATION PASSED with zero blockers.** Requirement **COV-10** (new).
-Next: `/gsd-execute-phase 207.1` — in the main session on branch
+Plan: 1 of 3 — executing in the main session on branch
 `phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out).
 
 **Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
@@ -1300,9 +1300,11 @@ control drag with no `mouse.down()` moved nothing, so the assertion can fail.
    return **no endpoint geometry** (`sourceEndpoint()` -> `{}`). My first probe read that empty result
    and would have recorded a false intractability verdict. Select via
    `connectedEdges().filter(e => e.visible())`.
+
 2. `container._cyreg.cy` is an **undocumented Cytoscape internal** — the only route to the live
    instance, since `roadmap.tsx` keeps `cyRef` in a React ref and exposes nothing globally. Assert it
    resolved; fail with a named diagnosis if a version bump removes it.
+
 3. `UAT-7-23` criterion 6 ("transition is smooth, no layout jumps or flicker") has **no mechanical
    referent.** It stays human-UAT or is dropped explicitly. This case closes at **5 of 6** and the
    partial must be stated, not absorbed.
@@ -1316,6 +1318,7 @@ control drag with no `mouse.down()` moved nothing, so the assertion can fail.
   them byte-identically (`git status` clean). The *guard* D-04 motivated is still right; its premise
   was false. Consequence to check before it costs CI time: the `Browser E2E` job may need **no
   `npm run build` step at all.**
+
 - **Phase 208's "`~/Library/Caches/ms-playwright/` is empty on this machine" is superseded** —
   `chromium-1208` is installed and launches. True when written; Phase 207 changed it.
 
@@ -1516,12 +1519,15 @@ unauthorized-remote-actions note below belongs to that earlier period. Verified 
    row-lag pattern. Deliberately NOT flipped — honest flipping requires confirming each row's
    command actually ran, and flipping them otherwise is a fabricated attestation. Only the two
    Manual-Only Verification rows were discharged (that was 209-07's scope).
+
 2. `tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged`
    **fails at baseline**, verified by stashing Series 209 and re-running. Pre-existing, unrelated
    to 209, not fixed here.
+
 3. The live end-to-end Playwright PDF render (`test_pdf_export.py::test_pdf_export_endpoint` and
    all three `test_pdf_metadata_constants.py` nodes) remains **TRIAGE-149-skipped**, so it is not
    covered by Series 209's automated citations. UAT-209-06 records that narrowing explicitly.
+
 4. Plan 209-08's instruction to add ledger rows was **deliberately not followed** —
    `docs/uat-disposition-ledger.jsonl` is bounded at series 158 by design and Phase 204 made
    `docs/UAT-SERIES.md` authoritative; no series from 201-205 has ledger rows. Rationale and
