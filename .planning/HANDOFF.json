@@ -1,121 +1,106 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-27T14:15:00.000Z",
-  "phase": "207",
-  "phase_name": "Browser-Only Coverage Verdict",
-  "phase_dir": ".planning/phases/207-browser-only-coverage-verdict",
-  "plan": 6,
-  "task": 6,
-  "total_tasks": 6,
-  "status": "complete",
+  "timestamp": "2026-09-27T15:00:00.000Z",
+  "scope": "milestone",
+  "phase": "none",
+  "phase_name": "milestone v5.24 (UAT Coverage Drain) \u2014 all 7 phases complete",
+  "phase_dir": ".planning",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "awaiting_operator_decision",
+  "note": "This is a MILESTONE-level pause, not a mid-phase one. Phase 207's own .continue-here.md is a COMPLETED record -- do not read it as live work and do not overwrite it. The human-readable handoff for this pause is .planning/.continue-here.md.",
   "completed_tasks": [
     {
       "id": 1,
-      "name": "207-01 Tier 1: criterion-1 verdict artifact + UAT-88-03 PDF test",
+      "name": "Phase 207 W-10 skip-never-error precheck, reproduced as 3 ERRORs first",
       "status": "done",
-      "commit": "9fcd0d07"
+      "commit": "e063e4f0"
     },
     {
       "id": 2,
-      "name": "207-02 Tier-2 harness (uvicorn subprocess, seeder, D-04 mount guard) + UAT-7-01",
-      "status": "done",
-      "commit": "148f58c7"
-    },
-    {
-      "id": 3,
-      "name": "207-03 UAT-7-32 seven-route console sweep + UAT-7-17 download interception",
-      "status": "done",
-      "commit": "0eddf3ba"
-    },
-    {
-      "id": "3.5",
-      "name": "207-03.5 corrective wave: 7 of 19 review findings fixed",
-      "status": "done",
-      "commit": "d034b555"
-    },
-    {
-      "id": "3.6",
-      "name": "207-03.6 blocking constraints: W-10 skip-never-error precheck + W-09 /certificates discrimination",
+      "name": "Phase 207 W-09 /certificates discrimination, reproduced by emptying the payload",
       "status": "done",
       "commit": "98f00b04"
     },
     {
-      "id": "3.7",
-      "name": "207-03.7 triage of the 12 findings the 03.5 brief omitted (4 fixed, 2 accepted, 2 carried, 1 no-action)",
+      "id": 3,
+      "name": "Phase 207 triage of the 12 omitted findings -- 4 fixed, 2 accepted, 2 carried, 1 no-action",
       "status": "done",
       "commit": "10c0652d"
     },
     {
       "id": 4,
-      "name": "207-04 non-gating browser-e2e CI job + criterion-3 NOT-MET-AS-WRITTEN record",
+      "name": "Wave 4: non-gating Browser E2E job + narrowed the guard regex it tripped",
       "status": "done",
       "commit": "01526634"
     },
     {
       "id": 5,
-      "name": "207-05 four CI-EXEMPT dispositions + worklist regen + two-sided gate, plus 3 full-suite-only fixes",
+      "name": "Wave 5: 3 full-suite-only failures fixed, then 4 CI-EXEMPT dispositions -- GAP 47->43",
       "status": "done",
       "commit": "e34e1903"
     },
     {
       "id": 6,
-      "name": "207-06 docs, vault sync, validation rows, ROADMAP/REQUIREMENTS, operator checkpoint satisfied",
+      "name": "Wave 6: docs, vault sync, phase note, VALIDATION/ROADMAP/REQUIREMENTS, verifier W-1..W-5",
       "status": "done",
-      "commit": "0b9252e5"
+      "commit": "8e436388"
     }
   ],
-  "remaining_tasks": [],
+  "remaining_tasks": [
+    {
+      "id": 1,
+      "name": "DECIDE UAT-7-23 / UAT-7-29 -- orphaned between Phase 206 and 207; take this FIRST",
+      "status": "not_started"
+    },
+    {
+      "id": 2,
+      "name": "Merge phase-207-browser-only-coverage-verdict into main -- PR or direct push",
+      "status": "not_started"
+    },
+    {
+      "id": 3,
+      "name": "Milestone close: /gsd-audit-milestone -> /gsd-complete-milestone -> /gsd-new-milestone",
+      "status": "not_started"
+    }
+  ],
   "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Decide whether to open a PR and merge phase-207-browser-only-coverage-verdict into main",
-      "context": "Both CI checkpoints are already satisfied from workflow_dispatch run 36320908301 -- Browser E2E 6 passed on ubuntu-latest, Linux Full Suite red on exactly the two Docker chaos-lab nodes main is also red on, zero regressions. Opening a PR is outward-facing and was not done. Commit 21f12789 exists only on this branch; run `git log main..HEAD` before closing anything.",
+      "action": "Decide the disposition of UAT-7-23 and UAT-7-29",
+      "context": "Phase 206 closed COV-04 at 25 of 28 with SC#1 recorded NOT MET AS WRITTEN, and routed these two to Phase 207. Phase 207's scope was UAT-7-01/7-17/7-32 + UAT-88-03 and never took them. Verified live: both still disposition=GAP, is_gap=True, both in docs/uat-coverage-gaps.md. Neither phase erred; the cases are orphaned BETWEEN them. They may now be tractable against the browser harness Phase 207 built -- nobody has assessed that. Options: a small Phase 207.1; recorded permanent GAPs; or promotion to the next milestone's backlog.",
+      "blocking": true
+    },
+    {
+      "action": "Decide whether to open a PR or push phase-207 directly to main",
+      "context": "32 commits, close gate clean, both CI checkpoints already satisfied from workflow_dispatch run 36320908301. Opening a PR is outward-facing and was deliberately not done. main's own required check is already red on two Docker chaos-lab nodes, so any PR inherits a failing check. Commit 21f12789 exists only on this branch -- run `git log main..HEAD` before closing anything.",
       "blocking": false
     }
   ],
   "decisions": [
     {
-      "decision": "Playwright E2E in an isolated, NON-REQUIRED CI job (not permanent GAP, not inside Linux Full Suite)",
-      "rationale": "Operator call 2026-09-26. Deciding evidence: TRIAGE-149 Cluster 2 quarantines 14 tests on a shared-Playwright-singleton root cause that a separate pytest invocation structurally avoids. No new dependency needed - playwright and pypdf already ship under the dashboard extras.",
+      "decision": "CI-EXEMPT wording states what is true HERE, not the precedents' 'CI cannot run this'",
+      "rationale": "CI DOES run these nodes, in the Browser E2E job. Borrowing the precedent phrasing would put a false statement in the honesty record.",
       "phase": "207"
     },
     {
-      "decision": "Dispositions carry CI-EXEMPT with wording honest to OUR case (D-10)",
-      "rationale": "Operator-confirmed. The citation guard executes cited nodes in the required job and fails on a clean skip; our tests skip there by design. Both existing precedents say 'CI cannot run this', which is FALSE for us - CI does run these nodes, in the Browser E2E job. Borrowing that phrasing would put a false statement in the honesty record.",
+      "decision": "UAT-88-03's TRIAGE-149 contamination is skipped NARROWLY in the test, not handled in production code",
+      "rationale": "Broadening what render_pdf_report catches would mask real failures for users to fix a test-ordering problem. Red-proved three ways.",
       "phase": "207"
     },
     {
-      "decision": "Criterion 1's verdict is condensed into ROADMAP.md itself, not merely pointed at",
-      "rationale": "Phase artifacts are git-UNTRACKED, so 207-TOOLCHAIN-VERDICT.md is absent from a fresh clone and deleted by /gsd-cleanup. A pointer to a file that will not exist does not make a record durable.",
+      "decision": "COV-07 closed on its own written condition, by hand, cross-phase and surfaced not buried",
+      "rationale": "Its text says 'stays [ ] until that leg ships'; the leg shipped here. requirements mark-complete was NOT used -- no per-phase granularity, twice over-flipped here.",
       "phase": "207"
     },
     {
-      "decision": "D-04's original evidence was WRONG and is corrected in place rather than quietly amended",
-      "rationale": "It cited `git ls-files src/dashboard/dist` = 0, but vite.config.ts:194 sets outDir to quirk/dashboard/static, where 14 files ARE tracked. The guard still stands, for a different reason: staleness and mount failure, not a missing build.",
-      "phase": "207"
-    },
-    {
-      "decision": "Executors dispatched directly instead of via execute-phase, and workflow.use_worktrees left untouched",
-      "rationale": "D-08 forbids worktree fan-out. Flipping the config would satisfy one phase by silently changing every future phase's execution model.",
-      "phase": "207"
-    },
-    {
-      "decision": "The browser-e2e job runs a THIRD file, tests/test_browser_e2e_skip_contract.py, beyond the two the plan named",
-      "rationale": "That file did not exist when 207-04 was written (added this session for W-10). Its second leg asserts a dead server is reported loudly when Chromium IS present, and this job is the only place in CI where that is true. Omitting it would mean the leg never runs in CI.",
-      "phase": "207"
-    },
-    {
-      "decision": "test_full_suite_ci_job_still_selects_all_markers's job-body regex was NARROWED, not the new job moved",
-      "rationale": "The guard captured every indented line after its header to EOF, so any job defined after linux-full-suite was folded into the captured body -- anchored but unscoped. Moving the new job earlier would have silenced the symptom and left the trap armed for the next appended job. Red-proved both ways after narrowing: continue-on-error on linux-full-suite itself still fails, and removing its -m '' still fails.",
-      "phase": "207"
-    },
-    {
-      "decision": "UAT-88-03's TRIAGE-149 contamination is converted to a NARROW skip in the test, not handled in production code",
-      "rationale": "render_pdf_report catches PlaywrightError/TimeoutError/OSError/RuntimeError but not AttributeError, so the contamination propagated and the node FAILED where D-10 requires a skip. Broadening production exception handling would mask real failures for users to fix a test-ordering problem. The skip matches only the two-token signature; an unrelated or half-matching AttributeError still re-raises -- red-proved in all three directions.",
+      "decision": "Criterion 1's verdict condensed INTO ROADMAP.md rather than pointed at",
+      "rationale": "Phase artifacts are git-untracked; a pointer to a file absent from a fresh clone is not a durable record.",
       "phase": "207"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Phase 207 is COMPLETE. Milestone v5.24 has one phase left: 206, paused at 5 of 13 plans. Do NOT use phase.complete to close anything on this machine.",
-  "context_notes": "Waves 1-3.5 are solid and independently re-verified by the orchestrator: 4 nodes collect and pass 3/3 consecutively (~9-10s, variance <0.15s), both gate legs behave (pass with Chromium, skip cleanly without), all 25 assertions are capable of failing, D-05 and D-10 hold, tree clean, no orphaned processes. The remaining waves mutate GATED artifacts (python-ci.yml, docs/UAT-SERIES.md, the disposition ledger), so errors get more expensive from here - which is why the open findings should be closed first. Session ran 16 commits. One orchestrator error is recorded in the anti-patterns table and must be read before dispatching any subagent. UPDATE 2026-09-26 (resumed session): the two blocking constraints are closed and each was reproduced mechanically BEFORE being fixed, not argued from the code. Verification in both CI job shapes: Chromium present -> 6 passed (4 Tier-2 nodes + 2 contract legs, 15.1s); Chromium absent -> 1 passed, 5 skipped, ZERO errors (3.1s). The new contract test EXECUTES in the required job rather than skipping there, so it adds required-job coverage of D-10 itself. UPDATE 2026-09-26 (triage): all 19 review findings are now dispositioned -- see 207-03.7-TRIAGE.md for the 12 the 03.5 brief omitted. Post-triage verification: Chromium present -> 6 passed (16.9s); absent -> 1 passed, 5 skipped, 0 errors (3.1s); 3/3 consecutive at 8.86-8.89s, variance 0.03s; no orphaned uvicorn. Process note worth keeping: the first W-06 mutation proof silently did not run because `timeout` does not exist on macOS, and the empty output read like 'no failure'. A mutation run that reports nothing has not passed -- it has not run. UPDATE 2026-09-27 (Wave 5): full suite exits 0 on BOTH legs, failing-node set EMPTY, 5251 nodes either way. GAP 47->43. The first two-leg run was RED with 3 failures, two of them dating to Waves 1-2 and invisible to every per-file verification done so far -- both classes are ordering-dependent. The recorded local baseline is stale for the THIRD time: its two documented nodes did not fail in either leg."
+  "next_action": "Decide UAT-7-23 / UAT-7-29 FIRST -- it is the only decision that changes the milestone's permanent record. A useful first move is the assessment nobody has done: check whether either is now tractable against tests/browser_e2e_harness.py, since jsdom intractability was the original reason both were excluded. Then merge Phase 207, then the milestone close sequence. Do NOT use phase.complete or milestone.complete on this machine.",
+  "context_notes": "Milestone v5.24 is functionally complete: all 7 phases [x], 16 of 17 requirements closed, COV-04 the sole open one and deliberately partial at 25/28. Phase 207 closed this session with gsd-verifier PASSED WITH CONCERNS 5/5, all five concerns addressed before commit. The session's recurring lesson: every real defect found was a record asserting more than it proved, and none was caught by re-reading the reasoning that produced it -- each needed a DIFFERENT method. Two cautions for the resuming agent: a push to a feature branch triggers NO CI here (use `gh workflow run python-ci.yml --ref <branch>`), and continue-on-error:true makes the Browser E2E job report success even when steps fail, so read step-level conclusions and the numeric pass count, never the job verdict."
 }
