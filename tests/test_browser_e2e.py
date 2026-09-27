@@ -678,3 +678,90 @@ def test_uat_7_23_control_no_viewport_change(dashboard_origin):
             f"before={before!r}, after={after!r}. A failure here means either the page is "
             "unstable or a stray resize crept into the control."
         )
+
+
+# UAT-7-29 (Cytoscape roadmap node drag) — module-level constants and shared helpers.
+#
+# The container is selected by its ARIA role/label, not by a Tailwind class or Cytoscape's own
+# injected container class (`__________cytoscape_container`): `roadmap.tsx:333` gives the
+# container `<div>` `role="img"` and a distinctive `aria-label` starting "Migration roadmap DAG",
+# which is stable against both a future className refactor and against Cytoscape's own internal
+# naming.
+_CY_CONTAINER_SELECTOR = '[role="img"][aria-label*="Migration roadmap"]'
+
+# .visible() edge-discrimination note (207.1-RESEARCH.md Pitfall 1, verified live 2026-09-27):
+# generic Cytoscape.js documentation describes opacity/visibility/display as three independent
+# style axes, reading as though `.visible()` tracks only visibility/display and would report
+# `true` for the seed's opacity:0 `rank-` edges too. That generic reading is WRONG for this
+# codebase's installed cytoscape (`^3.33.1`, src/dashboard/package.json:39) — `.visible()` was
+# live-verified to correctly report `false` for `rank-` edges and `true` for `phase-` edges. Do
+# NOT "fix" `_select_draggable_candidate`'s filter based on generic docs; if a future cytoscape
+# version bump ever changes this, the `phase-` prefix guard below is the independent backstop
+# that fails loudly instead of silently steering onto the wrong edge.
+
+
+def _resolve_cy(page):
+    """Assert `container._cyreg.cy` resolved — SC#4, per D-08. Call before any mouse event.
+
+    `_cyreg` is an undocumented Cytoscape internal: `roadmap.tsx:73-74` holds the live instance in
+    a React `useRef` with no public export, so this internal registry object attached to the
+    mounted container is genuinely the only reach. This is an `assert` with a named diagnosis, not
+    a `None`-returning lookup — a future reader must get a diagnosis, not an `AttributeError` on
+    `None`.
+    """
+    resolved = page.evaluate(
+        "(sel) => { const el = document.querySelector(sel);"
+        " return !!(el && el._cyreg && el._cyreg.cy); }",
+        _CY_CONTAINER_SELECTOR,
+    )
+    assert resolved, (
+        "UAT-7-29: container._cyreg.cy did not resolve. `_cyreg` is an undocumented Cytoscape "
+        "internal — roadmap.tsx:73-74 holds the live instance in a React useRef with no public "
+        "export, so this is genuinely the only reach available to a test. A Cytoscape version "
+        "bump (declared range `^3.33.1` in src/dashboard/package.json) may have removed or "
+        "renamed `_cyreg`. Investigate the installed cytoscape version BEFORE assuming this is a "
+        "product regression."
+    )
+
+
+def _select_draggable_candidate(page):
+    """Structurally select a node with a visible connected edge — D-07. Never selects by index.
+
+    `cy.nodes()[0]` is `NOW-triage-high-impact-f`, whose only connected edge is the invisible
+    `rank-` one (opacity: 0) — a test selecting by index would observe no usable endpoint
+    geometry and its edge-follow assertion would be silently unobservable, exactly the trap
+    `.planning/REQUIREMENTS.md:221-223` (COV-10) records. Instead this iterates every node and
+    returns the first one whose `connectedEdges().filter(e => e.visible())` is non-empty.
+
+    Returns ``(node_id, edge_id)``. Asserts, before returning:
+      1. a qualifying node was found at all (D-01: the seed has 2 visible `phase-` edges, so at
+         least one must exist) — a bare `[0]` on an empty result reads as a passing test that
+         observed nothing, which is the whole point of this guard;
+      2. the selected edge id starts with ``"phase-"`` — a second, independent guard against a
+         future cytoscape version where `.visible()` stops discriminating `opacity: 0` `rank-`
+         edges (see the module comment above and 207.1-RESEARCH.md Pitfall 1). Without this guard,
+         such a regression would silently steer the test onto the wrong edge instead of failing.
+    """
+    candidate = page.evaluate(
+        "(sel) => { const el = document.querySelector(sel); const cy = el._cyreg.cy;"
+        " for (const n of cy.nodes().toArray()) {"
+        "   const ve = n.connectedEdges().filter(e => e.visible());"
+        "   if (ve.length > 0) return { nodeId: n.id(), edgeId: ve[0].id() };"
+        " } return null; }",
+        _CY_CONTAINER_SELECTOR,
+    )
+    assert candidate is not None, (
+        "UAT-7-29: no node has a connectedEdges().filter(e => e.visible()) match — the seed's "
+        "roadmap must contain at least one visible cross-phase edge (D-01: 2 visible `phase-` "
+        "edges measured live on 2026-09-27). This assertion is the whole point of D-07 — a bare "
+        "[0] on an empty result would read as a passing test that observed nothing."
+    )
+    node_id, edge_id = candidate["nodeId"], candidate["edgeId"]
+    assert edge_id.startswith("phase-"), (
+        f"UAT-7-29: selected edge {edge_id!r} is not a `phase-` edge. `.visible()` may no longer "
+        "discriminate the seed's opacity:0 `rank-` edges on the installed cytoscape version — "
+        "this is the second, independent guard against that regression (see module comment above "
+        "and 207.1-RESEARCH.md Pitfall 1); without it, a future `.visible()` behaviour change "
+        "would silently steer this test onto the invisible `rank-` edge instead of failing."
+    )
+    return node_id, edge_id
