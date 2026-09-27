@@ -9,21 +9,18 @@ Every total below is computed by the generator at generation time from the live 
 ## Totals
 
 - Total case headings: 904
-- Disposition counts: DEFERRED 39, FAIL 7, GAP 34, OBSOLETE 2, PASS 736, SKIP_OTHER 86
-- Open GAP (drainable) cases: 47
+- Disposition counts: DEFERRED 39, FAIL 7, GAP 30, OBSOLETE 2, PASS 740, SKIP_OTHER 86
+- Open GAP (drainable) cases: 43
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (47 cases, all series)
+## Open GAP Worklist (43 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
 | UAT-5-19 | 5 | Storage Profile — PostgreSQL pgcrypto Reachability | no substitute coverage; needs a pgcrypto column-level crypto detector, not yet implemented per BACK-12 named in the case's own Pass Criteria. tests/test_db_connector.py covers connection-level SSL/RDS-encryption detection only, not column-level pgp_sym_encrypt usage |
-| UAT-7-01 | 7 | Dashboard Loads — No Blank Screen | no substitute coverage; needs a headless-browser render check that the SPA mounts without a blank screen or console errors |
-| UAT-7-17 | 7 | PDF Export — Generate Report | no substitute coverage; needs a headless-browser test that clicks Export PDF and asserts a valid downloaded PDF |
 | UAT-7-23 | 7 | Sidebar Responsive Collapse | no substitute coverage; the sidebar collapse is a pure Tailwind `lg:` breakpoint with no `matchMedia` or `useMediaQuery` listener, so jsdom — which evaluates no media queries and has no layout engine — renders byte-identical DOM above and below 1024px. Reclassified 2026-09-21 out of the jsdom-tractable set and routed to Phase 207's operator-led browser verdict |
 | UAT-7-29 | 7 | Roadmap — Node Drag | no substitute coverage; node drag is entirely internal to the real Cytoscape renderer and `roadmap.tsx` registers no drag, `grab`, `free`, `position` or `dragfree` handler and never reads or writes node positions. Reclassified 2026-09-21 out of the jsdom-tractable set and routed to Phase 207's operator-led browser verdict |
-| UAT-7-32 | 7 | No JavaScript Console Errors — All Pages | no substitute coverage; needs a full-navigation headless-browser test asserting zero console errors across every dashboard route |
 | UAT-9-06 | 9 | HTML Report — Visual Quality | no substitute coverage; needs a visual/browser render check of the HTML report dark theme, layout, and mobile responsiveness |
 | UAT-11-02 | 11 | Multi-Profile Lab Run — Progressive Discovery | no substitute coverage; needs a multi-run progressive-discovery integration test covering score/CBOM growth across successive scans as chaos-lab profiles are added, plus dashboard-reflects-latest-scan-on-refresh -- this is cross-run integration behavior with no single-scan unit-test equivalent |
 | UAT-36-04 | 36 | Executive summary shows 6 ScoreGauges with Data in Motion last | no substitute coverage; needs a frontend render test asserting exactly 6 ScoreGauge elements with Data in Motion last and an integer value |
@@ -38,7 +35,6 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-50-03 | 50 | Obsidian vault sync produced both Reference notes with correct frontmatter (DOCS-03) | no substitute coverage; needs a filesystem check of the Obsidian vault Reference notes and _QUIRK-Hub.md wikilinks, which lives outside the repo and is not reachable from pytest |
 | UAT-67-04 | 67 | ScannerStatusCard renders on Executive page when failures exist (RESUME-02) | no substitute coverage; needs a frontend component test for ScannerStatusCard -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding |
 | UAT-85-08 | 85 | Real dashboard hero screenshot replaces placeholder (LAUNCH-01) | no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent |
-| UAT-88-03 | 88 | Score Decomposition renders in the Playwright PDF (RENDER-PDF-01) | no substitute coverage; needs a Playwright PDF-render assertion proving the same six pillar-subscore rows and rollup sentence documented at UAT-88-02 survive HTML-to-PDF conversion intact, no truncation or layout break -- the isolation property is PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion; no pytest coverage exercises Playwright PDF generation at all; costed handoff to Phase 207, D-03 re-verified 2026-09-22: `render_pdf_report` already exists at `quirk/reports/html_renderer.py:1351`, `pypdf>=4.0` is already declared under the `dashboard` extras and importable in `.venv` as `pypdf==6.11.0` so PDF text extraction needs no new dependency, and the sole remaining cost is installing a Chromium browser in the `python-ci.yml` pytest job — `~/Library/Caches/ms-playwright/` is empty and no Chromium install step exists in `python-ci.yml` today — which is Phase 207's reserved operator call |
 | UAT-89-01-01 | 89 | three new weak-TLS profiles start and auto-register (LAB-01/02/04) | no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01 |
 | UAT-96-08 | 96 | `fuzz-target` chaos profile appears in `./lab.sh profiles` (LAB-01) | no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01 |
 | UAT-134-01 | 134 | CBOM Page — Hardware Inventory [DEVICE]/[FIRMWARE] labels — Manual | no substitute coverage; the case's core assertion is the React HardwareInventory component's rendering behavior in src/dashboard/src/pages/cbom.tsx -- two badge rows per device, DEVICE and FIRMWARE badge colors, tier-based row coloring, and complete section absence when hardware_devices is empty. No vitest test file anywhere under src/dashboard/src/pages/__tests__/ references HardwareInventory or hardwareDevices; the only related coverage is the backend data-shape unit test tests/test_dashboard_api.py::test_derive_hw_components_bridge_status_promoted_and_null, which proves the API payload shape but not the frontend render. A live hwcompat chaos-lab scan plus browser walkthrough, or a new HardwareInventory vitest test, is needed to close this gap |

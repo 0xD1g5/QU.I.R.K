@@ -3375,7 +3375,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 - No JavaScript console errors (check DevTools)
 - No blank white screen
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a headless-browser render check that the SPA mounts without a blank screen or console errors)
+**Result:** - [x] PASS (2026-09-27 verified: pytest tests/test_browser_e2e.py::test_uat_7_01_spa_mounts_without_blank_screen -q -m '' -- 1 passed with Chromium installed, 1 skipped with Chromium absent, zero failures and zero errors. Asserts the real SPA mounted via the D-04 vacuous-pass guard, not merely that a page loaded -- CI-EXEMPT: this node DOES execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. That is a different and stronger position than the two earlier CI-EXEMPT precedents, which describe nodes CI genuinely never executes)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -3778,7 +3778,7 @@ Both are uncovered because the product renders neither. `grep -rni "owner"` retu
 - PDF is A4 format
 - No error toast or error message
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a headless-browser test that clicks Export PDF and asserts a valid downloaded PDF)
+**Result:** - [x] PASS (2026-09-27 verified: pytest tests/test_browser_e2e.py::test_uat_7_17_export_pdf_download -q -m '' -- 1 passed with Chromium installed, 1 skipped with Chromium absent, zero failures and zero errors. Intercepts the real download event and asserts the saved file is a valid PDF by magic bytes, page count and A4 media-box geometry -- CI-EXEMPT: this node DOES execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. That is a different and stronger position than the two earlier CI-EXEMPT precedents, which describe nodes CI genuinely never executes)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -4230,7 +4230,7 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 - API requests all return 200 (check Network tab)
 - `/identity` page loads without errors even when no identity scan data is present
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a full-navigation headless-browser test asserting zero console errors across every dashboard route)
+**Result:** - [x] PASS (2026-09-27 verified: pytest tests/test_browser_e2e.py::test_uat_7_32_zero_console_errors_all_routes -q -m '' -- 1 passed with Chromium installed, 1 skipped with Chromium absent, zero failures and zero errors. Zero console errors, page errors and failing /api/ responses across all seven routes the case enumerates plus the CBOM Table/Graph switch, unfiltered with no allowlist, with the D-04 mount guard asserted on every route and a positive content assertion on /certificates. Scope bound, per review finding W-09: the per-route heading assertion distinguishes a loaded page from its empty branch only on / and /roadmap, so this PASS claims zero console errors plus the named positive assertions, not heading-level discrimination on /findings, /identity, /cbom or /print -- CI-EXEMPT: this node DOES execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. That is a different and stronger position than the two earlier CI-EXEMPT precedents, which describe nodes CI genuinely never executes)  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
 **Notes:**
 
@@ -10842,7 +10842,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Decomposition table renders intact in the PDF; overall reconciles across PDF / HTML / dashboard.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a Playwright PDF-render assertion proving the same six pillar-subscore rows and rollup sentence documented at UAT-88-02 survive HTML-to-PDF conversion intact, no truncation or layout break -- the isolation property is PDF-specific rendering fidelity, one layer downstream of UAT-88-02's HTML assertion; no pytest coverage exercises Playwright PDF generation at all; costed handoff to Phase 207, D-03 re-verified 2026-09-22: `render_pdf_report` already exists at `quirk/reports/html_renderer.py:1351`, `pypdf>=4.0` is already declared under the `dashboard` extras and importable in `.venv` as `pypdf==6.11.0` so PDF text extraction needs no new dependency, and the sole remaining cost is installing a Chromium browser in the `python-ci.yml` pytest job — `~/Library/Caches/ms-playwright/` is empty and no Chromium install step exists in `python-ci.yml` today — which is Phase 207's reserved operator call)
+**Result:** - [x] PASS (2026-09-27 verified: pytest tests/test_pdf_decomposition_render.py::test_uat_88_03_decomposition_survives_pdf_render -q -m '' -- 1 passed with Chromium installed, 1 skipped with Chromium absent, zero failures and zero errors. Asserts the six pillar-subscore rows survive HTML-to-PDF conversion in the extracted PDF text layer by VALUE, not by static label presence -- the label-only form was review finding W-02 and was closed by mutation proof -- CI-EXEMPT: this node DOES execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. That is a different and stronger position than the two earlier CI-EXEMPT precedents, which describe nodes CI genuinely never executes)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 
