@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-27T01:30:00.000Z",
+  "timestamp": "2026-09-27T14:15:00.000Z",
   "phase": "207",
   "phase_name": "Browser-Only Coverage Verdict",
   "phase_dir": ".planning/phases/207-browser-only-coverage-verdict",
   "plan": 6,
   "task": 6,
   "total_tasks": 6,
-  "status": "paused",
+  "status": "complete",
   "completed_tasks": [
     {
       "id": 1,
@@ -56,37 +56,21 @@
       "name": "207-05 four CI-EXEMPT dispositions + worklist regen + two-sided gate, plus 3 full-suite-only fixes",
       "status": "done",
       "commit": "e34e1903"
-    }
-  ],
-  "remaining_tasks": [
+    },
     {
       "id": 6,
-      "name": "207-06 docs + Obsidian vault sync + VALIDATION row flips + operator checkpoint",
-      "status": "not_started"
+      "name": "207-06 docs, vault sync, validation rows, ROADMAP/REQUIREMENTS, operator checkpoint satisfied",
+      "status": "done",
+      "commit": "0b9252e5"
     }
   ],
-  "blockers": [
-    {
-      "description": "Wave 5 evidence must be copied from 207-NODE-EVIDENCE.md's 'CI job invocation' CLOSE-OUT section, NOT its summary table. W-10's fix moved the Chromium gate into fixture setup, so the skip strings the summary table quotes for UAT-7-01/7-32/7-17 are stale. Corrected in the close-out section. This is the W-11 defect class recurring.",
-      "type": "technical",
-      "workaround": "Use the close-out table's verbatim strings; they were re-measured 2026-09-26 with -rs."
-    },
-    {
-      "description": "RESOLVED in 112265be: three full-suite-only failures, two predating this wave. serve_dashboard's Popen lacked close_fds=False; UAT-88-03 FAILED rather than skipped on TRIAGE-149 Cluster 2 contamination because render_pdf_report does not catch AttributeError; four skip sites were unregistered. Full suite now exits 0 on BOTH legs with an EMPTY failing-node set.",
-      "type": "resolved",
-      "workaround": "None. Run the FULL suite, not the affected files -- both classes are ordering-dependent and invisible per-file."
-    }
-  ],
+  "remaining_tasks": [],
+  "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Confirm the Browser E2E job passes on ubuntu-latest with a real Chromium install, reading the actual PR logs",
-      "context": "Cannot be proven on macOS. Research flagged Assumption A2: whether `playwright install chromium` needs --with-deps on the GitHub runner. Wave 6 ends in a blocking checkpoint for exactly this.",
-      "blocking": true
-    },
-    {
-      "action": "Confirm Linux Full Suite stays green with the four new CI-EXEMPT citations and Chromium absent",
-      "context": "The citation guard EXECUTES cited nodes in that job and asserts skipped==0; a local run has Chromium installed and structurally cannot observe this.",
-      "blocking": true
+      "action": "Decide whether to open a PR and merge phase-207-browser-only-coverage-verdict into main",
+      "context": "Both CI checkpoints are already satisfied from workflow_dispatch run 36320908301 -- Browser E2E 6 passed on ubuntu-latest, Linux Full Suite red on exactly the two Docker chaos-lab nodes main is also red on, zero regressions. Opening a PR is outward-facing and was not done. Commit 21f12789 exists only on this branch; run `git log main..HEAD` before closing anything.",
+      "blocking": false
     }
   ],
   "decisions": [
@@ -132,6 +116,6 @@
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Execute 207-06-PLAN.md -- autonomous: NO, it ends in a blocking operator checkpoint. Docs + Obsidian vault sync, phase note, VALIDATION row flips, the condensed criterion-1 verdict into ROADMAP.md, hand-verified COV-05. The checkpoint needs the REAL PR job log: Assumption A2 -- does playwright install --with-deps chromium work on ubuntu-latest -- and whether Linux Full Suite stays green with the four new citations. Neither is provable locally. NOTE for reading that log: UAT-88-03 is EXPECTED to SKIP in Linux Full Suite with the TRIAGE-149 reason, not to pass; the Browser E2E job is where it should be green.",
+  "next_action": "Phase 207 is COMPLETE. Milestone v5.24 has one phase left: 206, paused at 5 of 13 plans. Do NOT use phase.complete to close anything on this machine.",
   "context_notes": "Waves 1-3.5 are solid and independently re-verified by the orchestrator: 4 nodes collect and pass 3/3 consecutively (~9-10s, variance <0.15s), both gate legs behave (pass with Chromium, skip cleanly without), all 25 assertions are capable of failing, D-05 and D-10 hold, tree clean, no orphaned processes. The remaining waves mutate GATED artifacts (python-ci.yml, docs/UAT-SERIES.md, the disposition ledger), so errors get more expensive from here - which is why the open findings should be closed first. Session ran 16 commits. One orchestrator error is recorded in the anti-patterns table and must be read before dispatching any subagent. UPDATE 2026-09-26 (resumed session): the two blocking constraints are closed and each was reproduced mechanically BEFORE being fixed, not argued from the code. Verification in both CI job shapes: Chromium present -> 6 passed (4 Tier-2 nodes + 2 contract legs, 15.1s); Chromium absent -> 1 passed, 5 skipped, ZERO errors (3.1s). The new contract test EXECUTES in the required job rather than skipping there, so it adds required-job coverage of D-10 itself. UPDATE 2026-09-26 (triage): all 19 review findings are now dispositioned -- see 207-03.7-TRIAGE.md for the 12 the 03.5 brief omitted. Post-triage verification: Chromium present -> 6 passed (16.9s); absent -> 1 passed, 5 skipped, 0 errors (3.1s); 3/3 consecutive at 8.86-8.89s, variance 0.03s; no orphaned uvicorn. Process note worth keeping: the first W-06 mutation proof silently did not run because `timeout` does not exist on macOS, and the empty output read like 'no failure'. A mutation run that reports nothing has not passed -- it has not run. UPDATE 2026-09-27 (Wave 5): full suite exits 0 on BOTH legs, failing-node set EMPTY, 5251 nodes either way. GAP 47->43. The first two-leg run was RED with 3 failures, two of them dating to Waves 1-2 and invisible to every per-file verification done so far -- both classes are ordering-dependent. The recorded local baseline is stale for the THIRD time: its two documented nodes did not fail in either leg."
 }

@@ -95,11 +95,17 @@ finding this category acts on: no genuine substitute exists today, so the tests 
       rejected `sensors-loading.test.tsx` as a substitute for `UAT-7-34` on exactly this ground
       (same component pattern, wrong subject).
 
-- [ ] **COV-05**: the **3** structurally jsdom-impossible cases — `UAT-7-01` (SPA mounts without a
+- [x] **COV-05**: the **3** structurally jsdom-impossible cases — `UAT-7-01` (SPA mounts without a
       blank screen), `UAT-7-17` (click Export PDF, assert a valid downloaded PDF), `UAT-7-32` (zero
       console errors across every route) — receive either real Playwright E2E coverage or a
       recorded, reasoned permanent disposition naming why no substitute can exist. A fabricated PASS
       is never acceptable; an honest permanent GAP is.
+      **Complete 2026-09-27 (Phase 207).** All three received real Playwright coverage, plus
+      `UAT-88-03` inherited from Phase 208 — four cases, not three. Each cites a real node and
+      carries a `CI-EXEMPT:` declaration whose wording states what is true here: CI **does** run
+      these nodes, in the non-gating `Browser E2E` job; they skip only in `Linux Full Suite`, where
+      Chromium is deliberately absent. No permanent GAP was recorded and no PASS was fabricated.
+      Live GAP count 47 -> 43.
 
 ### Guard Integrity
 
@@ -136,7 +142,7 @@ gate, not the coverage, is the defect.
       source inspection in `quirk/ticketing/jira.py`, but the case's own `-k ssrf` filter matches
       **0 of 8** collected tests: today nothing anywhere proves it actually fires. Security-relevant.
 
-- [ ] **COV-07**: `UAT-88-02` / `UAT-88-03` — the six-row score-decomposition table
+- [x] **COV-07**: `UAT-88-02` / `UAT-88-03` — the six-row score-decomposition table
       (`quirk/reports/templates/report.html.j2`) is asserted at **render-output** level in HTML, and
       in the Playwright PDF. Today only data-layer parity and markdown presence are covered; the PDF
       leg has no pytest coverage of this table at all.
@@ -150,6 +156,18 @@ gate, not the coverage, is the defect.
       would need it. This box stays `[ ]` until that leg ships; closing it now would mark a
       two-legged requirement complete on one leg. Tracked as ROADMAP Phase 208 criterion 2,
       recorded NOT MET AS WRITTEN — see `208-NOT-MET-AS-WRITTEN.md`.
+      **NOW COMPLETE 2026-09-27 (Phase 207) — closed on this requirement's OWN stated condition,
+      "until that leg ships".** It shipped: `tests/test_pdf_decomposition_render.py::
+      test_uat_88_03_decomposition_survives_pdf_render` asserts the six pillar rows in the
+      **extracted PDF text layer by VALUE**, not by static label presence — the label-only form was
+      Phase 207 review finding W-02 and was closed by mutation proof. `UAT-88-03` is PASS.
+      The PARTIAL paragraph above is left unedited as the record of what was true on 2026-09-22.
+      Flipped **by hand**, not by `requirements mark-complete`, which has no per-phase granularity
+      and has twice over-flipped multi-phase requirements in this project.
+      Caveat a future reader needs: the PDF node is proven by the **non-gating** `Browser E2E` job
+      and SKIPS in `Linux Full Suite` — in fact in any full-suite run, Chromium present or not,
+      because it is affected by TRIAGE-149 Cluster 2 contamination. A green required check is not
+      evidence about this requirement.
 
 - [x] **COV-08**: `UAT-8-04` / `UAT-8-05` — the hygiene subscore (plaintext ratio) and the
       identity-trust subscore (mTLS bonus) are each asserted **in isolation**, holding other evidence
@@ -267,9 +285,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-02 | Phase 204 | Closed (204-04/204-04b) |
 | COV-03 | Phase 204 | Closed (204-01/204-02) |
 | COV-04 | Phase 206 | Pending |
-| COV-05 | Phase 207 | Pending |
+| COV-05 | Phase 207 | Complete |
 | COV-06 | Phase 208 | Complete |
-| COV-07 | Phase 208 | Partial — HTML leg done; PDF leg -> Phase 207 |
+| COV-07 | Phase 208 + 207 | Complete — HTML leg Phase 208; PDF leg Phase 207 |
 | COV-08 | Phase 208 | Complete |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
 | GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |

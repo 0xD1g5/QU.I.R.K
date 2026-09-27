@@ -255,7 +255,7 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
   Work landed on `phase-206-resume-wave2-5`; `phase-206-dashboard-ui-coverage` was already merged
   before the resume, so the prior record's "24 commits ahead of main" was stale when written.
 
-- [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
+- [x] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
 
 - [x] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
@@ -454,8 +454,50 @@ coverage exists, or a reasoned permanent disposition says why it never can.
      no substitute can exist. A fabricated PASS is never acceptable.
   3. Phase 204's worklist and gate treat a recorded permanent disposition distinctly from an open
      GAP, so these cases stop reappearing as drainable work every regeneration.
-**Plans**: TBD
+     **NOT APPLICABLE BY VERDICT — recorded 2026-09-27 (Phase 207, D-06 option 2):** criterion 3 is
+     conditional on criterion 2's *other* branch. D-01's verdict chose Playwright for all four
+     cases, so no case in this phase lands as a permanent GAP and the criterion's machinery has no
+     caller. It is recorded rather than reported met, because machinery with no caller reports green
+     trivially — as dishonest as a fabricated PASS, from the other direction. No fifth disposition
+     token was built speculatively; `OBSOLETE` was checked and rejected on semantics, since it means
+     *the feature went away* while a browser-only case is live and valid. Full record:
+     `.planning/phases/207-browser-only-coverage-verdict/207-NOT-MET-AS-WRITTEN.md`. The original
+     criterion text above is preserved unedited, per Phase 206's SC#1-at-25-of-28 precedent.
+**Plans**: 6 of 6 complete
+  1. `207-01` — Tier-1 `UAT-88-03` PDF-render assertion + the written toolchain verdict. Complete.
+  2. `207-02` — Tier-2 harness: subprocess uvicorn on a real port, DB seeder, D-04 mount guard,
+     `UAT-7-01`. Complete.
+  3. `207-03` — `UAT-7-32` seven-route console sweep and `UAT-7-17` download interception, plus a
+     19-finding self-review and a corrective wave. Complete.
+  4. `207-04` — the non-gating `Browser E2E` job in `python-ci.yml`, and criterion 3's record.
+     Complete.
+  5. `207-05` — four `CI-EXEMPT` dispositions applied ledger-first, worklist regenerated, and the
+     two-sided gate. Complete.
+  6. `207-06` — docs, Obsidian sync, validation rows, this block, and the operator's CI checkpoint.
+     Complete.
 **UI hint**: yes
+
+**Criterion 1 — the toolchain verdict, recorded here in full rather than pointed at.** Phase
+artifacts are git-untracked, so `207-TOOLCHAIN-VERDICT.md` is absent from a fresh clone and removed
+when the phase directory is archived; a pointer from a tracked file to an untracked one inherits
+that problem rather than solving it. Condensed, operator call 2026-09-26:
+
+- **Decision:** Playwright E2E for all four cases, run in an **isolated, non-required** CI job.
+- **Rejected:** the browser leg inside `Linux Full Suite` — its flake surface would redden the check
+  every PR must pass; a permanent GAP for all three series-7 cases — real coverage was affordable;
+  a split GAP/Playwright verdict — no case justified the asymmetry.
+- **Deciding evidence:** TRIAGE-149 Cluster 2 quarantines **14** tests on a single root cause, a
+  shared `PlaywrightContextManager` singleton torn down by an earlier full-suite test. A separate
+  pytest invocation structurally avoids it, so isolation is the cure rather than a containment
+  workaround. No new dependency: `playwright` and `pypdf` already ship under the `dashboard` extras.
+- **Standing consequence, for any future reader:** these four cases are proven by a **non-required**
+  job. Their dispositions are `CI-EXEMPT` and they SKIP in `Linux Full Suite`. **A green required
+  check is not evidence about them** — read the `Browser E2E` job. `UAT-88-03` additionally skips in
+  *any* full-suite run, Chromium present or not, because it is itself affected by that same
+  contamination.
+
+Full record while the phase directory survives:
+`.planning/phases/207-browser-only-coverage-verdict/207-TOOLCHAIN-VERDICT.md`.
 
 **Inbound costed decision from Phase 208 (`UAT-88-03`, D-03, recorded 2026-09-22):** the Playwright
 PDF-render assertion for the score-decomposition table is materially cheaper than an open-ended
@@ -486,6 +528,10 @@ corrections carried from the v5.23 boundary review land.
      `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md` for the full
      record and the Phase 207 block below for the inbound handoff. The original criterion text above
      is preserved unedited, per Phase 206's SC#1-at-25-of-28 precedent.
+     **DISCHARGED 2026-09-27 by Phase 207.** The Playwright PDF leg shipped: `UAT-88-03` asserts the
+     six rows in the extracted PDF text layer by value and is PASS, so this criterion is now met in
+     full. COV-07 is closed on its own stated condition. The NOT-MET record above is retained
+     unedited as the account of what was true on 2026-09-21 — it is superseded, not erased.
   3. The hygiene subscore (plaintext ratio) and identity-trust subscore (mTLS bonus) are each
      asserted **in isolation**, holding other evidence fixed, rather than inferred from movement in
      the overall score (`UAT-8-04` / `UAT-8-05`).
