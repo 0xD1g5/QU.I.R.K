@@ -1276,6 +1276,96 @@ machine-enforced score firewall, Tier B reachability deferred by spike decision 
   (import, not copy; same builder function, not a parallel one) — the integration audit could
   verify wiring by reading import statements.
 
+## Milestone: v5.24 — UAT Coverage Drain
+
+**Shipped:** 2026-09-27 (development complete; untagged by design)
+**Phases:** 8 (203–209, incl. the mid-milestone insert 207.1) | **Plans:** 53
+**Audit:** `tech_debt` — 17/18 requirements + 1 PARTIAL, integration 4/4 WIRED, Nyquist 8/8
+**Scale:** 358 commits, 197 files, +35,835 / −1,565, 15 days
+
+> **Gap note:** v5.22 and v5.23 have no retrospective section in this file. Not backfilled here —
+> flagged so the omission is visible rather than compounding silently. This file's last entry before
+> v5.24 is v5.21.
+
+### What Was Built
+
+A gap worklist that derives itself instead of being hand-maintained; guards proven non-vacuous rather
+than assumed; a real Playwright browser tier where jsdom structurally cannot reach, in a deliberately
+non-gating CI job; vendor catalogs re-verified by hand against primary sources; and the
+consulting-grade report artifacts finally made reachable from the dashboard through an auth-gated route
+whose containment guard never joins client input into a path at all.
+
+### What Worked
+
+- **Red-proving every conversion.** Each browser case shipped with a paired control that omits the
+  triggering interaction and asserts nothing moved. This turned "the test passes" into "the test can
+  fail", which is the only version of the claim worth having. It caught a genuine tautology in
+  `UAT-7-29` criterion 5, where `post != pre` was *entailed* by two other criteria and could never fail
+  independently.
+- **Recording shortfalls instead of shrinking denominators.** COV-04 closed at 27 of 28 with SC#1
+  marked NOT MET AS WRITTEN, rather than redefining the target as 25 and reporting 25/25. Phase 208 did
+  the same for COV-07's PDF leg — costed and handed onward rather than faked. Phase 206 kept `UAT-7-12`
+  in the denominator knowing it would never pass.
+- **Routing an unmechanizable claim to a human instead of dropping or faking it.** `UAT-7-23`
+  criterion 6 had no mechanical referent. D-11 sent it to HUMAN-UAT; the operator ran it and it passed.
+  Dropping it would have left a silent hole; mechanizing it into a proxy assertion would have
+  manufactured the verdict.
+- **Run-time source scans replacing hand-derived lists.** Where a defect class had to be enumerated,
+  the guard regenerated its own occurrence set from installed source at test time. Every time a
+  hand-derived list was trusted instead, it was short.
+
+### What Was Inefficient
+
+- **Counts were wrong in both directions, repeatedly, and always cost a detour.** `completed_plans` was
+  stale at 44 (real: 51). A predicted 6 defect sites turned out to be 29 needing 21 patches. A citation
+  guard reported 74 of 140 when it should have checked all. The close gate reported 5 todos against 33.
+  Phases 206 and 207 were reported as having open human items when all six were discharged.
+- **Stale records that read as authoritative.** CLAUDE.md's "CI never installs Node" claim outlived its
+  own closure by two milestones — and was *already flagged* by Phase 207's context scout, then
+  outlived the flag too. v5.23 was archived without a MILESTONES.md entry, so the historical record
+  skipped a version for two weeks.
+- **`Self-Check: PASSED` was wrong twice in one phase**, both times caught by an orchestrator reading
+  the produced artifacts rather than the summary describing them.
+
+### Patterns Established
+
+- **A count is a hypothesis until re-derived with a different instrument.** Disagreement between two
+  measurements *is* the finding, not an inconvenience.
+- **A gate can err in both directions, so it is authority in neither.** One `audit-open` run
+  simultaneously invented two blockers from stale frontmatter and hid 28 todos behind a display slice.
+- **"Pushed" and "merged" are different questions needing different commands.** Neither is answered by
+  the presence of an upstream: `rev-list --left-right --count @{u}...HEAD` and
+  `rev-list --count origin/main..HEAD`.
+- **Annotate stale records forward; do not delete them.** The record of what was *believed* is itself
+  load-bearing evidence.
+- **A tautological criterion is worse than a missing one.** A missing criterion fails a count; a
+  tautological one passes the count, the test, and every gate while adding zero falsifiability.
+
+### Key Lessons
+
+1. **The middle audit status exists for a reason.** `tech_debt` was the honest verdict: `passed` would
+   have hidden two shipped product defects, and `gaps_found` would have manufactured a phase to build a
+   feature nobody asked for, to satisfy a checkbox, to close a milestone.
+2. **Merge before closing a milestone.** `main` carried 6 of 8 phases at close time. The archive would
+   have described a state that existed nowhere on the default branch.
+3. **Measurement artifacts masquerade as defects.** Three "findings" this milestone were a legend line
+   counted as data, unmaintained frontmatter, and a regex that saw 7 of 9 catalogs. A fourth nearly
+   became a false BLOCKER when `timeout` — which does not exist on macOS — silently produced an empty
+   file that diffed as 71 missing lines.
+4. **Coverage and enforcement are different properties.** The browser tier is real coverage that
+   *cannot fail a PR*, and 18 of 24 qualified PASSes have no gate policing their qualification text.
+   Both are honestly disclosed, and both would read as enforced to someone skimming the PASS lines.
+
+### Cost Observations
+
+- Sessions: the close spanned one long session that resumed a paused phase, took an operator verdict,
+  merged, audited, and archived.
+- Subagents: 3 (one re-verifier, one integration checker, one earlier phase verifier). Each corrected at
+  least one orchestrator claim — the strongest argument for spawning them rather than self-reviewing.
+- Notable: the integration checker independently reproduced the same `timeout`-on-macOS failure the
+  orchestrator hit, which suggests the trap is environmental and worth a standing note rather than a
+  per-session rediscovery.
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

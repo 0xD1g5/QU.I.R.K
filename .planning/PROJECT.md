@@ -1,6 +1,40 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-22)
+## Current State (updated 2026-09-27)
+
+**v5.24 UAT Coverage Drain CLOSED and ARCHIVED 2026-09-27.** All 8 phases complete (203–209 incl. the
+mid-milestone insert 207.1), 53 plans, **17 of 18 requirements satisfied + COV-04 PARTIAL at 27 of 28**.
+Audit `tech_debt`: integration **4/4 seams WIRED with 0 blockers**, Nyquist 8/8 compliant, staleness
+green across all 9 date-gated catalogs. Merged to `origin/main` at `b262aa82`; archived to
+`.planning/milestones/v5.24-*`; `.planning/REQUIREMENTS.md` removed on purpose. **No milestone is open**
+— next action is `/gsd-new-milestone`. Open drainable GAPs **47 → 41**.
+
+**What this milestone was actually about: evidence integrity, not features.** Nearly every phase exists
+because a coverage claim turned out to rest on something weaker than it looked — a worklist maintained
+by hand and therefore drifting, guards that could pass vacuously, dispositions citing tests that did
+not assert what was claimed, and two cases falling between requirements that each assumed the other
+owned them. The recurring lesson, hit repeatedly and in both directions, is that **a count is a
+hypothesis until re-derived with an instrument independent of the thing being counted.**
+
+**The audit landed `tech_debt` deliberately, and the reasoning matters more than the label.** `passed`
+would have been dishonest — the milestone ships two known product-defect FAILs in series 7 and its
+largest coverage claim has no gate policing its own qualification text. `gaps_found` would have been
+wrong more expensively: it routes to "insert a closure phase per gap", which would have manufactured a
+phase to build a product feature COV-04 never asked for, to satisfy a checkbox, to close a milestone.
+COV-04 asked for tests of *existing* behaviour; one of its 28 cases describes behaviour the product
+does not have.
+
+**Three items are carried forward above any new feature**, because they affect the merge signal rather
+than the product: `release.yml` hardcodes a static release body (the standing reason three consecutive
+milestones are untagged, and the precondition for ever tagging again); a **flaky node inside the
+required CI job**; and `UAT-206-05`, where 18 of 24 COV-04 conversions are QUALIFIED PASSes with no
+mechanical guard on the qualification text. 35 items acknowledged as deferred at close — 33 todos + 1
+open debug session + 1 known false positive, all counted from disk because the close gate caps its own
+todo count at 5.
+
+<details>
+<summary>Superseded — Phase 208 close state as of 2026-09-22</summary>
+
 
 **Phase 208 complete 2026-09-22 — 4 of 5 success criteria met as written.** COV-06 (Jira SSRF
 guard proved to fire before construction), COV-08 (hygiene and identity-trust subscores asserted in
@@ -11,6 +45,8 @@ WRITTEN rather than shrunk to fit what shipped. Open GAP count 51 -> 47. Phase 2
 unstarted phase in v5.24; Phase 209 is complete but still unmerged on its own branch.
 
 
+
+</details>
 
 **v5.24 UAT Coverage Drain — OPENED 2026-09-13.** Ops/integrity cycle, following four
 capability-leaning milestones. Anchor: write the missing tests behind the honest UAT GAPs and make
@@ -192,7 +228,7 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.24 UAT Coverage Drain
+## Previous Milestone: v5.24 UAT Coverage Drain — development complete 2026-09-27 (untagged)
 
 **Opened:** 2026-09-13, after a boundary pass that ran the doc-review template and a PM review of
 HORIZON's Open-Item Ledger.
@@ -617,6 +653,40 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Zero-fabrication Quantum Exposure Map — key-reuse clusters + `upstream_mitigated`-only hardware-bridge chains, per-edge evidence, explicit "no path data" empty state, zero inferred edges — Phase 195 (MAP-02)
 - ✓ Exposure-map score firewall machine-enforced — dedicated `test_exposure_map_score_guard.py` with AST-walk import guard and a negative control proving it can fail — Phase 195 (MAP-03)
 
+**v5.24 UAT Coverage Drain milestone (Phases 203–209 incl. 207.1)** — development complete
+2026-09-27, audit `tech_debt`, untagged by design
+- ✓ Vendor catalog claims re-verified by hand, not just re-dated — 5 of 5 claims checked were WRONG in
+  both directions, incl. Palo Alto's entry being INVERTED (PAN-OS strips PQC groups and drops PQC-only
+  sessions; it is a downgrade point, not a capable device) — Phase 203 (STALE-01)
+- ✓ `hw_cve.py` 6/6 rows re-verified against the live NVD API — Phase 203 (STALE-02)
+- ✓ Gap worklist derives itself and is gated; regenerates byte-identically — Phase 204 (COV-01/02/03)
+- ✓ OBSOLETE retirements adjudicated, not rubber-stamped — 2 of 3 accepted, `UAT-47-04` corrected to
+  GAP instead of retired — Phase 204 (COV-09)
+- ✓ Citation guard hardened; its own stated premise falsified during execution and the requirement
+  closed on re-measurement instead — Phase 205 (GUARD-01)
+- ✓ vitest substitute-execution leg proven NON-VACUOUS inside the gating job and red-proved in CI —
+  Phase 205 (GUARD-02)
+- ⚠ Dashboard UI coverage drained to **27 of 28** — SC#1 recorded NOT MET AS WRITTEN; sole remainder
+  `UAT-7-12` is an accepted product-absence FAIL (`certificates.tsx` has no sort state, no column
+  handler, no table library, so there is no behaviour to assert) — Phase 206 + 207.1 (COV-04, PARTIAL)
+- ✓ Real browser tier where jsdom structurally cannot reach — Playwright harness, subprocess uvicorn on
+  a real port, DB seeder, SPA-mount guard, in a deliberately NON-GATING `Browser E2E` job — Phase 207
+  (COV-05), Phase 207.1 (COV-10)
+- ✓ Every browser conversion red-proved by a paired control that omits the triggering interaction,
+  rather than merely observed passing — Phases 207/207.1
+- ✓ `UAT-7-23` closed at 6 of 6, its sixth criterion ("transition is smooth") discharged by an operator
+  HUMAN-UAT verdict because it has no mechanical referent — routed rather than dropped or mechanized
+  into a proxy — Phase 207.1 (COV-10)
+- ✓ Jira SSRF guard proved to fire BEFORE construction; hygiene/identity-trust subscores asserted in
+  isolation — Phase 208 (COV-06, COV-08)
+- ✓ Score-decomposition table asserted at render-output level in HTML; the Playwright PDF leg costed
+  and handed onward rather than faked — Phase 208 (COV-07, adjusted)
+- ✓ Two carried doc corrections landed — Phase 208 (DOC-01, DOC-02)
+- ✓ Report artifacts finally reachable from the dashboard — auth-gated read-only route whose
+  containment guard never joins client input into a path at all, only a server-side filename template,
+  with enum membership as the routing rule; reachability confirmed into the committed JS bundle —
+  Phase 209 (DELIV-01, DELIV-02)
+
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
 - [ ] Scan job queue (Celery + Redis or similar)
@@ -626,19 +696,38 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-v5.23 Deliverable Experience in progress (opened 2026-09-11). A fresh `.planning/REQUIREMENTS.md`
-formalizes these into REQ-IDs during requirements definition:
+**No milestone is open.** v5.24 closed and archived 2026-09-27; `.planning/REQUIREMENTS.md` was
+removed on purpose and `/gsd-new-milestone` creates the next one. The items below are the honest
+carry-forward, and the first two are prioritised above any new feature because they affect the merge
+signal itself rather than the product:
 
-- [ ] **Wave A drain** — trends.py/merge.py int-coerced score fields fix; combined
-      connectors+advanced overlay CI regression test
-- [ ] **999.105 Tier 1** — customizable reporting engine: operator-controlled composition/
-      templates/branding on the existing `ReportContent` → three-renderer split
-- [ ] **999.101** — Migration Roadmap NOW/NEXT/LATER re-frame with score-lift framing
-- [ ] **999.102** — Finding storyline drawer
-- [ ] **BACK-51 (opportunistic)** — migration_planner dual categorization unification, if the
-      999.101 re-frame touches that code anyway
+- [ ] **`release.yml` hardcodes a static release body** — every tagged release to date carries
+      byte-identical wrong release notes (v5.18/v5.19/v5.21 confirmed). This is the standing reason
+      v5.22, v5.23 and v5.24 are all **untagged**, so fixing it is the precondition for ever tagging a
+      release again. Investigated 2026-09-11, no fixes applied
+      (`.planning/debug/github-release-notes-and-ci-failures.md`).
+- [ ] **A flaky node inside the REQUIRED CI job** — `test_vitest_substitute_nodes_pass` produced 14
+      failing vitest nodes once, then passed on 4 of 5 subsequent runs on an unchanged tree. It runs in
+      `Linux Full Suite`, which gates every PR. A flaky required check cannot be diffed against a
+      baseline and gets misattributed to whichever PR catches it.
+- [ ] **`UAT-206-05` — no gate polices qualified-PASS honesty.** 18 of 24 COV-04 conversions are
+      QUALIFIED PASSes with some Pass Criteria bullets uncovered, and the case that would require each
+      qualified PASS to quote its uncovered bullets verbatim is itself an open GAP. The largest
+      coverage claim in v5.24 therefore has no mechanical guard on its own qualification text.
+      **Highest-value content item.**
+- [ ] **Two shipped product-defect FAILs in series 7**, filed not fixed: `UAT-7-12`
+      (`certificates.tsx` has no expiry sort at all) and `UAT-7-21` (95 hardcoded colour literals
+      across 9 files, recorded via a full-strength `it.fails`).
+- [ ] **`Browser E2E` is non-gating by design**, so COV-05/COV-10 regressions in
+      `UAT-7-01/7-17/7-23/7-29/7-32` cannot fail a PR. Deliberate (D-01) and disclosed in each
+      disposition's `CI-EXEMPT` clause — listed here so it is not mistaken for enforced coverage.
+- [ ] **`UAT-7-23` criterion 6 has no regression guard** — the operator verdict is a one-time
+      observation, so a smoothness regression would redden no gate.
+- [ ] **`gsd-sdk query audit-open` caps `counts.todos` at 5**, and it is the pre-close gate for the
+      milestone workflow, which writes that number into MILESTONES.md permanently.
+- [ ] **33 pending todos** in `.planning/todos/pending/` — count re-derived from disk.
 
-Standing carry-forward, not in v5.23 scope:
+Standing carry-forward, unchanged by v5.24:
 
 - [ ] **Phase 158 human-UAT** — 2 deferred visual scenarios (`/hardware` and `/compare` rendering of
       sensor-pushed devices); code-level criteria independently satisfied, opportunistic only.
@@ -1404,7 +1493,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-13 — milestone v5.24 UAT Coverage Drain opened*
+*Last updated: 2026-09-27 after the v5.24 UAT Coverage Drain milestone*
 
 ## Evolution
 

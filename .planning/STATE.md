@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: phase_complete
-last_updated: "2026-09-27T22:10:00.000Z"
+status: milestone_complete
+last_updated: "2026-09-27T23:15:00.000Z"
 last_activity: 2026-09-27
 progress:
   total_phases: 8
@@ -16,6 +16,80 @@ progress:
 # Project State
 
 ## Deferred Items
+
+### v5.24 milestone close (2026-09-27) — acknowledged and deferred
+
+**Counts re-derived from disk, NOT from `gsd-sdk query audit-open`.** That gate reported
+`todos: 5`; there are **33**. Its collector slices to 5 for display and then counts the
+truncated array (`query/audit-open.js:181`), so the number it hands this workflow can never exceed 5 —
+and on `[A]cknowledge` the workflow writes that number into `MILESTONES.md` permanently and populates
+this very table from the truncated list. Had it been trusted, **28 items would have been
+dropped rather than deferred.** The defect is itself filed below. Prior milestones' "Known deferred
+items" counts should be re-derived rather than read: any value `<= 5` is indistinguishable from a true
+small count.
+
+**Total acknowledged: 35** — 33 pending todos, 1 open debug session, 1
+known-false-positive quick_task.
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | `github-release-notes-and-ci-failures` | open — investigation only, no fixes applied |
+| quick_task | `260611-g0b-merge-healthcare-vertical-branch-into-ma` | known FALSE POSITIVE — genuinely complete |
+| todo | `260927-audit-open-caps-todo-count-at-five` | pending |
+| todo | `260927-vitest-batched-run-fails-14-nodes-in-required-ci-job` | pending |
+| todo | `999.113-domain-connector-ratio-denominator-is-approximate` | pending |
+| todo | `a1-copy-conflates-no-theme-with-cannot-determine` | pending |
+| todo | `cbom-table-no-results-empty-state-absent` | pending |
+| todo | `certificates-expiry-sort-absent` | pending |
+| todo | `certificates-self-signed-flag-absent` | pending |
+| todo | `cli-dashboard-score-divergence-same-scan` | pending |
+| todo | `dashboard-hardcoded-colour-literals-bypass-theme-tokens` | pending |
+| todo | `email-scanner-host-derivation-is-invisible-to-operators` | pending |
+| todo | `exposure-map-spider-web-is-an-artifact-not-the-data` | pending |
+| todo | `finding-item-id-not-unique-per-finding` | pending |
+| todo | `gsd-phase-complete-premature-completion` | pending |
+| todo | `gsd-state-bold-field-search-unscoped-latent` | pending |
+| todo | `gsd-state-field-value-multiline-truncation` | pending |
+| todo | `gsd-state-planned-phase-misleading-empty-updated` | pending |
+| todo | `hardware-matrix-doc-id-decouple-url-from-identity` | pending |
+| todo | `kerberos-udp-probe-times-out-falls-back-to-tcp` | pending |
+| todo | `lifecycle-event-row-unknown-event-type-crash` | pending |
+| todo | `p2b-healthy-endpoints-dilute-the-readiness-score` | pending |
+| todo | `pqc-discriminator-collection-time-skipif-flake` | pending |
+| todo | `pytest-9-breaks-uat-nonvacuity-skip-reporting` | pending |
+| todo | `r5-ladder-fixture-is-not-the-measurement-it-claims` | pending |
+| todo | `readiness-score-denominator-is-probe-count-not-assessable-endpoints` | pending |
+| todo | `roadmap-detail-panel-owner-and-dependencies-absent` | pending |
+| todo | `rollup-arithmetic-assertion-verifies-indirectly` | pending |
+| todo | `saml-one-certificate-counted-twice-c-and-d` | pending |
+| todo | `score-drivers-leak-from-domains-excluded-from-the-headline` | pending |
+| todo | `storyline-drawer-one-theme-display-simplification` | pending |
+| todo | `uat-corpus-parser-test-pins-a-literal-count` | pending |
+| todo | `uat-parsers-disagree-on-wrapped-result-lines` | pending |
+| todo | `url-allowlist-accepted-risk-overstates-pinning-coverage` | pending |
+| todo | `verify-multihost-footer-conflates-endpoint-and-finding-severity` | pending |
+
+**The two filed during this close, both worth reading before the next milestone opens:**
+- `260927-vitest-batched-run-fails-14-nodes-in-required-ci-job` — an **intermittent** failure
+  (14 vitest nodes) inside the **required** `Linux Full Suite` job. Failed once, then passed on 4 of 5
+  subsequent runs across two independent agents on an unchanged tree. A flaky required check cannot be
+  diffed against a baseline and gets misattributed to whichever PR happens to catch it.
+- `260927-audit-open-caps-todo-count-at-five` — the gate defect described above.
+
+**The open debug session is load-bearing for release policy, not just a stray item.** Its finding 1 is
+that `.github/workflows/release.yml` hardcodes a static release body for every tag, so v5.18/v5.19/
+v5.21 all carry byte-identical wrong release notes. **That is why v5.22, v5.23 and v5.24 are all
+deliberately untagged** — tagging fires that workflow. Fixing it is the precondition for ever tagging
+a release again, so it is not optional cleanup.
+
+**Also carried, from the audit's tech-debt set rather than from the todo directory:** COV-04 at 27 of
+28 with `UAT-7-12` an accepted product-absence FAIL; two shipped product-defect FAILs in series 7
+(`UAT-7-12`, `UAT-7-21`); **18 of 24 COV-04 conversions are QUALIFIED PASSes with no gate policing the
+qualification text** — `UAT-206-05` is itself an open GAP and is the highest-value next item;
+`Browser E2E` non-gating so COV-05/COV-10 regressions cannot fail a PR; and `UAT-7-23` criterion 6
+carrying no regression guard.
+
+---
 
 ### Phase 203 (2026-09-13) — ⚠️ SUPERSEDED: this deferral is DISCHARGED as of 2026-09-13
 
@@ -164,7 +238,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Milestone v5.24 (UAT Coverage Drain) is at **8 of 8 phases complete** — Phase 207.1 closed 2026-09-27 at 5 of 5 success criteria MET AS WRITTEN, re-verified `passed` (5/5 must-haves, 0 blockers). `UAT-7-23` closes at **6 of 6**: criterion 6 ("transition is smooth") was routed to HUMAN-UAT per D-11 and then DISCHARGED by operator verdict the same day, recorded ledger-first. Next action is the operator's: close the milestone, or drain the todo backlog first — 32 pending, including a newly-filed flaky-required-check finding. No phase work is in flight.
+**Current focus:** **v5.24 (UAT Coverage Drain) is CLOSED and ARCHIVED 2026-09-27** — audit `tech_debt`, 17/18 requirements satisfied + COV-04 PARTIAL at 27 of 28, integration 4/4 seams WIRED with 0 blockers, Nyquist 8/8, staleness green. Archived to `.planning/milestones/v5.24-*`; `REQUIREMENTS.md` was removed on purpose — `/gsd-new-milestone` creates the next one. **Untagged by design** (`release.yml` hardcodes a static release body). No milestone is active and no phase is in flight; next action is `/gsd-new-milestone`. 35 items acknowledged as deferred at close — 33 todos + 1 open debug session + 1 known false positive, all counted from disk because the close gate caps its own todo count at 5. Highest-value carried item: `UAT-206-05` — 18 of 24 COV-04 conversions are QUALIFIED PASSes and the gate meant to police that honesty does not exist.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1272,6 +1346,68 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
+
+**MILESTONE v5.24 CLOSED 2026-09-27.** No phase is active and no milestone is open. Next action is
+`/gsd-new-milestone`.
+
+**Audit `tech_debt`** — not `passed`, not `gaps_found`, and the middle status is the load-bearing
+choice. `passed` would have been dishonest: the milestone ships two known product-defect FAILs in
+series 7 and a coverage claim with no guard on its own qualification text. `gaps_found` would have
+been wrong in a costlier way — it routes to "insert a closure phase per gap", which would have
+manufactured a phase to build a product feature (`certificates.tsx` column sorting) that COV-04 never
+asked for, in order to satisfy a checkbox, in order to close a milestone. COV-04 asked for *tests of
+existing behaviour*; one of its 28 cases describes behaviour the product does not have. Scores:
+requirements 17/18 + 1 PARTIAL, phases 8/8, integration 4/4 WIRED with 0 blockers, flows 4/4, Nyquist
+8/8, staleness green across all 9 date-gated catalogs.
+
+**COV-04's true number is 27 of 28, counted rather than claimed.** Series 7's 41 cases partition
+exactly — 4 pre-existing PASS + 6 SKIP/DEFERRED + the 28-case COV-04 set + COV-05's disjoint 3 — which
+independently confirms the "31 series-7 cases" in COV-04's own preamble. No case fell between Phases
+206/207/207.1 beyond the documented pair, and none is double-counted: `7-23`/`7-29` originate in the 28
+but were reclassified out and are owned solely by COV-10. The checkbox stays `[ ]` deliberately so the
+shortfall stays visible. Its traceability row read **`Pending`** until this audit — finished work
+presented as outstanding in a phase that will never run again, because Phase 207.1 closed 2 of COV-04's
+3 remainders and never touched COV-04's record. Now a terminal disposition.
+
+**Archived by hand, not by `milestone.complete`**, which is recorded as garbling archive text and
+mis-keying on `- [ ]` boxes. That mattered concretely here: this milestone carries **three
+deliberately-unchecked boxes** a mis-keying writer would flip or drop — COV-04, plus Phase 203's
+`203-05/06/07`, which are CLOSED-WONTFIX because retro-writing SUMMARYs would fabricate a record.
+`ROADMAP.md` collapsed 946 -> 377 lines with the 243-line Backlog extracted, re-appended, and verified
+**byte-identical by diff** — `BACK-86` and all three `999.x` items confirmed present. This project lost
+a `BACK-*` item for three months to an archive that silently swallowed it, so that check is a diff and
+not a glance.
+
+**Three findings from this close that are process, not content, and outlive the milestone:**
+
+1. **The close gate under-reports the thing it exists to surface.** `audit-open`'s `counts.todos` is
+   capped at 5 by a display slice that leaks into the count. It reported 5 against **33**. On
+   `[A]cknowledge` the workflow writes that number into `MILESTONES.md` permanently and populates
+   STATE.md's Deferred Items from the truncated list, so 28 items would have been **dropped rather than
+   deferred**. All 33 are now enumerated individually above. Filed.
+2. **A gate can err in both directions, so it is authority in neither.** The same `audit-open` run
+   reported Phases 206 and 207 as `human_needed` when all six underlying items were discharged — too
+   pessimistic, inventing blockers from unmaintained frontmatter — while simultaneously being too
+   optimistic about todos. Both were caught only by checking the thing itself (`ls`,
+   `git merge-base`, parsing the ledger row) rather than the reporter.
+3. **Three apparent defects were artifacts of measurement.** The stale `human_needed` frontmatter; three
+   `⬜ pending` VALIDATION rows that were the **legend line**; and an ad-hoc scan finding 7 of 9
+   catalogs because two store `last_verified` in a form the regex missed. Separately: **`timeout` does
+   not exist on macOS/zsh** — both this session and the integration checker hit exit 127 from it, and in
+   the checker's case it silently produced an empty regenerated worklist that diffed as 71 missing
+   lines, which would have been a false BLOCKER had the first number been trusted.
+
+**Untagged by design, and this is policy rather than omission.** `release.yml` fires on `v[0-9]*` and
+hardcodes a static release body, so every tagged release to date carries byte-identical wrong release
+notes (`.planning/debug/github-release-notes-and-ci-failures.md`, investigated 2026-09-11, no fixes
+applied). v5.22, v5.23 and v5.24 are all untagged for this reason. **Fixing it is the precondition for
+ever tagging a release again.**
+
+STATE.md was **hand-edited** for this entry. No mutating `state.*` verb was invoked. Pre-images taken
+and the **FULL diff** inspected at each step — not a signature grep, per the finding that a truncated
+multi-line field value is invisible to signature greps.
+
+---
 
 Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **COMPLETE 2026-09-27 at 5 of 5 ROADMAP
 success criteria MET AS WRITTEN.** Re-verification returned `status: passed`, 5 of 5 must-haves, **0
@@ -2690,6 +2826,40 @@ Found at Phase 208 close (2026-09-22):
 | costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
+
+Last session: 2026-09-27 — **resumed a paused phase, closed it on an operator verdict, merged to
+`main`, and closed the milestone.** Sequence: `/gsd-resume-work` found Phase 207.1 at 3/3 plans held on
+one human UAT item -> the operator ran the walkthrough and reported the sidebar transition smooth ->
+verdict recorded ledger-first -> re-verification `passed` 5/5 -> branch pushed -> `--no-ff` merge of 54
+commits to `main` (`b262aa82`) -> `/gsd-complete-milestone`, halted at pre-flight for the missing audit
+-> `/gsd-audit-milestone` returned `tech_debt` -> close resumed and completed.
+
+**The merge was not a formality.** Before it, `main` carried **6** checked v5.24 phases and
+`completed_phases: 6` — it had neither Phase 207 nor 207.1. Closing the milestone from the working tree
+without merging would have archived v5.24 as complete against a `main` missing the browser harness, the
+CI job, both dispositions and COV-10 entirely. Merging first is why the archive describes something
+that exists. `git rev-list --count origin/main..<branch>` is the check that answers this;
+`git rev-list --left-right --count @{u}...HEAD` answers the different question of whether a branch is
+pushed, and the presence of an upstream answers neither.
+
+**Four of my own claims needed correcting this session, and each fell to a different instrument than
+the one that produced it** — worth recording as the session's real lesson rather than as errors:
+(1) "the branch is unpushed" — it had an upstream; `rev-list --left-right --count` showed 20 unpushed
+commits, a different fact. (2) "the vitest failure is deterministic" — an independent agent found it
+green twice; it is intermittent. (3) "checkpoint files are scratch" — they are git-tracked here, so a
+deleted one was restored and annotated instead. (4) "UAT-7-12 is the sole FAIL in series 7" — the
+integration checker found `UAT-7-21` as a second.
+
+Stopped at: **v5.24 closed and archived; no milestone open, no phase in flight, tree clean.** Next
+action is `/gsd-new-milestone`. Before opening one, read the two items that affect the merge signal
+itself rather than any feature: the **flaky node inside the required CI job**, and the **release-notes
+defect** that is the standing reason three consecutive milestones are untagged. The highest-value
+content item is `UAT-206-05` — 18 of 24 COV-04 conversions are QUALIFIED PASSes and the gate meant to
+police that honesty does not exist, which means this milestone's largest coverage claim has no
+mechanical guard on its own qualification text.
+Written by hand — no `state.*` verb used; pre-images taken and FULL diffs inspected at every step.
+Resume file: (none — `HANDOFF.json` deleted as the one-shot artifact it is; four stale
+`.continue-here.md` files were annotated as superseded rather than removed.)
 
 Last session: 2026-09-27 (resumed) — **Session resumed via `/gsd-resume-work`. One blocking human
 item in flight.** `.planning/HANDOFF.json` (2026-09-27T16:56Z) is current and authoritative: Phase
