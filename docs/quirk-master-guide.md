@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,367 lines, in reading order.
+Five guides, 6,439 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -100,6 +100,7 @@ and the connector guides under [`connectors/`](connectors/).
   - [17. Rating Band Severity Floor (Phase 184.4, SCORE-04/SCORE-05)](#17-rating-band-severity-floor-phase-1844-score-04score-05)
   - [18. SPKI Fingerprint Capture and Key Reuse (Phase 191, SPKI-01/SPKI-02)](#18-spki-fingerprint-capture-and-key-reuse-phase-191-spki-01spki-02)
   - [19. Finding Storyline Drawer (Phase 202, v5.23 — STORY-01/STORY-02)](#19-finding-storyline-drawer-phase-202-v523-story-01story-02)
+  - [20. Browser E2E Tests (Phase 207, v5.24 — COV-05, COV-10)](#20-browser-e2e-tests-phase-207-v524-cov-05-cov-10)
 - **[Administration](#administration)**
   - [Prerequisites](#prerequisites-6)
   - [1. Deploy the Console](#1-deploy-the-console)
@@ -6208,6 +6209,78 @@ score-lift attribution — the owning remediation theme's total lift, conditione
 that theme being resolved, never this one finding's individual share. See
 `docs/report-interpretation.md` §25 for the full explanation of the theme framing, why most
 findings show no narrative, and the one-theme display rule.
+
+---
+
+### 20. Browser E2E Tests (Phase 207, v5.24 — COV-05, COV-10)
+
+Six UAT cases are structurally impossible to cover with the jsdom-based dashboard test runner —
+they need a real browser engine. They are now covered by real Playwright tests:
+
+| Case | What it proves |
+|---|---|
+| `UAT-7-01` | The dashboard SPA mounts — no blank screen, no console errors on first load |
+| `UAT-7-32` | Zero console errors across all seven routes, plus the CBOM Table/Graph switch |
+| `UAT-7-17` | Clicking **Export PDF** yields a genuinely valid downloaded PDF |
+| `UAT-88-03` | The six score-decomposition rows survive HTML-to-PDF conversion, asserted by value |
+| `UAT-7-23` | The sidebar collapses at the 1024px breakpoint — asserted as **measured** `aside` box width (240px / 48px), never as the `class` attribute |
+| `UAT-7-29` | A real Cytoscape node drags and its visible edge's endpoint follows **mid-drag**, not merely after release |
+
+They live in `tests/test_browser_e2e.py` and `tests/test_pdf_decomposition_render.py`, with shared
+setup in `tests/browser_e2e_harness.py`.
+
+**`UAT-7-23` and `UAT-7-29` (Phase 207.1, COV-10) each ship with a dedicated red-proof control
+node** — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown`. A
+control performs the identical mount and setup with only the triggering interaction omitted (no
+viewport resize; no `mouse.down()`) and asserts the observed value stays unmoved. Its purpose is to
+prove the main test's assertions are capable of failing — a green result on a test that would also
+be green if nothing happened is the vacuous-pass trap this module's own D-04 exists to catch. Each
+control is its own pytest node with its own PASS/FAIL line, not a comment or sub-assertion inside
+the main test.
+
+#### Running them locally
+
+One-time setup — roughly 2 minutes and about 91 MiB:
+
+```bash
+.venv/bin/python -m playwright install chromium
+```
+
+Then:
+
+```bash
+.venv/bin/python -m pytest tests/test_browser_e2e.py tests/test_pdf_decomposition_render.py -q -m ""
+```
+
+The `-m ""` is required: `pyproject.toml` sets `addopts = -m 'not slow'`, which would otherwise
+deselect part of this surface.
+
+**Read this before trusting a green local run.** Without that Chromium install these tests
+**SKIP** — they do not fail. A green run that never installed Chromium has proven *nothing*, and
+that is by far the most likely way to misread this suite. Always confirm a numeric passed count,
+and check the skip lines: each one names whether the Chromium executable was actually found on
+disk, precisely so an expected "no browser here" skip can be told apart from a transient launch
+failure on a machine where the browser *is* installed.
+
+No `npm run build` is needed. The built SPA bundle is committed under `quirk/dashboard/static`, and
+its freshness is enforced by the separate `bundle-freshness` CI job.
+
+#### How they run in CI
+
+They execute for real in a dedicated **Browser E2E** job, which installs Chromium. That job is
+**non-gating** (`continue-on-error: true`) on purpose: browser tests carry a flake class that must
+not be able to redden the check every pull request has to pass. Isolation is also the structural
+cure for a known root cause — a shared Playwright singleton torn down by an earlier test in the
+same process, which had previously quarantined 14 unrelated tests.
+
+In the required **Linux Full Suite** job these same nodes **skip**, because that job deliberately
+installs no Chromium. A skip there is not a pass; the coverage claim rests entirely on the Browser
+E2E job's real execution, and each case's recorded disposition says exactly that.
+
+One node behaves differently and it is not a fault: `UAT-88-03` skips in *any* full-suite run,
+whether or not Chromium is installed, because it is affected by that shared-singleton
+contamination. It passes standalone and in the Browser E2E job. If you are reading a Linux Full
+Suite log and expecting it to pass there, you will think something has broken — it has not.
 
 
 ---

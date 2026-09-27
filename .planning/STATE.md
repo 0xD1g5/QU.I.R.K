@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.24
 milestone_name: UAT Coverage Drain
-status: ready_to_plan
-last_updated: "2026-09-22T19:30:00Z"
-last_activity: 2026-09-22
+status: phase_complete
+last_updated: "2026-09-27T22:10:00.000Z"
+last_activity: 2026-09-27
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 44
-  completed_plans: 44
-  percent: 86
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 54
+  completed_plans: 54
+  percent: 100
 ---
 
 # Project State
@@ -164,7 +164,7 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 208 — Security, Report Coverage & Doc Debt (COV-06/07/08, DOC-01/02).
+**Current focus:** Milestone v5.24 (UAT Coverage Drain) is at **8 of 8 phases complete** — Phase 207.1 closed 2026-09-27 at 5 of 5 success criteria MET AS WRITTEN, re-verified `passed` (5/5 must-haves, 0 blockers). `UAT-7-23` closes at **6 of 6**: criterion 6 ("transition is smooth") was routed to HUMAN-UAT per D-11 and then DISCHARGED by operator verdict the same day, recorded ledger-first. Next action is the operator's: close the milestone, or drain the todo backlog first — 32 pending, including a newly-filed flaky-required-check finding. No phase work is in flight.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1258,7 +1258,237 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   Inserted by hand-edit; `state.patch` / `state.add-roadmap-evolution` deliberately NOT used —
   they are the corrupting verbs this phase exists to fix (CLAUDE.md TOOL-05).
 
+- Phase 207.1 inserted after Phase 207 (2026-09-27) — `UAT-7-23` and `UAT-7-29` are orphaned
+  between COV-04's jsdom-tractable set (which reclassified them OUT on 2026-09-21) and COV-05's
+  three named cases (Complete). New requirement **COV-10** rather than an amendment to either, so no
+  closed record is rewritten to absorb work it never covered. Inserted on a **measured** tractability
+  assessment against live Chromium, not a hypothesis. `gsd-sdk query phase.insert 207` wrote the
+  Phase Details block and left STATE.md untouched (verified by pre-image diff), but **wrote no
+  checklist row** — the `- [ ] **Phase 207.1: ...**` line under `## Phases` was added by hand. That
+  omission matters: the checklist, not the details block, is what milestone audits read for `[x]`.
+  `state.patch` / `state.add-roadmap-evolution` deliberately NOT used (UNSAFE verb class).
+
+  **This reopens v5.24.** The milestone stood at all 7 phases `[x]` and was paused awaiting this very
+  decision; the close sequence now sits behind Phase 207.1.
+
 ## Current Position
+
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **COMPLETE 2026-09-27 at 5 of 5 ROADMAP
+success criteria MET AS WRITTEN.** Re-verification returned `status: passed`, 5 of 5 must-haves, **0
+blockers** (`207.1-VERIFICATION.md`, which PREPENDS the re-verification and preserves the prior
+`human_needed` record verbatim beneath it rather than overwriting the history of why a re-run was
+needed). Requirement **COV-10** Complete. Milestone v5.24 now stands at **8 of 8 phases**.
+Plan: 3 of 3 complete. ROADMAP checkbox flipped **BY HAND** — `phase.complete` stays banned on this
+machine per CLAUDE.md §TOOL-05's semantic-defect clause.
+
+**What actually closed the phase: a human verdict, not a test.** `UAT-7-23` criterion 6 ("transition
+is smooth — no layout jumps or flicker") was routed to HUMAN-UAT by D-11 because it has no mechanical
+referent. The operator ran the walkthrough on 2026-09-27 and reported, verbatim: *"when drag the
+window around it looked smooth. no issues or glitches"* — a real non-headless browser resized slowly
+through the 1024px breakpoint in both directions, watching the sidebar and the main content beside it.
+The case goes from a stated **5 of 6 to 6 of 6**.
+
+**Recorded ledger-first, never by hand-editing a `**Result:**` line.** One line changed in
+`docs/uat-disposition-ledger.jsonl`; propagated by `scripts.uat_disposition_apply apply` as exactly 1
+rewrite at `docs/UAT-SERIES.md:3934`; `verify` then reported **378 ledger rows agree**.
+`docs/uat-coverage-gaps.md` regenerated **byte-identical** — the correct outcome, and worth naming
+because it looks like a no-op: the case was already `PASS`, so the GAP set never moved and the count
+stays 41. **A verdict closed a criterion, not a gap.** Those are different denominators and conflating
+them would have manufactured a coverage claim.
+
+**Four prose sites were corrected that no gate governs** — the `**Notes:**` line, the `**Tester:**`
+line, the `**Last Updated:**` header narrative, and the trailing "That GAP is now closed" paragraph.
+This is the class commit `9eaeabe1` had to fix during execution: the reconciliation gate compares the
+Result line against the ledger row and the coverage-gaps set, and the ledger stores only the Result
+line — Notes prose is in none of the three. The re-verifier then found a FIFTH instance of the same
+class inside the phase's own `207.1-HUMAN-UAT.md`, where a present-tense sentence still read "the
+artifacts record only the ROUTING decision ... not a verdict" directly beneath a PASS verdict. Fixed
+and past-tensed. **Five instances of one prose-drift class in a single phase, none gate-detectable.**
+
+**The stated residual, which must not be lost on the next read: the verdict creates NO CI coverage.**
+The automated node still asserts only the five measurable criteria. A future regression in transition
+smoothness would fail no test and redden no gate. The re-verifier confirmed the verdict was not
+laundered into an assertion, three independent ways: the entire diff to `tests/test_browser_e2e.py` is
+one docstring hunk with **zero executable lines changed**; a grep for
+`transition|animation|getComputedStyle|requestAnimationFrame|smooth|flicker|jank|screenshot|wait_for_timeout`
+returns 4 hits, all of them prose; and the new docstring explicitly forbids the substitution. That was
+the real hazard here — not a missing test, but the temptation to let a human verdict license a proxy
+assertion, which is the tautology class this same phase already caught and rewrote in `UAT-7-29`
+(`057132e4`).
+
+**A finding surfaced that is worse than the item being closed, and it is NOT this phase's.**
+`tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass` produced **14 failing
+vitest nodes** across seven dashboard pages, then **passed twice on the identical tree** — once
+standalone and once inside the very batch that had just failed. It is **INTERMITTENT**, and it runs
+in the REQUIRED `Linux Full Suite` job, because that job installs Node 24 + `npm ci` in
+`src/dashboard` (`python-ci.yml:417-426`) *before* `pytest -q -m ""` (`:437`). A flaky required check
+is nastier than a steady red: it cannot be diffed against a baseline and will be misattributed to
+whichever PR happens to catch it. Not branch-induced — identical 58-file vitest citation set between
+`main` and `HEAD`, and `git diff main..HEAD` empty for both the gate and all of `src/dashboard/`, so
+`main` is equally exposed. Filed at
+`.planning/todos/pending/260927-vitest-batched-run-fails-14-nodes-in-required-ci-job.md`.
+
+**Two records corrected while closing, both of which read as authoritative and were wrong.**
+(1) CLAUDE.md's §UAT Corpus Integrity Gate "Known limitation" claimed `Linux Full Suite` "never
+installs Node/npm" — stale since Phase 205 D-04, and the consequence of its closure is precisely the
+flaky required check above. Phase 207's context scout had already flagged this; it outlived the flag.
+(2) The recorded local failing-node baseline listed two nodes and did not list this one. That record
+has now been wrong three times, and the correction this time is stronger than "add a third row": a
+flaky node makes a failing-node SET a *sample*, so the standing advice "compare SETS" needs "re-run
+before concluding, in either direction" attached to it.
+
+`tests/skip_registry.py` (~497-534) still repeats the retired Node-absence claim and was deliberately
+NOT edited — that file keys skips by `(filename, lineno)` and a line shift breaks the gate. Flagged in
+the todo instead. Separately confirmed: the registry keys by
+`(filename, function_name, category, reason)` for the entries touched here, so this phase's docstring
+edit to `tests/test_browser_e2e.py` could not have broken it — `26 passed` on
+`test_browser_e2e_skip_contract.py` + `test_skip_registry.py`.
+
+STATE.md was **hand-edited** for this entry. No mutating `state.*` verb was invoked. A pre-image was
+taken and the **FULL diff** inspected — not a signature grep, per the 2026-09-27 finding that a
+multi-line field value can be truncated in a way signature greps cannot see.
+
+---
+
+Phase: 207.1 (Orphaned Browser-Only Coverage Drain) — **ALL 3 PLANS COMPLETE 2026-09-27.
+Verification `human_needed` at 5 of 5 truths verified — 1 human item open, so the phase is NOT
+marked complete in ROADMAP.md and `completed_phases` is unchanged.** Requirement **COV-10** (new).
+Plan: 3 of 3 complete (207.1-01: UAT-7-23 measured sidebar collapse + red-proof control;
+207.1-02: UAT-7-29 Cytoscape node drag + red-proof control; 207.1-03: the three coupled disposition
+artifacts, COV-10, docs and vault close-out) — ran sequentially in the main session on branch
+`phase-207-browser-only-coverage-verdict` (D-17 forbids worktree fan-out;
+`workflow.use_worktrees=false`, and plans 01/02 share `tests/test_browser_e2e.py` anyway).
+Next: the `207.1-HUMAN-UAT.md` walkthrough — operator-led, then re-run verification.
+
+**Two post-executor corrections the orchestrator made, both after a `Self-Check: PASSED`:**
+1. `9eaeabe1` — both cases' `**Notes:**` prose still contradicted their flipped Result lines (a
+   stale "This case stays **GAP**" under a checked PASS box; `**Tester:** ... no test written`
+   beside a cited test). No gate catches this class: the reconciliation gate compares the Result
+   line against the ledger row and the coverage-gaps set, and the ledger stores only the **Result**
+   line — Notes prose is in none of the three.
+2. `057132e4` — code review WR-01: `UAT-7-29`'s criterion 5 was a TAUTOLOGY. `post != pre` is
+   entailed by criterion 1 (`mid != pre`) and criterion 3 (`post == mid`), so it could never fail
+   independently, and a dagre re-run relocating the node anywhere still satisfied it. Rewritten to
+   assert the node came to rest where the drag put it, and RED-PROVED by displacing the
+   expectation. A tautological criterion is worse than a missing one: a missing criterion fails a
+   count, a tautological one passes the count, the test, and every gate while adding zero
+   falsifiability.
+
+**Why it exists:** `UAT-7-23` (sidebar responsive collapse) and `UAT-7-29` (Cytoscape node drag) are
+orphaned between COV-04 and COV-05. Phase 206 closed COV-04 at 25 of 28 and routed them to Phase 207;
+Phase 207's scope was `UAT-7-01`/`7-17`/`7-32` + `UAT-88-03` and never took them. **Neither phase
+erred.** Both were reclassified out of the jsdom-tractable set on 2026-09-21 because jsdom evaluates
+no media queries and runs no Cytoscape renderer — a reason that stopped holding when Phase 207 shipped
+a real browser harness.
+
+**The verdict is measured, not argued.** Live Chromium, real built SPA, `assert_spa_mounted` passed
+first. `UAT-7-23`: `aside` 240px @1440 -> 48px @900 -> 240px back; wordmark/monogram visibility
+inverts; collapsed tooltip renders `"New Scan"`; collapsed nav click routes to `/findings`. Those are
+layout measurements, not the class-string assertions the original GAP note correctly banned.
+`UAT-7-29`: node `(75,168)` -> `(183.7,113.6)`; visible edge source endpoint `(75,194)` ->
+`(169.3,139.6)` **mid-drag**; position held after release; other three nodes byte-identical; and a
+control drag with no `mouse.down()` moved nothing, so the assertion can fail.
+
+**Three traps for whoever plans this, each found by a near-miss rather than by reasoning:**
+
+1. `cy.nodes()[0]`'s only connected edge is a `rank-` edge with `visible: false`, and invisible edges
+   return **no endpoint geometry** (`sourceEndpoint()` -> `{}`). My first probe read that empty result
+   and would have recorded a false intractability verdict. Select via
+   `connectedEdges().filter(e => e.visible())`.
+
+2. `container._cyreg.cy` is an **undocumented Cytoscape internal** — the only route to the live
+   instance, since `roadmap.tsx` keeps `cyRef` in a React ref and exposes nothing globally. Assert it
+   resolved; fail with a named diagnosis if a version bump removes it.
+
+3. `UAT-7-23` criterion 6 ("transition is smooth, no layout jumps or flicker") has **no mechanical
+   referent.** It stays human-UAT or is dropped explicitly. This case closes at **5 of 6** and the
+   partial must be stated, not absorbed.
+
+**Two records this assessment falsified, both left in place and corrected forward:**
+
+- **Phase 207 D-04's stated evidence was wrong.** It reasoned `git ls-files src/dashboard/dist`
+  returns 0, therefore built statics are not committed, therefore a vacuous-pass trap. But vite's
+  `outDir` is `../../quirk/dashboard/static` (`src/dashboard/vite.config.ts:194`) — `dist` is a path
+  vite never writes to. Those statics **are** committed: 14 tracked files, and a rebuild reproduced
+  them byte-identically (`git status` clean). The *guard* D-04 motivated is still right; its premise
+  was false. Consequence to check before it costs CI time: the `Browser E2E` job may need **no
+  `npm run build` step at all.**
+
+- **Phase 208's "`~/Library/Caches/ms-playwright/` is empty on this machine" is superseded** —
+  `chromium-1208` is installed and launches. True when written; Phase 207 changed it.
+
+**`completed_plans` was stale at 44 and is now 51, re-derived from disk.** The 44 came with its own
+per-phase breakdown (`203=4, 204=6, 205=7, 206=13, 208=6, 209=8`) which **omits Phase 207 entirely**;
+44 + 207's 7 = 51, matching the live glob exactly. `total_plans` is also 51 and `percent` stays
+**phase-based (7 of 8 = 88)**, for the reason already recorded below: Phase 207.1 has 0 plans on disk,
+so a plan-based denominator would read 100% for an incomplete milestone. The `-PLAN.md` glob returns
+**50**, not 51, and that asymmetry is fully explained — 203-05/06/07 are plans without summaries (the
+accepted, dated gap recorded at line ~1700 and ~2682: their scope landed under other commits), while
+205-02b, 205-06 and 207-03.5 are summaries without plan files.
+
+STATE.md was **hand-edited** for this entry. No mutating `state.*` verb was invoked — REQUIREMENTS.md's
+standing constraint holds them UNSAFE on this machine. A pre-image was taken and diffed against both
+named corruption signatures. `gsd-sdk query phase.insert` WAS used (it writes ROADMAP.md) and left
+STATE.md byte-identical, verified.
+
+---
+
+Phase: 207 (Browser-Only Coverage Verdict) — **CONTEXT GATHERED 2026-09-26, ready to plan.**
+Plan: 0 of ? — no plans written yet.
+
+**The operator-reserved toolchain verdict is MADE and recorded as D-01:** Playwright E2E in an
+**isolated, non-required CI job** — Chromium gets installed in CI, but the browser leg runs outside
+the required `Linux Full Suite` so its flake surface cannot redden the check every PR must pass.
+Three alternatives were costed and rejected (browser leg inside the full suite; permanent GAP for
+all three cases; a split GAP/Playwright verdict). Full record with the live evidence behind each
+option: `.planning/phases/207-browser-only-coverage-verdict/207-DISCUSSION-LOG.md`.
+
+Artifacts written, both **untracked per repo convention** (`.gitignore:75`; the only tracked
+`*-CONTEXT.md` files are 8 grandfathered ones under `.planning/milestones/v5.11-phases/` and
+`v5.12-phases/`):
+`207-CONTEXT.md` (9 locked decisions D-01..D-09) and `207-DISCUSSION-LOG.md`.
+
+**Phase 207 is operator-led and must NOT be run through `/gsd-autonomous`** —
+`.planning/ROADMAP.md:216` de-scopes it explicitly, and D-08 forbids worktree fan-out for two
+independent reasons (browser tooling is absent inside worktree subagents and silently falls back;
+and commit `21f12789` lives only on this branch). Branch `phase-207-browser-only-coverage-verdict`
+was **pushed to origin on 2026-09-26** so `execute-phase`'s fork-from-`origin/HEAD` cannot omit that
+commit. Verify with `git log main..HEAD` before closing.
+
+Three findings from the context scout that outlive this phase:
+
+1. **A vacuous-pass trap guards the whole Tier-2 leg (D-04).** `git ls-files src/dashboard/dist`
+   returns **0** — built statics are not committed. Without `npm run build`, the SPA catch-all at
+   `quirk/dashboard/api/app.py:170-184` serves a *placeholder* page and `/assets` is never mounted.
+   A naive `UAT-7-32` "zero console errors" test against that would pass with **no JavaScript
+   loaded at all.** Every Tier-2 test must first assert the real SPA mounted.
+
+2. **The isolated job is the structural cure for TRIAGE-149 Cluster 2 — 14 quarantined tests.**
+   `docs/test-triage-149.md:57-75` lists 14 tests skipped on one root cause (a shared
+   `PlaywrightContextManager` singleton torn down by an earlier full-suite test), every one recorded
+   "passing standalone". A separate pytest invocation means nothing has pre-torn-down the singleton.
+   Deliberately **deferred, not folded** — outside COV-05 — but near-free once this phase's job
+   exists. Highest-value item in `207-CONTEXT.md` `<deferred>`.
+
+3. **`CLAUDE.md` carries a stale claim of its own.** Its §UAT Corpus Integrity Gate "Known
+   limitation" paragraph says the `Linux Full Suite` job "never installs Node/npm for
+   `src/dashboard/`". Phase 205 D-04 added `Setup Node` + `npm ci` to that job
+   (`.github/workflows/python-ci.yml:414-428`, with a comment naming exactly that purpose). The
+   documented gap is closed and the warning outlived it — same drift class that file warns about.
+
+Also recorded: `gsd-sdk query todo.match-phase 207` returned **all 30** pending todos at an
+identical `0.6` score, every one titled "Untitled" — it returned the whole directory, keying on
+generic tokens ("phase", "cov", "2026"). An independent grep for this phase's real vocabulary
+(`playwright|e2e|console error|blank screen|export pdf`) returns **1** file. Do not read that
+matcher's hit count as signal at this phase's vocabulary.
+
+STATE.md was **hand-edited** for this entry. No mutating `gsd-sdk`/`gsd-tools.cjs` `state.*` verb
+was invoked, because CLAUDE.md clause (h) and the operator's own memory disagree on whether the
+shared body-writer's plain-field clobber is still live — when two records of a corruption class
+disagree, not invoking the verb is cheaper than adjudicating it. A pre-image was taken regardless
+and the full diff inspected.
+
+---
 
 Phase: 208 (Security, Report Coverage & Doc Debt) — **COMPLETE 2026-09-22, at 4 of 5 ROADMAP
 success criteria MET AS WRITTEN.** The operator approved the 208-06 checkpoint; `gsd-verifier`
@@ -1291,8 +1521,12 @@ Status: Ran on branch `phase-208-security-report-coverage-doc-debt`, forked from
 local `main` at `58c4ba54` (which carries two unpushed `docs(208)` planning commits that
 `origin/main` does not have — branching off `origin/main` would have silently dropped them).
 `workflow.use_worktrees=false`, so all six plans ran **sequentially on the main working tree**;
-there was no parallel isolation in this run despite `parallelization: true`. **Not merged/pushed —
-local commits only, per this plan's absolutely-no-remote-actions constraint.**
+there was no parallel isolation in this run despite `parallelization: true`. **MERGED to `main`
+2026-09-26 via PR #36** (`793736ad`), after the operator authorized shipping — all six CI checks
+green, including the `Linux Full Suite` job whose `-m ""` selects the 38 slow tests that
+`addopts = -m 'not slow'` deselects locally, and the `staleness` gate. During execution this line
+read "not merged/pushed — local commits only, per this plan's absolutely-no-remote-actions
+constraint"; that constraint governed the executors and was correct for them.
 
 **ROADMAP criterion 2 is recorded NOT MET AS WRITTEN, in place, original text preserved** — the
 HTML leg (`UAT-88-02`) shipped in 208-02; the Playwright PDF leg (`UAT-88-03`) is re-scoped to
@@ -1329,6 +1563,13 @@ disk" ambiguity 209's own retained note below already flagged (17 vs 22, then 23
 against it misleading in the complete direction. Recompute these at phase close, after
 verification, with the definition chosen explicitly rather than inferred from a disk glob.
 
+> **UPDATE 2026-09-26 — question (1) is RESOLVED; the paragraph above is left unedited as the
+> record of what was true on 2026-09-22.** Phase 209 is now merged: `git log
+> origin/main..origin/phase-209-deliverable-reachability` returns **0 commits**. Its 8 plans are
+> on `main`, so they count, and `completed_plans: 44` is correct on the disk-glob definition with
+> no ambiguity left in it. Question (2) still stands — `percent` remains phase-based (6 of 7 = 86)
+> precisely because `total_plans` cannot express Phase 207's unknown plan count.
+
 **`state.begin-phase` corrupted this file on 2026-09-22 and was reverted — TOOL-05 class, still
 live on this machine.** The verb was called once at phase start with a pre-image taken per
 CLAUDE.md §GSD. The diff showed: (a) **corruption signature (b) fired** — the frontmatter key
@@ -1343,9 +1584,12 @@ signature: no bold-field code span was garbled and no key was dropped *by that p
 It is the plain-field body writer being line-scoped against a value that is not line-scoped.
 STATE.md was restored byte-identical (`shasum` 19828ff7…) and these fields hand-edited instead.
 
-**The Phase 209 record below is RETAINED, not superseded.** Phase 209 ran ahead of 208 and its work
-is **still unmerged** on branch `phase-209-deliverable-reachability`; this Phase 208 branch forks
-from `main` and therefore does not contain it.
+**The Phase 209 record below is RETAINED, not superseded.** Phase 209 ran ahead of 208. As of
+2026-09-22 its work was still unmerged on `phase-209-deliverable-reachability` and the Phase 208
+branch forked from `main` did not contain it — **that is no longer true: Phase 209 merged, and
+`main` now carries both phases** (verified 2026-09-26, 0 commits on the 209 branch absent from
+`origin/main`). The record below is kept because its per-criterion detail and open items are still
+the authoritative account of 209; only its branch/merge status has moved on.
 
 ---
 
@@ -1358,8 +1602,10 @@ seen in an isolated env where `import docx` genuinely raises `ModuleNotFoundErro
 `209-MANUAL-VERIFICATION.md`; both carry a fidelity note recording that the operator confirmed
 against shown tables/strings rather than transcribing independently, so the record is not read as
 stronger than it is. No automated result was substituted for either (T-209-13 respected).
-Branch `phase-209-deliverable-reachability`, 25 commits, working tree clean. **NOT merged to
-`main`** — see the unauthorized-remote-actions note below before doing anything with `origin`.
+Branch `phase-209-deliverable-reachability`, 25 commits, working tree clean. **MERGED to `main`**
+— corrected 2026-09-26; this line read "NOT merged to `main`" from 2026-09-15 until then, and the
+unauthorized-remote-actions note below belongs to that earlier period. Verified by
+`git log origin/main..origin/phase-209-deliverable-reachability` returning 0 commits.
 
 **Open items carried out of phase 209 (none blocking, all deliberate):**
 
@@ -1368,12 +1614,15 @@ Branch `phase-209-deliverable-reachability`, 25 commits, working tree clean. **N
    row-lag pattern. Deliberately NOT flipped — honest flipping requires confirming each row's
    command actually ran, and flipping them otherwise is a fabricated attestation. Only the two
    Manual-Only Verification rows were discharged (that was 209-07's scope).
+
 2. `tests/test_uat_disposition_integrity.py::test_non_vacuity_skipped_substitute_is_flagged`
    **fails at baseline**, verified by stashing Series 209 and re-running. Pre-existing, unrelated
    to 209, not fixed here.
+
 3. The live end-to-end Playwright PDF render (`test_pdf_export.py::test_pdf_export_endpoint` and
    all three `test_pdf_metadata_constants.py` nodes) remains **TRIAGE-149-skipped**, so it is not
    covered by Series 209's automated citations. UAT-209-06 records that narrowing explicitly.
+
 4. Plan 209-08's instruction to add ledger rows was **deliberately not followed** —
    `docs/uat-disposition-ledger.jsonl` is bounded at series 158 by design and Phase 204 made
    `docs/UAT-SERIES.md` authoritative; no series from 201-205 has ledger rows. Rationale and
@@ -1921,6 +2170,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 193 P02 | 20min | 2 tasks | 4 files |
 | Phase 193 P03 | 20min | 2 tasks | 2 files |
 | Phase 195 P05 | 55min | 2 tasks | 5 files |
+| Phase 207.1 P02 | 50m | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -2257,6 +2507,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: connectors and credentials kept as two separate Optional dict fields on ScanSubmitRequest, never merged, per D-11 (193-03)
 - [Phase ?]: 195-05: Tier A only per 195-SPIKE-DECISION.md DEFERRED — no declared_reachability edge type/legend row/crown-jewel declaration UX in exposure-map.tsx
 - [Phase ?]: 195-05: evidence citation implemented both as hover shadcn Tooltip AND an always-present sr-only edge list, satisfying D-09 hover + UI-SPEC Dimension 2 no-hover accessible fallback simultaneously
+- [Phase 207.1]: 207.1-02: widened UAT-7-29 criterion 2 tolerance to 25px + same-sign check (bezier edge anchor is angle-dependent, not a fixed node offset)
 
 ### Pending Todos
 
@@ -2439,6 +2690,41 @@ Found at Phase 208 close (2026-09-22):
 | costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
+
+Last session: 2026-09-27 (resumed) — **Session resumed via `/gsd-resume-work`. One blocking human
+item in flight.** `.planning/HANDOFF.json` (2026-09-27T16:56Z) is current and authoritative: Phase
+207.1 at 3 of 3 plans, `status: paused_awaiting_human_uat`, three remaining tasks all gated behind a
+single operator verdict (UAT-7-23 criterion 6, transition smoothness). No interrupted agent. Two
+`.continue-here.md` files exist (207 and 207.1); the 207.1 one is the live handoff, 207's is a
+completed record — HANDOFF.json says so explicitly and it is right.
+
+**One record corrected while resuming, and it is the load-bearing one.** HANDOFF.json's
+`branch_note` and this project's own memory both say branch `phase-207-browser-only-coverage-verdict`
+is "still UNPUSHED". That is **half true and the safe half is the false half**: the branch DOES have
+an upstream (`origin/phase-207-browser-only-coverage-verdict`, pushed 2026-09-26), but
+`git rev-list --left-right --count @{u}...HEAD` returns `0 20` — **20 local commits are unpushed**,
+including all three of 207.1's plan commits. The parked STATE.md fix `21f12789` is on this branch and
+confirmed NOT on `main`; 53 commits separate this branch from `main`. So the hazard the "UNPUSHED"
+note was written to guard against is live, just not for the reason stated: a fresh
+`execute-phase` fork from `origin/HEAD` would now lose 20 commits, not the whole branch.
+
+**VERDICT RECEIVED AND PHASE CLOSED, same session.** The operator ran the walkthrough and reported
+the transition smooth with no issues or glitches. Recorded ledger-first exactly as the plan below
+required, propagated, re-verified `passed` at 5/5 with 0 blockers, and the ROADMAP checkbox flipped by
+hand. `UAT-7-23` closes at 6 of 6. Full trace in this file's `## Current Position` entry for 207.1.
+
+Stopped at: **v5.24 complete at 8 of 8 phases, nothing in flight.** The next action is the operator's
+call — close the milestone (`/gsd-complete-milestone`), or drain todos first. One newly-filed item is
+worth reading before a milestone close, because it affects the merge signal itself: a flaky node in
+the REQUIRED CI job
+(`.planning/todos/pending/260927-vitest-batched-run-fails-14-nodes-in-required-ci-job.md`).
+Branch `phase-207-browser-only-coverage-verdict` is still UNMERGED to `main` and had 20 unpushed
+commits when this session began — verify with `git rev-list --left-right --count @{u}...HEAD` before
+trusting any "is it pushed?" check, since the branch DOES have an upstream.
+Written by hand — no `state.*` verb used; pre-image taken and full diff inspected per CLAUDE.md
+§TOOL-05.
+Resume file: `.planning/phases/207.1-orphaned-browser-only-coverage-drain/.continue-here.md`
+(plus `.planning/HANDOFF.json`, retained until this pause is discharged).
 
 Last session: 2026-09-21 (resumed) — **Session resumed via `/gsd-resume-work`; nothing was in
 flight.** `.planning/HANDOFF.json` (2026-09-21T19:37Z) reports the post-demo resumption COMPLETE at

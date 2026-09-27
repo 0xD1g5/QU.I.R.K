@@ -95,11 +95,17 @@ finding this category acts on: no genuine substitute exists today, so the tests 
       rejected `sensors-loading.test.tsx` as a substitute for `UAT-7-34` on exactly this ground
       (same component pattern, wrong subject).
 
-- [ ] **COV-05**: the **3** structurally jsdom-impossible cases — `UAT-7-01` (SPA mounts without a
+- [x] **COV-05**: the **3** structurally jsdom-impossible cases — `UAT-7-01` (SPA mounts without a
       blank screen), `UAT-7-17` (click Export PDF, assert a valid downloaded PDF), `UAT-7-32` (zero
       console errors across every route) — receive either real Playwright E2E coverage or a
       recorded, reasoned permanent disposition naming why no substitute can exist. A fabricated PASS
       is never acceptable; an honest permanent GAP is.
+      **Complete 2026-09-27 (Phase 207).** All three received real Playwright coverage, plus
+      `UAT-88-03` inherited from Phase 208 — four cases, not three. Each cites a real node and
+      carries a `CI-EXEMPT:` declaration whose wording states what is true here: CI **does** run
+      these nodes, in the non-gating `Browser E2E` job; they skip only in `Linux Full Suite`, where
+      Chromium is deliberately absent. No permanent GAP was recorded and no PASS was fabricated.
+      Live GAP count 47 -> 43.
 
 ### Guard Integrity
 
@@ -136,7 +142,7 @@ gate, not the coverage, is the defect.
       source inspection in `quirk/ticketing/jira.py`, but the case's own `-k ssrf` filter matches
       **0 of 8** collected tests: today nothing anywhere proves it actually fires. Security-relevant.
 
-- [ ] **COV-07**: `UAT-88-02` / `UAT-88-03` — the six-row score-decomposition table
+- [x] **COV-07**: `UAT-88-02` / `UAT-88-03` — the six-row score-decomposition table
       (`quirk/reports/templates/report.html.j2`) is asserted at **render-output** level in HTML, and
       in the Playwright PDF. Today only data-layer parity and markdown presence are covered; the PDF
       leg has no pytest coverage of this table at all.
@@ -150,6 +156,18 @@ gate, not the coverage, is the defect.
       would need it. This box stays `[ ]` until that leg ships; closing it now would mark a
       two-legged requirement complete on one leg. Tracked as ROADMAP Phase 208 criterion 2,
       recorded NOT MET AS WRITTEN — see `208-NOT-MET-AS-WRITTEN.md`.
+      **NOW COMPLETE 2026-09-27 (Phase 207) — closed on this requirement's OWN stated condition,
+      "until that leg ships".** It shipped: `tests/test_pdf_decomposition_render.py::
+      test_uat_88_03_decomposition_survives_pdf_render` asserts the six pillar rows in the
+      **extracted PDF text layer by VALUE**, not by static label presence — the label-only form was
+      Phase 207 review finding W-02 and was closed by mutation proof. `UAT-88-03` is PASS.
+      The PARTIAL paragraph above is left unedited as the record of what was true on 2026-09-22.
+      Flipped **by hand**, not by `requirements mark-complete`, which has no per-phase granularity
+      and has twice over-flipped multi-phase requirements in this project.
+      Caveat a future reader needs: the PDF node is proven by the **non-gating** `Browser E2E` job
+      and SKIPS in `Linux Full Suite` — in fact in any full-suite run, Chromium present or not,
+      because it is affected by TRIAGE-149 Cluster 2 contamination. A green required check is not
+      evidence about this requirement.
 
 - [x] **COV-08**: `UAT-8-04` / `UAT-8-05` — the hygiene subscore (plaintext ratio) and the
       identity-trust subscore (mTLS bonus) are each asserted **in isolation**, holding other evidence
@@ -175,6 +193,42 @@ gate, not the coverage, is the defect.
       (COV-09)" section for the full evidence trail. A GAP that can never close is noise in the
       worklist, not honesty — but the retirement must be a recorded decision with its reason, never a
       quiet deletion, which is exactly what the `UAT-47-04` correction demonstrates.
+
+- [x] **COV-10**: the **2** cases orphaned between COV-04 and COV-05 — `UAT-7-23` (sidebar
+      responsive collapse at the 1024px breakpoint) and `UAT-7-29` (Cytoscape roadmap node drag) —
+      receive real Tier-2 browser coverage against the Phase 207 harness, or a recorded permanent
+      disposition. Neither requirement above ever owned them: both were reclassified OUT of COV-04's
+      **28** jsdom-tractable set on 2026-09-21, and COV-05 names exactly three cases (`UAT-7-01`,
+      `UAT-7-17`, `UAT-7-32`) and is Complete. **This is a new requirement rather than an amendment
+      to either**, because widening COV-04's "28" or reopening a Complete COV-05 would rewrite a
+      closed record to absorb work it never covered — the silent-shrink failure mode this milestone
+      has refused four times, pointed backwards.
+      **Tractability is measured, not assumed** (assessed 2026-09-27, live Chromium against the real
+      built SPA, after `assert_spa_mounted` passed): `UAT-7-23`'s `aside` measures **240px at 1440px
+      viewport and 48px at 900px**, wordmark/monogram visibility inverts with it, the collapsed-state
+      tooltip renders `"New Scan"`, and a nav click at 900px routes to `/findings` — layout facts, not
+      the class-string assertions the original GAP note correctly banned. `UAT-7-29`'s node drags
+      `(75,168)` -> `(183.7,113.6)`, its visible edge's source endpoint follows **mid-drag**
+      (`(75,194)` -> `(169.3,139.6)`), the position holds after release, and the other three nodes are
+      byte-identical throughout; a control drag with no `mouse.down()` moved nothing, so the assertion
+      can fail.
+      **Two known limits, recorded in advance rather than discovered at close.** (1) `UAT-7-23`
+      criterion 6 — "transition is smooth (no layout jumps or flicker)" — has no mechanical referent
+      and must stay human-UAT or be dropped explicitly; this requirement closed at **5 of 6** for that
+      case and an honest partial was the expected outcome, not a shortfall to be hidden.
+      **DISCHARGED 2026-09-27 — the human-UAT item was run and PASSED, taking the case to 6 of
+      6.** The operator resized a real non-headless browser slowly through the 1024px breakpoint
+      in both directions and reported the sidebar and adjacent main content smooth, with no jump,
+      flicker, flash of unstyled content or glitching reflow; recorded in `207.1-HUMAN-UAT.md` and
+      in the case's own ledger evidence. The limit above is retained as written because it is the
+      record of WHY the item was routed rather than mechanized — and the routing is precisely what
+      made the sixth criterion closable. What the verdict does NOT do is create CI coverage: the
+      automated node still asserts five criteria, so a smoothness regression would redden no gate. (2) `UAT-7-29`
+      reaches the live Cytoscape instance through `container._cyreg.cy`, an **undocumented internal**;
+      the test must assert it resolved and fail with a named diagnosis if a version bump removes it.
+      A third trap is load-bearing: `cy.nodes()[0]`'s only connected edge is a `rank-` edge with
+      `visible: false`, which returns **no endpoint geometry**, so the edge-follow criterion must
+      select via `connectedEdges().filter(e => e.visible())` or it silently cannot be observed.
 
 ### Carried Doc Debt (from the v5.23 boundary review)
 
@@ -267,11 +321,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | COV-02 | Phase 204 | Closed (204-04/204-04b) |
 | COV-03 | Phase 204 | Closed (204-01/204-02) |
 | COV-04 | Phase 206 | Pending |
-| COV-05 | Phase 207 | Pending |
+| COV-05 | Phase 207 | Complete |
 | COV-06 | Phase 208 | Complete |
-| COV-07 | Phase 208 | Partial — HTML leg done; PDF leg -> Phase 207 |
+| COV-07 | Phase 208 + 207 | Complete — HTML leg Phase 208; PDF leg Phase 207 |
 | COV-08 | Phase 208 | Complete |
 | COV-09 | Phase 204 | Closed (204-02, 2 of 3 proposed retirements; UAT-47-04 corrected to GAP) |
+| COV-10 | Phase 207.1 | Complete (207.1-01/207.1-02/207.1-03; UAT-7-23 closes 6 of 6 — 5 mechanized, criterion 6 by operator HUMAN-UAT verdict 2026-09-27) |
 | GUARD-01 | Phase 205 | Closed (205-01/205-02/205-02b/205-06; premise falsified — see ROADMAP criteria 1-2) |
 | GUARD-02 | Phase 205 | Closed (205-03/205-04/205-06; leg proven non-vacuous, red-proved in CI) |
 | DOC-01 | Phase 208 | Complete |
@@ -280,8 +335,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DELIV-02 | Phase 209 | Complete |
 
 **Coverage:**
-- v1 requirements: 17 total (15 at milestone open + DELIV-01/02 added 2026-09-14)
-- Mapped to phases: 17 ✓
+- v1 requirements: 18 total (15 at milestone open + DELIV-01/02 added 2026-09-14 + COV-10 added
+  2026-09-27 for the two cases orphaned between COV-04 and COV-05)
+- Mapped to phases: 18 ✓
 - Unmapped: 0 ✓
 
 ## Standing Constraints Carried Into This Milestone

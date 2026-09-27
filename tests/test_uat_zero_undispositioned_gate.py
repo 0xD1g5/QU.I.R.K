@@ -316,8 +316,24 @@ def test_full_suite_ci_job_still_selects_all_markers():
     assert CI_WORKFLOW_PATH.is_file(), f"CI workflow not found at {CI_WORKFLOW_PATH}"
     workflow_text = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
 
+    # SCOPED to this job's own body, not "everything indented after its header".
+    #
+    # The original pattern ended at `(?:^(?:[ \t].*)?\n?)+` with no terminator, and since every
+    # job body in this file is indented, it ran to EOF. Any job defined AFTER `linux-full-suite`
+    # therefore had its lines folded into this job's captured body — so the assertions below read
+    # a *different* job's settings and reported them against this one. Hit live 2026-09-26 (Phase
+    # 207): adding the non-gating `browser-e2e` job made this test claim `linux-full-suite` had
+    # gained `continue-on-error: true`, which it had not.
+    #
+    # Anchored but unscoped: it matched from the right place and had no notion of where the region
+    # ended. The lookahead below terminates the body at the next top-level job key (two-space
+    # indent, non-space first character) or EOF, which is the region actually meant.
+    #
+    # This NARROWS the match; it does not weaken the assertions. A `continue-on-error: true` added
+    # to `linux-full-suite` itself still fails this test — red-proved, see the module docstring note
+    # and the Phase 207 04-SUMMARY.
     job_match = re.search(
-        r"linux-full-suite:\n(?P<body>(?:^(?:[ \t].*)?\n?)+)",
+        r"^  linux-full-suite:\n(?P<body>(?:^(?:[ \t].*)?\n)*?)(?=^  \S|\Z)",
         workflow_text,
         re.MULTILINE,
     )

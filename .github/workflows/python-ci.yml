@@ -435,3 +435,77 @@ jobs:
 
       - name: Run full test suite
         run: pytest -q -m ""
+
+  browser-e2e:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    # NON-GATING BY DESIGN (Phase 207, D-01 / D-02). DO NOT "FIX" THIS INTO THE REQUIRED SET.
+    #
+    # The browser leg is deliberately isolated from the required `Linux Full Suite` check so its
+    # flake surface cannot redden the check every PR must pass. That isolation is not merely
+    # containment — it is the structural cure for a known, diagnosed root cause:
+    # TRIAGE-149 Cluster 2 (docs/test-triage-149.md:57-75) quarantines 14 tests on ONE cause, a shared
+    # `PlaywrightContextManager` singleton torn down by an earlier full-suite test. Every one of
+    # those 14 is recorded "passing standalone"; the failures are order-dependent, not real. A
+    # separate GitHub Actions job is a separate process, so nothing has pre-torn-down that singleton
+    # here.
+    #
+    # Coverage for UAT-88-03 / UAT-7-01 / UAT-7-32 / UAT-7-17 is established by THIS job's real
+    # execution. Those same nodes skip in `Linux Full Suite` (no Chromium there, by design), and
+    # A SKIP IS NOT A PASS — every disposition citing them carries a `CI-EXEMPT:` declaration
+    # saying exactly that (D-10).
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.11'
+
+      # No Node toolchain and NO `npm ci` / `npm run build` here, deliberately. The built SPA bundle
+      # is COMMITTED — 14 tracked files under `quirk/dashboard/static`, which is the real Vite
+      # `outDir` per src/dashboard/vite.config.ts:194 — and its freshness is already enforced by the
+      # separate bundle-freshness job. A build step here would spend CI minutes for zero effect.
+      # (An earlier draft of D-04 claimed a build was required because it checked the conventional
+      # `src/dashboard/dist` path rather than the configured one. The corrected finding is what this
+      # job follows.)
+      #
+      # `[all]` pulls `quirk-scanner[dashboard]` (pyproject.toml:157), which carries
+      # `playwright>=1.58.0` and `pypdf>=4.0` — so the browser tier needs no extra dependency line.
+      # `[identity]` is intentionally excluded from `[all]`; do not add it.
+      - name: Install project with all extras and pytest
+        run: |
+          pip install -e ".[all]"
+          pip install pytest
+
+      # `--with-deps` on purpose: the ubuntu-latest runner needs OS-level shared libraries that
+      # Playwright's installer pulls, and the bare `install chromium` form was only ever exercised on
+      # macOS (research Assumption A2). If this job ever fails on a missing shared library,
+      # `--with-deps` is already the remedy rather than a diagnosis step.
+      #
+      # NOT `browser-actions/setup-chrome`: that action installs a pinned SYSTEM Chrome and is paired
+      # with Puppeteer in dashboard-quality.yml. The code under test calls bare `p.chromium.launch()`
+      # with no `channel=`, so it launches Playwright's OWN bundled Chromium. setup-chrome would
+      # install a browser this code never launches.
+      #
+      # No actions/cache step: deliberately skipped as optional polish. The install measured ~2
+      # minutes and this job blocks nothing.
+      - name: Install Chromium for Playwright
+        run: python -m playwright install --with-deps chromium
+
+      # SELECTION IS BY EXPLICIT FILE PATH, ON PURPOSE — a pytest marker cannot isolate anything
+      # here. `Linux Full Suite` runs `pytest -q -m ""`, an empty marker expression that selects
+      # EVERY marker and overrides pyproject.toml's `addopts = -m 'not slow'`. Physical job
+      # placement is the only mechanism that actually works, so do not "simplify" this into a
+      # marker-based selection.
+      #
+      # `-m ""` is needed here for the same `addopts` reason, so the slow-marked contract legs run.
+      #
+      # test_browser_e2e_skip_contract.py is included even though it is not itself a browser test:
+      # its second leg asserts that a server which will not start is reported LOUDLY when Chromium
+      # IS present, and this job is the only place in CI where Chromium exists. Its first leg runs
+      # in Linux Full Suite, where it guards the skip-never-error contract (D-10) directly.
+      - name: Run the browser E2E leg
+        run: pytest tests/test_pdf_decomposition_render.py tests/test_browser_e2e.py tests/test_browser_e2e_skip_contract.py -q -m ""

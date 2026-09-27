@@ -255,8 +255,20 @@ only. Autonomous execution resumes at Phase 208 once 207's verdict is recorded.
   Work landed on `phase-206-resume-wave2-5`; `phase-206-dashboard-ui-coverage` was already merged
   before the resume, so the prior record's "24 commits ahead of main" was stale when written.
 
-- [ ] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
+- [x] **Phase 207: Browser-Only Coverage Verdict** - The 3 structurally jsdom-impossible cases get
   either real browser coverage or a reasoned permanent disposition.
+
+- [x] **Phase 207.1: Orphaned Browser-Only Coverage Drain** (INSERTED 2026-09-27) - the 2 cases
+  orphaned between COV-04's jsdom set and COV-05's named three get real Tier-2 browser coverage.
+  Inserted after a measured tractability assessment, not a hypothesis — see COV-10.
+  **COMPLETE 2026-09-27 at 5 of 5 success criteria MET AS WRITTEN.** Verified `passed` (5/5
+  must-haves, 0 blockers) — see `207.1-VERIFICATION.md`, which prepends the re-verification and
+  preserves the prior `human_needed` record beneath it. `UAT-7-23` closes at **6 of 6**: five
+  criteria mechanized, and criterion 6 ("transition is smooth") discharged by operator HUMAN-UAT
+  walkthrough the same day, recorded ledger-first. Checkbox flipped BY HAND — `phase.complete` is
+  banned on this machine per CLAUDE.md §TOOL-05's semantic-defect clause. **Stated residual:** the
+  criterion-6 verdict is a one-time human observation, not a guard; a smoothness regression would
+  redden no gate, and the automated node still asserts only the five measurable criteria.
 
 - [x] **Phase 208: Security, Report Coverage & Doc Debt** - The security- and report-relevant non-UI
   gaps are covered and the two carried doc corrections land. **Completed 2026-09-22 at 4 of 5
@@ -454,8 +466,50 @@ coverage exists, or a reasoned permanent disposition says why it never can.
      no substitute can exist. A fabricated PASS is never acceptable.
   3. Phase 204's worklist and gate treat a recorded permanent disposition distinctly from an open
      GAP, so these cases stop reappearing as drainable work every regeneration.
-**Plans**: TBD
+     **NOT APPLICABLE BY VERDICT — recorded 2026-09-27 (Phase 207, D-06 option 2):** criterion 3 is
+     conditional on criterion 2's *other* branch. D-01's verdict chose Playwright for all four
+     cases, so no case in this phase lands as a permanent GAP and the criterion's machinery has no
+     caller. It is recorded rather than reported met, because machinery with no caller reports green
+     trivially — as dishonest as a fabricated PASS, from the other direction. No fifth disposition
+     token was built speculatively; `OBSOLETE` was checked and rejected on semantics, since it means
+     *the feature went away* while a browser-only case is live and valid. Full record:
+     `.planning/phases/207-browser-only-coverage-verdict/207-NOT-MET-AS-WRITTEN.md`. The original
+     criterion text above is preserved unedited, per Phase 206's SC#1-at-25-of-28 precedent.
+**Plans**: 6 of 6 complete
+  1. `207-01` — Tier-1 `UAT-88-03` PDF-render assertion + the written toolchain verdict. Complete.
+  2. `207-02` — Tier-2 harness: subprocess uvicorn on a real port, DB seeder, D-04 mount guard,
+     `UAT-7-01`. Complete.
+  3. `207-03` — `UAT-7-32` seven-route console sweep and `UAT-7-17` download interception, plus a
+     19-finding self-review and a corrective wave. Complete.
+  4. `207-04` — the non-gating `Browser E2E` job in `python-ci.yml`, and criterion 3's record.
+     Complete.
+  5. `207-05` — four `CI-EXEMPT` dispositions applied ledger-first, worklist regenerated, and the
+     two-sided gate. Complete.
+  6. `207-06` — docs, Obsidian sync, validation rows, this block, and the operator's CI checkpoint.
+     Complete.
 **UI hint**: yes
+
+**Criterion 1 — the toolchain verdict, recorded here in full rather than pointed at.** Phase
+artifacts are git-untracked, so `207-TOOLCHAIN-VERDICT.md` is absent from a fresh clone and removed
+when the phase directory is archived; a pointer from a tracked file to an untracked one inherits
+that problem rather than solving it. Condensed, operator call 2026-09-26:
+
+- **Decision:** Playwright E2E for all four cases, run in an **isolated, non-required** CI job.
+- **Rejected:** the browser leg inside `Linux Full Suite` — its flake surface would redden the check
+  every PR must pass; a permanent GAP for all three series-7 cases — real coverage was affordable;
+  a split GAP/Playwright verdict — no case justified the asymmetry.
+- **Deciding evidence:** TRIAGE-149 Cluster 2 quarantines **14** tests on a single root cause, a
+  shared `PlaywrightContextManager` singleton torn down by an earlier full-suite test. A separate
+  pytest invocation structurally avoids it, so isolation is the cure rather than a containment
+  workaround. No new dependency: `playwright` and `pypdf` already ship under the `dashboard` extras.
+- **Standing consequence, for any future reader:** these four cases are proven by a **non-required**
+  job. Their dispositions are `CI-EXEMPT` and they SKIP in `Linux Full Suite`. **A green required
+  check is not evidence about them** — read the `Browser E2E` job. `UAT-88-03` additionally skips in
+  *any* full-suite run, Chromium present or not, because it is itself affected by that same
+  contamination.
+
+Full record while the phase directory survives:
+`.planning/phases/207-browser-only-coverage-verdict/207-TOOLCHAIN-VERDICT.md`.
 
 **Inbound costed decision from Phase 208 (`UAT-88-03`, D-03, recorded 2026-09-22):** the Playwright
 PDF-render assertion for the score-decomposition table is materially cheaper than an open-ended
@@ -467,6 +521,74 @@ The sole open question this phase inherits is a **yes/no on installing a Chromiu
 install step exists in that workflow today; the only `setup-chrome` steps live in
 `dashboard-quality.yml`, which runs no pytest. Full record:
 `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`.
+
+### Phase 207.1: Orphaned Browser-Only Coverage Drain (INSERTED 2026-09-27)
+**Goal**: `UAT-7-23` and `UAT-7-29` stop being orphaned between two requirements that never owned
+them, and become real Tier-2 browser tests against the harness Phase 207 already built.
+**Depends on**: Phase 207 (its `tests/browser_e2e_harness.py` and the non-gating `Browser E2E` job
+are this phase's entire toolchain — nothing new is provisioned)
+**Requirements**: COV-10
+**Success Criteria** (what must be TRUE):
+  1. `UAT-7-23` has a Tier-2 test asserting the collapse as **measured layout**, not class strings:
+     `aside` width 240px above the 1024px breakpoint and 48px below it, wordmark/monogram visibility
+     inverting with it, a collapsed-state tooltip rendering real text, and a nav click routing while
+     collapsed. The case's disposition cites that node. Criterion 6 of the case itself ("transition
+     is smooth") is recorded as human-UAT or explicitly dropped — **this case closes at 5 of 6 and
+     the partial is stated, never absorbed into a PASS.**
+     **MET AS WRITTEN, then exceeded (2026-09-27).** Criterion 6 was recorded human-UAT, which is
+     what this criterion asked for; the case closed at a stated 5 of 6. The human-UAT item was then
+     run and **PASSED** — the operator resized a real non-headless browser slowly through the 1024px
+     breakpoint in both directions and reported the sidebar and adjacent main content smooth, with no
+     jump, flicker, flash of unstyled content or glitching reflow — taking the case to **6 of 6**.
+     Recorded in `207.1-HUMAN-UAT.md` and in the case's ledger evidence. The criterion text is left
+     as written: it was satisfied by the *routing*, and the routing is what made the sixth criterion
+     closable at all. The verdict creates no CI coverage — the automated node still asserts five
+     criteria, so a smoothness regression would redden no gate. That residual is stated, not absorbed.
+  2. `UAT-7-29` has a Tier-2 test that drags a real Cytoscape node and asserts all five of the
+     case's criteria: the node moves, its **visible** edge's endpoint follows mid-drag, the position
+     holds after release, the other nodes are unchanged, and no layout reset occurs. The test selects
+     its edge via `connectedEdges().filter(e => e.visible())` — a `rank-` edge returns no endpoint
+     geometry and would make the edge-follow assertion silently unobservable.
+  3. Both tests are **proved capable of failing**, not merely observed passing — a control that
+     omits the triggering interaction (no `mouse.down()`; no viewport change) leaves the asserted
+     values unmoved. A test that cannot fail is the vacuous-pass trap D-04 exists to catch, and this
+     phase's two subjects are precisely where it would hide.
+  4. `container._cyreg.cy` is asserted to have resolved before use, failing with a named diagnosis
+     if a Cytoscape version bump removes that undocumented internal.
+  5. Both cases' `**Result:**` dispositions, `docs/uat-coverage-gaps.md`, and the UAT ledger move
+     together — the three coupled artifacts from Phase 205 — and the freshness gate stays green.
+**Plans**: 3 plans in 3 waves (serialized — plans 01 and 02 both write
+`tests/test_browser_e2e.py`, so they cannot share a wave)
+- [x] 207.1-01-PLAN.md — UAT-7-23: measured sidebar collapse across the 1024px breakpoint + its
+  no-viewport-change control (wave 1) — complete 2026-09-27, both nodes passing
+- [x] 207.1-02-PLAN.md — UAT-7-29: Cytoscape node drag with the visible edge sampled mid-drag +
+  its no-mouse.down() control (wave 2) — complete 2026-09-27, all four nodes passing
+- [x] 207.1-03-PLAN.md — two-sided gate, the three coupled disposition artifacts, COV-10, docs and
+  vault close-out (wave 3) — complete 2026-09-27, all 4 disposition integrity gates green
+**UI hint**: yes
+
+**Why this phase exists, and why it is not a Phase 207 defect.** Phase 206 closed COV-04 at 25 of 28
+with SC#1 recorded NOT MET AS WRITTEN and routed these two cases to Phase 207. Phase 207's scope was
+`UAT-7-01`/`7-17`/`7-32` plus the inherited `UAT-88-03`, and it never took them. **Neither phase
+erred; the cases fell between them.** Both were reclassified out of the jsdom-tractable set on
+2026-09-21 on the correct ground that jsdom evaluates no media queries and runs no Cytoscape
+renderer — a reason that stopped being load-bearing the moment Phase 207 shipped a real browser.
+
+**The tractability verdict is measured, not argued** (2026-09-27, live Chromium, real built SPA,
+`assert_spa_mounted` passed first). `UAT-7-23`: 240px/48px/240px across 1440 -> 900 -> 1440, tooltip
+text `"New Scan"`, collapsed nav click -> `/findings`. `UAT-7-29`: node `(75,168)` -> `(183.7,113.6)`,
+visible edge source endpoint `(75,194)` -> `(169.3,139.6)` **mid-drag**, position held after release,
+other three nodes byte-identical, and a no-`mouse.down()` control moved nothing.
+
+**Two corrections to the record this assessment produced, both worth carrying.** (1) Phase 207
+D-04's stated evidence for the vacuous-pass trap — "`git ls-files src/dashboard/dist` returns 0,
+therefore built statics are not committed" — checked a path vite never writes to: `outDir` is
+`../../quirk/dashboard/static` (`src/dashboard/vite.config.ts:194`), and those statics **are**
+committed (14 tracked files; a rebuild reproduced them byte-identically). The guard D-04 motivated
+is still correct practice; its premise was false, and the `Browser E2E` job may not need an
+`npm run build` step at all — check before adding one. (2) Phase 208's record that
+`~/Library/Caches/ms-playwright/` is empty on this machine is superseded: `chromium-1208` is
+installed and launches. That record was true when written; Phase 207 changed it.
 
 ### Phase 208: Security, Report Coverage & Doc Debt
 **Goal**: The security- and report-relevant non-UI gaps are genuinely exercised, and the two doc
@@ -486,6 +608,10 @@ corrections carried from the v5.23 boundary review land.
      `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md` for the full
      record and the Phase 207 block below for the inbound handoff. The original criterion text above
      is preserved unedited, per Phase 206's SC#1-at-25-of-28 precedent.
+     **DISCHARGED 2026-09-27 by Phase 207.** The Playwright PDF leg shipped: `UAT-88-03` asserts the
+     six rows in the extracted PDF text layer by value and is PASS, so this criterion is now met in
+     full. COV-07 is closed on its own stated condition. The NOT-MET record above is retained
+     unedited as the account of what was true on 2026-09-21 — it is superseded, not erased.
   3. The hygiene subscore (plaintext ratio) and identity-trust subscore (mTLS bonus) are each
      asserted **in isolation**, holding other evidence fixed, rather than inferred from movement in
      the overall score (`UAT-8-04` / `UAT-8-05`).
