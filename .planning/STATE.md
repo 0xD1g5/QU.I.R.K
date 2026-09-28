@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T19:55:00.000Z"
-last_activity: 2026-09-28 -- Phase 214 (Release Cut) plan 01 (Wave 0 baseline) COMPLETE: captured the pre-phase full-suite failing-node SET (empty set -- 5287 passed, 0 failed, 43 skipped, 76 xfailed, 5 xpassed, 1168.48s, Docker healthy, 29-case chaos-lab parametrization), confirmed gh authenticated and reachable against 0xD1g5/QU.I.R.K, re-derived the version surface live (5.21.0 confirmed on pyproject/installed-dist/README/UAT-SERIES.md, getting-started.md confirmed to carry no real version string), and live-enumerated the 5 generator-drift freshness gates from source (matches CLAUDE.md's table exactly). FINDING: push parity measured 1 unpushed commit (532fc59a, this phase's own plan-creation commit), not the 0 CONTEXT.md's F5 claimed -- explained as a commit landing after F5 was measured, not a regression; flagged per project disagreement-reporting discipline. Recorded to .planning/phases/214-release-cut/214-BASELINE.md (gitignored, no commit). Both 214-01-PLAN.md tasks verified green; 214-VALIDATION.md's 214-01-T1/T2 rows and Wave 0 checklist flipped. `phase.complete` and `requirements mark-complete` were NOT invoked. No mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb was run this plan -- STATE.md/ROADMAP.md were hand-edited, full pre/post diff taken. REMAINING: Phase 214 plans 02-09 (CHANGELOG authoring, REL-04 re-confirmation, version bump, UAT-SERIES sync, push, dry-run, NOT-MET-AS-WRITTEN + hand-edits, operator handover checkpoint).
+last_updated: "2026-09-28T20:45:00.000Z"
+last_activity: 2026-09-28 -- Session resumed via /gsd-resume-work after an accidental termination during Phase 214 plan 06. Ground truth re-enumerated from disk and git, and this frontmatter was stale by four plans: plans 214-01..05 are complete and committed (3f08cd11, de9f2e2a, 4522285a, ee4598af+3626a56a, 07157599), plan 06 is partially executed. Plan 06's Task 1 (post-edit full-suite SET vs baseline) is DONE and recorded in 214-PUSH-EVIDENCE.md -- empty failing-node SET, count-identical to baseline; Tasks 2-3 carry unfilled <CAPTURED BELOW> placeholders even though the facts they prove are already true live (push parity 0/0 both directions, no v5.25 tag local or on origin, v5.21 positive control returns refs). No 214-06 commit exists, so execute-phase's safe_resume_gate will NOT fire and a fresh executor will rewrite 214-PUSH-EVIDENCE.md -- a byte-identical copy is archived in the session scratchpad. Stale .planning/HANDOFF.json (Phase 211, 06:56Z) DELETED; its two still-live blockers (Phase 210 criterion 5, 17-vs-18 headline score; multihost lab profile down and needing a forced mh-prober rebuild) carried into ## Current Position. Tree clean, main == origin/main. No mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb was run -- STATE.md hand-edited from a pre-image with the FULL diff inspected. REMAINING: Phase 214 plans 06 (finish evidence + record two Task-2 deviations), 07 (release.yml dry-run), 08 (NOT-MET-AS-WRITTEN + hand-edits), 09 (blocking operator handover -- no agent tags).
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 19
-  completed_plans: 11
-  percent: 58
+  completed_plans: 15
+  percent: 79
 ---
 
 # Project State
@@ -1359,28 +1359,95 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
+Phase: 214 (Release Cut) — plans 01-05 of 9 executed and committed; plan 06 INTERRUPTED
+mid-execution when the operator's session terminated accidentally (2026-09-28 ~16:29 EDT). That
+is an interruption, not a failure. Ground truth re-enumerated from disk and git on 2026-09-28
+during `/gsd-resume-work`, NOT inherited from this block's prior text — which was stale by five
+plans, having last been written at 15:51 while `214-02-SUMMARY.md` landed at 15:56: 9 PLAN.md
+files, 5 SUMMARY.md files (214-01 through 214-05), one-to-one correspondence confirmed for those
+five. `gsd-sdk query init.execute-phase --phase 214` independently agrees
+(`incomplete_plans: [214-06, 214-07, 214-08, 214-09]`, `incomplete_count: 4`) — two instruments,
+same answer.
+Plan: 5 of 9 complete, plan 06 partially executed. No checkpoint reached yet — plans 01-08 are
+all `autonomous: true`; the single blocking operator checkpoint lives in plan 09.
+Status: the release surfaces are edited, committed AND pushed; the evidence that proves it is
+half-written. Committed this phase: `3f08cd11` (Wave 0 baseline), `de9f2e2a` (CHANGELOG
+`[5.25.0]`), `4522285a` (REL-04 stale-claim correction + 999.116 backlog item), `ee4598af` +
+`3626a56a` (version bump to 5.25.0 in pyproject/README), `07157599` (UAT-SERIES.md + ledger).
 
-Phase: 214 (Release Cut) — plan 01 of 9 executed (Wave 0 baseline). Ground truth enumerated
-from disk: 1 PLAN.md file present for this phase so far (214-01-PLAN.md), 1 SUMMARY.md
-(214-01-SUMMARY.md), one-to-one correspondence confirmed. Plans 214-02 through 214-09 not yet
-executed.
-Plan: 1 of 9 executed. No checkpoint reached yet — plan 01 is fully autonomous (no
-`checkpoint:*` tasks).
-Status: pre-phase baseline captured on a confirmed-clean tree before any release-cut edit. Full
-suite: empty failing-node SET (5287 passed, 0 failed). Version surface re-derived live and
-matches CONTEXT.md F4/F5/F7 exactly (5.21.0 across pyproject/installed-dist/README/UAT-SERIES.md;
-`getting-started.md` confirmed to carry no version string). `gh` confirmed authenticated and
-reachable. The 5 generator-drift freshness gates enumerated live from source, matching CLAUDE.md's
-table with zero drift. One FINDING recorded: push parity measured 1 unpushed commit
-(`532fc59a`, this phase's own plan-creation commit) against CONTEXT.md F5's claimed 0 — explained,
-not silently reconciled; later plans (214-06/08/09) must re-measure live, not inherit this number.
-`.planning/phases/214-release-cut/214-BASELINE.md` is the artifact every later plan's full-suite
-and version-surface comparisons diff against. `phase.complete` and `requirements mark-complete`
-were NOT invoked.
-Last activity: 2026-09-28 — Phase 214 plan 01 COMPLETE: captured full-suite failing-node SET
-(empty), version-surface baseline, gh-reachability confirmation, and generator-drift-gate
-enumeration into 214-BASELINE.md; resolved 214-VALIDATION.md's 214-01-T1/T2 rows and both Wave 0
-checklist items to done; wrote 214-01-SUMMARY.md.
+**Plan 06's state is the one thing a resuming session must not get wrong.** Its Task 1 is DONE
+and written up in `214-PUSH-EVIDENCE.md`: post-edit full-suite failing-node SET is the empty set,
+count-identical to the baseline (`5287 passed, 43 skipped, 76 xfailed, 5 xpassed`), with
+`git diff --stat -- src/dashboard/` empty as the positive control. Tasks 2 and 3 still carry
+literal `<CAPTURED BELOW>` placeholders. But the FACTS those tasks were to prove are already true
+in the world, re-measured live at resume time:
+`git log origin/main..main` empty, `git log main..origin/main` empty (push parity, both
+directions), `git ls-remote --tags origin 'refs/tags/v5.25*'` empty, and the positive control
+`git tag --list 'v5.2*'` returns `v5.2.0`/`v5.21.0` so the query mechanism demonstrably works.
+The work happened; the record of it did not. Those are two different measurements and this block
+deliberately reports them separately.
+
+**Two deviations plan 06 must record rather than paper over.** (1) Its Task 2 `<done>` requires
+"the commit contains `CHANGELOG.md` and `pyproject.toml`" — no such single commit exists. The
+plan assumed a release-surfaces staging commit #8 that was never needed, because those files
+landed in `de9f2e2a` and `ee4598af` instead. The criterion is satisfiable against the commit
+RANGE, not against `HEAD` (which is `07157599`, the UAT-SERIES commit). (2) The phase's own
+upstream-state notice undercounted the unpushed set by one (6 vs the actual 7), already flagged
+inside `214-PUSH-EVIDENCE.md`.
+
+**`safe_resume_gate` will NOT catch this on re-entry, and that is understood, not overlooked.**
+`execute-phase.md:158` triggers on *production commits present AND SUMMARY.md missing*;
+`git log --grep="214-06"` is empty because plan 06 died before its commit step, so from git's
+view the plan never started. A fresh executor will therefore be dispatched for 214-06 and will
+rewrite `214-PUSH-EVIDENCE.md` from template. `.planning/` is gitignored (`.gitignore:75`), so
+that file has no git backup — a byte-identical copy was taken to the session scratchpad at
+`214-prep/214-PUSH-EVIDENCE.partial.md` (SHA-256 `1f06b9b1...`) before resuming. Re-running Task
+1 costs ~20 minutes of wall clock and reproduces the same result on an unchanged tree; nothing
+irreversible is at stake.
+
+**Carried forward from the now-deleted `.planning/HANDOFF.json`** (timestamped 2026-09-28T06:56Z,
+stale — it described Phase 211 as unplanned and Phases 212/213 as `not_started`, all three since
+closed; archived to scratchpad as `214-prep/HANDOFF.stale-211.json`). Its two blockers are NOT
+stale and are recorded here so they survive the file:
+- **Phase 210 Success Criterion 5 — the handoff called this a live tag-blocker. It is NOT; it
+  was RESOLVED the same day, and the handoff simply predated the fix.** The handoff cited
+  `.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`.
+  That path does not exist: the file is in `.planning/todos/**completed**/`, marked
+  `Status: RESOLVED 2026-09-28 (Phase 211, plans 211-02/211-03, live-confirmed 211-05)`. The
+  17-vs-18 gap was never a denominator problem — that hypothesis, and both of `211-CONTEXT.md`
+  D-07's successors, were each refuted by direct measurement. Real causes: (1) Hygiene —
+  `evidence.py::_finding_targets` matched finding titles by exact CLI vocabulary, so the
+  dashboard's deliberately-separate vocabulary (`schemas.py:126-129`, "DO NOT UNIFY") never
+  matched and `plaintext_http_count` read a structural 0; fixed in `127913ca` by routing titles
+  through `finding_title_bridge.py::canonical_cli_title()`. (2) Modern TLS — `legacy_tls_count`
+  was `sev.get("LOW", 0)`, and the dashboard pipeline emits no LOW findings at all; fixed in
+  `c1245a55` via `quirk.util.weak_crypto.has_legacy_tls_versions_signal()`. Live confirmation on
+  `scan_run_id 2026-09-28T13:16:55.319715+00:00`: **18/100 on both pipelines, EQUAL**, all six
+  subscores matching, cross-checked by an independent DB re-derivation (13/13 evidence counters).
+  Evidence: `211-LIVE-MEASUREMENT.md`; decision record
+  `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`.
+  **What survives, and it is narrower:** `"HTTP on TLS-designated port"` has no dashboard-side
+  emission site at all, dispositioned `unbridgeable-latent-divergence` with an explicit
+  **tag-blocking verdict of NO**, tracked at
+  `.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`. So
+  nothing here blocks the v5.25.0 tag. Phase 210's ROADMAP box is nonetheless still `[ ]` and
+  `completed_phases: 3` is left UNCHANGED — whether criterion 5 now counts as met is the
+  orchestrator's call at phase/milestone close, not a resume step's, and plan 214-08 is where
+  that judgement is recorded.
+- **The `multihost` chaos-lab profile is DOWN** (0 chaoslab containers; torn down since). Any
+  live re-comparison must re-raise it AND force-rebuild `mh-prober`
+  (`docker compose -p chaoslab --profile multihost build mh-prober` first) — `lab.sh up` does not
+  pass `--build`, and a stale image silently reproduces a superseded 91/100. **Re-verified live at
+  resume time: `docker ps --filter name=chaoslab` returns 0 containers, so this one is still
+  accurate.** It does not block plans 06-09, none of which need a live scan.
+
+`phase.complete` and `requirements mark-complete` have NOT been invoked at any point in this
+phase, and their effects have not been hand-reproduced.
+Last activity: 2026-09-28 — session resumed via `/gsd-resume-work` after an accidental
+termination during plan 06. No plan work was performed: three prep steps only — partial evidence
+file and stale HANDOFF.json archived to scratchpad, this block and the `progress:` frontmatter
+corrected against disk/git, `HANDOFF.json` deleted with its live blockers carried above. STATE.md
+was hand-edited from a pre-image with the full diff inspected; no `state.*` verb was run.
 
 ### Prior: Phase 213 close (2026-09-28)
 
