@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from quirk.dashboard.api.routes.scan import _derive_findings, _derive_identity_findings
+from quirk.engine.findings_evaluator import evaluate_identity_endpoints
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +213,122 @@ class TestIdentityFindingsAccuracy(unittest.TestCase):
             3,
             f"Expected exactly 3 '## Phase 25' headings, found {len(phase25_headings)}: {phase25_headings}",
         )
+
+
+# ===========================================================================
+# Phase 210 (XSURF-01/XSURF-02, D-01/D-05/D-08): evaluate_identity_endpoints()
+# ===========================================================================
+
+class TestEvaluateIdentityEndpointsDedupe(unittest.TestCase):
+    """Behavioral contract for the shared evaluator's `(host, port, serial)`
+    dedupe (XSURF-01) plus D-08's three-branch extraction (XSURF-02).
+    """
+
+    def _weak_saml_ep(self, use: str, serial: str, host: str = "10.80.0.41", port: int = 8080) -> _Ep:
+        return _Ep(
+            host=host,
+            port=port,
+            protocol="SAML",
+            cert_pubkey_alg="RSA",
+            cert_pubkey_size=1024,
+            service_detail=f"urn:x|use={use}|serial={serial}",
+        )
+
+    def test_dual_use_same_serial_collapses_to_one_critical(self) -> None:
+        """XSURF-01: one certificate published under both `use=signing` and
+        `use=encryption` with the SAME serial yields exactly ONE finding."""
+        endpoints = [
+            self._weak_saml_ep("signing", "0a1b"),
+            self._weak_saml_ep("encryption", "0a1b"),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 1, f"Expected 1 finding, got {results}")
+        self.assertEqual(results[0]["severity"], "CRITICAL")
+
+    def test_distinct_serials_yield_two_findings(self) -> None:
+        """The dedupe-falsifying case (T-210-02-01): a dedupe keyed on
+        (host, port) alone, or on `use`, or an unconditional collapse, all
+        fail this assertion. Two DISTINCT certificates must never collapse.
+
+        Node id: this is the test that would FAIL if the dedupe were
+        widened to `(host, port)` — see SUMMARY for the exact node id quoted
+        back from this file.
+        """
+        endpoints = [
+            self._weak_saml_ep("signing", "0a1b"),
+            self._weak_saml_ep("encryption", "0a1c"),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 2, f"Expected 2 findings for distinct serials, got {results}")
+
+    def test_same_serial_different_host_yields_two_findings(self) -> None:
+        endpoints = [
+            self._weak_saml_ep("signing", "0a1b", host="10.80.0.41"),
+            self._weak_saml_ep("encryption", "0a1b", host="10.80.0.42"),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 2, f"Expected 2 findings for different hosts, got {results}")
+
+    def test_same_serial_different_port_yields_two_findings(self) -> None:
+        endpoints = [
+            self._weak_saml_ep("signing", "0a1b", port=8080),
+            self._weak_saml_ep("encryption", "0a1b", port=8443),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 2, f"Expected 2 findings for different ports, got {results}")
+
+    def test_missing_serial_token_never_deduped(self) -> None:
+        """A row whose `service_detail` carries no `serial=` token at all is
+        NOT deduped away against another absent-serial row — absent serial
+        must never be treated as "same as another absent serial"."""
+        endpoints = [
+            _Ep(host="10.80.0.41", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=signing"),
+            _Ep(host="10.80.0.41", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=encryption"),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 2, f"Expected 2 findings when serial is absent, got {results}")
+
+    def test_oidc_rs_family_branch_extracted(self) -> None:
+        endpoints = [
+            _Ep(host="auth.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="RS256", cert_pubkey_size=None,
+                service_detail="oidc-discovery|https://auth.example.com/.well-known/openid-configuration"),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 1)
+        self.assertIn("OIDC RS-family algorithm: RS256", results[0]["title"])
+        self.assertEqual(results[0]["protocol"], "SAML")
+        self.assertEqual(results[0]["source"], "saml")
+        self.assertEqual(results[0]["algorithm"], "RS256")
+
+    def test_sha1_branch_extracted_mixed_case(self) -> None:
+        endpoints = [
+            _Ep(host="idp.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="sha1", cert_pubkey_size=None,
+                service_detail="https://idp.example.com|algo_uri=...sha1"),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["title"], "SHA-1 algorithm URI detected in SAML metadata")
+        self.assertEqual(results[0]["source"], "saml")
+
+    def test_every_finding_has_protocol_source_algorithm(self) -> None:
+        endpoints = [
+            self._weak_saml_ep("signing", "0a1b"),
+            _Ep(host="auth.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="RS256", cert_pubkey_size=None,
+                service_detail="oidc-discovery|..."),
+        ]
+        results = evaluate_identity_endpoints(endpoints)
+        self.assertEqual(len(results), 2)
+        for f in results:
+            self.assertTrue(f.get("protocol"))
+            self.assertTrue(f.get("source"))
+            self.assertTrue(f.get("algorithm"))
 
 
 if __name__ == "__main__":

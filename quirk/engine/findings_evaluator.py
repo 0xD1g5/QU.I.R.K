@@ -16,6 +16,7 @@ from quirk.reports.content_model import (
     REMEDIATION_CATALOG,
     _classify_finding,
 )
+from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 
 
@@ -1095,5 +1096,176 @@ def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
                 quantum_vulnerable=True,
                 check_id=dominant_check_id,
             ))
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Phase 210 (XSURF-01/XSURF-02, D-01/D-02/D-05/D-08): SAML identity findings
+# ---------------------------------------------------------------------------
+
+def _saml_key_use(service_detail: str) -> Optional[str]:
+    """The SAML KeyDescriptor `use` recorded on this endpoint row, if any.
+
+    Mirrors quirk/dashboard/api/routes/scan.py::_saml_key_use verbatim (the
+    route now imports this copy instead of defining its own — Phase 210 D-06).
+    `service_detail` is pipe-delimited tokens, e.g.
+    `http://host:8080/.../metadata.php|use=signing|serial=109f9643...`.
+
+    Returns the lowercased use ("signing" / "encryption" / any future value),
+    or None when no `use=` token is present.
+    """
+    for token in (service_detail or "").split("|"):
+        token = token.strip()
+        if token.startswith("use="):
+            return token[4:].strip().lower() or None
+    return None
+
+
+def _saml_cert_serial(service_detail: str) -> Optional[str]:
+    """The SAML certificate serial recorded on this endpoint row, if any.
+
+    Same parsing shape as `_saml_key_use`, matching the `serial=` prefix
+    instead of `use=`. Sourced from `quirk/scanner/saml_scanner.py`'s
+    `service_detail=f"{entity_id}|use=...|serial={cert_info['serial']}"`
+    construction (`serial` is `format(cert.serial_number, 'x')`, lowercase
+    hex, no `0x` prefix). Returns None when no `serial=` token is present or
+    the token has no value after the prefix.
+    """
+    for token in (service_detail or "").split("|"):
+        token = token.strip()
+        if token.startswith("serial="):
+            return token[7:].strip().lower() or None
+    return None
+
+
+def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Emit SAML identity findings (XSURF-01, XSURF-02) for SAML endpoints.
+
+    Phase 210, decisions D-05/D-08/D-01. This is the fifth `evaluate_*_endpoints()`
+    sibling alongside `evaluate_email_endpoints` / `evaluate_broker_endpoints` /
+    `evaluate_codesign_endpoints` — it is composed in `run_scan.py` beside those
+    three, and it is the single implementation
+    `quirk/dashboard/api/routes/scan.py::_derive_identity_findings` delegates to
+    (D-06: one implementation, not a parity-tested pair).
+
+    Reproduces, verbatim in substance, the three SAML sub-branches that used to
+    live only in the dashboard route (D-08 — all three, not weak-key alone):
+      - OIDC RS-family algorithms (`OIDC_ALG_SEVERITY` lookup).
+      - The SHA-1 algorithm URI branch.
+      - The weak-key branch (RSA < 2048 bits), where D-01's `(host, port, cert
+        serial)` dedupe collapses a same-`use`-pair-of-rows-per-certificate SAML
+        IdP publication pattern into a single finding per certificate. A distinct
+        certificate serial on the same host:port is never suppressed (XSURF-01
+        safety property; see `.planning/decisions/
+        XSURF-01-saml-dual-use-certificate-dedupe.md`).
+    """
+    findings: List[Dict[str, Any]] = []
+    seen: set = set()  # (host, port, serial) — dedupe guard, weak-key branch only
+
+    for e in endpoints:
+        protocol = str(getattr(e, "protocol", "") or "").upper()
+        if protocol != "SAML":
+            continue
+
+        host = getattr(e, "host", "") or ""
+        port = int(getattr(e, "port", 0) or 0)
+        alg = (getattr(e, "cert_pubkey_alg", "") or "").upper()
+        size = getattr(e, "cert_pubkey_size", None)
+        sd = getattr(e, "service_detail", "") or ""
+
+        severity = OIDC_ALG_SEVERITY.get(alg)
+        if severity is not None:
+            findings.append(dict(
+                _build_finding(
+                    severity=severity,
+                    host=host,
+                    port=port,
+                    title=f"OIDC RS-family algorithm: {alg}",
+                    description=(
+                        f"OIDC endpoint uses {alg} which relies on RSA. "
+                        f"RSA is quantum-vulnerable and will be broken by Shor's algorithm."
+                    ),
+                    recommendation=(
+                        "Migrate OIDC token signing to ECDSA (ES256/ES384) or EdDSA "
+                        "per NIST PQC roadmap recommendations."
+                    ),
+                    quantum_vulnerable=True,
+                ),
+                protocol="SAML",
+                source="saml",
+                algorithm=alg,
+            ))
+        elif alg == "SHA1":
+            findings.append(dict(
+                _build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="SHA-1 algorithm URI detected in SAML metadata",
+                    description=(
+                        "SAML metadata references SHA-1 signing algorithm. "
+                        "SHA-1 is collision-vulnerable since 2017 (SHAttered attack)."
+                    ),
+                    recommendation="Update IdP to use SHA-256 or SHA-384 signature algorithms.",
+                    quantum_vulnerable=True,
+                ),
+                protocol="SAML",
+                source="saml",
+                algorithm="SHA1",
+            ))
+        elif alg not in OIDC_ALG_SEVERITY and size is not None and isinstance(size, int) and size < 2048:
+            serial = _saml_cert_serial(sd)
+            if serial is not None:
+                dedupe_key = (host, port, serial)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+
+            algorithm = f"{alg}-{size}" if size else alg
+            _shared = dict(
+                severity="CRITICAL",
+                host=host,
+                port=port,
+                recommendation=(
+                    "Replace the IdP certificate with RSA-2048 minimum "
+                    "or switch to ECDSA P-256."
+                ),
+                quantum_vulnerable=True,
+            )
+            # D-07: keep each title= as a literal f-string at its own
+            # _build_finding call — a title built into a variable first is
+            # invisible to tests/fixtures/chaos_lab_findings.py's AST walk.
+            if _saml_key_use(sd) == "encryption":
+                findings.append(dict(
+                    _build_finding(
+                        title=f"Weak SAML encryption certificate: {alg}-{size}",
+                        description=(
+                            f"SAML encryption certificate uses {size}-bit {alg} key, "
+                            f"below the 2048-bit minimum for RSA."
+                        ),
+                        **_shared,
+                    ),
+                    protocol="SAML",
+                    source="saml",
+                    algorithm=algorithm,
+                ))
+            else:
+                # Absent `use` means the key is valid for BOTH purposes per
+                # SAML 2.0 metadata; kept as "signing" per the route's
+                # pre-existing wording for that case.
+                findings.append(dict(
+                    _build_finding(
+                        title=f"Weak SAML signing certificate: {alg}-{size}",
+                        description=(
+                            f"SAML signing certificate uses {size}-bit {alg} key, "
+                            f"below the 2048-bit minimum for RSA."
+                        ),
+                        **_shared,
+                    ),
+                    protocol="SAML",
+                    source="saml",
+                    algorithm=algorithm,
+                ))
 
     return findings
