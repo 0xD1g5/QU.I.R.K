@@ -1,10 +1,59 @@
 # Hygiene and Modern TLS subscores still diverge between report and dashboard pipelines
 
 **Found:** 2026-09-28, Phase 210 plan 06 (live multihost re-run, Success Criterion 5 evidence)
+**Status:** RESOLVED 2026-09-28 (Phase 211, plans 211-02/211-03, live-confirmed 211-05)
 
 **Severity:** Medium — residual, much smaller than the bug XSURF-01/02/03 fixed, but Success
 Criterion 5 explicitly demands the two pipelines report the "identical number" and they do not, on
 this live run.
+
+## Resolution (Phase 211, 2026-09-28)
+
+**This todo's own "Suspected mechanism" paragraph below is REFUTED.** It guessed a
+denominator-population difference ("Hygiene and Modern TLS are exactly the two categories most
+likely to be affected by denominator population differences") and explicitly admitted "no code was
+read for this beyond the artifacts above." Phase 211 measured the guess directly and it is wrong:
+the denominator fields (`cert_denom`, `endpoint_denom`, `domain_denom`) were already correct
+(`0b0ed1c7`, landed 2026-09-13, an ancestor of HEAD before this todo was even filed), and a live
+re-derivation in `211-05` found `assessable_endpoint_count` byte-identical (216 = 216) between the
+two pipelines for the same scan — there was no population delta to find.
+
+**The actual mechanism** (D-07's two hypotheses about `scan_error_rate` and endpoint population
+were ALSO both REFUTED by direct measurement — see the decision doc) was a finding-title vocabulary
+split plus a severity-proxy structural zero, neither of which is a denominator question at all:
+
+1. **Hygiene** — `evidence.py::_finding_targets` matched finding titles by exact CLI-vocabulary
+   string only, so the dashboard's independently-maintained finding vocabulary
+   (`schemas.py:126-129`'s deliberate "DO NOT UNIFY" split) never matched, and
+   `plaintext_http_count` measured 0 on the dashboard pipeline. Fixed in `211-02` (`127913ca`) by
+   routing every compared title through the existing `finding_title_bridge.py::canonical_cli_title()`
+   translation, with an identity fallback.
+2. **Modern TLS** — `legacy_tls_count` was `sev.get("LOW", 0)`, a raw count of ALL LOW-severity
+   findings; the dashboard pipeline emits no LOW-severity findings at all, making the counter a
+   structural zero there regardless of actual TLS posture. Fixed in `211-03` (`c1245a55`) by
+   deriving the counter from endpoint TLS fields via a new shared predicate
+   `quirk.util.weak_crypto.has_legacy_tls_versions_signal()`.
+
+Full root-cause narrative, both REFUTED hypotheses, rejected alternatives, the accepted
+mapping-coverage risk and its built mitigation, and the one residual latent divergence are recorded
+in `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`.
+
+**Live confirmation (211-05), `scan_run_id 2026-09-28T13:16:55.319715+00:00`:** headline score
+**18/100 on both pipelines — EQUAL**, all six subscores matching exactly (Hygiene 17/25, Modern TLS
+20/25, plus the four categories that were already matching), cap reason string identical, cross-
+checked by an independent DB re-derivation (13/13 evidence counters matched, including
+`legacy_tls_count` 1=1 and `plaintext_http_count` 10=10 — the two counters these fixes directly
+targeted). Full evidence:
+`.planning/phases/211-denominator-correctness/211-LIVE-MEASUREMENT.md`.
+
+**Disposition: RESOLVED, closed.** The verdict was EQUAL, so this todo is moved to
+`.planning/todos/completed/` per this repo's convention (see e.g.
+`main-ci-is-red-so-every-pr-inherits-a-failing-check.md`). One narrower residual survives and is
+tracked separately, NOT as a reopening of this todo: `"HTTP on TLS-designated port"` has no
+dashboard-side emission site at all (measures 0 on the reference estate, dispositioned
+`unbridgeable-latent-divergence`, tag-blocking verdict NO) — see
+`.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`, owned by
+whichever future phase next touches `evidence.py`'s scoring counters.
 
 ## What was found
 
