@@ -7,6 +7,21 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 from quirk.engine.findings_evaluator import _saml_cert_serial
 from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
 
+# Phase 211-02 (DENOM-04 residual / 17-vs-18 divergence leg 1) — SECOND
+# consumer of the Phase 202 title-vocabulary split (the first being
+# RemediationItemFingerprint/score-lift via storyline.py). This is a safe
+# top-level import ONLY because both quirk/dashboard/__init__.py and
+# quirk/dashboard/api/__init__.py are empty (0 lines) and
+# finding_title_bridge.py imports only `typing` — no FastAPI, no web stack.
+# If either __init__.py becomes non-empty in the future, re-verify this
+# import is still free before trusting it (see the subprocess check in
+# tests/test_evidence_finding_vocabulary_parity.py). Unifying the two
+# vocabularies instead of bridging is explicitly forbidden by
+# quirk/dashboard/api/schemas.py:126-129 ("DO NOT UNIFY"); the coverage gate
+# in tests/test_finding_title_bridge.py (plan 211-04 lineage) is what keeps
+# this mapping honest, not the mapping table itself.
+from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
+
 EVIDENCE_SCHEMA_VERSION = "1.2.0"
 
 # Phase 184.1 SCORE-01 D-06/D-07 — protocols that are not scanned assets and must be
@@ -76,9 +91,18 @@ def _resolve_reference_utc(endpoints: Iterable[Any], reference_utc: Optional[dat
 
 
 def _finding_targets(findings: Iterable[Mapping[str, Any]], wanted_title: str) -> Set[Tuple[str, int]]:
+    # Phase 211-02: translate each finding's title through the dashboard ->
+    # CLI title bridge before comparing. `wanted_title` at every call site
+    # stays the CLI-canonical string, so this is a genuine no-op for the CLI
+    # pipeline (canonical_cli_title() returns None for CLI titles, or the
+    # same string for the three identity-mapped rows) while letting
+    # dashboard-vocabulary findings ("Unencrypted HTTP service", etc.) match
+    # the same CLI-canonical `wanted_title` a caller passes in.
     out: Set[Tuple[str, int]] = set()
     for f in findings:
-        if (f.get("title") or "") != wanted_title:
+        raw_title = f.get("title") or ""
+        title = canonical_cli_title(raw_title) or raw_title
+        if title != wanted_title:
             continue
         host = str(f.get("host") or "")
         port = int(f.get("port") or 0)
