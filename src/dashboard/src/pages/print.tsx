@@ -20,36 +20,50 @@ const FRAMEWORK_DISPLAY: Record<string, string> = {
 const FRAMEWORK_ORDER = ["NIST_PQC", "NSM10", "CNSA2", "ISO27001", "ETSI_QS", "PCI_DSS", "CC", "BSI_TR"]
 const QRAMM_DIMS = ["CVI", "SGRM", "DPE", "ITR"] as const
 
-// Static CSS string — pure constant, no user content interpolated
+// Static CSS string — pure constant, no user content interpolated.
+//
+// 213-06 D-14/T-213-11: the body,html rule below uses --print-bg/--print-fg,
+// the two `--print-*` tokens 213-02 minted specifically for this rule (see
+// 213-02-SUMMARY.md's `--print-bg` entry, which names this exact selector as
+// its justification). Both tokens carry the IDENTICAL value in :root and
+// .light by deliberate design (THEME_INVARIANT) — so unlike every other
+// token in this file, `var(--print-bg)`/`var(--print-fg)` resolve correctly
+// on `body`/`html` regardless of which class `<html>` actually carries in
+// the PDF export's fresh, cookie-less, dark-defaulted Playwright context.
+// This sidesteps the general "a descendant .light class cannot scope an
+// ancestor rule" problem entirely for this one rule, because both sides of
+// that cascade already agree on the same value by construction. Every other
+// literal below IS scoped via the .quirk-print.light wrapper applied at each
+// of the three return paths (loading/error/main) below.
 const PRINT_CSS = [
-  "body,html{background:#fff!important;color:#0a0a0a!important;font-family:Inter,-apple-system,sans-serif;font-size:14px}",
+  "body,html{background:var(--print-bg)!important;color:var(--print-fg)!important;font-family:Inter,-apple-system,sans-serif;font-size:14px}",
   ".print-section{break-before:page;padding-top:24px}",
   ".print-section:first-child{break-before:avoid}",
   "h1{font-size:28px;font-weight:600;margin-bottom:8px}",
   "h2{font-size:20px;font-weight:600;margin-bottom:12px;margin-top:24px}",
   "h3{font-size:16px;font-weight:600;margin-bottom:8px}",
   "table{width:100%;border-collapse:collapse;font-size:12px}",
-  "th{text-align:left;padding:6px 8px;border-bottom:2px solid #e4e4e7;font-weight:600;background:#f4f4f5}",
-  "td{padding:5px 8px;border-bottom:1px solid #e4e4e7;vertical-align:top}",
+  "th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--print-border);font-weight:600;background:var(--print-surface)}",
+  "td{padding:5px 8px;border-bottom:1px solid var(--print-border);vertical-align:top}",
   ".badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600}",
-  ".sev-CRITICAL{background:#dc2626;color:#fff}",
-  ".sev-HIGH{background:#f97316;color:#fff}",
-  ".sev-MEDIUM{background:#f59e0b;color:#000}",
-  ".sev-LOW{background:#60a5fa;color:#000}",
-  ".sev-INFO{background:#71717a;color:#fff}",
-  ".qs-Safe{background:#22c55e;color:#fff}",
-  ".qs-At-Risk{background:#f59e0b;color:#000}",
-  ".qs-Vulnerable{background:#dc2626;color:#fff}",
-  ".qs-Unknown{background:#71717a;color:#fff}",
-  ".meta{color:#52525b;font-size:12px;margin-top:4px}",
+  ".sev-CRITICAL{background:var(--print-critical);color:var(--print-fg-inverse)}",
+  ".sev-HIGH{background:var(--print-high);color:var(--print-fg-inverse)}",
+  ".sev-MEDIUM{background:var(--print-medium);color:var(--print-fg-on-light)}",
+  ".sev-LOW{background:var(--print-low);color:var(--print-fg-on-light)}",
+  ".sev-INFO{background:var(--print-neutral);color:var(--print-fg-inverse)}",
+  ".qs-Safe{background:var(--print-safe);color:var(--print-fg-inverse)}",
+  ".qs-At-Risk{background:var(--print-medium);color:var(--print-fg-on-light)}",
+  ".qs-Vulnerable{background:var(--print-critical);color:var(--print-fg-inverse)}",
+  ".qs-Unknown{background:var(--print-neutral);color:var(--print-fg-inverse)}",
+  ".meta{color:var(--print-muted);font-size:12px;margin-top:4px}",
   ".score-row{display:flex;gap:32px;flex-wrap:wrap;margin:16px 0}",
   ".score-item{text-align:center;min-width:80px}",
   ".score-number{font-size:28px;font-weight:600}",
-  ".score-label{font-size:12px;font-weight:600;color:#52525b}",
-  ".tier-scanner{background:#4ba8a8;color:#fff}",
-  ".tier-manual{background:#e4e4e7;color:#52525b}",
+  ".score-label{font-size:12px;font-weight:600;color:var(--print-muted)}",
+  ".tier-scanner{background:var(--ds-accent);color:var(--print-fg-inverse)}",
+  ".tier-manual{background:var(--print-border);color:var(--print-muted)}",
   ".qramm-radar{margin:16px 0}",
-  ".qramm-footnote{font-size:12px;color:#52525b;margin-top:8px;border-top:1px solid #e4e4e7;padding-top:8px}",
+  ".qramm-footnote{font-size:12px;color:var(--print-muted);margin-top:8px;border-top:1px solid var(--print-border);padding-top:8px}",
   ".qramm-detail-section{margin-top:16px}",
 ].join("")
 
@@ -262,28 +276,28 @@ function PrintQRAMM({
       <div style={{ width: 200, height: 200, margin: "16px 0" }}>
         <svg viewBox="0 0 200 200" width={200} height={200} className="qramm-radar">
           {/* Axis lines */}
-          <line x1={100} y1={100} x2={100} y2={20}  stroke="#e4e4e7" strokeWidth={1} />
-          <line x1={100} y1={100} x2={180} y2={100} stroke="#e4e4e7" strokeWidth={1} />
-          <line x1={100} y1={100} x2={100} y2={180} stroke="#e4e4e7" strokeWidth={1} />
-          <line x1={100} y1={100} x2={20}  y2={100} stroke="#e4e4e7" strokeWidth={1} />
+          <line x1={100} y1={100} x2={100} y2={20}  stroke="var(--print-border)" strokeWidth={1} />
+          <line x1={100} y1={100} x2={180} y2={100} stroke="var(--print-border)" strokeWidth={1} />
+          <line x1={100} y1={100} x2={100} y2={180} stroke="var(--print-border)" strokeWidth={1} />
+          <line x1={100} y1={100} x2={20}  y2={100} stroke="var(--print-border)" strokeWidth={1} />
           {/* Score polygon */}
           <polygon
             points={polygon}
-            fill="#4ba8a8"
+            fill="var(--ds-accent)"
             fillOpacity={0.18}
-            stroke="#4ba8a8"
+            stroke="var(--ds-accent)"
             strokeWidth={2}
           />
           {/* Axis labels */}
-          <text x={100} y={14}  textAnchor="middle" fontSize={12} fill="#52525b">CVI</text>
-          <text x={194} y={104} textAnchor="end"    fontSize={12} fill="#52525b">SGRM</text>
-          <text x={100} y={196} textAnchor="middle" fontSize={12} fill="#52525b">DPE</text>
-          <text x={6}   y={104} textAnchor="start"  fontSize={12} fill="#52525b">ITR</text>
+          <text x={100} y={14}  textAnchor="middle" fontSize={12} fill="var(--print-muted)">CVI</text>
+          <text x={194} y={104} textAnchor="end"    fontSize={12} fill="var(--print-muted)">SGRM</text>
+          <text x={100} y={196} textAnchor="middle" fontSize={12} fill="var(--print-muted)">DPE</text>
+          <text x={6}   y={104} textAnchor="start"  fontSize={12} fill="var(--print-muted)">ITR</text>
           {/* Score values adjacent to each polygon vertex */}
-          <text x={cviPt[0] + 4}  y={cviPt[1] - 4}  fontSize={12} fontWeight={600} fill="#0a0a0a">{cviScore.toFixed(1)}</text>
-          <text x={sgrmPt[0] - 4} y={sgrmPt[1] - 4} fontSize={12} fontWeight={600} fill="#0a0a0a" textAnchor="end">{sgrmScore.toFixed(1)}</text>
-          <text x={dpePt[0] + 4}  y={dpePt[1] + 12} fontSize={12} fontWeight={600} fill="#0a0a0a">{dpeScore.toFixed(1)}</text>
-          <text x={itrPt[0] + 4}  y={itrPt[1] - 4}  fontSize={12} fontWeight={600} fill="#0a0a0a">{itrScore.toFixed(1)}</text>
+          <text x={cviPt[0] + 4}  y={cviPt[1] - 4}  fontSize={12} fontWeight={600} fill="var(--print-fg)">{cviScore.toFixed(1)}</text>
+          <text x={sgrmPt[0] - 4} y={sgrmPt[1] - 4} fontSize={12} fontWeight={600} fill="var(--print-fg)" textAnchor="end">{sgrmScore.toFixed(1)}</text>
+          <text x={dpePt[0] + 4}  y={dpePt[1] + 12} fontSize={12} fontWeight={600} fill="var(--print-fg)">{dpeScore.toFixed(1)}</text>
+          <text x={itrPt[0] + 4}  y={itrPt[1] - 4}  fontSize={12} fontWeight={600} fill="var(--print-fg)">{itrScore.toFixed(1)}</text>
         </svg>
       </div>
 
@@ -400,16 +414,23 @@ export function PrintPage() {
     }
   }, [data, loading, qrammLoading, qrammError])
 
+  // T-213-11 (213-06): every return path is rooted in an element carrying
+  // both `light` (pins descendant var(--token) reads to the .light block's
+  // values regardless of the ambient <html> class the PDF export's fresh
+  // Playwright context defaults to) and `quirk-print` (a stable hook class
+  // for PRINT_CSS selectors). The error path's literal "red" is the reason
+  // this wrapper cannot be applied to the main content div alone — see
+  // print-light-scope.test.tsx for the rendered proof.
   if (loading) {
     return (
-      <div style={{ padding: 40, fontFamily: "sans-serif" }}>
+      <div className="light quirk-print" style={{ padding: 40, fontFamily: "sans-serif" }}>
         Loading scan data...
       </div>
     )
   }
   if (error) {
     return (
-      <div style={{ padding: 40, fontFamily: "sans-serif", color: "red" }}>
+      <div className="light quirk-print" style={{ padding: 40, fontFamily: "sans-serif", color: "var(--print-critical)" }}>
         {error}
       </div>
     )
@@ -430,7 +451,7 @@ export function PrintPage() {
     // is a pure module-level constant — no user content is interpolated.
     <>
       <style>{PRINT_CSS}</style>
-      <div style={{ padding: "0 24px", maxWidth: 900, margin: "0 auto" }}>
+      <div className="light quirk-print" style={{ padding: "0 24px", maxWidth: 900, margin: "0 auto" }}>
 
         {/* D-03 (WR-07): visible alert when QRAMM data could not be loaded. */}
         {qrammError && (
