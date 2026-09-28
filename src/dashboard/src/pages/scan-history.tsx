@@ -16,9 +16,9 @@ import { ScanCoverageChip } from "@/components/ScanCoverageChip"
 import { Card, CardContent } from "@/components/ui/card"
 
 const SEVERITY_STYLES: Record<string, string> = {
-  HIGH: "bg-[hsl(24_95%_53%)] text-white",
-  MEDIUM: "bg-[hsl(38_92%_50%)] text-black",
-  LOW: "bg-[hsl(213_94%_68%)] text-black",
+  HIGH: "bg-[hsl(var(--risk-badge-high))] text-white",
+  MEDIUM: "bg-[hsl(var(--status-warning))] text-black",
+  LOW: "bg-[hsl(var(--chart-tls))] text-black",
 }
 
 export function ScanHistoryPage() {
