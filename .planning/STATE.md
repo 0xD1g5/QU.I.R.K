@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
-status: ready_to_execute
-last_updated: "2026-09-27T23:58:00.000Z"
-last_activity: 2026-09-27
+status: executing
+last_updated: "2026-09-27T23:59:55.629Z"
+last_activity: 2026-09-27 -- Phase 210 execution started
 progress:
   total_phases: 5
   completed_phases: 0
@@ -240,7 +240,16 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** **v5.24 (UAT Coverage Drain) is CLOSED and ARCHIVED 2026-09-27** — audit `tech_debt`, 17/18 requirements satisfied + COV-04 PARTIAL at 27 of 28, integration 4/4 seams WIRED with 0 blockers, Nyquist 8/8, staleness green. Archived to `.planning/milestones/v5.24-*`; `REQUIREMENTS.md` was removed on purpose — `/gsd-new-milestone` creates the next one. **Untagged by design** (`release.yml` hardcodes a static release body). No milestone is active and no phase is in flight; next action is `/gsd-new-milestone`. 35 items acknowledged as deferred at close — 33 todos + 1 open debug session + 1 known false positive, all counted from disk because the close gate caps its own todo count at 5. Highest-value carried item: `UAT-206-05` — 18 of 24 COV-04 conversions are QUALIFIED PASSes and the gate meant to police that honesty does not exist.
+**Current focus:** Phase 210 — Cross-Surface Score Parity (8 plans, 6 waves). Making one scan
+yield the same headline score, CRITICAL count and certificate count from the report pipeline and the
+dashboard pipeline — today 15/100 + 5 CRITICAL vs 19/100 + 7 CRITICAL for the same scan.
+
+**Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
+field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
+dropping the pointer to the milestone's highest-value carried item. Restoring it: **`UAT-206-05`** —
+18 of 24 COV-04 conversions are QUALIFIED passes and the gate meant to police that honesty does not
+exist. v5.24 closed at audit `tech_debt` with 35 deferred items (33 todos + 1 open debug session + 1
+known false positive), all counted from disk because the close gate caps its own todo count at 5.
 
 Milestone v5.24 — UAT Coverage Drain — anchor: write the missing tests behind the honest UAT GAPs
 and make the gap worklist derive
@@ -1349,10 +1358,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-27 — Milestone v5.25 started
+Phase: 210 (Cross-Surface Score Parity) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 210
+Last activity: 2026-09-27 -- Phase 210 execution started
 
 ### Phase 206 (2026-09-21) — Dashboard UI Coverage Drain, COMPLETE, 13 of 13 plans
 
