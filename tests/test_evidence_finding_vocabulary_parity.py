@@ -386,7 +386,7 @@ class TestFastapiFreeImport:
                 "'evidence.py now drags FastAPI into every import'; "
                 "print('import cost OK')",
             ],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, timeout=60, close_fds=False,
         )
         assert result.returncode == 0, (
             f"subprocess import check failed:\nstdout: {result.stdout}\n"

@@ -113,6 +113,7 @@ ALLOWED_SKIPS = [
     ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", 'python-docx not installed'),
     ("test_report_render_undetermined_hosts.py", "test_cross_surface_parity_undetermined_count", "optional_extra", "python-docx not installed"),
     ("test_scheduler_cmd.py", "test_signal_sets_stop_flag", "live_infra", "SIGTERM not supported on Windows"),
+    ("test_score_clamp_property.py", "test_agility_ceiling_saturates_on_reference_estate", "live_infra", "Requires the Phase 210 live-scan artifact intelligence-20260928-014244.json preserved on disk under quirk-output/ (per .continue-here.md); a fresh checkout or a pruned quirk-output/ has no such file, so the pinned-oracle clamp-saturation test skips honestly rather than asserting on data that isn't there."),
     # 999.115 P2b — the ONE remaining xfail in the scoring property suite, and the
     # first xfail this ledger has ever carried. It is not an environment gap: it is a
     # standing, measured statement of a KNOWN OPEN DEFECT, kept numeric rather than

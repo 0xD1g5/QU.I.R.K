@@ -167,6 +167,7 @@ def test_cli_rewrite_extractor_sees_the_rewrite_only_title() -> None:
         capture_output=True,
         text=True,
         check=True,
+        close_fds=False,
     )
     grep_lines = [
         line for line in grep_result.stdout.splitlines()
