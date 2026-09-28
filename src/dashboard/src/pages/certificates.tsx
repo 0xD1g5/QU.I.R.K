@@ -20,10 +20,10 @@ import { extractCN } from "@/lib/cert-parse"
 import { toDate, formatDateOnly } from "@/lib/datetime"
 
 const QS_BADGE: Record<string, string> = {
-  Safe: "bg-[hsl(142_71%_45%)] text-white",
-  "At Risk": "bg-[hsl(38_92%_50%)] text-black",
-  Vulnerable: "bg-[hsl(0_72%_51%)] text-white",
-  Unknown: "bg-[hsl(240_5%_46%)] text-white",
+  Safe: "bg-[hsl(var(--qs-node-safe))] text-white",
+  "At Risk": "bg-[hsl(var(--status-warning))] text-black",
+  Vulnerable: "bg-[hsl(var(--status-critical))] text-white",
+  Unknown: "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 export function CertificatesPage() {
@@ -82,9 +82,9 @@ export function CertificatesPage() {
         const expiry = toDate(cert.cert_not_after)
         const daysToExpiry = expiry ? Math.floor((expiry.getTime() - now.getTime()) / 86400000) : null
         const expiryClass = daysToExpiry !== null
-          ? daysToExpiry < 0 ? "text-[hsl(0_72%_51%)]"
-          : daysToExpiry < 30 ? "text-[hsl(0_72%_51%)]"
-          : daysToExpiry < 90 ? "text-[hsl(38_92%_50%)]"
+          ? daysToExpiry < 0 ? "text-[hsl(var(--status-critical))]"
+          : daysToExpiry < 30 ? "text-[hsl(var(--status-critical))]"
+          : daysToExpiry < 90 ? "text-[hsl(var(--status-warning))]"
           : "text-muted-foreground"
           : "text-muted-foreground"
 
