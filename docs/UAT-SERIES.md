@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-28 (Phase 212 close — Score Dilution, Decision Only. Series 212 added:
+**Last Updated:** 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
+(Certificates Page — Expiry Sorting) and `UAT-7-21` (Dashboard Theme — No Hardcoded Colors)
+re-dispositioned FAIL to PASS. `UAT-7-12` cites the five new
+`certificates-expiry-sort.test.tsx` nodes plus operator browser confirmation. `UAT-7-21` is a
+QUALIFIED PASS gated on the WIDENED colour-audit detector's own red-then-green transition (true
+pre-fix total 205 literals across 17 files, not the narrow detector's original 95-across-9),
+plus operator confirmation that all three Cytoscape graphs render correctly under live theme
+toggle in both themes; two Pass Criteria bullets (electric-blue accent value, dark-background
+consistency) remain named as uncovered by any instrument. Prior: 2026-09-28 (Phase 212 close —
+Score Dilution, Decision Only. Series 212 added:
 five cases, all PASS, verifying the DILUTE-01 written decision (`RECOMMEND NONE`) exists, the defect
 is recorded DEFERRED with `test_p2b_...` still `xfail(strict=True)`, an owner phase is named that is
 not Phase 214, the method finding is first-class, and every assumption label survives into the
@@ -3649,22 +3658,13 @@ Not asserted, because the feature does not exist: `certificates.tsx` contains no
 - Near-expiry certs show days remaining
 - Date format is human-readable
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-09-21 Phase 206 — the product does not implement the interaction this case describes: `certificates.tsx` has no sort state, no column-header click handler and no `@tanstack/react-table` import. An absent feature, not a test gap, so this case STAYS in the jsdom-tractable denominator; todo filed)  - [ ] SKIP
-**Date:** 2026-09-21  **Tester:** automated  
-**Notes:** No substitute node is cited, and none should be: there is no behaviour to assert.
+**Result:** - [x] PASS (2026-09-28 Phase 213 plan 213-03/213-10 — certificates.tsx sorts by expiry via ported TanStack Table, accessorFn returning parsed Date, sortingFn: datetime, null-expiry sorts last both directions. Cited: certificates-expiry-sort.test.tsx::"sorts the certificate table ascending by expiry after one click on the Expiry header", plus 4 sibling nodes in the same file. Corroborated by operator browser confirmation in plan 213-09.)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated (Phase 213, plan 213-03) + operator (Phase 213, plan 213-09)
+**Notes:** Verdict recorded by `src/dashboard/src/pages/__tests__/certificates-expiry-sort.test.tsx::"sorts the certificate table ascending by expiry after one click on the Expiry header"`, with `"reverses to descending expiry order on a second click of the Expiry header"`, `"sorts on the parsed Date, not the formatted display string (D-07 disagreement guard)"`, `"sorts the null-expiry certificate to the end in both ascending and descending order"` and `"exposes aria-sort as none, then ascending, then descending across two clicks"` as further coverage in the same file. All five are bare double-quoted `it()` titles, not `describe >` composites, so the citation-guard resolves them. Corroborated (not primarily evidenced) by plan 213-09's operator-confirmed browser walkthrough of `/certificates`: expiry header sorts ascending on first click and descending on second, null-expiry rows sort last in both directions, and ordering was confirmed CHRONOLOGICAL rather than lexicographic-by-formatted-string.
 
-**Honest FAIL on re-confirmed evidence, not a citation.** Re-run against live source on 2026-09-21 rather than carried forward from RESEARCH:
+**What changed.** Plan 213-03 (Phase 213, UIFIX-01) ported the sorting pattern already running on `findings.tsx`/`identity.tsx` into `certificates.tsx`, using TanStack Table with `defaultColumn: { enableSorting: false }` and a per-column `enableSorting: true` override scoped to the Expiry column. The sort key is an `accessorFn` returning a real parsed `Date` (not the formatted display string) with `sortingFn: "datetime"`, so `jan2027.example.com` (`2027-01-04`, chronologically latest but rendered as `"04 Jan 2027"`, alphabetically earliest) sorts correctly — a display-string sort would pass a naive ascending test and still be wrong; the RED-then-GREEN test fixture in `certificates-expiry-sort.test.tsx` deliberately includes that disagreement pair. Certificates with a null expiry sort to the end in both ascending and descending order.
 
-```
-$ grep -n "sort\|Sort\|tanstack" src/dashboard/src/pages/certificates.tsx
-$ echo $?
-1
-
-$ grep -n "tanstack" src/dashboard/src/pages/findings.tsx
-11:} from "@tanstack/react-table"
-```
-
-`certificates.tsx` has zero occurrences of `sort`, `Sort` or `tanstack` across all 116 lines — no sorting state, no `onClick` column-header handler, no table library import. The sibling page `findings.tsx` (UAT-7-07's subject) implements exactly that pattern, which is the direct point of comparison. **This case is deliberately NOT reclassified out of the jsdom-tractable set.** Its blocker is an absent feature, not a jsdom limitation: a click-to-sort interaction is exactly what jsdom tests well, and Phase 207 with a real browser would find the same missing control. Moving it to the browser-only group would be a category error and a silent shrink of SC#3's denominator. Filed as `.planning/todos/pending/certificates-expiry-sort-absent.md`.
+**Prior FAIL was an accepted product-absence finding, now closed.** The 2026-09-21 Phase 206 FAIL recorded that `certificates.tsx` had zero sort state, no column-header click handler and no `@tanstack/react-table` import — an absent feature, confirmed by grep showing `findings.tsx` had the pattern and `certificates.tsx` did not. That absence is what plan 213-03 fixed. The remediation todo `.planning/todos/pending/certificates-expiry-sort-absent.md` is now resolved by this phase's work and should be closed out alongside this disposition.
 
 
 ---
@@ -3871,20 +3871,22 @@ Both are uncovered because the product renders neither. `grep -rni "owner"` retu
 - Electric-blue (`#00D8FF` or design system equivalent) used for accents
 - Dark background palette consistent across all pages
 
-**Result:** - [ ] PASS  - [x] FAIL (2026-09-21 Phase 206 — the product genuinely fails Pass Criterion 2: a full-strength source audit finds 95 hardcoded hex/raw-hsl colour literals across 9 of the audited files. Recorded by the `it.fails` node cited in Notes; remediation todo filed)  - [ ] SKIP
-**Date:** 2026-09-21  **Tester:** automated  
-**Notes:** Verdict recorded by `src/dashboard/src/components/__tests__/hardcoded-color-audit.test.tsx::"finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components"`.
+**Result:** - [x] PASS (2026-09-28 Phase 213 plan 213-08/213-10 — QUALIFIED PASS on the WIDENED colour-audit gate's red-then-green transition, true pre-fix total 205 literals across 17 files, not the narrow gate's original 95-across-9. Cited node title unchanged: hardcoded-color-audit.test.tsx::"finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components". Corroborated by operator confirmation in plan 213-09 that all three Cytoscape graphs render correctly under both themes with live toggle re-resolution. Two Pass Criteria bullets, electric-blue accent and dark-background consistency, remain uncovered by any instrument.)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated (Phase 213, plan 213-08) + operator (Phase 213, plan 213-09)
+**Notes:** Verdict recorded by `src/dashboard/src/components/__tests__/hardcoded-color-audit.test.tsx::"finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components"` — the SAME node, title byte-identical, so this citation still resolves. The node's `.fails` modifier was removed in plan 213-08 only AFTER a captured RED proof (`Error: Expect test to fail`) on the WIDENED detector; it now reports `1 passed` honestly.
 
-**This is an honest FAIL, not a conversion shortfall.** The audit's detector is full strength: no allowlist, no baseline snapshot, no narrowed pattern. Its assertion is `expect(violations).toEqual([])`, and it genuinely fails. As of 2026-09-21 it finds **95 hardcoded colour literals across 9 of the audited files**: `pages/print.tsx` 45, `pages/trends.tsx` 12, `pages/cbom.tsx` 11, `pages/executive.tsx` 9, `pages/exposure-map.tsx` 6, `pages/healthcare.tsx` 4, `pages/sensors.tsx` 3, `pages/roadmap.tsx` 3, `pages/schedules.tsx` 2; `components/sidebar.tsx` is clean at 0. `print.tsx`'s 45 are arguably by design — `/print` is a white-background client deliverable, not a themed dashboard surface — so the honest remediation headline is **50 literals across 8 dashboard page files**, with print.tsx's 45 reported separately. That is a classification of the finding, not a narrowing of the detector: the audit reports all 95. The verdict is robust to how the scope is drawn — under the narrowest possible reading of Criterion 2 (JSX `style={{ … }}` inline styles only) the case still fails, on `executive.tsx:545` and `healthcare.tsx:134/150/204`.
+**The flip rests on the WIDENED gate's red, not the narrow gate's green — per D-14 obligation 5.** The 2026-09-21 FAIL was recorded against a detector that only matched hex colours and whitespace-form raw HSL (`hsl(142 71% 45%)`), finding 95 literals across 9 files. That detector had a blind spot roughly the size of the defect it reported: Tailwind arbitrary values use underscores (`hsl(142_71%_45%)`), which the narrow `RAW_HSL_RE` could not see at all, plus a comma-separated HSL form found only in `roadmap.tsx`. Plan 213-01 widened the detector to catch all four forms and proved the widened gate RED — `Expect test to fail`, captured verbatim in `213-08-SUMMARY.md` — reporting the TRUE pre-fix total of **205 hardcoded colour literals across 17 files** (67 hex, 28 whitespace-HSL, 93 underscore-HSL, 17 comma-HSL), independently re-derived four separate times including once via `git show <commit>:<path>` against the phase's starting commit without a checkout. **Flipping this case on the narrow gate's 95-found-and-fixed alone would have published "Dashboard Theme — No Hardcoded Colors: PASS" while 110 further hardcoded colours remained in the product** — a true gate result creating a false impression, which is the exact failure family this milestone exists to clean up. That is why the PASS is gated on the widened instrument's own red-then-green transition, not on the narrower one this case originally cited.
 
-**Why the cited node is `it.fails`, and what that does and does not mean.** A hard-red node would take `dashboard-quality.yml` and this document's own vitest citation-execution leg down with it, obscuring the finding rather than publishing it. `it.fails` records the verdict instead: the body runs, every assertion is evaluated, nothing is ignored. **Do not score this case by its node's green result** — the node is green *because* the product fails. Both directions of that contract were proved rather than assumed: sensitivity (injecting one literal moved the reported set 95 → 96 and named the exact new site) and contingency (with the scan temporarily returning no source lines the node went red with `Error: Expect test to fail`), plus a module-scope glob-vacuity guard that `it.fails` cannot absorb. When the product is fixed this node goes red with `Expect test to fail` — that is the signal to drop `.fails` and re-disposition this case to PASS, so the FAIL self-invalidates rather than rotting.
+**The original FAIL was itself an under-report, and that is the phase's central finding.** The instrument that recorded "95 across 9" and the disposition that trusted it were both honest about what they measured, but neither measured the whole defect. Plans 213-02 through 213-07 tokenised all 205 literals (theme-token vocabulary; certificates; hardware/data-at-rest; trends/executive/healthcare/sensors/schedules/findings/identity/compare; print.tsx light-pinning; the three Cytoscape graphs via a shared theme resolver with live re-resolution on theme change). Plan 213-08's independent re-derivation of the current tree, using the same widened instrument, found **0** remaining literals.
 
-**Two further Pass Criteria bullets are uncovered by the cited node**, quoted verbatim from this case's Pass Criteria above. They are moot for the disposition — Criterion 2 already fails — but are named so the citation is not read as full coverage:
+**Rendering verified by the operator, not inferred from the source audit.** The colour audit is a source-property test: it would be equally green whether the three Cytoscape graphs (`/roadmap`, `/cbom`, `/exposure-map`) rendered correctly, rendered colourless, or rendered nothing at all, since Cytoscape cannot read CSS custom properties directly. Plan 213-09's HUMAN-UAT checkpoint had the operator load and LIVE-TOGGLE each graph (not merely reload it in each theme) and confirmed: node fills, edge colours, legend swatches and risk-tier semantics correct and legible in both themes, and — the load-bearing check — palettes re-resolving on a toggle without a reload. The operator also confirmed the two-PDF (dark-session vs light-session export) comparison came out equivalent, discharging plan 213-06's disclosed jsdom GAP by observation, and confirmed the certificates expiry sort (UAT-7-12) in a real browser.
+
+**Two Pass Criteria bullets remain uncovered by any instrument in this repository, named honestly rather than silently absorbed:**
 
 - Electric-blue (`#00D8FF` or design system equivalent) used for accents
 - Dark background palette consistent across all pages
 
-Both are computed-style properties a source scan cannot settle. Remediation filed as `.planning/todos/pending/dashboard-hardcoded-colour-literals-bypass-theme-tokens.md`.
+Both are computed-style properties neither the source audit nor a jsdom render can settle, and plan 213-09's manual checklist did not include a per-accent colour-value comparison against `#00D8FF` specifically. This PASS is QUALIFIED on that basis: Pass Criterion 2 (no hardcoded colours) is now proven by a widened, red-then-green instrument across all four literal forms; Pass Criterion 1 (tokens used) follows from the same tokenisation work; the electric-blue and dark-background-consistency bullets are corroborated by the operator's general "legible in both themes" confirmation across all pages but were not independently isolated and should not be read as separately proven. Original remediation todo (`dashboard-hardcoded-colour-literals-bypass-theme-tokens.md`) resolved and moved to `.planning/todos/completed/`.
 
 
 ---
