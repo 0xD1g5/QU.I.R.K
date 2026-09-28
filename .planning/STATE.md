@@ -1359,9 +1359,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 210 (Cross-Surface Score Parity) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Executing Phase 210
-Last activity: 2026-09-27 -- Phase 210 plan 04 complete (XSURF-03 scan_run_id resolution)
+Last activity: 2026-09-27 -- Phase 210 plan 05 complete (XSURF-04 three-number cross-surface
+equality gate + both required falsifications; A==B alone found insensitive to the shared
+evaluate_identity_endpoints/evidence.py dedupe sites, widened with pinned-oracle assertions)
 
 ### Phase 206 (2026-09-21) — Dashboard UI Coverage Drain, COMPLETE, 13 of 13 plans
 

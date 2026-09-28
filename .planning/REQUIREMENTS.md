@@ -45,7 +45,7 @@ hand a client two PDFs with different headline scores. Source:
       window with no `scan_run_id` filter, merging runs 4m26s apart into 34 certificates (17×2) and
       14 CRITICAL. The window is **load-bearing for legacy NULL-`scan_run_id` rows** — narrow it
       without orphaning that data, and read `get_latest_scan`'s docstring before changing it.
-- [ ] **XSURF-04**: A regression that reintroduces cross-surface divergence fails a gate. A test
+- [x] **XSURF-04**: A regression that reintroduces cross-surface divergence fails a gate. A test
       asserts the report pipeline and the dashboard pipeline emit the same headline score, the same
       CRITICAL count and the same certificate count for one `scan_run_id` — the four-surface
       equality `LIFT-05` claims for score-lift, extended to the headline number.
@@ -215,7 +215,7 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 | XSURF-01 | Phase 210 | Pending |
 | XSURF-02 | Phase 210 | Pending |
 | XSURF-03 | Phase 210 | Complete |
-| XSURF-04 | Phase 210 | Pending |
+| XSURF-04 | Phase 210 | Complete |
 | DENOM-01 | Phase 211 | Pending |
 | DENOM-02 | Phase 211 | Pending |
 | DENOM-03 | Phase 211 | Pending |
