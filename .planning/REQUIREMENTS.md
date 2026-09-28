@@ -141,13 +141,21 @@ and is not one — the dilution still computes, and surfaces at full size on any
 does not bind, i.e. exactly the healthier clients. Source:
 `todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md` (P1).
 
-- [ ] **DILUTE-01**: A spike produces a written, measured denominator decision for P2b — and no
+- [x] **DILUTE-01**: A spike produces a written, measured denominator decision for P2b — and no
       implementation. The three candidates (distinct hosts / an absolute exposure term / scan-scope
       normalisation) are **unvalidated**, so this milestone decides and defers rather than guessing.
       The spike reuses the existing ladder harness in `tests/test_score_properties.py`, verifies the
       control reproduces the baseline before trusting any row, and **must not weaken
       `test_p2b_...`'s pre-ceiling assertion** — that assertion exists precisely so the ceiling
       cannot hide the defect from its own test.
+      **Complete (Phase 212, 2026-09-28):** `.planning/decisions/212-score-dilution-denominator-decision.md`
+      is DECIDED — verdict `RECOMMEND NONE`, all three candidates measured on both axes against a
+      re-verified control. **This closes the DECISION only — it does NOT close the underlying
+      defect.** `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` remains
+      `xfail(strict=True)`, `git status --porcelain -- quirk/ tests/` is empty, and the decision
+      names a post-v5.25, OPERATOR-RESERVED owner phase (explicitly not Phase 214) for any future
+      implementation attempt. A later reader must not mistake this checkbox for the dilution being
+      fixed.
 
 ### Shipped Product Defects (series 7)
 
@@ -274,7 +282,7 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 | DENOM-02 | Phase 211 | Complete (prior commit `0b0ed1c7` + live measurement 211-01) |
 | DENOM-03 | Phase 211 | Complete (unit clause prior `0b0ed1c7`; behavioural clause measured INVERTED, live 211-05) |
 | DENOM-04 | Phase 211 | Complete (4 sub-items dispositioned 211-01; fixtures/score-strings N/A-dispositioned, not regenerated — deviation from literal text) |
-| DILUTE-01 | Phase 212 | Pending |
+| DILUTE-01 | Phase 212 | Complete (decision only — RECOMMEND NONE; defect still xfails) |
 | UIFIX-01 | Phase 213 | Pending |
 | UIFIX-02 | Phase 213 | Pending |
 | REL-01 | Phase 214 | Pending |

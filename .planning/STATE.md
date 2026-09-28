@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T21:45:00.000Z"
-last_activity: 2026-09-28 -- Phase 212 (Score Dilution -- Decision Only) EXECUTION STARTED at 0 of 5 plans, 4 waves. Phase 211 CLOSED and VERIFIED (passed, 8/8) -- completed_phases 1. 212 is a MEASUREMENT SPIKE: no production code ships, and test_p2b_... must STILL be xfail(strict=True) at close -- that is success, not failure. Plan-check PASSED WITH CONCERNS (1 MEDIUM, notation only, now closed). Two criteria flagged up front: criterion 1 CANNOT be met as literally written (the ladder pins assessable_endpoint_count=40 for every rung, so a denominator change rescales all rungs together and all three candidates would score identically) -- the plans satisfy it AND add a second axis; and criterion 2 may read MET WITH QUALIFICATION if the verdict is RECOMMEND NONE, which D-05 makes valid. Biggest known trap: the distinct-hosts candidate cannot be measured from data (_multihost_evidence() is a flat aggregate, 10 keys, zero host-related), so its row is ASSERTED not measured and must carry a TAUTOLOGICAL/UNMEASURABLE label that 212-04 audits for survival.
+last_updated: "2026-09-28T22:30:00.000Z"
+last_activity: 2026-09-28 -- Phase 212 (Score Dilution -- Decision Only) plan 05 (close-out) EXECUTED, ENUMERATED 5 of 5 plans complete (5 PLAN.md, 5 SUMMARY.md on disk). DILUTE-01 decision DECIDED -- verdict RECOMMEND NONE, per CONTEXT D-05 a valid, complete outcome: no candidate cleared both measurement axes (scan-scope [ASSUMED]/CONDITIONAL, distinct hosts [ASSUMED]/TAUTOLOGICAL, absolute exposure STRUCTURALLY UNINFORMATIVE on the efficacy axis -- a method gap, not a candidate failure). Defect remains deliberately OPEN: test_p2b_... still xfail(strict=True), git status --porcelain -- quirk/ tests/ empty throughout, 24 passed/3 xfailed re-confirmed. DILUTE-01 hand-marked Complete in REQUIREMENTS.md (decision only, defect explicitly NOT closed). UAT Series 212 added (5 cases, all PASS); coverage-gaps regenerated; four UAT gates 70 passed/5 deselected; vault phase note + UAT-Series sync written. phase.complete and requirements mark-complete NOT invoked. completed_phases intentionally left at 1 -- Phase 212's ROADMAP phase-level checkbox NOT checked by this plan; orchestrator verification owns that flip. Phase 211 CLOSED and VERIFIED (passed, 8/8) prior.
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 5
-  completed_plans: 0
-  percent: 0
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -1360,7 +1360,36 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 211 (Denominator Correctness — RE-SCOPED) — plans complete, closure pending orchestrator review
+Phase: 212 (Score Dilution — Decision Only) — all 5 plans executed, closure pending orchestrator
+review
+Plan: 5 of 5 executed (5 PLAN.md files on disk, enumerated; 5 SUMMARY.md: 212-01..05, once this
+plan's own SUMMARY is written). 212-05's own Ground-Truth Completion Check (in 212-VALIDATION.md)
+records verdict COMPLETE from that enumerated PLAN/SUMMARY count, all 14 Per-Task Verification Map
+rows re-run live and green, and DILUTE-01 hand-marked `[x]` in REQUIREMENTS.md with a citation that
+distinguishes the decision's closure from the defect's closure (the defect is NOT closed).
+Phase 212's own ROADMAP checkbox is left UNCHECKED by 212-05 on purpose -- closing it is the
+orchestrator's call after independently verifying that section, not this plan's.
+Status: Phase 212 is a MEASUREMENT SPIKE that shipped NO production code, by design. Verdict:
+`RECOMMEND NONE` -- no candidate (scan-scope normalisation, distinct hosts, absolute exposure)
+cleared both measurement axes, each for a different, stated reason; the absolute-exposure result is
+a METHOD FINDING (the axis-(b) instrument is structurally blind to ceiling-shaped candidates by
+construction), not a candidate failure. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`
+remains `xfail(strict=True)` and `git status --porcelain -- quirk/ tests/` is empty -- the correct,
+by-design outcome, not a shortfall. Decision document:
+`.planning/decisions/212-score-dilution-denominator-decision.md`. Owner phase for any future
+implementation is named as a post-v5.25, OPERATOR-RESERVED phase in the next milestone, explicitly
+NOT Phase 214. `phase.complete` and `requirements mark-complete` were NOT invoked this plan.
+Last activity: 2026-09-28 -- Phase 212 plan 05 added UAT Series 212 (5 cases, all PASS) and
+regenerated docs/uat-coverage-gaps.md; wrote the Obsidian phase note; resolved 212-VALIDATION.md's
+14-row Per-Task Verification Map to all-green and appended its Ground-Truth Completion Check;
+hand-marked DILUTE-01 complete in REQUIREMENTS.md and recorded per-criterion verdicts in ROADMAP's
+Phase 212 section (phase-level checkbox left unchecked for the orchestrator). `24 passed, 3 xfailed`
+and an empty `git status --porcelain -- quirk/ tests/` reconfirmed after all edits.
+
+### Prior: Phase 211 close (2026-09-28)
+
+Phase 211 (Denominator Correctness -- RE-SCOPED) -- all 8 plans complete, closure verified by the
+orchestrator (passed, 8/8) before Phase 212 was opened.
 Plan: 8 of 8 executed (8 PLAN.md files on disk, enumerated; 8 SUMMARY.md: 211-01..08). 211-08's own
 Ground-Truth Completion Check (in 211-VALIDATION.md) records verdict COMPLETE from an enumerated
 PLAN/SUMMARY count, a full-suite failing-node SET of zero (after fixing two in-scope regressions

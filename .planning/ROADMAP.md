@@ -250,12 +250,30 @@ under the corrected DENOM-* denominators, not a stale one)
   4. No production code implementing any candidate denominator ships in this phase. The decision
      document explicitly states the defect is deferred, not fixed, and names the phase where
      implementation belongs.
-**Plans**: 5 plans (4 waves)
-- [ ] 212-01-PLAN.md — Rebuild the two-axis measurement harness; establish and re-verify the control
-- [ ] 212-02-PLAN.md — Measure the two population-swap candidates (scan-scope, distinct hosts) + falsifiability audit
-- [ ] 212-03-PLAN.md — Settle and measure the absolute-exposure candidate via a monkeypatched wrapper
-- [ ] 212-04-PLAN.md — Write the DILUTE-01 decision document and capture verbatim criterion evidence
-- [ ] 212-05-PLAN.md — Close-out: UAT Series 212, coverage-gaps regeneration, vault sync, hand-edited tracking
+**Plans**: 5 plans (4 waves) — enumerated from disk 2026-09-28: 5 PLAN.md, 5 SUMMARY.md (after this
+plan's own SUMMARY is written), reconciled and matching the plan list below.
+- [x] 212-01-PLAN.md — Rebuild the two-axis measurement harness; establish and re-verify the control
+- [x] 212-02-PLAN.md — Measure the two population-swap candidates (scan-scope, distinct hosts) + falsifiability audit
+- [x] 212-03-PLAN.md — Settle and measure the absolute-exposure candidate via a monkeypatched wrapper
+- [x] 212-04-PLAN.md — Write the DILUTE-01 decision document and capture verbatim criterion evidence
+- [x] 212-05-PLAN.md — Close-out: UAT Series 212, coverage-gaps regeneration, vault sync, hand-edited tracking
+
+**Verified outcome (2026-09-28, ground-truth enumerated 5 PLAN = 5 SUMMARY):** all four success
+criteria MET. Criterion 1 MET-WIDENED (the ladder alone is structurally blind to denominator
+changes by construction; a second efficacy axis was added as a measurement-correctness fix, not
+scope creep — see `.planning/decisions/212-score-dilution-denominator-decision.md`, Section 3).
+Criterion 2 MET as a NEGATIVE result — `RECOMMEND NONE`, valid per CONTEXT D-05: scan-scope is
+`[ASSUMED]/CONDITIONAL`, distinct hosts is `[ASSUMED]/TAUTOLOGICAL`, absolute exposure is
+`STRUCTURALLY UNINFORMATIVE` on the efficacy axis (a method gap, not a candidate failure — the
+axis-(b) instrument reads strictly before the ceiling this candidate patches). Criterion 3 MET —
+`24 passed, 3 xfailed`, both `test_score_properties.py` and `skip_registry.py` byte-unchanged.
+Criterion 4 MET — `git status --porcelain -- quirk/ tests/` empty throughout; the decision names a
+post-v5.25, OPERATOR-RESERVED owner phase, explicitly not Phase 214. This phase closes with the
+defect deliberately OPEN — `test_p2b_...` remains `xfail(strict=True)` — which is the correct,
+by-design outcome for a decision-only measurement spike, not a shortfall. Phase-level checkbox
+above (line ~44) intentionally left unchecked here: per this project's standing caution about
+`phase.complete` writing well-formed-but-wrong completion state, the orchestrator's own
+verification pass owns flipping that checkbox, not this close-out plan.
 
 ### Phase 213: Shipped Product Defects (Series 7)
 **Goal**: The two product defects v5.24's audit recorded rather than absorbed — both shipped
