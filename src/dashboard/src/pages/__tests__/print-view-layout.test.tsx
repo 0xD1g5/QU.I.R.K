@@ -199,8 +199,12 @@ describe("PrintPage — UAT-7-30 print view layout", () => {
     // ---- Criterion 6: print background styling enabled ------------------
     // Backgrounds and borders are forced on rather than dropped by the
     // browser's default "do not print backgrounds" behaviour.
-    expect(printCss).toContain("body,html{background:#fff!important")
-    expect(printCss).toMatch(/th\{[^}]*background:#f4f4f5/)
+    // 213-06: the background/foreground values moved from hex literals to
+    // var(--print-bg)/var(--print-surface) tokens (D-14) — same forcing
+    // behaviour, token-driven values. See print-light-scope.test.tsx for the
+    // light-pinning proof this rewrite depends on.
+    expect(printCss).toContain("body,html{background:var(--print-bg)!important")
+    expect(printCss).toMatch(/th\{[^}]*background:var\(--print-surface\)/)
     expect(printCss).toMatch(/th\{[^}]*border-bottom:2px solid/)
     expect(printCss).toMatch(/\.sev-CRITICAL\{background:/)
   })
