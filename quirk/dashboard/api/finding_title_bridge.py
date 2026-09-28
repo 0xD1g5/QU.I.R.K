@@ -36,6 +36,16 @@ both generators' title-emission-site occurrence sets from installed source at te
 — this module is dispositioned DATA the gate checks, not a hand-maintained list that IS the
 safeguard. CLAUDE.md records five prior instances of a hand-maintained-list-as-safeguard failing
 silently in this repo; this module does not add a sixth.
+
+**Phase 211-04 (DENOM-04 residual): `SCORING_TITLE_DISPOSITIONS`, a second, independent axis.**
+211-02 made `quirk/intelligence/evidence.py::_finding_targets` a THIRD consumer of this module (via
+`canonical_cli_title`), which turns this module into a scoring input, not merely a remediation-theme
+input. `SCORING_TITLE_DISPOSITIONS` below is dispositioned DATA for THAT axis, exactly as
+`DASHBOARD_TITLE_BRIDGE` / `UNBRIDGED_DASHBOARD_TITLES` are dispositioned data for the remediation
+axis — it is not itself the safeguard either. `tests/test_evidence_scoring_title_coverage.py` is
+the gate: it regenerates, from installed source at run time, the exact set of CLI titles
+`evidence.py`'s `_finding_targets` calls look up, and fails if that set and this dict's key set ever
+diverge in either direction.
 """
 from __future__ import annotations
 
@@ -228,3 +238,120 @@ def canonical_cli_title(dashboard_title: str) -> Optional[str]:
         if dashboard_title.startswith(prefix):
             return DASHBOARD_TITLE_BRIDGE[prefix]
     return None
+
+
+# ---------------------------------------------------------------------------
+# SCORING_TITLE_DISPOSITIONS (Phase 211-04, DENOM-04 residual)
+#
+# Key: a CLI-canonical title that quirk/intelligence/evidence.py's
+# `_finding_targets(finding_list, "<title>")` looks up for a SCORING-CRITICAL
+# counter (i.e. one that feeds quirk/intelligence/scoring.py, not merely a
+# remediation theme). Value: one of three verdicts, each defined here and
+# nowhere else:
+#
+#   "bridged"                       -- a DASHBOARD_TITLE_BRIDGE entry maps a
+#                                       dashboard title to this CLI title, so
+#                                       both pipelines produce the same
+#                                       counter value via canonical_cli_title
+#                                       (211-02).
+#   "endpoint-derived"               -- the counter this title feeds does NOT
+#                                       depend on the finding-title vocabulary
+#                                       for its actual value: either the
+#                                       counter is computed straight from
+#                                       endpoint fields (the shape 211-03
+#                                       applied to legacy_tls_count), or —
+#                                       as measured live for "mTLS required"
+#                                       below — every finding that could ever
+#                                       carry this title corresponds to an
+#                                       endpoint object that is ALSO counted
+#                                       directly by evidence.py's own
+#                                       endpoint-field loop, so the
+#                                       finding-title match is a strict,
+#                                       always-redundant subset that never
+#                                       changes the counter's value. No
+#                                       bridge entry is needed either way.
+#   "unbridgeable-latent-divergence" -- no dashboard emission site exists for
+#                                       this CLI title, and none can safely
+#                                       be added (schemas.py:126-129's "DO NOT
+#                                       UNIFY"). The dashboard pipeline is
+#                                       therefore structurally 0 for this
+#                                       counter regardless of the estate. The
+#                                       entry MUST name the affected counter,
+#                                       the scoring category and weight it
+#                                       reaches, and the estate condition
+#                                       under which the divergence becomes
+#                                       non-zero. Tracked as a todo, not
+#                                       silently accepted.
+#
+# `tests/test_evidence_scoring_title_coverage.py` is the gate that keeps this
+# dict honest: it regenerates the true occurrence set of
+# `_finding_targets(...)` literal-string call sites from installed source at
+# run time and asserts EXACT set equality against this dict's keys (no gaps,
+# no extras), plus that every "bridged" value appears in
+# DASHBOARD_TITLE_BRIDGE.values() and every key (any verdict) still appears
+# in the run-time-extracted CLI title vocabulary.
+# ---------------------------------------------------------------------------
+SCORING_TITLE_DISPOSITIONS: Dict[str, str] = {
+    # evidence.py's _finding_targets(finding_list, "Plaintext HTTP service
+    # detected") feeds plaintext_http_count -> scoring.py's Hygiene category
+    # ("Plaintext HTTP exposure", weight hygiene_plaintext_http_ratio=18.0).
+    # Bridged from the dashboard's "Unencrypted HTTP service" via
+    # DASHBOARD_TITLE_BRIDGE (fixed in 211-02, commit 127913ca). Both
+    # pipelines now produce the same counter value for the same endpoint
+    # condition.
+    "Plaintext HTTP service detected": "bridged",
+
+    # evidence.py's _finding_targets(finding_list, "mTLS required") feeds
+    # (unions into) mtls_present_count -> scoring.py's Identity category
+    # ("mTLS enforcement signals", weight identity_mtls_ratio_bonus, a BONUS
+    # term). Measured live (211-04, two probe scenarios against the real
+    # evaluate_endpoints()/build_evidence_summary() functions, not asserted
+    # by inspection):
+    #   (a) a lone TLS endpoint with tls_blocker_reason="MTLS_REQUIRED" and
+    #       no finding at all -> mtls_present_count == 1, entirely via
+    #       evidence.py's endpoint-field loop (mtls_targets.add((host,
+    #       port)) on blocker == "MTLS_REQUIRED"), unioned with ZERO
+    #       finding-title matches.
+    #   (b) a two-endpoint-object pair sharing one host:port (one classified
+    #       HTTP -- the object that produces the initiating "Plaintext HTTP
+    #       service detected" finding -- one classified TLS with
+    #       tls_blocker_reason="MTLS_REQUIRED" -- the object
+    #       findings_evaluator._postprocess_findings' ep_map lookup resolves
+    #       to and upgrades the finding to title "mTLS required") ->
+    #       mtls_present_count == 1 again, and STILL fully accounted for by
+    #       evidence.py's endpoint-field loop alone, because that TLS/blocked
+    #       endpoint object is itself iterated by evidence.py's own loop
+    #       over the full endpoint list (evidence.py does not dedupe by
+    #       host:port the way ep_map does) -- the same (host, port) pair the
+    #       "mTLS required" finding would also contribute is therefore
+    #       ALWAYS already present in mtls_targets before the `|=` union
+    #       runs. The finding-title match is provably redundant, not merely
+    #       coincidentally so: any endpoint object whose fields make
+    #       findings_evaluator emit "mTLS required" necessarily has
+    #       tls_blocker_reason == "MTLS_REQUIRED" on itself, which is exactly
+    #       evidence.py's own direct-count condition. No dashboard bridge
+    #       entry is needed because the dashboard pipeline reaches the
+    #       correct value through the shared endpoint-field loop alone --
+    #       both pipelines call the same build_evidence_summary().
+    "mTLS required": "endpoint-derived",
+
+    # evidence.py's _finding_targets(finding_list, "HTTP on TLS-designated
+    # port") feeds http_on_tls_port_count -> scoring.py's Hygiene category
+    # ("HTTP on TLS-designated ports", scoring.py:493, weight
+    # hygiene_http_on_tls_ratio=16.0). No dashboard emission site exists for
+    # this condition (confirmed: no "title=" construct anywhere in
+    # quirk/dashboard/api/routes/scan.py matches "TLS-design" or
+    # "designated"), and schemas.py:126-129's "DO NOT UNIFY" forbids adding
+    # one by unification. The dashboard pipeline is therefore structurally 0
+    # for this counter regardless of the estate -- a LATENT divergence, not
+    # an active one, because it also measured 0 on the reference estate
+    # (identical live report/dashboard numbers happened to coincide, not
+    # because the counter is correct on the dashboard side). Becomes
+    # non-zero the moment plaintext HTTP is observed on a port in the
+    # TLS-designated set (WELL_KNOWN_TLS_PORTS unioned with the operator's
+    # config_template.yaml `tls_designated_ports` override). Tracked at
+    # .planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md
+    # -- see that file for the full estate condition, fix shapes and
+    # tag-blocking verdict.
+    "HTTP on TLS-designated port": "unbridgeable-latent-divergence",
+}
