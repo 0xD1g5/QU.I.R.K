@@ -1358,14 +1358,22 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 210 (Cross-Surface Score Parity) — EXECUTING
-Plan: 6 of 8 complete (01-05, 07; 06 and 08 remain)
-Status: Executing Phase 210
-Last activity: 2026-09-28 -- Phase 210 plan 07 complete (docs retarget per D-20: additions to
-report-interpretation.md §26 / operators-guide.md §3.1.7, corrections to demo-runbook-2026-09-18.md
-and expected_results_v4.md, master guide regenerated and vault-synced). Executed without plan 06's
-live re-run evidence (no 210-06-SUMMARY.md on disk); both edited docs cite the XSURF-04 regression
-gate and state the live re-run is deferred rather than quoting invented numbers.
+Phase: 211 (Denominator Correctness — RE-SCOPED) — CONTEXTUALISED, NOT YET PLANNED
+Plan: 0 of 0 — no PLAN.md files exist yet
+Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria); planning Phase 211
+Last activity: 2026-09-28 -- Phase 211 re-scoped from implement to verify-plus-investigate
+(`1804d703`): a live source audit found DENOM-01/02/03 already landed on main via `0b0ed1c7`
+(2026-09-13, confirmed an ancestor of HEAD), so the requirements as written on 2026-09-27 described
+an already-fixed defect. `211-CONTEXT.md` written with 8 decisions; stale arithmetic corrected in
+REQUIREMENTS.md and ROADMAP.md. Phase 211's centre of gravity is now the 17-vs-18 headline-score
+divergence (D-07's two hypotheses plus the Data-in-Motion discriminator), NOT denominator work.
+
+Phase 210's own record, for reference: all 8 plans executed and committed atomically; verifier
+returned `gaps_found` 4/6 and caught a BLOCKER the phase close-out missed (a false client-facing
+parity claim published by plan 07 ahead of plan 06's measurement), fixed in `0e5356d1`. Success
+Criterion 5 — identical headline score across pipelines — is NOT MET (17 report vs 18 dashboard),
+so the ROADMAP checkbox is deliberately left UNCHECKED. XSURF-01..04 are each independently
+Complete; 4/4 must never be read as goal-achieved.
 
 ### Phase 210 plan 05 (2026-09-27) — XSURF-04 three-number cross-surface
 equality gate + both required falsifications; A==B alone found insensitive to the shared
