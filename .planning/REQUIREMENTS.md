@@ -64,39 +64,74 @@ successive rounds of adding real detected vulnerabilities moved every subscore b
 Source: `todos/pending/readiness-score-denominator-is-probe-count-not-assessable-endpoints.md`,
 tracked as `999.113` at P1 in HORIZON's Open-Item Ledger.
 
-- [ ] **DENOM-01**: A written denominator decision exists before any denominator changes, recorded in
+- [x] **DENOM-01**: A written denominator decision exists before any denominator changes, recorded in
       `.planning/decisions/`. It states, per ratio family, which population is the correct divisor
       and why — certificate ratios over `certs_observed`, endpoint ratios over the assessable count —
       and it is reached **by measurement against the calibration ladder, not by argument** (999.113
       D5). One of the two current readings has to be wrong; the decision says which.
-- [ ] **DENOM-02**: Certificate ratios divide by certificates. Applies to the expired / expiring /
-      self-signed family. **CORRECTED 2026-09-28 — this requirement's arithmetic was written against
+      **MARKED COMPLETE 2026-09-28 (Phase 211, by citation to a PRIOR commit, not by new Phase 211
+      work).** `.planning/decisions/999.113-denominator-semantics.md` is DECIDED 2026-09-13 and was
+      committed tracked in `1804d703` (Phase 211's own re-scope commit, 2026-09-28) — `git
+      ls-files --error-unmatch` confirms tracked. Satisfied entirely by pre-Phase-211 work; this
+      milestone did not re-derive or re-argue the decision.
+- [x] **DENOM-02**: Certificate ratios divide by certificates. Applies to the expired / expiring /
+      self-signed family. **CORRECTED 2026-09-28, MARKED COMPLETE 2026-09-28 (Phase 211, by citation
+      to a PRIOR commit plus live re-measurement) — this requirement's arithmetic was written against
       a stale tree and the implementation has ALREADY LANDED.** `cert_denom = certs_observed` is live
       at `quirk/intelligence/scoring.py:404`, shipped in `0b0ed1c7` (2026-09-13, an ancestor of
-      HEAD), two weeks before this milestone was defined. The original text claimed
+      HEAD), two weeks before this milestone was defined. Gated by
+      `tests/test_score_denominator_999_113.py` (3 passed, re-run 211-01). The original text claimed
       `identity_expired_ratio` "currently computes `-(5/370) × 14.0`" and would become
       `-(5/17) × 14.0 = -4.12`, moving Identity 25 → ~19. All four numbers are stale. Live
-      measurement (`quirk-output/intelligence-20260928-014244.json`, Phase 210's re-run):
-      `certs_observed = 20`, `expired_count = 5`, `assessable_endpoint_count = 216`,
+      measurement (`quirk-output/intelligence-20260928-014244.json`, Phase 210's re-run, re-derived
+      211-01): `certs_observed = 20`, `expired_count = 5`, `assessable_endpoint_count = 216`,
       `totals.endpoints = 775` — so the live computation is `-(5/20) × 14.0 = -3.50`, the pre-fix
       value would have been `-(5/775) × 14.0 = -0.090`, and Identity already scores **9/25** (Phase
       210's SAML fixes made it emit). Phase 211 proves satisfaction by citation + live measurement
       rather than re-implementing working code.
-- [ ] **DENOM-03**: Endpoint ratios divide by assessable endpoints, not probes. **ALREADY LANDED —
-      corrected 2026-09-28.** `endpoint_denom = evidence.get("assessable_endpoint_count", endpoints)`
-      and `domain_denom = endpoint_denom` are live at `quirk/intelligence/scoring.py:412`/`:421`; the
-      only remaining mentions of `totals.endpoints` in that file are comments explaining it is
-      deliberately NOT used. Gated by `tests/test_score_denominator_999_113.py` (3 passed).
-      `endpoint_denom`
-      (`quirk/intelligence/scoring.py:412`) and `domain_denom` (`:421`) and their ~20 consumers at
-      `:481-502` stop reading `totals.endpoints`. Widening `ports_tls` must no longer raise a score:
-      the 10-port vs 2-port measurement on the `multihost` profile (91 vs 89 on identical
-      infrastructure) inverts or flattens.
-- [ ] **DENOM-04**: The change is red-proved and the ladder re-measured. A known scan moves in the
+- [x] **DENOM-03**: Endpoint ratios divide by assessable endpoints, not probes. **ALREADY LANDED for
+      the unit clause — corrected 2026-09-28. Behavioural clause MEASURED LIVE 2026-09-28 (Phase
+      211-05) and MARKED COMPLETE.** `endpoint_denom = evidence.get("assessable_endpoint_count",
+      endpoints)` and `domain_denom = endpoint_denom` are live at
+      `quirk/intelligence/scoring.py:412`/`:421`; the only remaining mentions of `totals.endpoints`
+      in that file are comments explaining it is deliberately NOT used. Gated by
+      `tests/test_score_denominator_999_113.py` (3 passed). **Behavioural clause**: the live
+      wide-vs-narrow `ports_tls` measurement (`211-05-SUMMARY.md`,
+      `211-LIVE-MEASUREMENT.md`) — 14-port `scan_run_id 2026-09-28T13:16:55.319715+00:00` = 18/100
+      vs 2-port `scan_run_id 2026-09-28T13:21:30.232752+00:00` = 20/100 — is **INVERTED** relative to
+      the historical pair this requirement cites (91 vs 89 on a 10-port vs 2-port comparison,
+      `999.113-denominator-semantics.md:86`): historically widening RAISED the score by 2; live,
+      widening LOWERS the score by 2. This requirement's own literal text accepts either "inverts or
+      flattens" as satisfaction — INVERTED is the measured outcome, so this requirement is
+      discharged by that live measurement, not assumed from the landed unit-clause fix alone.
+- [x] **DENOM-04**: The change is red-proved and the ladder re-measured. A known scan moves in the
       **predicted** direction before the fix is accepted; all five calibration rungs are re-measured;
       CBOM golden fixtures and `score-strings.json` are regenerated (both generator-drift-gated); and
       `_apply_weighted_impacts`' 25-point clamp is checked for saturation now that penalties are
-      larger.
+      larger. **MARKED COMPLETE 2026-09-28 (Phase 211-01, `211-DENOM-EVIDENCE.md`), all four
+      sub-items dispositioned by measurement, ONE with a stated deviation from the criterion's
+      literal text:**
+      1. **Ladder re-measured**: `24 passed, 3 xfailed` (`tests/test_score_properties.py`). The 3
+         xfails are the same parametrized node (`test_p2b_score_does_not_improve_by_observing_more_
+         healthy_endpoints`), confirmed denominator-related but a DIFFERENT denominator
+         (`assessable_endpoint_count` dilution, not this requirement's `totals.endpoints` defect),
+         owned by Phase 212's DILUTE-01 — not a DENOM-04 gap.
+      2. **CBOM golden fixtures + `score-strings.json`: DEVIATION — dispositioned N/A with evidence,
+         deliberately NOT regenerated.** The criterion's literal text says "regenerated"; measurement
+         found neither artifact encodes any score/ratio/denom key (`211-DENOM-EVIDENCE.md`), so
+         regenerating either would be ceremony with no content change. `test_score_strings_freshness.py`
+         green (5 passed) confirms no drift was introduced by leaving them untouched.
+      3. **Clamp saturation measured and locked**: `tests/test_score_clamp_property.py::
+         test_agility_ceiling_saturates_on_reference_estate` (211-01) — Agility saturates at the
+         25-point ceiling (pre-clamp 36.5918, +11.59 absorbed), no category floors at 0, Hygiene/
+         Modern TLS sit clear of either clamp boundary (locking the clamp out as an explanation for
+         the separate 17-vs-18 divergence). Red-proofed live (cap raised 25.0→40.0, both tests went
+         RED, reverted, confirmed clean).
+      4. **Red-proof discipline**: already satisfied by the denominator fix's own red-proof pair
+         `a49c7dd6`→`9fadfaa2` (both resolve as commits, predating this milestone). This phase's OWN
+         red-proof obligation — for the SEPARATE 17-vs-18 fix — was performed independently in
+         211-02/211-03 (sed/Edit-based single-line reverts, both reproducing the original failure
+         shape exactly).
 
 ### Score Dilution — Decision Only
 
@@ -235,10 +270,10 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 | XSURF-02 | Phase 210 | Complete |
 | XSURF-03 | Phase 210 | Complete |
 | XSURF-04 | Phase 210 | Complete |
-| DENOM-01 | Phase 211 | Pending |
-| DENOM-02 | Phase 211 | Pending |
-| DENOM-03 | Phase 211 | Pending |
-| DENOM-04 | Phase 211 | Pending |
+| DENOM-01 | Phase 211 | Complete (satisfied by prior commit `1804d703`, decision DECIDED 2026-09-13) |
+| DENOM-02 | Phase 211 | Complete (prior commit `0b0ed1c7` + live measurement 211-01) |
+| DENOM-03 | Phase 211 | Complete (unit clause prior `0b0ed1c7`; behavioural clause measured INVERTED, live 211-05) |
+| DENOM-04 | Phase 211 | Complete (4 sub-items dispositioned 211-01; fixtures/score-strings N/A-dispositioned, not regenerated — deviation from literal text) |
 | DILUTE-01 | Phase 212 | Pending |
 | UIFIX-01 | Phase 213 | Pending |
 | UIFIX-02 | Phase 213 | Pending |
