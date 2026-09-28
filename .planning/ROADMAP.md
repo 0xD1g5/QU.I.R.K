@@ -8,7 +8,16 @@ phase_range: 210-214
 # Roadmap: v5.25 Score Truth & Release Cut
 
 **Goal:** Make the readiness score mean one thing on every surface a client can see, then ship it —
-the first tagged release since v5.21, carrying three milestones of accumulated work.
+the first tagged release since v5.21, carrying **four** milestones of accumulated work (v5.22, v5.23,
+v5.24, v5.25).
+
+**CORRECTED (Phase 214, 214-08) — this line previously read "three milestones".** Same stale count as
+Phase 214's Success Criterion 1, from the same cause: it was written at the milestone's opening,
+before v5.25's own phases had shipped work of their own to describe. `v5.21.0` was tagged 2026-09-10
+and v5.22 shipped 2026-09-11 (`MILESTONES.md:143`), so four milestones sit between the last tag and
+the pending one. The prior claim is preserved rather than overwritten. Note the goal's "first tagged
+release" clause is **not yet true**: the `v5.25.0` tag is operator-reserved and had not been pushed at
+Phase 214's close — see that phase's entry below.
 
 **Sequencing (operator decision 2026-09-27): score first, release last.** A tag freezes whatever
 number the scorer emits, so Phase 214 (`REL-*`) runs after every scoring phase lands. Phase numbering
@@ -70,7 +79,20 @@ cause at an exact file:line. This milestone adds no new detection capability.
   FAIL 7->5, PASS 754->756. Two `UAT-7-21` Pass Criteria bullets (electric-blue accent,
   dark-background consistency) remain **uncovered by any instrument** and are named as such.
 - [ ] **Phase 214: Release Cut** - `v5.25.0` is tagged, published to PyPI, and its release notes and
-  the 7 backlogged release bodies are real.
+  the 7 backlogged release bodies are real. **8 of 9 plans executed (plan 214-09 is the blocking
+  operator handover and runs last); 3 of 4 requirements Complete
+  (REL-01, REL-02, REL-04). REL-03 is PENDING — operator-reserved: the `v5.25.0` tag was NOT pushed,
+  by an operator decision taken at discuss and reaffirmed at close, because `release.yml` fires on
+  `v[0-9]*` and publishes to PyPI irreversibly.** Success Criterion 3 is recorded **NOT MET AS
+  WRITTEN** — it demands proof "on the actual publish rather than a `workflow_dispatch` dry run",
+  and only the dry run (`36490856185`, heading at line 1 vs the unsigned-binary notice at line 209,
+  composed body byte-identical to `CHANGELOG.md`) was performed; the `publish` job and Attach-zip
+  step both read `skipped`, no Release object exists, and PyPI still serves 5.21.0. Criterion 1 is
+  deviated from **deliberately and on evidence** (the entry describes FOUR unreleased milestones,
+  not the "three" written, since no tag followed `v5.21.0` on 2026-09-10). Criteria 2 and 4 are MET.
+  Box left unchecked: the phase's terminal deliverable is an operator decision not yet taken — the
+  same treatment Phase 210's entry used. See
+  `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md`.
 
 ---
 
@@ -363,8 +385,19 @@ emits and whatever UI state ships — every other phase must land first)
      not one — and `release.yml:343`'s hard-fail-on-missing-section check passes for this version.
   2. `pyproject.toml`, `README.md`, and `docs/UAT-SERIES.md` (UAT-1-02 pass criteria + document
      header) all read `5.25.0` after `pip install -e . --no-deps`
-     (`importlib.metadata` reads the installed dist, not `pyproject.toml`), and all 4
-     `tests/test_version.py` tests pass. `docs/getting-started.md` is deliberately NOT in that list —
+     (`importlib.metadata` reads the installed dist, not `pyproject.toml`), and the
+     `tests/test_version.py` gate passes at its real, measured size: **8 test functions**
+     (`grep -c "^def test_" tests/test_version.py` → 8), of which a local run reports
+     `7 passed, 1 deselected` because `pyproject.toml`'s `addopts = -m 'not slow'` deselects one,
+     while CI's `pytest -m ""` collects and runs all 8.
+     **CORRECTED (Phase 214, 214-08) — this clause previously read "all 4 `tests/test_version.py`
+     tests pass".** That figure was copied forward without running the command and was stale by
+     four. It is preserved here rather than silently overwritten, so the next reader does not
+     re-derive the same drift from scratch. The identical stale claim was corrected in
+     `REQUIREMENTS.md`'s REL-02 bullet and in this repo's `CLAUDE.md` Per-Phase Documentation
+     Checklist by plan 214-03; fixing those two and leaving this one saying something different
+     would have reproduced, in one pass, the hand-maintained-figure drift `CLAUDE.md` records this
+     project being bitten by six times. `docs/getting-started.md` is deliberately NOT in that list —
      it carries no version string at all, only a `(v5.23+)` feature marker, verified at both the
      v5.24 and v5.25 boundary reviews. Do not add one to satisfy this criterion.
   3. A real `v5.25.0` tag push — never a test tag — produces a GitHub release whose body is composed
@@ -373,17 +406,28 @@ emits and whatever UI state ships — every other phase must land first)
   4. The 7 public releases carrying Windows-sensor boilerplate (v5.7.0, v5.8.0, v5.12.0, v5.15.0,
      v5.18.0, v5.19.0, v5.21.0) have real, backfilled release notes on GitHub, with their original
      bodies backed up before being overwritten; `v5.11.0` is left untouched.
-**Plans**: 9 plans (8 waves)
+
+**Measured outcomes (Phase 214, recorded at close 2026-09-28 — criteria above preserved unedited):**
+
+| # | Verdict |
+|---|---------|
+| 1 | **Deviated from deliberately, on evidence — spirit exceeded, letter not met.** The entry describes **FOUR** unreleased milestones (v5.22, v5.23, v5.24, v5.25), not "three": `v5.21.0` was tagged 2026-09-10 and v5.22 shipped 2026-09-11 (`MILESTONES.md:143`), so v5.25's own work is unreleased alongside the other three. The criterion's count was correct when written and went stale as the milestone executed. `[Unreleased]` IS promoted (exactly one, empty) and `release.yml:343`'s check passes — red-proved falsifiable against a `## [v5.25.0]` mutant before being trusted. Record: `214-NOT-MET-AS-WRITTEN.md` § B. |
+| 2 | **MET.** All three surfaces at 5.25.0 after `pip install -e . --no-deps`; three independent readings agree (`pip show`, `quirk.__version__`, `quirk --version`). Gate: `7 passed, 1 deselected`. The criterion's own test count was stale and is corrected in place above. |
+| 3 | **NOT MET AS WRITTEN. `REL-03` PENDING — operator-reserved.** Only the `workflow_dispatch` dry run the criterion explicitly excludes was performed (`36490856185`; heading line 1 < notice line 209; body `cmp`-IDENTICAL to `CHANGELOG.md`). `publish` job and Attach-zip step both `skipped`; `gh release view v5.25.0` → `release not found`; PyPI still serves 5.21.0; no `v5.25*` tag exists (with a `v5.21*` positive control returning 2 refs); `release.yml:436`'s `body_path` path untested. A green dry run is not a publish. Record + operator handoff: `214-NOT-MET-AS-WRITTEN.md` § A. |
+| 4 | **MET — and the end state already held before the phase began.** Two independent instruments confirm all 7 named tags already carry their own `## [x.y.z]` body (`214-REL04-EVIDENCE.md`). Zero GitHub write verbs ran, so nothing needed backing up because nothing needed overwriting. The genuinely-boilerplate set is a different, larger one (8 pre-v5.7 tags) — filed as backlog `999.116`, not actioned. |
+**Plans**: 9 plans (8 waves) — enumerated from disk 2026-09-28: 9 `214-0N-PLAN.md`,
+8 `214-0N-SUMMARY.md` (after this plan's own; 214-09 is the blocking operator checkpoint and
+produces no execution SUMMARY until the operator resumes it)
 
 Plans:
 - [x] 214-01-PLAN.md — Wave 0 baseline: full-suite failing-node SET, gh reachability, version-surface and generator-gate enumeration
-- [ ] 214-02-PLAN.md — REL-01: author the `## [5.25.0]` CHANGELOG section across four unreleased milestones
-- [ ] 214-03-PLAN.md — REL-04: re-confirm the 7 release bodies on two instruments; correct HORIZON/REQUIREMENTS/CLAUDE.md/999.109; file backlog 999.116
-- [ ] 214-04-PLAN.md — REL-02: bump pyproject.toml + README.md, editable reinstall, version-parity gate at its measured size
-- [ ] 214-05-PLAN.md — REL-02: UAT-SERIES.md bump, disposition-ledger sync, coverage-gaps regeneration, Obsidian vault sync
-- [ ] 214-06-PLAN.md — commit and push the release surfaces to `origin/main`; SET comparison; prove no tag exists
-- [ ] 214-07-PLAN.md — REL-03 (PARTIAL): workflow_dispatch dry run, artifact download, heading-order measurement
-- [ ] 214-08-PLAN.md — 214-NOT-MET-AS-WRITTEN.md, hand-edited ROADMAP/REQUIREMENTS/STATE/VALIDATION, Obsidian phase note
+- [x] 214-02-PLAN.md — REL-01: author the `## [5.25.0]` CHANGELOG section across four unreleased milestones
+- [x] 214-03-PLAN.md — REL-04: re-confirm the 7 release bodies on two instruments; correct HORIZON/REQUIREMENTS/CLAUDE.md/999.109; file backlog 999.116
+- [x] 214-04-PLAN.md — REL-02: bump pyproject.toml + README.md, editable reinstall, version-parity gate at its measured size
+- [x] 214-05-PLAN.md — REL-02: UAT-SERIES.md bump, disposition-ledger sync, coverage-gaps regeneration, Obsidian vault sync
+- [x] 214-06-PLAN.md — commit and push the release surfaces to `origin/main`; SET comparison; prove no tag exists
+- [x] 214-07-PLAN.md — REL-03 (PARTIAL): workflow_dispatch dry run, artifact download, heading-order measurement
+- [x] 214-08-PLAN.md — 214-NOT-MET-AS-WRITTEN.md, hand-edited ROADMAP/REQUIREMENTS/STATE/VALIDATION, Obsidian phase note
 - [ ] 214-09-PLAN.md — pre-flight handover block + blocking operator checkpoint (tag is operator-reserved; the phase stops here)
 
 ---
@@ -396,4 +440,4 @@ Plans:
 | 211. Denominator Correctness | 0/? | Not started | - |
 | 212. Score Dilution — Decision Only | 0/? | Not started | - |
 | 213. Shipped Product Defects (Series 7) | 0/? | Not started | - |
-| 214. Release Cut | 1/9 | In progress | - |
+| 214. Release Cut | 8/9 | Partial — 3/4 requirements Complete (REL-01/02/04); REL-03 PENDING — operator-reserved (tag unpushed by design); Success Criterion 3 NOT MET AS WRITTEN, Criterion 1 deliberately deviated from; plan 214-09 is the blocking operator checkpoint. See 214-NOT-MET-AS-WRITTEN.md | - |

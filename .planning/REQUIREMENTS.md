@@ -197,10 +197,22 @@ lines under `## [Unreleased]` spanning v5.22, v5.23 and v5.24. The `999.109` wor
 consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails when the version's
 `## [x.y.z]` section is missing. What remains is an actual release, never yet proven on a live tag.
 
-- [ ] **REL-01**: `CHANGELOG.md` carries a real `## [5.25.0]` section. `[Unreleased]` is promoted and
+- [x] **REL-01**: `CHANGELOG.md` carries a real `## [5.25.0]` section. `[Unreleased]` is promoted and
       the entry honestly describes three milestones of work, not one. The composer hard-fails without
       this section, so it is a precondition and not a courtesy.
-- [ ] **REL-02**: The version string is consistent everywhere it is declared — `pyproject.toml`,
+      **COMPLETE (Phase 214, 214-02; commit `de9f2e2a`).** `CHANGELOG.md:10` carries
+      `## [5.25.0] - 2026-09-28` — exactly one such heading, with exactly one `## [Unreleased]`
+      heading above it and that one empty. Every bullet traces to a real `file:line` via
+      `.planning/phases/214-release-cut/214-CHANGELOG-SOURCING.md` (18 sourced rows). The composer's
+      extraction was proven locally (206 lines captured) **and red-proved** against a
+      `## [v5.25.0]` mutant that correctly produced NO MATCH, then proven live by the
+      `workflow_dispatch` dry run's green compose step (`214-DRYRUN-EVIDENCE.md`).
+      **Deviation, deliberate:** the entry describes **four** milestones (v5.22, v5.23, v5.24,
+      v5.25), not the "three" written above — no tag was cut after `v5.21.0` (2026-09-10), so v5.25
+      is unreleased alongside the other three. Spirit exceeded, letter deviated from, on evidence;
+      recorded in `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md` § Section B rather
+      than quietly satisfied by omitting the fourth milestone.
+- [x] **REL-02**: The version string is consistent everywhere it is declared — `pyproject.toml`,
       `README.md`, `docs/UAT-SERIES.md` (UAT-1-02 pass criteria + header) —
       and the editable reinstall is run (`pip install -e . --no-deps`), because
       `importlib.metadata` reads the installed dist rather than `pyproject.toml` and 8
@@ -210,14 +222,50 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
       `addopts = -m 'not slow'`, CI's `pytest -m ""` runs all 8).
       **CORRECTED (Phase 214, 214-03)** — one file dropped from the bump-surface list above and
       the test count fixed; see the footnote below REL-04 for what changed and why.
+      **COMPLETE (Phase 214, 214-04 commits `ee4598af`+`3626a56a`; 214-05 commit `07157599`).**
+      All three surfaces read 5.25.0: `pyproject.toml:7`, `README.md:7` (H1) with `## What's New in
+      v5.25` rewritten across four milestones, and `docs/UAT-SERIES.md` header + `UAT-1-02` pass
+      criteria. `.venv/bin/pip install -e . --no-deps` was run (`Successfully installed
+      quirk-scanner-5.25.0`), and three independent post-reinstall readings agree — `pip show`,
+      `quirk.__version__`, and `quirk --version` → `QU.I.R.K. v5.25.0`. `214-BASELINE.md` recorded
+      all three at `5.21.0` beforehand, so this is a before/after pair, not a tautology.
+      **The version-parity gate is reported at its measured size, not as "4 tests":**
+      `.venv/bin/pytest tests/test_version.py -q` → **`7 passed, 1 deselected, 2 warnings in
+      0.35s`** (8 test functions; `addopts = -m 'not slow'` deselects one locally; CI's
+      `pytest -m ""` collects all 8). `docs/getting-started.md` deliberately untouched — it carries
+      no version string.
 - [ ] **REL-03**: A published release carries its own release notes. The composer is proven on a
       **real tag push** — it has only ever run on `workflow_dispatch` dry-runs — and the resulting
       GitHub release body contains the 5.25.0 CHANGELOG section above the unsigned-binary notice.
       **No test tags**: `release.yml` fires on `v[0-9]*` and publishes to PyPI (Phase 187).
-- [ ] **REL-04**: The 7 public releases carrying Windows-sensor boilerplate are backfilled —
+      **PENDING — operator-reserved.** Left unchecked on purpose at Phase 214's close. The version
+      cut is an operator decision (see § Constraints below, and `214-CONTEXT.md`'s
+      "DO NOT PUSH THE TAG", taken at discuss). Phase 214 delivered the strongest evidence
+      obtainable without a tag and stopped: `workflow_dispatch` run `36490856185` at
+      `793ae987c948bee51d6032ce0f92c81b335af3cd` composed a body whose `## [5.25.0]` heading sits at
+      line **1** and the unsigned-binary notice at line **209**, byte-identical (`cmp` IDENTICAL,
+      sha256 `6fc7c8eb50a0…`) to a local re-extraction from `git show origin/main:CHANGELOG.md`.
+      That is **PARTIAL** and is not this requirement: the `publish` job and the Attach-zip step
+      both read `skipped`, `gh release view v5.25.0` → `release not found`, PyPI (queried directly,
+      independent of `gh`) still serves `5.21.0`, no `v5.25*` tag exists locally or on `origin`
+      (with a `v5.21*` positive control returning 2 refs), and `release.yml:436`'s `body_path`
+      consumption path is untested because no dry run can reach it. **A green dry run is not a
+      publish.** Full record, verdict and operator handoff:
+      `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md` § Section A.
+- [x] **REL-04**: The 7 public releases carrying Windows-sensor boilerplate are backfilled —
       v5.7.0, v5.8.0, v5.12.0, v5.15.0, v5.18.0, v5.19.0, v5.21.0. `v5.11.0` already has a proper
       custom body and is left alone. **Back up the current bodies first**; they are not recoverable
       from GitHub once overwritten.
+      **COMPLETE (Phase 214, 214-03) — the end state already held before the phase began, and no
+      release body was edited.** Two independent instruments (`gh release view --json body` per tag,
+      and `gh api .../releases --paginate`) agree that all 7 tags named above already carry their
+      own `## [x.y.z]` CHANGELOG body; see
+      `.planning/phases/214-release-cut/214-REL04-EVIDENCE.md` for the per-tag first lines. Zero
+      GitHub write verbs were run, so the "back up first" instruction had nothing to protect —
+      nothing needed overwriting. The genuinely-boilerplate set is a **different**, larger one (8
+      pre-v5.7 tags at 1153 bytes, first line `## Windows Sensor Asset`: `v5.5.1`, `v5.5.2`,
+      `v5.5.2.1`–`.5`, `v5.6.0`), outside this requirement's stated 7 and **filed, not actioned**,
+      as backlog `999.116` (`.planning/backlog/999.116-boilerplate-release-bodies-pre-v5.7/`).
 
 **Footnote (Phase 214, 214-03) — REL-02 correction:** the REL-02 bullet above previously also
 listed `docs/getting-started.md` in the bump-surface file set. That file carries no version
@@ -326,10 +374,10 @@ named above already carry their own `## [x.y.z]` CHANGELOG body — see
 | DILUTE-01 | Phase 212 | Complete (decision only — RECOMMEND NONE; defect still xfails) |
 | UIFIX-01 | Phase 213 | Complete (`UAT-7-12` PASS; COV-04's 27-of-28 artifact-level closure recorded NOT MET AS WRITTEN — see ROADMAP.md Phase 213 entry) |
 | UIFIX-02 | Phase 213 | Complete (true pre-fix count 205 across 17 files, not 95 across 9; `UAT-7-21` PASS qualified) |
-| REL-01 | Phase 214 | Pending |
-| REL-02 | Phase 214 | Pending |
-| REL-03 | Phase 214 | Pending |
-| REL-04 | Phase 214 | Pending |
+| REL-01 | Phase 214 | Complete (`de9f2e2a`; one `## [5.25.0]`, composer red-proved then dry-run-proved — entry describes FOUR milestones not three, a deliberate evidenced deviation, see 214-NOT-MET-AS-WRITTEN.md § B) |
+| REL-02 | Phase 214 | Complete (`ee4598af`+`3626a56a`+`07157599`; 3 surfaces at 5.25.0, editable reinstall run, 3 independent readings agree, gate `7 passed, 1 deselected` — 8 functions, not the stale "4") |
+| REL-03 | Phase 214 | **PENDING — operator-reserved** (dry run `36490856185` is PARTIAL only: publish job + attach step both `skipped`, no Release object, PyPI still 5.21.0, no `v5.25` tag; criterion 3 recorded NOT MET AS WRITTEN — see 214-NOT-MET-AS-WRITTEN.md § A) |
+| REL-04 | Phase 214 | Complete (two-instrument live evidence, `214-REL04-EVIDENCE.md`; end state already held pre-phase, zero GitHub write verbs, nothing backed up because nothing overwritten; the different 8-release pre-v5.7 set filed as backlog `999.116`) |
 
 ---
 *Requirements defined: 2026-09-27*

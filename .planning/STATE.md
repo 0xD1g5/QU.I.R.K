@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T20:45:00.000Z"
-last_activity: 2026-09-28 -- Session resumed via /gsd-resume-work after an accidental termination during Phase 214 plan 06. Ground truth re-enumerated from disk and git, and this frontmatter was stale by four plans: plans 214-01..05 are complete and committed (3f08cd11, de9f2e2a, 4522285a, ee4598af+3626a56a, 07157599), plan 06 is partially executed. Plan 06's Task 1 (post-edit full-suite SET vs baseline) is DONE and recorded in 214-PUSH-EVIDENCE.md -- empty failing-node SET, count-identical to baseline; Tasks 2-3 carry unfilled <CAPTURED BELOW> placeholders even though the facts they prove are already true live (push parity 0/0 both directions, no v5.25 tag local or on origin, v5.21 positive control returns refs). No 214-06 commit exists, so execute-phase's safe_resume_gate will NOT fire and a fresh executor will rewrite 214-PUSH-EVIDENCE.md -- a byte-identical copy is archived in the session scratchpad. Stale .planning/HANDOFF.json (Phase 211, 06:56Z) DELETED; its two still-live blockers (Phase 210 criterion 5, 17-vs-18 headline score; multihost lab profile down and needing a forced mh-prober rebuild) carried into ## Current Position. Tree clean, main == origin/main. No mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb was run -- STATE.md hand-edited from a pre-image with the FULL diff inspected. REMAINING: Phase 214 plans 06 (finish evidence + record two Task-2 deviations), 07 (release.yml dry-run), 08 (NOT-MET-AS-WRITTEN + hand-edits), 09 (blocking operator handover -- no agent tags).
+last_updated: "2026-09-28T22:55:00.000Z"
+last_activity: 2026-09-28 -- Phase 214 plan 08 (close-out recording) executed. Wrote 214-NOT-MET-AS-WRITTEN.md: ROADMAP Success Criterion 3 recorded NOT MET AS WRITTEN with REL-03 PENDING -- operator-reserved (the criterion itself excludes the workflow_dispatch dry run that is all this phase performed; publish job and Attach-zip step both `skipped`, no Release object, PyPI still 5.21.0, no v5.25 tag with a v5.21 positive control), and Criterion 1 recorded as a deliberate evidenced deviation (the CHANGELOG entry describes FOUR unreleased milestones, not the "three" the criterion names, because no tag followed v5.21.0 on 2026-09-10). Hand-marked REL-01/REL-02/REL-04 complete in REQUIREMENTS.md with cited evidence artifacts and updated the Traceability rows; REL-03 left `[ ]` and annotated PENDING -- operator-reserved. Phase 214 ROADMAP box left `[ ]` deliberately. Corrected ROADMAP Success Criterion 2's stale test count ("all 4 tests/test_version.py tests" vs a measured 8 functions / `7 passed, 1 deselected` locally) and the milestone goal line's matching stale "three milestones", both in place with the prior claim preserved beside the correction. Closed 214-VALIDATION.md (nyquist_compliant true, zero pending rows). Wrote the Obsidian phase note at status: active, NOT complete -- the phase's terminal deliverable is an operator decision not yet taken. NO TAG WAS CREATED. Corrected the progress counters, which read total_plans 19 / completed_plans 15 against a disk-measured 40 / 39 -- recorded as a finding, not silently fixed. No phase.complete, no requirements mark-complete, no mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb; STATE.md hand-edited from a pre-image with the FULL diff read. REMAINING: plan 214-09 -- blocking operator handover; no agent tags.
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 19
-  completed_plans: 15
-  percent: 79
+  total_plans: 40
+  completed_plans: 39
+  percent: 98
 ---
 
 # Project State
@@ -1359,6 +1359,103 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
+Phase: 214 (Release Cut) — 8 of 9 plans executed. **The phase stops here by design.** Plan 214-09
+is a blocking operator checkpoint: the `v5.25.0` tag is operator-reserved and NO agent pushes it.
+Counts re-enumerated from disk 2026-09-28 at plan 08 close, not inherited from this block's prior
+text (archived below): `.planning/phases/214-release-cut/` holds 9 `214-0N-PLAN.md` and 8
+`214-0N-SUMMARY.md` (214-01..214-08). 214-09 has a PLAN and no SUMMARY because it has not run.
+Plan: 8 of 9 complete. Plans 01-08 are all `autonomous: true`; the single blocking operator
+checkpoint is plan 09 and it has not been reached.
+Status: **3 of 4 requirements Complete — REL-01, REL-02, REL-04. REL-03 is PENDING —
+operator-reserved.** ROADMAP Success Criterion 3 is recorded **NOT MET AS WRITTEN** and Criterion 1
+is recorded as a deliberate evidenced deviation, both in
+`.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md`. Criteria 2 and 4 are MET. Phase 214's
+ROADMAP checkbox and REL-03's requirement checkbox are both deliberately left `[ ]`.
+
+Commits this phase: `3f08cd11` (Wave 0 baseline), `de9f2e2a` (CHANGELOG `[5.25.0]`), `4522285a`
+(REL-04 stale-claim correction + 999.116 backlog item), `ee4598af` + `3626a56a` (version bump to
+5.25.0 in pyproject/README), `07157599` (UAT-SERIES.md + ledger), `793ae987` (STATE.md refresh /
+HANDOFF retirement — the SHA plans 07 and 08 cite), plus plan 08's own closure commit recording
+REL-01/02/04 complete and REL-03 pending. Plans 06 and 07 produced ZERO commits: every output was a
+gitignored `.planning/` artifact.
+
+**What REL-03 is pending ON, stated precisely so nobody reads the dry run as the publish.** Plan
+214-07 dispatched `release.yml` on `--ref main`: run `36490856185` at
+`793ae987c948bee51d6032ce0f92c81b335af3cd`, event `workflow_dispatch`, conclusion `success`. The
+composed `release-notes.md` carries `## [5.25.0] - 2026-09-28` at line **1** and the unsigned-binary
+notice at line **209**, and its 1..206 window is byte-identical (`cmp` IDENTICAL, sha256
+`6fc7c8eb50a0...`) to a local re-extraction from `git show origin/main:CHANGELOG.md`. **That is
+PARTIAL and it is not REL-03.** Re-measured live at plan 08: the `Publish to PyPI` job reads
+`skipped`, the `Attach zip to GitHub Release` step reads `skipped`, `gh release view v5.25.0`
+returns `release not found`, PyPI queried directly (independent of `gh` and of Actions) still serves
+`5.21.0` with `5.25.0 present: False`, no `v5.25*` tag exists locally or on `origin` (`v5.21*`
+positive control returns 2 refs from the identical query), and `release.yml:436`'s `body_path`
+consumption path is untested because no dry run can reach it. A green dry run is not a publish.
+
+**The operator, and only the operator, closes REL-03** by running
+`git tag -a v5.25.0 -m "..."` then `git push origin v5.25.0`. `push.followTags` is confirmed UNSET
+on this machine, so no routine `git push origin main` can carry a tag out by accident. Plan 214-09
+assembles the pre-flight handover with every value re-derived at handover time.
+
+**Phase 210's ROADMAP box and `completed_phases: 3` are left UNCHANGED, deliberately.** The prior
+Current Position block nominated plan 214-08 as where that judgement gets recorded. Plan 08 declines
+to make it: Phase 210's criterion 5 was satisfied by **Phase 211's** work, not Phase 210's, and
+whether that counts as Phase 210 meeting its own criterion is a milestone-close provenance call for
+the operator — the same reasoning Phase 210's own entry gives for leaving its box unchecked. Plan 08
+records that the call is still open rather than resolving it silently in either direction.
+
+**Deferred / carried items from this phase:**
+- **REL-03 pending on an operator-reserved tag push.** Not a blocker to be cleared by an agent; a
+  decision to be taken by a person. `release.yml` fires on `v[0-9]*` and publishes to PyPI
+  irreversibly, so there is no rehearsal tag that is not a real one.
+- **Backlog `999.116` filed, not actioned** —
+  `.planning/backlog/999.116-boilerplate-release-bodies-pre-v5.7/IDEA.md`. The 8 genuinely-
+  boilerplate pre-v5.7 tags (`v5.5.1`, `v5.5.2`, `v5.5.2.1`-`.5`, `v5.6.0`, 1153 bytes each, first
+  line `## Windows Sensor Asset`) are a DIFFERENT set from REL-04's 7 and outside its stated scope.
+  Carries the not-recoverable hazard note forward from `999.109`.
+- **`CLAUDE.md`'s Per-Phase Documentation Checklist was corrected in plan 214-03 and is
+  UNCOMMITTABLE.** `CLAUDE.md` is gitignored (`.gitignore:92`), so that correction is real on disk
+  and will never appear in a git diff, a commit, or a fresh clone. Do not look for it in history;
+  read the file. A future `git clean`-equivalent or a fresh checkout loses it silently.
+- **ROADMAP Success Criterion 2's test count was stale by four** ("all 4 `tests/test_version.py`
+  tests" against a measured 8) and is corrected in place at plan 08 with the prior claim preserved
+  beside it. The identical claim in `REQUIREMENTS.md` and `CLAUDE.md` was corrected by plan 214-03;
+  fixing two of three and leaving the third would have reproduced the hand-maintained-figure drift
+  `CLAUDE.md` records this project being bitten by six times. The milestone GOAL line's matching
+  "three milestones" was corrected the same way in the same pass.
+- **The `multihost` chaos-lab profile is still DOWN** (0 `chaoslab` containers). Any live
+  re-comparison must re-raise it AND force-rebuild `mh-prober`
+  (`docker compose -p chaoslab --profile multihost build mh-prober` first) — `lab.sh up` does not
+  pass `--build`, and a stale image silently reproduces a superseded 91/100. Blocks none of plans
+  06-09, none of which need a live scan.
+- **`"HTTP on TLS-designated port"` has no dashboard-side emission site**, dispositioned
+  `unbridgeable-latent-divergence` with an explicit **tag-blocking verdict of NO**:
+  `.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`. It does
+  not block the v5.25.0 tag.
+
+**Frontmatter counter drift, measured and corrected at plan 08 — recorded rather than tidied away.**
+The `progress:` block read `total_plans: 19 / completed_plans: 15`. Both were wrong. Re-derived from
+disk across the milestone's five phase directories: 210=8/8, 211=8/8, 212=5/5, 213=10/10, 214=9
+PLAN / 8 SUMMARY — **40 plans total, 39 with SUMMARYs** at this commit. `19` was not a plausible
+total for a milestone whose phases hold 8+8+5+10+9 plans, and `15` was not reachable either. This is
+the counter-regression class `CLAUDE.md` § GSD `state.*` Verb Integrity (h) and the project's
+`gsd-sdk` hazard memory both name; the values were corrected by hand, from disk, with no `state.*`
+verb run. `completed_phases: 3` is left alone — 211, 212 and 213 are `[x]`; 210 and 214 are not.
+
+`phase.complete` and `requirements mark-complete` have NOT been invoked at any point in this phase,
+by any entry point, and their effects have not been hand-reproduced. No mutating `gsd-sdk` or
+`gsd-tools.cjs` `state.*`/`roadmap.*` verb was run. STATE.md was hand-edited from a pre-image
+(`/tmp/214-STATE.pre`, sha256 `b048b939f2a1...`) with the FULL diff read afterward, not a signature
+grep — a signature grep cannot see the known multi-line-field-VALUE truncation class.
+Last activity: 2026-09-28 — plan 214-08 executed: wrote `214-NOT-MET-AS-WRITTEN.md` (criterion 3
+NOT MET AS WRITTEN / REL-03 PENDING; criterion 1's four-vs-three deviation evidenced), hand-marked
+REL-01/02/04 complete and left REL-03 unchecked in `REQUIREMENTS.md`, rewrote Phase 214's ROADMAP
+entry + Progress row + Success Criterion 2's stale test count + the milestone goal's stale milestone
+count, closed out `214-VALIDATION.md`, and wrote the Obsidian phase note at `status: active`. No tag
+was created. Phase 214's ROADMAP box remains `[ ]`.
+
+### Prior: Phase 214 plan 06 resume (2026-09-28) — superseded by the block above
+
 Phase: 214 (Release Cut) — plans 01-05 of 9 executed and committed; plan 06 INTERRUPTED
 mid-execution when the operator's session terminated accidentally (2026-09-28 ~16:29 EDT). That
 is an interruption, not a failure. Ground truth re-enumerated from disk and git on 2026-09-28
