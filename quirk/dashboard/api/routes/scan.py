@@ -1233,26 +1233,31 @@ def lift_context_for_scan(db: Session, scan_run_id: Optional[str]) -> dict[str, 
     """Per-slug score lifts for one scan, computed exactly as the roadmap
     surface computes them.
 
-    KNOWN CONSTRAINT (202-REVIEW.md WR-02(b), accepted, not fixed this pass):
-    the endpoint set this function scores is resolved via a STRICT
+    PARTIALLY RESOLVED (Phase 210 / XSURF-03 / D-09 / D-12; previously
+    202-REVIEW.md WR-02(b), accepted, not fixed in that pass): the endpoint
+    set this function scores is resolved via a STRICT
     `CryptoEndpoint.scan_run_id == scan_run_id` equality filter (below), and
     it short-circuits to `{}` whenever `scan_run_id` is falsy — including the
-    common legacy case where `ep.scan_run_id is None`. `get_latest_scan`'s
-    no-`scan_id` branch, by contrast, resolves "the latest scan"'s endpoint
-    set via a `SESSION_BRACKET` time window around `MAX(scanned_at)`, with NO
-    `scan_run_id` filter — it merges endpoints across distinct `scan_run_id`
-    values (and NULL rows) that this function cannot see. For a scan whose
-    endpoints do not all share one `scan_run_id`, this function's
-    `theme_score_lift` for a slug CAN legitimately differ from — or be
-    honestly null where the roadmap page has a real number for — the exact
-    same slug on the exact same "latest scan" the operator is viewing. See
+    legacy case where `ep.scan_run_id is None`. `get_latest_scan`'s
+    no-`scan_id` branch NOW resolves "the latest scan"'s endpoint set by that
+    same `scan_run_id` equality whenever the most recent row has one — it no
+    longer merges endpoints across distinct `scan_run_id` values as it once
+    did, so for any scan whose rows share one non-NULL `scan_run_id`, this
+    function's `theme_score_lift` and the roadmap surface's `score_lift` for
+    the same slug can no longer diverge for that reason. The ONE remaining
+    case is the legacy one: when the most recent row's `scan_run_id` IS NULL,
+    `get_latest_scan` still falls back to the `SESSION_BRACKET` time window
+    (D-10 — legacy rows must stay reachable), while this function still
+    short-circuits to `{}` for a falsy `scan_run_id`. That narrower
+    divergence is unchanged by this phase. See
     `test_scan_run_id_divergence_between_storyline_and_roadmap_surfaces` in
-    `tests/test_dashboard_finding_storyline.py` for a live-reproduced example
-    with a legacy (`scan_run_id IS NULL`) endpoint. A shared-resolution
-    refactor (making both call sites resolve endpoints identically) was
-    judged too large a blast radius to take in a post-review fix pass —
-    `get_latest_scan`'s window/fallback tree is exercised by several other
-    pinned tests this function's callers do not want to risk. Revisit if this
+    `tests/test_dashboard_finding_storyline.py`, which locks down exactly
+    that legacy-NULL case (it does not exercise the now-fixed multi-run
+    merge). A shared-resolution refactor for the legacy-NULL case (making
+    both call sites resolve identically when `scan_run_id` is NULL) is still
+    judged too large a blast radius to take here — `get_latest_scan`'s
+    window/fallback tree is exercised by several other pinned tests this
+    function's callers do not want to risk. Revisit if that narrower
     divergence is ever reported live rather than only demonstrated in a test.
 
     Phase 202 Plan 05 (STORY-02): this is the SAME pipeline `get_latest_scan`
@@ -1677,15 +1682,21 @@ def get_latest_scan(
     With ?segment=<label>: filters findings/CBOM to that segment only.
       Omitting the segment param leaves NULL-segment local scans unaffected (Trap T4).
 
-    KNOWN CONSTRAINT (202-REVIEW.md WR-02(b), accepted): the no-`scan_id`
-    branch below resolves endpoints via a `SESSION_BRACKET` time window
-    around `MAX(scanned_at)` with NO `scan_run_id` filter — it can merge
-    endpoints spanning multiple `scan_run_id` values (or NULL). The
-    storyline drawer's `lift_context_for_scan` (this module) instead filters
-    by a single, strict `scan_run_id` equality. For a "latest scan" spanning
-    more than one `scan_run_id`, `score_lift` for a slug computed HERE can
-    diverge from `theme_score_lift` for the same slug shown in the drawer.
-    See `lift_context_for_scan`'s docstring for the full accounting.
+    RESOLVED (Phase 210 / XSURF-03 / D-09 / D-12; previously
+    202-REVIEW.md WR-02(b), accepted): the no-`scan_id` branch below now
+    resolves the `scan_run_id` of the `MAX(scanned_at)` row and, when that
+    value is non-NULL, filters endpoints by strict `scan_run_id` equality —
+    exactly as the `scan_id is not None` branch above already does. It can
+    no longer merge endpoints across distinct `scan_run_id` values. The
+    `SESSION_BRACKET` time window survives only as the fallback for the
+    legacy case where that row's `scan_run_id` IS NULL (D-10) — no
+    migration, no backfill. Because this branch and the storyline drawer's
+    `lift_context_for_scan` (this module) now both resolve by the same
+    single `scan_run_id` equality whenever one is available, the `score_lift`
+    vs `theme_score_lift` divergence this block used to predict cannot occur
+    by construction for any scan whose rows share one `scan_run_id`. See
+    `lift_context_for_scan`'s docstring for the remaining legacy-NULL case,
+    which is unchanged by this fix.
     """
     if scan_id is not None:
         try:
@@ -1742,24 +1753,47 @@ def get_latest_scan(
             raise HTTPException(status_code=404, detail=format_error("DASHBOARD-005"))
         latest_ts = target_ts
     else:
-        # D-01: anchor on MAX(scanned_at), then load all endpoints in the
-        # SESSION_BRACKET window before that maximum. This restores SAML/OIDC
-        # findings that the previous 1-second forward window silently excluded
-        # when Kerberos finished last (ISSUE-3 / DEF-v4.4-02).
-        latest_ts = db.query(func.max(CryptoEndpoint.scanned_at)).scalar()
-        if latest_ts is None:
+        # Phase 210 / XSURF-03 / D-09: anchor on MAX(scanned_at) as before,
+        # but also read that row's scan_run_id. When it is non-NULL, resolve
+        # EXACTLY by scan_run_id equality — mirroring the `scan_id is not
+        # None` branch above — so two runs (e.g. 4m26s apart) can no longer
+        # merge into one "latest scan". D-01's original rationale (restoring
+        # SAML/OIDC findings the old 1-second forward window silently
+        # excluded when Kerberos finished last, ISSUE-3 / DEF-v4.4-02) is
+        # preserved: the SESSION_BRACKET window still exists below, demoted
+        # to a fallback that fires ONLY when the latest row's scan_run_id IS
+        # NULL — the legacy case D-10 requires stay reachable, with no
+        # migration and no backfill.
+        latest_row = (
+            db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
+            .order_by(CryptoEndpoint.scanned_at.desc())
+            .first()
+        )
+        if latest_row is None:
             raise HTTPException(
                 status_code=404,
                 detail=format_error("DASHBOARD-006"),
             )
-        endpoints: list[CryptoEndpoint] = (
-            db.query(CryptoEndpoint)
-            .filter(
-                CryptoEndpoint.scanned_at >= latest_ts - SESSION_BRACKET,
-                CryptoEndpoint.scanned_at <= latest_ts,
+        latest_ts, latest_scan_run_id = latest_row
+        if latest_scan_run_id is not None:
+            # Exact resolution — no time window participates. Do NOT AND this
+            # with the scanned_at window: a real scan's endpoints can span
+            # more than 5 minutes, and combining the two filters would drop
+            # rows from the very scan being requested.
+            endpoints: list[CryptoEndpoint] = (
+                db.query(CryptoEndpoint)
+                .filter(CryptoEndpoint.scan_run_id == latest_scan_run_id)
+                .all()
             )
-            .all()
-        )
+        else:
+            endpoints = (
+                db.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.scanned_at >= latest_ts - SESSION_BRACKET,
+                    CryptoEndpoint.scanned_at <= latest_ts,
+                )
+                .all()
+            )
 
     if not endpoints:
         raise HTTPException(status_code=404, detail=format_error("DASHBOARD-006"))
