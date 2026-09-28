@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T01:47:00.000Z"
-last_activity: 2026-09-28 -- Phase 210 plan 06 complete (live multihost re-run, evidence only, no code). XSURF-01/02 confirmed live and marked complete. Success Criterion 5 recorded NOT MET -- residual 1-point headline-score divergence (17 report vs 18 dashboard) isolated to Hygiene/Modern TLS subscores, CRITICAL count and certificate count now match exactly; filed as todo 260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard. Only plan 08 remains in Phase 210.
+last_updated: "2026-09-28T02:00:00.000Z"
+last_activity: 2026-09-28 -- Phase 210 plan 08 complete (final plan of Phase 210). docs/UAT-SERIES.md Series 210 added (UAT-210-01/02 PASS, UAT-210-03 SKIP/DEFERRED), docs/uat-coverage-gaps.md regenerated, Obsidian phase note written and UAT-SERIES.md synced to vault Digs, 210-VALIDATION.md rows flipped green. Ground-truth completion check: 8 PLANs, 8 SUMMARYs on disk, zero deficient -- phase.complete was NOT invoked. All 4 requirements (XSURF-01..04) independently Complete, but Phase 210's own headline-parity goal is PARTIALLY achieved only -- Success Criterion 5 (identical headline score across pipelines) is NOT MET (17 report vs 18 dashboard), filed as todo 260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard for Phase 211/212 follow-up. Phase 210 checkbox in ROADMAP.md left UNCHECKED to reflect this. Next: plan Phase 211 (Denominator Correctness).
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State

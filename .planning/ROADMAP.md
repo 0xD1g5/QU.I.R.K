@@ -22,7 +22,10 @@ cause at an exact file:line. This milestone adds no new detection capability.
 ## Phases
 
 - [ ] **Phase 210: Cross-Surface Score Parity** - One scan yields the same headline score, CRITICAL
-  count and certificate count from the report pipeline and the dashboard pipeline.
+  count and certificate count from the report pipeline and the dashboard pipeline. **All 8 plans
+  done, all 4 requirements Complete; left unchecked because the phase's own stated goal is only
+  PARTIALLY achieved** — CRITICAL count and certificate count now match exactly, but the headline
+  score still diverges by 1 point (Success Criterion 5 NOT MET). See 210-08-SUMMARY.md.
 - [ ] **Phase 211: Denominator Correctness** - Every ratio penalty divides by the population its
   numerator is drawn from, decided by measurement against the calibration ladder and re-proved red
   before acceptance.
@@ -95,7 +98,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 210-08-PLAN.md — UAT-SERIES.md, Obsidian phase note, ground-truth completion check (wave 6)
+- [x] 210-08-PLAN.md — UAT-SERIES.md, Obsidian phase note, ground-truth completion check (wave 6)
 
 ### Phase 211: Denominator Correctness
 **Goal**: Every ratio penalty in the readiness score divides by the population its own numerator is
@@ -203,7 +206,7 @@ emits and whatever UI state ships — every other phase must land first)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 210. Cross-Surface Score Parity | 0/8 | Not started | - |
+| 210. Cross-Surface Score Parity | 8/8 | Partial — 4/4 requirements Complete, Success Criterion 5 (identical headline score) NOT MET, see 210-08-SUMMARY.md | 2026-09-27 |
 | 211. Denominator Correctness | 0/? | Not started | - |
 | 212. Score Dilution — Decision Only | 0/? | Not started | - |
 | 213. Shipped Product Defects (Series 7) | 0/? | Not started | - |
