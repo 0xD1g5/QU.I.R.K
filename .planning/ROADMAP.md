@@ -310,17 +310,34 @@ verification pass owns flipping that checkbox, not this close-out plan.
 **Plans**: 10 plans in 5 waves
 
 Plans:
-- [ ] 213-01-PLAN.md — Widen the colour detector to all three HSL spellings, add a run-time residual guard, record the count finding (criterion 3)
-- [ ] 213-02-PLAN.md — Mint the theme-token vocabulary in :root and .light, add a token-existence/parity guard
-- [ ] 213-03-PLAN.md — UIFIX-01 certificates expiry sort (TanStack, Date accessorFn) + tokenise certificates.tsx
-- [ ] 213-04-PLAN.md — Tokenise hardware, data-at-rest, motion, scan-history (54 literals)
-- [ ] 213-05-PLAN.md — Tokenise trends, executive, healthcare, sensors, schedules, findings, identity, compare (52 literals)
-- [ ] 213-06-PLAN.md — Pin the print surface to the light palette and tokenise its 45 literals + 1 named colour
-- [ ] 213-07-PLAN.md — Real Cytoscape refactor: shared literal-free resolver + theme re-resolution across all 3 graphs (47 literals)
-- [ ] 213-08-PLAN.md — Prove the widened gate RED, remove .fails, correct the docstring, ship the authoritative build
-- [ ] 213-09-PLAN.md — HUMAN-UAT: both themes × 3 graphs, live toggle, two-PDF comparison, browser sort check
-- [ ] 213-10-PLAN.md — Close-out: flip UAT-7-12/7-21, regenerate coverage gaps + master guide, Obsidian sync, validation rows
+- [x] 213-01-PLAN.md — Widen the colour detector to all three HSL spellings, add a run-time residual guard, record the count finding (criterion 3)
+- [x] 213-02-PLAN.md — Mint the theme-token vocabulary in :root and .light, add a token-existence/parity guard
+- [x] 213-03-PLAN.md — UIFIX-01 certificates expiry sort (TanStack, Date accessorFn) + tokenise certificates.tsx
+- [x] 213-04-PLAN.md — Tokenise hardware, data-at-rest, motion, scan-history (54 literals)
+- [x] 213-05-PLAN.md — Tokenise trends, executive, healthcare, sensors, schedules, findings, identity, compare (52 literals)
+- [x] 213-06-PLAN.md — Pin the print surface to the light palette and tokenise its 45 literals + 1 named colour
+- [x] 213-07-PLAN.md — Real Cytoscape refactor: shared literal-free resolver + theme re-resolution across all 3 graphs (47 literals)
+- [x] 213-08-PLAN.md — Prove the widened gate RED, remove .fails, correct the docstring, ship the authoritative build
+- [x] 213-09-PLAN.md — HUMAN-UAT: both themes × 3 graphs, live toggle, two-PDF comparison, browser sort check
+- [x] 213-10-PLAN.md — Close-out: flip UAT-7-12/7-21, regenerate coverage gaps + master guide, Obsidian sync, validation rows
 **UI hint**: yes
+
+**Close-out (2026-09-28, plan 213-10):** All 10 plans executed; SUMMARY.md present for each.
+Criteria 1, 3, 4, 5 MET — `UAT-7-12` and `UAT-7-21` (qualified) both PASS; the true pre-fix colour
+count was re-derived at **205 literals across 17 files** (not the ~188 hypothesised by D-14, and
+far beyond the 95-across-9 the narrow detector originally found), all tokenised, and all three
+Cytoscape graphs confirmed rendering correctly under both themes with live toggle by the operator
+in plan 213-09. **Criterion 2 is recorded NOT MET AS WRITTEN.** It names `docs/uat-coverage-gaps.md`
+regenerating "from 27 of 28 to 28 of 28" — but that generator's worklist enumerates only its own
+GAP cases and corpus-wide disposition totals; it contains zero occurrences of "27 of 28", "COV-04",
+`UAT-7-12` or `UAT-7-21` at any point, before or after this phase's edits. The 27-of-28 tally is a
+v5.24 REQUIREMENT-level figure recorded in `.planning/PROJECT.md` (line 6, 736) and
+`.planning/REQUIREMENTS.md` (lines 167-168), not a figure `scripts/generate_uat_coverage_gaps`
+emits. **What WAS achieved instead:** the underlying product absence that caused COV-04 to close at
+27 of 28 is fixed, `UAT-7-12` is dispositioned PASS, and the regenerated worklist's corpus-wide
+totals moved to reflect it (FAIL 7→5, PASS 754→756). This is the third time this project has
+recorded a criterion NOT MET AS WRITTEN (after Phases 211 and 212) rather than silently
+reinterpreting it to fit the artifact on hand.
 
 ### Phase 214: Release Cut
 **Goal**: `v5.25.0` is tagged, published to PyPI, and every release-body defect this milestone can

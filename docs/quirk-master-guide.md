@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,474 lines, in reading order.
+Five guides, 6,486 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3894,6 +3894,18 @@ quirk errors --dump-md > docs/error-codes.md
   explicitly. Also worth checking: a stray 0-byte `quirk.db` left over from an earlier run in
   the working directory counts toward this conflict even though it holds no data — delete it
   if it isn't the DB you intend to serve.
+- **Certificates page — Expiry column is sortable (Phase 213, v5.25 — UIFIX-01).** Click the
+  Expiry column header to sort the certificate inventory ascending (soonest-expiring first); click
+  again to reverse to descending. Certificates with no recorded expiry sort to the end in both
+  directions. The sort key is the parsed date, not the rendered date string, so ordering is always
+  chronological. See
+  [Report Interpretation → Certificates Page Expiry Sorting](report-interpretation.md#28-certificates-page-expiry-sorting-phase-213-v525--uifix-01).
+- **Dashboard colours now follow the active theme everywhere, including the graph pages (Phase
+  213, v5.25 — UIFIX-02).** The Roadmap, CBOM Graph tab, and Exposure Map pages re-resolve their
+  Cytoscape colours immediately on a theme toggle — no reload needed. The exported PDF remains
+  intentionally theme-independent: it always renders in a fixed light palette regardless of the
+  live dashboard's theme at export time. See
+  [Report Interpretation → Dashboard Colours Follow the Active Theme](report-interpretation.md#29-dashboard-colours-follow-the-active-theme-phase-213-v525--uifix-02).
 - **Appearance note (Phase 165, A11Y-03)** — primary and accent buttons, and the
   severity/quantum-safety badges described in
   [Report Interpretation](report-interpretation.md#4-severity-tiers), now render dark text

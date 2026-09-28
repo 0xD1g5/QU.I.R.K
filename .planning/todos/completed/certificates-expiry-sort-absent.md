@@ -115,3 +115,13 @@ modelled on `findings-sorting.test.tsx`. No API change, no schema change, no new
 
 **Spike needed: NO.** The implementation path is a direct port of a pattern already running in
 `findings.tsx` in the same codebase, with a working test to copy. Go straight to implementation.
+
+---
+
+## RESOLVED 2026-09-28 (Phase 213, plan 213-03)
+
+`certificates.tsx` now sorts by expiry via a ported TanStack Table pattern (`accessorFn` returning
+a parsed `Date`, `sortingFn: "datetime"`, null-expiry sorts last in both directions). Covered by
+`src/dashboard/src/pages/__tests__/certificates-expiry-sort.test.tsx` (5 nodes) and confirmed live
+by the operator in plan 213-09's browser walkthrough. `UAT-7-12` re-dispositioned PASS in plan
+213-10. Moved to `.planning/todos/completed/`.

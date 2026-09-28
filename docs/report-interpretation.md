@@ -2163,3 +2163,33 @@ docker compose -p chaoslab --profile multihost build \
 
 Without the `--build-arg`, the image still builds and scans normally; its summary simply reports
 `Scanner build unknown`.
+
+## 28. Certificates Page Expiry Sorting (Phase 213, v5.25 — UIFIX-01)
+
+The Certificates page's Expiry column header is clickable and sorts the certificate inventory table
+by expiry date. The first click sorts ascending (soonest-expiring first); a second click reverses to
+descending. Certificates with no recorded expiry (a null value) sort to the end of the table in both
+directions, so they never displace an expiring certificate from the top of an ascending sort.
+
+The sort key is the parsed expiry `Date`, not the formatted display string. This matters because a
+naive string sort on a rendered date (e.g. `"04 Jan 2027"`) orders lexicographically rather than
+chronologically, which looks almost correct and is therefore a worse defect than an obviously broken
+sort — a certificate expiring in January 2027 could appear to sort before one expiring in 2026. The
+column header also exposes `aria-sort` (`none`, then `ascending`, then `descending`) across clicks for
+assistive technology.
+
+## 29. Dashboard Colours Follow the Active Theme (Phase 213, v5.25 — UIFIX-02)
+
+Every dashboard page — including the three Cytoscape-rendered graph pages (Roadmap, CBOM's Graph
+tab, and the Exposure Map) — now resolves its colours from the active theme's CSS custom properties
+rather than from hardcoded hex or HSL literals baked into the page source. Toggling the sidebar
+theme control re-colours a page immediately, without a reload, including graphs already on screen:
+node fills, edge colours, legend swatches, badges and severity-tier colouring all re-resolve to the
+newly active theme.
+
+**The exported PDF is deliberately theme-independent.** "Export PDF" runs in a fresh, cookie-less
+Playwright context that always renders the print surface in its own fixed light palette, regardless
+of whether the live dashboard session that triggered the export was in light or dark mode. A PDF
+exported from a dark-theme session and one exported from a light-theme session are equivalent — this
+is intentional, not a bug: the printed deliverable is a client-facing artifact and is not expected to
+carry the operator's personal theme preference.

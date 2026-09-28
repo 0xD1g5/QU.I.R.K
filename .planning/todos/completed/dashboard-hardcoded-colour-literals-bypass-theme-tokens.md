@@ -155,3 +155,18 @@ stale-colour bug.
 - `print.tsx`'s treatment is explicit — either fixed, or carried as a named, documented print
   palette the audit reports as a distinct category.
 - UAT-7-21 is re-dispositioned from FAIL to PASS in `docs/UAT-SERIES.md`, citing the same node.
+
+---
+
+## RESOLVED 2026-09-28 (Phase 213, plans 213-01 through 213-08)
+
+The detector was widened (213-01) to also catch the Tailwind underscore-HSL and comma-HSL forms
+the narrow detector missed, raising the true pre-fix count from 95-across-9 to 205-across-17. All
+205 literals were tokenised across plans 213-02 through 213-07 (theme tokens, certificates,
+hardware/data-at-rest, trends/executive/healthcare/sensors/schedules/findings/identity/compare,
+print.tsx light-pinning, and the three Cytoscape graphs via a shared theme resolver). Plan 213-08
+proved the widened gate genuinely RED (`Error: Expect test to fail`) before removing `.fails`,
+converting it to a standing honestly-green regression guard reporting 0 literals. Plan 213-09's
+operator walkthrough confirmed all three graphs render correctly under both themes with live
+toggle re-resolution. `UAT-7-21` re-dispositioned PASS (qualified — two Pass Criteria bullets
+remain uncovered by any source instrument) in plan 213-10. Moved to `.planning/todos/completed/`.
