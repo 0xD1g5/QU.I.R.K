@@ -149,7 +149,35 @@ now REFUTED and needs measuring.**
      five calibration ladder rungs are re-measured, CBOM golden fixtures and `score-strings.json` are
      regenerated and pass their generator-drift gates, and `_apply_weighted_impacts`'s 25-point clamp
      is checked for saturation now that penalties are larger.
-**Plans**: TBD
+**Plans**: 8 plans in 6 waves
+
+Plans:
+
+**Wave 1** *(no dependencies; disjoint files)*
+
+- [ ] 211-01-PLAN.md — DENOM-01/02/03 satisfaction record by re-derived citation + DENOM-04's four residual dispositions + clamp ceiling-saturation measured and locked (wave 1)
+- [ ] 211-02-PLAN.md — 17-vs-18 leg 1: wire `finding_title_bridge` into `evidence.py`'s title-matched counters per operator Decision A, with pinned-oracle parity test proven red (wave 1)
+
+**Wave 2** *(shares `evidence.py` with 211-02)*
+
+- [ ] 211-03-PLAN.md — 17-vs-18 leg 2: replace the `sev["LOW"]` severity proxy with an endpoint-derived `legacy_tls_count`; the bridge cannot fix this leg (wave 2)
+
+**Wave 3** *(needs the final title set from waves 1-2)*
+
+- [ ] 211-04-PLAN.md — run-time source-scan coverage gate over `evidence.py`'s scoring-critical finding titles + disposition ledger + todo for the unbridgeable latent divergence (wave 3)
+
+**Wave 4** *(one lab raise, shared by both live measurements — operator Decision B)*
+
+- [ ] 211-05-PLAN.md — force-rebuild `mh-prober`, raise `multihost`, D-08 cross-surface live comparison + DENOM-03's two-`ports_tls`-width behavioural measurement (wave 4, non-autonomous)
+
+**Wave 5** *(both plans state claims about 211-05's evidence, so both declare an explicit `depends_on` — wave co-membership is not ordering)*
+
+- [ ] 211-06-PLAN.md — DECIDED decision record, todo refutation, hand-marked REQUIREMENTS/ROADMAP/STATE with a full-file pre-image diff (wave 5, depends_on 211-01/211-04/211-05)
+- [ ] 211-07-PLAN.md — `report-interpretation.md` + `operators-guide.md` parity statements and score-contributor disclosure, master-guide regeneration, LIVE-03 vault sync (wave 5, depends_on 211-03/211-05)
+
+**Wave 6**
+
+- [ ] 211-08-PLAN.md — UAT Series 211 + coverage-gaps regeneration, Obsidian phase note, VALIDATION map resolution, ground-truth completion check on an ENUMERATED PLAN/SUMMARY set (wave 6)
 
 ### Phase 212: Score Dilution — Decision Only
 **Goal**: A written, measured denominator decision exists for the P2b healthy-endpoint dilution
