@@ -16,45 +16,64 @@
  * repeatedly, and a written list is not a safeguard.
  *
  * ---------------------------------------------------------------------------
- * THIS NODE IS `it.fails` BECAUSE UAT-7-21 CURRENTLY FAILS. READ THIS BEFORE
- * CITING IT.
+ * CURRENT CONTRACT (as of Phase 213 plan 08): this is a PLAIN `it` — the
+ * `.fails` modifier a prior phase wrapped it in has been removed. A GREEN
+ * run means zero hardcoded colour literals remain across the audited set.
+ * A RED run means one was reintroduced, and the failure
+ * diff names every offending file, line and literal via `format()` below.
+ * Read this before citing the node — its polarity was inverted for six
+ * phases (see the historical note at the end of this comment) and a reader
+ * skimming an old citation can easily get the direction backwards.
  * ---------------------------------------------------------------------------
- * As of 2026-09-28 the widened audit finds 205 hardcoded colour literals
- * across 17 of the 27 audited files: 67 hex, 28 whitespace-HSL
- * (`hsl(142 71% 45%)`), 93 Tailwind arbitrary-value underscore-HSL
- * (`hsl(142_71%_45%)`), and 17 comma-HSL (`hsl(0, 72%, 51%)`). The detector
- * below is NOT weakened to accommodate them: there is no allowlist, no
- * baseline snapshot and no narrowed pattern. The assertion is the
- * full-strength `toEqual([])`, and it genuinely fails.
+ * The detector covers three raw-HSL spellings found live in this codebase,
+ * in addition to `#hex`: `RAW_HSL_SPACE_RE` (`hsl(142 71% 45%)`),
+ * `RAW_HSL_UNDERSCORE_RE` (Tailwind arbitrary-value form,
+ * `hsl(142_71%_45%)`), and `RAW_HSL_COMMA_RE` (legacy comma form,
+ * `hsl(0, 72%, 51%)`). The pre-widen predecessor detector had only the
+ * whitespace form and was structurally blind to the other two — not merely
+ * under-counting them, unable to see them at all.
  *
- * This file's PREDECESSOR detector (a single whitespace-only `RAW_HSL_RE`)
- * could see only 95 of these 205 sites — it was structurally blind to the
- * underscore and comma spellings, not merely under-counting them. That blind
- * spot was found during Phase 213 planning by reproducing this file's own
- * scan logic in a standalone Node script over the same run-time-derived file
- * set and comparing outputs; it is recorded, with every prior estimate's
- * scope and method, in `.planning/phases/213-shipped-product-defects/
- * 213-COLOUR-COUNT-FINDING.md`. The `RESIDUAL` guard below exists so a FOURTH
- * spelling cannot repeat that history silently.
+ * As of Phase 213 plan 08 the pre-fix total, measured by reproducing this
+ * file's own scan logic in a standalone Node script (independent of both
+ * this file's own vitest runner and the live working tree — it read source
+ * via `git show <commit>:<path>` at the phase's starting commit) was
+ * **205 hardcoded colour literals across 17 of the 27 audited files**: 67
+ * hex, 28 whitespace-HSL, 93 underscore-HSL, 17 comma-HSL. That figure was
+ * closer to the eventual truth than D-14's ~188 planning-time hypothesis —
+ * the disagreement, and the method used to resolve it, is recorded in
+ * `.planning/phases/213-shipped-product-defects/213-COLOUR-COUNT-FINDING.md`.
+ * Every one of the 205 has now been tokenised; the same independent
+ * instrument, re-run after tokenisation, reports zero. There is no
+ * allowlist, no baseline snapshot and no narrowed pattern anywhere in this
+ * file or in how the 205 were closed — the assertion below is still the
+ * full-strength `toEqual([])`.
  *
- * `it.fails` records that verdict instead of hiding it. The alternative —
- * committing a hard-red node — would take `dashboard-quality.yml` and the UAT
- * citation guard's vitest execution leg down with it, which would obscure the
- * finding rather than publish it.
+ * The whitespace-only predecessor under-reported the true total by more than
+ * half (95 of 205 — well under 50%). That is why the `RESIDUAL` guard below
+ * re-derives the set of `hsl(`/`hsla(`-opening constructs none of the three
+ * named detectors matched, from source, on every run, rather than trusting a
+ * written list of forms to stay exhaustive — a written list is exactly what
+ * missed the other 110 the first time.
  *
- * Consequences a reader must not get wrong:
- *   - UAT-7-21's recommended disposition is FAIL, not PASS. A green run of
- *     this node means "the dashboard still has hardcoded colours", which is
- *     the opposite of the case passing.
- *   - The day someone fixes the product, this node goes RED with vitest's
- *     "Expect test to fail" — that is the signal to delete `.fails` here and
- *     re-disposition UAT-7-21 to PASS. It is not a regression.
- *   - Known limitation of the `it.fails` shape: a future break in the
- *     preconditions inside the test body would also be absorbed. The
- *     vacuity guard is therefore hoisted to module scope below, where a
- *     throw surfaces as a collection error `it.fails` cannot swallow.
- *   - To read the live violation inventory, change `it.fails` to `it` and
- *     run the file; the failure diff lists every site.
+ * HISTORICAL NOTE, kept for readers who find an old citation: this node
+ * carried the `.fails` modifier from Phase 206 (plan 206-11, when UAT-7-21
+ * was first found failing) until Phase 213 plan 08. While `.fails` was
+ * present, a GREEN run meant the OPPOSITE of what green means now — "the
+ * dashboard still has hardcoded colours" — and the fix signal was the node
+ * going RED with vitest's "Expect test to fail", not green. The `.fails`
+ * modifier was chosen over a hard-red node so a documented, expected
+ * failure would not take `dashboard-quality.yml` or the UAT citation
+ * guard's vitest execution leg down with it. Phase 213 plan 08 proved that
+ * RED state verbatim before removing `.fails` — see `213-08-SUMMARY.md`
+ * for the captured output — and only then converted this into the plain,
+ * honestly-green standing regression guard described above.
+ *
+ * A known limitation carried over from the `.fails`-modifier era: the
+ * module-scope vacuity guards (`AUDITED.length`, the sidebar-presence
+ * check, the `RESIDUAL` and `NO_LAUNDERING` throws below) remain at module
+ * scope rather than inside the `it(...)` body, because a throw there is a
+ * collection error that no wrapper — `it` with `.fails` before, plain `it`
+ * now — can silently absorb into a false pass.
  */
 import { describe, it, expect } from "vitest"
 import { readFileSync, readdirSync, existsSync } from "node:fs"
@@ -159,8 +178,8 @@ function format(v: Violation): string {
   return `${v.file}:${v.line}  ${v.literal} -> ${v.hex}  (contrast on light bg: ${v.onLight}:1)`
 }
 
-// Module-scope vacuity guard. Deliberately NOT inside the it.fails body: a
-// throw here is a collection error, which `it.fails` cannot absorb, so an
+// Module-scope vacuity guard. Deliberately NOT inside the it(...) body: a
+// throw here is a collection error, which a `.fails`-modified it cannot absorb, so an
 // empty or broken glob can never masquerade as "no violations found".
 const AUDITED = auditedFiles()
 if (AUDITED.length === 0) {
@@ -185,7 +204,7 @@ if (AUDITED.filter((f) => f.startsWith("pages/")).length < 5) {
  * A fourth spelling — or an `hsla()` call — must fail this loudly rather than
  * silently under-reporting the way the underscore and comma forms did before
  * this plan. Module scope, alongside the other vacuity guards, for the same
- * reason: a throw here is a collection error `it.fails` cannot absorb.
+ * reason: a throw here is a collection error a `.fails`-modified it cannot absorb.
  */
 const ALL_HSL_OPEN_RE = /hsla?\(\s*(?!var\()/g
 function findResidualSites(): string[] {
@@ -250,7 +269,7 @@ if (existsSync(CYTOSCAPE_THEME_PATH)) {
 }
 
 describe("UAT-7-21 — hardcoded colour audit (D-A1 source-audit carve-out)", () => {
-  it.fails("finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components", () => {
+  it("finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components", () => {
     // Restated in-test as well as at module scope, per the plan's acceptance
     // criterion that the glob is asserted non-empty before its contents are.
     expect(AUDITED.length).toBeGreaterThan(0)
