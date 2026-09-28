@@ -398,6 +398,28 @@ _XSURF04_CSRF = {"X-Quirk-Request": "1"}
 # (quirk/models.py:104-105), so this fixture matches production shape.
 _XSURF04_RUN_ID = "2026-09-27T09:15:00"
 
+# Pinned expected values for the fixture in `_xsurf04_seed_scan_run` (Task 2 /
+# D-15 widening). The plain A==B comparison below is STRUCTURALLY BLIND to a
+# regression in a site that BOTH surfaces call identically in-process — Phase
+# 210 D-06 unified SAML finding synthesis into one shared
+# `evaluate_identity_endpoints`, called by both the report pipeline and (via
+# `_derive_identity_findings`) the dashboard route, so a bug there moves BOTH
+# sides together and A==B still holds. Live-verified during this plan's
+# falsification (see 210-05-SUMMARY.md): disabling the `(host, port, serial)`
+# dedupe made BOTH surfaces report CRITICAL=3 instead of 2 — equal, and wrong.
+# Pinning the CORRECT value independently of either surface is what actually
+# catches that class of regression.
+_EXPECTED_XSURF04_CRITICAL_COUNT = 2   # 1 (deduped same-serial pair) + 1 (distinct-serial pair)
+_EXPECTED_XSURF04_CERT_COUNT = 2       # the two healthy TLS rows
+# quirk/intelligence/evidence.py's `_seen_saml_certs` dedupe (D-03) is a
+# SEPARATE counter (`saml_weak_signing_count`) that feeds the headline score
+# through a ratio too small, at this fixture's scale, to reliably move the
+# post-consequence-ceiling COMPRESSED integer score (live-verified: baseline
+# computed=95 vs sabotaged computed=94, both compress to the same displayed
+# 32). Pin the pipeline's own internal counter directly, since neither of
+# D-14's three surfaced numbers is guaranteed sensitive to this site.
+_EXPECTED_XSURF04_SAML_WEAK_SIGNING_COUNT = 2
+
 
 def _xsurf04_make_client_and_session():
     """TestClient + in-memory-SQLite session factory, borrowed verbatim in
@@ -575,4 +597,31 @@ def test_xsurf04_three_number_cross_surface_equality():
     assert cert_count_a == cert_count_b, (
         f"XSURF-04 VIOLATION: certificate count diverged across surfaces. "
         f"report={cert_count_a} dashboard={cert_count_b}"
+    )
+
+    # --- Pinned-oracle widening (D-15 Task 2 finding) ---
+    # A==B alone is insensitive to a regression inside a function BOTH
+    # surfaces call identically in-process (see the constants' docstring
+    # above). Pin the correct value independently so a reintroduced
+    # double-count trips even when it moves both surfaces together.
+    assert critical_count_a == _EXPECTED_XSURF04_CRITICAL_COUNT, (
+        f"XSURF-04 VIOLATION: report-pipeline CRITICAL count is "
+        f"{critical_count_a}, expected exactly {_EXPECTED_XSURF04_CRITICAL_COUNT} "
+        "for this fixture (1 deduped same-serial SAML pair + 1 distinct-serial "
+        "SAML row). A higher count means evaluate_identity_endpoints's "
+        "(host, port, serial) dedupe (D-01) was not applied."
+    )
+    assert cert_count_a == _EXPECTED_XSURF04_CERT_COUNT, (
+        f"XSURF-04 VIOLATION: certificate count is {cert_count_a}, expected "
+        f"exactly {_EXPECTED_XSURF04_CERT_COUNT} for this fixture's two "
+        "healthy TLS rows."
+    )
+    assert evidence_a["saml_weak_signing_count"] == _EXPECTED_XSURF04_SAML_WEAK_SIGNING_COUNT, (
+        f"XSURF-04 VIOLATION: build_evidence_summary's saml_weak_signing_count "
+        f"is {evidence_a['saml_weak_signing_count']}, expected exactly "
+        f"{_EXPECTED_XSURF04_SAML_WEAK_SIGNING_COUNT}. A higher count means "
+        "quirk/intelligence/evidence.py's _seen_saml_certs dedupe (D-03) was "
+        "not applied — this is checked directly because neither of the three "
+        "surfaced numbers above is guaranteed sensitive to this specific site "
+        "(see 210-05-SUMMARY.md Falsification section)."
     )
