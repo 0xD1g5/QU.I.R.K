@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T23:45:00.000Z"
-last_activity: 2026-09-28 -- Phase 213 (Shipped Product Defects, Series 7) plan 213-10 (close-out) executing: UAT-7-12 and UAT-7-21 (qualified) re-dispositioned PASS, true pre-fix colour-literal count confirmed at 205 across 17 files (not the ~188 D-14 hypothesised), all 205 tokenised, widened gate proved RED then GREEN, docs/uat-coverage-gaps.md and docs/quirk-master-guide.md regenerated, UIFIX-01/02 hand-marked complete in REQUIREMENTS.md, criterion 2 recorded NOT MET AS WRITTEN (docs/uat-coverage-gaps.md contains zero occurrences of '27 of 28', COV-04, UAT-7-12 or UAT-7-21 -- that tally lives in PROJECT.md/REQUIREMENTS.md, not the generated worklist the criterion names), vault synced (two guides, UAT-Series.md, new Phase 213 note, Hub table + wikilinks). Awaiting operator checkpoint approval before 213-10-SUMMARY.md is written and Phase 213's own ROADMAP checkbox is left for the orchestrator to flip after independent verification.
+last_updated: "2026-09-29T00:10:00.000Z"
+last_activity: 2026-09-28 -- Phase 213 (Shipped Product Defects, Series 7) plan 213-10 (close-out) COMPLETE: operator approved the checkpoint verbatim ("Approved -- close Phase 213."), UAT-7-12 and UAT-7-21 (qualified) re-dispositioned PASS, true pre-fix colour-literal count confirmed at 205 across 17 files (not the ~188 D-14 hypothesised), all 205 tokenised, widened gate proved RED then GREEN, docs/uat-coverage-gaps.md and docs/quirk-master-guide.md regenerated and orchestrator-confirmed BYTE-IDENTICAL to their generators, UIFIX-01/02 hand-marked complete in REQUIREMENTS.md, criterion 2 recorded NOT MET AS WRITTEN (docs/uat-coverage-gaps.md contains zero occurrences of '27 of 28', COV-04, UAT-7-12 or UAT-7-21 -- that tally lives in PROJECT.md/REQUIREMENTS.md, not the generated worklist the criterion names), vault synced (two guides, UAT-Series.md, new Phase 213 note, Hub table + wikilinks), 213-10-SUMMARY.md written, 213-VALIDATION.md all 27 rows green (nyquist_compliant true). Phase 213's own ROADMAP checkbox and completed_phases remain for the orchestrator's independent verification pass to flip -- not written here. `phase.complete` and `requirements mark-complete` were NOT invoked.
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -1360,13 +1360,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 213 (Shipped Product Defects, Series 7) — 9 of 10 plans executed (213-01..09 all complete
-with SUMMARY.md on disk); plan 213-10 (this close-out) is executing its final task, awaiting
-operator approval at its blocking checkpoint. Ground truth enumerated from disk at time of this
-edit: 10 PLAN.md files, 9 SUMMARY.md files (213-10-SUMMARY.md is written only after the checkpoint
-resolves).
-Plan: 9 of 10 executed; will become 10 of 10 once 213-10-SUMMARY.md is written after operator
-approval.
+Phase: 213 (Shipped Product Defects, Series 7) — all 10 plans executed, closure pending
+orchestrator review. Ground truth enumerated from disk: 10 PLAN.md files, 10 SUMMARY.md files
+(213-01 through 213-10), one-to-one correspondence confirmed.
+Plan: 10 of 10 executed. Plan 213-10's own blocking checkpoint was approved by the operator,
+verbatim: "Approved — close Phase 213."
 Status: `UAT-7-12` and `UAT-7-21` (qualified) re-dispositioned PASS; true pre-fix colour-literal
 count re-derived at 205 across 17 files (not the ~188 D-14 hypothesised, and far beyond the narrow
 detector's original 95-across-9); all 205 tokenised; widened colour-audit gate proved genuinely RED
@@ -1374,17 +1372,20 @@ before the fix and reports `1 passed` honestly after (0 remaining). Criterion 2 
 WRITTEN — `docs/uat-coverage-gaps.md`'s regenerated worklist contains zero occurrences of "27 of
 28", "COV-04", `UAT-7-12` or `UAT-7-21`; that tally is a v5.24 requirement-level figure in
 `.planning/PROJECT.md`/`.planning/REQUIREMENTS.md`, not something this generator emits. UIFIX-01
-and UIFIX-02 hand-marked `[x]` in REQUIREMENTS.md with scoped citations. Phase 213's own ROADMAP
-checkbox is left UNCHECKED on purpose — closing it is the orchestrator's call after independently
-verifying that section, not this plan's. `phase.complete` and `requirements mark-complete` were NOT
-invoked.
-Last activity: 2026-09-28 — Phase 213 plan 10 re-dispositioned UAT-7-12/UAT-7-21, regenerated
-docs/uat-coverage-gaps.md (FAIL 7->5, PASS 754->756) and docs/quirk-master-guide.md, synced
+and UIFIX-02 hand-marked `[x]` in REQUIREMENTS.md with scoped citations. `213-VALIDATION.md`'s
+Per-Task Verification Map is all 27 rows green (`nyquist_compliant: true`), including the final
+checkpoint row now resolved on the operator's verdict. Phase 213's own ROADMAP checkbox and
+`completed_phases` are left UNCHANGED on purpose — closing the phase is the orchestrator's call
+after independently verifying that section, not this plan's. `phase.complete` and
+`requirements mark-complete` were NOT invoked, and their effects were not hand-reproduced.
+Last activity: 2026-09-28 — Phase 213 plan 10 COMPLETE: re-dispositioned UAT-7-12/UAT-7-21,
+regenerated docs/uat-coverage-gaps.md (FAIL 7->5, PASS 754->756) and docs/quirk-master-guide.md
+(both orchestrator-confirmed byte-identical to their generators), synced
 docs/uat-disposition-ledger.jsonl, documented UIFIX-01/02 in report-interpretation.md and
 operators-guide.md, recorded criterion 2 NOT MET AS WRITTEN in ROADMAP.md, hand-marked UIFIX-01/02
-in REQUIREMENTS.md, resolved 26 of 27 213-VALIDATION.md rows to green (the 27th is the blocking
-checkpoint row itself), synced the vault (two guides, UAT-Series.md, new Phase 213 note, Hub table
-+ narrative wikilinks for Phases 210-213), and is now awaiting the operator's checkpoint approval.
+in REQUIREMENTS.md, resolved all 27 213-VALIDATION.md rows to green, synced the vault (two guides,
+UAT-Series.md, new Phase 213 note at 9,921 bytes, Hub table + narrative wikilinks for Phases
+210-213), wrote 213-10-SUMMARY.md, and closed the plan on operator approval.
 
 ### Prior: Phase 212 close (2026-09-28)
 
