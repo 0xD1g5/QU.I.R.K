@@ -26,9 +26,18 @@ did not anticipate:
   snippet, fixed and re-verified green (run 34783597094). Waiting for a real tag would have shipped
   it.
 
-**Still outstanding:** backfilling the 7 existing public release bodies via `gh release edit`
-(operator action — rewrites public pages; back up the current bodies first, they are not
-recoverable from GitHub once overwritten).
+**Still outstanding:** the composer is proven only on `workflow_dispatch` dry-runs, not on a real
+tag push — tracked as `REL-03` in v5.25.
+
+**CORRECTED 2026-09-28 (Phase 214, 214-03):** this line previously also claimed the 7 existing
+public release bodies still needed backfilling via `gh release edit`. **That was false** — live
+re-confirmation with two independent instruments (`gh release view --json body`, `gh api
+.../releases --paginate`) shows all 7 (v5.7.0, v5.8.0, v5.12.0, v5.15.0, v5.18.0, v5.19.0,
+v5.21.0) already carry their own `## [x.y.z]` CHANGELOG body — see
+`.planning/phases/214-release-cut/214-REL04-EVIDENCE.md`. The genuinely-outstanding backfill is a
+DIFFERENT, older set of 8 releases (`v5.5.1`, `v5.5.2`, `v5.5.2.1`–`.5`, `v5.6.0`, all
+byte-identical Windows-sensor boilerplate) that this item never named — now filed separately as
+backlog `999.116`.
 
 ## Root cause (confirmed)
 

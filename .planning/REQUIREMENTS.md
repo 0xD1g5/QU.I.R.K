@@ -201,10 +201,15 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
       the entry honestly describes three milestones of work, not one. The composer hard-fails without
       this section, so it is a precondition and not a courtesy.
 - [ ] **REL-02**: The version string is consistent everywhere it is declared — `pyproject.toml`,
-      `README.md`, `docs/getting-started.md`, `docs/UAT-SERIES.md` (UAT-1-02 pass criteria + header) —
+      `README.md`, `docs/UAT-SERIES.md` (UAT-1-02 pass criteria + header) —
       and the editable reinstall is run (`pip install -e . --no-deps`), because
-      `importlib.metadata` reads the installed dist rather than `pyproject.toml` and four
-      `tests/test_version.py` tests fail without it.
+      `importlib.metadata` reads the installed dist rather than `pyproject.toml` and 8
+      `tests/test_version.py` tests fail without it (measured live,
+      `grep -c "^def test_" tests/test_version.py` = 8; local `pytest tests/test_version.py
+      --collect-only -q` reports `7/8 tests collected (1 deselected)` under `pyproject.toml`'s
+      `addopts = -m 'not slow'`, CI's `pytest -m ""` runs all 8).
+      **CORRECTED (Phase 214, 214-03)** — one file dropped from the bump-surface list above and
+      the test count fixed; see the footnote below REL-04 for what changed and why.
 - [ ] **REL-03**: A published release carries its own release notes. The composer is proven on a
       **real tag push** — it has only ever run on `workflow_dispatch` dry-runs — and the resulting
       GitHub release body contains the 5.25.0 CHANGELOG section above the unsigned-binary notice.
@@ -213,6 +218,25 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
       v5.7.0, v5.8.0, v5.12.0, v5.15.0, v5.18.0, v5.19.0, v5.21.0. `v5.11.0` already has a proper
       custom body and is left alone. **Back up the current bodies first**; they are not recoverable
       from GitHub once overwritten.
+
+**Footnote (Phase 214, 214-03) — REL-02 correction:** the REL-02 bullet above previously also
+listed `docs/getting-started.md` in the bump-surface file set. That file carries no version
+string — only a `(v5.23+)` feature marker at line 202 (`grep -n "5\.2[0-9]"` on that file returns
+exactly that one line, live-verified 2026-09-28) — and `ROADMAP.md` criterion 2 already excluded
+it, so the bullet's file list was dropped down to `pyproject.toml`, `README.md`,
+`docs/UAT-SERIES.md`. The bullet also previously said "four" `tests/test_version.py` tests;
+`grep -c "^def test_" tests/test_version.py` measures 8, and a local
+`pytest tests/test_version.py --collect-only -q` reports `7/8 tests collected (1 deselected)`
+under `pyproject.toml`'s `addopts = -m 'not slow'` (CI's `pytest -m ""` runs all 8) — corrected to
+the measured figure; the original "four" was copied forward without running the command.
+**Also corrects the same claim in this repo's `CLAUDE.md` Per-Phase Documentation Checklist,
+which listed the same file for the same reason and was fixed in the same phase.**
+
+**Footnote (Phase 214, 214-03) — REL-04 evidence:** live re-confirmation with two independent
+instruments (`gh release view --json body`, `gh api .../releases --paginate`) shows all 7 tags
+named above already carry their own `## [x.y.z]` CHANGELOG body — see
+`.planning/phases/214-release-cut/214-REL04-EVIDENCE.md`. No release body was edited by Phase
+214; nothing above needed backing up because nothing needed overwriting.
 
 ---
 
