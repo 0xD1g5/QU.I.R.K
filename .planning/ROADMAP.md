@@ -90,7 +90,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 210-06-PLAN.md — live multihost re-run recording both pipelines' numbers (wave 5, non-autonomous)
+- [x] 210-06-PLAN.md — live multihost re-run recording both pipelines' numbers (wave 5, non-autonomous) — evidence captured; Success Criterion 5 NOT fully met (residual 1-point score divergence, see 210-06-SUMMARY.md and filed todo)
 - [x] 210-07-PLAN.md — doc retarget per D-20, master-guide regeneration, vault sync (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*

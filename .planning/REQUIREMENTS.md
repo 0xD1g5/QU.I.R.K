@@ -30,16 +30,21 @@ hand a client two PDFs with different headline scores. Source:
 `todos/pending/cli-dashboard-score-divergence-same-scan.md` (P1, reproduced twice, escalated
 2026-09-16).
 
-- [ ] **XSURF-01**: One certificate produces one finding. A SAML IdP publishing a single certificate
+- [x] **XSURF-01**: One certificate produces one finding. A SAML IdP publishing a single certificate
       under two `use` values (`signing`, `encryption`, identical serial) currently yields two
       CRITICAL findings from `quirk/dashboard/api/routes/scan.py:480-498`, inflating the cap input
       and accounting for the whole 19-vs-15 gap. Either dedupe on `(host, port, cert serial)` or
       keep both rows with accurate distinct titles — the choice is recorded as a decision before any
       code changes. The `use=encryption` row's title must stop saying "signing" either way.
-- [ ] **XSURF-02**: A weakness the CLI scores is a weakness the CLI reports. `grep SAML` over
+      Confirmed live on a freshly-rebuilt `multihost` re-run (plan 210-06, 2026-09-28): the
+      dual-`use` `mh-saml-idp` certificate produced exactly ONE finding, not two.
+- [x] **XSURF-02**: A weakness the CLI scores is a weakness the CLI reports. `grep SAML` over
       `findings-*.json` returns nothing while the same run's `intelligence-*.json` carries
       `identity_saml_weak_signing_ratio: 0.0054`. The evidence path and the finding-emission path
       have diverged; the evidence path is the correct one.
+      Confirmed live (plan 210-06, 2026-09-28): `grep SAML` over the same-run
+      `findings-20260928-014244.json` returns a matching CRITICAL finding for the non-zero
+      `identity_saml_weak_signing_ratio: 0.0013` in the paired `intelligence-20260928-014244.json`.
 - [x] **XSURF-03**: The dashboard's "latest scan" is one scan. `SESSION_BRACKET = 5min`
       (`routes/scan.py`, mirrored `quirk/merge/scan.py:31`) resolves the no-`scan_id` branch by time
       window with no `scan_run_id` filter, merging runs 4m26s apart into 34 certificates (17×2) and
@@ -212,8 +217,8 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| XSURF-01 | Phase 210 | Pending |
-| XSURF-02 | Phase 210 | Pending |
+| XSURF-01 | Phase 210 | Complete |
+| XSURF-02 | Phase 210 | Complete |
 | XSURF-03 | Phase 210 | Complete |
 | XSURF-04 | Phase 210 | Complete |
 | DENOM-01 | Phase 211 | Pending |

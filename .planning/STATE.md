@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T01:33:35.000Z"
-last_activity: 2026-09-28 -- Phase 210 plan 07 complete (docs retarget per D-20 + master guide regen + vault sync). Plan 06 (live re-run) and plan 08 remain; 07 does not depend on 06 and executed without it, citing the XSURF-04 gate in place of live numbers.
+last_updated: "2026-09-28T01:47:00.000Z"
+last_activity: 2026-09-28 -- Phase 210 plan 06 complete (live multihost re-run, evidence only, no code). XSURF-01/02 confirmed live and marked complete. Success Criterion 5 recorded NOT MET -- residual 1-point headline-score divergence (17 report vs 18 dashboard) isolated to Hygiene/Modern TLS subscores, CRITICAL count and certificate count now match exactly; filed as todo 260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard. Only plan 08 remains in Phase 210.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
