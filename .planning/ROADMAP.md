@@ -114,17 +114,37 @@ goes 5 -> 6 CRITICAL, both `>= 5`; `cap_band_for_severity` has no graduated N-CR
 `high_impact` / `agility_high_impact_ratio` path that would have moved the number was removed by
 999.115, `scoring.py:424,449`.)
 **Requirements**: DENOM-01, DENOM-02, DENOM-03, DENOM-04
+**RE-SCOPED 2026-09-28 (operator decision).** A live source audit before planning found this phase's
+core implementation already on `main`: `0b0ed1c7` (2026-09-13) made every ratio divide by its own
+population, with a red-proof pair (`a49c7dd6` -> `9fadfaa2`), a 152-line gate
+(`tests/test_score_denominator_999_113.py`, 3 passed), a DECIDED decision record
+(`.planning/decisions/999.113-denominator-semantics.md`, untracked) and a post-fix ladder
+re-measurement (rungs dated 2026-09-14, `tests/test_score_properties.py` green). The phase therefore
+delivers: proof-with-citations that DENOM-01/02/03 are satisfied; the decision doc committed;
+DENOM-04's genuine residual (clamp saturation, golden/score-strings coupling, the 3 xfailed ladder
+nodes); correction of the stale arithmetic below; and **the real open defect — Phase 210's residual
+17-vs-18 headline-score divergence, isolated to Hygiene and Modern TLS, whose "denominator" cause is
+now REFUTED and needs measuring.**
 **Success Criteria** (what must be TRUE):
   1. `.planning/decisions/` contains a DENOM-01 decision document, reached by measurement against the
      calibration ladder (never by argument, per 999.113 D5), stating per ratio family which
      population is the correct divisor — certificate ratios over `certs_observed`, endpoint ratios
      over the assessable-endpoint count — and citing the measured ladder rows that produced it.
-  2. On the 31-host reference estate, `identity_expired_ratio` (weight 14.0) moves Identity from
-     25/25 to ~19/25 — computed as `-(5/17) × 14.0 ≈ -4.12` over `certs_observed`, replacing today's
-     `-(5/370) × 14.0`, which rounds away entirely.
-  3. `endpoint_denom` (`quirk/intelligence/scoring.py:412`) and `domain_denom` (`:421`) and their
-     ~20 consumers at `:481-502` no longer read `totals.endpoints`; the 10-port vs 2-port `multihost`
-     profile measurement — 91 vs 89 on identical infrastructure today — inverts or flattens.
+  2. **CORRECTED 2026-09-28 — the original prediction was measured against a stale tree.** The
+     `cert_denom = certs_observed` change ALREADY LANDED in `0b0ed1c7` (2026-09-13, ancestor of
+     HEAD), so this criterion is discharged by citation + live measurement, not by new code. The
+     original text predicted Identity moving 25/25 -> ~19/25 via `-(5/17) × 14.0 ≈ -4.12`, replacing
+     `-(5/370) × 14.0`. Live (`quirk-output/intelligence-20260928-014244.json`): `certs_observed`
+     is **20** not 17, `assessable_endpoint_count` is **216** and `totals.endpoints` **775** not 370
+     — so the live term is `-(5/20) × 14.0 = -3.50` and Identity already scores **9/25**, not 25/25
+     (Phase 210's SAML fixes made it emit). Record the measured numbers; do not chase -4.12.
+  3. **ALREADY SATISFIED for the first clause — corrected 2026-09-28.** `endpoint_denom` and
+     `domain_denom` already read `assessable_endpoint_count`, not `totals.endpoints`
+     (`quirk/intelligence/scoring.py:412`/`:421`, gated by
+     `tests/test_score_denominator_999_113.py`, 3 passed). The remaining, genuinely open clause is
+     the behavioural one: the 10-port vs 2-port `multihost` measurement (91 vs 89 on identical
+     infrastructure) must invert or flatten — measure it live rather than assuming the landed fix
+     achieved it.
   4. A known scan is red-proved to move in the predicted direction before the fix is accepted, all
      five calibration ladder rungs are re-measured, CBOM golden fixtures and `score-strings.json` are
      regenerated and pass their generator-drift gates, and `_apply_weighted_impacts`'s 25-point clamp

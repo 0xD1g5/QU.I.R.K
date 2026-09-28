@@ -69,11 +69,25 @@ tracked as `999.113` at P1 in HORIZON's Open-Item Ledger.
       and why — certificate ratios over `certs_observed`, endpoint ratios over the assessable count —
       and it is reached **by measurement against the calibration ladder, not by argument** (999.113
       D5). One of the two current readings has to be wrong; the decision says which.
-- [ ] **DENOM-02**: Certificate ratios divide by certificates. `identity_expired_ratio` (weight 14.0)
-      currently computes `-(5/370) × 14.0`, which rounds away entirely; over `certs_observed` it is
-      `-(5/17) × 14.0 = -4.12`, moving Identity 25 → ~19 on the reference estate. Applies to the
-      expired / expiring / self-signed family.
-- [ ] **DENOM-03**: Endpoint ratios divide by assessable endpoints, not probes. `endpoint_denom`
+- [ ] **DENOM-02**: Certificate ratios divide by certificates. Applies to the expired / expiring /
+      self-signed family. **CORRECTED 2026-09-28 — this requirement's arithmetic was written against
+      a stale tree and the implementation has ALREADY LANDED.** `cert_denom = certs_observed` is live
+      at `quirk/intelligence/scoring.py:404`, shipped in `0b0ed1c7` (2026-09-13, an ancestor of
+      HEAD), two weeks before this milestone was defined. The original text claimed
+      `identity_expired_ratio` "currently computes `-(5/370) × 14.0`" and would become
+      `-(5/17) × 14.0 = -4.12`, moving Identity 25 → ~19. All four numbers are stale. Live
+      measurement (`quirk-output/intelligence-20260928-014244.json`, Phase 210's re-run):
+      `certs_observed = 20`, `expired_count = 5`, `assessable_endpoint_count = 216`,
+      `totals.endpoints = 775` — so the live computation is `-(5/20) × 14.0 = -3.50`, the pre-fix
+      value would have been `-(5/775) × 14.0 = -0.090`, and Identity already scores **9/25** (Phase
+      210's SAML fixes made it emit). Phase 211 proves satisfaction by citation + live measurement
+      rather than re-implementing working code.
+- [ ] **DENOM-03**: Endpoint ratios divide by assessable endpoints, not probes. **ALREADY LANDED —
+      corrected 2026-09-28.** `endpoint_denom = evidence.get("assessable_endpoint_count", endpoints)`
+      and `domain_denom = endpoint_denom` are live at `quirk/intelligence/scoring.py:412`/`:421`; the
+      only remaining mentions of `totals.endpoints` in that file are comments explaining it is
+      deliberately NOT used. Gated by `tests/test_score_denominator_999_113.py` (3 passed).
+      `endpoint_denom`
       (`quirk/intelligence/scoring.py:412`) and `domain_denom` (`:421`) and their ~20 consumers at
       `:481-502` stop reading `totals.endpoints`. Widening `ports_tls` must no longer raise a score:
       the 10-port vs 2-port measurement on the `multihost` profile (91 vs 89 on identical
