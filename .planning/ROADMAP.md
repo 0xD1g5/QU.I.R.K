@@ -373,7 +373,18 @@ emits and whatever UI state ships — every other phase must land first)
   4. The 7 public releases carrying Windows-sensor boilerplate (v5.7.0, v5.8.0, v5.12.0, v5.15.0,
      v5.18.0, v5.19.0, v5.21.0) have real, backfilled release notes on GitHub, with their original
      bodies backed up before being overwritten; `v5.11.0` is left untouched.
-**Plans**: TBD
+**Plans**: 9 plans (8 waves)
+
+Plans:
+- [ ] 214-01-PLAN.md — Wave 0 baseline: full-suite failing-node SET, gh reachability, version-surface and generator-gate enumeration
+- [ ] 214-02-PLAN.md — REL-01: author the `## [5.25.0]` CHANGELOG section across four unreleased milestones
+- [ ] 214-03-PLAN.md — REL-04: re-confirm the 7 release bodies on two instruments; correct HORIZON/REQUIREMENTS/CLAUDE.md/999.109; file backlog 999.116
+- [ ] 214-04-PLAN.md — REL-02: bump pyproject.toml + README.md, editable reinstall, version-parity gate at its measured size
+- [ ] 214-05-PLAN.md — REL-02: UAT-SERIES.md bump, disposition-ledger sync, coverage-gaps regeneration, Obsidian vault sync
+- [ ] 214-06-PLAN.md — commit and push the release surfaces to `origin/main`; SET comparison; prove no tag exists
+- [ ] 214-07-PLAN.md — REL-03 (PARTIAL): workflow_dispatch dry run, artifact download, heading-order measurement
+- [ ] 214-08-PLAN.md — 214-NOT-MET-AS-WRITTEN.md, hand-edited ROADMAP/REQUIREMENTS/STATE/VALIDATION, Obsidian phase note
+- [ ] 214-09-PLAN.md — pre-flight handover block + blocking operator checkpoint (tag is operator-reserved; the phase stops here)
 
 ---
 
