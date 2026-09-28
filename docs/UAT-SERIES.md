@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-27 (Phase 207.1 — Orphaned Browser-Only Coverage Drain, COV-10. `UAT-7-23` and `UAT-7-29` — the 2 cases orphaned between COV-04's jsdom-tractable set and COV-05's named three, which neither requirement ever owned — flip GAP -> PASS, each citing a real Playwright node in `tests/test_browser_e2e.py`. Open GAP (drainable) count 43 -> 41. Both carry the same `CI-EXEMPT:` position Phase 207 established, copied verbatim. Each is red-proved by its own paired control node — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown` — rather than merely observed passing. `UAT-7-23` closes at **6 of 6 as of 2026-09-27**: five criteria are mechanized by the Playwright node, and criterion 6 ("transition is smooth — no layout jumps or flicker") was recorded HUMAN-UAT rather than absorbed into the PASS, then **verified by operator-led walkthrough** — a real non-headless browser resized slowly through the 1024px breakpoint in both directions, reported smooth with no jump, flicker, flash of unstyled content or glitching reflow. The HUMAN-UAT routing is what made that verdict recordable; it is not CI coverage, and a smoothness regression would still redden no gate. No `207.1-NOT-MET-AS-WRITTEN.md` was filed, and the operator verdict does not change that: ROADMAP SC#1 predicts the 5-of-6 outcome in its own text and requires criterion 6 to be recorded human-UAT or explicitly dropped, so the stated partial WAS the criterion being met at close. The verdict discharges the human-UAT item SC#1 asked for rather than revealing a shortfall — the criterion was met as written and the case then exceeded it. Prior: 2026-09-27 (Phase 207 — Browser-Only Coverage Verdict. The four structurally jsdom-impossible cases now have REAL browser coverage: UAT-7-01, UAT-7-32, UAT-7-17 and UAT-88-03 flip GAP -> PASS, each citing a Playwright node in `tests/test_browser_e2e.py` or `tests/test_pdf_decomposition_render.py`. Open GAP (drainable) count 47 -> 43. Every one of the four carries a `CI-EXEMPT:` declaration, and its wording deliberately differs from the two earlier precedents: CI genuinely DOES execute these nodes, in the new non-gating `Browser E2E` job which installs Chromium; they skip only in `Linux Full Suite`, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. A skip there is not a pass — the coverage claim rests on the Browser E2E job's real execution. UAT-7-32's disposition records an explicit scope bound: it claims zero console errors plus named positive assertions, NOT heading-level discrimination on /findings, /identity, /cbom or /print. ROADMAP Phase 207 criterion 3 is recorded NOT APPLICABLE BY VERDICT — see 207-NOT-MET-AS-WRITTEN.md — because no case in this phase lands as a permanent GAP, so the criterion's machinery has no caller. Prior: 2026-09-22 (Phase 208 close — COV-06/07/08 dispositioned: UAT-104-04, UAT-88-02, UAT-8-04, UAT-8-05 flipped to PASS with verbatim re-run commands; UAT-88-03 stays SKIP (GAP), extended with a costed Phase 207 handoff; Open GAP (drainable) count 51 → 47. ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — see 208-NOT-MET-AS-WRITTEN.md.))
+**Last Updated:** 2026-09-27 (Phase 210 close — Cross-Surface Score Parity. Series 210 added: `UAT-210-01` (XSURF-01, one dual-`use` SAML certificate yields one CRITICAL finding) and `UAT-210-02` (XSURF-02, `identity_saml_weak_signing_ratio` and the matching SAML finding agree) both flip PASS on plan 210-06's live multihost re-run evidence (`scan_run_id 2026-09-28T01:41:30.088508+00:00`). `UAT-210-03` (XSURF-03, two runs 4m26s apart resolve to one `scan_run_id`, not the merged 34-certificate signature) is SKIP (GAP), DEFERRED — the live re-run exercised only a single scan, not the two-run-apart scenario itself — covered instead by `tests/test_api_scan_window.py::test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run`. ROADMAP Success Criterion 5 (identical headline score across pipelines) is recorded NOT MET: CRITICAL count and certificate count now match exactly (6=6, 20=20) but the headline score still diverges by 1 point (17 report vs 18 dashboard), isolated to the Hygiene and Modern TLS subscores — filed as `.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`, not fixed in this phase. Requirements XSURF-01..04 are each independently Complete on their own narrower wording; the phase's overall headline-parity goal is PARTIALLY achieved. Prior: 2026-09-27 (Phase 207.1 — Orphaned Browser-Only Coverage Drain, COV-10. `UAT-7-23` and `UAT-7-29` — the 2 cases orphaned between COV-04's jsdom-tractable set and COV-05's named three, which neither requirement ever owned — flip GAP -> PASS, each citing a real Playwright node in `tests/test_browser_e2e.py`. Open GAP (drainable) count 43 -> 41. Both carry the same `CI-EXEMPT:` position Phase 207 established, copied verbatim. Each is red-proved by its own paired control node — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown` — rather than merely observed passing. `UAT-7-23` closes at **6 of 6 as of 2026-09-27**: five criteria are mechanized by the Playwright node, and criterion 6 ("transition is smooth — no layout jumps or flicker") was recorded HUMAN-UAT rather than absorbed into the PASS, then **verified by operator-led walkthrough** — a real non-headless browser resized slowly through the 1024px breakpoint in both directions, reported smooth with no jump, flicker, flash of unstyled content or glitching reflow. The HUMAN-UAT routing is what made that verdict recordable; it is not CI coverage, and a smoothness regression would still redden no gate. No `207.1-NOT-MET-AS-WRITTEN.md` was filed, and the operator verdict does not change that: ROADMAP SC#1 predicts the 5-of-6 outcome in its own text and requires criterion 6 to be recorded human-UAT or explicitly dropped, so the stated partial WAS the criterion being met at close. The verdict discharges the human-UAT item SC#1 asked for rather than revealing a shortfall — the criterion was met as written and the case then exceeded it. Prior: 2026-09-27 (Phase 207 — Browser-Only Coverage Verdict. The four structurally jsdom-impossible cases now have REAL browser coverage: UAT-7-01, UAT-7-32, UAT-7-17 and UAT-88-03 flip GAP -> PASS, each citing a Playwright node in `tests/test_browser_e2e.py` or `tests/test_pdf_decomposition_render.py`. Open GAP (drainable) count 47 -> 43. Every one of the four carries a `CI-EXEMPT:` declaration, and its wording deliberately differs from the two earlier precedents: CI genuinely DOES execute these nodes, in the new non-gating `Browser E2E` job which installs Chromium; they skip only in `Linux Full Suite`, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. A skip there is not a pass — the coverage claim rests on the Browser E2E job's real execution. UAT-7-32's disposition records an explicit scope bound: it claims zero console errors plus named positive assertions, NOT heading-level discrimination on /findings, /identity, /cbom or /print. ROADMAP Phase 207 criterion 3 is recorded NOT APPLICABLE BY VERDICT — see 207-NOT-MET-AS-WRITTEN.md — because no case in this phase lands as a permanent GAP, so the criterion's machinery has no caller. Prior: 2026-09-22 (Phase 208 close — COV-06/07/08 dispositioned: UAT-104-04, UAT-88-02, UAT-8-04, UAT-8-05 flipped to PASS with verbatim re-run commands; UAT-88-03 stays SKIP (GAP), extended with a costed Phase 207 handoff; Open GAP (drainable) count 51 → 47. ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — see 208-NOT-MET-AS-WRITTEN.md.))
 DELIV-01 (manifest + five-format download API over the artifacts `write_reports()` already writes,
 structural path containment with a live negative control, RPT-03's dashboard exclusion re-proven) and
 DELIV-02 (the Executive-page download control). **Two cases are `Tester: Digs` and dispositioned only
@@ -29206,3 +29206,124 @@ rather than passing vacuously.
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-15  **Tester:** automated
 **Notes:** DEFERRED — covered by `tests/test_report_path_guard.py::test_report_route_exposes_no_branding_or_template_surface` and `tests/test_report_path_guard.py::test_mutation_check_report_route_sweep_detects_a_str_path_param`.
+
+---
+
+## Series 210: Cross-Surface Score Parity (Phase 210 — v5.25)
+
+**Last Updated:** 2026-09-27 (Phase 210 close — three cases added for XSURF-01/02/03; see the
+document header for the full disposition summary and the filed Success-Criterion-5 todo.)
+
+### UAT-210-01: SAML Dual-`use` Certificate Yields One CRITICAL Finding, Not Two
+
+**ID:** UAT-210-01
+**Title:** A SAML IdP publishing one certificate under `use=signing` and `use=encryption` with an
+identical serial produces exactly one CRITICAL finding, on both the report and dashboard surfaces
+**Maps to:** XSURF-01
+
+**What to test:** ROADMAP Success Criterion 1 / Phase 210 D-01. Before the fix, the dashboard route
+synthesized one `IdentityFinding` per `KeyDescriptor` `use` value, so a SAML IdP that reuses the same
+certificate for both `signing` and `encryption` (a real, observed chaos-lab configuration) counted
+one weak key as two CRITICAL findings. The dedupe key is `(host, port, cert serial)`, implemented once
+in the shared `quirk.engine.findings_evaluator.evaluate_identity_endpoints()` so both the CLI and the
+dashboard route inherit the same answer (D-02/D-05/D-06).
+
+**Steps:**
+`tests/test_identity_findings_accuracy.py::TestEvaluateIdentityEndpointsDedupe::test_dual_use_same_serial_collapses_to_one_critical`,
+`tests/test_identity_surface.py::IdentityDerivationTests::test_saml_dual_use_same_serial_route_returns_one_critical`,
+`tests/test_intelligence_evidence.py::SamlWeakSigningDedupeTests::test_same_serial_dual_use_pair_counts_one`.
+Live evidence: a freshly-rebuilt `multihost` chaos-lab profile's `mh-saml-idp` container was confirmed
+(via its own SAML metadata endpoint) to present the identical sub-2048-bit (RSA-1024) certificate
+under both `use="signing"` and `use="encryption"`; a live scan against it
+(`scan_run_id 2026-09-28T01:41:30.088508+00:00`) produced exactly **one** SAML finding in
+`findings-20260928-014244.json` (title `Weak SAML signing certificate: RSA-1024`), not two, and
+`evidence_summary.saml_weak_signing_count = 1`.
+
+**Pass Criteria:** the three cited unit/route-level nodes pass, and the live multihost re-run's
+`findings-*.json` contains exactly one finding for the dual-`use` certificate rather than two.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-27  **Tester:** automated + live evidence
+**Notes:** Live-demonstrated in `.planning/phases/210-cross-surface-score-parity/210-06-SUMMARY.md`
+(Task 1/Task 2, `scan_run_id 2026-09-28T01:41:30.088508+00:00`) — not merely unit-tested. The
+falsification proof (dedupe deliberately disabled, gate turns red, `3 != 2` CRITICAL) is recorded in
+`210-05-SUMMARY.md`.
+
+---
+
+### UAT-210-02: `identity_saml_weak_signing_ratio` Always Has a Matching `findings-*.json` Entry
+
+**ID:** UAT-210-02
+**Title:** A run whose `intelligence-*.json` carries a non-zero `identity_saml_weak_signing_ratio` has
+a matching SAML finding in that same run's `findings-*.json` — the evidence path and the
+finding-emission path no longer diverge
+**Maps to:** XSURF-02
+
+**What to test:** ROADMAP Success Criterion 2 / Phase 210 D-05/D-08. Before the fix, SAML identity
+finding synthesis lived only inside a FastAPI route handler, so the CLI's `findings-*.json` never
+carried a SAML finding at all even though `quirk/intelligence/evidence.py` scored the same weak
+certificate into `identity_saml_weak_signing_ratio` — a non-zero score with zero corroborating
+findings. `evaluate_identity_endpoints()` is now composed into `run_scan.py`'s CLI findings pipeline
+(D-05), so both paths draw on the same source.
+
+**Steps:**
+`tests/test_identity_findings_accuracy.py::TestIdentityFindingsSurviveDedupeFindings::test_dual_use_pair_survives_dedupe_findings_as_one`
+and
+`tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality`
+(its pinned `saml_weak_signing_count` oracle, falsified in `210-05-SUMMARY.md` Falsification B).
+Live evidence, ROADMAP Success Criterion 2's own literal command pair, run over one same-timestamp
+artifact pair (`findings-20260928-014244.json` / `intelligence-20260928-014244.json`):
+```
+$ grep -c SAML quirk-output/findings-20260928-014244.json
+3
+$ grep -o '"identity_saml_weak_signing_ratio":[^,}]*' quirk-output/intelligence-20260928-014244.json
+"identity_saml_weak_signing_ratio": 0.0013
+```
+(the 3 line-matches are 3 fields of the SAME one finding object, confirmed by JSON-parsing the file —
+not 3 separate findings.)
+
+**Pass Criteria:** the two cited automated nodes pass, and the live literal-command pair shows a
+non-zero ratio with exactly one matching, non-inflated SAML finding in the same run's
+`findings-*.json`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-27  **Tester:** automated + live evidence
+**Notes:** Live-demonstrated in `210-06-SUMMARY.md` §(d) — the non-zero ratio (0.0013) has exactly
+one matching finding, ruling out both the pre-fix "zero findings" defect and an over-counted "two
+findings" regression.
+
+---
+
+### UAT-210-03: Dashboard "Latest Scan" Resolves Two Runs Minutes Apart to One `scan_run_id`
+
+**ID:** UAT-210-03
+**Title:** Two scans a few minutes apart no longer merge into one inflated dashboard response — the
+no-`scan_id` "latest scan" branch resolves by `scan_run_id`, not by a bare time window
+**Maps to:** XSURF-03
+
+**What to test:** ROADMAP Success Criterion 3 / Phase 210 D-09/D-10. Before the fix,
+`GET /api/scan/latest` with no `scan_id` resolved by a `SESSION_BRACKET` (5-minute) time window with
+no run filter, so two scans 4m26s apart merged into one response carrying both runs' rows — the
+34-certificate (17x2) / 14-CRITICAL signature the roadmap names. The fix resolves by the MAX-timestamp
+row's `scan_run_id` when non-NULL, falling back to the window only for legacy NULL-`scan_run_id` rows
+(D-10).
+
+**Steps:**
+`tests/test_api_scan_window.py::test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run`.
+
+**Pass Criteria:** the cited node passes — a run seeded 4m26s before the latest run is excluded from
+the no-`scan_id` response, while a legacy NULL-`scan_run_id` row remains reachable through the
+window fallback (the sibling nodes in the same test module).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_api_scan_window.py::test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run`)
+**Date:** 2026-09-27  **Tester:** automated
+**Notes:** DEFERRED — covered by
+`tests/test_api_scan_window.py::test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run`. Plan
+210-06's live multihost re-run exercised only a single scan against the freshly-rebuilt lab, so it
+confirms the ABSENCE of the merge signature on one run (certificate count 20, not the previous 34)
+but did not itself execute the two-separate-runs-4m26s-apart scenario this case names. An honest GAP
+disposition here would also be defensible (`GAP — no substitute coverage`), but the cited node is a
+real, passing, purpose-built regression test for exactly this behavior (added in plan 210-04), so
+`DEFERRED` more accurately reflects that substitute coverage exists and executes.
+
+---
