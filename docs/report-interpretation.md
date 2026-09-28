@@ -2004,15 +2004,33 @@ Export PDF.
 
 ### If these two downloads' numbers differ, which one do you trust? (Phase 210, XSURF-01..04)
 
-The two artifacts above remain genuinely different documents (previous subsection), but as of
-Phase 210 their **numbers** are not expected to differ. For one scan, the headline readiness
-score, the CRITICAL finding count, and the certificate count are now identical whether they come
-from the report pipeline (the five download buttons, `write_reports()`) or the dashboard pipeline
-(the Executive page's live view and the Export PDF button, both backed by
-`GET /api/scan/latest`). Three cross-surface defects previously caused these numbers to diverge
-for the same scan — a SAML certificate double-counted on the dashboard side, an identity finding
-the CLI never emitted, and a "latest scan" query that could silently merge two separate scan runs
-— and all three are closed (XSURF-01, XSURF-02, XSURF-03). A regression gate,
+The two artifacts above remain genuinely different documents (previous subsection). As of
+Phase 210, **two of their three headline numbers are identical and one is not** — read that
+distinction carefully before quoting a number to a client.
+
+**Identical, and regression-gated:** for one scan, the **CRITICAL finding count** and the
+**certificate count** are the same whether they come from the report pipeline (the five download
+buttons, `write_reports()`) or the dashboard pipeline (the Executive page's live view and the
+Export PDF button, both backed by `GET /api/scan/latest`). Three cross-surface defects previously
+caused these to diverge for the same scan — a SAML certificate double-counted on the dashboard
+side, an identity finding the CLI never emitted, and a "latest scan" query that could silently
+merge two separate scan runs — and all three are closed (XSURF-01, XSURF-02, XSURF-03), confirmed
+on a live 31-host scan (CRITICAL 6 = 6, certificates 20 = 20).
+
+**NOT yet identical — the headline readiness score.** The same live scan produced **17/100 from
+the report pipeline and 18/100 from the dashboard pipeline**. The gap is small, known, and
+tracked; it is isolated entirely to the Hygiene and Modern TLS subscores (17 vs 21 each), with the
+other four scoring categories byte-identical between pipelines. It is a different defect from the
+three Phase 210 closed — not a double-count, but a suspected denominator-population difference —
+and it was invisible until those three were fixed, because the larger CRITICAL-count-driven score
+cap was masking it. Tracked at
+`.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md` and
+expected to be re-measured during the ratio-denominator work.
+
+**What this means in practice:** if you are handing a client a headline score, take it from one
+pipeline and say which. Do not present a report-pipeline score beside a dashboard screenshot and
+imply they are the same figure — on the reference estate they differ by one point. A regression
+gate,
 `tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality`, asserts
 this equality for one `scan_run_id` and is demonstrated to fail if any of the three defects is
 reintroduced (see `210-05-SUMMARY.md`). **If you ever see these three numbers differ across the

@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,449 lines, in reading order.
+Five guides, 6,459 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3616,15 +3616,25 @@ produced**. Until that association exists, serving "the report for scan X" is no
 API can do honestly, and a future scan-id-scoped route would need it built first, not just added to
 this router's path.
 
-**Score parity across the two pipelines (Phase 210, XSURF-01..04).** These download endpoints and
-the Export PDF button read different artifacts (see `docs/report-interpretation.md` §26), but as
-of Phase 210 the headline readiness score, CRITICAL finding count, and certificate count are
-identical between them for one scan — three previously-open cross-surface defects (a
-double-counted SAML certificate, an identity finding missing from the CLI's findings output, and a
-"latest scan" query that could merge two runs) are closed and are regression-gated by
-`tests/test_cross_surface_parity.py`. If an operator observes these three numbers differing
-between a downloaded report and the dashboard's live view for the same scan, treat it as a defect
-to file, not as expected pipeline drift.
+**Score parity across the two pipelines (Phase 210, XSURF-01..04) — two of three numbers, not
+all three.** These download endpoints and the Export PDF button read different artifacts (see
+`docs/report-interpretation.md` §26). As of Phase 210 the **CRITICAL finding count** and the
+**certificate count** are identical between them for one scan, confirmed on a live 31-host scan
+(6 = 6 and 20 = 20) and regression-gated by `tests/test_cross_surface_parity.py`. Three
+previously-open cross-surface defects (a double-counted SAML certificate, an identity finding
+missing from the CLI's findings output, and a "latest scan" query that could merge two runs) are
+closed.
+
+**The headline readiness score is NOT yet identical.** That same live scan returned 17/100 from
+the report pipeline and 18/100 from the dashboard pipeline — a known, disclosed residual gap
+isolated to the Hygiene and Modern TLS subscores, tracked at
+`.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`. Do
+not quote a headline score as pipeline-independent: take it from one pipeline and say which.
+
+If an operator observes the **CRITICAL count or the certificate count** differing between a
+downloaded report and the dashboard's live view for the same scan, treat it as a defect to file,
+not as expected pipeline drift. A small headline-score difference is, for now, the known gap
+above rather than a new defect — but a large one is still worth filing.
 
 #### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
