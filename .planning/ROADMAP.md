@@ -250,7 +250,12 @@ under the corrected DENOM-* denominators, not a stale one)
   4. No production code implementing any candidate denominator ships in this phase. The decision
      document explicitly states the defect is deferred, not fixed, and names the phase where
      implementation belongs.
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
+- [ ] 212-01-PLAN.md — Rebuild the two-axis measurement harness; establish and re-verify the control
+- [ ] 212-02-PLAN.md — Measure the two population-swap candidates (scan-scope, distinct hosts) + falsifiability audit
+- [ ] 212-03-PLAN.md — Settle and measure the absolute-exposure candidate via a monkeypatched wrapper
+- [ ] 212-04-PLAN.md — Write the DILUTE-01 decision document and capture verbatim criterion evidence
+- [ ] 212-05-PLAN.md — Close-out: UAT Series 212, coverage-gaps regeneration, vault sync, hand-edited tracking
 
 ### Phase 213: Shipped Product Defects (Series 7)
 **Goal**: The two product defects v5.24's audit recorded rather than absorbed — both shipped
