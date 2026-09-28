@@ -27,7 +27,14 @@ from quirk.intelligence.scoring import compute_readiness_score
 from quirk.models import CryptoEndpoint, MergeRun, Sensor
 
 # Redefined locally to avoid importing from the dashboard layer (D-06 seam).
-# Matches quirk/dashboard/api/routes/scan.py SESSION_BRACKET = timedelta(minutes=5).
+# Phase 210 / D-11: this is DELIBERATELY no longer the same contract as
+# quirk/dashboard/api/routes/scan.py's SESSION_BRACKET. That window is now a
+# NULL-scan_run_id-only fallback (Phase 210 / XSURF-03 / D-09) — it no longer
+# participates when a scan_run_id is available. This module's window has a
+# different job: Part 2's NULL-sensor local-row union (below, ~:128-139)
+# legitimately spans a single local scan's endpoints by sensor_id/time, not
+# by scan_run_id, so a 5-minute window is still the right tool here. Do not
+# re-couple the two values on the assumption they must match.
 _SESSION_BRACKET = timedelta(minutes=5)
 
 # Sensors not pushed in more than stale_days are omitted from the warning
