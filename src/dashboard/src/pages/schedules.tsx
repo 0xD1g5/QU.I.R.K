@@ -190,7 +190,7 @@ export function SchedulesPage() {
                           check-in is not a warning state. */}
                       {schedule.check_in && (
                         <span
-                          className="rounded border border-[#2b8a86] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#2b8a86]"
+                          className="rounded border border-[hsl(var(--badge-schedule))] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--badge-schedule))]"
                           title="Lightweight re-probe of already-known hardware; does not run a full scored scan"
                         >
                           check-in

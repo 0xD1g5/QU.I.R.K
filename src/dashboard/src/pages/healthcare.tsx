@@ -131,7 +131,7 @@ export function HealthcarePage() {
     <div className="space-y-8">
       {/* Page header */}
       <div className="flex items-start gap-3">
-        <HeartPulse className="h-6 w-6 mt-0.5 flex-shrink-0" style={{ color: "#4ba8a8" }} aria-hidden="true" />
+        <HeartPulse className="h-6 w-6 mt-0.5 flex-shrink-0" style={{ color: "var(--ds-accent)" }} aria-hidden="true" />
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 600 }} className="text-foreground">
             Healthcare Compliance Posture
@@ -147,7 +147,7 @@ export function HealthcarePage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4" style={{ color: "#4ba8a8" }} aria-hidden="true" />
+            <ShieldCheck className="h-4 w-4" style={{ color: "var(--ds-accent)" }} aria-hidden="true" />
             <CardTitle style={{ fontSize: 16, fontWeight: 600 }}>
               HIPAA Technical Safeguards — 45 CFR § 164.312
             </CardTitle>
@@ -201,7 +201,7 @@ export function HealthcarePage() {
                   </div>
                   <p className="text-xs text-muted-foreground">{sg.description}</p>
                   {risk && risk !== "low" && (
-                    <p className="text-xs flex items-center gap-1.5" style={{ color: risk === "high" ? "#e05555" : "#d4893a" }}>
+                    <p className="text-xs flex items-center gap-1.5" style={{ color: risk === "high" ? "var(--ds-critical)" : "var(--ds-high)" }}>
                       <AlertTriangle className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                       {sg.risk_note}
                     </p>

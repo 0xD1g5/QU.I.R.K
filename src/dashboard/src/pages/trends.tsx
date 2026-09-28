@@ -20,12 +20,12 @@ import type { ChartConfig } from "@/components/ui/chart"
 
 const TIMELINE_CHART_CONFIG: ChartConfig = {
   score:           { label: "Overall",        color: "hsl(var(--quantum-safe))" },
-  hygiene:         { label: "Hygiene",        color: "hsl(180 37% 47%)" },
-  modern_tls:      { label: "TLS",            color: "hsl(213 94% 68%)" },
-  identity_trust:  { label: "Identity",       color: "hsl(38 92% 50%)" },
-  agility_signals: { label: "Agility",        color: "hsl(28 64% 52%)" },
-  data_at_rest:    { label: "Data at Rest",   color: "hsl(270 50% 60%)" },
-  data_in_motion:  { label: "Data in Motion", color: "hsl(152 47% 45%)" },
+  hygiene:         { label: "Hygiene",        color: "hsl(var(--primary))" },
+  modern_tls:      { label: "TLS",            color: "hsl(var(--chart-tls))" },
+  identity_trust:  { label: "Identity",       color: "hsl(var(--status-warning))" },
+  agility_signals: { label: "Agility",        color: "hsl(var(--severity-high))" },
+  data_at_rest:    { label: "Data at Rest",   color: "hsl(var(--chart-data-at-rest))" },
+  data_in_motion:  { label: "Data in Motion", color: "hsl(var(--quantum-safe))" },
 }
 
 // Shape of one timeline datum carried in the Recharts tooltip payload.
@@ -37,11 +37,11 @@ type TimelineRow = {
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
+  CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  MEDIUM: "bg-[hsl(38_92%_50%)] text-black",
-  LOW: "bg-[hsl(213_94%_68%)] text-black",
-  INFO: "bg-[hsl(240_5%_46%)] text-white",
+  MEDIUM: "bg-[hsl(var(--status-warning))] text-black",
+  LOW: "bg-[hsl(var(--chart-tls))] text-black",
+  INFO: "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 function ScoreDeltaBadge({ delta }: { delta: number | null }) {
@@ -193,12 +193,12 @@ export function TrendsPage() {
               />
               {/* STATIC — never conditionally mount/unmount <Line> (Recharts static-children rule) */}
               <Line type="monotone" dataKey="score"           stroke="hsl(var(--quantum-safe))" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive={false} />
-              <Line type="monotone" dataKey="hygiene"         stroke="hsl(180 37% 47%)"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
-              <Line type="monotone" dataKey="modern_tls"      stroke="hsl(213 94% 68%)"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
-              <Line type="monotone" dataKey="identity_trust"  stroke="hsl(38 92% 50%)"          strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
-              <Line type="monotone" dataKey="agility_signals" stroke="hsl(28 64% 52%)"          strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
-              <Line type="monotone" dataKey="data_at_rest"    stroke="hsl(270 50% 60%)"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
-              <Line type="monotone" dataKey="data_in_motion"  stroke="hsl(152 47% 45%)"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
+              <Line type="monotone" dataKey="hygiene"         stroke="hsl(var(--primary))"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
+              <Line type="monotone" dataKey="modern_tls"      stroke="hsl(var(--chart-tls))"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
+              <Line type="monotone" dataKey="identity_trust"  stroke="hsl(var(--status-warning))"          strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
+              <Line type="monotone" dataKey="agility_signals" stroke="hsl(var(--severity-high))"          strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
+              <Line type="monotone" dataKey="data_at_rest"    stroke="hsl(var(--chart-data-at-rest))"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
+              <Line type="monotone" dataKey="data_in_motion"  stroke="hsl(var(--quantum-safe))"         strokeWidth={1.5} dot={{ r: 2 }} strokeOpacity={0.85} isAnimationActive={false} />
             </LineChart>
           </ChartContainer>
         ) : (

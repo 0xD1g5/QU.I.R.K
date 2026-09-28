@@ -43,7 +43,7 @@ function SensorStatusBadge({ status }: { status: SensorRegistryItem["status"] })
   if (status === "stale") {
     return (
       <Badge
-        className="bg-[#d4893a]/10 text-[#d4893a] border border-[#d4893a]/28 text-xs"
+        className="bg-[var(--ds-high-dim)] text-[var(--ds-high)] border border-[var(--ds-high-bdr)] text-xs"
         aria-label="status: Stale"
       >
         Stale

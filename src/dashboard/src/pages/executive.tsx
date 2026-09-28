@@ -29,15 +29,15 @@ import { useVertical } from "@/context/vertical-context"
 import scoreStrings from "@/lib/score-strings.json"
 
 const SEVERITY_COLORS: Record<string, string> = {
-  CRITICAL: "hsl(0 72% 51%)",
+  CRITICAL: "hsl(var(--status-critical))",
   // HIGH pairs with --risk-badge-high-foreground (220 22% 12%) in index.css (D-09). No text is
   // currently rendered on top of this Recharts <Cell> fill — it is a solid bar-fill color with no
   // overlaid label — so the foreground half of the token pair has no consuming site in this file.
   // See 165-04-SUMMARY.md.
   HIGH: "hsl(var(--risk-badge-high))",
-  MEDIUM: "hsl(38 92% 50%)",
-  LOW: "hsl(213 94% 68%)",
-  INFO: "hsl(240 5% 46%)",
+  MEDIUM: "hsl(var(--status-warning))",
+  LOW: "hsl(var(--chart-tls))",
+  INFO: "hsl(var(--status-neutral))",
 }
 
 // Phase 209 DELIV-02: the report-download control. Matches the manifest shape
@@ -140,7 +140,7 @@ function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
     // partial or unknown -> amber custom badge
     return (
       <Badge
-        className="bg-[#d4893a]/10 text-[#d4893a] border border-[#d4893a]/28"
+        className="bg-[var(--ds-high-dim)] text-[var(--ds-high)] border border-[var(--ds-high-bdr)]"
         aria-label="status: Partial"
       >
         Partial
@@ -542,7 +542,7 @@ export function ExecutivePage() {
             role="alert"
             aria-live="polite"
           >
-            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#d4893a" }} aria-hidden="true" />
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--ds-high)" }} aria-hidden="true" />
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold">Incomplete sensor coverage</span>
               <span className="text-sm text-muted-foreground">
@@ -689,7 +689,7 @@ export function ExecutivePage() {
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry) => (
-                  <Cell key={entry.severity} fill={SEVERITY_COLORS[entry.severity] ?? "#888"} />
+                  <Cell key={entry.severity} fill={SEVERITY_COLORS[entry.severity] ?? "hsl(var(--status-neutral))"} />
                 ))}
               </Bar>
             </BarChart>
