@@ -17,26 +17,26 @@ import { VendorTrendList } from "@/components/VendorTrendList"
 
 // Tier badge colors — Tier 1 red, Tier 2 orange, Tier 3 blue, N/A gray
 const TIER_STYLES: Record<string, string> = {
-  "Tier 1":   "bg-[hsl(0_72%_51%)] text-white",
-  "Tier 2":   "bg-[hsl(24_95%_53%)] text-white",
-  "Tier 3":   "bg-[hsl(213_94%_68%)] text-black",
-  "Tier N/A": "bg-[hsl(240_5%_46%)] text-white",
+  "Tier 1":   "bg-[hsl(var(--status-critical))] text-white",
+  "Tier 2":   "bg-[hsl(var(--risk-badge-high))] text-white",
+  "Tier 3":   "bg-[hsl(var(--chart-tls))] text-black",
+  "Tier N/A": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 // PQC status badge colors
 const PQC_STYLES: Record<string, string> = {
-  "supported":     "bg-[hsl(142_71%_45%)] text-white",
-  "partial":       "bg-[hsl(38_92%_50%)] text-black",
-  "unsupported":   "bg-[hsl(0_72%_51%)] text-white",
-  "VENDOR-SILENT": "bg-[hsl(240_5%_46%)] text-white",
+  "supported":     "bg-[hsl(var(--qs-node-safe))] text-white",
+  "partial":       "bg-[hsl(var(--status-warning))] text-black",
+  "unsupported":   "bg-[hsl(var(--status-critical))] text-white",
+  "VENDOR-SILENT": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 // Confidence badge colors
 const CONF_STYLES: Record<string, string> = {
-  "high":    "bg-[hsl(142_71%_45%)] text-white",
-  "medium":  "bg-[hsl(38_92%_50%)] text-black",
-  "low":     "bg-[hsl(24_95%_53%)] text-white",
-  "unknown": "bg-[hsl(240_5%_46%)] text-white",
+  "high":    "bg-[hsl(var(--qs-node-safe))] text-white",
+  "medium":  "bg-[hsl(var(--status-warning))] text-black",
+  "low":     "bg-[hsl(var(--risk-badge-high))] text-white",
+  "unknown": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 const TIER_ORDER: Record<string, number> = {
@@ -54,25 +54,25 @@ const METHOD_LABEL: Record<string, string> = {
 // Phase 139 SNMPV3-02 — SNMP version/security-level badge colors.
 // noAuthNoPriv (amber) must never render identically to auth+priv (green) — D-04.
 const SNMP_STYLES: Record<string, string> = {
-  "v3 auth+priv":      "bg-[hsl(142_71%_45%)] text-white",
-  "v3 noAuthNoPriv":   "bg-[hsl(38_92%_50%)] text-black",
-  "v2c":               "bg-[hsl(240_5%_46%)] text-white",
-  "v3 failed → v2c":   "bg-[hsl(0_72%_51%)] text-white",
-  "v3 failed → none":  "bg-[hsl(0_72%_51%)] text-white",
-  "No SNMP":           "bg-[hsl(240_5%_46%)] text-white",
+  "v3 auth+priv":      "bg-[hsl(var(--qs-node-safe))] text-white",
+  "v3 noAuthNoPriv":   "bg-[hsl(var(--status-warning))] text-black",
+  "v2c":               "bg-[hsl(var(--status-neutral))] text-white",
+  "v3 failed → v2c":   "bg-[hsl(var(--status-critical))] text-white",
+  "v3 failed → none":  "bg-[hsl(var(--status-critical))] text-white",
+  "No SNMP":           "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 const SNMP_FAILED_TOOLTIP =
   "SNMPv3 was configured for this host but authentication failed; the scanner fell back to a lower tier. Verify credentials."
 
 // Phase 140 BRIDGE-03 — bridge-status badge colors. Blue "SNMP-confirmed" must
-// NEVER reuse the green success hue (hsl(142_71%_45%)) — green implies a clean
+// NEVER reuse the green success hue (hsl(var(--qs-node-safe))) — green implies a clean
 // bill of health, which would misrepresent an advisory-only, topology-inferred
 // confirmation. Amber "Partial (assumed)" matches the existing PQC_STYLES.partial
 // / SNMP_STYLES."v3 noAuthNoPriv" amber convention.
 const BRIDGE_STYLES: Record<string, string> = {
-  "Partial (assumed)": "bg-[hsl(38_92%_50%)] text-black",
-  "SNMP-confirmed":    "bg-[hsl(213_94%_68%)] text-black",
+  "Partial (assumed)": "bg-[hsl(var(--status-warning))] text-black",
+  "SNMP-confirmed":    "bg-[hsl(var(--chart-tls))] text-black",
 }
 
 // Verbatim Pitfall-3 caveat text (UI-SPEC Copywriting Contract) — must appear
@@ -90,17 +90,17 @@ const BRIDGE_CONFIRMED_TOOLTIP =
 // collides with the existing green/amber/gray badge hues. aborted_anomalous_response
 // (red) must never look like no_response/no_match (gray) — D-13.
 const MODBUS_STYLES: Record<string, string> = {
-  "Modbus":         "bg-[hsl(199_89%_48%)] text-white",
-  "No response":    "bg-[hsl(240_5%_46%)] text-white",
-  "No match":       "bg-[hsl(240_5%_46%)] text-white",
-  "Probe aborted":  "bg-[hsl(0_72%_51%)] text-white",
+  "Modbus":         "bg-[hsl(var(--badge-modbus))] text-white",
+  "No response":    "bg-[hsl(var(--status-neutral))] text-white",
+  "No match":       "bg-[hsl(var(--status-neutral))] text-white",
+  "Probe aborted":  "bg-[hsl(var(--status-critical))] text-white",
 }
 
 const BACNET_STYLES: Record<string, string> = {
-  "BACnet":         "bg-[hsl(271_81%_56%)] text-white",
-  "No response":    "bg-[hsl(240_5%_46%)] text-white",
-  "No match":       "bg-[hsl(240_5%_46%)] text-white",
-  "Probe aborted":  "bg-[hsl(0_72%_51%)] text-white",
+  "BACnet":         "bg-[hsl(var(--badge-bacnet))] text-white",
+  "No response":    "bg-[hsl(var(--status-neutral))] text-white",
+  "No match":       "bg-[hsl(var(--status-neutral))] text-white",
+  "Probe aborted":  "bg-[hsl(var(--status-critical))] text-white",
 }
 
 const MODBUS_ABORT_TOOLTIP =
@@ -110,12 +110,12 @@ const BACNET_ABORT_TOOLTIP =
   "BACnet probe aborted — anomalous response. The device returned a malformed frame, reset the connection, or timed out; QU.I.R.K. stopped probing this host per its one-strike safety policy. Worth a closer manual look."
 
 // Phase 142 CVE-01/D-14 — single neutral CVE-count badge color, regardless of
-// match count or severity. NEVER green (hsl(142_71%_45%)) or a red severity
+// match count or severity. NEVER green (hsl(var(--qs-node-safe))) or a red severity
 // hue — the badge is advisory-only, not a severity signal (T-142-CVE01).
 // Amber, not blue: the original hsl(213...) sat in the same hue family as the
 // per-CVE NVD links rendered directly beneath it, so the badge didn't read as
 // a distinct element (human UAT, 142-06).
-const CVE_BADGE_STYLE = "bg-[hsl(38_92%_50%)] text-black"
+const CVE_BADGE_STYLE = "bg-[hsl(var(--status-warning))] text-black"
 
 // Maps a raw probe_state wire value to the verbatim UI-SPEC label. Returns
 // "—" (never attempted) for null/undefined, mirroring snmpLabel's raw-fallback

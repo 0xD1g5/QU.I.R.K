@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/table"
 
 const SEVERITY_STYLES: Record<string, string> = {
-  CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
+  CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH:     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  MEDIUM:   "bg-[hsl(38_92%_50%)] text-black",
-  LOW:      "bg-[hsl(213_94%_68%)] text-black",
-  INFO:     "bg-[hsl(240_5%_46%)] text-white",
+  MEDIUM:   "bg-[hsl(var(--status-warning))] text-black",
+  LOW:      "bg-[hsl(var(--chart-tls))] text-black",
+  INFO:     "bg-[hsl(var(--status-neutral))] text-white",
 }
 const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 } as const
 
@@ -91,12 +91,12 @@ function DatabaseTable({ findings }: { findings: DarFinding[] }) {
                 <TableCell className="text-sm">
                   <BoolBadge value={f.encryption_at_rest}
                     trueLabel="ENCRYPTED" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
-                    falseLabel="UNENCRYPTED" falseClass="bg-[hsl(0_72%_51%)] text-white" />
+                    falseLabel="UNENCRYPTED" falseClass="bg-[hsl(var(--status-critical))] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.tls_in_transit}
                     trueLabel="TLS ON" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
-                    falseLabel="TLS OFF" falseClass="bg-[hsl(0_72%_51%)] text-white" />
+                    falseLabel="TLS OFF" falseClass="bg-[hsl(var(--status-critical))] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>
                 <TableCell className="text-sm">{truncate(f.remediation)}</TableCell>
@@ -140,23 +140,23 @@ function ObjectStorageTable({ findings }: { findings: DarFinding[] }) {
                   {f.encryption_mode === null || f.encryption_mode === undefined ? (
                     <span>—</span>
                   ) : f.encryption_mode === "none" ? (
-                    <Badge className="bg-[hsl(0_72%_51%)] text-white text-xs">none</Badge>
+                    <Badge className="bg-[hsl(var(--status-critical))] text-white text-xs">none</Badge>
                   ) : (
                     f.encryption_mode
                   )}
                 </TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.public_access}
-                    trueLabel="PUBLIC" trueClass="bg-[hsl(0_72%_51%)] text-white"
-                    falseLabel="PRIVATE" falseClass="bg-[hsl(240_5%_46%)] text-white" />
+                    trueLabel="PUBLIC" trueClass="bg-[hsl(var(--status-critical))] text-white"
+                    falseLabel="PRIVATE" falseClass="bg-[hsl(var(--status-neutral))] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">
                   <span className="font-mono text-xs">{truncate(f.kms_key_id, 20)}</span>
                 </TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.versioning}
-                    trueLabel="ON" trueClass="bg-[hsl(213_94%_68%)] text-black"
-                    falseLabel="OFF" falseClass="bg-[hsl(240_5%_46%)] text-white" />
+                    trueLabel="ON" trueClass="bg-[hsl(var(--chart-tls))] text-black"
+                    falseLabel="OFF" falseClass="bg-[hsl(var(--status-neutral))] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>
                 <TableCell className="text-sm">{truncate(f.remediation)}</TableCell>
@@ -236,7 +236,7 @@ function VaultTable({ findings }: { findings: DarFinding[] }) {
                 <TableCell className="text-sm">
                   <BoolBadge value={f.auto_unseal}
                     trueLabel="YES" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
-                    falseLabel="NO" falseClass="bg-[hsl(240_5%_46%)] text-white" />
+                    falseLabel="NO" falseClass="bg-[hsl(var(--status-neutral))] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>
                 <TableCell className="text-sm">{truncate(f.remediation)}</TableCell>
