@@ -2002,6 +2002,23 @@ this deferral easy to rediscover and close in a future phase, not something a fu
 puzzle out from scratch. If you want the full report, use one of the five new download buttons, not
 Export PDF.
 
+### If these two downloads' numbers differ, which one do you trust? (Phase 210, XSURF-01..04)
+
+The two artifacts above remain genuinely different documents (previous subsection), but as of
+Phase 210 their **numbers** are not expected to differ. For one scan, the headline readiness
+score, the CRITICAL finding count, and the certificate count are now identical whether they come
+from the report pipeline (the five download buttons, `write_reports()`) or the dashboard pipeline
+(the Executive page's live view and the Export PDF button, both backed by
+`GET /api/scan/latest`). Three cross-surface defects previously caused these numbers to diverge
+for the same scan — a SAML certificate double-counted on the dashboard side, an identity finding
+the CLI never emitted, and a "latest scan" query that could silently merge two separate scan runs
+— and all three are closed (XSURF-01, XSURF-02, XSURF-03). A regression gate,
+`tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality`, asserts
+this equality for one `scan_run_id` and is demonstrated to fail if any of the three defects is
+reintroduced (see `210-05-SUMMARY.md`). **If you ever see these three numbers differ across the
+two pipelines for the same scan, that is a defect to report, not an expected artifact
+difference.**
+
 ### Formats can be unavailable, with a reason
 
 Any of the five formats may be shown disabled, with the reason visible in a tooltip. The three
