@@ -41,8 +41,20 @@ cause at an exact file:line. This milestone adds no new detection capability.
   vs wide 14-port 18/100) — Phase 212 owns whether width-neutrality is the target. One residual
   disclosed, NOT tag-blocking: `"HTTP on TLS-designated port"` is unbridgeable and measures 0 on the
   reference estate.
-- [ ] **Phase 212: Score Dilution — Decision Only** - A written, measured denominator decision for
-  P2b exists; no implementation ships.
+- [x] **Phase 212: Score Dilution — Decision Only** - A written, measured denominator decision for
+  P2b exists; no implementation ships. **VERDICT: RECOMMEND NONE** — a complete, valid outcome per
+  CONTEXT D-05. No candidate cleared both measurement axes, each failing for a DIFFERENT reason:
+  scan-scope normalisation `[ASSUMED] / CONDITIONAL` (zero mitigation — `71->74->78->82`, identical
+  to control — under the todo's own "scanning more ports" reading); distinct hosts
+  `[ASSUMED] / TAUTOLOGICAL` (no host data exists, so the row is unfalsifiable by construction; also
+  broke ladder monotonicity R4=13 < R5=17); absolute exposure `STRUCTURALLY UNINFORMATIVE` on axis
+  (b) (it patches `_consequence_ceiling()`, downstream of where that instrument reads). **METHOD
+  FINDING:** D-01's two axes are adequate for divisor-swap candidates and structurally inadequate for
+  ceiling-shaped ones — a third instrument is needed. The P2b defect is **DEFERRED, NOT FIXED**;
+  `test_p2b_...` remains `xfail(strict=True)` BY DESIGN. Implementation owner phase is post-v5.25,
+  explicitly NOT Phase 214, marked OPERATOR-RESERVED. 5 of 5 plans; `212-VERIFICATION.md` status
+  **passed**, 4/4 criteria, goal and requirement verdicts AGREE. Decision:
+  `.planning/decisions/212-score-dilution-denominator-decision.md`.
 - [ ] **Phase 213: Shipped Product Defects (Series 7)** - The two shipped `docs/UAT-SERIES.md` FAILs
   from v5.24 — certificate-table sort and theme-token colour literals — are fixed.
 - [ ] **Phase 214: Release Cut** - `v5.25.0` is tagged, published to PyPI, and its release notes and
