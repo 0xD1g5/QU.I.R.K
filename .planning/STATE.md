@@ -4,13 +4,13 @@ milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
 last_updated: "2026-09-28T22:30:00.000Z"
-last_activity: 2026-09-28 -- Phase 212 (Score Dilution -- Decision Only) CLOSED and VERIFIED: 212-VERIFICATION.md status=passed, 4/4 criteria, goal and requirement verdicts AGREE. 5 of 5 plans enumerated on disk. VERDICT: RECOMMEND NONE -- a complete, valid outcome per CONTEXT D-05, NOT a shortfall. All three candidates failed axis (b) for DIFFERENT reasons: scan-scope normalisation is CONDITIONAL (zero mitigation, 71->74->78->82 identical to control, under the todo's own 'scanning more ports' reading -- its initial clean PASS was OVERTURNED by a follow-up falsifiability audit); distinct hosts is TAUTOLOGICAL (no host data exists, row unfalsifiable by construction, also broke ladder monotonicity R4=13 < R5=17); absolute exposure is STRUCTURALLY UNINFORMATIVE on axis (b) (patches _consequence_ceiling(), downstream of where that instrument reads). METHOD FINDING: D-01's two axes are inadequate for ceiling-shaped candidates; a third instrument is needed. The P2b defect is DEFERRED NOT FIXED -- test_p2b_... remains xfail(strict=True) BY DESIGN. Implementation owner phase is post-v5.25, NOT Phase 214, OPERATOR-RESERVED. Decision record: .planning/decisions/212-score-dilution-denominator-decision.md. Phase 210's checkbox still UNCHECKED (its Criterion 5 was met by Phase 211's work, not its own -- a milestone-close call). Next: Phase 213 (Shipped Product Defects, Series 7), which has NO phase directory and needs discuss -> plan -> execute.
+last_activity: 2026-09-28 -- Phase 213 (Shipped Product Defects, Series 7) EXECUTION STARTED at 0 of 10 plans, 5 waves. Phases 211 and 212 both CLOSED and VERIFIED (completed_phases 2). Plan-check PASSED WITH CONCERNS (1 WARNING, notation only, now closed). OPERATOR DECISION D-14: fix ALL colour literals AND widen the gate, not just the 95 the narrow detector sees -- the operator knowingly accepted roughly doubling UIFIX-02 and delaying Phase 214's release cut. The count was then re-derived at run time and found to be 205, NOT the ~188 D-14 hypothesised: hex 67 + whitespace-HSL 28 (= the 95 the narrow gate sees) + underscore-HSL 93 + comma-HSL 17 (all 17 in roadmap.tsx, a third spelling nobody had counted). Reproduced independently THREE times. Two criteria flagged up front: criterion 2 is NOT MET AS WRITTEN (docs/uat-coverage-gaps.md contains zero occurrences of '27 of 28', COV-04, UAT-7-12 or UAT-7-21 -- that tally lives in MILESTONES.md/PROJECT.md, not the generated worklist the criterion names); and criterion 5's both-theme rendering is HUMAN-UAT, since the colour audit is a SOURCE test satisfied by removing literals whether or not the graph renders at all. Key hazard: the gate is it.fails -- a GREEN run means the defect is STILL PRESENT; success is the node going RED with 'Expect test to fail'. UAT-7-21 may flip to PASS only once the WIDENED gate is red.
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_plans: 10
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
