@@ -162,15 +162,32 @@ does not bind, i.e. exactly the healthier clients. Source:
 v5.24's audit recorded these rather than absorbing them. Both are `docs/UAT-SERIES.md` FAILs shipped
 into a closed milestone.
 
-- [ ] **UIFIX-01**: The certificates table sorts by expiry. `certificates.tsx` has no sort state, no
+- [x] **UIFIX-01**: The certificates table sorts by expiry. `certificates.tsx` has no sort state, no
       column handler and no table library across 116 lines, which is why `UAT-7-12` is an accepted
       product-absence FAIL and why COV-04 closed at 27 of 28. Size S; the pattern is a direct port
       from a page already running it. Flips `UAT-7-12` and closes COV-04's remainder.
-- [ ] **UIFIX-02**: Dashboard colours come from theme tokens. Hardcoded colour literals bypass the
+      **Complete (Phase 213, plan 213-03, closed by plan 213-10 2026-09-28)** — `certificates.tsx`
+      gained a TanStack `accessorFn`-on-parsed-`Date` sortable Expiry column, ported from
+      `findings.tsx`/`identity.tsx`; 5 vitest nodes in `certificates-expiry-sort.test.tsx` plus
+      operator browser confirmation (plan 213-09). `UAT-7-12` PASS in `docs/UAT-SERIES.md`.
+      COV-04's remainder is NOT closed as a `docs/uat-coverage-gaps.md` figure — see criterion 2's
+      NOT MET AS WRITTEN finding in `.planning/ROADMAP.md`'s Phase 213 entry; the underlying product
+      absence that caused the 27-of-28 tally IS fixed.
+- [x] **UIFIX-02**: Dashboard colours come from theme tokens. Hardcoded colour literals bypass the
       tokens and break theming, recorded via a full-strength `it.fails` as `UAT-7-21`. **Re-derive
       the count first:** the todo says 50 literals across 8 files, the v5.24 audit says 95 across 9.
       The disagreement is itself a finding — report which is right and by what instrument, and do not
       inherit either number. The three Cytoscape call sites are a real refactor, not a sed.
+      **Complete (Phases 213-01 through 213-08, closed by plan 213-10 2026-09-28)** — v5.24 audit's
+      "95 across 9" was CORRECT against the narrow detector; the todo's "50 across 8" was REFUTED.
+      A further finding surfaced at planning time (D-14): the narrow detector itself had a blind
+      spot (Tailwind underscore-HSL, comma-HSL) the size of the defect it reported. TRUE pre-fix
+      total, re-derived four independent ways: **205 literals across 17 files.** All 205 tokenised;
+      the widened gate proved genuinely RED before the fix and reports `1 passed` honestly after
+      (0 remaining). All three Cytoscape call sites refactored via a shared literal-free theme
+      resolver with live re-resolution on toggle, confirmed rendering correctly in both themes by
+      the operator (plan 213-09). `UAT-7-21` PASS (qualified — two Pass Criteria bullets remain
+      named as uncovered by any instrument) in `docs/UAT-SERIES.md`.
 
 ### Release Cut
 
@@ -283,8 +300,8 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 | DENOM-03 | Phase 211 | Complete (unit clause prior `0b0ed1c7`; behavioural clause measured INVERTED, live 211-05) |
 | DENOM-04 | Phase 211 | Complete (4 sub-items dispositioned 211-01; fixtures/score-strings N/A-dispositioned, not regenerated — deviation from literal text) |
 | DILUTE-01 | Phase 212 | Complete (decision only — RECOMMEND NONE; defect still xfails) |
-| UIFIX-01 | Phase 213 | Pending |
-| UIFIX-02 | Phase 213 | Pending |
+| UIFIX-01 | Phase 213 | Complete (`UAT-7-12` PASS; COV-04's 27-of-28 artifact-level closure recorded NOT MET AS WRITTEN — see ROADMAP.md Phase 213 entry) |
+| UIFIX-02 | Phase 213 | Complete (true pre-fix count 205 across 17 files, not 95 across 9; `UAT-7-21` PASS qualified) |
 | REL-01 | Phase 214 | Pending |
 | REL-02 | Phase 214 | Pending |
 | REL-03 | Phase 214 | Pending |

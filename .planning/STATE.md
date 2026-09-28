@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T22:30:00.000Z"
-last_activity: 2026-09-28 -- Phase 213 (Shipped Product Defects, Series 7) EXECUTION STARTED at 0 of 10 plans, 5 waves. Phases 211 and 212 both CLOSED and VERIFIED (completed_phases 2). Plan-check PASSED WITH CONCERNS (1 WARNING, notation only, now closed). OPERATOR DECISION D-14: fix ALL colour literals AND widen the gate, not just the 95 the narrow detector sees -- the operator knowingly accepted roughly doubling UIFIX-02 and delaying Phase 214's release cut. The count was then re-derived at run time and found to be 205, NOT the ~188 D-14 hypothesised: hex 67 + whitespace-HSL 28 (= the 95 the narrow gate sees) + underscore-HSL 93 + comma-HSL 17 (all 17 in roadmap.tsx, a third spelling nobody had counted). Reproduced independently THREE times. Two criteria flagged up front: criterion 2 is NOT MET AS WRITTEN (docs/uat-coverage-gaps.md contains zero occurrences of '27 of 28', COV-04, UAT-7-12 or UAT-7-21 -- that tally lives in MILESTONES.md/PROJECT.md, not the generated worklist the criterion names); and criterion 5's both-theme rendering is HUMAN-UAT, since the colour audit is a SOURCE test satisfied by removing literals whether or not the graph renders at all. Key hazard: the gate is it.fails -- a GREEN run means the defect is STILL PRESENT; success is the node going RED with 'Expect test to fail'. UAT-7-21 may flip to PASS only once the WIDENED gate is red.
+last_updated: "2026-09-28T23:45:00.000Z"
+last_activity: 2026-09-28 -- Phase 213 (Shipped Product Defects, Series 7) plan 213-10 (close-out) executing: UAT-7-12 and UAT-7-21 (qualified) re-dispositioned PASS, true pre-fix colour-literal count confirmed at 205 across 17 files (not the ~188 D-14 hypothesised), all 205 tokenised, widened gate proved RED then GREEN, docs/uat-coverage-gaps.md and docs/quirk-master-guide.md regenerated, UIFIX-01/02 hand-marked complete in REQUIREMENTS.md, criterion 2 recorded NOT MET AS WRITTEN (docs/uat-coverage-gaps.md contains zero occurrences of '27 of 28', COV-04, UAT-7-12 or UAT-7-21 -- that tally lives in PROJECT.md/REQUIREMENTS.md, not the generated worklist the criterion names), vault synced (two guides, UAT-Series.md, new Phase 213 note, Hub table + wikilinks). Awaiting operator checkpoint approval before 213-10-SUMMARY.md is written and Phase 213's own ROADMAP checkbox is left for the orchestrator to flip after independent verification.
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 10
-  completed_plans: 0
-  percent: 0
+  completed_plans: 9
+  percent: 90
 ---
 
 # Project State
@@ -1360,7 +1360,35 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 212 (Score Dilution — Decision Only) — all 5 plans executed, closure pending orchestrator
+Phase: 213 (Shipped Product Defects, Series 7) — 9 of 10 plans executed (213-01..09 all complete
+with SUMMARY.md on disk); plan 213-10 (this close-out) is executing its final task, awaiting
+operator approval at its blocking checkpoint. Ground truth enumerated from disk at time of this
+edit: 10 PLAN.md files, 9 SUMMARY.md files (213-10-SUMMARY.md is written only after the checkpoint
+resolves).
+Plan: 9 of 10 executed; will become 10 of 10 once 213-10-SUMMARY.md is written after operator
+approval.
+Status: `UAT-7-12` and `UAT-7-21` (qualified) re-dispositioned PASS; true pre-fix colour-literal
+count re-derived at 205 across 17 files (not the ~188 D-14 hypothesised, and far beyond the narrow
+detector's original 95-across-9); all 205 tokenised; widened colour-audit gate proved genuinely RED
+before the fix and reports `1 passed` honestly after (0 remaining). Criterion 2 recorded NOT MET AS
+WRITTEN — `docs/uat-coverage-gaps.md`'s regenerated worklist contains zero occurrences of "27 of
+28", "COV-04", `UAT-7-12` or `UAT-7-21`; that tally is a v5.24 requirement-level figure in
+`.planning/PROJECT.md`/`.planning/REQUIREMENTS.md`, not something this generator emits. UIFIX-01
+and UIFIX-02 hand-marked `[x]` in REQUIREMENTS.md with scoped citations. Phase 213's own ROADMAP
+checkbox is left UNCHECKED on purpose — closing it is the orchestrator's call after independently
+verifying that section, not this plan's. `phase.complete` and `requirements mark-complete` were NOT
+invoked.
+Last activity: 2026-09-28 — Phase 213 plan 10 re-dispositioned UAT-7-12/UAT-7-21, regenerated
+docs/uat-coverage-gaps.md (FAIL 7->5, PASS 754->756) and docs/quirk-master-guide.md, synced
+docs/uat-disposition-ledger.jsonl, documented UIFIX-01/02 in report-interpretation.md and
+operators-guide.md, recorded criterion 2 NOT MET AS WRITTEN in ROADMAP.md, hand-marked UIFIX-01/02
+in REQUIREMENTS.md, resolved 26 of 27 213-VALIDATION.md rows to green (the 27th is the blocking
+checkpoint row itself), synced the vault (two guides, UAT-Series.md, new Phase 213 note, Hub table
++ narrative wikilinks for Phases 210-213), and is now awaiting the operator's checkpoint approval.
+
+### Prior: Phase 212 close (2026-09-28)
+
+Phase 212 (Score Dilution — Decision Only) — all 5 plans executed, closure pending orchestrator
 review
 Plan: 5 of 5 executed (5 PLAN.md files on disk, enumerated; 5 SUMMARY.md: 212-01..05, once this
 plan's own SUMMARY is written). 212-05's own Ground-Truth Completion Check (in 212-VALIDATION.md)
