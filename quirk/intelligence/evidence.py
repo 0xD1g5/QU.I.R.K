@@ -5,7 +5,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
 from quirk.engine.findings_evaluator import _saml_cert_serial
-from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
+from quirk.util.weak_crypto import (
+    has_legacy_tls_versions_signal,
+    is_legacy_tls_version,
+    is_weak_cipher,
+)
 
 # Phase 211-02 (DENOM-04 residual / 17-vs-18 divergence leg 1) — SECOND
 # consumer of the Phase 202 title-vocabulary split (the first being
@@ -206,6 +210,17 @@ def build_evidence_summary(
     motion_broker_weak_tls_count = 0          # broker TLS with tls_version in {TLSv1, TLSv1.0, TLSv1.1, SSLv3}
     motion_broker_weak_cipher_count = 0       # broker TLS with weak cipher (HIGH only, mirrors risk_engine.py:564-567)
 
+    # Phase 211-03 (DENOM-04 residual / 17-vs-18 divergence leg 2) — replaces
+    # scoring.py's old `sev.get("LOW", 0)` severity-count proxy, which was
+    # structurally 0 on the dashboard pipeline (no LOW severity emitted
+    # there) and, on the CLI side, silently counted ANY LOW finding as
+    # "legacy TLS present" -- inflated by any future unrelated LOW finding
+    # class. This counter must NEVER be re-derived from findings; it reads
+    # endpoint fields directly via the shared
+    # weak_crypto.has_legacy_tls_versions_signal() predicate, mirroring
+    # findings_evaluator._has_legacy_tls_versions() exactly.
+    legacy_tls_count = 0
+
     for ep in endpoint_list:
         host = str(getattr(ep, "host", "") or "")
         port = int(getattr(ep, "port", 0) or 0)
@@ -220,6 +235,11 @@ def build_evidence_summary(
             pqc_hybrid_endpoint_count += 1
         if proto == "TLS" and (getattr(ep, "tls_supported_versions", "") or ""):
             tls_enum_success_count += 1
+        if proto == "TLS" and has_legacy_tls_versions_signal(
+            getattr(ep, "tls_version", "") or "",
+            getattr(ep, "tls_supported_versions", "") or "",
+        ):
+            legacy_tls_count += 1
 
         scan_error = getattr(ep, "scan_error", None)
         if scan_error:
@@ -520,6 +540,7 @@ def build_evidence_summary(
         "plaintext_http_count": len(plaintext_http_targets),
         "http_on_tls_port_count": len(http_on_tls_port_targets),
         "mtls_present_count": len(mtls_targets),
+        "legacy_tls_count": legacy_tls_count,
         "cert_key_type_counts": cert_key_type_counts,
         "certificate_observations": {
             "certs_observed": certs_observed,

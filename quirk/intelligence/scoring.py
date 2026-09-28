@@ -445,7 +445,18 @@ def compute_readiness_score(
     scan_error_rate = _clamp(_as_float(scan_error.get("rate", 0.0)), 0.0, 1.0)
 
     unknown_count = max(0, _as_int(protocol_counts.get("UNKNOWN", 0)))
-    legacy_tls_count = max(0, _as_int(sev.get("LOW", 0)))
+    # Phase 211-03 (DENOM-04 residual / 17-vs-18 divergence leg 2): read the
+    # endpoint-derived `legacy_tls_count` key evidence.py now always emits.
+    # The old `sev.get("LOW", 0)` severity-count proxy survives ONLY as a
+    # fallback for hand-built legacy evidence dicts in older tests -- both
+    # live pipelines always supply the key (asserted by
+    # tests/test_evidence_finding_vocabulary_parity.py's
+    # TestLegacyTlsCountCrossVocabularyParity suite). A silent fallback of
+    # this exact shape has bitten this project before:
+    # `assessable_endpoint_count`'s identical `evidence.get(key, fallback)`
+    # fallback at :412 had to be positively proven not to be firing during
+    # this phase's own research (211-CONTEXT.md D-07/H2).
+    legacy_tls_count = max(0, _as_int(evidence.get("legacy_tls_count", sev.get("LOW", 0))))
     # 999.115: `high_impact` is gone with the ratio it fed. CRITICAL and HIGH
     # counts now reach the score through `_consequence_ceiling()`, which reads
     # `sev` directly at the cap site below. Phase 184.4 D-03's "do NOT remove

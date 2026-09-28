@@ -18,6 +18,7 @@ from quirk.reports.content_model import (
 )
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
+from quirk.util.weak_crypto import has_legacy_tls_versions_signal
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -277,15 +278,14 @@ def _error_category(desc: str) -> str:
 
 
 def _has_legacy_tls_versions(ep: Any) -> bool:
-    ver = (getattr(ep, "tls_version", "") or "").strip()
-    if ver in {"TLSv1", "TLSv1.1"}:
-        return True
-
-    supported = (getattr(ep, "tls_supported_versions", "") or "").strip()
-    if not supported:
-        return False
-    versions = {v.strip() for v in supported.split(",") if v.strip()}
-    return bool({"TLSv1", "TLSv1.1"} & versions)
+    # Phase 211-03: thin wrapper -- the predicate itself now lives in
+    # quirk.util.weak_crypto.has_legacy_tls_versions_signal(), shared with
+    # evidence.py's endpoint-derived legacy_tls_count counter so the two
+    # pipelines cannot drift apart on what counts as legacy TLS.
+    return has_legacy_tls_versions_signal(
+        getattr(ep, "tls_version", "") or "",
+        getattr(ep, "tls_supported_versions", "") or "",
+    )
 
 
 _SENTINEL = object()

@@ -139,10 +139,12 @@ _TLS_LEGACY_VIA_SUPPORTED = _ep(
 _LEGACY_TLS_ENDPOINTS = _ALL_ENDPOINTS + [_TLS_LEGACY_VIA_VERSION, _TLS_LEGACY_VIA_SUPPORTED]
 
 # Measured post-fix via compute_readiness_score() over _LEGACY_TLS_ENDPOINTS'
-# CLI-side evidence dict -- filled in by 211-03 Task 2 after the fix lands
-# (pinned, not re-derived at test time, per this project's "pinned oracles,
-# not bare equality" rule). Placeholder until measured.
-_EXPECTED_MODERN_TLS_SUBSCORE = None
+# evidence dicts (pinned, not re-derived at test time, per this project's
+# "pinned oracles, not bare equality" rule). Unchanged from the pre-fix
+# CLI-side value -- the CLI generator already emitted a LOW finding for both
+# legacy-TLS endpoints, so its old severity-proxy and the new endpoint-derived
+# counter agree at 2 either way; only the DASHBOARD side moves (0 -> 2).
+_EXPECTED_MODERN_TLS_SUBSCORE = 18
 
 
 def _cli_findings(endpoints):

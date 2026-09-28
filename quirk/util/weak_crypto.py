@@ -16,6 +16,7 @@ Public surface:
   is_legacy_tls_version(tls_version: str | None) -> bool
   is_pfs_cipher(cipher: str | None) -> bool                    # Phase 77 D-05
   is_weak_cipher_classification(cipher: str | None) -> bool   # Phase 77 D-05
+  has_legacy_tls_versions_signal(tls_version, tls_supported_versions) -> bool  # Phase 211-03
 """
 from __future__ import annotations
 
@@ -82,6 +83,38 @@ def is_pfs_cipher(cipher: str | None) -> bool:
         return False
     upper = cipher.upper()
     return "ECDHE" in upper or "DHE" in upper
+
+
+def has_legacy_tls_versions_signal(
+    tls_version: str | None, tls_supported_versions: str | None
+) -> bool:
+    """Return True iff *tls_version* or *tls_supported_versions* signals a
+    legacy TLS 1.0/1.1 endpoint (Phase 211-03 / DENOM-04 leg 2).
+
+    Extracted from `quirk.engine.findings_evaluator._has_legacy_tls_versions`,
+    which now delegates here as a thin wrapper, so `evidence.py`'s
+    endpoint-derived `legacy_tls_count` counter cannot drift from the CLI
+    finding generator's own predicate -- the exact drift class that produced
+    the Modern TLS leg of the 17-vs-18 headline-score divergence (a
+    LOW-severity finding-count proxy that was structurally 0 on the
+    dashboard pipeline, which emits no LOW severity at all).
+
+    Case-SENSITIVE membership against exactly {"TLSv1", "TLSv1.1"} — this is
+    intentionally NARROWER than :func:`is_legacy_tls_version` above (which is
+    case-insensitive and also matches "TLSv1.0"/"SSLv3"). That function
+    serves a different audience (the motion broker/email weak-TLS counters)
+    and must not be conflated with this one; mirror
+    `_has_legacy_tls_versions`'s exact historical behaviour instead.
+    """
+    ver = (tls_version or "").strip()
+    if ver in {"TLSv1", "TLSv1.1"}:
+        return True
+
+    supported = (tls_supported_versions or "").strip()
+    if not supported:
+        return False
+    versions = {v.strip() for v in supported.split(",") if v.strip()}
+    return bool({"TLSv1", "TLSv1.1"} & versions)
 
 
 def is_weak_cipher_classification(cipher: str | None) -> bool:
