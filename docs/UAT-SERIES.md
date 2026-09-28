@@ -1,8 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-28 (Phase 211 close — Denominator Correctness & Finding-Vocabulary Parity.
-Series 211 added: `UAT-211-01` (cross-surface headline-score equality, DENOM-04/D-08, live EQUAL
+**Last Updated:** 2026-09-28 (Phase 212 close — Score Dilution, Decision Only. Series 212 added:
+five cases, all PASS, verifying the DILUTE-01 written decision (`RECOMMEND NONE`) exists, the defect
+is recorded DEFERRED with `test_p2b_...` still `xfail(strict=True)`, an owner phase is named that is
+not Phase 214, the method finding is first-class, and every assumption label survives into the
+recommendation. No product change shipped. Prior: 2026-09-28 (Phase 211 close — Denominator
+Correctness & Finding-Vocabulary Parity. Series 211 added: `UAT-211-01` (cross-surface
+headline-score equality, DENOM-04/D-08, live EQUAL
 verdict 18=18 on `scan_run_id 2026-09-28T13:16:55.319715+00:00`, closing Phase 210's unmet Success
 Criterion 5), `UAT-211-02` (`ports_tls` width behavioural verdict, DENOM-03, measured INVERTED —
 narrow 20 > wide 18, the opposite direction from the historical pair — which the requirement's own
@@ -29521,5 +29526,184 @@ rather than omitting it from their parity claims.
 **Notes:** Todo filed `8709eb36` (211-04); both guides updated to name the residual in `fb6ff014`
 (211-07). Not tag-blocking — measures 0 on the reference estate and did not move any subscore in
 this phase's live measurement.
+
+---
+
+
+## Series 212: Score Dilution — Decision Only (Phase 212 — v5.25)
+
+**Last Updated:** 2026-09-28 (Phase 212 close — Score Dilution, Decision Only. Five cases added, all
+PASS. This phase shipped NO product change — `DILUTE-01` is satisfied by a written, measured
+decision, not by an implementation. `UAT-212-01` confirms the decision document exists and records
+`RECOMMEND NONE`, with each of the three candidates' measured effect stated against the reference
+71->82 dilution. `UAT-212-02` confirms the defect is recorded as DEFERRED, not fixed:
+`test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` is still `xfail(strict=True)`
+and `git status --porcelain -- quirk/ tests/` is empty. `UAT-212-03` confirms an owner phase is
+named for future implementation and is explicitly NOT Phase 214, marked OPERATOR-RESERVED.
+`UAT-212-04` confirms the method finding (CONTEXT D-01's two-axis design is structurally inadequate
+for ceiling-shaped candidates) is recorded as a first-class result, not a footnote. `UAT-212-05`
+confirms every `[ASSUMED]`/`TAUTOLOGICAL`/`STRUCTURALLY UNINFORMATIVE` label from the upstream
+measurement files survives, unsoftened, into the decision document's recommendation. None of these
+cases assert the defect is fixed — a case reading that way would be false. DILUTE-01 is hand-marked
+Complete in REQUIREMENTS.md, scoped explicitly to "a measured decision was delivered," not to "the
+defect was resolved"; see `.planning/phases/212-score-dilution-decision-only/212-05-SUMMARY.md` for
+the phase's ground-truth completion verdict.)
+
+### UAT-212-01: The Decision Document Exists and Records RECOMMEND NONE With Measured Effects
+
+**ID:** UAT-212-01
+**Title:** `.planning/decisions/212-score-dilution-denominator-decision.md` exists, states the
+verdict `RECOMMEND NONE` up front, and backs it with each of the three candidates' measured effect
+against the reference 14x dilution case
+**Maps to:** DILUTE-01 (Success Criterion 2)
+
+**What to test:** Phase 212 measured three named candidates (scan-scope normalisation, distinct
+hosts, absolute exposure) on two axes (regression + efficacy) against a control that reproduced the
+documented 71 -> 74 -> 78 -> 82 pre-ceiling dilution exactly. None cleared both axes, each for a
+different, stated reason.
+
+**Steps:**
+```
+F=.planning/decisions/212-score-dilution-denominator-decision.md
+grep -q "RECOMMEND NONE" "$F"
+grep -q "71 -> 74 -> 78 -> 82" "$F"
+grep -q "CONDITIONAL" "$F" && grep -q "TAUTOLOGICAL" "$F" && grep -q "STRUCTURALLY UNINFORMATIVE" "$F"
+```
+
+**Pass Criteria:** the decision document exists, opens with the `RECOMMEND NONE` verdict, cites the
+control's pre-ceiling sweep figures, and carries a distinct combined verdict label for each of the
+three candidates.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** All three greps confirmed live against the committed decision document. Verdict is stated
+in the document's second line, before any candidate detail, specifically so a skimming reader cannot
+miss it (Section "Provenance appendix", "Scope audit" subsection).
+
+---
+
+### UAT-212-02: The Defect Is Recorded Deferred, Not Fixed — `test_p2b_...` Still xfails Strict
+
+**ID:** UAT-212-02
+**Title:** The decision document states the defect is DEFERRED and `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`
+remains `xfail(strict=True)` at phase close, with zero changes under `quirk/` or `tests/`
+**Maps to:** DILUTE-01 (Success Criteria 3 and 4)
+
+**What to test:** Success Criterion 4 forbids shipping any candidate's implementation this phase.
+This case verifies the standing regression instrument was not weakened and no production code moved.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_score_properties.py -q
+git status --porcelain -- quirk/ tests/
+grep -q "DEFERRED, NOT FIXED" .planning/decisions/212-score-dilution-denominator-decision.md
+grep -q "xfail(strict=True)" .planning/decisions/212-score-dilution-denominator-decision.md
+```
+
+**Pass Criteria:** pytest reports `24 passed, 3 xfailed`, `git status --porcelain` on `quirk/` and
+`tests/` is empty, and the decision document states the defect is deferred, not fixed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** Verbatim tail confirmed `24 passed, 3 xfailed, 2 warnings in 0.21s`
+(`212-CRITERIA-EVIDENCE.md`, Section 1a). Both `tests/test_score_properties.py` and
+`tests/skip_registry.py` are byte-unchanged (`git diff --stat`, empty). This is the correct,
+by-design outcome for a measurement spike, not an unfinished item.
+
+---
+
+### UAT-212-03: An Owner Phase Is Named for Implementation, and It Is Not Phase 214
+
+**ID:** UAT-212-03
+**Title:** The decision document names a future owner phase for implementing a denominator fix,
+marks it OPERATOR-RESERVED, and explicitly excludes Phase 214 (the Release Cut)
+**Maps to:** DILUTE-01 (Success Criterion 2), CONTEXT D-06
+
+**What to test:** Re-scoring every ladder rung inside a release phase would freeze an unmeasured
+number into a tag. The decision must name where implementation belongs without locking milestone
+structure, which is the operator's call, not the planner's.
+
+**Steps:**
+```
+F=.planning/decisions/212-score-dilution-denominator-decision.md
+grep -qi "OPERATOR-RESERVED" "$F"
+grep -q "post-v5.25" "$F"
+! grep -qiE "owner phase[^.]{0,60}\bphase 214\b" "$F"
+```
+
+**Pass Criteria:** the document names a post-v5.25 owner phase, marks the choice OPERATOR-RESERVED,
+and never names Phase 214 as the owner.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** Section 8 ("Deferral, owner phase, and the label-survival audit") names "a post-v5.25
+phase in the next milestone" and states explicitly this is "NOT Phase 214 (the Release Cut)."
+
+---
+
+### UAT-212-04: The Method Finding Is Recorded as First-Class, Not a Footnote
+
+**ID:** UAT-212-04
+**Title:** The decision document records, as a first-class result, that CONTEXT D-01's two-axis
+measurement design is structurally inadequate for ceiling-shaped candidates (as distinct from a
+candidate simply failing)
+**Maps to:** DILUTE-01 (Success Criterion 2)
+
+**What to test:** The absolute-exposure candidate's axis-(b) instrument reads the PRE-ceiling
+computed score, strictly upstream of where a ceiling-shaped candidate's effect would show up. This
+is a gap in the measurement method itself, not a property of that one candidate, and the decision
+must say so explicitly rather than reporting a bare "FAIL."
+
+**Steps:**
+```
+F=.planning/decisions/212-score-dilution-denominator-decision.md
+grep -qi "METHOD FINDING" "$F"
+grep -q "structurally inadequate" "$F"
+grep -qi "third instrument" "$F"
+```
+
+**Pass Criteria:** the document names the method finding explicitly (not merely reports the
+candidate as failed), states the two-axis design's blindness by construction, and names what a
+third instrument would need to do.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** Section 4 ("Why absolute exposure is a distinct third outcome, not a failure") and
+Section 5 both carry this finding; Section 9 ("What would falsify this recommendation") names the
+concrete instrument a future phase would need to build.
+
+---
+
+### UAT-212-05: Every Assumption Label Survives From the Measurement Files Into the Decision
+
+**ID:** UAT-212-05
+**Title:** Every `[ASSUMED]`, `TAUTOLOG*`, `UNMEASURABLE*`, `CONDITIONAL`, and `[UNCONSTRAINED]`
+label present in the two upstream measurement files has a downstream counterpart in the decision
+document's comparison table or recommendation text — none was silently dropped or softened
+**Maps to:** DILUTE-01 (Success Criterion 2), the project's standing "never tune to a target" rule
+(999.113 D5)
+
+**What to test:** A decision that quietly drops a qualifying label while carrying forward the number
+it qualifies would misrepresent how strong the evidence for a candidate actually is.
+
+**Steps:**
+```
+grep -noE "\[ASSUMED\]|TAUTOLOG[A-Z]*|UNMEASURABLE[-A-Z]*|CONDITIONAL|\[UNCONSTRAINED\]" \
+  .planning/phases/212-score-dilution-decision-only/212-MEASUREMENTS-denominator.md \
+  .planning/phases/212-score-dilution-decision-only/212-MEASUREMENTS-absolute-exposure.md
+grep -qi "Label-survival audit" .planning/decisions/212-score-dilution-denominator-decision.md
+```
+
+**Pass Criteria:** the decision document contains a written label-survival audit section, and its
+own audit table accounts for every label the grep surfaces.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** Section 8's "Label-survival audit" runs the identical grep and tabulates each label's
+source row against its downstream location in Section 4 or Section 5, including one explicit
+judgment call (`UNMEASURABLE-AS-POSED` folded into the `TAUTOLOGICAL` cell) recorded rather than
+silently made. Measurement-spike artifacts (`212-MEASUREMENTS-*.md`) are untracked phase scratch,
+consistent with `.planning/`'s standing convention for phase artifacts — the grep target exists on
+disk even though it is not git-tracked.
 
 ---
