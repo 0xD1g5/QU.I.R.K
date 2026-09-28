@@ -76,7 +76,7 @@ from quirk.discovery.nmap_provider import (
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints, evaluate_codesign_endpoints
+from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints, evaluate_codesign_endpoints, evaluate_identity_endpoints
 from quirk.reports.writer import write_reports
 from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
@@ -4092,6 +4092,16 @@ def main():
         codesign_findings = evaluate_codesign_endpoints(codesign_endpoints)
         if codesign_findings:
             findings = (findings or []) + codesign_findings
+        # Phase 210 XSURF-02: SAML identity findings. Before this, SAML weakness
+        # was scored into intelligence-*.json (identity_saml_weak_signing_ratio)
+        # but never emitted into findings-*.json, because IdentityFinding
+        # synthesis lived only in the dashboard route. evaluate_identity_endpoints
+        # is the shared evaluator (Phase 210 D-05/D-06) also used by
+        # quirk/dashboard/api/routes/scan.py::_derive_identity_findings, so both
+        # pipelines now report the same SAML findings.
+        identity_findings = evaluate_identity_endpoints(saml_endpoints)
+        if identity_findings:
+            findings = (findings or []) + identity_findings
 
     with _phase_timer(run_stats, "db_persist"):
         # RVW-003: stamp the stored session key on every endpoint before the

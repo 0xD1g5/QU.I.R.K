@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from quirk.dashboard.api.routes.scan import _derive_findings, _derive_identity_findings
-from quirk.engine.findings_evaluator import evaluate_identity_endpoints
+from quirk.engine.findings_evaluator import _dedupe_findings, evaluate_identity_endpoints
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +329,35 @@ class TestEvaluateIdentityEndpointsDedupe(unittest.TestCase):
             self.assertTrue(f.get("protocol"))
             self.assertTrue(f.get("source"))
             self.assertTrue(f.get("algorithm"))
+
+
+class TestIdentityFindingsSurviveDedupeFindings(unittest.TestCase):
+    """Phase 210 (XSURF-02, Task 3): mechanical half of the CLI composition
+    contract — a dual-`use` same-serial weak pair, after
+    evaluate_identity_endpoints's own dedupe, survives run_scan.py's later
+    _dedupe_findings() as exactly one finding. The live grep over a real
+    findings-*.json is plan 210-06's task; this is the unit-level guarantee.
+    """
+
+    def test_dual_use_pair_survives_dedupe_findings_as_one(self) -> None:
+        endpoints = [
+            _Ep(host="10.80.0.41", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=signing|serial=0a1b"),
+            _Ep(host="10.80.0.41", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=encryption|serial=0a1b"),
+        ]
+        identity_findings = evaluate_identity_endpoints(endpoints)
+        deduped = _dedupe_findings(identity_findings)
+        self.assertEqual(len(deduped), 1, f"Expected 1 finding after _dedupe_findings, got {deduped}")
+        self.assertIn(
+            deduped[0]["title"],
+            {
+                "Weak SAML encryption certificate: RSA-1024",
+                "Weak SAML signing certificate: RSA-1024",
+            },
+        )
 
 
 if __name__ == "__main__":
