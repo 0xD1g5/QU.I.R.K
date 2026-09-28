@@ -140,51 +140,58 @@ def collect_emitted_titles() -> set[str]:
 def collect_dashboard_titles() -> set[str]:
     """Return the set of RAW (un-normalized) literal-only templates passed
     as `title=` to any of the five finding-dataclass constructors in
-    `quirk/dashboard/api/routes/scan.py` — the second derivation path,
-    which has no chokepoint function — UNIONED with the `_build_finding(...)`
-    identity templates in `quirk/engine/findings_evaluator.py`.
+    `quirk/dashboard/api/routes/scan.py` — the second derivation path, which
+    has no chokepoint function.
 
-    Phase 210 (XSURF-01/XSURF-02, D-06/D-07): SAML identity finding synthesis
-    moved out of `scan.py`'s `IdentityFinding(...)` constructor calls into
-    `findings_evaluator.py`'s `_build_finding(...)` chokepoint. This is a
-    FIXED-FILE, FIXED-CALLABLE-NAME AST walk (not a directory walk), verified
-    empirically: before this widening, `collect_dashboard_titles()` returned
-    10 templates (down from 12), silently losing `"Weak SAML encryption
-    certificate: "` and `"Weak SAML signing certificate: "` the moment the
-    logic moved — a title a moved-to file cannot be seen by a scan that only
-    reads the moved-from file. Widening the scan to also read
-    `findings_evaluator.py` (matching `_build_finding` calls, not the
-    dashboard ctor names) restores both templates to this function's
-    returned set without re-introducing the titles into `scan.py` itself
-    (D-06 requires `scan.py` own no SAML finding-synthesis logic).
+    **This walk is deliberately scoped to `scan.py` ALONE. Do not widen it.**
+    The value of this fixture is that the two derivation paths are measured by
+    two INDEPENDENT walkers — this one over `scan.py`'s constructor names, and
+    `collect_all_interpolated_templates()`'s own walk over
+    `findings_evaluator.py`'s `_build_finding` chokepoint — which are then
+    unioned. If both walkers read both files, a bug in either one breaks both
+    identically and the union stops being able to expose the discrepancy. A
+    union with itself measures nothing.
 
-    `collect_all_interpolated_templates()` (below) is unaffected either way —
-    it already scans `findings_evaluator.py` directly and unions the result
-    with this function's output, so the same templates were already part of
-    its returned set both before and after this widening.
+    Phase 210 (XSURF-01/XSURF-02, D-06/D-07) exercised exactly that trap and
+    is worth recording, because the count here MOVED and that was correct:
+    SAML identity synthesis left `scan.py`'s `IdentityFinding(...)` calls for
+    `findings_evaluator.py`'s `_build_finding(...)`, so this function went
+    from 12 templates to 10 — it legitimately no longer sees
+    `"Weak SAML encryption certificate: "` or
+    `"Weak SAML signing certificate: "`, because they are no longer in the
+    file this function is responsible for. That is a faithful measurement of
+    a real move, NOT a lost template: `collect_all_interpolated_templates()`
+    still reports both, because it scans `findings_evaluator.py` directly,
+    and `tests/test_compliance_title_join.py::
+    test_every_interpolated_title_is_classified` — the gate that actually
+    matters — stayed green throughout, in both directions (no unclassified
+    template, no stale `TITLE_IDENTITY_CLASS` entry).
+
+    The gate this walk feeds still turns on `is_fstring`: a `title=` built
+    into a local variable first, or computed and passed as `title=computed`,
+    is INVISIBLE here by design, which is why the two SAML constructor calls
+    must never be collapsed into one with a computed title. See the in-line
+    comment in `quirk/engine/findings_evaluator.py` at the SAML weak-key
+    branch.
     """
+    tree = ast.parse(_SCAN_ROUTES.read_text())
     titles: set[str] = set()
-    for path, call_names in (
-        (_SCAN_ROUTES, _DASHBOARD_FINDING_CTORS),
-        (_RISK_ENGINE, frozenset({"_build_finding"})),
-    ):
-        tree = ast.parse(path.read_text())
-        for node in ast.walk(tree):
-            if not (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id in call_names
-            ):
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in _DASHBOARD_FINDING_CTORS
+        ):
+            continue
+        for kw in node.keywords:
+            if kw.arg != "title":
                 continue
-            for kw in node.keywords:
-                if kw.arg != "title":
-                    continue
-                result = _template_from_keyword(kw)
-                if result is None:
-                    continue
-                template, is_fstring = result
-                if is_fstring:
-                    titles.add(template)
+            result = _template_from_keyword(kw)
+            if result is None:
+                continue
+            template, is_fstring = result
+            if is_fstring:
+                titles.add(template)
     return titles
 
 
@@ -193,11 +200,23 @@ def collect_all_interpolated_templates() -> set[str]:
     templates from BOTH derivation paths, UN-normalized — these are the
     exact keys `quirk.compliance.TITLE_IDENTITY_CLASS` must cover.
 
-    Phase 210: no longer a fixed 22 — `collect_dashboard_titles()` now also
-    reads `findings_evaluator.py`, so its result overlaps with this
-    function's own direct `_RISK_ENGINE` scan below (harmless: both add into
-    the same `set`). The exact count moves with the source; do not hardcode
-    it here or in a test — see `project_hypothesised_counts_are_not_targets`.
+    The two inputs are measured INDEPENDENTLY and then unioned: this
+    function's own `_build_finding` walk over `findings_evaluator.py`, plus
+    `collect_dashboard_titles()`'s walk over `scan.py`'s constructor names.
+    Keep them independent — see that function's docstring for why a union
+    with itself measures nothing.
+
+    **Do not hardcode the total, here or in a test.** The docstring used to
+    claim "exactly 22: 10 in findings_evaluator.py plus the 12 in scan.py".
+    Phase 210 moved the two SAML templates from the second file to the first,
+    so the split is now 13 + 10 and the total is 23 — the same templates,
+    redistributed. A hardcoded total would have failed on a move that changed
+    nothing about coverage, which is the wrong thing to gate on. The gate that
+    matters is `tests/test_compliance_title_join.py::
+    test_every_interpolated_title_is_classified`, which is bidirectional: no
+    unclassified template, and no stale `TITLE_IDENTITY_CLASS` entry. That
+    pair of assertions is what catches both a new title and a vanished one,
+    at any count.
     """
     templates: set[str] = set()
 
