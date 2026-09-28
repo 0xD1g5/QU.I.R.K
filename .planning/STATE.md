@@ -1358,15 +1358,70 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 211 (Denominator Correctness — RE-SCOPED) — CONTEXTUALISED, NOT YET PLANNED
-Plan: 0 of 0 — no PLAN.md files exist yet
-Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria); planning Phase 211
+Phase: 211 (Denominator Correctness — RE-SCOPED) — PLANNED, ready to execute
+Plan: 0 of 8 executed (8 PLAN.md files on disk, enumerated; 0 SUMMARY.md)
+Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria); Phase 211 planned
 Last activity: 2026-09-28 -- Phase 211 re-scoped from implement to verify-plus-investigate
 (`1804d703`): a live source audit found DENOM-01/02/03 already landed on main via `0b0ed1c7`
 (2026-09-13, confirmed an ancestor of HEAD), so the requirements as written on 2026-09-27 described
 an already-fixed defect. `211-CONTEXT.md` written with 8 decisions; stale arithmetic corrected in
 REQUIREMENTS.md and ROADMAP.md. Phase 211's centre of gravity is now the 17-vs-18 headline-score
 divergence (D-07's two hypotheses plus the Data-in-Motion discriminator), NOT denominator work.
+
+Planning complete 2026-09-28: **8 plans in 6 waves**, plan-checker verdict **PASSED** (no HIGH/BLOCKER;
+2 MEDIUM and 1 LOW, both MEDIUMs fixed before this record was written). Research refuted BOTH of
+D-07's hypotheses by direct measurement (`scan_error_rate` byte-identical at 542/775 = 0.6994 across
+pipelines; `assessable_endpoint_count` 216 and `totals.endpoints` 775 identical — no population
+delta) and identified a THIRD mechanism, reproduced byte-for-byte by regenerating 17 and 18 exactly
+through the real `compute_readiness_score`:
+
+**Root cause — a finding-title VOCABULARY split, not an arithmetic one.** `evidence.py` counts by
+exact-string title match. The CLI emits `"Plaintext HTTP service detected"`
+(`findings_evaluator.py:543`); the dashboard emits `"Unencrypted HTTP service"` for the identical
+condition (`routes/scan.py:146`). A title miss silently returns 0, which reads as healthy. Second,
+independent leg: `legacy_tls_count` is a PROXY off `sev.get("LOW", 0)` (`scoring.py:448`, re-derived
+— RESEARCH.md's `:451` is wrong), and the dashboard's `findings_for_endpoint` emits only
+CRITICAL/HIGH/MEDIUM, so that proxy is structurally 0 there. These two counters feed exactly Hygiene
+and Modern TLS and nothing else — which is why those two diverged and the other four, all derived
+from endpoint FIELDS that round-trip faithfully through SQLite, matched byte-identically. This also
+explains the Data-in-Motion discriminator (13 = 13) that killed the population hypothesis.
+
+Operator decisions locked at planning: **(A)** extend the existing `finding_title_bridge.py` into
+`evidence.py` (leg 1, `211-02`), conditional on a run-time source-scan gate proving the mapping table
+covers every title either generator emits (`211-04`) — a mapping table is a hand-maintained list by
+another name, and this repo has been bitten by that six-plus times. Leg 2 cannot be reached by any
+title mapping, so `legacy_tls_count` becomes endpoint-derived with the proxy demoted to a
+provably-unreachable fallback (`211-03`). **(B)** raise the lab rather than defer DENOM-03's
+behavioural clause, sharing setup with D-08's live acceptance scan (`211-05`).
+
+**DENOM-01 is already fully discharged** — the decision doc was committed in `1804d703`, the re-scope
+commit itself. Both CONTEXT D-03 and RESEARCH (6 sites) claimed it was still untracked; RESEARCH had
+run `git ls-files .planning/decisions/`, pasted the output verbatim, and annotated the filename
+visibly present on line one as "# ABSENT from this list". Fifth recorded instance in this repo of a
+planning artifact describing an already-completed action as pending, and the first to defeat the
+"enumerate from source" mitigation — the instrument was right, the reading of it was wrong. Caught by
+re-deriving with `git ls-files --error-unmatch`, whose exit code cannot be misread the way a list you
+must visually scan can. Both artifacts corrected in place.
+
+**Two findings carried forward.** (1) A LATENT third divergence, invisible to the 17-vs-18
+measurement: `"HTTP on TLS-designated port"` (`evidence.py:468`) is emitted ONLY by the CLI
+(`findings_evaluator.py:433`) with no dashboard equivalent and no bridge-table entry, so it is
+structurally 0 on that side. It measured 0 = 0 only because the reference estate contains no
+plaintext HTTP on a TLS-designated port — a green test on a real bug. Dispositioned in `211-04` with
+a tag-blocking verdict. (2) **The headline score WILL move** — removing the inflated LOW proxy
+changes the REPORT side too, so the post-fix value is not 17. Equality is the acceptance criterion;
+17 is not. `211-07` discloses the movement with before/after numbers, since Phase 214 freezes
+whatever ships. If the movement breaks a calibration-ladder band, `211-03` forbids re-pinning,
+widening or xfailing the rung and must stop and surface it for operator disclosure.
+
+Also filed: `260928-gsd-plan-phase-ui-detector-unanchored-fires-on-quirk.md` — plan-phase §5.6's
+frontend detector greps with an unanchored alternation whose first alternative is the bare string
+`UI`. Because `q-u-i-r-k` contains `u-i` and every ROADMAP phase section cites a `quirk/` path, its
+hard-exit fires on EVERY phase this project will ever have (Phase 211: 6 substring matches inside
+`requires`, `genuine`, `quirk-output`; the word-anchored form returns zero). `--skip-ui` is therefore
+mandatory boilerplate here, which would equally suppress the gate on a phase that genuinely needs a
+UI-SPEC. Same defect class as TOOL-01, but located in the toolchain rather than this repo, so it
+cannot be patched locally.
 
 Phase 210's own record, for reference: all 8 plans executed and committed atomically; verifier
 returned `gaps_found` 4/6 and caught a BLOCKER the phase close-out missed (a false client-facing
