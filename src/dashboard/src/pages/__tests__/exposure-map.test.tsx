@@ -13,6 +13,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 vi.mock("cytoscape", () => {
   const mockCyCore = {
     on: vi.fn(),
+    style: vi.fn(),
     destroy: vi.fn(),
     zoom: vi.fn(() => 1),
     fit: vi.fn(),

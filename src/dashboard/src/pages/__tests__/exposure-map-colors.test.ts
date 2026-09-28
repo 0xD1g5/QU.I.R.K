@@ -7,9 +7,8 @@ import { dirname, join } from "node:path"
  * Cytoscape draws to <canvas> with its OWN color parser. It does not understand
  * the modern space-separated `hsl(H S% L%)` syntax, and several of this app's
  * design tokens (`--accent`, `--primary`, ...) are stored as RAW COMPONENTS
- * ("180 37% 47%") for Tailwind's benefit. Building `hsl(${cssVar("--accent")})`
- * from one of those therefore produces a string Cytoscape silently resolves to
- * BLACK.
+ * ("180 37% 47%") for Tailwind's benefit. Building `hsl(${...})` from one of
+ * those therefore produces a string Cytoscape silently resolves to BLACK.
  *
  * Measured live 2026-09-14 against the running dashboard:
  *
@@ -23,10 +22,14 @@ import { dirname, join } from "node:path"
  * rendered once. `node:selected` shared the same variable and was equally
  * black.
  *
- * This is the same defect class 195-06 already fixed once (Cytoscape cannot
- * resolve CSS custom properties because it is not CSS), pointed one step
- * further: resolving the `var()` is necessary but NOT sufficient if the RESULT
- * is a syntax Cytoscape cannot read.
+ * UPDATED Phase 213 plan 213-07: this file's own local `cssVar(name) ||
+ * "#fallback"` helper (the pattern this suite originally guarded) is gone.
+ * Colours now resolve through the shared `resolveToken()` in
+ * `src/lib/cytoscape-theme.ts`, which is intentionally FALLBACK-FREE — a hex
+ * fallback parked here would itself be a literal in an audited file (D-05),
+ * invisible to the pages/-scoped colour-audit gate. `resolveToken()` warns
+ * loudly in dev and returns "" instead. This suite now asserts the absence of
+ * any local fallback/cssVar helper rather than its presence.
  *
  * A rendering assertion cannot catch this in jsdom — there is no canvas and no
  * Cytoscape color parser — so this guard reads the source instead. It is
@@ -64,26 +67,34 @@ describe("exposure-map Cytoscape colors", () => {
     ).toEqual([])
   })
 
-  it("reads its colors from hex --ds-* tokens", () => {
-    // The three colors fed into the Cytoscape style spec.
-    for (const token of ["--ds-accent", "--ds-high", "--ds-medium", "--ds-critical"]) {
-      expect(src, `expected ${token} to be read via cssVar()`).toContain(
-        `cssVar("${token}")`,
+  it("reads its colors from hex --ds-* tokens via the shared resolveToken helper", () => {
+    // The five colors fed into the Cytoscape style spec.
+    for (const token of [
+      "--ds-accent",
+      "--ds-high",
+      "--ds-medium",
+      "--ds-critical",
+      "--ds-bg-elevated",
+    ]) {
+      expect(src, `expected ${token} to be read via resolveToken()`).toContain(
+        `resolveToken("${token}")`,
       )
     }
   })
 
-  it("keeps a literal hex fallback beside every token read", () => {
-    // getComputedStyle returns "" for an undefined property, so each read needs
-    // a fallback that is itself parseable by Cytoscape.
-    const reads = src.match(/cssVar\("--ds-[a-z-]+"\)\s*\|\|\s*"([^"]+)"/g) ?? []
-    expect(reads.length).toBeGreaterThanOrEqual(4)
-    for (const read of reads) {
-      const fallback = read.split("||")[1].trim().replace(/"/g, "")
-      expect(
-        fallback,
-        `fallback ${fallback} must be a hex color Cytoscape can parse`,
-      ).toMatch(/^#[0-9a-fA-F]{3,8}$/)
-    }
+  it("carries no local cssVar helper or hex fallback beside a token read", () => {
+    // A fallback here would be a colour literal in an audited file, invisible
+    // to the pages/-scoped colour-audit gate (D-05) — the exact anti-pattern
+    // this suite used to require. resolveToken() itself is deliberately
+    // fallback-free (see src/lib/cytoscape-theme.ts); this file must not
+    // reintroduce a local escape hatch around that.
+    expect(src, "exposure-map.tsx must not define its own cssVar() helper").not.toMatch(
+      /const cssVar\s*=/,
+    )
+    const fallbackReads = src.match(/resolveToken\("--[a-z-]+"\)\s*\|\|\s*"([^"]*)"/g) ?? []
+    expect(
+      fallbackReads,
+      "a resolveToken() call must not carry a literal hex/colour fallback",
+    ).toEqual([])
   })
 })

@@ -9,6 +9,7 @@ import { EmptyStateCard } from "@/components/EmptyStateCard"
 import { PageSpinner } from "@/components/PageSpinner"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
+import { resolveToken, useThemeRevision } from "@/lib/cytoscape-theme"
 
 // Register dagre layout (D-07 — dagre only; no alternate layout engine used).
 // D-24 (IN-02) pattern: log via console.error and re-throw genuine failures
@@ -30,9 +31,120 @@ const EDGE_TYPE_LABEL: Record<string, string> = {
   shared_ca: "Shared certificate authority",
 }
 
+// Cytoscape draws to a <canvas> and cannot resolve CSS custom properties — every colour handed
+// to it below is resolved to a concrete hex value via resolveToken() at call time, never a
+// var(--x) reference and never a reconstructed HSL function-call string (see cytoscape-theme.ts,
+// and this file's own hard-won history: this page had the right idea — resolving tokens at
+// build time — since before that shared helper existed, but never re-resolved on a theme change,
+// and briefly carried hex FALLBACK literals here too, which is itself a literal in an audited
+// file. Neither gap is repeated below: no fallback, and a dedicated theme-revision effect calls
+// this function again on every toggle).
+function buildExposureMapStyle(): cytoscape.StylesheetJsonBlock[] {
+  const nodeLabelColor = resolveToken("--chart-node-label")
+  const dsHigh = resolveToken("--ds-high")        // key-reuse amber
+  const dsMedium = resolveToken("--ds-medium")    // hardware-bridge / node slate
+  const accent = resolveToken("--ds-accent")      // crown-jewel / selection teal
+  const dsCritical = resolveToken("--ds-critical")       // shared-CA taxonomy hue
+  const dsBgElevated = resolveToken("--ds-bg-elevated")  // CA hub fill
+
+  return [
+    // Base node style — neutral fill for all nodes (no risk-implying color).
+    {
+      selector: "node",
+      style: {
+        "label": "data(label)",
+        "font-size": 12,
+        "font-family": "JetBrains Mono, ui-monospace, monospace",
+        "color": nodeLabelColor,
+        "text-valign": "center",
+        "text-halign": "center",
+        "text-wrap": "wrap",
+        "text-max-width": "120px",
+        "width": 150,
+        "height": 52,
+        "shape": "roundrectangle",
+        "background-color": dsMedium,
+        "border-width": 0,
+      },
+    },
+    // CA hub — a certificate authority, NOT a scanned host. Distinguished
+    // by SHAPE first (hexagon vs roundrectangle) so the distinction
+    // survives grayscale and color-vision deficiency, with a darker fill as
+    // a secondary cue. Narrower than a host node because its label is a CN,
+    // not a host:port.
+    {
+      selector: "node[nodeType='ca']",
+      style: {
+        "shape": "hexagon",
+        "background-color": dsBgElevated,
+        "border-width": 2,
+        "border-color": dsCritical,
+        "width": 130,
+        "height": 64,
+      },
+    },
+    // Crown-jewel badge — small accent-teal ring overlay, not a full recolor.
+    {
+      selector: "node[isCrownJewel='true']",
+      style: {
+        "border-width": 3,
+        "border-color": accent,
+        "border-style": "solid",
+      },
+    },
+    {
+      selector: "node:selected",
+      style: { "border-width": 3, "border-color": accent },
+    },
+    // Edge-type taxonomy (D-06/UI-SPEC): key-reuse amber solid,
+    // hardware-bridge gray dashed. declared_reachability is Tier B —
+    // omitted entirely per 195-SPIKE-DECISION.md DECISION: DEFERRED.
+    {
+      selector: "edge[edgeType='key_reuse']",
+      style: {
+        "width": 2,
+        "line-color": dsHigh,
+        "target-arrow-color": dsHigh,
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        "line-style": "solid",
+      },
+    },
+    // Shared-CA edges are dotted and use the critical hue. Per the D-11
+    // note on ExposureEdge, an edge carries no severity — the severity
+    // palette is used here as a TAXONOMY (amber / gray / red = three
+    // distinguishable relationship kinds), exactly as key_reuse and
+    // hardware_bridge already use it. Dotted vs solid vs dashed keeps the
+    // three separable without relying on hue.
+    {
+      selector: "edge[edgeType='shared_ca']",
+      style: {
+        "width": 2,
+        "line-color": dsCritical,
+        "target-arrow-color": dsCritical,
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        "line-style": "dotted",
+      },
+    },
+    {
+      selector: "edge[edgeType='hardware_bridge']",
+      style: {
+        "width": 2,
+        "line-color": dsMedium,
+        "target-arrow-color": dsMedium,
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        "line-style": "dashed",
+      },
+    },
+  ] as cytoscape.StylesheetJsonBlock[]
+}
+
 export function ExposureMapPage() {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<cytoscape.Core | null>(null)
+  const themeRevision = useThemeRevision()
   const [data, setData] = useState<ExposureMapResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -137,35 +249,6 @@ export function ExposureMapPage() {
       })
     })
 
-    // Cytoscape renders to a <canvas>, which cannot resolve CSS custom
-    // properties (`var(--x)`) — passing them yields cytoscape's default gray,
-    // which is why the graph edge/nodes rendered gray while the DOM legend
-    // swatch (real CSS) showed the correct color. Resolve tokens to concrete
-    // values here at init so the canvas gets a real color while staying
-    // theme-aware (getComputedStyle reads the active light/dark override).
-    const cssVar = (name: string): string =>
-      getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-    const dsHigh = cssVar("--ds-high") || "#d4893a"        // key-reuse amber
-    const dsMedium = cssVar("--ds-medium") || "#8892a4"    // hardware-bridge / node slate
-    // Crown-jewel / selection teal. MUST come from the HEX token, not from
-    // `hsl(${--accent})`. Cytoscape draws to <canvas> with its own color parser,
-    // which does NOT support the modern space-separated hsl() syntax — and
-    // `--accent` is stored as raw components ("180 37% 47%"), so building
-    // `hsl(180 37% 47%)` from it parses to BLACK, silently. Verified live
-    // 2026-09-14: space-separated -> rgb(0,0,0), comma-separated ->
-    // rgb(76,164,164), hex -> rgb(75,168,168).
-    //
-    // This had been broken since Phase 195 and was invisible because no data
-    // ever set is_crown_jewel, so the badge shipped never once rendered
-    // (195-06 recorded it as an honest GAP for exactly that reason). It is the
-    // same defect class 195-06 already fixed once — Cytoscape cannot resolve
-    // CSS custom properties because it is not CSS — pointed one step further:
-    // resolving the var() is necessary but not sufficient if the RESULT is
-    // still a syntax Cytoscape cannot read. Prefer hex tokens here, always.
-    const accent = cssVar("--ds-accent") || "#4ba8a8"
-    const dsCritical = cssVar("--ds-critical") || "#e05555"       // shared-CA taxonomy hue
-    const dsBgElevated = cssVar("--ds-bg-elevated") || "#1e2129"  // CA hub fill
-
     // Pitfall 5: rankDir MUST be "LR" (attack-path narrative reads
     // left-to-right), not roadmap.tsx's "TB".
     const layout: cytoscape.LayoutOptions = {
@@ -179,98 +262,7 @@ export function ExposureMapPage() {
     cyRef.current = cytoscape({
       container: containerRef.current,
       elements,
-      style: [
-        // Base node style — neutral fill for all nodes (no risk-implying color).
-        {
-          selector: "node",
-          style: {
-            "label": "data(label)",
-            "font-size": 12,
-            "font-family": "JetBrains Mono, ui-monospace, monospace",
-            "color": "#fff",
-            "text-valign": "center",
-            "text-halign": "center",
-            "text-wrap": "wrap",
-            "text-max-width": "120px",
-            "width": 150,
-            "height": 52,
-            "shape": "roundrectangle",
-            "background-color": dsMedium,
-            "border-width": 0,
-          },
-        },
-        // CA hub — a certificate authority, NOT a scanned host. Distinguished
-        // by SHAPE first (hexagon vs roundrectangle) so the distinction
-        // survives grayscale and color-vision deficiency, with a darker fill as
-        // a secondary cue. Narrower than a host node because its label is a CN,
-        // not a host:port.
-        {
-          selector: "node[nodeType='ca']",
-          style: {
-            "shape": "hexagon",
-            "background-color": dsBgElevated,
-            "border-width": 2,
-            "border-color": dsCritical,
-            "width": 130,
-            "height": 64,
-          },
-        },
-        // Crown-jewel badge — small accent-teal ring overlay, not a full recolor.
-        {
-          selector: "node[isCrownJewel='true']",
-          style: {
-            "border-width": 3,
-            "border-color": accent,
-            "border-style": "solid",
-          },
-        },
-        {
-          selector: "node:selected",
-          style: { "border-width": 3, "border-color": accent },
-        },
-        // Edge-type taxonomy (D-06/UI-SPEC): key-reuse amber solid,
-        // hardware-bridge gray dashed. declared_reachability is Tier B —
-        // omitted entirely per 195-SPIKE-DECISION.md DECISION: DEFERRED.
-        {
-          selector: "edge[edgeType='key_reuse']",
-          style: {
-            "width": 2,
-            "line-color": dsHigh,
-            "target-arrow-color": dsHigh,
-            "target-arrow-shape": "triangle",
-            "curve-style": "bezier",
-            "line-style": "solid",
-          },
-        },
-        // Shared-CA edges are dotted and use the critical hue. Per the D-11
-        // note on ExposureEdge, an edge carries no severity — the severity
-        // palette is used here as a TAXONOMY (amber / gray / red = three
-        // distinguishable relationship kinds), exactly as key_reuse and
-        // hardware_bridge already use it. Dotted vs solid vs dashed keeps the
-        // three separable without relying on hue.
-        {
-          selector: "edge[edgeType='shared_ca']",
-          style: {
-            "width": 2,
-            "line-color": dsCritical,
-            "target-arrow-color": dsCritical,
-            "target-arrow-shape": "triangle",
-            "curve-style": "bezier",
-            "line-style": "dotted",
-          },
-        },
-        {
-          selector: "edge[edgeType='hardware_bridge']",
-          style: {
-            "width": 2,
-            "line-color": dsMedium,
-            "target-arrow-color": dsMedium,
-            "target-arrow-shape": "triangle",
-            "curve-style": "bezier",
-            "line-style": "dashed",
-          },
-        },
-      ],
+      style: buildExposureMapStyle(),
       layout,
       userZoomingEnabled: true,
       userPanningEnabled: true,
@@ -302,6 +294,15 @@ export function ExposureMapPage() {
       setHoverPos(null)
     }
   }, [nodes, edges, edgeById])
+
+  // Theme-change-only restyle — re-resolves every token and re-applies via cy.style()
+  // instead of tearing down and rebuilding the graph, preserving pan/zoom/selection. This
+  // closes the gap this plan exists to fix: this page already resolved its tokens correctly
+  // at build time, but never re-ran that resolution on a theme toggle.
+  useEffect(() => {
+    if (!cyRef.current) return
+    cyRef.current.style(buildExposureMapStyle())
+  }, [themeRevision])
 
   if (loading) return <PageSpinner ariaLabel="Loading quantum exposure map" />
 
