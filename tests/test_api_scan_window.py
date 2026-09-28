@@ -232,3 +232,131 @@ def test_compute_multiplier_clamp_then_round_boundary(monkeypatch, base, delta, 
     )
     # Always within band
     assert 0.8 <= result <= 1.5
+
+
+# ---------------------------------------------------------------------------
+# Phase 210 Plan 04 (XSURF-03 / D-09 / D-10) — the no-`scan_id` "latest scan"
+# branch must resolve by scan_run_id, not by a time window that can merge
+# distinct runs. `_seed_endpoint` above intentionally leaves scan_run_id at
+# its NULL default (the legacy case); this helper accepts it explicitly.
+# ---------------------------------------------------------------------------
+
+from datetime import timedelta  # noqa: E402
+
+
+def _seed_endpoint_with_run(
+    TestingSession,
+    scanned_at: datetime,
+    scan_run_id,
+    host: str = "10.0.0.1",
+):
+    """Like `_seed_endpoint`, but sets `scan_run_id` explicitly (including
+    None) and stamps `cert_subject` so the row survives the phantom-cert
+    filter (`_is_real_cert_endpoint`) and appears in the `certificates` list —
+    observed by probing `resp.json()` live: a bare TLS row with no
+    `cert_subject` is silently excluded from `certificates`, which would make
+    a host-presence assertion pass vacuously regardless of merge behaviour.
+    """
+    db = TestingSession()
+    try:
+        db.add(CryptoEndpoint(
+            scanned_at=scanned_at,
+            host=host,
+            port=443,
+            protocol="tls",
+            severity="HIGH",
+            scan_run_id=scan_run_id,
+            cert_subject=f"CN={host}",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run():
+    """XSURF-03 reproduction at test scale: two scan_run_id groups 4m26s
+    apart (the exact interval from the live reproduction) must NOT merge.
+
+    Falsifiability (RESEARCH / plan Task 1 acceptance criteria): asserting
+    only "run-b's data is present" would pass against the buggy merged
+    behaviour too, because the merge INCLUDES run-b. The exclusion assertion
+    -- run-a's host must be ABSENT -- is the one that can actually fail, and
+    it is the point of this test.
+    """
+    client, Session = _make_client_and_session()
+    base = datetime(2026, 9, 1, 12, 0, 0)
+    _seed_endpoint_with_run(Session, base, "run-a", host="10.0.0.1")
+    _seed_endpoint_with_run(
+        Session, base + timedelta(minutes=4, seconds=26), "run-b", host="10.0.1.1",
+    )
+
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    cert_hosts = {c["host"] for c in body["certificates"]}
+    assert "10.0.1.1" in cert_hosts, f"expected run-b's host present, got {cert_hosts}"
+    assert "10.0.0.1" not in cert_hosts, (
+        f"run-a's host must NOT be merged into the 'latest scan' response, got {cert_hosts}"
+    )
+
+    # Falsifiability guard: the buggy behaviour merges both groups (2 total
+    # endpoints); the fixed behaviour resolves to exactly run-b's 1 endpoint.
+    # A test that only checked run-b's presence could not distinguish these.
+    assert body["meta"]["total_endpoints"] != 2, (
+        "total_endpoints must not equal the sum of both groups (both-runs merge)"
+    )
+    assert body["meta"]["total_endpoints"] == 1
+
+
+def test_get_latest_scan_legacy_null_scan_run_id_row_still_reachable():
+    """D-10: a single legacy row with `scan_run_id=None`, alone in the table,
+    must still be reachable via the SESSION_BRACKET window fallback. No
+    current code path in `run_scan.py` can produce such a row (it always
+    populates `scan_run_id` from `run_stats["started_utc"]`), so it is
+    hand-built directly via the ORM here.
+    """
+    client, Session = _make_client_and_session()
+    _seed_endpoint_with_run(
+        Session, datetime(2026, 9, 1, 12, 0, 0), None, host="10.0.9.1",
+    )
+
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    cert_hosts = {c["host"] for c in body["certificates"]}
+    assert "10.0.9.1" in cert_hosts, f"legacy NULL-scan_run_id row must remain reachable, got {cert_hosts}"
+    assert body["meta"]["total_endpoints"] == 1
+
+
+def test_get_latest_scan_mixed_legacy_and_run_resolves_to_run_not_legacy():
+    """A mixed table -- one NULL-scan_run_id legacy row older than the window,
+    plus a non-NULL group -- resolves to the non-NULL group; the legacy row
+    is not merged in, because the MAX(scanned_at) row carries a real
+    scan_run_id and the window fallback is reached only when it is NULL.
+    """
+    client, Session = _make_client_and_session()
+    old_legacy = datetime(2026, 9, 1, 10, 0, 0)
+    newer_run = datetime(2026, 9, 1, 12, 0, 0)
+    _seed_endpoint_with_run(Session, old_legacy, None, host="10.0.5.1")
+    _seed_endpoint_with_run(Session, newer_run, "run-c", host="10.0.5.2")
+
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    cert_hosts = {c["host"] for c in body["certificates"]}
+    assert "10.0.5.2" in cert_hosts
+    assert "10.0.5.1" not in cert_hosts, (
+        f"legacy row must not be merged in when the latest row has a real scan_run_id, got {cert_hosts}"
+    )
+    assert body["meta"]["total_endpoints"] == 1
+
+
+def test_get_latest_scan_empty_table_returns_404_dashboard_006():
+    """An empty table still returns HTTP 404 carrying the DASHBOARD-006 error
+    code -- the resolution rewrite must not disturb the empty-table path.
+    """
+    client, Session = _make_client_and_session()
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 404, resp.text
+    assert "DASHBOARD-006" in resp.json()["detail"], resp.json()
