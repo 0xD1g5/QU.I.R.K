@@ -307,7 +307,19 @@ verification pass owns flipping that checkbox, not this close-out plan.
   5. The three Cytoscape call sites render the CBOM graph and the roadmap graph correctly under both
      light and dark theme with zero hardcoded hex/rgb literals remaining in those files — a real
      refactor of the Cytoscape style objects, not a sed pass.
-**Plans**: TBD
+**Plans**: 10 plans in 5 waves
+
+Plans:
+- [ ] 213-01-PLAN.md — Widen the colour detector to all three HSL spellings, add a run-time residual guard, record the count finding (criterion 3)
+- [ ] 213-02-PLAN.md — Mint the theme-token vocabulary in :root and .light, add a token-existence/parity guard
+- [ ] 213-03-PLAN.md — UIFIX-01 certificates expiry sort (TanStack, Date accessorFn) + tokenise certificates.tsx
+- [ ] 213-04-PLAN.md — Tokenise hardware, data-at-rest, motion, scan-history (54 literals)
+- [ ] 213-05-PLAN.md — Tokenise trends, executive, healthcare, sensors, schedules, findings, identity, compare (52 literals)
+- [ ] 213-06-PLAN.md — Pin the print surface to the light palette and tokenise its 45 literals + 1 named colour
+- [ ] 213-07-PLAN.md — Real Cytoscape refactor: shared literal-free resolver + theme re-resolution across all 3 graphs (47 literals)
+- [ ] 213-08-PLAN.md — Prove the widened gate RED, remove .fails, correct the docstring, ship the authoritative build
+- [ ] 213-09-PLAN.md — HUMAN-UAT: both themes × 3 graphs, live toggle, two-PDF comparison, browser sort check
+- [ ] 213-10-PLAN.md — Close-out: flip UAT-7-12/7-21, regenerate coverage gaps + master guide, Obsidian sync, validation rows
 **UI hint**: yes
 
 ### Phase 214: Release Cut
