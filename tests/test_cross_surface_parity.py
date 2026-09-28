@@ -347,3 +347,232 @@ def test_docx_narrative_parity(tmp_path):
         f"  Expected: {exec_content.narrative_lead!r}\n"
         f"  DOCX text preview: {docx_full_text[:400]!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 210 Plan 05 / XSURF-04 (D-13/D-14/D-15): three-number cross-surface
+# equality gate for ONE persisted scan_run_id.
+#
+# D-13: extends THIS file (no new top-level test file), reusing the
+# TestClient + in-memory-SQLite harness shape from tests/test_api_scan_window.py
+# (borrowed, not imported, per that plan's own harness contract) plus the
+# "one seed, N surfaces, compare independently-extracted numbers" shape this
+# file and tests/test_score_lift_cross_surface_numbers.py already use.
+#
+# D-14: asserts three numbers for ONE scan_run_id, each with its own
+# assertion + named diagnostic — headline score, CRITICAL finding count,
+# certificate count — comparing the report pipeline (evaluate_endpoints +
+# evaluate_identity_endpoints -> build_evidence_summary -> compute_readiness_score,
+# called directly over the persisted rows) against the dashboard pipeline
+# (GET /api/scan/latest?scan_id=<scan_run_id> via TestClient).
+#
+# D-15: Task 2 (see 210-05-SUMMARY.md "Falsification" section) demonstrates
+# this gate failing against two independently reintroduced double-counts.
+# ---------------------------------------------------------------------------
+
+import uuid as _uuid
+from datetime import datetime as _datetime
+from types import SimpleNamespace as _SimpleNamespace
+
+from fastapi.testclient import TestClient as _TestClient
+from sqlalchemy import create_engine as _create_engine
+from sqlalchemy.orm import sessionmaker as _sessionmaker
+
+from quirk.dashboard.api.app import create_app as _create_app
+from quirk.dashboard.api.deps import get_db as _get_db
+from quirk.models import Base as _Base, CryptoEndpoint as _CryptoEndpoint
+from quirk.engine.findings_evaluator import (
+    evaluate_endpoints as _evaluate_endpoints,
+    evaluate_identity_endpoints as _evaluate_identity_endpoints,
+)
+from quirk.intelligence.evidence import build_evidence_summary as _build_evidence_summary
+from quirk.intelligence.scoring import compute_readiness_score as _compute_readiness_score
+
+_XSURF04_CSRF = {"X-Quirk-Request": "1"}
+
+# scan_run_id must be an ISO-parseable string: the `?scan_id=` branch of
+# GET /api/scan/latest validates it via datetime.fromisoformat() before
+# matching it LITERALLY against CryptoEndpoint.scan_run_id (scan.py:1701-1706)
+# — a non-ISO id like "xsurf04-run-1" would 400 before ever reaching the
+# equality filter. Real scan_run_id values are always ISO timestamps
+# (quirk/models.py:104-105), so this fixture matches production shape.
+_XSURF04_RUN_ID = "2026-09-27T09:15:00"
+
+
+def _xsurf04_make_client_and_session():
+    """TestClient + in-memory-SQLite session factory, borrowed verbatim in
+    shape from tests/test_api_scan_window.py:35-52 (D-13's named harness)."""
+    db_name = f"test_xsurf04_{_uuid.uuid4().hex}"
+    engine = _create_engine(
+        f"sqlite:///file:{db_name}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False},
+    )
+    _Base.metadata.create_all(engine)
+    TestingSession = _sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = _create_app()
+    app.dependency_overrides[_get_db] = _override_get_db
+    return _TestClient(app, headers=_XSURF04_CSRF), TestingSession
+
+
+def _xsurf04_seed_scan_run(TestingSession, scan_run_id: str) -> None:
+    """Seeds ONE scan_run_id with a mixed endpoint set (D-14's fixture):
+
+    - a SAML dual-`use` SAME-serial pair (serial=0a1b) — one certificate
+      published under two KeyDescriptor `use` values, the exact XSURF-01
+      reproduction shape (quirk/scanner/saml_scanner.py:168,277,308).
+    - a SAML DISTINCT-serial row on a different host:port — must survive
+      the dedupe uncollapsed (safety property: distinct certs are never
+      suppressed).
+    - two non-identity, healthy TLS endpoints — makes the certificate count
+      non-1 and keeps the score off a trivial floor/ceiling.
+
+    Every row sets scan_run_id explicitly (never NULL — the NULL fallback is
+    plan 210-04's XSURF-03 concern, not this gate's) and sets scanned_at (a
+    row without it is invisible to the history surfaces).
+    """
+    db = TestingSession()
+    try:
+        now = _datetime(2026, 9, 27, 9, 15, 0)
+        rows = [
+            # --- SAML dual-`use` same-serial pair (XSURF-01 fixture) ---
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.41", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:mh-saml-idp|use=signing|serial=0a1b",
+            ),
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.41", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:mh-saml-idp|use=encryption|serial=0a1b",
+            ),
+            # --- SAML distinct-serial row (over-dedupe guard) ---
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.42", port=8080, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:mh-saml-idp-2|use=signing|serial=deadbeef",
+            ),
+            # --- Two healthy, non-identity TLS endpoints (real certs) ---
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.50", port=443, protocol="TLS",
+                cert_subject="CN=svc1.example.com", cert_issuer="CN=Example CA",
+                cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+                cert_not_after=_datetime(2030, 1, 1),
+                tls_supported_versions="TLSv1.3",
+            ),
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.51", port=443, protocol="TLS",
+                cert_subject="CN=svc2.example.com", cert_issuer="CN=Example CA",
+                cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+                cert_not_after=_datetime(2030, 1, 1),
+                tls_supported_versions="TLSv1.3",
+            ),
+        ]
+        for row in rows:
+            db.add(row)
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_xsurf04_three_number_cross_surface_equality():
+    """XSURF-04 / D-14: for ONE scan_run_id, the report pipeline and the
+    dashboard's GET /api/scan/latest?scan_id= agree on headline score,
+    CRITICAL finding count, and certificate count — each asserted
+    separately with a diagnostic naming which number diverged.
+
+    What would make this fail: a future regression that reintroduces a
+    double-count at either of the two XSURF-01/03 dedupe sites (see the
+    "Falsification" section of 210-05-SUMMARY.md for the two demonstrated
+    reproductions), OR any change that makes the report pipeline and the
+    dashboard pipeline diverge on the SAME persisted scan_run_id for any
+    other reason.
+    """
+    client, TestingSession = _xsurf04_make_client_and_session()
+    _xsurf04_seed_scan_run(TestingSession, _XSURF04_RUN_ID)
+
+    # --- Surface A: report pipeline, computed directly over the persisted rows ---
+    db = TestingSession()
+    try:
+        endpoints_a = (
+            db.query(_CryptoEndpoint)
+            .filter(_CryptoEndpoint.scan_run_id == _XSURF04_RUN_ID)
+            .all()
+        )
+    finally:
+        db.close()
+
+    cfg = _SimpleNamespace(scan=_SimpleNamespace(tls_designated_ports=[]))
+    findings_a = _evaluate_endpoints(cfg, endpoints_a) + _evaluate_identity_endpoints(endpoints_a)
+    evidence_a = _build_evidence_summary(endpoints_a, findings_a)
+    score_raw_a = _compute_readiness_score(evidence_a, profile=None)
+
+    headline_score_a = score_raw_a["score"]
+    critical_count_a = evidence_a["finding_severity_counts"].get("CRITICAL", 0)
+    # Mirrors quirk/dashboard/api/routes/scan.py::_is_real_cert_endpoint verbatim
+    # (host TLS row with a cert_subject and no scan_error) — the same rule the
+    # dashboard's `certificates` list applies, computed independently here
+    # over the report pipeline's own endpoint set rather than imported, so a
+    # divergence in that predicate itself would also be caught.
+    cert_count_a = sum(
+        1 for ep in endpoints_a
+        if (ep.protocol or "").upper() == "TLS" and ep.cert_subject and not ep.scan_error
+    )
+
+    # Non-vacuity (the most important check in this test): two pipelines that
+    # both report zero are trivially "equal" and prove nothing.
+    assert critical_count_a >= 1, (
+        f"XSURF-04 non-vacuity: report-pipeline CRITICAL count is {critical_count_a}, "
+        "expected >= 1 from the seeded SAML weak-key fixture."
+    )
+    assert cert_count_a >= 1, (
+        f"XSURF-04 non-vacuity: report-pipeline certificate count is {cert_count_a}, "
+        "expected >= 1 from the seeded TLS rows."
+    )
+
+    # --- Surface B: dashboard pipeline, via the live route ---
+    resp = client.get(f"/api/scan/latest?scan_id={_XSURF04_RUN_ID}")
+    assert resp.status_code == 200, (
+        f"XSURF-04: GET /api/scan/latest?scan_id={_XSURF04_RUN_ID} expected 200, "
+        f"got {resp.status_code} ({resp.text[:300]})"
+    )
+    data = resp.json()
+
+    headline_score_b = data["score"]["score"]
+    critical_count_b = sum(1 for f in data["findings"] if f.get("severity") == "CRITICAL")
+    cert_count_b = len(data["certificates"])
+
+    assert critical_count_b >= 1, (
+        f"XSURF-04 non-vacuity: dashboard-pipeline CRITICAL count is {critical_count_b}, "
+        "expected >= 1 from the seeded SAML weak-key fixture."
+    )
+    assert cert_count_b >= 1, (
+        f"XSURF-04 non-vacuity: dashboard-pipeline certificate count is {cert_count_b}, "
+        "expected >= 1 from the seeded TLS rows."
+    )
+
+    # --- The three named equality assertions (D-14) ---
+    assert headline_score_a == headline_score_b, (
+        f"XSURF-04 VIOLATION: headline score diverged across surfaces. "
+        f"report={headline_score_a} dashboard={headline_score_b}"
+    )
+    assert critical_count_a == critical_count_b, (
+        f"XSURF-04 VIOLATION: CRITICAL finding count diverged across surfaces. "
+        f"report={critical_count_a} dashboard={critical_count_b}"
+    )
+    assert cert_count_a == cert_count_b, (
+        f"XSURF-04 VIOLATION: certificate count diverged across surfaces. "
+        f"report={cert_count_a} dashboard={cert_count_b}"
+    )
