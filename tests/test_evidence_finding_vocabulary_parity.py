@@ -17,6 +17,19 @@ Modern TLS's identical `scan_error_rate` dependency, the report-vs-dashboard
 17-vs-18 headline divergence tracked at
 `.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`.
 
+**211-03 (leg 2) addendum.** `legacy_tls_count` -- the Modern TLS "Legacy TLS
+versions present" driver -- is a DIFFERENT defect shape, not a title-bridging
+problem: `scoring.py:448` computes it as
+`max(0, _as_int(sev.get("LOW", 0)))`, a raw count of ALL LOW-severity findings
+of ANY kind. The dashboard pipeline emits no LOW severity at all, so the
+proxy is structurally 0 on that side regardless of the estate. Bridging
+titles (leg 1, above) cannot reach this because `legacy_tls_count` never
+looks at a title. The fix is to derive it from endpoint fields instead,
+mirroring `findings_evaluator._has_legacy_tls_versions` exactly -- the same
+shape every OTHER counter in this file (`motion_email_plaintext_count` and
+siblings) already uses, and the only shape that produces parity by
+construction across two independently-maintained finding generators.
+
 **Why pinned absolutes, not `A == B`.** Both pipelines call the SAME
 `build_evidence_summary` function. Once a bug lives inside a function two
 surfaces share, an `assert A == B` comparing the two surfaces' outputs is
@@ -45,6 +58,7 @@ from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 from quirk.dashboard.api.routes.scan import _derive_findings
 from quirk.engine.findings_evaluator import evaluate_endpoints
 from quirk.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.scoring import compute_readiness_score
 from quirk.models import CryptoEndpoint
 
 
@@ -110,6 +124,25 @@ _EXPIRED = _ep(
     cert_not_before=_PAST, cert_not_after=_PAST,
 )
 _IDENTITY_ENDPOINTS = [_HTTP_1, _HTTP_2, _HTTP_3, _SELF_SIGNED, _UNDERSIZED_RSA, _EXPIRED]
+
+# Two endpoints tripping `_has_legacy_tls_versions` two DIFFERENT ways --
+# both must count, and both are exercised so a fix that only handles one
+# branch of the predicate is caught.
+_TLS_LEGACY_VIA_VERSION = _ep(
+    id=9, host="10.0.5.1", port=443, protocol="TLS",
+    tls_version="TLSv1.1",
+)
+_TLS_LEGACY_VIA_SUPPORTED = _ep(
+    id=10, host="10.0.5.2", port=443, protocol="TLS",
+    tls_version="TLSv1.3", tls_supported_versions="TLSv1,TLSv1.2,TLSv1.3",
+)
+_LEGACY_TLS_ENDPOINTS = _ALL_ENDPOINTS + [_TLS_LEGACY_VIA_VERSION, _TLS_LEGACY_VIA_SUPPORTED]
+
+# Measured post-fix via compute_readiness_score() over _LEGACY_TLS_ENDPOINTS'
+# CLI-side evidence dict -- filled in by 211-03 Task 2 after the fix lands
+# (pinned, not re-derived at test time, per this project's "pinned oracles,
+# not bare equality" rule). Placeholder until measured.
+_EXPECTED_MODERN_TLS_SUBSCORE = None
 
 
 def _cli_findings(endpoints):
@@ -222,6 +255,113 @@ class TestTranslationIsANoOpOnCliVocabulary:
         # either of the other two title-matched counters.
         assert summary["http_on_tls_port_count"] == 0
         assert summary["mtls_present_count"] == 0
+
+
+class TestLegacyTlsCountCrossVocabularyParity:
+    """211-03 leg 2: `legacy_tls_count` must be endpoint-derived, identical
+    across both pipelines for the same endpoints, and immune to an unrelated
+    LOW-severity finding -- the exact contamination the old severity-proxy
+    was vulnerable to (and which caught nothing on the CLI side either)."""
+
+    def test_cli_vocabulary_legacy_tls_count_is_pinned_at_two(self):
+        summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _cli_findings(_LEGACY_TLS_ENDPOINTS))
+        assert summary["legacy_tls_count"] == 2, (
+            f"CLI-side legacy_tls_count expected 2 (one endpoint matching via "
+            f"tls_version, one via tls_supported_versions), got "
+            f"{summary['legacy_tls_count']}"
+        )
+
+    def test_dashboard_vocabulary_legacy_tls_count_is_pinned_at_two(self):
+        """THE red assertion pre-fix: the dashboard pipeline emits no LOW
+        severity at all, so the pre-fix `sev.get('LOW', 0)` proxy in
+        scoring.py measures 0 here regardless of the endpoint population --
+        and pre-fix, evidence.py does not even emit a `legacy_tls_count` key,
+        so this raises KeyError. A value of 0 (or a KeyError) here is the
+        Modern TLS half of the 17-vs-18 headline-score defect."""
+        summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _dashboard_findings(_LEGACY_TLS_ENDPOINTS))
+        assert summary["legacy_tls_count"] == 2, (
+            f"dashboard-side legacy_tls_count expected 2 (parity with the CLI "
+            f"pipeline over the identical endpoint set), got "
+            f"{summary['legacy_tls_count']}"
+        )
+
+    def test_pinned_count_agrees_with_cli_generators_own_finding_set(self):
+        """Independent cross-check, computed from the generator at test time
+        (never hardcoded twice): the pinned integer above must equal the
+        number of distinct (host, port) pairs the CLI generator itself
+        emits under the legacy-TLS finding title."""
+        findings = _cli_findings(_LEGACY_TLS_ENDPOINTS)
+        generator_pairs = {
+            (f["host"], f["port"]) for f in findings
+            if f["title"] == "Legacy TLS versions allowed (TLS 1.0/1.1)"
+        }
+        summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, findings)
+        assert summary["legacy_tls_count"] == len(generator_pairs), (
+            f"legacy_tls_count ({summary['legacy_tls_count']}) disagrees with "
+            f"the CLI generator's own legacy-TLS finding set "
+            f"({len(generator_pairs)} distinct (host, port) pairs)"
+        )
+        assert len(generator_pairs) == 2
+
+    def test_unrelated_low_severity_finding_does_not_move_legacy_tls_count(self):
+        """Contamination guard: an unrelated LOW-severity finding must NOT
+        move legacy_tls_count. This is the assertion that fails if anyone
+        reinstates the severity proxy -- it also would have caught the
+        original defect on the CLI side, where the proxy over-counted
+        rather than under-counted."""
+        findings = list(_cli_findings(_LEGACY_TLS_ENDPOINTS))
+        baseline = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, findings)["legacy_tls_count"]
+
+        contaminated = findings + [{
+            "host": "10.0.9.9", "port": 9999, "severity": "LOW",
+            "title": "Unrelated LOW-severity finding (contamination guard)",
+            "description": "Not a legacy-TLS condition.",
+            "recommendation": "N/A",
+        }]
+        contaminated_summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, contaminated)
+        assert contaminated_summary["legacy_tls_count"] == baseline, (
+            f"an unrelated LOW-severity finding moved legacy_tls_count from "
+            f"{baseline} to {contaminated_summary['legacy_tls_count']} -- the "
+            f"severity proxy has been reinstated"
+        )
+
+    def test_legacy_tls_count_key_always_present_including_no_findings(self):
+        """Fallback-can-never-fire assertion: the key must always be present,
+        for both pipelines' finding lists AND when findings=None, so
+        scoring.py's legacy-dict compatibility fallback is unreachable for
+        either real pipeline."""
+        cli_summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _cli_findings(_LEGACY_TLS_ENDPOINTS))
+        dash_summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _dashboard_findings(_LEGACY_TLS_ENDPOINTS))
+        none_summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, None)
+        assert "legacy_tls_count" in cli_summary
+        assert "legacy_tls_count" in dash_summary
+        assert "legacy_tls_count" in none_summary
+
+    def test_both_pipelines_agree_corroborating_only(self):
+        """Corroborating only -- NOT the test's sole claim. Both pinned
+        absolute assertions above must pass independently first."""
+        cli_count = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _cli_findings(_LEGACY_TLS_ENDPOINTS))["legacy_tls_count"]
+        dash_count = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _dashboard_findings(_LEGACY_TLS_ENDPOINTS))["legacy_tls_count"]
+        assert cli_count == dash_count
+
+    def test_modern_tls_subscore_identical_across_pipelines(self):
+        """compute_readiness_score over both evidence dicts yields the SAME
+        Modern TLS subscore, each asserted against a pinned absolute value
+        first (Phase 210's lesson: a bare A == B across a shared function is
+        vacuous on its own)."""
+        cli_evidence = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _cli_findings(_LEGACY_TLS_ENDPOINTS))
+        dash_evidence = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, _dashboard_findings(_LEGACY_TLS_ENDPOINTS))
+        cli_modern_tls = compute_readiness_score(cli_evidence)["subscores"]["modern_tls"]
+        dash_modern_tls = compute_readiness_score(dash_evidence)["subscores"]["modern_tls"]
+        assert cli_modern_tls == _EXPECTED_MODERN_TLS_SUBSCORE, (
+            f"CLI-side Modern TLS subscore expected "
+            f"{_EXPECTED_MODERN_TLS_SUBSCORE}, got {cli_modern_tls}"
+        )
+        assert dash_modern_tls == _EXPECTED_MODERN_TLS_SUBSCORE, (
+            f"dashboard-side Modern TLS subscore expected "
+            f"{_EXPECTED_MODERN_TLS_SUBSCORE}, got {dash_modern_tls}"
+        )
+        assert cli_modern_tls == dash_modern_tls
 
 
 class TestFastapiFreeImport:
