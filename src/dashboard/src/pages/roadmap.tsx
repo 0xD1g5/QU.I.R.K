@@ -4,6 +4,7 @@ import dagre from "cytoscape-dagre"
 import { useScanData } from "@/hooks/useScanData"
 import type { RoadmapNode } from "@/types/api"
 import { formatScoreNumber } from "@/lib/utils"
+import { resolveToken, useThemeRevision } from "@/lib/cytoscape-theme"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageSpinner } from "@/components/PageSpinner"
@@ -28,12 +29,20 @@ const CLOSURE_STATE_LABEL: Record<string, string> = {
   resurfaced: "Resurfaced",
 }
 
-const CLOSURE_STATE_COLOR: Record<string, string> = {
-  open: "hsl(0, 72%, 51%)",
-  closed: "hsl(142, 71%, 45%)",
-  not_observed: "hsl(240, 5%, 46%)",
-  resurfaced: "hsl(38, 92%, 50%)",
+// Token names, not literals — CLOSURE_STATE_COLOR below wraps each in `hsl(var(...))`,
+// which is a real-DOM-only string (Badge inline `style=`); it is never handed to
+// Cytoscape (see src/lib/cytoscape-theme.ts's module docstring for why that would
+// silently paint nothing).
+const CLOSURE_STATE_TOKEN: Record<string, string> = {
+  open: "--status-critical",
+  closed: "--qs-node-safe",
+  not_observed: "--status-neutral",
+  resurfaced: "--status-warning",
 }
+
+const CLOSURE_STATE_COLOR: Record<string, string> = Object.fromEntries(
+  Object.entries(CLOSURE_STATE_TOKEN).map(([state, token]) => [state, `hsl(var(${token}))`]),
+)
 
 // Mirrors quirk/scanner/pqc_deadlines.py bucket labels; "unmapped" gets an
 // explicit human label rather than being dropped from the burndown table.
@@ -54,11 +63,18 @@ try {
   if (!(e instanceof Error) || !/already/i.test(e.message)) throw e
 }
 
-const PHASE_COLORS: Record<string, string> = {
-  NOW:   "hsl(0, 72%, 51%)",    // Red — Immediate
-  NEXT:  "hsl(38, 92%, 50%)",   // Amber — Short-term
-  LATER: "hsl(142, 71%, 45%)",  // Green — Long-term
+// Token names — resolved to a HEX value via resolveToken() for the Cytoscape build
+// effect below, and wrapped as `hsl(var(...))` (PHASE_COLORS) for real-DOM usage
+// (legend swatches, detail-panel Badge fallback).
+const PHASE_TOKEN: Record<string, string> = {
+  NOW:   "--status-critical", // Red — Immediate
+  NEXT:  "--status-warning",  // Amber — Short-term
+  LATER: "--qs-node-safe",    // Green — Long-term
 }
+
+const PHASE_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(PHASE_TOKEN).map(([phase, token]) => [phase, `hsl(var(${token}))`]),
+)
 
 const PHASE_LABEL: Record<string, string> = {
   NOW:   "0-30 days",
@@ -68,11 +84,79 @@ const PHASE_LABEL: Record<string, string> = {
 
 const PHASE_ORDER = ["NOW", "NEXT", "LATER"]
 
+// Cytoscape draws to a <canvas> and cannot resolve CSS custom properties — every colour handed
+// to it below is resolved to a concrete hex value via resolveToken() at call time, never a
+// var(--x) reference and never a reconstructed HSL function-call string (see cytoscape-theme.ts).
+// Building the style array as its own function (rather than inlining it in the effect) is what
+// lets the theme-change effect below re-apply fresh colours via cy.style() without tearing down
+// and rebuilding the whole graph, which would otherwise reset the user's pan/zoom/selection.
+function buildRoadmapStyle(): cytoscape.StylesheetJsonBlock[] {
+  const nodeLabelColor = resolveToken("--chart-node-label")
+  const neutralColor = resolveToken("--status-neutral")
+  const highlightColor = resolveToken("--chart-edge-highlight")
+  const phaseColor: Record<string, string> = {
+    NOW: resolveToken(PHASE_TOKEN.NOW),
+    NEXT: resolveToken(PHASE_TOKEN.NEXT),
+    LATER: resolveToken(PHASE_TOKEN.LATER),
+  }
+
+  return [
+    // Base node style
+    {
+      selector: "node",
+      style: {
+        "label": "data(label)",
+        "font-size": 12,
+        "font-family": "Inter, sans-serif",
+        "color": nodeLabelColor,
+        "text-valign": "center",
+        "text-halign": "center",
+        "text-wrap": "wrap",
+        "text-max-width": "120px",
+        "width": 150,
+        "height": 52,
+        "shape": "roundrectangle",
+        "background-color": neutralColor,
+        "border-width": 0,
+      },
+    },
+    // Phase-specific colors via data selector (reliable approach)
+    { selector: "node[phase='NOW']",   style: { "background-color": phaseColor.NOW } },
+    { selector: "node[phase='NEXT']",  style: { "background-color": phaseColor.NEXT } },
+    { selector: "node[phase='LATER']", style: { "background-color": phaseColor.LATER } },
+    // Selected state
+    {
+      selector: "node:selected",
+      style: { "border-width": 3, "border-color": highlightColor },
+    },
+    // Cross-phase edges (visible arrows)
+    {
+      selector: "edge[rankOnly='false']",
+      style: {
+        "width": 2,
+        "line-color": neutralColor,
+        "target-arrow-color": neutralColor,
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+      },
+    },
+    // Within-phase rank-only edges (invisible)
+    {
+      selector: "edge[rankOnly='true']",
+      style: {
+        "opacity": 0,
+        "width": 0,
+      },
+    },
+  ] as cytoscape.StylesheetJsonBlock[]
+}
+
 export function RoadmapPage() {
   const { data, loading, error } = useScanData()
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<cytoscape.Core | null>(null)
   const [selected, setSelected] = useState<RoadmapNode | null>(null)
+  const themeRevision = useThemeRevision()
 
   const nodes = useMemo(() => data?.roadmap?.nodes ?? [], [data])
   const burndown = data?.burndown ?? null
@@ -152,55 +236,7 @@ export function RoadmapPage() {
     cyRef.current = cytoscape({
       container: containerRef.current,
       elements,
-      style: [
-        // Base node style
-        {
-          selector: "node",
-          style: {
-            "label": "data(label)",
-            "font-size": 12,
-            "font-family": "Inter, sans-serif",
-            "color": "#fff",
-            "text-valign": "center",
-            "text-halign": "center",
-            "text-wrap": "wrap",
-            "text-max-width": "120px",
-            "width": 150,
-            "height": 52,
-            "shape": "roundrectangle",
-            "background-color": "hsl(240, 5%, 46%)",
-            "border-width": 0,
-          },
-        },
-        // Phase-specific colors via data selector (reliable approach)
-        { selector: "node[phase='NOW']",   style: { "background-color": PHASE_COLORS.NOW } },
-        { selector: "node[phase='NEXT']",  style: { "background-color": PHASE_COLORS.NEXT } },
-        { selector: "node[phase='LATER']", style: { "background-color": PHASE_COLORS.LATER } },
-        // Selected state
-        {
-          selector: "node:selected",
-          style: { "border-width": 3, "border-color": "hsl(210, 100%, 65%)" },
-        },
-        // Cross-phase edges (visible arrows)
-        {
-          selector: "edge[rankOnly='false']",
-          style: {
-            "width": 2,
-            "line-color": "hsl(240, 6%, 40%)",
-            "target-arrow-color": "hsl(240, 6%, 40%)",
-            "target-arrow-shape": "triangle",
-            "curve-style": "bezier",
-          },
-        },
-        // Within-phase rank-only edges (invisible)
-        {
-          selector: "edge[rankOnly='true']",
-          style: {
-            "opacity": 0,
-            "width": 0,
-          },
-        },
-      ],
+      style: buildRoadmapStyle(),
       layout,
       userZoomingEnabled: true,
       userPanningEnabled: true,
@@ -210,17 +246,20 @@ export function RoadmapPage() {
     // Click handler — show detail panel
     cyRef.current.on("tap", "node", (evt) => {
       const nodeId = evt.target.data("id") as string
-      cyRef.current?.edges().style({ "line-color": "hsl(240, 6%, 40%)", "target-arrow-color": "hsl(240, 6%, 40%)" })
+      const neutralColor = resolveToken("--status-neutral")
+      const highlightColor = resolveToken("--chart-edge-highlight")
+      cyRef.current?.edges().style({ "line-color": neutralColor, "target-arrow-color": neutralColor })
       evt.target.connectedEdges("[rankOnly='false']").style({
-        "line-color": "hsl(210, 100%, 65%)",
-        "target-arrow-color": "hsl(210, 100%, 65%)",
+        "line-color": highlightColor,
+        "target-arrow-color": highlightColor,
       })
       setSelected(nodeById[nodeId] ?? null)
     })
 
     cyRef.current.on("tap", (evt) => {
       if (evt.target === cyRef.current) {
-        cyRef.current?.edges().style({ "line-color": "hsl(240, 6%, 40%)", "target-arrow-color": "hsl(240, 6%, 40%)" })
+        const neutralColor = resolveToken("--status-neutral")
+        cyRef.current?.edges().style({ "line-color": neutralColor, "target-arrow-color": neutralColor })
         setSelected(null)
       }
     })
@@ -230,6 +269,16 @@ export function RoadmapPage() {
       cyRef.current = null
     }
   }, [nodes, nodeById])
+
+  // Theme-change-only restyle: re-resolves every token via buildRoadmapStyle() and applies
+  // it in place with cy.style(), instead of tearing down and rebuilding the whole graph
+  // (which would reset the user's pan/zoom/selection on every toggle). This is the fix for
+  // the gap this plan exists to close — none of the effects above ever re-ran on a theme
+  // change, so the graph rendered the theme active at first paint forever.
+  useEffect(() => {
+    if (!cyRef.current) return
+    cyRef.current.style(buildRoadmapStyle())
+  }, [themeRevision])
 
   if (loading) return <PageSpinner ariaLabel="Loading remediation roadmap" />
 
@@ -293,7 +342,7 @@ export function RoadmapPage() {
                 Layout & Placement Contract ("same row (flex row, gap-1.5)").
                 gap-1.5 replaces the prior off-grid ml-1.5 (6px) margins. */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <Badge className="text-xs text-white" style={{ background: PHASE_COLORS[selected.phase] ?? "hsl(240 5% 46%)" }}>
+              <Badge className="text-xs text-white" style={{ background: PHASE_COLORS[selected.phase] ?? "hsl(var(--status-neutral))" }}>
                 {PHASE_LABEL[selected.phase] ?? selected.timeframe}
               </Badge>
               {/* Phase 181 SURF-03: closure badge is omitted entirely when
@@ -302,7 +351,7 @@ export function RoadmapPage() {
               {selected.closure_state && (
                 <Badge
                   className="text-xs text-white"
-                  style={{ background: CLOSURE_STATE_COLOR[selected.closure_state] ?? "hsl(240 5% 46%)" }}
+                  style={{ background: CLOSURE_STATE_COLOR[selected.closure_state] ?? "hsl(var(--status-neutral))" }}
                 >
                   {CLOSURE_STATE_LABEL[selected.closure_state] ?? selected.closure_state}
                 </Badge>

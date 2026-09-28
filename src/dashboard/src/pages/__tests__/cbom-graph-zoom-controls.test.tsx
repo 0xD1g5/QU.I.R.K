@@ -34,6 +34,7 @@ vi.mock("cytoscape", () => {
       edges: vi.fn(() => ({ removeClass: vi.fn(), addClass: vi.fn() })),
       elements: vi.fn(() => ({ style: vi.fn() })),
       layout: vi.fn(() => ({ run: vi.fn() })),
+      style: vi.fn(),
       destroy: vi.fn(),
       // Returns a stable current zoom level so the component's
       // `zoom(zoom() * factor)` read-modify-write is deterministic.

@@ -17,6 +17,7 @@ import type { CbomComponent } from "@/types/api"
 vi.mock("cytoscape", () => {
   const mockCyCore = {
     on: vi.fn(),
+    style: vi.fn(),
     destroy: vi.fn(),
     zoom: vi.fn(() => 1),
     fit: vi.fn(),

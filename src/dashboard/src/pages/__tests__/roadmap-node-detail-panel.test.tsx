@@ -38,6 +38,7 @@ vi.mock("cytoscape", () => {
       }
     }),
     edges: vi.fn(() => ({ style: vi.fn() })),
+    style: vi.fn(),
     destroy: vi.fn(),
     zoom: vi.fn(() => 1),
     fit: vi.fn(),

@@ -14,7 +14,7 @@
  * NOT a source-text test: nothing here reads the source file. Assertions run
  * against the captured runtime argument.
  */
-import { describe, it, expect, vi, afterEach } from "vitest"
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest"
 import { render, cleanup, waitFor } from "@testing-library/react"
 
 type CyElement = {
@@ -38,6 +38,7 @@ vi.mock("cytoscape", () => {
     edges: vi.fn(() => ({ style: vi.fn() })),
     elements: vi.fn(() => ({ style: vi.fn() })),
     layout: vi.fn(() => ({ run: vi.fn() })),
+    style: vi.fn(),
     destroy: vi.fn(),
     zoom: vi.fn(() => 1),
     fit: vi.fn(),
@@ -99,9 +100,25 @@ const FIXTURE_ITEMS = [
   },
 ]
 
+// roadmap.tsx now resolves its Cytoscape colours from CSS custom properties at build time
+// (Phase 213 plan 213-07, resolveToken()) rather than embedding literal colour strings. jsdom
+// never parses the real src/index.css, so the tokens this page reads must be set on
+// documentElement directly — otherwise resolveToken() legitimately returns "" (with a dev
+// warning) and every colour assertion below would trivially fail, not because the page is
+// broken but because the test never gave it a stylesheet to resolve against.
+beforeEach(() => {
+  document.documentElement.style.setProperty("--status-critical", "0 72% 51%")
+  document.documentElement.style.setProperty("--status-warning", "38 92% 50%")
+  document.documentElement.style.setProperty("--qs-node-safe", "142 71% 45%")
+  document.documentElement.style.setProperty("--status-neutral", "240 5% 46%")
+  document.documentElement.style.setProperty("--chart-node-label", "#ffffff")
+  document.documentElement.style.setProperty("--chart-edge-highlight", "210 100% 60%")
+})
+
 afterEach(() => {
   cleanup()
   capturedConfig = null
+  document.documentElement.removeAttribute("style")
 })
 
 describe("RoadmapPage — UAT-7-15 DAG horizon coding", () => {

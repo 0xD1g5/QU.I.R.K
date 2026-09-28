@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 import { firstNonZeroComp } from "./cbom-utils"
+import { resolveToken, useThemeRevision } from "@/lib/cytoscape-theme"
 
 // Register Cytoscape layout extension once.
 // D-24 (IN-02): log via console.error and re-throw genuine failures so
@@ -27,32 +28,39 @@ try {
   if (!(e instanceof Error) || !/already/i.test(e.message)) throw e
 }
 
+// Token names, not literals. QS_TOKEN is the single source of truth for which token each
+// quantum-safety state maps to; QS_BADGE (Tailwind arbitrary-value classes) and QS_NODE_COLOR
+// (real-DOM `style=` legend swatches below) both read from it, so a state's badge and its
+// graph-legend swatch cannot drift to different colours.
+//
+// QS_BADGE's class strings must stay FULLY STATIC — never built via template-literal
+// interpolation from QS_TOKEN. Tailwind's JIT scanner does a static regex pass over raw
+// source text (including comments) and does not evaluate JS expressions, so an interpolated
+// class candidate is scanned as its literal, unresolved source text and emits broken,
+// unparseable CSS at build time (confirmed live: a production build with an interpolated
+// class here failed at the lightningcss minify step, and even failed a SECOND time from an
+// interpolated example previously written directly into this comment). QS_NODE_COLOR has no
+// such constraint — it is a plain runtime string handed to an inline `style=` prop, which
+// Tailwind's scanner never looks at.
+const QS_TOKEN: Record<string, string> = {
+  Safe: "--qs-node-safe",
+  "At Risk": "--status-warning",
+  Vulnerable: "--status-critical",
+  Unknown: "--status-neutral",
+}
+
 const QS_BADGE: Record<string, string> = {
-  Safe: "bg-[hsl(142_71%_30%)] text-white",
-  "At Risk": "bg-[hsl(38_92%_50%)] text-black",
-  Vulnerable: "bg-[hsl(0_72%_51%)] text-white",
-  Unknown: "bg-[hsl(240_5%_46%)] text-white",
+  Safe: "bg-[hsl(var(--qs-node-safe))] text-white",
+  "At Risk": "bg-[hsl(var(--status-warning))] text-black",
+  Vulnerable: "bg-[hsl(var(--status-critical))] text-white",
+  Unknown: "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 const QS_NODE_COLOR: Record<string, string> = {
-  Safe: "hsl(var(--qs-node-safe))",
-  "At Risk": "hsl(38 92% 50%)",
-  Vulnerable: "hsl(0 72% 51%)",
-  Unknown: "hsl(240 5% 46%)",
-}
-
-// D-09: Cytoscape stylesheets are plain JS objects evaluated at graph-init time, outside the
-// DOM's CSS cascade — a raw `var(--token)` reference in an element's `data(color)` mapper does
-// not resolve to a computed value the way it does in a `.tsx` `style=` prop or Tailwind arbitrary
-// value (confirmed at implementation time; see 165-04-SUMMARY.md). Resolve any CSS custom-property
-// reference to its computed literal value before handing a color to Cytoscape element data. Colors
-// used directly in DOM `style=` props (the legend swatches below) do not need this — `var()`
-// resolves natively there.
-function resolveCytoscapeColor(color: string): string {
-  const match = /var\((--[\w-]+)\)/.exec(color)
-  if (!match || typeof document === "undefined") return color
-  const resolved = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim()
-  return resolved ? color.replace(match[0], resolved) : color
+  Safe: `hsl(var(${QS_TOKEN.Safe}))`,
+  "At Risk": `hsl(var(${QS_TOKEN["At Risk"]}))`,
+  Vulnerable: `hsl(var(${QS_TOKEN.Vulnerable}))`,
+  Unknown: `hsl(var(${QS_TOKEN.Unknown}))`,
 }
 
 // ── Table Tab ──────────────────────────────────────────────────────────────
@@ -147,14 +155,16 @@ function CbomTable({ components }: CbomTableProps) {
 
 // ── Hardware Inventory ─────────────────────────────────────────────────────
 
-const HW_DEVICE_BADGE = "bg-[hsl(220_60%_40%)] text-white"
-const HW_FIRMWARE_BADGE = "bg-[hsl(240_5%_60%)] text-white"
+// The underscore-HSL literal formerly here was a 213-02 near-duplicate collapse onto
+// --status-neutral (see 213-02-SUMMARY.md's collapse table) — not a distinct token.
+const HW_DEVICE_BADGE = "bg-[hsl(var(--badge-hardware-device))] text-white"
+const HW_FIRMWARE_BADGE = "bg-[hsl(var(--status-neutral))] text-white"
 
 const TIER_BADGE: Record<string, string> = {
-  "Tier 1": "bg-[hsl(0_72%_51%)] text-white",
-  "Tier 2": "bg-[hsl(38_92%_50%)] text-black",
-  "Tier 3": "bg-[hsl(142_71%_30%)] text-white",
-  "Tier N/A": "bg-[hsl(240_5%_46%)] text-white",
+  "Tier 1": "bg-[hsl(var(--status-critical))] text-white",
+  "Tier 2": "bg-[hsl(var(--status-warning))] text-black",
+  "Tier 3": "bg-[hsl(var(--status-safe-deep))] text-white",
+  "Tier N/A": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 function HardwareInventory({ devices }: { devices: HardwareComponent[] }) {
@@ -224,10 +234,110 @@ type NodeDetail =
   | { nodeType: "algorithm"; id: string; label: string; qs: string; keySize: number | null; type: string; systems: string[] }
   | { nodeType: "system"; id: string; label: string; algorithms: string[] }
 
+// Cytoscape draws to a <canvas> and cannot resolve CSS custom properties — every colour handed
+// to it below is resolved to a concrete hex value via resolveToken() at call time, never a
+// var(--x) reference and never a reconstructed HSL function-call string (see cytoscape-theme.ts).
+// Quantum-safety colour is expressed as an attribute SELECTOR (node[qs='...']) rather than a
+// per-element `data(color)` mapper, so a theme toggle only needs to re-apply this stylesheet via
+// cy.style() rather than walking every element and rewriting its data.
+function buildCbomGraphStyle(): cytoscape.StylesheetJsonBlock[] {
+  const nodeLabelColor = resolveToken("--chart-node-label")
+  const slateDark = resolveToken("--chart-slate-dark")
+  const slateMid = resolveToken("--chart-slate-mid")
+  const slateLight = resolveToken("--chart-slate-light")
+  const highlightColor = resolveToken("--chart-edge-highlight")
+  const neutralColor = resolveToken("--status-neutral")
+  const qsColor: Record<string, string> = {
+    Safe: resolveToken(QS_TOKEN.Safe),
+    "At Risk": resolveToken(QS_TOKEN["At Risk"]),
+    Vulnerable: resolveToken(QS_TOKEN.Vulnerable),
+    Unknown: resolveToken(QS_TOKEN.Unknown),
+  }
+
+  return [
+    {
+      selector: "node[nodeType='algorithm'][qs='Safe']",
+      style: { "background-color": qsColor.Safe },
+    },
+    {
+      selector: "node[nodeType='algorithm'][qs='At Risk']",
+      style: { "background-color": qsColor["At Risk"] },
+    },
+    {
+      selector: "node[nodeType='algorithm'][qs='Vulnerable']",
+      style: { "background-color": qsColor.Vulnerable },
+    },
+    {
+      selector: "node[nodeType='algorithm'][qs='Unknown']",
+      style: { "background-color": qsColor.Unknown },
+    },
+    {
+      selector: "node[nodeType='algorithm']",
+      style: {
+        "label": "data(label)",
+        "font-size": 12,
+        "font-family": "monospace",
+        "color": nodeLabelColor,
+        "text-valign": "center",
+        "text-halign": "center",
+        "text-wrap": "wrap",
+        "text-max-width": "90px",
+        "width": 90,
+        "height": 90,
+        "shape": "ellipse",
+        "border-width": 0,
+      },
+    },
+    {
+      selector: "node[nodeType='system']",
+      style: {
+        "background-color": slateDark,
+        "label": "data(label)",
+        "font-size": 11,
+        "color": slateLight,
+        "text-valign": "center",
+        "text-halign": "center",
+        "text-wrap": "wrap",
+        "text-max-width": "110px",
+        "width": 120,
+        "height": 36,
+        "shape": "roundrectangle",
+        "border-width": 1,
+        "border-color": slateMid,
+      },
+    },
+    {
+      selector: "node:selected",
+      style: {
+        "border-width": 3,
+        "border-color": highlightColor,
+      },
+    },
+    {
+      selector: "edge",
+      style: {
+        "width": 1.5,
+        "line-color": neutralColor,
+        "opacity": 0.8,
+        "curve-style": "bezier",
+      },
+    },
+    {
+      selector: "edge.highlighted",
+      style: {
+        "line-color": highlightColor,
+        "opacity": 1,
+        "width": 2.5,
+      },
+    },
+  ] as cytoscape.StylesheetJsonBlock[]
+}
+
 function CbomGraph({ components }: { components: CbomComponent[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<cytoscape.Core | null>(null)
   const [selected, setSelected] = useState<NodeDetail | null>(null)
+  const themeRevision = useThemeRevision()
 
   // Build lookup maps for click handler
   const algBySystem = useMemo(() => {
@@ -263,7 +373,6 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           label: comp.algorithm,
           nodeType: "algorithm",
           qs: comp.quantum_safety ?? "Unknown",
-          color: resolveCytoscapeColor(QS_NODE_COLOR[comp.quantum_safety ?? "Unknown"] ?? QS_NODE_COLOR.Unknown),
         },
         group: "nodes",
       })
@@ -275,7 +384,6 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
               id: `sys-${sys}`,
               label: sys,
               nodeType: "system",
-              color: "hsl(220 13% 28%)",
             },
             group: "nodes",
           })
@@ -299,68 +407,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
     cyRef.current = cytoscape({
       container: containerRef.current,
       elements,
-      style: [
-        {
-          selector: "node[nodeType='algorithm']",
-          style: {
-            "background-color": "data(color)",
-            "label": "data(label)",
-            "font-size": 12,
-            "font-family": "monospace",
-            "color": "#fff",
-            "text-valign": "center",
-            "text-halign": "center",
-            "text-wrap": "wrap",
-            "text-max-width": "90px",
-            "width": 90,
-            "height": 90,
-            "shape": "ellipse",
-            "border-width": 0,
-          },
-        },
-        {
-          selector: "node[nodeType='system']",
-          style: {
-            "background-color": "data(color)",
-            "label": "data(label)",
-            "font-size": 11,
-            "color": "hsl(220 13% 85%)",
-            "text-valign": "center",
-            "text-halign": "center",
-            "text-wrap": "wrap",
-            "text-max-width": "110px",
-            "width": 120,
-            "height": 36,
-            "shape": "roundrectangle",
-            "border-width": 1,
-            "border-color": "hsl(220 13% 45%)",
-          },
-        },
-        {
-          selector: "node:selected",
-          style: {
-            "border-width": 3,
-            "border-color": "hsl(210 100% 60%)",
-          },
-        },
-        {
-          selector: "edge",
-          style: {
-            "width": 1.5,
-            "line-color": "hsl(240 6% 38%)",
-            "opacity": 0.8,
-            "curve-style": "bezier",
-          },
-        },
-        {
-          selector: "edge.highlighted",
-          style: {
-            "line-color": "hsl(210 100% 60%)",
-            "opacity": 1,
-            "width": 2.5,
-          },
-        },
-      ],
+      style: buildCbomGraphStyle(),
       layout,
       userZoomingEnabled: true,
       userPanningEnabled: true,
@@ -412,6 +459,13 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
     }
   }, [components, compByAlg, algBySystem])
 
+  // Theme-change-only restyle — re-resolves every token and re-applies via cy.style()
+  // instead of tearing down and rebuilding the graph, preserving pan/zoom/selection.
+  useEffect(() => {
+    if (!cyRef.current) return
+    cyRef.current.style(buildCbomGraphStyle())
+  }, [themeRevision])
+
   if (!components.length) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
@@ -433,7 +487,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
         ))}
         <span className="text-muted-foreground font-medium mt-1 mb-0.5">System</span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-2.5 rounded" style={{ background: "hsl(220 13% 45%)" }} />
+          <span className="inline-block w-3 h-2.5 rounded" style={{ background: "hsl(var(--chart-slate-mid))" }} />
           Host:Port
         </span>
       </div>

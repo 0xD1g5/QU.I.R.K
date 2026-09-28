@@ -47,7 +47,6 @@ export function resolveToken(name: string): string {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   if (!raw) {
     if (import.meta.env?.DEV) {
-      // eslint-disable-next-line no-console -- deliberate loud failure per plan 213-07 Task 1
       console.warn(`[cytoscape-theme] resolveToken: token "${name}" resolved to an empty value`)
     }
     return ""
