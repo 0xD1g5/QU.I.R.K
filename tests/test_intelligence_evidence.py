@@ -22,6 +22,7 @@ class _Ep:
     cert_issuer: str | None = None
     tls_version: str | None = None
     cipher_suite: str | None = None
+    service_detail: str | None = None
 
 
 class EvidenceSummaryTests(unittest.TestCase):
@@ -123,6 +124,70 @@ def test_saml_sha1_mixed_case():
     """WR-10 / D-02: SAML alg in {SHA-1, sha1, #rsa-sha1} all increment counter."""
     for alg in ("SHA-1", "sha1", "#rsa-sha1"):
         assert _saml_count(alg) == 1, f"missed: {alg!r}"
+
+
+def _saml_weak_ep(host: str, port: int, service_detail: str | None) -> _Ep:
+    """A weak-key SAML endpoint row (RSA-1024, matches the `< 2048` branch)."""
+    return _Ep(host=host, port=port, protocol="SAML", cert_pubkey_alg="RSA",
+               cert_pubkey_size=1024, service_detail=service_detail)
+
+
+class SamlWeakSigningDedupeTests(unittest.TestCase):
+    """XSURF-01 / D-03: saml_weak_signing_count dedupes on (host, port, cert serial),
+    the same key plan 210-02 applied to finding emission. This counter iterates raw
+    CryptoEndpoint rows independently of finding_list (see the structural grep in
+    210-03-SUMMARY.md) and does NOT self-heal from that finding-side dedupe."""
+
+    def test_same_serial_dual_use_pair_counts_one(self) -> None:
+        endpoints = [
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=signing|serial=0a1b"),
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=encryption|serial=0a1b"),
+        ]
+        summary = build_evidence_summary(endpoints)
+        assert summary["saml_weak_signing_count"] == 1, summary["saml_weak_signing_count"]
+
+    def test_distinct_serials_count_two(self) -> None:
+        endpoints = [
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=signing|serial=0a1b"),
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=encryption|serial=0a1c"),
+        ]
+        summary = build_evidence_summary(endpoints)
+        assert summary["saml_weak_signing_count"] == 2, summary["saml_weak_signing_count"]
+
+    def test_same_serial_different_host_counts_two(self) -> None:
+        endpoints = [
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=signing|serial=0a1b"),
+            _saml_weak_ep("10.80.0.42", 8080, "urn:x|use=encryption|serial=0a1b"),
+        ]
+        summary = build_evidence_summary(endpoints)
+        assert summary["saml_weak_signing_count"] == 2, summary["saml_weak_signing_count"]
+
+    def test_same_serial_different_port_counts_two(self) -> None:
+        endpoints = [
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=signing|serial=0a1b"),
+            _saml_weak_ep("10.80.0.41", 8443, "urn:x|use=encryption|serial=0a1b"),
+        ]
+        summary = build_evidence_summary(endpoints)
+        assert summary["saml_weak_signing_count"] == 2, summary["saml_weak_signing_count"]
+
+    def test_missing_serial_token_never_deduped(self) -> None:
+        """Fail-open convention from plan 210-02's test of the same name: a row with
+        no serial= token must never be deduped against another serial-less row."""
+        endpoints = [
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=signing"),
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=encryption"),
+        ]
+        summary = build_evidence_summary(endpoints)
+        assert summary["saml_weak_signing_count"] == 2, summary["saml_weak_signing_count"]
+
+    def test_ratio_matches_deduped_count(self) -> None:
+        endpoints = [
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=signing|serial=0a1b"),
+            _saml_weak_ep("10.80.0.41", 8080, "urn:x|use=encryption|serial=0a1b"),
+        ]
+        summary = build_evidence_summary(endpoints)
+        expected = round(summary["saml_weak_signing_count"] / len(endpoints), 4)
+        assert summary["identity_saml_weak_signing_ratio"] == expected
 
 
 def test_motion_broker_legacy_tls():
