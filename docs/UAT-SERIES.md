@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.21.0
-**Last Updated:** 2026-09-27 (Phase 210 close — Cross-Surface Score Parity. Series 210 added: `UAT-210-01` (XSURF-01, one dual-`use` SAML certificate yields one CRITICAL finding) and `UAT-210-02` (XSURF-02, `identity_saml_weak_signing_ratio` and the matching SAML finding agree) both flip PASS on plan 210-06's live multihost re-run evidence (`scan_run_id 2026-09-28T01:41:30.088508+00:00`). `UAT-210-03` (XSURF-03, two runs 4m26s apart resolve to one `scan_run_id`, not the merged 34-certificate signature) is SKIP (GAP), DEFERRED — the live re-run exercised only a single scan, not the two-run-apart scenario itself — covered instead by `tests/test_api_scan_window.py::test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run`. ROADMAP Success Criterion 5 (identical headline score across pipelines) is recorded NOT MET: CRITICAL count and certificate count now match exactly (6=6, 20=20) but the headline score still diverges by 1 point (17 report vs 18 dashboard), isolated to the Hygiene and Modern TLS subscores — filed as `.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`, not fixed in this phase. Requirements XSURF-01..04 are each independently Complete on their own narrower wording; the phase's overall headline-parity goal is PARTIALLY achieved. Prior: 2026-09-27 (Phase 207.1 — Orphaned Browser-Only Coverage Drain, COV-10. `UAT-7-23` and `UAT-7-29` — the 2 cases orphaned between COV-04's jsdom-tractable set and COV-05's named three, which neither requirement ever owned — flip GAP -> PASS, each citing a real Playwright node in `tests/test_browser_e2e.py`. Open GAP (drainable) count 43 -> 41. Both carry the same `CI-EXEMPT:` position Phase 207 established, copied verbatim. Each is red-proved by its own paired control node — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown` — rather than merely observed passing. `UAT-7-23` closes at **6 of 6 as of 2026-09-27**: five criteria are mechanized by the Playwright node, and criterion 6 ("transition is smooth — no layout jumps or flicker") was recorded HUMAN-UAT rather than absorbed into the PASS, then **verified by operator-led walkthrough** — a real non-headless browser resized slowly through the 1024px breakpoint in both directions, reported smooth with no jump, flicker, flash of unstyled content or glitching reflow. The HUMAN-UAT routing is what made that verdict recordable; it is not CI coverage, and a smoothness regression would still redden no gate. No `207.1-NOT-MET-AS-WRITTEN.md` was filed, and the operator verdict does not change that: ROADMAP SC#1 predicts the 5-of-6 outcome in its own text and requires criterion 6 to be recorded human-UAT or explicitly dropped, so the stated partial WAS the criterion being met at close. The verdict discharges the human-UAT item SC#1 asked for rather than revealing a shortfall — the criterion was met as written and the case then exceeded it. Prior: 2026-09-27 (Phase 207 — Browser-Only Coverage Verdict. The four structurally jsdom-impossible cases now have REAL browser coverage: UAT-7-01, UAT-7-32, UAT-7-17 and UAT-88-03 flip GAP -> PASS, each citing a Playwright node in `tests/test_browser_e2e.py` or `tests/test_pdf_decomposition_render.py`. Open GAP (drainable) count 47 -> 43. Every one of the four carries a `CI-EXEMPT:` declaration, and its wording deliberately differs from the two earlier precedents: CI genuinely DOES execute these nodes, in the new non-gating `Browser E2E` job which installs Chromium; they skip only in `Linux Full Suite`, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. A skip there is not a pass — the coverage claim rests on the Browser E2E job's real execution. UAT-7-32's disposition records an explicit scope bound: it claims zero console errors plus named positive assertions, NOT heading-level discrimination on /findings, /identity, /cbom or /print. ROADMAP Phase 207 criterion 3 is recorded NOT APPLICABLE BY VERDICT — see 207-NOT-MET-AS-WRITTEN.md — because no case in this phase lands as a permanent GAP, so the criterion's machinery has no caller. Prior: 2026-09-22 (Phase 208 close — COV-06/07/08 dispositioned: UAT-104-04, UAT-88-02, UAT-8-04, UAT-8-05 flipped to PASS with verbatim re-run commands; UAT-88-03 stays SKIP (GAP), extended with a costed Phase 207 handoff; Open GAP (drainable) count 51 → 47. ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — see 208-NOT-MET-AS-WRITTEN.md.))
+**Last Updated:** 2026-09-28 (Phase 211 close — Denominator Correctness & Finding-Vocabulary Parity.
+Series 211 added: `UAT-211-01` (cross-surface headline-score equality, DENOM-04/D-08, live EQUAL
+verdict 18=18 on `scan_run_id 2026-09-28T13:16:55.319715+00:00`, closing Phase 210's unmet Success
+Criterion 5), `UAT-211-02` (`ports_tls` width behavioural verdict, DENOM-03, measured INVERTED —
+narrow 20 > wide 18, the opposite direction from the historical pair — which the requirement's own
+"inverts or flattens" text accepts as satisfaction), `UAT-211-03` (Modern TLS no longer moved by an
+unrelated LOW-severity finding), `UAT-211-04` (coverage gate reddens on an undispositioned new
+scoring title), and `UAT-211-05` (the one residual unbridgeable divergence disclosed, not hidden).
+All five PASS. DENOM-01..04 marked Complete in REQUIREMENTS.md; see
+`.planning/phases/211-denominator-correctness/211-08-SUMMARY.md` for the ground-truth completion
+verdict.) Prior: 2026-09-27 (Phase 210 close — Cross-Surface Score Parity. Series 210 added: `UAT-210-01` (XSURF-01, one dual-`use` SAML certificate yields one CRITICAL finding) and `UAT-210-02` (XSURF-02, `identity_saml_weak_signing_ratio` and the matching SAML finding agree) both flip PASS on plan 210-06's live multihost re-run evidence (`scan_run_id 2026-09-28T01:41:30.088508+00:00`). `UAT-210-03` (XSURF-03, two runs 4m26s apart resolve to one `scan_run_id`, not the merged 34-certificate signature) is SKIP (GAP), DEFERRED — the live re-run exercised only a single scan, not the two-run-apart scenario itself — covered instead by `tests/test_api_scan_window.py::test_get_latest_scan_two_runs_4m26s_apart_excludes_older_run`. ROADMAP Success Criterion 5 (identical headline score across pipelines) is recorded NOT MET: CRITICAL count and certificate count now match exactly (6=6, 20=20) but the headline score still diverges by 1 point (17 report vs 18 dashboard), isolated to the Hygiene and Modern TLS subscores — filed as `.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`, not fixed in this phase. Requirements XSURF-01..04 are each independently Complete on their own narrower wording; the phase's overall headline-parity goal is PARTIALLY achieved. Prior: 2026-09-27 (Phase 207.1 — Orphaned Browser-Only Coverage Drain, COV-10. `UAT-7-23` and `UAT-7-29` — the 2 cases orphaned between COV-04's jsdom-tractable set and COV-05's named three, which neither requirement ever owned — flip GAP -> PASS, each citing a real Playwright node in `tests/test_browser_e2e.py`. Open GAP (drainable) count 43 -> 41. Both carry the same `CI-EXEMPT:` position Phase 207 established, copied verbatim. Each is red-proved by its own paired control node — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown` — rather than merely observed passing. `UAT-7-23` closes at **6 of 6 as of 2026-09-27**: five criteria are mechanized by the Playwright node, and criterion 6 ("transition is smooth — no layout jumps or flicker") was recorded HUMAN-UAT rather than absorbed into the PASS, then **verified by operator-led walkthrough** — a real non-headless browser resized slowly through the 1024px breakpoint in both directions, reported smooth with no jump, flicker, flash of unstyled content or glitching reflow. The HUMAN-UAT routing is what made that verdict recordable; it is not CI coverage, and a smoothness regression would still redden no gate. No `207.1-NOT-MET-AS-WRITTEN.md` was filed, and the operator verdict does not change that: ROADMAP SC#1 predicts the 5-of-6 outcome in its own text and requires criterion 6 to be recorded human-UAT or explicitly dropped, so the stated partial WAS the criterion being met at close. The verdict discharges the human-UAT item SC#1 asked for rather than revealing a shortfall — the criterion was met as written and the case then exceeded it. Prior: 2026-09-27 (Phase 207 — Browser-Only Coverage Verdict. The four structurally jsdom-impossible cases now have REAL browser coverage: UAT-7-01, UAT-7-32, UAT-7-17 and UAT-88-03 flip GAP -> PASS, each citing a Playwright node in `tests/test_browser_e2e.py` or `tests/test_pdf_decomposition_render.py`. Open GAP (drainable) count 47 -> 43. Every one of the four carries a `CI-EXEMPT:` declaration, and its wording deliberately differs from the two earlier precedents: CI genuinely DOES execute these nodes, in the new non-gating `Browser E2E` job which installs Chromium; they skip only in `Linux Full Suite`, where Chromium is deliberately absent so the browser flake class cannot redden the check every PR must pass. A skip there is not a pass — the coverage claim rests on the Browser E2E job's real execution. UAT-7-32's disposition records an explicit scope bound: it claims zero console errors plus named positive assertions, NOT heading-level discrimination on /findings, /identity, /cbom or /print. ROADMAP Phase 207 criterion 3 is recorded NOT APPLICABLE BY VERDICT — see 207-NOT-MET-AS-WRITTEN.md — because no case in this phase lands as a permanent GAP, so the criterion's machinery has no caller. Prior: 2026-09-22 (Phase 208 close — COV-06/07/08 dispositioned: UAT-104-04, UAT-88-02, UAT-8-04, UAT-8-05 flipped to PASS with verbatim re-run commands; UAT-88-03 stays SKIP (GAP), extended with a costed Phase 207 handoff; Open GAP (drainable) count 51 → 47. ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — see 208-NOT-MET-AS-WRITTEN.md.))
 DELIV-01 (manifest + five-format download API over the artifacts `write_reports()` already writes,
 structural path containment with a live negative control, RPT-03's dashboard exclusion re-proven) and
 DELIV-02 (the Executive-page download control). **Two cases are `Tester: Digs` and dispositioned only
@@ -29325,5 +29335,191 @@ but did not itself execute the two-separate-runs-4m26s-apart scenario this case 
 disposition here would also be defensible (`GAP — no substitute coverage`), but the cited node is a
 real, passing, purpose-built regression test for exactly this behavior (added in plan 210-04), so
 `DEFERRED` more accurately reflects that substitute coverage exists and executes.
+
+---
+
+## Series 211: Denominator Correctness & Finding-Vocabulary Parity (Phase 211 — v5.25)
+
+**Last Updated:** 2026-09-28 (Phase 211 close — Denominator Correctness & Finding-Vocabulary
+Parity. Five cases added. `UAT-211-01` (cross-surface headline-score equality, DENOM-04/D-08) flips
+PASS on a fresh live scan (`scan_run_id 2026-09-28T13:16:55.319715+00:00`): report and dashboard
+both read 18/100, all six subscores, cap reason, CRITICAL count and certificate count identical,
+independently re-derived by a second instrument. `UAT-211-02` (`ports_tls` width behavioural
+verdict, DENOM-03) is PASS on the requirement's own literal "inverts or flattens" acceptance text —
+the live measurement came back INVERTED (narrow 20 > wide 18), the opposite direction from the
+historical narrow-89-vs-wide-91 pair, which is a valid, not a failing, outcome. `UAT-211-03` (Modern
+TLS contributor no longer moves with an unrelated LOW-severity finding, leg 2 of the 17-vs-18 fix)
+is PASS on `tests/test_evidence_finding_vocabulary_parity.py`. `UAT-211-04` (coverage gate reddens
+when a new scoring-critical title is added without a disposition) is PASS on
+`tests/test_evidence_scoring_title_coverage.py`, RED-proved in `211-04-SUMMARY.md`. `UAT-211-05`
+(the one residual unbridgeable divergence — `"HTTP on TLS-designated port"` — disclosed rather than
+hidden) is PASS, citing the filed todo and both corrected client-facing guides. DENOM-01..04 are all
+marked Complete in REQUIREMENTS.md; see `.planning/phases/211-denominator-correctness/211-08-SUMMARY.md`
+for the phase's ground-truth completion verdict.)
+
+### UAT-211-01: Cross-Surface Headline Score Is Identical for One Live Scan
+
+**ID:** UAT-211-01
+**Title:** The report pipeline and the dashboard pipeline emit the identical headline score, all six
+subscores, cap reason, CRITICAL count, and certificate count for one `scan_run_id`
+**Maps to:** DENOM-04 (D-08 acceptance evidence), closing Phase 210's unmet Success Criterion 5
+
+**What to test:** Phase 210 measured report 17/100 vs dashboard 18/100 on `scan_run_id
+2026-09-28T01:41:30.088508+00:00`, isolated to the Hygiene and Modern TLS subscores. Phase 211
+traced this to two mechanisms (a finding-title vocabulary mismatch making `plaintext_http_count` a
+structural zero on the dashboard side, and `legacy_tls_count` being driven by a raw LOW-severity
+proxy rather than the endpoint fields themselves) and fixed both (`127913ca`, `c1245a55`). This case
+verifies the fix against a fresh live scan, not merely a unit fixture.
+
+**Steps:** A fresh `multihost` chaos-lab scan
+(`scan_run_id 2026-09-28T13:16:55.319715+00:00`, 775 endpoints, wide 14-port width) was read from
+both the on-disk report artifacts (`quirk-output/intelligence-20260928-131809.json`) and the
+authenticated dashboard API (`GET /api/scan/latest?scan_id=...`, HTTP 200). The dashboard-side
+`evidence_summary` was independently re-derived a second way — a standalone script opening
+`quirk-output/quirk.db` directly and calling the same evidence-building functions the route uses
+internally, bypassing the running HTTP server entirely — and all 13 evidence counters it produced
+matched the report side exactly.
+
+**Pass Criteria:** headline score, all six subscores, cap-reason string, CRITICAL count, and
+certificate count are identical between the two surfaces for the same `scan_run_id`, and the
+independent second-instrument re-derivation agrees with both.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated + live evidence
+**Notes:** Verdict EQUAL on all nine compared rows (headline score 18=18; Hygiene 17=17; Modern TLS
+20=20; Identity 9=9; Agility 25=25; Data at Rest 22=22; Data in Motion 13=13; CRITICAL 6=6;
+certificates 20=20). Full comparison table and independent re-derivation table in
+`.planning/phases/211-denominator-correctness/211-LIVE-MEASUREMENT.md` (Scan A section). This is
+ONE sample on ONE estate at ONE scan width — both guides this phase edited state that scope
+explicitly rather than claiming permanent parity. `finding_severity_counts`' non-CRITICAL buckets
+(HIGH/MEDIUM/LOW/INFO) do diverge between the two label-generation paths — a known, expected,
+non-scoring-relevant difference, recorded rather than hidden.
+
+---
+
+### UAT-211-02: `ports_tls` Width Comparison Discharges DENOM-03's Behavioural Clause
+
+**ID:** UAT-211-02
+**Title:** A wide-vs-narrow `ports_tls` scan-width comparison on live infrastructure produces a
+directional verdict — inverts or flattens relative to the historical pattern — rather than an
+unmeasured assumption
+**Maps to:** DENOM-03 (behavioural clause)
+
+**What to test:** DENOM-03's endpoint/domain denominator fix (`0b0ed1c7`, already landed before this
+phase) is unit-tested, but its behavioural consequence — whether widening `ports_tls` still inflates
+the score the way the pre-fix code did — had never been measured live. The requirement's own literal
+text accepts "inverts or flattens" as satisfaction, not a specific direction.
+
+**Steps:** Two live scans on identical `multihost` infrastructure, differing only in `ports_tls`
+width: wide (14 ports, the committed default, `scan_run_id
+2026-09-28T13:16:55.319715+00:00`) and narrow (2 ports — `443` and `993`, chosen so the only
+mail-only hosts in the fleet still earn TLS candidacy, `scan_run_id
+2026-09-28T13:21:30.232752+00:00`). Headline scores and all six subscores were read from each scan's
+own on-disk artifacts.
+
+**Pass Criteria:** the wide-vs-narrow relationship measurably inverts or flattens relative to the
+historical 2-port=89-vs-10-port=91 pair (`.planning/decisions/999.113-denominator-semantics.md:86`),
+rather than reproducing the same "wider always scores higher" shape unexamined.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated + live evidence
+**Notes:** Verdict INVERTED: narrow (2-port) scored 20/100, wide (14-port) scored 18/100 — the
+opposite direction from the historical pair, where narrower scored lower. Hygiene, Modern TLS and
+Identity (the three subscores whose ratios divide by `assessable_endpoint_count`/`certs_observed`)
+moved between widths (17->23, 20->23, 9->11); Agility, Data at Rest and Data in Motion stayed flat.
+Full measurement, mechanism discussion, and the bind-mount caveat encountered live are in
+`211-LIVE-MEASUREMENT.md` (Scan B section). INVERTED is recorded as a measured, honest outcome, not
+retargeted to look like the historical direction.
+
+---
+
+### UAT-211-03: Modern TLS Subscore No Longer Moves With an Unrelated LOW-Severity Finding
+
+**ID:** UAT-211-03
+**Title:** `legacy_tls_count` is derived from endpoint TLS-version fields, not from a raw
+count-of-all-LOW-severity-findings proxy, so an unrelated LOW finding cannot move the Modern TLS
+subscore
+**Maps to:** DENOM-04 (17-vs-18 fix, leg 2)
+
+**What to test:** Before this phase, `legacy_tls_count` on the dashboard pipeline was `sev.get("LOW",
+0)` — a proxy that counted every LOW-severity finding of any kind, not just legacy-TLS ones, and was
+a structural zero on a pipeline that emits no LOW severity at all. `c1245a55` replaced it with a
+count derived from the same endpoint TLS-version fields both pipelines already read.
+
+**Steps:**
+`tests/test_evidence_finding_vocabulary_parity.py::test_unrelated_low_severity_finding_does_not_move_legacy_tls_count`,
+`::test_cli_vocabulary_legacy_tls_count_is_pinned_at_two`,
+`::test_dashboard_vocabulary_legacy_tls_count_is_pinned_at_two`,
+`::test_modern_tls_subscore_identical_across_pipelines`.
+
+**Pass Criteria:** the cited pinned-oracle nodes pass, including the specific node proving an
+unrelated LOW-severity finding cannot move `legacy_tls_count`; the fix was proven RED first by
+211-03's own falsification before the endpoint-derived replacement shipped.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** RED-proof and GREEN implementation recorded in `211-03-SUMMARY.md`
+(`be3e06da` -> `c1245a55`). Re-verified live in this phase's Scan A comparison
+(`legacy_tls_count` 1=1 on both surfaces, `211-LIVE-MEASUREMENT.md`).
+
+---
+
+### UAT-211-04: Coverage Gate Reddens on a New Scoring-Critical Title Without a Disposition
+
+**ID:** UAT-211-04
+**Title:** Adding a new title-matched scoring counter to `evidence.py` without recording its
+cross-surface disposition fails a run-time source-scan gate, not a hand-maintained checklist
+**Maps to:** DENOM-04
+
+**What to test:** This project's own recurring lesson (named repeatedly in CLAUDE.md's Staleness
+Review Cadence and GSD `state.*` sections) is that a hand-derived list of sites drifts from the real
+set. `211-04` applied that lesson to the finding-vocabulary bridge: the occurrence set of
+scoring-critical titles is regenerated from installed source at test-run time, not carried forward
+from a written list, and every title found must have a disposition entry.
+
+**Steps:**
+`tests/test_evidence_scoring_title_coverage.py::test_every_evidence_scoring_title_is_dispositioned`,
+`::test_every_disposition_verdict_is_one_of_the_three_allowed`,
+`::test_every_bridged_disposition_has_a_dashboard_bridge_entry`,
+`::test_every_dispositioned_title_still_exists_in_cli_vocabulary`,
+`::test_unbridgeable_dispositions_name_a_real_evidence_counter`.
+
+**Pass Criteria:** all five cited nodes pass, and the gate was proven RED by a live source-scan
+finding an undispositioned title before the ledger was completed (211-04-SUMMARY.md's own RED-proof
+step), confirmed by `git diff --exit-code quirk/intelligence/evidence.py` after the fix.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** Gate and disposition ledger added `8fa9c26e` / `5ccefaad`. This is a non-vacuity-guarded
+gate — it fails closed if the source scan ever returns zero titles, per this project's standing rule
+that a written list is not a safeguard.
+
+---
+
+### UAT-211-05: Unbridgeable Cross-Surface Divergence Is Disclosed, Not Hidden
+
+**ID:** UAT-211-05
+**Title:** The one finding type that cannot be bridged between the two pipelines
+(`"HTTP on TLS-designated port"`, dashboard-only, measures 0 on the reference estate) is named
+explicitly in both client- and operator-facing guides and in a tracked todo, rather than silently
+absorbed into the "parity achieved" claim
+**Maps to:** DENOM-04
+
+**What to test:** `211-04` found one finding type with no dashboard equivalent and no viable bridge
+path. Rather than treating this as a full-parity blocker or hiding it, the phase disclosed it as a
+named, scoped residual.
+
+**Steps:** `git ls-files --error-unmatch
+.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`;
+`grep -n '"HTTP on TLS-designated port"' docs/report-interpretation.md docs/operators-guide.md`.
+
+**Pass Criteria:** the todo is tracked (git-visible), and both guides name the residual explicitly
+rather than omitting it from their parity claims.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated
+**Notes:** Todo filed `8709eb36` (211-04); both guides updated to name the residual in `fb6ff014`
+(211-07). Not tag-blocking — measures 0 on the reference estate and did not move any subscore in
+this phase's live measurement.
 
 ---
