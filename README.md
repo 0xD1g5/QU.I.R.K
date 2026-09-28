@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.21.0
+# QU.I.R.K. — v5.25.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -82,10 +82,33 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.21
+## What's New in v5.25
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
+This release covers four milestones shipped since v5.21.0 (v5.22, v5.23, v5.24, v5.25) — none of
+which had been tagged individually. **The scoring model moved again in v5.25**
+(`SCORING_VERSION` 2.0 -> 3.0, absolute consequence ceiling, no-PQC-no-100, non-linear prevalence
+curve) — v5.25 scores are not comparable with v5.21-v5.24 scores, which themselves are not
+comparable with pre-5.20 scores.
 
+- **v5.25 Score Truth & Release Cut (Phases 210-213)** — cross-surface score parity so CRITICAL
+  count, certificate count, and the headline 0-100 score now match exactly between the report and
+  dashboard pipelines; every ratio penalty now divides by the population its numerator is drawn
+  from (denominator correctness); a written score-dilution decision (P2b) recommending no
+  implementation change, made and recorded rather than shipped as code; and shipped-product defect
+  fixes including a real Date-sort fix and a qualified-pass theme-token colour-literal fix (205
+  instances across 17 files).
+- **v5.24 UAT Coverage Drain** — the UAT gap worklist now derives itself from the corpus instead of
+  being hand-maintained; a real browser E2E tier via Playwright (non-gating, so browser flake can't
+  redden the required check); consulting-grade report artifacts became reachable in the dashboard
+  behind an auth-gated read-only route; and five vendor catalog freshness claims were re-verified
+  by hand and found wrong in both directions.
+- **v5.23 Deliverable Experience** — consulting-grade reporting shipped CLI/config-side (report
+  branding and templates, deliberately excluded from the dashboard for path-traversal safety); a
+  score-lift roadmap re-frame surfacing projected-score deltas; and a finding storyline drawer.
+- **v5.22 Release & Parity Tail** — `v5.21.0` published to PyPI with Sigstore provenance
+  verification; full Tier 2/3 dashboard scan-field settability closed; standing
+  backlog-reconciliation gate green end-to-end.
 - **v5.21 Dashboard Parity & Quantum Exposure Map (Phases 191-195)** — a Connectors panel and
   Advanced scan-fields panel bring the dashboard's scan-creation form to parity with the config
   file, an always-on Executive Verdict layer driven by the server's authoritative rating, a
