@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T02:00:00.000Z"
-last_activity: 2026-09-28 -- Phase 210 plan 08 complete (final plan of Phase 210). docs/UAT-SERIES.md Series 210 added (UAT-210-01/02 PASS, UAT-210-03 SKIP/DEFERRED), docs/uat-coverage-gaps.md regenerated, Obsidian phase note written and UAT-SERIES.md synced to vault Digs, 210-VALIDATION.md rows flipped green. Ground-truth completion check: 8 PLANs, 8 SUMMARYs on disk, zero deficient -- phase.complete was NOT invoked. All 4 requirements (XSURF-01..04) independently Complete, but Phase 210's own headline-parity goal is PARTIALLY achieved only -- Success Criterion 5 (identical headline score across pipelines) is NOT MET (17 report vs 18 dashboard), filed as todo 260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard for Phase 211/212 follow-up. Phase 210 checkbox in ROADMAP.md left UNCHECKED to reflect this. Next: plan Phase 211 (Denominator Correctness).
+last_updated: "2026-09-28T12:42:32.728Z"
+last_activity: 2026-09-28 -- Phase 211 (Denominator Correctness) execution STARTED at 0 of 8 plans. Carried from Phase 210, still open: Success Criterion 5 NOT MET -- headline score 17 (report) vs 18 (dashboard) for one scan, isolated to Hygiene and Modern TLS; tracked at 260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard. Phase 210's ROADMAP checkbox stays UNCHECKED (goal PARTIAL) -- completed_phases is 0, not 1. Phase 211 is RE-SCOPED to verify + investigate: DENOM-01/02/03 already landed via 0b0ed1c7 (2026-09-13).
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 8
-  percent: 100
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -240,9 +240,11 @@ See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 210 — Cross-Surface Score Parity (8 plans, 6 waves). Making one scan
-yield the same headline score, CRITICAL count and certificate count from the report pipeline and the
-dashboard pipeline — today 15/100 + 5 CRITICAL vs 19/100 + 7 CRITICAL for the same scan.
+**Current focus:** Phase 211 — Denominator Correctness (RE-SCOPED to verify + investigate; 8 plans,
+6 waves). Proving DENOM-01..04 satisfied by citation plus live measurement rather than by
+implementation, then investigating the 17-vs-18 headline-score divergence that Phase 210 left open
+(isolated to Hygiene and Modern TLS). Denominator fields in scoring.py are already correct and must
+not be edited.
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1358,10 +1360,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 211 (Denominator Correctness — RE-SCOPED) — PLANNED, ready to execute
+Phase: 211 (Denominator Correctness — RE-SCOPED) — EXECUTING
 Plan: 0 of 8 executed (8 PLAN.md files on disk, enumerated; 0 SUMMARY.md)
-Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria); Phase 211 planned
-Last activity: 2026-09-28 -- Phase 211 re-scoped from implement to verify-plus-investigate
+Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria, checkbox UNCHECKED);
+Phase 211 planned and now executing
+Last activity: 2026-09-28 -- Phase 211 execution started. Re-scoped earlier
 (`1804d703`): a live source audit found DENOM-01/02/03 already landed on main via `0b0ed1c7`
 (2026-09-13, confirmed an ancestor of HEAD), so the requirements as written on 2026-09-27 described
 an already-fixed defect. `211-CONTEXT.md` written with 8 decisions; stale arithmetic corrected in
