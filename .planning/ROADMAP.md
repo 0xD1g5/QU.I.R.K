@@ -130,25 +130,64 @@ now REFUTED and needs measuring.**
      calibration ladder (never by argument, per 999.113 D5), stating per ratio family which
      population is the correct divisor — certificate ratios over `certs_observed`, endpoint ratios
      over the assessable-endpoint count — and citing the measured ladder rows that produced it.
-  2. **CORRECTED 2026-09-28 — the original prediction was measured against a stale tree.** The
+     **MET, by citation to a PRIOR commit — measured 2026-09-28.** `.planning/decisions/
+     999.113-denominator-semantics.md` is DECIDED 2026-09-13 and tracked (committed in `1804d703`,
+     Phase 211's own re-scope commit). `git ls-files --error-unmatch` confirms.
+  2. **CORRECTED 2026-09-28 — the original prediction was measured against a stale tree. MET, by
+     citation + live measurement — re-confirmed 2026-09-28 (211-01).** The
      `cert_denom = certs_observed` change ALREADY LANDED in `0b0ed1c7` (2026-09-13, ancestor of
      HEAD), so this criterion is discharged by citation + live measurement, not by new code. The
      original text predicted Identity moving 25/25 -> ~19/25 via `-(5/17) × 14.0 ≈ -4.12`, replacing
-     `-(5/370) × 14.0`. Live (`quirk-output/intelligence-20260928-014244.json`): `certs_observed`
-     is **20** not 17, `assessable_endpoint_count` is **216** and `totals.endpoints` **775** not 370
-     — so the live term is `-(5/20) × 14.0 = -3.50` and Identity already scores **9/25**, not 25/25
-     (Phase 210's SAML fixes made it emit). Record the measured numbers; do not chase -4.12.
-  3. **ALREADY SATISFIED for the first clause — corrected 2026-09-28.** `endpoint_denom` and
-     `domain_denom` already read `assessable_endpoint_count`, not `totals.endpoints`
-     (`quirk/intelligence/scoring.py:412`/`:421`, gated by
-     `tests/test_score_denominator_999_113.py`, 3 passed). The remaining, genuinely open clause is
-     the behavioural one: the 10-port vs 2-port `multihost` measurement (91 vs 89 on identical
-     infrastructure) must invert or flatten — measure it live rather than assuming the landed fix
-     achieved it.
+     `-(5/370) × 14.0`. Live (`quirk-output/intelligence-20260928-014244.json`, re-derived 211-01):
+     `certs_observed` is **20** not 17, `assessable_endpoint_count` is **216** and `totals.endpoints`
+     **775** not 370 — so the live term is `-(5/20) × 14.0 = -3.50` and Identity already scores
+     **9/25**, not 25/25 (Phase 210's SAML fixes made it emit). The measured numbers are recorded
+     here in place of the original -4.12 prediction, per this criterion's own instruction.
+  3. **ALREADY SATISFIED for the first clause — corrected 2026-09-28. MET in full, both clauses —
+     live-measured 2026-09-28 (211-05).** `endpoint_denom` and `domain_denom` already read
+     `assessable_endpoint_count`, not `totals.endpoints` (`quirk/intelligence/scoring.py:412`/`:421`,
+     gated by `tests/test_score_denominator_999_113.py`, 3 passed). **Behavioural clause, measured
+     live rather than assumed**: a fresh multihost scan at the wide, committed `ports_tls` width (14
+     ports, `scan_run_id 2026-09-28T13:16:55.319715+00:00`) scored **18/100**; the identical
+     infrastructure re-scanned at a narrow 2-port width (`[443,993]`,
+     `scan_run_id 2026-09-28T13:21:30.232752+00:00`) scored **20/100**. Relative to the historical
+     pair this criterion cites (10-port=91 vs 2-port=89, `999.113-denominator-semantics.md:86` —
+     widening RAISED the score by 2), the live pair **INVERTED**: widening now LOWERS the score by
+     2. This is neither the historical direction nor a flat/noise result (the underlying pre-cap
+     computed sums differ by 7: 78 vs 71) — it satisfies this criterion's own literal "inverts or
+     flattens" acceptance test via the "inverts" branch. Full evidence:
+     `211-LIVE-MEASUREMENT.md`.
   4. A known scan is red-proved to move in the predicted direction before the fix is accepted, all
      five calibration ladder rungs are re-measured, CBOM golden fixtures and `score-strings.json` are
      regenerated and pass their generator-drift gates, and `_apply_weighted_impacts`'s 25-point clamp
      is checked for saturation now that penalties are larger.
+     **MET with ONE STATED DEVIATION — measured 2026-09-28 (211-01).** (a) Red-proof: already
+     performed for the denominator change itself at `a49c7dd6`→`9fadfaa2` (both resolve as commits,
+     predate this milestone). (b) Ladder: `24 passed, 3 xfailed`
+     (`tests/test_score_properties.py`); the 3 xfails are the Phase-212-owned `test_p2b_...`
+     dilution node, not a DENOM-04 gap. **(c) DEVIATION: CBOM golden fixtures and
+     `score-strings.json` were NOT regenerated — dispositioned N/A with evidence instead.**
+     Measurement found neither artifact encodes any score/ratio/denom key, so this criterion's
+     literal "regenerated" instruction does not apply; `test_score_strings_freshness.py` stayed
+     green (5 passed) throughout, confirming no drift was introduced by leaving them untouched. (d)
+     Clamp saturation: measured and locked (`tests/test_score_clamp_property.py::
+     test_agility_ceiling_saturates_on_reference_estate`) — Agility saturates at the 25-point
+     ceiling (+11.59 absorbed), no category floors, Hygiene/Modern TLS sit clear of either boundary.
+  **17-vs-18 outcome (the phase's actual centre of gravity, per its RE-SCOPE note above).** Root
+  cause: a finding-title vocabulary mismatch (Hygiene, `evidence.py::_finding_targets` matching only
+  CLI-canonical title strings against a deliberately independent dashboard vocabulary) plus a
+  severity-proxy structural zero (Modern TLS, `legacy_tls_count = sev.get("LOW", 0)`, always 0 on
+  the dashboard pipeline, which emits no LOW findings). Fixed in two legs: `211-02` (`127913ca`,
+  routes titles through the existing `finding_title_bridge.py` translation) and `211-03`
+  (`c1245a55`, derives `legacy_tls_count` from endpoint fields via a new shared predicate). Guarded
+  by a run-time source-scan coverage gate (`211-04`, `tests/test_evidence_scoring_title_coverage.py`)
+  so the mapping table cannot silently drift. Live verdict: **EQUAL** — report and dashboard both
+  18/100 for `scan_run_id 2026-09-28T13:16:55.319715+00:00`, all six subscores matching exactly,
+  cross-checked by an independent DB re-derivation (13/13 counters matched). Full decision record:
+  `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`. One residual —
+  `"HTTP on TLS-designated port"` has no dashboard equivalent, measures 0 on the reference estate,
+  dispositioned `unbridgeable-latent-divergence`, tag-blocking verdict NO — tracked at
+  `.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`.
 **Plans**: 8 plans in 6 waves
 
 Plans:
