@@ -29709,3 +29709,201 @@ consistent with `.planning/`'s standing convention for phase artifacts — the g
 disk even though it is not git-tracked.
 
 ---
+
+## Series 213: Shipped Product Defects — Sort & Theme Tokens (Phase 213 — v5.25)
+
+**Last Updated:** 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. Five cases added:
+four PASS, one GAP. This phase fixed the two product defects v5.24 recorded rather than absorbed,
+flipping `UAT-7-12` and `UAT-7-21` from FAIL to PASS. Those two cases live in Series 7 and are NOT
+duplicated here; this series records what Phase 213 added that Series 7 does not cover.
+`UAT-213-01` records the phase's largest finding — the authoritative colour detector had been
+UNDER-REPORTING BY ROUGHLY HALF, and the true pre-fix total was 205 across 17 files, not the 95 the
+narrow detector saw nor operator decision D-14's own ~188 hypothesis. `UAT-213-02` records the
+theme RE-RESOLUTION fix, which no source test can verify and which rests on operator visual
+confirmation. `UAT-213-03` records the gate's transition from an `it.fails` open-defect marker to a
+standing regression guard, proved RED before the flip. `UAT-213-04` records Success Criterion 2 as
+NOT MET AS WRITTEN — the third such honest recording across Phases 211/212/213. `UAT-213-05` is a
+GAP: two of `UAT-7-21`'s own Pass Criteria bullets are covered by no instrument, named rather than
+absorbed into its PASS.)
+
+### UAT-213-01: The Colour Detector Was Under-Reporting, and the True Pre-Fix Count Was 205
+
+**ID:** UAT-213-01
+**Title:** The widened colour audit detects all four literal spellings, and the phase records that
+the pre-fix total was 205 across 17 files — not the narrow detector's 95, nor D-14's ~188 hypothesis
+**Maps to:** UIFIX-02 (Success Criterion 3)
+
+**What to test:** Success Criterion 3 required the count be re-derived with an instrument
+independent of both prior estimates, treating the disagreement itself as a finding. The re-derivation
+found that the AUTHORITATIVE GATE ITSELF was the under-reporting instrument: its `RAW_HSL_RE`
+required literal whitespace (`hsl(142 71% 45%)`), so it could not see Tailwind's underscore form
+(`hsl(142_71%_45%)`, 93 sites) nor the comma form (`hsl(0, 72%, 51%)`, 17 sites, all in
+`roadmap.tsx`). The comma form is not a typo: `exposure-map.tsx`'s comment trail records that
+space-separated `hsl()` resolves to BLACK in Cytoscape's canvas parser.
+
+**Steps:**
+```
+G=src/dashboard/src/components/__tests__/hardcoded-color-audit.test.tsx
+grep -qE 'hsl\(\s*\(\?!var\\\(\)|UNDERSCORE|COMMA' "$G"   # all spellings named in the detector
+grep -q "205" .planning/phases/213-shipped-product-defects/213-COLOUR-COUNT-FINDING.md
+grep -q "RESIDUAL" "$G" && grep -q "NO_LAUNDERING" "$G"
+```
+
+**Pass Criteria:** the detector matches hex plus all three HSL spellings; the count finding records
+205 across 17 files with the per-form breakdown (hex 67 + whitespace-HSL 28 + underscore-HSL 93 +
+comma-HSL 17); and a `RESIDUAL` guard re-derives uncovered construct shapes from source at run time
+so a FOURTH spelling fails loudly rather than waiting to be found by the next planner.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated + orchestrator
+**Notes:** 205 was reproduced INDEPENDENTLY FOUR TIMES — by the planner, by the orchestrator's
+standalone Node script, by the plan-checker, and by the live widened gate itself (flipped to `it`,
+counted, restored byte-identical). A fifth reproduction ran against the phase's starting commit via
+`git show a7e9005c:<path>` without a checkout. The verifier separately TRIPPED both guards —
+injecting `hsla(200, 50%, 50%, 0.5)` into `sidebar.tsx` and `#ff0000` into `cytoscape-theme.ts` —
+confirming they are real mechanisms rather than tautologies, then restored both files clean. Prior
+estimates for the record: the todo said 50 across 8 (REFUTED); the v5.24 audit said 95 across 9
+(CORRECT for the NARROW detector); the gate's own docstring said "95 across 10" (count right, file
+count off by one); D-14 hypothesised ~188.
+
+---
+
+### UAT-213-02: The Cytoscape Graphs Re-Resolve Colours on a Live Theme Toggle
+
+**ID:** UAT-213-02
+**Title:** All three Cytoscape graphs rebuild their style objects on a theme change, verified by
+operator observation because no source test can reach this property
+**Maps to:** UIFIX-02 (Success Criterion 5)
+
+**What to test:** Before this phase, NONE of the three `cytoscape({...})` call sites re-resolved on
+theme change — `theme` appeared in no effect dependency array (`roadmap.tsx`, `cbom.tsx`,
+`exposure-map.tsx`). `exposure-map.tsx` already resolved correctly at BUILD time and still went
+stale on toggle. Cytoscape cannot read CSS custom properties, so a `var(--token)` string in a style
+object yields NO COLOUR — meaning a sed-style substitution would produce three invisible graphs and
+a perfectly green source gate.
+
+**Steps (MANUAL — this is the point of the case):**
+```
+1. quirk serve --port 8512 --no-open
+2. Open /roadmap, /cbom (Graph tab), /exposure-map
+3. On EACH: toggle light/dark WHILE THE GRAPH IS ON SCREEN — not two separate page loads
+4. Confirm fills/edges/labels re-colour, selection highlight survives the toggle, and nothing
+   renders black or invisible
+```
+
+**Pass Criteria:** all three graphs re-colour on a live toggle without a reload; node labels stay
+legible against every fill in both themes; selection highlight re-colours rather than sticking at
+the pre-toggle colour or resetting.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** operator (manual)
+**Notes:** Confirmed by the operator during plan 213-09's walkthrough against a live dashboard
+carrying 18,084 `crypto_endpoints`. **This case is deliberately MANUAL and must stay that way**: the
+colour audit is a SOURCE test and was already green before this work landed — it would be equally
+green if all three graphs rendered black. The fix is a shared literal-free resolver
+(`src/dashboard/src/lib/cytoscape-theme.ts`) plus a `MutationObserver`-backed `useThemeRevision()`,
+chosen over a `theme` effect dependency specifically to sidestep an unverified React
+effect-ordering race against `ThemeProvider`'s classList toggle. The same walkthrough discharged
+plan 213-06's disclosed jsdom GAP via a two-PDF dark-session-vs-light-session comparison.
+
+---
+
+### UAT-213-03: The Colour Gate Became a Standing Regression Guard, Proved RED Before the Flip
+
+**ID:** UAT-213-03
+**Title:** `hardcoded-color-audit.test.tsx` transitioned from an `it.fails` open-defect marker to a
+standing guard, with the RED proof captured before `.fails` was removed
+**Maps to:** UIFIX-02 (Success Criterion 4)
+
+**What to test:** The gate's polarity was INVERTED while the defect was open: a GREEN run meant the
+dashboard still had hardcoded colours. Success is the node going RED with vitest's
+`Expect test to fail`, after which `.fails` is removed. Removing `.fails` from a gate not first seen
+red-as-expected is how a vacuously-green gate ships.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/hardcoded-color-audit.test.tsx   # expect: 1 passed
+grep -c "it\.fails" src/components/__tests__/hardcoded-color-audit.test.tsx   # expect: 0
+grep -q "toEqual(\[\])" src/components/__tests__/hardcoded-color-audit.test.tsx
+```
+
+**Pass Criteria:** `.fails` is gone; the node passes honestly with a full-strength `toEqual([])`;
+no allowlist, baseline snapshot or narrowed pattern exists anywhere in the file; and the node's
+`it()` title is byte-identical to its pre-phase text so the UAT citation guard's link survives.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated + orchestrator
+**Notes:** The RED proof (`Error: Expect test to fail`) was captured verbatim BEFORE `.fails` was
+removed, and independently reproduced by the orchestrator. The docstring retains its explanation of
+the `it.fails`-era semantics for posterity — a future reader needs to understand why the node was
+shaped that way — reworded to avoid the literal substring so the plan's own `grep -c` verify step
+returns 0 without deleting the history.
+
+---
+
+### UAT-213-04: Success Criterion 2 Is Recorded NOT MET AS WRITTEN, With What Was Achieved
+
+**ID:** UAT-213-04
+**Title:** Criterion 2's COV-04 27-of-28 -> 28-of-28 target is recorded as unmeetable against the
+artifact it names, rather than reinterpreted into compliance
+**Maps to:** UIFIX-01 (Success Criterion 2)
+
+**What to test:** Criterion 2 required COV-04's shortfall to close "in the regenerated
+`docs/uat-coverage-gaps.md`". That generated worklist has never carried that tally at any point in
+the project's history — it is a v5.24 REQUIREMENT-LEVEL figure living in `.planning/PROJECT.md` and
+`.planning/REQUIREMENTS.md`, and the generator's own scope is GAP cases only.
+
+**Steps:**
+```
+grep -cE "27 of 28|COV-04|UAT-7-12|UAT-7-21" docs/uat-coverage-gaps.md    # expect: 0
+grep -q "NOT MET AS WRITTEN" .planning/ROADMAP.md
+```
+
+**Pass Criteria:** the criterion is recorded NOT MET AS WRITTEN in ROADMAP.md, with the reason
+(wrong artifact named) and what WAS achieved (the underlying product absence fixed; corpus totals
+moved FAIL 7->5, PASS 754->756) both stated.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** automated + orchestrator
+**Notes:** Independently re-verified by the orchestrator AND by the phase verifier against the
+FRESHLY REGENERATED file, not the pre-phase one. This is the THIRD NOT-MET-AS-WRITTEN recorded
+across Phases 211/212/213 — a rate suggesting this milestone's criteria were written against
+EXPECTED artifacts rather than inspected ones, which is worth weighing before Phase 214's release
+criteria are trusted literally. The criterion was not wrong about the GOAL, only about the ARTIFACT:
+no amount of correct work could make "28 of 28" appear in a worklist that does not emit such tallies.
+
+---
+
+### UAT-213-05: Two of UAT-7-21's Pass Criteria Bullets Are Covered by No Instrument
+
+**ID:** UAT-213-05
+**Title:** The electric-blue accent value and dark-background consistency bullets of `UAT-7-21` are
+verified by no automated test and by no recorded manual check
+**Maps to:** UIFIX-02
+
+**What to test:** `UAT-7-21` is dispositioned PASS (qualified). Two of its own Pass Criteria bullets
+are covered by nothing: the colour audit is a SOURCE test that cannot assert a RENDERED value, and
+plan 213-09's operator walkthrough covered the three Cytoscape graphs, the certificates sort and the
+two-PDF comparison — it did not enumerate these two bullets.
+
+**Steps:**
+```
+grep -q "electric-blue accent" docs/UAT-SERIES.md     # named in UAT-7-21's disposition
+ls .planning/todos/pending/260928-uat-7-21-two-pass-criteria-uncovered-by-any-instrument.md
+```
+
+**Pass Criteria:** GAP — no substitute coverage. The two bullets are NAMED in `UAT-7-21`'s
+disposition rather than absorbed into its PASS, and a tracked todo carries them forward with a
+named owner.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-28  **Tester:** orchestrator
+**Notes:** **GAP — no substitute coverage.** Recorded as a PASS because this project's UAT gate
+polices UNRECORDED cases, not UNCOVERED ones, and GAP is a valid passing disposition; the honest
+disposition of a real gap is to name it. NOT tag-blocking on its own, but a release tag freezes the
+shipped appearance and `UAT-7-21` will read PASS in the corpus at tag time — a reader who does not
+open the disposition text will not know these two bullets were never checked. Tracked at
+`.planning/todos/pending/260928-uat-7-21-two-pass-criteria-uncovered-by-any-instrument.md`.
+
+---

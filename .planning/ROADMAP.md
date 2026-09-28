@@ -55,8 +55,20 @@ cause at an exact file:line. This milestone adds no new detection capability.
   explicitly NOT Phase 214, marked OPERATOR-RESERVED. 5 of 5 plans; `212-VERIFICATION.md` status
   **passed**, 4/4 criteria, goal and requirement verdicts AGREE. Decision:
   `.planning/decisions/212-score-dilution-denominator-decision.md`.
-- [ ] **Phase 213: Shipped Product Defects (Series 7)** - The two shipped `docs/UAT-SERIES.md` FAILs
-  from v5.24 — certificate-table sort and theme-token colour literals — are fixed.
+- [x] **Phase 213: Shipped Product Defects (Series 7)** - The two shipped `docs/UAT-SERIES.md` FAILs
+  from v5.24 — certificate-table sort and theme-token colour literals — are fixed. 10 of 10 plans;
+  `213-VERIFICATION.md` status **passed**, 5/5, goal and requirement verdicts AGREE. `UAT-7-12` PASS
+  (real `Date` sort via `sortingFn: "datetime"`, not a display-string sort); `UAT-7-21` **QUALIFIED
+  PASS** on the WIDENED gate's red-then-green transition PLUS operator visual confirmation — never
+  the source gate alone. **The detector had been under-reporting by roughly half:** operator decision
+  **D-14** chose to fix ALL literals and widen the gate, and the live re-derivation then found **205
+  across 17 files** (hex 67 + whitespace-HSL 28 + underscore-HSL 93 + comma-HSL 17, all comma-form in
+  `roadmap.tsx`) — not the 95 the narrow detector saw, nor D-14's own ~188 hypothesis. Reproduced
+  independently four times. Criterion 2 recorded **NOT MET AS WRITTEN** (`docs/uat-coverage-gaps.md`
+  has never carried COV-04's 27-of-28 tally — it is a requirement-level figure in
+  `PROJECT.md`/`REQUIREMENTS.md`, not generator output); what WAS achieved: corpus totals moved
+  FAIL 7->5, PASS 754->756. Two `UAT-7-21` Pass Criteria bullets (electric-blue accent,
+  dark-background consistency) remain **uncovered by any instrument** and are named as such.
 - [ ] **Phase 214: Release Cut** - `v5.25.0` is tagged, published to PyPI, and its release notes and
   the 7 backlogged release bodies are real.
 
