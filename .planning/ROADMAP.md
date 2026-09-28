@@ -26,9 +26,21 @@ cause at an exact file:line. This milestone adds no new detection capability.
   done, all 4 requirements Complete; left unchecked because the phase's own stated goal is only
   PARTIALLY achieved** — CRITICAL count and certificate count now match exactly, but the headline
   score still diverges by 1 point (Success Criterion 5 NOT MET). See 210-08-SUMMARY.md.
-- [ ] **Phase 211: Denominator Correctness** - Every ratio penalty divides by the population its
+  **UPDATE 2026-09-28 — Criterion 5 is now SATISFIED, by Phase 211's work, not by Phase 210's.**
+  Live measurement `scan_run_id 2026-09-28T13:16:55.319715+00:00`: report 18/100 == dashboard
+  18/100, all six subscores matching. Root cause was a finding-title vocabulary mismatch plus a
+  LOW-severity-proxy structural zero, fixed in `127913ca` and `c1245a55`. This box is left
+  UNCHECKED deliberately: the provenance matters, and whether to check it is a milestone-close
+  decision for the operator. See `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`.
+- [x] **Phase 211: Denominator Correctness** - Every ratio penalty divides by the population its
   numerator is drawn from, decided by measurement against the calibration ladder and re-proved red
-  before acceptance.
+  before acceptance. **RE-SCOPED to verify + investigate (`1804d703`)** — DENOM-01/02/03 had already
+  landed via `0b0ed1c7` (2026-09-13). 8 of 8 plans; `211-VERIFICATION.md` status **passed**, 8/8
+  must-haves, goal-level and requirement-level verdicts AGREE. Closed Phase 210's unmet Criterion 5
+  (18/100 == 18/100 live). DENOM-03's behavioural clause measured **INVERTED** (narrow 2-port 20/100
+  vs wide 14-port 18/100) — Phase 212 owns whether width-neutrality is the target. One residual
+  disclosed, NOT tag-blocking: `"HTTP on TLS-designated port"` is unbridgeable and measures 0 on the
+  reference estate.
 - [ ] **Phase 212: Score Dilution — Decision Only** - A written, measured denominator decision for
   P2b exists; no implementation ships.
 - [ ] **Phase 213: Shipped Product Defects (Series 7)** - The two shipped `docs/UAT-SERIES.md` FAILs
