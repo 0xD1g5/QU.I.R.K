@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-27T23:59:55.629Z"
-last_activity: 2026-09-27 -- Phase 210 plan 04 complete (XSURF-03 scan_run_id resolution)
+last_updated: "2026-09-28T01:33:35.000Z"
+last_activity: 2026-09-28 -- Phase 210 plan 07 complete (docs retarget per D-20 + master guide regen + vault sync). Plan 06 (live re-run) and plan 08 remain; 07 does not depend on 06 and executed without it, citing the XSURF-04 gate in place of live numbers.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 4
-  percent: 50
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -1359,11 +1359,17 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 210 (Cross-Surface Score Parity) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8 complete (01-05, 07; 06 and 08 remain)
 Status: Executing Phase 210
-Last activity: 2026-09-27 -- Phase 210 plan 05 complete (XSURF-04 three-number cross-surface
+Last activity: 2026-09-28 -- Phase 210 plan 07 complete (docs retarget per D-20: additions to
+report-interpretation.md §26 / operators-guide.md §3.1.7, corrections to demo-runbook-2026-09-18.md
+and expected_results_v4.md, master guide regenerated and vault-synced). Executed without plan 06's
+live re-run evidence (no 210-06-SUMMARY.md on disk); both edited docs cite the XSURF-04 regression
+gate and state the live re-run is deferred rather than quoting invented numbers.
+
+### Phase 210 plan 05 (2026-09-27) — XSURF-04 three-number cross-surface
 equality gate + both required falsifications; A==B alone found insensitive to the shared
-evaluate_identity_endpoints/evidence.py dedupe sites, widened with pinned-oracle assertions)
+evaluate_identity_endpoints/evidence.py dedupe sites, widened with pinned-oracle assertions
 
 ### Phase 206 (2026-09-21) — Dashboard UI Coverage Drain, COMPLETE, 13 of 13 plans
 

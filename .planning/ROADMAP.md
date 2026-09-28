@@ -91,7 +91,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [ ] 210-06-PLAN.md — live multihost re-run recording both pipelines' numbers (wave 5, non-autonomous)
-- [ ] 210-07-PLAN.md — doc retarget per D-20, master-guide regeneration, vault sync (wave 5)
+- [x] 210-07-PLAN.md — doc retarget per D-20, master-guide regeneration, vault sync (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
