@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T18:50:00.000Z"
-last_activity: 2026-09-28 -- Phase 211 (Denominator Correctness) at 6 of 8 plans (211-01..06 SUMMARY.md enumerated on disk; 211-07/08 remain). 211-06 recorded what 211-01/04/05 measured: DENOM-01..04 all marked complete in REQUIREMENTS.md, each with a scoped citation (DENOM-01/02 by prior commit 0b0ed1c7 + live measurement; DENOM-03's behavioural clause by the live INVERTED ports_tls-width verdict, 211-05; DENOM-04 with one stated deviation -- CBOM/score-strings dispositioned N/A, not regenerated). The Phase 210 residual (17 report vs 18 dashboard for one scan) is RESOLVED: root cause was a finding-title vocabulary mismatch (Hygiene) plus a severity-proxy structural zero (Modern TLS), fixed in 211-02/211-03, confirmed EQUAL live in 211-05 (scan_run_id 2026-09-28T13:16:55.319715+00:00, both pipelines 18/100, cross-checked by an independent DB re-derivation). Decision record: .planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md. The Phase 210 todo (260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard) is closed, moved to .planning/todos/completed/. One residual survives, NOT tag-blocking: "HTTP on TLS-designated port" has no dashboard equivalent, tracked at 211-http-on-tls-designated-port-has-no-dashboard-equivalent. Phase 210's ROADMAP checkbox stays UNCHECKED (goal PARTIAL) -- completed_phases is still 0, not 1. Phase 211's own checkbox also stays UNCHECKED -- 211-08 owns ground-truth closure.
+last_updated: "2026-09-28T21:45:00.000Z"
+last_activity: 2026-09-28 -- Phase 211 (Denominator Correctness) all 8 of 8 plans SUMMARY'd on disk (211-01..08, enumerated). 211-08 closed the phase's own artifacts: UAT Series 211 (5 cases, all PASS) added and docs/uat-coverage-gaps.md regenerated; Obsidian phase note written; 211-VALIDATION.md's 22-row Per-Task Verification Map fully resolved to green and its Ground-Truth Completion Check appended with an explicit COMPLETE verdict from an enumerated PLAN=SUMMARY=8 count; two regressions the full-suite ground-truth run surfaced (missing close_fds=False in two 211-02/211-04 test files, an unregistered pytest.skip() site from 211-01) were root-caused to earlier 211 plans and fixed, taking the excluded-lab-file full suite from 2 failed/5255 passed to 0 failed/5257 passed. DENOM-01..04 all marked complete in REQUIREMENTS.md, each with a scoped citation (DENOM-01/02 by prior commit 0b0ed1c7 + live measurement; DENOM-03's behavioural clause by the live INVERTED ports_tls-width verdict, 211-05; DENOM-04 with one stated deviation -- CBOM/score-strings dispositioned N/A, not regenerated). The Phase 210 residual (17 report vs 18 dashboard for one scan) is RESOLVED: root cause was a finding-title vocabulary mismatch (Hygiene) plus a severity-proxy structural zero (Modern TLS), fixed in 211-02/211-03, confirmed EQUAL live in 211-05 (scan_run_id 2026-09-28T13:16:55.319715+00:00, both pipelines 18/100, cross-checked by an independent DB re-derivation). Decision record: .planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md. The Phase 210 todo (260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard) is closed, moved to .planning/todos/completed/. One residual survives, NOT tag-blocking: "HTTP on TLS-designated port" has no dashboard equivalent, tracked at 211-http-on-tls-designated-port-has-no-dashboard-equivalent. Phase 210's ROADMAP checkbox stays UNCHECKED (goal PARTIAL) -- completed_phases is still 0, not 1. Phase 211's own top-level checkbox ALSO stays UNCHECKED by 211-08's own explicit binding constraint -- closing it is the orchestrator's call after independently verifying 211-VALIDATION.md's Ground-Truth Completion Check, not this plan's.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -1360,13 +1360,23 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 211 (Denominator Correctness — RE-SCOPED) — EXECUTING
-Plan: 6 of 8 executed (8 PLAN.md files on disk, enumerated; 6 SUMMARY.md: 211-01..06). 211-07
-(docs correction, master-guide regen, LIVE-03 vault sync) and 211-08 (UAT Series + ground-truth
-close-out) remain.
+Phase: 211 (Denominator Correctness — RE-SCOPED) — plans complete, closure pending orchestrator review
+Plan: 8 of 8 executed (8 PLAN.md files on disk, enumerated; 8 SUMMARY.md: 211-01..08). 211-08's own
+Ground-Truth Completion Check (in 211-VALIDATION.md) records verdict COMPLETE from an enumerated
+PLAN/SUMMARY count, a full-suite failing-node SET of zero (after fixing two in-scope regressions
+introduced by earlier 211 plans), and all four DENOM requirements `[x]` with scoped citations.
+Phase 211's own ROADMAP checkbox is left UNCHECKED by 211-08 on purpose -- closing it is the
+orchestrator's call after independently verifying that section, not this plan's.
 Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria, checkbox UNCHECKED);
-Phase 211 executing, DENOM-01..04 all marked complete, 17-vs-18 divergence RESOLVED (EQUAL, live)
-Last activity: 2026-09-28 -- Phase 211 plan 06 recorded what plans 211-01/04/05 measured: the
+Phase 211 all 8 plans done, DENOM-01..04 all marked complete, 17-vs-18 divergence RESOLVED (EQUAL, live)
+Last activity: 2026-09-28 -- Phase 211 plan 08 added UAT Series 211 (5 cases, all PASS) and
+regenerated docs/uat-coverage-gaps.md; wrote the Obsidian phase note; resolved 211-VALIDATION.md's
+22-row Per-Task Verification Map to all-green and appended its Ground-Truth Completion Check;
+found and fixed two regressions the full-suite ground-truth run surfaced (missing close_fds=False
+in two 211-02/211-04 test files; an unregistered pytest.skip() site from 211-01), both caused by
+earlier plans in this phase, neither pre-existing. Full suite (excluding the chaos-lab file whose
+infra 211-05 tore down) went from 2 failed/5255 passed to 0 failed/5257 passed after the fix.
+Plan 06 recorded what plans 211-01/04/05 measured: the
 decision doc `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md` is
 DECIDED and tracked; the Phase 210 todo is refuted and closed (moved to
 `.planning/todos/completed/`); DENOM-01..04 are hand-marked complete in REQUIREMENTS.md, each with a
