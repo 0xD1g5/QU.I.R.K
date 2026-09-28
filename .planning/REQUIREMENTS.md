@@ -40,7 +40,7 @@ hand a client two PDFs with different headline scores. Source:
       `findings-*.json` returns nothing while the same run's `intelligence-*.json` carries
       `identity_saml_weak_signing_ratio: 0.0054`. The evidence path and the finding-emission path
       have diverged; the evidence path is the correct one.
-- [ ] **XSURF-03**: The dashboard's "latest scan" is one scan. `SESSION_BRACKET = 5min`
+- [x] **XSURF-03**: The dashboard's "latest scan" is one scan. `SESSION_BRACKET = 5min`
       (`routes/scan.py`, mirrored `quirk/merge/scan.py:31`) resolves the no-`scan_id` branch by time
       window with no `scan_run_id` filter, merging runs 4m26s apart into 34 certificates (17×2) and
       14 CRITICAL. The window is **load-bearing for legacy NULL-`scan_run_id` rows** — narrow it
@@ -214,7 +214,7 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
 |-------------|-------|--------|
 | XSURF-01 | Phase 210 | Pending |
 | XSURF-02 | Phase 210 | Pending |
-| XSURF-03 | Phase 210 | Pending |
+| XSURF-03 | Phase 210 | Complete |
 | XSURF-04 | Phase 210 | Pending |
 | DENOM-01 | Phase 211 | Pending |
 | DENOM-02 | Phase 211 | Pending |

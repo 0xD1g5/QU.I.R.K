@@ -73,16 +73,16 @@ client receives it from the report pipeline or the dashboard pipeline.
 Plans:
 **Wave 1**
 
-- [ ] 210-01-PLAN.md — XSURF-01 written decision, decision-only, before any code change (wave 1)
+- [x] 210-01-PLAN.md — XSURF-01 written decision, decision-only, before any code change (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 210-02-PLAN.md — extract evaluate_identity_endpoints() with the (host, port, serial) dedupe; route becomes a caller; CLI composition (wave 2)
+- [x] 210-02-PLAN.md — extract evaluate_identity_endpoints() with the (host, port, serial) dedupe; route becomes a caller; CLI composition (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 210-03-PLAN.md — dedupe evidence.py's independent saml_weak_signing_count (wave 3)
-- [ ] 210-04-PLAN.md — resolve latest-scan by scan_run_id, window as NULL-only fallback; two stale comments corrected (wave 3)
+- [x] 210-03-PLAN.md — dedupe evidence.py's independent saml_weak_signing_count (wave 3)
+- [x] 210-04-PLAN.md — resolve latest-scan by scan_run_id, window as NULL-only fallback; two stale comments corrected (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

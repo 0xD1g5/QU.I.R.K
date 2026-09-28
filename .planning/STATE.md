@@ -4,13 +4,13 @@ milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
 last_updated: "2026-09-27T23:59:55.629Z"
-last_activity: 2026-09-27 -- Phase 210 execution started
+last_activity: 2026-09-27 -- Phase 210 plan 04 complete (XSURF-03 scan_run_id resolution)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -1359,9 +1359,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 210 (Cross-Surface Score Parity) — EXECUTING
-Plan: 1 of 8
+Plan: 4 of 8
 Status: Executing Phase 210
-Last activity: 2026-09-27 -- Phase 210 execution started
+Last activity: 2026-09-27 -- Phase 210 plan 04 complete (XSURF-03 scan_run_id resolution)
 
 ### Phase 206 (2026-09-21) — Dashboard UI Coverage Drain, COMPLETE, 13 of 13 plans
 
