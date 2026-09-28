@@ -619,9 +619,29 @@ misleading" caveat — it described v2.
 `chaoslab-mh-prober` image silently reproduces the old 91/100 (see the rebuild note in the command
 block above). The two models differ by **76 points** on identical evidence.
 
-#### Cross-surface parity — the CLI and the dashboard DISAGREE (open defects, 2026-09-14)
+#### Cross-surface parity — RESOLVED in Phase 210 (was: open defects, recorded 2026-09-14)
 
-Measured against this exact run. All three are reproducible and all three are client-visible:
+**Update (2026-09-27, Phase 210 / XSURF-01..04):** the three divergences this section originally
+recorded are now closed on `main`, not merely tracked. The dashboard's dual-`use` SAML certificate
+is deduped `(host, port, cert serial)` in the shared `evaluate_identity_endpoints()` evaluator
+(XSURF-01); the CLI now emits that same SAML finding through the identical shared evaluator instead
+of omitting it (XSURF-02); and the no-`scan_id` "latest scan" branch resolves by `scan_run_id`
+equality instead of a bare 5-minute time window, so two runs no longer merge into one inflated
+response (XSURF-03, `quirk/dashboard/api/routes/scan.py::get_latest_scan`). A three-number
+regression gate — `tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality`
+(XSURF-04) — asserts headline score, CRITICAL count and certificate count are equal across both
+pipelines for one `scan_run_id`, and was demonstrated failing against two independently
+reintroduced double-counts before being pinned green (see `210-05-SUMMARY.md`). **A live re-run of
+this exact 31-host estate to confirm both pipelines now report identical numbers end-to-end is
+deferred** — parity is proved at the XSURF-04 gate, not by a fresh scan of this profile, as of this
+writing.
+
+The three original findings are retained below as the historical record of the closed defect, per
+this repository's convention of marking superseded rationale rather than deleting it. **This is no
+longer current behaviour.**
+
+Measured against the run on 2026-09-14 (pre-Phase-210, `main` at that date). All three were
+reproducible and client-visible at the time:
 
 | Surface | Score | CRITICAL | Certificates |
 |---|---|---|---|
@@ -629,19 +649,24 @@ Measured against this exact run. All three are reproducible and all three are cl
 | Dashboard `/api/scan/latest` pinned to this `scan_run_id` | **19** (computed 76) | **7** | 17 |
 | Dashboard `/api/scan/latest` with no `scan_id` | **19** (computed 76) | **14** | **34** |
 
-1. **The dashboard emits `Weak SAML signing certificate: RSA-1024` TWICE** for the same
-   `10.80.0.41:8080` — identical host, port and title. That duplicate is what takes CRITICAL from
-   6 to 7, and CRITICAL count drives the score cap.
-2. **The CLI omits the SAML finding entirely** — `grep SAML` over the findings JSON returns nothing,
-   even though the CLI's own `evidence_summary` carries `identity_saml_weak_signing_ratio: 0.0054`.
-   It scored the weakness and never reported it.
+1. **The dashboard emitted `Weak SAML signing certificate: RSA-1024` TWICE** for the same
+   `10.80.0.41:8080` — identical host, port and title. That duplicate took CRITICAL from
+   6 to 7, and CRITICAL count drives the score cap. **Closed by XSURF-01's `(host, port, cert
+   serial)` dedupe.**
+2. **The CLI omitted the SAML finding entirely** — `grep SAML` over the findings JSON returned
+   nothing, even though the CLI's own `evidence_summary` carried
+   `identity_saml_weak_signing_ratio: 0.0054`. It scored the weakness and never reported it.
+   **Closed by XSURF-02's extraction of SAML finding synthesis into the shared
+   `evaluate_identity_endpoints()` evaluator, which the CLI now calls.**
 3. **`SESSION_BRACKET = timedelta(minutes=5)`** (`quirk/dashboard/api/routes/scan.py`): the
-   no-`scan_id` branch resolves endpoints by a time window around `MAX(scanned_at)` with **no
-   `scan_run_id` filter**, so two scans less than 5 minutes apart MERGE. Two runs 4m26s apart
-   produced 34 certificates (17x2) and 14 CRITICAL. This is documented and accepted at
-   `202-REVIEW.md` WR-02(b) — but recorded there only as a `score_lift` divergence, not as headline
-   score and CRITICAL-count inflation. **Do not re-scan within 5 minutes during a demo**, or pin the
-   dashboard with `?scan_id=`.
+   no-`scan_id` branch resolved endpoints by a time window around `MAX(scanned_at)` with **no
+   `scan_run_id` filter**, so two scans less than 5 minutes apart MERGED. Two runs 4m26s apart
+   produced 34 certificates (17x2) and 14 CRITICAL. This was previously recorded as documented and
+   accepted at `202-REVIEW.md` WR-02(b) — but only as a `score_lift` divergence, not as headline
+   score and CRITICAL-count inflation. **Closed by XSURF-03: the branch now resolves by
+   `scan_run_id` equality when the latest row has one, falling back to the `SESSION_BRACKET` window
+   only for legacy rows with a NULL `scan_run_id`.** Re-scanning within 5 minutes during a demo is
+   no longer expected to merge two runs, provided both carry a `scan_run_id`.
 
 #### What the score no longer does
 

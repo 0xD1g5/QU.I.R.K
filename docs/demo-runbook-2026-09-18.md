@@ -209,13 +209,26 @@ docker exec chaoslab-mh-prober-1 quirk --config /scan-config.yaml
 - Close on the CBOM: **CycloneDX, an open standard**, so the inventory outlives
   the tool that produced it.
 
-> **⚠ Do not press Export PDF in this session.** It sits immediately beside the
-> five downloads and produces a **different document with a different headline
-> score**: 19/100 with 7 CRITICAL, against the consulting report's 15/100 with
-> 5 CRITICAL. Same scan. Two finding producers with different rule sets;
-> consolidating them is tracked work. Use the five downloads only. If asked why
-> both buttons exist, say they are two pipelines and convergence is on the
-> roadmap.
+> **Update (2026-09-27, Phase 210 / XSURF-01..04):** the numeric divergence this warning
+> originally recorded — dashboard **19/100 with 7 CRITICAL** against the consulting report's
+> **15/100 with 5 CRITICAL**, same scan — was a defect (a SAML certificate double-counted on the
+> dashboard side, an identity finding the CLI never emitted, and a "latest scan" query window that
+> could merge two runs), and it is closed. As of Phase 210, the headline score, CRITICAL count and
+> certificate count are the same across the report pipeline and the dashboard pipeline for one
+> scan; a difference on those three numbers is now a defect to report, not an expected outcome of
+> this demo. Regression-gated by
+> `tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality`. A live
+> re-run of this exact demo estate to reconfirm the numbers end-to-end is deferred — this guidance
+> is not yet backed by a fresh scan of this profile, only by the gate.
+>
+> **Historical record (pre-Phase-210, retained rather than deleted):** Export PDF sits immediately
+> beside the five downloads and is still, structurally, a different artifact — a Playwright print
+> of the dashboard's own `/print` page, versus the consulting-grade `write_reports()` output the
+> five download buttons produce (see `docs/report-interpretation.md` §26). That distinction is
+> unrelated to the score divergence and remains true. Previously this section additionally warned
+> that Export PDF showed a different headline score than the consulting report: **19/100 with 7
+> CRITICAL, against the consulting report's 15/100 with 5 CRITICAL.** That numeric gap is what
+> Phase 210 closed; the two-artifacts distinction is not what closed.
 >
 > A trap if you spot-check under pressure: **76 appears in both surfaces meaning
 > different things** — the report's pre-cap value and the dashboard's post-cap
