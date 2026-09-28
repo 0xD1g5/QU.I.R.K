@@ -2002,40 +2002,59 @@ this deferral easy to rediscover and close in a future phase, not something a fu
 puzzle out from scratch. If you want the full report, use one of the five new download buttons, not
 Export PDF.
 
-### If these two downloads' numbers differ, which one do you trust? (Phase 210, XSURF-01..04)
+### If these two downloads' numbers differ, which one do you trust? (Phase 210 XSURF-01..04, Phase 211 legacy-TLS/plaintext-HTTP fix)
 
 The two artifacts above remain genuinely different documents (previous subsection). As of
-Phase 210, **two of their three headline numbers are identical and one is not** — read that
-distinction carefully before quoting a number to a client.
+Phase 211, every headline number checked below matched for one live scan — but this is a single
+measurement on a single estate, not a guarantee that the two pipelines can never diverge. Read
+the scope note below before quoting a number to a client.
 
-**Identical, and regression-gated:** for one scan, the **CRITICAL finding count** and the
-**certificate count** are the same whether they come from the report pipeline (the five download
-buttons, `write_reports()`) or the dashboard pipeline (the Executive page's live view and the
-Export PDF button, both backed by `GET /api/scan/latest`). Three cross-surface defects previously
-caused these to diverge for the same scan — a SAML certificate double-counted on the dashboard
-side, an identity finding the CLI never emitted, and a "latest scan" query that could silently
-merge two separate scan runs — and all three are closed (XSURF-01, XSURF-02, XSURF-03), confirmed
-on a live 31-host scan (CRITICAL 6 = 6, certificates 20 = 20).
+**Identical, regression-gated, and reconfirmed live:** for `scan_run_id
+2026-09-28T13:16:55.319715+00:00` (the `multihost` chaos lab, 775 endpoints, wide 14-port scan),
+the **headline readiness score** (18/100), all **six subscores** (Hygiene 17/25, Modern TLS
+20/25, Identity 9/25, Agility 25/25, Data at Rest 22/25, Data in Motion 13/25), the **cap reason
+string**, the **CRITICAL finding count** (6 = 6), and the **certificate count** (20 = 20) were all
+identical between the report pipeline (`write_reports()`) and the dashboard pipeline (`GET
+/api/scan/latest`, the Executive page and the Export PDF button). An independent second
+instrument — a standalone script re-deriving `evidence_summary` directly from the database,
+bypassing the running dashboard server entirely — reproduced all 13 of its own evidence counters
+exactly, including the two that previously diverged.
 
-**NOT yet identical — the headline readiness score.** The same live scan produced **17/100 from
-the report pipeline and 18/100 from the dashboard pipeline**. The gap is small, known, and
-tracked; it is isolated entirely to the Hygiene and Modern TLS subscores (17 vs 21 each), with the
-other four scoring categories byte-identical between pipelines. It is a different defect from the
-three Phase 210 closed — not a double-count, but a suspected denominator-population difference —
-and it was invisible until those three were fixed, because the larger CRITICAL-count-driven score
-cap was masking it. Tracked at
-`.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md` and
-expected to be re-measured during the ratio-denominator work.
+**What changed to get here.** Two scoring inputs in `quirk/intelligence/evidence.py` were keyed
+off finding **titles** or finding **severity labels**, which the report and dashboard pipelines
+populate from two independently-maintained vocabularies by deliberate design. `plaintext_http_count`
+now matches findings via a title bridge instead of an exact-string comparison across those two
+vocabularies (Phase 211 leg 1). More significantly for anyone comparing scores across scans: the
+"Legacy TLS versions present" Modern TLS contributor is **no longer driven by the count of ALL
+LOW-severity findings** — a proxy any newly-added LOW-severity finding class could silently
+inflate, whether or not it had anything to do with TLS — **but is now derived from which endpoints
+actually accept TLS 1.0/1.1** (Phase 211 leg 2). Before this fix, the same estate produced
+17/100 (report) vs 18/100 (dashboard) for one scan; the endpoint-derived signal now produces
+18/100 on both. If you re-run an older scan and its Modern TLS or Hygiene subscore differs from
+what was previously reported for the same estate, that is this contributor change, not a
+regression.
 
-**What this means in practice:** if you are handing a client a headline score, take it from one
-pipeline and say which. Do not present a report-pipeline score beside a dashboard screenshot and
-imply they are the same figure — on the reference estate they differ by one point. A regression
-gate,
-`tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality`, asserts
-this equality for one `scan_run_id` and is demonstrated to fail if any of the three defects is
-reintroduced (see `210-05-SUMMARY.md`). **If you ever see these three numbers differ across the
-two pipelines for the same scan, that is a defect to report, not an expected artifact
-difference.**
+**What this measurement does not claim.** This is one scan, on one estate, at one scan width — not
+a claim that the two pipelines can never diverge again. One gap is known and deliberately left
+open rather than fixed: the finding title `"HTTP on TLS-designated port"` has no dashboard
+emission site at all, so it cannot be bridged the way the two fixed legs above were. It measured
+0 on this reference estate (so it did not move any number above), but on an estate where a
+plaintext-HTTP service happens to run on a TLS-designated port, the dashboard pipeline is
+structurally incapable of penalizing it while the report pipeline will — reproducing a
+Hygiene-category divergence identical in shape to the two legs just closed. Tracked at
+`.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md` (not
+tag-blocking for the current release; disclosed in release notes).
+
+**What this means in practice:** the two pipelines' headline scores agree on every estate and
+scan width measured to date. If you ever see the headline score, a subscore, the CRITICAL count,
+or the certificate count differ across the two pipelines for the same scan, check first whether
+the report-side output contains an `"HTTP on TLS-designated port"` finding — that is the one
+known, disclosed way they can still diverge. Any other divergence is a defect to report, not an
+expected artifact difference. Regression gates
+`tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality` and
+`tests/test_evidence_finding_vocabulary_parity.py`'s pinned-oracle legacy-TLS and plaintext-HTTP
+parity tests assert this equality and are demonstrated to fail if any of the underlying defects is
+reintroduced (see `210-05-SUMMARY.md` and `211-03-SUMMARY.md`).
 
 ### Formats can be unavailable, with a reason
 

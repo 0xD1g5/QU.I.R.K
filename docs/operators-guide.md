@@ -475,25 +475,40 @@ produced**. Until that association exists, serving "the report for scan X" is no
 API can do honestly, and a future scan-id-scoped route would need it built first, not just added to
 this router's path.
 
-**Score parity across the two pipelines (Phase 210, XSURF-01..04) — two of three numbers, not
-all three.** These download endpoints and the Export PDF button read different artifacts (see
-`docs/report-interpretation.md` §26). As of Phase 210 the **CRITICAL finding count** and the
-**certificate count** are identical between them for one scan, confirmed on a live 31-host scan
-(6 = 6 and 20 = 20) and regression-gated by `tests/test_cross_surface_parity.py`. Three
-previously-open cross-surface defects (a double-counted SAML certificate, an identity finding
-missing from the CLI's findings output, and a "latest scan" query that could merge two runs) are
-closed.
+**Score parity across the two pipelines (Phase 210 XSURF-01..04, Phase 211 legacy-TLS/plaintext-HTTP
+fix) — reconfirmed live, one scan, one estate.** These download endpoints and the Export PDF
+button read different artifacts (see `docs/report-interpretation.md` §26 for the full account). As
+of Phase 211, every headline number checked matched for one live scan
+(`scan_run_id 2026-09-28T13:16:55.319715+00:00`, 775 endpoints): the **headline score** (18/100 on
+both), all **six subscores**, the **cap reason string**, the **CRITICAL finding count** (6 = 6),
+and the **certificate count** (20 = 20) — regression-gated by `tests/test_cross_surface_parity.py`
+and `tests/test_evidence_finding_vocabulary_parity.py`. This closes the three Phase 210
+cross-surface defects (a double-counted SAML certificate, an identity finding missing from the
+CLI's findings output, a "latest scan" query that could merge two runs) plus the two Phase 211
+scoring-vocabulary defects described next.
 
-**The headline readiness score is NOT yet identical.** That same live scan returned 17/100 from
-the report pipeline and 18/100 from the dashboard pipeline — a known, disclosed residual gap
-isolated to the Hygiene and Modern TLS subscores, tracked at
-`.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`. Do
-not quote a headline score as pipeline-independent: take it from one pipeline and say which.
+**The headline score used to differ, and now agrees — because a scoring input changed, which
+matters if you compare an old scan's score to a new one.** The "Legacy TLS versions present"
+Modern TLS contributor is no longer derived from the count of ALL LOW-severity findings (a proxy
+any newly-added LOW-severity finding class could silently inflate); it is now derived from which
+endpoints actually accept TLS 1.0/1.1. On the reference estate the old proxy produced 17/100
+(report) vs 18/100 (dashboard) for the same scan; the endpoint-derived signal produces 18/100 on
+both. **If you re-run an older scan and its Modern TLS or Hygiene subscore moves relative to what
+was reported before this fix, that is expected and correct** — not a regression.
 
-If an operator observes the **CRITICAL count or the certificate count** differing between a
-downloaded report and the dashboard's live view for the same scan, treat it as a defect to file,
-not as expected pipeline drift. A small headline-score difference is, for now, the known gap
-above rather than a new defect — but a large one is still worth filing.
+**One known, disclosed gap remains — not fixed, not tag-blocking, disclosed here on purpose.** The
+finding title `"HTTP on TLS-designated port"` has no dashboard-side emission site and cannot be
+bridged the way the two fixed legs above were. It measured 0 on the reference estate, so it did
+not affect the measurement above, but a report-side scan that finds a plaintext-HTTP service on a
+TLS-designated port will show a Hygiene-category score the dashboard pipeline cannot reproduce.
+Tracked at
+`.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`.
+
+This is one measurement on one estate — not a guarantee the two pipelines can never diverge. If an
+operator observes the **headline score, a subscore, the CRITICAL count, or the certificate count**
+differing between a downloaded report and the dashboard's live view for the same scan, check first
+whether the report contains an `"HTTP on TLS-designated port"` finding — that is the one known way
+they can still diverge. Any other divergence is a defect to file.
 
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
