@@ -7,6 +7,44 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [5.25.0] - 2026-09-28
+
+This release carries **four** development-complete milestones as a single publish, not three —
+no tag was cut after `v5.21.0` (2026-09-10), so v5.22, v5.23, v5.24 and v5.25 are all unreleased
+together. **v5.22 Release & Parity Tail** published `v5.21.0` to PyPI and closed out connector
+and scan-behavior dashboard parity. **v5.23 Deliverable Experience** shipped consulting-grade
+reporting CLI/config-side, a score-lift roadmap re-frame, and a finding storyline drawer.
+**v5.24 UAT Coverage Drain** made the UAT gap worklist self-deriving, added a real browser E2E
+tier, made v5.23's report artifacts dashboard-reachable, and hand-re-verified catalog freshness.
+**v5.25 Score Truth & Release Cut** closed the score-parity gap between the report and dashboard
+pipelines, corrected denominator semantics, recorded a measured decision to ship no P2b fix, and
+fixed two shipped product defects. Several items below are qualified rather than unconditional —
+the qualification is kept in the bullet, not smoothed away.
+
+**Breaking change in meaning, not mechanism:** readiness scoring moved to v3 in this release (see
+Changed, below) and denominator semantics were corrected in v5.25 — together these mean **every
+score this product has ever emitted moves, substantially and downward, and is not comparable to a
+score computed after this release.** Re-scan or re-score before comparing.
+
+### Added
+
+- **v5.22 Release & Parity Tail** — 999.104 fully closed: Tier 2 (37 residual connector detail
+  fields dashboard-settable) and Tier 3 (19 scan-behavior fields — 11 timeouts, 2 backoff, 5
+  concurrency knobs, `tls_designated_ports`), via the lockstep-widened connectors overlay and
+  `AdvancedScanFields` (`.planning/MILESTONES.md:150-152`).
+- **v5.23 Deliverable Experience** — consulting-grade reporting shipped CLI/config-side
+  (RPT-01..05): report branding and templates. The dashboard exclusion was deliberate (RPT-03
+  guards it as a path-traversal surface), not an oversight — v5.24 later made those artifacts
+  dashboard-reachable. Also shipped: a score-lift roadmap re-frame (LIFT-01..05) surfacing
+  projected-score deltas, and a per-finding storyline drawer (STORY-01/02)
+  (`.planning/MILESTONES.md:95-102`).
+- **v5.24 UAT Coverage Drain** — the UAT gap worklist now derives itself (COV-01/02/03):
+  `docs/uat-coverage-gaps.md` is generated and gated, regenerating byte-identically; open GAPs
+  went 47 → 43 → 41. A real Playwright browser tier exists where jsdom structurally could not
+  reach (COV-05, COV-10), and the consulting-grade report artifacts from v5.23 became reachable
+  through an auth-gated, containment-guarded dashboard route (DELIV-01/02)
+  (`.planning/MILESTONES.md:19-34`).
+
 ### Changed
 
 - **Readiness scoring is now v3: consequence is absolute rather than proportional, and a
@@ -47,6 +85,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
   (POOR), and the 31-host purpose-built vulnerable estate 87 → **18**. If you hold a previously
   delivered score, re-scan or re-score the evidence before comparing it to anything produced after
   this release.
+- **v5.25 — cross-surface score parity (Phase 210) and denominator correctness (Phase 211).**
+  One scan now yields the same headline score, CRITICAL count and certificate count from the
+  report pipeline and the dashboard pipeline. Phase 210 closed the CRITICAL-count and
+  certificate-count divergence but left the headline score itself 1 point apart (Success
+  Criterion 5 **NOT MET** by Phase 210's own work). **Criterion 5 was subsequently satisfied by
+  Phase 211's denominator-correctness fix, not by Phase 210's** — live measurement:
+  report 18/100 == dashboard 18/100, all six subscores matching, root-caused to a finding-title
+  vocabulary mismatch plus a LOW-severity-proxy structural zero. Every ratio penalty divides by
+  the population its numerator is drawn from (DENOM-01/02/03; this work had already landed via
+  `0b0ed1c7` before Phase 211 re-scoped to verify + investigate). One residual is disclosed and
+  explicitly not tag-blocking: DENOM-03's width-neutrality clause measured **inverted**
+  (narrow 2-port scan 20/100 vs. wide 14-port scan 18/100 on the same estate)
+  (`.planning/ROADMAP.md:24-40`).
+- **v5.25 — score dilution, decision only (Phase 212).** A written, measured denominator
+  decision for the P2b scan-scope-dilution defect exists; **no implementation ships in this
+  release.** VERDICT: **RECOMMEND NONE** — no candidate cleared both measurement axes (scan-scope
+  normalisation showed zero mitigation; the distinct-hosts candidate was unfalsifiable by
+  construction and broke ladder monotonicity; the absolute-exposure candidate was structurally
+  uninformative on one axis). The P2b defect remains **deferred, not fixed**
+  (`test_p2b_...` stays `xfail(strict=True)` by design); its implementation is explicitly owned
+  by a post-v5.25, operator-reserved phase — **not** Phase 214
+  (`.planning/ROADMAP.md:44-55`, `.planning/decisions/212-score-dilution-denominator-decision.md`).
 
 ### Fixed
 
@@ -106,6 +166,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
   ratios (database, storage, Kubernetes, Vault, email, broker, Kerberos, SAML, DNSSEC, S/MIME,
   AD CS) move to a strict improvement over the old denominator but are not yet population-correct
   — tracked as a follow-up.
+- **v5.22 — the standing backlog-reconciliation gate (GATE-04) is green end-to-end.** The
+  long-standing local-only red was fixed by escaping fake worked-example IDs (U+2011, 9 files);
+  the full-suite expected failing-node SET reached empty for the first time in project history
+  (`.planning/MILESTONES.md:153-154`).
+- **v5.24 — catalog freshness was re-verified by hand (STALE-01/02), and the finding was not
+  what anyone expected.** Not that source URLs had rotted, but that 5 of 5 claims checked were
+  WRONG, in both directions — most sharply Palo Alto, whose entry was **inverted**: it claimed
+  PAN-OS supports X25519MLKEM768 for TLS decryption, when the NGFW actually strips PQC groups
+  from ClientHello, making it a downgrade point rather than a capable device
+  (`.planning/MILESTONES.md:35-38`).
+- **v5.24 — COV-04 closes at 27 of 28, not 28 of 28.** Success Criterion 1 is recorded **NOT MET
+  AS WRITTEN** and its checkbox left unchecked on purpose, so the shortfall stays visible rather
+  than rounding to a pass. The sole remainder, `UAT-7-12`, was at the time an accepted
+  product-absence FAIL — `certificates.tsx` had no sort state, no column handler and no table
+  library — and is the same case Phase 213 (below) went on to fix for real
+  (`.planning/MILESTONES.md:50-53`).
+- **v5.25 — two shipped product defects fixed for real (Phase 213, UAT Series 7).**
+  `UAT-7-12` now **PASSes**: certificate-table sort uses a real `Date` sort
+  (`sortingFn: "datetime"`), not a display-string sort. `UAT-7-21` (hardcoded colour literals
+  bypassing theme tokens) is a **QUALIFIED PASS** — the detector had been under-reporting by
+  roughly half; widening it found 205 literals across 17 files, not the 95 originally seen, and
+  the pass rests on the widened gate's red-then-green transition plus operator visual
+  confirmation, never the source gate alone. Two Pass Criteria bullets (electric-blue accent,
+  dark-background consistency) remain **uncovered by any instrument** and are named as such, not
+  silently absorbed into the pass (`.planning/ROADMAP.md:58-68`).
+- **v5.25 — REL-04 (public release-body backfill) confirmed already satisfied, no action taken.**
+  All 7 named releases (`v5.7.0`, `v5.8.0`, `v5.12.0`, `v5.15.0`, `v5.18.0`, `v5.19.0`,
+  `v5.21.0`) already carry their real `## [x.y.z]` CHANGELOG section as their public GitHub
+  release body, confirmed by two independent instruments (`gh release view --json body` and the
+  GitHub releases API). 8 older, genuinely boilerplate-only releases (`v5.5.1`-`v5.6.0`) were
+  found and filed as a separate backlog item rather than actioned here — they require authoring
+  notes from scratch, not extraction (`214-CONTEXT.md:30-44`, F1/F2).
+
+### Known Limitations
+
+- **v5.23 — INT-01 (Phase 201→202 seam), accepted OPEN, not fixed.** `scan_run_id` resolution
+  diverges between the roadmap's `score_lift` computation and the finding storyline drawer for
+  any scan whose endpoints do not all share one `scan_run_id` — a real, shipped topology
+  (distributed console/sensor). The roadmap can show a real `score_lift` while the drawer shows
+  `None` for the same finding (`.planning/MILESTONES.md:105-113`).
+- **v5.25 — the P2b score-dilution defect is deferred, not fixed** (see Changed, Phase 212,
+  above); its implementation is owned by a post-v5.25, operator-reserved phase.
+- **v5.25 — REL-03 (the actual PyPI publish) is PENDING, operator-reserved.** This release's
+  `workflow_dispatch` dry run is the strongest evidence obtainable without a tag; it is **not**
+  the same as a real publish, and this CHANGELOG entry does not claim it is. See
+  `214-NOT-MET-AS-WRITTEN.md` for the full record.
 
 ## [5.21.0] - 2026-09-10
 
