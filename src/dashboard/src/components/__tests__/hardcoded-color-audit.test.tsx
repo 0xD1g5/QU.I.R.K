@@ -74,9 +74,18 @@ function stripComments(src: string): string {
     .join("\n")
 }
 
-/** `#rgb` / `#rrggbb` literals, and raw `hsl(N N% N%)` triples (not `hsl(var(...))`). */
+/**
+ * `#rgb` / `#rrggbb` literals, and raw `hsl(N N% N%)` triples in every spelling this codebase
+ * actually uses (not `hsl(var(...))`). A single whitespace-only pattern was blind to two of the
+ * three real forms — see the module docstring for how that was found and measured.
+ */
 const HEX_RE = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g
-const RAW_HSL_RE = /hsl\(\s*(?!var\()([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/g
+/** `hsl(142 71% 45%)` — literal whitespace between components. */
+const RAW_HSL_SPACE_RE = /hsl\(\s*(?!var\()([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/g
+/** `hsl(142_71%_45%)` — Tailwind arbitrary-value form, underscore-separated, no whitespace. */
+const RAW_HSL_UNDERSCORE_RE = /hsl\(\s*(?!var\()([\d.]+)_([\d.]+)%_([\d.]+)%\s*\)/g
+/** `hsl(0, 72%, 51%)` — legacy comma-separated form, optional whitespace after each comma. */
+const RAW_HSL_COMMA_RE = /hsl\(\s*(?!var\()([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/g
 
 interface Violation {
   file: string
@@ -110,18 +119,20 @@ function scan(): Violation[] {
           onLight: Number(contrastRatio(hex, "#ffffff").toFixed(2)),
         })
       }
-      for (const m of line.matchAll(RAW_HSL_RE)) {
-        // Resolved to hex so a raw triple is reported in the same units as a
-        // hex literal — this is why the shared hslToHex/contrastRatio helpers
-        // are reused here rather than re-derived.
-        const hex = hslToHex(Number(m[1]), Number(m[2]), Number(m[3]))
-        found.push({
-          file: rel,
-          line: i + 1,
-          literal: m[0],
-          hex,
-          onLight: Number(contrastRatio(hex, "#ffffff").toFixed(2)),
-        })
+      // All three raw-HSL spellings are resolved to hex through the same
+      // hslToHex/contrastRatio path as HEX_RE, so every form is reported in
+      // the same units regardless of which literal punctuation produced it.
+      for (const re of [RAW_HSL_SPACE_RE, RAW_HSL_UNDERSCORE_RE, RAW_HSL_COMMA_RE]) {
+        for (const m of line.matchAll(re)) {
+          const hex = hslToHex(Number(m[1]), Number(m[2]), Number(m[3]))
+          found.push({
+            file: rel,
+            line: i + 1,
+            literal: m[0],
+            hex,
+            onLight: Number(contrastRatio(hex, "#ffffff").toFixed(2)),
+          })
+        }
       }
     })
   }
