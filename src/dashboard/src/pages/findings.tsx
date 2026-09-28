@@ -25,11 +25,11 @@ import { StorylineSections } from "@/components/FindingStorylineSections"
 import { useFindingStoryline } from "@/hooks/useFindingStoryline"
 
 const SEVERITY_STYLES: Record<string, string> = {
-  CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
+  CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  MEDIUM: "bg-[hsl(38_92%_50%)] text-black",
-  LOW: "bg-[hsl(213_94%_68%)] text-black",
-  INFO: "bg-[hsl(240_5%_46%)] text-white",
+  MEDIUM: "bg-[hsl(var(--status-warning))] text-black",
+  LOW: "bg-[hsl(var(--chart-tls))] text-black",
+  INFO: "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 export function FindingsPage() {
@@ -140,9 +140,9 @@ export function FindingsPage() {
         const qr = row.original.quantum_risk
         if (!qr) return <span className="text-muted-foreground">—</span>
         const colors: Record<string, string> = {
-          "Vulnerable": "bg-[hsl(0_72%_51%)] text-white",
-          "At Risk": "bg-[hsl(38_92%_50%)] text-black",
-          "Safe": "bg-[hsl(142_71%_30%)] text-white",
+          "Vulnerable": "bg-[hsl(var(--status-critical))] text-white",
+          "At Risk": "bg-[hsl(var(--status-warning))] text-black",
+          "Safe": "bg-[hsl(var(--status-safe-deep))] text-white",
         }
         return <Badge className={`${colors[qr] ?? ""} text-xs`}>{qr}</Badge>
       },

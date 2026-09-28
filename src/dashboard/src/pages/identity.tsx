@@ -23,11 +23,11 @@ import { IdentitySkeleton } from "./identity.skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const SEVERITY_STYLES: Record<string, string> = {
-  CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
+  CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  MEDIUM: "bg-[hsl(38_92%_50%)] text-black",
-  LOW: "bg-[hsl(213_94%_68%)] text-black",
-  INFO: "bg-[hsl(240_5%_46%)] text-white",
+  MEDIUM: "bg-[hsl(var(--status-warning))] text-black",
+  LOW: "bg-[hsl(var(--chart-tls))] text-black",
+  INFO: "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 const PROTOCOLS = ["KERBEROS", "SAML", "DNSSEC"] as const
@@ -46,10 +46,10 @@ function getProtocolStatus(findings: IdentityFinding[], protocol: string) {
 }
 
 const STATUS_BADGE_STYLES: Record<string, string> = {
-  "Critical": "bg-[hsl(0_72%_51%)] text-white",
+  "Critical": "bg-[hsl(var(--status-critical))] text-white",
   "At Risk": "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   "Clean": "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
-  "Not Scanned": "bg-[hsl(240_5%_46%)] text-white",
+  "Not Scanned": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 const PROTOCOL_LABELS: Record<string, string> = {
