@@ -98,6 +98,54 @@
     /* Phase 165 Wave 5: --quantum-safe badge text was hardcoded white (2.97:1, fails AA);
        dark foreground matches the D-08/D-09 pattern (6.20:1). Brand hue unchanged. */
     --quantum-safe-foreground: 220 22% 12%;     /* #11141c */
+
+    /* ── Phase 213 UIFIX-02: minted theme-token vocabulary ──
+       Every value below reuses an EXISTING token where the resolved colour
+       exactly matched one (see 213-02-SUMMARY.md's value-to-token map for
+       the full list of reused tokens); these are the values with no match.
+       Named for what they MEAN on the page that uses them, never for the
+       colour itself. Every token here has a `.light` override below, or is
+       recorded in theme-token-vocabulary.test.ts's THEME_INVARIANT set with
+       a stated reason (the --print-* family, which renders on fixed white
+       paper regardless of app theme). See 213-02-SUMMARY.md for the
+       distinct-value derivation, every near-duplicate collapse decision, and
+       the contrast data behind each light-mode value. */
+    --status-critical: 0 72% 51%;       /* #dc2828 — red / expired / vulnerable state chips */
+    --status-warning: 38 92% 50%;       /* #f59f0a — amber / warning state chips */
+    --chart-tls: 213 94% 68%;           /* #61a6fa — TLS chart series (trends/compare/etc.) */
+    --status-neutral: 240 5% 46%;       /* #6f6f7b — neutral/unknown zinc-grey state chips */
+    --status-safe-deep: 142 71% 30%;    /* #16833e — deep-green "safe, pressed/dim" variant */
+    --chart-data-at-rest: 270 50% 60%;  /* #9966cc — data-at-rest chart series (trends.tsx) */
+    --chart-edge-highlight: 210 100% 60%; /* #3399ff — Cytoscape highlighted edge/border */
+    --badge-hardware-device: 220 60% 40%; /* #2952a3 — cbom.tsx HW_DEVICE_BADGE bg */
+    --badge-modbus: 199 89% 48%;        /* #0da2e7 — hardware.tsx Modbus protocol badge */
+    --badge-bacnet: 271 81% 56%;        /* #9234ea — hardware.tsx BACnet protocol badge */
+    --badge-schedule: 177 52% 35%;      /* ~#2b8883 (source literal #2b8a86) — schedules.tsx badge */
+    --chart-slate-dark: 220 13% 28%;    /* #3e4451 — cbom.tsx Cytoscape neutral ramp, dark step */
+    --chart-slate-mid: 220 13% 45%;     /* #646e82 — cbom.tsx Cytoscape neutral ramp, mid step */
+    --chart-slate-light: 220 13% 85%;   /* #d4d7de — cbom.tsx Cytoscape neutral ramp, light step */
+    --chart-node-label: #ffffff;        /* Cytoscape node label text (cbom/exposure-map/roadmap) —
+                                            provisional light value below; 213-07 owns the real
+                                            per-node-fill re-resolution, see 213-02-SUMMARY.md */
+
+    /* Print surface (print.tsx) — deliberately THEME-INVARIANT: the printed
+       page always renders on fixed white paper regardless of which app
+       theme was active when export was triggered, so these carry the SAME
+       value in :root and .light. See theme-token-vocabulary.test.ts's
+       THEME_INVARIANT set for the enforced justification. */
+    --print-bg: #ffffff;
+    --print-fg: #0a0a0a;
+    --print-fg-inverse: #ffffff;   /* text on a colour/dark chip background */
+    --print-fg-on-light: #000000;  /* text on a light-colour chip background (MEDIUM/LOW/At-Risk) */
+    --print-border: #e4e4e7;
+    --print-surface: #f4f4f5;
+    --print-muted: #52525b;
+    --print-critical: #dc2626;
+    --print-high: #f97316;
+    --print-medium: #f59e0b;
+    --print-low: #60a5fa;
+    --print-neutral: #71717a;
+    --print-safe: #22c55e;
   }
 
   /* Light mode override */
@@ -154,6 +202,49 @@
     --severity-medium: 220 12% 43%;
     --severity-low: 180 45% 41%;
     --severity-info: 220 12% 43%;
+
+    /* ── Phase 213 UIFIX-02: minted theme-token vocabulary, light overrides ──
+       Deepened for contrast against a light surface, following this file's
+       existing pattern (e.g. --quantum-safe 45%->36%, --ds-high
+       #d4893a->#b46b1b). Contrast-on-white figures computed with the same
+       contrastRatio()/hslToHex() maths as color-contrast-helpers.ts; see
+       213-02-SUMMARY.md for the full table. --status-warning's dark value
+       (f59f0a) is only 2.13:1 on white — this light override (32%, 4.84:1)
+       is a deliberate improvement, not a faithful port of the literal, and
+       is flagged in the SUMMARY for 213-09's human visual review. */
+    --status-critical: 0 72% 40%;         /* #af1d1d, 6.96:1 */
+    --status-warning: 38 92% 32%;         /* #9d6607, 4.84:1 — see note above */
+    --chart-tls: 213 94% 40%;             /* #065cc6, 6.26:1 */
+    --status-neutral: 240 5% 34%;         /* #52525b, 7.73:1 */
+    --status-safe-deep: 142 71% 24%;      /* #126932, 6.79:1 */
+    --chart-data-at-rest: 270 50% 40%;    /* #663399, 8.41:1 */
+    --chart-edge-highlight: 210 100% 38%; /* #0061c2, 6.02:1 */
+    --badge-hardware-device: 220 60% 32%; /* #214183, 9.77:1 */
+    --badge-modbus: 199 89% 30%;          /* #086591, 6.40:1 */
+    --badge-bacnet: 271 81% 36%;          /* #5e11a6, 9.97:1 */
+    --badge-schedule: 177 52% 28%;        /* ~#226d69, 6.07:1 */
+    --chart-slate-dark: 220 13% 24%;      /* #353b45, 11.27:1 */
+    --chart-slate-mid: 220 13% 34%;       /* #4b5362, 7.74:1 */
+    --chart-slate-light: 220 13% 30%;     /* #434956, 9.03:1 — role reverses: a light
+                                              grey on a dark Cytoscape bg needs a dark
+                                              grey on a light one to stay legible */
+    --chart-node-label: #11141c;          /* matches --ds-text light; provisional, see :root comment */
+
+    /* Print surface — same values as :root (deliberately theme-invariant, see
+       :root's comment for the justification enforced by THEME_INVARIANT). */
+    --print-bg: #ffffff;
+    --print-fg: #0a0a0a;
+    --print-fg-inverse: #ffffff;
+    --print-fg-on-light: #000000;
+    --print-border: #e4e4e7;
+    --print-surface: #f4f4f5;
+    --print-muted: #52525b;
+    --print-critical: #dc2626;
+    --print-high: #f97316;
+    --print-medium: #f59e0b;
+    --print-low: #60a5fa;
+    --print-neutral: #71717a;
+    --print-safe: #22c55e;
   }
 }
 
