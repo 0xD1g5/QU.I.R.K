@@ -376,7 +376,7 @@ emits and whatever UI state ships — every other phase must land first)
 **Plans**: 9 plans (8 waves)
 
 Plans:
-- [ ] 214-01-PLAN.md — Wave 0 baseline: full-suite failing-node SET, gh reachability, version-surface and generator-gate enumeration
+- [x] 214-01-PLAN.md — Wave 0 baseline: full-suite failing-node SET, gh reachability, version-surface and generator-gate enumeration
 - [ ] 214-02-PLAN.md — REL-01: author the `## [5.25.0]` CHANGELOG section across four unreleased milestones
 - [ ] 214-03-PLAN.md — REL-04: re-confirm the 7 release bodies on two instruments; correct HORIZON/REQUIREMENTS/CLAUDE.md/999.109; file backlog 999.116
 - [ ] 214-04-PLAN.md — REL-02: bump pyproject.toml + README.md, editable reinstall, version-parity gate at its measured size
@@ -396,4 +396,4 @@ Plans:
 | 211. Denominator Correctness | 0/? | Not started | - |
 | 212. Score Dilution — Decision Only | 0/? | Not started | - |
 | 213. Shipped Product Defects (Series 7) | 0/? | Not started | - |
-| 214. Release Cut | 0/? | Not started | - |
+| 214. Release Cut | 1/9 | In progress | - |

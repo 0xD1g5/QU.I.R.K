@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-29T00:10:00.000Z"
-last_activity: 2026-09-28 -- Phase 213 (Shipped Product Defects, Series 7) CLOSED and VERIFIED: 213-VERIFICATION.md status=passed, 5/5, goal and requirement verdicts AGREE. 10 of 10 plans enumerated on disk. Both v5.24 shipped FAILs are fixed: UAT-7-12 PASS (real Date sort, sortingFn datetime) and UAT-7-21 QUALIFIED PASS on the WIDENED gate's red-then-green transition PLUS operator visual confirmation -- never the source gate alone. The verifier tripped both new guards itself (RESIDUAL and NO_LAUNDERING) to prove they are real mechanisms, then restored the files clean. THE PHASE'S BIGGEST FINDING: the authoritative detector had been UNDER-REPORTING BY ROUGHLY HALF. Operator decision D-14 chose to fix ALL literals and widen the gate rather than the 95 the narrow detector saw; the live re-derivation then found 205 across 17 files (hex 67 + whitespace-HSL 28 + underscore-HSL 93 + comma-HSL 17, all comma-form in roadmap.tsx) -- not 95, and not D-14's own ~188 hypothesis either. Reproduced independently FOUR times. Criterion 2 recorded NOT MET AS WRITTEN (docs/uat-coverage-gaps.md has never carried COV-04's 27-of-28 tally; it is a requirement-level figure in PROJECT.md/REQUIREMENTS.md, not generator output) -- the THIRD such honest recording across phases 211/212/213. Two UAT-7-21 Pass Criteria bullets (electric-blue accent, dark-background consistency) remain UNCOVERED BY ANY INSTRUMENT and are named as such. v5.25 now stands at 3 of 5 phases complete. Phase 210's checkbox is still UNCHECKED (its Criterion 5 was met by Phase 211's work, not its own -- a milestone-close call for the operator). REMAINING: Phase 214 (Release Cut), which is OUT of the requested 211-213 range and not started.
+last_updated: "2026-09-28T19:55:00.000Z"
+last_activity: 2026-09-28 -- Phase 214 (Release Cut) plan 01 (Wave 0 baseline) COMPLETE: captured the pre-phase full-suite failing-node SET (empty set -- 5287 passed, 0 failed, 43 skipped, 76 xfailed, 5 xpassed, 1168.48s, Docker healthy, 29-case chaos-lab parametrization), confirmed gh authenticated and reachable against 0xD1g5/QU.I.R.K, re-derived the version surface live (5.21.0 confirmed on pyproject/installed-dist/README/UAT-SERIES.md, getting-started.md confirmed to carry no real version string), and live-enumerated the 5 generator-drift freshness gates from source (matches CLAUDE.md's table exactly). FINDING: push parity measured 1 unpushed commit (532fc59a, this phase's own plan-creation commit), not the 0 CONTEXT.md's F5 claimed -- explained as a commit landing after F5 was measured, not a regression; flagged per project disagreement-reporting discipline. Recorded to .planning/phases/214-release-cut/214-BASELINE.md (gitignored, no commit). Both 214-01-PLAN.md tasks verified green; 214-VALIDATION.md's 214-01-T1/T2 rows and Wave 0 checklist flipped. `phase.complete` and `requirements mark-complete` were NOT invoked. No mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb was run this plan -- STATE.md/ROADMAP.md were hand-edited, full pre/post diff taken. REMAINING: Phase 214 plans 02-09 (CHANGELOG authoring, REL-04 re-confirmation, version bump, UAT-SERIES sync, push, dry-run, NOT-MET-AS-WRITTEN + hand-edits, operator handover checkpoint).
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_plans: 19
+  completed_plans: 11
+  percent: 58
 ---
 
 # Project State
@@ -1360,7 +1360,31 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 213 (Shipped Product Defects, Series 7) — all 10 plans executed, closure pending
+Phase: 214 (Release Cut) — plan 01 of 9 executed (Wave 0 baseline). Ground truth enumerated
+from disk: 1 PLAN.md file present for this phase so far (214-01-PLAN.md), 1 SUMMARY.md
+(214-01-SUMMARY.md), one-to-one correspondence confirmed. Plans 214-02 through 214-09 not yet
+executed.
+Plan: 1 of 9 executed. No checkpoint reached yet — plan 01 is fully autonomous (no
+`checkpoint:*` tasks).
+Status: pre-phase baseline captured on a confirmed-clean tree before any release-cut edit. Full
+suite: empty failing-node SET (5287 passed, 0 failed). Version surface re-derived live and
+matches CONTEXT.md F4/F5/F7 exactly (5.21.0 across pyproject/installed-dist/README/UAT-SERIES.md;
+`getting-started.md` confirmed to carry no version string). `gh` confirmed authenticated and
+reachable. The 5 generator-drift freshness gates enumerated live from source, matching CLAUDE.md's
+table with zero drift. One FINDING recorded: push parity measured 1 unpushed commit
+(`532fc59a`, this phase's own plan-creation commit) against CONTEXT.md F5's claimed 0 — explained,
+not silently reconciled; later plans (214-06/08/09) must re-measure live, not inherit this number.
+`.planning/phases/214-release-cut/214-BASELINE.md` is the artifact every later plan's full-suite
+and version-surface comparisons diff against. `phase.complete` and `requirements mark-complete`
+were NOT invoked.
+Last activity: 2026-09-28 — Phase 214 plan 01 COMPLETE: captured full-suite failing-node SET
+(empty), version-surface baseline, gh-reachability confirmation, and generator-drift-gate
+enumeration into 214-BASELINE.md; resolved 214-VALIDATION.md's 214-01-T1/T2 rows and both Wave 0
+checklist items to done; wrote 214-01-SUMMARY.md.
+
+### Prior: Phase 213 close (2026-09-28)
+
+Phase 213 (Shipped Product Defects, Series 7) — all 10 plans executed, closure pending
 orchestrator review. Ground truth enumerated from disk: 10 PLAN.md files, 10 SUMMARY.md files
 (213-01 through 213-10), one-to-one correspondence confirmed.
 Plan: 10 of 10 executed. Plan 213-10's own blocking checkpoint was approved by the operator,
