@@ -141,31 +141,50 @@ def collect_dashboard_titles() -> set[str]:
     """Return the set of RAW (un-normalized) literal-only templates passed
     as `title=` to any of the five finding-dataclass constructors in
     `quirk/dashboard/api/routes/scan.py` — the second derivation path,
-    which has no chokepoint function.
+    which has no chokepoint function — UNIONED with the `_build_finding(...)`
+    identity templates in `quirk/engine/findings_evaluator.py`.
 
-    Returns exactly 12 templates, including the three extraction-gotcha
-    cases: `"S3 bucket "` (the `.strip()` unwrap), `" encryption posture"`
-    and `" cluster etcd encryption"` (start-interpolated, leading space
-    preserved), and `"Quantum- algorithm: "` (mid-string interpolation).
+    Phase 210 (XSURF-01/XSURF-02, D-06/D-07): SAML identity finding synthesis
+    moved out of `scan.py`'s `IdentityFinding(...)` constructor calls into
+    `findings_evaluator.py`'s `_build_finding(...)` chokepoint. This is a
+    FIXED-FILE, FIXED-CALLABLE-NAME AST walk (not a directory walk), verified
+    empirically: before this widening, `collect_dashboard_titles()` returned
+    10 templates (down from 12), silently losing `"Weak SAML encryption
+    certificate: "` and `"Weak SAML signing certificate: "` the moment the
+    logic moved — a title a moved-to file cannot be seen by a scan that only
+    reads the moved-from file. Widening the scan to also read
+    `findings_evaluator.py` (matching `_build_finding` calls, not the
+    dashboard ctor names) restores both templates to this function's
+    returned set without re-introducing the titles into `scan.py` itself
+    (D-06 requires `scan.py` own no SAML finding-synthesis logic).
+
+    `collect_all_interpolated_templates()` (below) is unaffected either way —
+    it already scans `findings_evaluator.py` directly and unions the result
+    with this function's output, so the same templates were already part of
+    its returned set both before and after this widening.
     """
-    tree = ast.parse(_SCAN_ROUTES.read_text())
     titles: set[str] = set()
-    for node in ast.walk(tree):
-        if not (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id in _DASHBOARD_FINDING_CTORS
-        ):
-            continue
-        for kw in node.keywords:
-            if kw.arg != "title":
+    for path, call_names in (
+        (_SCAN_ROUTES, _DASHBOARD_FINDING_CTORS),
+        (_RISK_ENGINE, frozenset({"_build_finding"})),
+    ):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id in call_names
+            ):
                 continue
-            result = _template_from_keyword(kw)
-            if result is None:
-                continue
-            template, is_fstring = result
-            if is_fstring:
-                titles.add(template)
+            for kw in node.keywords:
+                if kw.arg != "title":
+                    continue
+                result = _template_from_keyword(kw)
+                if result is None:
+                    continue
+                template, is_fstring = result
+                if is_fstring:
+                    titles.add(template)
     return titles
 
 
@@ -174,8 +193,11 @@ def collect_all_interpolated_templates() -> set[str]:
     templates from BOTH derivation paths, UN-normalized — these are the
     exact keys `quirk.compliance.TITLE_IDENTITY_CLASS` must cover.
 
-    Length is exactly 22: 10 f-string sites in findings_evaluator.py plus
-    the 12 in scan.py (`collect_dashboard_titles`).
+    Phase 210: no longer a fixed 22 — `collect_dashboard_titles()` now also
+    reads `findings_evaluator.py`, so its result overlaps with this
+    function's own direct `_RISK_ENGINE` scan below (harmless: both add into
+    the same `set`). The exact count moves with the source; do not hardcode
+    it here or in a test — see `project_hypothesised_counts_are_not_targets`.
     """
     templates: set[str] = set()
 

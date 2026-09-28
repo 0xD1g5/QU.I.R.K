@@ -68,7 +68,7 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
-from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
+from quirk.engine.findings_evaluator import evaluate_identity_endpoints
 from quirk.util.safe_exc import safe_str
 
 logger = logging.getLogger(__name__)
@@ -395,27 +395,6 @@ def finding_by_id_and_title(
     return ep, None
 
 
-def _saml_key_use(service_detail: str) -> Optional[str]:
-    """The SAML KeyDescriptor `use` recorded on this endpoint row, if any.
-
-    The SAML scanner writes `service_detail` as pipe-delimited tokens, e.g.
-    `http://host:8080/.../metadata.php|use=signing|serial=109f9643...`. An IdP
-    commonly publishes the SAME certificate under two KeyDescriptors (one
-    `use=signing`, one `use=encryption`, identical serial), which produces two
-    endpoint rows for one key.
-
-    Returns the lowercased use ("signing" / "encryption" / any future value), or
-    None when no `use=` token is present. Per SAML 2.0 metadata, an omitted
-    `use` means the key is valid for both purposes — callers should treat None
-    as "unspecified", never as a specific use.
-    """
-    for token in (service_detail or "").split("|"):
-        token = token.strip()
-        if token.startswith("use="):
-            return token[4:].strip().lower() or None
-    return None
-
-
 def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityFinding]:
     """Synthesize identity protocol findings from KERBEROS/SAML/DNSSEC endpoints.
 
@@ -424,6 +403,26 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
     for the main findings list.
     """
     results: list[IdentityFinding] = []
+
+    # Phase 210 (XSURF-01/XSURF-02, D-06): SAML synthesis — including the
+    # (host, port, cert serial) dedupe — is delegated to the shared evaluator
+    # so the CLI and dashboard pipelines share one implementation instead of
+    # two. This block is a thin dict -> IdentityFinding adapter; it does not
+    # own any SAML finding-synthesis logic itself.
+    saml_endpoints = [ep for ep in endpoints if (ep.protocol or "").upper() == "SAML"]
+    for d in evaluate_identity_endpoints(saml_endpoints):
+        results.append(IdentityFinding(
+            host=d["host"],
+            port=d["port"],
+            severity=d["severity"],
+            title=d["title"],
+            protocol=d.get("protocol"),
+            description=d.get("description"),
+            remediation=d.get("recommendation"),  # key name differs at the boundary
+            quantum_risk=d.get("quantum_risk"),
+            source=d.get("source"),
+            algorithm=d.get("algorithm") or "",  # required field, no default
+        ))
 
     for ep in endpoints:
         proto = (ep.protocol or "").upper()
@@ -457,104 +456,10 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
                     ))
 
         elif proto == "SAML":
-            alg = (ep.cert_pubkey_alg or "").upper()
-            size = ep.cert_pubkey_size
-            sd = ep.service_detail or ""
-
-            # RS-family OIDC check (D-01, D-02) — runs before SHA-1 check (highest specificity)
-            severity = OIDC_ALG_SEVERITY.get(alg)
-            if severity is not None:
-                results.append(IdentityFinding(
-                    host=ep.host,
-                    port=ep.port,
-                    severity=severity,
-                    title=f"OIDC RS-family algorithm: {alg}",
-                    protocol="SAML",
-                    description=(
-                        f"OIDC endpoint uses {alg} which relies on RSA. "
-                        f"RSA is quantum-vulnerable and will be broken by Shor's algorithm."
-                    ),
-                    remediation=(
-                        "Migrate OIDC token signing to ECDSA (ES256/ES384) or EdDSA "
-                        "per NIST PQC roadmap recommendations."
-                    ),
-                    quantum_risk="Vulnerable",
-                    source="saml",
-                    algorithm=alg,
-                ))
-            elif alg == "SHA1":
-                results.append(IdentityFinding(
-                    host=ep.host,
-                    port=ep.port,
-                    severity="HIGH",
-                    title="SHA-1 algorithm URI detected in SAML metadata",
-                    protocol="SAML",
-                    description=(
-                        "SAML metadata references SHA-1 signing algorithm. "
-                        "SHA-1 is collision-vulnerable since 2017 (SHAttered attack)."
-                    ),
-                    remediation="Update IdP to use SHA-256 or SHA-384 signature algorithms.",
-                    quantum_risk="Vulnerable",
-                    source="saml",
-                    algorithm="SHA1",
-                ))
-            elif alg not in OIDC_ALG_SEVERITY and size is not None and isinstance(size, int) and size < 2048:
-                # 2026-09-14: a SAML IdP publishes a KeyDescriptor per USE, so one
-                # certificate can appear as two endpoint rows (use=signing and
-                # use=encryption, identical serial). This branch runs per ROW, so
-                # the encryption row was previously titled "Weak SAML SIGNING
-                # certificate" — a claim about the wrong key use, on a surface a
-                # client reads. Title the row for the use it actually describes.
-                #
-                # DELIBERATELY NOT FIXED HERE: the two rows still produce two
-                # CRITICAL findings for ONE weak key, and CRITICAL count drives
-                # the score cap. Collapsing them changes the emitted score, so it
-                # is tracked separately (option C) rather than slipped in behind a
-                # string fix. `evidence.py`'s saml_weak_signing_count double-counts
-                # the same key into the score ratio (option D), also tracked.
-                #
-                # The two constructor calls below are deliberately NOT collapsed
-                # into one with a computed `title=`. `tests/fixtures/
-                # chaos_lab_findings.py::collect_dashboard_titles` walks the AST
-                # for `title=` keywords holding an f-string LITERAL; a title built
-                # into a local variable first is invisible to it, which would hide
-                # BOTH templates from the classification gate rather than register
-                # the new one. Keeping each f-string at its call site is what makes
-                # the gate able to see them.
-                _shared = dict(
-                    host=ep.host,
-                    port=ep.port,
-                    severity="CRITICAL",
-                    protocol="SAML",
-                    remediation=(
-                        "Replace the IdP certificate with RSA-2048 minimum "
-                        "or switch to ECDSA P-256."
-                    ),
-                    quantum_risk="Vulnerable",
-                    source="saml",
-                    algorithm=f"{alg}-{size}" if size else alg,
-                )
-                if _saml_key_use(sd) == "encryption":
-                    results.append(IdentityFinding(
-                        title=f"Weak SAML encryption certificate: {alg}-{size}",
-                        description=(
-                            f"SAML encryption certificate uses {size}-bit {alg} key, "
-                            f"below the 2048-bit minimum for RSA."
-                        ),
-                        **_shared,
-                    ))
-                else:
-                    # Absent `use` means the key is valid for BOTH purposes per
-                    # SAML 2.0 metadata; the pre-existing wording is kept for that
-                    # case so this change alters exactly one thing.
-                    results.append(IdentityFinding(
-                        title=f"Weak SAML signing certificate: {alg}-{size}",
-                        description=(
-                            f"SAML signing certificate uses {size}-bit {alg} key, "
-                            f"below the 2048-bit minimum for RSA."
-                        ),
-                        **_shared,
-                    ))
+            # Phase 210 D-06: handled above, once, via evaluate_identity_endpoints —
+            # this branch intentionally does nothing so proto=="SAML" rows are not
+            # ALSO routed to the fallthrough/unknown-protocol path below.
+            pass
 
         elif proto == "DNSSEC":
             alg = (ep.cert_pubkey_alg or "").upper()

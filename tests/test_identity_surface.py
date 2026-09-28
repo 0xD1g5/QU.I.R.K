@@ -467,6 +467,44 @@ class IdentityDerivationTests(unittest.TestCase):
             f"Expected 0 findings for safe endpoints, got {len(results)}",
         )
 
+    def test_saml_dual_use_same_serial_route_returns_one_critical(self) -> None:
+        """Phase 210 XSURF-01: at the route boundary, a dual-`use`
+        same-serial SAML pair collapses to ONE IdentityFinding, with the
+        dict->pydantic field mapping (remediation from the evaluator's
+        `recommendation`) intact."""
+        from quirk.dashboard.api.routes.scan import _derive_identity_findings
+        endpoints = [
+            _Ep(host="idp.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=signing|serial=0a1b"),
+            _Ep(host="idp.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=encryption|serial=0a1b"),
+        ]
+        results = _derive_identity_findings(endpoints)
+        self.assertEqual(len(results), 1, f"Expected 1 finding, got {results}")
+        finding = results[0]
+        self.assertEqual(finding.severity, "CRITICAL")
+        self.assertEqual(finding.protocol, "SAML")
+        self.assertEqual(finding.source, "saml")
+        self.assertTrue(finding.algorithm)
+        self.assertTrue(finding.remediation)
+
+    def test_saml_distinct_serial_route_returns_two(self) -> None:
+        """Phase 210 XSURF-01 safety property: distinct certificate serials
+        on the same host:port are never suppressed at the route boundary."""
+        from quirk.dashboard.api.routes.scan import _derive_identity_findings
+        endpoints = [
+            _Ep(host="idp.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=signing|serial=0a1b"),
+            _Ep(host="idp.example.com", port=443, protocol="SAML",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+                service_detail="urn:x|use=encryption|serial=0a1c"),
+        ]
+        results = _derive_identity_findings(endpoints)
+        self.assertEqual(len(results), 2, f"Expected 2 findings, got {results}")
+
 
 # ===========================================================================
 # Class 5: ISSUE-3 Scan-Window Regression Test
