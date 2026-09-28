@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T12:42:32.728Z"
-last_activity: 2026-09-28 -- Phase 211 (Denominator Correctness) execution STARTED at 0 of 8 plans. Carried from Phase 210, still open: Success Criterion 5 NOT MET -- headline score 17 (report) vs 18 (dashboard) for one scan, isolated to Hygiene and Modern TLS; tracked at 260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard. Phase 210's ROADMAP checkbox stays UNCHECKED (goal PARTIAL) -- completed_phases is 0, not 1. Phase 211 is RE-SCOPED to verify + investigate: DENOM-01/02/03 already landed via 0b0ed1c7 (2026-09-13).
+last_updated: "2026-09-28T18:50:00.000Z"
+last_activity: 2026-09-28 -- Phase 211 (Denominator Correctness) at 6 of 8 plans (211-01..06 SUMMARY.md enumerated on disk; 211-07/08 remain). 211-06 recorded what 211-01/04/05 measured: DENOM-01..04 all marked complete in REQUIREMENTS.md, each with a scoped citation (DENOM-01/02 by prior commit 0b0ed1c7 + live measurement; DENOM-03's behavioural clause by the live INVERTED ports_tls-width verdict, 211-05; DENOM-04 with one stated deviation -- CBOM/score-strings dispositioned N/A, not regenerated). The Phase 210 residual (17 report vs 18 dashboard for one scan) is RESOLVED: root cause was a finding-title vocabulary mismatch (Hygiene) plus a severity-proxy structural zero (Modern TLS), fixed in 211-02/211-03, confirmed EQUAL live in 211-05 (scan_run_id 2026-09-28T13:16:55.319715+00:00, both pipelines 18/100, cross-checked by an independent DB re-derivation). Decision record: .planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md. The Phase 210 todo (260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard) is closed, moved to .planning/todos/completed/. One residual survives, NOT tag-blocking: "HTTP on TLS-designated port" has no dashboard equivalent, tracked at 211-http-on-tls-designated-port-has-no-dashboard-equivalent. Phase 210's ROADMAP checkbox stays UNCHECKED (goal PARTIAL) -- completed_phases is still 0, not 1. Phase 211's own checkbox also stays UNCHECKED -- 211-08 owns ground-truth closure.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -1361,15 +1361,24 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 211 (Denominator Correctness — RE-SCOPED) — EXECUTING
-Plan: 0 of 8 executed (8 PLAN.md files on disk, enumerated; 0 SUMMARY.md)
+Plan: 6 of 8 executed (8 PLAN.md files on disk, enumerated; 6 SUMMARY.md: 211-01..06). 211-07
+(docs correction, master-guide regen, LIVE-03 vault sync) and 211-08 (UAT Series + ground-truth
+close-out) remain.
 Status: Phase 210 closed PARTIAL (8 of 8 plans, 4 of 6 success criteria, checkbox UNCHECKED);
-Phase 211 planned and now executing
-Last activity: 2026-09-28 -- Phase 211 execution started. Re-scoped earlier
+Phase 211 executing, DENOM-01..04 all marked complete, 17-vs-18 divergence RESOLVED (EQUAL, live)
+Last activity: 2026-09-28 -- Phase 211 plan 06 recorded what plans 211-01/04/05 measured: the
+decision doc `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md` is
+DECIDED and tracked; the Phase 210 todo is refuted and closed (moved to
+`.planning/todos/completed/`); DENOM-01..04 are hand-marked complete in REQUIREMENTS.md, each with a
+scoped citation; ROADMAP Phase 211's four criteria carry the measured outcomes including the live
+INVERTED `ports_tls`-width verdict. Re-scoped earlier
 (`1804d703`): a live source audit found DENOM-01/02/03 already landed on main via `0b0ed1c7`
 (2026-09-13, confirmed an ancestor of HEAD), so the requirements as written on 2026-09-27 described
 an already-fixed defect. `211-CONTEXT.md` written with 8 decisions; stale arithmetic corrected in
-REQUIREMENTS.md and ROADMAP.md. Phase 211's centre of gravity is now the 17-vs-18 headline-score
-divergence (D-07's two hypotheses plus the Data-in-Motion discriminator), NOT denominator work.
+REQUIREMENTS.md and ROADMAP.md. Phase 211's centre of gravity was the 17-vs-18 headline-score
+divergence (D-07's two hypotheses plus the Data-in-Motion discriminator), NOT denominator work --
+both hypotheses were REFUTED live and a third mechanism (finding-title vocabulary split + severity
+proxy) was found and fixed, confirmed EQUAL at `scan_run_id 2026-09-28T13:16:55.319715+00:00`.
 
 Planning complete 2026-09-28: **8 plans in 6 waves**, plan-checker verdict **PASSED** (no HIGH/BLOCKER;
 2 MEDIUM and 1 LOW, both MEDIUMs fixed before this record was written). Research refuted BOTH of
