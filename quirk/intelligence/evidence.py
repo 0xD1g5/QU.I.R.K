@@ -4,6 +4,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
+from quirk.engine.findings_evaluator import _saml_cert_serial
 from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
 
 EVIDENCE_SCHEMA_VERSION = "1.2.0"
@@ -126,6 +127,13 @@ def build_evidence_summary(
 
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
+    # Phase 210 / D-03: this counter iterates raw CryptoEndpoint rows directly and
+    # shares no state with finding_severity_counts (built from finding_list below) -
+    # the finding-emission dedupe in evaluate_identity_endpoints() (plan 210-02) does
+    # not reach it, so a SAML IdP publishing one weak certificate under two `use`
+    # KeyDescriptors would otherwise double-count here too. Dedupe on the same
+    # (host, port, cert serial) key XSURF-01 established, via the shared parser.
+    _seen_saml_certs: Set[Tuple[str, int, str]] = set()
     dnssec_weak_algo_count = 0
     smime_weak_signing_count = 0
     smime_expired_count = 0
@@ -236,10 +244,18 @@ def build_evidence_summary(
         elif proto == "SAML":
             _saml_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
             _saml_size = getattr(ep, "cert_pubkey_size", None)
-            if is_weak_cipher(_saml_alg):
-                saml_weak_signing_count += 1
-            elif _saml_size is not None and isinstance(_saml_size, int) and _saml_size < 2048:
-                saml_weak_signing_count += 1
+            _saml_serial = _saml_cert_serial(str(getattr(ep, "service_detail", "") or ""))
+            _saml_key = (str(getattr(ep, "host", "") or ""),
+                         int(getattr(ep, "port", 0) or 0), _saml_serial)
+            if _saml_serial is not None and _saml_key in _seen_saml_certs:
+                pass
+            else:
+                if _saml_serial is not None:
+                    _seen_saml_certs.add(_saml_key)
+                if is_weak_cipher(_saml_alg):
+                    saml_weak_signing_count += 1
+                elif _saml_size is not None and isinstance(_saml_size, int) and _saml_size < 2048:
+                    saml_weak_signing_count += 1
 
         elif proto == "DNSSEC":
             _dnssec_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
