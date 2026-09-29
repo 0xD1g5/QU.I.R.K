@@ -65,3 +65,12 @@ Phase-branch CI state is unobserved by default in this repo, which is squarely P
 - Phase 220 (v5.26) — CI Instrument Truth. This belongs to that phase's scope.
 - `main`'s `Linux Full Suite` is currently **failure** on run 36604466116, which is already a
   named Phase 220 goal ("`main`'s Python CI is green").
+
+## Update 2026-09-29 — trigger-type hypothesis now has one confirming data point
+
+PR #38 (same tree as the failing dispatch, `pull_request`-triggered) ran this job **green**:
+run `36624566175`, job `109599195909`, 2m14s. Same code: RED under `workflow_dispatch`
+(`36618376788`), GREEN under `pull_request`. That isolates the trigger, not the code. It does
+NOT yet name the mechanism — the empty `e2e_token.txt` points at something dispatch-only
+(a secret/env not exposed to dispatch runs, or a conditional step). Next step: diff the
+job's `if:`/`env:` handling between the two event types in `python-ci.yml`.
