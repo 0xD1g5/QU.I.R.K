@@ -18,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card"
 const SEVERITY_STYLES: Record<string, string> = {
   HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM: "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
-  LOW: "bg-[hsl(var(--chart-tls))] text-black",
+  LOW: "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
 }
 
 export function ScanHistoryPage() {

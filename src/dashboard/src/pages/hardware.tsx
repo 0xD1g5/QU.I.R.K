@@ -20,7 +20,7 @@ import { VendorTrendList } from "@/components/VendorTrendList"
 const TIER_STYLES: Record<string, string> = {
   "Tier 1":   "bg-[hsl(var(--status-critical))] text-white",
   "Tier 2":   "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  "Tier 3":   "bg-[hsl(var(--chart-tls))] text-black",
+  "Tier 3":   "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
   "Tier N/A": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
@@ -73,7 +73,7 @@ const SNMP_FAILED_TOOLTIP =
 // / SNMP_STYLES."v3 noAuthNoPriv" amber convention.
 const BRIDGE_STYLES: Record<string, string> = {
   "Partial (assumed)": "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
-  "SNMP-confirmed":    "bg-[hsl(var(--chart-tls))] text-black",
+  "SNMP-confirmed":    "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
 }
 
 // Verbatim Pitfall-3 caveat text (UI-SPEC Copywriting Contract) — must appear

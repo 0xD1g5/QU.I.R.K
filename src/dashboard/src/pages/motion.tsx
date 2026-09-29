@@ -14,7 +14,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH:     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM:   "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
-  LOW:      "bg-[hsl(var(--chart-tls))] text-black",
+  LOW:      "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
   INFO:     "bg-[hsl(var(--status-neutral))] text-white",
 }
 
@@ -117,7 +117,7 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
         const plaintextCount = rows.filter(r => r.plaintext_exposed).length
         const pillClass = plaintextCount > 0
           ? "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]"
-          : "bg-[hsl(var(--chart-tls))] text-black"
+          : "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]"
         return (
           <Card key={fam}>
             <CardHeader className="pb-2">
@@ -163,7 +163,7 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
                               </Badge>
                             )}
                             {cloudSuffix && (
-                              <Badge className="bg-[hsl(var(--chart-tls))] text-black text-xs">
+                              <Badge className="bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))] text-xs">
                                 ☁ {cloudSuffix}
                               </Badge>
                             )}

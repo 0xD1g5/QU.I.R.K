@@ -1,47 +1,15 @@
 {
-  "pages/compare.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
   "pages/compare.tsx|destructive|white|dark": {
     "ratio": 3.8167472488346967,
     "why": "--destructive (3.82:1, dark) is the semantic error/danger token; its dark-theme value is not dark enough behind static white text at badge scale (text-xs). Backlog 999.117 class 'semantic-error-badge'. Tracked as dashboard-accessibility-debt, deferred as one unit pending a theme-varying destructive-foreground token."
-  },
-  "pages/data-at-rest.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/findings.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
   "pages/hardware.tsx|badge-modbus|white|dark": {
     "ratio": 2.8613669243793294,
     "why": "--badge-modbus (2.86:1, dark) is a protocol-accent token minted for a coloured chip background, paired here with a static white foreground never designed against it. Backlog 999.117 class 'protocol accent badges'. Tracked as dashboard-accessibility-debt, deferred as one unit pending Phase 217/218's badge-foreground rework."
   },
-  "pages/hardware.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/identity.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/motion.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/scan-history.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
   "pages/sensors.tsx|quantum-safe|--quantum-safe-foreground|light": {
     "ratio": 3.865881036029146,
     "why": "--quantum-safe (3.87:1, light) paired with its own --quantum-safe-foreground token falls short of AA in the light theme even though the pairing was clearly deliberate (a dedicated foreground token exists). Backlog 999.117 class 'quantum-safe-foreground-light-gap'. Tracked as dashboard-accessibility-debt."
-  },
-  "pages/trends.tsx|chart-tls|black|light": {
-    "ratio": 3.3540454596433555,
-    "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
   "pages/trends.tsx|destructive|white|dark": {
     "ratio": 3.8167472488346967,
