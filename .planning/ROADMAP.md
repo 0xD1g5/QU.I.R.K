@@ -40,6 +40,7 @@
 - ✅ **v5.23 Deliverable Experience** — Phases 199–202, 28 plans (development complete 2026-09-12; audit `gaps_found` 14/14, 1 blocker operator-accepted; merged to main 2026-09-13) → `.planning/milestones/v5.23-ROADMAP.md`
 - ✅ **v5.24 UAT Coverage Drain** — Phases 203–209 incl. the insert 207.1, 53 plans (development complete 2026-09-27; audit `tech_debt`, 17/18 requirements + 1 PARTIAL, integration 4/4, Nyquist 8/8; merged to main 2026-09-27 `b262aa82`; untagged by design) → `.planning/milestones/v5.24-ROADMAP.md`
 - ✅ **v5.25 Score Truth & Release Cut** — Phases 210–214, 40 plans (**SHIPPED 2026-09-28 — tag `v5.25.0`, published to PyPI**, the first tagged release since `v5.21.0` and carrying four milestones of work; audit `tech_debt`, 15/15 requirements with 2 scope-qualified, integration 6/6 seams, Nyquist 5/5) → `.planning/milestones/v5.25-ROADMAP.md`
+- ⏳ **v5.26 Accessibility & Instrument Truth** — Phases 215–220 (opened 2026-09-28; in progress) → see `## Milestone v5.26` below
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -95,6 +96,125 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
 is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
+## Milestone v5.26: Accessibility & Instrument Truth
+
+**Status:** In progress — opened 2026-09-28 (Phases 215–220). This is a reopening of
+`BACK-A11Y-01` (filed 2026-05-22, v5.0 Phase 87; lost at that milestone's archive; rediscovered a
+third time on 2026-09-28 by a red CI gate). Full milestone context:
+`.planning/PROJECT.md` § "Current Milestone: v5.26", `.planning/REQUIREMENTS.md`,
+`.planning/HORIZON.md` § "Carried forward from v5.25", and
+`.planning/backlog/999.117-dashboard-accessibility-debt/IDEA.md`.
+
+**Operator scoping constraint:** the accessibility work is drained AS ONE UNIT — phases below split
+by *kind of work* (instrument, harness, violation-drain, design-review, keyboard, CI), never by
+*which dashboard page*. RATCHET runs first because every FIX requirement is verified against its
+baseline. FIX-02's spike is sequenced ahead of FIX-03's bulk edit inside the same phase. FIX-04/05
+close the accessibility arc last, behind an operator visual-review checkpoint. CITRUTH is an
+independent CI-instrument work-stream and may run in parallel with the accessibility phases. Phase 216 is
+also parallel-safe, and deliberately so: its two harness repairs are *discovery* instruments that can
+GROW the contrast baseline, so they must land before Phase 218 asserts that baseline is empty.
+
+### Phases
+
+- [ ] **Phase 215: Instrument Ratchet** - Convert the 45 invisible badge-contrast failures into a derived, shrink-only baseline that every later fix is verified against
+- [ ] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
+- [ ] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
+- [ ] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
+- [ ] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
+- [ ] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
+
+### Phase Details
+
+### Phase 215: Instrument Ratchet
+**Goal**: The dashboard's badge-contrast debt is measurable, bounded, and provably enforced — every page, both themes, derived from source at run time, with a baseline that can only shrink.
+**Depends on**: Nothing (first phase of the milestone)
+**Requirements**: RATCHET-01, RATCHET-02, RATCHET-03, RATCHET-04
+**Success Criteria** (what must be TRUE):
+  1. A single contrast guard test evaluates every dashboard page and both themes, deriving its badge-pair set from source at run time (no hand-maintained list of files or pairs).
+  2. The 45 known failures are recorded in a checked-in, shrink-only baseline — a new sub-AA pair fails CI, and a fixed pair requires (and gets) a baseline update, never a silent widening.
+  3. `auditedFiles()` exists in exactly one place in the codebase; the verbatim copy in `theme-token-vocabulary.test.ts` is deleted and both call sites use the single derived source.
+  4. A mutation probe injects a sub-AA badge pair and the guard demonstrably goes red, with the failing output captured as evidence rather than asserted in prose.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 216: A11y Harness Repair
+**Goal**: The axe/a11y harness can actually see what it claims to sweep — both themes, and routes whose fixtures currently mask real failures — and the one flaky baseline in this area stops producing false local/CI disagreement.
+**Depends on**: Nothing (independent of Phase 215; may run in parallel with Phase 217). The
+ratchet/baseline idiom this phase extends is a convention, not a build dependency — and because
+HARNESS-01/02 are *discovery* instruments that can GROW the contrast baseline, running this early
+is preferable to running it late. See Phase 218's dependency note.
+**Requirements**: HARNESS-01, HARNESS-02, HARNESS-03
+**Success Criteria** (what must be TRUE):
+  1. `npm run a11y:check` sweeps both light and dark themes for every route in `routes.json`, with a separate baseline per theme.
+  2. `/certificates` and `/hardware` no longer report PASS while rendering badges below AA — the fixture-dependent blind spot that let 2.30:1 badges pass is closed for both proof routes.
+  3. The `data-at-rest` baseline uses a tolerance/range rather than an exact count, and running it repeatedly on macOS and in CI no longer disagrees.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 217: Contrast Violations — Structural Drain
+**Goal**: Every badge-contrast site that can be fixed by convention or classification (not a genuine design call) reaches AA in both themes, without regressing the text-on-white contrast Phase 213 already established.
+**Depends on**: Phase 215 (RATCHET-01's baseline is how every swap in this phase is verified)
+**Requirements**: FIX-01, FIX-02, FIX-03
+**Success Criteria** (what must be TRUE):
+  1. The 11 zero-design-input swaps (7 × `--risk-badge-high`, 4 × `--qs-node-safe`) are applied, each now using its existing `-foreground` sibling, and RATCHET's baseline count for these sites drops to zero.
+  2. FIX-02's spike classifies 3–4 of the 29 `text-black` sites as badge-background vs. text-on-white use and records the resulting plan shape (mixed vs. uniform) before any bulk edit to the remaining sites lands.
+  3. All 29 `--status-warning`/`--chart-tls` sites reach AA as badge backgrounds in both themes, while the text-on-white use of the same tokens (Phase 213's fix) keeps its existing contrast.
+  4. RATCHET's baseline reflects zero remaining failures for the categories this phase owns (11 free swaps + 29 spiked sites).
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 218: Contrast Violations — Design Calls & Closing Assertion
+**Goal**: The 5 remaining badge pairs that require a real design decision are resolved with the operator's eyes on the result, and the milestone can assert — not estimate — that the dashboard's badge-contrast debt is drained.
+**Depends on**: Phase 217 **and Phase 216** — 217 because the closing assertion requires every
+non-design-call site already fixed; **216 because it can grow the baseline this phase asserts is
+empty.** HARNESS-01 adds a light-theme sweep and HARNESS-02 closes a fixture blind spot that is
+currently masking 2.30:1 badges on `/certificates` and `/hardware`; both are discovery mechanisms
+that may surface contrast failures never counted among the 45. FIX-05 is only meaningful once every
+discovery instrument is live, so this phase cannot close before 216 has landed and its findings have
+been drained.
+**Requirements**: FIX-04, FIX-05
+**Success Criteria** (what must be TRUE):
+  1. The operator visually reviews and approves new values for all 5 design-call pairs (`--destructive` + white dark ×2, `--quantum-safe` + paired foreground light ×2, `--badge-modbus` + white dark ×1), following the same review path Phase 213-09 used for light-palette values. **Human checkpoint: operator sign-off required before these values merge.**
+  2. All 5 approved values are applied and pass AA 4.5:1 in the theme each pair is used in.
+  3. RATCHET-01 reports an empty baseline — zero badge pairs anywhere in the dashboard below 4.5:1
+     in either theme — measured **after** Phase 216's theme axis and fixture-blind-spot fixes are
+     live, so the assertion covers everything the repaired instruments can see, not only the
+     original 45.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 219: Keyboard Access
+**Goal**: A keyboard-only user can operate any scrollable table region in the dashboard without a mouse, closing the one accepted violation whose own justification says it is not accepted as permanent debt.
+**Depends on**: Nothing (independent of the contrast work-stream; may run in parallel with Phases 215–218)
+**Requirements**: KBD-01
+**Success Criteria** (what must be TRUE):
+  1. `components/ui/table.tsx` exposes a focusable, keyboard-scrollable region (`tabIndex`, appropriate `role`) usable app-wide across every table consumer, not just one page.
+  2. A keyboard-only walkthrough (Tab to the region, arrow/PageDown to scroll) succeeds on at least one representative page with a mouse disconnected.
+  3. The `scrollable-region-focusable` accepted-violation entry is withdrawn from the accepted-violations list, not renewed, and the axe/a11y suite stays green without it.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 220: CI Instrument Truth
+**Goal**: The gates that report CI health actually measure it — the intermittent required-job flake is diagnosed rather than tolerated, `main`'s Python CI is green, and phase verification can no longer report `passed` over a red branch.
+**Depends on**: Nothing (independent CI-instrument work-stream; may run in parallel with Phases 215–219)
+**Requirements**: CITRUTH-01, CITRUTH-02, CITRUTH-03
+**Success Criteria** (what must be TRUE):
+  1. `test_vitest_substitute_nodes_pass`'s 14 nodes are diagnosed (documented root cause) and demonstrated passing across repeated batched `Linux Full Suite` runs — not merely observed green once, since a single green run is a sample, not evidence of health.
+  2. `Python CI` runs green on `main`'s current HEAD, with `test_chaos_lab_idempotency[multihost]`/`[storage-s3]` either fixed or skipping cleanly and honestly (a stated, checkable condition — e.g. registry unreachable) rather than failing or silently passing on masked errors.
+  3. Phase verification consults its own branch's live CI state before reporting `passed`, demonstrated against a real branch rather than asserted — closing the v5.25 gap where five phases verified `passed` over a failing `main`.
+**Plans**: TBD
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 215. Instrument Ratchet | 0/? | Not started | - |
+| 216. A11y Harness Repair | 0/? | Not started | - |
+| 217. Contrast Violations — Structural Drain | 0/? | Not started | - |
+| 218. Contrast Violations — Design Calls & Closing Assertion | 0/? | Not started | - |
+| 219. Keyboard Access | 0/? | Not started | - |
+| 220. CI Instrument Truth | 0/? | Not started | - |
+
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 
 **5 phases (210-214), 40 plans, 15/15 requirements satisfied.** Audit `tech_debt` — 6/6 integration

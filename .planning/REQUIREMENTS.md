@@ -159,19 +159,19 @@ Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RATCHET-01 | TBD | Pending |
-| RATCHET-02 | TBD | Pending |
-| RATCHET-03 | TBD | Pending |
-| RATCHET-04 | TBD | Pending |
-| HARNESS-01 | TBD | Pending |
-| HARNESS-02 | TBD | Pending |
-| HARNESS-03 | TBD | Pending |
-| FIX-01 | TBD | Pending |
-| FIX-02 | TBD | Pending |
-| FIX-03 | TBD | Pending |
-| FIX-04 | TBD | Pending |
-| FIX-05 | TBD | Pending |
-| KBD-01 | TBD | Pending |
-| CITRUTH-01 | TBD | Pending |
-| CITRUTH-02 | TBD | Pending |
-| CITRUTH-03 | TBD | Pending |
+| RATCHET-01 | Phase 215 | Pending |
+| RATCHET-02 | Phase 215 | Pending |
+| RATCHET-03 | Phase 215 | Pending |
+| RATCHET-04 | Phase 215 | Pending |
+| HARNESS-01 | Phase 216 | Pending |
+| HARNESS-02 | Phase 216 | Pending |
+| HARNESS-03 | Phase 216 | Pending |
+| FIX-01 | Phase 217 | Pending |
+| FIX-02 | Phase 217 | Pending |
+| FIX-03 | Phase 217 | Pending |
+| FIX-04 | Phase 218 | Pending |
+| FIX-05 | Phase 218 | Pending |
+| KBD-01 | Phase 219 | Pending |
+| CITRUTH-01 | Phase 220 | Pending |
+| CITRUTH-02 | Phase 220 | Pending |
+| CITRUTH-03 | Phase 220 | Pending |
