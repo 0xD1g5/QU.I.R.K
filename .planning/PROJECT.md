@@ -34,6 +34,10 @@ and rediscovered a third time by a red CI gate rather than by anyone reading the
 `HORIZON.md` and backlog `999.117` — the files that survive archiving — and deliberately not as a
 ROADMAP Backlog row.
 
+**v5.26 Accessibility & Instrument Truth opened 2026-09-28** — that deferral is this milestone, taken
+whole per the operator's instruction, paired with the instrument and CI-gate defects that let it hide.
+See the Current Milestone section below.
+
 <details>
 <summary>Previous: v5.24 UAT Coverage Drain — CLOSED and ARCHIVED 2026-09-27</summary>
 
@@ -269,6 +273,96 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 </details>
 
 </details>
+
+## Current Milestone: v5.26 Accessibility & Instrument Truth — OPENED 2026-09-28 *(Phases 215+)*
+
+**Goal:** Drain the dashboard's WCAG-AA badge-contrast debt as one unit, and repair the instruments
+that let 45 real violations sit behind three green gates — including the CI gates that report green
+on a required job without measuring it.
+
+**This is a reopening of `BACK-A11Y-01`, not a new item.** Filed 2026-05-22 in v5.0 Phase 87
+("genuine WCAG-AA violations — `color-contrast` on muted-foreground text / accent backgrounds /
+**severity badges**"), it went invisible at that milestone's archive and survives only at
+`.planning/milestones/v5.0-ROADMAP.md:848`. It was rediscovered a **third** time on 2026-09-28 — by a
+red CI gate, not by anyone reading the ledger, roughly four months and ten milestones after it was
+first written down. Stating that here is part of the scope: a milestone that closes this debt without
+recording why it was invisible has scheduled the fourth rediscovery.
+
+**Operator scoping constraint (2026-09-28):** worked **as one unit** — its own milestone or bundled
+whole — explicitly **not** drained piecemeal across phases that each happen to touch a page.
+
+**Target features:**
+
+- **Ratchet before repair.** Generalise
+  `src/dashboard/src/components/__tests__/cbom-badge-contrast-guard.test.ts` to every page and both
+  themes, with the 45 remaining failures as a baseline that can only shrink (same idiom as
+  `tests/a11y/baseline-*.json`). This fixes nothing and goes first anyway: it converts an unbounded,
+  invisible liability into a drainable number, and it runs in vitest with no browser, so it covers the
+  light theme and every route regardless of fixture data.
+- **Single-source the audited file set.** `auditedFiles()` covers **27 of 76** non-test `.tsx` files
+  (`src/pages/*.tsx` + `sidebar.tsx`), so six colour literals ship from three unaudited, reachable
+  components — `LifecycleEventRow.tsx`, `VendorTrendList.tsx`, `LifecycleEventList.tsx` (v5.25 audit
+  W-4). Verified 2026-09-28: the function exists **twice**, at
+  `hardcoded-color-audit.test.tsx:86` and `theme-token-vocabulary.test.ts:41`, the second carrying the
+  comment *"Copied verbatim from hardcoded-color-audit.test.tsx's auditedFiles()."* Widening a
+  hand-synced duplicate is the enumeration-vs-derivation defect living inside the gate built to catch
+  enumeration defects; derive it once and delete the copy.
+- **Give the a11y harness a theme axis.** Verified 2026-09-28: `run-a11y.mjs`'s `VARIANT` is a
+  *fixture* variant (`default`/`empty`/`loading`), and `data-theme`, `.dark`, `classList` and
+  `prefers-color-scheme` return **zero** hits in that file. The harness has no theme dimension at all,
+  so 4 of the 7 contrast classes are invisible to CI and this is new capability rather than a
+  misconfigured flag — size accordingly. Separately, axe coverage is **fixture-dependent**:
+  `/certificates` and `/hardware` are both in `routes.json` and both reported PASS while rendering
+  2.30:1 badges their fixture data never shows.
+- **Drain the violations.** 11 free swaps with zero design input (7 × `--risk-badge-high` + white
+  2.85 → its existing `-foreground` sibling 5.97; 4 × `--qs-node-safe` + white 2.30 →
+  `--status-safe-deep` 4.83/6.79; precedent already at `data-at-rest.tsx`, `identity.tsx`,
+  `findings.tsx:145`). Then 2 new theme-varying foreground tokens + 29 sites (17 × `--status-warning`
+  + `text-black`, 12 × `--chart-tls` + `text-black`) — **spike 3–4 sites first**: those tokens are
+  used both as text-on-white, where the light values are correct, and as badge backgrounds, where they
+  are not, and if the 29 are a mix this stops being find-and-replace and becomes per-site
+  classification. Finally the 5 genuine design calls (`--destructive` + white 3.82 dark ×2,
+  `--quantum-safe` + paired fg 3.87 light ×2, `--badge-modbus` + white 2.86 dark ×1) routed through
+  operator visual review, as 213-09 routed light-palette values.
+- **Keyboard/focus pass on `components/ui/table.tsx`.** `scrollable-region-focusable` is the one
+  accepted violation whose own justification says it is "tracked as follow-up work, **not accepted as
+  permanent debt**" — the shadcn wrapper has no `tabIndex`/`role`, so a keyboard user cannot scroll it
+  independently. WCAG 2.1.1/2.1.3, app-wide across every table consumer.
+- **CI instrument truth.** The 14 intermittent vitest nodes inside the `Linux Full Suite` job every PR
+  must pass (`tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass`; each passes
+  standalone, so a green run is a sample, not health). `main`'s `Python CI` red from Docker-registry
+  `unauthorized` on seed-image pulls. And phase verification that can see its branch's CI state —
+  five v5.25 phases verified `passed` and a release was tagged and published while `main` was failing,
+  and no `VERIFICATION.md` mentions it.
+- **`data-at-rest` baseline: exact count → tolerance.** The baseline's own text says the rule "only
+  fires on a container *actually overflowing* at render time… a function of viewport, font metrics,
+  and rendered row widths — not of markup". It trips locally on macOS (observes 1, baseline 2) while
+  passing CI, so it is a live source of false signal during exactly this work.
+
+**Why this is one cohesive milestone rather than eight chores:** the ratchet, the harness theme axis,
+the duplicated glob and the `data-at-rest` pin are all **instrument** defects — the reason 45 real
+violations sat behind three green gates. The swaps, the tokens, the design calls and the focus pass
+are the violations themselves. Fixing the violations without fixing the instruments guarantees a
+third rediscovery of the same debt; Phase 213 built a colour-literal gate that asks "is this a
+literal?" and never "does this contrast?", which is precisely how a hand-tuned AA-clearing value got
+laundered into a token reference that looked correct in review.
+
+**Deliberately out of scope, stated so it is deferred rather than forgotten:** HORIZON Candidate A
+(Migration Execution — its 3x sizing question is still unresolved), Candidate B (detection breadth —
+still no demand signal), `999.104` PARITY-T4, `999.107` Exposure Map Tier B, `999.105` customizable
+reporting engine, `999.110` multi-host lab topology, `999.111` (P2, the operator-accepted v5.23
+blocker), `999.112`, and the seven scoring follow-on todos v5.25 filed but did not fix
+(`p2b-healthy-endpoints-dilute-the-readiness-score`,
+`readiness-score-denominator-is-probe-count-not-assessable-endpoints`,
+`score-drivers-leak-from-domains-excluded-from-the-headline`,
+`saml-one-certificate-counted-twice-c-and-d`, `cli-dashboard-score-divergence-same-scan`,
+`r5-ladder-fixture-is-not-the-measurement-it-claims`,
+`211-http-on-tls-designated-port-has-no-dashboard-equivalent`).
+
+**Full detail and the per-class site inventory:**
+`.planning/backlog/999.117-dashboard-accessibility-debt/IDEA.md`; the 8-item breakdown with sizes is
+in `HORIZON.md` § "Carried forward from v5.25"; audit rows are `.planning/v5.25-MILESTONE-AUDIT.md`
+W-4 and W-9 (archived at `.planning/milestones/v5.25-MILESTONE-AUDIT.md`).
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 

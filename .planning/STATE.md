@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.25
-milestone_name: Score Truth & Release Cut
-status: milestone_complete
-last_updated: "2026-09-29T02:30:00.000Z"
-last_activity: 2026-09-28 -- v5.25 Score Truth & Release Cut CLOSED and ARCHIVED (local date; the prior entry here dated the same work 2026-09-29 from UTC timestamps -- git, CHANGELOG and every SUMMARY use local, so local is the convention). 5 phases (210-214), 40 plans, 15/15 requirements with XSURF-04 and UIFIX-02 scope-qualified rather than quietly accepted. Audit tech_debt -- integration 6/6 seams WIRED 0 blockers, Nyquist 5/5, staleness green on all 9 date-gated catalogs and all 5 generator-drift gates, 9 warnings. Archived to .planning/milestones/v5.25-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md; REQUIREMENTS.md git-rm'd. ROADMAP.md rebuilt as the milestone index -- and note WHY that needed care -- /gsd-new-milestone had overwritten the Backlog section when v5.25 opened, so the close workflow's "extract the Backlog first" step would have found nothing and silently dropped 11 subsections; restored verbatim from dd4b2a17 and diff-verified at zero removed lines. Phase 210's checkbox flipped [ ]->[x] by operator decision with provenance preserved (its Criterion 5 was met by Phase 211's work, not its own); the ROADMAP Progress table had rows 211/212/213 reading "0/? Not started" while all three were complete, re-derived from disk. MID-CLOSE FIX -- Dashboard Quality / Axe + Console Gate had been red on main for 5 runs -- root-caused NOT to dependency float (my first hypothesis, wrong because I anchored the breaking window on a run that failed in a DIFFERENT job) but to plan 213-07 retokenising cbom.tsx's Safe badge from hsl(142 71% 30%) to var(--qs-node-safe), identical hue and saturation, lightness 30->45, 4.84:1 -> 2.30:1. Fixed to --status-safe-deep, guarded by a mutation-proved run-time-derived test, verified PASS against the real sweep, merged as PR 37 (2f79f6e1). Enumerating the full set then found 46 of 103 badge pairs below AA -- 45 remain, DEFERRED AS ONE UNIT by operator decision to HORIZON.md + backlog 999.117, a reopening of BACK-A11Y-01 lost at the v5.0 archive. Linux Full Suite stays red on main for a THIRD unrelated reason -- test_chaos_lab_idempotency[multihost]/[storage-s3], Docker registry auth, identical node set on main and on the PR, NOT the vitest flake. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- every file hand-edited from a pre-image with the FULL diff read. NEXT -- /gsd-new-milestone.
+milestone: v5.26
+milestone_name: Accessibility & Instrument Truth
+status: planning
+last_updated: "2026-09-29T02:55:00.000Z"
+last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 40
-  completed_plans: 40
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -1387,6 +1387,40 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
+## Current Position
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-09-28 — Milestone v5.26 Accessibility & Instrument Truth started
+
+**Scope, as locked at the boundary:** the v5.25 dashboard-accessibility deferral taken **as one
+unit** per the operator instruction (45 of 103 badge colour pairs below WCAG AA across 11 pages — a
+reopening of `BACK-A11Y-01`, filed 2026-05-22 and rediscovered a third time by a red gate), paired
+with the instrument and CI-gate defects that let it stay invisible behind three green gates. Ratchet
+first, then repair. Full target-feature list: `PROJECT.md` § Current Milestone.
+
+**Two boundary verifications worth carrying into planning**, both of which make `HORIZON.md`'s
+sizing optimistic rather than wrong:
+
+- `auditedFiles()` (the UIFIX-02 colour-audit glob, 27 of 76 non-test `.tsx` files) exists **twice** —
+  `hardcoded-color-audit.test.tsx:86` and `theme-token-vocabulary.test.ts:41`, the second annotated
+  *"Copied verbatim from hardcoded-color-audit.test.tsx's auditedFiles()."* Widening it means
+  widening two hand-synced copies; derive once and delete the copy.
+- `run-a11y.mjs` has **no theme dimension at all**. Its `VARIANT` is a *fixture* variant
+  (`default`/`empty`/`loading`), and `data-theme` / `.dark` / `classList` / `prefers-color-scheme`
+  return zero hits. Adding the light theme is new harness capability, not a flag flip.
+
+**Phase numbering continues from 214** — v5.26 starts at Phase 215. No `--reset-phase-numbers`.
+
+**Toolchain discipline carried from the v5.25 close, unchanged:** no `phase.complete`, no
+`milestone.complete`, no mutating `gsd-sdk` / `gsd-tools.cjs` state verb. This section and the
+frontmatter above were hand-edited from a pre-image with the FULL diff read — not a signature grep,
+which cannot see the multi-line-value truncation defect (HITS #15-17). See `CLAUDE.md` § GSD
+`state.*` Verb Integrity.
+
+---
+
+## v5.25 Close Record — Phase 214 (Release Cut), superseded as Current Position 2026-09-28
 Phase: 214 (Release Cut) — **COMPLETE at 9 of 9 plans.** Recorded 2026-09-29 by the continuation
 pass that ran after plan 214-09's blocking operator checkpoint was satisfied.
 Plan: 9 of 9 complete.
