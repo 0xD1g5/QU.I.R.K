@@ -1388,7 +1388,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 Phase: 216 (A11y Harness Repair) — **COMPLETE, 8 of 8 plans, all 6 waves.**
-Plan: next is Phase 217 plan 01 (not yet planned)
+Plan: Phase 217 context gathered 2026-09-29 (`217-CONTEXT.md`, D-01..D-16); next is `/gsd-plan-phase 217`. Branch `phase-217-contrast-structural-drain` cut from `main` `1c34559c` after PR #38 merged 215+216.
 Status: Phase complete; milestone v5.26 at 2 of 6 phases
 Last activity: 2026-09-29 — **216-08 executed and the phase closed.** The Linux `workflow_dispatch`
 job produced every baseline (run `36613039581`, Chrome `152.0.7977.82`, artifact
