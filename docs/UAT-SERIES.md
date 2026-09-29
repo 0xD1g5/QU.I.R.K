@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Series 216 added: five cases, four PASS and one SKIP (`UAT-216-03`, the `data-at-rest` countRange DEFERRED honestly to plan 216-08, which derives the actual bounds from Linux CI). No version bump — v5.26 is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
+**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Series 216 added: five cases, **all five PASS**. `UAT-216-03` was first recorded SKIP while plan 216-08 was still pending, then re-run and flipped to PASS once 216-08 landed the measured `countRange: [1, 2]` — exactly as that SKIP annotation prescribed. Its original multi-line SKIP annotation also violated the canonical single-line `**Result:**` form and was caught by `tests/test_uat_series_format.py`, a gate outside the five this phase had been running. No version bump — v5.26 is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
 (Certificates Page — Expiry Sorting) and `UAT-7-21` (Dashboard Theme — No Hardcoded Colors)
 re-dispositioned FAIL to PASS. `UAT-7-12` cites the five new
 `certificates-expiry-sort.test.tsx` nodes plus operator browser confirmation. `UAT-7-21` is a
@@ -30215,7 +30215,7 @@ read it as the criterion being met, not as a regression.
 
 **ID:** UAT-216-03
 **Title:** `compareToBaseline` supports an opt-in, per-entry `countRange`, proven correct at the
-unit level — but the live `data-at-rest` baseline does not yet carry one
+unit level and applied to the live `data-at-rest` baseline with measured bounds
 **Maps to:** HARNESS-03 (ROADMAP Phase 216 criterion 3)
 
 **What to test:** The recorded macOS-vs-Linux disagreement on `data-at-rest`'s
@@ -30228,7 +30228,7 @@ marking it transitional (D-14).
 ```
 cd src/dashboard
 npx vitest run tests/a11y/baseline-diff.test.ts -t "declared tolerance range"
-cat tests/a11y/baseline-data-at-rest-default-dark.json | grep -c countRange   # 0 today — see Notes
+cat tests/a11y/baseline-data-at-rest-default-dark.json | grep -c countRange   # 2 since plan 216-08
 grep -c "countRange" tests/a11y/run-a11y.mjs
 ```
 
@@ -30239,22 +30239,19 @@ band" claim) and cites `HARNESS-03`, `KBD-01`, and the Phase 177-07 provenance; 
 `data-at-rest` baseline entry itself carries a `countRange` whose bounds were derived from two
 actually-observed runs (one macOS, one Linux CI), not guessed.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage: the `countRange`
-mechanism is built and unit-proven in plan 216-03 — 18 passing nodes in
-`tests/a11y/baseline-diff.test.ts` covering the ceiling/floor/malformed-shape/carry-forward legs,
-plus a docstring-amendment guard — but the actual `data-at-rest` baseline entry on disk still
-records a bare `count: 2` with no `countRange` key (`grep -c countRange
-tests/a11y/baseline-data-at-rest-default-dark.json` = 0 as of this writing). Deriving the range from
-two real observed runs, one macOS and one freshly Linux-generated, is plan 216-08's job — it has
-not executed yet. This case should be re-run and flipped to PASS once 216-08 lands, citing the
-committed baseline's `countRange` value directly; it is recorded SKIP now rather than invented
-against evidence that does not exist.)
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP (re-run and flipped from SKIP after plan 216-08 landed, exactly as the superseded SKIP annotation prescribed: `countRange: [1, 2]` now sits on the live `scrollable-region-focusable` entry in both `baseline-data-at-rest-default-dark.json` and its `-default-light.json` sibling, bounds measured not guessed — macOS 1 via `npm run a11y:check`, Linux 2 via CI run 36613039581 on pinned Chrome 152.0.7977.82 — with the D-10/D-12/D-13/D-14 tolerance addendum naming KBD-01 and Phase 219 as the retirement owner; 12 tolerance nodes in `tests/a11y/baseline-diff.test.ts` pass, and `run-a11y.mjs` cites HARNESS-03, KBD-01 and the Phase 177-07 provenance with the retired "no tolerance band" phrase absent)
 **Date:** 2026-09-29  **Tester:** automated
 **Notes:** Mechanism-level falsification is real and committed: `216-03-SUMMARY.md` captures a
 docstring-guard RED (reintroducing the retired "no tolerance band" phrase) then a restore-to-green,
 and 12 dedicated `compareToBaseline` nodes prove the ceiling/floor/malformed-shape behaviour by
-mutation, not assertion. What is missing is the application of that mechanism to the one entry this
-criterion names — a scope gap between plans, not a defect in the mechanism itself.
+mutation, not assertion. The application of that mechanism to the entry this criterion names was a
+scope gap between plans, closed by plan 216-08: the range is now declared on the live entry in both
+themes with bounds taken from two actually-observed runs. Note the two bounds differ by platform, not
+by theme — macOS reports 1 under both dark and light, Linux 2 — which is the expected shape for a
+keyboard-focus rule and was measured rather than predicted. The `empty` and `loading` variants show a
+wider 0-vs-2 divergence that `[1, 2]` deliberately does NOT cover, because a `[0, 2]` floor would
+disable the D-12 shrink-only ratchet; that is pre-existing, CI-green, and tracked as a pending todo
+for Phase 219 / KBD-01 rather than absorbed here.
 
 ### UAT-216-04: The Repaired Harness Is Proved To Fail, Not Asserted To Work
 
