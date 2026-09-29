@@ -514,6 +514,51 @@ todos stay unlinked to any phase on purpose.
 
 ---
 
+## Carried forward from v5.25 — Dashboard Accessibility Debt — DEFERRED AS ONE UNIT
+
+**Operator decision, 2026-09-29: do not drain this piecemeal.** Either its own milestone or bundled
+whole into the next one — but worked together, not scattered across phases that each happen to
+touch a page.
+
+Recorded here rather than in `ROADMAP.md`'s Backlog for the reason this file already gives above:
+archived roadmaps swallow backlog items. That warning is not hypothetical for *this* theme —
+**`BACK-A11Y-01` IS this work**, filed 2026-05-22 in v5.0 Phase 87, describing the axe sweep red
+across all 11 dashboard pages with "genuine WCAG-AA violations — `color-contrast` on
+muted-foreground text / accent backgrounds / **severity badges**". It went invisible for three
+months at the v5.0 archive and survives only in `.planning/milestones/v5.0-ROADMAP.md:848`.
+`.planning/ROADMAP.md` has **no `## Backlog` section at all** right now, so a backlog row would
+have nowhere to live and `complete-milestone`'s backlog-preservation step would have nothing to
+preserve. **This entry is a reopening of BACK-A11Y-01, not a new item** — four months and roughly
+ten milestones after it was first filed, rediscovered from scratch by a red CI gate rather than by
+anyone reading the ledger.
+
+Full detail and the per-class site inventory: `.planning/backlog/999.117-dashboard-accessibility-debt/IDEA.md`.
+Audit rows: `.planning/v5.25-MILESTONE-AUDIT.md` W-4 and W-9.
+
+| # | Item | Size | Notes |
+|---|---|---|---|
+| 1 | **Repo-wide badge-contrast guard + ratcheted baseline** | S–M | Generalise `src/dashboard/src/components/__tests__/cbom-badge-contrast-guard.test.ts` to every page and both themes, with the 45 remaining failures as a baseline that can only shrink — same idiom as `tests/a11y/baseline-*.json`. Do this FIRST: it fixes nothing but converts an unbounded, invisible liability into a drainable number. Runs in vitest with no browser, so unlike the axe sweep it covers the light theme and every route regardless of fixture data. |
+| 2 | **Drain the 11 free swaps** | S | 7 × `--risk-badge-high` + white (2.85) → its existing `-foreground` sibling (5.97); 4 × `--qs-node-safe` + white (2.30) → `--status-safe-deep` (4.83/6.79). Zero design input — precedent already exists at `data-at-rest.tsx`, `identity.tsx`, `findings.tsx:145`. |
+| 3 | **Mint 2 theme-varying foreground tokens, then 29 sites** | M (risk of L) | 17 × `--status-warning` + `text-black` (4.34 light) and 12 × `--chart-tls` + `text-black` (3.35 light). No static foreground works for either — near-black passes dark and fails light, white the reverse. **The L-risk:** these tokens are used BOTH as text-on-white (their designed use, where the light values are correct) and as badge backgrounds (where they are not). If the 29 sites are a mix, this stops being find-and-replace and becomes per-site classification. **Spike 3–4 sites before committing to a plan shape.** |
+| 4 | **The 5 genuine design calls** | S, operator-gated | `--destructive` + white 3.82 dark (×2), `--quantum-safe` + paired fg 3.87 light (×2), `--badge-modbus` + white 2.86 dark (×1). Token value changes with app-wide blast radius; 213-09 already routed light-palette values through human visual review, so these want the same. |
+| 5 | **Widen UIFIX-02's colour audit glob** (audit W-4) | S | `auditedFiles()` covers 27 of 76 files (`src/pages/*.tsx` + `sidebar.tsx`). Six literals ship from three unaudited, reachable components — `LifecycleEventRow.tsx`, `VendorTrendList.tsx`, `LifecycleEventList.tsx`. Belongs here, not in a scoring phase. |
+| 6 | **a11y harness structural gaps** | M | `run-a11y.mjs` sweeps the **default (dark) variant only**, making 4 of the 7 contrast classes invisible to CI — that is why the light-theme failures survived Phase 213's own gates. Separately, axe coverage is **fixture-dependent**: `/certificates` and `/hardware` are both in `routes.json` and both reported PASS while rendering 2.30:1 badges the fixture data never shows. |
+| 7 | **`scrollable-region-focusable` / `components/ui/table.tsx`** | M | The one accepted violation whose own justification says it is "tracked as follow-up work, **not accepted as permanent debt**": the shadcn table wrapper has no tabIndex/role, so a keyboard user cannot scroll it independently. Serious, WCAG 2.1.1/2.1.3, app-wide across every table consumer. An a11y milestone is the right home for a focus-order pass. |
+| 8 | **`data-at-rest` baseline: exact-count pin → tolerance** | S | The baseline's own text calls this out: the rule "only fires on a container *actually overflowing* at render time… a function of viewport, font metrics, and rendered row widths — not of markup", so an exact count is inherently render-dependent. It currently trips locally on macOS (observes 1, baseline 2) while passing in CI. |
+
+**Already fixed, not carried:** `cbom.tsx` QS_BADGE "Safe" — the single one of the 46 that was a
+v5.25 regression (plan 213-07, `3f50b104`) and the only one turning CI red. Guarded and
+mutation-proved. See `.planning/todos/completed/260929-dashboard-quality-axe-console-gate-red-on-main.md`.
+
+**Why this cluster is cohesive rather than eight chores:** items 1, 6 and 8 are all *instrument*
+defects — the reason 45 real violations sat invisible behind three green gates. Items 2–5 and 7 are
+the violations themselves. Fixing the violations without fixing the instruments guarantees a third
+rediscovery; Phase 213 built a colour-literal gate that asks "is this a literal?" and never "does
+this contrast?", which is exactly how a hand-tuned AA-clearing value got laundered into a token
+reference that looked correct in review.
+
+---
+
 ## Items Pulled Forward (rationale log)
 
 Track here when the horizon shifts so future-you can see why:
