@@ -3,14 +3,6 @@
     "ratio": 4.337236213441025,
     "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
   },
-  "pages/certificates.tsx|qs-node-safe|white|dark": {
-    "ratio": 2.302959750480067,
-    "why": "--qs-node-safe (2.30:1, dark) is a Cytoscape NODE FILL token, never intended to sit behind text; its own paired --qs-node-safe-foreground is near-black. Same root cause documented in cbom-badge-contrast-guard.test.ts's WHAT BROKE note (213-07 tokenisation regression). Backlog 999.117 class 'qs-node-safe-as-badge-bg'."
-  },
-  "pages/certificates.tsx|qs-node-safe|white|light": {
-    "ratio": 2.302959750480067,
-    "why": "--qs-node-safe (2.30:1, light — theme-invariant token, declared once) is a Cytoscape NODE FILL token, never intended to sit behind text; its own paired --qs-node-safe-foreground is near-black. Same root cause as the dark-theme entry above. Backlog 999.117 class 'qs-node-safe-as-badge-bg'."
-  },
   "pages/certificates.tsx|status-warning|black|light": {
     "ratio": 4.337236213441025,
     "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
@@ -22,14 +14,6 @@
   "pages/compare.tsx|destructive|white|dark": {
     "ratio": 3.8167472488346967,
     "why": "--destructive (3.82:1, dark) is the semantic error/danger token; its dark-theme value is not dark enough behind static white text at badge scale (text-xs). Backlog 999.117 class 'semantic-error-badge'. Tracked as dashboard-accessibility-debt, deferred as one unit pending a theme-varying destructive-foreground token."
-  },
-  "pages/compare.tsx|risk-badge-high|white|dark": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, dark) is the highest-severity risk chip background, paired with static white text across 4 pages; the token was tuned for visual urgency (deep red) rather than AA contrast. Backlog 999.117 class 'risk-badge-high-severity'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/compare.tsx|risk-badge-high|white|light": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, light — theme-invariant token) is the highest-severity risk chip background, paired with static white text across the same 4 pages as the dark-theme entry above; same root cause. Backlog 999.117 class 'risk-badge-high-severity'."
   },
   "pages/compare.tsx|status-warning|black|light": {
     "ratio": 4.337236213441025,
@@ -59,22 +43,6 @@
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
-  "pages/hardware.tsx|qs-node-safe|white|dark": {
-    "ratio": 2.302959750480067,
-    "why": "--qs-node-safe (2.30:1, dark) is a Cytoscape NODE FILL token, never intended to sit behind text; its own paired --qs-node-safe-foreground is near-black. Same root cause documented in cbom-badge-contrast-guard.test.ts's WHAT BROKE note (213-07 tokenisation regression). Backlog 999.117 class 'qs-node-safe-as-badge-bg'."
-  },
-  "pages/hardware.tsx|qs-node-safe|white|light": {
-    "ratio": 2.302959750480067,
-    "why": "--qs-node-safe (2.30:1, light — theme-invariant token, declared once) is a Cytoscape NODE FILL token, never intended to sit behind text; its own paired --qs-node-safe-foreground is near-black. Same root cause as the dark-theme entry above. Backlog 999.117 class 'qs-node-safe-as-badge-bg'."
-  },
-  "pages/hardware.tsx|risk-badge-high|white|dark": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, dark) is the highest-severity risk chip background, paired with static white text across 4 pages; the token was tuned for visual urgency (deep red) rather than AA contrast. Backlog 999.117 class 'risk-badge-high-severity'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/hardware.tsx|risk-badge-high|white|light": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, light — theme-invariant token) is the highest-severity risk chip background, paired with static white text across the same 4 pages as the dark-theme entry above; same root cause. Backlog 999.117 class 'risk-badge-high-severity'."
-  },
   "pages/hardware.tsx|status-warning|black|light": {
     "ratio": 4.337236213441025,
     "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
@@ -91,14 +59,6 @@
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
-  "pages/motion.tsx|risk-badge-high|white|dark": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, dark) is the highest-severity risk chip background, paired with static white text across 4 pages; the token was tuned for visual urgency (deep red) rather than AA contrast. Backlog 999.117 class 'risk-badge-high-severity'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/motion.tsx|risk-badge-high|white|light": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, light — theme-invariant token) is the highest-severity risk chip background, paired with static white text across the same 4 pages as the dark-theme entry above; same root cause. Backlog 999.117 class 'risk-badge-high-severity'."
-  },
   "pages/motion.tsx|status-warning|black|light": {
     "ratio": 4.337236213441025,
     "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
@@ -106,14 +66,6 @@
   "pages/scan-history.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/scan-history.tsx|risk-badge-high|white|dark": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, dark) is the highest-severity risk chip background, paired with static white text across 4 pages; the token was tuned for visual urgency (deep red) rather than AA contrast. Backlog 999.117 class 'risk-badge-high-severity'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/scan-history.tsx|risk-badge-high|white|light": {
-    "ratio": 2.8546400231108393,
-    "why": "--risk-badge-high (2.85:1, light — theme-invariant token) is the highest-severity risk chip background, paired with static white text across the same 4 pages as the dark-theme entry above; same root cause. Backlog 999.117 class 'risk-badge-high-severity'."
   },
   "pages/scan-history.tsx|status-warning|black|light": {
     "ratio": 4.337236213441025,

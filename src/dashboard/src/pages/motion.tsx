@@ -12,7 +12,7 @@ import { formatDateOnly } from "@/lib/datetime"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
-  HIGH:     "bg-[hsl(var(--risk-badge-high))] text-white",
+  HIGH:     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM:   "bg-[hsl(var(--status-warning))] text-black",
   LOW:      "bg-[hsl(var(--chart-tls))] text-black",
   INFO:     "bg-[hsl(var(--status-neutral))] text-white",
@@ -116,7 +116,7 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
         const rows = grouped[fam]
         const plaintextCount = rows.filter(r => r.plaintext_exposed).length
         const pillClass = plaintextCount > 0
-          ? "bg-[hsl(var(--risk-badge-high))] text-white"
+          ? "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]"
           : "bg-[hsl(var(--chart-tls))] text-black"
         return (
           <Card key={fam}>
@@ -158,7 +158,7 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
                         <TableCell className="text-sm">
                           <div className="flex items-center gap-2">
                             {r.plaintext_exposed && (
-                              <Badge className="bg-[hsl(var(--risk-badge-high))] text-white text-xs">
+                              <Badge className="bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))] text-xs">
                                 ☠ PLAINTEXT
                               </Badge>
                             )}

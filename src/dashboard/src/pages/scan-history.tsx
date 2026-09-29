@@ -16,7 +16,7 @@ import { ScanCoverageChip } from "@/components/ScanCoverageChip"
 import { Card, CardContent } from "@/components/ui/card"
 
 const SEVERITY_STYLES: Record<string, string> = {
-  HIGH: "bg-[hsl(var(--risk-badge-high))] text-white",
+  HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   MEDIUM: "bg-[hsl(var(--status-warning))] text-black",
   LOW: "bg-[hsl(var(--chart-tls))] text-black",
 }
