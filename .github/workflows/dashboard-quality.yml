@@ -47,8 +47,17 @@ jobs:
           # Phase 185 D-07 -- pinned from run 34066331311 (2026-09-06); supersedes 165-CONTEXT.md D-04's unpinned-Chrome residual risk. D-06 keeps exact counts with no jitter tolerance, so the pin replaces that mitigation.
           chrome-version: '152.0.7977.82'
 
-      - name: Run axe + console sweep (happy fixture)
+      - name: Run axe + console sweep (happy fixture, dark theme)
         run: npm run a11y:check
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+      # 216 D-16: the theme dimension is enumerated in CI, not just the harness. EXPECTED
+      # AND INTENTIONAL to be RED on this branch until plan 216-08 lands the Linux-generated
+      # light baselines (a missing baseline is a hard error by design, D-15) -- do not add
+      # continue-on-error to mask it.
+      - name: Run axe + console sweep (happy fixture, light theme)
+        run: npm run a11y:check:light
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
 
@@ -95,8 +104,15 @@ jobs:
       - name: Record resolved Chrome version
         run: '"${{ steps.setup-chrome.outputs.chrome-path }}" --version'
 
-      - name: Regenerate baselines (default fixture)
+      - name: Regenerate baselines (default fixture, dark theme)
         run: npm run a11y:baseline
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+      # 216 D-16: enumerate the theme dimension here too, so a regeneration dispatch never
+      # silently produces dark-only baselines while the gate job expects both themes.
+      - name: Regenerate baselines (default fixture, light theme)
+        run: npm run a11y:baseline:light
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
 

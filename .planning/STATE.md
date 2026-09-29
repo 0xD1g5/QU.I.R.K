@@ -272,7 +272,7 @@ See: .planning/PROJECT.md (updated 2026-09-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal.
+**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
