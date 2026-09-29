@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-09-29T02:55:00.000Z"
+last_updated: "2026-09-29T14:10:00.000Z"
 last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 17
 ---
 
@@ -1387,14 +1387,26 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 216 (A11y Harness Repair) — **5 of 8 plans complete, waves 1-4 done.**
-Plan: next is 216-06 (wave 5)
+Phase: 216 (A11y Harness Repair) — **6 of 8 plans complete, wave 5 done.**
+Plan: next is 216-07 (wave 5, docs/UAT/vault)
 Status: In progress
-Last activity: 2026-09-29 — 216-04 (light sweep, npm scripts, both CI jobs) and 216-05
-(theme-complete ACCEPTED-VIOLATIONS.md ledger, D-17) executed since the wave-2 pause recorded
-below. `npx vitest run tests/a11y/` green at 95/95; `npm run test` green at 542/544 (2
-pre-existing skips); `npm run lint` clean (1 pre-existing unrelated warning). Working tree
-clean apart from this hand-edit.
+Last activity: 2026-09-29 — 216-06 (harness falsification probes, HARNESS-01/HARNESS-02)
+executed. New permanent `harness-falsification-probe.test.ts` (15 nodes, synthetic input only,
+mirrors the RATCHET-04 mutation-probe idiom) plus three live RED captures: falsifier 1 (a light
+sweep never resolves the dark baseline — all 13 routes FAIL naming a `-default-light.json` path,
+zero `-default-dark.json` references, exit 1), falsifier 2 (a coverage run reading zero badge
+maps fails on 3 independent legs rather than passing vacuously — demonstrated via a reverted
+one-line `pageFiles()` glob edit), and criterion 2 (the enriched fixture makes `/certificates`
+FAIL `color-contrast count 2 exceeds baseline 0` and `/hardware` FAIL `count 8 exceeds baseline
+3`, both live before any baseline records them). Assumption A2 settled BY MEASUREMENT (a
+temporary, reverted debug edit to `run-a11y.mjs` printed per-node `incomplete` detail): every
+badge-contrast failure on both routes lands in axe `violations`, never `incomplete` —
+`/hardware`'s 5 `incomplete` nodes are unrelated `<th>` table-header text, not badges, a
+separate out-of-scope finding recorded but not chased. No baseline created, modified, or
+committed by this plan; all temporary falsification/debug edits reverted via `git checkout --`
+and confirmed byte-identical. `npx vitest run tests/a11y/` green at 110/110 (was 95/95);
+`npm run test` green at 557/559 (2 pre-existing skips, was 542/544); `npm run lint` clean (1
+pre-existing unrelated warning). Working tree clean apart from this hand-edit.
 
 **Phase 216 progress, verified against disk not reported:**
 
@@ -1405,7 +1417,8 @@ clean apart from this hand-edit.
 | 2 | 216-03 opt-in per-entry `countRange` + the D-11 docstring amendment | done | `4dc4dd40` `dbc2761b` `31526c54` `c2fc1ccb` |
 | 3 | 216-04 light sweep, npm scripts, both CI jobs | done | `ef5ad3a3` `8601eff0` `cbf694a5` |
 | 4 | 216-05 theme-complete ledger | done | `c7fc7d34` `224b7d6f` |
-| 5 | 216-06 falsification evidence · 216-07 docs/UAT/vault | not started | — |
+| 5 | 216-06 falsification evidence | done | `c040ae1d` |
+| 5 | 216-07 docs/UAT/vault | not started | — |
 | 6 | 216-08 Linux CI baselines | not started, **`autonomous: false`** | — |
 
 **Why the pause is here and not one wave later.** Wave 3 (`216-04`) deliberately adds an a11y CI
