@@ -54,8 +54,45 @@ export function resolveVariant(env) {
   return (env && env.VITE_A11Y_FIXTURE_VARIANT) || 'default'
 }
 
-export function baselineFilename(slug, variant) {
-  return `baseline-${slug}-${variant}.json`
+// 216 D-01/D-02: the harness-side theme allowlist. Deliberately NARROWER than the app's own
+// `VALID_THEMES` (`src/components/theme-context.ts`), which also allows `"system"`. A swept
+// `"system"` theme resolves via `matchMedia` and is non-deterministic per runner/OS — the
+// opposite of what a committed baseline needs — so it is excluded here on purpose, not by
+// omission.
+export const THEMES = Object.freeze(['dark', 'light'])
+
+// 216 D-01/D-02: resolves the sweep theme from the harness-only `A11Y_THEME` env var (NOT
+// `VITE_A11Y_THEME` — unlike `VITE_A11Y_FIXTURE_VARIANT`, which the Vite fixture middleware
+// reads inside the bundle, the theme is applied entirely harness-side by seeding
+// `localStorage` before `page.goto` (D-01), so a `VITE_` prefix would falsely imply the
+// bundle itself consumes it). Unset resolves to the historical default `'dark'`, named
+// explicitly rather than left implicit. Anything outside `THEMES` — including the app-valid
+// `'system'` and simple typos — THROWS rather than silently falling back: a mistyped
+// `A11Y_THEME=ligth` silently sweeping dark and overwriting the dark baseline is the exact
+// unnamed-dimension defect class this phase repairs.
+export function resolveTheme(env) {
+  const value = (env && env.A11Y_THEME) || 'dark'
+  if (!THEMES.includes(value)) {
+    throw new Error(
+      `resolveTheme: unsupported A11Y_THEME "${value}" — must be one of: ${THEMES.join(', ')}`,
+    )
+  }
+  return value
+}
+
+// 216 D-02: `theme` is REQUIRED, not optional-with-a-default. A 2-arg call would previously
+// have silently produced `baseline-{slug}-{variant}-undefined.json` — a plausible-looking
+// filename that is actually a distinct, un-reviewed baseline. Throwing here is what makes
+// the theme dimension impossible to omit by accident (216-RESEARCH.md § Code Examples).
+export function baselineFilename(slug, variant, theme) {
+  if (typeof theme !== 'string' || theme.length === 0 || !THEMES.includes(theme)) {
+    throw new Error(
+      `baselineFilename: missing/invalid theme for slug "${slug}" (received ${JSON.stringify(theme)}) — ` +
+        `a 2-arg call would silently produce "baseline-${slug}-${variant}-undefined.json"; ` +
+        `theme must be one of: ${THEMES.join(', ')}`,
+    )
+  }
+  return `baseline-${slug}-${variant}-${theme}.json`
 }
 
 const WCAG_TAG_RE = /^wcag(\d)(\d)(\d+)$/
