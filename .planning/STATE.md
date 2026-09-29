@@ -9,7 +9,7 @@ progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
+  completed_plans: 9
   percent: 17
 ---
 
@@ -1387,11 +1387,14 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 216 (A11y Harness Repair) — **PAUSED at 3 of 8 plans, waves 1-2 complete.**
-Plan: next is 216-04 (wave 3)
-Status: In progress, paused at an all-green boundary by operator request
-Last activity: 2026-09-29 — Phase 215 closed 4/4; Phase 216 discussed, researched, planned
-(8 plans / 6 waves) and executed through wave 2. Suite green at 83/83, working tree clean.
+Phase: 216 (A11y Harness Repair) — **5 of 8 plans complete, waves 1-4 done.**
+Plan: next is 216-06 (wave 5)
+Status: In progress
+Last activity: 2026-09-29 — 216-04 (light sweep, npm scripts, both CI jobs) and 216-05
+(theme-complete ACCEPTED-VIOLATIONS.md ledger, D-17) executed since the wave-2 pause recorded
+below. `npx vitest run tests/a11y/` green at 95/95; `npm run test` green at 542/544 (2
+pre-existing skips); `npm run lint` clean (1 pre-existing unrelated warning). Working tree
+clean apart from this hand-edit.
 
 **Phase 216 progress, verified against disk not reported:**
 
@@ -1400,8 +1403,8 @@ Last activity: 2026-09-29 — Phase 215 closed 4/4; Phase 216 discussed, researc
 | 1 | 216-01 theme axis at the naming choke point, 40 baselines `git mv`'d to `-dark` | done | `ed143199` `4f8778d3` `0f925ee5` |
 | 1 | 216-02 fixture blind-spot closure, labels extracted to a pure module, source-derived coverage gate | done | `43045332` `488b63b4` `f0e47aff` |
 | 2 | 216-03 opt-in per-entry `countRange` + the D-11 docstring amendment | done | `4dc4dd40` `dbc2761b` `31526c54` `c2fc1ccb` |
-| 3 | 216-04 light sweep, npm scripts, both CI jobs | **not started** | — |
-| 4 | 216-05 theme-complete ledger | not started | — |
+| 3 | 216-04 light sweep, npm scripts, both CI jobs | done | `ef5ad3a3` `8601eff0` `cbf694a5` |
+| 4 | 216-05 theme-complete ledger | done | `c7fc7d34` `224b7d6f` |
 | 5 | 216-06 falsification evidence · 216-07 docs/UAT/vault | not started | — |
 | 6 | 216-08 Linux CI baselines | not started, **`autonomous: false`** | — |
 
