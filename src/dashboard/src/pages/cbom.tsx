@@ -29,9 +29,24 @@ try {
 }
 
 // Token names, not literals. QS_TOKEN is the single source of truth for which token each
-// quantum-safety state maps to; QS_BADGE (Tailwind arbitrary-value classes) and QS_NODE_COLOR
-// (real-DOM `style=` legend swatches below) both read from it, so a state's badge and its
-// graph-legend swatch cannot drift to different colours.
+// quantum-safety state maps to; QS_NODE_COLOR (real-DOM `style=` legend swatches below) reads
+// from it, and QS_BADGE mirrors it for every state whose fill is legible behind text.
+//
+// DELIBERATE DIVERGENCE — Safe. QS_TOKEN's Safe is `--qs-node-safe` (142 71% 45%, #21c45d): a
+// Cytoscape NODE FILL, correct for a graph node and a legend swatch, where nothing is drawn on
+// top of it. QS_BADGE's Safe is `--status-safe-deep` (142 71% 30%, #16833e), because a badge
+// puts white text ON the fill and #21c45d + white is 2.30:1 — below AA's 4.5:1 and even below
+// the 3:1 large-text allowance. #16833e + white is 4.83:1.
+//
+// Do NOT "restore consistency" by pointing QS_BADGE.Safe back at QS_TOKEN.Safe. That is exactly
+// the regression plan 213-07 shipped: it replaced the literal `hsl(142_71%_30%)` with
+// `var(--qs-node-safe)` — same hue, same saturation, lightness 30% -> 45%, which reads as the
+// same green in review but is the one channel contrast depends on. The 30% was deliberate
+// (`4d18cdf4`, 165-04, "flip teal/severity foregrounds to AA-clearing dark tokens"). It shipped
+// in v5.25.0 and turned the `Axe + Console Gate` red for five consecutive runs on main.
+// `src/components/__tests__/cbom-badge-contrast-guard.test.ts` now fails if it comes back.
+// The sibling sites `findings.tsx:145` and this file's own TIER_BADGE "Tier 3" use
+// `--status-safe-deep` for the same reason.
 //
 // QS_BADGE's class strings must stay FULLY STATIC — never built via template-literal
 // interpolation from QS_TOKEN. Tailwind's JIT scanner does a static regex pass over raw
@@ -50,7 +65,7 @@ const QS_TOKEN: Record<string, string> = {
 }
 
 const QS_BADGE: Record<string, string> = {
-  Safe: "bg-[hsl(var(--qs-node-safe))] text-white",
+  Safe: "bg-[hsl(var(--status-safe-deep))] text-white",
   "At Risk": "bg-[hsl(var(--status-warning))] text-black",
   Vulnerable: "bg-[hsl(var(--status-critical))] text-white",
   Unknown: "bg-[hsl(var(--status-neutral))] text-white",
