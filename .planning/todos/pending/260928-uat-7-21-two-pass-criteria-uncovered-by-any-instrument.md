@@ -1,3 +1,7 @@
+---
+resolves_phase: 215
+---
+
 # UAT-7-21: two Pass Criteria bullets are covered by no instrument
 
 **Filed:** 2026-09-28 (Phase 213 close, UIFIX-02)

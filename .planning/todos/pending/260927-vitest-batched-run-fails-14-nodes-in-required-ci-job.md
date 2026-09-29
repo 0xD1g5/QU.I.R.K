@@ -5,6 +5,7 @@ source: Phase 207.1 close-out session (found while running the UAT integrity gat
 severity: high
 reproducibility: intermittent — failed once, passed twice in the same session on the same tree
 status: pending
+resolves_phase: 220
 ---
 
 ## What
