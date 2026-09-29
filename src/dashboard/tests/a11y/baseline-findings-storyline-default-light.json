@@ -1,19 +1,17 @@
 {
   "route": "findings-storyline",
-  "generated": "2026-09-29T18:35:52.140Z",
+  "generated": "2026-09-29T21:40:26.459Z",
   "entries": [
     {
       "rule": "color-contrast",
-      "count": 3,
+      "count": 1,
       "impact": "serious",
       "wcag": [
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /findings (storyline interaction fixture), theme light, rule color-contrast. This entry was REVEALED, not created, by Phase 216's light-theme sweep (216-01/216-04, D-01/D-02): the a11y harness swept dark only before this phase, so no light-theme baseline for this route ever existed. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. Two of the three samples (`bg-[hsl(var(--status-warning))] text-black`, \"At Risk\" and \"MEDIUM\") pairs a `bg-[hsl(var(--status-warning))]` or `bg-[hsl(var(--chart-tls))]` badge background with a literal `text-black` foreground class \u2014 one of the 29 `text-black` sites FIX-02 (Phase 217) classifies and FIX-03 (Phase 217) repairs with a theme-varying `-foreground` token (analysis already shows no static colour passes AA in both themes for either token; REQUIREMENTS.md FIX-02). The third sample, a `<span style=\"color: var(--ds-ok)\">` delta indicator, is a hardcoded inline CSS-variable reference rather than one of the named badge tokens; it does not match any of FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`). It is nonetheless dashboard contrast debt this milestone tracks, and is swept up by FIX-05 (Phase 218), which requires zero badge/contrast pair anywhere in the dashboard below 4.5:1 in either theme, verified by RATCHET-01 reporting an empty baseline. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "justification": "Route /findings (storyline interaction fixture), theme light, rule color-contrast. Phase 217 (FIX-03) drained this entry's two `--status-warning`+text-black badges ('At Risk', 'MEDIUM') by repointing them to the new `--status-warning-foreground` token (REQUIREMENTS.md FIX-03): count dropped 3 -> 1 in this regeneration (217-04, CI run 36634705275). The single remaining node is a `<span style=\"color: var(--ds-ok)\">+7</span>` delta indicator using a hardcoded inline CSS-variable reference, not one of FIX-01/02/03/04's named tokens. It is dashboard contrast debt attributed to FIX-05 (Phase 218)'s general zero-below-AA verification bucket, not a drained requirement.",
       "samples": [
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--status-warning))] text-black text-xs\">At Risk</div>",
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--status-warning))] text-black font-semibold text-xs\">MEDIUM</div>",
         "<span style=\"font-size: 20px; font-weight: 600; color: var(--ds-ok);\">+7</span>"
       ]
     }
