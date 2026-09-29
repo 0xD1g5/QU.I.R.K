@@ -168,7 +168,16 @@ is preferable to running it late. See Phase 218's dependency note.
   1. `npm run a11y:check` sweeps both light and dark themes for every route in `routes.json`, with a separate baseline per theme.
   2. `/certificates` and `/hardware` no longer report PASS while rendering badges below AA — the fixture-dependent blind spot that let 2.30:1 badges pass is closed for both proof routes.
   3. The `data-at-rest` baseline uses a tolerance/range rather than an exact count, and running it repeatedly on macOS and in CI no longer disagrees.
-**Plans**: TBD
+**Plans**: 8 plans in 6 waves
+Plans:
+- [ ] 216-01-PLAN.md — Theme-explicit baseline naming + 40-file rename + call-site lockstep (wave 1)
+- [ ] 216-02-PLAN.md — Fixture blind-spot closure: label module, source-derived coverage gate, enriched fixture, /certificates contentMarker (wave 1)
+- [ ] 216-03-PLAN.md — Opt-in per-entry countRange tolerance + Phase 185 D-06 docstring amendment (wave 2)
+- [ ] 216-04-PLAN.md — Light/dark sweep mechanics, theme-explicit npm scripts, both CI jobs, drift contract test (wave 3)
+- [ ] 216-05-PLAN.md — Theme-complete ACCEPTED-VIOLATIONS ledger via a browser-free a11y:ledger (wave 4)
+- [ ] 216-06-PLAN.md — Falsification evidence: synthetic probe + three verbatim RED captures (wave 5)
+- [ ] 216-07-PLAN.md — Operators guide, master-guide regen, UAT Series 216, vault sync (wave 5)
+- [ ] 216-08-PLAN.md — Linux CI baseline provenance, justifications, measured tolerance bounds (wave 6, LAST)
 **UI hint**: yes
 
 ### Phase 217: Contrast Violations — Structural Drain
