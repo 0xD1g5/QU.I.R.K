@@ -1484,6 +1484,50 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
+## Next Cycle — Phase 217 (Contrast Violations, Structural Drain)
+
+Stopped here by operator request at a clean boundary: Phase 216 closed, branch pushed
+(`d107f270`), working tree clean, close gate green. Phase 217 has **no directory yet** — it needs a
+full discuss -> plan -> execute cycle. It depends on **Phase 215**, not 216, so it is unblocked.
+
+**Re-derive the ownership split at plan time; do not trust any prose figure, including this
+paragraph.** Keyed `file|bgToken|fgSpec|theme` in the live `badge-contrast-baseline.json`, the split
+recorded at 216's open was: Phase 217 owns **30** entries (FIX-01 **12**, FIX-03 **18**), Phase 218
+owns **5** — matching FIX-04's "5 genuine design calls", with 30+5=35 accounting for the whole
+baseline and nothing unowned. The prose figures "11" and "29" elsewhere are raw-occurrence counts
+from 999.117's pre-RATCHET classification, a different unit.
+
+**FIX-01 is already decided** (operator, 2026-09-29, commit `ef043b85`): use the existing
+`-foreground` sibling (7.40:1, theme-invariant, no new token, badge colour unchanged), NOT
+`--status-safe-deep` (6.82 light / 4.84 dark, and it changes badge colour identity, making it a
+design call and therefore FIX-04's).
+
+**FIX-02's spike answer is forced, which changes its job.** No static text colour passes AA in both
+themes for `--status-warning` / `--chart-tls` (black passes dark only, white light only), so
+theme-varying `-foreground` tokens are required, not chosen. The open question is WHICH call sites.
+
+**New sizing input measured during 216, from a method independent of the static classification:**
+the light theme carries **44 `color-contrast` violation nodes across 11 routes** (`/hardware` 21,
+trends 5, compare 4, certificates 3, findings-storyline 3, data-at-rest 2, findings 2, and 1 each on
+cbom / identity / qramm-assessment), against 3 baselined in dark. Different unit from "badge pairs" —
+do not equate them — but the dark-only sweep was measuring the quieter theme, and 217's swaps must
+be verified in BOTH themes now that both are swept.
+
+**Two live instrument caveats that affect how 217 verifies itself:**
+1. `empty`/`loading` baselines are **near-vacuous** (only 1 of 10 fixture endpoints honours the
+   variant; `loading` serves the full fixture after 3s). Verify 217's swaps against the `default`
+   dark AND light baselines; treat the 26 variant baselines as weak evidence. P1 todo owned by 220.
+2. `216-02` recorded **11 badge-style maps across 8 further pages** in `OUT_OF_SCOPE_MAPS`. The
+   coverage gate covers `/certificates` + `/hardware` only, so FIX-05's "zero badge pair anywhere"
+   is wider than the instrument currently sees.
+
+**Branch state:** `phase-216-a11y-harness-repair` is pushed and **UNMERGED** — `git rev-list --count
+main..HEAD` = 41. Decide merge-vs-continue before 217 starts; a phase branch stacking a second phase
+is how prior milestones compounded unpushed work. Required `Linux Full Suite` on this branch matches
+`main` exactly (same 2 `test_chaos_lab_idempotency` Docker nodes, same 5210 passed), so the branch is
+mergeable on test evidence. `Windows Sensor E2E` is RED on the branch's dispatch but green on 5 of
+main's last 5 pushes — see its todo; the untested hypothesis is the trigger type, not this code.
+
 **Prior activity, superseded above:** 2026-09-29 — 216-07 (docs/UAT/vault close-out, HARNESS-01/HARNESS-02/HARNESS-03)
 executed. `docs/operators-guide.md`'s four a11y bullets amended to describe the theme dimension,
 the opt-in per-entry `countRange` tolerance, and the browser-free `npm run a11y:ledger` command;
