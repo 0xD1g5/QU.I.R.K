@@ -74,11 +74,40 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 ### A11y Harness
 
-- [ ] **HARNESS-01**: `run-a11y.mjs` sweeps both light and dark themes, with per-theme baselines
-- [ ] **HARNESS-02**: The axe sweep no longer reports PASS on a route whose fixture omits the failing
+- [x] **HARNESS-01**: `run-a11y.mjs` sweeps both light and dark themes, with per-theme baselines
+      — Complete (Phase 216). Theme seeded via `page.evaluateOnNewDocument` into the app's real
+      `THEME_STORAGE_KEY` before navigation, so the sweep travels the actual `theme-provider` path.
+      14 default-dark + 14 default-light baselines, zero slugs missing a light baseline; both themes
+      enumerated in both CI jobs and both `success` on run 36615283160.
+      **Note on ROADMAP criterion 1's wording:** both themes are swept by TWO commands
+      (`a11y:check:dark` / `a11y:check:light`), not by `a11y:check` alone, which remains a dark
+      alias because the guides and the harness's own remediation messages name it. Substance met,
+      wording not — see `216-NOT-MET-AS-WRITTEN.md`.
+- [x] **HARNESS-02**: The axe sweep no longer reports PASS on a route whose fixture omits the failing
       element — `/certificates` and `/hardware` are the proof cases
-- [ ] **HARNESS-03**: The `data-at-rest` baseline's render-dependent rule uses a tolerance instead of
+      — Complete (Phase 216). Both proof routes went RED on measurement (`/certificates`
+      color-contrast 0→2, `/hardware` 3→8), independently on macOS and Linux CI, and are now
+      baselined with hand-written per-entry justifications naming FIX-01/02/03/04/05 and the
+      draining phase. Settled by measurement: plan 216-06 confirmed the failures land in axe
+      `violations`, never `incomplete`, so the blind spot is closed rather than relabelled.
+- [~] **HARNESS-03**: The `data-at-rest` baseline's render-dependent rule uses a tolerance instead of
       an exact count, and stops disagreeing between macOS and CI
+      — Complete (Phase 216) **SCOPE-QUALIFIED to the `default` fixture variant, both themes.**
+      `countRange: [1, 2]` on `scrollable-region-focusable` in `baseline-data-at-rest-default-dark`
+      and its `-light` sibling, bounds MEASURED (macOS 1 / Linux 2, run 36613039581, Chrome
+      152.0.7977.82), not guessed, with a D-14 addendum naming KBD-01 / Phase 219 as retirement
+      owner. macOS `a11y:check` and `a11y:check:light`: 14 PASS / 0 FAIL each.
+      **NOT met for the `empty` and `loading` variants**, which carry a wider 0-vs-2 divergence
+      that `[1, 2]` cannot cover and that `[0, 2]` would only "fix" by zeroing the D-12 shrink-only
+      floor — the loose-tolerance trap D-10 rejects. **CORRECTED at close-out (verifier blocker
+      B2):** the residual is **4 routes / 2 rules**, `/hardware` at 0-vs-**8** not 0-vs-2, and this
+      phase DID rewrite `certificates-{empty,loading}-dark` and `hardware-{empty,loading}-dark`.
+      Deeper: the empty/loading legs are **near-vacuous** — only `/api/scan/latest` of ten fixture
+      endpoints honours the variant, and `loading` serves the full fixture after a 3s delay. See
+      `.planning/todos/pending/260929-a11y-empty-loading-variant-legs-are-near-vacuous.md`.
+      Also tracked at
+      `.planning/todos/pending/260929-a11y-data-at-rest-empty-loading-zero-vs-two-divergence.md`,
+      pointed at Phase 219 / KBD-01, which withdraws the acceptance outright.
 
 ### Contrast Violations
 
@@ -218,9 +247,9 @@ Filled during roadmap creation.
 | RATCHET-02 | Phase 215 | Complete |
 | RATCHET-03 | Phase 215 | Complete |
 | RATCHET-04 | Phase 215 | Complete |
-| HARNESS-01 | Phase 216 | Pending |
-| HARNESS-02 | Phase 216 | Pending |
-| HARNESS-03 | Phase 216 | Pending |
+| HARNESS-01 | Phase 216 | Complete |
+| HARNESS-02 | Phase 216 | Complete |
+| HARNESS-03 | Phase 216 | PARTIAL (default variant only; empty/loading legs near-vacuous — verifier B1) |
 | FIX-01 | Phase 217 | Pending |
 | FIX-02 | Phase 217 | Pending |
 | FIX-03 | Phase 217 | Pending |

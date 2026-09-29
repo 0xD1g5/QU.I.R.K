@@ -122,7 +122,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
        checkbox flip that lacks a NN-VERIFICATION.md (produced by the gsd-verifier
        subagent, not the plan executor) and, separately, this phase's human checkpoint
        (215-04 Task 4) has not yet been approved. Flip this after both land. -->
-- [ ] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
+- [x] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
 - [ ] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
 - [ ] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [ ] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
@@ -166,18 +166,26 @@ is preferable to running it late. See Phase 218's dependency note.
 **Requirements**: HARNESS-01, HARNESS-02, HARNESS-03
 **Success Criteria** (what must be TRUE):
   1. `npm run a11y:check` sweeps both light and dark themes for every route in `routes.json`, with a separate baseline per theme.
+     — **NOT MET AS WRITTEN** (substance met). Both themes are swept for every route with a
+     separate baseline per theme, but by TWO commands — `a11y:check:dark` and
+     `a11y:check:light` — because `a11y:check` stays a dark alias for the guides and the
+     harness's own remediation messages. See `216-NOT-MET-AS-WRITTEN.md`.
   2. `/certificates` and `/hardware` no longer report PASS while rendering badges below AA — the fixture-dependent blind spot that let 2.30:1 badges pass is closed for both proof routes.
   3. The `data-at-rest` baseline uses a tolerance/range rather than an exact count, and running it repeatedly on macOS and in CI no longer disagrees.
+     — **MET, SCOPE-QUALIFIED to the `default` variant** (both themes): `countRange: [1, 2]`,
+     bounds measured macOS 1 / Linux 2. The `empty` and `loading` variants keep a wider
+     0-vs-2 divergence, deliberately un-ranged because a `[0, 2]` floor would disable the
+     D-12 shrink-only ratchet; pre-existing, CI-green, tracked as a Phase 219 / KBD-01 todo.
 **Plans**: 8 plans in 6 waves
 Plans:
-- [ ] 216-01-PLAN.md — Theme-explicit baseline naming + 40-file rename + call-site lockstep (wave 1)
-- [ ] 216-02-PLAN.md — Fixture blind-spot closure: label module, source-derived coverage gate, enriched fixture, /certificates contentMarker (wave 1)
-- [ ] 216-03-PLAN.md — Opt-in per-entry countRange tolerance + Phase 185 D-06 docstring amendment (wave 2)
-- [ ] 216-04-PLAN.md — Light/dark sweep mechanics, theme-explicit npm scripts, both CI jobs, drift contract test (wave 3)
-- [ ] 216-05-PLAN.md — Theme-complete ACCEPTED-VIOLATIONS ledger via a browser-free a11y:ledger (wave 4)
-- [ ] 216-06-PLAN.md — Falsification evidence: synthetic probe + three verbatim RED captures (wave 5)
-- [ ] 216-07-PLAN.md — Operators guide, master-guide regen, UAT Series 216, vault sync (wave 5)
-- [ ] 216-08-PLAN.md — Linux CI baseline provenance, justifications, measured tolerance bounds (wave 6, LAST)
+- [x] 216-01-PLAN.md — Theme-explicit baseline naming + 40-file rename + call-site lockstep (wave 1)
+- [x] 216-02-PLAN.md — Fixture blind-spot closure: label module, source-derived coverage gate, enriched fixture, /certificates contentMarker (wave 1)
+- [x] 216-03-PLAN.md — Opt-in per-entry countRange tolerance + Phase 185 D-06 docstring amendment (wave 2)
+- [x] 216-04-PLAN.md — Light/dark sweep mechanics, theme-explicit npm scripts, both CI jobs, drift contract test (wave 3)
+- [x] 216-05-PLAN.md — Theme-complete ACCEPTED-VIOLATIONS ledger via a browser-free a11y:ledger (wave 4)
+- [x] 216-06-PLAN.md — Falsification evidence: synthetic probe + three verbatim RED captures (wave 5)
+- [x] 216-07-PLAN.md — Operators guide, master-guide regen, UAT Series 216, vault sync (wave 5)
+- [x] 216-08-PLAN.md — Linux CI baseline provenance, justifications, measured tolerance bounds (wave 6, LAST)
 **UI hint**: yes
 
 ### Phase 217: Contrast Violations — Structural Drain

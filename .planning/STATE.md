@@ -7,10 +7,10 @@ last_updated: "2026-09-29T14:10:00.000Z"
 last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 10
-  percent: 17
+  completed_plans: 12
+  percent: 33
 ---
 
 # Project State
@@ -1387,10 +1387,104 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 216 (A11y Harness Repair) — **7 of 8 plans complete, wave 5 done.**
-Plan: next is 216-08 (wave 6, Linux CI baselines, `autonomous: false`)
-Status: In progress
-Last activity: 2026-09-29 — 216-07 (docs/UAT/vault close-out, HARNESS-01/HARNESS-02/HARNESS-03)
+Phase: 216 (A11y Harness Repair) — **COMPLETE, 8 of 8 plans, all 6 waves.**
+Plan: next is Phase 217 plan 01 (not yet planned)
+Status: Phase complete; milestone v5.26 at 2 of 6 phases
+Last activity: 2026-09-29 — **216-08 executed and the phase closed.** The Linux `workflow_dispatch`
+job produced every baseline (run `36613039581`, Chrome `152.0.7977.82`, artifact
+`a11y-baselines-36613039581`); 54 baselines committed, each verified against the artifact on
+`generated` AND every `(rule, count)` pair, only justification prose differing. 14 new
+`-default-light.json` files. `/certificates` color-contrast 0->2 and `/hardware` 3->8 baselined with
+hand-written per-entry justifications naming FIX-01/02/03/04/05 and the draining phase.
+`/hardware`'s `scrollable-region-focusable` entry DROPPED as stale (0 on BOTH platforms, not a
+platform disagreement — an inference corrected by the Linux run, not by re-reading).
+`countRange: [1, 2]` declared on the `data-at-rest` default-dark AND default-light entries, bounds
+MEASURED (macOS 1 via `npm run a11y:check`, Linux 2 via CI), carrying the D-14 addendum that names
+KBD-01 / Phase 219 as retirement owner. **CI confirmation run `36615283160`: all four jobs green,
+and both the dark AND light sweep steps `success` — the first run in which the light step executed
+at all.** On run 36613039581 the dark step failed first and every later step was `skipped`, so the
+light step had never run; the note plan 216-04 wrote into this field described the wrong step.
+Falsifier 1 re-proved in its strong form: a light baseline `git mv`'d aside -> RED naming that exact
+`-default-light.json` path with zero `-dark.json` references, exit 1 -> restored byte-identical ->
+green. ROADMAP criterion 1 recorded **NOT MET AS WRITTEN** — both themes ARE swept, by two commands
+rather than by `a11y:check` alone. See `216-NOT-MET-AS-WRITTEN.md`.
+
+**The phase verifier returned `gaps_found` (6/9) and it was RIGHT on both blockers — HARNESS-01/02
+stand, HARNESS-03 is downgraded to PARTIAL.** B1: all three dark fixture variants carry IDENTICAL
+`(rule, count)` sets for every data-bearing route (`/hardware` reports 8 sub-AA badges under an
+*empty* fixture, which is impossible), with distinct `generated` timestamps proving three real
+sweeps rather than a copy. Mechanism confirmed by reading `vite.config.ts`, not inferred: the
+`a11y-fixture` plugin correctly registers both `configureServer` and `configurePreviewServer`, but
+**only `/api/scan/latest` (`:29`) consults `VITE_A11Y_FIXTURE_VARIANT`** — the other nine fixture
+endpoints (`/api/hardware/drift`, `/api/compare`, `/api/findings`, `/api/trends`, `/api/qramm/*`, …)
+serve full fixtures unconditionally — and `loading` returns the COMPLETE fixture after a 3s delay,
+so it measures the default state by construction. The `empty`/`loading` CI legs are therefore
+**near-vacuous** and 26 of 54 baselines are of limited evidential value. **This phase built a
+run-time drift guard for exactly this failure mode and pointed it only at the theme axis**; nothing
+does the equivalent for the variant axis, and nothing asserts two variants must differ. Filed at
+`.planning/todos/pending/260929-a11y-empty-loading-variant-legs-are-near-vacuous.md`, owned by
+Phase 220. B2: two statements written into this close-out were FALSE and are withdrawn — "Phase 216
+changed neither count nor variant" (it rewrote `certificates-{empty,loading}-dark` `(none)`->`:2`
+and `hardware-{empty,loading}-dark` `3+1`->`8`; true only of `data-at-rest` and `compare`), and the
+residual divergence is **4 routes / 2 rules** with `/hardware` at 0-vs-**8**, not the single 0-vs-2
+entry four separate records described. Corrected in `216-NOT-MET-AS-WRITTEN.md`, `REQUIREMENTS.md`,
+`216-VALIDATION.md` and the sibling todo. Verifier warnings carried, not closed: 6 of 15
+`harness-falsification-probe.test.ts` nodes are tautologies (Injection D reimplements range
+semantics as a local `classify()` and asserts against itself — the substance IS covered
+non-vacuously by 12 range + 5 stale nodes in `baseline-diff.test.ts`, so not a blocker, but a file
+premised on "a guard nobody has seen fail is a guard nobody has tested" should not contain 6
+unfailable nodes); criterion 2's literal "no longer report PASS" is also unmet (both routes print
+PASS, with violations now visible and baselined); `VITEST_REF_RE` cannot resolve
+`tests/a11y/*.test.ts` so this phase's tests are not machine-checked as UAT substitutes; and
+`216-VALIDATION.md` still carries `status: planned` / `wave_0_complete: false`.
+
+**One real regression was introduced and fixed in-session, and how it was found is the point.**
+`tests/test_uat_series_format.py::test_all_result_lines_canonical` went RED on plan 216-07's
+`UAT-216-03` SKIP annotation, which spanned six physical lines while the canonical regex requires the
+parenthetical to contain no newline. That gate is NOT among the five 216-07 verified, so a green
+five-gate sweep sat on top of a red suite — the hand-curated-list failure mode this project
+documents, pointed at test selection. The annotation was also semantically malformed
+("DEFERRED — no substitute coverage" blends the two sanctioned forms). Fixed in `d12c0a12`, and
+`UAT-216-03` flipped SKIP->PASS because 216-08 invalidated its stated blocker one plan later — the
+annotation had itself written "flip to PASS once 216-08 lands". All three pass criteria were
+re-verified before the flip, not assumed. Series 216 is now 5 PASS / 0 SKIP. Found by the FULL-suite
+failing-node SET, not by the curated gate list.
+
+**Two CI facts worth carrying, neither attributable to this phase.** (1) Neither
+`dashboard-quality.yml` nor `python-ci.yml` triggers on a phase-branch push — both are
+`pull_request` / `push: branches: [main]` / `workflow_dispatch` — so the required `Linux Full Suite`
+had NEVER run on this branch until dispatched deliberately. Phase-branch CI state is unobserved by
+default here, which is Phase 220's territory. (2) That dispatch (run `36618376788`) turned up
+`Windows Sensor E2E (frozen -> Linux-built console)` RED on `quirk sensor enroll: error: argument
+--api-token: expected one argument` — an EMPTY token read from `e2e_token.txt`, whose producing step
+GitHub records as succeeded. Phase 216 touched zero sensor/Windows/Python paths and the job is green
+on 5 of main's last 5 runs, so it is neither ours nor a known flake; the untested hypothesis is the
+trigger type (main's greens were all `push`-triggered). Filed at
+`.planning/todos/pending/260929-windows-sensor-e2e-empty-api-token-on-branch-dispatch.md` with the
+decisive test.
+
+**(3) The required `Linux Full Suite` failing-node SET is IDENTICAL on this branch and on `main` —
+this phase broke nothing.** Branch run `36618376788` and `main` run `36604466116` each report
+exactly `2 failed, 5210 passed, 118 skipped, 75 xfailed, 6 xpassed`, and the two failing nodes are
+the same pair: `tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]`
+and `[storage-s3]`, both `first up failed (rc=1)` — the documented environmental Docker class that
+passes on isolated re-run. Phase 216 touched zero chaos-lab/Docker paths. Compared as SETS, not as
+pass counts: "2 failed" alone is alarming, "the same 2 nodes and the same 5210 passes as main" is
+exonerating. Two bonus confirmations from the same run: `test_uat_series_format` is ABSENT from CI's
+failing set, so the real gate exercised the `d12c0a12` fix; and the known intermittent
+`test_vitest_substitute_nodes_pass` did not fire, which is the only reason the sets compare cleanly
+at all. `main`'s Linux Full Suite being red is therefore pre-existing and is already a named
+Phase 220 goal.
+
+**Product pixels unchanged, by design (D-04/D-09).** Every product-source edit this phase is a
+refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"` literal into
+`THEME_STORAGE_KEY`, and `hardware.tsx` moves 65 lines of label functions into
+`hardware-badge-labels.ts` so a test can import them. Zero `bg-`/`text-`/`border-`/token changes in
+`hardware.tsx` (grep count 0). The contrast violations this phase made visible are drained by
+Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
+unattributable.
+
+**Prior activity, superseded above:** 2026-09-29 — 216-07 (docs/UAT/vault close-out, HARNESS-01/HARNESS-02/HARNESS-03)
 executed. `docs/operators-guide.md`'s four a11y bullets amended to describe the theme dimension,
 the opt-in per-entry `countRange` tolerance, and the browser-free `npm run a11y:ledger` command;
 `docs/quirk-master-guide.md` regenerated from its five sources (freshness gate green). Added
@@ -1433,9 +1527,9 @@ pre-existing unrelated warning). Working tree clean apart from this hand-edit.
 | 2 | 216-03 opt-in per-entry `countRange` + the D-11 docstring amendment | done | `4dc4dd40` `dbc2761b` `31526c54` `c2fc1ccb` |
 | 3 | 216-04 light sweep, npm scripts, both CI jobs | done | `ef5ad3a3` `8601eff0` `cbf694a5` |
 | 4 | 216-05 theme-complete ledger | done | `c7fc7d34` `224b7d6f` |
-| 5 | 216-06 falsification evidence | done | `c040ae1d` |
-| 5 | 216-07 docs/UAT/vault | done | `e5650f9e` `5ce0dcf8` |
-| 6 | 216-08 Linux CI baselines | not started, **`autonomous: false`** | — |
+| 5 | 216-06 falsification evidence | done | `c040ae1d` `dd77113d` |
+| 5 | 216-07 docs/UAT/vault | done | `e5650f9e` `5ce0dcf8` `3f67e059` |
+| 6 | 216-08 Linux CI baselines | done | `4eaf6313` `c761ebd6` `d12c0a12` `43ba38d1` |
 
 **Why the pause is here and not one wave later.** Wave 3 (`216-04`) deliberately adds an a11y CI
 step that is RED on this branch until wave 6 lands the Linux-generated baselines, with
