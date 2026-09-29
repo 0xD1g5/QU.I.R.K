@@ -1387,10 +1387,26 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 216 (A11y Harness Repair) — **6 of 8 plans complete, wave 5 done.**
-Plan: next is 216-07 (wave 5, docs/UAT/vault)
+Phase: 216 (A11y Harness Repair) — **7 of 8 plans complete, wave 5 done.**
+Plan: next is 216-08 (wave 6, Linux CI baselines, `autonomous: false`)
 Status: In progress
-Last activity: 2026-09-29 — 216-06 (harness falsification probes, HARNESS-01/HARNESS-02)
+Last activity: 2026-09-29 — 216-07 (docs/UAT/vault close-out, HARNESS-01/HARNESS-02/HARNESS-03)
+executed. `docs/operators-guide.md`'s four a11y bullets amended to describe the theme dimension,
+the opt-in per-entry `countRange` tolerance, and the browser-free `npm run a11y:ledger` command;
+`docs/quirk-master-guide.md` regenerated from its five sources (freshness gate green). Added
+`## Series 216` to `docs/UAT-SERIES.md` (5 cases: 4 PASS, 1 honest SKIP — UAT-216-03's
+`data-at-rest` `countRange` mechanism is unit-proven but not yet applied to the live baseline,
+which is 216-08's job); regenerated `docs/uat-coverage-gaps.md` (0 new GAP rows). All UAT corpus
+gates green (75 passed: zero-undispositioned, disposition-integrity, coverage-gaps-freshness,
+worklist-reconciliation). Vault `Digs` synced: Operators-Guide.md, UAT-Series.md, and a new
+Phase-216-A11y-Harness-Repair.md note (`status: active`, flips to `complete` at 216-08). Per-Phase
+Documentation Checklist adjudicated row by row with evidence in `216-07-SUMMARY.md` — no CLI
+command, scanner signal, chaos lab profile, config option, API endpoint, version bump, report
+section, or dashboard tab/UI feature this phase; the `quirk/dashboard/static/*` diff is a
+mechanical `npm run build` rebuild artifact of 216-04's `theme-provider.tsx` edit, not new shipped
+functionality.
+
+**Prior activity, superseded above:** 2026-09-29 — 216-06 (harness falsification probes, HARNESS-01/HARNESS-02)
 executed. New permanent `harness-falsification-probe.test.ts` (15 nodes, synthetic input only,
 mirrors the RATCHET-04 mutation-probe idiom) plus three live RED captures: falsifier 1 (a light
 sweep never resolves the dark baseline — all 13 routes FAIL naming a `-default-light.json` path,
@@ -1418,7 +1434,7 @@ pre-existing unrelated warning). Working tree clean apart from this hand-edit.
 | 3 | 216-04 light sweep, npm scripts, both CI jobs | done | `ef5ad3a3` `8601eff0` `cbf694a5` |
 | 4 | 216-05 theme-complete ledger | done | `c7fc7d34` `224b7d6f` |
 | 5 | 216-06 falsification evidence | done | `c040ae1d` |
-| 5 | 216-07 docs/UAT/vault | not started | — |
+| 5 | 216-07 docs/UAT/vault | done | `e5650f9e` `5ce0dcf8` |
 | 6 | 216-08 Linux CI baselines | not started, **`autonomous: false`** | — |
 
 **Why the pause is here and not one wave later.** Wave 3 (`216-04`) deliberately adds an a11y CI
