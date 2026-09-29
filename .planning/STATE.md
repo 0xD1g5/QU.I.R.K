@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
-status: planning
+status: in_progress
 last_updated: "2026-09-29T02:55:00.000Z"
 last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 12
+  completed_plans: 7
+  percent: 17
 ---
 
 # Project State
@@ -1387,11 +1387,91 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-## Current Position
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-28 — Milestone v5.26 Accessibility & Instrument Truth started
+Phase: 216 (A11y Harness Repair) — **PAUSED at 3 of 8 plans, waves 1-2 complete.**
+Plan: next is 216-04 (wave 3)
+Status: In progress, paused at an all-green boundary by operator request
+Last activity: 2026-09-29 — Phase 215 closed 4/4; Phase 216 discussed, researched, planned
+(8 plans / 6 waves) and executed through wave 2. Suite green at 83/83, working tree clean.
+
+**Phase 216 progress, verified against disk not reported:**
+
+| Wave | Plan | State | Commits |
+|------|------|-------|---------|
+| 1 | 216-01 theme axis at the naming choke point, 40 baselines `git mv`'d to `-dark` | done | `ed143199` `4f8778d3` `0f925ee5` |
+| 1 | 216-02 fixture blind-spot closure, labels extracted to a pure module, source-derived coverage gate | done | `43045332` `488b63b4` `f0e47aff` |
+| 2 | 216-03 opt-in per-entry `countRange` + the D-11 docstring amendment | done | `4dc4dd40` `dbc2761b` `31526c54` `c2fc1ccb` |
+| 3 | 216-04 light sweep, npm scripts, both CI jobs | **not started** | — |
+| 4 | 216-05 theme-complete ledger | not started | — |
+| 5 | 216-06 falsification evidence · 216-07 docs/UAT/vault | not started | — |
+| 6 | 216-08 Linux CI baselines | not started, **`autonomous: false`** | — |
+
+**Why the pause is here and not one wave later.** Wave 3 (`216-04`) deliberately adds an a11y CI
+step that is RED on this branch until wave 6 lands the Linux-generated baselines, with
+`continue-on-error` prohibited. That is by design (it is falsifier 1 from `216-VALIDATION.md`
+observed live), but this repo already carries an intermittently-failing required check, so a second
+expected-red step makes attribution harder — and the plan-checker flagged it. Stopping before wave 3
+leaves the branch fully green instead.
+
+**Wave 6 cannot complete without a push.** D-15 forbids committing a macOS-generated a11y baseline;
+the only legitimate source is `.github/workflows/dashboard-quality.yml`'s
+`a11y-regenerate-baselines` job (`workflow_dispatch`, ubuntu-latest, Chrome pinned
+`152.0.7977.82`) — which **uploads an artifact and does not commit**. So resuming to done requires:
+push branch → `gh workflow run dashboard-quality.yml` → download the `a11y-baselines-<run_id>`
+artifact → inspect → commit only the CI-generated files.
+
+**Each executor's claims were re-verified independently, and each check found something the
+executor's own report would not have surfaced** — not because the executors erred, but because each
+tested the direction it had in mind:
+- 216-01: `baselineFilename` was confirmed to THROW on a 2-arg call rather than defaulting, so the
+  theme dimension cannot silently go implicit again.
+- 216-02: the executor proved the coverage gate fails on under-reading; the *renaming* direction was
+  untested, so it was broken here (rename a source map → 3 of 6 nodes red, restored byte-identical).
+- 216-03: the executor unit-proved the range floor works; whether it could be *disabled* was
+  untested, so a mutation probe collapsed the floor to 0 → 2 tests red. The shrink-only ratchet
+  cannot be silently turned into upward drift.
+
+**Findings carried out of Phase 216, not folded into "done":**
+- The run-time source scan found **11 badge-style maps across 8 further pages** beyond the 7 in
+  `hardware.tsx`. Recorded in the coverage test's `OUT_OF_SCOPE_MAPS` with reasons. Consequence:
+  HARNESS-02's named scope (`/certificates` + `/hardware`) covers less of the dashboard than the
+  requirement's framing implies — relevant sizing for FIX-05's "zero badge pair anywhere".
+- `SNMP_STYLES` declares a `"v3 failed → none"` key that `snmpLabel` has no branch capable of
+  producing. Dispositioned `unreachable` with a written reason rather than reached by an invented
+  fixture value. A real, small product defect.
+- `216-CONTEXT.md` D-02's own file count was wrong (44 → 40), caught during research. Named in the
+  decision rather than overwritten, since the phase's whole subject is instruments that drift.
+
+**Operator decision recorded 2026-09-29 — FIX-01 (Phase 217).** ROADMAP criterion 1 and
+REQUIREMENTS FIX-01 prescribed different fixes for the 4 `--qs-node-safe` + white entries; both
+targets exist in `index.css`, so the disagreement was real. Resolved toward the ROADMAP: use the
+existing `-foreground` sibling (**7.40:1**, theme-invariant, no new token, badge colour unchanged)
+rather than `--status-safe-deep` (6.82 light / **4.84** dark, and it changes the badge's colour
+identity, which makes it a design call and therefore FIX-04's). REQUIREMENTS.md corrected in
+`ef043b85` with the superseded prescription shown, not overwritten.
+
+**Phase 217 counts re-derived from the live `badge-contrast-baseline.json`** (keyed
+`file|bgToken|fgSpec|theme`), because the ROADMAP's own note says to: Phase 217 owns **30** entries
+(FIX-01 **12**, FIX-03 **18**), Phase 218 owns **5** — which matches FIX-04's "5 genuine design
+calls" exactly, and 30+5=35 accounts for the whole baseline with nothing unowned. The prose figures
+"11" and "29" are raw-occurrence counts from 999.117's pre-RATCHET classification. Re-derive again
+at plan time rather than trusting this paragraph.
+
+**FIX-02's spike answer is already forced, which changes its job.** No static text colour passes AA
+in both themes for `--status-warning`/`--chart-tls` (black passes dark only, white light only), so
+theme-varying `-foreground` tokens are required, not chosen. The spike's real open question is
+*which call sites*, and that is mechanical: 29 `bg-` badge backgrounds take the new token; exactly
+one `text-` use exists (`pages/certificates.tsx:87`, Phase 213's protected text-on-white case) and
+must not change; 9 further uses are chart fills that are not text pairs.
+
+**A note on this section's own history:** the `## Current Position` heading was DUPLICATED
+(two identical lines) — a stale-write artifact of the kind CLAUDE.md § GSD `state.*` Verb Integrity
+describes. Collapsed to one here. The frontmatter `progress` block was all zeros and `status` was
+`planning` while Phase 215 was in fact complete and 216 half-built; both re-derived from disk.
+
+**Toolchain discipline, unchanged:** no `phase.complete`, no `milestone.complete`, no mutating
+`gsd-sdk` / `gsd-tools.cjs` state verb. This section and the frontmatter were hand-edited from a
+pre-image with the FULL diff read — not a signature grep, which cannot see the multi-line-value
+truncation defect (HITS #15-17).
 
 **Scope, as locked at the boundary:** the v5.25 dashboard-accessibility deferral taken **as one
 unit** per the operator instruction (45 of 103 badge colour pairs below WCAG AA across 11 pages — a
