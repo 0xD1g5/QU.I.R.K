@@ -134,7 +134,12 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
   2. The 45 known failures are recorded in a checked-in, shrink-only baseline — a new sub-AA pair fails CI, and a fixed pair requires (and gets) a baseline update, never a silent widening.
   3. `auditedFiles()` exists in exactly one place in the codebase; the verbatim copy in `theme-token-vocabulary.test.ts` is deleted and both call sites use the single derived source.
   4. A mutation probe injects a sub-AA badge pair and the guard demonstrably goes red, with the failing output captured as evidence rather than asserted in prose.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 215-01-PLAN.md — Foundation modules: derived `auditedFiles()` (76 files) + the four badge-extraction primitives promoted into `color-contrast-helpers.ts`
+- [ ] 215-02-PLAN.md — RATCHET-03: widen both existing consumers to 76 files, delete the verbatim copies, add the forever-exempt/debt exemption machinery
+- [ ] 215-03-PLAN.md — RATCHET-01/02: pure evaluator, repo-wide badge-contrast guard, checked-in shrink-only baseline
+- [ ] 215-04-PLAN.md — RATCHET-04: two-direction mutation probe, mechanical Tailwind JIT guard, count-prose correction and phase close
 **UI hint**: yes
 
 ### Phase 216: A11y Harness Repair
