@@ -8,13 +8,13 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 932
-- Disposition counts: DEFERRED 40, FAIL 5, GAP 28, OBSOLETE 2, PASS 771, SKIP_OTHER 86
-- Open GAP (drainable) cases: 41
+- Total case headings: 940
+- Disposition counts: DEFERRED 40, FAIL 5, GAP 30, OBSOLETE 2, PASS 777, SKIP_OTHER 86
+- Open GAP (drainable) cases: 43
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (41 cases, all series)
+## Open GAP Worklist (43 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
@@ -59,6 +59,8 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-202-02 | 202 | Keyboard-Operable Trigger, Escape Closes, Focus Returns to the Row | no substitute coverage; no operator walkthrough exercised keyboard Tab/Escape/focus-return, and vitest coverage cannot be cited as a DEFERRED pytest node |
 | UAT-202-11 | 202 | No-Stable-Identifier Finding Renders a Disabled Trigger | no substitute coverage; no operator walkthrough exercised the disabled-trigger state, and vitest coverage cannot be cited as a DEFERRED pytest node |
 | UAT-206-05 | 206 | Partial Conversions Are Qualified With Verbatim Uncovered Bullets | no substitute coverage. A standing gate asserting that every qualified PASS quotes |
+| UAT-217-07 | 217 | Certificates Safe/At Risk Badges Confirmed — The 30-89-Day Amber Expiry Text Leg Has No Fixture Row | no fixture row: covered by the automated D-09 guard |
+| UAT-217-08 | 217 | Findings/Trends Amber Badges Confirmed — No Chart-TLS (Blue) Badge Rows In The Canonical DB | no fixture row: covered by badge-contrast-guard + CI axe baselines |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 
