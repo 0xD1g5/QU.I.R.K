@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of this edit. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
+**Last Updated:** 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
 (Certificates Page — Expiry Sorting) and `UAT-7-21` (Dashboard Theme — No Hardcoded Colors)
 re-dispositioned FAIL to PASS. `UAT-7-12` cites the five new
 `certificates-expiry-sort.test.tsx` nodes plus operator browser confirmation. `UAT-7-21` is a
@@ -724,7 +724,7 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 - Output matches format: `QU.I.R.K. v5.25.0`
 - Exit code 0
 
-**Result:** - [x] PASS (2026-09-10 live re-execution against the published 5.21.0 PyPI install, clean throwaway venv `/tmp/q5210-check` per 196-03-SUMMARY.md Task 3: `quirk --version` printed the matching 5.21.0-formatted version string, exit code 0, on the first install attempt — attempt count: 1, no CDN-lag failure text observed. This SUPERSEDES the prior 2026-09-07 PASS note, whose evidence was `QU.I.R.K. v5.19.0`, the same way that note superseded 2026-09-02's `v5.18.0` evidence. The interim "criteria bumped, re-execution lands in 196-05" note that Phase 196 Plan 02 added is closed by this entry and no longer reads as an open item. Phase 214, 2026-09-28: the Pass Criteria above were bumped to `QU.I.R.K. v5.25.0`; this existing PASS disposition and its 2026-09-10 published-5.21.0 evidence are NOT reopened — re-execution against a published 5.25.0 PyPI artifact is operator-reserved and post-tag, because Phase 214 deliberately does not push the `v5.25.0` tag.)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-09-10 live re-execution against the published 5.21.0 PyPI install, clean throwaway venv `/tmp/q5210-check` per 196-03-SUMMARY.md Task 3: `quirk --version` printed the matching 5.21.0-formatted version string, exit code 0, on the first install attempt — attempt count: 1, no CDN-lag failure text observed. This SUPERSEDES the prior 2026-09-07 PASS note, whose evidence was `QU.I.R.K. v5.19.0`, the same way that note superseded 2026-09-02's `v5.18.0` evidence. The interim "criteria bumped, re-execution lands in 196-05" note that Phase 196 Plan 02 added is closed by this entry and no longer reads as an open item. Phase 214, 2026-09-28: the Pass Criteria above were bumped to `QU.I.R.K. v5.25.0`; this existing PASS disposition and its 2026-09-10 published-5.21.0 evidence are NOT reopened — re-execution against a published 5.25.0 PyPI artifact is operator-reserved and post-tag. CORRECTED 2026-09-28, post-publish, Phase 214 continuation: this note previously ended “because Phase 214 deliberately does not push the `v5.25.0` tag”. The operator pushed the annotated `v5.25.0` tag the same day — run `36497076444`, event `push`, job `Publish to PyPI` = `success`, and PyPI now serves 5.25.0 — so that clause is false. The operator-reserved re-execution is therefore UNBLOCKED rather than unreachable, and is recorded as human-verification item 1 in `214-VERIFICATION.md`. This existing PASS disposition and its 2026-09-10 published-5.21.0 evidence are still NOT reopened.)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-10  **Tester:** Automated (196-05 phase-close plan execution)
 **Notes:** Version bumped to 5.21.0 in Phase 196 Plan 02 (`pyproject.toml` sole SoT;
 importlib.metadata derives it, which is why `pip install -e . --no-deps` must follow the bump).
@@ -742,7 +742,10 @@ the matching 5.21.0-formatted version string, exit 0. The project's own `.venv/b
 the identical 5.21.0-formatted string, confirming the throwaway-venv result reflects the published artifact rather
 than an editable-install leak.
 
-Phase 214 (2026-09-28): Pass Criteria bumped to `QU.I.R.K. v5.25.0`; re-execution against a published 5.25.0 artifact is operator-reserved and post-tag (Phase 214 does not push the `v5.25.0` tag).
+Phase 214 (2026-09-28): Pass Criteria bumped to `QU.I.R.K. v5.25.0`; re-execution against a published 5.25.0 artifact is operator-reserved and post-tag.
+CORRECTED 2026-09-28, post-publish: the parenthetical here previously read “Phase 214 does not push the `v5.25.0` tag”. The operator pushed it the same day (run
+`36497076444`, `Publish to PyPI` = `success`); PyPI serves `quirk-scanner` 5.25.0. The re-execution is now performable and is tracked as human-verification item 1 in
+`214-VERIFICATION.md`.
 
 ---
 

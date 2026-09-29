@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
 status: executing
-last_updated: "2026-09-28T22:55:00.000Z"
-last_activity: 2026-09-28 -- Phase 214 plan 08 (close-out recording) executed. Wrote 214-NOT-MET-AS-WRITTEN.md: ROADMAP Success Criterion 3 recorded NOT MET AS WRITTEN with REL-03 PENDING -- operator-reserved (the criterion itself excludes the workflow_dispatch dry run that is all this phase performed; publish job and Attach-zip step both `skipped`, no Release object, PyPI still 5.21.0, no v5.25 tag with a v5.21 positive control), and Criterion 1 recorded as a deliberate evidenced deviation (the CHANGELOG entry describes FOUR unreleased milestones, not the "three" the criterion names, because no tag followed v5.21.0 on 2026-09-10). Hand-marked REL-01/REL-02/REL-04 complete in REQUIREMENTS.md with cited evidence artifacts and updated the Traceability rows; REL-03 left `[ ]` and annotated PENDING -- operator-reserved. Phase 214 ROADMAP box left `[ ]` deliberately. Corrected ROADMAP Success Criterion 2's stale test count ("all 4 tests/test_version.py tests" vs a measured 8 functions / `7 passed, 1 deselected` locally) and the milestone goal line's matching stale "three milestones", both in place with the prior claim preserved beside the correction. Closed 214-VALIDATION.md (nyquist_compliant true, zero pending rows). Wrote the Obsidian phase note at status: active, NOT complete -- the phase's terminal deliverable is an operator decision not yet taken. NO TAG WAS CREATED. Corrected the progress counters, which read total_plans 19 / completed_plans 15 against a disk-measured 40 / 39 -- recorded as a finding, not silently fixed. No phase.complete, no requirements mark-complete, no mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb; STATE.md hand-edited from a pre-image with the FULL diff read. REMAINING: plan 214-09 -- blocking operator handover; no agent tags.
+last_updated: "2026-09-29T00:15:00.000Z"
+last_activity: 2026-09-29 -- Phase 214 CLOSED at 9 of 9 plans, 4 of 4 requirements, all 4 ROADMAP success criteria MET. Continuation pass after plan 214-09's blocking checkpoint. THE OPERATOR PERSONALLY created and pushed the annotated v5.25.0 tag (tag object 0d948b46 -> de74b118 == HEAD == origin/main, tagger Digs 19:12:10 -0400, annotation diffing clean against the prepared 214-v5.25-tag-annotation.txt); NO AGENT created, moved or pushed any tag. That push fired release.yml as run 36497076444 (event=push) -- Publish to PyPI (Trusted Publishers + Sigstore) went skipped -> success, Attach zip to GitHub Release likewise, Upload dry-run zip artifact inverted success -> skipped as its complement; the Release object's body is byte-identical (17,794 B) to the composer's archived output, its H2 section heading for 5.25.0 sitting at line 1 above the unsigned-binary notice, exercising release.yml:436's body_path half for the first time; PyPI queried directly serves quirk-scanner 5.25.0 with wheel + sdist. REL-03 hand-marked [x] in REQUIREMENTS.md with that evidence and its traceability row flipped; ROADMAP criterion 3 recorded MET, Phase 214 box checked POST-checkpoint on published evidence (operator-approved decision, not the phase's own close), progress row 9/9 completed 2026-09-28, 214-09 plan box checked. 214-NOT-MET-AS-WRITTEN.md Section A carries a DISCHARGED banner with its original text intact; Section B (criterion 1's deliberate four-milestones-not-three deviation) is UNTOUCHED and STANDS. Wrote 214-PUBLISH-EVIDENCE.md -- every row a live command with raw output. ONE authorized public mutation, on the operator's explicit decision -- gh release edit v5.25.0 --notes-file re-synced the published body, which carried a now-false 'REL-03 ... is PENDING' Known-Limitations bullet -- 999.109's own defect class recurring on the release that proved the composer. Pre-edit body backed up; regenerated-vs-archived diff contained ONLY that bullet; post-edit body re-read via JSON parse (never -q .body, which appends a jq newline) and byte-matched at 19,735 B; archived as 214-release-notes-published.md. No tag, asset, flag, title or other release touched. Corrected the same stale claim in CHANGELOG.md (prior text preserved as a dated correction), docs/UAT-SERIES.md lines 727/745 + header, the uat-disposition-ledger.jsonl mirror, and HORIZON.md's 999.109 row. FINDING -- the UAT Result-line regex uses [^)]* for its annotation, so NESTED PARENTHESES in a Result annotation silently un-disposition the case -- my first edit did exactly that and the coverage-gaps generator reported UNDISPOSITIONED 1 / PASS 760; rewritten paren-free, all 75 UAT gates green, uat-coverage-gaps.md regenerates byte-identical. Counters re-derived FROM DISK -- 40 total plans (8+8+5+10+9), 40 complete, 4 of 5 phases checked (Phase 210's box stays [ ] deliberately). No phase.complete, no requirements mark-complete, no mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb; STATE.md hand-edited from a pre-image with the FULL diff read, not a signature grep. REMAINING -- milestone v5.25 audit + close; status stays `executing` because the milestone is open, not because the phase is unfinished.
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 40
-  completed_plans: 39
-  percent: 98
+  completed_plans: 40
+  percent: 100
 ---
 
 # Project State
@@ -83,6 +83,18 @@ that `.github/workflows/release.yml` hardcodes a static release body for every t
 v5.21 all carry byte-identical wrong release notes. **That is why v5.22, v5.23 and v5.24 are all
 deliberately untagged** — tagging fires that workflow. Fixing it is the precondition for ever tagging
 a release again, so it is not optional cleanup.
+**⚠️ DISCHARGED — both halves, on two different dates.** The workflow fix landed on `main` in
+`7b9eb4cc` on 2026-09-13 (`release.yml:293` composes the body from `CHANGELOG.md`, `:436` consumes
+it, `:343` hard-fails on a missing section), so this paragraph's "hardcodes a static release body"
+premise was already false when it was written at the v5.24 close. And on **2026-09-28** the operator
+pushed `v5.25.0`, whose publish run `36497076444` exercised that composer end-to-end for the first
+time and shipped all four accumulated milestones (v5.22, v5.23, v5.24, v5.25) in one release — so
+the untagged backlog this paragraph describes is drained. The text is preserved as the v5.24-close
+snapshot it is. **`.planning/PROJECT.md`'s carry-forward list still carries the identical stale
+claim** (its `- [ ] release.yml hardcodes a static release body` bullet, in a section whose opening
+"No milestone is open" line is itself a v5.24-close snapshot); it is left alone rather than
+part-corrected, and named here so the next reader finds it. Evidence:
+`.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
 
 **Also carried, from the audit's tech-debt set rather than from the todo directory:** COV-04 at 27 of
 28 with `UAT-7-12` an accepted product-absence FAIL; two shipped product-defect FAILs in series 7
@@ -1359,6 +1371,106 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
+Phase: 214 (Release Cut) — **COMPLETE at 9 of 9 plans.** Recorded 2026-09-29 by the continuation
+pass that ran after plan 214-09's blocking operator checkpoint was satisfied.
+Plan: 9 of 9 complete.
+Status: **4 of 4 requirements Complete — REL-01, REL-02, REL-03, REL-04. All four ROADMAP Success
+Criteria MET**, criterion 1 with the deliberate, evidenced four-milestones-not-three deviation that
+`214-NOT-MET-AS-WRITTEN.md` § B records and which **STANDS**. § A is **DISCHARGED**.
+
+**The operator pushed the tag. No agent did.** `git tag -l v5.25.0 --format='%(taggername) ...'`
+reads `Digs 2026-09-28 19:12:10 -0400`; the annotated tag object `0d948b46` dereferences to
+`de74b118` (== `HEAD` == `origin/main`) and its annotation body diffs **clean** against the
+`214-v5.25-tag-annotation.txt` plan 214-09 prepared — the operator fired the prepared command
+verbatim, about eight minutes after the handover was written.
+
+**REL-03 closed on a real publish, not on an inference.** Run **`36497076444`**, `event=push`,
+`headSha=de74b118`, conclusion `success`. The transition the criterion demanded, read from
+`conclusion` fields and never from log prose: `Publish to PyPI (Trusted Publishers + Sigstore)`
+**`skipped` → `success`**, `Attach zip to GitHub Release` **`skipped` → `success`**, and
+`Upload dry-run zip artifact` inverting `success` → `skipped` as the publish gate's complement —
+which independently corroborates that the real branch of the conditional was taken. The Release
+object is live (not draft, not prerelease, asset `quirk-windows-5.25.0.zip` `uploaded`), its body
+byte-identical at **17,794 B** to the composer's archived output, `## [5.25.0]` at line 1 and the
+unsigned-binary notice at 211 on the **rendered** body. `release.yml:436`'s `body_path` half is
+exercised for the first time. PyPI, queried directly and independently of `gh` and of Actions,
+serves `quirk-scanner` **5.25.0** with both wheel and sdist. Command-by-command:
+`.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
+
+**Scoped, because the broad version is false.** This is the first `push`-event run of `release.yml`
+**since the composer landed** (`7b9eb4cc`, 2026-09-13 17:16 -0400) — NOT the first in the workflow's
+history: 13 of the last 20 runs are `push`. The last prior push run, `v5.21.0`
+(2026-09-10 10:14 -0400), predates the composer by three days and shipped the static body that
+*was* the `999.109` defect.
+
+**The gap `214-VERIFICATION.md` found, and the one public mutation that closed it.** The published
+body carried a Known-Limitations bullet reading "REL-03 (the actual PyPI publish) is PENDING,
+operator-reserved … not the same as a real publish." True when authored pre-tag; **falsified by the
+very push that composed and published it.** That is 999.109's own defect class — a public release
+body misdescribing what shipped — recurring on the release that proved the composer. On the
+operator's explicit decision, `CHANGELOG.md` was corrected (prior text preserved as a dated
+correction, not deleted) and `gh release edit v5.25.0 --notes-file` re-synced the published body.
+The pre-edit body was backed up first; the regenerated-vs-archived diff contained **only** that
+bullet; the post-edit body was re-read via a JSON parse (never `-q .body`, which appends a `jq`
+newline and already produced one false "body differs" reading this phase) and **byte-matched** at
+19,735 B; it is archived as `214-release-notes-published.md`. **No tag, asset, draft/prerelease
+flag, title or other release was touched.** Secondary instances of the same stale claim were
+corrected in `docs/UAT-SERIES.md` (lines 727/745 + header), its
+`docs/uat-disposition-ledger.jsonl` mirror, and `HORIZON.md`'s `999.109` row.
+
+**The box-check is POST-checkpoint and says so.** Phase 214's ROADMAP box was checked in this
+continuation pass on published evidence, **not at the phase's own close** — where it was correctly
+left `[ ]` because the terminal deliverable was a decision not yet taken. The operator took the
+decision and then explicitly approved checking the box. `phase.complete` was **not** used, at any
+entry point; neither was `requirements mark-complete`; nor any mutating `state.*`/`roadmap.*` verb.
+Every tracking document was hand-edited, and `STATE.md` from a pre-image with the **FULL** diff
+read — a signature grep cannot see the known multi-line-field-value truncation class.
+
+**One instrument defect found and recorded, an eighth for this phase.** `docs/UAT-SERIES.md`'s
+canonical `**Result:**` regex captures its annotation as `[^)]*`, so **nested parentheses in a
+Result annotation silently un-disposition the case.** The first draft of the UAT correction used
+them; `scripts/generate_uat_coverage_gaps` then reported `UNDISPOSITIONED 1 / PASS 760` while
+`tests/test_uat_zero_undispositioned_gate.py` still passed — two parsers disagreeing, which is the
+already-filed `uat-parsers-disagree-on-wrapped-result-lines` class pointed at parentheses instead
+of wrapping. Rewritten paren-free: **75 UAT gates green** and `docs/uat-coverage-gaps.md`
+regenerates **byte-identical** to the committed copy. Write Result annotations without parentheses.
+
+**And a ninth, in this very file's frontmatter — a THIRD hazard axis on `last_activity`.** The known
+two are the unanchored/unscoped field regexes and multi-line field *values*. This is a third:
+`last_activity` is an **unquoted YAML plain scalar**, so (a) any `": "` inside it makes the whole
+frontmatter unparseable, and (b) any `" #"` inside it **silently truncates the value at that point**
+for any YAML-based reader. Both were present. `git show HEAD:.planning/STATE.md` frontmatter has
+**never** strict-YAML-parsed on this file — the committed value contains a filename immediately
+followed by a colon-space — which is consistent with the GSD toolchain reading these fields by
+regex rather than by parsing.
+This pass's first draft contained a literal `" ## [5.25.0]"`, and `yaml.safe_load` returned **781 of
+3,183 characters** with **no error** — a clean truncation that no signature grep and no `git diff`
+would flag, because the file on disk is complete and only the *reader* loses 75% of it. Both classes
+are now removed from this file's `last_activity` and the frontmatter round-trips **lossless** for the
+first time (`raw == yaml.safe_load(...)` → `True`). **Do not put `": "` or `" #"` in an unquoted
+STATE.md scalar**, and verify with a round-trip equality check, not with a parse-succeeded check —
+the parse *succeeded* on the truncated value.
+
+**Counters re-derived FROM DISK, not inherited:** `total_plans: 40` (210:8 + 211:8 + 212:5 + 213:10
++ 214:9, each counted by `ls | grep -cE '^[0-9.]+-[0-9]+-PLAN\.md$'`), `completed_plans: 40` (40
+SUMMARY files), `completed_phases: 4` (checked ROADMAP boxes 211/212/213/214). **Phase 210's box
+stays `[ ]` deliberately** — unchanged by this pass, exactly as plan 08 left it.
+
+**REMAINING:** the v5.25 milestone is still **open** — `status:` stays `executing` because the
+milestone is not closed, not because any phase is unfinished. Next is the milestone audit and
+close. Two carried items to read before that: `phase.complete` must **not** be used to close this
+milestone (semantic defect class — it wrote `completed_plans: 142` at 5/7 plans with both
+corruption signatures reading clean), and the milestone-close `audit-open` gate caps `counts.todos`
+at 5 against a real 33, dropping rather than deferring the rest.
+
+---
+
+### Prior: Phase 214 at plan 08 close (2026-09-28) — accurate then, superseded by the block above
+
+**Read this as history.** Every "REL-03 is PENDING", "no tag exists" and "PyPI still serves 5.21.0"
+statement below was **true when written** and was superseded by the operator's push at
+19:12:10 -0400. Nothing in it should be acted on.
+
 Phase: 214 (Release Cut) — 8 of 9 plans executed. **The phase stops here by design.** Plan 214-09
 is a blocking operator checkpoint: the `v5.25.0` tag is operator-reserved and NO agent pushes it.
 Counts re-enumerated from disk 2026-09-28 at plan 08 close, not inherited from this block's prior
@@ -2625,6 +2737,56 @@ Found at Phase 208 close (2026-09-22):
 | costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
+
+Last session: 2026-09-28/29 — **the release shipped, and then the release notes had to be corrected
+because shipping falsified them.** Sequence: Phase 214 executed 8 plans and stopped at plan 214-09's
+blocking checkpoint with the tag operator-reserved -> the **operator** created and pushed the
+annotated `v5.25.0` tag himself (tagger `Digs`, 19:12:10 -0400; no agent tagged, ever) -> run
+`36497076444` published `quirk-scanner` 5.25.0 to PyPI and rendered the composed release body ->
+`gsd-verifier` scored the phase 13/14 and found one gap -> this continuation pass closed it.
+
+**The gap is the session's real lesson, and it is second-order.** `999.109` was "a public release
+body that misdescribes what shipped." The `v5.25.0` body — the **first** body composed on a real
+publish, the proof artifact for `REL-03` — closed with a Known-Limitations bullet telling every
+reader that "REL-03 (the actual PyPI publish) is PENDING, operator-reserved" and that only a dry run
+had happened. It was written honestly and pre-tag, and **the push that composed and published it
+falsified it about eight hours later.** Nothing in the phase's design re-read the entry after the
+push. *A statement that was true when written is not therefore true now, and the artifact most
+likely to go stale is the one describing the event that is about to happen.*
+
+**Four claims needed correcting this session, each by a different instrument than the one that
+produced it** — the recurring shape, recorded as the lesson rather than as errors:
+(1) "run `36497076444` is the first `push`-event run in this workflow's entire history" — derived
+from a `--limit 3` listing; a `--limit 20` listing says **13 of 20** are `push`. The scoped form
+("first since the composer landed in `7b9eb4cc`") is true and is what survives.
+(2) `214-VERIFICATION.md`'s published-body byte count (17793 true / 17794 via jq) — off by one in
+both figures, measured here three ways as **17794 / 17795**. Its sha256 is correspondingly wrong;
+its *verdict* (published == archived) reproduces and holds.
+(3) "the UAT correction is done" — `pytest` passed the zero-undispositioned gate while the
+coverage-gaps generator reported `UNDISPOSITIONED 1`. Two parsers disagreeing; the generator was
+right. Cause: the `**Result:**` regex captures its annotation as `[^)]*`, so **nested parentheses
+un-disposition a case silently.** Rewritten paren-free; 75 gates green; the generated artifact
+regenerates byte-identical.
+(4) "`release.yml` hardcodes a static release body, which is why three milestones are untagged" —
+carried in `STATE.md`'s own Deferred Items and in `PROJECT.md`. False since 2026-09-13. Annotated in
+this file; `PROJECT.md`'s twin is named, not part-corrected.
+
+Stopped at: **Phase 214 COMPLETE (9/9, 4/4 requirements, 4/4 criteria); milestone v5.25 still
+OPEN.** `v5.25.0` is tagged, on PyPI, and its release page now describes what actually shipped.
+Next action is the **v5.25 milestone audit + close**. Read two things first, both about the close
+mechanism rather than the product: **`phase.complete` must not be used** to close this milestone
+(semantic defect class — well-formed, wrong values; it wrote `completed_plans: 142` at 5/7 plans
+with both corruption signatures reading clean), and the close gate's **`audit-open` caps
+`counts.todos` at 5** against a real 33, writing the truncated number into `MILESTONES.md` and
+**dropping** rather than deferring the remainder. Also standing: the flaky
+`test_vitest_substitute_nodes_pass` node inside the **required** `Linux Full Suite` job, which makes
+any failing-node SET a sample rather than a baseline.
+Written by hand — no `state.*` verb used; pre-image taken and the FULL diff read, not a signature
+grep.
+
+---
+
+### Prior: 2026-09-27 (v5.24 close) — history
 
 Last session: 2026-09-27 — **resumed a paused phase, closed it on an operator verdict, merged to
 `main`, and closed the milestone.** Sequence: `/gsd-resume-work` found Phase 207.1 at 3/3 plans held on

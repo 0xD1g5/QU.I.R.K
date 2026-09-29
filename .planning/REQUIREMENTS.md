@@ -196,6 +196,10 @@ lines under `## [Unreleased]` spanning v5.22, v5.23 and v5.24. The `999.109` wor
 **already discharged on `main`** — `release.yml:293` composes the body from CHANGELOG and `:436`
 consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails when the version's
 `## [x.y.z]` section is missing. What remains is an actual release, never yet proven on a live tag.
+**CLOSED 2026-09-28:** that release happened — `v5.25.0` is tagged (by the operator), published to
+PyPI, and the composer is proven on a real `push`-event run (`36497076444`). This paragraph is the
+milestone-opening snapshot and is preserved as such; all four `REL-*` requirements below are now
+Complete.
 
 - [x] **REL-01**: `CHANGELOG.md` carries a real `## [5.25.0]` section. `[Unreleased]` is promoted and
       the entry honestly describes three milestones of work, not one. The composer hard-fails without
@@ -234,24 +238,60 @@ consumes it via `body_path`; the static `body:` is gone and `:343` hard-fails wh
       0.35s`** (8 test functions; `addopts = -m 'not slow'` deselects one locally; CI's
       `pytest -m ""` collects all 8). `docs/getting-started.md` deliberately untouched — it carries
       no version string.
-- [ ] **REL-03**: A published release carries its own release notes. The composer is proven on a
+- [x] **REL-03**: A published release carries its own release notes. The composer is proven on a
       **real tag push** — it has only ever run on `workflow_dispatch` dry-runs — and the resulting
       GitHub release body contains the 5.25.0 CHANGELOG section above the unsigned-binary notice.
       **No test tags**: `release.yml` fires on `v[0-9]*` and publishes to PyPI (Phase 187).
-      **PENDING — operator-reserved.** Left unchecked on purpose at Phase 214's close. The version
-      cut is an operator decision (see § Constraints below, and `214-CONTEXT.md`'s
-      "DO NOT PUSH THE TAG", taken at discuss). Phase 214 delivered the strongest evidence
-      obtainable without a tag and stopped: `workflow_dispatch` run `36490856185` at
+      **COMPLETE (Phase 214, continuation pass after plan 214-09's blocking checkpoint;
+      2026-09-28).** The **operator personally** created and pushed the annotated `v5.25.0` tag —
+      tag object `0d948b46` dereferencing to `de74b118` (== `HEAD` == `origin/main`), tagger `Digs`
+      at 19:12:10 -0400, annotation body diffing **clean** against the prepared
+      `214-v5.25-tag-annotation.txt`. **No agent created, moved or pushed any tag.** That push fired
+      `release.yml` as run **`36497076444`** (`event=push`, `headSha=de74b118`) and produced the
+      exact transition this requirement demanded:
+      `Publish to PyPI (Trusted Publishers + Sigstore)` **`skipped` → `success`**,
+      `Attach zip to GitHub Release` **`skipped` → `success`**, and
+      `Upload dry-run zip artifact` inverting `success` → `skipped` as its complement.
+      A GitHub Release object now exists (not draft, not prerelease, asset
+      `quirk-windows-5.25.0.zip` `uploaded`) whose body, read via a JSON parse rather than
+      `-q .body`, is **byte-identical** (17,794 bytes) to the composer's archived output — so
+      `release.yml:436`'s `body_path` half is exercised for the first time. PyPI, queried directly
+      and independently of `gh` and of Actions, serves `quirk-scanner` **5.25.0** with both wheel
+      and sdist. Heading order holds on the **rendered** body: `## [5.25.0]` at line 1,
+      `### UNSIGNED BINARY NOTICE` at 211. Evidence, command by command with raw output:
+      `.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
+      **Scoped historical claim:** this is the first `push`-event run of `release.yml` **since the
+      composer landed** (`7b9eb4cc`, 2026-09-13 17:16 -0400) — not the first in the workflow's
+      history; 13 of the last 20 runs are `push`. The last prior push run, `v5.21.0`
+      (2026-09-10 10:14 -0400), predates the composer by three days and shipped the static body
+      that was the `999.109` defect.
+      **PRIOR TEXT, preserved rather than deleted (accurate at Phase 214's close, 2026-09-28
+      19:04, superseded eight minutes later by the operator's push):** *"PENDING —
+      operator-reserved. Left unchecked on purpose at Phase 214's close. The version cut is an
+      operator decision (see § Constraints below, and `214-CONTEXT.md`'s "DO NOT PUSH THE TAG",
+      taken at discuss). Phase 214 delivered the strongest evidence obtainable without a tag and
+      stopped: `workflow_dispatch` run `36490856185` at
       `793ae987c948bee51d6032ce0f92c81b335af3cd` composed a body whose `## [5.25.0]` heading sits at
-      line **1** and the unsigned-binary notice at line **209**, byte-identical (`cmp` IDENTICAL,
-      sha256 `6fc7c8eb50a0…`) to a local re-extraction from `git show origin/main:CHANGELOG.md`.
-      That is **PARTIAL** and is not this requirement: the `publish` job and the Attach-zip step
-      both read `skipped`, `gh release view v5.25.0` → `release not found`, PyPI (queried directly,
-      independent of `gh`) still serves `5.21.0`, no `v5.25*` tag exists locally or on `origin`
-      (with a `v5.21*` positive control returning 2 refs), and `release.yml:436`'s `body_path`
-      consumption path is untested because no dry run can reach it. **A green dry run is not a
-      publish.** Full record, verdict and operator handoff:
-      `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md` § Section A.
+      line 1 and the unsigned-binary notice at line 209, byte-identical to a local re-extraction
+      from `git show origin/main:CHANGELOG.md`. That is PARTIAL and is not this requirement: the
+      `publish` job and the Attach-zip step both read `skipped`, `gh release view v5.25.0` →
+      `release not found`, PyPI (queried directly, independent of `gh`) still serves `5.21.0`, no
+      `v5.25*` tag exists locally or on `origin` (with a `v5.21*` positive control returning 2
+      refs), and `release.yml:436`'s `body_path` consumption path is untested because no dry run
+      can reach it. A green dry run is not a publish."* That refusal to substitute a dry run for a
+      publish is **why this closure is a measurement rather than a re-reading** — the transition it
+      named as the missing evidence is the transition that was then observed.
+      **`214-NOT-MET-AS-WRITTEN.md` § Section A is DISCHARGED** (banner added at its head, original
+      text intact); **§ Section B stands** — REL-01's four-milestones-not-three deviation is not
+      folded into "met as written" by this closure.
+      **One authorized public mutation was performed** on the operator's explicit decision:
+      `gh release edit v5.25.0 --notes-file` re-synced the published body to the corrected
+      CHANGELOG section, because the body as published carried a now-false
+      "REL-03 … is PENDING" Known-Limitations bullet — the gap `214-VERIFICATION.md` found. The
+      pre-edit body was backed up first (byte-identical to `214-release-notes-dryrun.md`); the
+      regenerated-vs-archived diff contained **only** that bullet; the post-edit body was re-read
+      and byte-matched, and is archived as `214-release-notes-published.md`. No tag, asset,
+      draft/prerelease flag, title or other release was touched.
 - [x] **REL-04**: The 7 public releases carrying Windows-sensor boilerplate are backfilled —
       v5.7.0, v5.8.0, v5.12.0, v5.15.0, v5.18.0, v5.19.0, v5.21.0. `v5.11.0` already has a proper
       custom body and is left alone. **Back up the current bodies first**; they are not recoverable
@@ -376,7 +416,7 @@ named above already carry their own `## [x.y.z]` CHANGELOG body — see
 | UIFIX-02 | Phase 213 | Complete (true pre-fix count 205 across 17 files, not 95 across 9; `UAT-7-21` PASS qualified) |
 | REL-01 | Phase 214 | Complete (`de9f2e2a`; one `## [5.25.0]`, composer red-proved then dry-run-proved — entry describes FOUR milestones not three, a deliberate evidenced deviation, see 214-NOT-MET-AS-WRITTEN.md § B) |
 | REL-02 | Phase 214 | Complete (`ee4598af`+`3626a56a`+`07157599`; 3 surfaces at 5.25.0, editable reinstall run, 3 independent readings agree, gate `7 passed, 1 deselected` — 8 functions, not the stale "4") |
-| REL-03 | Phase 214 | **PENDING — operator-reserved** (dry run `36490856185` is PARTIAL only: publish job + attach step both `skipped`, no Release object, PyPI still 5.21.0, no `v5.25` tag; criterion 3 recorded NOT MET AS WRITTEN — see 214-NOT-MET-AS-WRITTEN.md § A) |
+| REL-03 | Phase 214 | **Complete** — real publish run `36497076444` (`event=push`, head `de74b118`): `Publish to PyPI` **`skipped` → `success`**, `Attach zip` likewise, Release object live with the composed body byte-identical (17,794 B) and `## [5.25.0]` above the unsigned-binary notice, PyPI serves 5.25.0 (wheel + sdist). Tag pushed by the **operator**, not an agent. Criterion 3 **MET**; `214-NOT-MET-AS-WRITTEN.md` § A **DISCHARGED** (§ B stands). Evidence `214-PUBLISH-EVIDENCE.md`. Prior row read "PENDING — operator-reserved" and was accurate at the phase's close |
 | REL-04 | Phase 214 | Complete (two-instrument live evidence, `214-REL04-EVIDENCE.md`; end state already held pre-phase, zero GitHub write verbs, nothing backed up because nothing overwritten; the different 8-release pre-v5.7 set filed as backlog `999.116`) |
 
 ---

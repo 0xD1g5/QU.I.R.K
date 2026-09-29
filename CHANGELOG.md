@@ -208,10 +208,33 @@ score computed after this release.** Re-scan or re-score before comparing.
   `None` for the same finding (`.planning/MILESTONES.md:105-113`).
 - **v5.25 — the P2b score-dilution defect is deferred, not fixed** (see Changed, Phase 212,
   above); its implementation is owned by a post-v5.25, operator-reserved phase.
-- **v5.25 — REL-03 (the actual PyPI publish) is PENDING, operator-reserved.** This release's
-  `workflow_dispatch` dry run is the strongest evidence obtainable without a tag; it is **not**
-  the same as a real publish, and this CHANGELOG entry does not claim it is. See
-  `214-NOT-MET-AS-WRITTEN.md` for the full record.
+- **v5.25 — REL-03 (the actual PyPI publish) is MET, not pending. CORRECTED 2026-09-28,
+  post-publish.** The claim this bullet carried until now was written before the tag existed and was
+  falsified by the very push that composed and published this release body. It is preserved verbatim
+  rather than deleted, per this project's correct-in-place convention:
+
+  > *"v5.25 — REL-03 (the actual PyPI publish) is PENDING, operator-reserved. This release's
+  > `workflow_dispatch` dry run is the strongest evidence obtainable without a tag; it is **not**
+  > the same as a real publish, and this CHANGELOG entry does not claim it is."*
+
+  What actually happened: the operator created and pushed the annotated `v5.25.0` tag (tag object
+  `0d948b46`, dereferencing to `de74b118`), firing `release.yml` as **run `36497076444`**
+  (`event=push`). The `Publish to PyPI (Trusted Publishers + Sigstore)` job read **`skipped`** on the
+  dry run (`36490856185`) and reads **`success`** on this one — the exact transition the release
+  criterion demanded — alongside `Attach zip to GitHub Release` = `success` and
+  `Compose release notes from CHANGELOG` = `success`. PyPI, queried directly rather than through
+  GitHub Actions, serves `quirk-scanner` **5.25.0** (`quirk_scanner-5.25.0-py3-none-any.whl` +
+  `quirk_scanner-5.25.0.tar.gz`). The body that run composed and published was byte-identical
+  (17,794 bytes) to the composer's archived dry-run output — so `release.yml:436`'s `body_path` half
+  is exercised for the first time. The body now on the release page is that one with **this bullet**
+  corrected and nothing else changed, archived as `214-release-notes-published.md`; the diff between
+  the two was inspected and contains only this bullet. Scoped precisely: this is the first
+  **`push`**-event run of `release.yml` since the CHANGELOG composer landed (`7b9eb4cc`,
+  2026-09-13 17:16 -0400); the previous push run, `v5.21.0`
+  (2026-09-10 10:14 -0400), predates it by three days and shipped the static hardcoded body that
+  *was* the `999.109` defect. Command-by-command evidence:
+  `214-PUBLISH-EVIDENCE.md`. `214-NOT-MET-AS-WRITTEN.md` § A is **DISCHARGED**; its § B
+  (criterion 1's deliberate four-milestones-not-three deviation) **stands**.
 
 ## [5.21.0] - 2026-09-10
 

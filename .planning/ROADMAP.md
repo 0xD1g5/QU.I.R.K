@@ -16,8 +16,12 @@ Phase 214's Success Criterion 1, from the same cause: it was written at the mile
 before v5.25's own phases had shipped work of their own to describe. `v5.21.0` was tagged 2026-09-10
 and v5.22 shipped 2026-09-11 (`MILESTONES.md:143`), so four milestones sit between the last tag and
 the pending one. The prior claim is preserved rather than overwritten. Note the goal's "first tagged
-release" clause is **not yet true**: the `v5.25.0` tag is operator-reserved and had not been pushed at
-Phase 214's close — see that phase's entry below.
+release" clause **was not yet true at Phase 214's close** — the `v5.25.0` tag was operator-reserved
+and unpushed. **CORRECTED 2026-09-28, post-publish: it is now TRUE.** The operator pushed the
+annotated `v5.25.0` tag the same day; run `36497076444` (`event=push`) published `quirk-scanner`
+5.25.0 to PyPI and rendered the composed release body. `v5.25.0` is the first tagged release since
+`v5.21.0` and it carries all four milestones. Evidence:
+`.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
 
 **Sequencing (operator decision 2026-09-27): score first, release last.** A tag freezes whatever
 number the scorer emits, so Phase 214 (`REL-*`) runs after every scoring phase lands. Phase numbering
@@ -78,21 +82,26 @@ cause at an exact file:line. This milestone adds no new detection capability.
   `PROJECT.md`/`REQUIREMENTS.md`, not generator output); what WAS achieved: corpus totals moved
   FAIL 7->5, PASS 754->756. Two `UAT-7-21` Pass Criteria bullets (electric-blue accent,
   dark-background consistency) remain **uncovered by any instrument** and are named as such.
-- [ ] **Phase 214: Release Cut** - `v5.25.0` is tagged, published to PyPI, and its release notes and
-  the 7 backlogged release bodies are real. **8 of 9 plans executed (plan 214-09 is the blocking
-  operator handover and runs last); 3 of 4 requirements Complete
-  (REL-01, REL-02, REL-04). REL-03 is PENDING — operator-reserved: the `v5.25.0` tag was NOT pushed,
-  by an operator decision taken at discuss and reaffirmed at close, because `release.yml` fires on
-  `v[0-9]*` and publishes to PyPI irreversibly.** Success Criterion 3 is recorded **NOT MET AS
-  WRITTEN** — it demands proof "on the actual publish rather than a `workflow_dispatch` dry run",
-  and only the dry run (`36490856185`, heading at line 1 vs the unsigned-binary notice at line 209,
-  composed body byte-identical to `CHANGELOG.md`) was performed; the `publish` job and Attach-zip
-  step both read `skipped`, no Release object exists, and PyPI still serves 5.21.0. Criterion 1 is
-  deviated from **deliberately and on evidence** (the entry describes FOUR unreleased milestones,
-  not the "three" written, since no tag followed `v5.21.0` on 2026-09-10). Criteria 2 and 4 are MET.
-  Box left unchecked: the phase's terminal deliverable is an operator decision not yet taken — the
-  same treatment Phase 210's entry used. See
-  `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md`.
+- [x] **Phase 214: Release Cut** - `v5.25.0` is tagged, published to PyPI, and its release notes and
+  the 7 backlogged release bodies are real. **9 of 9 plans executed; 4 of 4 requirements Complete
+  (REL-01, REL-02, REL-03, REL-04); all four Success Criteria MET** — criterion 1 with the
+  deliberate, evidenced four-milestones-not-three deviation that
+  `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md` § B records and which **still
+  stands**. **REL-03 closed on a real publish:** the **operator personally** pushed the annotated
+  `v5.25.0` tag (tag object `0d948b46` → `de74b118` == `origin/main`, tagger `Digs`
+  19:12:10 -0400, annotation diffing clean against the prepared file); no agent tagged. Run
+  **`36497076444`** (`event=push`) took `Publish to PyPI (Trusted Publishers + Sigstore)` from
+  `skipped` to **`success`** and `Attach zip to GitHub Release` likewise; the Release object's body
+  is byte-identical (17,794 B) to the composer's output with `## [5.25.0]` at line 1 above the
+  unsigned-binary notice, exercising `release.yml:436`'s `body_path` half for the first time; PyPI,
+  queried directly, serves 5.25.0 with wheel + sdist. Criterion 3 is **MET** and § A of
+  `214-NOT-MET-AS-WRITTEN.md` is **DISCHARGED** (banner added, original text intact).
+  **Box-checking provenance:** this box was checked **POST-checkpoint**, in a continuation pass on
+  published evidence (run `36497076444`), **not at the phase's own close** — at that close it was
+  correctly left `[ ]` because the phase's terminal deliverable was an operator decision not yet
+  taken, the same treatment Phase 210's entry used. The operator took that decision and then
+  explicitly approved checking the box. Evidence:
+  `.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
 
 ---
 
@@ -413,11 +422,12 @@ emits and whatever UI state ships — every other phase must land first)
 |---|---------|
 | 1 | **Deviated from deliberately, on evidence — spirit exceeded, letter not met.** The entry describes **FOUR** unreleased milestones (v5.22, v5.23, v5.24, v5.25), not "three": `v5.21.0` was tagged 2026-09-10 and v5.22 shipped 2026-09-11 (`MILESTONES.md:143`), so v5.25's own work is unreleased alongside the other three. The criterion's count was correct when written and went stale as the milestone executed. `[Unreleased]` IS promoted (exactly one, empty) and `release.yml:343`'s check passes — red-proved falsifiable against a `## [v5.25.0]` mutant before being trusted. Record: `214-NOT-MET-AS-WRITTEN.md` § B. |
 | 2 | **MET.** All three surfaces at 5.25.0 after `pip install -e . --no-deps`; three independent readings agree (`pip show`, `quirk.__version__`, `quirk --version`). Gate: `7 passed, 1 deselected`. The criterion's own test count was stale and is corrected in place above. |
-| 3 | **NOT MET AS WRITTEN. `REL-03` PENDING — operator-reserved.** Only the `workflow_dispatch` dry run the criterion explicitly excludes was performed (`36490856185`; heading line 1 < notice line 209; body `cmp`-IDENTICAL to `CHANGELOG.md`). `publish` job and Attach-zip step both `skipped`; `gh release view v5.25.0` → `release not found`; PyPI still serves 5.21.0; no `v5.25*` tag exists (with a `v5.21*` positive control returning 2 refs); `release.yml:436`'s `body_path` path untested. A green dry run is not a publish. Record + operator handoff: `214-NOT-MET-AS-WRITTEN.md` § A. |
+| 3 | **MET — on the actual publish, which is the condition the criterion names.** The operator pushed the annotated `v5.25.0` tag after plan 214-09's checkpoint (tag object `0d948b46` → `de74b118`, tagger `Digs`; no agent tagged). Run **`36497076444`**, `event=push`, head `de74b118`: `Publish to PyPI (Trusted Publishers + Sigstore)` **`skipped` → `success`**, `Attach zip to GitHub Release` **`skipped` → `success`**, `Upload dry-run zip artifact` inverted `success` → `skipped` as its complement. Release object live (not draft, not prerelease, asset `uploaded`); its body byte-identical (17,794 B, read via JSON parse not `-q .body`) to the composer's archived output; `## [5.25.0]` at line 1, `### UNSIGNED BINARY NOTICE` at 211 — heading above notice on the RENDERED body. PyPI, queried directly, serves `quirk-scanner` 5.25.0 (wheel + sdist). `release.yml:436`'s `body_path` half exercised for the first time. **Recorded POST-checkpoint, not at the phase's close.** Prior verdict, preserved: *"NOT MET AS WRITTEN. `REL-03` PENDING — operator-reserved — a green dry run is not a publish."* That refusal is what made this a measurement rather than a re-reading. Record: `214-NOT-MET-AS-WRITTEN.md` § A, **DISCHARGED**; evidence `214-PUBLISH-EVIDENCE.md`. |
 | 4 | **MET — and the end state already held before the phase began.** Two independent instruments confirm all 7 named tags already carry their own `## [x.y.z]` body (`214-REL04-EVIDENCE.md`). Zero GitHub write verbs ran, so nothing needed backing up because nothing needed overwriting. The genuinely-boilerplate set is a different, larger one (8 pre-v5.7 tags) — filed as backlog `999.116`, not actioned. |
-**Plans**: 9 plans (8 waves) — enumerated from disk 2026-09-28: 9 `214-0N-PLAN.md`,
-8 `214-0N-SUMMARY.md` (after this plan's own; 214-09 is the blocking operator checkpoint and
-produces no execution SUMMARY until the operator resumes it)
+**Plans**: 9 plans (8 waves) — re-enumerated from disk 2026-09-28 at the post-publish continuation
+pass: 9 `214-0N-PLAN.md` and **9** `214-0N-SUMMARY.md`. (At the phase's own close this read
+"8 `214-0N-SUMMARY.md` … 214-09 produces no execution SUMMARY until the operator resumes it" — the
+operator resumed it, so 214-09's SUMMARY now exists and records its checkpoint as satisfied.)
 
 Plans:
 - [x] 214-01-PLAN.md — Wave 0 baseline: full-suite failing-node SET, gh reachability, version-surface and generator-gate enumeration
@@ -428,7 +438,7 @@ Plans:
 - [x] 214-06-PLAN.md — commit and push the release surfaces to `origin/main`; SET comparison; prove no tag exists
 - [x] 214-07-PLAN.md — REL-03 (PARTIAL): workflow_dispatch dry run, artifact download, heading-order measurement
 - [x] 214-08-PLAN.md — 214-NOT-MET-AS-WRITTEN.md, hand-edited ROADMAP/REQUIREMENTS/STATE/VALIDATION, Obsidian phase note
-- [ ] 214-09-PLAN.md — pre-flight handover block + blocking operator checkpoint (tag is operator-reserved; the phase stops here)
+- [x] 214-09-PLAN.md — pre-flight handover block + blocking operator checkpoint (tag is operator-reserved; the phase stopped here, the OPERATOR pushed the tag, and a continuation pass closed REL-03 on published evidence)
 
 ---
 
@@ -440,4 +450,4 @@ Plans:
 | 211. Denominator Correctness | 0/? | Not started | - |
 | 212. Score Dilution — Decision Only | 0/? | Not started | - |
 | 213. Shipped Product Defects (Series 7) | 0/? | Not started | - |
-| 214. Release Cut | 8/9 | Partial — 3/4 requirements Complete (REL-01/02/04); REL-03 PENDING — operator-reserved (tag unpushed by design); Success Criterion 3 NOT MET AS WRITTEN, Criterion 1 deliberately deviated from; plan 214-09 is the blocking operator checkpoint. See 214-NOT-MET-AS-WRITTEN.md | - |
+| 214. Release Cut | 9/9 | Complete — 4/4 requirements Complete (REL-01/02/03/04); all 4 Success Criteria MET, criterion 1 with the deliberate evidenced four-milestones deviation (214-NOT-MET-AS-WRITTEN.md § B, STANDS). REL-03 closed POST-checkpoint on real publish run 36497076444; § A DISCHARGED. Tag pushed by the operator. | 2026-09-28 |
