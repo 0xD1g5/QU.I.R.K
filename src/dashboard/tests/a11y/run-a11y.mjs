@@ -77,6 +77,29 @@ console.log(`[a11y] Fixture variant: ${VARIANT}`)
 // unset A11Y_THEME run stays byte-equivalent to before this plan apart from filenames.
 const THEME = resolveTheme(process.env)
 console.log(`[a11y] Theme: ${THEME}`)
+
+// 216 D-03: light is swept for the default fixture variant only. `empty` renders
+// EmptyStateCard and `loading` renders skeletons — neither emits a badge variant, so a light
+// sweep there would carry no signal (the existing VARIANT !== 'default' interaction skip
+// below is the same rationale, applied here to the whole run rather than one section of it).
+// A silent skip here would be indistinguishable from a broken invocation — this harness's own
+// idiom is that skips are logged, never silent — so this refuses loudly and exits before the
+// preview server or browser are even started.
+if (THEME !== 'dark' && VARIANT !== 'default') {
+  console.error(
+    `[a11y] REFUSED: theme=${THEME} is only swept for the default fixture variant (216 D-03) — ` +
+      `the empty variant renders EmptyStateCard and loading renders skeletons, neither of which ` +
+      `emits a badge variant`,
+  )
+  process.exit(1)
+}
+
+// 216 D-01: the harness-side literal copy of the app's localStorage theme key
+// (src/components/theme-context.ts's THEME_STORAGE_KEY). This file is `.mjs` and cannot
+// import from the app's `.ts` module, so the literal is duplicated deliberately;
+// theme-sweep-contract.test.ts mechanically asserts the two copies stay equal (D-01).
+const THEME_STORAGE_KEY = 'quirk-ui-theme'
+
 const PREVIEW_PORT = 4173
 const PREVIEW_HOST = 'localhost'
 const CONNECT_TIMEOUT_MS = 30_000
@@ -175,9 +198,23 @@ const writtenBaselinesByRoute = []
 
 for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
-  console.log(`[a11y] Scanning ${slug} (${url})...`)
+  console.log(`[a11y] Scanning ${slug} [${THEME}] (${url})...`)
 
   const page = await browser.newPage()
+  // 216 D-01: seed the app's real theme-provider path by writing its localStorage key
+  // BEFORE any page script runs — exercising `getStoredTheme`'s useState initializer exactly
+  // as a real user visit would, rather than diverging from it. Rejected: forcing
+  // `documentElement.classList` after load (diverges from the app path and races the
+  // provider's effect); CDP `Emulation.setEmulatedMedia` (a silent no-op, because
+  // `theme-provider.tsx` only consults `matchMedia` when `theme === 'system'`, which the
+  // harness never sweeps). Registered once per page — this loop already opens a fresh page
+  // per route, so hoisting this call out of the loop would leave two registrations firing on
+  // the same page and silently reintroduce single-theme sweeping one layer down.
+  await page.evaluateOnNewDocument(
+    (key, value) => { localStorage.setItem(key, value) },
+    THEME_STORAGE_KEY,
+    THEME,
+  )
   const consoleMsgs = []
   page.on('console', m => {
     if (m.type() === 'warn' || m.type() === 'error') consoleMsgs.push(m.text())
@@ -192,7 +229,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     // Record the route so it appears in the summary table. Without this the
     // run still fails (exitCode is 1), but the route vanishes from the summary
     // and a maintainer has to scroll the raw log to find which one broke.
-    summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'NAV_ERR' })
+    summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'NAV_ERR' })
     await page.close()
     continue
   }
@@ -215,7 +252,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
         `[a11y] FAIL [${slug}]: content marker "${contentMarker}" not found — route rendered empty`,
       )
       exitCode = 1
-      summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'FAIL' })
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
       await page.close()
       continue
     }
@@ -223,6 +260,11 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
 
   // Run axe with WCAG 2A/2AA tags
   const results = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
+  // RESEARCH Pitfall 3 / Assumption A2: axe's `incomplete` array holds rules it could not
+  // resolve either way (e.g. a `color-contrast` check it cannot compute) — never gated on
+  // this phase, but logged so a needs-manual-review result is visible rather than invisible.
+  const incompleteCount = results.incomplete.length
+  console.log(`[a11y] ${slug} [${THEME}]: violations=${results.violations.length} incomplete=${incompleteCount}`)
 
   let newViolationsCount = 0
   let routeStatus = 'PASS'
@@ -272,16 +314,20 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     // fallback (D-15) — that fallback was the actual defect that made the empty-state CI gate
     // a no-op: it made every route unconditionally pass regardless of live violations.
     if (!existsSync(baselinePath)) {
+      // 216 D-15: the remediation command names the theme too, not just the variant — a
+      // missing light baseline must point at `a11y:baseline:light`, never the dark command.
       const generateCmd =
-        VARIANT === 'default'
-          ? 'npm run a11y:baseline'
-          : `npm run a11y:baseline:${VARIANT}`
+        THEME === 'light'
+          ? 'npm run a11y:baseline:light'
+          : VARIANT === 'default'
+            ? 'npm run a11y:baseline'
+            : `npm run a11y:baseline:${VARIANT}`
       console.error(
         `[a11y] FAIL [${slug}]: missing baseline file ${baselinePath} — run \`${generateCmd}\` to generate it`,
       )
       exitCode = 1
       routeStatus = 'FAIL'
-      summary.push({ slug, violations: 0, console: 0, status: routeStatus })
+      summary.push({ slug, violations: 0, console: 0, incomplete: 0, status: routeStatus })
       await page.close()
       continue
     }
@@ -358,7 +404,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
       if (!triggerHandle) {
         console.error(`[a11y] FAIL [${interactionSlug}]: trigger "${trigger}" not found`)
         exitCode = 1
-        summary.push({ slug: interactionSlug, violations: 0, console: 0, status: 'FAIL' })
+        summary.push({ slug: interactionSlug, violations: 0, console: 0, incomplete: 0, status: 'FAIL' })
       } else {
         await triggerHandle.click()
         const opened = await page.waitForSelector(awaitSelector, { timeout: 5_000 }).catch(() => null)
@@ -367,12 +413,14 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
             `[a11y] FAIL [${interactionSlug}]: awaitSelector "${awaitSelector}" never appeared after clicking trigger — drawer did not open`,
           )
           exitCode = 1
-          summary.push({ slug: interactionSlug, violations: 0, console: 0, status: 'FAIL' })
+          summary.push({ slug: interactionSlug, violations: 0, console: 0, incomplete: 0, status: 'FAIL' })
         } else {
           // Second, independent axe scan of the opened state — reuses the exact same
           // helpers the primary route scan above uses (buildBaselineEntries /
           // compareToBaseline / baselineFilename); no parallel baseline code path.
           const interactionResults = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
+          const interactionIncompleteCount = interactionResults.incomplete.length
+          console.log(`[a11y] ${interactionSlug} [${THEME}]: violations=${interactionResults.violations.length} incomplete=${interactionIncompleteCount}`)
 
           let interactionViolationsCount = 0
           let interactionStatus = 'PASS'
@@ -414,9 +462,11 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
           } else {
             if (!existsSync(interactionBaselinePath)) {
               const generateCmd =
-                VARIANT === 'default'
-                  ? 'npm run a11y:baseline'
-                  : `npm run a11y:baseline:${VARIANT}`
+                THEME === 'light'
+                  ? 'npm run a11y:baseline:light'
+                  : VARIANT === 'default'
+                    ? 'npm run a11y:baseline'
+                    : `npm run a11y:baseline:${VARIANT}`
               console.error(
                 `[a11y] FAIL [${interactionSlug}]: missing baseline file ${interactionBaselinePath} — run \`${generateCmd}\` to generate it`,
               )
@@ -481,6 +531,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
             slug: interactionSlug,
             violations: interactionViolationsCount,
             console: 0,
+            incomplete: interactionIncompleteCount,
             status: interactionStatus,
           })
         }
@@ -505,7 +556,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     routeStatus = 'WRITTEN'
   }
 
-  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, status: routeStatus })
+  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, incomplete: incompleteCount, status: routeStatus })
   await page.close()
 }
 
@@ -524,8 +575,8 @@ if (UPDATE_BASELINES && VARIANT === 'default') {
 }
 
 console.log('\n[a11y] Summary:')
-for (const { slug, violations, console: consoleCount, status } of summary) {
-  console.log(`  ${status.padEnd(7)} ${slug} — violations: ${violations}, console: ${consoleCount}`)
+for (const { slug, violations, console: consoleCount, incomplete, status } of summary) {
+  console.log(`  ${status.padEnd(7)} ${slug} — violations: ${violations}, console: ${consoleCount}, incomplete: ${incomplete ?? 0}`)
 }
 
 process.exit(exitCode)
