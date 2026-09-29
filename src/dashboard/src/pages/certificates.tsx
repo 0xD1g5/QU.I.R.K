@@ -21,7 +21,7 @@ import { toDate, formatDateOnly } from "@/lib/datetime"
 
 const QS_BADGE: Record<string, string> = {
   Safe: "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
-  "At Risk": "bg-[hsl(var(--status-warning))] text-black",
+  "At Risk": "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
   Vulnerable: "bg-[hsl(var(--status-critical))] text-white",
   Unknown: "bg-[hsl(var(--status-neutral))] text-white",
 }

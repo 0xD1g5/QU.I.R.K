@@ -66,7 +66,7 @@ const QS_TOKEN: Record<string, string> = {
 
 const QS_BADGE: Record<string, string> = {
   Safe: "bg-[hsl(var(--status-safe-deep))] text-white",
-  "At Risk": "bg-[hsl(var(--status-warning))] text-black",
+  "At Risk": "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
   Vulnerable: "bg-[hsl(var(--status-critical))] text-white",
   Unknown: "bg-[hsl(var(--status-neutral))] text-white",
 }
@@ -177,7 +177,7 @@ const HW_FIRMWARE_BADGE = "bg-[hsl(var(--status-neutral))] text-white"
 
 const TIER_BADGE: Record<string, string> = {
   "Tier 1": "bg-[hsl(var(--status-critical))] text-white",
-  "Tier 2": "bg-[hsl(var(--status-warning))] text-black",
+  "Tier 2": "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
   "Tier 3": "bg-[hsl(var(--status-safe-deep))] text-white",
   "Tier N/A": "bg-[hsl(var(--status-neutral))] text-white",
 }

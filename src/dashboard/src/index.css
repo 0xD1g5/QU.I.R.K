@@ -113,6 +113,10 @@
     --status-critical: 0 72% 51%;       /* #dc2828 — red / expired / vulnerable state chips */
     --status-warning: 38 92% 50%;       /* #f59f0a — amber / warning state chips */
     --chart-tls: 213 94% 68%;           /* #61a6fa — TLS chart series (trends/compare/etc.) */
+    /* Phase 217 FIX-03: minted badge-foreground pair, dark = pixel-identical to the prior
+       static text-black (D-07); light override below switches to white (see .light). */
+    --status-warning-foreground: 0 0% 0%;   /* #000000 — identical to prior text-black */
+    --chart-tls-foreground: 0 0% 0%;        /* #000000 — identical to prior text-black */
     --status-neutral: 240 5% 46%;       /* #6f6f7b — neutral/unknown zinc-grey state chips */
     --status-safe-deep: 142 71% 30%;    /* #16833e — deep-green "safe, pressed/dim" variant */
     --chart-data-at-rest: 270 50% 60%;  /* #9966cc — data-at-rest chart series (trends.tsx) */
@@ -215,6 +219,9 @@
     --status-critical: 0 72% 40%;         /* #af1d1d, 6.96:1 */
     --status-warning: 38 92% 32%;         /* #9d6607, 4.84:1 — see note above */
     --chart-tls: 213 94% 40%;             /* #065cc6, 6.26:1 */
+    /* Phase 217 FIX-03: badge-foreground pair switches to white in light theme. */
+    --status-warning-foreground: 0 0% 100%;  /* #ffffff, 4.87:1 on --status-warning */
+    --chart-tls-foreground: 0 0% 100%;       /* #ffffff, 6.24:1 on --chart-tls */
     --status-neutral: 240 5% 34%;         /* #52525b, 7.73:1 */
     --status-safe-deep: 142 71% 24%;      /* #126932, 6.79:1 */
     --chart-data-at-rest: 270 50% 40%;    /* #663399, 8.41:1 */

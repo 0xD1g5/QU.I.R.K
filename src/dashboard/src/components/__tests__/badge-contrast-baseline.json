@@ -1,12 +1,4 @@
 {
-  "pages/cbom.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
-  },
-  "pages/certificates.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
-  },
   "pages/compare.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
@@ -15,25 +7,13 @@
     "ratio": 3.8167472488346967,
     "why": "--destructive (3.82:1, dark) is the semantic error/danger token; its dark-theme value is not dark enough behind static white text at badge scale (text-xs). Backlog 999.117 class 'semantic-error-badge'. Tracked as dashboard-accessibility-debt, deferred as one unit pending a theme-varying destructive-foreground token."
   },
-  "pages/compare.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
-  },
   "pages/data-at-rest.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
-  "pages/data-at-rest.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
-  },
   "pages/findings.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/findings.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
   },
   "pages/hardware.tsx|badge-modbus|white|dark": {
     "ratio": 2.8613669243793294,
@@ -43,33 +23,17 @@
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
-  "pages/hardware.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
-  },
   "pages/identity.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/identity.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
   },
   "pages/motion.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
   },
-  "pages/motion.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
-  },
   "pages/scan-history.tsx|chart-tls|black|light": {
     "ratio": 3.3540454596433555,
     "why": "--chart-tls (3.35:1, light) is a chart-series hue token, reused here as a badge background paired with static text-black across 8 pages; its designed use is a chart line colour, not a text-bearing surface. Backlog 999.117 class 'chart-hue-as-badge-bg'. Tracked as dashboard-accessibility-debt, deferred as one unit."
-  },
-  "pages/scan-history.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
   },
   "pages/sensors.tsx|quantum-safe|--quantum-safe-foreground|light": {
     "ratio": 3.865881036029146,
@@ -86,9 +50,5 @@
   "pages/trends.tsx|quantum-safe|--quantum-safe-foreground|light": {
     "ratio": 3.865881036029146,
     "why": "--quantum-safe (3.87:1, light) paired with its own --quantum-safe-foreground token falls short of AA in the light theme even though the pairing was clearly deliberate (a dedicated foreground token exists). Backlog 999.117 class 'quantum-safe-foreground-light-gap'. Tracked as dashboard-accessibility-debt."
-  },
-  "pages/trends.tsx|status-warning|black|light": {
-    "ratio": 4.337236213441025,
-    "why": "--status-warning resolves to 38 92% 32% (#9d6607) in .light (4.34:1), and badges pair it with static text-black across 10 pages. The light value was minted as a TEXT colour on white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its designed use); these badges reuse it as a BACKGROUND, where the number does not carry. Same miss shape cbom-badge-contrast-guard.test.ts's KNOWN_GAPS entry records for cbom.tsx specifically; this entry generalizes it repo-wide. Backlog 999.117 class 'status-warning-as-badge-bg', deferred as one unit — needs a theme-varying --status-warning-foreground token affecting ~14 call sites across 8 pages."
   }
 }

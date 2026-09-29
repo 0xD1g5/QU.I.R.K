@@ -25,7 +25,7 @@ import { EmptyStateCard } from "@/components/EmptyStateCard"
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH: "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  MEDIUM: "bg-[hsl(var(--status-warning))] text-black",
+  MEDIUM: "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
   LOW: "bg-[hsl(var(--chart-tls))] text-black",
   INFO: "bg-[hsl(var(--status-neutral))] text-white",
 }

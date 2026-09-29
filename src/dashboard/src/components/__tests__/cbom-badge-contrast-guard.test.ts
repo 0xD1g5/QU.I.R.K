@@ -96,21 +96,10 @@ if (!/--status-warning:/.test(light)) throw new Error("light block parse failed 
  * This is NOT a place to park the regression this file exists to catch. Only pre-existing,
  * separately-filed defects belong here.
  */
-const KNOWN_GAPS: Record<string, { ratio: number; why: string }> = {
-  "At Risk|light": {
-    ratio: 4.34,
-    why:
-      "--status-warning resolves to 38 92% 32% (#9d6607) in .light, and QS_BADGE pairs it with " +
-      "a static text-black => 4.34:1. The light value was minted by 213-02 as a TEXT colour on " +
-      "white (its index.css comment reads '#9d6607, 4.84:1' — that ratio is against white, its " +
-      "designed use); QS_BADGE reuses it as a BACKGROUND, where the number does not carry. " +
-      "Not fixable by swapping the static foreground: near-black passes dark (7.99) but fails " +
-      "light (3.52); white passes light (4.84) but fails dark (1.94). It needs a theme-varying " +
-      "--status-warning-foreground token, which affects ~14 call sites across 8 pages. " +
-      "The axe sweep cannot see this: run-a11y.mjs sweeps the default (dark) variant only. " +
-      "Tracked as backlog 999.117 (dashboard-accessibility-debt), deferred as one unit.",
-  },
-}
+// The former At-Risk/light KNOWN_GAPS entry was closed by Phase 217 FIX-03 (QS_BADGE now pairs
+// --status-warning with the theme-varying --status-warning-foreground token instead of a static
+// text-black) and deleted per this file's own "still failing" assertion demanding it.
+const KNOWN_GAPS: Record<string, { ratio: number; why: string }> = {}
 
 describe("cbom QS_BADGE contrast (Phase 213-07 tokenisation regression)", () => {
   it("parses every badge as a resolvable bg-token / foreground pair", () => {
