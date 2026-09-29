@@ -82,11 +82,60 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 ### Contrast Violations
 
-- [ ] **FIX-01**: The 11 zero-design-input swaps are applied — 7 × `--risk-badge-high` + white
-      (2.85) to its existing `-foreground` sibling (5.97), 4 × `--qs-node-safe` + white (2.30) to
-      `--status-safe-deep` (4.83/6.79)
+- [ ] **FIX-01**: The zero-design-input swaps are applied — every failing pair moves to its
+      existing `-foreground` sibling: `--risk-badge-high` + white (2.85) → `-foreground` (5.97),
+      and `--qs-node-safe` + white (2.30) → `--qs-node-safe-foreground` (7.40).
+
+      **CORRECTED 2026-09-29 by operator decision. This requirement previously sent
+      `--qs-node-safe` to `--status-safe-deep` (4.83/6.79), which CONTRADICTED ROADMAP Phase 217
+      criterion 1's own wording ("each now using its existing `-foreground` sibling"). Two locked
+      documents disagreed; the operator resolved it toward the ROADMAP's reading.** The prior
+      prescription is recorded here rather than silently overwritten, per this project's standing
+      rule that a correction must show what it corrected.
+
+      Evidence the decision rested on, recomputed with a converter independent of
+      `badge-contrast-evaluator.ts` (it reproduced that evaluator's committed ratios to 2 d.p.,
+      so the two methods agree):
+
+      | Option | bg | fg | light | dark | new token? | bg colour |
+      |--------|----|----|-------|------|-----------|-----------|
+      | **CHOSEN** | `--qs-node-safe` | `--qs-node-safe-foreground` (`index.css:97`, already exists) | **7.40** | **7.40** | none | unchanged |
+      | rejected | `--status-safe-deep` | white | 6.82 | **4.84** | none | bright → deep green |
+
+      The chosen option is theme-invariant (one value, because `--qs-node-safe` is declared once
+      with no `.light` override), clears AAA as well as AA, needs no new token, and leaves the
+      badge's colour identity alone — which is what makes it genuinely *zero-design-input*. The
+      rejected option sat 0.34 above the AA floor in dark and changed the Safe badge's appearance,
+      i.e. it was a design call, and design calls belong to FIX-04.
+
+      **Count correction, same date:** "11" was a 999.117 raw-occurrence figure. Re-derived from
+      the live `badge-contrast-baseline.json` (keyed `file|bgToken|fgSpec|theme`), FIX-01 owns
+      **12** entries — 8 × `risk-badge-high|white` (4 files × both themes) + 4 ×
+      `qs-node-safe|white` (2 files × both themes). Both tokens fail in BOTH themes, unlike
+      FIX-03's, which fail in light only. Re-derive again before treating 12 as a target.
 - [ ] **FIX-02**: A spike on 3–4 of the 29 `text-black` sites classifies each as badge-background vs
       text-on-white use and returns a recorded plan shape before any bulk edit
+
+      **Pre-scouted 2026-09-29 (evidence, not a substitute for the spike).** The spike's *fix*
+      question is already settled analytically: NO static text colour passes AA in both themes for
+      either token, so theme-varying `--status-warning-foreground` / `--chart-tls-foreground` are
+      forced rather than chosen —
+
+      | token / theme | + black | + white | AA passes with |
+      |---|---|---|---|
+      | `--status-warning` dark (50%) | 9.82 | 2.14 | black only |
+      | `--status-warning` light (32%) | 4.32 | 4.87 | white only |
+      | `--chart-tls` dark (68%) | 8.32 | 2.52 | black only |
+      | `--chart-tls` light (40%) | 3.37 | 6.24 | white only |
+
+      So the spike's REAL open question is *which call sites*, and that looks mechanical rather
+      than judgemental: 29 × `bg-[hsl(var(--status-warning|--chart-tls))]` badge backgrounds take
+      the new token; exactly ONE text use exists — `pages/certificates.tsx:87`
+      (`daysToExpiry < 90`), which is Phase 213's protected text-on-white case and must NOT change;
+      9 further uses (trends 4, roadmap 2, executive 2, cbom 1) are chart/graph fills that are not
+      text pairs at all. Expected plan shape: **uniform**, with a `bg-` vs `text-` prefix test as
+      the classifier. Re-derive at Phase 217 plan time; the baseline dedups these 29 occurrences
+      to 18 distinct entries.
 - [ ] **FIX-03**: The 29 sites reach AA in both themes without regressing the text-on-white contrast
       Phase 213 established for `--status-warning` and `--chart-tls`
 - [ ] **FIX-04**: The 5 genuine design calls are resolved with operator visual review, as 213-09 did
