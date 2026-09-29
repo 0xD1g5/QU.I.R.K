@@ -36,9 +36,12 @@ function allBaselineSlugs(): string[] {
   return routes.flatMap((route) => [route.slug, ...(route.interaction ? [route.interaction.slug] : [])])
 }
 
+// 216 D-17: this ledger is a DELIBERATE, temporary single-theme (dark) read. Plan 216-05
+// widens it to every theme once the sweep itself covers more than one — this is a
+// sequenced step, not a narrowing of what the ledger guards.
 function loadDefaultBaselines() {
   return allBaselineSlugs().map((slug) => {
-    const baselinePath = path.resolve(A11Y_DIR, baselineFilename(slug, 'default'))
+    const baselinePath = path.resolve(A11Y_DIR, baselineFilename(slug, 'default', 'dark'))
     const baseline = existsSync(baselinePath)
       ? JSON.parse(readFileSync(baselinePath, 'utf-8'))
       : { route: slug, entries: [] }
@@ -110,7 +113,8 @@ describe('ACCEPTED-VIOLATIONS.md freshness (A11Y-01 / D-05)', () => {
 
   it('no entry stores a selector — no key named "target" appears anywhere in any committed baseline (D-01, D-02)', () => {
     for (const slug of allBaselineSlugs()) {
-      const baselinePath = path.resolve(A11Y_DIR, baselineFilename(slug, 'default'))
+      // 216 D-17: same deliberate, temporary single-theme (dark) read as loadDefaultBaselines above.
+      const baselinePath = path.resolve(A11Y_DIR, baselineFilename(slug, 'default', 'dark'))
       if (!existsSync(baselinePath)) continue
       const raw = readFileSync(baselinePath, 'utf-8')
       expect(raw).not.toMatch(/"target"\s*:/)

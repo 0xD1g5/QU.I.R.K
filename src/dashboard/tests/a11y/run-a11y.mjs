@@ -38,7 +38,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
-import { buildBaselineEntries, compareToBaseline, resolveVariant, baselineFilename } from './baseline-diff.mjs'
+import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
 import { generateMarkdown } from './generate-accepted-violations.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -54,6 +54,11 @@ const UPDATE_BASELINES = process.argv.includes('--update-baselines')
 // fallback was the actual defect that made the empty-state CI gate a no-op.
 const VARIANT = resolveVariant(process.env)
 console.log(`[a11y] Fixture variant: ${VARIANT}`)
+// 216 D-01/D-02: the theme dimension, named explicitly at the choke point rather than left
+// implicit. No sweep-behaviour change here — THEME resolves to 'dark' with no env set, so an
+// unset A11Y_THEME run stays byte-equivalent to before this plan apart from filenames.
+const THEME = resolveTheme(process.env)
+console.log(`[a11y] Theme: ${THEME}`)
 const PREVIEW_PORT = 4173
 const PREVIEW_HOST = 'localhost'
 const CONNECT_TIMEOUT_MS = 30_000
@@ -204,7 +209,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
   let newViolationsCount = 0
   let routeStatus = 'PASS'
 
-  const baselinePath = resolve(A11Y_DIR, baselineFilename(slug, VARIANT))
+  const baselinePath = resolve(A11Y_DIR, baselineFilename(slug, VARIANT, THEME))
 
   if (UPDATE_BASELINES) {
     // Write baseline snapshot: per-(route, rule) count budget (D-01), no selectors stored
@@ -353,7 +358,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
 
           let interactionViolationsCount = 0
           let interactionStatus = 'PASS'
-          const interactionBaselinePath = resolve(A11Y_DIR, baselineFilename(interactionSlug, VARIANT))
+          const interactionBaselinePath = resolve(A11Y_DIR, baselineFilename(interactionSlug, VARIANT, THEME))
 
           if (UPDATE_BASELINES) {
             const previous = existsSync(interactionBaselinePath)
