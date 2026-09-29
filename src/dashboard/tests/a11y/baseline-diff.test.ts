@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { dirname, resolve } from "node:path"
 import {
   buildBaselineEntries,
   compareToBaseline,
@@ -504,5 +507,35 @@ describe("variant- and theme-aware baseline naming (A11Y-04, D-15, D-16, 216 D-0
   it("THEMES excludes 'system' — the harness allowlist is deliberately narrower than the app's VALID_THEMES", () => {
     expect(THEMES).not.toContain("system")
     expect(VALID_THEMES).toContain("system")
+  })
+})
+
+describe("run-a11y.mjs docstring amendment guard (216 D-11)", () => {
+  // 216-CONTEXT.md D-11: run-a11y.mjs's Chrome-pinning-status docstring used to assert
+  // "D-06 keeps exact-integer baseline counts with no tolerance band" — a claim HARNESS-03's
+  // countRange directly contradicts. This guard asserts the contradicted sentence is gone
+  // and the amendment naming HARNESS-03/countRange is present, read from the FILE ON DISK so
+  // it fails if the docstring ever regresses, not just at plan-authoring time.
+  const runA11yPath = resolve(dirname(fileURLToPath(import.meta.url)), "run-a11y.mjs")
+  const runA11ySource = readFileSync(runA11yPath, "utf8")
+
+  it("does not contain the retired zero-tolerance claim 'no tolerance band'", () => {
+    expect(runA11ySource).not.toContain("no tolerance band")
+  })
+
+  it("contains the HARNESS-03 amendment marker and the new countRange mechanism name", () => {
+    expect(runA11ySource).toContain("HARNESS-03")
+    expect(runA11ySource).toContain("countRange")
+  })
+
+  it("names the transitional KBD-01 retirement pointer (D-14)", () => {
+    expect(runA11ySource).toContain("KBD-01")
+  })
+
+  it("names the incident the amendment is based on (Phase 177-07 / the resolved todo)", () => {
+    expect(
+      runA11ySource.includes("177-07") ||
+        runA11ySource.includes("a11y-baseline-environment-mismatch"),
+    ).toBe(true)
   })
 })

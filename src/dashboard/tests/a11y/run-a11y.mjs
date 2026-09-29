@@ -24,9 +24,27 @@
  *     `PUPPETEER_EXECUTABLE_PATH`, and remains DELIBERATELY unpinned per D-08 — local runs
  *     are diagnostic-only after Phase 185 and are never the source of a committed
  *     baseline, so contributors are not required to obtain a specific Chrome build.
- *   - No jitter-tolerance claim is made for either path: D-06 keeps exact-integer
- *     baseline counts with no tolerance band. The CI pin above is what makes that
- *     zero-tolerance comparison sound, not a rendering-jitter allowance.
+ *   - AMENDED by Phase 216 HARNESS-03 (216-CONTEXT.md D-11), narrowing rather than
+ *     reversing the claim above: exact-integer counts remain the DEFAULT for every baseline
+ *     entry — this paragraph's zero-tolerance claim still holds for any entry without a
+ *     declared range. Tolerance is now OPT-IN and PER-ENTRY via a `countRange: [floor,
+ *     ceiling]` field on a baseline entry (see `baseline-diff.mjs`'s `compareToBaseline`).
+ *   - Reason: `scrollable-region-focusable` on `/data-at-rest` is render-dependent (font
+ *     metrics / overflow resolution differ between macOS and the pinned Linux Chrome), which
+ *     produced a real recorded disagreement — baseline `1` locally vs `2` on CI, hand-bumped
+ *     in Phase 177-07 (see `.planning/todos/completed/a11y-baseline-environment-mismatch.md`).
+ *     The CI pin above makes a zero-tolerance comparison sound BETWEEN CI RUNS; it does not
+ *     make a local run agree with CI, which is what this one entry needed.
+ *   - A global tolerance band was REJECTED (D-10): the resolved todo above warns in writing
+ *     that "a loose tolerance could hide a real regression", and a global band would apply
+ *     that risk to every baseline to fix one entry. The range stays opt-in and per-entry.
+ *   - The stale-entry leg ("count is BELOW baseline — Baseline is stale") still fires against
+ *     a declared range's LOWER bound (D-12) — a range is not a one-way ratchet in the wrong
+ *     direction.
+ *   - The range is TRANSITIONAL (D-14): KBD-01 (Phase 219) adds `tabIndex`/`role` to
+ *     `components/ui/table.tsx` and withdraws the `scrollable-region-focusable` acceptance
+ *     outright, which removes the render-dependence this range exists to absorb. Phase 219
+ *     should RETIRE the range, not renew it by inertia.
  *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
  *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */
