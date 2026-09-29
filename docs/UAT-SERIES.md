@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
+**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Series 216 added: five cases, four PASS and one SKIP (`UAT-216-03`, the `data-at-rest` countRange DEFERRED honestly to plan 216-08, which derives the actual bounds from Linux CI). No version bump — v5.26 is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
 (Certificates Page — Expiry Sorting) and `UAT-7-21` (Dashboard Theme — No Hardcoded Colors)
 re-dispositioned FAIL to PASS. `UAT-7-12` cites the five new
 `certificates-expiry-sort.test.tsx` nodes plus operator browser confirmation. `UAT-7-21` is a
@@ -30115,3 +30115,219 @@ instead of checking would have left a live hazard unguarded on the grounds that 
 expensive.
 
 ---
+
+## Series 216: A11y Harness Repair — The Instrument Can Now See What It Sweeps (Phase 216 — v5.26)
+
+**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Five
+cases. This phase fixed NO colours — it repaired three instrument defects that were letting real
+badge-contrast and theme-scope debt go unmeasured. `UAT-216-02` records a demonstration, not an
+assertion: the enriched fixture makes `/certificates` and `/hardware` genuinely FAIL today, and
+that FAIL is the correct, intended state until Phase 216's own plan 08 baselines it on Linux CI —
+a later reader seeing red on this branch should not mistake it for a regression. `UAT-216-03` is
+the one case in this series recorded SKIP rather than PASS: the `countRange` tolerance mechanism is
+built and unit-proven, but the actual derived range for `data-at-rest` does not land in the
+committed baseline until plan 216-08 runs the Linux `workflow_dispatch` job — this case is written
+now, honestly, rather than invented against evidence that does not exist yet.)
+
+### UAT-216-01: Every Route Is Swept In Both Themes, With A Separate Baseline Each
+
+**ID:** UAT-216-01
+**Title:** The a11y harness seeds the real theme-provider localStorage key before navigation and
+sweeps every `routes.json` route in both dark and light, each theme naming its own baseline file
+**Maps to:** HARNESS-01 (ROADMAP Phase 216 criterion 1)
+
+**What to test:** Before this phase, `run-a11y.mjs` had no theme dimension at all — a
+`grep -cE "data-theme|prefers-color-scheme|classList|theme"` against it returned `0`. A gate that
+never names the theme it swept cannot know it swept only one.
+
+**Steps:**
+```
+cd src/dashboard
+npm run a11y:check:dark
+npm run a11y:check:light
+ls tests/a11y/baseline-*-default-dark.json | wc -l    # 13
+ls tests/a11y/baseline-*-default-light.json | wc -l   # 0 today — see Notes
+npx vitest run tests/a11y/theme-sweep-contract.test.ts
+```
+
+**Pass Criteria:** `theme-sweep-contract.test.ts` passes, deriving its theme set from `THEMES` at
+run time (no hardcoded `'light'`/`'dark'` literal); both `a11y:check:dark` and `a11y:check:light`
+exist as real npm scripts and are named in both `dashboard-quality.yml` jobs; every baseline
+filename carries an explicit `-dark`/`-light` suffix with no implicit default; and a light sweep
+against a missing light baseline fails loudly, naming the light-specific filename, never silently
+resolving the dark file for that route.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `npx vitest run tests/a11y/theme-sweep-contract.test.ts` — 8 passed. All 40 pre-existing
+baselines were renamed (`git mv`, verified as pure renames, zero delete+add pairs) to carry an
+explicit `-dark` suffix; `ls baseline-*-default-light.json` returning `0` today is expected and
+correct — no light baseline has been generated on Linux CI yet (plan 216-08, not yet run). The
+mechanism this case certifies is the SEEDING and NAMING, proved directly:
+`npm run a11y:check:light` exits 1 for all 13 routes, each FAIL line naming a
+`baseline-<slug>-default-light.json` path and the `npm run a11y:baseline:light` remediation
+command, with zero mention of any `-dark.json` path anywhere in that run's stdout (verified via
+`grep -c` against the captured output in `216-06-SUMMARY.md`, Capture 1) — the falsifying case (a
+silent fallback to dark) does not occur.
+
+### UAT-216-02: `/certificates` And `/hardware` No Longer Report PASS While Rendering Sub-AA Badges
+
+**ID:** UAT-216-02
+**Title:** The fixture now renders every reachable badge variant on both routes, and the harness
+reports a genuine, itemized FAIL — not a silent PASS — the moment it does
+**Maps to:** HARNESS-02 (ROADMAP Phase 216 criterion 2)
+
+**What to test:** Before this phase, `/certificates`' fixture data held both certificates at
+`quantum_safety: "At Risk"`, so 3 of 4 `QS_BADGE` variants — including the sub-AA `Safe` variant —
+never rendered, and axe audited a DOM that structurally could not surface the defect
+(`baseline-certificates-default-dark.json` held `"entries": []`). The criterion is a demonstration:
+show the enriched-fixture sweep going RED before any baseline absorbs the failure, per this
+project's RATCHET-04 mutation-probe standard ("proves it can fail — demonstrated rather than
+asserted").
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run tests/a11y/badge-variant-coverage.test.ts
+npm run a11y:check:dark
+```
+
+**Pass Criteria:** `badge-variant-coverage.test.ts` passes with zero `uncoveredKeys` — every badge
+map key discovered by a run-time source scan of `src/pages/*.tsx` is reached by the fixture, with
+any genuinely unreachable key named in an explicit, reasoned allowlist rather than silently
+dropped; and a real `npm run a11y:check:dark` run reports `certificates` and `hardware` as FAIL
+with a `color-contrast` violation naming the `Safe`/`high` badge markup, not a silent PASS.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `badge-variant-coverage.test.ts` — 6 passed (verbatim RED-then-green transition captured
+in `216-02-SUMMARY.md`: 21 uncovered keys before fixture enrichment, 0 after). The live demonstration
+this case actually certifies is `216-06-SUMMARY.md` Capture 3 —
+`npm run a11y:check` (dark) reports `FAIL [certificates]: color-contrast count 2 exceeds baseline 0`
+(sample: `<div class="... bg-[hsl(var(--qs-node-safe))] text-white text-xs">Safe</div>`) and
+`FAIL [hardware]: color-contrast count 8 exceeds baseline 3`. This FAIL is the CORRECT, INTENDED
+state on this branch — the instrument now sees the defect it could not see before, and plan 216-08
+baselines it on Linux CI with written per-entry justifications naming FIX-01/FIX-02 as the phases
+that actually drain it (D-04/D-09). A reader seeing this FAIL locally before 216-08 lands should
+read it as the criterion being met, not as a regression.
+
+### UAT-216-03: The `data-at-rest` Range Absorbs The macOS/Linux Disagreement
+
+**ID:** UAT-216-03
+**Title:** `compareToBaseline` supports an opt-in, per-entry `countRange`, proven correct at the
+unit level — but the live `data-at-rest` baseline does not yet carry one
+**Maps to:** HARNESS-03 (ROADMAP Phase 216 criterion 3)
+
+**What to test:** The recorded macOS-vs-Linux disagreement on `data-at-rest`'s
+`scrollable-region-focusable` count (baseline `1` locally, `2` on CI,
+`.planning/todos/completed/a11y-baseline-environment-mismatch.md`) is what a declared `countRange`
+is meant to absorb, with the floor still ratcheting (D-12) and an explicit KBD-01/Phase 219 pointer
+marking it transitional (D-14).
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run tests/a11y/baseline-diff.test.ts -t "declared tolerance range"
+cat tests/a11y/baseline-data-at-rest-default-dark.json | grep -c countRange   # 0 today — see Notes
+grep -c "countRange" tests/a11y/run-a11y.mjs
+```
+
+**Pass Criteria:** the tolerance mechanism passes its full unit suite (ceiling regression, floor
+stale-entry, `[N,N]` exact-equivalence, malformed-shape rejection, carry-forward across
+regeneration); `run-a11y.mjs`'s docstring is amended (not left asserting the retired "no tolerance
+band" claim) and cites `HARNESS-03`, `KBD-01`, and the Phase 177-07 provenance; and the live
+`data-at-rest` baseline entry itself carries a `countRange` whose bounds were derived from two
+actually-observed runs (one macOS, one Linux CI), not guessed.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — no substitute coverage: the `countRange`
+mechanism is built and unit-proven in plan 216-03 — 18 passing nodes in
+`tests/a11y/baseline-diff.test.ts` covering the ceiling/floor/malformed-shape/carry-forward legs,
+plus a docstring-amendment guard — but the actual `data-at-rest` baseline entry on disk still
+records a bare `count: 2` with no `countRange` key (`grep -c countRange
+tests/a11y/baseline-data-at-rest-default-dark.json` = 0 as of this writing). Deriving the range from
+two real observed runs, one macOS and one freshly Linux-generated, is plan 216-08's job — it has
+not executed yet. This case should be re-run and flipped to PASS once 216-08 lands, citing the
+committed baseline's `countRange` value directly; it is recorded SKIP now rather than invented
+against evidence that does not exist.)
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** Mechanism-level falsification is real and committed: `216-03-SUMMARY.md` captures a
+docstring-guard RED (reintroducing the retired "no tolerance band" phrase) then a restore-to-green,
+and 12 dedicated `compareToBaseline` nodes prove the ceiling/floor/malformed-shape behaviour by
+mutation, not assertion. What is missing is the application of that mechanism to the one entry this
+criterion names — a scope gap between plans, not a defect in the mechanism itself.
+
+### UAT-216-04: The Repaired Harness Is Proved To Fail, Not Asserted To Work
+
+**ID:** UAT-216-04
+**Title:** A permanent 15-node synthetic mutation probe exercises the repaired choke points
+directly, and both named anti-tautology falsifiers were captured live against the real harness
+**Maps to:** HARNESS-01, HARNESS-02 (216-VALIDATION.md Anti-Tautology Checks)
+
+**What to test:** This project's standing rule: `Self-Check: PASSED` is a claim, not evidence, and
+a guard nobody has watched fail is a guard nobody knows works. 216-VALIDATION.md names two traps in
+advance — a light sweep silently falling back to the dark baseline, and a variant-coverage test
+that reads zero badge maps and passes vacuously.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run tests/a11y/harness-falsification-probe.test.ts
+```
+
+**Pass Criteria:** the probe's 15 nodes are all green by design (a positive test about negative
+behaviour, reading no real file — `grep -c "node:fs\|readFileSync"` on the probe file returns `0`);
+falsifier 1 (light-sweep-falls-back-to-dark) is disproven both synthetically (the probe) and against
+a real run (`npm run a11y:check:light`'s captured stdout naming only light-suffixed paths); and
+falsifier 2 (coverage test reads zero maps and passes) is disproven by an actual code mutation
+showing 3 of 6 real gate nodes going RED when `extractBadgeMaps` is forced to return `[]`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `tests/a11y/harness-falsification-probe.test.ts` — 15 passed
+(`216-06-SUMMARY.md` Task 1). Falsifier 1's live capture: `npm run a11y:check:light` exit 1, all 13
+routes FAIL, every line naming a `-default-light.json` path and zero `-default-dark.json` mentions
+in the captured output (Capture 1). Falsifier 2's live capture: a one-line edit forcing
+`badge-variant-coverage.test.ts`'s discovery glob to read zero files produced 3 failing nodes
+naming the exact zero-discovery condition, reverted via `git checkout --` with a confirmed clean
+`git status --porcelain` afterward (Capture 2). One leg is intentionally incomplete on this branch:
+216-VALIDATION.md's sign-off records falsifier 1 as "proved twice... and against a real light
+baseline in 216-08 Task 3" — that second half depends on a real Linux-generated light baseline,
+which does not exist until plan 216-08 runs. The synthetic and real-but-missing-baseline halves
+captured here are sufficient to certify the probe itself; the residual confirmation against a real
+committed light baseline is 216-08's to close.
+
+### UAT-216-05: The Accepted-Violations Ledger Cannot Silently Narrow Or Half-Commit A Theme
+
+**ID:** UAT-216-05
+**Title:** `ACCEPTED-VIOLATIONS.md` is now generated browser-free from a single disk-based loader
+shared with its own freshness gate, which enforces per-theme completeness and rejects a
+half-committed theme rollout
+**Maps to:** HARNESS-01 (216-CONTEXT.md D-17)
+
+**What to test:** The harness's old in-process ledger collection could only ever see one theme per
+process run — a generator that reads only what the current process just swept is structurally
+incapable of producing a theme-complete ledger once a second theme exists.
+
+**Steps:**
+```
+cd src/dashboard
+npm run a11y:ledger
+npx vitest run tests/a11y/accepted-violations-freshness.test.ts
+```
+
+**Pass Criteria:** `npm run a11y:ledger` regenerates `ACCEPTED-VIOLATIONS.md` from committed JSON
+with no browser, no preview server, and no network call; running it twice back-to-back produces a
+byte-identical file (idempotent); and the freshness gate's completeness legs reject both a missing
+dark default baseline and a theme that is present for only some slugs ("half-committed"), while a
+theme with zero files present on disk (light, today) is correctly NOT flagged.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `npx vitest run tests/a11y/accepted-violations-freshness.test.ts` — 11 passed (widened
+from 6 pre-phase). Two falsification demonstrations captured in `216-05-SUMMARY.md`: (1) removing
+`baseline-hardware-default-dark.json` produces a failing "Missing dark default baseline(s):
+hardware" node, restored and re-verified green; (2) synthetically committing a single
+`baseline-root-default-light.json` (1 of 14 slugs) produces a failing "Half-committed theme(s)
+detected" node naming the 13 missing light slugs, then removed with a confirmed clean
+`git status --short`. `npm run a11y:ledger` completes in ~0.2s with no `Starting vite preview` or
+Chrome-launch line in its output, and two consecutive runs produce zero `git status` diff.
