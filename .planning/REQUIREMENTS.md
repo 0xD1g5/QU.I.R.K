@@ -57,13 +57,19 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 ### Instrument Ratchet
 
-- [ ] **RATCHET-01**: A contrast guard covers every dashboard page and both themes, deriving its
+- [x] **RATCHET-01**: A contrast guard covers every dashboard page and both themes, deriving its
       badge-pair set from source at run time rather than from a hand-maintained list
-- [ ] **RATCHET-02**: The 45 known failures are recorded as a shrink-only baseline — a new failure
-      fails CI, a fixed one requires a baseline update, and the count can never silently grow
-- [ ] **RATCHET-03**: `auditedFiles()` is derived once and covers all 76 non-test `.tsx` files; the
+- [x] **RATCHET-02**: The 45 known failures are recorded as a shrink-only baseline — a new failure
+      fails CI, a fixed one requires a baseline update, and the count can never silently grow.
+      **Corrected 2026-09-28 (215-03/215-04):** "45" counts raw failing badge-pair OCCURRENCES as
+      999.117 measured them over the original 11-file pages+sidebar set; the checked-in baseline is
+      keyed `file|bgToken|fgSpec|theme` (a churn-resistant, per-theme key), which deduplicates an
+      identical class string repeated within one file and therefore holds **35 distinct entries**,
+      not 45. Both numbers are correct measurements of two different things — "45" is preserved
+      here rather than silently overwritten. See `215-03-SUMMARY.md`.
+- [x] **RATCHET-03**: `auditedFiles()` is derived once and covers all 76 non-test `.tsx` files; the
       verbatim copy in `theme-token-vocabulary.test.ts` is deleted, not re-synced
-- [ ] **RATCHET-04**: The guard proves it can fail — a mutation probe shows it going red on an
+- [x] **RATCHET-04**: The guard proves it can fail — a mutation probe shows it going red on an
       injected sub-AA pair, demonstrated rather than asserted
 
 ### A11y Harness
@@ -159,10 +165,10 @@ Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RATCHET-01 | Phase 215 | Pending |
-| RATCHET-02 | Phase 215 | Pending |
-| RATCHET-03 | Phase 215 | Pending |
-| RATCHET-04 | Phase 215 | Pending |
+| RATCHET-01 | Phase 215 | Complete |
+| RATCHET-02 | Phase 215 | Complete |
+| RATCHET-03 | Phase 215 | Complete |
+| RATCHET-04 | Phase 215 | Complete |
 | HARNESS-01 | Phase 216 | Pending |
 | HARNESS-02 | Phase 216 | Pending |
 | HARNESS-03 | Phase 216 | Pending |
