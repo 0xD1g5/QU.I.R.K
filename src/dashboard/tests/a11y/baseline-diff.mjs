@@ -119,6 +119,21 @@ function sumNodes(violation) {
   return Array.isArray(violation.nodes) ? violation.nodes.length : 0
 }
 
+// 216-CONTEXT.md D-10: a declared `countRange` is opt-in and, when present, must be a
+// two-integer `[floor, ceiling]` tuple with `floor <= ceiling` and `floor >= 0`. Returns
+// `false` for `undefined`/`null` (the "no range declared" case is valid and handled by the
+// caller, not here) but `false` for any other malformed shape too — the caller distinguishes
+// "absent" from "malformed" itself.
+function isValidCountRange(value) {
+  if (value === undefined || value === null) return false
+  if (!Array.isArray(value) || value.length !== 2) return false
+  const [floor, ceiling] = value
+  if (!Number.isInteger(floor) || !Number.isInteger(ceiling)) return false
+  if (floor < 0) return false
+  if (floor > ceiling) return false
+  return true
+}
+
 /**
  * Builds the D-01 per-(route, rule) baseline entry array from a live axe `violations` array.
  *
@@ -172,6 +187,16 @@ export function buildBaselineEntries(route, violations, { previousEntries } = {}
       samples: allNodes.slice(0, SAMPLE_CAP).map(n => n.html),
     }
 
+    // 216-CONTEXT.md D-10/D-12: carry a declared countRange forward across a regeneration,
+    // mirroring the Phase 185 D-05 justification carry-forward above. Only carried when the
+    // previous entry declared a VALID range — an entry that never had one must not gain a
+    // `countRange: undefined` key, which would change the JSON byte output and redden the
+    // ACCEPTED-VIOLATIONS.md drift gate. Validity is re-checked here rather than trusted from
+    // the prior file, since that file could have been hand-edited.
+    if (previous && isValidCountRange(previous.countRange)) {
+      entry.countRange = previous.countRange
+    }
+
     if (impact === 'critical') {
       refusedCritical.push(entry)
     } else {
@@ -222,30 +247,58 @@ export function compareToBaseline(route, liveViolations, baselineEntries) {
 
   for (const [rule, live] of liveByRule) {
     const baseline = baselineByRule.get(rule)
-    const baselineCount = baseline ? baseline.count : 0
-    if (live.count > baselineCount) {
+
+    // 216-CONTEXT.md D-10/D-12: an opt-in per-entry countRange widens the exact-count
+    // comparison to a two-sided band. An entry with no countRange keeps today's exact-integer
+    // semantics byte-unchanged (ceiling === floor === baseline.count). A malformed countRange
+    // throws rather than silently degrading to "compare against undefined" — that silent
+    // fallback would make every count pass, the same class run-a11y.mjs's D-15 comment
+    // already forbids for a missing baseline file.
+    if (baseline && baseline.countRange !== undefined && !isValidCountRange(baseline.countRange)) {
+      throw new Error(
+        `compareToBaseline: malformed countRange for route "${route}" rule "${rule}" — ` +
+          `received ${JSON.stringify(baseline.countRange)}; expected [floor, ceiling] with ` +
+          `two integers, floor >= 0 and floor <= ceiling`,
+      )
+    }
+    const hasRange = baseline && isValidCountRange(baseline.countRange)
+    const baselineCeiling = hasRange ? baseline.countRange[1] : baseline ? baseline.count : 0
+    const baselineFloor = hasRange ? baseline.countRange[0] : baseline ? baseline.count : 0
+
+    if (live.count > baselineCeiling) {
       regressions.push({
         rule,
-        baselineCount,
+        baselineCount: baselineCeiling,
         observedCount: live.count,
         impact: live.impact,
         samples: live.samples,
       })
-    } else if (live.count < baselineCount) {
+    } else if (live.count < baselineFloor) {
       staleEntries.push({
         rule,
-        baselineCount,
+        baselineCount: baselineFloor,
         observedCount: live.count,
       })
     }
   }
 
-  // Rules baselined but not observed live at all are also stale (observed count 0).
+  // Rules baselined but not observed live at all are also stale (observed count 0), checked
+  // against the declared range's floor (D-12) so a range can never disable this leg.
   for (const [rule, baseline] of baselineByRule) {
-    if (!liveByRule.has(rule) && baseline.count > 0) {
+    if (baseline.countRange !== undefined && !isValidCountRange(baseline.countRange)) {
+      throw new Error(
+        `compareToBaseline: malformed countRange for route "${route}" rule "${rule}" — ` +
+          `received ${JSON.stringify(baseline.countRange)}; expected [floor, ceiling] with ` +
+          `two integers, floor >= 0 and floor <= ceiling`,
+      )
+    }
+    const baselineFloor = isValidCountRange(baseline.countRange)
+      ? baseline.countRange[0]
+      : baseline.count
+    if (!liveByRule.has(rule) && baselineFloor > 0) {
       staleEntries.push({
         rule,
-        baselineCount: baseline.count,
+        baselineCount: baselineFloor,
         observedCount: 0,
       })
     }
