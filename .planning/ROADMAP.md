@@ -116,7 +116,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 
 ### Phases
 
-- [ ] **Phase 215: Instrument Ratchet** - Convert the 45 invisible badge-contrast failures into a derived, shrink-only baseline that every later fix is verified against
+- [x] **Phase 215: Instrument Ratchet** - Convert the 45 invisible badge-contrast failures into a derived, shrink-only baseline that every later fix is verified against
   <!-- Phase-level checkbox intentionally left unflipped by 215-04: this repo's
        scripts/verify_phase_gates.py pre-commit hook blocks a ROADMAP.md phase-close
        checkbox flip that lacks a NN-VERIFICATION.md (produced by the gsd-verifier
@@ -235,7 +235,7 @@ been drained.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 215. Instrument Ratchet | 0/? | Not started | - |
+| 215. Instrument Ratchet | 4/4 | Complete | 2026-09-29 |
 | 216. A11y Harness Repair | 0/? | Not started | - |
 | 217. Contrast Violations — Structural Drain | 0/? | Not started | - |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 0/? | Not started | - |
