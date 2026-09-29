@@ -1,460 +1,423 @@
----
-milestone: v5.25
-milestone_name: Score Truth & Release Cut
-phases_total: 5
-phase_range: 210-214
----
+# Roadmap: QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-# Roadmap: v5.25 Score Truth & Release Cut
+## Milestones
 
-**Goal:** Make the readiness score mean one thing on every surface a client can see, then ship it —
-the first tagged release since v5.21, carrying **four** milestones of accumulated work (v5.22, v5.23,
-v5.24, v5.25).
+- ✅ **v3.9 Gap Closure** — Phases 1–11, 40 plans (shipped 2026-04-04) → `.planning/milestones/v3.9-ROADMAP.md`
+- ✅ **v4.1 Foundation Polish** — Phases 12–16, 17 plans (shipped 2026-04-08) → `.planning/milestones/v4.1-ROADMAP.md`
+- ✅ **v4.2 Identity Crypto** — Phases 17–24, 14 plans (shipped 2026-04-24) → `.planning/milestones/v4.2-ROADMAP.md`
+- ✅ **v4.3 Data at Rest** — Phases 25–31, 24 plans (shipped 2026-04-26) → `.planning/milestones/v4.3-ROADMAP.md`
+- ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
+- ✅ **v4.5 Reliability & Gap Closure** — Phases 38–44, 40 plans (shipped 2026-05-03) → `.planning/milestones/v4.5-ROADMAP.md`
+- ✅ **v4.6 Enterprise Readiness** — Phases 45–50, 24 plans (shipped 2026-05-05) → `.planning/milestones/v4.6-ROADMAP.md`
+- ✅ **v4.7 Governance & Compliance** — Phases 51–56 (shipped 2026-05-08) → `.planning/milestones/v4.7-phases/`
+- ✅ **v4.8 Pre-Primetime** — Phases 57–68, 53 plans (shipped 2026-05-14) → `.planning/milestones/v4.8-ROADMAP.md`
+- ✅ **v4.9 Audit Depth** — Phases 69–77, 38 plans (shipped 2026-05-15) → `.planning/milestones/v4.9-ROADMAP.md`
+- ✅ **v4.10 Launch Readiness** — Phases 78–85, 31 plans (shipped 2026-05-21) → `.planning/milestones/v4.10-ROADMAP.md`
+- ✅ **v4.10.1 Scoring Correctness Hotfix** — Phase 86, 3 plans (shipped 2026-05-22) → `.planning/milestones/v4.10.1-ROADMAP.md`
+- ✅ **v5.0 Stabilization + Tech Debt Sweep** — Phases 87–92, 16 plans (shipped 2026-05-22) → `.planning/milestones/v5.0-ROADMAP.md`
+- ✅ **v5.1 Authenticated Scanning + API Surface Depth** — Phases 93–96, 16 plans (shipped 2026-05-23) → `.planning/milestones/v5.1-ROADMAP.md`
+- ✅ **v5.2 Consulting-Grade Reporting** — Phases 97–100, 12 plans (shipped 2026-05-24) → `.planning/milestones/v5.2-ROADMAP.md`
+- ✅ **v5.3 Adoption & Integration Surface** — Phases 101–105, 20 plans (shipped 2026-05-25) → `.planning/milestones/v5.3-ROADMAP.md`
+- ✅ **v5.4 Distributed On-Prem Scanner Architecture** — Phases 106–112, 20 plans (shipped 2026-05-26) → `.planning/milestones/v5.4-ROADMAP.md`
+- ✅ **v5.5 Distributed Hardening + Stabilization** — Phases 113–116, 11 plans (shipped 2026-05-27) → `.planning/milestones/v5.5-ROADMAP.md`
+- ✅ **v5.6 Distributed Completion + Public Launch** — Phases 117–122, 20 plans (shipped 2026-06-12) → `.planning/milestones/v5.6-ROADMAP.md`
+- ✅ **v5.7 Hardening + Hardware Compatibility & Lifecycle Remediation** — Phases 123–129, 24 plans (shipped 2026-06-14) → `.planning/milestones/v5.7-ROADMAP.md`
+- ✅ **v5.8 Audit Closeout + SNMP Fingerprinting** — Phases 130–134, 21 plans (shipped 2026-06-18) → `.planning/milestones/v5.8-ROADMAP.md`
+- ✅ **v5.9 Documentation Audit & Living Docs System** — Phases 135–138 + 138.1/138.2, 10 plans (shipped 2026-07-30) → `.planning/milestones/v5.9-ROADMAP.md`
+- ✅ **v5.10 Hardware Lifecycle Depth** — Phases 139–143, 36 plans (shipped 2026-08-03) → `.planning/milestones/v5.10-ROADMAP.md`
+- ✅ **v5.11 Discovery at Scale + Backlog Drain** — Phases 144–147, 16 plans (shipped 2026-08-11) → `.planning/milestones/v5.11-ROADMAP.md`
+- ✅ **v5.12 Release & Verification Integrity** — Phases 148–153, 36 plans (shipped 2026-08-14) → `.planning/milestones/v5.12-ROADMAP.md`
+- ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
+- ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
+- ✅ **v5.15 Lifecycle Tail Drain** — Phases 161–163, 11 plans (shipped 2026-08-26; first published release since 5.12.0) → `.planning/milestones/v5.15-ROADMAP.md`
+- ✅ **v5.16 Review Drain & Gate Integrity** — Phases 164–171, 47 plans (development complete 2026-08-28; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02** — see note) → `.planning/milestones/v5.16-ROADMAP.md`
+- ✅ **v5.19 Drain & Tooling Integrity** — Phases 182–186.1, 77 plans (development complete 2026-09-07; audit `passed` 15/15) → `.planning/milestones/v5.19-ROADMAP.md`
+- ✅ **v5.18 Migration Execution** — Phases 177–181, 37 plans (shipped 2026-09-03 as `v5.18.0`, first PyPI release since 5.12.0; carries v5.16 + v5.17 content) → `.planning/milestones/v5.18-ROADMAP.md`
+- ✅ **v5.17 Defect Drain** — Phases 172–176, 28 plans + 2 addenda (development complete 2026-09-01; **developed and archived untagged, shipped inside `v5.18.0` on 2026-09-02**, same as v5.16) → `.planning/milestones/v5.17-ROADMAP.md`
+- ✅ **v5.20 Release & Correctness Drain** — Phases 187–190, 18 plans (shipped 2026-09-08; v5.19.0 published to PyPI 2026-09-07) → `.planning/milestones/v5.20-ROADMAP.md`
+- ✅ **v5.21 Dashboard Parity & Exposure Capability** — Phases 191–195, 42 plans (development complete 2026-09-10; audit tech_debt accepted 13/13; Tier B deferred → 999.107) → `.planning/milestones/v5.21-ROADMAP.md`
+- ✅ **v5.22 Release & Parity Tail** — Phases 196–198, 13 plans (shipped 2026-09-11; v5.21.0 published to PyPI 2026-09-10; audit passed 10/10) → `.planning/milestones/v5.22-ROADMAP.md`
+- ✅ **v5.23 Deliverable Experience** — Phases 199–202, 28 plans (development complete 2026-09-12; audit `gaps_found` 14/14, 1 blocker operator-accepted; merged to main 2026-09-13) → `.planning/milestones/v5.23-ROADMAP.md`
+- ✅ **v5.24 UAT Coverage Drain** — Phases 203–209 incl. the insert 207.1, 53 plans (development complete 2026-09-27; audit `tech_debt`, 17/18 requirements + 1 PARTIAL, integration 4/4, Nyquist 8/8; merged to main 2026-09-27 `b262aa82`; untagged by design) → `.planning/milestones/v5.24-ROADMAP.md`
+- ✅ **v5.25 Score Truth & Release Cut** — Phases 210–214, 40 plans (**SHIPPED 2026-09-28 — tag `v5.25.0`, published to PyPI**, the first tagged release since `v5.21.0` and carrying four milestones of work; audit `tech_debt`, 15/15 requirements with 2 scope-qualified, integration 6/6 seams, Nyquist 5/5) → `.planning/milestones/v5.25-ROADMAP.md`
 
-**CORRECTED (Phase 214, 214-08) — this line previously read "three milestones".** Same stale count as
-Phase 214's Success Criterion 1, from the same cause: it was written at the milestone's opening,
-before v5.25's own phases had shipped work of their own to describe. `v5.21.0` was tagged 2026-09-10
-and v5.22 shipped 2026-09-11 (`MILESTONES.md:143`), so four milestones sit between the last tag and
-the pending one. The prior claim is preserved rather than overwritten. Note the goal's "first tagged
-release" clause **was not yet true at Phase 214's close** — the `v5.25.0` tag was operator-reserved
-and unpushed. **CORRECTED 2026-09-28, post-publish: it is now TRUE.** The operator pushed the
-annotated `v5.25.0` tag the same day; run `36497076444` (`event=push`) published `quirk-scanner`
-5.25.0 to PyPI and rendered the composed release body. `v5.25.0` is the first tagged release since
-`v5.21.0` and it carries all four milestones. Evidence:
-`.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
+### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
-**Sequencing (operator decision 2026-09-27): score first, release last.** A tag freezes whatever
-number the scorer emits, so Phase 214 (`REL-*`) runs after every scoring phase lands. Phase numbering
-continues from v5.24's last phase (209) — v5.25 starts at **Phase 210**.
+v5.16 and v5.17 were each archived at development-complete without a tag or a PyPI release, by
+explicit decision — this section is the historical record of why, and of how that gap closed.
 
-No research phase — every requirement traces to a filed todo or backlog item with a CONFIRMED root
-cause at an exact file:line. This milestone adds no new detection capability.
+`pyproject.toml` stayed at `5.15.0` through both milestones. v5.16 was an ops milestone and never
+bumped it; tagging `v5.16.0` at the time would have produced a tag whose source carried the wrong
+version string, exactly the v5.13/v5.14 defect recorded below. Bumping properly was blocked behind
+a deferred toolchain repair: a version bump alone fails `tests/test_version.py`, which needs
+`pip install -e . --no-deps` to succeed, and the local editable install was broken (three competing
+distributions all claiming the `quirk` import package, plus a stale
+`__editable__.quirk-4.0.0.pth` residue). v5.17 inherited the same untagged state rather than
+introduce a second broken bump on top of the first.
 
----
+`release.yml` triggers on `v[0-9]*`, so any pushed tag now fires a real release — the old
+silent-no-op failure mode (below) is fixed, which is precisely why an incorrect tag would do
+damage rather than nothing, and why the toolchain had to be repaired before tagging, not after.
 
-## Phases
+**Resolution: Phase 177 (Release Toolchain Repair) fixed the toolchain and both milestones' content
+shipped together in the single `v5.18.0` release, published to PyPI 2026-09-02** — the local
+editable install works cleanly (single distribution,
+`tests/test_version.py::test_single_distribution_provides_quirk` guards against regression),
+`pyproject.toml` carries `5.18.0`, and `CHANGELOG.md`/`README.md` document v5.16 and v5.17's
+user-visible fixes (the first-run command, three screen-reader blockers, resume UX, the
+fuzzing/disclosure-safety hardening, scanner scope corrections, dashboard/API fixes, UAT case
+corrections, and the chaos-lab re-run findings) as shipping under that one version. The
+three-component `v5.18.0` tag push was a deliberate human handoff (plan 177-06/177-07) — the user
+pushed it 2026-09-02, `release.yml` run
+[33656116783](https://github.com/0xD1g5/QU.I.R.K./actions/runs/33656116783) fired on a `push` event
+and completed green across all three jobs (build, Windows package, PyPI publish). See
+`docs/UAT-SERIES.md` Series 177 for the release-verification cases, all re-executed to `[x] PASS`
+against the real published artifact.
 
-- [x] **Phase 210: Cross-Surface Score Parity** - One scan yields the same headline score, CRITICAL
-  count and certificate count from the report pipeline and the dashboard pipeline. **All 8 plans
-  done, all 4 requirements Complete; left unchecked because the phase's own stated goal is only
-  PARTIALLY achieved** — CRITICAL count and certificate count now match exactly, but the headline
-  score still diverges by 1 point (Success Criterion 5 NOT MET). See 210-08-SUMMARY.md.
-  **UPDATE 2026-09-28 — Criterion 5 is now SATISFIED, by Phase 211's work, not by Phase 210's.**
-  Live measurement `scan_run_id 2026-09-28T13:16:55.319715+00:00`: report 18/100 == dashboard
-  18/100, all six subscores matching. Root cause was a finding-title vocabulary mismatch plus a
-  LOW-severity-proxy structural zero, fixed in `127913ca` and `c1245a55`.
-  **CHECKED 2026-09-29 — operator decision at the v5.25 milestone close.** The two sentences above
-  are preserved verbatim, including the one that said this box was "left UNCHECKED deliberately …
-  a milestone-close decision for the operator": that decision has now been made, and the box is
-  `[x]`. The provenance the prior text wanted protected is not erased by the checkbox — it is
-  recorded here and in `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`:
-  **Phase 210's Success Criterion 5 was met by Phase 211's work, not by Phase 210's.** A reader
-  reconstructing who fixed what must read this entry, not the checkbox. Note also the v5.25 audit's
-  W-1/W-2: XSURF-04's regression gate covers one of three divergence classes, so "a regression
-  fails a gate" is narrower than it reads — see `REQUIREMENTS.md` XSURF-04's scope correction.
-- [x] **Phase 211: Denominator Correctness** - Every ratio penalty divides by the population its
-  numerator is drawn from, decided by measurement against the calibration ladder and re-proved red
-  before acceptance. **RE-SCOPED to verify + investigate (`1804d703`)** — DENOM-01/02/03 had already
-  landed via `0b0ed1c7` (2026-09-13). 8 of 8 plans; `211-VERIFICATION.md` status **passed**, 8/8
-  must-haves, goal-level and requirement-level verdicts AGREE. Closed Phase 210's unmet Criterion 5
-  (18/100 == 18/100 live). DENOM-03's behavioural clause measured **INVERTED** (narrow 2-port 20/100
-  vs wide 14-port 18/100) — Phase 212 owns whether width-neutrality is the target. One residual
-  disclosed, NOT tag-blocking: `"HTTP on TLS-designated port"` is unbridgeable and measures 0 on the
-  reference estate.
-- [x] **Phase 212: Score Dilution — Decision Only** - A written, measured denominator decision for
-  P2b exists; no implementation ships. **VERDICT: RECOMMEND NONE** — a complete, valid outcome per
-  CONTEXT D-05. No candidate cleared both measurement axes, each failing for a DIFFERENT reason:
-  scan-scope normalisation `[ASSUMED] / CONDITIONAL` (zero mitigation — `71->74->78->82`, identical
-  to control — under the todo's own "scanning more ports" reading); distinct hosts
-  `[ASSUMED] / TAUTOLOGICAL` (no host data exists, so the row is unfalsifiable by construction; also
-  broke ladder monotonicity R4=13 < R5=17); absolute exposure `STRUCTURALLY UNINFORMATIVE` on axis
-  (b) (it patches `_consequence_ceiling()`, downstream of where that instrument reads). **METHOD
-  FINDING:** D-01's two axes are adequate for divisor-swap candidates and structurally inadequate for
-  ceiling-shaped ones — a third instrument is needed. The P2b defect is **DEFERRED, NOT FIXED**;
-  `test_p2b_...` remains `xfail(strict=True)` BY DESIGN. Implementation owner phase is post-v5.25,
-  explicitly NOT Phase 214, marked OPERATOR-RESERVED. 5 of 5 plans; `212-VERIFICATION.md` status
-  **passed**, 4/4 criteria, goal and requirement verdicts AGREE. Decision:
-  `.planning/decisions/212-score-dilution-denominator-decision.md`.
-- [x] **Phase 213: Shipped Product Defects (Series 7)** - The two shipped `docs/UAT-SERIES.md` FAILs
-  from v5.24 — certificate-table sort and theme-token colour literals — are fixed. 10 of 10 plans;
-  `213-VERIFICATION.md` status **passed**, 5/5, goal and requirement verdicts AGREE. `UAT-7-12` PASS
-  (real `Date` sort via `sortingFn: "datetime"`, not a display-string sort); `UAT-7-21` **QUALIFIED
-  PASS** on the WIDENED gate's red-then-green transition PLUS operator visual confirmation — never
-  the source gate alone. **The detector had been under-reporting by roughly half:** operator decision
-  **D-14** chose to fix ALL literals and widen the gate, and the live re-derivation then found **205
-  across 17 files** (hex 67 + whitespace-HSL 28 + underscore-HSL 93 + comma-HSL 17, all comma-form in
-  `roadmap.tsx`) — not the 95 the narrow detector saw, nor D-14's own ~188 hypothesis. Reproduced
-  independently four times. Criterion 2 recorded **NOT MET AS WRITTEN** (`docs/uat-coverage-gaps.md`
-  has never carried COV-04's 27-of-28 tally — it is a requirement-level figure in
-  `PROJECT.md`/`REQUIREMENTS.md`, not generator output); what WAS achieved: corpus totals moved
-  FAIL 7->5, PASS 754->756. Two `UAT-7-21` Pass Criteria bullets (electric-blue accent,
-  dark-background consistency) remain **uncovered by any instrument** and are named as such.
-- [x] **Phase 214: Release Cut** - `v5.25.0` is tagged, published to PyPI, and its release notes and
-  the 7 backlogged release bodies are real. **9 of 9 plans executed; 4 of 4 requirements Complete
-  (REL-01, REL-02, REL-03, REL-04); all four Success Criteria MET** — criterion 1 with the
-  deliberate, evidenced four-milestones-not-three deviation that
-  `.planning/phases/214-release-cut/214-NOT-MET-AS-WRITTEN.md` § B records and which **still
-  stands**. **REL-03 closed on a real publish:** the **operator personally** pushed the annotated
-  `v5.25.0` tag (tag object `0d948b46` → `de74b118` == `origin/main`, tagger `Digs`
-  19:12:10 -0400, annotation diffing clean against the prepared file); no agent tagged. Run
-  **`36497076444`** (`event=push`) took `Publish to PyPI (Trusted Publishers + Sigstore)` from
-  `skipped` to **`success`** and `Attach zip to GitHub Release` likewise; the Release object's body
-  is byte-identical (17,794 B) to the composer's output with `## [5.25.0]` at line 1 above the
-  unsigned-binary notice, exercising `release.yml:436`'s `body_path` half for the first time; PyPI,
-  queried directly, serves 5.25.0 with wheel + sdist. Criterion 3 is **MET** and § A of
-  `214-NOT-MET-AS-WRITTEN.md` is **DISCHARGED** (banner added, original text intact).
-  **Box-checking provenance:** this box was checked **POST-checkpoint**, in a continuation pass on
-  published evidence (run `36497076444`), **not at the phase's own close** — at that close it was
-  correctly left `[ ]` because the phase's terminal deliverable was an operator decision not yet
-  taken, the same treatment Phase 210's entry used. The operator took that decision and then
-  explicitly approved checking the box. Evidence:
-  `.planning/phases/214-release-cut/214-PUBLISH-EVIDENCE.md`.
+### Release-integrity note (RVW-004, corrected 2026-08-25; resolution recorded 2026-09-02)
 
----
+v5.13 and v5.14 were previously marked ✅ shipped. They were not. **The last
+version published to PyPI is 5.12.0** (2026-08-14), and `pyproject.toml` still
+carried `5.12.0` throughout both milestones — so even the tags contain the wrong
+version string.
 
-## Phase Details
+Root cause: `release.yml` triggered on `'v*.*.*'`, a **three**-component glob.
+`v5.13` and `v5.14` are two-component tags, so pushing them matched nothing and
+fired no workflow — no run, no failure, no signal. `v5.13` was never pushed to
+origin at all. This is the third occurrence of the same defect; `v5.9` failed
+identically and is recorded in `.github/tag-hygiene-baseline.txt`.
 
-### Phase 210: Cross-Surface Score Parity
-**Goal**: One scan produces the same headline score, CRITICAL count, and certificate count whether a
-client receives it from the report pipeline or the dashboard pipeline.
-**Depends on**: Nothing (first phase of the milestone)
-**Requirements**: XSURF-01, XSURF-02, XSURF-03, XSURF-04
-**Success Criteria** (what must be TRUE):
-  1. A written decision (recorded in `.planning/decisions/`) states whether the SAML dual-`use`
-     certificate case (`quirk/dashboard/api/routes/scan.py:480-498`) dedupes on
-     `(host, port, cert serial)` or keeps both rows with accurate distinct titles, decided before any
-     code changes; whichever is chosen, the `use=encryption` row no longer says "signing".
-  2. `grep SAML` over a fresh run's `findings-*.json` returns a matching finding for every non-zero
-     `identity_saml_weak_signing_ratio` in that same run's `intelligence-*.json` — the evidence path
-     and the finding-emission path agree instead of diverging.
-  3. The dashboard's no-`scan_id` "latest scan" branch resolves two runs 4m26s apart to one
-     `scan_run_id`'s data (not the previous merged 34 certificates / 14 CRITICAL), while legacy
-     NULL-`scan_run_id` rows remain reachable exactly as `get_latest_scan`'s docstring describes.
-  4. A regression test asserts, for one `scan_run_id`, equal headline score, equal CRITICAL count and
-     equal certificate count between the report pipeline and
-     `GET /api/scan/latest?scan_id=` — and is shown to fail when a deliberately reintroduced
-     double-count is present (the LIFT-05 four-surface-equality shape, extended to the headline
-     number).
-  5. The original reproducing scan — 15/100 + 5 CRITICAL from the report pipeline vs 19/100 + 7
-     CRITICAL from the dashboard pipeline — is re-run and both pipelines now report the identical
-     number.
-  6. The two docs that currently document the divergence as EXPECTED behaviour are corrected in the
-     same phase: `docs/report-interpretation.md` §26 (`:1988`, "Export PDF is not the same thing as
-     these downloads") and `docs/operators-guide.md` §3.1.7 (`:419`). Both are synced to their vault
-     counterparts under `20_Dev-Work/QUIRK/Guides/` per LIVE-03 — `Report-Interpretation.md` and
-     `Operators-Guide.md`, vault `Digs` — and `docs/quirk-master-guide.md` is regenerated, since
-     `operators-guide.md` is one of its five generator inputs and
-     `tests/test_master_guide_freshness.py` gates the committed artifact byte-for-byte.
-**Plans**: 8 plans in 6 waves
+Disposition: the code shipped to `main` and is in use; only the *release* did
+not happen. Rather than retro-publish two versions whose source never carried
+those numbers, the record was corrected here and **v5.15 became the next real
+release**, tagged with a 3-component version. `release.yml`'s trigger was
+broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
+is the reason the three-component tag matters for every release after v5.15,
+including v5.18.0, and it is the institutional memory behind Phase 177's
+insistence on a real, correctly-formed tag rather than another silent gap.
+## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 
-Plans:
-**Wave 1**
+**5 phases (210-214), 40 plans, 15/15 requirements satisfied.** Audit `tech_debt` — 6/6 integration
+seams WIRED, 0 blockers, Nyquist 5/5, 9 warnings. Full detail:
+`.planning/milestones/v5.25-ROADMAP.md` · requirements:
+`.planning/milestones/v5.25-REQUIREMENTS.md` · audit:
+`.planning/milestones/v5.25-MILESTONE-AUDIT.md`.
 
-- [x] 210-01-PLAN.md — XSURF-01 written decision, decision-only, before any code change (wave 1)
+**This ended the tag drought.** `v5.25.0` is the first tagged release since `v5.21.0` (2026-09-10)
+and carries four milestones — v5.22, v5.23, v5.24, v5.25. The tag was created and pushed **by the
+operator**, not by an agent; run `36497076444` (`event=push`) published `quirk-scanner` 5.25.0 to
+PyPI with wheel + sdist and rendered the composed release body, exercising `release.yml:436`'s
+`body_path` half for the first time.
 
-**Wave 2** *(blocked on Wave 1 completion)*
+**The headline number now agrees across surfaces.** One live scan
+(`scan_run_id 2026-09-28T13:16:55.319715+00:00`, 775 endpoints): report **18/100** == dashboard
+**18/100**, all six subscores equal, CRITICAL 6==6, certificates 20==20. Note the provenance —
+Phase 210's own Success Criterion 5 was NOT met at its close (17 vs 18) and was closed by **Phase
+211's** work; 210's box was checked at this milestone's close by operator decision, with the
+provenance preserved in the archived roadmap entry rather than erased by the checkbox.
 
-- [x] 210-02-PLAN.md — extract evaluate_identity_endpoints() with the (host, port, serial) dedupe; route becomes a caller; CLI composition (wave 2)
+Carried forward, stated rather than absorbed:
 
-**Wave 3** *(blocked on Wave 2 completion)*
+- **XSURF-04 and UIFIX-02 are scope-qualified, not clean.** XSURF-04's regression gate covers one
+  of three cross-surface divergence classes (proved by mutation probe, not asserted); the third,
+  `"HTTP on TLS-designated port"`, is unbridgeable and ungated. UIFIX-02's colour audit globs 27 of
+  76 files, and a token reference is not a legible colour — see the next bullet.
+- **Dashboard accessibility debt, deferred AS ONE UNIT** (operator decision): **46 of 103 badge
+  colour pairs fail WCAG AA 4.5:1** in at least one theme across 11 pages; 1 fixed, 45 remain.
+  This is a **reopening of `BACK-A11Y-01`** (filed 2026-05-22, v5.0 Phase 87), lost at that
+  milestone's archive and rediscovered a third time — by a red CI gate, not by reading the ledger.
+  Tracked in `HORIZON.md` § "Carried forward from v5.25" + backlog `999.117`, deliberately NOT as a
+  Backlog row below, for exactly that reason.
+- **`Linux Full Suite` is red on `main`** — `test_chaos_lab_idempotency[multihost]` and
+  `[storage-s3]`, Docker registry `unauthorized` pulling seed images. Environmental, pre-existing,
+  identical node set on `main` and on PR #37. Not the vitest flake.
+- **DENOM-03's behavioural clause measured INVERTED** (narrow 2-port 20/100 vs wide 14-port 18/100);
+  Phase 212 owns whether width-neutrality is the target and returned **RECOMMEND NONE** for P2b.
+- **REL-04's "7 releases" is true only of the already-backfilled `v5.7.0`–`v5.21.0` set**; a
+  different, older 8-release group still carries Windows-sensor boilerplate (backlog `999.116`).
+- **Process gap:** five phases verified `passed` and a release was tagged and published while
+  `main` was failing CI, and no VERIFICATION.md mentions it. Phase verification looks at the
+  phase's own artifacts, never at the branch's CI state.
 
-- [x] 210-03-PLAN.md — dedupe evidence.py's independent saml_weak_signing_count (wave 3)
-- [x] 210-04-PLAN.md — resolve latest-scan by scan_run_id, window as NULL-only fallback; two stale comments corrected (wave 3)
+## Previous Milestone: v5.24 UAT Coverage Drain — development complete 2026-09-27 (untagged)
 
-**Wave 4** *(blocked on Wave 3 completion)*
+**8 phases (203-209, incl. the mid-milestone insert 207.1), 53 plans, 17/18 requirements
+satisfied + 1 PARTIAL.** Audit `tech_debt` — 4/4 integration seams WIRED, 0 blockers, Nyquist 8/8.
+Full detail: `.planning/milestones/v5.24-ROADMAP.md` · requirements:
+`.planning/milestones/v5.24-REQUIREMENTS.md` · audit:
+`.planning/milestones/v5.24-MILESTONE-AUDIT.md`.
 
-- [x] 210-05-PLAN.md — XSURF-04 three-number parity gate plus the required falsification (wave 4)
+Open drainable GAPs **47 -> 41**. Carried forward, stated rather than absorbed: **COV-04 at 27 of 28**
+(sole remainder `UAT-7-12`, an accepted product-absence FAIL — no sort state, no column handler, no
+table library in `certificates.tsx`, so no behaviour to assert); **two shipped product-defect FAILs**
+in series 7 (`UAT-7-12`, `UAT-7-21`); **18 of 24 COV-04 conversions are QUALIFIED PASSes with no gate
+policing the qualification text** (`UAT-206-05` is itself an open GAP — highest-value next item);
+**`Browser E2E` is non-gating** so COV-05/COV-10 regressions cannot fail a PR; and **`UAT-7-23`
+criterion 6 has no regression guard** — its operator HUMAN-UAT verdict is a one-time observation.
 
-**Wave 5** *(blocked on Wave 4 completion)*
+## Previous Milestone: v5.23 Deliverable Experience — development complete 2026-09-12
 
-- [x] 210-06-PLAN.md — live multihost re-run recording both pipelines' numbers (wave 5, non-autonomous) — evidence captured; Success Criterion 5 NOT fully met (residual 1-point score divergence, see 210-06-SUMMARY.md and filed todo)
-- [x] 210-07-PLAN.md — doc retarget per D-20, master-guide regeneration, vault sync (wave 5)
+Archived at `.planning/milestones/v5.23-ROADMAP.md`. Phases 199–202, 28 plans; 14/14 requirements,
+4/4 phases Nyquist-compliant. Audit `gaps_found` — 5/6 integration seams, with **one blocker
+accepted by the operator at close** rather than downgraded (999.111 — the roadmap surface and the
+storyline drawer disagree on score-lift where endpoints do not share a `scan_run_id`; the failure is
+*missing* rather than *wrong* information, pinned by a characterization test). 999.112 filed P3 and
+carried into v5.24 as DOC-02. Merged to `main` 2026-09-13 via PRs #12/#13. No v5.23 git tag by
+design (release.yml fires on `v[0-9]*`).
 
-**Wave 6** *(blocked on Wave 5 completion)*
+## Previous Milestone: v5.22 Release & Parity Tail — SHIPPED 2026-09-11
 
-- [x] 210-08-PLAN.md — UAT-SERIES.md, Obsidian phase note, ground-truth completion check (wave 6)
+Archived at `.planning/milestones/v5.22-ROADMAP.md`. All 10 requirements Complete; audit
+`passed` 10/10. v5.21.0 published to PyPI (first release since 5.19.0, carrying v5.20 + v5.21
+content); 999.104 fully closed (Tiers 1–3); backlog-reconciliation standing gate green with an
+EMPTY full-suite failing-node baseline. No v5.22 git tag by design (release.yml fires on
+v[0-9]*).
 
-### Phase 211: Denominator Correctness
-**Goal**: Every ratio penalty in the readiness score divides by the population its own numerator is
-drawn from, not by a probe count, and the change is proved to move a known scan in the predicted
-direction before it is accepted.
-**Depends on**: Phase 210. NOT independent, though it looks it: XSURF-03 stops `SESSION_BRACKET`
-merging runs, which returns the certificate count from 34 to 17 — and DENOM-02 makes `certs_observed`
-the *divisor* for every certificate ratio. Landing both independently moves that divisor for two
-unrelated reasons at once, and DENOM-04's red-proof requires a *predicted* direction, which cannot be
-predicted through two simultaneous changes to the same denominator. (Checked and ruled out as the
-coupling: the consequence ceiling does NOT move — `DEEP_CRITICAL_COUNT = 5` and the reference estate
-goes 5 -> 6 CRITICAL, both `>= 5`; `cap_band_for_severity` has no graduated N-CRITICAL ladder; and the
-`high_impact` / `agility_high_impact_ratio` path that would have moved the number was removed by
-999.115, `scoring.py:424,449`.)
-**Requirements**: DENOM-01, DENOM-02, DENOM-03, DENOM-04
-**RE-SCOPED 2026-09-28 (operator decision).** A live source audit before planning found this phase's
-core implementation already on `main`: `0b0ed1c7` (2026-09-13) made every ratio divide by its own
-population, with a red-proof pair (`a49c7dd6` -> `9fadfaa2`), a 152-line gate
-(`tests/test_score_denominator_999_113.py`, 3 passed), a DECIDED decision record
-(`.planning/decisions/999.113-denominator-semantics.md`, untracked) and a post-fix ladder
-re-measurement (rungs dated 2026-09-14, `tests/test_score_properties.py` green). The phase therefore
-delivers: proof-with-citations that DENOM-01/02/03 are satisfied; the decision doc committed;
-DENOM-04's genuine residual (clamp saturation, golden/score-strings coupling, the 3 xfailed ladder
-nodes); correction of the stale arithmetic below; and **the real open defect — Phase 210's residual
-17-vs-18 headline-score divergence, isolated to Hygiene and Modern TLS, whose "denominator" cause is
-now REFUTED and needs measuring.**
-**Success Criteria** (what must be TRUE):
-  1. `.planning/decisions/` contains a DENOM-01 decision document, reached by measurement against the
-     calibration ladder (never by argument, per 999.113 D5), stating per ratio family which
-     population is the correct divisor — certificate ratios over `certs_observed`, endpoint ratios
-     over the assessable-endpoint count — and citing the measured ladder rows that produced it.
-     **MET, by citation to a PRIOR commit — measured 2026-09-28.** `.planning/decisions/
-     999.113-denominator-semantics.md` is DECIDED 2026-09-13 and tracked (committed in `1804d703`,
-     Phase 211's own re-scope commit). `git ls-files --error-unmatch` confirms.
-  2. **CORRECTED 2026-09-28 — the original prediction was measured against a stale tree. MET, by
-     citation + live measurement — re-confirmed 2026-09-28 (211-01).** The
-     `cert_denom = certs_observed` change ALREADY LANDED in `0b0ed1c7` (2026-09-13, ancestor of
-     HEAD), so this criterion is discharged by citation + live measurement, not by new code. The
-     original text predicted Identity moving 25/25 -> ~19/25 via `-(5/17) × 14.0 ≈ -4.12`, replacing
-     `-(5/370) × 14.0`. Live (`quirk-output/intelligence-20260928-014244.json`, re-derived 211-01):
-     `certs_observed` is **20** not 17, `assessable_endpoint_count` is **216** and `totals.endpoints`
-     **775** not 370 — so the live term is `-(5/20) × 14.0 = -3.50` and Identity already scores
-     **9/25**, not 25/25 (Phase 210's SAML fixes made it emit). The measured numbers are recorded
-     here in place of the original -4.12 prediction, per this criterion's own instruction.
-  3. **ALREADY SATISFIED for the first clause — corrected 2026-09-28. MET in full, both clauses —
-     live-measured 2026-09-28 (211-05).** `endpoint_denom` and `domain_denom` already read
-     `assessable_endpoint_count`, not `totals.endpoints` (`quirk/intelligence/scoring.py:412`/`:421`,
-     gated by `tests/test_score_denominator_999_113.py`, 3 passed). **Behavioural clause, measured
-     live rather than assumed**: a fresh multihost scan at the wide, committed `ports_tls` width (14
-     ports, `scan_run_id 2026-09-28T13:16:55.319715+00:00`) scored **18/100**; the identical
-     infrastructure re-scanned at a narrow 2-port width (`[443,993]`,
-     `scan_run_id 2026-09-28T13:21:30.232752+00:00`) scored **20/100**. Relative to the historical
-     pair this criterion cites (10-port=91 vs 2-port=89, `999.113-denominator-semantics.md:86` —
-     widening RAISED the score by 2), the live pair **INVERTED**: widening now LOWERS the score by
-     2. This is neither the historical direction nor a flat/noise result (the underlying pre-cap
-     computed sums differ by 7: 78 vs 71) — it satisfies this criterion's own literal "inverts or
-     flattens" acceptance test via the "inverts" branch. Full evidence:
-     `211-LIVE-MEASUREMENT.md`.
-  4. A known scan is red-proved to move in the predicted direction before the fix is accepted, all
-     five calibration ladder rungs are re-measured, CBOM golden fixtures and `score-strings.json` are
-     regenerated and pass their generator-drift gates, and `_apply_weighted_impacts`'s 25-point clamp
-     is checked for saturation now that penalties are larger.
-     **MET with ONE STATED DEVIATION — measured 2026-09-28 (211-01).** (a) Red-proof: already
-     performed for the denominator change itself at `a49c7dd6`→`9fadfaa2` (both resolve as commits,
-     predate this milestone). (b) Ladder: `24 passed, 3 xfailed`
-     (`tests/test_score_properties.py`); the 3 xfails are the Phase-212-owned `test_p2b_...`
-     dilution node, not a DENOM-04 gap. **(c) DEVIATION: CBOM golden fixtures and
-     `score-strings.json` were NOT regenerated — dispositioned N/A with evidence instead.**
-     Measurement found neither artifact encodes any score/ratio/denom key, so this criterion's
-     literal "regenerated" instruction does not apply; `test_score_strings_freshness.py` stayed
-     green (5 passed) throughout, confirming no drift was introduced by leaving them untouched. (d)
-     Clamp saturation: measured and locked (`tests/test_score_clamp_property.py::
-     test_agility_ceiling_saturates_on_reference_estate`) — Agility saturates at the 25-point
-     ceiling (+11.59 absorbed), no category floors, Hygiene/Modern TLS sit clear of either boundary.
-  **17-vs-18 outcome (the phase's actual centre of gravity, per its RE-SCOPE note above).** Root
-  cause: a finding-title vocabulary mismatch (Hygiene, `evidence.py::_finding_targets` matching only
-  CLI-canonical title strings against a deliberately independent dashboard vocabulary) plus a
-  severity-proxy structural zero (Modern TLS, `legacy_tls_count = sev.get("LOW", 0)`, always 0 on
-  the dashboard pipeline, which emits no LOW findings). Fixed in two legs: `211-02` (`127913ca`,
-  routes titles through the existing `finding_title_bridge.py` translation) and `211-03`
-  (`c1245a55`, derives `legacy_tls_count` from endpoint fields via a new shared predicate). Guarded
-  by a run-time source-scan coverage gate (`211-04`, `tests/test_evidence_scoring_title_coverage.py`)
-  so the mapping table cannot silently drift. Live verdict: **EQUAL** — report and dashboard both
-  18/100 for `scan_run_id 2026-09-28T13:16:55.319715+00:00`, all six subscores matching exactly,
-  cross-checked by an independent DB re-derivation (13/13 counters matched). Full decision record:
-  `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`. One residual —
-  `"HTTP on TLS-designated port"` has no dashboard equivalent, measures 0 on the reference estate,
-  dispositioned `unbridgeable-latent-divergence`, tag-blocking verdict NO — tracked at
-  `.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`.
-**Plans**: 8 plans in 6 waves
+## Previous Milestone: v5.21 Dashboard Parity & Exposure Capability — SHIPPED 2026-09-10
 
-Plans:
+Archived at `.planning/milestones/v5.21-ROADMAP.md`. All 13 requirements Complete; audit
+`tech_debt` accepted.
 
-**Wave 1** *(no dependencies; disjoint files)*
+## Backlog
 
-- [x] 211-01-PLAN.md — DENOM-01/02/03 satisfaction record by re-derived citation + DENOM-04's four residual dispositions + clamp ceiling-saturation measured and locked (wave 1)
-- [x] 211-02-PLAN.md — 17-vs-18 leg 1: wire `finding_title_bridge` into `evidence.py`'s title-matched counters per operator Decision A, with pinned-oracle parity test proven red (wave 1)
+Items to be organized into future milestones. Organized by theme.
 
-**Wave 2** *(shares `evidence.py` with 211-02)*
+### Remediation Coverage (post-v5.18)
 
-- [x] 211-03-PLAN.md — 17-vs-18 leg 2: replace the `sev["LOW"]` severity proxy with an endpoint-derived `legacy_tls_count`; the bridge cannot fix this leg (wave 2)
+- **Sensor-origin findings are excluded from remediation closure tracking.** Sensor-pushed
+  `CryptoEndpoint` rows (`quirk/cli/console_cmd.py::_ingest_envelope`) carry `sensor_id` and
+  `segment` but never `scan_run_id`; Phase 179's scope signatures (which gate closure comparisons)
+  are keyed on `scan_run_id`, so sensor-origin findings have no signature and cannot be evaluated
+  for closure. This was a deliberate decision in Phase 179 (179-CONTEXT.md, "Sensor-Origin
+  Coverage") — documented in `docs/operators-guide.md` §15 and in
+  `quirk/intelligence/scope_signature.py::persist_scope_signature`'s docstring — not an oversight.
+  A future phase needs to decide either (a) extend the scope signature to a per-sensor / per-push
+  keying scheme that can carry the sensor's own port scope and profile, or (b) accept the exclusion
+  permanently and surface it explicitly in reports (e.g. a visible "N sensor-origin findings not
+  tracked for closure" line) rather than leaving it undocumented data absence. Note: the gap is
+  structurally invisible in local testing — the live dev DB has 30 rows, all with `scan_run_id`,
+  zero with `sensor_id` — so no local test run will ever trip over it; this must be caught by
+  reading the code path, not by observing a failure.
 
-**Wave 3** *(needs the final title set from waves 1-2)*
+### Dashboard / CLI Configuration Parity (proposed, from Phase 184.2) — PROMOTED INTO v5.21
 
-- [x] 211-04-PLAN.md — run-time source-scan coverage gate over `evidence.py`'s scoring-critical finding titles + disposition ledger + todo for the unbridgeable latent divergence (wave 3)
+Promoted into v5.21 as 999.104 tiers 1–3 (Phases 192–194 above) — kept here for backlog-history
+continuity:
 
-**Wave 4** *(one lab raise, shared by both live measurements — operator Decision B)*
+- **No configurable settings/connectors page in the dashboard — CLI is the only way to reach most
+  scan configuration.** Not every consultant or IT generalist is comfortable in a terminal.
+  Measured starting gap (D-16, Phase 184.2): the config template exposes 25 connectors, the CLI
+  interactive wizard (`quirk/interactive.py`) only prompts for 5 of them, and the dashboard's New
+  Scan page (`src/dashboard/src/pages/scan-new.tsx`, 330 LOC) exposes 0 connector controls. Overlaps
+  with the older, broader **BACK-86** (dashboard-initiated scan configuration, launch, and
+  reporting — `.planning/backlog/999.79-dashboard-scan-config-launch-reporting/`); this item is the
+  narrower configuration-parity slice of that broader idea. Tier 4 (server-side `config.yaml`
+  editing) remains explicitly out of scope — new security surface, deferred.
+  *Evidence: `.planning/milestones/v5.19-phases/184.2-out-of-the-box-scanning-posture/184.2-CONTEXT.md`
+  (`<deferred>`, "Proposed Phase 184.4: CLI↔UI Configuration Parity"), `184.2-RESEARCH.md`,
+  `docs/configuration.md` D-16. Originally sketched as "Phase 184.4," a number since claimed by an
+  unrelated shipped phase (184.4-rating-band-severity-floor) — do not reuse that phase number.*
 
-- [x] 211-05-PLAN.md — force-rebuild `mh-prober`, raise `multihost`, D-08 cross-surface live comparison + DENOM-03's two-`ports_tls`-width behavioural measurement (wave 4, non-autonomous)
+### Findings Model & Reporting (Phase 186 carry-forward)
 
-**Wave 5** *(both plans state claims about 211-05's evidence, so both declare an explicit `depends_on` — wave co-membership is not ordering)*
+- **No machine-readable `finding_type` identifier on findings.** QU.I.R.K. findings are matched
+  everywhere by their title string as a literal — `quirk/intelligence/remediation.py:81-82`,
+  `quirk/intelligence/scoring.py:193`, `quirk/intelligence/evidence.py:435-436`,
+  `quirk/compliance/__init__.py:288`, and `quirk/engine/findings_evaluator.py:320` all match on
+  literal title text, plus roughly eight test files. `_build_finding()` in
+  `quirk/engine/findings_evaluator.py` is the single construction seam where a stable
+  `finding_type` key would be added. `TRIAGE-176-02` (Phase 186) surfaced this as a genuine
+  architectural weakness — the classifier bug it fixed exists precisely because there is no
+  stable type signal, only a mutable title string — but a schema migration touching five product
+  modules and ~8 test files is its own phase, not a carried-defect drain. `186-CONTEXT.md`'s D-09
+  deliberately dispositioned the vocabulary (rewrote UAT case text to name real titles) rather
+  than implementing this, for that reason.
+  *Evidence: `.planning/phases/186-carried-defect-drain/186-CONTEXT.md` (`<deferred>`),
+  `186-03-SUMMARY.md`.*
 
-- [x] 211-06-PLAN.md — DECIDED decision record, todo refutation, hand-marked REQUIREMENTS/ROADMAP/STATE with a full-file pre-image diff (wave 5, depends_on 211-01/211-04/211-05)
-- [x] 211-07-PLAN.md — `report-interpretation.md` + `operators-guide.md` parity statements and score-contributor disclosure, master-guide regeneration, LIVE-03 vault sync (wave 5, depends_on 211-03/211-05)
+- **Report-generation headline-vs-severity warning, uninvestigated for a second phase running.**
+  `Report generation halted: executive headline 'GOOD' is inconsistent with 1 CRITICAL
+  finding(s)` reproduced identically across both scan configs during Phase 176's UAT-6-06/07/08
+  live chaos-lab runs (`176-DEFECT-TRIAGE.md`, flagged "for visibility only", explicitly not
+  investigated). Phase 186 re-ran the same UAT cases live (plan 186-05) and did not re-trigger or
+  further diagnose it — it remains unactioned. Working hypothesis, still untested: the consistency
+  check may be miscalibrated for a lab-fixture-heavy target set, where all chaos-lab certs are
+  deliberately weak, so a CRITICAL expired-cert finding alongside a GOOD/EXCELLENT headline may be
+  a scoring-vs-headline mismatch rather than a real inconsistency. Filed with an ID now because
+  this is the **second** phase in which it has been noted and not actioned — it must not evaporate
+  a third time.
+  *Evidence: `.planning/phases/176-chaos-lab-re-run/176-DEFECT-TRIAGE.md`,
+  `.planning/phases/186-carried-defect-drain/186-CONTEXT.md` (`<deferred>`).*
 
-**Wave 6**
+  No further new deferred item was found in `186-05-SUMMARY.md`'s live re-run: the D-11
+  compliance-attachment-before-rewrite discrepancy it recorded (compliance controls are computed
+  once against a finding's pre-rewrite title in `_build_finding()` and never recomputed when
+  `_postprocess_findings()` later rewrites the title, so compliance mappings do not move
+  pre/post-fix, contradicting `186-CONTEXT.md`'s D-11 premise) was explicitly reported as
+  observed evidence only, per that plan's own scope, and is not filed here as a fresh backlog
+  item — a future phase should re-derive it from `186-05-SUMMARY.md` directly if
+  compliance-mapping fidelity on post-processed findings becomes a priority, rather than treating
+  this note as a restatement of it.
 
-- [x] 211-08-PLAN.md — UAT Series 211 + coverage-gaps regeneration, Obsidian phase note, VALIDATION map resolution, ground-truth completion check on an ENUMERATED PLAN/SUMMARY set (wave 6)
+### Release & Verification Integrity (v5.12 candidates)
 
-### Phase 212: Score Dilution — Decision Only
-**Goal**: A written, measured denominator decision exists for the P2b healthy-endpoint dilution
-defect. No implementation ships in this phase — the defect remains open at close, by design.
-**Depends on**: Phase 211 (the spike must measure candidates against a ladder already re-measured
-under the corrected DENOM-* denominators, not a stale one)
-**Requirements**: DILUTE-01
-**Success Criteria** (what must be TRUE):
-  1. The spike measures all three candidate denominators (distinct hosts / an absolute exposure term
-     / scan-scope normalisation) against the existing ladder harness in
-     `tests/test_score_properties.py`, first confirming the control reproduces the unmodified
-     baseline before trusting any candidate's row.
-  2. A written decision in `.planning/decisions/` names which candidate is recommended for a future
-     implementation phase and why, backed by each candidate's measured effect on the reference
-     14× dilution case (71 → 82 today, masked to 18 → 20 only by `_consequence_ceiling()`).
-  3. `test_p2b_...`'s pre-ceiling assertion is unweakened and still red-detects the 71 → 82 dilution
-     independent of the consequence ceiling — the assertion that exists precisely so the ceiling
-     cannot hide the defect from its own test.
-  4. No production code implementing any candidate denominator ships in this phase. The decision
-     document explicitly states the defect is deferred, not fixed, and names the phase where
-     implementation belongs.
-**Plans**: 5 plans (4 waves) — enumerated from disk 2026-09-28: 5 PLAN.md, 5 SUMMARY.md (after this
-plan's own SUMMARY is written), reconciled and matching the plan list below.
-- [x] 212-01-PLAN.md — Rebuild the two-axis measurement harness; establish and re-verify the control
-- [x] 212-02-PLAN.md — Measure the two population-swap candidates (scan-scope, distinct hosts) + falsifiability audit
-- [x] 212-03-PLAN.md — Settle and measure the absolute-exposure candidate via a monkeypatched wrapper
-- [x] 212-04-PLAN.md — Write the DILUTE-01 decision document and capture verbatim criterion evidence
-- [x] 212-05-PLAN.md — Close-out: UAT Series 212, coverage-gaps regeneration, vault sync, hand-edited tracking
+Promoted into the v5.12 milestone and shipped 2026-08-14 (see `.planning/milestones/v5.12-ROADMAP.md`) — kept here for
+backlog-history continuity:
 
-**Verified outcome (2026-09-28, ground-truth enumerated 5 PLAN = 5 SUMMARY):** all four success
-criteria MET. Criterion 1 MET-WIDENED (the ladder alone is structurally blind to denominator
-changes by construction; a second efficacy axis was added as a measurement-correctness fix, not
-scope creep — see `.planning/decisions/212-score-dilution-denominator-decision.md`, Section 3).
-Criterion 2 MET as a NEGATIVE result — `RECOMMEND NONE`, valid per CONTEXT D-05: scan-scope is
-`[ASSUMED]/CONDITIONAL`, distinct hosts is `[ASSUMED]/TAUTOLOGICAL`, absolute exposure is
-`STRUCTURALLY UNINFORMATIVE` on the efficacy axis (a method gap, not a candidate failure — the
-axis-(b) instrument reads strictly before the ceiling this candidate patches). Criterion 3 MET —
-`24 passed, 3 xfailed`, both `test_score_properties.py` and `skip_registry.py` byte-unchanged.
-Criterion 4 MET — `git status --porcelain -- quirk/ tests/` empty throughout; the decision names a
-post-v5.25, OPERATOR-RESERVED owner phase, explicitly not Phase 214. This phase closes with the
-defect deliberately OPEN — `test_p2b_...` remains `xfail(strict=True)` — which is the correct,
-by-design outcome for a decision-only measurement spike, not a shortfall. Phase-level checkbox
-above (line ~44) intentionally left unchecked here: per this project's standing caution about
-`phase.complete` writing well-formed-but-wrong completion state, the orchestrator's own
-verification pass owns flipping that checkbox, not this close-out plan.
+- Windows release asset gap (v5.11.0 shipped no Windows build) → RELEASE-04 (Phase 148)
+- Release dry-run / pre-tag validation → RELEASE-02 (Phase 148)
+- Tag hygiene guard (`v5.9`/`v5.10.0` tag drift) → RELEASE-03 (Phase 148)
+- Actual tag cut proving the repaired pipeline → RELEASE-01 (Phase 153)
+- ~102 pre-existing suite failures → SUITE-01/02/03 (Phases 149–150)
+- Phase-completion artifact enforcement (VERIFICATION.md/VALIDATION.md/UAT-SERIES.md gaps) →
+  ARTIFACT-01/02/03 (Phase 151)
 
-### Phase 213: Shipped Product Defects (Series 7)
-**Goal**: The two product defects v5.24's audit recorded rather than absorbed — both shipped
-`docs/UAT-SERIES.md` FAILs — are fixed.
-**Depends on**: Nothing (independent of the scoring phases; UI-only work)
-**Requirements**: UIFIX-01, UIFIX-02
-**Success Criteria** (what must be TRUE):
-  1. `certificates.tsx` supports clicking the expiry column header to sort ascending and descending,
-     flipping `UAT-7-12` from its accepted product-absence FAIL to PASS in `docs/UAT-SERIES.md`.
-  2. COV-04's recorded shortfall closes from 27 of 28 to 28 of 28 in the regenerated
-     `docs/uat-coverage-gaps.md`.
-  3. The UIFIX-02 colour-literal count is re-derived with an instrument independent of both existing
-     estimates (the todo's 50 literals across 8 files; the v5.24 audit's 95 across 9), and the phase
-     records which prior estimate was closer and by what method — the disagreement itself is treated
-     as a finding, not resolved by picking one number to inherit.
-  4. Every hardcoded colour literal found by that re-derived count is replaced with a theme-token
-     reference; `npm run build` and `npm run lint` pass clean in `src/dashboard/`, flipping
-     `UAT-7-21` from its full-strength `it.fails` FAIL to PASS.
-  5. The three Cytoscape call sites render the CBOM graph and the roadmap graph correctly under both
-     light and dark theme with zero hardcoded hex/rgb literals remaining in those files — a real
-     refactor of the Cytoscape style objects, not a sed pass.
-**Plans**: 10 plans in 5 waves
+- `phases.clear` destructive-op guard — see `.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`
+  incident → ARTIFACT-04 (Phase 151)
 
-Plans:
-- [x] 213-01-PLAN.md — Widen the colour detector to all three HSL spellings, add a run-time residual guard, record the count finding (criterion 3)
-- [x] 213-02-PLAN.md — Mint the theme-token vocabulary in :root and .light, add a token-existence/parity guard
-- [x] 213-03-PLAN.md — UIFIX-01 certificates expiry sort (TanStack, Date accessorFn) + tokenise certificates.tsx
-- [x] 213-04-PLAN.md — Tokenise hardware, data-at-rest, motion, scan-history (54 literals)
-- [x] 213-05-PLAN.md — Tokenise trends, executive, healthcare, sensors, schedules, findings, identity, compare (52 literals)
-- [x] 213-06-PLAN.md — Pin the print surface to the light palette and tokenise its 45 literals + 1 named colour
-- [x] 213-07-PLAN.md — Real Cytoscape refactor: shared literal-free resolver + theme re-resolution across all 3 graphs (47 literals)
-- [x] 213-08-PLAN.md — Prove the widened gate RED, remove .fails, correct the docstring, ship the authoritative build
-- [x] 213-09-PLAN.md — HUMAN-UAT: both themes × 3 graphs, live toggle, two-PDF comparison, browser sort check
-- [x] 213-10-PLAN.md — Close-out: flip UAT-7-12/7-21, regenerate coverage gaps + master guide, Obsidian sync, validation rows
-**UI hint**: yes
+- DISC-09 segmented-network chaos lab profile + Phase 144 nmap timing artifact → DISC-09/DISC-10
+  (Phase 152)
 
-**Close-out (2026-09-28, plan 213-10):** All 10 plans executed; SUMMARY.md present for each.
-Criteria 1, 3, 4, 5 MET — `UAT-7-12` and `UAT-7-21` (qualified) both PASS; the true pre-fix colour
-count was re-derived at **205 literals across 17 files** (not the ~188 hypothesised by D-14, and
-far beyond the 95-across-9 the narrow detector originally found), all tokenised, and all three
-Cytoscape graphs confirmed rendering correctly under both themes with live toggle by the operator
-in plan 213-09. **Criterion 2 is recorded NOT MET AS WRITTEN.** It names `docs/uat-coverage-gaps.md`
-regenerating "from 27 of 28 to 28 of 28" — but that generator's worklist enumerates only its own
-GAP cases and corpus-wide disposition totals; it contains zero occurrences of "27 of 28", "COV-04",
-`UAT-7-12` or `UAT-7-21` at any point, before or after this phase's edits. The 27-of-28 tally is a
-v5.24 REQUIREMENT-level figure recorded in `.planning/PROJECT.md` (line 6, 736) and
-`.planning/REQUIREMENTS.md` (lines 167-168), not a figure `scripts/generate_uat_coverage_gaps`
-emits. **What WAS achieved instead:** the underlying product absence that caused COV-04 to close at
-27 of 28 is fixed, `UAT-7-12` is dispositioned PASS, and the regenerated worklist's corpus-wide
-totals moved to reflect it (FAIL 7→5, PASS 754→756). This is the third time this project has
-recorded a criterion NOT MET AS WRITTEN (after Phases 211 and 212) rather than silently
-reinterpreting it to fit the artifact on hand.
+- Interactive nmap-discovery-first default N→Y → DISC-11 (Phase 152)
 
-### Phase 214: Release Cut
-**Goal**: `v5.25.0` is tagged, published to PyPI, and every release-body defect this milestone can
-close — the CHANGELOG composer's first live proof and 7 backlogged bodies — is closed.
-**Depends on**: Phase 210, Phase 211, Phase 212, Phase 213 (a tag freezes whatever number the scorer
-emits and whatever UI state ships — every other phase must land first)
-**Requirements**: REL-01, REL-02, REL-03, REL-04
-**Success Criteria** (what must be TRUE):
-  1. `CHANGELOG.md` carries a real `## [5.25.0]` section — `[Unreleased]`'s ~100 lines spanning
-     v5.22, v5.23 and v5.24 are promoted and the entry honestly describes three milestones of work,
-     not one — and `release.yml:343`'s hard-fail-on-missing-section check passes for this version.
-  2. `pyproject.toml`, `README.md`, and `docs/UAT-SERIES.md` (UAT-1-02 pass criteria + document
-     header) all read `5.25.0` after `pip install -e . --no-deps`
-     (`importlib.metadata` reads the installed dist, not `pyproject.toml`), and the
-     `tests/test_version.py` gate passes at its real, measured size: **8 test functions**
-     (`grep -c "^def test_" tests/test_version.py` → 8), of which a local run reports
-     `7 passed, 1 deselected` because `pyproject.toml`'s `addopts = -m 'not slow'` deselects one,
-     while CI's `pytest -m ""` collects and runs all 8.
-     **CORRECTED (Phase 214, 214-08) — this clause previously read "all 4 `tests/test_version.py`
-     tests pass".** That figure was copied forward without running the command and was stale by
-     four. It is preserved here rather than silently overwritten, so the next reader does not
-     re-derive the same drift from scratch. The identical stale claim was corrected in
-     `REQUIREMENTS.md`'s REL-02 bullet and in this repo's `CLAUDE.md` Per-Phase Documentation
-     Checklist by plan 214-03; fixing those two and leaving this one saying something different
-     would have reproduced, in one pass, the hand-maintained-figure drift `CLAUDE.md` records this
-     project being bitten by six times. `docs/getting-started.md` is deliberately NOT in that list —
-     it carries no version string at all, only a `(v5.23+)` feature marker, verified at both the
-     v5.24 and v5.25 boundary reviews. Do not add one to satisfy this criterion.
-  3. A real `v5.25.0` tag push — never a test tag — produces a GitHub release whose body is composed
-     by `release.yml:293`/`:436` from `CHANGELOG.md` and contains the 5.25.0 section above the
-     unsigned-binary notice, proven on the actual publish rather than a `workflow_dispatch` dry run.
-  4. The 7 public releases carrying Windows-sensor boilerplate (v5.7.0, v5.8.0, v5.12.0, v5.15.0,
-     v5.18.0, v5.19.0, v5.21.0) have real, backfilled release notes on GitHub, with their original
-     bodies backed up before being overwritten; `v5.11.0` is left untouched.
+**Explicitly out of scope for v5.12:**
 
-**Measured outcomes (Phase 214, recorded at close 2026-09-28 — criteria above preserved unedited):**
+- DISC-08 sub-batch (mid-discovery) checkpoint/resume granularity — accepted boundary; batches are
+  cheap (~30–60s) relative to what the checkpoint system protects. Revisit only if batch cost
+  grows.
 
-| # | Verdict |
-|---|---------|
-| 1 | **Deviated from deliberately, on evidence — spirit exceeded, letter not met.** The entry describes **FOUR** unreleased milestones (v5.22, v5.23, v5.24, v5.25), not "three": `v5.21.0` was tagged 2026-09-10 and v5.22 shipped 2026-09-11 (`MILESTONES.md:143`), so v5.25's own work is unreleased alongside the other three. The criterion's count was correct when written and went stale as the milestone executed. `[Unreleased]` IS promoted (exactly one, empty) and `release.yml:343`'s check passes — red-proved falsifiable against a `## [v5.25.0]` mutant before being trusted. Record: `214-NOT-MET-AS-WRITTEN.md` § B. |
-| 2 | **MET.** All three surfaces at 5.25.0 after `pip install -e . --no-deps`; three independent readings agree (`pip show`, `quirk.__version__`, `quirk --version`). Gate: `7 passed, 1 deselected`. The criterion's own test count was stale and is corrected in place above. |
-| 3 | **MET — on the actual publish, which is the condition the criterion names.** The operator pushed the annotated `v5.25.0` tag after plan 214-09's checkpoint (tag object `0d948b46` → `de74b118`, tagger `Digs`; no agent tagged). Run **`36497076444`**, `event=push`, head `de74b118`: `Publish to PyPI (Trusted Publishers + Sigstore)` **`skipped` → `success`**, `Attach zip to GitHub Release` **`skipped` → `success`**, `Upload dry-run zip artifact` inverted `success` → `skipped` as its complement. Release object live (not draft, not prerelease, asset `uploaded`); its body byte-identical (17,794 B, read via JSON parse not `-q .body`) to the composer's archived output; `## [5.25.0]` at line 1, `### UNSIGNED BINARY NOTICE` at 211 — heading above notice on the RENDERED body. PyPI, queried directly, serves `quirk-scanner` 5.25.0 (wheel + sdist). `release.yml:436`'s `body_path` half exercised for the first time. **Recorded POST-checkpoint, not at the phase's close.** Prior verdict, preserved: *"NOT MET AS WRITTEN. `REL-03` PENDING — operator-reserved — a green dry run is not a publish."* That refusal is what made this a measurement rather than a re-reading. Record: `214-NOT-MET-AS-WRITTEN.md` § A, **DISCHARGED**; evidence `214-PUBLISH-EVIDENCE.md`. |
-| 4 | **MET — and the end state already held before the phase began.** Two independent instruments confirm all 7 named tags already carry their own `## [x.y.z]` body (`214-REL04-EVIDENCE.md`). Zero GitHub write verbs ran, so nothing needed backing up because nothing needed overwriting. The genuinely-boilerplate set is a different, larger one (8 pre-v5.7 tags) — filed as backlog `999.116`, not actioned. |
-**Plans**: 9 plans (8 waves) — re-enumerated from disk 2026-09-28 at the post-publish continuation
-pass: 9 `214-0N-PLAN.md` and **9** `214-0N-SUMMARY.md`. (At the phase's own close this read
-"8 `214-0N-SUMMARY.md` … 214-09 produces no execution SUMMARY until the operator resumes it" — the
-operator resumed it, so 214-09's SUMMARY now exists and records its checkpoint as satisfied.)
+- Continuous hardware lifecycle monitoring — promoted into v5.13 (see above).
 
-Plans:
-- [x] 214-01-PLAN.md — Wave 0 baseline: full-suite failing-node SET, gh reachability, version-surface and generator-gate enumeration
-- [x] 214-02-PLAN.md — REL-01: author the `## [5.25.0]` CHANGELOG section across four unreleased milestones
-- [x] 214-03-PLAN.md — REL-04: re-confirm the 7 release bodies on two instruments; correct HORIZON/REQUIREMENTS/CLAUDE.md/999.109; file backlog 999.116
-- [x] 214-04-PLAN.md — REL-02: bump pyproject.toml + README.md, editable reinstall, version-parity gate at its measured size
-- [x] 214-05-PLAN.md — REL-02: UAT-SERIES.md bump, disposition-ledger sync, coverage-gaps regeneration, Obsidian vault sync
-- [x] 214-06-PLAN.md — commit and push the release surfaces to `origin/main`; SET comparison; prove no tag exists
-- [x] 214-07-PLAN.md — REL-03 (PARTIAL): workflow_dispatch dry run, artifact download, heading-order measurement
-- [x] 214-08-PLAN.md — 214-NOT-MET-AS-WRITTEN.md, hand-edited ROADMAP/REQUIREMENTS/STATE/VALIDATION, Obsidian phase note
-- [x] 214-09-PLAN.md — pre-flight handover block + blocking operator checkpoint (tag is operator-reserved; the phase stopped here, the OPERATOR pushed the tag, and a continuation pass closed REL-03 on published evidence)
+- SaaS multi-tenancy — still parked, no business-model signal.
 
----
+### Hardware Compatibility & Lifecycle Remediation (v5.13+)
 
-## Progress
+Promoted into v5.13 (see above) — kept here for backlog-history continuity:
 
-| Phase | Plans Complete | Status | Completed |
-|-------|-----------------|--------|-----------|
-| 210. Cross-Surface Score Parity | 8/8 | Complete — 4/4 requirements Complete. Criterion 5 (identical headline score) was NOT MET at this phase's close (210-08-SUMMARY.md) and was **satisfied by Phase 211's work**, live 18/100 == 18/100. Box checked 2026-09-29 by operator decision at milestone close; provenance recorded in the phase entry above. | 2026-09-28 |
-| 211. Denominator Correctness | 8/8 | Complete — `211-VERIFICATION.md` passed, 8/8 must-haves, goal-level and requirement-level verdicts AGREE. Closed Phase 210's unmet Criterion 5. DENOM-03's behavioural clause measured INVERTED and disclosed. | 2026-09-28 |
-| 212. Score Dilution — Decision Only | 5/5 | Complete — `212-VERIFICATION.md` passed, 4/4 success criteria. VERDICT **RECOMMEND NONE**, a complete and valid outcome per CONTEXT D-05; no implementation shipped, defect still `xfail(strict=True)`. | 2026-09-28 |
-| 213. Shipped Product Defects (Series 7) | 10/10 | Complete — `213-VERIFICATION.md` passed, 5/5 must-haves; criterion 2 recorded NOT MET AS WRITTEN rather than reinterpreted. UIFIX-01/02 Complete; see REQUIREMENTS.md UIFIX-02's 2026-09-29 scope correction (audit W-4/W-9). | 2026-09-28 |
-| 214. Release Cut | 9/9 | Complete — 4/4 requirements Complete (REL-01/02/03/04); all 4 Success Criteria MET, criterion 1 with the deliberate evidenced four-milestones deviation (214-NOT-MET-AS-WRITTEN.md § B, STANDS). REL-03 closed POST-checkpoint on real publish run 36497076444; § A DISCHARGED. Tag pushed by the operator. | 2026-09-28 |
+- **Continuous hardware lifecycle monitoring** — HWLC-01..12, Phases 154–156.
+
+~~OT/ICS resume-checkpoint gap~~ and ~~CVE table BACnet key coverage~~ — both closed by v5.11
+Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
+
+### Hardware Lifecycle Tail (v5.14) — SHIPPED
+
+Promoted into v5.14 (see above) — all items shipped 2026-08-19, kept here for backlog-history
+continuity:
+
+- HWLC-13 — lightweight "check-in" scan mode (narrow re-probe of known devices only) → Phase 159 ✓
+- HWLC-15 — fleet-wide sensor coverage for `hardware_devices` (deferred from v5.13) → Phase 158 ✓
+- HWLC-16 — `hardware_drift_events` retention policy → Phase 157 ✓
+- HWLC-17 — vendor PQC-status trend tracking (catalog-level, not per-device) → Phase 160 ✓
+- HWLC-18 — consultant-facing "lifecycle risk forecast" narrative (12-month EOL/tier projections)
+  → Phase 157 ✓
+
+**Deferred out of v5.14, now promoted into v5.15 (see below):**
+
+- HWLC-14, HWLC-19 (vendor-trend surfacing), HWLC-20 (check-in scheduling), DISC-08 — all promoted
+  into v5.15 Lifecycle Tail Drain 2026-08-19.
+
+**Still out of scope (v2+ / rejected):**
+
+- Statistically-modeled EOL prediction beyond vendor-published catalog dates — explicitly rejected
+  as an anti-feature.
+
+- Cross-tenant/cross-client PQC trend aggregation — blocked on the still-parked SaaS multi-tenant
+  architecture.
+
+### Lifecycle Tail Drain (v5.15)
+
+Promoted into v5.15 and shipped 2026-08-26 (see `.planning/milestones/v5.15-ROADMAP.md`) — kept here for backlog-history
+continuity:
+
+- HWLC-14 — email/webhook notification on tier-crossing/EOL events, reusing Phase 101 fan-out →
+  Phase 161
+
+- HWLC-19 — vendor-level PQC-trend dashboard/report surfacing (`GET /api/hardware/vendor-trends`
+  has had zero consumers since Phase 160) → Phase 161
+
+- HWLC-20 — recurring/scheduled check-in scan mode on top of HWLC-13, via existing `quirk schedule`
+  CRUD/dispatcher (Phase 63) → Phase 162
+
+- DISC-08 — sub-batch (mid-discovery) checkpoint/resume granularity, tightening the v5.11 Phase 144
+  per-batch checkpoint system → Phase 163
+
+### Chaos-Lab & Findings-Quality Defects (v5.17 Phase 176)
+
+Found during Phase 176's LABRUN-01 live chaos-lab re-run. Final tally after the 2026-08-31
+GAP-closure re-run (plan 176-08): **10 PASS / 3 FAIL / 0 GAP** of 13 cases. TRIAGE-176-01 and
+TRIAGE-176-02 were not fixed in that phase and need their own plans and tests; TRIAGE-176-03 was
+fixed in plan 176-08 and is recorded here for traceability only:
+
+- Chaos lab `identity` profile: regenerate `certs/keycloak.crt`/`certs/keycloak.key` with a
+  Keycloak-identifying subject (currently byte-identical to `certs/modern.crt`, CN=modern.chaos.local)
+  so UAT-5-13's cert-subject criterion is actually verifiable — found during Phase 176 LABRUN-01
+  re-run (TRIAGE-176-01).
+
+- Scanner findings-quality: add a distinct plaintext-HTTP finding type/title (matching the
+  `PLAINTEXT_HTTP`/`HTTP_EXPOSURE` vocabulary `docs/UAT-SERIES.md` UAT-6-06 already expects) so
+  ports outside `ports_tls` can be flagged as "known plaintext HTTP" separately from
+  `HTTP on TLS-designated port` misconfiguration findings, which currently collapse to the same
+  title regardless of intent — found during Phase 176 LABRUN-01 re-run (TRIAGE-176-02).
+
+- **CLOSED — TRIAGE-176-03 (fixed in plan 176-08, 2026-08-31).** `quirk/scanner/ssh_scanner.py`
+  invoked ssh-audit as `[exe, "-j", host, str(port)]` — two positionals — but ssh-audit accepts
+  exactly one `host:port` target. The malformed command exited 2 with empty stdout, so
+  `_run_ssh_audit` always returned `None` and every SSH scan silently degraded to a banner grab,
+  leaving `ssh_audit_json` NULL on every install since the integration shipped. Fixed with the
+  `host:port` form plus a regression test asserting the argv. Retained here because the fix
+  **unblocks downstream work that was never verifiable before**: the CBOM SSH algorithm
+  components, `qramm/evidence_bridge.py`, `scanner/hardware_scanner.py`, and the dashboard SSH
+  panel have all been receiving empty data and none of their SSH paths have ever run against real
+  ssh-audit output.
+
+### UAT Case-Text Corrections Carried Forward (from Phase 176 plan 176-08)
+
+Verified case defects where the product is correct and `docs/UAT-SERIES.md` is wrong. Same class as
+the `UAT-94-05` / `UAT-36-05` / `UAT-8-07` corrections already carried forward in this milestone:
+
+- **`UAT-6-08` criterion 1** asserts an ED25519 host key should be "classified as `quantum-safe` or
+  at least not quantum-vulnerable". This is cryptographically false — Ed25519 is an elliptic-curve
+  signature scheme and Shor's algorithm breaks it as completely as RSA or ECDSA. QUIRK correctly
+  returns `nist_quantum_security_level=0`. The criterion should require Ed25519 be classified
+  **quantum-vulnerable** while noting its strong *classical* level of 128.
+
+- **`UAT-6-08` criterion 4** expects "each algorithm has NIST quantum level in the finding" and its
+  Steps direct the tester to the findings JSON — but that file carries a single generic
+  `INFO — SSH quantum planning advisory` per SSH endpoint. Per-algorithm NIST levels exist only in
+  the CBOM, and neither `run_scan.py` nor `quirk` exposes a CBOM emission flag. Either retarget the
+  criterion at the CBOM/scan record, or treat "no CLI-reachable surface for per-algorithm SSH
+  quantum data" as its own product gap and file it separately.
+
+- **`UAT-5-11` pass criteria** use the word `CRITICAL`, which ssh-audit never emits — its severity
+  vocabulary is `fail`/`warn`/`info`. The case passes on the merits (`[fail]` is the top tier), but
+  the wording should match the tool. Cosmetic; no disposition impact.
+
+### v1.x / v2+ (deferred, see PROJECT.md Active Requirements)
+
+- **PARITY-T4**: Dashboard load/edit/save of the persistent `config.yaml` (tier 4) — needs its own
+  threat model first. Explicitly out of scope for v5.22.
+
+- **999.107**: Tier B Exposure Map (operator-declared reachability + crown jewels) — build when a
+  client engagement needs it. Deferred from v5.21 Phase 195's MAP-01 spike.
+
+- **999.106**: real `ports_ssh` backend capability (config field + scanner targeting) — deferred
+  from v5.21/v5.22's PARITY work; no CLI-side equivalent exists to achieve parity with today.
+
+- **999.105**: customizable reporting engine (three-tier shape in its IDEA.md).
+
+- **MAP-ELK**: `cytoscape-elk` layout upgrade for the Quantum Exposure Map — only if dagre proves
+  visually inadequate against real exposure data. Contingent on v5.21 Phase 195 shipping first.
+
+- P3 UX set (999.101/999.102/BACK-01/03/08), 999.103 broker scanner-logic noise, trends.py/merge.py
+  int-coercion, GSD tooling todos (see `CLAUDE.md` TOOL-01..05), UAT coverage-gaps worklist —
+  deliberately deferred at the v5.22 boundary; visible in `HORIZON.md`'s Open-Item Ledger.
+
+### SaaS Platform (Future Milestone)
+
+- [ ] Multi-tenant architecture design
+- [ ] Scan job queue (Celery + Redis or similar)
+- [ ] User auth and org management
+- [ ] Cloud deployment (Docker Compose → Kubernetes)
+- [ ] Hosted reporting and CBOM storage
+
+</content>

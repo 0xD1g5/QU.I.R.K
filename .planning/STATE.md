@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v5.25
 milestone_name: Score Truth & Release Cut
-status: executing
-last_updated: "2026-09-29T00:15:00.000Z"
-last_activity: 2026-09-29 -- Phase 214 CLOSED at 9 of 9 plans, 4 of 4 requirements, all 4 ROADMAP success criteria MET. Continuation pass after plan 214-09's blocking checkpoint. THE OPERATOR PERSONALLY created and pushed the annotated v5.25.0 tag (tag object 0d948b46 -> de74b118 == HEAD == origin/main, tagger Digs 19:12:10 -0400, annotation diffing clean against the prepared 214-v5.25-tag-annotation.txt); NO AGENT created, moved or pushed any tag. That push fired release.yml as run 36497076444 (event=push) -- Publish to PyPI (Trusted Publishers + Sigstore) went skipped -> success, Attach zip to GitHub Release likewise, Upload dry-run zip artifact inverted success -> skipped as its complement; the Release object's body is byte-identical (17,794 B) to the composer's archived output, its H2 section heading for 5.25.0 sitting at line 1 above the unsigned-binary notice, exercising release.yml:436's body_path half for the first time; PyPI queried directly serves quirk-scanner 5.25.0 with wheel + sdist. REL-03 hand-marked [x] in REQUIREMENTS.md with that evidence and its traceability row flipped; ROADMAP criterion 3 recorded MET, Phase 214 box checked POST-checkpoint on published evidence (operator-approved decision, not the phase's own close), progress row 9/9 completed 2026-09-28, 214-09 plan box checked. 214-NOT-MET-AS-WRITTEN.md Section A carries a DISCHARGED banner with its original text intact; Section B (criterion 1's deliberate four-milestones-not-three deviation) is UNTOUCHED and STANDS. Wrote 214-PUBLISH-EVIDENCE.md -- every row a live command with raw output. ONE authorized public mutation, on the operator's explicit decision -- gh release edit v5.25.0 --notes-file re-synced the published body, which carried a now-false 'REL-03 ... is PENDING' Known-Limitations bullet -- 999.109's own defect class recurring on the release that proved the composer. Pre-edit body backed up; regenerated-vs-archived diff contained ONLY that bullet; post-edit body re-read via JSON parse (never -q .body, which appends a jq newline) and byte-matched at 19,735 B; archived as 214-release-notes-published.md. No tag, asset, flag, title or other release touched. Corrected the same stale claim in CHANGELOG.md (prior text preserved as a dated correction), docs/UAT-SERIES.md lines 727/745 + header, the uat-disposition-ledger.jsonl mirror, and HORIZON.md's 999.109 row. FINDING -- the UAT Result-line regex uses [^)]* for its annotation, so NESTED PARENTHESES in a Result annotation silently un-disposition the case -- my first edit did exactly that and the coverage-gaps generator reported UNDISPOSITIONED 1 / PASS 760; rewritten paren-free, all 75 UAT gates green, uat-coverage-gaps.md regenerates byte-identical. Counters re-derived FROM DISK -- 40 total plans (8+8+5+10+9), 40 complete, 4 of 5 phases checked (Phase 210's box stays [ ] deliberately). No phase.complete, no requirements mark-complete, no mutating gsd-sdk/gsd-tools.cjs state.*/roadmap.* verb; STATE.md hand-edited from a pre-image with the FULL diff read, not a signature grep. REMAINING -- milestone v5.25 audit + close; status stays `executing` because the milestone is open, not because the phase is unfinished.
+status: milestone_complete
+last_updated: "2026-09-29T02:30:00.000Z"
+last_activity: 2026-09-28 -- v5.25 Score Truth & Release Cut CLOSED and ARCHIVED (local date; the prior entry here dated the same work 2026-09-29 from UTC timestamps -- git, CHANGELOG and every SUMMARY use local, so local is the convention). 5 phases (210-214), 40 plans, 15/15 requirements with XSURF-04 and UIFIX-02 scope-qualified rather than quietly accepted. Audit tech_debt -- integration 6/6 seams WIRED 0 blockers, Nyquist 5/5, staleness green on all 9 date-gated catalogs and all 5 generator-drift gates, 9 warnings. Archived to .planning/milestones/v5.25-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md; REQUIREMENTS.md git-rm'd. ROADMAP.md rebuilt as the milestone index -- and note WHY that needed care -- /gsd-new-milestone had overwritten the Backlog section when v5.25 opened, so the close workflow's "extract the Backlog first" step would have found nothing and silently dropped 11 subsections; restored verbatim from dd4b2a17 and diff-verified at zero removed lines. Phase 210's checkbox flipped [ ]->[x] by operator decision with provenance preserved (its Criterion 5 was met by Phase 211's work, not its own); the ROADMAP Progress table had rows 211/212/213 reading "0/? Not started" while all three were complete, re-derived from disk. MID-CLOSE FIX -- Dashboard Quality / Axe + Console Gate had been red on main for 5 runs -- root-caused NOT to dependency float (my first hypothesis, wrong because I anchored the breaking window on a run that failed in a DIFFERENT job) but to plan 213-07 retokenising cbom.tsx's Safe badge from hsl(142 71% 30%) to var(--qs-node-safe), identical hue and saturation, lightness 30->45, 4.84:1 -> 2.30:1. Fixed to --status-safe-deep, guarded by a mutation-proved run-time-derived test, verified PASS against the real sweep, merged as PR 37 (2f79f6e1). Enumerating the full set then found 46 of 103 badge pairs below AA -- 45 remain, DEFERRED AS ONE UNIT by operator decision to HORIZON.md + backlog 999.117, a reopening of BACK-A11Y-01 lost at the v5.0 archive. Linux Full Suite stays red on main for a THIRD unrelated reason -- test_chaos_lab_idempotency[multihost]/[storage-s3], Docker registry auth, identical node set on main and on the PR, NOT the vitest flake. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- every file hand-edited from a pre-image with the FULL diff read. NEXT -- /gsd-new-milestone.
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 40
   completed_plans: 40
   percent: 100
@@ -16,6 +16,26 @@ progress:
 # Project State
 
 ## Deferred Items
+
+### v5.25 milestone close (2026-09-28) — acknowledged and deferred
+
+**Counts re-derived from disk, NOT from `gsd-sdk query audit-open`** (it slices to 5 before counting;
+see the v5.24 note below, which this close re-confirms rather than re-discovers).
+
+**38 pending todos + 9 audit warnings.** The audit's full warning set with evidence is at
+`.planning/milestones/v5.25-MILESTONE-AUDIT.md`. Not re-tabulated here — that file survives archiving
+and this section would drift from it.
+
+The single largest deferral, and the only one with an operator instruction attached:
+
+| Category | Item | Status |
+|----------|------|--------|
+| backlog | `999.117-dashboard-accessibility-debt` | **DEFERRED AS ONE UNIT** — own milestone or bundled whole into the next; explicitly NOT piecemeal. 45 of 103 badge pairs below WCAG AA. Reopening of `BACK-A11Y-01`. 8-item breakdown in `HORIZON.md`. |
+| ci | `Linux Full Suite` red on `main` | `test_chaos_lab_idempotency[multihost]`/`[storage-s3]`, Docker registry `unauthorized`. Environmental, pre-existing, identical node set on `main` and PR #37. Not the vitest flake. |
+| audit | W-1/W-2 — XSURF-04 gates 1 of 3 divergence classes | Scope-corrected in the archived REQUIREMENTS.md rather than left reading clean. |
+| audit | W-3 — DENOM-04 clamp oracle skips in CI | Gitignored artifact under `quirk-output/`; fix is a committed fixture. |
+| audit | W-7 — `requirements-completed` frontmatter absent from 35 of 41 SUMMARY files | Requirement coverage rested on 2 independent sources, not the 3 the workflow assumes. Process gap. |
+| process | Phase verification is branch-CI-blind | 5 phases verified `passed` and a release shipped while `main` was failing CI; no VERIFICATION.md mentions it. |
 
 ### v5.24 milestone close (2026-09-27) — acknowledged and deferred
 
@@ -248,15 +268,11 @@ Also carried, not in `audit-open`'s scope:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-13)
+See: .planning/PROJECT.md (updated 2026-09-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 211 — Denominator Correctness (RE-SCOPED to verify + investigate; 8 plans,
-6 waves). Proving DENOM-01..04 satisfied by citation plus live measurement rather than by
-implementation, then investigating the 17-vs-18 headline-score divergence that Phase 210 left open
-(isolated to Hygiene and Modern TLS). Denominator fields in scoring.py are already correct and must
-not be edited.
+**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal.
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),

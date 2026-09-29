@@ -1,6 +1,41 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-27)
+## Current State (updated 2026-09-28)
+
+**v5.25 Score Truth & Release Cut CLOSED and ARCHIVED 2026-09-28 — and it SHIPPED.** All 5 phases
+complete (210–214), 40 plans, **15 of 15 requirements satisfied**, two of them (XSURF-04, UIFIX-02)
+honestly narrowed at close rather than quietly accepted. Audit `tech_debt`: integration **6/6 seams
+WIRED with 0 blockers**, Nyquist 5/5 compliant, staleness green across all 9 date-gated catalogs and
+all 5 generator-drift gates, 9 warnings. Archived to `.planning/milestones/v5.25-*`;
+`.planning/REQUIREMENTS.md` removed on purpose.
+
+**`v5.25.0` is tagged and on PyPI — the first tagged release since `v5.21.0` (2026-09-10)**, carrying
+four milestones of accumulated work (v5.22, v5.23, v5.24, v5.25). The tag was created and pushed **by
+the operator**, not by an agent; run `36497076444` (`event=push`) published wheel + sdist and rendered
+the composed release body from `CHANGELOG.md`.
+
+**The score means one thing now.** One live scan (`scan_run_id 2026-09-28T13:16:55.319715+00:00`,
+775 endpoints): report **18/100** == dashboard **18/100**, all six subscores equal, CRITICAL 6==6,
+certificates 20==20. Worth keeping the provenance: Phase 210's own Success Criterion 5 was NOT met at
+its close (17 vs 18) and was closed by **Phase 211's** work.
+
+**What to carry forward.** Two findings this milestone produced could only come from a measurement,
+not an argument. Phase 213's literal count was predicted at 50-across-8 and 95-across-9; a run-time
+re-derivation on four independent instruments found **205 across 17** — the narrow detector's blind
+spot was the size of the defect it reported. And the closing audit's mutation probes showed
+XSURF-04's parity gate **passes** when Phase 211's fixes are reverted, so the two gates are
+complementary and neither alone satisfies the requirement as written. A count, and a green gate, are
+both hypotheses until an independent instrument agrees.
+
+**Largest item deferred, as one unit by operator decision:** dashboard accessibility debt — **46 of
+103 badge colour pairs below WCAG AA 4.5:1** in at least one theme; 1 fixed, 45 remain. It is a
+**reopening of `BACK-A11Y-01`** (filed 2026-05-22, v5.0 Phase 87), lost at that milestone's archive
+and rediscovered a third time by a red CI gate rather than by anyone reading the ledger. Recorded in
+`HORIZON.md` and backlog `999.117` — the files that survive archiving — and deliberately not as a
+ROADMAP Backlog row.
+
+<details>
+<summary>Previous: v5.24 UAT Coverage Drain — CLOSED and ARCHIVED 2026-09-27</summary>
 
 **v5.24 UAT Coverage Drain CLOSED and ARCHIVED 2026-09-27.** All 8 phases complete (203–209 incl. the
 mid-milestone insert 207.1), 53 plans, **17 of 18 requirements satisfied + COV-04 PARTIAL at 27 of 28**.
@@ -233,7 +268,9 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.25 Score Truth & Release Cut
+</details>
+
+## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 
 **Opened:** 2026-09-27, after a boundary pass that ran a PM review of HORIZON's Open-Item Ledger, the
 33 pending todos re-counted from disk, and the v5.24 audit's `tech_debt` set.
@@ -1560,7 +1597,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-27 after the v5.24 UAT Coverage Drain milestone*
+*Last updated: 2026-09-28 after the v5.25 Score Truth & Release Cut milestone*
 
 ## Evolution
 

@@ -516,7 +516,7 @@ todos stay unlinked to any phase on purpose.
 
 ## Carried forward from v5.25 — Dashboard Accessibility Debt — DEFERRED AS ONE UNIT
 
-**Operator decision, 2026-09-29: do not drain this piecemeal.** Either its own milestone or bundled
+**Operator decision, 2026-09-28: do not drain this piecemeal.** Either its own milestone or bundled
 whole into the next one — but worked together, not scattered across phases that each happen to
 touch a page.
 
@@ -548,7 +548,7 @@ Audit rows: `.planning/v5.25-MILESTONE-AUDIT.md` W-4 and W-9.
 
 **Already fixed, not carried:** `cbom.tsx` QS_BADGE "Safe" — the single one of the 46 that was a
 v5.25 regression (plan 213-07, `3f50b104`) and the only one turning CI red. Guarded and
-mutation-proved. See `.planning/todos/completed/260929-dashboard-quality-axe-console-gate-red-on-main.md`.
+mutation-proved. See `.planning/todos/completed/260928-dashboard-quality-axe-console-gate-red-on-main.md`.
 
 **Why this cluster is cohesive rather than eight chores:** items 1, 6 and 8 are all *instrument*
 defects — the reason 45 real violations sat invisible behind three green gates. Items 2–5 and 7 are

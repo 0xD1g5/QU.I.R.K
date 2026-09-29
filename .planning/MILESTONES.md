@@ -1,5 +1,63 @@
 # Milestones
 
+## v5.25 Score Truth & Release Cut (Shipped: 2026-09-28 — tag `v5.25.0`)
+
+**Phases completed:** 5 phases (210-214), 40 plans on disk / 41 SUMMARY files
+**Requirements:** **15/15 satisfied**, 2 scope-qualified at close (XSURF-04, UIFIX-02)
+**Audit:** `tech_debt` (`.planning/milestones/v5.25-MILESTONE-AUDIT.md`) — requirements 15/15,
+phases 5/5, **integration 6/6 seams WIRED with 0 blockers**, Nyquist 5/5 compliant, staleness green
+across all 9 date-gated catalogs and all 5 generator-drift gates, 9 warnings.
+**Scale:** 104 commits, 108 files, +10,618 / -2,644, 2 days (2026-09-27 -> 2026-09-28).
+
+**What it was about:** making the readiness score mean one thing on every surface a client can
+see, and then actually shipping it.
+
+**Highlights:**
+- **The headline number agrees now.** One live scan (`scan_run_id
+  2026-09-28T13:16:55.319715+00:00`, 775 endpoints): report **18/100** == dashboard **18/100**, all
+  six subscores equal, CRITICAL 6==6, certificates 20==20. Root causes were a double-counted SAML
+  certificate, an identity finding the CLI scored but never reported, a "latest scan" query that
+  merged two runs, a finding-title vocabulary mismatch, and a LOW-severity-proxy structural zero.
+- **The tag drought ended.** `v5.25.0` is the **first tagged release since `v5.21.0`** (2026-09-10)
+  and carries four milestones — v5.22, v5.23, v5.24, v5.25. Tag created and pushed **by the
+  operator**, not an agent; run `36497076444` published to PyPI (wheel + sdist) and rendered the
+  composed release body, exercising `release.yml:436`'s `body_path` half for the first time.
+- **Denominators divide by the right population** — certificate ratios over certificates, endpoint
+  ratios over assessable endpoints. Largely already landed in `0b0ed1c7`; Phase 211 re-scoped to
+  verify-and-investigate rather than re-implement working code, and proved satisfaction by
+  citation plus live measurement.
+- **Phase 212 returned RECOMMEND NONE and that counted as success.** No P2b candidate cleared both
+  measurement axes, each failing for a different reason. A decision-only phase that ships no code
+  is a complete outcome, not a failed one — CONTEXT D-05 said so up front.
+
+**The best process outcome was two findings that only a measurement could produce.** Phase 213's
+colour-literal count was predicted at 50-across-8 by the todo and 95-across-9 by the v5.24 audit;
+a run-time re-derivation on four independent instruments found **205 across 17** — the narrow
+detector had a blind spot the size of the defect it reported. And at close, the milestone audit's
+mutation probes showed XSURF-04's parity gate **passes** when Phase 211's fixes are reverted:
+the two gates are complementary, and neither alone satisfies the requirement as worded.
+
+**Closed at 15/15 with two requirements honestly narrowed rather than quietly accepted.** XSURF-04
+gates one of three cross-surface divergence classes; UIFIX-02 covers the pages layer while a token
+reference turned out not to guarantee a legible colour.
+
+**Known open at close: 9 audit warnings + 38 pending todos** (counted from disk — **not** from
+`gsd-sdk query audit-open`, which slices to 5 before counting and would have dropped 33).
+The largest is **dashboard accessibility debt, deferred as one unit** by operator decision: 46 of
+103 badge colour pairs fail WCAG AA 4.5:1 in at least one theme; 1 fixed, 45 remain, tracked in
+`HORIZON.md` + backlog `999.117`. That is a **reopening of `BACK-A11Y-01`**, filed 2026-05-22 in
+v5.0 Phase 87, lost at that milestone's archive and rediscovered a third time by a red CI gate
+rather than by anyone reading the ledger — which is why it is recorded in `HORIZON.md`, the file
+that survives archiving, and not as a ROADMAP Backlog row. `Linux Full Suite` is also red on
+`main` on two `test_chaos_lab_idempotency` nodes (Docker registry auth, environmental,
+pre-existing, identical node set on `main` and on the PR).
+
+**This close was hand-written under a pre-image + full-diff protocol** — `phase.complete` /
+`milestone.complete` and every mutating `state.*` / `roadmap.*` verb remain UNSAFE on this machine.
+A dedicated check caught that `/gsd-new-milestone` had overwritten `ROADMAP.md`'s `## Backlog`
+section when v5.25 opened, so the close workflow's "extract the Backlog first" step would have
+found nothing and silently dropped 11 subsections; they were restored from `dd4b2a17`.
+
 ## v5.24 UAT Coverage Drain (Development complete: 2026-09-27 — untagged)
 
 **Phases completed:** 8 phases (203-209, including the mid-milestone insert **207.1**), 53 plans on
