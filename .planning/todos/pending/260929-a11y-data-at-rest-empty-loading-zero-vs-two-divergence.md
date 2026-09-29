@@ -52,3 +52,27 @@ lands, this divergence retires along with the default-variant range — no follo
 added to `baseline-data-at-rest-empty-dark.json` / `baseline-data-at-rest-loading-dark.json` in the
 meantime; if CI ever goes red on them before then, re-measure fresh rather than assuming this
 todo's hypothesis still holds.
+
+
+---
+
+## SUPERSEDED IN PART, 2026-09-29 (Phase 216 verifier blocker B1)
+
+**CORRECTED at close-out, after the Phase 216 verifier returned `gaps_found` (blocker B2).** Two
+claims above were false and are withdrawn. (a) "Phase 216 changed neither count nor variant" is
+false for four files this phase rewrote: `certificates-{empty,loading}-dark` went `(none)` ->
+`color-contrast:2`, and `hardware-{empty,loading}-dark` went
+`color-contrast:3 + scrollable-region-focusable:1` -> `color-contrast:8`. It is true only of
+`data-at-rest` (2->2) and `compare`. (b) The residual divergence is not one `data-at-rest` entry: it
+is **4 routes across 2 rules**, with `/hardware` at 0-vs-**8**, not 0-vs-2. (c) The deeper finding:
+the `empty` and `loading` legs are **near-vacuous** — only `/api/scan/latest` of ten fixture
+endpoints consults `VITE_A11Y_FIXTURE_VARIANT` (`vite.config.ts:29`; the other nine serve full
+fixtures unconditionally), and `loading` returns the COMPLETE fixture after a 3s delay, so it
+measures the default state by construction. All three dark variants therefore carry identical
+`(rule, count)` sets for every data-bearing route, with distinct `generated` timestamps proving
+three real sweeps rather than a copy. Filed at
+`.planning/todos/pending/260929-a11y-empty-loading-variant-legs-are-near-vacuous.md`.
+
+This todo's framing — a single `data-at-rest` 0-vs-2 entry — is too narrow. Read the vacuity todo
+first; fixing that one may dissolve this one, since the CI-side `2` is the default fixture leaking
+through rather than a genuine empty-state render.
