@@ -3,6 +3,7 @@ import { useScanData } from "@/hooks/useScanData"
 import { useHardwareDrift } from "@/hooks/useHardwareDrift"
 import { useVendorPqcTrends } from "@/hooks/useVendorPqcTrends"
 import type { HardwareFinding } from "@/types/api"
+import { modbusLabel, bacnetLabel, bridgeLabel, snmpLabel } from "./hardware-badge-labels"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -116,70 +117,6 @@ const BACNET_ABORT_TOOLTIP =
 // per-CVE NVD links rendered directly beneath it, so the badge didn't read as
 // a distinct element (human UAT, 142-06).
 const CVE_BADGE_STYLE = "bg-[hsl(var(--status-warning))] text-black"
-
-// Maps a raw probe_state wire value to the verbatim UI-SPEC label. Returns
-// "—" (never attempted) for null/undefined, mirroring snmpLabel's raw-fallback
-// convention. identifiedLabel is column-specific ("Modbus" or "BACnet").
-function probeStateLabel(rawState: string | null | undefined, identifiedLabel: string): string {
-  if (!rawState) return "—"
-  switch (rawState) {
-    case "identified":
-      return identifiedLabel
-    case "no_response":
-      return "No response"
-    case "no_match":
-      return "No match"
-    case "aborted_anomalous_response":
-      return "Probe aborted"
-    default:
-      return rawState
-  }
-}
-
-function modbusLabel(f: HardwareFinding): string {
-  return probeStateLabel(f.modbus_probe_state, "Modbus")
-}
-
-function bacnetLabel(f: HardwareFinding): string {
-  return probeStateLabel(f.bacnet_probe_state, "BACnet")
-}
-
-// Maps the raw wire bridge_status to the verbatim UI-SPEC label. Returns ""
-// for null/absent (not a detected bridge pair) — the table cell renders a
-// muted em-dash for that case, matching the existing SNMP-column convention.
-function bridgeLabel(f: HardwareFinding): string {
-  switch (f.bridge_status) {
-    case "upstream_mitigated":
-      return "SNMP-confirmed"
-    case "partial_only":
-      return "Partial (assumed)"
-    default:
-      return ""
-  }
-}
-
-// Maps the raw wire snmp_version to the verbatim UI-SPEC label. Returns "—"
-// (never attempted) for null/undefined; mirrors quirk/reports/html_renderer.py
-// and docx_renderer.py's `_snmp_badge_label` raw-fallback so an unmapped state
-// (e.g. "v3-protocol-mismatch") renders its raw value rather than going blank.
-function snmpLabel(f: HardwareFinding): string {
-  const raw = f.snmp_version
-  if (!raw) return "—"
-  switch (raw) {
-    case "v3 auth+priv":
-      return "v3 auth+priv"
-    case "v3 noAuthNoPriv":
-      return "v3 noAuthNoPriv"
-    case "v2c":
-      return "v2c"
-    case "v3-failed-fell-back":
-      return "v3 failed → v2c"
-    case "none":
-      return "No SNMP"
-    default:
-      return raw
-  }
-}
 
 export function HardwarePage() {
   const { data, loading, error } = useScanData()
