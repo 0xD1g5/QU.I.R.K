@@ -44,8 +44,10 @@ function makeViolation({ id, impact = "serious", count = 1, target, tags = [], h
   }
 }
 
-function makeBaselineEntry({ rule, count, impact = "serious", justification = "" }) {
-  return { rule, count, impact, wcag: [], helpUrl: "", justification, samples: [] }
+function makeBaselineEntry({ rule, count, impact = "serious", justification = "", countRange }) {
+  const entry = { rule, count, impact, wcag: [], helpUrl: "", justification, samples: [] }
+  if (countRange !== undefined) entry.countRange = countRange
+  return entry
 }
 
 describe("deriveWcagCriteria", () => {
@@ -135,6 +137,128 @@ describe("compareToBaseline — ratchet (D-13)", () => {
     const result = compareToBaseline("cbom", live, [])
     expect(result.regressions).toEqual([
       expect.objectContaining({ rule: "label", baselineCount: 0, observedCount: 2 }),
+    ])
+  })
+})
+
+describe("compareToBaseline — declared tolerance range (216 D-10/D-12)", () => {
+  it("a live count inside the range yields neither a regression nor a stale entry", () => {
+    const live = [makeViolation({ id: "scrollable-region-focusable", count: 2 })]
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", live, baseline)
+    expect(result.regressions).toHaveLength(0)
+    expect(result.staleEntries).toHaveLength(0)
+  })
+
+  it("a live count one above the range ceiling yields exactly one regression, reporting the ceiling", () => {
+    const live = [makeViolation({ id: "scrollable-region-focusable", count: 3 })]
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", live, baseline)
+    expect(result.regressions).toEqual([
+      expect.objectContaining({
+        rule: "scrollable-region-focusable",
+        baselineCount: 2,
+        observedCount: 3,
+      }),
+    ])
+    expect(result.staleEntries).toHaveLength(0)
+  })
+
+  it("a live count one below the range floor yields exactly one stale entry, reporting the floor", () => {
+    const live = [makeViolation({ id: "scrollable-region-focusable", count: 0 })]
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", live, baseline)
+    expect(result.regressions).toHaveLength(0)
+    expect(result.staleEntries).toEqual([
+      expect.objectContaining({
+        rule: "scrollable-region-focusable",
+        baselineCount: 1,
+        observedCount: 0,
+      }),
+    ])
+  })
+
+  it("a range of [2,2] is exactly equivalent to count: 2 on all three legs", () => {
+    const baseline = [
+      makeBaselineEntry({ rule: "color-contrast", count: 2, countRange: [2, 2] }),
+    ]
+    const insideResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 2 })],
+      baseline,
+    )
+    expect(insideResult.regressions).toHaveLength(0)
+    expect(insideResult.staleEntries).toHaveLength(0)
+
+    const aboveResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 3 })],
+      baseline,
+    )
+    expect(aboveResult.regressions).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 2, observedCount: 3 }),
+    ])
+
+    const belowResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 1 })],
+      baseline,
+    )
+    expect(belowResult.staleEntries).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 2, observedCount: 1 }),
+    ])
+  })
+
+  it("a baselined range with floor > 0 and no live observation yields one stale entry", () => {
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", [], baseline)
+    expect(result.staleEntries).toEqual([
+      expect.objectContaining({
+        rule: "scrollable-region-focusable",
+        baselineCount: 1,
+        observedCount: 0,
+      }),
+    ])
+  })
+
+  it.each([
+    ["ceiling below floor", [3, 1]],
+    ["single-element array", [1]],
+    ["three-element array", [1, 2, 3]],
+    ["string instead of array", "1-2"],
+    ["negative floor", [-1, 2]],
+    ["non-integer bound", [1.5, 2]],
+  ])("a malformed countRange (%s) throws and names the rule", (_desc, countRange) => {
+    const baseline = [makeBaselineEntry({ rule: "color-contrast", count: 2, countRange })]
+    expect(() => compareToBaseline("cbom", [], baseline)).toThrow(/color-contrast/)
+  })
+
+  it("an entry with no countRange is compared against its exact count", () => {
+    const baseline = [makeBaselineEntry({ rule: "color-contrast", count: 3 })]
+    const aboveResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 4 })],
+      baseline,
+    )
+    expect(aboveResult.regressions).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 3, observedCount: 4 }),
+    ])
+
+    const belowResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 2 })],
+      baseline,
+    )
+    expect(belowResult.staleEntries).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 3, observedCount: 2 }),
     ])
   })
 })
@@ -290,6 +414,31 @@ describe("justification carry-forward across regeneration (Phase 185 D-05)", () 
       previousEntries: [],
     })
     expect(emptyEntries[0].justification).toBe("")
+  })
+
+  it("carries a declared countRange forward across a regeneration (216 D-10/D-12)", () => {
+    const violation = makeViolation({ id: "scrollable-region-focusable", count: 2 })
+    const previousEntries = [
+      makeBaselineEntry({
+        rule: "scrollable-region-focusable",
+        count: 2,
+        justification: "macOS-vs-Linux render disagreement; see 216-CONTEXT.md D-13.",
+        countRange: [1, 2],
+      }),
+    ]
+    const { entries } = buildBaselineEntries("data-at-rest", [violation], { previousEntries })
+    const entry = entries.find(e => e.rule === "scrollable-region-focusable")
+    expect(entry.countRange).toEqual([1, 2])
+  })
+
+  it("does not add a countRange key to an entry that never had one", () => {
+    const violation = makeViolation({ id: "color-contrast", count: 3 })
+    const previousEntries = [
+      makeBaselineEntry({ rule: "color-contrast", count: 3, justification: "still present" }),
+    ]
+    const { entries } = buildBaselineEntries("cbom", [violation], { previousEntries })
+    const entry = entries.find(e => e.rule === "color-contrast")
+    expect(Object.keys(entry)).not.toContain("countRange")
   })
 })
 
