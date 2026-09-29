@@ -124,6 +124,17 @@ function sumNodes(violation) {
 // `false` for `undefined`/`null` (the "no range declared" case is valid and handled by the
 // caller, not here) but `false` for any other malformed shape too — the caller distinguishes
 // "absent" from "malformed" itself.
+//
+// 216-CONTEXT.md D-14 — countRange is TRANSITIONAL, not permanent. The only entry that has
+// one is `data-at-rest`'s `scrollable-region-focusable`, whose count is render-dependent
+// (it fires on whether a container actually overflows at render time, a function of
+// viewport/font metrics). KBD-01 (Phase 219) adds the `tabIndex`/`role` to
+// `src/components/ui/table.tsx` that the rule's own accepted-violation justification says it
+// needs and WITHDRAWS that acceptance rather than renewing it — which removes the
+// render-dependence this band exists to absorb. When that lands, delete the range; do not
+// renew it by inertia, and do not add new ranges to route around a fixable rule. The
+// same pointer is in run-a11y.mjs's header; it is repeated here because this is the file a
+// future reader changing the comparison will open.
 function isValidCountRange(value) {
   if (value === undefined || value === null) return false
   if (!Array.isArray(value) || value.length !== 2) return false
