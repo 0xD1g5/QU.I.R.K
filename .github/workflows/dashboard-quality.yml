@@ -126,6 +126,12 @@ jobs:
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
 
+      # 216 D-17: positioned after every a11y:baseline* step above and before the artifact
+      # upload below, so the uploaded ledger reflects baselines from every theme this run
+      # produced. Browser-free -- reads committed JSON from disk, no Chrome/preview needed.
+      - name: Regenerate accepted-violations ledger
+        run: npm run a11y:ledger
+
       - name: Upload regenerated baselines
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:

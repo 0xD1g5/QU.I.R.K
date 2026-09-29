@@ -10,7 +10,7 @@ the grand total below mechanically reconstructible from this ledger alone.
 
 Totals: 3 route(s), 4 (route, rule) entries, 8 accepted violation node(s).
 
-## compare
+## compare [dark]
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
@@ -23,7 +23,7 @@ Totals: 3 route(s), 4 (route, rule) entries, 8 accepted violation node(s).
 
 </details>
 
-## data-at-rest
+## data-at-rest [dark]
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
@@ -36,7 +36,7 @@ Totals: 3 route(s), 4 (route, rule) entries, 8 accepted violation node(s).
 
 </details>
 
-## hardware
+## hardware [dark]
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
