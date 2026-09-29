@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
+**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Series 216 added: five cases, **all five PASS**. `UAT-216-03` was first recorded SKIP while plan 216-08 was still pending, then re-run and flipped to PASS once 216-08 landed the measured `countRange: [1, 2]` — exactly as that SKIP annotation prescribed. Its original multi-line SKIP annotation also violated the canonical single-line `**Result:**` form and was caught by `tests/test_uat_series_format.py`, a gate outside the five this phase had been running. No version bump — v5.26 is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
 (Certificates Page — Expiry Sorting) and `UAT-7-21` (Dashboard Theme — No Hardcoded Colors)
 re-dispositioned FAIL to PASS. `UAT-7-12` cites the five new
 `certificates-expiry-sort.test.tsx` nodes plus operator browser confirmation. `UAT-7-21` is a
@@ -29912,3 +29912,419 @@ open the disposition text will not know these two bullets were never checked. Tr
 `.planning/todos/pending/260928-uat-7-21-two-pass-criteria-uncovered-by-any-instrument.md`.
 
 ---
+
+## Series 215: Instrument Ratchet — Badge-Contrast Debt Made Measurable (Phase 215 — v5.26)
+
+**Last Updated:** 2026-09-29 (Phase 215 close — Instrument Ratchet, the first phase of v5.26.
+Five cases, all PASS. This phase FIXED NO COLOURS: it converted an unbounded, invisible liability
+into a bounded, shrink-only number that Phases 217/218 are verified against. `UAT-215-02` records
+the count decomposition that matters most to a later reader — the roadmap's **45** and the
+baseline's **35** are both correct measurements of different things, and the tempting reconciliation
+(adding line numbers to baseline keys so 45 reproduces) is banned precisely because Phase 217 shifts
+every line number. `UAT-215-03` records that widening the audit set from 27 to 76 files surfaced a
+contradiction between two standing guards, resolved as a THREE-way split rather than one debt list.
+`UAT-215-05` records a hazard that had broken this build twice and was never mechanically enforced
+until now.
+
+**A note on this series' own existence, which belongs in a milestone about instrument truth:** the
+phase executor adjudicated CLAUDE.md's Per-Phase Documentation Checklist row by row, with evidence,
+and concluded UAT-SERIES.md was a no-op — no CLI command, no scanner signal, no config option, no
+report section, no shipped `.tsx` change, and the one UAT-cited node title left byte-identical.
+That reasoning was careful and it was wrong: `scripts/verify_phase_gates.py`'s
+`_USER_FACING_PREFIXES` judges by PATH, and `src/dashboard/` matches whether or not the changed
+files are tests. The pre-commit gate blocked the phase-close commit and this series exists because
+of it. A gate keyed on paths caught what reasoning about content missed — which is the same lesson
+this phase's own instruments encode.)
+
+### UAT-215-01: The Contrast Guard Derives Its Scope From Source, Not From A List
+
+**ID:** UAT-215-01
+**Title:** One guard evaluates every dashboard page in both themes, with its file set and pair set
+derived at run time and no hand-maintained list anywhere on the path
+**Maps to:** RATCHET-01 (Success Criterion 1)
+
+**What to test:** The defect class this milestone exists to correct is a gate whose scope is
+narrower than its claim. A guard that hardcodes which files or which pairs it checks reproduces
+that defect in the instrument built to detect it.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/badge-contrast-guard.test.ts
+grep -c "readdirSync" src/components/__tests__/audited-files.ts        # real walk, not a list
+grep -rn "function auditedFiles" src/                                   # exactly 1
+```
+
+**Pass Criteria:** the guard passes; its file set comes from a recursive directory walk and its pair
+set from a regex scan of source text; both themes (`:root` dark and `.light`) are evaluated; and no
+literal array of file names or badge names appears between source and assertion.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated + gsd-verifier + orchestrator
+**Notes:** Verified independently of the phase SUMMARYs. The verifier attempted a vacuity
+stress-test — constructing any path by which the guard could report success while measuring nothing
+— and could not: every extraction stage (file walk, pair extraction, theme-block parse, token
+resolution, baseline presence) throws at COLLECTION time against a FLOOR, never an exact count.
+Floors rather than equality are deliberate: `HARNESS-03` is a live flake caused by an exact-count
+pin, and this phase declined to add a second one.
+
+### UAT-215-02: 45 And 35 Are Both Correct, And The Reconciliation Is Banned
+
+**ID:** UAT-215-02
+**Title:** The checked-in baseline is shrink-only, trips in BOTH directions, and records 35 distinct
+keys for the same 45 failing occurrences — with the line-number "fix" explicitly forbidden
+**Maps to:** RATCHET-02 (Success Criterion 2)
+
+**What to test:** A baseline that can silently grow is not a ratchet. A baseline whose entry count
+was bent to match a roadmap figure is not a measurement.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/badge-contrast-guard.test.ts
+python3 -c "import json;d=json.load(open('src/components/__tests__/badge-contrast-baseline.json'));print(len(d))"
+grep -c "UPDATE_BADGE_CONTRAST_BASELINE" src/components/__tests__/badge-contrast-guard.test.ts
+```
+
+**Pass Criteria:** the baseline holds 35 entries keyed `file|bgToken|fgSpec|theme` with NO line
+numbers; both `dark` and `light` appear; a newly sub-AA pair absent from the baseline fails; a
+baselined pair that gets FIXED also fails, demanding its entry be deleted; and regeneration happens
+only under `UPDATE_BADGE_CONTRAST_BASELINE=1`, never on an ordinary run.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated + gsd-verifier + orchestrator
+**Notes:** Four counts were re-derived live rather than transcribed: **103** raw badge pairs, **57**
+unique triples, **45** failing AA occurrences (reproducing backlog 999.117's figure exactly), **35**
+distinct baseline keys. 45 counts OCCURRENCES — the same class string repeated in one file counts
+each time. 35 counts distinct FIXABLE things. Both are correct; the roadmap's 45 was preserved in
+prose rather than overwritten. The tempting reconciliation — adding line numbers to the key so 45
+reproduces — is banned by decision D-06 precisely because Phase 217 shifts every line number it
+touches, which would invalidate the whole baseline on the first fix. Ratchet proved RED in both
+directions with verbatim vitest captures, including the real production guard reporting
+`pages/cbom.tsx (light): bg #9d6607 (--status-warning) on fg #000000 = 4.34:1 — NEW sub-AA pair,
+not in baseline`.
+
+### UAT-215-03: Widening The Audit Set Exposed Two Guards In Contradiction
+
+**ID:** UAT-215-03
+**Title:** `auditedFiles()` exists in exactly one place and covers all 76 non-test `.tsx`; the 13
+violations that widening surfaced split THREE ways, not one
+**Maps to:** RATCHET-03 (Success Criterion 3)
+
+**What to test:** v5.25 filed "the colour audit globs 27 of 76 files" as a defect. Widening it is
+the fix — but widening makes `hardcoded-color-audit.test.tsx` flag literals that two OTHER guards
+require to stay raw. Filing those as debt would schedule a future drain pass to break a standing
+guard.
+
+**Steps:**
+```
+grep -rn "function auditedFiles" src/dashboard/src/                     # exactly 1
+grep -c "Copied verbatim" src/dashboard/src/components/__tests__/theme-token-vocabulary.test.ts
+grep -l "FOREVER_EXEMPT\|DEBT_BASELINE" src/dashboard/src/components/__tests__/hardcoded-color-audit.test.tsx
+grep -l "EXTERNAL_VAR_NAMESPACES" src/dashboard/src/components/__tests__/theme-token-vocabulary.test.ts
+```
+
+**Pass Criteria:** `function auditedFiles` returns exactly one grep hit; the verbatim copy and its
+annotation are DELETED from `theme-token-vocabulary.test.ts` rather than re-synced; both consumers
+import the single derived source; the set is a floor-asserted 76 files; and the 13 newly-surfaced
+violations live in three structurally separate constructs — 6 advisory-firewall sites in
+`FOREVER_EXEMPT` (each citing the guard and Phase 156/161 decision requiring the literal), 5
+drainable `chart.tsx` hex literals in `DEBT_BASELINE`, and 2 Radix runtime var refs in
+`EXTERNAL_VAR_NAMESPACES`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated + gsd-verifier + operator (checkpoint judgements 1 and 4)
+**Notes:** `stripComments()` was extracted alongside `auditedFiles()` — a finding beyond the
+requirement's text, since extracting one and leaving its twin would re-create the
+enumeration-vs-derivation defect inside the phase that removes it. Only the 2 VERBATIM copies moved;
+the 3 DIVERGENT implementations in `lifecycle-advisory-guard.test.ts`,
+`vendor-trend-advisory-guard.test.ts` and `exposure-map-colors.test.ts` were deliberately left alone
+and are named in the new module's docstring so a later reader does not "finish the job". The
+three-way split corrects a locked decision (D-14) that originally bucketed all 7 remaining
+violations as debt: the 2 Radix vars (`--radix-select-trigger-height`/`-width`) are injected at
+RUNTIME, absent from `index.css` by construction, and can never be drained. The reversal was
+surfaced to the operator as a rejectable choice at the phase's blocking checkpoint and approved
+2026-09-29. RATCHET-03's pre-defined fallback — retreat to a 27/76 split, recorded as
+scope-qualified — was never triggered; the measured 13 sites matched the projection exactly.
+
+### UAT-215-04: The Guard Is Proved To Fail, Not Asserted To Work
+
+**ID:** UAT-215-04
+**Title:** A mutation probe drives the pure evaluator with synthetic input and proves both ratchet
+directions, with the failing output captured verbatim as evidence
+**Maps to:** RATCHET-04 (Success Criterion 4)
+
+**What to test:** This project's standing rule is that `Self-Check: PASSED` is a claim, not
+evidence. A guard nobody has watched fail is a guard nobody knows works.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/badge-contrast-guard-probe.test.ts
+grep -cE "from ['\"](vitest|node:fs)" src/components/__tests__/badge-contrast-evaluator.ts   # 0
+```
+
+**Pass Criteria:** `evaluatePairs` is pure — zero `vitest` and zero `node:fs` imports — so the probe
+feeds it synthetic input without mutating any real source file and without a git-dirt window; the
+probe exercises BOTH directions (a new sub-AA pair absent from the baseline, and a baselined entry
+silently widened); the probe's own nodes are GREEN, being a positive test about negative behaviour;
+and a separately-produced deliberately-RED run's verbatim terminal output is committed as evidence.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated + gsd-verifier + operator (checkpoint judgement 2)
+**Notes:** Three RED transcripts were captured. One inverted the probe's own assertion, which proves
+the probe node is not vacuous but does NOT by itself demonstrate the guard catching an injected
+pair — the orchestrator flagged that distinction to the operator rather than let the two be read as
+equivalent. The criterion is met by the second capture: a real baseline entry deleted from the
+PRODUCTION guard, yielding genuine vitest output naming the specific key and ratio. The verifier
+re-derived this independently and agreed. Recorded here because a later reader comparing three
+"RED proofs" should know they prove different things.
+
+### UAT-215-05: A Hazard That Broke This Build Twice Is Now Mechanically Enforced
+
+**ID:** UAT-215-05
+**Title:** Tailwind's JIT scanner reads test-file comments, and a guard now prevents an intact
+arbitrary-value class from emitting junk CSS
+**Maps to:** RATCHET-01 (supporting — no requirement of its own)
+
+**What to test:** `tailwind.config.ts`'s content glob does a static regex pass over raw source text
+INCLUDING comments and string literals. `cbom-badge-contrast-guard.test.ts:35-48` records a build
+broken twice by this — the second time by an example written into the comment warning about it.
+Phase 215 wrote two new files full of exactly these class strings.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/tailwind-jit-safety-guard.test.ts
+npm run build && cd .. && git diff --stat quirk/dashboard/static    # must be empty
+```
+
+**Pass Criteria:** the guard scans `src/**/__tests__/**/*.{ts,tsx}` for unescaped arbitrary-value
+class candidates and passes; and a real `npm run build` leaves the committed
+`quirk/dashboard/static` byte-identical, corroborating the guard with a second independent
+instrument.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated + orchestrator
+**Notes:** Research recommended ACCEPTING this hazard as documented-but-unenforced, citing scope.
+The planner measured it instead and found the opposite: unescaped candidates return 303 hits across
+`src/` but ZERO inside any `__tests__` directory (the 36 bracket constructs under `tests/a11y/` are
+in `.json`/`.md`, outside the content glob), so the guard is green today with no false positives and
+cost almost nothing. Worth recording that the conservative estimate was the wrong one — assuming
+instead of checking would have left a live hazard unguarded on the grounds that guarding it was too
+expensive.
+
+---
+
+## Series 216: A11y Harness Repair — The Instrument Can Now See What It Sweeps (Phase 216 — v5.26)
+
+**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Five
+cases. This phase fixed NO colours — it repaired three instrument defects that were letting real
+badge-contrast and theme-scope debt go unmeasured. `UAT-216-02` records a demonstration, not an
+assertion: the enriched fixture makes `/certificates` and `/hardware` genuinely FAIL today, and
+that FAIL is the correct, intended state until Phase 216's own plan 08 baselines it on Linux CI —
+a later reader seeing red on this branch should not mistake it for a regression. `UAT-216-03` is
+the one case in this series recorded SKIP rather than PASS: the `countRange` tolerance mechanism is
+built and unit-proven, but the actual derived range for `data-at-rest` does not land in the
+committed baseline until plan 216-08 runs the Linux `workflow_dispatch` job — this case is written
+now, honestly, rather than invented against evidence that does not exist yet.)
+
+### UAT-216-01: Every Route Is Swept In Both Themes, With A Separate Baseline Each
+
+**ID:** UAT-216-01
+**Title:** The a11y harness seeds the real theme-provider localStorage key before navigation and
+sweeps every `routes.json` route in both dark and light, each theme naming its own baseline file
+**Maps to:** HARNESS-01 (ROADMAP Phase 216 criterion 1)
+
+**What to test:** Before this phase, `run-a11y.mjs` had no theme dimension at all — a
+`grep -cE "data-theme|prefers-color-scheme|classList|theme"` against it returned `0`. A gate that
+never names the theme it swept cannot know it swept only one.
+
+**Steps:**
+```
+cd src/dashboard
+npm run a11y:check:dark
+npm run a11y:check:light
+ls tests/a11y/baseline-*-default-dark.json | wc -l    # 13
+ls tests/a11y/baseline-*-default-light.json | wc -l   # 0 today — see Notes
+npx vitest run tests/a11y/theme-sweep-contract.test.ts
+```
+
+**Pass Criteria:** `theme-sweep-contract.test.ts` passes, deriving its theme set from `THEMES` at
+run time (no hardcoded `'light'`/`'dark'` literal); both `a11y:check:dark` and `a11y:check:light`
+exist as real npm scripts and are named in both `dashboard-quality.yml` jobs; every baseline
+filename carries an explicit `-dark`/`-light` suffix with no implicit default; and a light sweep
+against a missing light baseline fails loudly, naming the light-specific filename, never silently
+resolving the dark file for that route.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `npx vitest run tests/a11y/theme-sweep-contract.test.ts` — 8 passed. All 40 pre-existing
+baselines were renamed (`git mv`, verified as pure renames, zero delete+add pairs) to carry an
+explicit `-dark` suffix; `ls baseline-*-default-light.json` returning `0` today is expected and
+correct — no light baseline has been generated on Linux CI yet (plan 216-08, not yet run). The
+mechanism this case certifies is the SEEDING and NAMING, proved directly:
+`npm run a11y:check:light` exits 1 for all 13 routes, each FAIL line naming a
+`baseline-<slug>-default-light.json` path and the `npm run a11y:baseline:light` remediation
+command, with zero mention of any `-dark.json` path anywhere in that run's stdout (verified via
+`grep -c` against the captured output in `216-06-SUMMARY.md`, Capture 1) — the falsifying case (a
+silent fallback to dark) does not occur.
+
+### UAT-216-02: `/certificates` And `/hardware` No Longer Report PASS While Rendering Sub-AA Badges
+
+**ID:** UAT-216-02
+**Title:** The fixture now renders every reachable badge variant on both routes, and the harness
+reports a genuine, itemized FAIL — not a silent PASS — the moment it does
+**Maps to:** HARNESS-02 (ROADMAP Phase 216 criterion 2)
+
+**What to test:** Before this phase, `/certificates`' fixture data held both certificates at
+`quantum_safety: "At Risk"`, so 3 of 4 `QS_BADGE` variants — including the sub-AA `Safe` variant —
+never rendered, and axe audited a DOM that structurally could not surface the defect
+(`baseline-certificates-default-dark.json` held `"entries": []`). The criterion is a demonstration:
+show the enriched-fixture sweep going RED before any baseline absorbs the failure, per this
+project's RATCHET-04 mutation-probe standard ("proves it can fail — demonstrated rather than
+asserted").
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run tests/a11y/badge-variant-coverage.test.ts
+npm run a11y:check:dark
+```
+
+**Pass Criteria:** `badge-variant-coverage.test.ts` passes with zero `uncoveredKeys` — every badge
+map key discovered by a run-time source scan of `src/pages/*.tsx` is reached by the fixture, with
+any genuinely unreachable key named in an explicit, reasoned allowlist rather than silently
+dropped; and a real `npm run a11y:check:dark` run reports `certificates` and `hardware` as FAIL
+with a `color-contrast` violation naming the `Safe`/`high` badge markup, not a silent PASS.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `badge-variant-coverage.test.ts` — 6 passed (verbatim RED-then-green transition captured
+in `216-02-SUMMARY.md`: 21 uncovered keys before fixture enrichment, 0 after). The live demonstration
+this case actually certifies is `216-06-SUMMARY.md` Capture 3 —
+`npm run a11y:check` (dark) reports `FAIL [certificates]: color-contrast count 2 exceeds baseline 0`
+(sample: `<div class="... bg-[hsl(var(--qs-node-safe))] text-white text-xs">Safe</div>`) and
+`FAIL [hardware]: color-contrast count 8 exceeds baseline 3`. This FAIL is the CORRECT, INTENDED
+state on this branch — the instrument now sees the defect it could not see before, and plan 216-08
+baselines it on Linux CI with written per-entry justifications naming FIX-01/FIX-02 as the phases
+that actually drain it (D-04/D-09). A reader seeing this FAIL locally before 216-08 lands should
+read it as the criterion being met, not as a regression.
+
+### UAT-216-03: The `data-at-rest` Range Absorbs The macOS/Linux Disagreement
+
+**ID:** UAT-216-03
+**Title:** `compareToBaseline` supports an opt-in, per-entry `countRange`, proven correct at the
+unit level and applied to the live `data-at-rest` baseline with measured bounds
+**Maps to:** HARNESS-03 (ROADMAP Phase 216 criterion 3)
+
+**What to test:** The recorded macOS-vs-Linux disagreement on `data-at-rest`'s
+`scrollable-region-focusable` count (baseline `1` locally, `2` on CI,
+`.planning/todos/completed/a11y-baseline-environment-mismatch.md`) is what a declared `countRange`
+is meant to absorb, with the floor still ratcheting (D-12) and an explicit KBD-01/Phase 219 pointer
+marking it transitional (D-14).
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run tests/a11y/baseline-diff.test.ts -t "declared tolerance range"
+cat tests/a11y/baseline-data-at-rest-default-dark.json | grep -c countRange   # 2 since plan 216-08
+grep -c "countRange" tests/a11y/run-a11y.mjs
+```
+
+**Pass Criteria:** the tolerance mechanism passes its full unit suite (ceiling regression, floor
+stale-entry, `[N,N]` exact-equivalence, malformed-shape rejection, carry-forward across
+regeneration); `run-a11y.mjs`'s docstring is amended (not left asserting the retired "no tolerance
+band" claim) and cites `HARNESS-03`, `KBD-01`, and the Phase 177-07 provenance; and the live
+`data-at-rest` baseline entry itself carries a `countRange` whose bounds were derived from two
+actually-observed runs (one macOS, one Linux CI), not guessed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP (re-run and flipped from SKIP after plan 216-08 landed, exactly as the superseded SKIP annotation prescribed: `countRange: [1, 2]` now sits on the live `scrollable-region-focusable` entry in both `baseline-data-at-rest-default-dark.json` and its `-default-light.json` sibling, bounds measured not guessed — macOS 1 via `npm run a11y:check`, Linux 2 via CI run 36613039581 on pinned Chrome 152.0.7977.82 — with the D-10/D-12/D-13/D-14 tolerance addendum naming KBD-01 and Phase 219 as the retirement owner; 12 tolerance nodes in `tests/a11y/baseline-diff.test.ts` pass, and `run-a11y.mjs` cites HARNESS-03, KBD-01 and the Phase 177-07 provenance with the retired "no tolerance band" phrase absent)
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** Mechanism-level falsification is real and committed: `216-03-SUMMARY.md` captures a
+docstring-guard RED (reintroducing the retired "no tolerance band" phrase) then a restore-to-green,
+and 12 dedicated `compareToBaseline` nodes prove the ceiling/floor/malformed-shape behaviour by
+mutation, not assertion. The application of that mechanism to the entry this criterion names was a
+scope gap between plans, closed by plan 216-08: the range is now declared on the live entry in both
+themes with bounds taken from two actually-observed runs. Note the two bounds differ by platform, not
+by theme — macOS reports 1 under both dark and light, Linux 2 — which is the expected shape for a
+keyboard-focus rule and was measured rather than predicted. The `empty` and `loading` variants show a
+wider 0-vs-2 divergence that `[1, 2]` deliberately does NOT cover, because a `[0, 2]` floor would
+disable the D-12 shrink-only ratchet; that is pre-existing, CI-green, and tracked as a pending todo
+for Phase 219 / KBD-01 rather than absorbed here.
+
+### UAT-216-04: The Repaired Harness Is Proved To Fail, Not Asserted To Work
+
+**ID:** UAT-216-04
+**Title:** A permanent 15-node synthetic mutation probe exercises the repaired choke points
+directly, and both named anti-tautology falsifiers were captured live against the real harness
+**Maps to:** HARNESS-01, HARNESS-02 (216-VALIDATION.md Anti-Tautology Checks)
+
+**What to test:** This project's standing rule: `Self-Check: PASSED` is a claim, not evidence, and
+a guard nobody has watched fail is a guard nobody knows works. 216-VALIDATION.md names two traps in
+advance — a light sweep silently falling back to the dark baseline, and a variant-coverage test
+that reads zero badge maps and passes vacuously.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run tests/a11y/harness-falsification-probe.test.ts
+```
+
+**Pass Criteria:** the probe's 15 nodes are all green by design (a positive test about negative
+behaviour, reading no real file — `grep -c "node:fs\|readFileSync"` on the probe file returns `0`);
+falsifier 1 (light-sweep-falls-back-to-dark) is disproven both synthetically (the probe) and against
+a real run (`npm run a11y:check:light`'s captured stdout naming only light-suffixed paths); and
+falsifier 2 (coverage test reads zero maps and passes) is disproven by an actual code mutation
+showing 3 of 6 real gate nodes going RED when `extractBadgeMaps` is forced to return `[]`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `tests/a11y/harness-falsification-probe.test.ts` — 15 passed
+(`216-06-SUMMARY.md` Task 1). Falsifier 1's live capture: `npm run a11y:check:light` exit 1, all 13
+routes FAIL, every line naming a `-default-light.json` path and zero `-default-dark.json` mentions
+in the captured output (Capture 1). Falsifier 2's live capture: a one-line edit forcing
+`badge-variant-coverage.test.ts`'s discovery glob to read zero files produced 3 failing nodes
+naming the exact zero-discovery condition, reverted via `git checkout --` with a confirmed clean
+`git status --porcelain` afterward (Capture 2). One leg is intentionally incomplete on this branch:
+216-VALIDATION.md's sign-off records falsifier 1 as "proved twice... and against a real light
+baseline in 216-08 Task 3" — that second half depends on a real Linux-generated light baseline,
+which does not exist until plan 216-08 runs. The synthetic and real-but-missing-baseline halves
+captured here are sufficient to certify the probe itself; the residual confirmation against a real
+committed light baseline is 216-08's to close.
+
+### UAT-216-05: The Accepted-Violations Ledger Cannot Silently Narrow Or Half-Commit A Theme
+
+**ID:** UAT-216-05
+**Title:** `ACCEPTED-VIOLATIONS.md` is now generated browser-free from a single disk-based loader
+shared with its own freshness gate, which enforces per-theme completeness and rejects a
+half-committed theme rollout
+**Maps to:** HARNESS-01 (216-CONTEXT.md D-17)
+
+**What to test:** The harness's old in-process ledger collection could only ever see one theme per
+process run — a generator that reads only what the current process just swept is structurally
+incapable of producing a theme-complete ledger once a second theme exists.
+
+**Steps:**
+```
+cd src/dashboard
+npm run a11y:ledger
+npx vitest run tests/a11y/accepted-violations-freshness.test.ts
+```
+
+**Pass Criteria:** `npm run a11y:ledger` regenerates `ACCEPTED-VIOLATIONS.md` from committed JSON
+with no browser, no preview server, and no network call; running it twice back-to-back produces a
+byte-identical file (idempotent); and the freshness gate's completeness legs reject both a missing
+dark default baseline and a theme that is present for only some slugs ("half-committed"), while a
+theme with zero files present on disk (light, today) is correctly NOT flagged.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `npx vitest run tests/a11y/accepted-violations-freshness.test.ts` — 11 passed (widened
+from 6 pre-phase). Two falsification demonstrations captured in `216-05-SUMMARY.md`: (1) removing
+`baseline-hardware-default-dark.json` produces a failing "Missing dark default baseline(s):
+hardware" node, restored and re-verified green; (2) synthetically committing a single
+`baseline-root-default-light.json` (1 of 14 slugs) produces a failing "Half-committed theme(s)
+detected" node naming the 13 missing light slugs, then removed with a confirmed clean
+`git status --short`. `npm run a11y:ledger` completes in ~0.2s with no `Starting vite preview` or
+Chrome-launch line in its output, and two consecutive runs produce zero `git status` diff.

@@ -14,48 +14,37 @@
  * SCOPE IS DERIVED AT RUN TIME, NEVER WRITTEN DOWN — same discipline as
  * `hardcoded-color-audit.test.tsx`'s own module docstring: a hand-maintained
  * list of token names or audited files would silently stop matching the
- * real set. `auditedFiles()` below is copied verbatim from that file (a
- * `readdirSync` of `src/pages/` plus `components/sidebar.tsx`) so both
- * guards agree on what "the dashboard's pages" means.
+ * real set. Both guards now import the SAME single derived file set from
+ * `./audited-files` (Phase 215 RATCHET-03) rather than each keeping their
+ * own copy of `auditedFiles()` — the duplicate this file used to carry (a
+ * `readdirSync` of `src/pages/` plus `components/sidebar.tsx`, with a
+ * comment describing it as a duplicate of the sibling guard's own function)
+ * is what this phase deleted, comment and all. The set now covers all 76
+ * non-test `.tsx` files under `src/`, not 27 pages.
  *
- * Three properties are asserted:
+ * Four properties are asserted:
  *   1. EXISTENCE — every `var(--x)` / `hsl(var(--x))` reference in the
- *      audited pages names a custom property actually defined in
- *      `index.css`.
+ *      audited files names a custom property actually defined in
+ *      `index.css`, OR its name matches a prefix in `EXTERNAL_VAR_NAMESPACES`
+ *      below (Radix-injected runtime custom properties that are absent from
+ *      `index.css` by construction and can never be drained).
  *   2. PARITY — every colour-bearing custom property defined in `:root` is
  *      also defined in `.light`, OR is named in the `THEME_INVARIANT` set
  *      below with a one-line reason. The set is NOT a place to silence a
  *      real gap — see the module comment on `THEME_INVARIANT` itself.
  *   3. VACUITY — the parsed `:root` set, the parsed `.light` set, and the
- *      audited page set are each asserted non-empty at collection time (not
+ *      audited file set are each asserted non-empty at collection time (not
  *      inside `it()`), so a regex that stops matching a future `index.css`
  *      refactor cannot report perfect parity over zero tokens.
+ *   4. NO STALE EXEMPTIONS — both `THEME_INVARIANT` and
+ *      `EXTERNAL_VAR_NAMESPACES` are checked at run time to still name a
+ *      live site; a stale entry excuses nothing while reading as a live
+ *      exemption (D-09).
  */
 import { describe, it, expect } from "vitest"
-import { readFileSync, readdirSync, existsSync } from "node:fs"
+import { readFileSync, existsSync } from "node:fs"
 import path from "node:path"
-
-const SRC_ROOT = path.resolve(__dirname, "../..")
-
-/** Copied verbatim from hardcoded-color-audit.test.tsx's auditedFiles(). */
-function auditedFiles(): string[] {
-  const pagesDir = path.join(SRC_ROOT, "pages")
-  const pages = readdirSync(pagesDir)
-    .filter((f) => f.endsWith(".tsx"))
-    .map((f) => path.join("pages", f))
-  const sidebar = path.join("components", "sidebar.tsx")
-  return [...pages, sidebar].sort()
-}
-
-/** Same comment-stripping logic as hardcoded-color-audit.test.tsx, so a
- * `var(--x)` mentioned only in prose is never treated as a real reference. */
-function stripComments(src: string): string {
-  const noBlocks = src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-  return noBlocks
-    .split("\n")
-    .map((line) => (/^\s*\/\//.test(line) ? "" : line))
-    .join("\n")
-}
+import { SRC_ROOT, auditedFiles, stripComments } from "./audited-files"
 
 /** Every `var(--token-name` reference (leading text only — we don't need the
  * fallback argument, just the property name). */
@@ -118,11 +107,40 @@ const THEME_INVARIANT: Record<string, string> = {
   "quantum-safe-foreground": "deliberately theme-invariant — Phase 165 Wave 5 fixed contrast in both themes with one dark foreground value",
 }
 
+/**
+ * EXTERNAL_VAR_NAMESPACES — Phase 215 (RATCHET-03). Widening the audited set
+ * to 76 files surfaced 2 EXISTENCE misses, both `var(--radix-select-trigger-*)`
+ * references in `components/ui/select.tsx`. These are CSS custom properties
+ * Radix UI injects at RUNTIME (element-measured trigger height/width); they
+ * are, by construction, absent from `index.css` and always will be, so they
+ * can never be drained by declaring a token for them — unlike a real missing
+ * reference, which is a bug to fix.
+ *
+ * Structurally SEPARATE from `THEME_INVARIANT` above: that set is about
+ * `:root`/`.light` PARITY for tokens that DO exist in `index.css`; this one
+ * is about REFERENCES to properties that will never exist in `index.css` at
+ * all. Conflating the two would let a future reader silence a real
+ * missing-token bug by adding it to this namespace list instead. Keyed by
+ * var-name PREFIX (not full name, not file|literal) — `radix-` covers every
+ * `--radix-*` property Radix's primitives inject, present or future, without
+ * needing an entry per property.
+ */
+const EXTERNAL_VAR_NAMESPACES: Record<string, string> = {
+  "radix-": "Radix UI injects --radix-* custom properties at RUNTIME (e.g. measured trigger " +
+    "height/width); application code legitimately reads them via var(--radix-...), they are by " +
+    "construction absent from index.css, and this is a permanent property of the Radix primitives, " +
+    "not debt to drain.",
+}
+
 // --- VACUITY (module scope, not inside it(), for the same reason
 // hardcoded-color-audit.test.tsx hoists its own vacuity guards: a throw here
-// is a collection error, which cannot be silently absorbed). ---
-if (AUDITED.length === 0) {
-  throw new Error("theme-token-vocabulary: the audited file set resolved empty")
+// is a collection error, which cannot be silently absorbed). Phase 215
+// (RATCHET-03): floor widened from the 27-file era to the 76-file era, never
+// an exact count (D-04). ---
+if (AUDITED.length < 60) {
+  throw new Error(
+    `theme-token-vocabulary: only ${AUDITED.length} files resolved — the recursive walk is broken`,
+  )
 }
 if (ROOT_PROPS.size === 0) {
   throw new Error("theme-token-vocabulary: :root parsed zero custom properties")
@@ -147,12 +165,35 @@ describe("theme token vocabulary (Phase 213 UIFIX-02)", () => {
       const src = stripComments(readFileSync(abs, "utf8"))
       for (const m of src.matchAll(VAR_REF_RE)) {
         const name = m[1]
-        if (!ROOT_PROPS.has(name)) {
-          missing.push(`${rel}: var(--${name}) has no matching :root definition in index.css`)
-        }
+        if (ROOT_PROPS.has(name)) continue
+        const exempt = Object.keys(EXTERNAL_VAR_NAMESPACES).some((prefix) => name.startsWith(prefix))
+        if (exempt) continue
+        missing.push(`${rel}: var(--${name}) has no matching :root definition in index.css`)
       }
     }
     expect(missing).toEqual([])
+  })
+
+  it("EXTERNAL_VAR_NAMESPACES carries no stale entries — every prefix still matches a live reference", () => {
+    // D-09, modelled on the THEME_INVARIANT stale check below: a prefix
+    // matching nothing excuses nothing while reading as a live exemption.
+    const liveNames = new Set<string>()
+    for (const rel of AUDITED) {
+      const abs = path.join(SRC_ROOT, rel)
+      if (!existsSync(abs)) continue
+      const src = stripComments(readFileSync(abs, "utf8"))
+      for (const m of src.matchAll(VAR_REF_RE)) liveNames.add(m[1])
+    }
+    const stale: string[] = []
+    for (const prefix of Object.keys(EXTERNAL_VAR_NAMESPACES)) {
+      const matches = [...liveNames].some((name) => name.startsWith(prefix))
+      if (!matches) {
+        stale.push(
+          `EXTERNAL_VAR_NAMESPACES lists prefix "${prefix}", which matches no live var(--...) reference — remove it`,
+        )
+      }
+    }
+    expect(stale).toEqual([])
   })
 
   it("every colour-bearing :root property has a .light override or a justified THEME_INVARIANT entry", () => {

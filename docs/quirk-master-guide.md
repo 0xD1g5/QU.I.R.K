@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,486 lines, in reading order.
+Five guides, 6,530 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3913,14 +3913,47 @@ quirk errors --dump-md > docs/error-codes.md
   (teal buttons, orange/red/green badges) are numerically unchanged — only the foreground text
   moved, to clear WCAG 2.1 AA contrast (teal buttons: 2.81:1 → 6.27:1). This is a contrast
   fix, not a redesign.
-- **Accessibility gate (Phase 165, A11Y-01/A11Y-04)** — `npm run a11y:check` (and its
-  `:empty`/`:loading` variants) in `src/dashboard/` now enforce a per-route, per-rule *count
-  budget* rather than a selector snapshot: each baselined `(route, rule)` pair records a
-  maximum node count, impact level, WCAG success criterion, and a written justification.
-  The gate fails if a count goes **up**
+- **Accessibility gate (Phase 165, A11Y-01/A11Y-04; theme dimension added Phase 216,
+  HARNESS-01)** — `npm run a11y:check` (and its `:empty`/`:loading` variants) in
+  `src/dashboard/` now enforce a per-route, per-rule *count budget* rather than a selector
+  snapshot: each baselined `(route, rule)` pair records a maximum node count, impact level,
+  WCAG success criterion, and a written justification. The gate fails if a count goes **up**
   (new debt) — and, deliberately, also if a count goes **down** without the baseline being
   regenerated (`npm run a11y:baseline`), so a real fix always tightens the ledger instead of
   leaving a now-stale, looser number in place.
+  - **The sweep now has an explicit theme dimension (216 D-01/D-02).** Every route in
+    `routes.json` is swept in both themes: `npm run a11y:check:dark` / `npm run
+    a11y:check:light` (and the baseline-regenerating `npm run a11y:baseline:dark` / `npm run
+    a11y:baseline:light`). The unsuffixed `a11y:check` / `a11y:baseline` remain aliases for the
+    `:dark` form — existing scripts and CI steps that name them keep working. The harness seeds
+    the real `quirk-ui-theme` `localStorage` key before navigation (the same path the live
+    application's theme provider reads), not a forced CSS class and not a `prefers-color-scheme`
+    media emulation, so the sweep exercises the actual app code path.
+  - **Baseline filenames now name the theme explicitly — there is no implicit default
+    (216 D-02).** Every baseline file is `baseline-{slug}-{variant}-{theme}.json`, including the
+    dark ones (`baseline-root-default-dark.json`, not `baseline-root-default.json`). A light
+    sweep with a missing light baseline is a hard error, exactly like a missing dark baseline
+    always was — it never silently falls back to reading the dark file for that route.
+  - **The `empty`/`loading` fixture variants stay dark-only, on purpose (216 D-03).** Neither
+    variant renders a themed badge, so a second, light-theme sweep of them would add real CI
+    cost for near-zero signal. A light-theme sweep requested against `empty`/`loading` is
+    **refused loudly** (the harness exits non-zero before starting the preview server or
+    browser) rather than silently skipped or silently run against the wrong theme.
+  - **Per-entry count tolerance (Phase 216, HARNESS-03).** Tolerance is **opt-in and
+    per-entry**, via a two-element `countRange: [floor, ceiling]` on a baseline entry. An entry
+    with no `countRange` keeps today's exact-integer semantics unchanged — this is the default
+    for all baselined rules. The existing stale-entry ratchet still fires against the range's
+    **lower bound**, so a `countRange` is not a one-way ratchet that only ever loosens: a live
+    count below the declared floor still fails as "Baseline is stale," exactly as an exact-count
+    entry would. Only `data-at-rest`'s `scrollable-region-focusable` entry carries a range today
+    — it absorbs a real macOS-vs-Linux render disagreement recorded in
+    `a11y-baseline-environment-mismatch.md`. That range is **transitional**: Phase 219 (KBD-01)
+    adds a `tabIndex`/`role` to `components/ui/table.tsx` that removes the render-dependence
+    entirely, and is expected to **retire** the range rather than renew it. A `countRange` is
+    hand-added once to a baseline entry and is then carried forward automatically across every
+    later CI regeneration — declaring one is **not** the "hand-patching a baseline count" the
+    next bullet forbids; it declares a bound in advance, it does not edit an already-observed
+    count after the fact.
 - **Regenerating a11y baselines — the sanctioned procedure (Phase 185, D-03).** Baselines
   **must** be generated on a Linux CI runner, not a contributor's local machine. Font metrics,
   overflow behavior, and other render-time properties differ enough between macOS and Linux that
@@ -3932,10 +3965,17 @@ quirk errors --dump-md > docs/error-codes.md
      `gh workflow run dashboard-quality.yml --ref <branch>`. `workflow_dispatch` works from any
      branch that contains the workflow file — you do not need to be on `main`.
   2. Once the run completes, download its artifact:
-     `gh run download <run-id> --name a11y-baselines-<run-id>`. The artifact contains both the
-     regenerated `baseline-*.json` files and the regenerated `ACCEPTED-VIOLATIONS.md` — **both
-     must be committed together**, since `ACCEPTED-VIOLATIONS.md` is a rendering of the baseline
-     JSON and the two will silently disagree if only one is updated.
+     `gh run download <run-id> --name a11y-baselines-<run-id>`. The artifact now contains
+     **per-theme** `baseline-*-dark.json` / `baseline-*-light.json` files, plus the regenerated
+     `ACCEPTED-VIOLATIONS.md` — **both must be committed together**, since `ACCEPTED-VIOLATIONS.md`
+     is a rendering of the baseline JSON and the two will silently disagree if only one is
+     updated. As of Phase 216, `ACCEPTED-VIOLATIONS.md` is produced by `npm run a11y:ledger` — a
+     browser-free command that re-renders the ledger straight from the committed baseline JSON on
+     disk (no preview server, no Chrome launch, ~0.2s). CI runs `a11y:ledger` itself as the final
+     step of `a11y-regenerate-baselines`, after all `a11y:baseline*` steps and before the artifact
+     upload, so the downloaded artifact already reflects every theme that run produced. You can
+     also run `npm run a11y:ledger` locally at any time to re-check the committed ledger against
+     the committed baselines without launching a browser.
   3. If you are onboarding a brand-new route, its `routes.json` entry and its baseline files
      **must land in the same commit**. A `routes.json` entry with no matching baseline file is a
      hard, by-design CI error (`missing baseline file`), not a soft warning — this is intentional,
@@ -3953,15 +3993,19 @@ quirk errors --dump-md > docs/error-codes.md
   the gate without ever establishing whether the change was a genuine environment artifact or a
   real regression slipping through — treat any future local count edit the same way: as a defect
   to be replaced with the CI-regeneration procedure above, not a shortcut to repeat.
-- **CI pins Chrome; local runs deliberately do not (Phase 185, D-06/D-07/D-08/D-09).** All three
-  `browser-actions/setup-chrome` usages in `dashboard-quality.yml` (`a11y`,
-  `a11y-regenerate-baselines`, `e2e-smoke`) pin a concrete version
-  (`chrome-version: '152.0.7977.82'` as of this writing), guarded by
+- **CI pins Chrome; local runs deliberately do not (Phase 185, D-06/D-07/D-08/D-09; amended
+  Phase 216, HARNESS-03).** All three `browser-actions/setup-chrome` usages in
+  `dashboard-quality.yml` (`a11y`, `a11y-regenerate-baselines`, `e2e-smoke`) pin a concrete
+  version (`chrome-version: '152.0.7977.82'` as of this writing), guarded by
   `src/dashboard/tests/a11y/pinned-deps.test.ts` so the three occurrences can never drift apart or
   regress to a floating channel name (`stable`/`beta`/`dev`/`latest`). Local `a11y:check` runs
   intentionally do **not** pin — `run-a11y.mjs` launches Puppeteer's `channel: 'chrome'`, whatever
   is locally installed — so a local a11y result is **diagnostic-only** and never decides a
-  committed baseline; only the pinned, CI-run result does.
+  committed baseline; only the pinned, CI-run result does. **Amendment:** the pin makes
+  comparison sound **between CI runs** — it does not, and was never claimed to, make a local
+  macOS run agree with a Linux CI run for a genuinely render-dependent count. That residual
+  disagreement is exactly what the one transitional `countRange` entry above absorbs; the pin's
+  rationale is unchanged, this just states its actual scope rather than an implied broader one.
   - **Why the exact pin needs no scheduled staleness check.** A `chrome-version: stable` pin
     resolves against Google's rolling "current" distribution
     (`dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`), which genuinely drops

@@ -54,8 +54,45 @@ export function resolveVariant(env) {
   return (env && env.VITE_A11Y_FIXTURE_VARIANT) || 'default'
 }
 
-export function baselineFilename(slug, variant) {
-  return `baseline-${slug}-${variant}.json`
+// 216 D-01/D-02: the harness-side theme allowlist. Deliberately NARROWER than the app's own
+// `VALID_THEMES` (`src/components/theme-context.ts`), which also allows `"system"`. A swept
+// `"system"` theme resolves via `matchMedia` and is non-deterministic per runner/OS — the
+// opposite of what a committed baseline needs — so it is excluded here on purpose, not by
+// omission.
+export const THEMES = Object.freeze(['dark', 'light'])
+
+// 216 D-01/D-02: resolves the sweep theme from the harness-only `A11Y_THEME` env var (NOT
+// `VITE_A11Y_THEME` — unlike `VITE_A11Y_FIXTURE_VARIANT`, which the Vite fixture middleware
+// reads inside the bundle, the theme is applied entirely harness-side by seeding
+// `localStorage` before `page.goto` (D-01), so a `VITE_` prefix would falsely imply the
+// bundle itself consumes it). Unset resolves to the historical default `'dark'`, named
+// explicitly rather than left implicit. Anything outside `THEMES` — including the app-valid
+// `'system'` and simple typos — THROWS rather than silently falling back: a mistyped
+// `A11Y_THEME=ligth` silently sweeping dark and overwriting the dark baseline is the exact
+// unnamed-dimension defect class this phase repairs.
+export function resolveTheme(env) {
+  const value = (env && env.A11Y_THEME) || 'dark'
+  if (!THEMES.includes(value)) {
+    throw new Error(
+      `resolveTheme: unsupported A11Y_THEME "${value}" — must be one of: ${THEMES.join(', ')}`,
+    )
+  }
+  return value
+}
+
+// 216 D-02: `theme` is REQUIRED, not optional-with-a-default. A 2-arg call would previously
+// have silently produced `baseline-{slug}-{variant}-undefined.json` — a plausible-looking
+// filename that is actually a distinct, un-reviewed baseline. Throwing here is what makes
+// the theme dimension impossible to omit by accident (216-RESEARCH.md § Code Examples).
+export function baselineFilename(slug, variant, theme) {
+  if (typeof theme !== 'string' || theme.length === 0 || !THEMES.includes(theme)) {
+    throw new Error(
+      `baselineFilename: missing/invalid theme for slug "${slug}" (received ${JSON.stringify(theme)}) — ` +
+        `a 2-arg call would silently produce "baseline-${slug}-${variant}-undefined.json"; ` +
+        `theme must be one of: ${THEMES.join(', ')}`,
+    )
+  }
+  return `baseline-${slug}-${variant}-${theme}.json`
 }
 
 const WCAG_TAG_RE = /^wcag(\d)(\d)(\d+)$/
@@ -80,6 +117,32 @@ export function deriveWcagCriteria(tags) {
 
 function sumNodes(violation) {
   return Array.isArray(violation.nodes) ? violation.nodes.length : 0
+}
+
+// 216-CONTEXT.md D-10: a declared `countRange` is opt-in and, when present, must be a
+// two-integer `[floor, ceiling]` tuple with `floor <= ceiling` and `floor >= 0`. Returns
+// `false` for `undefined`/`null` (the "no range declared" case is valid and handled by the
+// caller, not here) but `false` for any other malformed shape too — the caller distinguishes
+// "absent" from "malformed" itself.
+//
+// 216-CONTEXT.md D-14 — countRange is TRANSITIONAL, not permanent. The only entry that has
+// one is `data-at-rest`'s `scrollable-region-focusable`, whose count is render-dependent
+// (it fires on whether a container actually overflows at render time, a function of
+// viewport/font metrics). KBD-01 (Phase 219) adds the `tabIndex`/`role` to
+// `src/components/ui/table.tsx` that the rule's own accepted-violation justification says it
+// needs and WITHDRAWS that acceptance rather than renewing it — which removes the
+// render-dependence this band exists to absorb. When that lands, delete the range; do not
+// renew it by inertia, and do not add new ranges to route around a fixable rule. The
+// same pointer is in run-a11y.mjs's header; it is repeated here because this is the file a
+// future reader changing the comparison will open.
+function isValidCountRange(value) {
+  if (value === undefined || value === null) return false
+  if (!Array.isArray(value) || value.length !== 2) return false
+  const [floor, ceiling] = value
+  if (!Number.isInteger(floor) || !Number.isInteger(ceiling)) return false
+  if (floor < 0) return false
+  if (floor > ceiling) return false
+  return true
 }
 
 /**
@@ -135,6 +198,16 @@ export function buildBaselineEntries(route, violations, { previousEntries } = {}
       samples: allNodes.slice(0, SAMPLE_CAP).map(n => n.html),
     }
 
+    // 216-CONTEXT.md D-10/D-12: carry a declared countRange forward across a regeneration,
+    // mirroring the Phase 185 D-05 justification carry-forward above. Only carried when the
+    // previous entry declared a VALID range — an entry that never had one must not gain a
+    // `countRange: undefined` key, which would change the JSON byte output and redden the
+    // ACCEPTED-VIOLATIONS.md drift gate. Validity is re-checked here rather than trusted from
+    // the prior file, since that file could have been hand-edited.
+    if (previous && isValidCountRange(previous.countRange)) {
+      entry.countRange = previous.countRange
+    }
+
     if (impact === 'critical') {
       refusedCritical.push(entry)
     } else {
@@ -185,30 +258,58 @@ export function compareToBaseline(route, liveViolations, baselineEntries) {
 
   for (const [rule, live] of liveByRule) {
     const baseline = baselineByRule.get(rule)
-    const baselineCount = baseline ? baseline.count : 0
-    if (live.count > baselineCount) {
+
+    // 216-CONTEXT.md D-10/D-12: an opt-in per-entry countRange widens the exact-count
+    // comparison to a two-sided band. An entry with no countRange keeps today's exact-integer
+    // semantics byte-unchanged (ceiling === floor === baseline.count). A malformed countRange
+    // throws rather than silently degrading to "compare against undefined" — that silent
+    // fallback would make every count pass, the same class run-a11y.mjs's D-15 comment
+    // already forbids for a missing baseline file.
+    if (baseline && baseline.countRange !== undefined && !isValidCountRange(baseline.countRange)) {
+      throw new Error(
+        `compareToBaseline: malformed countRange for route "${route}" rule "${rule}" — ` +
+          `received ${JSON.stringify(baseline.countRange)}; expected [floor, ceiling] with ` +
+          `two integers, floor >= 0 and floor <= ceiling`,
+      )
+    }
+    const hasRange = baseline && isValidCountRange(baseline.countRange)
+    const baselineCeiling = hasRange ? baseline.countRange[1] : baseline ? baseline.count : 0
+    const baselineFloor = hasRange ? baseline.countRange[0] : baseline ? baseline.count : 0
+
+    if (live.count > baselineCeiling) {
       regressions.push({
         rule,
-        baselineCount,
+        baselineCount: baselineCeiling,
         observedCount: live.count,
         impact: live.impact,
         samples: live.samples,
       })
-    } else if (live.count < baselineCount) {
+    } else if (live.count < baselineFloor) {
       staleEntries.push({
         rule,
-        baselineCount,
+        baselineCount: baselineFloor,
         observedCount: live.count,
       })
     }
   }
 
-  // Rules baselined but not observed live at all are also stale (observed count 0).
+  // Rules baselined but not observed live at all are also stale (observed count 0), checked
+  // against the declared range's floor (D-12) so a range can never disable this leg.
   for (const [rule, baseline] of baselineByRule) {
-    if (!liveByRule.has(rule) && baseline.count > 0) {
+    if (baseline.countRange !== undefined && !isValidCountRange(baseline.countRange)) {
+      throw new Error(
+        `compareToBaseline: malformed countRange for route "${route}" rule "${rule}" — ` +
+          `received ${JSON.stringify(baseline.countRange)}; expected [floor, ceiling] with ` +
+          `two integers, floor >= 0 and floor <= ceiling`,
+      )
+    }
+    const baselineFloor = isValidCountRange(baseline.countRange)
+      ? baseline.countRange[0]
+      : baseline.count
+    if (!liveByRule.has(rule) && baselineFloor > 0) {
       staleEntries.push({
         rule,
-        baselineCount: baseline.count,
+        baselineCount: baselineFloor,
         observedCount: 0,
       })
     }

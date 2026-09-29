@@ -1,0 +1,21 @@
+{
+  "route": "hardware",
+  "generated": "2026-09-29T18:36:08.727Z",
+  "entries": [
+    {
+      "rule": "color-contrast",
+      "count": 21,
+      "impact": "serious",
+      "wcag": [
+        "1.4.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
+      "justification": "Route /hardware, theme light, rule color-contrast, count 21. This entry was REVEALED, not created, by Phase 216's light-theme sweep (216-01/216-04, D-01/D-02): the a11y harness swept dark only before this phase, so no light-theme baseline for this route ever existed. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. The `bg-[hsl(var(--qs-node-safe))] text-white font-semibold` \"high\" vendor-risk badge sample pairs a `bg-[hsl(var(--risk-badge-high))]` or `bg-[hsl(var(--qs-node-safe))]` badge background with white foreground text \u2014 exactly the zero-design-input swap FIX-01 (Phase 217, REQUIREMENTS.md) drains by moving each to its existing `-foreground` sibling token (`--risk-badge-high-foreground` / `--qs-node-safe-foreground`), which needs no new token and no visual redesign. The remaining bulk of the 21 nodes are the route's two `role=\"note\"` advisory banners (`text-yellow-700 dark:text-yellow-300` on a `bg-yellow-500/10` panel) repeated per advisory card, plus the same Phase-156 `--qs-node-safe`/`--risk-badge-high` firewalled raw-hsl() badges already documented and D-11-accepted on this route's default-dark entry (see that entry's justification) \u2014 none of these are FIX-01's named `-foreground` swap, FIX-02/03's `text-black` sites, or FIX-04's named design calls; they does not match any of FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`). It is nonetheless dashboard contrast debt this milestone tracks, and is swept up by FIX-05 (Phase 218), which requires zero badge/contrast pair anywhere in the dashboard below 4.5:1 in either theme, verified by RATCHET-01 reporting an empty baseline. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "samples": [
+        "<div role=\"note\" class=\"rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300\">Hardware findings are advisory-only and do not affect the readiness score.</div>",
+        "<div role=\"note\" class=\"rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300\">Based on SNMP-derived network-path evidence; not independently confirmed by traffic inspection.</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--qs-node-safe))] text-white font-semibold text-xs\">high</div>"
+      ]
+    }
+  ]
+}

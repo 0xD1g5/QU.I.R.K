@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
-status: planning
-last_updated: "2026-09-29T02:55:00.000Z"
+status: in_progress
+last_updated: "2026-09-29T14:10:00.000Z"
 last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 6
+  completed_phases: 2
+  total_plans: 12
+  completed_plans: 12
+  percent: 33
 ---
 
 # Project State
@@ -272,7 +272,7 @@ See: .planning/PROJECT.md (updated 2026-09-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal.
+**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1387,11 +1387,261 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-## Current Position
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-28 — Milestone v5.26 Accessibility & Instrument Truth started
+Phase: 216 (A11y Harness Repair) — **COMPLETE, 8 of 8 plans, all 6 waves.**
+Plan: next is Phase 217 plan 01 (not yet planned)
+Status: Phase complete; milestone v5.26 at 2 of 6 phases
+Last activity: 2026-09-29 — **216-08 executed and the phase closed.** The Linux `workflow_dispatch`
+job produced every baseline (run `36613039581`, Chrome `152.0.7977.82`, artifact
+`a11y-baselines-36613039581`); 54 baselines committed, each verified against the artifact on
+`generated` AND every `(rule, count)` pair, only justification prose differing. 14 new
+`-default-light.json` files. `/certificates` color-contrast 0->2 and `/hardware` 3->8 baselined with
+hand-written per-entry justifications naming FIX-01/02/03/04/05 and the draining phase.
+`/hardware`'s `scrollable-region-focusable` entry DROPPED as stale (0 on BOTH platforms, not a
+platform disagreement — an inference corrected by the Linux run, not by re-reading).
+`countRange: [1, 2]` declared on the `data-at-rest` default-dark AND default-light entries, bounds
+MEASURED (macOS 1 via `npm run a11y:check`, Linux 2 via CI), carrying the D-14 addendum that names
+KBD-01 / Phase 219 as retirement owner. **CI confirmation run `36615283160`: all four jobs green,
+and both the dark AND light sweep steps `success` — the first run in which the light step executed
+at all.** On run 36613039581 the dark step failed first and every later step was `skipped`, so the
+light step had never run; the note plan 216-04 wrote into this field described the wrong step.
+Falsifier 1 re-proved in its strong form: a light baseline `git mv`'d aside -> RED naming that exact
+`-default-light.json` path with zero `-dark.json` references, exit 1 -> restored byte-identical ->
+green. ROADMAP criterion 1 recorded **NOT MET AS WRITTEN** — both themes ARE swept, by two commands
+rather than by `a11y:check` alone. See `216-NOT-MET-AS-WRITTEN.md`.
+
+**The phase verifier returned `gaps_found` (6/9) and it was RIGHT on both blockers — HARNESS-01/02
+stand, HARNESS-03 is downgraded to PARTIAL.** B1: all three dark fixture variants carry IDENTICAL
+`(rule, count)` sets for every data-bearing route (`/hardware` reports 8 sub-AA badges under an
+*empty* fixture, which is impossible), with distinct `generated` timestamps proving three real
+sweeps rather than a copy. Mechanism confirmed by reading `vite.config.ts`, not inferred: the
+`a11y-fixture` plugin correctly registers both `configureServer` and `configurePreviewServer`, but
+**only `/api/scan/latest` (`:29`) consults `VITE_A11Y_FIXTURE_VARIANT`** — the other nine fixture
+endpoints (`/api/hardware/drift`, `/api/compare`, `/api/findings`, `/api/trends`, `/api/qramm/*`, …)
+serve full fixtures unconditionally — and `loading` returns the COMPLETE fixture after a 3s delay,
+so it measures the default state by construction. The `empty`/`loading` CI legs are therefore
+**near-vacuous** and 26 of 54 baselines are of limited evidential value. **This phase built a
+run-time drift guard for exactly this failure mode and pointed it only at the theme axis**; nothing
+does the equivalent for the variant axis, and nothing asserts two variants must differ. Filed at
+`.planning/todos/pending/260929-a11y-empty-loading-variant-legs-are-near-vacuous.md`, owned by
+Phase 220. B2: two statements written into this close-out were FALSE and are withdrawn — "Phase 216
+changed neither count nor variant" (it rewrote `certificates-{empty,loading}-dark` `(none)`->`:2`
+and `hardware-{empty,loading}-dark` `3+1`->`8`; true only of `data-at-rest` and `compare`), and the
+residual divergence is **4 routes / 2 rules** with `/hardware` at 0-vs-**8**, not the single 0-vs-2
+entry four separate records described. Corrected in `216-NOT-MET-AS-WRITTEN.md`, `REQUIREMENTS.md`,
+`216-VALIDATION.md` and the sibling todo. Verifier warnings carried, not closed: 6 of 15
+`harness-falsification-probe.test.ts` nodes are tautologies (Injection D reimplements range
+semantics as a local `classify()` and asserts against itself — the substance IS covered
+non-vacuously by 12 range + 5 stale nodes in `baseline-diff.test.ts`, so not a blocker, but a file
+premised on "a guard nobody has seen fail is a guard nobody has tested" should not contain 6
+unfailable nodes); criterion 2's literal "no longer report PASS" is also unmet (both routes print
+PASS, with violations now visible and baselined); `VITEST_REF_RE` cannot resolve
+`tests/a11y/*.test.ts` so this phase's tests are not machine-checked as UAT substitutes; and
+`216-VALIDATION.md` still carries `status: planned` / `wave_0_complete: false`.
+
+**One real regression was introduced and fixed in-session, and how it was found is the point.**
+`tests/test_uat_series_format.py::test_all_result_lines_canonical` went RED on plan 216-07's
+`UAT-216-03` SKIP annotation, which spanned six physical lines while the canonical regex requires the
+parenthetical to contain no newline. That gate is NOT among the five 216-07 verified, so a green
+five-gate sweep sat on top of a red suite — the hand-curated-list failure mode this project
+documents, pointed at test selection. The annotation was also semantically malformed
+("DEFERRED — no substitute coverage" blends the two sanctioned forms). Fixed in `d12c0a12`, and
+`UAT-216-03` flipped SKIP->PASS because 216-08 invalidated its stated blocker one plan later — the
+annotation had itself written "flip to PASS once 216-08 lands". All three pass criteria were
+re-verified before the flip, not assumed. Series 216 is now 5 PASS / 0 SKIP. Found by the FULL-suite
+failing-node SET, not by the curated gate list.
+
+**Two CI facts worth carrying, neither attributable to this phase.** (1) Neither
+`dashboard-quality.yml` nor `python-ci.yml` triggers on a phase-branch push — both are
+`pull_request` / `push: branches: [main]` / `workflow_dispatch` — so the required `Linux Full Suite`
+had NEVER run on this branch until dispatched deliberately. Phase-branch CI state is unobserved by
+default here, which is Phase 220's territory. (2) That dispatch (run `36618376788`) turned up
+`Windows Sensor E2E (frozen -> Linux-built console)` RED on `quirk sensor enroll: error: argument
+--api-token: expected one argument` — an EMPTY token read from `e2e_token.txt`, whose producing step
+GitHub records as succeeded. Phase 216 touched zero sensor/Windows/Python paths and the job is green
+on 5 of main's last 5 runs, so it is neither ours nor a known flake; the untested hypothesis is the
+trigger type (main's greens were all `push`-triggered). Filed at
+`.planning/todos/pending/260929-windows-sensor-e2e-empty-api-token-on-branch-dispatch.md` with the
+decisive test.
+
+**(3) The required `Linux Full Suite` failing-node SET is IDENTICAL on this branch and on `main` —
+this phase broke nothing.** Branch run `36618376788` and `main` run `36604466116` each report
+exactly `2 failed, 5210 passed, 118 skipped, 75 xfailed, 6 xpassed`, and the two failing nodes are
+the same pair: `tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]`
+and `[storage-s3]`, both `first up failed (rc=1)` — the documented environmental Docker class that
+passes on isolated re-run. Phase 216 touched zero chaos-lab/Docker paths. Compared as SETS, not as
+pass counts: "2 failed" alone is alarming, "the same 2 nodes and the same 5210 passes as main" is
+exonerating. Two bonus confirmations from the same run: `test_uat_series_format` is ABSENT from CI's
+failing set, so the real gate exercised the `d12c0a12` fix; and the known intermittent
+`test_vitest_substitute_nodes_pass` did not fire, which is the only reason the sets compare cleanly
+at all. `main`'s Linux Full Suite being red is therefore pre-existing and is already a named
+Phase 220 goal.
+
+**Product pixels unchanged, by design (D-04/D-09).** Every product-source edit this phase is a
+refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"` literal into
+`THEME_STORAGE_KEY`, and `hardware.tsx` moves 65 lines of label functions into
+`hardware-badge-labels.ts` so a test can import them. Zero `bg-`/`text-`/`border-`/token changes in
+`hardware.tsx` (grep count 0). The contrast violations this phase made visible are drained by
+Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
+unattributable.
+
+## Next Cycle — Phase 217 (Contrast Violations, Structural Drain)
+
+Stopped here by operator request at a clean boundary: Phase 216 closed, branch pushed
+(`d107f270`), working tree clean, close gate green. Phase 217 has **no directory yet** — it needs a
+full discuss -> plan -> execute cycle. It depends on **Phase 215**, not 216, so it is unblocked.
+
+**Re-derive the ownership split at plan time; do not trust any prose figure, including this
+paragraph.** Keyed `file|bgToken|fgSpec|theme` in the live `badge-contrast-baseline.json`, the split
+recorded at 216's open was: Phase 217 owns **30** entries (FIX-01 **12**, FIX-03 **18**), Phase 218
+owns **5** — matching FIX-04's "5 genuine design calls", with 30+5=35 accounting for the whole
+baseline and nothing unowned. The prose figures "11" and "29" elsewhere are raw-occurrence counts
+from 999.117's pre-RATCHET classification, a different unit.
+
+**FIX-01 is already decided** (operator, 2026-09-29, commit `ef043b85`): use the existing
+`-foreground` sibling (7.40:1, theme-invariant, no new token, badge colour unchanged), NOT
+`--status-safe-deep` (6.82 light / 4.84 dark, and it changes badge colour identity, making it a
+design call and therefore FIX-04's).
+
+**FIX-02's spike answer is forced, which changes its job.** No static text colour passes AA in both
+themes for `--status-warning` / `--chart-tls` (black passes dark only, white light only), so
+theme-varying `-foreground` tokens are required, not chosen. The open question is WHICH call sites.
+
+**New sizing input measured during 216, from a method independent of the static classification:**
+the light theme carries **44 `color-contrast` violation nodes across 11 routes** (`/hardware` 21,
+trends 5, compare 4, certificates 3, findings-storyline 3, data-at-rest 2, findings 2, and 1 each on
+cbom / identity / qramm-assessment), against 3 baselined in dark. Different unit from "badge pairs" —
+do not equate them — but the dark-only sweep was measuring the quieter theme, and 217's swaps must
+be verified in BOTH themes now that both are swept.
+
+**Two live instrument caveats that affect how 217 verifies itself:**
+1. `empty`/`loading` baselines are **near-vacuous** (only 1 of 10 fixture endpoints honours the
+   variant; `loading` serves the full fixture after 3s). Verify 217's swaps against the `default`
+   dark AND light baselines; treat the 26 variant baselines as weak evidence. P1 todo owned by 220.
+2. `216-02` recorded **11 badge-style maps across 8 further pages** in `OUT_OF_SCOPE_MAPS`. The
+   coverage gate covers `/certificates` + `/hardware` only, so FIX-05's "zero badge pair anywhere"
+   is wider than the instrument currently sees.
+
+**Branch state:** `phase-216-a11y-harness-repair` is pushed and **UNMERGED** — `git rev-list --count
+main..HEAD` = 41. Decide merge-vs-continue before 217 starts; a phase branch stacking a second phase
+is how prior milestones compounded unpushed work. Required `Linux Full Suite` on this branch matches
+`main` exactly (same 2 `test_chaos_lab_idempotency` Docker nodes, same 5210 passed), so the branch is
+mergeable on test evidence. `Windows Sensor E2E` is RED on the branch's dispatch but green on 5 of
+main's last 5 pushes — see its todo; the untested hypothesis is the trigger type, not this code.
+
+**Prior activity, superseded above:** 2026-09-29 — 216-07 (docs/UAT/vault close-out, HARNESS-01/HARNESS-02/HARNESS-03)
+executed. `docs/operators-guide.md`'s four a11y bullets amended to describe the theme dimension,
+the opt-in per-entry `countRange` tolerance, and the browser-free `npm run a11y:ledger` command;
+`docs/quirk-master-guide.md` regenerated from its five sources (freshness gate green). Added
+`## Series 216` to `docs/UAT-SERIES.md` (5 cases: 4 PASS, 1 honest SKIP — UAT-216-03's
+`data-at-rest` `countRange` mechanism is unit-proven but not yet applied to the live baseline,
+which is 216-08's job); regenerated `docs/uat-coverage-gaps.md` (0 new GAP rows). All UAT corpus
+gates green (75 passed: zero-undispositioned, disposition-integrity, coverage-gaps-freshness,
+worklist-reconciliation). Vault `Digs` synced: Operators-Guide.md, UAT-Series.md, and a new
+Phase-216-A11y-Harness-Repair.md note (`status: active`, flips to `complete` at 216-08). Per-Phase
+Documentation Checklist adjudicated row by row with evidence in `216-07-SUMMARY.md` — no CLI
+command, scanner signal, chaos lab profile, config option, API endpoint, version bump, report
+section, or dashboard tab/UI feature this phase; the `quirk/dashboard/static/*` diff is a
+mechanical `npm run build` rebuild artifact of 216-04's `theme-provider.tsx` edit, not new shipped
+functionality.
+
+**Prior activity, superseded above:** 2026-09-29 — 216-06 (harness falsification probes, HARNESS-01/HARNESS-02)
+executed. New permanent `harness-falsification-probe.test.ts` (15 nodes, synthetic input only,
+mirrors the RATCHET-04 mutation-probe idiom) plus three live RED captures: falsifier 1 (a light
+sweep never resolves the dark baseline — all 13 routes FAIL naming a `-default-light.json` path,
+zero `-default-dark.json` references, exit 1), falsifier 2 (a coverage run reading zero badge
+maps fails on 3 independent legs rather than passing vacuously — demonstrated via a reverted
+one-line `pageFiles()` glob edit), and criterion 2 (the enriched fixture makes `/certificates`
+FAIL `color-contrast count 2 exceeds baseline 0` and `/hardware` FAIL `count 8 exceeds baseline
+3`, both live before any baseline records them). Assumption A2 settled BY MEASUREMENT (a
+temporary, reverted debug edit to `run-a11y.mjs` printed per-node `incomplete` detail): every
+badge-contrast failure on both routes lands in axe `violations`, never `incomplete` —
+`/hardware`'s 5 `incomplete` nodes are unrelated `<th>` table-header text, not badges, a
+separate out-of-scope finding recorded but not chased. No baseline created, modified, or
+committed by this plan; all temporary falsification/debug edits reverted via `git checkout --`
+and confirmed byte-identical. `npx vitest run tests/a11y/` green at 110/110 (was 95/95);
+`npm run test` green at 557/559 (2 pre-existing skips, was 542/544); `npm run lint` clean (1
+pre-existing unrelated warning). Working tree clean apart from this hand-edit.
+
+**Phase 216 progress, verified against disk not reported:**
+
+| Wave | Plan | State | Commits |
+|------|------|-------|---------|
+| 1 | 216-01 theme axis at the naming choke point, 40 baselines `git mv`'d to `-dark` | done | `ed143199` `4f8778d3` `0f925ee5` |
+| 1 | 216-02 fixture blind-spot closure, labels extracted to a pure module, source-derived coverage gate | done | `43045332` `488b63b4` `f0e47aff` |
+| 2 | 216-03 opt-in per-entry `countRange` + the D-11 docstring amendment | done | `4dc4dd40` `dbc2761b` `31526c54` `c2fc1ccb` |
+| 3 | 216-04 light sweep, npm scripts, both CI jobs | done | `ef5ad3a3` `8601eff0` `cbf694a5` |
+| 4 | 216-05 theme-complete ledger | done | `c7fc7d34` `224b7d6f` |
+| 5 | 216-06 falsification evidence | done | `c040ae1d` `dd77113d` |
+| 5 | 216-07 docs/UAT/vault | done | `e5650f9e` `5ce0dcf8` `3f67e059` |
+| 6 | 216-08 Linux CI baselines | done | `4eaf6313` `c761ebd6` `d12c0a12` `43ba38d1` |
+
+**Why the pause is here and not one wave later.** Wave 3 (`216-04`) deliberately adds an a11y CI
+step that is RED on this branch until wave 6 lands the Linux-generated baselines, with
+`continue-on-error` prohibited. That is by design (it is falsifier 1 from `216-VALIDATION.md`
+observed live), but this repo already carries an intermittently-failing required check, so a second
+expected-red step makes attribution harder — and the plan-checker flagged it. Stopping before wave 3
+leaves the branch fully green instead.
+
+**Wave 6 cannot complete without a push.** D-15 forbids committing a macOS-generated a11y baseline;
+the only legitimate source is `.github/workflows/dashboard-quality.yml`'s
+`a11y-regenerate-baselines` job (`workflow_dispatch`, ubuntu-latest, Chrome pinned
+`152.0.7977.82`) — which **uploads an artifact and does not commit**. So resuming to done requires:
+push branch → `gh workflow run dashboard-quality.yml` → download the `a11y-baselines-<run_id>`
+artifact → inspect → commit only the CI-generated files.
+
+**Each executor's claims were re-verified independently, and each check found something the
+executor's own report would not have surfaced** — not because the executors erred, but because each
+tested the direction it had in mind:
+- 216-01: `baselineFilename` was confirmed to THROW on a 2-arg call rather than defaulting, so the
+  theme dimension cannot silently go implicit again.
+- 216-02: the executor proved the coverage gate fails on under-reading; the *renaming* direction was
+  untested, so it was broken here (rename a source map → 3 of 6 nodes red, restored byte-identical).
+- 216-03: the executor unit-proved the range floor works; whether it could be *disabled* was
+  untested, so a mutation probe collapsed the floor to 0 → 2 tests red. The shrink-only ratchet
+  cannot be silently turned into upward drift.
+
+**Findings carried out of Phase 216, not folded into "done":**
+- The run-time source scan found **11 badge-style maps across 8 further pages** beyond the 7 in
+  `hardware.tsx`. Recorded in the coverage test's `OUT_OF_SCOPE_MAPS` with reasons. Consequence:
+  HARNESS-02's named scope (`/certificates` + `/hardware`) covers less of the dashboard than the
+  requirement's framing implies — relevant sizing for FIX-05's "zero badge pair anywhere".
+- `SNMP_STYLES` declares a `"v3 failed → none"` key that `snmpLabel` has no branch capable of
+  producing. Dispositioned `unreachable` with a written reason rather than reached by an invented
+  fixture value. A real, small product defect.
+- `216-CONTEXT.md` D-02's own file count was wrong (44 → 40), caught during research. Named in the
+  decision rather than overwritten, since the phase's whole subject is instruments that drift.
+
+**Operator decision recorded 2026-09-29 — FIX-01 (Phase 217).** ROADMAP criterion 1 and
+REQUIREMENTS FIX-01 prescribed different fixes for the 4 `--qs-node-safe` + white entries; both
+targets exist in `index.css`, so the disagreement was real. Resolved toward the ROADMAP: use the
+existing `-foreground` sibling (**7.40:1**, theme-invariant, no new token, badge colour unchanged)
+rather than `--status-safe-deep` (6.82 light / **4.84** dark, and it changes the badge's colour
+identity, which makes it a design call and therefore FIX-04's). REQUIREMENTS.md corrected in
+`ef043b85` with the superseded prescription shown, not overwritten.
+
+**Phase 217 counts re-derived from the live `badge-contrast-baseline.json`** (keyed
+`file|bgToken|fgSpec|theme`), because the ROADMAP's own note says to: Phase 217 owns **30** entries
+(FIX-01 **12**, FIX-03 **18**), Phase 218 owns **5** — which matches FIX-04's "5 genuine design
+calls" exactly, and 30+5=35 accounts for the whole baseline with nothing unowned. The prose figures
+"11" and "29" are raw-occurrence counts from 999.117's pre-RATCHET classification. Re-derive again
+at plan time rather than trusting this paragraph.
+
+**FIX-02's spike answer is already forced, which changes its job.** No static text colour passes AA
+in both themes for `--status-warning`/`--chart-tls` (black passes dark only, white light only), so
+theme-varying `-foreground` tokens are required, not chosen. The spike's real open question is
+*which call sites*, and that is mechanical: 29 `bg-` badge backgrounds take the new token; exactly
+one `text-` use exists (`pages/certificates.tsx:87`, Phase 213's protected text-on-white case) and
+must not change; 9 further uses are chart fills that are not text pairs.
+
+**A note on this section's own history:** the `## Current Position` heading was DUPLICATED
+(two identical lines) — a stale-write artifact of the kind CLAUDE.md § GSD `state.*` Verb Integrity
+describes. Collapsed to one here. The frontmatter `progress` block was all zeros and `status` was
+`planning` while Phase 215 was in fact complete and 216 half-built; both re-derived from disk.
+
+**Toolchain discipline, unchanged:** no `phase.complete`, no `milestone.complete`, no mutating
+`gsd-sdk` / `gsd-tools.cjs` state verb. This section and the frontmatter were hand-edited from a
+pre-image with the FULL diff read — not a signature grep, which cannot see the multi-line-value
+truncation defect (HITS #15-17).
 
 **Scope, as locked at the boundary:** the v5.25 dashboard-accessibility deferral taken **as one
 unit** per the operator instruction (45 of 103 badge colour pairs below WCAG AA across 11 pages — a

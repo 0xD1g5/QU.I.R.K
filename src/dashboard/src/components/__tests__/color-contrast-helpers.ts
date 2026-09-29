@@ -11,6 +11,15 @@
  * test.ts`. 206-11 needed them a third time for the UAT-7-21 audit; a third
  * copy would have been the point at which the set started to drift, so the
  * copies were collapsed here instead.
+ *
+ * Phase 215 plan 215-01 promoted four badge-extraction primitives
+ * (`themeBlocks`, `resolveToken`, `foregroundHex`, `backgroundToken`) out of
+ * `cbom-badge-contrast-guard.test.ts` per D-02: the repo-wide badge-contrast
+ * guard plan 215-03 adds needs the same extraction logic, and a second
+ * private copy inside a phase whose own RATCHET-03 deletes a verbatim copy
+ * elsewhere would be indefensible. All four remain pure functions of their
+ * arguments — no test-runner import, no filesystem read — matching this
+ * module's existing discipline.
  */
 
 /** Relative luminance per WCAG 2.1 §Relative luminance. */
@@ -50,4 +59,44 @@ export function hslToHex(h: number, s: number, l: number): string {
       .toString(16)
       .padStart(2, "0")
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+/**
+ * Split `index.css` source into its dark and light theme blocks. index.css
+ * is dark-first: `:root { … }` holds the dark palette, `.light { … }`
+ * overrides it. Split on `.light {` — every colour token in that file is
+ * declared in one or both of those two blocks.
+ */
+export function themeBlocks(css: string): { dark: string; light: string } {
+  const lightStart = css.indexOf(".light {")
+  if (lightStart === -1) {
+    throw new Error("themeBlocks: '.light {' not found in index.css — the dark/light split failed")
+  }
+  return { dark: css.slice(0, lightStart), light: css.slice(lightStart) }
+}
+
+/**
+ * Resolve an `--x` token to hex within a theme block, falling back to the
+ * dark block when the light block does not override it (theme-invariant
+ * tokens such as `--qs-node-safe` are declared once).
+ */
+export function resolveToken(token: string, block: string, fallback: string): string | null {
+  const re = new RegExp(`--${token}:\\s*([\\d.]+)\\s+([\\d.]+)%\\s+([\\d.]+)%`)
+  const m = block.match(re) ?? fallback.match(re)
+  if (!m) return null
+  return hslToHex(Number(m[1]), Number(m[2]), Number(m[3]))
+}
+
+/** Foreground hex for a Tailwind text-* utility used in a badge class string. */
+export function foregroundHex(classes: string, block: string, fallback: string): string | null {
+  if (/\btext-white\b/.test(classes)) return "#ffffff"
+  if (/\btext-black\b/.test(classes)) return "#000000"
+  const tok = classes.match(/text-\[hsl\(var\(--([\w-]+)\)\)\]/)
+  return tok ? resolveToken(tok[1], block, fallback) : null
+}
+
+/** Background token name for a Tailwind arbitrary-value background utility. */
+export function backgroundToken(classes: string): string | null {
+  const m = classes.match(/bg-\[hsl\(var\(--([\w-]+)\)\)\]/)
+  return m ? m[1] : null
 }

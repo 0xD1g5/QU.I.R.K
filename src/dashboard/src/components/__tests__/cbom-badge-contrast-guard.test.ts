@@ -49,7 +49,13 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { contrastRatio, hslToHex } from "./color-contrast-helpers"
+import {
+  contrastRatio,
+  themeBlocks,
+  resolveToken,
+  foregroundHex,
+  backgroundToken,
+} from "./color-contrast-helpers"
 
 const SRC_ROOT = path.resolve(__dirname, "../..")
 const css = readFileSync(path.join(SRC_ROOT, "index.css"), "utf8")
@@ -57,29 +63,6 @@ const cbom = readFileSync(path.join(SRC_ROOT, "pages/cbom.tsx"), "utf8")
 
 /** WCAG 2.1 AA for normal-size text. The badge renders at `text-xs` (12px). */
 const AA_NORMAL_TEXT = 4.5
-
-/**
- * index.css is dark-first: `:root { … }` holds the dark palette, `.light { … }`
- * overrides it. Split on `.light {` — every colour token in this file is
- * declared in one or both of those two blocks.
- */
-function themeBlocks(): { dark: string; light: string } {
-  const lightStart = css.indexOf(".light {")
-  expect(lightStart).toBeGreaterThan(-1)
-  return { dark: css.slice(0, lightStart), light: css.slice(lightStart) }
-}
-
-/**
- * Resolve an `--x` token to hex within a theme block, falling back to the
- * dark block when the light block does not override it (theme-invariant
- * tokens such as `--qs-node-safe` are declared once).
- */
-function resolveToken(token: string, block: string, fallback: string): string | null {
-  const re = new RegExp(`--${token}:\\s*([\\d.]+)\\s+([\\d.]+)%\\s+([\\d.]+)%`)
-  const m = block.match(re) ?? fallback.match(re)
-  if (!m) return null
-  return hslToHex(Number(m[1]), Number(m[2]), Number(m[3]))
-}
 
 /** Parse the QS_BADGE literal out of cbom.tsx: state -> Tailwind class string. */
 function badgePairs(): Array<{ state: string; classes: string }> {
@@ -91,22 +74,8 @@ function badgePairs(): Array<{ state: string; classes: string }> {
   }))
 }
 
-/** Foreground hex for a Tailwind text-* utility used in QS_BADGE. */
-function foregroundHex(classes: string, block: string, fallback: string): string | null {
-  if (/\btext-white\b/.test(classes)) return "#ffffff"
-  if (/\btext-black\b/.test(classes)) return "#000000"
-  const tok = classes.match(/text-\[hsl\(var\(--([\w-]+)\)\)\]/)
-  return tok ? resolveToken(tok[1], block, fallback) : null
-}
-
-/** Background token name for a Tailwind arbitrary-value background utility. */
-function backgroundToken(classes: string): string | null {
-  const m = classes.match(/bg-\[hsl\(var\(--([\w-]+)\)\)\]/)
-  return m ? m[1] : null
-}
-
 const pairs = badgePairs()
-const { dark, light } = themeBlocks()
+const { dark, light } = themeBlocks(css)
 
 // VACUITY — asserted at collection time, not inside an it(). A regex that
 // stops matching a refactored cbom.tsx or index.css must fail loudly rather

@@ -1,0 +1,20 @@
+{
+  "route": "findings",
+  "generated": "2026-09-29T18:35:51.673Z",
+  "entries": [
+    {
+      "rule": "color-contrast",
+      "count": 2,
+      "impact": "serious",
+      "wcag": [
+        "1.4.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
+      "justification": "Route /findings, theme light, rule color-contrast. This entry was REVEALED, not created, by Phase 216's light-theme sweep (216-01/216-04, D-01/D-02): the a11y harness swept dark only before this phase, so no light-theme baseline for this route ever existed. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. Both samples (`bg-[hsl(var(--status-warning))] text-black`, \"At Risk\" and \"MEDIUM\") pairs a `bg-[hsl(var(--status-warning))]` or `bg-[hsl(var(--chart-tls))]` badge background with a literal `text-black` foreground class \u2014 one of the 29 `text-black` sites FIX-02 (Phase 217) classifies and FIX-03 (Phase 217) repairs with a theme-varying `-foreground` token (analysis already shows no static colour passes AA in both themes for either token; REQUIREMENTS.md FIX-02). Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "samples": [
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--status-warning))] text-black text-xs\">At Risk</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--status-warning))] text-black font-semibold text-xs\">MEDIUM</div>"
+      ]
+    }
+  ]
+}

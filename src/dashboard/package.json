@@ -12,12 +12,17 @@
     "test:watch": "vitest",
     "e2e:smoke": "node tests/e2e/run-e2e.mjs",
     "preview": "vite preview",
-    "a11y:check": "node tests/a11y/run-a11y.mjs",
+    "a11y:check": "npm run a11y:check:dark",
+    "a11y:check:dark": "VITE_A11Y_FIXTURE=1 A11Y_THEME=dark node tests/a11y/run-a11y.mjs",
+    "a11y:check:light": "VITE_A11Y_FIXTURE=1 A11Y_THEME=light node tests/a11y/run-a11y.mjs",
     "a11y:check:empty": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty node tests/a11y/run-a11y.mjs",
     "a11y:check:loading": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading node tests/a11y/run-a11y.mjs",
-    "a11y:baseline": "VITE_A11Y_FIXTURE=1 node tests/a11y/run-a11y.mjs --update-baselines",
+    "a11y:baseline": "npm run a11y:baseline:dark",
+    "a11y:baseline:dark": "VITE_A11Y_FIXTURE=1 A11Y_THEME=dark node tests/a11y/run-a11y.mjs --update-baselines",
+    "a11y:baseline:light": "VITE_A11Y_FIXTURE=1 A11Y_THEME=light node tests/a11y/run-a11y.mjs --update-baselines",
     "a11y:baseline:empty": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty node tests/a11y/run-a11y.mjs --update-baselines",
-    "a11y:baseline:loading": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading node tests/a11y/run-a11y.mjs --update-baselines"
+    "a11y:baseline:loading": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading node tests/a11y/run-a11y.mjs --update-baselines",
+    "a11y:ledger": "node tests/a11y/regenerate-ledger.mjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",

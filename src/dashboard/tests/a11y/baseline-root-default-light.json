@@ -1,0 +1,19 @@
+{
+  "route": "root",
+  "generated": "2026-09-29T18:35:50.136Z",
+  "entries": [
+    {
+      "rule": "color-contrast",
+      "count": 1,
+      "impact": "serious",
+      "wcag": [
+        "1.4.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
+      "justification": "Route / (root/dashboard-home), theme light, rule color-contrast. This entry was REVEALED, not created, by Phase 216's light-theme sweep (216-01/216-04, D-01/D-02): the a11y harness swept dark only before this phase, so no light-theme baseline for this route ever existed. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. The sole sample is a `text-primary underline` navigation link (\"View trends \u2192\"), a text link rather than a badge-background pair, so it matches none of FIX-01/02/03/04's named tokens; it does not match any of FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`). It is nonetheless dashboard contrast debt this milestone tracks, and is swept up by FIX-05 (Phase 218), which requires zero badge/contrast pair anywhere in the dashboard below 4.5:1 in either theme, verified by RATCHET-01 reporting an empty baseline. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "samples": [
+        "<a class=\"text-primary underline\" href=\"/trends\" data-discover=\"true\">View trends \u2192</a>"
+      ]
+    }
+  ]
+}

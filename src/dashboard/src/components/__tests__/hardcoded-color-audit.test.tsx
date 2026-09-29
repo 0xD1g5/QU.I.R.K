@@ -74,37 +74,37 @@
  * scope rather than inside the `it(...)` body, because a throw there is a
  * collection error that no wrapper — `it` with `.fails` before, plain `it`
  * now — can silently absorb into a false pass.
+ *
+ * ---------------------------------------------------------------------------
+ * PHASE 215 (RATCHET-03): widened from 27 files (`pages/` + sidebar) to all
+ * 76 non-test `.tsx` files under `src/`, via the single derived
+ * `auditedFiles()` in `./audited-files` (the local copy formerly here, and
+ * its `stripComments()` twin, are deleted — not re-synced). Widening
+ * surfaced 11 new hits in the 49 previously-unaudited files, live-measured
+ * and reproduced independently during planning:
+ *
+ *   - 6 are raw `hsl()` literals in `LifecycleEventList.tsx` (2),
+ *     `LifecycleEventRow.tsx` (2) and `VendorTrendList.tsx` (2) that
+ *     `lifecycle-advisory-guard.test.ts` / `vendor-trend-advisory-guard.test.ts`
+ *     PIN as Phase 156/161's deliberate "advisory firewall" — tokenising them
+ *     would break those standing guards. These are not debt; they live in
+ *     `FOREVER_EXEMPT` below, not the debt baseline.
+ *   - 5 are hex literals in `components/ui/chart.tsx` — real, drainable
+ *     colour debt. They live in `DEBT_BASELINE` below, a structurally
+ *     separate list a later phase is expected to shrink to empty.
+ *
+ * The two lists are kept apart on purpose: a single list with a `why` field
+ * would let a future reader, or a future debt-draining agent, mistake a
+ * firewall site for something safe to "fix". Filing deliberate architecture
+ * as debt would misreport a correct design as a liability — the exact
+ * category error this milestone exists to correct.
+ * ---------------------------------------------------------------------------
  */
 import { describe, it, expect } from "vitest"
-import { readFileSync, readdirSync, existsSync } from "node:fs"
+import { readFileSync, existsSync } from "node:fs"
 import path from "node:path"
 import { contrastRatio, hslToHex } from "./color-contrast-helpers"
-
-const SRC_ROOT = path.resolve(__dirname, "../..")
-
-/** The audited set: every page component, plus the shell sidebar. */
-function auditedFiles(): string[] {
-  const pagesDir = path.join(SRC_ROOT, "pages")
-  const pages = readdirSync(pagesDir)
-    .filter((f) => f.endsWith(".tsx"))
-    .map((f) => path.join("pages", f))
-  const sidebar = path.join("components", "sidebar.tsx")
-  return [...pages, sidebar].sort()
-}
-
-/**
- * Blank out comment bodies so a comment that merely *discusses* a colour is
- * not reported as a violation, while keeping line numbering intact.
- * Line comments are only stripped when `//` opens the line, so a `//` inside
- * a string literal (a URL, say) cannot swallow real code.
- */
-function stripComments(src: string): string {
-  const noBlocks = src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-  return noBlocks
-    .split("\n")
-    .map((line) => (/^\s*\/\//.test(line) ? "" : line))
-    .join("\n")
-}
+import { SRC_ROOT, auditedFiles, stripComments } from "./audited-files"
 
 /**
  * `#rgb` / `#rrggbb` literals, and raw `hsl(N N% N%)` triples in every spelling this codebase
@@ -181,17 +181,122 @@ function format(v: Violation): string {
 // Module-scope vacuity guard. Deliberately NOT inside the it(...) body: a
 // throw here is a collection error, which a `.fails`-modified it cannot absorb, so an
 // empty or broken glob can never masquerade as "no violations found".
+// Phase 215 (RATCHET-03): floors widened from the 27-file `pages/`+sidebar
+// era to the 76-file recursive-walk era. Floors, never exact-count
+// equalities — D-04, and HARNESS-03 is the standing example of why an exact
+// count flakes across macOS vs CI.
 const AUDITED = auditedFiles()
-if (AUDITED.length === 0) {
-  throw new Error("hardcoded-color-audit: the audited file set resolved empty — the glob is broken")
+if (AUDITED.length < 60) {
+  throw new Error(
+    `hardcoded-color-audit: only ${AUDITED.length} files resolved — the recursive walk is broken`,
+  )
 }
 if (!AUDITED.includes(path.join("components", "sidebar.tsx"))) {
   throw new Error("hardcoded-color-audit: components/sidebar.tsx is missing from the audited set")
 }
-if (AUDITED.filter((f) => f.startsWith("pages/")).length < 5) {
+if (AUDITED.filter((f) => f.startsWith("pages/")).length < 20) {
   throw new Error(
-    `hardcoded-color-audit: only ${AUDITED.length} files resolved — src/pages/ has far more than that`,
+    `hardcoded-color-audit: only ${AUDITED.filter((f) => f.startsWith("pages/")).length} ` +
+      "pages/ files resolved — src/pages/ has far more than that",
   )
+}
+
+/**
+ * FOREVER_EXEMPT — Phase 215 (RATCHET-03). Widening the audited set from 27
+ * to 76 files surfaced 6 raw `hsl()` literals that TWO OTHER guards —
+ * `lifecycle-advisory-guard.test.ts` and `vendor-trend-advisory-guard.test.ts`
+ * — pin in their own `FORBIDDEN_PALETTE` as Phase 156 (HWLC-11 / D-07) and
+ * Phase 161 (HWLC-19)'s deliberate "advisory firewall": the advisory-only
+ * hardware-lifecycle and vendor-PQC-trend sections must never visually
+ * resemble the app's scored-finding badge language, so these specific hues
+ * are barred from ever becoming design tokens the scored UI also draws from.
+ * Tokenising any of the six would break that standing guard.
+ *
+ * These are NOT debt. They live here, structurally separate from
+ * `DEBT_BASELINE` below, so a future debt-draining pass (Phase 217/218) can
+ * never mistake deliberate architecture for something to fix. Keyed
+ * `file|literal` (no line numbers) for the same churn-resistance reasoning
+ * as `THEME_INVARIANT` in the sibling theme-token-vocabulary guard.
+ */
+const FOREVER_EXEMPT: Record<string, { literal: string; guard: string; decision: string; why: string }> = {
+  "components/LifecycleEventList.tsx|hsl(180 37% 47%)": {
+    literal: "hsl(180 37% 47%)",
+    guard: "lifecycle-advisory-guard.test.ts",
+    decision: "Phase 156 HWLC-11 / D-07",
+    why:
+      "lifecycle-advisory-guard.test.ts pins this hue in FORBIDDEN_PALETTE as Phase 156's deliberate " +
+      "advisory firewall, so an advisory-only lifecycle badge can never be mistaken for a scored " +
+      "finding; tokenising this literal would let the advisory section draw the same colour the " +
+      "scored UI uses, breaking that standing guard.",
+  },
+  "components/LifecycleEventList.tsx|hsl(180_37%_47%)": {
+    literal: "hsl(180_37%_47%)",
+    guard: "lifecycle-advisory-guard.test.ts",
+    decision: "Phase 156 HWLC-11 / D-07",
+    why:
+      "Same site as the whitespace-form entry above, in its Tailwind arbitrary-value spelling — " +
+      "lifecycle-advisory-guard.test.ts's FORBIDDEN_PALETTE bars this hue for the same advisory-firewall " +
+      "reason.",
+  },
+  "components/LifecycleEventRow.tsx|hsl(172_45%_42%)": {
+    literal: "hsl(172_45%_42%)",
+    guard: "lifecycle-advisory-guard.test.ts",
+    decision: "Phase 156 HWLC-11 / D-07",
+    why:
+      "lifecycle-advisory-guard.test.ts pins this hue in FORBIDDEN_PALETTE as part of the Phase 156 " +
+      "advisory firewall protecting the lifecycle event row's advisory-only status colours from " +
+      "resembling the app's scored-finding palette.",
+  },
+  "components/LifecycleEventRow.tsx|hsl(300_45%_55%)": {
+    literal: "hsl(300_45%_55%)",
+    guard: "lifecycle-advisory-guard.test.ts",
+    decision: "Phase 156 HWLC-11 / D-07",
+    why:
+      "Second lifecycle-event-row status colour pinned by lifecycle-advisory-guard.test.ts's " +
+      "FORBIDDEN_PALETTE under the same Phase 156 advisory-firewall rationale.",
+  },
+  "components/VendorTrendList.tsx|hsl(180 37% 47%)": {
+    literal: "hsl(180 37% 47%)",
+    guard: "vendor-trend-advisory-guard.test.ts",
+    decision: "Phase 161 HWLC-19",
+    why:
+      "vendor-trend-advisory-guard.test.ts pins this hue in FORBIDDEN_PALETTE as Phase 161's advisory " +
+      "firewall (the HWLC-11 precedent applied to the vendor PQC trend section), so this advisory-only " +
+      "badge can never visually resemble a scored finding.",
+  },
+  "components/VendorTrendList.tsx|hsl(180_37%_47%)": {
+    literal: "hsl(180_37%_47%)",
+    guard: "vendor-trend-advisory-guard.test.ts",
+    decision: "Phase 161 HWLC-19",
+    why:
+      "Same vendor-trend site as the entry above, in its Tailwind arbitrary-value spelling — pinned by " +
+      "vendor-trend-advisory-guard.test.ts's FORBIDDEN_PALETTE for the same Phase 161 advisory-firewall " +
+      "reason.",
+  },
+}
+
+/**
+ * DEBT_BASELINE — Phase 215 (RATCHET-03). The 5 remaining newly-surfaced
+ * hits, all on one line of `components/ui/chart.tsx` (Recharts CSS-selector
+ * fallback colours). Unlike FOREVER_EXEMPT above, this is ordinary,
+ * DRAINABLE colour debt: nothing requires these specific hex values to stay
+ * raw, and a later phase (217/218) is expected to tokenise them and delete
+ * these entries. Do NOT move an entry between this list and FOREVER_EXEMPT —
+ * they encode two different claims about a site's future.
+ */
+const DEBT_BASELINE: Record<string, { justification: string }> = {
+  "components/ui/chart.tsx|#ccc": {
+    justification:
+      "Recharts CSS-selector fallback stroke colour (grid/reference-line/polar-grid stroke='#ccc' " +
+      "selectors) on a single shared className string; drainable chart-border debt surfaced by " +
+      "Phase 215's audit widening, not yet tokenised.",
+  },
+  "components/ui/chart.tsx|#fff": {
+    justification:
+      "Recharts CSS-selector fallback stroke colour (dot/sector stroke='#fff' selectors) on the same " +
+      "shared className string as the #ccc entries above; drainable chart-border debt surfaced by " +
+      "Phase 215's audit widening, not yet tokenised.",
+  },
 }
 
 /**
@@ -243,14 +348,18 @@ if (RESIDUAL.length > 0) {
 
 /**
  * NO_LAUNDERING guard. Plan 213-07 introduces `src/lib/cytoscape-theme.ts` as
- * a shared colour-resolution helper for the three Cytoscape sites. Because
- * the audited set above is `pages/` plus `components/sidebar.tsx`, a hex or
- * raw-HSL literal parked in that helper (e.g. as a fallback default) would
- * leave this gate green while the product still ships the literal — the
- * classic laundering move D-05 forbids. This guard names ONE file
- * deliberately; widening the audited SET to all of `src/` is the separate,
- * deferred D-03 decision, not this guard's job. `existsSync` keeps it inert
- * until 213-07 actually creates the file.
+ * a shared colour-resolution helper for the three Cytoscape sites. The
+ * premise recorded here originally — "the audited set above is `pages/` plus
+ * `components/sidebar.tsx`" — is now FALSE: D-03's deferred "widen the
+ * audited set to all of `src/`" decision has landed in Phase 215 (RATCHET-03)
+ * via `./audited-files`'s recursive walk, and `cytoscape-theme.ts` would now
+ * be scanned by `scan()` directly if it were a `.tsx` file. This guard is
+ * retained anyway, as belt-and-braces: `cytoscape-theme.ts` is a `.ts` file,
+ * not `.tsx`, and `auditedFiles()`'s walk only collects `.tsx`, so it is
+ * still outside the general audit and a hex or raw-HSL literal parked there
+ * would still leave `scan()` blind to it — the classic laundering move D-05
+ * forbids. `existsSync` keeps it inert until 213-07 actually creates the
+ * file.
  */
 const CYTOSCAPE_THEME_PATH = path.join(SRC_ROOT, "lib", "cytoscape-theme.ts")
 if (existsSync(CYTOSCAPE_THEME_PATH)) {
@@ -275,6 +384,34 @@ describe("UAT-7-21 — hardcoded colour audit (D-A1 source-audit carve-out)", ()
     expect(AUDITED.length).toBeGreaterThan(0)
 
     const violations = scan()
-    expect(violations.map(format)).toEqual([])
+    const unexempted = violations.filter((v) => {
+      const key = `${v.file}|${v.literal}`
+      return !(key in FOREVER_EXEMPT) && !(key in DEBT_BASELINE)
+    })
+    expect(unexempted.map(format)).toEqual([])
+  })
+
+  it("FOREVER_EXEMPT and DEBT_BASELINE carry no stale entries — every key still names a live violation", () => {
+    // D-09: a stale entry excuses nothing while reading as a live exemption.
+    // Run over BOTH structures — a stale forever-exempt entry is as
+    // dangerous as a stale debt entry.
+    const liveKeys = new Set(scan().map((v) => `${v.file}|${v.literal}`))
+    const stale: string[] = []
+    for (const key of Object.keys(FOREVER_EXEMPT)) {
+      if (!liveKeys.has(key)) {
+        stale.push(`FOREVER_EXEMPT lists "${key}", which no longer matches a live violation — delete it`)
+      }
+    }
+    for (const key of Object.keys(DEBT_BASELINE)) {
+      if (!liveKeys.has(key)) {
+        stale.push(`DEBT_BASELINE lists "${key}", which no longer matches a live violation — delete it`)
+      }
+    }
+    expect(stale).toEqual([])
+  })
+
+  it("FOREVER_EXEMPT and DEBT_BASELINE are mutually disjoint — no site is excused twice", () => {
+    const both = Object.keys(FOREVER_EXEMPT).filter((key) => key in DEBT_BASELINE)
+    expect(both).toEqual([])
   })
 })

@@ -96,6 +96,36 @@
       "cert_pubkey_alg": "RSA",
       "cert_pubkey_size": 2048,
       "quantum_safety": "At Risk"
+    },
+    {
+      "host": "chaos-lab.local",
+      "port": 8080,
+      "cert_subject": "CN=internal.chaos-lab.local",
+      "cert_issuer": "CN=Chaos Lab CA",
+      "cert_not_after": "2028-01-01T00:00:00Z",
+      "cert_pubkey_alg": "ECDSA",
+      "cert_pubkey_size": 256,
+      "quantum_safety": "Safe"
+    },
+    {
+      "host": "10.0.0.6",
+      "port": 8444,
+      "cert_subject": "CN=legacy.chaos-lab.local",
+      "cert_issuer": "CN=Legacy Root CA",
+      "cert_not_after": "2026-08-01T00:00:00Z",
+      "cert_pubkey_alg": "RSA",
+      "cert_pubkey_size": 1024,
+      "quantum_safety": "Vulnerable"
+    },
+    {
+      "host": "10.0.0.7",
+      "port": 8445,
+      "cert_subject": "CN=unscanned.chaos-lab.local",
+      "cert_issuer": "CN=Unknown CA",
+      "cert_not_after": "2027-12-01T00:00:00Z",
+      "cert_pubkey_alg": null,
+      "cert_pubkey_size": null,
+      "quantum_safety": "Unknown"
     }
   ],
   "cbom_components": [
@@ -315,6 +345,89 @@
       "eol_date": null,
       "snmp_version": "v2c",
       "bridge_status": "upstream_mitigated"
+    },
+    {
+      "host": "10.0.0.8",
+      "port": 502,
+      "severity": "LOW",
+      "title": "PQC Support Confirmed by Vendor",
+      "description": "Vendor firmware release notes confirm PQC-ready key exchange support.",
+      "remediation": "No action required; monitor for firmware regressions.",
+      "quantum_risk": "Safe",
+      "vendor": "Schneider Electric",
+      "model": "Modicon M580",
+      "pqc_status": "supported",
+      "remediation_tier": "Tier 3",
+      "confidence": "low",
+      "fingerprint_method": "ssh_banner",
+      "eol_date": null,
+      "snmp_version": "v3 noAuthNoPriv",
+      "bridge_status": null,
+      "modbus_probe_state": "identified",
+      "bacnet_probe_state": "no_response",
+      "cve_matches": [
+        { "cve_id": "CVE-2024-0001", "severity": "HIGH", "source_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-0001" }
+      ]
+    },
+    {
+      "host": "10.0.0.9",
+      "port": 47808,
+      "severity": "INFO",
+      "title": "Vendor Declines to Disclose PQC Roadmap",
+      "description": "Vendor support contact declined to answer PQC readiness questions.",
+      "remediation": "Escalate to vendor account team for a written PQC statement.",
+      "quantum_risk": "Unknown",
+      "vendor": "Honeywell",
+      "model": "Experion PKS",
+      "pqc_status": "VENDOR-SILENT",
+      "remediation_tier": "Tier N/A",
+      "confidence": "unknown",
+      "fingerprint_method": "unknown",
+      "eol_date": null,
+      "snmp_version": "v3-failed-fell-back",
+      "bridge_status": "partial_only",
+      "modbus_probe_state": "no_response",
+      "bacnet_probe_state": "no_match"
+    },
+    {
+      "host": "10.0.0.10",
+      "port": 502,
+      "severity": "HIGH",
+      "title": "Legacy Device, SNMP Unreachable",
+      "description": "Device did not respond to any SNMP probe attempt.",
+      "remediation": "Enable SNMP or provide out-of-band PQC attestation.",
+      "quantum_risk": "At Risk",
+      "vendor": "Rockwell Automation",
+      "model": "ControlLogix 5580",
+      "pqc_status": "unsupported",
+      "remediation_tier": "Tier 1",
+      "confidence": "high",
+      "fingerprint_method": "ssh_banner",
+      "eol_date": "2026-12-31",
+      "snmp_version": "none",
+      "bridge_status": null,
+      "modbus_probe_state": "no_match",
+      "bacnet_probe_state": "aborted_anomalous_response"
+    },
+    {
+      "host": "10.0.0.11",
+      "port": 47808,
+      "severity": "MEDIUM",
+      "title": "BACnet Probe Anomalous Response",
+      "description": "BACnet probe was aborted after receiving a malformed frame.",
+      "remediation": "Investigate device firmware for BACnet stack stability issues.",
+      "quantum_risk": "Unknown",
+      "vendor": "Siemens",
+      "model": "SCALANCE X208",
+      "pqc_status": "partial",
+      "remediation_tier": "Tier 2",
+      "confidence": "medium",
+      "fingerprint_method": "http_mgmt",
+      "eol_date": null,
+      "snmp_version": "v2c",
+      "bridge_status": null,
+      "modbus_probe_state": "aborted_anomalous_response",
+      "bacnet_probe_state": "identified"
     }
   ]
 }

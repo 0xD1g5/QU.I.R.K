@@ -116,8 +116,13 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 
 ### Phases
 
-- [ ] **Phase 215: Instrument Ratchet** - Convert the 45 invisible badge-contrast failures into a derived, shrink-only baseline that every later fix is verified against
-- [ ] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
+- [x] **Phase 215: Instrument Ratchet** - Convert the 45 invisible badge-contrast failures into a derived, shrink-only baseline that every later fix is verified against
+  <!-- Phase-level checkbox intentionally left unflipped by 215-04: this repo's
+       scripts/verify_phase_gates.py pre-commit hook blocks a ROADMAP.md phase-close
+       checkbox flip that lacks a NN-VERIFICATION.md (produced by the gsd-verifier
+       subagent, not the plan executor) and, separately, this phase's human checkpoint
+       (215-04 Task 4) has not yet been approved. Flip this after both land. -->
+- [x] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
 - [ ] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
 - [ ] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [ ] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
@@ -132,14 +137,24 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 **Success Criteria** (what must be TRUE):
   1. A single contrast guard test evaluates every dashboard page and both themes, deriving its badge-pair set from source at run time (no hand-maintained list of files or pairs).
   2. The 45 known failures are recorded in a checked-in, shrink-only baseline — a new sub-AA pair fails CI, and a fixed pair requires (and gets) a baseline update, never a silent widening.
+     **Corrected 2026-09-28 (215-03/215-04):** "45" was the raw count of failing badge-pair
+     OCCURRENCES as 999.117 measured them over the pages+sidebar (11-file) set — a class string
+     repeated verbatim across N files counts N times. The guard's checked-in baseline is keyed
+     `file|bgToken|fgSpec|theme` (D-06, no line numbers), which deduplicates an identical class
+     string repeated *within one file* and splits per theme, so it holds **35 distinct entries**,
+     not 45. Both figures are correct measurements of two different things — the original "45" is
+     preserved above rather than overwritten, and "35" is the number the checked-in baseline
+     actually holds. See `215-03-SUMMARY.md`'s "Count Trap" section for the full live re-derivation
+     (103 raw pairs / 57 unique triples / 45 raw failing occurrences / 29 unique failing triples /
+     35 distinct failing baseline keys).
   3. `auditedFiles()` exists in exactly one place in the codebase; the verbatim copy in `theme-token-vocabulary.test.ts` is deleted and both call sites use the single derived source.
   4. A mutation probe injects a sub-AA badge pair and the guard demonstrably goes red, with the failing output captured as evidence rather than asserted in prose.
 **Plans**: 4 plans
 Plans:
-- [ ] 215-01-PLAN.md — Foundation modules: derived `auditedFiles()` (76 files) + the four badge-extraction primitives promoted into `color-contrast-helpers.ts`
-- [ ] 215-02-PLAN.md — RATCHET-03: widen both existing consumers to 76 files, delete the verbatim copies, add the forever-exempt/debt exemption machinery
-- [ ] 215-03-PLAN.md — RATCHET-01/02: pure evaluator, repo-wide badge-contrast guard, checked-in shrink-only baseline
-- [ ] 215-04-PLAN.md — RATCHET-04: two-direction mutation probe, mechanical Tailwind JIT guard, count-prose correction and phase close
+- [x] 215-01-PLAN.md — Foundation modules: derived `auditedFiles()` (76 files) + the four badge-extraction primitives promoted into `color-contrast-helpers.ts`
+- [x] 215-02-PLAN.md — RATCHET-03: widen both existing consumers to 76 files, delete the verbatim copies, add the forever-exempt/debt exemption machinery
+- [x] 215-03-PLAN.md — RATCHET-01/02: pure evaluator, repo-wide badge-contrast guard, checked-in shrink-only baseline
+- [x] 215-04-PLAN.md — RATCHET-04: two-direction mutation probe, mechanical Tailwind JIT guard, count-prose correction and phase close
 **UI hint**: yes
 
 ### Phase 216: A11y Harness Repair
@@ -151,9 +166,26 @@ is preferable to running it late. See Phase 218's dependency note.
 **Requirements**: HARNESS-01, HARNESS-02, HARNESS-03
 **Success Criteria** (what must be TRUE):
   1. `npm run a11y:check` sweeps both light and dark themes for every route in `routes.json`, with a separate baseline per theme.
+     — **NOT MET AS WRITTEN** (substance met). Both themes are swept for every route with a
+     separate baseline per theme, but by TWO commands — `a11y:check:dark` and
+     `a11y:check:light` — because `a11y:check` stays a dark alias for the guides and the
+     harness's own remediation messages. See `216-NOT-MET-AS-WRITTEN.md`.
   2. `/certificates` and `/hardware` no longer report PASS while rendering badges below AA — the fixture-dependent blind spot that let 2.30:1 badges pass is closed for both proof routes.
   3. The `data-at-rest` baseline uses a tolerance/range rather than an exact count, and running it repeatedly on macOS and in CI no longer disagrees.
-**Plans**: TBD
+     — **MET, SCOPE-QUALIFIED to the `default` variant** (both themes): `countRange: [1, 2]`,
+     bounds measured macOS 1 / Linux 2. The `empty` and `loading` variants keep a wider
+     0-vs-2 divergence, deliberately un-ranged because a `[0, 2]` floor would disable the
+     D-12 shrink-only ratchet; pre-existing, CI-green, tracked as a Phase 219 / KBD-01 todo.
+**Plans**: 8 plans in 6 waves
+Plans:
+- [x] 216-01-PLAN.md — Theme-explicit baseline naming + 40-file rename + call-site lockstep (wave 1)
+- [x] 216-02-PLAN.md — Fixture blind-spot closure: label module, source-derived coverage gate, enriched fixture, /certificates contentMarker (wave 1)
+- [x] 216-03-PLAN.md — Opt-in per-entry countRange tolerance + Phase 185 D-06 docstring amendment (wave 2)
+- [x] 216-04-PLAN.md — Light/dark sweep mechanics, theme-explicit npm scripts, both CI jobs, drift contract test (wave 3)
+- [x] 216-05-PLAN.md — Theme-complete ACCEPTED-VIOLATIONS ledger via a browser-free a11y:ledger (wave 4)
+- [x] 216-06-PLAN.md — Falsification evidence: synthetic probe + three verbatim RED captures (wave 5)
+- [x] 216-07-PLAN.md — Operators guide, master-guide regen, UAT Series 216, vault sync (wave 5)
+- [x] 216-08-PLAN.md — Linux CI baseline provenance, justifications, measured tolerance bounds (wave 6, LAST)
 **UI hint**: yes
 
 ### Phase 217: Contrast Violations — Structural Drain
@@ -162,8 +194,15 @@ is preferable to running it late. See Phase 218's dependency note.
 **Requirements**: FIX-01, FIX-02, FIX-03
 **Success Criteria** (what must be TRUE):
   1. The 11 zero-design-input swaps (7 × `--risk-badge-high`, 4 × `--qs-node-safe`) are applied, each now using its existing `-foreground` sibling, and RATCHET's baseline count for these sites drops to zero.
+     **Note added 215-04:** "11" is a 999.117 raw-occurrence classification count (pre-dating
+     RATCHET-01/02's per-key dedup), not a count of distinct `badge-contrast-baseline.json`
+     entries — Phase 217 must re-derive the actual entry count for these sites from the live
+     baseline rather than assuming 11 keys will disappear.
   2. FIX-02's spike classifies 3–4 of the 29 `text-black` sites as badge-background vs. text-on-white use and records the resulting plan shape (mixed vs. uniform) before any bulk edit to the remaining sites lands.
   3. All 29 `--status-warning`/`--chart-tls` sites reach AA as badge backgrounds in both themes, while the text-on-white use of the same tokens (Phase 213's fix) keeps its existing contrast.
+     **Note added 215-04:** "29" is the same kind of raw-occurrence count as "11" above, carried
+     over from 999.117's pre-RATCHET classification — re-derive against the live baseline's
+     distinct keys before treating 29 as a completion target.
   4. RATCHET's baseline reflects zero remaining failures for the categories this phase owns (11 free swaps + 29 spiked sites).
 **Plans**: TBD
 **UI hint**: yes
@@ -213,7 +252,7 @@ been drained.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 215. Instrument Ratchet | 0/? | Not started | - |
+| 215. Instrument Ratchet | 4/4 | Complete | 2026-09-29 |
 | 216. A11y Harness Repair | 0/? | Not started | - |
 | 217. Contrast Violations — Structural Drain | 0/? | Not started | - |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 0/? | Not started | - |

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import {
   ThemeProviderContext,
   getStoredTheme,
+  THEME_STORAGE_KEY,
   type Theme,
   type ThemeProviderState,
 } from "./theme-context"
@@ -15,7 +16,7 @@ type ThemeProviderProps = {
 export function ThemeProvider({
   children,
   defaultTheme = "dark",
-  storageKey = "quirk-ui-theme",
+  storageKey = THEME_STORAGE_KEY,
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme(storageKey, defaultTheme))
 

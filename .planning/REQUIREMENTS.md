@@ -57,30 +57,114 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 ### Instrument Ratchet
 
-- [ ] **RATCHET-01**: A contrast guard covers every dashboard page and both themes, deriving its
+- [x] **RATCHET-01**: A contrast guard covers every dashboard page and both themes, deriving its
       badge-pair set from source at run time rather than from a hand-maintained list
-- [ ] **RATCHET-02**: The 45 known failures are recorded as a shrink-only baseline — a new failure
-      fails CI, a fixed one requires a baseline update, and the count can never silently grow
-- [ ] **RATCHET-03**: `auditedFiles()` is derived once and covers all 76 non-test `.tsx` files; the
+- [x] **RATCHET-02**: The 45 known failures are recorded as a shrink-only baseline — a new failure
+      fails CI, a fixed one requires a baseline update, and the count can never silently grow.
+      **Corrected 2026-09-28 (215-03/215-04):** "45" counts raw failing badge-pair OCCURRENCES as
+      999.117 measured them over the original 11-file pages+sidebar set; the checked-in baseline is
+      keyed `file|bgToken|fgSpec|theme` (a churn-resistant, per-theme key), which deduplicates an
+      identical class string repeated within one file and therefore holds **35 distinct entries**,
+      not 45. Both numbers are correct measurements of two different things — "45" is preserved
+      here rather than silently overwritten. See `215-03-SUMMARY.md`.
+- [x] **RATCHET-03**: `auditedFiles()` is derived once and covers all 76 non-test `.tsx` files; the
       verbatim copy in `theme-token-vocabulary.test.ts` is deleted, not re-synced
-- [ ] **RATCHET-04**: The guard proves it can fail — a mutation probe shows it going red on an
+- [x] **RATCHET-04**: The guard proves it can fail — a mutation probe shows it going red on an
       injected sub-AA pair, demonstrated rather than asserted
 
 ### A11y Harness
 
-- [ ] **HARNESS-01**: `run-a11y.mjs` sweeps both light and dark themes, with per-theme baselines
-- [ ] **HARNESS-02**: The axe sweep no longer reports PASS on a route whose fixture omits the failing
+- [x] **HARNESS-01**: `run-a11y.mjs` sweeps both light and dark themes, with per-theme baselines
+      — Complete (Phase 216). Theme seeded via `page.evaluateOnNewDocument` into the app's real
+      `THEME_STORAGE_KEY` before navigation, so the sweep travels the actual `theme-provider` path.
+      14 default-dark + 14 default-light baselines, zero slugs missing a light baseline; both themes
+      enumerated in both CI jobs and both `success` on run 36615283160.
+      **Note on ROADMAP criterion 1's wording:** both themes are swept by TWO commands
+      (`a11y:check:dark` / `a11y:check:light`), not by `a11y:check` alone, which remains a dark
+      alias because the guides and the harness's own remediation messages name it. Substance met,
+      wording not — see `216-NOT-MET-AS-WRITTEN.md`.
+- [x] **HARNESS-02**: The axe sweep no longer reports PASS on a route whose fixture omits the failing
       element — `/certificates` and `/hardware` are the proof cases
-- [ ] **HARNESS-03**: The `data-at-rest` baseline's render-dependent rule uses a tolerance instead of
+      — Complete (Phase 216). Both proof routes went RED on measurement (`/certificates`
+      color-contrast 0→2, `/hardware` 3→8), independently on macOS and Linux CI, and are now
+      baselined with hand-written per-entry justifications naming FIX-01/02/03/04/05 and the
+      draining phase. Settled by measurement: plan 216-06 confirmed the failures land in axe
+      `violations`, never `incomplete`, so the blind spot is closed rather than relabelled.
+- [~] **HARNESS-03**: The `data-at-rest` baseline's render-dependent rule uses a tolerance instead of
       an exact count, and stops disagreeing between macOS and CI
+      — Complete (Phase 216) **SCOPE-QUALIFIED to the `default` fixture variant, both themes.**
+      `countRange: [1, 2]` on `scrollable-region-focusable` in `baseline-data-at-rest-default-dark`
+      and its `-light` sibling, bounds MEASURED (macOS 1 / Linux 2, run 36613039581, Chrome
+      152.0.7977.82), not guessed, with a D-14 addendum naming KBD-01 / Phase 219 as retirement
+      owner. macOS `a11y:check` and `a11y:check:light`: 14 PASS / 0 FAIL each.
+      **NOT met for the `empty` and `loading` variants**, which carry a wider 0-vs-2 divergence
+      that `[1, 2]` cannot cover and that `[0, 2]` would only "fix" by zeroing the D-12 shrink-only
+      floor — the loose-tolerance trap D-10 rejects. **CORRECTED at close-out (verifier blocker
+      B2):** the residual is **4 routes / 2 rules**, `/hardware` at 0-vs-**8** not 0-vs-2, and this
+      phase DID rewrite `certificates-{empty,loading}-dark` and `hardware-{empty,loading}-dark`.
+      Deeper: the empty/loading legs are **near-vacuous** — only `/api/scan/latest` of ten fixture
+      endpoints honours the variant, and `loading` serves the full fixture after a 3s delay. See
+      `.planning/todos/pending/260929-a11y-empty-loading-variant-legs-are-near-vacuous.md`.
+      Also tracked at
+      `.planning/todos/pending/260929-a11y-data-at-rest-empty-loading-zero-vs-two-divergence.md`,
+      pointed at Phase 219 / KBD-01, which withdraws the acceptance outright.
 
 ### Contrast Violations
 
-- [ ] **FIX-01**: The 11 zero-design-input swaps are applied — 7 × `--risk-badge-high` + white
-      (2.85) to its existing `-foreground` sibling (5.97), 4 × `--qs-node-safe` + white (2.30) to
-      `--status-safe-deep` (4.83/6.79)
+- [ ] **FIX-01**: The zero-design-input swaps are applied — every failing pair moves to its
+      existing `-foreground` sibling: `--risk-badge-high` + white (2.85) → `-foreground` (5.97),
+      and `--qs-node-safe` + white (2.30) → `--qs-node-safe-foreground` (7.40).
+
+      **CORRECTED 2026-09-29 by operator decision. This requirement previously sent
+      `--qs-node-safe` to `--status-safe-deep` (4.83/6.79), which CONTRADICTED ROADMAP Phase 217
+      criterion 1's own wording ("each now using its existing `-foreground` sibling"). Two locked
+      documents disagreed; the operator resolved it toward the ROADMAP's reading.** The prior
+      prescription is recorded here rather than silently overwritten, per this project's standing
+      rule that a correction must show what it corrected.
+
+      Evidence the decision rested on, recomputed with a converter independent of
+      `badge-contrast-evaluator.ts` (it reproduced that evaluator's committed ratios to 2 d.p.,
+      so the two methods agree):
+
+      | Option | bg | fg | light | dark | new token? | bg colour |
+      |--------|----|----|-------|------|-----------|-----------|
+      | **CHOSEN** | `--qs-node-safe` | `--qs-node-safe-foreground` (`index.css:97`, already exists) | **7.40** | **7.40** | none | unchanged |
+      | rejected | `--status-safe-deep` | white | 6.82 | **4.84** | none | bright → deep green |
+
+      The chosen option is theme-invariant (one value, because `--qs-node-safe` is declared once
+      with no `.light` override), clears AAA as well as AA, needs no new token, and leaves the
+      badge's colour identity alone — which is what makes it genuinely *zero-design-input*. The
+      rejected option sat 0.34 above the AA floor in dark and changed the Safe badge's appearance,
+      i.e. it was a design call, and design calls belong to FIX-04.
+
+      **Count correction, same date:** "11" was a 999.117 raw-occurrence figure. Re-derived from
+      the live `badge-contrast-baseline.json` (keyed `file|bgToken|fgSpec|theme`), FIX-01 owns
+      **12** entries — 8 × `risk-badge-high|white` (4 files × both themes) + 4 ×
+      `qs-node-safe|white` (2 files × both themes). Both tokens fail in BOTH themes, unlike
+      FIX-03's, which fail in light only. Re-derive again before treating 12 as a target.
 - [ ] **FIX-02**: A spike on 3–4 of the 29 `text-black` sites classifies each as badge-background vs
       text-on-white use and returns a recorded plan shape before any bulk edit
+
+      **Pre-scouted 2026-09-29 (evidence, not a substitute for the spike).** The spike's *fix*
+      question is already settled analytically: NO static text colour passes AA in both themes for
+      either token, so theme-varying `--status-warning-foreground` / `--chart-tls-foreground` are
+      forced rather than chosen —
+
+      | token / theme | + black | + white | AA passes with |
+      |---|---|---|---|
+      | `--status-warning` dark (50%) | 9.82 | 2.14 | black only |
+      | `--status-warning` light (32%) | 4.32 | 4.87 | white only |
+      | `--chart-tls` dark (68%) | 8.32 | 2.52 | black only |
+      | `--chart-tls` light (40%) | 3.37 | 6.24 | white only |
+
+      So the spike's REAL open question is *which call sites*, and that looks mechanical rather
+      than judgemental: 29 × `bg-[hsl(var(--status-warning|--chart-tls))]` badge backgrounds take
+      the new token; exactly ONE text use exists — `pages/certificates.tsx:87`
+      (`daysToExpiry < 90`), which is Phase 213's protected text-on-white case and must NOT change;
+      9 further uses (trends 4, roadmap 2, executive 2, cbom 1) are chart/graph fills that are not
+      text pairs at all. Expected plan shape: **uniform**, with a `bg-` vs `text-` prefix test as
+      the classifier. Re-derive at Phase 217 plan time; the baseline dedups these 29 occurrences
+      to 18 distinct entries.
 - [ ] **FIX-03**: The 29 sites reach AA in both themes without regressing the text-on-white contrast
       Phase 213 established for `--status-warning` and `--chart-tls`
 - [ ] **FIX-04**: The 5 genuine design calls are resolved with operator visual review, as 213-09 did
@@ -159,13 +243,13 @@ Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RATCHET-01 | Phase 215 | Pending |
-| RATCHET-02 | Phase 215 | Pending |
-| RATCHET-03 | Phase 215 | Pending |
-| RATCHET-04 | Phase 215 | Pending |
-| HARNESS-01 | Phase 216 | Pending |
-| HARNESS-02 | Phase 216 | Pending |
-| HARNESS-03 | Phase 216 | Pending |
+| RATCHET-01 | Phase 215 | Complete |
+| RATCHET-02 | Phase 215 | Complete |
+| RATCHET-03 | Phase 215 | Complete |
+| RATCHET-04 | Phase 215 | Complete |
+| HARNESS-01 | Phase 216 | Complete |
+| HARNESS-02 | Phase 216 | Complete |
+| HARNESS-03 | Phase 216 | PARTIAL (default variant only; empty/loading legs near-vacuous — verifier B1) |
 | FIX-01 | Phase 217 | Pending |
 | FIX-02 | Phase 217 | Pending |
 | FIX-03 | Phase 217 | Pending |

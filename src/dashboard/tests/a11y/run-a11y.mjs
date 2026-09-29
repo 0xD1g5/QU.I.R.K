@@ -24,9 +24,27 @@
  *     `PUPPETEER_EXECUTABLE_PATH`, and remains DELIBERATELY unpinned per D-08 — local runs
  *     are diagnostic-only after Phase 185 and are never the source of a committed
  *     baseline, so contributors are not required to obtain a specific Chrome build.
- *   - No jitter-tolerance claim is made for either path: D-06 keeps exact-integer
- *     baseline counts with no tolerance band. The CI pin above is what makes that
- *     zero-tolerance comparison sound, not a rendering-jitter allowance.
+ *   - AMENDED by Phase 216 HARNESS-03 (216-CONTEXT.md D-11), narrowing rather than
+ *     reversing the claim above: exact-integer counts remain the DEFAULT for every baseline
+ *     entry — this paragraph's zero-tolerance claim still holds for any entry without a
+ *     declared range. Tolerance is now OPT-IN and PER-ENTRY via a `countRange: [floor,
+ *     ceiling]` field on a baseline entry (see `baseline-diff.mjs`'s `compareToBaseline`).
+ *   - Reason: `scrollable-region-focusable` on `/data-at-rest` is render-dependent (font
+ *     metrics / overflow resolution differ between macOS and the pinned Linux Chrome), which
+ *     produced a real recorded disagreement — baseline `1` locally vs `2` on CI, hand-bumped
+ *     in Phase 177-07 (see `.planning/todos/completed/a11y-baseline-environment-mismatch.md`).
+ *     The CI pin above makes a zero-tolerance comparison sound BETWEEN CI RUNS; it does not
+ *     make a local run agree with CI, which is what this one entry needed.
+ *   - A global tolerance band was REJECTED (D-10): the resolved todo above warns in writing
+ *     that "a loose tolerance could hide a real regression", and a global band would apply
+ *     that risk to every baseline to fix one entry. The range stays opt-in and per-entry.
+ *   - The stale-entry leg ("count is BELOW baseline — Baseline is stale") still fires against
+ *     a declared range's LOWER bound (D-12) — a range is not a one-way ratchet in the wrong
+ *     direction.
+ *   - The range is TRANSITIONAL (D-14): KBD-01 (Phase 219) adds `tabIndex`/`role` to
+ *     `components/ui/table.tsx` and withdraws the `scrollable-region-focusable` acceptance
+ *     outright, which removes the render-dependence this range exists to absorb. Phase 219
+ *     should RETIRE the range, not renew it by inertia.
  *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
  *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */
@@ -38,8 +56,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
-import { buildBaselineEntries, compareToBaseline, resolveVariant, baselineFilename } from './baseline-diff.mjs'
-import { generateMarkdown } from './generate-accepted-violations.mjs'
+import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -54,6 +71,34 @@ const UPDATE_BASELINES = process.argv.includes('--update-baselines')
 // fallback was the actual defect that made the empty-state CI gate a no-op.
 const VARIANT = resolveVariant(process.env)
 console.log(`[a11y] Fixture variant: ${VARIANT}`)
+// 216 D-01/D-02: the theme dimension, named explicitly at the choke point rather than left
+// implicit. No sweep-behaviour change here — THEME resolves to 'dark' with no env set, so an
+// unset A11Y_THEME run stays byte-equivalent to before this plan apart from filenames.
+const THEME = resolveTheme(process.env)
+console.log(`[a11y] Theme: ${THEME}`)
+
+// 216 D-03: light is swept for the default fixture variant only. `empty` renders
+// EmptyStateCard and `loading` renders skeletons — neither emits a badge variant, so a light
+// sweep there would carry no signal (the existing VARIANT !== 'default' interaction skip
+// below is the same rationale, applied here to the whole run rather than one section of it).
+// A silent skip here would be indistinguishable from a broken invocation — this harness's own
+// idiom is that skips are logged, never silent — so this refuses loudly and exits before the
+// preview server or browser are even started.
+if (THEME !== 'dark' && VARIANT !== 'default') {
+  console.error(
+    `[a11y] REFUSED: theme=${THEME} is only swept for the default fixture variant (216 D-03) — ` +
+      `the empty variant renders EmptyStateCard and loading renders skeletons, neither of which ` +
+      `emits a badge variant`,
+  )
+  process.exit(1)
+}
+
+// 216 D-01: the harness-side literal copy of the app's localStorage theme key
+// (src/components/theme-context.ts's THEME_STORAGE_KEY). This file is `.mjs` and cannot
+// import from the app's `.ts` module, so the literal is duplicated deliberately;
+// theme-sweep-contract.test.ts mechanically asserts the two copies stay equal (D-01).
+const THEME_STORAGE_KEY = 'quirk-ui-theme'
+
 const PREVIEW_PORT = 4173
 const PREVIEW_HOST = 'localhost'
 const CONNECT_TIMEOUT_MS = 30_000
@@ -146,15 +191,26 @@ try {
 
 let exitCode = 0
 const summary = []
-// D-07: collected only when UPDATE_BASELINES + VARIANT === 'default', so the regenerated
-// ledger reflects the same default-variant entries the freshness test byte-compares against.
-const writtenBaselinesByRoute = []
 
 for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
-  console.log(`[a11y] Scanning ${slug} (${url})...`)
+  console.log(`[a11y] Scanning ${slug} [${THEME}] (${url})...`)
 
   const page = await browser.newPage()
+  // 216 D-01: seed the app's real theme-provider path by writing its localStorage key
+  // BEFORE any page script runs — exercising `getStoredTheme`'s useState initializer exactly
+  // as a real user visit would, rather than diverging from it. Rejected: forcing
+  // `documentElement.classList` after load (diverges from the app path and races the
+  // provider's effect); CDP `Emulation.setEmulatedMedia` (a silent no-op, because
+  // `theme-provider.tsx` only consults `matchMedia` when `theme === 'system'`, which the
+  // harness never sweeps). Registered once per page — this loop already opens a fresh page
+  // per route, so hoisting this call out of the loop would leave two registrations firing on
+  // the same page and silently reintroduce single-theme sweeping one layer down.
+  await page.evaluateOnNewDocument(
+    (key, value) => { localStorage.setItem(key, value) },
+    THEME_STORAGE_KEY,
+    THEME,
+  )
   const consoleMsgs = []
   page.on('console', m => {
     if (m.type() === 'warn' || m.type() === 'error') consoleMsgs.push(m.text())
@@ -169,7 +225,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     // Record the route so it appears in the summary table. Without this the
     // run still fails (exitCode is 1), but the route vanishes from the summary
     // and a maintainer has to scroll the raw log to find which one broke.
-    summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'NAV_ERR' })
+    summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'NAV_ERR' })
     await page.close()
     continue
   }
@@ -192,7 +248,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
         `[a11y] FAIL [${slug}]: content marker "${contentMarker}" not found — route rendered empty`,
       )
       exitCode = 1
-      summary.push({ slug, violations: 0, console: consoleMsgs.length, status: 'FAIL' })
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
       await page.close()
       continue
     }
@@ -200,11 +256,16 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
 
   // Run axe with WCAG 2A/2AA tags
   const results = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
+  // RESEARCH Pitfall 3 / Assumption A2: axe's `incomplete` array holds rules it could not
+  // resolve either way (e.g. a `color-contrast` check it cannot compute) — never gated on
+  // this phase, but logged so a needs-manual-review result is visible rather than invisible.
+  const incompleteCount = results.incomplete.length
+  console.log(`[a11y] ${slug} [${THEME}]: violations=${results.violations.length} incomplete=${incompleteCount}`)
 
   let newViolationsCount = 0
   let routeStatus = 'PASS'
 
-  const baselinePath = resolve(A11Y_DIR, baselineFilename(slug, VARIANT))
+  const baselinePath = resolve(A11Y_DIR, baselineFilename(slug, VARIANT, THEME))
 
   if (UPDATE_BASELINES) {
     // Write baseline snapshot: per-(route, rule) count budget (D-01), no selectors stored
@@ -227,10 +288,6 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n')
     console.log(`[a11y] Wrote baseline for ${slug}: ${entries.length} rule(s)`)
 
-    if (VARIANT === 'default') {
-      writtenBaselinesByRoute.push({ route: slug, entries })
-    }
-
     if (refusedCritical.length > 0) {
       exitCode = 1
       routeStatus = 'FAIL'
@@ -249,16 +306,20 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     // fallback (D-15) — that fallback was the actual defect that made the empty-state CI gate
     // a no-op: it made every route unconditionally pass regardless of live violations.
     if (!existsSync(baselinePath)) {
+      // 216 D-15: the remediation command names the theme too, not just the variant — a
+      // missing light baseline must point at `a11y:baseline:light`, never the dark command.
       const generateCmd =
-        VARIANT === 'default'
-          ? 'npm run a11y:baseline'
-          : `npm run a11y:baseline:${VARIANT}`
+        THEME === 'light'
+          ? 'npm run a11y:baseline:light'
+          : VARIANT === 'default'
+            ? 'npm run a11y:baseline'
+            : `npm run a11y:baseline:${VARIANT}`
       console.error(
         `[a11y] FAIL [${slug}]: missing baseline file ${baselinePath} — run \`${generateCmd}\` to generate it`,
       )
       exitCode = 1
       routeStatus = 'FAIL'
-      summary.push({ slug, violations: 0, console: 0, status: routeStatus })
+      summary.push({ slug, violations: 0, console: 0, incomplete: 0, status: routeStatus })
       await page.close()
       continue
     }
@@ -335,7 +396,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
       if (!triggerHandle) {
         console.error(`[a11y] FAIL [${interactionSlug}]: trigger "${trigger}" not found`)
         exitCode = 1
-        summary.push({ slug: interactionSlug, violations: 0, console: 0, status: 'FAIL' })
+        summary.push({ slug: interactionSlug, violations: 0, console: 0, incomplete: 0, status: 'FAIL' })
       } else {
         await triggerHandle.click()
         const opened = await page.waitForSelector(awaitSelector, { timeout: 5_000 }).catch(() => null)
@@ -344,16 +405,18 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
             `[a11y] FAIL [${interactionSlug}]: awaitSelector "${awaitSelector}" never appeared after clicking trigger — drawer did not open`,
           )
           exitCode = 1
-          summary.push({ slug: interactionSlug, violations: 0, console: 0, status: 'FAIL' })
+          summary.push({ slug: interactionSlug, violations: 0, console: 0, incomplete: 0, status: 'FAIL' })
         } else {
           // Second, independent axe scan of the opened state — reuses the exact same
           // helpers the primary route scan above uses (buildBaselineEntries /
           // compareToBaseline / baselineFilename); no parallel baseline code path.
           const interactionResults = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
+          const interactionIncompleteCount = interactionResults.incomplete.length
+          console.log(`[a11y] ${interactionSlug} [${THEME}]: violations=${interactionResults.violations.length} incomplete=${interactionIncompleteCount}`)
 
           let interactionViolationsCount = 0
           let interactionStatus = 'PASS'
-          const interactionBaselinePath = resolve(A11Y_DIR, baselineFilename(interactionSlug, VARIANT))
+          const interactionBaselinePath = resolve(A11Y_DIR, baselineFilename(interactionSlug, VARIANT, THEME))
 
           if (UPDATE_BASELINES) {
             const previous = existsSync(interactionBaselinePath)
@@ -375,10 +438,6 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
             writeFileSync(interactionBaselinePath, JSON.stringify(baseline, null, 2) + '\n')
             console.log(`[a11y] Wrote baseline for ${interactionSlug}: ${entries.length} rule(s)`)
 
-            if (VARIANT === 'default') {
-              writtenBaselinesByRoute.push({ route: interactionSlug, entries })
-            }
-
             if (refusedCritical.length > 0) {
               exitCode = 1
               interactionStatus = 'FAIL'
@@ -391,9 +450,11 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
           } else {
             if (!existsSync(interactionBaselinePath)) {
               const generateCmd =
-                VARIANT === 'default'
-                  ? 'npm run a11y:baseline'
-                  : `npm run a11y:baseline:${VARIANT}`
+                THEME === 'light'
+                  ? 'npm run a11y:baseline:light'
+                  : VARIANT === 'default'
+                    ? 'npm run a11y:baseline'
+                    : `npm run a11y:baseline:${VARIANT}`
               console.error(
                 `[a11y] FAIL [${interactionSlug}]: missing baseline file ${interactionBaselinePath} — run \`${generateCmd}\` to generate it`,
               )
@@ -458,6 +519,7 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
             slug: interactionSlug,
             violations: interactionViolationsCount,
             console: 0,
+            incomplete: interactionIncompleteCount,
             status: interactionStatus,
           })
         }
@@ -482,27 +544,29 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     routeStatus = 'WRITTEN'
   }
 
-  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, status: routeStatus })
+  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, incomplete: incompleteCount, status: routeStatus })
   await page.close()
 }
 
 await browser.close()
 cleanup()
 
-// D-05/D-07: regenerate the human-readable accepted-debt ledger from the JSON just written,
-// so ACCEPTED-VIOLATIONS.md can never drift from the baseline files it describes. Written
-// beside the baselines (src/dashboard/tests/a11y/), NOT under docs/ — an engineering artifact
-// with no Obsidian vault counterpart, same treatment docs/error-codes.md got in Phase 164.
-if (UPDATE_BASELINES && VARIANT === 'default') {
-  const ledgerPath = resolve(A11Y_DIR, 'ACCEPTED-VIOLATIONS.md')
-  const ledger = generateMarkdown(writtenBaselinesByRoute, VARIANT)
-  writeFileSync(ledgerPath, ledger)
-  console.log(`[a11y] Regenerated ${ledgerPath}`)
+// 216 D-17: in-process ledger collection is gone. Theme is now a per-process dimension
+// (D-01/D-02), so a single `--update-baselines` invocation can only ever see ONE theme — it
+// was structurally incapable of producing a theme-complete ACCEPTED-VIOLATIONS.md, and left
+// alone would silently narrow the ledger to whichever theme's process ran last. Regeneration
+// now reads every committed baseline file from disk across every theme
+// (`tests/a11y/ledger-input.mjs`), so it cannot be partial by construction. Run the dedicated
+// command afterward instead of writing here.
+if (UPDATE_BASELINES) {
+  console.log(
+    '[a11y] Baselines written. Run `npm run a11y:ledger` to regenerate ACCEPTED-VIOLATIONS.md across all themes.',
+  )
 }
 
 console.log('\n[a11y] Summary:')
-for (const { slug, violations, console: consoleCount, status } of summary) {
-  console.log(`  ${status.padEnd(7)} ${slug} — violations: ${violations}, console: ${consoleCount}`)
+for (const { slug, violations, console: consoleCount, incomplete, status } of summary) {
+  console.log(`  ${status.padEnd(7)} ${slug} — violations: ${violations}, console: ${consoleCount}, incomplete: ${incomplete ?? 0}`)
 }
 
 process.exit(exitCode)

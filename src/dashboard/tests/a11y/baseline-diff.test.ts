@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { dirname, resolve } from "node:path"
 import {
   buildBaselineEntries,
   compareToBaseline,
@@ -6,8 +9,11 @@ import {
   isPlaceholderJustification,
   SAMPLE_CAP,
   resolveVariant,
+  resolveTheme,
+  THEMES,
   baselineFilename,
 } from "./baseline-diff.mjs"
+import { VALID_THEMES } from "@/components/theme-context"
 
 // Phase 165 A11Y-04 / D-01, D-02, D-06, D-13, D-14 — the count-budget baseline comparison
 // must be insensitive to selector churn (radix runtime IDs, Tailwind arbitrary values), must
@@ -41,8 +47,10 @@ function makeViolation({ id, impact = "serious", count = 1, target, tags = [], h
   }
 }
 
-function makeBaselineEntry({ rule, count, impact = "serious", justification = "" }) {
-  return { rule, count, impact, wcag: [], helpUrl: "", justification, samples: [] }
+function makeBaselineEntry({ rule, count, impact = "serious", justification = "", countRange }) {
+  const entry = { rule, count, impact, wcag: [], helpUrl: "", justification, samples: [] }
+  if (countRange !== undefined) entry.countRange = countRange
+  return entry
 }
 
 describe("deriveWcagCriteria", () => {
@@ -132,6 +140,128 @@ describe("compareToBaseline — ratchet (D-13)", () => {
     const result = compareToBaseline("cbom", live, [])
     expect(result.regressions).toEqual([
       expect.objectContaining({ rule: "label", baselineCount: 0, observedCount: 2 }),
+    ])
+  })
+})
+
+describe("compareToBaseline — declared tolerance range (216 D-10/D-12)", () => {
+  it("a live count inside the range yields neither a regression nor a stale entry", () => {
+    const live = [makeViolation({ id: "scrollable-region-focusable", count: 2 })]
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", live, baseline)
+    expect(result.regressions).toHaveLength(0)
+    expect(result.staleEntries).toHaveLength(0)
+  })
+
+  it("a live count one above the range ceiling yields exactly one regression, reporting the ceiling", () => {
+    const live = [makeViolation({ id: "scrollable-region-focusable", count: 3 })]
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", live, baseline)
+    expect(result.regressions).toEqual([
+      expect.objectContaining({
+        rule: "scrollable-region-focusable",
+        baselineCount: 2,
+        observedCount: 3,
+      }),
+    ])
+    expect(result.staleEntries).toHaveLength(0)
+  })
+
+  it("a live count one below the range floor yields exactly one stale entry, reporting the floor", () => {
+    const live = [makeViolation({ id: "scrollable-region-focusable", count: 0 })]
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", live, baseline)
+    expect(result.regressions).toHaveLength(0)
+    expect(result.staleEntries).toEqual([
+      expect.objectContaining({
+        rule: "scrollable-region-focusable",
+        baselineCount: 1,
+        observedCount: 0,
+      }),
+    ])
+  })
+
+  it("a range of [2,2] is exactly equivalent to count: 2 on all three legs", () => {
+    const baseline = [
+      makeBaselineEntry({ rule: "color-contrast", count: 2, countRange: [2, 2] }),
+    ]
+    const insideResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 2 })],
+      baseline,
+    )
+    expect(insideResult.regressions).toHaveLength(0)
+    expect(insideResult.staleEntries).toHaveLength(0)
+
+    const aboveResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 3 })],
+      baseline,
+    )
+    expect(aboveResult.regressions).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 2, observedCount: 3 }),
+    ])
+
+    const belowResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 1 })],
+      baseline,
+    )
+    expect(belowResult.staleEntries).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 2, observedCount: 1 }),
+    ])
+  })
+
+  it("a baselined range with floor > 0 and no live observation yields one stale entry", () => {
+    const baseline = [
+      makeBaselineEntry({ rule: "scrollable-region-focusable", count: 2, countRange: [1, 2] }),
+    ]
+    const result = compareToBaseline("data-at-rest", [], baseline)
+    expect(result.staleEntries).toEqual([
+      expect.objectContaining({
+        rule: "scrollable-region-focusable",
+        baselineCount: 1,
+        observedCount: 0,
+      }),
+    ])
+  })
+
+  it.each([
+    ["ceiling below floor", [3, 1]],
+    ["single-element array", [1]],
+    ["three-element array", [1, 2, 3]],
+    ["string instead of array", "1-2"],
+    ["negative floor", [-1, 2]],
+    ["non-integer bound", [1.5, 2]],
+  ])("a malformed countRange (%s) throws and names the rule", (_desc, countRange) => {
+    const baseline = [makeBaselineEntry({ rule: "color-contrast", count: 2, countRange })]
+    expect(() => compareToBaseline("cbom", [], baseline)).toThrow(/color-contrast/)
+  })
+
+  it("an entry with no countRange is compared against its exact count", () => {
+    const baseline = [makeBaselineEntry({ rule: "color-contrast", count: 3 })]
+    const aboveResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 4 })],
+      baseline,
+    )
+    expect(aboveResult.regressions).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 3, observedCount: 4 }),
+    ])
+
+    const belowResult = compareToBaseline(
+      "cbom",
+      [makeViolation({ id: "color-contrast", count: 2 })],
+      baseline,
+    )
+    expect(belowResult.staleEntries).toEqual([
+      expect.objectContaining({ rule: "color-contrast", baselineCount: 3, observedCount: 2 }),
     ])
   })
 })
@@ -288,9 +418,34 @@ describe("justification carry-forward across regeneration (Phase 185 D-05)", () 
     })
     expect(emptyEntries[0].justification).toBe("")
   })
+
+  it("carries a declared countRange forward across a regeneration (216 D-10/D-12)", () => {
+    const violation = makeViolation({ id: "scrollable-region-focusable", count: 2 })
+    const previousEntries = [
+      makeBaselineEntry({
+        rule: "scrollable-region-focusable",
+        count: 2,
+        justification: "macOS-vs-Linux render disagreement; see 216-CONTEXT.md D-13.",
+        countRange: [1, 2],
+      }),
+    ]
+    const { entries } = buildBaselineEntries("data-at-rest", [violation], { previousEntries })
+    const entry = entries.find(e => e.rule === "scrollable-region-focusable")
+    expect(entry.countRange).toEqual([1, 2])
+  })
+
+  it("does not add a countRange key to an entry that never had one", () => {
+    const violation = makeViolation({ id: "color-contrast", count: 3 })
+    const previousEntries = [
+      makeBaselineEntry({ rule: "color-contrast", count: 3, justification: "still present" }),
+    ]
+    const { entries } = buildBaselineEntries("cbom", [violation], { previousEntries })
+    const entry = entries.find(e => e.rule === "color-contrast")
+    expect(Object.keys(entry)).not.toContain("countRange")
+  })
 })
 
-describe("variant-aware baseline naming (A11Y-04, D-15, D-16)", () => {
+describe("variant- and theme-aware baseline naming (A11Y-04, D-15, D-16, 216 D-01/D-02)", () => {
   it("resolveVariant({}) returns 'default' — the unsuffixed run is not an empty-string variant", () => {
     expect(resolveVariant({})).toBe("default")
   })
@@ -307,17 +462,80 @@ describe("variant-aware baseline naming (A11Y-04, D-15, D-16)", () => {
     expect(resolveVariant({ VITE_A11Y_FIXTURE_VARIANT: "" })).toBe("default")
   })
 
-  it("baselineFilename('cbom', 'default') returns 'baseline-cbom-default.json'", () => {
-    expect(baselineFilename("cbom", "default")).toBe("baseline-cbom-default.json")
+  it("baselineFilename('cbom', 'default', 'dark') returns 'baseline-cbom-default-dark.json'", () => {
+    expect(baselineFilename("cbom", "default", "dark")).toBe("baseline-cbom-default-dark.json")
   })
 
-  it("baselineFilename('qramm-assessment', 'empty') round-trips a hyphenated slug correctly", () => {
-    expect(baselineFilename("qramm-assessment", "empty")).toBe(
-      "baseline-qramm-assessment-empty.json",
+  it("baselineFilename('qramm-assessment', 'empty', 'light') round-trips a hyphenated slug correctly", () => {
+    expect(baselineFilename("qramm-assessment", "empty", "light")).toBe(
+      "baseline-qramm-assessment-empty-light.json",
     )
   })
 
   it("the default and empty variants produce different filenames for the same slug", () => {
-    expect(baselineFilename("cbom", "default")).not.toBe(baselineFilename("cbom", "empty"))
+    expect(baselineFilename("cbom", "default", "dark")).not.toBe(
+      baselineFilename("cbom", "empty", "dark"),
+    )
+  })
+
+  it("resolveTheme({}) returns 'dark' — the unset sweep is the historical default, named explicitly", () => {
+    expect(resolveTheme({})).toBe("dark")
+  })
+
+  it("resolveTheme({ A11Y_THEME: 'light' }) returns 'light'", () => {
+    expect(resolveTheme({ A11Y_THEME: "light" })).toBe("light")
+  })
+
+  it("resolveTheme({ A11Y_THEME: 'system' }) throws — a matchMedia-resolved sweep is not baselineable", () => {
+    expect(() => resolveTheme({ A11Y_THEME: "system" })).toThrow()
+  })
+
+  it("resolveTheme({ A11Y_THEME: 'ligth' }) throws rather than silently sweeping dark", () => {
+    expect(() => resolveTheme({ A11Y_THEME: "ligth" })).toThrow()
+  })
+
+  it("baselineFilename('cbom','default') throws instead of returning 'baseline-cbom-default-undefined.json'", () => {
+    expect(() => baselineFilename("cbom", "default")).toThrow()
+  })
+
+  it("the dark and light themes produce different filenames for the same (slug, variant)", () => {
+    expect(baselineFilename("cbom", "default", "dark")).not.toBe(
+      baselineFilename("cbom", "default", "light"),
+    )
+  })
+
+  it("THEMES excludes 'system' — the harness allowlist is deliberately narrower than the app's VALID_THEMES", () => {
+    expect(THEMES).not.toContain("system")
+    expect(VALID_THEMES).toContain("system")
+  })
+})
+
+describe("run-a11y.mjs docstring amendment guard (216 D-11)", () => {
+  // 216-CONTEXT.md D-11: run-a11y.mjs's Chrome-pinning-status docstring used to assert
+  // "D-06 keeps exact-integer baseline counts with no tolerance band" — a claim HARNESS-03's
+  // countRange directly contradicts. This guard asserts the contradicted sentence is gone
+  // and the amendment naming HARNESS-03/countRange is present, read from the FILE ON DISK so
+  // it fails if the docstring ever regresses, not just at plan-authoring time.
+  const runA11yPath = resolve(dirname(fileURLToPath(import.meta.url)), "run-a11y.mjs")
+  const runA11ySource = readFileSync(runA11yPath, "utf8")
+
+  it("does not contain the retired zero-tolerance claim 'no tolerance band'", () => {
+    expect(runA11ySource).not.toContain("no tolerance band")
+  })
+
+  it("contains the HARNESS-03 amendment marker and the new countRange mechanism name", () => {
+    expect(runA11ySource).toContain("HARNESS-03")
+    expect(runA11ySource).toContain("countRange")
+  })
+
+  it("names the transitional KBD-01 retirement pointer (D-14)", () => {
+    expect(runA11ySource).toContain("KBD-01")
+  })
+
+  it("names the incident the amendment is based on (Phase 177-07 / the resolved todo)", () => {
+    expect(
+      runA11ySource.includes("177-07") ||
+        runA11ySource.includes("a11y-baseline-environment-mismatch"),
+    ).toBe(true)
   })
 })
