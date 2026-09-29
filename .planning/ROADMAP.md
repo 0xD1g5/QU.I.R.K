@@ -34,7 +34,7 @@ cause at an exact file:line. This milestone adds no new detection capability.
 
 ## Phases
 
-- [ ] **Phase 210: Cross-Surface Score Parity** - One scan yields the same headline score, CRITICAL
+- [x] **Phase 210: Cross-Surface Score Parity** - One scan yields the same headline score, CRITICAL
   count and certificate count from the report pipeline and the dashboard pipeline. **All 8 plans
   done, all 4 requirements Complete; left unchecked because the phase's own stated goal is only
   PARTIALLY achieved** — CRITICAL count and certificate count now match exactly, but the headline
@@ -42,9 +42,16 @@ cause at an exact file:line. This milestone adds no new detection capability.
   **UPDATE 2026-09-28 — Criterion 5 is now SATISFIED, by Phase 211's work, not by Phase 210's.**
   Live measurement `scan_run_id 2026-09-28T13:16:55.319715+00:00`: report 18/100 == dashboard
   18/100, all six subscores matching. Root cause was a finding-title vocabulary mismatch plus a
-  LOW-severity-proxy structural zero, fixed in `127913ca` and `c1245a55`. This box is left
-  UNCHECKED deliberately: the provenance matters, and whether to check it is a milestone-close
-  decision for the operator. See `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`.
+  LOW-severity-proxy structural zero, fixed in `127913ca` and `c1245a55`.
+  **CHECKED 2026-09-29 — operator decision at the v5.25 milestone close.** The two sentences above
+  are preserved verbatim, including the one that said this box was "left UNCHECKED deliberately …
+  a milestone-close decision for the operator": that decision has now been made, and the box is
+  `[x]`. The provenance the prior text wanted protected is not erased by the checkbox — it is
+  recorded here and in `.planning/decisions/211-cross-surface-finding-vocabulary-is-a-scoring-input.md`:
+  **Phase 210's Success Criterion 5 was met by Phase 211's work, not by Phase 210's.** A reader
+  reconstructing who fixed what must read this entry, not the checkbox. Note also the v5.25 audit's
+  W-1/W-2: XSURF-04's regression gate covers one of three divergence classes, so "a regression
+  fails a gate" is narrower than it reads — see `REQUIREMENTS.md` XSURF-04's scope correction.
 - [x] **Phase 211: Denominator Correctness** - Every ratio penalty divides by the population its
   numerator is drawn from, decided by measurement against the calibration ladder and re-proved red
   before acceptance. **RE-SCOPED to verify + investigate (`1804d703`)** — DENOM-01/02/03 had already
@@ -446,8 +453,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 210. Cross-Surface Score Parity | 8/8 | Partial — 4/4 requirements Complete, Success Criterion 5 (identical headline score) NOT MET, see 210-08-SUMMARY.md | 2026-09-27 |
-| 211. Denominator Correctness | 0/? | Not started | - |
-| 212. Score Dilution — Decision Only | 0/? | Not started | - |
-| 213. Shipped Product Defects (Series 7) | 0/? | Not started | - |
+| 210. Cross-Surface Score Parity | 8/8 | Complete — 4/4 requirements Complete. Criterion 5 (identical headline score) was NOT MET at this phase's close (210-08-SUMMARY.md) and was **satisfied by Phase 211's work**, live 18/100 == 18/100. Box checked 2026-09-29 by operator decision at milestone close; provenance recorded in the phase entry above. | 2026-09-28 |
+| 211. Denominator Correctness | 8/8 | Complete — `211-VERIFICATION.md` passed, 8/8 must-haves, goal-level and requirement-level verdicts AGREE. Closed Phase 210's unmet Criterion 5. DENOM-03's behavioural clause measured INVERTED and disclosed. | 2026-09-28 |
+| 212. Score Dilution — Decision Only | 5/5 | Complete — `212-VERIFICATION.md` passed, 4/4 success criteria. VERDICT **RECOMMEND NONE**, a complete and valid outcome per CONTEXT D-05; no implementation shipped, defect still `xfail(strict=True)`. | 2026-09-28 |
+| 213. Shipped Product Defects (Series 7) | 10/10 | Complete — `213-VERIFICATION.md` passed, 5/5 must-haves; criterion 2 recorded NOT MET AS WRITTEN rather than reinterpreted. UIFIX-01/02 Complete; see REQUIREMENTS.md UIFIX-02's 2026-09-29 scope correction (audit W-4/W-9). | 2026-09-28 |
 | 214. Release Cut | 9/9 | Complete — 4/4 requirements Complete (REL-01/02/03/04); all 4 Success Criteria MET, criterion 1 with the deliberate evidenced four-milestones deviation (214-NOT-MET-AS-WRITTEN.md § B, STANDS). REL-03 closed POST-checkpoint on real publish run 36497076444; § A DISCHARGED. Tag pushed by the operator. | 2026-09-28 |

@@ -54,6 +54,20 @@ hand a client two PDFs with different headline scores. Source:
       asserts the report pipeline and the dashboard pipeline emit the same headline score, the same
       CRITICAL count and the same certificate count for one `scan_run_id` — the four-surface
       equality `LIFT-05` claims for score-lift, extended to the headline number.
+      **SCOPE CORRECTED 2026-09-29 (v5.25 milestone audit, W-1/W-2) — the text above is preserved
+      as written and is broader than what shipped.** "A regression … fails a gate" is true for the
+      *dedupe / latest-scan* divergence class only. Measured by mutation probe, not asserted:
+      reverting 211's title bridge (`canonical_cli_title -> None`) or 211's `legacy_tls_count`
+      emission fails `tests/test_evidence_finding_vocabulary_parity.py` (2 and 7 failures
+      respectively) but **passes** `tests/test_cross_surface_parity.py` (`4 passed`) in both cases —
+      XSURF-04's synthetic fixture never exercises the plaintext-HTTP or legacy-TLS code paths.
+      The two gates are **complementary; neither alone satisfies this requirement as worded.**
+      A *third* class has no gate at all: `"HTTP on TLS-designated port"` has no dashboard emission
+      site and is unbridgeable (`docs/report-interpretation.md:2035`, todo
+      `211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`). Stays `[x]`: Phase 210
+      delivered the gate its own plans scoped, and the two later classes were discovered by Phase
+      211 and disclosed rather than hidden. Honest status is **Complete for one of three
+      divergence classes, with the other two gated elsewhere or ledgered.**
 
 ### Denominator Correctness
 
@@ -188,6 +202,27 @@ into a closed milestone.
       resolver with live re-resolution on toggle, confirmed rendering correctly in both themes by
       the operator (plan 213-09). `UAT-7-21` PASS (qualified — two Pass Criteria bullets remain
       named as uncovered by any instrument) in `docs/UAT-SERIES.md`.
+      **SCOPE CORRECTED 2026-09-29 (v5.25 milestone audit, W-4/W-9) — the heading sentence
+      "Dashboard colours come from theme tokens" is preserved as written and is broader than what
+      shipped, in two separate ways.**
+      *(a) Coverage.* The gate's `auditedFiles()` globs `src/pages/*.tsx` plus
+      `components/sidebar.tsx` — **27 of 76 non-test `.tsx` files.** Six live literals ship from
+      three unaudited but reachable components: `LifecycleEventRow.tsx` (2), `VendorTrendList.tsx`
+      (2), `LifecycleEventList.tsx` (2). They are in the committed bundle —
+      `grep -c -F 'hsl(180_37%_47%)' quirk/dashboard/static/assets/index-*.js` returns 1.
+      *(b) A token reference is not a legible colour.* The gate asks "is this a literal?", never
+      "does this contrast?", so tokenisation can *launder* an accessibility fix. It did: plan
+      213-07 replaced the hand-tuned `hsl(142 71% 30%)` (#16833e + white = 4.84:1) with
+      `var(--qs-node-safe)` (142 71% 45%, #21c45d + white = **2.30:1**) — identical hue and
+      saturation, lightness 30%->45% — the gate stayed green, and `Axe + Console Gate` went red on
+      `main` for five consecutive runs. Fixed 2026-09-29 (`--status-safe-deep`), guarded by
+      `src/dashboard/src/components/__tests__/cbom-badge-contrast-guard.test.ts`, mutation-proved.
+      Full-set enumeration then found **46 of 103 badge pairs below AA 4.5:1 in at least one
+      theme**; 1 fixed, **45 remain**, deferred as one unit to backlog `999.117`.
+      Stays `[x]`: the 205-literal tokenisation this requirement scoped was delivered and gated,
+      and the residue is pre-existing (a reopening of `BACK-A11Y-01`, filed 2026-05-22) rather than
+      work this requirement dropped. Honest status is **Complete for the pages layer; the
+      components layer is ungated and 45 colour pairs remain below AA.**
 
 ### Release Cut
 
@@ -406,14 +441,14 @@ named above already carry their own `## [x.y.z]` CHANGELOG body — see
 | XSURF-01 | Phase 210 | Complete |
 | XSURF-02 | Phase 210 | Complete |
 | XSURF-03 | Phase 210 | Complete |
-| XSURF-04 | Phase 210 | Complete |
+| XSURF-04 | Phase 210 | Complete (QUALIFIED 2026-09-29, audit W-1/W-2 — gate covers the dedupe/latest-scan divergence class only; the vocabulary + severity-proxy class is gated by Phase 211's test instead, and the `"HTTP on TLS-designated port"` class is ungated and ledgered) |
 | DENOM-01 | Phase 211 | Complete (satisfied by prior commit `1804d703`, decision DECIDED 2026-09-13) |
 | DENOM-02 | Phase 211 | Complete (prior commit `0b0ed1c7` + live measurement 211-01) |
 | DENOM-03 | Phase 211 | Complete (unit clause prior `0b0ed1c7`; behavioural clause measured INVERTED, live 211-05) |
 | DENOM-04 | Phase 211 | Complete (4 sub-items dispositioned 211-01; fixtures/score-strings N/A-dispositioned, not regenerated — deviation from literal text) |
 | DILUTE-01 | Phase 212 | Complete (decision only — RECOMMEND NONE; defect still xfails) |
 | UIFIX-01 | Phase 213 | Complete (`UAT-7-12` PASS; COV-04's 27-of-28 artifact-level closure recorded NOT MET AS WRITTEN — see ROADMAP.md Phase 213 entry) |
-| UIFIX-02 | Phase 213 | Complete (true pre-fix count 205 across 17 files, not 95 across 9; `UAT-7-21` PASS qualified) |
+| UIFIX-02 | Phase 213 | Complete (true pre-fix count 205 across 17 files, not 95 across 9; `UAT-7-21` PASS qualified). QUALIFIED FURTHER 2026-09-29, audit W-4/W-9 — colour audit globs 27 of 76 files, 6 literals ship from 3 unaudited components, and a token reference is not a legible colour: 45 badge pairs remain below AA 4.5:1 (backlog `999.117`, a reopening of `BACK-A11Y-01`) |
 | REL-01 | Phase 214 | Complete (`de9f2e2a`; one `## [5.25.0]`, composer red-proved then dry-run-proved — entry describes FOUR milestones not three, a deliberate evidenced deviation, see 214-NOT-MET-AS-WRITTEN.md § B) |
 | REL-02 | Phase 214 | Complete (`ee4598af`+`3626a56a`+`07157599`; 3 surfaces at 5.25.0, editable reinstall run, 3 independent readings agree, gate `7 passed, 1 deselected` — 8 functions, not the stale "4") |
 | REL-03 | Phase 214 | **Complete** — real publish run `36497076444` (`event=push`, head `de74b118`): `Publish to PyPI` **`skipped` → `success`**, `Attach zip` likewise, Release object live with the composed body byte-identical (17,794 B) and `## [5.25.0]` above the unsigned-binary notice, PyPI serves 5.25.0 (wheel + sdist). Tag pushed by the **operator**, not an agent. Criterion 3 **MET**; `214-NOT-MET-AS-WRITTEN.md` § A **DISCHARGED** (§ B stands). Evidence `214-PUBLISH-EVIDENCE.md`. Prior row read "PENDING — operator-reserved" and was accurate at the phase's close |
