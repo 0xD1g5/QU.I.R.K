@@ -6,8 +6,11 @@ import {
   isPlaceholderJustification,
   SAMPLE_CAP,
   resolveVariant,
+  resolveTheme,
+  THEMES,
   baselineFilename,
 } from "./baseline-diff.mjs"
+import { VALID_THEMES } from "@/components/theme-context"
 
 // Phase 165 A11Y-04 / D-01, D-02, D-06, D-13, D-14 — the count-budget baseline comparison
 // must be insensitive to selector churn (radix runtime IDs, Tailwind arbitrary values), must
@@ -290,7 +293,7 @@ describe("justification carry-forward across regeneration (Phase 185 D-05)", () 
   })
 })
 
-describe("variant-aware baseline naming (A11Y-04, D-15, D-16)", () => {
+describe("variant- and theme-aware baseline naming (A11Y-04, D-15, D-16, 216 D-01/D-02)", () => {
   it("resolveVariant({}) returns 'default' — the unsuffixed run is not an empty-string variant", () => {
     expect(resolveVariant({})).toBe("default")
   })
@@ -307,17 +310,50 @@ describe("variant-aware baseline naming (A11Y-04, D-15, D-16)", () => {
     expect(resolveVariant({ VITE_A11Y_FIXTURE_VARIANT: "" })).toBe("default")
   })
 
-  it("baselineFilename('cbom', 'default') returns 'baseline-cbom-default.json'", () => {
-    expect(baselineFilename("cbom", "default")).toBe("baseline-cbom-default.json")
+  it("baselineFilename('cbom', 'default', 'dark') returns 'baseline-cbom-default-dark.json'", () => {
+    expect(baselineFilename("cbom", "default", "dark")).toBe("baseline-cbom-default-dark.json")
   })
 
-  it("baselineFilename('qramm-assessment', 'empty') round-trips a hyphenated slug correctly", () => {
-    expect(baselineFilename("qramm-assessment", "empty")).toBe(
-      "baseline-qramm-assessment-empty.json",
+  it("baselineFilename('qramm-assessment', 'empty', 'light') round-trips a hyphenated slug correctly", () => {
+    expect(baselineFilename("qramm-assessment", "empty", "light")).toBe(
+      "baseline-qramm-assessment-empty-light.json",
     )
   })
 
   it("the default and empty variants produce different filenames for the same slug", () => {
-    expect(baselineFilename("cbom", "default")).not.toBe(baselineFilename("cbom", "empty"))
+    expect(baselineFilename("cbom", "default", "dark")).not.toBe(
+      baselineFilename("cbom", "empty", "dark"),
+    )
+  })
+
+  it("resolveTheme({}) returns 'dark' — the unset sweep is the historical default, named explicitly", () => {
+    expect(resolveTheme({})).toBe("dark")
+  })
+
+  it("resolveTheme({ A11Y_THEME: 'light' }) returns 'light'", () => {
+    expect(resolveTheme({ A11Y_THEME: "light" })).toBe("light")
+  })
+
+  it("resolveTheme({ A11Y_THEME: 'system' }) throws — a matchMedia-resolved sweep is not baselineable", () => {
+    expect(() => resolveTheme({ A11Y_THEME: "system" })).toThrow()
+  })
+
+  it("resolveTheme({ A11Y_THEME: 'ligth' }) throws rather than silently sweeping dark", () => {
+    expect(() => resolveTheme({ A11Y_THEME: "ligth" })).toThrow()
+  })
+
+  it("baselineFilename('cbom','default') throws instead of returning 'baseline-cbom-default-undefined.json'", () => {
+    expect(() => baselineFilename("cbom", "default")).toThrow()
+  })
+
+  it("the dark and light themes produce different filenames for the same (slug, variant)", () => {
+    expect(baselineFilename("cbom", "default", "dark")).not.toBe(
+      baselineFilename("cbom", "default", "light"),
+    )
+  })
+
+  it("THEMES excludes 'system' — the harness allowlist is deliberately narrower than the app's VALID_THEMES", () => {
+    expect(THEMES).not.toContain("system")
+    expect(VALID_THEMES).toContain("system")
   })
 })
