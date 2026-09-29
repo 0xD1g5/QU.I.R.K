@@ -1,0 +1,21 @@
+{
+  "route": "certificates",
+  "generated": "2026-09-29T18:35:58.245Z",
+  "entries": [
+    {
+      "rule": "color-contrast",
+      "count": 3,
+      "impact": "serious",
+      "wcag": [
+        "1.4.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
+      "justification": "Route /certificates, theme light, rule color-contrast. This entry was REVEALED, not created, by two Phase 216 repairs together: the certificates fixture enrichment (216-02, D-05/D-07), which gave this route real certificate data to render badges from, and the light-theme sweep (216-01/216-04, D-01/D-02), which swept this route's light theme for the first time. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. Two of the three samples (`bg-[hsl(var(--status-warning))] text-black` \"At Risk\", appearing twice) pairs a `bg-[hsl(var(--status-warning))]` or `bg-[hsl(var(--chart-tls))]` badge background with a literal `text-black` foreground class \u2014 one of the 29 `text-black` sites FIX-02 (Phase 217) classifies and FIX-03 (Phase 217) repairs with a theme-varying `-foreground` token (analysis already shows no static colour passes AA in both themes for either token; REQUIREMENTS.md FIX-02). The third sample, `bg-[hsl(var(--qs-node-safe))] text-white` \"Safe\", pairs a `bg-[hsl(var(--risk-badge-high))]` or `bg-[hsl(var(--qs-node-safe))]` badge background with white foreground text \u2014 exactly the zero-design-input swap FIX-01 (Phase 217, REQUIREMENTS.md) drains by moving each to its existing `-foreground` sibling token (`--risk-badge-high-foreground` / `--qs-node-safe-foreground`), which needs no new token and no visual redesign. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "samples": [
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--status-warning))] text-black text-xs\">At Risk</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--status-warning))] text-black text-xs\">At Risk</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--qs-node-safe))] text-white text-xs\">Safe</div>"
+      ]
+    }
+  ]
+}

@@ -1,34 +1,20 @@
 {
   "route": "hardware",
-  "generated": "2026-09-06T23:42:36.823Z",
+  "generated": "2026-09-29T18:36:31.573Z",
   "entries": [
     {
       "rule": "color-contrast",
-      "count": 3,
+      "count": 8,
       "impact": "serious",
       "wcag": [
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "D-11 — Phase 156 HWLC-11 advisory firewall (justified in the ledger, NOT fixed). This route renders hardware-lifecycle/vendor risk badges using raw hsl() Tailwind arbitrary-value literals (bg-[hsl(24_95%_53%)] and/or bg-[hsl(142_71%_45%)]) that deliberately bypass the app's semantic score-color design tokens. Per Phase 156 D-07, these literals implement a mechanical firewall between the advisory-only hardware lifecycle / vendor PQC trend section and the app's scored-finding visual language, so an advisory badge can never be visually confused with a real CBOM/QRAMM scored finding (see 156-UI-SPEC.md §Color). That firewall is enforced by two guard tests that pin these exact literals in a FORBIDDEN_PALETTE array and fail if either is retuned toward the app's contrast-compliant palette: src/dashboard/src/components/__tests__/lifecycle-advisory-guard.test.ts (hsl(24 95% 53%) at line 16, hsl(142 71% 45%) at line 18) and src/dashboard/src/components/__tests__/vendor-trend-advisory-guard.test.ts (hsl(24 95% 53%) at line 18, hsl(142 71% 45%) at line 20). Tokenizing or adjusting either literal to satisfy color-contrast would deliberately break both currently-passing guard tests. Per D-11 this violation is accepted here and tracked in this ledger, not fixed; the raw hsl() literals are left unchanged — confirmed by an empty git diff on both component files.",
+      "justification": "D-11 \u2014 Phase 156 HWLC-11 advisory firewall (justified in the ledger, NOT fixed). This route renders hardware-lifecycle/vendor risk badges using raw hsl() Tailwind arbitrary-value literals (bg-[hsl(24_95%_53%)] and/or bg-[hsl(142_71%_45%)]) that deliberately bypass the app's semantic score-color design tokens. Per Phase 156 D-07, these literals implement a mechanical firewall between the advisory-only hardware lifecycle / vendor PQC trend section and the app's scored-finding visual language, so an advisory badge can never be visually confused with a real CBOM/QRAMM scored finding (see 156-UI-SPEC.md \u00a7Color). That firewall is enforced by two guard tests that pin these exact literals in a FORBIDDEN_PALETTE array and fail if either is retuned toward the app's contrast-compliant palette: src/dashboard/src/components/__tests__/lifecycle-advisory-guard.test.ts (hsl(24 95% 53%) at line 16, hsl(142 71% 45%) at line 18) and src/dashboard/src/components/__tests__/vendor-trend-advisory-guard.test.ts (hsl(24 95% 53%) at line 18, hsl(142 71% 45%) at line 20). Tokenizing or adjusting either literal to satisfy color-contrast would deliberately break both currently-passing guard tests. Per D-11 this violation is accepted here and tracked in this ledger, not fixed; the raw hsl() literals are left unchanged \u2014 confirmed by an empty git diff on both component files.\n\nCount-increase addendum (Phase 216, D-05/D-07, REVEALED not created): this route's color-contrast count rose from the prior baseline's 3 to 8 nodes on this regeneration. This is the SAME D-11 Phase-156 firewalled raw-hsl() badge debt described above, now rendering more badge instances because 216-02 enriched the fixture with more hardware vendor/lifecycle records than the pre-216 fixture carried \u2014 more rows means more badges using the same two firewalled literals, not a new violation shape. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own. This entry is explicitly OUT of FIX-01..FIX-04's scope: the Phase-156 firewall (lifecycle-advisory-guard.test.ts, vendor-trend-advisory-guard.test.ts) deliberately keeps these two literals off the app's semantic token system, so FIX-01's token-pair swap does not apply to them, and FIX-04's named design calls (`--destructive`/`--quantum-safe`/`--badge-modbus`) do not include them either. FIX-05's \"zero badge pair anywhere\" target does not retire this entry unless a future phase revisits the Phase-156 firewall design itself; that revisit is out of scope here.",
       "samples": [
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(142_71%_45%)] text-white font-semibold text-xs\">high</div>",
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(142_71%_45%)] text-white font-semibold text-xs\">v3 auth+priv</div>",
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(24_95%_53%)] text-white font-semibold text-xs\">Tier 2</div>"
-      ]
-    },
-    {
-      "rule": "scrollable-region-focusable",
-      "count": 1,
-      "impact": "serious",
-      "wcag": [
-        "2.1.1",
-        "2.1.3"
-      ],
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/scrollable-region-focusable?application=axe-puppeteer",
-      "justification": "Category (b) — design/scope decision beyond this ops milestone; this is /hardware's own instance of the same pre-existing, already-accepted app-wide gap described in the data-at-rest baseline (Phase 165/177), not a new defect. The /hardware route renders its table(s) via the shared shadcn Table wrapper (src/dashboard/src/components/ui/table.tsx:9, `<div class=\"relative w-full overflow-auto\">`), which has no tabIndex/role on the scrolling container, so a keyboard user cannot focus and scroll it independently of page scroll. Fixing this correctly requires the same app-wide focus-order change already described on data-at-rest's entry — adding focus + ARIA landmark handling to a component shared by every table consumer (findings, identity, certificates, roadmap, data-at-rest, and now hardware) — which 165-CONTEXT.md's phase boundary explicitly excludes ('keyboard-navigation or focus-order audits') from this milestone's scope. Tracked as the same follow-up work as the data-at-rest entry, not accepted as separate permanent debt.",
-      "samples": [
-        "<div class=\"relative w-full overflow-auto\">"
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--qs-node-safe))] text-white font-semibold text-xs\">high</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--qs-node-safe))] text-white font-semibold text-xs\">v3 auth+priv</div>",
+        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--qs-node-safe))] text-white font-semibold text-xs\">high</div>"
       ]
     }
   ]
