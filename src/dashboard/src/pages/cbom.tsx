@@ -126,7 +126,7 @@ function CbomTable({ components }: CbomTableProps) {
       </div>
 
       <div className="rounded-md border border-border">
-        <Table>
+        <Table regionLabel="Cryptographic algorithm inventory">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold text-foreground">Algorithm</TableHead>
@@ -189,7 +189,7 @@ function HardwareInventory({ devices }: { devices: HardwareComponent[] }) {
     <div className="space-y-3 mt-6">
       <h2 style={{ fontSize: 16, fontWeight: 600 }}>Hardware Inventory</h2>
       <div className="rounded-md border border-border">
-        <Table>
+        <Table regionLabel="Hardware inventory">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold text-foreground">Type</TableHead>
