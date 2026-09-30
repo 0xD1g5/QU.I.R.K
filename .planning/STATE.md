@@ -1387,7 +1387,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 217 (Contrast Violations — Structural Drain) — **COMPLETE, 5 of 5 plans, verification `passed` 4/4 (`217-VERIFICATION.md`, 2026-09-29).** Code-review WR-01 fixed in `c1842532`; IN-01 (Info) left open. Branch pushed at `c1842532`, NOT merged to `main` — merge via PR before treating 217 as landed.
+Phase: 217 (Contrast Violations — Structural Drain) — **COMPLETE, 5 of 5 plans, verification `passed` 4/4 (`217-VERIFICATION.md`, 2026-09-29).** Code-review WR-01 fixed in `c1842532`; IN-01 (Info) left open. Merged to `main` via PR #39 (`40377f6b`) 2026-09-29.
 Plan: All five 217-0N plans executed and committed on branch `phase-217-contrast-structural-drain`
 (`96cd3317`, `652a845f`, `364bdf40`, `349046ac`, `f6031506`, `99993d71`, plus this close-out's
 STATE/ROADMAP/REQUIREMENTS hand-edit commit). Next is `/gsd-verify-work` for Phase 217, then Phase
@@ -1515,8 +1515,18 @@ unattributable.
 
 ## Next Cycle — Phase 218 (Contrast Violations — Design Calls & Closing Assertion)
 
-Phase 217 (FIX-01/02/03) is executed and committed; verification is next, then Phase 218 needs a
-full discuss -> plan -> execute cycle. It depends on Phase 217 **and Phase 216** per ROADMAP (the
+**PAUSED 2026-09-29 by operator request at a clean boundary.** Phase 217 (FIX-01/02/03) is
+executed, verified `passed` 4/4, and **MERGED to `main` via PR #39 (`40377f6b`)** — every PR check
+green, including `Linux Full Suite` (the two Docker `chaos_lab_idempotency` nodes passed this run).
+Phase 218 has **no directory yet** and needs a full discuss -> plan -> execute cycle; resume with
+`/gsd-autonomous --from 218` or `/gsd-discuss-phase 218`. The three findings routed out of 217 are
+filed as tracked todos: `260929-roadmap-runtime-bg-badges-text-white-fail-aa-dark.md` (218/220),
+`260929-a11y-axe-harness-does-not-cover-scan-history-sensors-and-more.md` (220),
+`260929-canonical-demo-db-lacks-rows-for-uat-217-visual-legs.md` (220).
+
+Original handoff text (written at 217-05 close, before verification): Phase 217 (FIX-01/02/03) is
+executed and committed; verification is next, then Phase 218 needs a full discuss -> plan ->
+execute cycle. It depends on Phase 217 **and Phase 216** per ROADMAP (the
 closing empty-baseline assertion requires every prior phase's contrast work to have already
 landed). Phase 218 owns FIX-04 (the 5 genuine design-call pairs — `--destructive`/white dark ×2,
 `--quantum-safe`/paired-fg light ×2, `--badge-modbus`/white dark ×1 — under operator visual
