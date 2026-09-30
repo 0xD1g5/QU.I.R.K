@@ -124,7 +124,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
        (215-04 Task 4) has not yet been approved. Flip this after both land. -->
 - [x] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
 - [x] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
-- [ ] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
+- [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [ ] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
 - [ ] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
 
@@ -268,7 +268,7 @@ Plans:
 | 215. Instrument Ratchet | 4/4 | Complete | 2026-09-29 |
 | 216. A11y Harness Repair | 8/8 | Complete | 2026-09-29 |
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
-| 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Executed, pending verification | - |
+| 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 0/? | Not started | - |
 | 220. CI Instrument Truth | 0/? | Not started | - |
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-09-30T23:59:00.000Z"
-last_activity: 2026-09-30 -- Phase 218 (Contrast Violations -- Design Calls & Closing Assertion) EXECUTED, all 6 plans complete, PENDING VERIFICATION (no phase.complete, no state.* verb used). FIX-04 resolved via 3-round operator checkpoint (218-03, verbatim choices in 218-FIX04-DECISIONS.md); FIX-05 closed as "empty baseline + 7 named blind-spot sites fixed + 9 instrument blind spots handed to Phase 220" (218-CLOSING-ASSERTION.md, D-08 shape). badge-contrast-baseline.json key set confirmed [] live. D-07(3) roadmap-graph node-label scope addition operator-approved and fixed. CI axe round-trip (218-05) green 4/4 on second dispatch; Linux Full Suite failing-node set identical to main (2 permanent MinIO nodes). UAT Series 218 added (8 cases, all PASS) with dated addenda on 4 superseded-count cases in Series 215/217. Branch phase-218-contrast-design-calls NOT merged. Next -- /gsd-verify-phase 218, then PR.
+last_updated: "2026-09-30T22:34:55.000Z"
+last_activity: 2026-09-30 -- Phase 218 VERIFIED passed 3/3 (218-VERIFICATION.md) and marked complete BY HAND (no phase.complete). CI on HEAD 1ef68b29 read per-step: Dashboard Quality green 4/4 (run 36783565237); Python CI fails only the 2 permanent MinIO chaos-lab nodes, failing-node SET identical to main (run 36783562387 vs 36728169611). Code review 0 Critical / 1 Warning (WR-01 fixed 1ef68b29) / 2 Info. FIX-05 closed as "empty baseline + 7 named blind-spot sites fixed + 9 instrument blind spots handed to Phase 220". Branch phase-218-contrast-design-calls pushed, NOT merged. Out-of-phase: PR #41 (score gauge arcs mirrored since 2026-03-31) and PR #42 (README refresh; depends on #41). Next -- merge 218 PR, then Phase 219.
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 23
   completed_plans: 23
-  percent: 50
+  percent: 67
 ---
 
 # Project State
