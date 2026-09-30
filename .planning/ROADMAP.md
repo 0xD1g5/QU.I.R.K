@@ -206,11 +206,11 @@ Plans:
   4. RATCHET's baseline reflects zero remaining failures for the categories this phase owns (11 free swaps + 29 spiked sites).
 **Plans**: 5 plans in 4 waves
 Plans:
-- [ ] 217-01-PLAN.md — FIX-01: 11 text-white -> -foreground sibling swaps, badge baseline -12 keys in the same commit (wave 1)
-- [ ] 217-02-PLAN.md — FIX-02 spike: 217-SPIKE.md full classification + recorded plan shape, D-09 text-on-white guard proven red under 2 mutations (wave 1, before any FIX-03 edit)
-- [ ] 217-03-PLAN.md — FIX-03: mint --status-warning-foreground/--chart-tls-foreground, repoint 29 badge sites, baseline = exactly FIX-04's 5 keys (wave 2)
-- [ ] 217-04-PLAN.md — CI-only axe baseline round-trip (Linux artifact), drained justifications rewritten, residual per-route attribution for Phase 218 (wave 3)
-- [ ] 217-05-PLAN.md — Operator both-theme visual check, UAT Series 217, vault sync, hand-edited STATE/ROADMAP/REQUIREMENTS (wave 4)
+- [x] 217-01-PLAN.md — FIX-01: 11 text-white -> -foreground sibling swaps, badge baseline -12 keys in the same commit (wave 1)
+- [x] 217-02-PLAN.md — FIX-02 spike: 217-SPIKE.md full classification + recorded plan shape, D-09 text-on-white guard proven red under 2 mutations (wave 1, before any FIX-03 edit)
+- [x] 217-03-PLAN.md — FIX-03: mint --status-warning-foreground/--chart-tls-foreground, repoint 29 badge sites, baseline = exactly FIX-04's 5 keys (wave 2)
+- [x] 217-04-PLAN.md — CI-only axe baseline round-trip (Linux artifact), drained justifications rewritten, residual per-route attribution for Phase 218 (wave 3)
+- [x] 217-05-PLAN.md — Operator both-theme visual check, UAT Series 217, vault sync, hand-edited STATE/ROADMAP/REQUIREMENTS (wave 4)
 **UI hint**: yes
 
 ### Phase 218: Contrast Violations — Design Calls & Closing Assertion
@@ -259,8 +259,8 @@ been drained.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 215. Instrument Ratchet | 4/4 | Complete | 2026-09-29 |
-| 216. A11y Harness Repair | 0/? | Not started | - |
-| 217. Contrast Violations — Structural Drain | 0/5 | Planned | - |
+| 216. A11y Harness Repair | 8/8 | Complete | 2026-09-29 |
+| 217. Contrast Violations — Structural Drain | 5/5 | Executed (pending verification) | 2026-09-29 |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 0/? | Not started | - |
 | 219. Keyboard Access | 0/? | Not started | - |
 | 220. CI Instrument Truth | 0/? | Not started | - |

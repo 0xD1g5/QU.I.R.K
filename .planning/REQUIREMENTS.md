@@ -111,7 +111,7 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 ### Contrast Violations
 
-- [ ] **FIX-01**: The zero-design-input swaps are applied — every failing pair moves to its
+- [x] **FIX-01**: The zero-design-input swaps are applied — every failing pair moves to its
       existing `-foreground` sibling: `--risk-badge-high` + white (2.85) → `-foreground` (5.97),
       and `--qs-node-safe` + white (2.30) → `--qs-node-safe-foreground` (7.40).
 
@@ -142,7 +142,7 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
       **12** entries — 8 × `risk-badge-high|white` (4 files × both themes) + 4 ×
       `qs-node-safe|white` (2 files × both themes). Both tokens fail in BOTH themes, unlike
       FIX-03's, which fail in light only. Re-derive again before treating 12 as a target.
-- [ ] **FIX-02**: A spike on 3–4 of the 29 `text-black` sites classifies each as badge-background vs
+- [x] **FIX-02**: A spike on 3–4 of the 29 `text-black` sites classifies each as badge-background vs
       text-on-white use and returns a recorded plan shape before any bulk edit
 
       **Pre-scouted 2026-09-29 (evidence, not a substitute for the spike).** The spike's *fix*
@@ -165,7 +165,7 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
       text pairs at all. Expected plan shape: **uniform**, with a `bg-` vs `text-` prefix test as
       the classifier. Re-derive at Phase 217 plan time; the baseline dedups these 29 occurrences
       to 18 distinct entries.
-- [ ] **FIX-03**: The 29 sites reach AA in both themes without regressing the text-on-white contrast
+- [x] **FIX-03**: The 29 sites reach AA in both themes without regressing the text-on-white contrast
       Phase 213 established for `--status-warning` and `--chart-tls`
 - [ ] **FIX-04**: The 5 genuine design calls are resolved with operator visual review, as 213-09 did
       — not auto-picked (`--destructive` + white 3.82 dark ×2, `--quantum-safe` + paired fg 3.87
@@ -250,9 +250,9 @@ Filled during roadmap creation.
 | HARNESS-01 | Phase 216 | Complete |
 | HARNESS-02 | Phase 216 | Complete |
 | HARNESS-03 | Phase 216 | PARTIAL (default variant only; empty/loading legs near-vacuous — verifier B1) |
-| FIX-01 | Phase 217 | Pending |
-| FIX-02 | Phase 217 | Pending |
-| FIX-03 | Phase 217 | Pending |
+| FIX-01 | Phase 217 | Complete |
+| FIX-02 | Phase 217 | Complete |
+| FIX-03 | Phase 217 | Complete |
 | FIX-04 | Phase 218 | Pending |
 | FIX-05 | Phase 218 | Pending |
 | KBD-01 | Phase 219 | Pending |
