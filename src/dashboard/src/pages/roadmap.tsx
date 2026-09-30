@@ -91,18 +91,38 @@ const PHASE_COLORS: Record<string, string> = Object.fromEntries(
   Object.entries(PHASE_TOKEN).map(([phase, token]) => [phase, `hsl(var(${token}))`]),
 )
 
-// Phase 218 D-07(1): text colour for the phase detail-panel badge, keyed the
-// SAME as PHASE_TOKEN above (not a static text-white class). Each entry is
-// derived from its own background's own AA result in both themes: "white"
-// only where the bg already clears 4.5:1 with white in both themes
-// (status-critical); --status-warning and --qs-node-safe route to their
-// existing -foreground tokens because white fails on at least one theme
-// (status-warning: 2.13 dark; qs-node-safe: 2.30 both themes).
-const PHASE_FG: Record<string, string> = {
+// Phase 218 D-07(1)/D-07(3): single source of truth for the phase foreground
+// colour, keyed the SAME as PHASE_TOKEN above. Each entry is derived from its
+// own background's own AA result in both themes: "white" only where the bg
+// already clears 4.5:1 with white in both themes (status-critical);
+// --status-warning and --qs-node-safe route to their existing -foreground
+// tokens because white fails on at least one theme (status-warning: 2.13
+// dark; qs-node-safe: 2.30 both themes). "white" is a literal CSS keyword,
+// not a --token reference — it is accepted natively by both the real DOM
+// (PHASE_FG below) and Cytoscape's canvas renderer (buildRoadmapStyle()), so
+// it is the one case that needs no resolveToken() lookup. Both the
+// real-DOM detail-panel badge text colour (PHASE_FG) and the Cytoscape
+// graph node label colour (buildRoadmapStyle()) derive from this ONE map so
+// they cannot drift apart — before D-07(3), buildRoadmapStyle() painted every
+// node label the same flat --chart-node-label colour regardless of phase,
+// failing AA for NEXT (dark 2.14) and LATER (dark 2.30, light 2.30) while
+// NOW stayed wrong in light (2.65) too.
+const PHASE_FG_TOKEN: Record<string, string> = {
   NOW:   "white",
-  NEXT:  "hsl(var(--status-warning-foreground))",
-  LATER: "hsl(var(--qs-node-safe-foreground))",
+  NEXT:  "--status-warning-foreground",
+  LATER: "--qs-node-safe-foreground",
 }
+
+/** Real-DOM `color:` value for a PHASE_FG_TOKEN entry — "white" stays a
+ * literal keyword; anything else is wrapped as `hsl(var(--x))`, Tailwind's
+ * own idiom for a runtime `style=` colour. */
+function phaseFgToRealDom(tok: string): string {
+  return tok === "white" ? "white" : `hsl(var(${tok}))`
+}
+
+const PHASE_FG: Record<string, string> = Object.fromEntries(
+  Object.entries(PHASE_FG_TOKEN).map(([phase, tok]) => [phase, phaseFgToRealDom(tok)]),
+)
 
 const PHASE_LABEL: Record<string, string> = {
   NOW:   "0-30 days",
@@ -127,6 +147,17 @@ function buildRoadmapStyle(): cytoscape.StylesheetJsonBlock[] {
     NEXT: resolveToken(PHASE_TOKEN.NEXT),
     LATER: resolveToken(PHASE_TOKEN.LATER),
   }
+  // Phase 218 D-07(3): per-phase label colour, resolved from the SAME
+  // PHASE_FG_TOKEN map PHASE_FG (real-DOM) derives from — "white" is a
+  // literal CSS keyword Cytoscape accepts natively (no resolveToken() lookup
+  // possible or needed); every other entry resolves through resolveToken()
+  // like every other Cytoscape colour in this function, never a var(--x)
+  // string (see this function's own module-level comment).
+  const phaseLabelColor: Record<string, string> = {
+    NOW: PHASE_FG_TOKEN.NOW === "white" ? "white" : resolveToken(PHASE_FG_TOKEN.NOW),
+    NEXT: PHASE_FG_TOKEN.NEXT === "white" ? "white" : resolveToken(PHASE_FG_TOKEN.NEXT),
+    LATER: PHASE_FG_TOKEN.LATER === "white" ? "white" : resolveToken(PHASE_FG_TOKEN.LATER),
+  }
 
   return [
     // Base node style
@@ -148,10 +179,12 @@ function buildRoadmapStyle(): cytoscape.StylesheetJsonBlock[] {
         "border-width": 0,
       },
     },
-    // Phase-specific colors via data selector (reliable approach)
-    { selector: "node[phase='NOW']",   style: { "background-color": phaseColor.NOW } },
-    { selector: "node[phase='NEXT']",  style: { "background-color": phaseColor.NEXT } },
-    { selector: "node[phase='LATER']", style: { "background-color": phaseColor.LATER } },
+    // Phase-specific colors via data selector (reliable approach). D-07(3):
+    // "color" (label text) is now per-phase too, not the shared base
+    // nodeLabelColor — see phaseLabelColor above.
+    { selector: "node[phase='NOW']",   style: { "background-color": phaseColor.NOW, "color": phaseLabelColor.NOW } },
+    { selector: "node[phase='NEXT']",  style: { "background-color": phaseColor.NEXT, "color": phaseLabelColor.NEXT } },
+    { selector: "node[phase='LATER']", style: { "background-color": phaseColor.LATER, "color": phaseLabelColor.LATER } },
     // Selected state
     {
       selector: "node:selected",

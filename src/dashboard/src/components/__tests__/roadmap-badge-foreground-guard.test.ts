@@ -20,7 +20,7 @@
  * without a matching entry in the other is caught mechanically rather than
  * shipping a silently-white-on-fail badge.
  *
- * SCOPE IS DERIVED AT RUN TIME. Every map (`PHASE_TOKEN`, `PHASE_FG`,
+ * SCOPE IS DERIVED AT RUN TIME. Every map (`PHASE_TOKEN`, `PHASE_FG_TOKEN`,
  * `CLOSURE_STATE_TOKEN`, `CLOSURE_STATE_FG`) and every token value is parsed
  * straight out of `roadmap.tsx` and `index.css` on every run, never copied
  * into this file as a hand-maintained literal. The module-scope vacuity
@@ -28,6 +28,18 @@
  * this project's repeated "a hand-maintained list drifts from the real set"
  * lesson (CLAUDE.md, multiple sections). An unresolvable FG literal is a
  * hard failure here too, never silently skipped.
+ *
+ * Phase 218 plan 218-04 (D-07(3)): `PHASE_FG` in roadmap.tsx is no longer a
+ * hand-written literal object — it is `Object.fromEntries`-derived from
+ * `PHASE_FG_TOKEN` so the real-DOM detail-panel badge and the Cytoscape
+ * graph node label (`buildRoadmapStyle()`) cannot drift apart. This file's
+ * `extractMap()` cannot regex-parse a derived object's literal values, so
+ * this guard now parses `PHASE_FG_TOKEN` instead and re-applies the
+ * IDENTICAL transform roadmap.tsx's own `phaseFgToRealDom()` uses ("white"
+ * stays a literal keyword; anything else becomes `hsl(var(--x))`) to derive
+ * the same PHASE_FG values this guard tests against. `CLOSURE_STATE_FG`
+ * is untouched by D-07(3) — the Cytoscape graph has no closure_state data
+ * attribute, only `phase` — so it is still parsed directly as before.
  *
  * NEVER WRITE AN INTACT ARBITRARY-VALUE CLASS IN THIS FILE. Tailwind's JIT
  * scanner does a static regex pass over raw source text, including comments
@@ -75,9 +87,21 @@ function extractMap(name: string): Record<string, string> {
 }
 
 const PHASE_TOKEN = extractMap("PHASE_TOKEN")
-const PHASE_FG = extractMap("PHASE_FG")
+const PHASE_FG_TOKEN = extractMap("PHASE_FG_TOKEN")
 const CLOSURE_STATE_TOKEN = extractMap("CLOSURE_STATE_TOKEN")
 const CLOSURE_STATE_FG = extractMap("CLOSURE_STATE_FG")
+
+/** Mirrors roadmap.tsx's own `phaseFgToRealDom()` exactly — "white" stays a
+ * literal keyword, anything else becomes `hsl(var(--x))`. Derived here
+ * rather than regex-parsed, since PHASE_FG is itself derived in source now
+ * (D-07(3)) and no longer a literal object `extractMap()` can parse. */
+function phaseFgToRealDom(tok: string): string {
+  return tok === "white" ? "white" : `hsl(var(${tok}))`
+}
+
+const PHASE_FG: Record<string, string> = Object.fromEntries(
+  Object.entries(PHASE_FG_TOKEN).map(([phase, tok]) => [phase, phaseFgToRealDom(tok)]),
+)
 
 /** Resolve a background token name (e.g. "--status-warning") to hex for a theme. */
 function resolveBgToken(tokenDecl: string, block: string): string {
