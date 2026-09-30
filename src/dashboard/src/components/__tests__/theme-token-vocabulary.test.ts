@@ -234,7 +234,9 @@ describe("theme token vocabulary (Phase 213 UIFIX-02)", () => {
     const minted = [
       "status-critical",
       "status-warning",
+      "status-warning-foreground",
       "chart-tls",
+      "chart-tls-foreground",
       "status-neutral",
       "status-safe-deep",
       "chart-data-at-rest",
