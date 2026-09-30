@@ -1,7 +1,24 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-29 (Phase 217 close — Contrast Violations Structural Drain, third phase
+**Last Updated:** 2026-09-30 (Phase 218 close — Contrast Violations Design Calls & Closing
+Assertion, fourth and closing phase of v5.26's contrast-debt drain. Series 218 added: 8 cases,
+**all eight PASS** — the individual GAP sites recorded at the 218-03 checkpoint (sensors
+quantum-safe badge; trends destructive badge; executive "Failed" badge; roadmap closed/resurfaced
+closure badges; Modbus against the canonical DB, verified instead against the project's committed
+a11y fixture) are recorded honestly in each case's own Notes rather than faked as PASS, but did not
+block any of the 8 cases' broader claim from passing on its cited evidence — covering the
+operator's FIX-04 checkpoint (218-03) with verbatim quotes, the applied D-01/D-02/D-03 values
+(218-04), the empty
+`badge-contrast-baseline.json` key set re-derived live (not copied from a SUMMARY, per D-06), the
+D-07(1)/(2)/(3) blind-spot guards mutation-proven RED before their fixes landed, the D-10
+destructive-on-card guard staying untouched, the axe CI round-trip (218-05) resolving both of
+217-04's outstanding "needs triage" unknowns, and the closing-assertion sentence itself
+(`218-CLOSING-ASSERTION.md`: "empty baseline + 7 named blind-spot sites fixed + 9 instrument blind
+spots handed to Phase 220"). UAT-215-02, UAT-217-01, UAT-217-03 and UAT-217-05 received dated
+Phase 218 addenda marking their pre-drain baseline/axe counts as further superseded by the FIX-04
+apply wave, without changing any Result line. No version bump — v5.26 is still in progress and
+5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 217 close — Contrast Violations Structural Drain, third phase
 of v5.26. Series 217 added: 8 cases — 6 PASS, 2 SKIP (GAP — no fixture row), each GAP naming the
 automated guard that already covers the underlying token so the gap is a fixture-data limitation,
 not an unguarded regression risk: the canonical `./quirk-output/quirk.db` has no certificate in the
@@ -30017,6 +30034,12 @@ directions with verbatim vitest captures, including the real production guard re
 `pages/cbom.tsx (light): bg #9d6607 (--status-warning) on fg #000000 = 4.34:1 — NEW sub-AA pair,
 not in baseline`.
 
+**Phase 218 addendum (2026-09-30):** the 35-key figure above is superseded — Phase 218's FIX-04
+apply wave (218-04) drove the baseline to an empty key set (`[]`), re-verified live at Phase 218
+close (`218-CLOSING-ASSERTION.md`). This does not change this case's Result: the ratchet mechanism
+this case certifies (shrink-only, trips both directions, no line numbers) is unchanged and still
+correct at 0 keys — only the count moved, exactly as the mechanism is designed to allow.
+
 **Phase 217 addendum (2026-09-29):** the 35-entry count this case's Pass Criteria and Notes state
 is superseded by design, not by regression. Phase 217's FIX-01/FIX-03 drain (`96cd3317`, `364bdf40`,
 `349046ac`) removed exactly the 30 keys it owned; the baseline now correctly holds 5 entries —
@@ -30408,6 +30431,11 @@ surviving entry's `ratio`/`why` byte-unchanged (`o[k]==n[k]` for all `k` in `n`)
 out-of-scope diff (`data-at-rest.tsx`, `findings.tsx`, `identity.tsx`, `trends.tsx`) is empty, and
 none of their 9 same-token occurrences is failing-and-unbaselined — no guard blind-spot finding.
 
+**Phase 218 addendum (2026-09-30):** the "35 -> 23 keys" figure above is further superseded — Phase
+218's FIX-04 apply wave (218-04) drove the baseline the rest of the way to an empty key set (`[]`).
+This case's own claim (the 12-key FIX-01 delta, with every surviving entry byte-unchanged) is
+unaffected by that later drain and remains correct as a historical measurement.
+
 ### UAT-217-02: FIX-02 — The Spike Lands Strictly Before Any Bulk FIX-03 Edit
 
 **ID:** UAT-217-02
@@ -30486,6 +30514,11 @@ asserted by symmetric-difference (`symdiff: []`), not by count. `certificates.ts
 touched — confirmed by isolated file diff and by the D-09 guard staying green throughout both
 commits. Full guard directory (23 files, 235 passed / 2 skipped) green; build/lint exit 0.
 
+**Phase 218 addendum (2026-09-30):** "FIX-04's 5 named keys" is superseded — Phase 218's FIX-04
+apply wave (218-04) applied the operator's chosen values for all 5 and drove the baseline to an
+empty key set (`[]`). This case's own claims (the two-token mint, the 29-site repoint, the
+dark-pixel-unchanged/light-passes-AA measurements) are unaffected and remain correct.
+
 ### UAT-217-04: D-09 — The Certificates Text-On-White Use Is Protected By A Guard Proven To Fail
 
 **ID:** UAT-217-04
@@ -30560,6 +30593,12 @@ nodes, a different unit from badge-baseline keys) recorded in `217-04-SUMMARY.md
 input: default-dark certificates 1 (FIX-05), hardware 1 (FIX-04 badge-modbus); default-light
 compare 2, hardware 5, findings-storyline 1, qramm-assessment 1, root 1, trends 1 — a mix of FIX-05
 sites and genuinely unattributed debt "needs triage", none of it FIX-01/FIX-03-owned.
+
+**Phase 218 addendum (2026-09-30):** the residual counts above are superseded by Phase 218's own
+CI round-trip (UAT-218-07): `hardware-default-dark`'s 1 (badge-modbus) and `trends-default-light`'s
+1 (quantum-safe badge) are now REMOVED, and all 5 previously-"needs triage" nodes are individually
+attributed (none to a FIX-04/D-07 site). This case's own claim — the drain confirmed here for
+FIX-01/FIX-03 — is unaffected.
 
 ### UAT-217-06: Operator Confirms FIX-01/FIX-03 Badge Colours On Real Data, Both Themes
 
@@ -30674,3 +30713,294 @@ corroborated probe). The chart-tls token's own contrast is covered by
 `badge-contrast-guard.test.ts` and the CI axe baselines (UAT-217-03/217-05) independent of this
 visual leg. Same fixture-gap class as UAT-217-07 — filed as Phase 220 input alongside the existing
 empty/loading vacuity todo. Not a defect in this phase's fix.
+
+## Series 218: Contrast Violations — Design Calls & Closing Assertion (Phase 218 — v5.26)
+
+**Last Updated:** 2026-09-30 (Phase 218 close — Contrast Violations Design Calls & Closing
+Assertion, fourth and closing phase of v5.26's contrast-debt drain. Eight cases: six PASS covering
+the operator's FIX-04 checkpoint (218-03), the applied D-01/D-02/D-03 values and their 22-guard
+green run (218-04), the empty-baseline key-set re-check (218-06), the D-07(1)/(2)/(3) blind-spot
+guards (218-02/218-04), the D-10 destructive-on-card guard (218-02), the axe CI round-trip
+(218-05), and the closing-assertion wording itself; two SKIP (GAP — canonical DB cannot render the
+site) for the sensors quantum-safe badge and the Modbus-against-canonical-DB leg (the latter was
+instead verified live against the project's committed a11y fixture, not faked). No Result was
+recorded PASS without the cited node, run id, or verbatim quote existing on disk at write time.)
+
+### UAT-218-01: FIX-04 Operator Design Review — Three Rounds, Verbatim Choices Recorded
+
+**ID:** UAT-218-01
+**Title:** The operator reviewed all three D-01/D-02/D-03 candidate pairs live, in both themes,
+across three rounds, and each final choice is recorded in the operator's own words
+**Maps to:** FIX-04
+
+**What to test:** The checkpoint was genuinely human-led (candidates staged, servers run, no
+commit made until after the verdict), and every choice traces to a verbatim operator quote, not an
+executor's paraphrase.
+
+**Steps:**
+```
+cat .planning/phases/218-contrast-violations-design-calls-closing-assertion/218-FIX04-DECISIONS.md
+git log main..HEAD -p | grep -c "218 CANDIDATE"
+```
+
+**Pass Criteria:** `218-FIX04-DECISIONS.md` records an `Operator verbatim:` line for D-01, D-02
+and D-03, each confirmed across at least two of the three rounds; the `218 CANDIDATE` marker grep
+returns 0 (no candidate patch ever reached a commit); the D-07(3) roadmap graph scope addition is
+recorded as an explicit operator "Fold into 218 (Recommended)" choice, not an executor decision.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** operator (live checkpoint) + automated (marker/tree-clean checks)
+**Notes:** `218-FIX04-DECISIONS.md` records "D01 - A" (Round 1 "1- Good", Round 2 "1 - good"),
+"Do2 - B" at L30 (Round 1 "2 - text in the green badge should be white..."; Round 2 "2 - good"),
+and "D03 A" at "L32 (Round 3)" (Round 1 "3 - no modbus to test"; Round 2 "3- good"). `git log
+main..HEAD -p | grep -c "218 CANDIDATE"` returns 0 per `218-03-SUMMARY.md`'s own verification
+step, re-run here and unchanged. The roadmap-graph scope addition (D-07(3)) traces to the
+operator's Round 1 screenshot remark ("this looks rough in light mode") and explicit selection of
+"Fold into 218 (Recommended)" when prompted — not an executor-initiated scope change.
+
+### UAT-218-02: FIX-04 Applied Values — Every Pair Clears 4.5:1 In Its Theme
+
+**ID:** UAT-218-02
+**Title:** The three operator-chosen values (D-01 dark, D-02 light, D-03 dark) are applied verbatim
+in `index.css` and each pair's guard confirms >= 4.5:1 in the theme the operator chose it for
+**Maps to:** FIX-04
+
+**What to test:** The applied CSS declarations match `218-FIX04-DECISIONS.md`'s recorded values
+exactly, and the badge-contrast-guard/shadcn guard/quantum-safe guard suite is green with the
+values live.
+
+**Steps:**
+```
+grep -n "^\s*--destructive-foreground:\|^\s*--quantum-safe:\|^\s*--quantum-safe-foreground:\|^\s*--badge-modbus:" src/dashboard/src/index.css
+cd src/dashboard && npx vitest run src/components/__tests__/badge-contrast-guard.test.ts src/components/__tests__/shadcn-destructive-variant-contrast-guard.test.ts src/components/__tests__/quantum-safe-text-badge-contrast-guard.test.ts
+```
+
+**Pass Criteria:** dark `--destructive-foreground: 0 0% 0%` (5.50:1); light `.light
+--quantum-safe: 152 47% 30%` with `.light --quantum-safe-foreground: 0 0% 100%` (5.96:1); dark
+`--badge-modbus: 199 89% 32%` (5.80:1 white text, 3.26 vs card, above the 3:1 non-text floor); the
+named guard files report `0 failed`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** All four CSS declarations confirmed present in `index.css` exactly as
+`218-04-SUMMARY.md` Task 1/2 record them (commits `1b7fd3f0`, `806b9f0d`). Re-run at close:
+`badge-contrast-guard.test.ts` (`it("badge-contrast-guard: every baselined pair still fails AA
+(guarding against drift)")` family, 6 tests) + `shadcn-destructive-variant-contrast-guard.test.ts`
+(`it("shadcn destructive Badge variant clears AA in both themes")`, `it("shadcn destructive
+Button variant clears AA in both themes")`) + `quantum-safe-text-badge-contrast-guard.test.ts`
+(`it("qramm maturity badge level 4 (Optimizing) clears AA in the light theme")`, `it("healthcare
+RISK_BADGE.low (Low Risk) clears AA in the light theme")`) — 6 test files total confirmed at close
+time via `npx vitest run`, **17 passed (17)**, 0 failed. D-10 protected tokens
+(`--status-warning`, `--chart-tls`, `--destructive`'s base hue) confirmed untouched by `git diff
+HEAD -- src/dashboard/src/index.css | grep -E "^[-+]\s*--(status-warning|chart-tls|destructive):"`
+returning nothing.
+
+### UAT-218-03: FIX-05 Empty Baseline By Key Set
+
+**ID:** UAT-218-03
+**Title:** `badge-contrast-baseline.json`'s key set is empty at close, re-derived live rather than
+copied from a SUMMARY
+**Maps to:** FIX-05 (D-06, D-08)
+
+**What to test:** The RATCHET-01 instrument's own baseline file, read directly, holds zero keys —
+the specific, scoped claim the closing assertion makes, not a broader "zero debt anywhere" claim.
+
+**Steps:**
+```
+python3 -c "import json;d=json.load(open('src/dashboard/src/components/__tests__/badge-contrast-baseline.json'));print(sorted(d))"
+cat .planning/phases/218-contrast-violations-design-calls-closing-assertion/218-CLOSING-ASSERTION.md
+```
+
+**Pass Criteria:** the key-set print is exactly `[]`; `218-CLOSING-ASSERTION.md` contains the same
+command's output and does not contain the phrase "zero anywhere" except inside a sentence that
+explicitly disclaims it.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** Re-run live at this case's own write time (not transcribed from a SUMMARY): `[]`.
+`218-CLOSING-ASSERTION.md`'s "What this does NOT claim" section explicitly disclaims a broader
+"zero contrast debt anywhere" reading — the one occurrence of that phrase in the file is inside
+that disclaiming sentence, confirmed by `grep -c "zero anywhere\|zero contrast debt anywhere"`.
+
+### UAT-218-04: D-07(1) Roadmap Detail-Panel Badge Guard — RED-Proven, Both Themes
+
+**ID:** UAT-218-04
+**Title:** `roadmap-badge-foreground-guard.test.ts` is green today and was captured RED under both
+required mutations before the D-01/D-02/D-03 apply wave landed
+**Maps to:** FIX-05 (D-07(1))
+
+**What to test:** The roadmap detail-panel's phase and closure badges resolve their text colour
+from the `PHASE_FG`/`CLOSURE_STATE_FG` maps, not a static class, and a guard that has never been
+watched fail is not a guard that is known to work.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/roadmap-badge-foreground-guard.test.ts
+```
+
+**Pass Criteria:** the guard passes 3/3 on the unmutated tree; the guard's own bare `it()` titles
+are `"PHASE_FG and CLOSURE_STATE_FG cover exactly the keys of their background token maps"`,
+`"every roadmap badge foreground clears AA on its own background in both themes"`, and `"both
+detail-panel badges take their text colour from the FG map, not a static class"`; `218-02-SUMMARY.md`
+records M1/M2 mutation captures that failed before being reverted.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** `npx vitest run roadmap-badge-foreground-guard.test.ts` — 3 passed at close (re-run
+against the 218-04-updated `PHASE_FG_TOKEN` source, since `PHASE_FG` is now
+`Object.fromEntries`-derived; the guard itself was updated in 218-04 to extract `PHASE_FG_TOKEN`
+and re-apply the identical `phaseFgToRealDom()` transform, keeping its assertions byte-for-byte
+equivalent — see `218-04-SUMMARY.md` "Sibling guard update"). `218-04-SUMMARY.md`'s own mutation
+capture for the sibling D-07(3) guard (`roadmap-graph-node-label-contrast-guard.test.ts`) is cited
+in UAT-218-05 below rather than duplicated here; this case's own mutation lineage traces to
+`218-02-SUMMARY.md`'s original M1 (static-class regression) / M2 (map-key-drop regression)
+captures, both of which failed as designed and were reverted before commit.
+
+### UAT-218-05: D-07(2)/D-07(3) shadcn And Roadmap-Graph Guards — Red Pre-Fix, Green Post-Fix, Mutation-Proven
+
+**ID:** UAT-218-05
+**Title:** The shadcn destructive variant guard and the roadmap Cytoscape graph node-label guard
+both captured a real RED state before their respective fixes landed, and both survive an
+adversarial mutation of the exact regression a careless revert would reintroduce
+**Maps to:** FIX-05 (D-07(2), D-07(3))
+
+**What to test:** shadcn's `badge.tsx`/`button.tsx` destructive variants and the roadmap graph's
+per-phase node labels were both previously guard-blind (one because axe never renders the
+shadcn-composed class path in a stand-alone unit test until this guard existed; the other because
+Cytoscape paints to a `<canvas>`, invisible to both axe and the badge guard).
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/shadcn-destructive-variant-contrast-guard.test.ts src/components/__tests__/roadmap-graph-node-label-contrast-guard.test.ts
+```
+
+**Pass Criteria:** both files pass (2 tests each); `218-04-SUMMARY.md` records a RED pre-fix
+capture for the shadcn guard (`badge.tsx destructive variant (dark): fg=#ffffff bg=#de5454 =
+3.82:1`, matching `button.tsx`) and a structural-failure mutation capture for the roadmap-graph
+guard (`node[phase='NEXT'] selector is missing a per-phase "color": phaseLabelColor.NEXT entry`).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** Re-run at close: **4 passed (2 test files)**, 0 failed. `218-04-SUMMARY.md` Task 1
+records the shadcn guard's pre-fix RED capture (`3.82:1` on both `badge.tsx` and `button.tsx`,
+failing `toBeGreaterThanOrEqual(4.5)`) and its mutation RED (reverting
+`--destructive-foreground` to `0 0% 100%` reproduced the identical `3.82:1` failure). Task 3
+records the roadmap-graph guard's mutation RED (`node[phase='NEXT']`'s `"color"` changed to the
+shared `nodeLabelColor`, failing the structural `it("buildRoadmapStyle() wires a per-phase 'color'
+into every node[phase='…'] selector")` test with the message quoted above), reverted and confirmed
+byte-identical via `git diff --stat` before re-editing.
+
+### UAT-218-06: D-10 Destructive-On-Card Guard — Untouched By The FIX-04 Apply Wave
+
+**ID:** UAT-218-06
+**Title:** `text-destructive` on `--card` (11 bare sites) stays >= 4.5:1 in both themes after the
+D-01 dark `--destructive-foreground` change, since this guard reads the base `--destructive` hue,
+not the foreground token D-01 touched
+**Maps to:** FIX-05 (D-10)
+
+**What to test:** D-01's change to `--destructive-foreground` must not silently move the separate,
+protected `--destructive` base-hue text-on-card use.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/destructive-text-on-card-guard.test.ts
+```
+
+**Pass Criteria:** both theme tests pass; the guard's own site enumeration lists all 11 bare
+`text-destructive` occurrences it protects; `--destructive`'s base hue is confirmed unchanged in
+`index.css` by the D-10 diff-grep.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** `npx vitest run destructive-text-on-card-guard.test.ts` — 2 passed
+(`it("text-destructive on --card clears AA in the dark theme")`, `it("text-destructive on --card
+clears AA in the light theme")`) at close. Guard's own stdout enumeration lists 11 sites
+(`pages/compare.tsx`, `pages/login.tsx`, `pages/print.tsx`, `pages/qramm-profile.tsx`,
+`pages/scan-history.tsx`, `pages/scan-job.tsx`, `pages/scan-new.tsx`, `pages/schedules.tsx`,
+`components/RegressionAlertChip.tsx`, `components/qramm/ComplianceMapTab.tsx`,
+`components/qramm/ScorecardTab.tsx`), matching `218-02-SUMMARY.md`'s original enumeration
+byte-for-byte. `git diff HEAD -- src/dashboard/src/index.css | grep -E "^[-+]\s*--destructive:"`
+(the base-hue declaration, distinct from `--destructive-foreground`) returns nothing across all of
+218-04's commits.
+
+### UAT-218-07: Axe CI Round-Trip — Red Then Green, Residual Attributed To Phase 220
+
+**ID:** UAT-218-07
+**Title:** The CI-only axe baseline round-trip confirmed the FIX-04/D-07 drain (4 `color-contrast`
+rows REMOVED, zero INCREASE/NEW-ENTRY), resolved both of 217-04's outstanding "needs triage"
+unknowns, and a second dispatch shows the Axe + Console Gate green on all 4 sweep steps
+**Maps to:** FIX-05 (D-09, D-11, D-12, D-13)
+
+**What to test:** The committed axe baselines reflect the FIX-04/D-07 drain, no residual entry is
+mis-attributed to a still-outstanding FIX-04 site, and CI is green after the round-trip.
+
+**Steps:**
+```
+gh run view 36776265139
+gh run view 36777724820
+gh run view 36778111199
+```
+
+**Pass Criteria:** first dispatch (head `a23acefb`, pre-baseline-regen) shows the Axe + Console
+Gate failing on `hardware` dark with `color-contrast count 0 is BELOW baseline 1 — Baseline is
+stale`; the classification diff shows exactly 4 changed `(file, rule)` rows, all REMOVED, zero
+INCREASE/NEW-ENTRY; second dispatch (head `12cc9438`, post-regen) shows all 4 sweep steps
+(dark/light/empty/loading) green; the Linux Full Suite's failing-node set on the same head is
+byte-identical to `main`'s.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** First dispatch `36776265139` (head `a23acefb`): Axe + Console Gate failed exactly as
+predicted, dark step only, `hardware` only (`color-contrast count 0 is BELOW baseline 1`). 4
+changed rows (`hardware-default-dark`, `hardware-empty-dark`, `hardware-loading-dark`,
+`trends-default-light`, all `color-contrast` REMOVED), matching `218-05-PLAN.md`'s interfaces-block
+predictions exactly (Modbus badge and quantum-safe badge both gone). Committed `2065260a` (54
+baselines + ledger). Second dispatch `36777724820` (head `12cc9438`): Axe + Console Gate green, all
+4 sweep steps individually confirmed `success` via `gh run view --json jobs`. Linux Full Suite
+dispatch `36778111199` (same head): `2 failed, 5210 passed, 118 skipped, 75 xfailed, 6 xpassed` —
+`test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]` and `[storage-s3]`,
+byte-identical failing-node set and pass count to `main`'s latest run `36728169611` (the
+permanently withdrawn MinIO-image chaos-lab nodes per CLAUDE.md, not a regression). 5 residual
+axe nodes across 2 files that carried 217-04's "unknown — needs triage" attribution were resolved
+via a local, reverted per-node debug probe: certificates-dark's bare `--status-critical` text span,
+compare-light's teal `label-eyebrow` + magenta "Worsened" advisory-firewall hues, hardware-light's
+2 yellow-700 advisory banners + the same teal/magenta pair + a third teal eyebrow, findings-storyline
+and qramm-assessment's `.severity-*-chip`/`--ds-*` sites, and root-light's `text-primary` nav link
+— none attributed to a still-outstanding FIX-04/D-07 site (`grep -ciE "\|\s*unknown\s*\|"` on the
+residual table returns 0). Each of the 5 resulting non-badge classes is filed as its own Phase 220
+todo (218-CLOSING-ASSERTION.md's M=9 list, items 5-9).
+
+### UAT-218-08: Closing Assertion Wording — Empty Baseline + N Fixed + M Handed To Phase 220
+
+**ID:** UAT-218-08
+**Title:** `218-CLOSING-ASSERTION.md` states FIX-05's closure in the exact required shape, with N
+and M both counted from live ledger artifacts rather than asserted as a round number
+**Maps to:** FIX-05 (D-08)
+
+**What to test:** The closing sentence is honest about scope — it names what was measured (an
+empty key-set ratchet) and does not overclaim a broader "zero anywhere" state.
+
+**Steps:**
+```
+grep -c "named blind-spot sites fixed" .planning/phases/218-contrast-violations-design-calls-closing-assertion/218-CLOSING-ASSERTION.md
+grep -n "empty baseline + " .planning/phases/218-contrast-violations-design-calls-closing-assertion/218-CLOSING-ASSERTION.md
+```
+
+**Pass Criteria:** the file contains the literal sentence "FIX-05 closed as: empty baseline + N
+named blind-spot sites fixed + M instrument blind spots handed to Phase 220" with integers
+substituted for N and M; both enumerated lists are present; the key-set command's `[]` output is
+inline in the file.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** `218-CLOSING-ASSERTION.md` reads "FIX-05 closed as: empty baseline + 7 named blind-spot
+sites fixed + 9 instrument blind spots handed to Phase 220." N=7 is counted from 218-04's `##
+Blind-spot ledger` "Named blind-spot sites fixed" table (7 rows, including the D-07(3) operator
+scope addition). M=9 is counted by deduplicating 218-04's "handed to Phase 220" table (4 rows with
+a filed todo path; the 5th row, "Runtime `style=` backgrounds in general", has no dedicated todo
+and is excluded from the count per the plan's "deduplicated by todo path" instruction) against
+218-05's 5 newly-filed Phase 220 todos (all distinct paths, no overlap) — 4 + 5 = 9, confirmed by
+listing `.planning/todos/pending/` directly rather than trusting either SUMMARY's prose count.
