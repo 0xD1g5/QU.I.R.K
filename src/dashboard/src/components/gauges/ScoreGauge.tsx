@@ -60,7 +60,7 @@ export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = 
   const endY = cy
   // For colored fill arc
   const fillEndAngle = Math.PI - fraction * Math.PI  // from left to fill point
-  const fillEndX = cx + radius * Math.cos(fillEndAngle) * -1
+  const fillEndX = cx + radius * Math.cos(fillEndAngle)
   const fillEndY = cy - radius * Math.sin(fillEndAngle)
 
   // Suppress unused variable warning
