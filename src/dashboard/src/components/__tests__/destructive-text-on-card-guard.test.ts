@@ -101,7 +101,6 @@ if (!cardLight) throw new Error("destructive-text-on-card-guard: --card unresolv
 
 // Recorded for the SUMMARY — not asserted as a fixed literal, since the
 // count is derived at run time (today: 11 files).
-// eslint-disable-next-line no-console
 console.log(
   `destructive-text-on-card-guard: ${SITES.length} bare text-destructive site(s): ` +
     SITES.map((f) => path.relative(SRC_ROOT, f)).join(", "),
