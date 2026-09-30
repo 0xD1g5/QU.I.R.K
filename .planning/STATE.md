@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-09-29T23:59:35.000Z"
-last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
+last_updated: "2026-09-30T00:11:12.000Z"
+last_activity: 2026-09-29 -- Phase 217 (Contrast Violations -- Structural Drain) VERIFIED passed 4/4 and marked complete by hand (no phase.complete). FIX-01/02/03 done; badge baseline 35 -> 5 keys (exactly FIX-04's set); CI axe baselines regenerated on Linux (run 36635543200, 4/4 sweep steps green); code-review WR-01 fixed in c1842532. Branch phase-217-contrast-structural-drain pushed, NOT merged. Next -- Phase 218.
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
   completed_plans: 17
-  percent: 33
+  percent: 50
 ---
 
 # Project State
@@ -272,7 +272,7 @@ See: .planning/PROJECT.md (updated 2026-09-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
+**Current focus:** v5.26 — Phase 217 COMPLETE (verified 2026-09-29); next is Phase 218 (Contrast Violations — Design Calls & Closing Assertion). *Superseded text follows:* None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1387,15 +1387,15 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 217 (Contrast Violations — Structural Drain) — **EXECUTED, 5 of 5 plans, all 4 waves. Pending `/gsd-verify-work`.**
+Phase: 217 (Contrast Violations — Structural Drain) — **COMPLETE, 5 of 5 plans, verification `passed` 4/4 (`217-VERIFICATION.md`, 2026-09-29).** Code-review WR-01 fixed in `c1842532`; IN-01 (Info) left open. Branch pushed at `c1842532`, NOT merged to `main` — merge via PR before treating 217 as landed.
 Plan: All five 217-0N plans executed and committed on branch `phase-217-contrast-structural-drain`
 (`96cd3317`, `652a845f`, `364bdf40`, `349046ac`, `f6031506`, `99993d71`, plus this close-out's
 STATE/ROADMAP/REQUIREMENTS hand-edit commit). Next is `/gsd-verify-work` for Phase 217, then Phase
 218 (Contrast Violations — Design Calls & Closing Assertion) needs a full discuss -> plan -> execute
 cycle. No `phase.complete`/`milestone.complete`/mutating state verb was used to reach this position.
-Status: Phase 217 executed, verification pending; milestone v5.26 at 2 of 6 phases complete (215,
-216 — 217 stays phase-level `[ ]` in ROADMAP until verification, per this project's standing rule
-that a phase checkbox is verification's to flip, not the executor's)
+Status: Phase 217 verified and complete; milestone v5.26 at 3 of 6 phases complete (215, 216, 217).
+ROADMAP phase checkbox flipped by hand after verification passed (not by the executor, not by
+`phase.complete`).
 Last activity: 2026-09-29 — **217-05 executed (close-out): operator visual checkpoint returned a
 SCOPED PASS** (Firefox screenshots + orchestrator headless-Chrome computed-style probe, taken after
 `transition-colors` settled — a harness lesson recorded for future visual checkpoints). The
