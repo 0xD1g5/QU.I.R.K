@@ -54,8 +54,8 @@ function extractDestructiveVariant(fileRel: string): string {
 }
 
 /** Resolve the bg token name from a variant class string. `bg-destructive` ->
- * "destructive"; an arbitrary `bg-[hsl(var(--x))]` -> "x". Throws on anything
- * else — an unresolvable bg is a hard failure, never silently skipped. */
+ * "destructive"; an arbitrary `bg-[ hsl(var(--x)) ]` -> "x". Throws on
+ * anything else — an unresolvable bg is a hard failure, never silently skipped. */
 function resolveBgTokenName(classes: string): string {
   const arbitrary = classes.match(/bg-\[hsl\(var\(--([\w-]+)\)\)\]/)
   if (arbitrary) return arbitrary[1]
@@ -64,7 +64,7 @@ function resolveBgTokenName(classes: string): string {
 }
 
 /** Resolve the fg token name from a variant class string. `text-destructive-foreground`
- * -> "destructive-foreground"; an arbitrary `text-[hsl(var(--x))]` -> "x";
+ * -> "destructive-foreground"; an arbitrary `text-[ hsl(var(--x)) ]` -> "x";
  * `text-white`/`text-black` -> the literal hex. Throws on anything else. */
 function resolveFg(classes: string, block: string, fallback: string): string {
   if (/\btext-white\b/.test(classes)) return "#ffffff"

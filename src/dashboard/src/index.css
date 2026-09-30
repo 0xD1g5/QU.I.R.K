@@ -123,7 +123,8 @@
     --chart-data-at-rest: 270 50% 60%;  /* #9966cc — data-at-rest chart series (trends.tsx) */
     --chart-edge-highlight: 210 100% 60%; /* #3399ff — Cytoscape highlighted edge/border */
     --badge-hardware-device: 220 60% 40%; /* #2952a3 — cbom.tsx HW_DEVICE_BADGE bg */
-    --badge-modbus: 199 89% 48%;        /* #0da2e7 — hardware.tsx Modbus protocol badge */
+    /* Phase 218 FIX-04 D-03, operator-chosen 2026-09-30 ("D03 A" @ L32), 5.80:1 white (was 2.86:1) */
+    --badge-modbus: 199 89% 32%;        /* #0da2e7 — hardware.tsx Modbus protocol badge */
     --badge-bacnet: 271 81% 56%;        /* #9234ea — hardware.tsx BACnet protocol badge */
     --badge-schedule: 177 52% 35%;      /* ~#2b8883 (source literal #2b8a86) — schedules.tsx badge */
     --chart-slate-dark: 220 13% 28%;    /* #3e4451 — cbom.tsx Cytoscape neutral ramp, dark step */
@@ -200,7 +201,10 @@
     --ds-medium:          #6c7589;
 
     /* Security tokens adjusted for light contrast */
-    --quantum-safe: 152 47% 36%;
+    /* Phase 218 FIX-04 D-02, operator-chosen 2026-09-30 ("Do2 - B" @ L30), 5.96:1 (was 3.87:1) */
+    --quantum-safe: 152 47% 30%;
+    /* Phase 218 FIX-04 D-02: new .light override — dark :root stays 220 22% 12% */
+    --quantum-safe-foreground: 0 0% 100%;
     --quantum-at-risk: 28 64% 40%;
     --quantum-vulnerable: 0 64% 47%;
     --severity-high: 28 64% 40%;

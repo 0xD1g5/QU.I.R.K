@@ -104,7 +104,6 @@ const THEME_INVARIANT: Record<string, string> = {
   "risk-badge-high-foreground": "deliberately theme-invariant — paired foreground for risk-badge-high",
   "qs-node-safe": "deliberately theme-invariant — pre-dates Phase 213, same rationale as risk-badge-high",
   "qs-node-safe-foreground": "deliberately theme-invariant — paired foreground for qs-node-safe",
-  "quantum-safe-foreground": "deliberately theme-invariant — Phase 165 Wave 5 fixed contrast in both themes with one dark foreground value",
 }
 
 /**
