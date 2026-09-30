@@ -248,7 +248,12 @@ Plans:
   1. `components/ui/table.tsx` exposes a focusable, keyboard-scrollable region (`tabIndex`, appropriate `role`) usable app-wide across every table consumer, not just one page.
   2. A keyboard-only walkthrough (Tab to the region, arrow/PageDown to scroll) succeeds on at least one representative page with a mouse disconnected.
   3. The `scrollable-region-focusable` accepted-violation entry is withdrawn from the accepted-violations list, not renewed, and the axe/a11y suite stays green without it.
-**Plans**: TBD
+**Plans**: 4 plans in 4 waves
+Plans:
+- [ ] 219-01-PLAN.md — Conditional focusable/named region in table.tsx (mutation-proven unit test) + 14 regionLabels + rebuilt statics (wave 1)
+- [ ] 219-02-PLAN.md — Keyboard-only Playwright walkthrough + control node, mutation-proven against a rebuilt bundle (wave 2)
+- [ ] 219-03-PLAN.md — CI-only axe round-trip: withdraw scrollable-region-focusable, retire countRange, resolve D-09 todo, per-step CI proof (wave 3)
+- [ ] 219-04-PLAN.md — Docs (operators-guide, master-guide regen, report-interpretation), UAT Series 219, vault sync, VALIDATION close, hand-edited state (wave 4)
 **UI hint**: yes
 
 ### Phase 220: CI Instrument Truth
