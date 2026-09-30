@@ -167,11 +167,17 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
       to 18 distinct entries.
 - [x] **FIX-03**: The 29 sites reach AA in both themes without regressing the text-on-white contrast
       Phase 213 established for `--status-warning` and `--chart-tls`
-- [ ] **FIX-04**: The 5 genuine design calls are resolved with operator visual review, as 213-09 did
+- [x] **FIX-04**: The 5 genuine design calls are resolved with operator visual review, as 213-09 did
       — not auto-picked (`--destructive` + white 3.82 dark ×2, `--quantum-safe` + paired fg 3.87
-      light ×2, `--badge-modbus` + white 2.86 dark ×1)
-- [ ] **FIX-05**: Zero badge pair anywhere in the dashboard sits below 4.5:1 in either theme,
-      verified by RATCHET-01 reporting an empty baseline
+      light ×2, `--badge-modbus` + white 2.86 dark ×1). Resolved Phase 218 (218-03 operator
+      checkpoint, verbatim choices in `218-FIX04-DECISIONS.md`; 218-04 applied all 3 values).
+- [x] **FIX-05**: Zero badge pair anywhere in the dashboard sits below 4.5:1 in either theme,
+      verified by RATCHET-01 reporting an empty baseline. **Qualified closure** (memory
+      `project_requirement_closed_one_surface_only`): `badge-contrast-baseline.json`'s key set is
+      empty (`[]`), confirmed live at Phase 218 close. This is scoped to what RATCHET-01 measures —
+      see `218-CLOSING-ASSERTION.md`: "empty baseline + 7 named blind-spot sites fixed + 9
+      instrument blind spots handed to Phase 220." The 9 instrument-blind-spot sites are NOT
+      claimed closed by this checkbox; they are tracked as Phase 220 todos.
 
 ### Keyboard Access
 
@@ -253,8 +259,8 @@ Filled during roadmap creation.
 | FIX-01 | Phase 217 | Complete |
 | FIX-02 | Phase 217 | Complete |
 | FIX-03 | Phase 217 | Complete |
-| FIX-04 | Phase 218 | Pending |
-| FIX-05 | Phase 218 | Pending |
+| FIX-04 | Phase 218 | Complete (218-03/218-04) |
+| FIX-05 | Phase 218 | Complete, qualified (see FIX-05 note above) |
 | KBD-01 | Phase 219 | Pending |
 | CITRUTH-01 | Phase 220 | Pending |
 | CITRUTH-02 | Phase 220 | Pending |

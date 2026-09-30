@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-09-30T00:11:12.000Z"
-last_activity: 2026-09-29 -- Phase 217 (Contrast Violations -- Structural Drain) VERIFIED passed 4/4 and marked complete by hand (no phase.complete). FIX-01/02/03 done; badge baseline 35 -> 5 keys (exactly FIX-04's set); CI axe baselines regenerated on Linux (run 36635543200, 4/4 sweep steps green); code-review WR-01 fixed in c1842532. Branch phase-217-contrast-structural-drain pushed, NOT merged. Next -- Phase 218.
+last_updated: "2026-09-30T22:34:55.000Z"
+last_activity: 2026-09-30 -- Phase 218 VERIFIED passed 3/3 (218-VERIFICATION.md) and marked complete BY HAND (no phase.complete). CI on HEAD 1ef68b29 read per-step: Dashboard Quality green 4/4 (run 36783565237); Python CI fails only the 2 permanent MinIO chaos-lab nodes, failing-node SET identical to main (run 36783562387 vs 36728169611). Code review 0 Critical / 1 Warning (WR-01 fixed 1ef68b29) / 2 Info. FIX-05 closed as "empty baseline + 7 named blind-spot sites fixed + 9 instrument blind spots handed to Phase 220". Branch phase-218-contrast-design-calls pushed, NOT merged. Out-of-phase: PR #41 (score gauge arcs mirrored since 2026-03-31) and PR #42 (README refresh; depends on #41). Next -- merge 218 PR, then Phase 219.
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 17
-  completed_plans: 17
-  percent: 50
+  completed_phases: 4
+  total_plans: 23
+  completed_plans: 23
+  percent: 67
 ---
 
 # Project State
@@ -1387,16 +1387,39 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 217 (Contrast Violations — Structural Drain) — **COMPLETE, 5 of 5 plans, verification `passed` 4/4 (`217-VERIFICATION.md`, 2026-09-29).** Code-review WR-01 fixed in `c1842532`; IN-01 (Info) left open. Merged to `main` via PR #39 (`40377f6b`) 2026-09-29.
-Plan: All five 217-0N plans executed and committed on branch `phase-217-contrast-structural-drain`
-(`96cd3317`, `652a845f`, `364bdf40`, `349046ac`, `f6031506`, `99993d71`, plus this close-out's
-STATE/ROADMAP/REQUIREMENTS hand-edit commit). Next is `/gsd-verify-work` for Phase 217, then Phase
-218 (Contrast Violations — Design Calls & Closing Assertion) needs a full discuss -> plan -> execute
-cycle. No `phase.complete`/`milestone.complete`/mutating state verb was used to reach this position.
-Status: Phase 217 verified and complete; milestone v5.26 at 3 of 6 phases complete (215, 216, 217).
-ROADMAP phase checkbox flipped by hand after verification passed (not by the executor, not by
-`phase.complete`).
-Last activity: 2026-09-29 — **217-05 executed (close-out): operator visual checkpoint returned a
+Phase: 218 (Contrast Violations — Design Calls & Closing Assertion) — **EXECUTED, 6 of 6 plans,
+pending verification.** No `217-VERIFICATION.md`-equivalent exists yet for 218; the phase-level
+ROADMAP checkbox is deliberately left unflipped (verification's job, not the executor's, per D-15).
+Plan: All six 218-0N plans executed and committed on branch `phase-218-contrast-design-calls`
+(`fc148cf8`, `8ec67cb2`, `1b7fd3f0`, `806b9f0d`, `7f8be681`, `a23acefb`, `2065260a`, `12cc9438`,
+`777c3c48`, plus this close-out's STATE/ROADMAP/REQUIREMENTS hand-edit commit). Next is
+`/gsd-verify-phase 218`, then a PR to `main` (NOT yet opened). No `phase.complete`/
+`milestone.complete`/mutating state verb was used to reach this position.
+Status: Phase 218 executed, pending verification; milestone v5.26 at 3 of 6 phases *verified*
+complete (215, 216, 217) with Phase 218 executed but not yet counted toward that total.
+Last activity: 2026-09-30 — **218-06 executed (close-out): wrote `218-CLOSING-ASSERTION.md`** in
+the required D-08 shape ("empty baseline + 7 named blind-spot sites fixed + 9 instrument blind
+spots handed to Phase 220"), N and M both re-derived live from 218-04's Blind-spot ledger and
+218-05's residual table (deduplicated by todo path against `.planning/todos/pending/` on disk, not
+transcribed from a SUMMARY). Wrote UAT `## Series 218` (8 cases, all PASS), dated Phase 218 addenda
+to `UAT-215-02`/`UAT-217-01`/`UAT-217-03`/`UAT-217-05` for now-superseded pre-drain counts (Result
+lines unchanged). Regenerated `docs/uat-coverage-gaps.md` (940->948 headings, summary counts only,
+no GAP-set change); `docs/quirk-master-guide.md` needed no regeneration (no source-guide edits this
+phase); `docs/operators-guide.md` had no stale badge-baseline/FIX-04 references to amend.
+`218-VALIDATION.md` closed: `nyquist_compliant: true`, `wave_0_complete: true`, all 14
+verification-map rows green. Obsidian phase note finalized (`status: complete`) and
+`UAT-Series.md` re-synced to vault `Digs`. STATE.md (this edit)/ROADMAP.md/REQUIREMENTS.md
+hand-edited from pre-images with the FULL diff read — ROADMAP's six 218-0N plan checkboxes flipped
+`[x]` and progress row set to 6/6 "Executed, pending verification" (phase-level checkbox left
+`[ ]`); REQUIREMENTS.md FIX-04 flipped `[x]` (Complete) and FIX-05 flipped `[x]` with an explicit
+qualifying note pointing at the closing assertion's scoped claim, per the standing lesson that a
+requirement closed on one surface must say so explicitly rather than read as unconditionally
+closed everywhere.
+
+**Prior activity, superseded above:** 2026-09-29 — Phase 217 (Contrast Violations — Structural
+Drain) — **COMPLETE, 5 of 5 plans, verification `passed` 4/4 (`217-VERIFICATION.md`, 2026-09-29).**
+Code-review WR-01 fixed in `c1842532`; IN-01 (Info) left open. Merged to `main` via PR #39
+(`40377f6b`) 2026-09-29. **217-05 executed (close-out): operator visual checkpoint returned a
 SCOPED PASS** (Firefox screenshots + orchestrator headless-Chrome computed-style probe, taken after
 `transition-colors` settled — a harness lesson recorded for future visual checkpoints). The
 checkpoint's own draft verification steps were themselves wrong (named badge labels absent from the
@@ -1513,9 +1536,23 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 218 (Contrast Violations — Design Calls & Closing Assertion)
+## Next Cycle — Phase 218 verification, then Phase 219/220
 
-**PAUSED 2026-09-29 by operator request at a clean boundary.** Phase 217 (FIX-01/02/03) is
+**Phase 218 is EXECUTED (all 6 plans), NOT merged.** `git rev-list --count main..HEAD` = **11**
+at the start of this close-out (before this edit's own commit) on branch
+`phase-218-contrast-design-calls`, pushed to `origin` but `ahead 1` locally at close (this
+close-out's own commit had not yet been pushed when this note was written). The branch is **not
+merged to `main`** — do not describe Phase 218 as "landed" or "shipped" until a PR merges (D-15).
+Resume with `/gsd-verify-phase 218`, then open a PR.
+
+**Out-of-scope work done this session, on separate branches — do NOT fold into Phase 218:**
+PR #41 (score gauge arcs drew mirrored since 2026-03-31; fix + a geometry regression test) and
+PR #42 (README refresh + a new HORIZON.md row committing a pre-launch doc review to the next
+milestone — that HORIZON row lives on the #42 branch, not on `phase-218-contrast-design-calls`;
+it will not appear here until #42 merges).
+
+**Prior Next Cycle note, superseded above:** 2026-09-29 (written when Phase 218 had no directory
+yet) — **PAUSED 2026-09-29 by operator request at a clean boundary.** Phase 217 (FIX-01/02/03) is
 executed, verified `passed` 4/4, and **MERGED to `main` via PR #39 (`40377f6b`)** — every PR check
 green, including `Linux Full Suite` (the two Docker `chaos_lab_idempotency` nodes passed this run).
 Phase 218 has **no directory yet** and needs a full discuss -> plan -> execute cycle; resume with

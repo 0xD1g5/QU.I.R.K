@@ -1,19 +1,5 @@
 {
   "route": "trends",
-  "generated": "2026-09-29T21:40:36.336Z",
-  "entries": [
-    {
-      "rule": "color-contrast",
-      "count": 1,
-      "impact": "serious",
-      "wcag": [
-        "1.4.3"
-      ],
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /trends, theme light, rule color-contrast, count 5 -> 1. Phase 217 (FIX-03) drained at least this entry's two `--status-warning`/`--chart-tls`+text-black badges ('MEDIUM 0', 'LOW 1') by repointing them to the new `-foreground` tokens (REQUIREMENTS.md FIX-03), and evidently drained further status-warning/chart-tls instances on this route beyond the two named samples, since the count fell 5 -> 1 in this regeneration (217-04, CI run 36634705275) rather than only 5 -> 3. The single remaining node is axe's own truncated sample (`<div ...>`), unchanged in shape from the prior baseline and still not attributable to a specific token from the sample text alone; the route renders no tokens outside the `--status-warning`/`--chart-tls`/`--risk-badge-high` set already covered by FIX-01/02/03 elsewhere in this baseline set. It does not match FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens. It is attributed to FIX-05 (Phase 218)'s general zero-below-AA verification bucket -- unknown/unattributed, needs triage in Phase 218 to identify the exact element.",
-      "samples": [
-        "<div ...>"
-      ]
-    }
-  ]
+  "generated": "2026-09-30T20:59:06.448Z",
+  "entries": []
 }

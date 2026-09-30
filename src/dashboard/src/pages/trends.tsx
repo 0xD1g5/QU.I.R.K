@@ -52,7 +52,7 @@ function ScoreDeltaBadge({ delta }: { delta: number | null }) {
     </Badge>
   )
   if (delta < 0) return (
-    <Badge className="bg-[hsl(var(--destructive))] text-white">
+    <Badge className="bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]">
       ▼ {delta} pts
     </Badge>
   )
