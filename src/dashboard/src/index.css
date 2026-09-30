@@ -47,7 +47,8 @@
     --accent-foreground: 220 22% 12%;
 
     --destructive: 0 68% 60%;          /* #e05555 critical */
-    --destructive-foreground: 0 0% 100%;
+    /* Phase 218 FIX-04 D-01, operator-chosen 2026-09-30, 5.50:1 (was 3.82:1) */
+    --destructive-foreground: 0 0% 0%;
 
     --border: 220 24% 19%;             /* #252d3e */
     --input: 220 24% 19%;

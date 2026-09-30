@@ -131,7 +131,7 @@ export function ComparePage() {
               </Badge>
             )}
             {delta !== null && delta < 0 && (
-              <Badge className="bg-[hsl(var(--destructive))] text-white">
+              <Badge className="bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]">
                 <TrendingDown className="inline w-4 h-4 mr-1" />
                 {delta} pts regression
               </Badge>
