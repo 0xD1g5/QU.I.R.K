@@ -232,12 +232,12 @@ been drained.
      original 45.
 **Plans**: 6 plans in 5 waves
 Plans:
-- [ ] 218-01-PLAN.md — FIX-04 candidate prep: two-method ratio + collateral table, guard-blind triage, canonical-DB renderability, reversible candidate patches (wave 1, no commits)
-- [ ] 218-02-PLAN.md — D-07(1) roadmap runtime-style badges derive fg from their own bg + D-10 text-destructive-on-card guard, both mutation-proven (wave 1)
-- [ ] 218-03-PLAN.md — BLOCKING operator checkpoint: 3 live rounds in quirk serve, theme toggled on screen, choice per pair recorded verbatim, tree reverted (wave 2)
-- [ ] 218-04-PLAN.md — Apply operator-chosen FIX-04 values + D-07(2) shadcn destructive guard + FOLD sites; badge baseline -> {} by key set (wave 3)
-- [ ] 218-05-PLAN.md — CI-only axe baseline round-trip, D-09 per-node residual attribution, Phase 220 todos (wave 4)
-- [ ] 218-06-PLAN.md — Closing assertion ("empty baseline + N named sites fixed + M blind spots to 220"), UAT Series 218, vault, hand-edited state (wave 5)
+- [x] 218-01-PLAN.md — FIX-04 candidate prep: two-method ratio + collateral table, guard-blind triage, canonical-DB renderability, reversible candidate patches (wave 1, no commits)
+- [x] 218-02-PLAN.md — D-07(1) roadmap runtime-style badges derive fg from their own bg + D-10 text-destructive-on-card guard, both mutation-proven (wave 1)
+- [x] 218-03-PLAN.md — BLOCKING operator checkpoint: 3 live rounds in quirk serve, theme toggled on screen, choice per pair recorded verbatim, tree reverted (wave 2)
+- [x] 218-04-PLAN.md — Apply operator-chosen FIX-04 values + D-07(2) shadcn destructive guard + FOLD sites; badge baseline -> {} by key set (wave 3)
+- [x] 218-05-PLAN.md — CI-only axe baseline round-trip, D-09 per-node residual attribution, Phase 220 todos (wave 4)
+- [x] 218-06-PLAN.md — Closing assertion ("empty baseline + N named sites fixed + M blind spots to 220"), UAT Series 218, vault, hand-edited state (wave 5)
 **UI hint**: yes
 
 ### Phase 219: Keyboard Access
@@ -268,7 +268,7 @@ Plans:
 | 215. Instrument Ratchet | 4/4 | Complete | 2026-09-29 |
 | 216. A11y Harness Repair | 8/8 | Complete | 2026-09-29 |
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
-| 218. Contrast Violations — Design Calls & Closing Assertion | 0/6 | Not started | - |
+| 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Executed, pending verification | - |
 | 219. Keyboard Access | 0/? | Not started | - |
 | 220. CI Instrument Truth | 0/? | Not started | - |
 
