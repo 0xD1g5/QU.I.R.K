@@ -13,8 +13,8 @@ import {
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
   HIGH:     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
-  MEDIUM:   "bg-[hsl(var(--status-warning))] text-black",
-  LOW:      "bg-[hsl(var(--chart-tls))] text-black",
+  MEDIUM:   "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
+  LOW:      "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
   INFO:     "bg-[hsl(var(--status-neutral))] text-white",
 }
 const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 } as const
@@ -155,7 +155,7 @@ function ObjectStorageTable({ findings }: { findings: DarFinding[] }) {
                 </TableCell>
                 <TableCell className="text-sm">
                   <BoolBadge value={f.versioning}
-                    trueLabel="ON" trueClass="bg-[hsl(var(--chart-tls))] text-black"
+                    trueLabel="ON" trueClass="bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]"
                     falseLabel="OFF" falseClass="bg-[hsl(var(--status-neutral))] text-white" />
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>

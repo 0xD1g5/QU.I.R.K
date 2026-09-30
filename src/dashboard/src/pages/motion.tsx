@@ -12,9 +12,9 @@ import { formatDateOnly } from "@/lib/datetime"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(var(--status-critical))] text-white",
-  HIGH:     "bg-[hsl(var(--risk-badge-high))] text-white",
-  MEDIUM:   "bg-[hsl(var(--status-warning))] text-black",
-  LOW:      "bg-[hsl(var(--chart-tls))] text-black",
+  HIGH:     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
+  MEDIUM:   "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
+  LOW:      "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
   INFO:     "bg-[hsl(var(--status-neutral))] text-white",
 }
 
@@ -87,7 +87,7 @@ function EmailTable({ findings }: { findings: MotionFinding[] }) {
                 <TableCell className="text-sm">{f.quantum_risk ?? ""}</TableCell>
                 <TableCell className="text-sm">
                   {f.starttls_warning && (
-                    <Badge className="bg-[hsl(var(--status-warning))] text-black text-xs">⚠ STARTTLS</Badge>
+                    <Badge className="bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))] text-xs">⚠ STARTTLS</Badge>
                   )}
                 </TableCell>
               </TableRow>
@@ -116,8 +116,8 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
         const rows = grouped[fam]
         const plaintextCount = rows.filter(r => r.plaintext_exposed).length
         const pillClass = plaintextCount > 0
-          ? "bg-[hsl(var(--risk-badge-high))] text-white"
-          : "bg-[hsl(var(--chart-tls))] text-black"
+          ? "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]"
+          : "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]"
         return (
           <Card key={fam}>
             <CardHeader className="pb-2">
@@ -158,12 +158,12 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
                         <TableCell className="text-sm">
                           <div className="flex items-center gap-2">
                             {r.plaintext_exposed && (
-                              <Badge className="bg-[hsl(var(--risk-badge-high))] text-white text-xs">
+                              <Badge className="bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))] text-xs">
                                 ☠ PLAINTEXT
                               </Badge>
                             )}
                             {cloudSuffix && (
-                              <Badge className="bg-[hsl(var(--chart-tls))] text-black text-xs">
+                              <Badge className="bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))] text-xs">
                                 ☁ {cloudSuffix}
                               </Badge>
                             )}

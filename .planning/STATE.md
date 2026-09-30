@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-09-29T14:10:00.000Z"
-last_activity: 2026-09-28 -- v5.26 Accessibility & Instrument Truth OPENED (local date; this project dates LOCAL, UTC only in timestamp fields). Scope locked at the boundary from a PM review that re-derived its counts from disk rather than reading the ledger -- the v5.25 dashboard-accessibility deferral taken AS ONE UNIT per the operator instruction -- 45 of 103 badge colour pairs below WCAG AA 4.5:1 across 11 pages, a reopening of BACK-A11Y-01 filed 2026-05-22 in v5.0 Phase 87 and rediscovered a THIRD time by a red CI gate -- paired with the instrument and CI-gate defects that let 45 real violations sit behind three green gates. Ratchet before repair -- the generalised contrast guard with a shrink-only baseline goes first because it fixes nothing and converts an unbounded invisible liability into a drainable number. TWO BOUNDARY VERIFICATIONS made HORIZON.md optimistic rather than wrong -- auditedFiles() exists TWICE (hardcoded-color-audit.test.tsx:86 and theme-token-vocabulary.test.ts:41, the latter annotated as a verbatim copy), so widening 27->76 means widening two hand-synced copies; and run-a11y.mjs has NO theme dimension at all (its VARIANT is a fixture variant; data-theme / .dark / classList / prefers-color-scheme all return zero), so the light theme is new harness capability, not a flag flip. Milestone-boundary doc review passed all three domains -- version drift clean (pyproject 5.25.0 == installed dist == tag v5.25.0 == README == UAT-SERIES header, CHANGELOG [Unreleased] empty), no shipped-but-undocumented surface, Obsidian vault current across all 7 guides + UAT-Series + phase notes for all of 210-214. Repo clean, main == origin/main, all v5.25 work merged. Dashboard Quality and Python Staleness Gate GREEN on head b501d3bc; Python CI in_progress, known-red two commits back on Docker registry unauthorized. Phase numbering CONTINUES -- v5.26 starts at 215. Explicitly deferred rather than forgotten -- HORIZON Candidates A and B, 999.104 PARITY-T4, 999.105, 999.107, 999.110, 999.111, 999.112, and the seven scoring follow-on todos v5.25 filed but did not fix. No phase.complete, no milestone.complete, no mutating gsd-sdk/gsd-tools.cjs verb -- frontmatter and body hand-edited from a pre-image with the FULL diff read. NEXT -- requirements, then roadmap.
+last_updated: "2026-09-30T00:11:12.000Z"
+last_activity: 2026-09-29 -- Phase 217 (Contrast Violations -- Structural Drain) VERIFIED passed 4/4 and marked complete by hand (no phase.complete). FIX-01/02/03 done; badge baseline 35 -> 5 keys (exactly FIX-04's set); CI axe baselines regenerated on Linux (run 36635543200, 4/4 sweep steps green); code-review WR-01 fixed in c1842532. Branch phase-217-contrast-structural-drain pushed, NOT merged. Next -- Phase 218.
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
-  percent: 33
+  completed_phases: 3
+  total_plans: 17
+  completed_plans: 17
+  percent: 50
 ---
 
 # Project State
@@ -272,7 +272,7 @@ See: .planning/PROJECT.md (updated 2026-09-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
+**Current focus:** v5.26 — Phase 217 COMPLETE (verified 2026-09-29); next is Phase 218 (Contrast Violations — Design Calls & Closing Assertion). *Superseded text follows:* None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1387,10 +1387,39 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 216 (A11y Harness Repair) — **COMPLETE, 8 of 8 plans, all 6 waves.**
-Plan: next is Phase 217 plan 01 (not yet planned)
-Status: Phase complete; milestone v5.26 at 2 of 6 phases
-Last activity: 2026-09-29 — **216-08 executed and the phase closed.** The Linux `workflow_dispatch`
+Phase: 217 (Contrast Violations — Structural Drain) — **COMPLETE, 5 of 5 plans, verification `passed` 4/4 (`217-VERIFICATION.md`, 2026-09-29).** Code-review WR-01 fixed in `c1842532`; IN-01 (Info) left open. Branch pushed at `c1842532`, NOT merged to `main` — merge via PR before treating 217 as landed.
+Plan: All five 217-0N plans executed and committed on branch `phase-217-contrast-structural-drain`
+(`96cd3317`, `652a845f`, `364bdf40`, `349046ac`, `f6031506`, `99993d71`, plus this close-out's
+STATE/ROADMAP/REQUIREMENTS hand-edit commit). Next is `/gsd-verify-work` for Phase 217, then Phase
+218 (Contrast Violations — Design Calls & Closing Assertion) needs a full discuss -> plan -> execute
+cycle. No `phase.complete`/`milestone.complete`/mutating state verb was used to reach this position.
+Status: Phase 217 verified and complete; milestone v5.26 at 3 of 6 phases complete (215, 216, 217).
+ROADMAP phase checkbox flipped by hand after verification passed (not by the executor, not by
+`phase.complete`).
+Last activity: 2026-09-29 — **217-05 executed (close-out): operator visual checkpoint returned a
+SCOPED PASS** (Firefox screenshots + orchestrator headless-Chrome computed-style probe, taken after
+`transition-colors` settled — a harness lesson recorded for future visual checkpoints). The
+checkpoint's own draft verification steps were themselves wrong (named badge labels absent from the
+canonical `./quirk-output/quirk.db` fixture; had the FIX-01 orange/green badges' expected text
+colour backwards) and were corrected in `UAT-217-06`'s Notes rather than copied forward. Two visual
+legs (certificates 30-89-day amber expiry text; findings/trends chart-tls blue badges) could not be
+operator-exercised — no matching fixture row in the canonical DB — and are recorded as honest
+SKIP/GAP dispositions (`UAT-217-07`, `UAT-217-08`) naming the automated guards that cover the
+underlying tokens regardless, filed as Phase 220 input alongside the existing empty/loading
+fixture-vacuity todo. Wrote UAT `## Series 217` (8 cases: 6 PASS, 2 SKIP/GAP), dated Phase 217
+addenda to `UAT-215-02`/`UAT-216-02` for now-superseded pre-drain counts (Result lines unchanged),
+re-read `UAT-7-21` against its own four Pass Criteria per D-15 (left unchanged — none turns on
+contrast). Regenerated `docs/uat-coverage-gaps.md` (932->940 headings, open GAP 41->43); ledger
+unchanged (no ledger-tracked case's Result changed). `217-VALIDATION.md` closed:
+`nyquist_compliant: true`, all six verification-map rows green, zero real `⬜ pending` rows.
+Obsidian phase note finalized (`status: complete`) and `UAT-Series.md` re-synced to vault `Digs`.
+STATE.md (this edit)/ROADMAP.md/REQUIREMENTS.md hand-edited from pre-images with the FULL diff
+read — ROADMAP's Phase 216 progress-table row was ALSO found stale here (`0/? Not started` despite
+216 being phase-level `[x]` complete since 216-08) and corrected in the same edit; REQUIREMENTS.md
+FIX-01/02/03 flipped `[x]` with their traceability rows to `Complete`, FIX-04/05 left untouched
+(Phase 218's).
+
+**Prior activity, superseded above:** 2026-09-29 — **216-08 executed and the phase closed.** The Linux `workflow_dispatch`
 job produced every baseline (run `36613039581`, Chrome `152.0.7977.82`, artifact
 `a11y-baselines-36613039581`); 54 baselines committed, each verified against the artifact on
 `generated` AND every `(rule, count)` pair, only justification prose differing. 14 new
@@ -1484,7 +1513,36 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 217 (Contrast Violations, Structural Drain)
+## Next Cycle — Phase 218 (Contrast Violations — Design Calls & Closing Assertion)
+
+Phase 217 (FIX-01/02/03) is executed and committed; verification is next, then Phase 218 needs a
+full discuss -> plan -> execute cycle. It depends on Phase 217 **and Phase 216** per ROADMAP (the
+closing empty-baseline assertion requires every prior phase's contrast work to have already
+landed). Phase 218 owns FIX-04 (the 5 genuine design-call pairs — `--destructive`/white dark ×2,
+`--quantum-safe`/paired-fg light ×2, `--badge-modbus`/white dark ×1 — under operator visual
+review, same pattern as 213-09/217-05) and FIX-05 (the closing "zero badge pair anywhere sits
+below 4.5:1" assertion against an empty RATCHET-01 baseline).
+
+**Inputs 217 hands to 218, re-derive rather than trust these prose figures:**
+1. The residual per-route axe `color-contrast` node table from `217-04-SUMMARY.md` (a different
+   unit from badge-baseline keys): default-dark certificates 1 (FIX-05), hardware 1 (FIX-04
+   badge-modbus); default-light compare 2, hardware 5, findings-storyline 1, qramm-assessment 1,
+   root 1, trends 1 — a mix of named FIX-05 sites and genuinely unattributed debt needing triage.
+2. `roadmap.tsx:345`/`:354`'s runtime-interpolated `PHASE_COLORS`/`CLOSURE_STATE_COLOR`
+   white-on-status-warning dark-theme failure (2.13:1), found by 217-02's spike but explicitly not
+   fixed there (D-02) — the static classifier cannot see it since it is split across `className`
+   and `style=`.
+3. The badge ratchet baseline's exact remaining 5-key set (asserted by symmetric-difference in
+   `217-03-SUMMARY.md`): `compare.tsx|destructive|white|dark`,
+   `hardware.tsx|badge-modbus|white|dark`, `sensors.tsx|quantum-safe|--quantum-safe-foreground|light`,
+   `trends.tsx|destructive|white|dark`, `trends.tsx|quantum-safe|--quantum-safe-foreground|light`
+   — this IS FIX-04's 5, byte-identical to their pre-217 `ratio`/`why` values (never touched by
+   217's edits).
+4. The certificates 30-89-day-expiry and chart-tls-badge fixture gaps surfaced by 217-05's
+   operator checkpoint (`UAT-217-07`/`UAT-217-08`) — Phase 220 input, not 218's, but relevant if
+   218's own operator visual review needs the same fixture widened.
+
+**Prior Next Cycle note, superseded above:** 2026-09-29 — Phase 217 (Contrast Violations, Structural Drain)
 
 Stopped here by operator request at a clean boundary: Phase 216 closed, branch pushed
 (`d107f270`), working tree clean, close gate green. Phase 217 has **no directory yet** — it needs a

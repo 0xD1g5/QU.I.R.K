@@ -19,24 +19,24 @@ import { VendorTrendList } from "@/components/VendorTrendList"
 // Tier badge colors — Tier 1 red, Tier 2 orange, Tier 3 blue, N/A gray
 const TIER_STYLES: Record<string, string> = {
   "Tier 1":   "bg-[hsl(var(--status-critical))] text-white",
-  "Tier 2":   "bg-[hsl(var(--risk-badge-high))] text-white",
-  "Tier 3":   "bg-[hsl(var(--chart-tls))] text-black",
+  "Tier 2":   "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
+  "Tier 3":   "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
   "Tier N/A": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 // PQC status badge colors
 const PQC_STYLES: Record<string, string> = {
-  "supported":     "bg-[hsl(var(--qs-node-safe))] text-white",
-  "partial":       "bg-[hsl(var(--status-warning))] text-black",
+  "supported":     "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
+  "partial":       "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
   "unsupported":   "bg-[hsl(var(--status-critical))] text-white",
   "VENDOR-SILENT": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
 // Confidence badge colors
 const CONF_STYLES: Record<string, string> = {
-  "high":    "bg-[hsl(var(--qs-node-safe))] text-white",
-  "medium":  "bg-[hsl(var(--status-warning))] text-black",
-  "low":     "bg-[hsl(var(--risk-badge-high))] text-white",
+  "high":    "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
+  "medium":  "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
+  "low":     "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   "unknown": "bg-[hsl(var(--status-neutral))] text-white",
 }
 
@@ -55,8 +55,8 @@ const METHOD_LABEL: Record<string, string> = {
 // Phase 139 SNMPV3-02 — SNMP version/security-level badge colors.
 // noAuthNoPriv (amber) must never render identically to auth+priv (green) — D-04.
 const SNMP_STYLES: Record<string, string> = {
-  "v3 auth+priv":      "bg-[hsl(var(--qs-node-safe))] text-white",
-  "v3 noAuthNoPriv":   "bg-[hsl(var(--status-warning))] text-black",
+  "v3 auth+priv":      "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
+  "v3 noAuthNoPriv":   "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
   "v2c":               "bg-[hsl(var(--status-neutral))] text-white",
   "v3 failed → v2c":   "bg-[hsl(var(--status-critical))] text-white",
   "v3 failed → none":  "bg-[hsl(var(--status-critical))] text-white",
@@ -72,8 +72,8 @@ const SNMP_FAILED_TOOLTIP =
 // confirmation. Amber "Partial (assumed)" matches the existing PQC_STYLES.partial
 // / SNMP_STYLES."v3 noAuthNoPriv" amber convention.
 const BRIDGE_STYLES: Record<string, string> = {
-  "Partial (assumed)": "bg-[hsl(var(--status-warning))] text-black",
-  "SNMP-confirmed":    "bg-[hsl(var(--chart-tls))] text-black",
+  "Partial (assumed)": "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]",
+  "SNMP-confirmed":    "bg-[hsl(var(--chart-tls))] text-[hsl(var(--chart-tls-foreground))]",
 }
 
 // Verbatim Pitfall-3 caveat text (UI-SPEC Copywriting Contract) — must appear
@@ -116,7 +116,7 @@ const BACNET_ABORT_TOOLTIP =
 // Amber, not blue: the original hsl(213...) sat in the same hue family as the
 // per-CVE NVD links rendered directly beneath it, so the badge didn't read as
 // a distinct element (human UAT, 142-06).
-const CVE_BADGE_STYLE = "bg-[hsl(var(--status-warning))] text-black"
+const CVE_BADGE_STYLE = "bg-[hsl(var(--status-warning))] text-[hsl(var(--status-warning-foreground))]"
 
 export function HardwarePage() {
   const { data, loading, error } = useScanData()

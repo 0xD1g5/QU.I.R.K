@@ -1,20 +1,19 @@
 {
   "route": "compare",
-  "generated": "2026-09-29T18:36:10.293Z",
+  "generated": "2026-09-29T21:40:42.785Z",
   "entries": [
     {
       "rule": "color-contrast",
-      "count": 4,
+      "count": 2,
       "impact": "serious",
       "wcag": [
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /compare, theme light, rule color-contrast. This entry was REVEALED, not created, by Phase 216's light-theme sweep (216-01/216-04, D-01/D-02): the a11y harness swept dark only before this phase, so no light-theme baseline for this route ever existed. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. Two of the three samples (`bg-[hsl(var(--risk-badge-high))] text-white` \"HIGH\" risk badge, appearing twice) pairs a `bg-[hsl(var(--risk-badge-high))]` or `bg-[hsl(var(--qs-node-safe))]` badge background with white foreground text \u2014 exactly the zero-design-input swap FIX-01 (Phase 217, REQUIREMENTS.md) drains by moving each to its existing `-foreground` sibling token (`--risk-badge-high-foreground` / `--qs-node-safe-foreground`), which needs no new token and no visual redesign. The third sample, a `label-eyebrow` span with an inline `style=\"color: rgb(76, 164, 164)\"`, is a hardcoded RGB literal rather than a CSS-variable badge pair; it does not match any of FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`). It is nonetheless dashboard contrast debt this milestone tracks, and is swept up by FIX-05 (Phase 218), which requires zero badge/contrast pair anywhere in the dashboard below 4.5:1 in either theme, verified by RATCHET-01 reporting an empty baseline. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "justification": "Route /compare, theme light, rule color-contrast. Phase 217 (FIX-01) drained this entry's two `--risk-badge-high`+white 'HIGH' risk badges (the zero-design-input `-foreground` swap, REQUIREMENTS.md FIX-01) from this baseline: count dropped 4 -> 2 in this regeneration (217-04, CI run 36634705275). The two remaining nodes are non-badge: a `label-eyebrow` span with a hardcoded inline `style=\"color: rgb(76, 164, 164)\"` literal, and the `LifecycleEventRow.tsx` direction-indicator 'Worsened' label using `text-[hsl(300_45%_55%)]` -- a raw hsl() literal adjacent to, but not itself listed in, the Phase-156/D-11 `lifecycle-advisory-guard.test.ts` FORBIDDEN_PALETTE. Neither matches FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens. The eyebrow RGB literal is attributed to FIX-05 (Phase 218)'s general zero-below-AA bucket; the unguarded direction-indicator literal is attributed as unknown -- needs triage in Phase 218 to determine whether it belongs in the D-11 firewall or is unintentional debt.",
       "samples": [
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--risk-badge-high))] text-white font-semibold text-xs\">HIGH</div>",
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--risk-badge-high))] text-white font-semibold text-xs\">HIGH</div>",
-        "<span class=\"label-eyebrow\" style=\"color: rgb(76, 164, 164);\">Recent Lifecycle Changes</span>"
+        "<span class=\"label-eyebrow\" style=\"color: rgb(76, 164, 164);\">Recent Lifecycle Changes</span>",
+        "<span>Worsened</span>"
       ]
     }
   ]

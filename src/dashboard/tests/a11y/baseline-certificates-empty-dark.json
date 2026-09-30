@@ -1,18 +1,17 @@
 {
   "route": "certificates",
-  "generated": "2026-09-29T18:36:21.771Z",
+  "generated": "2026-09-29T21:40:52.114Z",
   "entries": [
     {
       "rule": "color-contrast",
-      "count": 2,
+      "count": 1,
       "impact": "serious",
       "wcag": [
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /certificates, fixture variant empty, theme dark, rule color-contrast. This entry was REVEALED, not created, by Phase 216's certificates fixture enrichment (216-02, D-05/D-07): the /certificates fixture previously shipped with no certificate records, so this route's badges never rendered under any prior a11y sweep and the baseline sat empty. The underlying colour debt pre-dates this phase; only the harness's ability to see it is new. Matches the default-dark entry's own two samples exactly (`--qs-node-safe`+white \"Safe\" badge, and a bare `--status-critical` text label) because the enriched fixture's summary cards render before the per-record empty-state branch does. The `--qs-node-safe`+white badge pairs a `bg-[hsl(var(--risk-badge-high))]` or `bg-[hsl(var(--qs-node-safe))]` badge background with white foreground text \u2014 exactly the zero-design-input swap FIX-01 (Phase 217, REQUIREMENTS.md) drains by moving each to its existing `-foreground` sibling token (`--risk-badge-high-foreground` / `--qs-node-safe-foreground`), which needs no new token and no visual redesign. The bare `--status-critical` text label does not match any of FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`). It is nonetheless dashboard contrast debt this milestone tracks, and is swept up by FIX-05 (Phase 218), which requires zero badge/contrast pair anywhere in the dashboard below 4.5:1 in either theme, verified by RATCHET-01 reporting an empty baseline. Per 216-CONTEXT.md D-04/D-09, this phase BASELINES this finding rather than fixing it: a phase whose job is instrument repair (fixing the harness's fixture and theme coverage) must not also change product pixels, or a red gate becomes unattributable to either change on its own.",
+      "justification": "Route /certificates, fixture variant empty, theme dark, rule color-contrast. Phase 217 (FIX-01) drained this entry's `--qs-node-safe`+white 'Safe' cert-status badge (the zero-design-input `-foreground` swap, REQUIREMENTS.md FIX-01) from this baseline: count dropped 2 -> 1 in this regeneration (217-04, CI run 36634705275). The single remaining node is a bare `text-[hsl(var(--status-critical))]` label with no badge background -- it does not match FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`). It is dashboard contrast debt attributed to FIX-05 (Phase 218)'s general zero-below-AA verification bucket, not a drained requirement.",
       "samples": [
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--qs-node-safe))] text-white text-xs\">Safe</div>",
         "<span class=\"text-sm text-[hsl(var(--status-critical))] flex items-center gap-1\">"
       ]
     }

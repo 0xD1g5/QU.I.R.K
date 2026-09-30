@@ -1,7 +1,20 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Series 216 added: five cases, **all five PASS**. `UAT-216-03` was first recorded SKIP while plan 216-08 was still pending, then re-run and flipped to PASS once 216-08 landed the measured `countRange: [1, 2]` — exactly as that SKIP annotation prescribed. Its original multi-line SKIP annotation also violated the canonical single-line `**Result:**` form and was caught by `tests/test_uat_series_format.py`, a gate outside the five this phase had been running. No version bump — v5.26 is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
+**Last Updated:** 2026-09-29 (Phase 217 close — Contrast Violations Structural Drain, third phase
+of v5.26. Series 217 added: 8 cases — 6 PASS, 2 SKIP (GAP — no fixture row), each GAP naming the
+automated guard that already covers the underlying token so the gap is a fixture-data limitation,
+not an unguarded regression risk: the canonical `./quirk-output/quirk.db` has no certificate in the
+30-89-day expiry window and no chart-tls (blue) badge rows, so those two visual legs could not be
+operator-exercised; `status-warning-text-on-white-guard.test.ts` (D-09) and the
+`badge-contrast-guard`/`cbom-badge-contrast-guard` suites cover the underlying tokens either way.
+UAT-7-21 was re-read against its own four Pass Criteria per D-15 and left unchanged — Phase 217 is
+a contrast-only fix to existing badge foreground colours and bears on none of "tokens used",
+"no hardcoded colours", "electric-blue accent" or "dark-background consistency". UAT-215-02 and
+UAT-216-02's Notes received dated Phase 217 addenda marking their pre-drain counts (the
+35-key badge baseline; live axe color-contrast counts on certificates/hardware/compare) as
+superseded by the FIX-01/FIX-03 drain, without changing either Result line. No version bump — v5.26
+is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 216 close — A11y Harness Repair, second phase of v5.26. Series 216 added: five cases, **all five PASS**. `UAT-216-03` was first recorded SKIP while plan 216-08 was still pending, then re-run and flipped to PASS once 216-08 landed the measured `countRange: [1, 2]` — exactly as that SKIP annotation prescribed. Its original multi-line SKIP annotation also violated the canonical single-line `**Result:**` form and was caught by `tests/test_uat_series_format.py`, a gate outside the five this phase had been running. No version bump — v5.26 is still in progress and 5.25.0 remains the shipped version. Prior: 2026-09-29 (Phase 215 close — Instrument Ratchet, first phase of v5.26. Series 215 added: five cases, all PASS, covering RATCHET-01..04 plus the newly-enforced Tailwind JIT hazard. No version bump — v5.26 is in progress and 5.25.0 remains the shipped version. Prior: 2026-09-28 (Phase 214 close — Release Cut; version bumped to 5.25.0 across `pyproject.toml`, `README.md` and this document's header/UAT-1-02 pass criteria; the `v5.25.0` tag itself is operator-reserved and had NOT been pushed at the time of that edit — **the operator pushed it later the same day** (run `36497076444`, `Publish to PyPI` = `success`, PyPI serves 5.25.0), and `UAT-1-02`'s post-tag re-execution note was corrected accordingly in a post-publish continuation pass. Prior: 2026-09-28 (Phase 213 close — Shipped Product Defects, Series 7. `UAT-7-12`
 (Certificates Page — Expiry Sorting) and `UAT-7-21` (Dashboard Theme — No Hardcoded Colors)
 re-dispositioned FAIL to PASS. `UAT-7-12` cites the five new
 `certificates-expiry-sort.test.tsx` nodes plus operator browser confirmation. `UAT-7-21` is a
@@ -30004,6 +30017,13 @@ directions with verbatim vitest captures, including the real production guard re
 `pages/cbom.tsx (light): bg #9d6607 (--status-warning) on fg #000000 = 4.34:1 — NEW sub-AA pair,
 not in baseline`.
 
+**Phase 217 addendum (2026-09-29):** the 35-entry count this case's Pass Criteria and Notes state
+is superseded by design, not by regression. Phase 217's FIX-01/FIX-03 drain (`96cd3317`, `364bdf40`,
+`349046ac`) removed exactly the 30 keys it owned; the baseline now correctly holds 5 entries —
+FIX-04's remaining set, asserted by key in `217-03-SUMMARY.md` — and the ratchet's shrink-only
+and grow-fails-loud behaviour this case actually certifies is unchanged. This Result line is not
+reopened by that count moving.
+
 ### UAT-215-03: Widening The Audit Set Exposed Two Guards In Contradiction
 
 **ID:** UAT-215-03
@@ -30211,6 +30231,14 @@ baselines it on Linux CI with written per-entry justifications naming FIX-01/FIX
 that actually drain it (D-04/D-09). A reader seeing this FAIL locally before 216-08 lands should
 read it as the criterion being met, not as a regression.
 
+**Phase 217 addendum (2026-09-29):** the live counts quoted above (`color-contrast count 2 exceeds
+baseline 0` for certificates, `count 8 exceeds baseline 3` for hardware) are pre-FIX-01/FIX-03
+counts and are now stale — CI run `36635543200` shows `certificates-default-dark` at 1
+(`color-contrast`, FIX-05-attributed) and `hardware-default-dark` at 1 (FIX-04's badge-modbus),
+per `217-04-SUMMARY.md`'s classification table. This case's own Result is unaffected: it certifies
+that the harness CAN report a genuine FAIL rather than a silent PASS, which remains true regardless
+of the count the drain has since lowered.
+
 ### UAT-216-03: The `data-at-rest` Range Absorbs The macOS/Linux Disagreement
 
 **ID:** UAT-216-03
@@ -30328,3 +30356,321 @@ hardware" node, restored and re-verified green; (2) synthetically committing a s
 detected" node naming the 13 missing light slugs, then removed with a confirmed clean
 `git status --short`. `npm run a11y:ledger` completes in ~0.2s with no `Starting vite preview` or
 Chrome-launch line in its output, and two consecutive runs produce zero `git status` diff.
+
+---
+
+## Series 217: Contrast Violations — Structural Drain (Phase 217 — v5.26)
+
+**Last Updated:** 2026-09-29 (Phase 217 close — Contrast Violations Structural Drain, third phase
+of v5.26. Eight cases: six PASS covering FIX-01's 11-site swap, FIX-02's spike-before-edit
+ordering, FIX-03's two-token mint and 29-site repoint, the D-09 text-on-white regression guard,
+the CI axe baseline drain, and the operator-confirmed badge legs the canonical DB's fixture data
+can exercise; two SKIP (GAP — no fixture row) for the two visual legs the canonical DB cannot
+exercise (a 30-89-day-expiry certificate; a chart-tls/blue badge row), each naming the automated
+guard that already covers the underlying token. The operator's Task 1 checkpoint verdict corrected
+this plan's own draft verification steps, which had named badge labels and colours that do not
+exist in this project's fixture data and had the FIX-01 orange/green badges' expected text colour
+backwards (near-black in BOTH themes, not white-in-light) — see UAT-217-06's Notes for the record
+and `217-05-SUMMARY.md` for the corrected-vs-original comparison.)
+
+### UAT-217-01: FIX-01 — 11 `text-white` Sites Swapped To Their `-foreground` Sibling
+
+**ID:** UAT-217-01
+**Title:** All 11 live occurrences pairing `bg-[hsl(var(--risk-badge-high))]` or
+`bg-[hsl(var(--qs-node-safe))]` with `text-white` now use the existing `-foreground` sibling
+token, and the badge ratchet baseline shrank by exactly the 12 keys this swap drains
+**Maps to:** FIX-01
+
+**What to test:** The 11 raw occurrences named in `217-CONTEXT.md`/`217-UI-SPEC.md` (certificates,
+compare, hardware ×3, motion ×3, scan-history) no longer hardcode `text-white`; both background
+tokens are theme-invariant so one swap covers both themes.
+
+**Steps:**
+```
+git show 96cd3317 --stat
+grep -cE "risk-badge-high\)\)\] text-white|qs-node-safe\)\)\] text-white" src/dashboard/src/pages/*.tsx
+cd src/dashboard && npx vitest run src/components/__tests__/badge-contrast-guard.test.ts
+python3 -c "import json;print(len(json.load(open('src/components/__tests__/badge-contrast-baseline.json'))))"
+```
+
+**Pass Criteria:** zero remaining `text-white` occurrences on either background token; the badge
+ratchet passes 6/6 with the 12 FIX-01 keys removed and no new key introduced; no other file's
+baseline entry changed value.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** Commit `96cd3317`. Live grep at execution time returned exactly 11 lines, matching the
+plan's prediction byte-for-byte (`217-01-SUMMARY.md` Task 1 table). `badge-contrast-guard.test.ts`
+6/6 passed. Independent Python re-derivation against `git show 867f4469:` confirmed the baseline
+dropped 35 -> 23 keys, exactly the 12 FIX-01 keys named in the summary removed, with every
+surviving entry's `ratio`/`why` byte-unchanged (`o[k]==n[k]` for all `k` in `n`). `motion.tsx:119-120`'s
+`--chart-tls`/`text-black` ternary branch was deliberately left untouched (FIX-03 scope). The D-02
+out-of-scope diff (`data-at-rest.tsx`, `findings.tsx`, `identity.tsx`, `trends.tsx`) is empty, and
+none of their 9 same-token occurrences is failing-and-unbaselined — no guard blind-spot finding.
+
+### UAT-217-02: FIX-02 — The Spike Lands Strictly Before Any Bulk FIX-03 Edit
+
+**ID:** UAT-217-02
+**Title:** `217-SPIKE.md`'s mechanical classification (39 occurrences: 29 badge-background, 1
+text-use, 9 non-class) and its recorded `UNIFORM` plan shape landed in the same wave as FIX-01,
+strictly before either FIX-03 edit commit
+**Maps to:** FIX-02
+
+**What to test:** ROADMAP criterion 2's ordering requirement — the spike's classification work is
+committed evidence before the bulk repoint touches any file it classified.
+
+**Steps:**
+```
+git log --oneline f81c295e..f6031506
+ls -la .planning/phases/217-contrast-violations-structural-drain/217-SPIKE.md
+grep -c "UNIFORM" .planning/phases/217-contrast-violations-structural-drain/217-SPIKE.md
+```
+
+**Pass Criteria:** the spike artifact exists and records a `UNIFORM` shape with the same 29-line
+edit set 217-03 later executes; the D-09 guard commit (the spike plan's own Task 2) precedes both
+FIX-03 commits in `git log`; the spike's "what input would misclassify?" answer is recorded, not
+skipped.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** `git log --oneline` shows the commit order `96cd3317` (FIX-01) → `652a845f` (FIX-02's
+D-09 guard) → `364bdf40`/`349046ac` (FIX-03) → `f6031506` (axe baselines) — the spike's guard
+commit strictly precedes both FIX-03 commits, and `217-SPIKE.md` (git-untracked phase artifact,
+confirmed present on disk) records the classification landing in wave 1 alongside 217-01, wave
+strictly before 217-03's wave 2 (`217-01-PLAN.md`/`217-02-PLAN.md` wave: 1; `217-03-PLAN.md` wave:
+2). Live counts (39 total: 29/1/9) matched `217-CONTEXT.md`'s pre-scout hypothesis exactly — no
+mismatch finding. Misclassification answer, recorded not fixed (D-02): `roadmap.tsx:345`/`:354`
+pairs a static `text-white` class with a runtime-interpolated `PHASE_COLORS`/`CLOSURE_STATE_COLOR`
+background that resolves to `--status-warning`, measuring 2.13:1 in dark theme (an AA failure the
+static classifier cannot see because it is split across `className` and `style=`) — routed to
+Phase 218/220, not fixed in this phase.
+
+### UAT-217-03: FIX-03 — Two New Tokens Mint, Both Themes Reach AA, Dark Pixels Unchanged
+
+**ID:** UAT-217-03
+**Title:** `--status-warning-foreground` and `--chart-tls-foreground` are minted (dark=black,
+light=white), all 29 badge-background `text-black` occurrences repoint to them, and the badge
+ratchet baseline now holds exactly FIX-04's 5 remaining keys
+**Maps to:** FIX-03
+
+**What to test:** The two theme-varying tokens exist with the D-07 values, the 29-site repoint is
+complete, `certificates.tsx:87`'s protected text-on-white use is untouched, and the light-theme
+ratios now pass AA while dark-theme ratios are unchanged.
+
+**Steps:**
+```
+git show 364bdf40 349046ac --stat
+grep -c "status-warning-foreground\|chart-tls-foreground" src/dashboard/src/index.css
+grep -cE "(status-warning|chart-tls)\)\)\] text-black" src/dashboard/src/pages/*.tsx
+cd src/dashboard && npx vitest run src/components/__tests__/badge-contrast-guard.test.ts src/components/__tests__/status-warning-text-on-white-guard.test.ts
+python3 -c "import json;print(sorted(json.load(open('src/components/__tests__/badge-contrast-baseline.json')).keys()))"
+```
+
+**Pass Criteria:** both new tokens exist in `:root` and `.light`; zero remaining `text-black`
+occurrences on either background token outside the protected text-on-white use; the ratchet's
+remaining key SET (not count) equals FIX-04's 5 named keys exactly; dark-theme ratios for both
+tokens are unchanged from their pre-217 values; light-theme ratios clear 4.5:1.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** Commits `364bdf40` (status-warning, 17 sites) and `349046ac` (chart-tls, 12 sites), 29
+total, matching `217-SPIKE.md`'s edit set byte-for-byte. `217-03-SUMMARY.md`'s exact-algorithm
+measurement (the repo's own `color-contrast-helpers.ts` maths): status-warning dark #f59f0a/black
+9.85:1 (unchanged), light #9d6607/white 4.84:1 (passes AA); chart-tls dark #61a6fa/black 8.34:1
+(unchanged), light #065cc6/white 6.26:1 (passes AA) — both new `-foreground` tokens confirmed to
+resolve to `#000000` dark / `#ffffff` light. The plan header's approximate 9.82/8.32/4.87/6.24
+figures come from a different rounding path and agree to within ±0.03; both measurements pass AA
+in their respective use. The remaining baseline key set is exactly FIX-04's 5 keys (`compare.tsx`
+`destructive`, `hardware.tsx` `badge-modbus`, `sensors.tsx`/`trends.tsx` `quantum-safe` ×2),
+asserted by symmetric-difference (`symdiff: []`), not by count. `certificates.tsx:87` was not
+touched — confirmed by isolated file diff and by the D-09 guard staying green throughout both
+commits. Full guard directory (23 files, 235 passed / 2 skipped) green; build/lint exit 0.
+
+### UAT-217-04: D-09 — The Certificates Text-On-White Use Is Protected By A Guard Proven To Fail
+
+**ID:** UAT-217-04
+**Title:** `status-warning-text-on-white-guard.test.ts` is green today and was captured RED under
+both required mutations before this phase's bulk edit landed
+**Maps to:** FIX-03 (D-09)
+
+**What to test:** A guard nobody has watched fail is a guard nobody knows works (this project's
+standing rule). The guard must fail if `certificates.tsx:87` is repointed to the new `-foreground`
+token (which would make the text unreadable on the table's white background), and must fail if the
+light-theme `--status-warning` value is ever lightened toward its dark value.
+
+**Steps:**
+```
+cd src/dashboard
+npx vitest run src/components/__tests__/status-warning-text-on-white-guard.test.ts
+```
+
+**Pass Criteria:** the guard passes 3/3 on the unmutated tree; a mutation that repoints
+`certificates.tsx:87` to `-foreground` fails it; a mutation that lightens `.light --status-warning`
+toward the dark value fails it with a ratio-below-4.5 assertion message; both mutations are
+reverted with a confirmed clean `git diff --quiet`.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** Committed `652a845f`, ahead of both FIX-03 commits (UAT-217-02). `217-02-SUMMARY.md`
+captures both mutations verbatim: M1 (repoint `certificates.tsx:87` to `-foreground`) failed with
+"the daysToExpiry<90 branch no longer uses the bare --status-warning text token: expected false to
+be true"; M2 (lighten `.light --status-warning` from `38 92% 32%` to `38 92% 50%`) failed with
+"--status-warning #f59f0a on white = 2.13:1 — Phase 213's text-on-white fix regressed: expected
+2.13 to be greater than or equal to 4.5". Both reverted, `git diff --quiet` clean. Post-revert and
+post-FIX-03 re-runs both green (3/3, then 25/25 across the full guard suite in `217-03-SUMMARY.md`).
+
+### UAT-217-05: CI Axe Baselines Confirm The Drain In Both Themes
+
+**ID:** UAT-217-05
+**Title:** A CI-only Linux round-trip regenerates the axe baselines against the FIX-01/FIX-03
+drain, confirms an expected red Axe gate on the first dispatch, and a green 4/4 gate on the second
+**Maps to:** FIX-01, FIX-03 (D-12/D-13)
+
+**What to test:** The `color-contrast` node counts drop on every route FIX-01/FIX-03 touched, in
+both themes, with no unrelated rule or route affected; the residual after the drain is correctly
+attributed as Phase 218 input, not a 217 failure.
+
+**Steps:**
+```
+gh run view 36634705275
+gh run view 36635543200
+gh run view 36635546110
+```
+
+**Pass Criteria:** the first dispatch (pre-baseline-regen HEAD) shows the Axe + Console Gate
+failing with `color-contrast ... is BELOW baseline ... Baseline is stale` on exactly the
+FIX-01/FIX-03 routes; the second dispatch (post-regen HEAD `f6031506`) shows all 4 axe sweep steps
+(dark/light/empty/loading) green; the Linux Full Suite's failing-node set on the same head is
+byte-identical to `main`'s.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** automated
+**Notes:** First dispatch `36634705275` (head `349046ac`, before this plan's commit): Axe + Console
+Gate failed on the dark step first, naming `certificates`/`hardware`/`compare` as `color-contrast
+... BELOW baseline ... Baseline is stale`, as predicted. 18 changed (file, rule) rows across the
+CI artifact, all DECREASE or REMOVED, zero INCREASE/NEW-ENTRY, matching 217-03's macOS
+weak-evidence predictions exactly — 0 platform-drift findings. Committed `f6031506` (54 baselines +
+ledger, 10 justifications hand-rewritten to describe the completed drain rather than a live
+count). Second dispatch `36635543200` (head `f6031506`): Axe + Console Gate green, all 4 sweep
+steps. Linux Full Suite run `36635546110` on the same head: `2 failed, 5210 passed` —
+`test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]` and `[storage-s3]`,
+identical failing-node set to `main` run `36604466116` and PR #38 run `36624566175` (pre-existing
+environmental Docker nodes, not a regression). Residual per-route `color-contrast` table (axe
+nodes, a different unit from badge-baseline keys) recorded in `217-04-SUMMARY.md` as Phase 218
+input: default-dark certificates 1 (FIX-05), hardware 1 (FIX-04 badge-modbus); default-light
+compare 2, hardware 5, findings-storyline 1, qramm-assessment 1, root 1, trends 1 — a mix of FIX-05
+sites and genuinely unattributed debt "needs triage", none of it FIX-01/FIX-03-owned.
+
+### UAT-217-06: Operator Confirms FIX-01/FIX-03 Badge Colours On Real Data, Both Themes
+
+**ID:** UAT-217-06
+**Title:** Operator visual walkthrough against the canonical `./quirk-output/quirk.db` confirms
+the FIX-03 amber "medium" badge and the FIX-01 orange/green badges render with their corrected
+expected text colours in both themes, on `/hardware`, `/compare` and `/motion`
+**Maps to:** FIX-01, FIX-03 (D-14, human-verify checkpoint)
+
+**What to test:** Rendered, not merely source-audited, confirmation that the FIX-03 `medium`
+(status-warning) badge shows WHITE text in light theme / BLACK text in dark theme (unchanged), and
+that the FIX-01 `Tier 2`/`low`/`supported`/`high`/`v3 auth+priv` badges (risk-badge-high /
+qs-node-safe) show NEAR-BLACK text in BOTH themes.
+
+**Steps:**
+```
+.venv/bin/quirk serve --no-open --port 8512
+# open http://127.0.0.1:8512/hardware in a real browser, light then dark theme
+# open http://127.0.0.1:8512/compare and /motion, both themes
+```
+
+**Pass Criteria:** `/hardware` in light theme: amber "medium" badge text is white and legible;
+in dark theme: amber "medium" badge text is black, unchanged from pre-217. `/hardware`, `/compare`,
+`/motion` in both themes: orange "Tier 2"/"low" and green "supported"/"high"/"v3 auth+priv" badges
+show near-black text, not white. No unintended colour change elsewhere (backgrounds, sidebar,
+charts).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-29  **Tester:** operator (Firefox, hard-refresh) + orchestrator (headless-Chrome
+computed-style probe, corroborating)
+**Notes:** **This case's own checkpoint draft was itself wrong and is corrected here, not copied
+forward.** The original Task 1 how-to-verify steps named amber badges ("partial", "v3
+noAuthNoPriv", "Partial (assumed)", CVE) and blue badges ("Tier 3", "SNMP-confirmed") that do not
+exist in `./quirk-output/quirk.db`'s actual data, and stated the FIX-01 orange/green badges should
+show white text in light theme — backwards; FIX-01's `-foreground` tokens are theme-invariant and
+render near-black in BOTH themes. The operator's corrected verdict, recorded 2026-09-29: FIX-03's
+amber `medium` badge is WHITE-on-`#9d6607` in light / BLACK-on-`#f59f0a` in dark (both as
+designed); FIX-01's orange `Tier 2`/`low` badge is `rgb(24,28,37)`-on-`#f97015` in BOTH themes.
+Corroborated by an orchestrator headless-Chrome computed-style probe taken AFTER the
+`transition-colors` CSS transition settled (a harness lesson worth recording: an unsettled probe
+would read the pre-transition colour and false-fail or false-pass depending on timing) —
+light medium: `rgb(255,255,255)` on `rgb(157,102,7)`; dark medium: `rgb(0,0,0)` on
+`rgb(245,159,10)`; Tier 2/low: `rgb(24,28,37)` on `rgb(249,112,21)` in both themes — matching the
+operator's Firefox screenshots exactly. No unintended colour change reported anywhere else on the
+swept pages.
+
+### UAT-217-07: Certificates Safe/At Risk Badges Confirmed — The 30-89-Day Amber Expiry Text Leg Has No Fixture Row
+
+**ID:** UAT-217-07
+**Title:** The `/certificates` Safe (near-black) and At Risk (white) badges are confirmed rendered
+correctly; the protected amber expiry-text-on-white leg (D-09) could not be operator-exercised
+because the canonical DB holds no certificate expiring in the 30-89-day window
+**Maps to:** FIX-01 (Safe/At Risk badges), FIX-03/D-09 (expiry text — GAP leg only)
+
+**What to test:** `/certificates` in light theme: "Safe" badge near-black text, "At Risk" badge
+white text (both FIX-01 `qs-node-safe`/`risk-badge-high`); a certificate expiring in 30-89 days
+shows its expiry date in amber `--status-warning` text on the table background, unchanged by
+FIX-03 per D-08/D-09.
+
+**Steps:**
+```
+# operator: http://127.0.0.1:8512/certificates, light theme
+python3 -c "import sqlite3; c=sqlite3.connect('quirk-output/quirk.db'); print(list(c.execute(\"select name, days_to_expiry from certificates\")))" 2>/dev/null || true
+cd src/dashboard && npx vitest run src/components/__tests__/status-warning-text-on-white-guard.test.ts
+```
+
+**Pass Criteria (badges):** Safe badge near-black text, At Risk badge white text, both legible.
+**Pass Criteria (expiry text, GAP-eligible):** a 30-89-day-expiry certificate's date text renders
+amber on white and passes AA — exercised either by a live fixture row or, absent one, by the
+automated D-09 guard alone.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no fixture row: covered by the automated D-09 guard)
+**Date:** 2026-09-29  **Tester:** operator (badges) + automated (D-09 guard, expiry-text leg)
+**Notes:** The Safe/At Risk badge leg is a full PASS, operator-verified. The 30-89-day-expiry
+amber-text-on-white leg is SKIP (GAP): the canonical `./quirk-output/quirk.db` holds no certificate
+with `daysToExpiry` in that window, so this visual leg could not be operator-exercised. It is
+covered by the automated D-09 guard (`status-warning-text-on-white-guard.test.ts`, 3/3 green),
+which is what actually protects the token; this SKIP records only that the visual confirmation of
+a live row was not possible with this fixture, not a gap in guard coverage. Filed as a Phase 220
+input alongside the existing empty/loading fixture-vacuity todo
+(`260929-a11y-empty-loading-variant-legs-are-near-vacuous`) — the canonical DB's certificate
+fixture set does not include a 30-89-day-expiry row, so this visual leg (and UAT-217-08's
+chart-tls leg below) cannot be operator-exercised against real data until the fixture is widened.
+Not a defect in this phase's fix; the underlying token contrast is asserted by the D-09 guard
+independent of any browser render.
+
+### UAT-217-08: Findings/Trends Amber Badges Confirmed — No Chart-TLS (Blue) Badge Rows In The Canonical DB
+
+**ID:** UAT-217-08
+**Title:** `/findings` and `/trends` amber (status-warning) severity badges render white text in
+light theme where present; no blue (chart-tls) badge row exists in the canonical DB to inspect
+**Maps to:** FIX-03
+
+**What to test:** `/findings` and `/trends` in light theme: MEDIUM (amber, status-warning) severity
+badges show white text; LOW (blue, chart-tls) severity badges show white text where they render.
+
+**Steps:**
+```
+# operator: http://127.0.0.1:8512/findings and /trends, light theme
+grep -rn "chart-tls" src/dashboard/src/pages/findings.tsx src/dashboard/src/pages/trends.tsx
+```
+
+**Pass Criteria:** amber MEDIUM badges show white text in light theme; blue LOW badges show white
+text in light theme, exercised either by a live fixture row or the automated token guard alone.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no fixture row: covered by badge-contrast-guard + CI axe baselines)
+**Date:** 2026-09-29  **Tester:** operator (amber leg) + automated (chart-tls token, badge guard)
+**Notes:** The canonical `./quirk-output/quirk.db` contains no LOW-severity finding rendering a
+chart-tls badge on `/findings` or `/trends`, so that leg could not be operator-exercised. The
+amber MEDIUM leg was confirmed where present (white text in light theme, per UAT-217-06's
+corroborated probe). The chart-tls token's own contrast is covered by
+`badge-contrast-guard.test.ts` and the CI axe baselines (UAT-217-03/217-05) independent of this
+visual leg. Same fixture-gap class as UAT-217-07 — filed as Phase 220 input alongside the existing
+empty/loading vacuity todo. Not a defect in this phase's fix.
