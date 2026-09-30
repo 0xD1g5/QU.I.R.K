@@ -6,158 +6,131 @@
 
 # QU.I.R.K. — v5.25.0
 
-**Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
+**Quantum Infrastructure Readiness Kit** is a consulting-grade cryptographic inventory and quantum-readiness assessment tool.
 
-QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endpoints, SSH services, JWT-issuing APIs, container images, Git repositories, and major cloud providers (AWS, Azure, GCP, HashiCorp Vault, Kubernetes). It produces a Cryptography Bill of Materials (CBOM) in CycloneDX JSON and XML, computes a quantum-readiness score (0–100) with six subscores, and generates client-ready PDF / DOCX / HTML reports. Distributed mode (v5.4+) splits scanning across on-prem sensors that push findings to a central console for merged reporting.
+QU.I.R.K. is an agentless scanner that finds the cryptography running in an environment: TLS and SSH services, identity infrastructure (SAML, Kerberos, AD CS, JWT/OIDC), mail and message brokers, container images, source code, databases, cloud key management (AWS, Azure, GCP, HashiCorp Vault, Kubernetes), and network and OT/ICS hardware. It produces three things:
+
+- a Cryptography Bill of Materials (CBOM) in CycloneDX JSON and XML;
+- a 0–100 quantum-readiness score with six subscores;
+- a prioritized migration roadmap, in client-ready PDF, DOCX and HTML reports.
+
+> [!IMPORTANT]
+> **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and dashboard also enforce an optional trusted-targets allowlist; see the [Operator's Guide](docs/operators-guide.md).
+
+![QU.I.R.K. dashboard — executive summary](docs/images/dashboard-hero.png)
+*The executive summary for a scan of the bundled chaos lab, which is deliberately weak. The score is capped at 20 because six CRITICAL findings are open, even though the computed score is 78. It shows the harvest-now-decrypt-later verdict, the first three remediation steps, and the six subscores.*
 
 ## For your role
 
-**For the security consultant.** QU.I.R.K. produces the deliverable: a CycloneDX CBOM, a 0–100 quantum-readiness score with six subscores (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion), and client-ready PDF / DOCX / HTML reports. Point it at a client's TLS endpoints, SSH services, JWT-issuing APIs, and cloud accounts; hand back the findings, the prioritized remediation roadmap, and a written executive narrative. No agents to deploy, no software for the client to install.
+**For the security consultant.** QU.I.R.K. produces the deliverable:
+- a CycloneDX CBOM;
+- a 0–100 quantum-readiness score with six subscores (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion);
+- a written executive narrative;
+- a prioritized remediation roadmap, in PDF, DOCX and HTML.
 
-**For the IT generalist.** Start with the simple question — *what crypto do we even have running?* — and end with an answerable inventory. QU.I.R.K. walks your environment, names every TLS endpoint, SSH host, container image, and KMS key it can reach, and tells you which ones are quantum-vulnerable. The dashboard at `http://localhost:8512` lets you browse the findings interactively before you commit to any remediation work.
+Nothing needs to be installed on the client's systems.
 
-**For the compliance officer.** Quantum-readiness is on the audit radar (NIST PQC, CNSA 2.0, FIPS 140-3 transitions). QU.I.R.K. ships compliance mappings against CMVP / FIPS 140-3 with documented staleness review cadence, surfaces algorithm classifications that map to those frameworks, and produces artifact-grade output (CBOM JSON/XML, PDF reports) you can attach to an audit response.
+**For the IT generalist.** Start with the simple question: *what crypto do we even have running?* QU.I.R.K. walks your environment and names every TLS endpoint, SSH host, certificate, container image and KMS key it can reach, and tells you which ones are quantum-vulnerable. Browse the results in the dashboard before committing to any remediation work.
 
-![QU.I.R.K. dashboard against the chaos lab](docs/images/dashboard-hero.png)
-*Dashboard view of a scan against the chaos lab — quantum-readiness score, subscores, findings, and CBOM browser.*
+**For the compliance officer.** Quantum-readiness is on the audit radar: NIST PQC, CNSA 2.0 and the FIPS 140-3 transition. QU.I.R.K. maps its findings to FIPS 140-3 / CMVP, PCI-DSS 4.0.1 and HIPAA, and tracks the US federal PQC transition deadlines (EO 14412). Each mapping is dated and re-verified on a CI-enforced review cadence. The output (CBOM JSON/XML, PDF reports) can be attached to an audit response.
 
 ## Quick Start
 
-From a virtual environment (recommended on every platform, **required** on Debian/Ubuntu/Kali/Parrot — see note below):
+Install into a virtual environment. This is recommended on every platform and **required** on Debian, Ubuntu, Kali and Parrot (see the note below).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install 'quirk-scanner[all]'
-quirk init
-quirk --config config.yaml
+quirk init                     # writes a starter config.yaml — edit the targets
+quirk --config config.yaml     # run the scan
+quirk serve                    # open the dashboard at http://localhost:8512
 ```
 
-> **Use a venv.** Modern Debian-based distros (Ubuntu 23.04+, Kali, Parrot) enforce [PEP 668](https://peps.python.org/pep-0668/) and reject a bare `pip install` into the system Python with `error: externally-managed-environment`. Installing into the `.venv` above avoids this. Keep the quotes around `'quirk-scanner[all]'` — zsh (the default shell on macOS, Kali, and Parrot) otherwise treats `[all]` as a glob and fails with `no matches found`. Full Parrot/Kali walkthrough: [Installation → Parrot OS / Kali / Debian](docs/installation.md#parrot-os--kali--debian-pep-668).
+> **Use a venv.** Modern Debian-based distros enforce [PEP 668](https://peps.python.org/pep-0668/) and reject a bare `pip install` into the system Python with `error: externally-managed-environment`. Keep the quotes around `'quirk-scanner[all]'`: zsh, the default shell on macOS, Kali and Parrot, otherwise treats `[all]` as a glob and fails with `no matches found`. Full walkthrough: [Installation → Parrot OS / Kali / Debian](docs/installation.md#parrot-os--kali--debian-pep-668).
 
-Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrough with explanations of each command.
+The dashboard has no login by default and is meant for local use. To require one, run `quirk token generate --config config.yaml`; see [Configuration → dashboard authentication](docs/configuration.md). For a walkthrough of each step, follow the [Getting Started guide](docs/getting-started.md).
+
+## What QU.I.R.K. Scans
+
+**Always on.** Every scan does these against its targets:
+- **TLS / HTTPS**: certificate metadata and chain, cipher suites, protocol versions, and PQC-hybrid key exchange detection (X25519MLKEM768; needs a host `openssl` with ML-KEM).
+- **SSH**: host key, key exchange, MAC and cipher algorithms (uses the `ssh-audit` binary).
+- **Hardware fingerprinting**: vendor, model and CNSA 2.0 remediation tier, from SSH banners and HTTP management pages. Firmware CVEs and end-of-life dates are matched against **built-in offline tables**.
+
+**Opt-in.** Each of these is enabled with a config key or flag:
+
+| Area | What it inspects | Needs |
+|---|---|---|
+| **JWT / OIDC APIs** | JWKS keys and signing algorithms, following OIDC discovery | `enable_jwt` |
+| **OpenAPI specs** | Declared security schemes, plaintext servers, unauthenticated endpoints | `--openapi-spec` |
+| **REST crypto fuzzing** | Active probing of an API's crypto posture, including JWT algorithm confusion; asks for interactive confirmation | `--fuzz`, `[api]` extra |
+| **SAML / OIDC identity providers** | IdP metadata signing and encryption certificates and algorithms | `enable_saml` |
+| **Kerberos** | KDC encryption types, from an unauthenticated AS-REQ | `enable_kerberos`, `[identity]` extra |
+| **AD CS** | CA certificates and templates, read over LDAP; flags ESC1–ESC8 misconfigurations (ESC4/5/7/8 reported as coverage gaps) | `enable_adcs` |
+| **S/MIME** | S/MIME certificates discovered via LDAP (reads no mail) | `enable_smime` |
+| **Code signing** | LDAP code-signing certificates plus EKU classification of captured TLS certificates | `--inventory-code-signing` |
+| **DNSSEC** | DNSKEY / DS algorithms | `enable_dnssec` |
+| **Email** | TLS / STARTTLS on the SMTP, submission, IMAP and POP3 ports, and flags STARTTLS downgrade risk on SMTP | `enable_email` |
+| **Message brokers** | Kafka, RabbitMQ (AMQPS and management API), Redis TLS, Azure Service Bus, AWS SQS | `enable_broker` |
+| **Container images** | Crypto libraries found in the image SBOM | `enable_container`, `syft` |
+| **Source code** | Cryptographic API usage (Semgrep `p/cryptography`) | `enable_source`, `semgrep` |
+| **Databases** | PostgreSQL / MySQL TLS enforcement | `enable_db` |
+| **AWS** | ACM, KMS, CloudFront, ELB listeners, RDS and S3 encryption, EKS | `enable_aws` / `enable_s3` |
+| **Azure** | Key Vault keys and certificates, Application Gateway TLS policy, Blob encryption | `enable_azure` / `enable_blob` |
+| **GCP** | Cloud KMS (including PQC algorithms), Cloud SQL TLS, GCS encryption | `enable_gcp` |
+| **HashiCorp Vault** | Transit key types (including ML-DSA / SLH-DSA), PKI mounts, auth methods | `enable_vault` |
+| **Kubernetes** | EKS / GKE / AKS secrets-encryption configuration; lists secret types but never reads secret data | `enable_k8s` |
+| **SNMP** | Device identity via SNMP v2c / v3 (auth + priv) | `--enable-snmp`, `[hw]` extra |
+| **Modbus/TCP** | One read-only device-identification request | `--enable-modbus`, `[hw]` extra |
+| **BACnet/IP** | Who-Is, then model name and firmware revision | `--enable-bacnet`, `[hw]` extra |
+
+`[all]` covers the cloud, database, broker, email, AD CS, report and dashboard dependencies. It deliberately leaves out **`[hw]`** (SNMP, Modbus, BACnet), **`[api]`** (REST fuzzing) and **`[identity]`** (Kerberos). Install those explicitly, e.g. `pip install 'quirk-scanner[all,hw]'`. The [Configuration Reference](docs/configuration.md) documents every key.
+
+## Output
+
+- **Quantum-readiness score** (0–100) with six subscores: Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion. The score is capped while CRITICAL findings remain open, and it never reaches 100 without post-quantum cryptography in place.
+- **CBOM** in CycloneDX JSON and XML. Hardware is modelled as DEVICE components with FIRMWARE children.
+- **Reports** in PDF, DOCX and HTML, plus CLI markdown, all rendered from one shared content model, with a written executive narrative and a NOW / NEXT / LATER migration roadmap.
+- **Web dashboard** (`quirk serve`) with these views: executive summary, findings with a per-finding storyline, identity, data in motion, data at rest, certificates, hardware inventory, CBOM viewer, migration roadmap, quantum exposure map (key reuse across endpoints), trends, scan history, schedules, sensors and QRAMM assessment. Light and dark themes are included.
+- **Distributed mode**: on-prem sensors scan isolated network segments and push findings to a central console, which merges them into one CBOM and score. A Windows sensor build ships as a GitHub Release asset.
+- **Integrations**: notifications, SIEM CEF export, and Jira / ServiceNow ticket creation.
+
+Sample CBOMs live in [`examples/cbom/`](examples/cbom/), one per major scan profile.
 
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
 | [Getting Started](docs/getting-started.md) | Zero to first scan in under 10 minutes |
-| [Installation](docs/installation.md) | System requirements, macOS, Linux, Windows WSL |
-| [Configuration Reference](docs/configuration.md) | All config.yaml options and CLI flags |
-| [Connector Guides](docs/connectors/) | AWS, Azure, Docker, Git setup with credential templates |
-| [Cloud Console Deployment](docs/deployment-cloud-console.md) | Run the console on a cloud VM (Linode/EC2/GCP) with internal sensors pushing in — hardened, with ready-to-use `deploy/` files |
-| [Report Interpretation](docs/report-interpretation.md) | What every score and finding means, client conversation guide |
+| [Installation](docs/installation.md) | System requirements for macOS, Linux and Windows WSL |
+| [Configuration Reference](docs/configuration.md) | Every config.yaml option and CLI flag |
+| [Operator's Guide](docs/operators-guide.md) | Running engagements: scope, allowlists, scheduling, sensors |
+| [Connector Guides](docs/connectors/) | AWS, Azure, Docker and Git setup with credential templates |
+| [Cloud Console Deployment](docs/deployment-cloud-console.md) | Running the console on a cloud VM with internal sensors pushing to it |
+| [Report Interpretation](docs/report-interpretation.md) | What every score and finding means, plus a client conversation guide |
 | [CBOM Guide](docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
-| [Chaos Lab Operator Guide](docs/chaos-lab.md) | Lab profiles, port matrix, expected findings |
-| [Intelligence Schema](docs/intelligence-schema.md) | `intelligence-*.json` output format reference |
-| [Upgrade Guide](docs/upgrade-guide.md) | Cross-version upgrade procedure with `quirk db migrate` |
-| [Release Process](docs/release-process.md) | PyPI / GHCR / Homebrew tap publish procedure + Sigstore attestation verification |
-| [UAT Test Series](docs/UAT-SERIES.md) | Full user acceptance testing guide — CLI, lab, dashboard |
-
-## What QU.I.R.K. Scans
-
-- **TLS/HTTPS endpoints** — certificate metadata, cipher suites, TLS version, chain trust, PQC-hybrid KEM detection
-- **SSH services** — host key algorithms, KEX algorithms, MAC algorithms, cipher suites
-- **JWT-issuing APIs** — algorithm discovery via JWKS and OIDC endpoints; query-param API-key auth supported
-- **Email protocols** — SMTP/SMTPS, submission, IMAP/IMAPS, POP3/POP3S with STARTTLS-stripping detection
-- **Message brokers** — Kafka, RabbitMQ AMQPS, Redis TLS
-- **Docker container images** — crypto libraries detected via Syft SBOM analysis; signature/attestation verification
-- **Git repositories / source code** — cryptographic API usage via Semgrep analysis
-- **Code-signing posture** — LDAP-based certificate discovery + EKU classification
-- **AWS** — ACM certificates, KMS key specs, CloudFront distributions, ELBv2 listeners
-- **Azure** — Key Vault keys and certificates, Application Gateway TLS policies
-- **GCP** — Cloud KMS algorithm classification (incl. PQC), Cloud SQL TLS enforcement, GCS CMEK
-- **HashiCorp Vault** — Transit key types (incl. ml-dsa / slh-dsa), PKI mounts, auth method risk
-- **Kubernetes** — EKS / GKE / AKS managed cluster encryption APIs
-- **Databases & object storage** — PostgreSQL / MySQL / RDS at-rest encryption; S3 / Blob / GCS CMEK posture
-- **Network devices / hardware fingerprinting** — SSH banner, HTTP management interface, and SNMP probes (pysnmp, requires `[hw]` extras) classify hardware vendor, model, and CNSA 2.0 remediation tier; crypto-bridge detection flags hardware devices where upstream TLS mitigates a quantum-vulnerable on-device cipher
-
-## Output Artifacts
-
-- **Quantum-readiness score** (0–100) — overall score with six subscores: Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion
-- **CBOM** in CycloneDX JSON + XML — inventory of all discovered cryptographic components; hardware endpoints are promoted to a CycloneDX DEVICE parent component with FIRMWARE children for hardware/firmware crypto separation
-- **Web dashboard** at `http://localhost:8512` — interactive findings browser, CBOM graph, trend analysis, score breakdowns
-- **Reports** — client-ready PDF / DOCX / HTML / CLI markdown from one shared content model; written executive narrative for consultant deliverables
-- **Distributed mode** — on-prem sensors scan isolated network segments, push findings to a central console which merges into a single CBOM + score (v5.4+)
-- **Integrations** — notification fan-out, SIEM CEF dispatch, Jira / ServiceNow ticket creation on findings (v5.3+)
-
-Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
+| [Chaos Lab Guide](docs/chaos-lab.md) | A Docker lab of **deliberately weak** crypto services to scan. Run it on an isolated host only, and never expose it to a network |
+| [Intelligence Schema](docs/intelligence-schema.md) | The `intelligence-*.json` output format |
+| [Upgrade Guide](docs/upgrade-guide.md) | Cross-version upgrades with `quirk db migrate` |
+| [Release Process](docs/release-process.md) | Publishing, and Sigstore attestation verification |
 
 ## What's New in v5.25
 
-Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
-This release covers four milestones shipped since v5.21.0 (v5.22, v5.23, v5.24, v5.25) — none of
-which had been tagged individually. **The scoring model moved again in v5.25**
-(`SCORING_VERSION` 2.0 -> 3.0, absolute consequence ceiling, no-PQC-no-100, non-linear prevalence
-curve) — v5.25 scores are not comparable with v5.21-v5.24 scores, which themselves are not
-comparable with pre-5.20 scores.
+The scoring model changed in v5.25 (`SCORING_VERSION` 3.0). v5.25 scores are **not comparable** with scores from earlier releases.
 
-- **v5.25 Score Truth & Release Cut (Phases 210-213)** — cross-surface score parity so CRITICAL
-  count, certificate count, and the headline 0-100 score now match exactly between the report and
-  dashboard pipelines; every ratio penalty now divides by the population its numerator is drawn
-  from (denominator correctness); a written score-dilution decision (P2b) recommending no
-  implementation change, made and recorded rather than shipped as code; and shipped-product defect
-  fixes including a real Date-sort fix and a qualified-pass theme-token colour-literal fix (205
-  instances across 17 files).
-- **v5.24 UAT Coverage Drain** — the UAT gap worklist now derives itself from the corpus instead of
-  being hand-maintained; a real browser E2E tier via Playwright (non-gating, so browser flake can't
-  redden the required check); consulting-grade report artifacts became reachable in the dashboard
-  behind an auth-gated read-only route; and five vendor catalog freshness claims were re-verified
-  by hand and found wrong in both directions.
-- **v5.23 Deliverable Experience** — consulting-grade reporting shipped CLI/config-side (report
-  branding and templates, deliberately excluded from the dashboard for path-traversal safety); a
-  score-lift roadmap re-frame surfacing projected-score deltas; and a finding storyline drawer.
-- **v5.22 Release & Parity Tail** — `v5.21.0` published to PyPI with Sigstore provenance
-  verification; full Tier 2/3 dashboard scan-field settability closed; standing
-  backlog-reconciliation gate green end-to-end.
-- **v5.21 Dashboard Parity & Quantum Exposure Map (Phases 191-195)** — a Connectors panel and
-  Advanced scan-fields panel bring the dashboard's scan-creation form to parity with the config
-  file, an always-on Executive Verdict layer driven by the server's authoritative rating, a
-  phantom-certificate disclosure fix so excluded TLS endpoints are never silently dropped, and a
-  new Quantum Exposure Map tab visualizing key-reuse relationships from real scan evidence with a
-  score-firewall guard. Carries forward v5.20's scoring v2 change (below) — **scores from this
-  release are not comparable with pre-5.20 scores.**
-- **v5.19 Drain & Tooling Integrity (Phases 182-186.1)** — readiness-score correctness across
-  coverage metrics, default-config scanning posture, timestamp handling, and a single-producer
-  severity-band contract (`quirk/severity_bands.py`); drift-proof test-suite honesty gates so the
-  fork-safety and skip-registry checks derive their coverage from live source scans instead of
-  hand-maintained lists; the a11y baseline environment stabilized; and two carried-forward defects
-  (a Keycloak cert fixture, a plaintext-HTTP classifier gap) drained. The release toolchain that
-  authors this project's own planning files also had its state-corruption defect class closed on
-  this machine — an operator-side fix, not a product change.
-- **v5.16 Review Drain & Gate Integrity** — every open finding from the 2026-08-24 third-party
-  functional review closed: the UAT corpus went from 377 undispositioned cases to zero across all
-  666, a CRITICAL evidence-injection vulnerability in the UAT tooling was found and fixed
-  mid-milestone, three screen-reader-blocking accessibility violations were fixed, and the
-  first-run command a new user is told to type now actually exists and works.
-- **v5.17 Defect Drain** — `--fuzz` now hard-refuses to run against non-interactive stdin before
-  issuing any request; the dashboard score matches the CLI score under every score profile; a
-  silent SSH-scanner degradation (banner-grab-only, `ssh_audit_json` always NULL) that had existed
-  since the ssh-audit integration shipped was found and fixed during a live chaos-lab re-run; and
-  nine UAT cases that recorded FAIL against correct product behavior were corrected.
-- **v5.18 Release Toolchain Repair (Phase 177)** — a package-name-migration residue that left
-  three distributions claiming the `quirk` import package is purged and now guarded by a
-  permanent regression test; this release is the mechanism proving the fix, shipping the two
-  prior milestones' work for the first time.
-- **Lifecycle Tail Drain (v5.15)** — opt-in email/webhook notifications when a monitored device drifts or crosses an EOL boundary; vendor PQC-status trend data surfaced across the CLI, HTML and DOCX reports and the `/hardware` dashboard tab; `--check-in` re-probes schedulable on a recurring cadence via `quirk schedule add --check-in`; and batch-granular discovery resume, so an interrupted scan re-probes only the unfinished 1024-host batches instead of starting the whole discovery stage over.
+- **Every surface reports the same score.** The dashboard, the PDF report and the CLI now agree exactly on the headline score, the CRITICAL count and the certificate count for a given scan. A single certificate no longer produces two findings.
+- **A more honest score.** An absolute consequence ceiling caps the score while CRITICAL findings are open. No environment scores 100 without post-quantum cryptography. Every ratio penalty now divides by the population it describes; for example, certificate ratios divide by the certificate count, not the probe count.
+- **Dashboard fixes**, including chronological date sorting and theme-correct colours: 205 hard-coded colours were replaced with theme tokens across 17 files.
 
-- **Hardware Lifecycle Depth (v5.10)** — SNMPv3 auth+priv fingerprinting with a safe v2c/none fallback ladder; SNMP-confirmed bridge mitigation (`upstream_mitigated`, evidence-backed, never scored); OT/ICS fingerprinting for Modbus/TCP + BACnet/IP (opt-in, read-only, circuit-breakered) via a new `otics` chaos-lab profile; advisory-only firmware CVE correlation against fingerprinted hardware; a persistent dashboard scan-date badge, server-enforced trusted-targets allowlist, and Windows Authenticode signing CI mechanism.
-- **SNMP hardware fingerprinting + CBOM DEVICE/FIRMWARE hierarchy (v5.8)** — SSH banner → HTTP management interface → SNMP cascade classifies network hardware vendor, model, and CNSA 2.0 remediation tier; crypto-bridge detection; CBOM now emits a DEVICE parent component with FIRMWARE children; dashboard "Hardware Inventory" section in the CBOM tab; requires `[hw]` extras (pysnmp, not included in `[all]`).
-- **Hardening + Hardware Compatibility (v5.7)** — SSRF cluster hardening, scoring correctness fixes, audit drain; hardware fingerprinting via SSH/HTTP banner with CNSA 2.0 remediation tier classification and crypto-bridge detection.
-- **Public launch + Windows frozen build (v5.6)** — open-source public repo on GitHub with branch protection and gitleaks history scan; frozen Windows sensor binary (`quirk.exe`) + PowerShell Scheduled Task installer as a GitHub Release asset; port-scope discovery control (Common TLS / Top 1000 / All ports / Custom).
-- **Distributed sensor hardening (v5.5)** — per-sensor opaque Bearer tokens, sensor revocation, failure-isolated auto-merge across sensors, weak-TLS chaos-lab targets.
-- **On-prem sensor / console split (v5.4)** — scan per segment, push findings, merged into one CBOM + score; sensor / console enroll workflow.
-- **Notification & integration surface (v5.3)** — notification fan-out, SIEM CEF dispatch, Jira / ServiceNow ticket integration on one shared SSRF-safe / secret-scrubbing layer; dashboard token auth.
-- **Consulting-grade reporting (v5.2)** — one shared content model drives CLI / HTML / PDF / DOCX renderers; written executive narrative; corrected score sourcing across surfaces.
-- **Authenticated scanning (v5.1)** — ephemeral credentials for cloud + JWT-issuing API scans; LDAP+TLS-EKU code-signing posture; folded into agility subscore.
-- **PQC-hybrid scoring ceiling (v5.0)** — OQS-nginx PQC-hybrid chaos-lab profile with X25519MLKEM768 + ML-DSA-65; agility scoring gains a `+8.0` PQC-hybrid bonus that anchors the ceiling for post-quantum readiness.
+v5.25.0 also includes the untagged v5.22–v5.24 work: consulting-report branding and templates, a score-lift migration roadmap, the finding storyline drawer, the Quantum Exposure Map, and an Executive Verdict layer. The full per-release history is in [CHANGELOG.md](CHANGELOG.md).
 
-## Install From Other Channels
+## Install
 
-- **PyPI (recommended):** `pip install 'quirk-scanner[all]'` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
-- **Homebrew (macOS):** `brew install 0xD1g5/quirk/quirk` — installs into an isolated `pipx`-style venv under `libexec`. *(Tap bootstrap is a manual post-release task; becomes functional once the `0xD1g5/homebrew-quirk` tap repo is published with the first signed sdist sha256.)* See [Homebrew Tap](docs/release-process.md#homebrew-tap-launch-02) for the bootstrap procedure.
-- **Docker (GHCR, multi-arch):** `docker run ghcr.io/0xd1g5/quirk:latest --help` — `linux/amd64` + `linux/arm64`. See [Container Image](docs/release-process.md#container-image-launch-03).
+- **PyPI:** `pip install 'quirk-scanner[all]'` (see Quick Start). Releases are published through PyPI Trusted Publishers with Sigstore attestations; verify them with `gh attestation verify`, as described in [Release Process](docs/release-process.md#attestation-verification).
+- **Windows sensor:** a frozen `quirk.exe` zip and a Scheduled Task installer are attached to each [GitHub Release](https://github.com/0xD1g5/QU.I.R.K/releases).
+- **Homebrew and a GHCR container image** are planned but **not published yet**. Use PyPI for now.
 
-> **No `curl | bash` installer.** This is a deliberate non-feature, not an oversight — see [`docs/release-process.md` → `curl | bash` Non-Decision](docs/release-process.md). Piping HTTP to a shell defeats the integrity guarantees of Sigstore attestations and PyPI Trusted Publishers; install via pip / brew / docker only.
+> **No `curl | bash` installer.** This is deliberate. Piping HTTP into a shell bypasses the integrity guarantees of Sigstore attestations and Trusted Publishers. See [`docs/release-process.md`](docs/release-process.md).
 
 <details>
 <summary>Develop from source</summary>
@@ -171,7 +144,7 @@ playwright install chromium
 quirk --help
 ```
 
-Editable install is for contributors — end users should prefer the PyPI / Homebrew / GHCR paths above.
+The editable install is for contributors. End users should install from PyPI.
 
 </details>
 
