@@ -1,6 +1,6 @@
 {
   "route": "hardware",
-  "generated": "2026-09-29T21:40:41.327Z",
+  "generated": "2026-09-30T20:59:11.435Z",
   "entries": [
     {
       "rule": "color-contrast",
@@ -10,7 +10,7 @@
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /hardware, theme light, rule color-contrast. Phase 217 (FIX-01) drained this entry's `--qs-node-safe`+white vendor-risk badges (the zero-design-input `-foreground` swap, REQUIREMENTS.md FIX-01) from this baseline: count dropped 21 -> 5 in this regeneration (217-04, CI run 36634705275). Axe truncates its `samples` array to 3 representative nodes regardless of count, so not all 5 remaining nodes are individually itemized here. The 3 sampled remaining nodes are: two `role=\"note\"` advisory banners using Tailwind default `text-yellow-700 dark:text-yellow-300` on a `bg-yellow-500/10` panel (repeated per advisory card), and a `label-eyebrow` span with a hardcoded inline `style=\"color: rgb(76, 164, 164)\"` literal -- none match FIX-01's named `-foreground` swaps, FIX-02/FIX-03's `text-black` badge sites, or FIX-04's five named design-call tokens. These 3 are attributed to FIX-05 (Phase 218)'s general zero-below-AA verification bucket. The remaining 2 unsampled nodes are unknown -- needs triage in Phase 218 to confirm whether they repeat the same yellow-advisory/eyebrow classes or are a distinct site.",
+      "justification": "Route /hardware, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 5 -> 5. Phase 217-04 sampled only 3 of the 5 nodes (axe truncates `samples` to 3) and left the other 2 as 'unknown -- needs triage'; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) identified all 5: (1)-(2) two `role=\"note\"` advisory banners using Tailwind default `text-yellow-700 dark:text-yellow-300` on a `bg-yellow-500/10` panel; (3) the `label-eyebrow` TEAL span (`LifecycleEventList.tsx:58`, \"Recent Lifecycle Changes\", Phase-156 HWLC-11 firewall hue); (4) `LifecycleEventRow.tsx`'s \"Worsened\" magenta span (`LifecycleEventRow.tsx:47`, same HWLC-11 firewall family); (5) a second `label-eyebrow` TEAL span (`VendorTrendList.tsx:45`, \"Vendor PQC Status Trends\", Phase-161 HWLC-19 firewall hue). None are one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so none are FIX-05 failures. Attribution: non-badge, outside RATCHET-01 -- nodes (3)-(5) handed to Phase 220: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md; nodes (1)-(2) handed to Phase 220: .planning/todos/pending/260930-hardware-advisory-banner-yellow-text-borderline-aa-light.md.",
       "samples": [
         "<div role=\"note\" class=\"rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300\">Hardware findings are advisory-only and do not affect the readiness score.</div>",
         "<div role=\"note\" class=\"rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300\">Based on SNMP-derived network-path evidence; not independently confirmed by traffic inspection.</div>",

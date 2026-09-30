@@ -1,19 +1,5 @@
 {
   "route": "hardware",
-  "generated": "2026-09-29T21:41:01.133Z",
-  "entries": [
-    {
-      "rule": "color-contrast",
-      "count": 1,
-      "impact": "serious",
-      "wcag": [
-        "1.4.3"
-      ],
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /hardware, fixture variant empty, theme dark, rule color-contrast. D-11 -- Phase 156 HWLC-11 advisory firewall (justified in the ledger, NOT fixed). Phase 217 (FIX-01) drained the `--qs-node-safe`/`--risk-badge-high`+white vendor-risk badges this baseline previously carried: count dropped 8 -> 1 in this regeneration (217-04, CI run 36634705275). The single remaining node is the `bg-[hsl(var(--badge-modbus))] text-white` 'Modbus' protocol badge, which renders using the app's `--badge-modbus` semantic token -- one of FIX-04's five named design-call tokens (Phase 218), not a FIX-01/02/03 site. Superseded history, retained for record: this route's color-contrast count previously rose from 3 (pre-Phase-216) to 8 (post-216-02 fixture enrichment) because more hardware vendor/lifecycle rows rendered more `--qs-node-safe`/`--risk-badge-high` badges under the enriched fixture; that increase was explicitly out of FIX-01..FIX-04 scope at the time it was recorded (216-08). Phase 217's FIX-01 swap has now drained all of those badge instances, leaving only the pre-existing `--badge-modbus` FIX-04 site untouched (empty git diff on lifecycle-advisory-guard.test.ts / vendor-trend-advisory-guard.test.ts-covered components). Per 216-CONTEXT.md D-04/D-09 and 217-CONTEXT.md D-12/D-13, this baseline update reflects the FIX-01 drain rather than any new fix: no code changed on this firewalled Modbus badge in Phase 217.",
-      "samples": [
-        "<div class=\"inline-flex items-center rounded-md border px-2.5 py-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow hover:bg-primary/80 bg-[hsl(var(--badge-modbus))] text-white font-semibold text-xs\">Modbus</div>"
-      ]
-    }
-  ]
+  "generated": "2026-09-30T20:59:31.210Z",
+  "entries": []
 }
