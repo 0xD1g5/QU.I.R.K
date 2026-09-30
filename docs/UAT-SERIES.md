@@ -30717,13 +30717,16 @@ empty/loading vacuity todo. Not a defect in this phase's fix.
 ## Series 218: Contrast Violations — Design Calls & Closing Assertion (Phase 218 — v5.26)
 
 **Last Updated:** 2026-09-30 (Phase 218 close — Contrast Violations Design Calls & Closing
-Assertion, fourth and closing phase of v5.26's contrast-debt drain. Eight cases: six PASS covering
-the operator's FIX-04 checkpoint (218-03), the applied D-01/D-02/D-03 values and their 22-guard
-green run (218-04), the empty-baseline key-set re-check (218-06), the D-07(1)/(2)/(3) blind-spot
-guards (218-02/218-04), the D-10 destructive-on-card guard (218-02), the axe CI round-trip
-(218-05), and the closing-assertion wording itself; two SKIP (GAP — canonical DB cannot render the
-site) for the sensors quantum-safe badge and the Modbus-against-canonical-DB leg (the latter was
-instead verified live against the project's committed a11y fixture, not faked). No Result was
+Assertion, fourth and closing phase of v5.26's contrast-debt drain. Eight cases, all eight PASS,
+covering the operator's FIX-04 checkpoint (218-03), the applied D-01/D-02/D-03 values and their
+22-guard green run (218-04), the empty-baseline key-set re-check (218-06), the D-07(1)/(2)/(3)
+blind-spot guards (218-02/218-04), the D-10 destructive-on-card guard (218-02), the axe CI
+round-trip (218-05), and the closing-assertion wording itself. The five sites the canonical DB
+cannot render (sensors quantum-safe badge; trends destructive badge; executive "Failed" badge;
+roadmap closed/resurfaced closure badges; Modbus, which was instead verified live against the
+project's committed a11y fixture) are recorded as GAP inside the cases that cover them — never
+faked, and not separate SKIP cases. Corrected 2026-09-30: an earlier draft of this header said
+"six PASS / two SKIP", contradicting the Result boxes below. No Result was
 recorded PASS without the cited node, run id, or verbatim quote existing on disk at write time.)
 
 ### UAT-218-01: FIX-04 Operator Design Review — Three Rounds, Verbatim Choices Recorded
