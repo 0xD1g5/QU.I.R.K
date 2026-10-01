@@ -26,6 +26,14 @@ function a11yFixture(): Plugin {
     const noCache = (r: ServerResponse) => r.setHeader('Cache-Control', 'no-store')
     return (req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
       const variant = process.env.VITE_A11Y_FIXTURE_VARIANT
+      // 221 D-02: identity sentinel. Lets the harness prove the server answering the port is
+      // the one it spawned, with the variant it asked for. Lives inside buildHandler, so it is
+      // only mounted behind the VITE_A11Y_FIXTURE guard below (never in a normal dev/preview).
+      if (req.url === '/__a11y-variant') {
+        noCache(res); res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ variant: variant ?? 'default', pid: process.pid }))
+        return
+      }
       if (req.url?.startsWith('/api/scan/latest')) {
         if (variant === 'empty') {
           noCache(res); res.setHeader('Content-Type', 'application/json')

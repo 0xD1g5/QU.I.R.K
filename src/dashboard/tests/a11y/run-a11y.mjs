@@ -60,6 +60,7 @@ import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
+import { renderStateViolations, DEFAULT_LOADING_SELECTOR } from './variant-guard.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -152,6 +153,22 @@ if (!existsSync(distIndex)) {
   })
 }
 
+// 221 D-02: refuse to sweep when something already answers on the port. A stale preview left
+// by a previous sweep would otherwise be measured instead of the server this run spawns.
+function assertPortFree(host, port) {
+  return new Promise(resolveP => {
+    const socket = createConnection({ host, port })
+    socket.on('connect', () => { socket.destroy(); resolveP(false) })
+    socket.on('error', () => { socket.destroy(); resolveP(true) })
+  })
+}
+if (!(await assertPortFree(PREVIEW_HOST, PREVIEW_PORT))) {
+  console.error(
+    `[a11y] FAIL: port ${PREVIEW_PORT} already answers before this sweep spawned its own preview — stale server from a previous sweep? (221 D-02)`,
+  )
+  process.exit(1)
+}
+
 console.log('[a11y] Starting vite preview with VITE_A11Y_FIXTURE=1...')
 const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVIEW_PORT)], {
   cwd: DASHBOARD_DIR,
@@ -159,6 +176,8 @@ const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVI
   env: previewEnv,
 })
 previewProc.stderr.on('data', d => process.stderr.write(d))
+// 221: stdout carries vite's "Port 4173 is in use, trying another one" notice.
+previewProc.stdout.on('data', d => process.stdout.write(d))
 
 // Ensure preview is killed on exit
 function cleanup() {
@@ -178,6 +197,24 @@ try {
 }
 console.log(`[a11y] Preview ready at http://${PREVIEW_HOST}:${PREVIEW_PORT}`)
 
+// 221 D-02: identity assertion — the server on the port must be the one this sweep spawned,
+// serving the variant this sweep asked for.
+let identity = null
+try {
+  const resp = await fetch(`http://${PREVIEW_HOST}:${PREVIEW_PORT}/__a11y-variant`)
+  identity = await resp.json()
+} catch {
+  identity = null
+}
+if (!identity || identity.variant !== VARIANT) {
+  console.error(
+    `[a11y] FAIL: preview server reports variant ${identity ? identity.variant : '(no sentinel response)'}, expected ${VARIANT} — not the server this sweep spawned (221 D-02)`,
+  )
+  cleanup()
+  process.exit(1)
+}
+console.log(`[a11y] Preview identity confirmed: variant=${identity.variant} pid=${identity.pid}`)
+
 // --- Launch headless Chrome ---
 let browser
 try {
@@ -195,7 +232,7 @@ try {
 let exitCode = 0
 const summary = []
 
-for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, variantInsensitive, loadingSelector } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
   console.log(`[a11y] Scanning ${slug} [${THEME}] (${url})...`)
 
@@ -255,6 +292,42 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
       await page.close()
       continue
     }
+  }
+
+  // 221 D-05: render-state guard. BEFORE the axe scan and any baseline write. Under default
+  // every declared marker must be present; under empty/loading every one must be absent (and
+  // under loading the skeleton must be present). A sweep that measured the wrong server or a
+  // fixture that did not take effect fails here instead of baselining a hollow page.
+  if (variantMarkers) {
+    const present = {}
+    let skeleton
+    if (VARIANT === 'loading') {
+      skeleton = !!(await page.waitForSelector(loadingSelector ?? DEFAULT_LOADING_SELECTOR, { timeout: 5_000 }).catch(() => null))
+    }
+    for (const selector of Object.values(variantMarkers)) {
+      if (VARIANT === 'default') {
+        present[selector] = !!(await page.waitForSelector(selector, { timeout: 5_000 }).catch(() => null))
+      } else {
+        present[selector] = !!(await page.$(selector))
+      }
+    }
+    const rsViolations = renderStateViolations({
+      variant: VARIANT,
+      slug,
+      markers: variantMarkers,
+      present,
+      skeleton,
+      loadingSelector: loadingSelector ?? DEFAULT_LOADING_SELECTOR,
+    })
+    if (rsViolations.length > 0) {
+      for (const line of rsViolations) console.error(`[a11y] FAIL [${slug}]: ${line}`)
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
+      await page.close()
+      continue
+    }
+  } else if (variantInsensitive) {
+    console.log(`[a11y] NOTE [${slug}]: variant-insensitive — ${variantInsensitive}`)
   }
 
   // Run axe with WCAG 2A/2AA tags
