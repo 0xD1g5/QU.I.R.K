@@ -38,7 +38,9 @@ function a11yFixture(): Plugin {
       // the one it spawned, with the variant it asked for. Lives inside buildHandler, so it is
       // only mounted behind the VITE_A11Y_FIXTURE guard below (never in a normal dev/preview).
       if (req.url === '/__a11y-variant') {
-        sendJson(res, JSON.stringify({ variant: variant ?? 'default', pid: process.pid }))
+        // 221 WR-05: `||`, matching baseline-diff.mjs resolveVariant, so an empty-string
+        // VITE_A11Y_FIXTURE_VARIANT reports 'default' on both sides.
+        sendJson(res, JSON.stringify({ variant: variant || 'default', pid: process.pid }))
         return
       }
       const h = matchHandler(req.url)

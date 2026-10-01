@@ -91,6 +91,14 @@ describe("variant-contract (221-01)", () => {
     expect(RUN_A11Y_SOURCE).toContain("__a11y-variant")
   })
 
+  it("the sentinel normalises the variant like resolveVariant and the harness checks process-group ownership (221 WR-05)", () => {
+    const vite = readFileSync(path.resolve(__dirname, "../../vite.config.ts"), "utf-8")
+    expect(vite).toContain("variant: variant || 'default'")
+    expect(vite).not.toContain("variant ?? 'default'")
+    expect(RUN_A11Y_SOURCE).toContain("['-o', 'pgid=', '-p', String(identity.pid)]")
+    expect(RUN_A11Y_SOURCE).toContain("identityPgid !== previewProc.pid")
+  })
+
   it("run-a11y.mjs applies renderStateViolations before the axe scan (221 D-05)", () => {
     const guard = RUN_A11Y_SOURCE.indexOf("renderStateViolations(")
     const axe = RUN_A11Y_SOURCE.indexOf("new AxePuppeteer(")

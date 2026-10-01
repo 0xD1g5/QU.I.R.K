@@ -61,7 +61,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { createConnection } from 'node:net'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
@@ -281,7 +281,20 @@ if (!identity || identity.variant !== VARIANT) {
   )
   await abort(1)
 }
-console.log(`[a11y] Preview identity confirmed: variant=${identity.variant} pid=${identity.pid}`)
+// 221 WR-05: the variant alone does not prove ownership (a leftover preview of the SAME variant
+// would pass). The answering server's process must belong to the process group this sweep spawned
+// (detached spawn => pgid === previewProc.pid).
+let identityPgid = NaN
+try {
+  identityPgid = Number(execFileSync('ps', ['-o', 'pgid=', '-p', String(identity.pid)]).toString().trim())
+} catch {}
+if (!Number.isInteger(identityPgid) || identityPgid !== previewProc.pid) {
+  console.error(
+    `[a11y] FAIL: preview server pid ${identity.pid} is in process group ${Number.isNaN(identityPgid) ? '(unknown)' : identityPgid}, not this sweep's group ${previewProc.pid} — not the server this sweep spawned (221 WR-05)`,
+  )
+  await abort(1)
+}
+console.log(`[a11y] Preview identity confirmed: variant=${identity.variant} pid=${identity.pid} pgid=${identityPgid}`)
 
 // --- Launch headless Chrome ---
 // 221 WR-04: puppeteer's default handleSIGINT/SIGTERM/SIGHUP call process.exit() themselves and
