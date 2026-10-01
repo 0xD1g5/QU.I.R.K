@@ -296,7 +296,7 @@ Plans:
 - [x] 221-06-PLAN.md — Sweep /scans + /sensors; UNMEASURED-EXCLUSIONS.md enforced from source (W6)
 - [x] 221-07-PLAN.md — Linux baseline regeneration (true empty/loading + new routes), justification re-point, all four sweeps green (W7)
 - [x] 221-08-PLAN.md — Mutation evidence M1b-M6; HARNESS-03 per D-13 + FIX-05 note; retire satisfied todos (W8)
-- [ ] 221-09-PLAN.md — Docs + UAT Series 221 + vault sync; STATE/ROADMAP hand-edits; branch_ci_state.py exit 0 at close SHA (W9)
+- [x] 221-09-PLAN.md — Docs + UAT Series 221 + vault sync; STATE/ROADMAP hand-edits; branch_ci_state.py exit 0 at close SHA (W9)
 
 ### Progress
 
@@ -308,7 +308,7 @@ Plans:
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
 | 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg verified post-merge, run 36868142296) | 2026-10-01 |
-| 221. Close gap: a11y blind spots + empty/loading variant legs | 0/9 | Planned | - |
+| 221. Close gap: a11y blind spots + empty/loading variant legs | 9/9 | Executed — pending verification | - |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 

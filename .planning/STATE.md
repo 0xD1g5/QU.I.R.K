@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T20:30:00.000Z"
-last_activity: "2026-10-01 -- Phase 221 PLANNED: 9 plans in 9 serial waves (shared working tree), plan-checker passed on iteration 2. Research CONFIRMED the variant-leg root cause as a leaked vite preview server on Linux (D-02), not the todo's handler theory. Branch phase-221-a11y-gap-closure; next: execute 221-01 (loud-first guard, red on Linux CI)"
+last_updated: "2026-10-01T23:00:00.000Z"
+last_activity: "2026-10-01 -- Phase 221 executed 9/9, pending verification. HARNESS-03 [x] per D-13 (empty/loading legs shown able to fail; /scans loading retired as exclusion UX-12); FIX-05 stays qualified (/sensors light Stale badge 3.42:1 and CBOM light system node 1.25:1 owned by 999.118); INT-01 closed (12 todos re-pointed to 999.118/999.119). Phase NOT closed: awaiting gsd-verifier and the CI observation at the close SHA (221-evidence/branch-ci-state.json)"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 44
-  completed_plans: 35
+  completed_plans: 44
   percent: 80
 ---
 
@@ -1398,12 +1398,14 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   hand-edited.
 
 ## Current Position
-Phase: 221 (Close gap: a11y blind spots + empty/loading variant legs) — **PLANNED, 0 of 9 plans
-executed.** Ready to execute on branch `phase-221-a11y-gap-closure`. The 9 plans run strictly
-serially (waves 1-9, all sharing one working tree). 221-01 lands the stale-server/render-state guard
-and must be shown RED on Linux CI before 221-05 lands the harness fix ("loud first"). 221-04 has an
-operator checkpoint (CBOM `system` node, light theme, port 4180).
-Plan: 0 of 9.
+Phase: 221 (Close gap: a11y blind spots + empty/loading variant legs) — **EXECUTED, 9 of 9 plans,
+pending verification.** All nine plans ran serially on branch `phase-221-a11y-gap-closure`. The
+phase is NOT closed: the gsd-verifier has not run, and the phase-close commit needs a
+`221-VERIFICATION.md` `ci:` block observed at the exact HEAD (ARTIFACT-05). The CI observation
+(`python3 scripts/branch_ci_state.py --branch phase-221-a11y-gap-closure --compare-main`) is saved
+untracked at `221-evidence/branch-ci-state.json`; its verdict and exit code are in `221-09-SUMMARY.md`,
+not here, because this file cannot name its own SHA.
+Plan: 9 of 9 executed.
 
 **Prior position (Phase 218, superseded; kept for history):**
 Phase: 218 (Contrast Violations — Design Calls & Closing Assertion) — **EXECUTED, 6 of 6 plans,
