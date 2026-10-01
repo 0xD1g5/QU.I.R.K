@@ -156,7 +156,7 @@ export function ComparePage() {
                 No new findings since the earlier scan.
               </p>
             ) : (
-              <Table>
+              <Table regionLabel="Findings added since earlier scan">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Severity</TableHead>
@@ -181,7 +181,7 @@ export function ComparePage() {
                 No findings resolved between these scans.
               </p>
             ) : (
-              <Table>
+              <Table regionLabel="Findings resolved since earlier scan">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Severity</TableHead>
@@ -201,7 +201,7 @@ export function ComparePage() {
         </TabsContent>
 
         <TabsContent value="subscores" className="mt-4">
-          <Table>
+          <Table regionLabel="Subscore comparison by pillar">
             <TableHeader>
               <TableRow>
                 <TableHead>Pillar</TableHead>
@@ -241,7 +241,7 @@ export function ComparePage() {
                 No endpoint posture changes between these scans.
               </p>
             ) : (
-              <Table>
+              <Table regionLabel="Endpoints with changed posture">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Host</TableHead>
@@ -264,7 +264,7 @@ export function ComparePage() {
                 No endpoints unique to this scan.
               </p>
             ) : (
-              <Table>
+              <Table regionLabel="Endpoints only in scan A">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Host</TableHead>
@@ -287,7 +287,7 @@ export function ComparePage() {
                 No endpoints unique to the earlier scan.
               </p>
             ) : (
-              <Table>
+              <Table regionLabel="Endpoints only in scan B">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Host</TableHead>

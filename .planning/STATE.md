@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-09-30T22:34:55.000Z"
-last_activity: 2026-09-30 -- Phase 218 VERIFIED passed 3/3 (218-VERIFICATION.md) and marked complete BY HAND (no phase.complete). CI on HEAD 1ef68b29 read per-step: Dashboard Quality green 4/4 (run 36783565237); Python CI fails only the 2 permanent MinIO chaos-lab nodes, failing-node SET identical to main (run 36783562387 vs 36728169611). Code review 0 Critical / 1 Warning (WR-01 fixed 1ef68b29) / 2 Info. FIX-05 closed as "empty baseline + 7 named blind-spot sites fixed + 9 instrument blind spots handed to Phase 220". Branch phase-218-contrast-design-calls pushed, NOT merged. Out-of-phase: PR #41 (score gauge arcs mirrored since 2026-03-31) and PR #42 (README refresh; depends on #41). Next -- merge 218 PR, then Phase 219.
+last_updated: "2026-10-01T01:49:54.000Z"
+last_activity: 2026-09-30 -- Phase 219 (Keyboard Access, KBD-01) VERIFIED passed 3/3 and marked complete BY HAND (no phase.complete). Table wrapper focusable only while overflowing (role=region + name, ring-2); keyboard-only E2E executed in CI; operator spot-check "keyboard pass"; scrollable-region-focusable WITHDRAWN from all baselines + ledger, countRange retired. CI on HEAD 39de6f15 per-step: Dashboard Quality 4/4 green (36800692384); Python CI fails only the 2 MinIO nodes, set identical to main (36800690414). Review 0 Critical / 1 Warning (WR-01 fixed c0e0d1f4) / 2 Info. Branch phase-219-keyboard-access pushed, NOT merged. Next -- merge 219 PR, then Phase 220 (CI Instrument Truth).
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 23
-  completed_plans: 23
-  percent: 67
+  completed_phases: 5
+  total_plans: 27
+  completed_plans: 27
+  percent: 83
 ---
 
 # Project State
@@ -1536,7 +1536,26 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 218 verification, then Phase 219/220
+## Next Cycle — Phase 219 verification, then Phase 220
+
+**Phase 219 is EXECUTED (all 4 plans), NOT merged.** `git rev-list --count main..HEAD` = **9** at
+the start of this close-out (before this edit's own commit), branch `phase-219-keyboard-access`.
+KBD-01 closed: 219-01 made the shared `Table` wrapper conditionally keyboard-focusable (27
+consumers across 17 files inherit it, 14 distinct `regionLabel`s on the 4 multi-table pages),
+219-02 added a non-gating keyboard-only Browser E2E walkthrough plus a paired no-focus control,
+and 219-03 withdrew the `scrollable-region-focusable` accepted violation via the CI-only axe
+round-trip (run `36795176372` classified the drop before copying bytes; a second dispatch, run
+`36795657850`, confirmed the Axe + Console Gate green 4/4; the Linux Full Suite failing-node set
+on run `36795678760` matched `main`'s reference run `36791593817` exactly — the 2 permanent,
+withdrawn-MinIO-image chaos-lab Docker nodes). 219-04 closed out docs (operators-guide.md's
+`countRange` text retired, master-guide regenerated, report-interpretation.md section 30 added),
+UAT Series 219 (5 cases, 4 PASS / 1 SKIP DEFERRED for the D-10 operator spot-check), the Obsidian
+vault, `219-VALIDATION.md` (`nyquist_compliant: true`), and this hand-edit — no toolchain state
+verb was used. The branch is **not merged to `main`** — do not describe Phase 219 as "landed" or
+"shipped" until a PR merges. Resume with `/gsd-verify-phase 219`, then open a PR.
+
+**Prior Next Cycle note, superseded above:** 2026-09-30 (Phase 218 close) — Phase 218
+verification, then Phase 219/220.
 
 **Phase 218 is EXECUTED (all 6 plans), NOT merged.** `git rev-list --count main..HEAD` = **11**
 at the start of this close-out (before this edit's own commit) on branch

@@ -41,10 +41,13 @@
  *   - The stale-entry leg ("count is BELOW baseline — Baseline is stale") still fires against
  *     a declared range's LOWER bound (D-12) — a range is not a one-way ratchet in the wrong
  *     direction.
- *   - The range is TRANSITIONAL (D-14): KBD-01 (Phase 219) adds `tabIndex`/`role` to
- *     `components/ui/table.tsx` and withdraws the `scrollable-region-focusable` acceptance
- *     outright, which removes the render-dependence this range exists to absorb. Phase 219
- *     should RETIRE the range, not renew it by inertia.
+ *   - RETIRED by Phase 219 (KBD-01, 219-03, CI run 36795176372): `components/ui/table.tsx`
+ *     gained conditional `tabIndex`/`role`/`aria-label` on its scroll wrapper (applied only
+ *     while actually overflowing), and `scrollable-region-focusable` withdrew outright across
+ *     every route and fixture variant — the render-dependence this range existed to absorb no
+ *     longer produces any violation to range. The `countRange` field itself (the opt-in,
+ *     per-entry mechanism in `baseline-diff.mjs`'s `compareToBaseline`) remains available for a
+ *     future render-dependent entry; no committed baseline currently declares one.
  *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
  *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */

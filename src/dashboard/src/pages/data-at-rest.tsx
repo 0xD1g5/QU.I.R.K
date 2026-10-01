@@ -66,7 +66,7 @@ function DatabaseTable({ findings }: { findings: DarFinding[] }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table>
+        <Table regionLabel="Database encryption findings">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold">Engine</TableHead>
@@ -114,7 +114,7 @@ function ObjectStorageTable({ findings }: { findings: DarFinding[] }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table>
+        <Table regionLabel="Object storage encryption findings">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold">Provider</TableHead>
@@ -174,7 +174,7 @@ function KubernetesTable({ findings }: { findings: DarFinding[] }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table>
+        <Table regionLabel="Kubernetes secrets encryption findings">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold">Namespace</TableHead>
@@ -212,7 +212,7 @@ function VaultTable({ findings }: { findings: DarFinding[] }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table>
+        <Table regionLabel="Vault encryption findings">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>

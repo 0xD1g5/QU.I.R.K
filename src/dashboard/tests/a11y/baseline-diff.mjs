@@ -125,16 +125,16 @@ function sumNodes(violation) {
 // caller, not here) but `false` for any other malformed shape too — the caller distinguishes
 // "absent" from "malformed" itself.
 //
-// 216-CONTEXT.md D-14 — countRange is TRANSITIONAL, not permanent. The only entry that has
-// one is `data-at-rest`'s `scrollable-region-focusable`, whose count is render-dependent
-// (it fires on whether a container actually overflows at render time, a function of
-// viewport/font metrics). KBD-01 (Phase 219) adds the `tabIndex`/`role` to
-// `src/components/ui/table.tsx` that the rule's own accepted-violation justification says it
-// needs and WITHDRAWS that acceptance rather than renewing it — which removes the
-// render-dependence this band exists to absorb. When that lands, delete the range; do not
-// renew it by inertia, and do not add new ranges to route around a fixable rule. The
-// same pointer is in run-a11y.mjs's header; it is repeated here because this is the file a
-// future reader changing the comparison will open.
+// 216-CONTEXT.md D-14 — countRange is TRANSITIONAL, not permanent. The one live use was
+// `data-at-rest`'s `scrollable-region-focusable`, whose count was render-dependent (it fired
+// on whether a container actually overflowed at render time, a function of viewport/font
+// metrics). RETIRED by Phase 219 (KBD-01, 219-03, CI run 36795176372): `src/components/ui/
+// table.tsx` gained conditional `tabIndex`/`role` on its scroll wrapper and the rule withdrew
+// outright across every route and fixture variant, removing the render-dependence this band
+// existed to absorb. No committed baseline currently declares a `countRange`; the mechanism
+// itself stays available for a future render-dependent entry. The same pointer is in
+// run-a11y.mjs's header; it is repeated here because this is the file a future reader
+// changing the comparison will open.
 function isValidCountRange(value) {
   if (value === undefined || value === null) return false
   if (!Array.isArray(value) || value.length !== 2) return false

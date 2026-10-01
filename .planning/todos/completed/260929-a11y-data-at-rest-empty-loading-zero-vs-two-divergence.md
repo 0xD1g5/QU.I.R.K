@@ -76,3 +76,31 @@ three real sweeps rather than a copy. Filed at
 This todo's framing — a single `data-at-rest` 0-vs-2 entry — is too narrow. Read the vacuity todo
 first; fixing that one may dissolve this one, since the CI-side `2` is the default fixture leaking
 through rather than a genuine empty-state render.
+
+---
+
+## RESOLVED 2026-10-01 (Phase 219, run 36795176372)
+
+KBD-01 (219-01) added conditional `tabIndex`/`role`/`aria-label` to the shared wrapper in
+`src/dashboard/src/components/ui/table.tsx`. 219-03's CI-only round-trip (dashboard-quality.yml
+run `36795176372`, head SHA `1071b372`, pinned Chrome `152.0.7977.82`) regenerated all 54
+baselines and classified exactly 4 changed `(file, rule)` rows, all `REMOVED`, all
+`scrollable-region-focusable`:
+
+```
+baseline-data-at-rest-default-dark.json    scrollable-region-focusable  2 -> (none)
+baseline-data-at-rest-default-light.json   scrollable-region-focusable  2 -> (none)
+baseline-data-at-rest-empty-dark.json      scrollable-region-focusable  2 -> (none)
+baseline-data-at-rest-loading-dark.json    scrollable-region-focusable  2 -> (none)
+```
+
+The rule is absent from all 4 `data-at-rest` baselines, **including the empty and loading
+variants this todo was specifically about** — there is no longer an entry for the 0-vs-2
+divergence to diverge on. No `countRange` remains anywhere in the committed baselines. This todo
+is resolved by disappearance, per 219-CONTEXT.md D-09.
+
+**Not resolved by this closure:** the broader, structurally different
+`260929-a11y-empty-loading-variant-legs-are-near-vacuous.md` todo (the empty/loading fixture legs
+being near-vacuous for most routes because only `/api/scan/latest` consults
+`VITE_A11Y_FIXTURE_VARIANT`) is unrelated to this rule's withdrawal and stays open, handed to
+Phase 220.
