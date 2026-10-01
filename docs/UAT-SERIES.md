@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-01 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
+**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
 cases, 4 PASS, 1 SKIP (DEFERRED — the D-10 operator spot-check, UAT-219-05, staged for
 verification as `human_needed`, not yet performed as of this write). The gating proof is
 UAT-219-04's CI-only axe round-trip withdrawing `scrollable-region-focusable` from all 4
@@ -31021,7 +31021,7 @@ listing `.planning/todos/pending/` directly rather than trusting either SUMMARY'
 
 ## Series 219: Keyboard Access (Phase 219 — v5.26)
 
-**Last Updated:** 2026-10-01 (Phase 219 close — Keyboard Access, KBD-01. Five cases — 4 PASS, 1
+**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Five cases — 4 PASS, 1
 SKIP (DEFERRED). UAT-219-01 covers the mutation-proven unit test for the conditional
 `tabIndex`/`role`/`aria-label` region in `components/ui/table.tsx` (219-01); UAT-219-02 covers the
 app-wide consumer re-derivation (27 `<Table>` mounts across 17 files) and the 14 distinct
@@ -31060,7 +31060,7 @@ forwarding, `regionLabel` never spread onto `<table>`, re-measure on children ch
 `ResizeObserver` firing, the `ring-2` focus-visible class set, and ref forwarding.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-10-01  **Tester:** automated
+**Date:** 2026-09-30  **Tester:** automated
 **Notes:** Re-run live at this case's write time: `npx vitest run
 src/components/__tests__/table-region.test.tsx` — **9 passed (9)**. `219-01-SUMMARY.md` records
 the RED capture before implementation (`7 failed | 2 passed (9)`) and five mutation RED captures,
@@ -31093,7 +31093,7 @@ not a failure); 14 `regionLabel=` occurrences across exactly 4 files (the multi-
 the generic default label, applied with no per-file edit.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-10-01  **Tester:** automated
+**Date:** 2026-09-30  **Tester:** automated
 **Notes:** Re-derived live at this case's write time (not copied from a SUMMARY): 27 matches
 across 17 files (byte-identical consumer list to `219-01-SUMMARY.md`'s and `219-CONTEXT.md`'s
 snapshot); 14 `regionLabel=` occurrences; 4 distinct files. Per-file counts match
@@ -31123,7 +31123,7 @@ before pressing any key, drives ArrowRight/ArrowLeft to scroll extremes and back
 never presses Tab and asserts `scrollLeft` stays exactly 0 after 5 ArrowRight presses.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-10-01  **Tester:** automated
+**Date:** 2026-09-30  **Tester:** automated
 **Notes:** `219-02-SUMMARY.md` records `2 passed` on 5 consecutive local runs, plus confirmation
 via CI run `36795678760` (python-ci.yml, Browser E2E job): the 3-file collection
 (`tests/test_pdf_decomposition_render.py tests/test_browser_e2e.py
@@ -31165,7 +31165,7 @@ Linux Full Suite failing-node set on the branch is identical to `main`'s (the 2 
 withdrawn-MinIO-image chaos-lab Docker nodes, not an environmental or new failure).
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-10-01  **Tester:** automated
+**Date:** 2026-09-30  **Tester:** automated
 **Notes:** Re-run live at this case's write time: all three greps return `0`.
 `219-03-SUMMARY.md` records the full CI-only round-trip: first dispatch (run `36795176372`,
 head `1071b372`) classified exactly 4 changed rows before copying artifact bytes, all REMOVED
