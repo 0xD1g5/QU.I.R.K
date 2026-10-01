@@ -159,6 +159,26 @@ describe("variant-contract (221-01)", () => {
     expect(catchBlock.indexOf("if (abortCode !== null) {")).toBeLessThan(catchBlock.indexOf("exitCode = 1"))
   })
 
+  it("run-a11y.mjs bounds browser.close(), signals the preview group before any await, and a second signal forces exit (221 WR-11)", () => {
+    // the only browser.close() CALL (not prose) is the bounded one
+    const closeCalls = RUN_A11Y_SOURCE.match(/browser\??\.close\(\)\s*[.;)]/g) ?? []
+    expect(closeCalls.length, `an unbounded browser.close() call exists: ${closeCalls.join(" | ")}`).toBe(1)
+    expect(RUN_A11Y_SOURCE).toContain("browser.close().then(() => true, () => true),")
+    expect(RUN_A11Y_SOURCE).toMatch(/setTimeout\(\(\) => r\(false\), BROWSER_CLOSE_TIMEOUT_MS\)/)
+    const td = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("function teardown() {"))
+    expect(td.slice(0, td.indexOf("\n}\n"))).toContain("await closeBrowserBounded()")
+    const sig = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("function onSignal(code) {"))
+    const body = sig.slice(0, sig.indexOf("\n}\n"))
+    expect(body, "onSignal() not found").toContain("void abort(code)")
+    expect(body.indexOf("cleanup()"), "signal path must signal the preview group before abort()").toBeGreaterThan(-1)
+    expect(body.indexOf("cleanup()")).toBeLessThan(body.indexOf("void abort(code)"))
+    const second = body.slice(body.indexOf("if (abortCode !== null) {"), body.indexOf("shuttingDown = true"))
+    expect(second, "second signal does not force").toContain("'SIGKILL'")
+    expect(second).toContain("process.exit(abortCode)")
+    expect(RUN_A11Y_SOURCE).toContain("process.on('SIGINT', () => onSignal(130))")
+    expect(RUN_A11Y_SOURCE).toContain("process.on('SIGTERM', () => onSignal(143))")
+  })
+
   it("run-a11y.mjs navigates loading on 'load' and derives endpoints at run time (221 D-06/D-08)", () => {
     for (const needle of ["waitUntil", "'load'", "matchHandler", "does not declare"]) {
       expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)

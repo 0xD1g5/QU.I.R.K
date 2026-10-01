@@ -254,12 +254,28 @@ async function shutdownPreview() {
 // preview's early-exit listener cannot misreport a teardown-in-progress as a --strictPort
 // refusal, and a signal racing the route loop's own catch/finally joins the same teardown
 // instead of starting a second one that polls the same port and decides the exit status.
+// 221 WR-11: puppeteer's browser.close() has no timeout; a wedged Chrome (hung renderer, stuck
+// CDP Browser.close) must never keep the teardown from reaching the preview group kill.
+const BROWSER_CLOSE_TIMEOUT_MS = 3_000
+async function closeBrowserBounded() {
+  if (!browser) return
+  let timer
+  const closed = await Promise.race([
+    browser.close().then(() => true, () => true),
+    new Promise(r => { timer = setTimeout(() => r(false), BROWSER_CLOSE_TIMEOUT_MS) }),
+  ])
+  clearTimeout(timer)
+  if (!closed) {
+    console.error(`[a11y] browser.close() did not resolve in ${BROWSER_CLOSE_TIMEOUT_MS}ms; killing Chrome and continuing to the preview teardown (221 WR-11)`)
+    try { browser.process()?.kill('SIGKILL') } catch {}
+  }
+}
 let teardownPromise = null
 function teardown() {
   if (!teardownPromise) {
     shuttingDown = true
     teardownPromise = (async () => {
-      await browser?.close().catch(() => {})
+      await closeBrowserBounded()
       await shutdownPreview()
     })()
   }
@@ -274,8 +290,27 @@ async function abort(code) {
   process.exit(abortCode)
 }
 process.on('exit', () => { shuttingDown = true; cleanup() })
-process.on('SIGINT', () => { void abort(130) })
-process.on('SIGTERM', () => { void abort(143) })
+// 221 WR-11: on a signal, the preview group is signalled SYNCHRONOUSLY first (before any
+// await), so nothing the browser does can keep vite on the port. A SECOND signal while the
+// teardown is still running forces the synchronous path: SIGKILL the preview group, then exit
+// with the first signal's status. Without this, repeated Ctrl-C/SIGTERM only re-awaited the same
+// close (puppeteer's own handlers are disabled), and the only way out was a SIGKILL of the
+// harness, which skips every exit handler and orphans vite on 4173.
+function onSignal(code) {
+  if (abortCode !== null) {
+    console.error(`[a11y] second signal during teardown; SIGKILL preview group ${previewProc.pid} and exit ${abortCode} (221 WR-11)`)
+    if (previewProc.pid) {
+      try { process.kill(-previewProc.pid, 'SIGKILL') } catch {}
+    }
+    try { browser?.process()?.kill('SIGKILL') } catch {}
+    process.exit(abortCode)
+  }
+  shuttingDown = true
+  cleanup()
+  void abort(code)
+}
+process.on('SIGINT', () => onSignal(130))
+process.on('SIGTERM', () => onSignal(143))
 
 // Wait for preview to be ready
 try {
