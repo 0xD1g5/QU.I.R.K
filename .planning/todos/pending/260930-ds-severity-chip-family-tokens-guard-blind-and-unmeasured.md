@@ -46,3 +46,8 @@ Measure every `--ds-*` chip pair (`severity-critical`, `severity-high`, `severit
 `--quantum-safe`. Any failing pair gets a design-call-style operator review (same shape as
 FIX-04); a general guard could then assert the whole family the way
 `muted-token-contrast-guard.test.ts` does for `--ds-text-muted`.
+
+## Phase 221 note (2026-10-01)
+
+Measured by `src/dashboard/src/components/__tests__/ds-severity-chip-contrast-guard.test.ts`; failing
+pairs ratcheted, not fixed (they need an operator design call). Ratios in 999.118. Stays pending.

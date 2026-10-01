@@ -81,3 +81,14 @@ captured by a sweep that waits for content.
   It rewrote four of them: `certificates-{empty,loading}-dark` went `(none)` → `color-contrast:2`,
   and `hardware-{empty,loading}-dark` went `color-contrast:3 + scrollable-region-focusable:1` →
   `color-contrast:8`. True only of `data-at-rest` (2→2) and `compare`. Corrected.
+
+## Resolution (Phase 221, 2026-10-01)
+
+The real root cause was a leaked preview server: the vite grandchild survived the npm wrapper's
+SIGTERM on Linux, so every sweep after the first measured the default-variant server. The
+"1 of 10 handlers honours the variant" mechanism above was wrong (RESEARCH Findings 1-2). Fixed with
+process-group kill, `--strictPort`, a `/__a11y-variant` identity sentinel, a per-route render-state
+guard, and a declarative handler table with a variant contract. Each leg was shown able to fail:
+see `.planning/phases/221-close-gap-a11y-blind-spots-empty-loading-variant-legs/221-evidence/mutations.md`
+(M1b run 36913766698, M2b run 36914404491, M3 local, M4/M5 contract tests); restored green at
+Linux run 36913079235. One loading leg is retired by name (`/scans`, exclusion UX-12).

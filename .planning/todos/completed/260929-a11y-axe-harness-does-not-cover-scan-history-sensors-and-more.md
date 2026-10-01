@@ -21,3 +21,10 @@ FIX-01 swap), `sensors` (holds a live FIX-04 badge-baseline key,
 the `/motion` sweep reports 0 violations without ever rendering the fixed badges.
 
 Re-derive the route/page set at fix time — this list is a snapshot.
+
+## Resolution (Phase 221, 2026-10-01)
+
+`/scans` and `/sensors` are swept with Linux baselines (Linux gate run 36913079235 green with the
+new routes). The remaining pages are named UNMEASURED-EXCLUSIONS rows (UX-NN, enforced from source
+by `unmeasured-exclusions.test.ts`), owned by backlog 999.118. That ownership lives on there and in
+`src/dashboard/tests/a11y/UNMEASURED-EXCLUSIONS.md`.

@@ -20,3 +20,9 @@ measured**. Re-derive every fill × theme × label pair before fixing.
 
 Cytoscape draws to `<canvas>`. axe sees no text nodes, and `badge-contrast-guard` only reads
 `bg-[hsl(var(--x))]` class strings.
+
+## Phase 221 note (2026-10-01)
+
+Measured by `src/dashboard/src/components/__tests__/cytoscape-label-contrast-guard.test.ts`; failing
+pairs ratcheted in `cytoscape-label-contrast-baseline.json`, not fixed (design call). Ratios in
+999.118. Stays pending.
