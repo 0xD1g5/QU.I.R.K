@@ -94,7 +94,7 @@
     "path": "/compare?a=1&b=2",
     "contentMarker": ".font-data",
     "variantMarkers": {
-      "compare": ".font-data"
+      "compare": "table tbody tr"
     }
   }
 ]
