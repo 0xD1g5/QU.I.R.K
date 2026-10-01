@@ -2,8 +2,8 @@
 
 **Version:** 5.25.0
 **Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
-cases, 4 PASS, 1 SKIP (DEFERRED — the D-10 operator spot-check, UAT-219-05, staged for
-verification as `human_needed`, not yet performed as of this write). The gating proof is
+cases, all five PASS — UAT-219-05, the D-10 operator keyboard spot-check, flipped from SKIP
+(DEFERRED) to PASS on the operator's own confirmation ("keyboard pass") at verification. The gating proof is
 UAT-219-04's CI-only axe round-trip withdrawing `scrollable-region-focusable` from all 4
 `data-at-rest` baselines and confirmed stable on a second, fully green dispatch; UAT-219-01 covers
 the mutation-proven unit test for `table.tsx`'s conditional region; UAT-219-02 covers the app-wide
@@ -31021,8 +31021,7 @@ listing `.planning/todos/pending/` directly rather than trusting either SUMMARY'
 
 ## Series 219: Keyboard Access (Phase 219 — v5.26)
 
-**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Five cases — 4 PASS, 1
-SKIP (DEFERRED). UAT-219-01 covers the mutation-proven unit test for the conditional
+**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Five cases, all five PASS. UAT-219-01 covers the mutation-proven unit test for the conditional
 `tabIndex`/`role`/`aria-label` region in `components/ui/table.tsx` (219-01); UAT-219-02 covers the
 app-wide consumer re-derivation (27 `<Table>` mounts across 17 files) and the 14 distinct
 `regionLabel` names wired on the 4 multi-table pages (219-01); UAT-219-03 covers the keyboard-only
@@ -31031,11 +31030,10 @@ UAT-7-01 established — it executes for real in the non-gating Browser E2E job 
 Linux Full Suite (219-02); UAT-219-04 covers the gating proof — the CI-only axe baseline
 round-trip that withdrew `scrollable-region-focusable` from all 4 `data-at-rest` baselines and from
 `ACCEPTED-VIOLATIONS.md`, confirmed stable on a second, fully green dispatch (219-03). UAT-219-05,
-the D-10 operator keyboard spot-check, is recorded SKIP (DEFERRED — covered by
-`tests/test_browser_e2e.py::test_kbd_01_keyboard_only_table_region_scroll`) because the operator
-has not yet performed the literal walkthrough at the time this series was written; it is staged in
-`219-VALIDATION.md`'s Manual-Only table for presentation at verification as `human_needed`
-corroboration, and must not be recorded PASS until the operator's own words exist.)
+the D-10 operator keyboard spot-check, was first written SKIP (DEFERRED) and flipped to PASS on
+2026-09-30 only after the operator performed it live and confirmed in their own words ("keyboard
+pass") — on `/findings` at a narrowed width, not the `/data-at-rest` route the staged steps named;
+see the case's Notes.)
 
 ### UAT-219-01: Conditional Keyboard-Focusable Table Region — Mutation-Proven
 
@@ -31198,12 +31196,18 @@ the Tab order).
 **Pass Criteria:** the operator performs the steps and confirms, in their own words, that keyboard
 focus reaches the table and arrow keys scroll it with no mouse input.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by
-tests/test_browser_e2e.py::test_kbd_01_keyboard_only_table_region_scroll; the operator has not yet
-performed this walkthrough as of this series' write time. Presented at verification as
-`human_needed` corroboration per D-10 — the automated node above is the evidence of record, not
-this case. Do not flip to PASS without the operator's own words.)
-**Date:** __________  **Tester:** __________
-**Notes:** Staged, not yet exercised. See `219-VALIDATION.md` Manual-Only table.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** operator (live, keyboard only)
+**Notes:** Operator verbatim: "keyboard pass". Performed against `quirk serve` on
+`./quirk-output/quirk.db`, serving branch `phase-219-keyboard-access` at `c0e0d1f4` (statics
+rebuilt with the WR-01 blank-label fix). **Route deviation, recorded rather than smoothed over:**
+the steps staged in `219-VALIDATION.md` name `/data-at-rest`, but the walkthrough the operator was
+actually given — and performed — used `/findings` in a browser narrowed to roughly phone width
+(about 600px), the same route the automated E2E node uses (`seed_dashboard_db` seeds no
+data-at-rest rows, 219-02). Steps given: hard-reload, one address-bar click then keyboard only,
+Tab until the table region shows the teal ring, ArrowLeft/ArrowRight (and Down/PageDown) scroll
+it while the page stays put; widening so the table fits (Tab skips it) and the light-theme ring
+were offered as optional. The operator's two-word confirmation does not itemise which optional
+steps were exercised, so only the core Tab-to-region + arrow-scroll claim is attested here.
 
 ---
