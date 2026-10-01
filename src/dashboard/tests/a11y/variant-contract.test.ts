@@ -76,11 +76,11 @@ describe("variant-contract (221-01)", () => {
     }
   })
 
-  it("vite.config.ts is table-driven: imports fixture-handlers.mjs, tracks held responses, destroys them (221 D-03/D-08)", () => {
+  // 221 WR-06: the held-response release is measured behaviourally in held-release.test.ts; a
+  // string-containment check here could stay green with the mechanism removed or broken.
+  it("vite.config.ts is table-driven: imports fixture-handlers.mjs (221 D-03)", () => {
     const vite = readFileSync(path.resolve(__dirname, "../../vite.config.ts"), "utf-8")
     expect(vite).toContain("fixture-handlers.mjs")
-    expect(vite).toContain("held")
-    expect(vite).toContain("destroy")
   })
 
   it("run-a11y.mjs refuses a pre-existing server on the port (221 D-02)", () => {

@@ -13,7 +13,7 @@ function a11yFixture(): Plugin {
   //
   // 221 D-03: the per-endpoint decisions live in tests/a11y/fixture-handlers.mjs (a pure,
   // contract-tested table). This function is only an interpreter over that table.
-  function buildHandler(held: Set<ServerResponse>) {
+  function buildHandler() {
     const fileCache = new Map<string, string>()
     for (const h of FIXTURE_HANDLERS) {
       if ('file' in h.default && !fileCache.has(h.default.file)) {
@@ -58,34 +58,29 @@ function a11yFixture(): Plugin {
         // {na}: declared non-applicability (reason enforced by variant-contract.test.ts)
       }
       if (variant === 'loading' && 'hold' in h.loading) {
-        // 221 D-08: hold the request open for the whole sweep. res.end is NEVER called;
-        // held responses are destroyed when the HTTP server closes.
+        // 221 D-08: hold the request open for the whole sweep. res.end is NEVER called.
+        // 221 WR-06: nothing here releases it, and nothing needs to. A held response ends when
+        // the browser page closes (its socket closes), when vite's own close function
+        // (createServerCloseFn) destroys every open socket before server.close(), or when the
+        // harness kills the preview's process group. A previous httpServer 'close' listener
+        // could never fire while a held socket was open (Node emits 'close' only after every
+        // connection ends), so it was dead code. held-release.test.ts measures the property.
         noCache(res); res.setHeader('Content-Type', 'application/json')
-        held.add(res)
-        res.on('close', () => { held.delete(res) })
         return
       }
       sendJson(res, defaultBody(h))
     }
   }
 
-  const releaseOnClose = (server: { httpServer?: { on: (e: 'close', cb: () => void) => unknown } | null }, held: Set<ServerResponse>) => {
-    server.httpServer?.on('close', () => { for (const r of held) r.destroy() })
-  }
-
   return {
     name: 'a11y-fixture',
     configureServer(server) {
       if (!process.env.VITE_A11Y_FIXTURE) return
-      const held = new Set<ServerResponse>()
-      releaseOnClose(server, held)
-      server.middlewares.use(buildHandler(held))
+      server.middlewares.use(buildHandler())
     },
     configurePreviewServer(server) {
       if (!process.env.VITE_A11Y_FIXTURE) return
-      const held = new Set<ServerResponse>()
-      releaseOnClose(server, held)
-      server.middlewares.use(buildHandler(held))
+      server.middlewares.use(buildHandler())
     },
   }
 }
