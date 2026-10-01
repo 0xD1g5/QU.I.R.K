@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T01:49:54.000Z"
-last_activity: 2026-09-30 -- Phase 219 (Keyboard Access, KBD-01) VERIFIED passed 3/3 and marked complete BY HAND (no phase.complete). Table wrapper focusable only while overflowing (role=region + name, ring-2); keyboard-only E2E executed in CI; operator spot-check "keyboard pass"; scrollable-region-focusable WITHDRAWN from all baselines + ledger, countRange retired. CI on HEAD 39de6f15 per-step: Dashboard Quality 4/4 green (36800692384); Python CI fails only the 2 MinIO nodes, set identical to main (36800690414). Review 0 Critical / 1 Warning (WR-01 fixed c0e0d1f4) / 2 Info. Branch phase-219-keyboard-access pushed, NOT merged. Next -- merge 219 PR, then Phase 220 (CI Instrument Truth).
+last_updated: "2026-10-01T02:20:47.000Z"
+last_activity: 2026-09-30 -- PAUSED by operator request after merging Phase 219 (PR #44, 8b3b087c). v5.26 at 5 of 6 phases verified + merged (215-219); Phase 220 (CI Instrument Truth) not started. Also merged this session -- #41 score-gauge arc fix, #42 README refresh + pre-launch doc-review commitment for v5.27. Resume -- /gsd-autonomous --from 220.
 progress:
   total_phases: 6
   completed_phases: 5
@@ -1387,7 +1387,14 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   decision; the close sequence now sits behind Phase 207.1.
 
 ## Current Position
-Phase: 218 (Contrast Violations — Design Calls & Closing Assertion) — **EXECUTED, 6 of 6 plans,
+Phase: 220 (CI Instrument Truth) — **NOT STARTED, no directory.** Autonomous run PAUSED 2026-09-30
+by operator request after merging Phase 219. Phases 215–219 are all MERGED to `main` (218 = PR #43
+`4b27d05c`, 219 = PR #44 `8b3b087c`); `git rev-list --count main..<branch>` = 0 for every phase
+branch, all deleted. Milestone v5.26 is at **5 of 6 phases verified and merged**; only Phase 220
+(CITRUTH-01/02/03) remains. Resume with `/gsd-autonomous --from 220` (or `/gsd-discuss-phase 220`).
+Status: paused at a clean boundary — `main` at `8b3b087c`, working tree clean.
+
+**Prior position, superseded above:** Phase: 218 (Contrast Violations — Design Calls & Closing Assertion) — **EXECUTED, 6 of 6 plans,
 pending verification.** No `217-VERIFICATION.md`-equivalent exists yet for 218; the phase-level
 ROADMAP checkbox is deliberately left unflipped (verification's job, not the executor's, per D-15).
 Plan: All six 218-0N plans executed and committed on branch `phase-218-contrast-design-calls`
@@ -1536,7 +1543,33 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 219 verification, then Phase 220
+## Next Cycle — Phase 220 (CI Instrument Truth)
+
+**PAUSED 2026-09-30 by operator request at a clean boundary.** Phase 219 VERIFIED passed 3/3 and
+MERGED (PR #44, `8b3b087c`): operator spot-check "keyboard pass", `scrollable-region-focusable`
+withdrawn from every baseline and the ledger. Phase 220 has **no directory yet** and needs a full
+discuss → plan → execute cycle. Its requirements are CITRUTH-01 (diagnose the 14-node vitest flake
+in the required job, demonstrated across repeated batched runs), CITRUTH-02 (`main`'s Python CI
+green — the 2 `test_chaos_lab_idempotency[multihost]`/`[storage-s3]` nodes fail on withdrawn MinIO
+images, see `260930-minio-images-withdrawn-from-quay-chaos-lab-cannot-pull-in-ci.md`) and
+CITRUTH-03 (verification consults live branch CI — note 218 and 219 already practised this by
+hand: every verifier was instructed to read per-step CI on the exact HEAD and compare failing-node
+SETS against `main`; 220 should make it mechanical rather than a prompt convention).
+
+**Inputs routed to Phase 220 this session (re-derive from `.planning/todos/pending/`, don't trust
+this list):** 9 instrument blind spots from 218's closing assertion (5 non-badge contrast
+survivors from 218-05, the Tailwind-shorthand badge sweep, the CBOM/exposure-map Cytoscape label
+todo, plus 216/217 carry-ins), the axe route-coverage gap
+(`260929-a11y-axe-harness-does-not-cover-scan-history-sensors-and-more.md`) and the canonical-DB
+fixture gaps (`260929-canonical-demo-db-lacks-rows-for-uat-217-visual-legs.md`).
+
+**Out-of-phase work merged this session (context, not phase scope):** PR #41 fixed score-gauge arcs
+that had drawn mirrored since 2026-03-31 (20/100 rendered ~90% full); PR #42 refreshed the README
+for a planned public social-media launch and added a HORIZON rationale row committing a
+claim-by-claim **pre-launch documentation review to the next milestone (v5.27)** — the operator
+posts only after that review closes.
+
+**Prior Next Cycle note, superseded above:** Phase 219 verification, then Phase 220
 
 **Phase 219 is EXECUTED (all 4 plans), NOT merged.** `git rev-list --count main..HEAD` = **9** at
 the start of this close-out (before this edit's own commit), branch `phase-219-keyboard-access`.
