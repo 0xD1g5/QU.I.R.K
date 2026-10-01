@@ -376,6 +376,17 @@ ALLOWED_SKIPS = [
         "are honest and a skip is not a pass; see CLAUDE.md's GSD `state.*` "
         "Verb Integrity section for why this durability check exists.",
     ),
+    (
+        "test_gsd_verifier_ci_patch.py",
+        "<module>",
+        "environment_capability",
+        "~/.claude/agents/gsd-verifier.md is absent: no operator GSD "
+        "toolchain in this environment (the Linux Full Suite CI job "
+        "provisions none), so the Phase 220 CITRUTH-03 revert detector has "
+        "no live verifier to read. A skip is not evidence that the verifier "
+        "patch is in force; see CLAUDE.md 'Phase Verification Is "
+        "Branch-CI-Aware (CITRUTH-03)'.",
+    ),
     # ------------------------------------------------------------------
     # Phase 186.1 (TOOL-01/TOOL-05): environment_capability skips in the
     # command-boundary harness built by 186.1-01 and extended by 186.1-03/04/05.

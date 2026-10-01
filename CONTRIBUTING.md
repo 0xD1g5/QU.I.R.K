@@ -43,6 +43,24 @@ It's cheap on unrelated commits (the phase-close checks only fire when the stage
 `.planning/ROADMAP.md` diff contains a Phase-checkbox flip to complete) and blocks the
 commit with a clear message when a gate is violated.
 
+**ARTIFACT-05: recorded CI truth at phase close.** A phase-close commit also requires
+the phase's `NN-VERIFICATION.md` frontmatter to carry a `ci:` block. The block must show
+every required workflow (Python CI, Dashboard Quality) observed and green at exactly the
+current local HEAD. Produce it with:
+
+```bash
+python3 scripts/branch_ci_state.py --branch "$(git branch --show-current)" --compare-main
+```
+
+Paste its JSON output verbatim under `ci:`. The script exits 0 (green), 1 (red, or no
+completed run at HEAD), or 2 (state unknowable, e.g. `gh` not authenticated). CI does not
+run on a branch push by itself, so push first and then dispatch both workflows
+(`gh workflow run 'Python CI' --ref <branch>`, `gh workflow run 'Dashboard Quality' --ref
+<branch>`). Any commit made after that observation, including a docs-only one, makes the
+block stale and requires a fresh dispatch and a re-recorded block. The only way to close
+over red required jobs is an operator-written `ci_waiver: {reason, failing_nodes}`, and
+only when those nodes exactly equal the failures `main` already has.
+
 `git commit --no-verify` bypasses this hook entirely — that's git's own designed escape
 hatch, not something this hook can prevent. Treat it as a safety net, not a hard
 guarantee: a contributor who skips the one-time `core.hooksPath` setup, or who commits
