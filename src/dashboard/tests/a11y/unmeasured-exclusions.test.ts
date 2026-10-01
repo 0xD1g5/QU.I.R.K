@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { isPlaceholderJustification } from "./baseline-diff.mjs"
-import { FIXTURE_HANDLERS } from "./fixture-handlers.mjs"
+import { matchHandler } from "./fixture-handlers.mjs"
 
 // Phase 221 / 221-06 / D-12. UNMEASURED-EXCLUSIONS.md is HAND-maintained, so this test derives the
 // REQUIRED row set from source at run time (App.tsx, routes.json, FIXTURE_HANDLERS). A blind spot
@@ -51,8 +51,10 @@ function deriveRequired(): Map<string, string> {
   }
   // (G) conceptual keys, plus the expanded-row blind spot when no coverage handler exists
   for (const k of CONCEPTUAL) req.set(k, "conceptual blind spot with no source artefact")
-  if (!FIXTURE_HANDLERS.some((h: { id: string }) => h.id === "scan-coverage")) {
-    req.set("scan-history-expanded-row", "FIXTURE_HANDLERS has no scan-coverage handler")
+  // 221 WR-01: keyed on REACHABILITY, not on a handler id merely existing. A scan-coverage entry
+  // shadowed by an earlier one would be dead, and must not retire this row.
+  if (matchHandler("/api/scans/1/coverage")?.id !== "scan-coverage") {
+    req.set("scan-history-expanded-row", "no FIXTURE_HANDLERS entry reachably serves /api/scans/{id}/coverage")
   }
   return req
 }

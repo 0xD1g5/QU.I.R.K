@@ -34,8 +34,10 @@ function enumerateApiTargets(): Set<string> {
   for (const d of SCAN_DIRS) {
     for (const file of walk(path.join(SRC_DIR, d))) {
       const text = readFileSync(file, "utf-8")
-      for (const m of text.matchAll(/["'`](\/api\/[^"'`$?\s]*)/g)) {
-        let t = m[1]
+      // 221 WR-01: keep a template literal's tail (`/api/scans/${id}/coverage` -> /api/scans/1/coverage)
+      // instead of collapsing it to its parent prefix, so a child endpoint is a target of its own.
+      for (const m of text.matchAll(/["'`](\/api\/(?:[^"'`$?:\s]|\$\{[^}]*\})*)/g)) {
+        let t = m[1].replace(/\$\{[^}]*\}/g, "1")
         if (t.length > 1 && t.endsWith("/")) t = t.slice(0, -1)
         targets.add(t)
       }
@@ -44,8 +46,10 @@ function enumerateApiTargets(): Set<string> {
   return targets
 }
 
+// 221 WR-01: a target is covered only if the table itself answers THAT url. No synthetic
+// "/1/coverage" or "/1" probes: they let a parent prefix count as coverage for a child endpoint.
 function covered(target: string): boolean {
-  return [target, target + "/1/coverage", target + "/1"].some((u) => matchHandler(u) !== undefined)
+  return matchHandler(target) !== undefined
 }
 
 // Fetch targets that no fixture handler serves, with the reason the sweep tolerates it.
@@ -56,11 +60,18 @@ const UNFIXTURED: Record<string, string> = {
   "/api/export/pdf": "download action in executive.tsx triggered by a button click; never fires during a page-load sweep",
   "/api/exposure-map": "pages/exposure-map.tsx; /exposure-map is not a swept route in routes.json (un-swept page)",
   "/api/jobs": "scan-job, scan-new and ScanCoverageChip job polling; those pages are not swept and the chip only fires for an active job",
+  "/api/jobs/1": "useJobStatus.ts / scan-job.tsx job polling for /scan/job/:id, which is not a swept route in routes.json",
+  "/api/jobs/1/coverage": "ScanCoverageChip.tsx:76 job-scoped coverage; the chip only renders inside an expanded scan-history row or an active job page, neither swept (UX-13)",
+  "/api/jobs/1/result-summary": "useJobStatus.ts:72 result summary for /scan/job/:id, which is not a swept route in routes.json",
   "/api/merge/latest": "useMergeLatest, consumed by pages not in the sweep set of routes.json (un-swept page)",
   "/api/qramm/assessment/draft": "QRAMMProvider draft autosave; the qramm routes are variantInsensitive and the draft call is not scan data",
-  "/api/reports/latest": "executive.tsx report download link; requested on click, not on page load",
+  "/api/reports/latest/1": "executive.tsx:260 report download link (/api/reports/latest/${fmt}); requested on click, not on page load",
   "/api/reports/latest/manifest": "executive.tsx requests it on load and no handler serves it under the harness (not verified which branch renders); candidate for 221-06 fixturing",
+  "/api/qramm/sessions/1/compliance-map": "ComplianceMapTab.tsx:121 / useQRAMMPrintData.ts:66; fetched only when the compliance-map tab or the print view opens, neither on a swept page load (221 WR-01: previously answered by the qramm-session regex with the wrong shape)",
+  "/api/qramm/sessions/1/score": "ScorecardTab.tsx:80 / ComplianceMapTab.tsx:95 / useQRAMMPrintData.ts:65; fetched only when a scorecard/compliance tab or the print view opens, not on a swept page load (221 WR-01: previously answered by the qramm-session regex with the wrong shape)",
+  "/api/scans/1/coverage": "ScanCoverageChip.tsx:77 renders only inside an expanded scan-history row, which the sweep does not expand (UNMEASURED-EXCLUSIONS UX-13). 221 WR-01: previously shadowed by the /api/scans prefix, which answered it with a ScanSession[]",
   "/api/schedules": "useSchedules for /schedules, which is not a swept route in routes.json (un-swept page)",
+  "/api/schedules/1": "useSchedules.ts:104,138 per-schedule update/delete for /schedules, which is not a swept route in routes.json",
 }
 
 const TARGETS = [...enumerateApiTargets()].sort()
@@ -82,6 +93,39 @@ describe("a11y fixture table covers every /api/ fetch target (D-14, 221 D-06)", 
   it.each(Object.keys(UNFIXTURED))("UNFIXTURED key %s is still fetched and still unhandled", (key) => {
     expect(TARGETS.includes(key), `UNFIXTURED lists "${key}" but no source fetches it any more`).toBe(true)
     expect(covered(key), `UNFIXTURED lists "${key}" but a FIXTURE_HANDLERS entry now covers it`).toBe(false)
+  })
+
+  // 221 WR-01: first match wins, so an entry whose own canonical URL resolves to an EARLIER
+  // entry is dead. Each handler's canonical URL is its prefix, or its regex's `example` (which
+  // the regex must itself match), plus `<prefix>/x` for a handler that declares `subpaths`.
+  it.each(FIXTURE_HANDLERS.map((h: { id: string }) => h.id))("handler %s is reachable (not shadowed by an earlier entry)", (id) => {
+    const h = FIXTURE_HANDLERS.find((x: { id: string }) => x.id === id)!
+    const probes: string[] = []
+    if (h.match.prefix !== undefined) {
+      probes.push(h.match.prefix, h.match.prefix + "?probe=1")
+      if (h.match.subpaths !== undefined) probes.push(h.match.prefix + "/1/probe")
+    }
+    if (h.match.regex !== undefined) {
+      expect(h.match.example, `regex handler "${id}" must declare match.example`).toBeTruthy()
+      expect(new RegExp(h.match.regex).test(h.match.example!), `regex handler "${id}" does not match its own example`).toBe(true)
+      probes.push(h.match.example!)
+    }
+    expect(probes.length, `handler "${id}" has no prefix or regex`).toBeGreaterThan(0)
+    for (const u of probes) expect(matchHandler(u)?.id, `"${u}" should reach handler "${id}"`).toBe(id)
+  })
+
+  it.each(FIXTURE_HANDLERS.filter((h: { match: { subpaths?: string } }) => h.match.subpaths !== undefined).map((h: { id: string }) => h.id))(
+    "handler %s declares a written reason for serving sub-paths",
+    (id) => {
+      const h = FIXTURE_HANDLERS.find((x: { id: string }) => x.id === id)!
+      expect(typeof h.match.subpaths === "string" && h.match.subpaths.length >= 20, `handler "${id}" subpaths reason too short`).toBe(true)
+    },
+  )
+
+  it("a prefix never matches a longer sibling segment or an undeclared sub-path (221 WR-01)", () => {
+    expect(matchHandler("/api/scansX")).toBeUndefined()
+    expect(matchHandler("/api/scans/1/coverage")).toBeUndefined()
+    expect(matchHandler("/api/scans")?.id).toBe("scans")
   })
 
   it("fixture-scans.json holds exactly one ScanSession and fixture-sensor-registry.json one row per status (221-06)", () => {
