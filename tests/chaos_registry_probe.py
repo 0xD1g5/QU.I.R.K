@@ -39,6 +39,26 @@ CONTROL_IMAGES: dict[str, str] = {
     "docker.io": "library/alpine:3.20",
 }
 
+# Each registry's v2 Bearer auth realm + `service` parameter differs and is
+# NOT reliably `https://<registry>/token` — e.g. quay.io's realm is
+# `.../v2/auth`, not `.../token`, and Docker Hub's token host
+# (auth.docker.io) differs from its pull host (registry-1.docker.io).
+# Verified live 2026-09-30 by reading each registry's 401 `WWW-Authenticate`
+# response to `GET https://<host>/v2/` — a Bug A/Bug B-class silent-wrong-
+# value trap (see CLAUDE.md §GSD state.* Verb Integrity) caught here by
+# actually exercising the quay.io leg against this project's own refused
+# image, not by assuming the ghcr.io shape generalizes.
+_REALM: dict[str, tuple[str, str]] = {
+    "ghcr.io": ("https://ghcr.io/token", "ghcr.io"),
+    "quay.io": ("https://quay.io/v2/auth", "quay.io"),
+    "docker.io": ("https://auth.docker.io/token", "registry.docker.io"),
+}
+_MANIFEST_HOST: dict[str, str] = {
+    "ghcr.io": "ghcr.io",
+    "quay.io": "quay.io",
+    "docker.io": "registry-1.docker.io",
+}
+
 _REFUSAL_KEYWORDS = re.compile(
     r"unauthorized|denied|not found|manifest unknown", re.IGNORECASE
 )
@@ -144,17 +164,16 @@ def control_probe(
         return None, None
 
     try:
-        token_url = (
-            f"https://{registry}/token?service={registry}"
-            f"&scope=repository:{control_ref.rsplit(':', 1)[0]}:pull"
-        )
+        realm, service = _REALM.get(registry, (f"https://{registry}/token", registry))
+        repo, tag = control_ref.rsplit(":", 1)
+        token_url = f"{realm}?service={service}&scope=repository:{repo}:pull"
         token_req = urllib.request.Request(token_url)
         with opener(token_req, timeout=timeout) as resp:
             payload = json.loads(resp.read())
         token = payload.get("token") or payload.get("access_token")
 
-        repo, tag = control_ref.rsplit(":", 1)
-        manifest_url = f"https://{registry}/v2/{repo}/manifests/{tag}"
+        manifest_host = _MANIFEST_HOST.get(registry, registry)
+        manifest_url = f"https://{manifest_host}/v2/{repo}/manifests/{tag}"
         headers = {
             "Accept": ",".join(
                 [

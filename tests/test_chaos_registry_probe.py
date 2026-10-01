@@ -126,6 +126,49 @@ def test_control_probe_network_exception_returns_none_status() -> None:
     assert status is None
 
 
+def test_control_probe_uses_registry_specific_auth_realm() -> None:
+    """Regression: quay.io's Bearer realm is .../v2/auth, not .../token.
+
+    A naive f"https://{registry}/token" guess returns 404 on quay.io and
+    silently makes every quay.io control probe status None forever (no
+    skip would ever fire for the registry this project actually hits) --
+    caught live 2026-09-30 running this against the real refused MinIO
+    image, not by inference from the ghcr.io interfaces example.
+    """
+    seen_urls: list[str] = []
+
+    def opener(req, timeout=10):
+        seen_urls.append(req.full_url)
+        if len(seen_urls) == 1:
+
+            class _TokenResp:
+                def read(self):
+                    return json.dumps({"token": "x"}).encode()
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    return False
+
+            return _TokenResp()
+
+        class _ManifestResp:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        return _ManifestResp()
+
+    control_probe("quay.io", opener=opener)
+    assert seen_urls[0].startswith("https://quay.io/v2/auth?")
+    assert seen_urls[1].startswith("https://quay.io/v2/prometheus/node-exporter/manifests/")
+
+
 def test_control_probe_unknown_registry_returns_none_none() -> None:
     def opener(req, timeout=10):  # pragma: no cover - must never be called
         raise AssertionError("opener should not be invoked for unknown registry")
