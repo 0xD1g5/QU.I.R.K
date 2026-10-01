@@ -2,18 +2,53 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Table = React.forwardRef<
-  HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
-))
+export type TableProps = React.HTMLAttributes<HTMLTableElement> & {
+  regionLabel?: string
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, regionLabel, ...props }, ref) => {
+    const wrapperRef = React.useRef<HTMLDivElement>(null)
+
+    React.useLayoutEffect(() => {
+      const el = wrapperRef.current
+      if (!el) return
+
+      const measure = () => {
+        const overflows =
+          el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight
+        if (overflows) {
+          el.tabIndex = 0
+          el.setAttribute("role", "region")
+          // `||` + trim, not `??`: a blank label would make a nameless region (D-02).
+          el.setAttribute("aria-label", regionLabel?.trim() || "Scrollable table")
+        } else {
+          el.removeAttribute("tabindex")
+          el.removeAttribute("role")
+          el.removeAttribute("aria-label")
+        }
+      }
+
+      measure()
+      const ro = new ResizeObserver(measure)
+      ro.observe(el)
+      return () => ro.disconnect()
+    }, [regionLabel, props.children])
+
+    return (
+      <div
+        ref={wrapperRef}
+        className="relative w-full overflow-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <table
+          ref={ref}
+          className={cn("w-full caption-bottom text-sm", className)}
+          {...props}
+        />
+      </div>
+    )
+  }
+)
 Table.displayName = "Table"
 
 const TableHeader = React.forwardRef<

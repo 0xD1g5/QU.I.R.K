@@ -125,7 +125,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 - [x] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
 - [x] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
 - [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
-- [ ] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
+- [x] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
 - [ ] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
 
 ### Phase Details
@@ -248,7 +248,12 @@ Plans:
   1. `components/ui/table.tsx` exposes a focusable, keyboard-scrollable region (`tabIndex`, appropriate `role`) usable app-wide across every table consumer, not just one page.
   2. A keyboard-only walkthrough (Tab to the region, arrow/PageDown to scroll) succeeds on at least one representative page with a mouse disconnected.
   3. The `scrollable-region-focusable` accepted-violation entry is withdrawn from the accepted-violations list, not renewed, and the axe/a11y suite stays green without it.
-**Plans**: TBD
+**Plans**: 4 plans in 4 waves
+Plans:
+- [x] 219-01-PLAN.md — Conditional focusable/named region in table.tsx (mutation-proven unit test) + 14 regionLabels + rebuilt statics (wave 1)
+- [x] 219-02-PLAN.md — Keyboard-only Playwright walkthrough + control node, mutation-proven against a rebuilt bundle (wave 2)
+- [x] 219-03-PLAN.md — CI-only axe round-trip: withdraw scrollable-region-focusable, retire countRange, resolve D-09 todo, per-step CI proof (wave 3)
+- [x] 219-04-PLAN.md — Docs (operators-guide, master-guide regen, report-interpretation), UAT Series 219, vault sync, VALIDATION close, hand-edited state (wave 4)
 **UI hint**: yes
 
 ### Phase 220: CI Instrument Truth
@@ -269,7 +274,7 @@ Plans:
 | 216. A11y Harness Repair | 8/8 | Complete | 2026-09-29 |
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
-| 219. Keyboard Access | 0/? | Not started | - |
+| 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
 | 220. CI Instrument Truth | 0/? | Not started | - |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)

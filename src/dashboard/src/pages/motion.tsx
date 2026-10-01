@@ -47,7 +47,7 @@ function EmailTable({ findings }: { findings: MotionFinding[] }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <Table>
+        <Table regionLabel="Email protocol findings">
           <TableHeader>
             <TableRow>
               <TableHead scope="col" className="text-xs font-semibold">Port</TableHead>
@@ -129,7 +129,7 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <Table regionLabel={`${fam} broker findings`}>
                 <TableHeader>
                   <TableRow>
                     <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>

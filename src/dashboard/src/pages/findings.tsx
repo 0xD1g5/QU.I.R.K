@@ -337,11 +337,12 @@ export function FindingsPage() {
                   container (overflow-y-auto), and axe's scrollable-region-focusable
                   (serious, WCAG 2.1.1/2.1.3) fires without it — a keyboard user could
                   not scroll the drawer body independently of the page. Caught by
-                  202-07's own a11y capture against this exact div. Unlike the
-                  already-accepted instances of this rule in ACCEPTED-VIOLATIONS.md,
-                  which are the app-wide shadcn Table wrapper (components/ui/table.tsx:9)
-                  and need a cross-component focus-order pass, this container is
-                  single-site and owned here, so it is FIXED rather than ledgered. */}
+                  202-07's own a11y capture against this exact div. The shared shadcn
+                  Table wrapper (components/ui/table.tsx:9) now handles this rule
+                  itself via conditional tabIndex/role, applied only while it overflows
+                  (Phase 219, KBD-01) — no cross-component pass needed there anymore.
+                  This drawer div keeps its own unconditional tabIndex={0} because it
+                  is always a scroll container, not a table wrapper. */}
               <div tabIndex={0} className="mt-4 flex-1 overflow-y-auto min-h-0 space-y-4 text-sm">
                 <div className="flex gap-2 items-center">
                   <Badge className={`${SEVERITY_STYLES[selectedFinding.severity] ?? ""} text-xs`}>

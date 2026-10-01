@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-30 (Phase 218 close — Contrast Violations Design Calls & Closing
+**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
+cases, all five PASS — UAT-219-05, the D-10 operator keyboard spot-check, flipped from SKIP
+(DEFERRED) to PASS on the operator's own confirmation ("keyboard pass") at verification. The gating proof is
+UAT-219-04's CI-only axe round-trip withdrawing `scrollable-region-focusable` from all 4
+`data-at-rest` baselines and confirmed stable on a second, fully green dispatch; UAT-219-01 covers
+the mutation-proven unit test for `table.tsx`'s conditional region; UAT-219-02 covers the app-wide
+27-mount consumer re-derivation and 14 `regionLabel` names; UAT-219-03 covers the keyboard-only
+Playwright walkthrough (CI-EXEMPT, non-gating Browser E2E tier). No version bump — v5.26 is still
+in progress and 5.25.0 remains the shipped version. Prior: 2026-09-30 (Phase 218 close — Contrast
+Violations Design Calls & Closing
 Assertion, fourth and closing phase of v5.26's contrast-debt drain. Series 218 added: 8 cases,
 **all eight PASS** — the individual GAP sites recorded at the 218-03 checkpoint (sensors
 quantum-safe badge; trends destructive badge; executive "Failed" badge; roadmap closed/resurfaced
@@ -31007,3 +31016,198 @@ a filed todo path; the 5th row, "Runtime `style=` backgrounds in general", has n
 and is excluded from the count per the plan's "deduplicated by todo path" instruction) against
 218-05's 5 newly-filed Phase 220 todos (all distinct paths, no overlap) — 4 + 5 = 9, confirmed by
 listing `.planning/todos/pending/` directly rather than trusting either SUMMARY's prose count.
+
+---
+
+## Series 219: Keyboard Access (Phase 219 — v5.26)
+
+**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Five cases, all five PASS. UAT-219-01 covers the mutation-proven unit test for the conditional
+`tabIndex`/`role`/`aria-label` region in `components/ui/table.tsx` (219-01); UAT-219-02 covers the
+app-wide consumer re-derivation (27 `<Table>` mounts across 17 files) and the 14 distinct
+`regionLabel` names wired on the 4 multi-table pages (219-01); UAT-219-03 covers the keyboard-only
+Playwright walkthrough and its paired no-focus control, carrying the same `CI-EXEMPT:` declaration
+UAT-7-01 established — it executes for real in the non-gating Browser E2E job and skips only in
+Linux Full Suite (219-02); UAT-219-04 covers the gating proof — the CI-only axe baseline
+round-trip that withdrew `scrollable-region-focusable` from all 4 `data-at-rest` baselines and from
+`ACCEPTED-VIOLATIONS.md`, confirmed stable on a second, fully green dispatch (219-03). UAT-219-05,
+the D-10 operator keyboard spot-check, was first written SKIP (DEFERRED) and flipped to PASS on
+2026-09-30 only after the operator performed it live and confirmed in their own words ("keyboard
+pass") — on `/findings` at a narrowed width, not the `/data-at-rest` route the staged steps named;
+see the case's Notes.)
+
+### UAT-219-01: Conditional Keyboard-Focusable Table Region — Mutation-Proven
+
+**ID:** UAT-219-01
+**Title:** The shared `Table` wrapper gains `tabIndex=0` + `role="region"` + a named `aria-label`
+only while it actually overflows, and the guard is proven to catch five distinct regressions
+**Maps to:** KBD-01
+
+**What to test:** `components/ui/table.tsx`'s wrapper measures real overflow (not a static class)
+and applies all three attributes together, or none at all — never a partial state — and a
+`regionLabel` prop is forwarded to the accessible name without leaking onto the `<table>` element
+itself.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/__tests__/table-region.test.tsx
+```
+
+**Pass Criteria:** all 9 cases pass: horizontal overflow, vertical overflow, no-overflow (no
+`tabindex`/`role`/`aria-label` attribute present at all, not `tabIndex={-1}`), `regionLabel`
+forwarding, `regionLabel` never spread onto `<table>`, re-measure on children change, re-measure on
+`ResizeObserver` firing, the `ring-2` focus-visible class set, and ref forwarding.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** Re-run live at this case's write time: `npx vitest run
+src/components/__tests__/table-region.test.tsx` — **9 passed (9)**. `219-01-SUMMARY.md` records
+the RED capture before implementation (`7 failed | 2 passed (9)`) and five mutation RED captures,
+each reverted with a confirmed clean tree: M1 (overflow hard-coded false) `6 failed | 3 passed`;
+M2 (overflow hard-coded true) `3 failed | 6 passed`; M3 (dropped `role="region"`) `5 failed | 4
+passed`; M4 (ignored `regionLabel`) `2 failed | 7 passed`; M5 (removed the synchronous `measure()`
+call, leaving only `ResizeObserver` wiring) `5 failed | 4 passed`.
+
+### UAT-219-02: App-Wide By Construction — Consumer Count And Distinct Region Names
+
+**ID:** UAT-219-02
+**Title:** Every `<Table>` mount in the dashboard inherits the fix by construction, and the 4
+multi-table pages carry distinct, human-readable region names
+**Maps to:** KBD-01
+
+**What to test:** The fix lives in one shared component, so no per-consumer edit is required for
+the base behavior; only pages with more than one table need an explicit `regionLabel` to
+disambiguate them for screen-reader users.
+
+**Steps:**
+```
+grep -rn "<Table\b" src/dashboard/src --include="*.tsx" | grep -v "TableHead\|TableBody\|TableRow\|TableCell\|TableFooter\|TableCaption\|__tests__" | wc -l
+grep -rn "regionLabel=" src/dashboard/src --include="*.tsx" | wc -l
+grep -rn "regionLabel=" src/dashboard/src --include="*.tsx" | cut -d: -f1 | sort -u | wc -l
+```
+
+**Pass Criteria:** 27 `<Table>` mounts across 17 files (snapshot, a mismatch would be a finding,
+not a failure); 14 `regionLabel=` occurrences across exactly 4 files (the multi-table pages:
+`data-at-rest.tsx`, `compare.tsx`, `motion.tsx`, `cbom.tsx`); the other 13 single-table files use
+the generic default label, applied with no per-file edit.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** Re-derived live at this case's write time (not copied from a SUMMARY): 27 matches
+across 17 files (byte-identical consumer list to `219-01-SUMMARY.md`'s and `219-CONTEXT.md`'s
+snapshot); 14 `regionLabel=` occurrences; 4 distinct files. Per-file counts match
+`219-01-SUMMARY.md`: `data-at-rest.tsx` 4, `compare.tsx` 6, `motion.tsx` 2 (one static, one
+template-literal per broker family), `cbom.tsx` 2.
+
+### UAT-219-03: Keyboard-Only Walkthrough — Tab, Arrow Keys, No Mouse (CI-EXEMPT)
+
+**ID:** UAT-219-03
+**Title:** A real-Chromium Playwright test Tabs into a table region using only keyboard input,
+scrolls it with arrow keys, and a paired control proves the scroll is caused by focus, not ambient
+page key handling
+**Maps to:** KBD-01
+
+**What to test:** `tests/test_browser_e2e.py::test_kbd_01_keyboard_only_table_region_scroll` and
+its control `test_kbd_01_keyboard_control_unfocused_region_does_not_scroll` exercise the plan-01
+fix end-to-end in a real browser, with no `click()` call anywhere in either test.
+
+**Steps:**
+```
+.venv/bin/pytest tests/test_browser_e2e.py -k keyboard -m "" -q
+```
+
+**Pass Criteria:** `2 passed`; the main test reaches `[role="region"][tabindex="0"]` via
+`page.keyboard.press("Tab")` alone, asserts the precondition that the region truly overflows
+before pressing any key, drives ArrowRight/ArrowLeft to scroll extremes and back to 0; the control
+never presses Tab and asserts `scrollLeft` stays exactly 0 after 5 ArrowRight presses.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** `219-02-SUMMARY.md` records `2 passed` on 5 consecutive local runs, plus confirmation
+via CI run `36795678760` (python-ci.yml, Browser E2E job): the 3-file collection
+(`tests/test_pdf_decomposition_render.py tests/test_browser_e2e.py
+tests/test_browser_e2e_skip_contract.py`) reported `12 passed, 0 skipped, 0 failed`, matching a
+local `--collect-only` count of 12, confirming both `test_kbd_01_*` nodes executed and passed
+rather than being silently skipped by the harness's known transient-launch case. Mutation evidence
+(219-02 Task 2): M1 (`overflows` hard-coded `false`) and M2 (`tabIndex` dropped, `role`/
+`aria-label` kept) both failed identically at the shared precondition (`2 failed` each, confirmed
+via `TimeoutError` on `[role="region"][tabindex="0"]`), each applied against a rebuilt bundle
+(`npm run build`) and reverted with a confirmed byte-identical tree. — CI-EXEMPT: this node DOES
+execute in CI, for real, in the non-gating Browser E2E job added by Phase 207 D-01/D-02, which
+installs Chromium; it skips only in Linux Full Suite, where Chromium is deliberately absent so the
+browser flake class cannot redden the check every PR must pass. That is the same, stronger
+position UAT-7-01 established, not the two earliest CI-EXEMPT precedents describing nodes CI
+genuinely never executes.
+
+### UAT-219-04: Accepted Violation Withdrawn, Not Renewed — Gating Proof
+
+**ID:** UAT-219-04
+**Title:** The `scrollable-region-focusable` accepted violation and its transitional `countRange`
+are gone from every committed baseline and from the ledger, confirmed stable on a second, fully
+green CI dispatch
+**Maps to:** KBD-01
+
+**What to test:** This is the gating proof for KBD-01 (ROADMAP criterion 3) — a CI-generated axe
+sweep, never a local or hand-patched run, showing the rule no longer fires anywhere it previously
+did, with no new rule introduced in its place.
+
+**Steps:**
+```
+grep -l scrollable-region-focusable src/dashboard/tests/a11y/baseline-*.json | wc -l
+grep -c scrollable-region-focusable src/dashboard/tests/a11y/ACCEPTED-VIOLATIONS.md
+grep -l countRange src/dashboard/tests/a11y/baseline-*.json | wc -l
+```
+
+**Pass Criteria:** all three commands return `0`; a second CI dispatch after the withdrawal
+commit reports the Axe + Console Gate green on all 4 sweep steps (dark/light/empty/loading); the
+Linux Full Suite failing-node set on the branch is identical to `main`'s (the 2 permanent,
+withdrawn-MinIO-image chaos-lab Docker nodes, not an environmental or new failure).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** automated
+**Notes:** Re-run live at this case's write time: all three greps return `0`.
+`219-03-SUMMARY.md` records the full CI-only round-trip: first dispatch (run `36795176372`,
+head `1071b372`) classified exactly 4 changed rows before copying artifact bytes, all REMOVED
+(`scrollable-region-focusable` 2 -> none on all 4 `data-at-rest` variants, including the
+empty/loading pair a prior todo tracked as a divergence — D-09 resolved by disappearance, moved to
+`.planning/todos/completed/`), zero INCREASE/NEW-ENTRY/COUNTRANGE-CHANGE/MISSING-FILE/NEW-FILE,
+matching the plan's own prediction with 0 disagreements. Second dispatch (run `36795657850`, head
+`ac042e10`): Axe + Console Gate green 4/4 steps. `python-ci.yml` dispatch (run `36795678760`, same
+head): Linux Full Suite failing-node set — `test_profile_re_up_is_idempotent[multihost]` and
+`[storage-s3]`, 5210 passed — identical to main's reference run `36791593817` (same 2 nodes, same
+5210 passed), confirming no regression traveled with this phase's changes.
+
+### UAT-219-05: Operator Keyboard Spot-Check (D-10)
+
+**ID:** UAT-219-05
+**Title:** A short, literal keyboard walkthrough — Tab into a table region, scroll with arrow
+keys, confirm a non-overflowing table adds no Tab stop — performed and confirmed in the operator's
+own words
+**Maps to:** KBD-01
+
+**What to test:** D-10's corroborating, non-blocking spot-check: the automated E2E node
+(UAT-219-03) is the evidence of record, and this case exists only to record the operator's own
+direct confirmation at verification time.
+
+**Steps:** see `.planning/phases/219-keyboard-access/219-VALIDATION.md`'s Manual-Only table for
+the literal numbered steps (open a narrowed browser window on `/data-at-rest`, Tab to a table
+region, ArrowRight to scroll, Home to return, widen and reload to confirm the table drops out of
+the Tab order).
+
+**Pass Criteria:** the operator performs the steps and confirms, in their own words, that keyboard
+focus reaches the table and arrow keys scroll it with no mouse input.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-09-30  **Tester:** operator (live, keyboard only)
+**Notes:** Operator verbatim: "keyboard pass". Performed against `quirk serve` on
+`./quirk-output/quirk.db`, serving branch `phase-219-keyboard-access` at `c0e0d1f4` (statics
+rebuilt with the WR-01 blank-label fix). **Route deviation, recorded rather than smoothed over:**
+the steps staged in `219-VALIDATION.md` name `/data-at-rest`, but the walkthrough the operator was
+actually given — and performed — used `/findings` in a browser narrowed to roughly phone width
+(about 600px), the same route the automated E2E node uses (`seed_dashboard_db` seeds no
+data-at-rest rows, 219-02). Steps given: hard-reload, one address-bar click then keyboard only,
+Tab until the table region shows the teal ring, ArrowLeft/ArrowRight (and Down/PageDown) scroll
+it while the page stays put; widening so the table fits (Tab skips it) and the light-theme ring
+were offered as optional. The operator's two-word confirmation does not itemise which optional
+steps were exercised, so only the core Tab-to-region + arrow-scroll claim is attested here.
+
+---

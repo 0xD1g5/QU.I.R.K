@@ -42,6 +42,19 @@ COV-10 records at ``:221-223``.
 1440x900 is already above the 1024px breakpoint, and ``UAT-7-23`` needs a *transition across* the
 breakpoint, which only a per-test ``page.set_viewport_size()`` can express. A ``viewport=``
 constructor parameter would fix one viewport and could not express a transition.
+
+Phase 219 / KBD-01 note (added by plan 219-02): ``test_kbd_01_keyboard_only_table_region_scroll``
+and its paired control ``test_kbd_01_keyboard_control_unfocused_region_does_not_scroll`` are D-07's
+keyboard-only walkthrough of the plan-01 conditional table-region wrapper
+(``src/dashboard/src/components/ui/table.tsx``). This tier is **non-gating**
+(``Browser E2E`` job, ``continue-on-error: true``, ``.github/workflows/python-ci.yml:442``), so
+these two nodes **corroborate** real-browser keyboard operability rather than gate on it — the
+gating proof is plan 03's axe ``scrollable-region-focusable`` rule withdrawal (D-08). They target
+``/findings``, not ``/data-at-rest``: ``seed_dashboard_db`` seeds no data-at-rest rows at all (by
+design, see above) and is deliberately not extended, so ``/data-at-rest`` renders no tables under
+this seed and cannot host a deterministic overflow. They land in this module, not a new one, for
+the same D-02 reason as every other case here: the ``Browser E2E`` CI job selects tests by
+**explicit file path**.
 """
 from __future__ import annotations
 
@@ -1028,4 +1041,228 @@ def test_uat_7_29_control_no_mousedown(dashboard_origin):
         assert before["edge"] == after["edge"], (
             f"UAT-7-29 control: expected NO sourceEndpoint() change for edge {edge_id!r} without "
             f"a mouse-button press; before={before['edge']!r} after={after['edge']!r}."
+        )
+
+
+# KBD-01 (D-07) — keyboard-only table-region walkthrough + paired control. Module-level constants
+# shared by both nodes so the control cannot drift from the main node's route/viewport (per the
+# plan's explicit instruction). Chosen via local measurement: /findings renders an 8-column table
+# (findings.tsx:122-187: Severity, Host, Port, Title, Protocol, Quantum Risk, Source, Storyline)
+# over 2 seeded hosts, which overflows reliably at 600x700 (below the 1024px breakpoint, so the
+# sidebar is collapsed too) — measured locally across 5 consecutive runs, all 5 landing on
+# scrollWidth=668 / clientWidth=518, a stable 150px margin far wider than any plausible layout
+# jitter.
+_KBD_01_ROUTE = "/findings"
+_KBD_01_VIEWPORT = {"width": 600, "height": 700}
+_KBD_01_REGION_SELECTOR = '[role="region"][tabindex="0"]'
+
+
+def _kbd_01_region_precondition(page):
+    """Assert the overflow + role/tabindex precondition on the first table region.
+
+    Returns the region's `aria-label` and overflow dimensions so both KBD-01 nodes verify an
+    identical, independently-checked starting point (T-219-04 — a vacuous pass is the threat this
+    guards against: no silent "the region never rendered" false green).
+    """
+    page.wait_for_selector(f"{_KBD_01_REGION_SELECTOR} table tbody tr", timeout=15_000)
+    region = page.locator(_KBD_01_REGION_SELECTOR).first
+    dims = region.evaluate(
+        "(el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth,"
+        " scrollHeight: el.scrollHeight, clientHeight: el.clientHeight,"
+        " ariaLabel: el.getAttribute('aria-label') })"
+    )
+    assert dims["scrollWidth"] > dims["clientWidth"], (
+        f"KBD-01 precondition: expected the table region to overflow horizontally at "
+        f"{_KBD_01_VIEWPORT!r} on {_KBD_01_ROUTE!r}; scrollWidth={dims['scrollWidth']!r} "
+        f"clientWidth={dims['clientWidth']!r}. The region never overflowed — narrow the viewport "
+        "or pick another route."
+    )
+    return dims
+
+
+def _kbd_01_press_until_stable(page, key, *, max_presses=60, settle_presses=3):
+    """Press ``key`` repeatedly, reading ``scrollLeft`` after each, until it stops changing.
+
+    Returns the final, stable ``scrollLeft``. Bounded at ``max_presses`` so a genuinely broken key
+    binding fails fast instead of hanging.
+    """
+    prev = page.evaluate("(sel) => document.querySelector(sel).scrollLeft", _KBD_01_REGION_SELECTOR)
+    stable_streak = 0
+    for _ in range(max_presses):
+        page.keyboard.press(key)
+        page.wait_for_timeout(50)
+        current = page.evaluate(
+            "(sel) => document.querySelector(sel).scrollLeft", _KBD_01_REGION_SELECTOR
+        )
+        if current == prev:
+            stable_streak += 1
+            if stable_streak >= settle_presses:
+                break
+        else:
+            stable_streak = 0
+        prev = current
+    return prev
+
+
+def test_kbd_01_keyboard_only_table_region_scroll(dashboard_origin):
+    """KBD-01 / D-07 — Tab-only navigation reaches the table region and arrow keys scroll it.
+
+    Reaches the region using ONLY ``page.keyboard.press("Tab")`` from page load — no click, no
+    mouse, no ``.focus()`` call anywhere in this test. ``page.evaluate``/``page.wait_for_function``
+    are used only to READ state (``document.activeElement``, scroll offsets, dimensions), never to
+    mutate focus or scroll.
+
+    Scrolling is native (D-04): there is no app-side key handler anywhere in this codebase for
+    these keys — the browser's own default keyboard behaviour on a scrollable, focused element does
+    the work. The plan-01 wrapper's only JS behaviour is the conditional ``tabIndex``/``role``
+    attribute toggle on mount/resize; it registers no ``onKeyDown``/``onKeyUp`` handler at all
+    (confirmed in 219-01-SUMMARY.md's acceptance-criteria greps).
+    """
+    with chromium_page() as page:
+        # Mount at the harness's default 1440x900 viewport FIRST (same idiom as UAT-7-23): the
+        # D-04 mount guard asserts the full-width sidebar wordmark, which is only rendered above
+        # the 1024px breakpoint. Narrowing happens only after the guard passes.
+        page.goto(dashboard_origin + _KBD_01_ROUTE)
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+        assert_spa_mounted(page)
+        page.set_viewport_size(_KBD_01_VIEWPORT)
+
+        dims = _kbd_01_region_precondition(page)
+
+        # Tab loop: bounded at 80 presses, printing the focused-element sequence on failure so a
+        # regression shows WHERE focus went instead of just "it never arrived".
+        focused_sequence = []
+        landed = False
+        for _ in range(80):
+            page.keyboard.press("Tab")
+            descriptor = page.evaluate(
+                "() => { const a = document.activeElement; return a ? "
+                "(a.getAttribute('role') + '|' + a.getAttribute('tabindex')) : null }"
+            )
+            focused_sequence.append(descriptor)
+            if descriptor == "region|0":
+                landed = True
+                break
+        if not landed:
+            raise AssertionError(
+                "KBD-01: Tab never reached a region|0 element within 80 presses. Focused-element "
+                f"sequence: {focused_sequence!r}"
+            )
+
+        focused_label = page.evaluate("() => document.activeElement.getAttribute('aria-label')")
+        assert focused_label == dims["ariaLabel"], (
+            "KBD-01: Tab landed on a region|0 element, but it is not the precondition-checked "
+            f"table region; focused aria-label={focused_label!r}, expected {dims['ariaLabel']!r}."
+        )
+
+        scroll_left_initial = page.evaluate(
+            "(sel) => document.querySelector(sel).scrollLeft", _KBD_01_REGION_SELECTOR
+        )
+        assert scroll_left_initial == 0, (
+            f"KBD-01: expected the region's scrollLeft to start at 0, got {scroll_left_initial!r}."
+        )
+
+        for _ in range(5):
+            page.keyboard.press("ArrowRight")
+        page.wait_for_function(
+            "(sel) => document.querySelector(sel).scrollLeft > 0",
+            arg=_KBD_01_REGION_SELECTOR,
+            timeout=2000,
+        )
+        scroll_left_after_arrows = page.evaluate(
+            "(sel) => document.querySelector(sel).scrollLeft", _KBD_01_REGION_SELECTOR
+        )
+        assert scroll_left_after_arrows > 0, (
+            "KBD-01: expected ArrowRight x5 on the focused region to increase scrollLeft above 0; "
+            f"got {scroll_left_after_arrows!r}."
+        )
+
+        # Deviation from the plan's literal End/Home wording (recorded in SUMMARY): live
+        # measurement in Chromium showed End/Home are no-ops on a region that overflows ONLY
+        # horizontally -- those keys target the vertical scroll axis by default and this wrapper
+        # has no vertical overflow to act on. Repeated ArrowRight/ArrowLeft are the keys this
+        # specific region actually responds to for reaching its scroll extremes, so they replace
+        # End/Home here; the underlying must-have (reach the far end, then return to 0, via native
+        # key handling only) is unchanged.
+        scroll_left_at_end = _kbd_01_press_until_stable(page, "ArrowRight")
+        assert scroll_left_at_end >= scroll_left_after_arrows, (
+            "KBD-01: expected continued ArrowRight presses to leave scrollLeft at or beyond the "
+            f"post-5-press value; after_5={scroll_left_after_arrows!r} "
+            f"at_end={scroll_left_at_end!r}."
+        )
+
+        scroll_left_after_home = _kbd_01_press_until_stable(page, "ArrowLeft")
+        assert scroll_left_after_home == 0, (
+            "KBD-01: expected repeated ArrowLeft presses to return scrollLeft to 0, got "
+            f"{scroll_left_after_home!r}."
+        )
+
+        if dims["scrollHeight"] > dims["clientHeight"]:
+            scroll_top_before = page.evaluate(
+                "(sel) => document.querySelector(sel).scrollTop", _KBD_01_REGION_SELECTOR
+            )
+            page.keyboard.press("PageDown")
+            page.wait_for_function(
+                "(args) => document.querySelector(args.sel).scrollTop > args.floor",
+                arg={"sel": _KBD_01_REGION_SELECTOR, "floor": scroll_top_before},
+                timeout=2000,
+            )
+            scroll_top_after = page.evaluate(
+                "(sel) => document.querySelector(sel).scrollTop", _KBD_01_REGION_SELECTOR
+            )
+            assert scroll_top_after > scroll_top_before, (
+                "KBD-01: region also overflows vertically; expected PageDown to increase "
+                f"scrollTop above {scroll_top_before!r}, got {scroll_top_after!r}."
+            )
+        # else: this wrapper has no height cap of its own, so any vertical scroll happens at the
+        # page level rather than inside the region — not asserted here, per the plan's spec.
+
+
+def test_kbd_01_keyboard_control_unfocused_region_does_not_scroll(dashboard_origin):
+    """Red-proof control for KBD-01 (T-219-04): ArrowRight without focusing the region is a no-op.
+
+    Same route, same viewport, same precondition as the main node, deliberately WITHOUT ever
+    pressing Tab — focus stays on ``<body>``. Proves the main test's scroll is caused by the region
+    itself having focus, not by some ambient page-level key handling.
+    """
+    with chromium_page() as page:
+        # Mount at the harness's default 1440x900 viewport FIRST (same idiom as UAT-7-23): the
+        # D-04 mount guard asserts the full-width sidebar wordmark, which is only rendered above
+        # the 1024px breakpoint. Narrowing happens only after the guard passes.
+        page.goto(dashboard_origin + _KBD_01_ROUTE)
+        with diagnosing_mount_failure(page, guard=assert_spa_mounted):
+            page.locator("main h1").first.wait_for(state="visible", timeout=15_000)
+        assert_spa_mounted(page)
+        page.set_viewport_size(_KBD_01_VIEWPORT)
+
+        _kbd_01_region_precondition(page)
+
+        active_tag = page.evaluate("() => document.activeElement.tagName")
+        assert active_tag == "BODY", (
+            f"KBD-01 control: expected focus to remain on <body> before any key press, got "
+            f"<{active_tag.lower()}>."
+        )
+
+        scroll_left_before = page.evaluate(
+            "(sel) => document.querySelector(sel).scrollLeft", _KBD_01_REGION_SELECTOR
+        )
+        assert scroll_left_before == 0, (
+            f"KBD-01 control: expected the region's scrollLeft to start at 0, got "
+            f"{scroll_left_before!r}."
+        )
+
+        for _ in range(5):
+            page.keyboard.press("ArrowRight")
+        # No wait_for_function here on purpose: proving a value STAYS put cannot be expressed as
+        # "wait until a condition becomes true". A short fixed settle is the correct shape for a
+        # negative assertion.
+        page.wait_for_timeout(300)
+
+        scroll_left_after = page.evaluate(
+            "(sel) => document.querySelector(sel).scrollLeft", _KBD_01_REGION_SELECTOR
+        )
+        assert scroll_left_after == 0, (
+            "KBD-01 control: expected ArrowRight x5 to leave scrollLeft at exactly 0 when the "
+            f"region is not focused; got {scroll_left_after!r}."
         )
