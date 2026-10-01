@@ -572,11 +572,15 @@ def _run_pytest_nodes(node_ids) -> tuple[int, str]:
 # ---------------------------------------------------------------------------
 # D-05: vitest execution dispatcher + JSON-reporter summary parser.
 #
-# The dashboard's Node toolchain is NOT guaranteed to be present -- the
-# `Linux Full Suite` CI job (.github/workflows/python-ci.yml) that runs
-# `pytest -q -m ""` never installs it. VITEST_TOOLCHAIN_AVAILABLE gates the
-# slow vitest tests below with an honest skip (VITEST_SKIP_REASON) rather
-# than faking a pass when npm or src/dashboard/node_modules is absent.
+# 220-01 correction: the Linux Full Suite CI job (.github/workflows/
+# python-ci.yml) HAS installed the dashboard's Node toolchain since Phase 205
+# D-04 (Setup Node + `npm ci` in src/dashboard, before `pytest -q -m ""`
+# runs) -- VITEST_TOOLCHAIN_AVAILABLE is therefore True in that job and this
+# leg executes for real there. A skip here reflects only a LOCAL toolchain
+# gap (no npm on PATH, or `npm ci` not yet run in src/dashboard/), not a CI
+# job that omits Node. VITEST_TOOLCHAIN_AVAILABLE gates the slow vitest tests
+# below with that honest, checkable skip (VITEST_SKIP_REASON) rather than
+# faking a pass when npm or src/dashboard/node_modules is absent.
 # ---------------------------------------------------------------------------
 
 DASHBOARD_NODE_MODULES = DASHBOARD_DIR / "node_modules"
@@ -585,10 +589,11 @@ VITEST_TOOLCHAIN_AVAILABLE = NPM_PATH is not None and DASHBOARD_NODE_MODULES.is_
 VITEST_SKIP_REASON = (
     "vitest toolchain unavailable in this environment (npm on PATH: "
     f"{NPM_PATH is not None}, src/dashboard/node_modules present: "
-    f"{DASHBOARD_NODE_MODULES.is_dir()}) -- the Linux Full Suite CI job does "
-    "not install the dashboard's Node toolchain, so this leg is honestly "
-    "skipped there rather than faked. Run `npm ci` in src/dashboard/ to "
-    "exercise it locally."
+    f"{DASHBOARD_NODE_MODULES.is_dir()}) -- the Linux Full Suite CI job DOES "
+    "install the dashboard's Node toolchain (Phase 205 D-04: Setup Node + "
+    "`npm ci` in src/dashboard before `pytest -q -m \"\"`), so a skip here "
+    "reflects a local toolchain gap only, not a CI omission. Run `npm ci` "
+    "in src/dashboard/ to exercise it locally."
 )
 
 _JS_REGEX_SPECIAL_RE = re.compile(r"[.*+?^${}()|[\]\\]")
@@ -674,7 +679,13 @@ def _vitest_assertion_lines(data: dict, cited_names=None) -> list[str]:
 
     205-06: when ``cited_names`` is given, restricted to cited tests. The
     unrestricted form listed every `-t`-filtered sibling as "skipped: ...",
-    burying the real signal under 15 lines of irrelevance in the live case."""
+    burying the real signal under 15 lines of irrelevance in the live case.
+
+    220-01: each non-passed line now also carries its `duration` (ms) and the
+    first 600 characters of each `failureMessages` entry (joined with " | ",
+    newlines flattened), so a batch failure explains itself without a second
+    local run. The "status: fullName" prefix is unchanged so existing readers
+    (and existing greps) still match."""
     wanted = None if cited_names is None else set(cited_names)
     lines = []
     for tr in data.get("testResults", []):
@@ -682,7 +693,15 @@ def _vitest_assertion_lines(data: dict, cited_names=None) -> list[str]:
             if wanted is not None and a.get("title") not in wanted:
                 continue
             if a.get("status") != "passed":
-                lines.append(f"{a.get('status')}: {a.get('fullName')}")
+                duration = a.get("duration")
+                failure_messages = a.get("failureMessages") or []
+                msg_part = " | ".join(
+                    str(m)[:600].replace("\n", " ") for m in failure_messages
+                )
+                line = f"{a.get('status')}: {a.get('fullName')} (duration={duration}ms)"
+                if msg_part:
+                    line += f" failureMessages={msg_part}"
+                lines.append(line)
     return lines
 
 
@@ -745,6 +764,52 @@ def _run_vitest_nodes(
             f"\n[205-06] cited={summary} "
             f"file-level={file_counts} (file-level skipped includes -t-filtered siblings)"
         )
+        # 220-01: diagnostic-only census -- warning class counts across
+        # stdout+stderr, the slowest cited assertion, and per-file wall time
+        # for any file whose cited assertions did not all pass. No new
+        # assertions are added here; this exists so a future failure
+        # explains itself without a second local run.
+        warn_act = combined.count("not wrapped in act(")
+        warn_unhandled = combined.count("Unhandled Rejection") + combined.count(
+            "unhandledRejection"
+        )
+        warn_econnrefused = combined.count("ECONNREFUSED")
+        warn_console_error = combined.count("console.error")
+        cited_set = set(cited_names)
+        slowest_title = None
+        slowest_ms = -1
+        file_all_passed: dict[str, bool] = {}
+        for tr in data.get("testResults", []):
+            file_name = tr.get("name")
+            all_passed = True
+            for a in tr.get("assertionResults", []):
+                title = a.get("title")
+                if title not in cited_set:
+                    continue
+                dur = a.get("duration") or 0
+                if dur > slowest_ms:
+                    slowest_ms = dur
+                    slowest_title = a.get("fullName") or title
+                if a.get("status") != "passed":
+                    all_passed = False
+            if file_name is not None:
+                file_all_passed[file_name] = file_all_passed.get(file_name, True) and all_passed
+        combined += (
+            f"\n[220-01] warnings act={warn_act} unhandled={warn_unhandled} "
+            f"econnrefused={warn_econnrefused} console_error={warn_console_error} "
+            f"slowest={slowest_title}:{slowest_ms}"
+        )
+        for tr in data.get("testResults", []):
+            file_name = tr.get("name")
+            if file_name in file_all_passed and not file_all_passed[file_name]:
+                start = tr.get("startTime")
+                end = tr.get("endTime")
+                wall = (
+                    end - start
+                    if isinstance(start, (int, float)) and isinstance(end, (int, float))
+                    else None
+                )
+                combined += f"\n[220-01] file_wall_time={file_name}:{wall}ms"
         return summary, combined
     finally:
         out_path.unlink(missing_ok=True)
@@ -1667,6 +1732,16 @@ def test_vitest_substitute_nodes_pass(uat_series_lines):
         for file_part, name in (parse_vitest_ref(r) for r in refs)
     ]
     summary, output = _run_vitest_nodes(pairs)
+    # 220-01: print the self-diagnosing census lines unconditionally (visible
+    # locally with `-rP`) so a passing run still shows the warning census --
+    # the next occurrence of a failure diagnoses itself from CI output alone.
+    diag_lines = [
+        line
+        for line in output.splitlines()
+        if line.startswith("[205-06]") or line.startswith("[220-01]")
+    ]
+    if diag_lines:
+        print("\n".join(diag_lines[-2:]))
     assert summary["failed"] == 0, f"vitest substitute node(s) failed:\n{output[-4000:]}"
     assert summary["skipped"] == 0, (
         "vitest substitute node(s) skipped -- a skip is NOT proof of coverage; pick a "
