@@ -61,7 +61,6 @@ const UNFIXTURED: Record<string, string> = {
   "/api/reports/latest": "executive.tsx report download link; requested on click, not on page load",
   "/api/reports/latest/manifest": "executive.tsx requests it on load and no handler serves it under the harness (not verified which branch renders); candidate for 221-06 fixturing",
   "/api/schedules": "useSchedules for /schedules, which is not a swept route in routes.json (un-swept page)",
-  "/api/sensor/registry": "useSensorRegistry for /sensors, which is not a swept route in routes.json (un-swept page)",
 }
 
 const TARGETS = [...enumerateApiTargets()].sort()
@@ -83,6 +82,24 @@ describe("a11y fixture table covers every /api/ fetch target (D-14, 221 D-06)", 
   it.each(Object.keys(UNFIXTURED))("UNFIXTURED key %s is still fetched and still unhandled", (key) => {
     expect(TARGETS.includes(key), `UNFIXTURED lists "${key}" but no source fetches it any more`).toBe(true)
     expect(covered(key), `UNFIXTURED lists "${key}" but a FIXTURE_HANDLERS entry now covers it`).toBe(false)
+  })
+
+  it("fixture-scans.json holds exactly one ScanSession and fixture-sensor-registry.json one row per status (221-06)", () => {
+    const scans = JSON.parse(readFileSync(path.resolve(__dirname, "fixture-scans.json"), "utf-8"))
+    expect(Array.isArray(scans)).toBe(true)
+    // exactly one keeps ScanSelector (sessions.length <= 1) hidden on every route
+    expect(scans.length).toBe(1)
+    for (const k of ["scan_id", "scanned_at", "total_endpoints", "score", "profile", "calibration", "target", "finding_counts", "rating"]) {
+      expect(k in scans[0], `fixture-scans.json session is missing "${k}"`).toBe(true)
+    }
+    const fc = scans[0].finding_counts
+    expect(fc.high).toBeGreaterThan(0)
+    expect(fc.medium).toBeGreaterThan(0)
+    expect(fc.low).toBeGreaterThan(0)
+
+    const reg = JSON.parse(readFileSync(path.resolve(__dirname, "fixture-sensor-registry.json"), "utf-8"))
+    expect(Array.isArray(reg.sensors)).toBe(true)
+    expect(reg.sensors.map((s: { status: string }) => s.status).sort()).toEqual(["current", "stale", "unknown"])
   })
 
   it("FIXTURE_HANDLERS still carries the hardware-drift, vendor-trends, compare and findings handlers", () => {

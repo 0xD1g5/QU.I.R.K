@@ -1,0 +1,25 @@
+{
+  "sensors": [
+    {
+      "sensor_id": "sensor-a11y-current",
+      "segment": "dmz",
+      "sensor_version": "5.25.0",
+      "last_push_at": "2026-09-30T14:00:00Z",
+      "status": "current"
+    },
+    {
+      "sensor_id": "sensor-a11y-stale",
+      "segment": "plant-floor",
+      "sensor_version": "5.24.1",
+      "last_push_at": "2026-09-20T09:30:00Z",
+      "status": "stale"
+    },
+    {
+      "sensor_id": "sensor-a11y-unknown",
+      "segment": "lab",
+      "sensor_version": "5.23.0",
+      "last_push_at": "2026-08-01T08:00:00Z",
+      "status": "unknown"
+    }
+  ]
+}

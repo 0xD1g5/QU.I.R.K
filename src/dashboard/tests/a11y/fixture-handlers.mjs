@@ -25,14 +25,21 @@ export const FIXTURE_HANDLERS = Object.freeze([
   {
     id: "scans",
     match: { prefix: "/api/scans" },
-    default: { json: [] },
+    default: { file: "fixture-scans.json" },
     empty: { body: [] },
     loading: {
       na: "AuthProvider.tsx:77 probes GET /api/scans on mount and renders a blank shell until it resolves (App.tsx AppShell status=loading); holding it would blank EVERY route and no page skeleton could ever be proven (221-05 finding)",
     },
     scope: "chrome",
     scopeReason:
-      "sidebar.tsx:191,194 (ScanSelector/ScanDateBadge) fetch it on every route; 221-06 replaces its default with a session fixture",
+      "sidebar.tsx:191,194 (ScanSelector/ScanDateBadge) fetch it on every route; 221-06: default is fixture-scans.json with exactly ONE session, so ScanSelector (sessions.length <= 1 returns null) stays hidden on every route and only ScanDateBadge's label changes",
+  },
+  {
+    id: "sensor-registry",
+    match: { prefix: "/api/sensor/registry" },
+    default: { file: "fixture-sensor-registry.json" },
+    empty: { body: { sensors: [] } },
+    loading: { hold: true },
   },
   {
     id: "trends",
