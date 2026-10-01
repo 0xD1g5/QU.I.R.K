@@ -27,7 +27,9 @@ export const FIXTURE_HANDLERS = Object.freeze([
     match: { prefix: "/api/scans" },
     default: { json: [] },
     empty: { body: [] },
-    loading: { hold: true },
+    loading: {
+      na: "AuthProvider.tsx:77 probes GET /api/scans on mount and renders a blank shell until it resolves (App.tsx AppShell status=loading); holding it would blank EVERY route and no page skeleton could ever be proven (221-05 finding)",
+    },
     scope: "chrome",
     scopeReason:
       "sidebar.tsx:191,194 (ScanSelector/ScanDateBadge) fetch it on every route; 221-06 replaces its default with a session fixture",

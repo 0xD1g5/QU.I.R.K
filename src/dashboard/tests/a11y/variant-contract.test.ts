@@ -92,6 +92,19 @@ describe("variant-contract (221-01)", () => {
     expect(axe).toBeGreaterThan(-1)
     expect(guard).toBeLessThan(axe)
   })
+
+  it("run-a11y.mjs owns its preview by process group with strictPort (221 D-02)", () => {
+    for (const needle of ["detached: true", "--strictPort", "process.kill(-", "SIGKILL"]) {
+      expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
+    }
+    expect(RUN_A11Y_SOURCE).not.toContain("previewProc.kill('SIGTERM')")
+  })
+
+  it("run-a11y.mjs navigates loading on 'load' and derives endpoints at run time (221 D-06/D-08)", () => {
+    for (const needle of ["waitUntil", "'load'", "matchHandler", "does not declare"]) {
+      expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
+    }
+  })
 })
 
 // 221-03 / D-03: every fixture handler carries an explicit empty AND loading decision.

@@ -48,6 +48,14 @@
  *     longer produces any violation to range. The `countRange` field itself (the opt-in,
  *     per-entry mechanism in `baseline-diff.mjs`'s `compareToBaseline`) remains available for a
  *     future render-dependent entry; no committed baseline currently declares one.
+ *   - 221 D-02 (preview lifecycle): the `npm -> sh -> vite` chain orphans the vite grandchild on
+ *     Linux when only the npm pid is signalled, so every sweep after the first measured sweep
+ *     1's default-variant server (CI run 36881093817: "Preview ready" 15-19 ms after the
+ *     previous sweep's). The preview is therefore spawned detached in its own process group
+ *     and the whole group is killed (SIGTERM, escalating to SIGKILL); `--strictPort` refuses a
+ *     silent port hop; a pre-spawn free-port check, a post-shutdown free-port assertion and the
+ *     /__a11y-variant identity sentinel together make "the server this sweep measured is the
+ *     server it spawned" checkable rather than assumed.
  *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
  *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */
@@ -61,6 +69,7 @@ import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
 import { renderStateViolations, DEFAULT_LOADING_SELECTOR } from './variant-guard.mjs'
+import { matchHandler } from './fixture-handlers.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -170,18 +179,50 @@ if (!(await assertPortFree(PREVIEW_HOST, PREVIEW_PORT))) {
 }
 
 console.log('[a11y] Starting vite preview with VITE_A11Y_FIXTURE=1...')
-const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVIEW_PORT)], {
+const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVIEW_PORT), '--strictPort'], {
   cwd: DASHBOARD_DIR,
-  stdio: 'pipe',
+  stdio: ['ignore', 'pipe', 'pipe'],
   env: previewEnv,
+  detached: true,
 })
 previewProc.stderr.on('data', d => process.stderr.write(d))
 // 221: stdout carries vite's "Port 4173 is in use, trying another one" notice.
 previewProc.stdout.on('data', d => process.stdout.write(d))
 
 // Ensure preview is killed on exit
+// 221 D-02: signal the whole process group (negative pid), not just the npm wrapper.
+// Synchronous so it is safe inside process.on('exit').
 function cleanup() {
-  if (!previewProc.killed) previewProc.kill('SIGTERM')
+  if (previewProc.pid) {
+    try { process.kill(-previewProc.pid, 'SIGTERM') } catch {}
+  }
+}
+
+// 221 D-02: normal-end shutdown that proves the port was actually released.
+async function waitForPortFree(timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (await assertPortFree(PREVIEW_HOST, PREVIEW_PORT)) return true
+    await new Promise(r => setTimeout(r, 100))
+  }
+  return await assertPortFree(PREVIEW_HOST, PREVIEW_PORT)
+}
+async function shutdownPreview() {
+  cleanup()
+  if (!(await waitForPortFree(3_000))) {
+    if (previewProc.pid) {
+      try { process.kill(-previewProc.pid, 'SIGKILL') } catch {}
+    }
+    await waitForPortFree(2_000)
+  }
+  if (!(await assertPortFree(PREVIEW_HOST, PREVIEW_PORT))) {
+    console.error(
+      `[a11y] FAIL: preview server still listening on ${PREVIEW_PORT} after group SIGKILL — next sweep would measure a stale server (221 D-02)`,
+    )
+    exitCode = 1
+  } else {
+    console.log(`[a11y] Preview shut down; port ${PREVIEW_PORT} free`)
+  }
 }
 process.on('exit', cleanup)
 process.on('SIGINT', () => { cleanup(); process.exit(130) })
@@ -232,7 +273,7 @@ try {
 let exitCode = 0
 const summary = []
 
-for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, variantInsensitive, loadingSelector } of ROUTES) {
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, loadingSelector } of ROUTES) {
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
   console.log(`[a11y] Scanning ${slug} [${THEME}] (${url})...`)
 
@@ -256,9 +297,20 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
     if (m.type() === 'warn' || m.type() === 'error') consoleMsgs.push(m.text())
   })
   page.on('pageerror', e => consoleMsgs.push(String(e)))
+  // 221 D-06: record every /api/ request so consumption is derived at run time.
+  const apiRequests = []
+  page.on('request', r => {
+    try {
+      const u = new URL(r.url())
+      if (u.pathname.startsWith('/api/')) apiRequests.push(u.pathname + u.search)
+    } catch {}
+  })
 
+  // 221 D-08: under `loading` the held request never settles, so networkidle2 would time out.
+  // Navigate on 'load', then wait for the skeleton as positive proof of the loading state.
+  const waitUntil = VARIANT === 'loading' ? 'load' : 'networkidle2'
   try {
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 })
+    await page.goto(url, { waitUntil, timeout: 30_000 })
   } catch (err) {
     console.error(`[a11y] ERROR: Navigation to ${url} failed: ${err.message}`)
     exitCode = 1
@@ -304,6 +356,23 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
     if (VARIANT === 'loading') {
       skeleton = !!(await page.waitForSelector(loadingSelector ?? DEFAULT_LOADING_SELECTOR, { timeout: 5_000 }).catch(() => null))
     }
+    // 221 D-06: any honouring, non-chrome handler this page actually requested must be declared.
+    const hitIds = [...new Set(apiRequests.map(u => matchHandler(u)).filter(Boolean)
+      .filter(h => h.scope !== 'chrome' && (h.empty.body !== undefined || h.empty.emptyFrom) && h.loading.hold === true)
+      .map(h => h.id))]
+    const declared = new Set([...Object.keys(variantMarkers), ...Object.keys(unmarkedEndpoints ?? {})])
+    const undeclared = hitIds.filter(id => !declared.has(id))
+    for (const id of undeclared) {
+      console.error(
+        `[a11y] FAIL [${slug}]: page requested honouring endpoint '${id}' that routes.json does not declare — add a marker or an unmarkedEndpoints reason (221 D-06)`,
+      )
+    }
+    if (undeclared.length > 0) {
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
+      await page.close()
+      continue
+    }
     for (const selector of Object.values(variantMarkers)) {
       if (VARIANT === 'default') {
         present[selector] = !!(await page.waitForSelector(selector, { timeout: 5_000 }).catch(() => null))
@@ -328,6 +397,10 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
     }
   } else if (variantInsensitive) {
     console.log(`[a11y] NOTE [${slug}]: variant-insensitive — ${variantInsensitive}`)
+    const hit = [...new Set(apiRequests.map(u => matchHandler(u)).filter(Boolean)
+      .filter(h => h.scope !== 'chrome' && (h.empty.body !== undefined || h.empty.emptyFrom) && h.loading.hold === true)
+      .map(h => h.id))]
+    console.log(`[a11y] NOTE [${slug}]: honouring endpoints hit: ${hit.join(', ') || '(none)'}`)
   }
 
   // Run axe with WCAG 2A/2AA tags
@@ -625,7 +698,7 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
 }
 
 await browser.close()
-cleanup()
+await shutdownPreview()
 
 // 216 D-17: in-process ledger collection is gone. Theme is now a per-process dimension
 // (D-01/D-02), so a single `--update-baselines` invocation can only ever see ONE theme — it
