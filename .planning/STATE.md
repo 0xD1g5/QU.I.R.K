@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T00:59:39.000Z"
-last_activity: 2026-09-30 -- Phase 219 (Keyboard Access, KBD-01) EXECUTED, all 4 plans committed. 219-01 made the shared Table wrapper conditionally keyboard-focusable; 219-02 added a non-gating keyboard-only Browser E2E walkthrough + control; 219-03 withdrew scrollable-region-focusable via the CI-only axe round-trip (run 36795176372 classified, run 36795657850 confirmed green 4/4, Linux Full Suite failing-node set on run 36795678760 identical to main's run 36791593817); 219-04 closed docs, UAT Series 219 (4 PASS / 1 SKIP DEFERRED), vault sync, and VALIDATION. Branch phase-219-keyboard-access pushed, NOT merged. Next -- /gsd-verify-phase 219, then open a PR.
+last_updated: "2026-10-01T01:49:54.000Z"
+last_activity: 2026-09-30 -- Phase 219 (Keyboard Access, KBD-01) VERIFIED passed 3/3 and marked complete BY HAND (no phase.complete). Table wrapper focusable only while overflowing (role=region + name, ring-2); keyboard-only E2E executed in CI; operator spot-check "keyboard pass"; scrollable-region-focusable WITHDRAWN from all baselines + ledger, countRange retired. CI on HEAD 39de6f15 per-step: Dashboard Quality 4/4 green (36800692384); Python CI fails only the 2 MinIO nodes, set identical to main (36800690414). Review 0 Critical / 1 Warning (WR-01 fixed c0e0d1f4) / 2 Info. Branch phase-219-keyboard-access pushed, NOT merged. Next -- merge 219 PR, then Phase 220 (CI Instrument Truth).
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 27
   completed_plans: 27
-  percent: 67
+  percent: 83
 ---
 
 # Project State
