@@ -64,7 +64,7 @@ vi.mock("@/components/RegressionAlertChip", () => ({
 // mocked here the way executive-report-downloads.test.tsx does it, so the
 // fetch settles deterministically and the test awaits that settlement before
 // ending instead of leaving a promise in flight past teardown.
-const fetchApiMock = vi.fn(() =>
+const fetchApiMock = vi.fn().mockImplementation(() =>
   Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
 )
 vi.mock("@/lib/api", () => ({

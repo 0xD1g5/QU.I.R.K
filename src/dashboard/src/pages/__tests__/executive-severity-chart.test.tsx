@@ -127,7 +127,7 @@ vi.mock("@/components/RegressionAlertChip", () => ({
 // fetchApi() on mount. Diagnosed in 220-diag/DIAGNOSIS.md as a
 // dangling-async-update hygiene defect, not a demonstrated cause of the
 // 260927 batch flake. Mocked and awaited the same way.
-const fetchApiMock = vi.fn(() =>
+const fetchApiMock = vi.fn().mockImplementation(() =>
   Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
 )
 vi.mock("@/lib/api", () => ({
