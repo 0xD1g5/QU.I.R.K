@@ -288,7 +288,7 @@ Plans:
   4. HARNESS-03 moves from `[~]` to `[x]` only if criterion 1 holds; otherwise it stays PARTIAL with the remaining gap stated.
 **Plans**: 9 plans (9 waves, fully serialized: one shared working tree, so no two plans build, mutate files, bind port 4173 or assert a clean tree/HEAD at once)
 Plans:
-- [ ] 221-01-PLAN.md — Loud first: variant render-state guard, VARIANTS allowlist, stale-server/identity refusal, 216 W1 probe repair; Linux CI shown RED before any fix (W1)
+- [x] 221-01-PLAN.md — Loud first: variant render-state guard, VARIANTS allowlist, stale-server/identity refusal, 216 W1 probe repair; Linux CI shown RED before any fix (W1)
 - [ ] 221-02-PLAN.md — Measure DS severity-chip family + cytoscape label/fill token pairs (shrink-only ratchets, no colour change) (W2)
 - [ ] 221-03-PLAN.md — Declarative fixture-handler table: explicit empty/loading decision per endpoint, hold-open loading, compare zero-diff + acted-on /compare marker re-probe, run-time fetch coverage (W3)
 - [ ] 221-04-PLAN.md — INT-01: re-point 12 Phase-220-owned todos to new backlog 999.118 / 999.119 + HORIZON rows; operator check of CBOM light system node on port 4180 (W4, checkpoint)
