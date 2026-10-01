@@ -75,7 +75,7 @@ def ring_halves(cx: float, cy: float, r: float) -> list[str]:
     return paths
 
 
-def mark_group(cx, cy, r, w, tail_len, fg, accent, lattice=True, ghost=True):
+def mark_group(cx, cy, r, w, tail_len, fg, accent, lattice=True, ghost=True, dot=None):
     """The Q mark. Returns SVG elements (no wrapper)."""
     out = []
     for d in ring_halves(cx, cy, r):
@@ -90,7 +90,7 @@ def mark_group(cx, cy, r, w, tail_len, fg, accent, lattice=True, ghost=True):
     # lattice: basis b1 = (s, 0), b2 = (shear, s); k = 3 -> 3x3 nodes
     s = r * 0.31
     shear = s * 0.36
-    dot = w * 0.24
+    dot = dot or r / 15            # = w*0.24 on the master mark (r=36, w=10)
     err = (s * 0.36, -s * 0.24)        # the LWE error vector e
     if lattice:
         for j in (-1, 0, 1):
@@ -113,22 +113,31 @@ def mark_group(cx, cy, r, w, tail_len, fg, accent, lattice=True, ghost=True):
 
 # --- wordmark: monoline geometric caps, built on a clipped cap-height band ---
 
-def wordmark(x0, top, cap, w, fg):
-    """'QU.I.R.K.' as stroked paths. Returns (elements, width)."""
+def wordmark(x0, top, cap, w, fg, q=True, round_dots=False):
+    """'QU.I.R.K.' as stroked paths. Returns (elements, width).
+
+    q=False drops the Q so a mark can stand in for it. round_dots draws the
+    periods as lattice points instead of squares.
+    """
     base = top + cap
     h = w / 2
     els, x = [], x0
     gap, dgap = cap * 0.2, cap * 0.11
 
     def dotsq(x):
+        if round_dots:
+            d = w * 1.18
+            els.append(f'<circle cx="{f(x + d / 2)}" cy="{f(base - d / 2)}" r="{f(d / 2)}" fill="{fg}"/>')
+            return x + d
         els.append(f'<rect x="{f(x)}" y="{f(base - w)}" width="{f(w)}" height="{f(w)}" fill="{fg}"/>')
         return x + w
 
     # Q -- same construction as the mark, small, no lattice
-    rq = cap / 2 - h
-    qx, qy = x + cap / 2, top + cap / 2
-    els += mark_group(qx, qy, rq, w, cap * 0.2, fg, fg, lattice=False)[:3]
-    x += cap + gap
+    if q:
+        rq = cap / 2 - h
+        qx, qy = x + cap / 2, top + cap / 2
+        els += mark_group(qx, qy, rq, w, cap * 0.2, fg, fg, lattice=False)[:3]
+        x += cap + gap
     # U
     uw = cap * 0.78
     ur = (uw - w) / 2
@@ -152,16 +161,78 @@ def wordmark(x0, top, cap, w, fg):
                f'stroke="{fg}" stroke-width="{f(w)}"/>')
     x += rw + dgap
     x = dotsq(x) + dgap
-    # K
+    # K -- arm and leg are one stroke that turns inside the stem, so no seam shows
     kw = cap * 0.72
+    o = w * 0.6                        # overshoot, clipped flat by the cap band
     els.append(f'<path d="M{f(x + h)} {f(top)} V{f(base)}" stroke="{fg}" stroke-width="{f(w)}"/>')
-    els.append(f'<path d="M{f(x + kw + 2)} {f(top - 3)} L{f(x + w)} {f(top + cap * 0.6)}" '
-               f'stroke="{fg}" stroke-width="{f(w)}"/>')
-    els.append(f'<path d="M{f(x + w + cap * 0.17)} {f(top + cap * 0.44)} L{f(x + kw + 2)} {f(base + 4)}" '
-               f'stroke="{fg}" stroke-width="{f(w)}"/>')
+    els.append(f'<path d="M{f(x + kw + o * 0.6)} {f(top - o)} L{f(x + w)} {f(top + cap * 0.56)} '
+               f'L{f(x + kw + o * 0.6)} {f(base + o)}" fill="none" stroke="{fg}" stroke-width="{f(w)}" '
+               f'stroke-linejoin="miter" stroke-miterlimit="4"/>')
     x += kw + dgap
     x = dotsq(x)
     return els, x - x0
+
+
+DESCRIPTOR = "QUANTUM INFRASTRUCTURE READINESS KIT"
+MONO = "'JetBrains Mono', ui-monospace, Menlo, monospace"
+
+
+def descriptor(x, y, width, size, fg, opacity=0.72):
+    """Live-text descriptor, stretched to exactly `width` so it locks to the wordmark."""
+    return (f'<text x="{f(x)}" y="{f(y)}" textLength="{f(width)}" lengthAdjust="spacing" '
+            f'font-family="{MONO}" font-size="{f(size)}" font-weight="600" fill="{fg}" '
+            f'opacity="{opacity}">{DESCRIPTOR}</text>')
+
+
+def dial(cx, cy, r, w, fg):
+    """256 ticks outside the ring, one per root of X^256+1 (large formats only).
+
+    Every 32nd tick is long. The ticks around the tail are left out.
+    """
+    out = []
+    r0 = r + w / 2 + w * 0.22
+    for k in range(N):
+        a = (2 * k + 1) * math.pi / N
+        if abs((a - SEAM + math.pi) % (2 * math.pi) - math.pi) < math.radians(9):
+            continue
+        ln = w * (0.34 if k % 32 == 0 else 0.13)
+        x0, y0 = cx + r0 * math.cos(a), cy + r0 * math.sin(a)
+        x1, y1 = cx + (r0 + ln) * math.cos(a), cy + (r0 + ln) * math.sin(a)
+        out.append(f"M{f(x0)} {f(y0)}L{f(x1)} {f(y1)}")
+    return [f'<path d="{" ".join(out)}" stroke="{fg}" stroke-width="{f(w * 0.045)}" opacity=".55"/>']
+
+
+def lattice_field(cx, cy, r, w, tail, W, H, fg, keep_out):
+    """The lattice the lens is looking at, continued across the canvas.
+
+    Same basis and origin as the mark's 3x3, so the field and the mark agree.
+    Dots fade with distance from the lens; nothing is drawn under the ring,
+    inside the counter (the mark's own 3x3 lives there), along the tail,
+    or inside the keep-out rectangles (type).
+    """
+    s = r * 0.31
+    sh = s * 0.36
+    dot = r / 15 * 0.55
+    outer = r + w / 2 + w * 0.9          # clears ring + dial
+    ux, uy = math.cos(SEAM), math.sin(SEAM)
+    out = []
+    jr = int(H / s) + 2
+    for j in range(-jr, jr + 1):
+        for i in range(-int(W / s) - jr, int(W / s) + jr):
+            x, y = cx + i * s + j * sh, cy + j * s
+            if not (dot < x < W - dot and dot < y < H - dot):
+                continue
+            d = math.hypot(x - cx, y - cy)
+            if d < outer:
+                continue
+            t = (x - cx) * ux + (y - cy) * uy             # distance along tail axis
+            if 0 < t < r + tail + w and abs(-(x - cx) * uy + (y - cy) * ux) < w * 1.1:
+                continue
+            if any(a <= x <= c and b <= y <= e for a, b, c, e in keep_out):
+                continue
+            op = max(0.025, 0.16 * (1 - (d - outer) / (W * 0.42)))
+            out.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="{f(dot)}" fill="{fg}" opacity="{op:.3f}"/>')
+    return out
 
 
 def svg(w, h, body, title, bg=None):
@@ -176,33 +247,81 @@ def svg(w, h, body, title, bg=None):
     )
 
 
+def clipped(els, top, cap):
+    """Wrap wordmark strokes in the cap-height clip (flat tops and baselines)."""
+    cid = f"cap{top:g}"
+    return [f'<clipPath id="{cid}"><rect x="0" y="{f(top)}" width="4000" height="{f(cap)}"/></clipPath>',
+            f'<g clip-path="url(#{cid})">', *els, "</g>"]
+
+
+def logo(x, top, cap, fg, accent=SIG):
+    """Primary logo: the lens is the Q, at cap height. Returns (elements, width)."""
+    w = cap * 0.175
+    D = cap * 1.04                     # round-letter overshoot
+    r = D / 2 - w / 2
+    body = mark_group(x + D / 2, top + cap / 2, r, w, cap * 0.34, fg, accent, dot=r * 0.088)
+    tx = x + D + cap * 0.17
+    wm, ww = wordmark(tx, top, cap, w, fg, q=False, round_dots=True)
+    return body + clipped(wm, top, cap), (tx - x) + ww, tx, ww
+
+
+def logo_display(x, top, cap, fg, accent=SIG):
+    """Display logo: oversized lens leads (1.55x cap), master-mark proportions."""
+    w = cap * 0.175
+    D = cap * 1.55
+    r = D / 2 - w / 2
+    cx, cy = x + D / 2, top + cap / 2
+    body = mark_group(cx, cy, r, w, r * 26 / 36, fg, accent)
+    tx = x + D + cap * 0.2
+    wm, ww = wordmark(tx, top, cap, w, fg, q=False, round_dots=True)
+    return body + clipped(wm, top, cap), (tx - x) + ww, tx, ww, (cx, cy, r, w)
+
+
+THEMES = (("", INK, None), ("-dark", PAPER, INK))
+FULL = "QU.I.R.K. — Quantum Infrastructure Readiness Kit"
+
+
 def build():
     files = {}
-    # 1. mark, light + dark (120 x 120 artboard)
-    for name, fg, bg in (("mark", INK, None), ("mark-dark", PAPER, INK)):
-        body = mark_group(54, 54, 36, 10, 26, fg, SIG)
-        files[f"quirk-{name}.svg"] = svg(120, 120, body, "QU.I.R.K. mark", bg)
+    # 1. mark (icon) -- 120 x 120 artboard
+    for sfx, fg, bg in THEMES:
+        files[f"quirk-mark{sfx}.svg"] = svg(120, 120, mark_group(54, 54, 36, 10, 26, fg, SIG), "QU.I.R.K. mark", bg)
+    files["quirk-mark-mono.svg"] = svg(120, 120, mark_group(54, 54, 36, 10, 26, INK, INK, ghost=False),
+                                       "QU.I.R.K. mark (mono)")
+    # 2. favicon: ring + tail + error point, no lattice
+    for sfx, fg, bg in THEMES:
+        files[f"quirk-favicon{sfx}.svg"] = svg(32, 32, mark_group(14.5, 14.5, 10, 4, 7.5, fg, SIG, lattice=False),
+                                               "QU.I.R.K.", bg)
+    # 3. primary logo, and primary logo + descriptor
+    for sfx, fg, bg in THEMES:
+        cap, top, pad = 120, 40, 40
+        body, W, tx, ww = logo(pad, top, cap, fg)
+        files[f"quirk-logo{sfx}.svg"] = svg(W + 2 * pad, 210, body, "QU.I.R.K.", bg)
+        body, W, tx, ww = logo(pad, top, cap, fg)
+        body.append(descriptor(tx, top + cap + 62, ww, 19.5, fg))
+        files[f"quirk-logo-descriptor{sfx}.svg"] = svg(W + 2 * pad, 250, body, FULL, bg)
+    # 4. display logo: oversized lens
+    for sfx, fg, bg in THEMES:
+        cap, top, pad = 120, 62, 40
+        body, W, *_ = logo_display(pad, top, cap, fg)
+        files[f"quirk-logo-display{sfx}.svg"] = svg(W + 2 * pad, 262, body, "QU.I.R.K.", bg)
+    # 5. hero (16:9): display logo on the lattice field, with the 256-tick dial
+    for sfx, fg, bg in (("", INK, PAPER), ("-dark", PAPER, INK)):
+        W, H, cap = 1600, 900, 196
+        _, lw, *_ = logo_display(0, 0, cap, fg)
+        x0, top = (W - lw) / 2 + 20, H / 2 - cap / 2 - 24
+        body, _, tx, ww, (cx, cy, r, w) = logo_display(x0, top, cap, fg)
+        desc_y = top + cap + 54
+        keep = [(tx - 40, top - 50, tx + ww + 40, desc_y + 30)]
+        field = lattice_field(cx, cy, r, w, r * 26 / 36, W, H, fg, keep)
+        files[f"quirk-hero{sfx}.svg"] = svg(
+            W, H, field + dial(cx, cy, r, w, fg) + body + [descriptor(tx + cap * 0.12, desc_y, ww - cap * 0.12, 25, fg)], FULL, bg)
 
-    # 2. mono mark (single colour -- print, emboss, 3D print, laser)
-    body = mark_group(54, 54, 36, 10, 26, INK, INK, ghost=False)
-    files["quirk-mark-mono.svg"] = svg(120, 120, body, "QU.I.R.K. mark (mono)")
-
-    # 3. favicon / small sizes: no lattice, just ring + tail + error dot
-    body = mark_group(14.5, 14.5, 10, 4, 7.5, INK, SIG, lattice=False)
-    files["quirk-favicon.svg"] = svg(32, 32, body, "QU.I.R.K.", None)
-    body = mark_group(14.5, 14.5, 10, 4, 7.5, PAPER, SIG, lattice=False)
-    files["quirk-favicon-dark.svg"] = svg(32, 32, body, "QU.I.R.K.", INK)
-
-    # 4. horizontal lockup
-    for name, fg, bg in (("lockup", INK, None), ("lockup-dark", PAPER, INK)):
-        body = mark_group(64, 64, 36, 10, 26, fg, SIG)
-        cap, top = 40, 44
-        clip = f'<clipPath id="cap"><rect x="0" y="{top}" width="2000" height="{cap}"/></clipPath>'
-        wm, ww = wordmark(136, top, cap, 7, fg)
-        body += [clip, '<g clip-path="url(#cap)">', *wm, "</g>"]
-        W = 136 + ww + 28
-        files[f"quirk-{name}.svg"] = svg(W, 136, body, "QU.I.R.K. — Quantum Infrastructure Readiness Kit", bg)
-
+    stale = {"quirk-lockup.svg", "quirk-lockup-dark.svg", "quirk-lockup-stacked.svg",
+             "quirk-lockup-stacked-dark.svg", "quirk-wordmark.svg", "quirk-wordmark-dark.svg",
+             "quirk-wordmark-lens.svg", "quirk-wordmark-lens-dark.svg"}
+    for fn in stale:
+        (OUT / fn).unlink(missing_ok=True)
     for fn, content in files.items():
         (OUT / fn).write_text(content)
         print("wrote", fn)

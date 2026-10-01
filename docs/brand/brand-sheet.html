@@ -24,11 +24,15 @@
     --bg: #0D0124; --surface: #150A31; --fg: #F4F5F9; --muted: #A49FBA;
     --rule: #2A2048; --plate: #120830; --mark: #F4F5F9; --anno: #7FA6FF; color-scheme: dark;
   }
+  :root:not([data-theme="light"]) .t-light { display: none !important; }
+  :root:not([data-theme="light"]) .t-dark { display: block !important; }
 }
 :root[data-theme="dark"] {
   --bg: #0D0124; --surface: #150A31; --fg: #F4F5F9; --muted: #A49FBA;
   --rule: #2A2048; --plate: #120830; --mark: #F4F5F9; --anno: #7FA6FF; color-scheme: dark;
 }
+:root[data-theme="dark"] .t-light { display: none !important; }
+:root[data-theme="dark"] .t-dark { display: block !important; }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--font-body); }
 .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: grid; gap: 64px; }
@@ -42,7 +46,8 @@ section { display: grid; gap: 20px; }
 .lede { color: var(--muted); }
 
 header { display: grid; gap: 20px; }
-header .lockup svg { height: 72px; width: auto; max-width: 100%; display: block; }
+header .lockup img { height: 96px; width: auto; max-width: 100%; display: block; }
+.t-dark { display: none !important; }
 header p { font-size: 1.1rem; }
 
 /* construction plate */
@@ -64,6 +69,18 @@ header p { font-size: 1.1rem; }
 .eggs strong { display: block; font-weight: 600; }
 .eggs span.d { display: block; color: var(--muted); font-size: .92rem; margin-top: 2px; }
 .eggs .std { font: .72rem var(--font-mono); color: var(--muted); letter-spacing: .04em; }
+
+/* logo system */
+.hero { margin: 0; display: grid; gap: 8px; }
+.hero img { width: 100%; height: auto; border-radius: 6px; display: block; border: 1px solid var(--rule); }
+figcaption { font-size: .85rem; color: var(--muted); }
+.system { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.system figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+.sys-tile { border: 1px solid var(--rule); border-radius: 6px; display: grid; place-items: center; padding: 24px; min-height: 160px; }
+.sys-tile.light { background: #F4F5F9; } .sys-tile.dark { background: #0D0124; }
+.sys-tile img { width: 100%; max-height: 120px; object-fit: contain; }
+.sys-tile.sq img { width: auto; height: 110px; }
+.system b { color: var(--fg); font-weight: 600; }
 
 /* palette */
 .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
@@ -101,13 +118,26 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--rul
 <div class="wrap">
   <header>
     <div class="eyebrow">Quantum Infrastructure Readiness Kit · identity v1</div>
-    <div class="lockup" id="lockup" aria-label="QU.I.R.K. logo"></div>
+    <div class="lockup"><img class="t-light" src="quirk-logo-descriptor.svg" alt="QU.I.R.K. — Quantum Infrastructure Readiness Kit"><img class="t-dark" src="quirk-logo-descriptor-dark.svg" alt="QU.I.R.K. — Quantum Infrastructure Readiness Kit"></div>
     <p>A Q drawn as a scanner lens over a lattice. Up close, every part of it is a reference to the post-quantum algorithms QU.I.R.K. looks for. The name is the thesis: lattice cryptography is secure because of a small, deliberate error. That error is the quirk.</p>
   </header>
 
+  <section aria-labelledby="h-sys">
+    <div class="eyebrow">Logo system</div>
+    <h2 id="h-sys">The lens is always the Q</h2>
+    <p class="lede">Whenever the name is spelled out, the mark stands in for the Q. The same lens scales from a 16 px favicon up to a stage backdrop. The larger it gets, the more of its detail shows.</p>
+    <figure class="hero"><img src="quirk-hero-dark.svg" alt="QU.I.R.K. hero: the lens over a lattice field with a 256-tick dial, followed by U.I.R.K. and the descriptor"><figcaption>Hero · 16:9 · covers, title slides, banners, social preview. Only this size adds the 256-tick dial and the lattice field around the lens.</figcaption></figure>
+    <div class="system">
+      <figure><div class="sys-tile light"><img src="quirk-logo.svg" alt="Primary logo"></div><figcaption><b>Primary logo</b> · the default everywhere · min 24 px tall</figcaption></figure>
+      <figure><div class="sys-tile dark"><img src="quirk-logo-descriptor-dark.svg" alt="Primary logo with descriptor"></div><figcaption><b>With descriptor</b> · first use in a document, cover pages · min 48 px tall</figcaption></figure>
+      <figure><div class="sys-tile light"><img src="quirk-logo-display.svg" alt="Display logo with oversized lens"></div><figcaption><b>Display</b> · lens at 1.55× cap height · signage, slides, swag · min 80 px tall</figcaption></figure>
+      <figure><div class="sys-tile dark sq"><img src="quirk-mark-dark.svg" alt="Mark"></div><figcaption><b>Mark</b> · app icon, avatar, sidebar · when the name already appears nearby</figcaption></figure>
+    </div>
+  </section>
+
   <section aria-labelledby="h-eggs">
     <div class="eyebrow">Construction</div>
-    <h2 id="h-eggs">Six things hidden in the mark</h2>
+    <h2 id="h-eggs">Six things hidden in the lens</h2>
     <div class="study">
       <div class="plate">
         <svg id="mark" viewBox="0 0 120 120" role="img" aria-label="QU.I.R.K. mark with construction overlay"></svg>
@@ -157,13 +187,13 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--rul
     <h2 id="h-use">Rules</h2>
     <div class="rules">
       <div><h3>Clear space</h3><p>Keep one ring stroke width (10 units on the 120 grid) clear on every side, measured from the tail tip and the outer ring edge.</p></div>
-      <div><h3>Minimum size</h3><p>Full mark 48 px. Below that, use the favicon construction. Lockup: wordmark cap height no smaller than 10 px.</p></div>
+      <div><h3>Minimum size</h3><p>Primary logo 24 px tall. The mark with its lattice needs 48 px; below that, use the favicon construction.</p></div>
       <div><h3>One accent</h3><p>Signal appears once: on the error point. Don't recolour the ring halves, the lattice or the wordmark with it.</p></div>
       <div><h3>Don't redraw</h3><p>Regenerate from <span class="mono">docs/brand/build_logo.py</span>. The easter eggs only hold if the geometry stays exact.</p></div>
     </div>
   </section>
 
-  <footer>Source files live in <span class="mono">docs/brand/</span>: mark (light, dark, mono), favicon (light, dark) and lockup (light, dark), all SVG. The mark's SVG <span class="mono">&lt;desc&gt;</span> carries the parameters in plain text for anyone who opens the file.</footer>
+  <footer>Source files live in <span class="mono">docs/brand/</span>, all SVG and all generated by <span class="mono">build_logo.py</span>. The full rules are in <span class="mono">BRAND-GUIDELINES.md</span>. The mark's SVG <span class="mono">&lt;desc&gt;</span> carries the parameters in plain text for anyone who opens the file.</footer>
 </div>
 
 <script>
@@ -209,36 +239,7 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--rul
     return { ring, tailEl, dots, ghostEl, err, H, s, sh, e, cx, cy, r, w };
   }
 
-  function wordmark(g, x0, top, cap, w, fg) {
-    const base = top + cap, h = w / 2, gap = cap * .2, dg = cap * .11; let x = x0;
-    const line = (d) => el("path", { d, fill: "none", stroke: fg, "stroke-width": w }, g);
-    const dotsq = () => { el("rect", { x, y: base - w, width: w, height: w, fill: fg }, g); x += w; };
-    const q = drawMark(g, { cx: x + cap / 2, cy: top + cap / 2, r: cap / 2 - h, w, tail: cap * .2, fg, lattice: false });
-    q.err.remove(); x += cap + gap;
-    const uw = cap * .78, ur = (uw - w) / 2;
-    line(`M${x + h} ${top} V${base - h - ur} A${ur} ${ur} 0 0 0 ${x + uw - h} ${base - h - ur} V${top}`); x += uw + dg; dotsq(); x += dg;
-    line(`M${x + h} ${top} V${base}`); x += w + dg; dotsq(); x += dg;
-    const rb = (cap * .5 - w) / 2, rw = cap * .74, bx = x + rw - h - rb;
-    line(`M${x + h} ${base} V${top + h} H${bx} A${rb} ${rb} 0 0 1 ${bx} ${top + h + 2 * rb} H${x + h}`);
-    line(`M${bx - rb * .15} ${top + h + 2 * rb} L${x + rw + 2} ${base + 4}`); x += rw + dg; dotsq(); x += dg;
-    const kw = cap * .72;
-    line(`M${x + h} ${top} V${base}`);
-    line(`M${x + kw + 2} ${top - 3} L${x + w} ${top + cap * .6}`);
-    line(`M${x + w + cap * .17} ${top + cap * .44} L${x + kw + 2} ${base + 4}`); x += kw + dg; dotsq();
-    return x - x0;
-  }
-
-  let uid = 0;
-  function svgBox(vb, label) { const s = el("svg", { viewBox: vb, role: "img", "aria-label": label }); return s; }
-
-  // header lockup (uses currentColor so it follows the theme)
-  const L = svgBox("0 0 340 136", "QU.I.R.K. — Quantum Infrastructure Readiness Kit");
-  const id = "cap" + (uid++);
-  const cp = el("clipPath", { id }, el("defs", {}, L)); el("rect", { x: 0, y: 44, width: 2000, height: 40 }, cp);
-  drawMark(el("g", {}, L), { cx: 64, cy: 64, r: 36, w: 10, tail: 26, fg: "currentColor" });
-  const ww = wordmark(el("g", { "clip-path": `url(#${id})` }, L), 136, 44, 40, 7, "currentColor");
-  L.setAttribute("viewBox", `0 0 ${136 + ww + 28} 136`);
-  document.getElementById("lockup").appendChild(L);
+    function svgBox(vb, label) { const s = el("svg", { viewBox: vb, role: "img", "aria-label": label }); return s; }
 
   // construction plate
   const M = document.getElementById("mark");
