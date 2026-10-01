@@ -127,7 +127,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 - [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [x] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
 - [x] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
-- [ ] **Phase 221: Close gap: a11y blind spots + empty/loading variant legs** - Close `v5.26-MILESTONE-AUDIT.md`'s two gaps: HARNESS-03 blocker B1 (near-vacuous empty/loading variant legs) and INT-01 (10 a11y todos orphaned on closed Phase 220)
+- [x] **Phase 221: Close gap: a11y blind spots + empty/loading variant legs** - Close `v5.26-MILESTONE-AUDIT.md`'s two gaps: HARNESS-03 blocker B1 (near-vacuous empty/loading variant legs) and INT-01 (10 a11y todos orphaned on closed Phase 220)
 
 ### Phase Details
 
@@ -308,7 +308,7 @@ Plans:
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
 | 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg verified post-merge, run 36868142296) | 2026-10-01 |
-| 221. Close gap: a11y blind spots + empty/loading variant legs | 9/9 | Executed — pending verification | - |
+| 221. Close gap: a11y blind spots + empty/loading variant legs | 9/9 | Complete (verified passed 4/4 at 72b6e4b2; CI green, Python CI 36926796359 + Dashboard Quality 36926793305) | 2026-10-01 |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T23:00:00.000Z"
-last_activity: "2026-10-01 -- Phase 221 executed 9/9, pending verification. HARNESS-03 [x] per D-13 (empty/loading legs shown able to fail; /scans loading retired as exclusion UX-12); FIX-05 stays qualified (/sensors light Stale badge 3.42:1 and CBOM light system node 1.25:1 owned by 999.118); INT-01 closed (12 todos re-pointed to 999.118/999.119). Phase NOT closed: awaiting gsd-verifier and the CI observation at the close SHA (221-evidence/branch-ci-state.json)"
+last_updated: "2026-10-02T01:30:00.000Z"
+last_activity: "2026-10-01 -- Phase 221 COMPLETE: verified passed 4/4 at 72b6e4b2 (branch_ci_state exit 0; Python CI 36926796359, Dashboard Quality 36926793305). Code review 3 iterations, CR-01 + WR-01..WR-13 fixed with mutation proofs. HARNESS-03 [x]; FIX-05 qualified (999.118). All 7 v5.26 phases done; branch phase-221-a11y-gap-closure pushed, NOT merged; next: PR + merge, then v5.26 milestone audit/close"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 44
   completed_plans: 44
-  percent: 80
+  percent: 100
 ---
 
 # Project State
@@ -1398,8 +1398,11 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   hand-edited.
 
 ## Current Position
-Phase: 221 (Close gap: a11y blind spots + empty/loading variant legs) — **EXECUTED, 9 of 9 plans,
-pending verification.** All nine plans ran serially on branch `phase-221-a11y-gap-closure`. The
+Phase: 221 (Close gap: a11y blind spots + empty/loading variant legs) — **COMPLETE, 9 of 9 plans,
+verified `passed` 4/4 on 2026-10-01** at `72b6e4b2` (CI green per `221-VERIFICATION.md` `ci:` block).
+Branch `phase-221-a11y-gap-closure` is pushed and NOT merged. Next: PR + merge, then the v5.26
+milestone audit/close. Historical note on the pre-verification state follows:
+All nine plans ran serially on branch `phase-221-a11y-gap-closure`. The
 phase is NOT closed: the gsd-verifier has not run, and the phase-close commit needs a
 `221-VERIFICATION.md` `ci:` block observed at the exact HEAD (ARTIFACT-05). The CI observation
 (`python3 scripts/branch_ci_state.py --branch phase-221-a11y-gap-closure --compare-main`) is saved
