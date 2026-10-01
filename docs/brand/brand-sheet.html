@@ -1,0 +1,317 @@
+<title>QU.I.R.K. Mark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; the mark sits on a construction plate beside its annotation list, then palette, variants, coverage. */
+:root {
+  --ink: #0D0124;          /* 0x0D01 = 3329, ML-KEM q */
+  --signal: #7FE001;       /* 0x7FE001 = 8380417, ML-DSA q */
+  --paper: #F4F5F9;
+  --bg: #F4F5F9;
+  --surface: #FFFFFF;
+  --fg: #0D0124;
+  --muted: #5B5672;
+  --rule: #DCDAE6;
+  --plate: #FFFFFF;
+  --mark: #0D0124;
+  --anno: #3B6FE0;
+  --font-display: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D0124; --surface: #150A31; --fg: #F4F5F9; --muted: #A49FBA;
+    --rule: #2A2048; --plate: #120830; --mark: #F4F5F9; --anno: #7FA6FF; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D0124; --surface: #150A31; --fg: #F4F5F9; --muted: #A49FBA;
+  --rule: #2A2048; --plate: #120830; --mark: #F4F5F9; --anno: #7FA6FF; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.55 var(--font-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: grid; gap: 64px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.01em; }
+h3 { font-size: 1rem; font-weight: 600; }
+p { margin: 0; max-width: 64ch; }
+.eyebrow { font: 600 .72rem/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-size: .85em; }
+section { display: grid; gap: 20px; }
+.lede { color: var(--muted); }
+
+header { display: grid; gap: 20px; }
+header .lockup svg { height: 72px; width: auto; max-width: 100%; display: block; }
+header p { font-size: 1.1rem; }
+
+/* construction plate */
+.study { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 760px) { .study { grid-template-columns: 1fr; } }
+.plate { background: var(--plate); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; display: grid; gap: 12px; }
+.plate svg { width: 100%; height: auto; display: block; aspect-ratio: 1; max-width: 100%; }
+.zoom { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; font: .8rem var(--font-mono); color: var(--muted); }
+.zoom input { width: 100%; accent-color: var(--anno); }
+.eggs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.eggs button {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 28px 1fr; gap: 12px;
+  padding: 12px 14px; border-radius: 6px; border: 1px solid transparent;
+}
+.eggs button:hover { background: var(--surface); border-color: var(--rule); }
+.eggs button:focus-visible { outline: 2px solid var(--anno); outline-offset: 2px; }
+.eggs button[aria-pressed="true"] { background: var(--surface); border-color: var(--anno); }
+.eggs .k { font: 600 .8rem/1.6 var(--font-mono); color: var(--anno); }
+.eggs strong { display: block; font-weight: 600; }
+.eggs span.d { display: block; color: var(--muted); font-size: .92rem; margin-top: 2px; }
+.eggs .std { font: .72rem var(--font-mono); color: var(--muted); letter-spacing: .04em; }
+
+/* palette */
+.swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.sw { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.sw .chip { height: 96px; }
+.sw .meta { padding: 14px; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.sw .hex { font: 600 1rem var(--font-mono); }
+.sw .calc { font: .8rem var(--font-mono); color: var(--muted); }
+
+/* variants */
+.variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+.variants figure { margin: 0; display: grid; gap: 8px; }
+.variants .tile { aspect-ratio: 1; max-width: 100%; border: 1px solid var(--rule); border-radius: 6px; display: grid; place-items: center; overflow: hidden; }
+.variants .tile svg { width: 72%; height: auto; }
+.variants figcaption { font: .78rem var(--font-mono); color: var(--muted); }
+.sizes { display: flex; flex-wrap: wrap; gap: 24px; align-items: end; padding: 20px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+.sizes figure { margin: 0; display: grid; gap: 6px; justify-items: center; font: .72rem var(--font-mono); color: var(--muted); }
+
+/* coverage */
+.tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .92rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 .72rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+.pill { font: 600 .7rem var(--font-mono); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--rule); white-space: nowrap; }
+.pill.y { border-color: var(--anno); color: var(--anno); }
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+.rules div { display: grid; gap: 6px; }
+.rules p { color: var(--muted); font-size: .95rem; }
+footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--rule); padding-top: 20px; }
+@media (prefers-reduced-motion: no-preference) { #mark * { transition: opacity .25s, stroke .25s, fill .25s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Quantum Infrastructure Readiness Kit · identity v1</div>
+    <div class="lockup" id="lockup" aria-label="QU.I.R.K. logo"></div>
+    <p>A Q drawn as a scanner lens over a lattice. Up close, every part of it is a reference to the post-quantum algorithms QU.I.R.K. looks for. The name is the thesis: lattice cryptography is secure because of a small, deliberate error. That error is the quirk.</p>
+  </header>
+
+  <section aria-labelledby="h-eggs">
+    <div class="eyebrow">Construction</div>
+    <h2 id="h-eggs">Six things hidden in the mark</h2>
+    <div class="study">
+      <div class="plate">
+        <svg id="mark" viewBox="0 0 120 120" role="img" aria-label="QU.I.R.K. mark with construction overlay"></svg>
+        <label class="zoom" for="zoom"><span>1×</span><input id="zoom" type="range" min="1" max="24" step="0.5" value="1"><span id="zv">1×</span></label>
+      </div>
+      <ol class="eggs" id="eggs"></ol>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-pal">
+    <div class="eyebrow">Colour</div>
+    <h2 id="h-pal">The palette is made of moduli</h2>
+    <p class="lede">Two of the three colours are the prime moduli from the NIST standards, written as hex. Use Signal only for the error point. It is the one accent in the system.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0D0124"></div><div class="meta"><span class="hex">#0D0124 · Ink</span><span class="calc">0x0D01 = 3329</span><span>ML-KEM modulus <i>q</i>, FIPS 203</span></div></div>
+      <div class="sw"><div class="chip" style="background:#7FE001"></div><div class="meta"><span class="hex">#7FE001 · Signal</span><span class="calc">0x7FE001 = 8,380,417 = 2²³ − 2¹³ + 1</span><span>ML-DSA modulus <i>q</i>, FIPS 204</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F4F5F9"></div><div class="meta"><span class="hex">#F4F5F9 · Paper</span><span class="calc">neutral, tinted toward Ink</span><span>Ground for light use</span></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-var">
+    <div class="eyebrow">Variants</div>
+    <h2 id="h-var">One construction, five uses</h2>
+    <div class="variants" id="variants"></div>
+    <div class="sizes" id="sizes"></div>
+    <p class="lede">The lattice drops out below about 48 px. Small sizes keep only the ring, the tail and the error point. The mono version is single-colour and the error point stays visibly offset, so it works for embossing, laser etching or a two-material 3D print.</p>
+  </section>
+
+  <section aria-labelledby="h-cov">
+    <div class="eyebrow">Coverage</div>
+    <h2 id="h-cov">What the mark encodes and what it leaves out</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Concept</th><th>Standard</th><th>In the mark</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Module-LWE key encapsulation</td><td class="mono">FIPS 203 ML-KEM</td><td><span class="pill y">encoded</span></td><td>3×3 lattice, error point, Ink colour, ring</td></tr>
+        <tr><td>Module-lattice signatures</td><td class="mono">FIPS 204 ML-DSA</td><td><span class="pill y">encoded</span></td><td>Signal colour, ring (same X²⁵⁶+1)</td></tr>
+        <tr><td>Hybrid key exchange</td><td class="mono">X25519MLKEM768</td><td><span class="pill y">encoded</span></td><td>Two ring halves joined by the tail</td></tr>
+        <tr><td>Hash-based signatures</td><td class="mono">FIPS 205 SLH-DSA</td><td><span class="pill">not encoded</span></td><td>Possible later: a Merkle fork in the K of the wordmark</td></tr>
+        <tr><td>NTRU-lattice signatures</td><td class="mono">FN-DSA (draft FIPS 206)</td><td><span class="pill">not encoded</span></td><td>Shares the ring idea, with no unique element</td></tr>
+        <tr><td>Code-based KEM</td><td class="mono">HQC (selected 2025)</td><td><span class="pill">not encoded</span></td><td>—</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="h-use">
+    <div class="eyebrow">Use</div>
+    <h2 id="h-use">Rules</h2>
+    <div class="rules">
+      <div><h3>Clear space</h3><p>Keep one ring stroke width (10 units on the 120 grid) clear on every side, measured from the tail tip and the outer ring edge.</p></div>
+      <div><h3>Minimum size</h3><p>Full mark 48 px. Below that, use the favicon construction. Lockup: wordmark cap height no smaller than 10 px.</p></div>
+      <div><h3>One accent</h3><p>Signal appears once: on the error point. Don't recolour the ring halves, the lattice or the wordmark with it.</p></div>
+      <div><h3>Don't redraw</h3><p>Regenerate from <span class="mono">docs/brand/build_logo.py</span>. The easter eggs only hold if the geometry stays exact.</p></div>
+    </div>
+  </section>
+
+  <footer>Source files live in <span class="mono">docs/brand/</span>: mark (light, dark, mono), favicon (light, dark) and lockup (light, dark), all SVG. The mark's SVG <span class="mono">&lt;desc&gt;</span> carries the parameters in plain text for anyone who opens the file.</footer>
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const N = 256, SEAM = Math.PI / 4, GAP = 3;
+  const SIG = "#7FE001";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+  function halves(cx, cy, r) {
+    const A = Array.from({ length: N }, (_, k) => (2 * k + 1) * Math.PI / N);
+    const T = 2 * Math.PI, side = a => (((a - SEAM) % T + T) % T) >= Math.PI ? 0 : 1;
+    const hs = [[], []]; A.forEach(a => hs[side(a)].push(a));
+    return hs.map((v, h) => {
+      const start = h === 1 ? SEAM : SEAM + Math.PI;
+      v.sort((a, b) => (((a - start) % T + T) % T) - (((b - start) % T + T) % T));
+      v = h === 1 ? [SEAM, ...v.slice(0, -GAP)] : [...v.slice(GAP), SEAM + T];
+      const pts = v.map(a => [cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+      return { d: "M" + pts.map(p => p.map(n => n.toFixed(3)).join(" ")).join(" L"), pts };
+    });
+  }
+
+  // draws the mark; returns handles for annotation
+  function drawMark(g, o) {
+    const { cx, cy, r, w, tail, fg, accent = SIG, lattice = true, ghost = true } = o;
+    const H = halves(cx, cy, r);
+    const ring = H.map(h => el("path", { d: h.d, fill: "none", stroke: fg, "stroke-width": w, "stroke-linejoin": "round" }, g));
+    const ux = Math.cos(SEAM), uy = Math.sin(SEAM), r0 = r - w / 2, r1 = r + tail;
+    const tailEl = el("path", { d: `M${cx + r0 * ux} ${cy + r0 * uy} L${cx + r1 * ux} ${cy + r1 * uy}`, stroke: fg, "stroke-width": w }, g);
+    const s = r * 0.31, sh = s * 0.36, dot = w * 0.24, e = [s * 0.36, -s * 0.24];
+    const dots = [];
+    let ghostEl = null, err;
+    if (lattice) {
+      for (const j of [-1, 0, 1]) for (const i of [-1, 0, 1]) {
+        if (!i && !j) continue;
+        dots.push(el("circle", { cx: cx + i * s + j * sh, cy: cy + j * s, r: dot, fill: fg }, g));
+      }
+      if (ghost) ghostEl = el("circle", { cx, cy, r: dot * 0.9, fill: "none", stroke: fg, "stroke-width": dot * 0.32, opacity: .5 }, g);
+      err = el("circle", { cx: cx + e[0], cy: cy + e[1], r: dot * 1.3, fill: accent }, g);
+    } else {
+      err = el("circle", { cx: cx + e[0] * .6, cy: cy + e[1] * .6, r: w * .62, fill: accent }, g);
+    }
+    return { ring, tailEl, dots, ghostEl, err, H, s, sh, e, cx, cy, r, w };
+  }
+
+  function wordmark(g, x0, top, cap, w, fg) {
+    const base = top + cap, h = w / 2, gap = cap * .2, dg = cap * .11; let x = x0;
+    const line = (d) => el("path", { d, fill: "none", stroke: fg, "stroke-width": w }, g);
+    const dotsq = () => { el("rect", { x, y: base - w, width: w, height: w, fill: fg }, g); x += w; };
+    const q = drawMark(g, { cx: x + cap / 2, cy: top + cap / 2, r: cap / 2 - h, w, tail: cap * .2, fg, lattice: false });
+    q.err.remove(); x += cap + gap;
+    const uw = cap * .78, ur = (uw - w) / 2;
+    line(`M${x + h} ${top} V${base - h - ur} A${ur} ${ur} 0 0 0 ${x + uw - h} ${base - h - ur} V${top}`); x += uw + dg; dotsq(); x += dg;
+    line(`M${x + h} ${top} V${base}`); x += w + dg; dotsq(); x += dg;
+    const rb = (cap * .5 - w) / 2, rw = cap * .74, bx = x + rw - h - rb;
+    line(`M${x + h} ${base} V${top + h} H${bx} A${rb} ${rb} 0 0 1 ${bx} ${top + h + 2 * rb} H${x + h}`);
+    line(`M${bx - rb * .15} ${top + h + 2 * rb} L${x + rw + 2} ${base + 4}`); x += rw + dg; dotsq(); x += dg;
+    const kw = cap * .72;
+    line(`M${x + h} ${top} V${base}`);
+    line(`M${x + kw + 2} ${top - 3} L${x + w} ${top + cap * .6}`);
+    line(`M${x + w + cap * .17} ${top + cap * .44} L${x + kw + 2} ${base + 4}`); x += kw + dg; dotsq();
+    return x - x0;
+  }
+
+  let uid = 0;
+  function svgBox(vb, label) { const s = el("svg", { viewBox: vb, role: "img", "aria-label": label }); return s; }
+
+  // header lockup (uses currentColor so it follows the theme)
+  const L = svgBox("0 0 340 136", "QU.I.R.K. — Quantum Infrastructure Readiness Kit");
+  const id = "cap" + (uid++);
+  const cp = el("clipPath", { id }, el("defs", {}, L)); el("rect", { x: 0, y: 44, width: 2000, height: 40 }, cp);
+  drawMark(el("g", {}, L), { cx: 64, cy: 64, r: 36, w: 10, tail: 26, fg: "currentColor" });
+  const ww = wordmark(el("g", { "clip-path": `url(#${id})` }, L), 136, 44, 40, 7, "currentColor");
+  L.setAttribute("viewBox", `0 0 ${136 + ww + 28} 136`);
+  document.getElementById("lockup").appendChild(L);
+
+  // construction plate
+  const M = document.getElementById("mark");
+  M.style.color = "var(--mark)";
+  const base = el("g", {}, M);
+  const m = drawMark(base, { cx: 54, cy: 54, r: 36, w: 10, tail: 26, fg: "currentColor" });
+  const anno = el("g", { fill: "none", stroke: "var(--anno)", "stroke-width": .6, "font-family": "JetBrains Mono, monospace" }, M);
+  const mk = el("marker", { id: "ah", viewBox: "0 0 6 6", refX: 5, refY: 3, markerWidth: 5, markerHeight: 5, orient: "auto" }, el("defs", {}, M));
+  el("path", { d: "M0 0 L6 3 L0 6 z", fill: "var(--anno)" }, mk);
+  const label = (x, y, t, size = 3.6) => { const e = el("text", { x, y, fill: "var(--anno)", stroke: "none", "font-size": size }, anno); e.textContent = t; return e; };
+  const arrow = (x1, y1, x2, y2) => el("line", { x1, y1, x2, y2, "marker-end": "url(#ah)" }, anno);
+  const dim = (on) => { [...m.ring, m.tailEl, ...m.dots, m.ghostEl].forEach(e => e && e.setAttribute("opacity", on.includes(e) ? 1 : .18)); m.ghostEl && on.includes(m.ghostEl) && m.ghostEl.setAttribute("opacity", .8); };
+
+  const EGGS = [
+    { t: "The ring is a 256-gon", std: "FIPS 203 · FIPS 204", d: "Its vertices sit at angles (2k+1)·π/256, the 256 roots of X²⁵⁶+1. That polynomial defines the ring R_q that ML-KEM and ML-DSA both compute in. It reads as a circle. Drag the zoom to see the facets.",
+      show() { dim(m.ring); m.H.forEach(h => h.pts.forEach(([x, y], i) => i % 8 === 0 && el("circle", { cx: x, cy: y, r: .7, fill: "var(--anno)", stroke: "none" }, anno))); label(4, 116, "x²⁵⁶ + 1 → 256 vertices"); } },
+    { t: "Two halves, one tail", std: "X25519MLKEM768", d: "The ring is two separate 128-vertex arcs. They only connect through the tail, the way a hybrid handshake runs a classical and a post-quantum exchange and feeds both secrets into one key derivation.",
+      show() { dim([...m.ring, m.tailEl]); m.ring[0].setAttribute("stroke", "var(--anno)"); label(78, 14, "X25519"); label(2, 104, "ML-KEM-768"); label(86, 116, "KDF(ss₁ ‖ ss₂)", 3.2); } },
+    { t: "A 3×3 lattice", std: "ML-KEM-768 · k = 3", d: "The nine points are a module lattice. ML-KEM-768 uses a 3×3 matrix A of polynomials, so the grid is 3×3. The basis is sheared on purpose: the public basis of a lattice is the 'bad' one, and finding short vectors with it is the hard problem.",
+      show() { dim(m.dots); const o = [m.cx - m.s - m.sh, m.cy - m.s]; arrow(o[0], o[1], o[0] + m.s, o[1]); arrow(o[0], o[1], o[0] + m.sh, o[1] + m.s); label(o[0] + 2, o[1] - 2.5, "b₁"); label(o[0] - 4.5, o[1] + m.s * .7, "b₂"); label(4, 116, "A ∈ R_q^(3×3)"); } },
+    { t: "The error is the quirk", std: "Learning With Errors", d: "The centre point is pushed off its lattice node by a small vector e. In LWE the public value is b = As + e. Without e the scheme is plain linear algebra and anyone can solve it. The faint ring marks where the point would sit with no error.",
+      show() { dim([m.ghostEl]); arrow(m.cx, m.cy, m.cx + m.e[0] * .9, m.cy + m.e[1] * .9); label(m.cx + 5, m.cy - 6, "e"); label(4, 116, "b = A·s + e"); } },
+    { t: "Ink is 3329", std: "FIPS 203", d: "The first four hex digits of the Ink colour, 0x0D01, are 3329. That is ML-KEM's prime modulus q. It also happens to echo the 0xD1 in the project's GitHub handle.",
+      show() { dim([...m.ring, m.tailEl, ...m.dots]); label(4, 116, "#0D01·24 → q = 3329"); } },
+    { t: "Signal is 8,380,417", std: "FIPS 204", d: "The accent colour #7FE001 is the ML-DSA modulus q = 2²³ − 2¹³ + 1 written in hex. All six digits are the prime, with nothing added.",
+      show() { dim([]); label(4, 116, "#7FE001 → q = 8 380 417"); } },
+  ];
+
+  const list = document.getElementById("eggs");
+  let active = -1;
+  const select = (i) => {
+    active = active === i ? -1 : i;
+    anno.replaceChildren(); m.ring[0].setAttribute("stroke", "currentColor");
+    [...list.querySelectorAll("button")].forEach((b, j) => b.setAttribute("aria-pressed", j === active));
+    if (active < 0) { [...m.ring, m.tailEl, ...m.dots].forEach(e => e.setAttribute("opacity", 1)); m.ghostEl.setAttribute("opacity", .5); return; }
+    EGGS[active].show();
+  };
+  EGGS.forEach((g, i) => {
+    const li2 = document.createElement("li");
+    const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-pressed", "false");
+    b.innerHTML = `<span class="k">${String(i + 1).padStart(2, "0")}</span><span><strong>${g.t}</strong><span class="std">${g.std}</span><span class="d">${g.d}</span></span>`;
+    b.addEventListener("click", () => select(i));
+    li2.appendChild(b); list.appendChild(li2);
+  });
+
+  // zoom toward the ring's right edge, where the facets show
+  const z = document.getElementById("zoom"), zv = document.getElementById("zv");
+  z.addEventListener("input", () => {
+    const k = +z.value, size = 120 / k, fx = 54 + 36, fy = 54;
+    const t = (k - 1) / 23, x = (1 - t) * 0 + t * (fx - size / 2), y = (1 - t) * 0 + t * (fy - size / 2);
+    M.setAttribute("viewBox", `${x} ${y} ${size} ${size}`); zv.textContent = k + "×";
+    if (k > 1 && active !== 0) select(0);
+  });
+
+  // variants
+  const V = document.getElementById("variants");
+  const vt = [
+    ["Mark · light", "#F4F5F9", "#0D0124", true], ["Mark · dark", "#0D0124", "#F4F5F9", true],
+    ["Mark · mono", "#FFFFFF", "#0D0124", "mono"], ["Favicon · light", "#F4F5F9", "#0D0124", false], ["Favicon · dark", "#0D0124", "#F4F5F9", false],
+  ];
+  vt.forEach(([cap, bg, fg, kind]) => {
+    const f = document.createElement("figure"), t = document.createElement("div"); t.className = "tile"; t.style.background = bg;
+    const s = kind === false ? svgBox("0 0 32 32", cap) : svgBox("0 0 120 120", cap);
+    if (kind === false) drawMark(s, { cx: 14.5, cy: 14.5, r: 10, w: 4, tail: 7.5, fg, lattice: false });
+    else drawMark(s, { cx: 54, cy: 54, r: 36, w: 10, tail: 26, fg, accent: kind === "mono" ? fg : SIG, ghost: kind !== "mono" });
+    t.appendChild(s); f.appendChild(t); const c = document.createElement("figcaption"); c.textContent = cap; f.appendChild(c); V.appendChild(f);
+  });
+  const S = document.getElementById("sizes");
+  [[16, false], [24, false], [32, false], [48, true], [96, true]].forEach(([px, full]) => {
+    const f = document.createElement("figure"); const s = full ? svgBox("0 0 120 120", px + "px") : svgBox("0 0 32 32", px + "px");
+    s.setAttribute("width", px); s.setAttribute("height", px); s.style.color = "var(--mark)";
+    full ? drawMark(s, { cx: 54, cy: 54, r: 36, w: 10, tail: 26, fg: "currentColor" }) : drawMark(s, { cx: 14.5, cy: 14.5, r: 10, w: 4, tail: 7.5, fg: "currentColor", lattice: false });
+    f.appendChild(s); const c = document.createElement("figcaption"); c.textContent = px + " px"; f.appendChild(c); S.appendChild(f);
+  });
+})();
+</script>
