@@ -190,7 +190,7 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 - [x] **CITRUTH-01**: `tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass` is
       diagnosed and stabilised — the 14 nodes pass batched, repeatedly, not just standalone
-- [ ] **CITRUTH-02**: `Python CI` is green on `main`, with
+- [x] **CITRUTH-02**: `Python CI` is green on `main`, with
       `test_chaos_lab_idempotency[multihost]`/`[storage-s3]` either fixed or honestly skipped on
       unavailable-registry rather than failing
 - [x] **CITRUTH-03**: Phase verification consults its branch's CI state, so a phase cannot verify
@@ -263,5 +263,5 @@ Filled during roadmap creation.
 | FIX-05 | Phase 218 | Complete, qualified (see FIX-05 note above) |
 | KBD-01 | Phase 219 | Complete (219-01..219-03) |
 | CITRUTH-01 | Phase 220 | Complete — stabilised (10/10 local, 4/4 CI); root cause NOT REPRODUCED, accepted by operator override 2026-10-01 |
-| CITRUTH-02 | Phase 220 | Branch leg verified (moto; 4/4 CI, nodes passed not skipped); 'green on main' leg OPEN until post-merge Python CI on main |
+| CITRUTH-02 | Phase 220 | Complete — post-merge main leg verified 2026-10-01: Python CI 36868142296 at merge c7431aca success, [multihost]/[storage-s3] PASSED in JUnit (moto) |
 | CITRUTH-03 | Phase 220 | Complete — live: refused unobserved + red, green at cd85c281; ARTIFACT-05 gate + verifier patch |

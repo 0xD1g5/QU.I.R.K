@@ -1546,7 +1546,9 @@ F-220-08-1: Dashboard Quality was red at `8c6be117` with TS2556 in three `execut
 mocks from `c0d98faf`, which vitest never type-checks. It was fixed in `cd85c281`. SC1's root-cause
 clause is met by **operator override**: the flake was NOT REPRODUCED, and the batch now
 self-diagnoses. CITRUTH-01/03 are `[x]`. **CITRUTH-02 stays `[ ]` until Python CI on `main` at the
-merge sha is success with `[multihost]`/`[storage-s3]` passed in its JUnit artifact.** Next: open a
+merge sha is success with `[multihost]`/`[storage-s3]` passed in its JUnit artifact.** **UPDATE 2026-10-01: MET.** PR #47 was merged as
+`c7431aca`. Python CI 36868142296 on `main` succeeded on every job, both S3 nodes PASSED in JUnit,
+and CITRUTH-02 is `[x]`. `main` is green for the first time since the MinIO withdrawal. Next: open a
 PR and merge, run that check and flip CITRUTH-02, then audit and close v5.26 (6/6 phases). Any
 commit on the branch before merge (this one excepted) needs re-push + re-dispatch + re-verify.
 

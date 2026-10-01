@@ -284,7 +284,7 @@ Plans:
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
-| 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg post-merge) | 2026-10-01 |
+| 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg verified post-merge, run 36868142296) | 2026-10-01 |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 
