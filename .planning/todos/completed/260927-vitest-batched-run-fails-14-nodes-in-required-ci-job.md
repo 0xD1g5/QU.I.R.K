@@ -4,7 +4,8 @@ created: 2026-09-27
 source: Phase 207.1 close-out session (found while running the UAT integrity gates, not by a report)
 severity: high
 reproducibility: intermittent — failed once, passed twice in the same session on the same tree
-status: pending
+status: completed
+completed: 2026-10-01
 resolves_phase: 220
 ---
 
@@ -187,3 +188,20 @@ used instead for the single-worker isolation runs.
 Full detail (per-run census lines) in `.planning/phases/220-ci-instrument-truth/220-diag/DIAGNOSIS.md` "## D-10 Local Leg".
 
 CI acceptance: recorded in 220-VERIFICATION.md / 220-diag/CI-EVIDENCE.md (220-08).
+
+## Resolution (Phase 220)
+
+**Closed 2026-10-01 by Phase 220 (CITRUTH-01), plans 220-01 and 220-07.** The diagnosis is the
+`## Root Cause (Phase 220, 2026-10-01)` section above: **NOT REPRODUCED in 10 attempts**, not the
+TRIAGE-149 Cluster 2 class, with the ExecutivePage un-mocked `fetchApi` fixed as hygiene rather than
+as a demonstrated cause. The batch now self-diagnoses (`[220-01] warnings` census, per-file wall time)
+and the CI job uploads `pytest-junit.xml` (`linux-full-suite-junit`), so a recurrence carries its own
+evidence. The D-10 local leg is the `## Local acceptance (D-10)` table above: 10/10 consecutive
+batched passes. It was re-run once more at 220-07 (`1 passed`, `cited` 36/36, census act=0).
+
+**This todo is closed on the local leg plus the instrumentation, not on CI.** The D-10 CI leg (3
+`Linux Full Suite` `workflow_dispatch` runs with this node `passed`, read per node from the JUnit
+artifact, never a job-level verdict) is recorded by 220-08 in `220-diag/CI-EVIDENCE.md` and
+`220-VERIFICATION.md`. **If any of those CI runs fails this node, move this file back to
+`.planning/todos/pending/`** (`git mv`), set `status: pending`, and record the failing run's census
+line here. A non-reproduction is not a root cause; this closure must not be read as one.

@@ -262,6 +262,6 @@ Filled during roadmap creation.
 | FIX-04 | Phase 218 | Complete (218-03/218-04) |
 | FIX-05 | Phase 218 | Complete, qualified (see FIX-05 note above) |
 | KBD-01 | Phase 219 | Complete (219-01..219-03) |
-| CITRUTH-01 | Phase 220 | Pending |
-| CITRUTH-02 | Phase 220 | Pending |
-| CITRUTH-03 | Phase 220 | Pending |
+| CITRUTH-01 | Phase 220 | Executed (220-01..07); CI acceptance 220-08 + verification pending |
+| CITRUTH-02 | Phase 220 | Executed (220-01..07); CI acceptance 220-08 + verification pending; 'green on main' leg verified post-merge |
+| CITRUTH-03 | Phase 220 | Executed (220-01..07); CI acceptance 220-08 + verification pending |
