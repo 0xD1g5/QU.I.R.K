@@ -1742,6 +1742,22 @@ def test_vitest_substitute_nodes_pass(uat_series_lines):
     ]
     if diag_lines:
         print("\n".join(diag_lines[-2:]))
+    # 220-01 (D-08): NO act() regression guard was added here. 10/10 local
+    # D-10 runs showed zero "not wrapped in act(" warnings, but the planned
+    # mutation-proof (temporarily remove one executive test's `await
+    # waitFor(...)` and confirm the node goes red) did NOT turn the batch
+    # red -- not with an immediately-resolving mocked fetchApi, and not with
+    # a 20ms-delayed one either. React 19 + @testing-library/react 16's
+    # act-environment and this component's own `cancelled`-flag guard
+    # (executive.tsx:232-250) together mean no observable React warning is
+    # producible from this effect in this toolchain regardless of whether
+    # the fetch is awaited -- see 220-diag/DIAGNOSIS.md "## Mutation-proof
+    # attempt (act() guard NOT added)" for both mutation attempts and their
+    # outputs. Adding an assertion that cannot be demonstrated to fail on the
+    # defect it claims to catch would be a tautology, not a guard, so it is
+    # deliberately left out; the fetchApi mock + awaited settlement in the
+    # three executive-*.test.tsx files is kept anyway as a correctness-hygiene
+    # fix (D-08), independent of whether this gate can detect its absence.
     assert summary["failed"] == 0, f"vitest substitute node(s) failed:\n{output[-4000:]}"
     assert summary["skipped"] == 0, (
         "vitest substitute node(s) skipped -- a skip is NOT proof of coverage; pick a "
