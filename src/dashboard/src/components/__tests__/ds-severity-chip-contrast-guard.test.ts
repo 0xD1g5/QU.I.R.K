@@ -3,7 +3,7 @@
  * D-10 / D-12).
  *
  * BLIND SPOT. RATCHET-01's evaluator cannot see `.severity-*-chip` (CSS
- * classes in index.css, not Tailwind bg-[...] utilities), so its empty
+ * classes in index.css, not Tailwind arbitrary-value background utilities), so its empty
  * baseline says nothing about them. This guard MEASURES them.
  *
  * Chip set is discovered from index.css at run time (vacuity floor 5).
