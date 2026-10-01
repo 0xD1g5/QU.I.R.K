@@ -126,7 +126,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 - [x] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
 - [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [x] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
-- [ ] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
+- [x] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
 
 ### Phase Details
 
@@ -264,7 +264,16 @@ Plans:
   1. `test_vitest_substitute_nodes_pass`'s 14 nodes are diagnosed (documented root cause) and demonstrated passing across repeated batched `Linux Full Suite` runs — not merely observed green once, since a single green run is a sample, not evidence of health.
   2. `Python CI` runs green on `main`'s current HEAD, with `test_chaos_lab_idempotency[multihost]`/`[storage-s3]` either fixed or skipping cleanly and honestly (a stated, checkable condition — e.g. registry unreachable) rather than failing or silently passing on masked errors.
   3. Phase verification consults its own branch's live CI state before reporting `passed`, demonstrated against a real branch rather than asserted — closing the v5.25 gap where five phases verified `passed` over a failing `main`.
-**Plans**: TBD
+**Plans**: 8 plans in 4 waves
+Plans:
+- [x] 220-01-PLAN.md — CITRUTH-01: self-diagnosing vitest batch + CI JUnit artifact, load/bisect diagnosis, act()-leak fix, D-10 local 10-run leg (wave 1)
+- [x] 220-02-PLAN.md — CITRUTH-02: checkable registry-refusal skip, MinIO services repointed to GHCR, chaos-lab docs + vault (wave 1; GHCR repoint superseded by 220-03)
+- [x] 220-03-PLAN.md — CITRUTH-02: replace MinIO with moto (D-01R, 2026-10-01: cached source images lost, every upstream channel closed), boto3 seed, oracles + docs, cache-less proof (wave 2, autonomous)
+- [x] 220-04-PLAN.md — CITRUTH-03: scripts/branch_ci_state.py (TDD, mocked gh, workflow-derived drift guard, first live refusal) (wave 1)
+- [x] 220-05-PLAN.md — CITRUTH-03: ARTIFACT-05 pre-commit gate — phase close requires recorded green CI at HEAD (wave 2)
+- [x] 220-06-PLAN.md — CITRUTH-03: gsd-verifier Step 9 CI-truth local patch + revert detector + CLAUDE.md/CONTRIBUTING (wave 2)
+- [x] 220-07-PLAN.md — cache-less MinIO proof, CLAUDE.md corrections, UAT Series 220, vault, todos closed, hand-edited state, push (wave 3)
+- [x] 220-08-PLAN.md — CI acceptance: refusal at HEAD, 3x Python CI + Dashboard Quality per-node evidence, green leg, zero commits (wave 4)
 
 ### Progress
 
@@ -275,7 +284,7 @@ Plans:
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
-| 220. CI Instrument Truth | 0/? | Not started | - |
+| 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg post-merge) | 2026-10-01 |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 

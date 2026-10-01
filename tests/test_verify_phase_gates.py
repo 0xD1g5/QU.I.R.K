@@ -894,6 +894,12 @@ def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
         REPO_ROOT / "scripts" / "verify_phase_gates.py",
         repo_dir / "scripts" / "verify_phase_gates.py",
     )
+    # 220-05 ARTIFACT-05: verify_phase_gates.py loads job_gating from its
+    # sibling branch_ci_state.py (single source of required-ness).
+    shutil.copy(
+        REPO_ROOT / "scripts" / "branch_ci_state.py",
+        repo_dir / "scripts" / "branch_ci_state.py",
+    )
 
     hooks_dir = repo_dir / ".githooks"
     hooks_dir.mkdir(parents=True)
@@ -967,3 +973,430 @@ def test_hook_integration_red_path_commit_rejected_on_missing_verification(tmp_p
         "expected the commit to be rejected when VERIFICATION.md is missing"
     )
     assert "VERIFICATION.md" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# 220-05: ARTIFACT-05 (CITRUTH-03 / D-13) -- recorded CI truth at phase close
+# ---------------------------------------------------------------------------
+
+BRANCH_CI_STATE_PATH = REPO_ROOT / "scripts" / "branch_ci_state.py"
+
+_HEAD = "a" * 40
+_OTHER = "b" * 40
+_MAIN_NODES = [
+    "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]",
+    "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[storage-s3]",
+]
+
+
+@pytest.fixture(scope="module")
+def bcs():
+    spec = importlib.util.spec_from_file_location(
+        "branch_ci_state_for_vpg_tests", BRANCH_CI_STATE_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _green_ci_block(head_sha, *, event="workflow_dispatch", bcs_module=None):
+    """Schema-complete green `ci:` block built from branch_ci_state's own
+    REQUIRED_JOBS so fixtures cannot drift from the constant."""
+    module = bcs_module
+    if module is None:
+        spec = importlib.util.spec_from_file_location(
+            "branch_ci_state_for_vpg_helper", BRANCH_CI_STATE_PATH
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+    workflows = []
+    for run_id, wf in enumerate(module.REQUIRED_WORKFLOWS, start=1000):
+        workflows.append({
+            "name": wf,
+            "run_id": run_id,
+            "head_sha": head_sha,
+            "event": event,
+            "status": "completed",
+            "conclusion": "success",
+            "observed": True,
+            "jobs": [
+                {
+                    "name": job,
+                    "conclusion": "success",
+                    "required": True,
+                    "advisory_reason": None,
+                    "failing_nodes": [],
+                }
+                for job in module.REQUIRED_JOBS[wf]
+            ],
+        })
+    return {
+        "checked_at": "2026-10-01T00:00:00Z",
+        "branch": "phase-999-fixture",
+        "head_sha": head_sha,
+        "verdict": "green",
+        "reasons": [],
+        "dispatch_hints": [],
+        "workflows": workflows,
+        "main": {
+            "head_sha": _OTHER,
+            "workflows": [
+                {"name": "Python CI", "run_id": 1, "conclusion": "failure",
+                 "failing_nodes": list(_MAIN_NODES)},
+                {"name": "Dashboard Quality", "run_id": 2, "conclusion": "success",
+                 "failing_nodes": []},
+            ],
+        },
+    }
+
+
+def _job(block, workflow, job):
+    for wf in block["workflows"]:
+        if wf["name"] == workflow:
+            for j in wf["jobs"]:
+                if j["name"] == job:
+                    return j
+    raise KeyError((workflow, job))
+
+
+def _make_linux_red(block, nodes=None):
+    job = _job(block, "Python CI", "Linux Full Suite")
+    job["conclusion"] = "failure"
+    job["failing_nodes"] = list(_MAIN_NODES if nodes is None else nodes)
+    block["workflows"][0]["conclusion"] = "failure"
+    return block
+
+
+def _fm(ci=None, *, status="passed", waiver=None):
+    fm = {"phase": "999", "status": status}
+    if ci is not None:
+        fm["ci"] = ci
+    if waiver is not None:
+        fm["ci_waiver"] = waiver
+    return fm
+
+
+def _joined(reasons):
+    return "\n".join(reasons)
+
+
+def test_check_ci_truth_blocks_when_no_ci_block(vpg):
+    reasons = vpg.check_ci_truth("999", _fm(), _HEAD)
+    assert reasons
+    assert "no `ci:` block" in _joined(reasons)
+    assert all(r.startswith("Phase 999: ARTIFACT-05 (CITRUTH-03):") for r in reasons)
+
+
+def test_check_ci_truth_blocks_when_frontmatter_none(vpg):
+    reasons = vpg.check_ci_truth("999", None, _HEAD)
+    assert "no `ci:` block" in _joined(reasons)
+
+
+def test_check_ci_truth_clean_for_green_block_at_head(vpg, bcs):
+    assert vpg.check_ci_truth("999", _fm(_green_ci_block(_HEAD, bcs_module=bcs)), _HEAD) == []
+
+
+def test_check_ci_truth_blocks_stale_head_and_names_both_shas(vpg, bcs):
+    reasons = vpg.check_ci_truth("999", _fm(_green_ci_block(_OTHER, bcs_module=bcs)), _HEAD)
+    text = _joined(reasons)
+    assert reasons
+    assert _HEAD in text and _OTHER in text
+    assert "re-dispatch" in text and "re-verify" in text
+
+
+def test_check_ci_truth_blocks_when_current_head_unresolvable(vpg, bcs):
+    reasons = vpg.check_ci_truth("999", _fm(_green_ci_block(_HEAD, bcs_module=bcs)), None)
+    assert reasons
+    assert "HEAD" in _joined(reasons)
+
+
+def test_check_ci_truth_blocks_unobserved_workflow(vpg, bcs):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    block["workflows"][1]["observed"] = False
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Dashboard Quality" in _joined(reasons)
+
+
+def test_check_ci_truth_blocks_missing_required_workflow(vpg, bcs):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    block["workflows"] = [w for w in block["workflows"] if w["name"] != "Dashboard Quality"]
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Dashboard Quality" in _joined(reasons)
+
+
+def test_check_ci_truth_blocks_missing_required_job(vpg, bcs):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    block["workflows"][1]["jobs"] = [
+        j for j in block["workflows"][1]["jobs"] if j["name"] != "Bundle Freshness Gate"
+    ]
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Bundle Freshness Gate" in _joined(reasons)
+
+
+def test_check_ci_truth_blocks_workflow_head_sha_mismatch(vpg, bcs):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    block["workflows"][0]["head_sha"] = _OTHER
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Python CI" in _joined(reasons)
+
+
+@pytest.mark.parametrize("conclusion", ["failure", "skipped", "cancelled", None])
+def test_check_ci_truth_blocks_required_job_not_success(vpg, bcs, conclusion):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    _job(block, "Dashboard Quality", "Axe + Console Gate")["conclusion"] = conclusion
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Axe + Console Gate" in _joined(reasons)
+
+
+def test_check_ci_truth_advisory_job_failure_is_clean(vpg, bcs):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    block["workflows"][0]["jobs"].append({
+        "name": "Windows Packaging Spike", "conclusion": "failure",
+        "required": False, "advisory_reason": "continue-on-error", "failing_nodes": [],
+    })
+    assert vpg.check_ci_truth("999", _fm(block), _HEAD) == []
+
+
+def test_check_ci_truth_ignores_block_required_false_on_truly_required_job(vpg, bcs):
+    """T-220-20: required-ness is re-derived via job_gating, never trusted."""
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    job = _job(block, "Python CI", "Linux Full Suite")
+    job["conclusion"] = "failure"
+    job["required"] = False
+    job["advisory_reason"] = "hand-edited to look advisory"
+    block["verdict"] = "green"
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Linux Full Suite" in _joined(reasons)
+
+
+def test_check_ci_truth_unclassified_job_failure_fails_closed(vpg, bcs):
+    block = _green_ci_block(_HEAD, bcs_module=bcs)
+    block["workflows"][0]["jobs"].append({
+        "name": "Some Brand New Job", "conclusion": "failure",
+        "required": False, "advisory_reason": None, "failing_nodes": [],
+    })
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert "Some Brand New Job" in _joined(reasons)
+
+
+_WIN_E2E = "Windows Sensor E2E (frozen -> Linux-built console)"
+
+
+def test_check_ci_truth_windows_e2e_dispatch_failure_is_advisory(vpg, bcs):
+    block = _green_ci_block(_HEAD, event="workflow_dispatch", bcs_module=bcs)
+    _job(block, "Python CI", _WIN_E2E)["conclusion"] = "failure"
+    assert vpg.check_ci_truth("999", _fm(block), _HEAD) == []
+
+
+def test_check_ci_truth_windows_e2e_pull_request_failure_blocks(vpg, bcs):
+    block = _green_ci_block(_HEAD, event="pull_request", bcs_module=bcs)
+    _job(block, "Python CI", _WIN_E2E)["conclusion"] = "failure"
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert _WIN_E2E in _joined(reasons)
+
+
+def test_check_ci_truth_status_passed_over_red_ci_is_explicit_violation(vpg, bcs):
+    block = _make_linux_red(_green_ci_block(_HEAD, bcs_module=bcs))
+    reasons = vpg.check_ci_truth("999", _fm(block, status="passed"), _HEAD)
+    assert "status: passed" in _joined(reasons)
+    # and the same red block without status: passed still blocks, minus that line
+    reasons_gaps = vpg.check_ci_truth("999", _fm(block, status="gaps_found"), _HEAD)
+    assert reasons_gaps
+    assert "status: passed" not in _joined(reasons_gaps)
+
+
+def test_check_ci_truth_status_passed_over_absent_ci_is_explicit_violation(vpg):
+    reasons = vpg.check_ci_truth("999", _fm(status="passed"), _HEAD)
+    assert "status: passed" in _joined(reasons)
+
+
+def test_check_ci_truth_valid_ci_waiver_matching_main_is_clean(vpg, bcs):
+    block = _make_linux_red(_green_ci_block(_HEAD, bcs_module=bcs))
+    waiver = {"reason": "MinIO images withdrawn; same two nodes red on main",
+              "failing_nodes": list(_MAIN_NODES)}
+    assert vpg.check_ci_truth("999", _fm(block, waiver=waiver), _HEAD) == []
+
+
+@pytest.mark.parametrize(
+    "waiver",
+    [
+        {"failing_nodes": list(_MAIN_NODES)},                     # no reason
+        {"reason": "   ", "failing_nodes": list(_MAIN_NODES)},    # blank reason
+        {"reason": "r", "failing_nodes": []},                     # empty list
+        {"reason": "r", "failing_nodes": _MAIN_NODES[:1]},        # set != main's
+        {"reason": "r", "failing_nodes": _MAIN_NODES + ["tests/x.py::extra"]},
+        "just a string",                                           # malformed
+    ],
+)
+def test_check_ci_truth_ci_waiver_invalid_shapes_block(vpg, bcs, waiver):
+    block = _make_linux_red(_green_ci_block(_HEAD, bcs_module=bcs))
+    reasons = vpg.check_ci_truth("999", _fm(block, waiver=waiver), _HEAD)
+    assert reasons
+    assert "ci_waiver" in _joined(reasons)
+
+
+def test_check_ci_truth_ci_waiver_never_covers_job_red_without_nodes(vpg, bcs):
+    block = _make_linux_red(_green_ci_block(_HEAD, bcs_module=bcs), nodes=[])
+    waiver = {"reason": "r", "failing_nodes": list(_MAIN_NODES)}
+    reasons = vpg.check_ci_truth("999", _fm(block, waiver=waiver), _HEAD)
+    assert "Linux Full Suite" in _joined(reasons)
+
+
+def test_check_ci_truth_ci_waiver_blocks_when_branch_nodes_not_in_waiver(vpg, bcs):
+    block = _make_linux_red(
+        _green_ci_block(_HEAD, bcs_module=bcs),
+        nodes=["tests/test_new_regression.py::test_it"],
+    )
+    waiver = {"reason": "r", "failing_nodes": list(_MAIN_NODES)}
+    reasons = vpg.check_ci_truth("999", _fm(block, waiver=waiver), _HEAD)
+    assert "test_new_regression" in _joined(reasons)
+
+
+def test_check_ci_truth_ci_waiver_blocks_when_ci_main_absent(vpg, bcs):
+    block = _make_linux_red(_green_ci_block(_HEAD, bcs_module=bcs))
+    del block["main"]
+    waiver = {"reason": "r", "failing_nodes": list(_MAIN_NODES)}
+    reasons = vpg.check_ci_truth("999", _fm(block, waiver=waiver), _HEAD)
+    assert "ci_waiver" in _joined(reasons)
+
+
+def test_check_ci_truth_ci_waiver_does_not_cover_unobserved_or_stale(vpg, bcs):
+    block = _make_linux_red(_green_ci_block(_OTHER, bcs_module=bcs))
+    waiver = {"reason": "r", "failing_nodes": list(_MAIN_NODES)}
+    assert vpg.check_ci_truth("999", _fm(block, waiver=waiver), _HEAD)
+
+
+@pytest.mark.parametrize(
+    "ci",
+    [
+        "green",
+        ["not", "a", "dict"],
+        {"head_sha": "abc123", "workflows": []},
+        {"head_sha": _HEAD.upper(), "workflows": []},
+        {"head_sha": _HEAD, "workflows": "nope"},
+        {"head_sha": _HEAD, "workflows": [None, 3]},
+        {"head_sha": _HEAD, "workflows": [{"name": "Python CI", "observed": True,
+                                           "head_sha": _HEAD, "jobs": "x"}]},
+        {"head_sha": _HEAD, "workflows": [{"name": "Python CI", "observed": True,
+                                           "head_sha": _HEAD, "jobs": [None]}]},
+    ],
+)
+def test_check_ci_truth_malformed_ci_blocks_and_never_raises(vpg, ci):
+    reasons = vpg.check_ci_truth("999", {"status": "passed", "ci": ci}, _HEAD)
+    assert reasons
+
+
+def _write_closable_phase(tmp_path, ci_block=None):
+    planning = tmp_path / ".planning"
+    phase_dir = planning / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    import yaml as _yaml
+
+    fm = {"phase": "999", "status": "passed"}
+    if ci_block is not None:
+        fm["ci"] = ci_block
+    (phase_dir / "999-VERIFICATION.md").write_text(
+        "---\n" + _yaml.safe_dump(fm, sort_keys=False) + "---\n\n# Verification\n",
+        encoding="utf-8",
+    )
+    (phase_dir / "999-VALIDATION.md").write_text(
+        "---\nphase: 999\nnyquist_compliant: true\n---\n\nbody\n", encoding="utf-8"
+    )
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    return "+- [x] **Phase 999: Fixture Phase** — done\n"
+
+
+def test_main_returns_0_when_trigger_and_green_ci_block_at_head(vpg, bcs, tmp_path, capsys):
+    diff_text = _write_closable_phase(tmp_path, _green_ci_block(_HEAD, bcs_module=bcs))
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+        head_sha_resolver=lambda: _HEAD,
+    )
+    assert exit_code == 0
+    assert "ARTIFACT-05" in capsys.readouterr().out
+
+
+def test_main_returns_1_when_trigger_and_no_ci_block(vpg, tmp_path, capsys):
+    diff_text = _write_closable_phase(tmp_path, None)
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+        head_sha_resolver=lambda: _HEAD,
+    )
+    assert exit_code == 1
+    assert "ci:" in capsys.readouterr().err
+
+
+def test_main_returns_1_when_green_ci_block_is_at_a_stale_head(vpg, bcs, tmp_path):
+    diff_text = _write_closable_phase(tmp_path, _green_ci_block(_OTHER, bcs_module=bcs))
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+        head_sha_resolver=lambda: _HEAD,
+    )
+    assert exit_code == 1
+
+
+def _flip_phase_999_with_verification(repo_dir, ci_block):
+    """After a baseline commit: write a passed VERIFICATION.md (with or
+    without a ci block), a clean VALIDATION.md, and flip ROADMAP's box."""
+    import yaml as _yaml
+
+    phase_dir = repo_dir / ".planning" / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    (phase_dir / "999-01-PLAN.md").write_text(
+        "---\nphase: 999\nplan: 01\nfiles_modified:\n  - tests/test_fixture.py\n---\n\n# Plan\n",
+        encoding="utf-8",
+    )
+    fm = {"phase": "999", "status": "passed"}
+    if ci_block is not None:
+        fm["ci"] = ci_block
+    (phase_dir / "999-VERIFICATION.md").write_text(
+        "---\n" + _yaml.safe_dump(fm, sort_keys=False) + "---\n\n# Verification\n",
+        encoding="utf-8",
+    )
+    (phase_dir / "999-VALIDATION.md").write_text(
+        "---\nphase: 999\nnyquist_compliant: true\n---\n\nbody\n", encoding="utf-8"
+    )
+    (repo_dir / ".planning" / "ROADMAP.md").write_text(
+        "# Roadmap\n\n- [x] **Phase 999: Fixture Phase** — placeholder\n",
+        encoding="utf-8",
+    )
+
+
+def _fixture_head(repo_dir):
+    return run_fork_safe(
+        [_GIT, "-C", str(repo_dir), "rev-parse", "HEAD"], check=True
+    ).stdout.strip()
+
+
+def test_hook_integration_phase_close_with_green_ci_block_at_head_succeeds(tmp_path, bcs):
+    repo_dir = tmp_path / "hook-ci-green-repo"
+    repo_dir.mkdir()
+    _init_fixture_repo(repo_dir)
+    baseline = _commit(repo_dir, "chore: initial fixture commit")
+    assert baseline.returncode == 0, baseline.stderr
+
+    _flip_phase_999_with_verification(
+        repo_dir, _green_ci_block(_fixture_head(repo_dir), bcs_module=bcs)
+    )
+    result = _commit(repo_dir, "docs: mark Phase 999 complete")
+    assert result.returncode == 0, (
+        f"expected a phase close with green CI at HEAD to succeed: {result.stderr}"
+    )
+
+
+def test_hook_integration_phase_close_without_ci_block_rejected(tmp_path):
+    repo_dir = tmp_path / "hook-ci-red-repo"
+    repo_dir.mkdir()
+    _init_fixture_repo(repo_dir)
+    baseline = _commit(repo_dir, "chore: initial fixture commit")
+    assert baseline.returncode == 0, baseline.stderr
+
+    _flip_phase_999_with_verification(repo_dir, None)
+    result = _commit(repo_dir, "docs: mark Phase 999 complete")
+    assert result.returncode != 0, "expected a phase close with no ci: block to be rejected"
+    assert "ci:" in result.stderr

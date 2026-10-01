@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T01:49:54.000Z"
-last_activity: 2026-09-30 -- Phase 219 (Keyboard Access, KBD-01) VERIFIED passed 3/3 and marked complete BY HAND (no phase.complete). Table wrapper focusable only while overflowing (role=region + name, ring-2); keyboard-only E2E executed in CI; operator spot-check "keyboard pass"; scrollable-region-focusable WITHDRAWN from all baselines + ledger, countRange retired. CI on HEAD 39de6f15 per-step: Dashboard Quality 4/4 green (36800692384); Python CI fails only the 2 MinIO nodes, set identical to main (36800690414). Review 0 Critical / 1 Warning (WR-01 fixed c0e0d1f4) / 2 Info. Branch phase-219-keyboard-access pushed, NOT merged. Next -- merge 219 PR, then Phase 220 (CI Instrument Truth).
+last_updated: "2026-10-01T12:03:01.000Z"
+last_activity: "2026-10-01 -- Phase 220 (CI Instrument Truth) COMPLETE, verified human_needed at cd85c281 (CI green, branch_ci_state exit 0). SC1 root cause NOT REPRODUCED, accepted by operator override. CITRUTH-02 main leg is post-merge. F-220-08-1 (TS2556 in 3 executive tests) fixed in cd85c281. Branch pushed, NOT merged; next: PR + merge, then the post-merge main check, then milestone v5.26 audit/close"
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 27
-  completed_plans: 27
-  percent: 83
+  completed_phases: 6
+  total_plans: 35
+  completed_plans: 35
+  percent: 100
 ---
 
 # Project State
@@ -31,7 +31,7 @@ The single largest deferral, and the only one with an operator instruction attac
 | Category | Item | Status |
 |----------|------|--------|
 | backlog | `999.117-dashboard-accessibility-debt` | **DEFERRED AS ONE UNIT** — own milestone or bundled whole into the next; explicitly NOT piecemeal. 45 of 103 badge pairs below WCAG AA. Reopening of `BACK-A11Y-01`. 8-item breakdown in `HORIZON.md`. |
-| ci | `Linux Full Suite` red on `main` | `test_chaos_lab_idempotency[multihost]`/`[storage-s3]`, Docker registry `unauthorized`. Environmental, pre-existing, identical node set on `main` and PR #37. Not the vitest flake. |
+| ci | `Linux Full Suite` red on `main` | `test_chaos_lab_idempotency[multihost]`/`[storage-s3]`, Docker registry `unauthorized`. Environmental, pre-existing, identical node set on `main` and PR #37. Not the vitest flake. **[Superseded 2026-10-01, Phase 220: NOT environmental — a permanent registry withdrawal of the MinIO images. Fixed on branch `phase-220-ci-instrument-truth` by replacing MinIO with moto (D-01R); CI leg 220-08, `main` leg post-merge.]** |
 | audit | W-1/W-2 — XSURF-04 gates 1 of 3 divergence classes | Scope-corrected in the archived REQUIREMENTS.md rather than left reading clean. |
 | audit | W-3 — DENOM-04 clamp oracle skips in CI | Gitignored artifact under `quirk-output/`; fix is a committed fixture. |
 | audit | W-7 — `requirements-completed` frontmatter absent from 35 of 41 SUMMARY files | Requirement coverage rested on 2 independent sources, not the 3 the workflow assumes. Process gap. |
@@ -1536,7 +1536,45 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 219 verification, then Phase 220
+## Next Cycle — merge Phase 220, check `main`, then close milestone v5.26
+
+**Phase 220 is COMPLETE (2026-10-01), verified `human_needed` at `cd85c281`, NOT merged.** The
+branch `phase-220-ci-instrument-truth` is pushed. The close commit sits directly on `cd85c281`,
+whose CI was observed green: Python CI 36854156107 and Dashboard Quality 36854158859, all jobs
+success. `branch_ci_state.py` exited 0 and `check_ci_truth` returned `[]`. 220-08 found
+F-220-08-1: Dashboard Quality was red at `8c6be117` with TS2556 in three `executive-*.test.tsx`
+mocks from `c0d98faf`, which vitest never type-checks. It was fixed in `cd85c281`. SC1's root-cause
+clause is met by **operator override**: the flake was NOT REPRODUCED, and the batch now
+self-diagnoses. CITRUTH-01/03 are `[x]`. **CITRUTH-02 stays `[ ]` until Python CI on `main` at the
+merge sha is success with `[multihost]`/`[storage-s3]` passed in its JUnit artifact.** Next: open a
+PR and merge, run that check and flip CITRUTH-02, then audit and close v5.26 (6/6 phases). Any
+commit on the branch before merge (this one excepted) needs re-push + re-dispatch + re-verify.
+
+**Prior Next Cycle note, superseded above:** 2026-10-01 (220-07) — Phase 220 CI acceptance (220-08), then verification.
+
+**(superseded)** Next Cycle — Phase 220 CI acceptance (220-08), then verification
+
+**Phase 220 is EXECUTED through 220-07 (7 of 8 plans), NOT verified, NOT merged.** Branch
+`phase-220-ci-instrument-truth`, 18 commits ahead of `origin/main` (`8b3b087c`, which already
+contains Phase 219 via PR #44) including this edit's own commit, and pushed to `origin` with
+this commit as its HEAD. The pushed sha is recorded in `220-07-SUMMARY.md`. 220-08 dispatches
+`Python CI` (3x) and `Dashboard Quality` against that exact sha and **must make zero commits**:
+under ARTIFACT-05 (220-05), any commit after the CI observation makes the recorded `ci:` block
+stale. CITRUTH-01: 220-01's verdict on the 14-node vitest flake is **NOT REPRODUCED in 10 attempts**.
+The un-mocked ExecutivePage `fetchApi` was fixed as hygiene, the batch now prints a `[220-01]`
+census, and the job uploads a JUnit artifact. The local D-10 leg was 10/10. CITRUTH-02: MinIO was
+replaced by `motoserver/moto:5.2.3` (D-01R; the GHCR mirror was abandoned when the cached source
+images were lost). Both idempotency nodes pass from a cache-less anonymous pull (220-03, re-confirmed
+220-07 at the same digest), with the D-04 refusal skip checkable. CITRUTH-03:
+`scripts/branch_ci_state.py`, the ARTIFACT-05 phase-close gate, and the CI-aware `gsd-verifier`
+local patch with a revert-detector test. The local full-suite failing-node set is {} vs `main`'s
+{`[multihost]`, `[storage-s3]`}. Todos 260927 and 260930 moved to `completed/`, each with a
+move-back clause if 220-08's CI leg fails. The ROADMAP Phase 220 checkbox, the 220-08 plan line,
+and the three CITRUTH boxes are deliberately left unchecked. No toolchain state verb was used.
+Resume with 220-08, then the verifier.
+
+**Prior Next Cycle note, superseded above:** 2026-09-30 (Phase 219 close) — Phase 219
+verification, then Phase 220. (Phase 219 has since been verified and merged, PR #44.)
 
 **Phase 219 is EXECUTED (all 4 plans), NOT merged.** `git rev-list --count main..HEAD` = **9** at
 the start of this close-out (before this edit's own commit), branch `phase-219-keyboard-access`.

@@ -14,7 +14,7 @@
 > [docs/UAT-SERIES.md](../../docs/UAT-SERIES.md).
 
 Earlier QU.I.R.K. phases shipped `docker compose --profile <name>` chaos labs for protocols
-that work locally (BIND9 for DNSSEC, SimpleSAMLphp for SAML, Samba DC for Kerberos, MinIO for
+that work locally (BIND9 for DNSSEC, SimpleSAMLphp for SAML, Samba DC for Kerberos, MinIO (moto since Phase 220) for
 S3). Kubernetes etcd encryption is intentionally NOT in that set — running etcd in a sidecar
 does not exercise the EKS/GKE/AKS encryption APIs Phase 29 inspects.
 

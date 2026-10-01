@@ -9,7 +9,7 @@
 //  current UI renders each subscore as a labeled gauge, not a card with
 //  descriptive body text.)
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 
 const FIXTURE = {
   meta: { scan_id: "scan-1", scanned_at: "2026-09-01T00:00:00Z", total_endpoints: 4, total_findings: 6 },
@@ -57,10 +57,28 @@ vi.mock("@/components/RegressionAlertChip", () => ({
   RegressionAlertChip: () => null,
 }))
 
+// 220-01 (D-08): see executive-score-gauge.test.tsx's identical comment —
+// executive.tsx:231-250's loadManifest() effect calls the real, un-mocked
+// fetchApi() on mount. Diagnosed in 220-diag/DIAGNOSIS.md as a
+// dangling-async-update hygiene defect, not a demonstrated cause of the
+// 260927 batch flake. Mocked and awaited the same way.
+const fetchApiMock = vi.fn().mockImplementation(() =>
+  Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+)
+vi.mock("@/lib/api", () => ({
+  fetchApi: (...args: unknown[]) => fetchApiMock(...args),
+}))
+
 describe("ExecutivePage — UAT-7-05", () => {
   it("renders four score driver cards whose subscores come from the fixture and sum to at most 100", async () => {
     const { ExecutivePage } = await import("@/pages/executive")
     render(<ExecutivePage />)
+
+    // Settle the manifest fetch before any assertion runs, so the effect's
+    // async continuation (setManifest) never resolves after the test ends.
+    await waitFor(() =>
+      expect(fetchApiMock).toHaveBeenCalledWith("/api/reports/latest/manifest")
+    )
 
     // UAT-7-05 names exactly these four driver labels (Hygiene, Modern TLS,
     // Identity Trust, Agility Signals) — the page's labels for identity_trust

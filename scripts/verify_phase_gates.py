@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pure decision core for QUIRK's phase-completion artifact gate (ARTIFACT-01..04).
+"""Pure decision core for QUIRK's phase-completion artifact gate (ARTIFACT-01..05).
 
 Why this exists: three v5.11 gaps shipped silently because nothing checked
 phase-close artifacts before the phase was marked Complete —
@@ -32,6 +32,18 @@ destructive deletion is blocked until the gap is resolved — a git hook has
 zero visibility into (and zero ability to prevent) a plain filesystem delete
 that happens outside of any git operation; it cannot make the delete
 itself refuse to run.
+
+ARTIFACT-05 (Phase 220, CITRUTH-03 / D-13): in v5.25, five phases were
+verified `passed` while CI was red, because nobody had to show a green run
+at the commit being closed. `check_ci_truth()` requires the closing phase's
+NN-VERIFICATION.md frontmatter to carry a `ci:` block (the JSON report of
+`scripts/branch_ci_state.py --compare-main`). Every required job must be
+`success`, with required-ness re-derived through branch_ci_state.job_gating
+rather than read from the block. `ci.head_sha` must equal the local HEAD,
+which is the parent of the commit being made. The one escape is an honest
+`ci_waiver:` bound to main's own recorded failing-node set. The check stays
+offline. It only reads the frontmatter plus `git rev-parse HEAD`, so the
+hook never needs network access or a gh token.
 
 Run modes:
     python3 scripts/verify_phase_gates.py           # invoked by .githooks/pre-commit
@@ -206,6 +218,295 @@ def check_phase_close(
     summary_markdown = "\n".join(lines) + "\n"
 
     return blocked, reasons, summary_markdown
+
+
+# ---------------------------------------------------------------------------
+# ARTIFACT-05 (CITRUTH-03 / D-13): check_ci_truth()
+# ---------------------------------------------------------------------------
+
+_SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
+_BRANCH_CI_STATE_CACHE: dict[str, object] = {}
+
+
+def _branch_ci_state():
+    """Lazy, cached load of the sibling scripts/branch_ci_state.py, the single
+    source of required-ness (REQUIRED_WORKFLOWS / REQUIRED_JOBS / job_gating).
+    Uses spec_from_file_location so sys.path is never mutated. Returns None
+    when the file is missing or fails to import; check_ci_truth() turns that
+    into a blocking reason instead of crashing the hook."""
+    if "module" in _BRANCH_CI_STATE_CACHE:
+        return _BRANCH_CI_STATE_CACHE["module"]
+    module = None
+    path = pathlib.Path(__file__).with_name("branch_ci_state.py")
+    if path.exists():
+        try:
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location(
+                "_vpg_branch_ci_state", path
+            )
+            if spec is not None and spec.loader is not None:
+                candidate = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(candidate)
+                module = candidate
+        except Exception:  # noqa: BLE001 - any import failure blocks, never crashes
+            module = None
+    _BRANCH_CI_STATE_CACHE["module"] = module
+    return module
+
+
+def _str_list(value) -> list[str] | None:
+    """A list of non-empty strings, or None when the shape is anything else."""
+    if not isinstance(value, list):
+        return None
+    if not all(isinstance(item, str) and item.strip() for item in value):
+        return None
+    return list(value)
+
+
+def _check_ci_waiver(waiver, ci: dict, red_jobs: list) -> list[str]:
+    """Return why `waiver` does NOT cover `red_jobs` (empty list = covered)."""
+    if not isinstance(waiver, dict):
+        return ["ci_waiver is malformed (expected a mapping with `reason` and "
+                "`failing_nodes`)."]
+    problems: list[str] = []
+    reason = waiver.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        problems.append("ci_waiver has no non-empty `reason`.")
+    nodes = _str_list(waiver.get("failing_nodes"))
+    if not nodes:
+        problems.append("ci_waiver.failing_nodes must be a non-empty list of "
+                        "pytest node ids.")
+        nodes = []
+    waiver_set = set(nodes)
+
+    main = ci.get("main")
+    main_set: set[str] | None = None
+    if isinstance(main, dict) and isinstance(main.get("workflows"), list):
+        main_set = set()
+        for entry in main["workflows"]:
+            if not isinstance(entry, dict):
+                main_set = None
+                break
+            entry_nodes = _str_list(entry.get("failing_nodes", []))
+            if entry_nodes is None:
+                main_set = None
+                break
+            main_set.update(entry_nodes)
+    if main_set is None:
+        problems.append("ci_waiver requires a well-formed `ci.main` block "
+                        "(run branch_ci_state.py --compare-main) to compare "
+                        "against; none was recorded.")
+    elif waiver_set and waiver_set != main_set:
+        problems.append(
+            "ci_waiver.failing_nodes does not equal main's recorded failing "
+            f"set (only in waiver: {sorted(waiver_set - main_set)}; only on "
+            f"main: {sorted(main_set - waiver_set)})."
+        )
+
+    for workflow, job, _conclusion, job_nodes in red_jobs:
+        if not job_nodes:
+            problems.append(
+                f"ci_waiver cannot cover required job {job!r} ({workflow}): no "
+                "failing nodes were extracted, and a job-level red is never "
+                "waivable."
+            )
+            continue
+        uncovered = sorted(set(job_nodes) - waiver_set)
+        if uncovered:
+            problems.append(
+                f"ci_waiver does not cover required job {job!r} ({workflow}) "
+                f"failing nodes {uncovered}."
+            )
+    return problems
+
+
+def _check_ci_workflow(
+    bcs, wf: str, entries: list, ci_head: str | None, red_jobs: list
+) -> list[str]:
+    """Check one required workflow's recorded entry. Appends every red
+    required job (re-derived via job_gating) to `red_jobs` as
+    (workflow, job, conclusion, failing_nodes); returns non-waivable
+    problems (absent, duplicated, unobserved, sha mismatch, malformed,
+    missing required job)."""
+    if not entries:
+        return [f"required workflow {wf!r} is absent from `ci.workflows`."]
+    if len(entries) > 1:
+        return [f"required workflow {wf!r} appears more than once in "
+                "`ci.workflows`."]
+    entry = entries[0]
+    if entry.get("observed") is not True:
+        return [f"{wf}: not observed (no completed run at HEAD); dispatch it "
+                "and re-verify."]
+    if ci_head is not None and entry.get("head_sha") != ci_head:
+        return [f"{wf}: run head_sha {entry.get('head_sha')!r} does not match "
+                f"`ci.head_sha` {ci_head}."]
+    event = entry.get("event")
+    if not isinstance(event, str):
+        event = ""
+    jobs = entry.get("jobs")
+    if not isinstance(jobs, list):
+        return [f"{wf}: `jobs` is missing or not a list."]
+
+    problems: list[str] = []
+    seen: set[str] = set()
+    for job in jobs:
+        if not isinstance(job, dict) or not isinstance(job.get("name"), str):
+            problems.append(f"{wf}: malformed job entry {job!r}.")
+            continue
+        jname = job["name"]
+        seen.add(jname)
+        required, _why = bcs.job_gating(wf, jname, event)
+        conclusion = job.get("conclusion")
+        if required and conclusion != "success":
+            nodes = _str_list(job.get("failing_nodes", [])) or []
+            red_jobs.append((wf, jname, conclusion, nodes))
+    for jname in bcs.REQUIRED_JOBS.get(wf, ()):
+        if jname not in seen and bcs.job_gating(wf, jname, event)[0]:
+            problems.append(
+                f"{wf}: required job {jname!r} is missing from the recorded run."
+            )
+    return problems
+
+
+def check_ci_truth(
+    phase_num: str,
+    verification_frontmatter: dict | None,
+    current_head_sha: str | None,
+) -> list[str]:
+    """Pure. ARTIFACT-05: decide whether a phase's recorded CI truth allows
+    it to close. Returns blocking reasons, each one prefixed
+    `Phase {N}: ARTIFACT-05 (CITRUTH-03):`. An empty list means clean. It
+    never raises, and every malformed shape becomes a reason.
+
+    `ci:` schema (the JSON report of `scripts/branch_ci_state.py
+    --compare-main`, pasted into NN-VERIFICATION.md frontmatter):
+        ci:
+          head_sha: <40-hex>           # branch HEAD that was observed
+          workflows:
+            - name: Python CI | Dashboard Quality
+              head_sha: <40-hex>       # must equal ci.head_sha
+              event: workflow_dispatch | pull_request | push
+              observed: true           # completed run AT head_sha
+              jobs:
+                - {name, conclusion, failing_nodes: [node ids]}
+          main:                        # required only when a waiver is used
+            workflows: [{name, failing_nodes: [node ids]}]
+    `verdict`, `reasons`, and the per-job `required` / `advisory_reason`
+    fields may be present, but they are NEVER treated as authority.
+    Required-ness is recomputed with branch_ci_state.job_gating(workflow, job,
+    event), so hand-editing a flag cannot turn a red job advisory (T-220-20).
+
+    `ci_waiver:` schema:
+        ci_waiver:
+          reason: <non-empty str>
+          failing_nodes: [<node id>, ...]   # non-empty
+    A waiver covers red required jobs only when all of the following hold:
+    the reason is non-empty; set(failing_nodes) equals the union of
+    `ci.main.workflows[*].failing_nodes`; and every red required job has a
+    non-empty failing_nodes list fully contained in the waiver. A job-level
+    red with no extractable nodes is never waivable. A waiver never covers
+    a stale, unobserved, missing, or malformed observation (T-220-21).
+
+    HEAD-equality rule (D-12): `ci.head_sha` must equal `current_head_sha`.
+    In a pre-commit hook that is the local HEAD, i.e. the parent of the
+    commit being made. A green run at any other sha does not count as an
+    observation of what is being closed, so the caller must push,
+    re-dispatch, and re-verify (T-220-22).
+
+    Why it stays offline: the hook runs on every commit under system
+    python3. It must be deterministic, need no gh token, and never go red
+    because the network is down. The live GitHub query belongs in
+    branch_ci_state.py, which runs at verification time. This gate only
+    proves that the recorded evidence is complete, current, and green.
+    Forging a block with copied run ids is accepted risk T-220-23.
+
+    `status: passed` combined with any blocking reason adds an explicit
+    "status: passed over red/absent CI" violation.
+    """
+    prefix = f"Phase {phase_num}: ARTIFACT-05 (CITRUTH-03):"
+    fm = verification_frontmatter if isinstance(verification_frontmatter, dict) else {}
+    status_passed = str(fm.get("status", "")).strip().lower() == "passed"
+    problems: list[str] = []
+    red_jobs: list[tuple[str, str, object, list[str]]] = []
+
+    ci = fm.get("ci")
+    if ci is None:
+        problems.append(
+            "VERIFICATION.md has no `ci:` block. Record the observation with "
+            "`python3 scripts/branch_ci_state.py --compare-main` at the "
+            "current HEAD and paste its report under `ci:`."
+        )
+    elif not isinstance(ci, dict):
+        problems.append("`ci:` block is malformed (expected a mapping).")
+    else:
+        bcs = _branch_ci_state()
+        if bcs is None:
+            problems.append(
+                "scripts/branch_ci_state.py is missing or failed to import, so "
+                "required-ness cannot be derived; refusing to close."
+            )
+        ci_head = ci.get("head_sha")
+        if not isinstance(ci_head, str) or not _SHA40_RE.match(ci_head):
+            problems.append(
+                f"`ci.head_sha` is not a 40-hex commit sha (got {ci_head!r})."
+            )
+            ci_head = None
+        elif current_head_sha is None:
+            problems.append(
+                "cannot resolve the local HEAD sha (`git rev-parse HEAD` "
+                "failed), so the recorded CI cannot be matched to it."
+            )
+        elif ci_head != current_head_sha:
+            problems.append(
+                f"`ci.head_sha` {ci_head} is not the current HEAD "
+                f"{current_head_sha}. Commits landed after CI was observed: "
+                "push, re-dispatch CI at the new HEAD, re-verify, and record "
+                "the fresh `ci:` block (D-12)."
+            )
+
+        workflows = ci.get("workflows")
+        if not isinstance(workflows, list):
+            problems.append("`ci.workflows` is missing or not a list.")
+        elif bcs is not None:
+            by_name: dict[str, list[dict]] = {}
+            for entry in workflows:
+                if not isinstance(entry, dict) or not isinstance(
+                    entry.get("name"), str
+                ):
+                    problems.append(
+                        f"`ci.workflows` has a malformed entry: {entry!r}."
+                    )
+                    continue
+                by_name.setdefault(entry["name"], []).append(entry)
+            for wf in bcs.REQUIRED_WORKFLOWS:
+                problems.extend(_check_ci_workflow(
+                    bcs, wf, by_name.get(wf, []), ci_head, red_jobs
+                ))
+
+    if red_jobs:
+        red_reasons = [
+            f"{wf}: required job {job!r} concluded {conclusion}"
+            + (f" (failing nodes: {nodes})" if nodes else "")
+            + "."
+            for wf, job, conclusion, nodes in red_jobs
+        ]
+        waiver = fm.get("ci_waiver")
+        if waiver is None:
+            problems.extend(red_reasons)
+        else:
+            waiver_problems = _check_ci_waiver(waiver, ci, red_jobs)
+            if waiver_problems:
+                problems.extend(red_reasons)
+                problems.extend(waiver_problems)
+
+    if problems and status_passed:
+        problems.append(
+            "VERIFICATION.md says `status: passed` over red/absent/unobserved "
+            "CI. That is a gate violation, not a verification."
+        )
+
+    return [f"{prefix} {p}" for p in problems]
 
 
 def load_validation_frontmatter(path: pathlib.Path) -> dict | None:
@@ -479,12 +780,18 @@ def _run_git(args: list[str], cwd: pathlib.Path) -> subprocess.CompletedProcess:
     )
 
 
-def _run_phase_close_check(phase_num: str, repo_root: pathlib.Path) -> int:
+def _run_phase_close_check(
+    phase_num: str,
+    repo_root: pathlib.Path,
+    head_sha: str | None = None,
+) -> int:
     """Disk-reading wrapper around check_phase_close(). Resolves the
     triggered phase's on-disk directory, assembles all five arguments from
     real disk state — including a mandatory call to
     load_phase_plan_files_modified() (never an empty-list placeholder) —
-    and returns 0 (clean) or 1 (blocked)."""
+    and returns 0 (clean) or 1 (blocked). ARTIFACT-05 (check_ci_truth) is
+    evaluated here too, against `head_sha` (the local HEAD resolved by
+    main()), and its reasons are merged into the same verdict."""
     phases_root = repo_root / ".planning" / "phases"
     matches = sorted(phases_root.glob(f"{phase_num}-*"))
     phase_dir = matches[0] if matches else phases_root / phase_num
@@ -519,6 +826,26 @@ def _run_phase_close_check(phase_num: str, repo_root: pathlib.Path) -> int:
         plan_files_modified,
         uat_series_text,
     )
+
+    # ARTIFACT-05: reuse the generic frontmatter loader (only if the file exists).
+    verification_frontmatter = (
+        load_validation_frontmatter(verification_path)
+        if verification_exists
+        else None
+    )
+    ci_reasons = check_ci_truth(phase_num, verification_frontmatter, head_sha)
+    ci_lines = ["### ARTIFACT-05 CI truth", ""]
+    if ci_reasons:
+        ci_lines.append("BLOCKED")
+        ci_lines.extend(f"- {reason}" for reason in ci_reasons)
+    else:
+        ci_lines.append(
+            f"Clean: recorded CI is green at HEAD {head_sha} (or honestly waived)."
+        )
+    summary_markdown = summary_markdown + "\n" + "\n".join(ci_lines) + "\n"
+    reasons = list(reasons) + ci_reasons
+    blocked = blocked or bool(ci_reasons)
+
     print(summary_markdown)
     if blocked:
         for reason in reasons:
@@ -567,6 +894,7 @@ def main(
     *,
     repo_root: pathlib.Path | None = None,
     git_runner: Callable[[], subprocess.CompletedProcess] | None = None,
+    head_sha_resolver: Callable[[], str | None] | None = None,
 ) -> int:
     """CLI entrypoint invoked by `.githooks/pre-commit`.
 
@@ -577,7 +905,10 @@ def main(
     runs unconditionally per RESEARCH.md Open Question 1's resolution.
     `repo_root`/`git_runner` are injectable seams for testing `main()`'s
     branching logic without a real git repo or touching the real
-    filesystem.
+    filesystem. `head_sha_resolver` (220-05, ARTIFACT-05) returns the local
+    HEAD sha the recorded `ci:` block must match; the default runs
+    `git rev-parse HEAD` and returns None on failure. It is only called when
+    a phase-close trigger fired.
     """
     resolved_repo_root = repo_root if repo_root is not None else REPO_ROOT
 
@@ -606,9 +937,22 @@ def main(
         if phase_num not in phase_nums:
             phase_nums.append(phase_num)
 
+    if head_sha_resolver is None:
+
+        def head_sha_resolver() -> str | None:
+            result = _run_git(["rev-parse", "HEAD"], cwd=resolved_repo_root)
+            if result.returncode != 0:
+                return None
+            return result.stdout.strip() or None
+
+    head_sha = head_sha_resolver() if phase_nums else None
+
     exit_code = 0
     for phase_num in phase_nums:
-        exit_code = max(exit_code, _run_phase_close_check(phase_num, resolved_repo_root))
+        exit_code = max(
+            exit_code,
+            _run_phase_close_check(phase_num, resolved_repo_root, head_sha),
+        )
 
     exit_code = max(exit_code, _run_destructive_archive_check(resolved_repo_root))
 

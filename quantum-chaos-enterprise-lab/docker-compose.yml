@@ -980,46 +980,55 @@ services:
 
   # ===========================================================================================
   # PHASE 28 — OBJECT STORAGE PROFILE (profile: storage-s3)
-  # MinIO S3-compatible local server for STOR-01 validation. Distinct from "storage" profile
+  # S3-compatible local server (moto since Phase 220 D-01R; MinIO before) for STOR-01 validation. Distinct from "storage" profile
   # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
   # ===========================================================================================
   minio:
-    # quay.io, NOT Docker Hub: MinIO withdrew `minio/minio` and `minio/mc` from Docker Hub.
-    # Verified 2026-09-13 — the Docker Hub API returns `{"message":"object not found"}` for BOTH
-    # repositories, and a pull fails with `pull access denied ... repository does not exist`. This
-    # broke `test_profile_re_up_is_idempotent[storage-s3]` on every CI run; it had been carried as
-    # an "environmental / Docker Hub rate limit" flake, which was wrong — the images are gone, so
-    # the profile could never have come up again.
-    # The exact pinned tag exists on quay.io and was verified with `docker manifest inspect`, so
-    # the CHAOS-05 image-pin discipline is preserved (no drift to :latest).
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # Phase 220 (2026-10-01, D-01R): this service runs moto, NOT MinIO.
+    # History: MinIO withdrew its server and mc client images from Docker Hub (404, verified
+    # 2026-09-13); the quay.io mirror then started refusing anonymous pulls (401, measured
+    # 2026-09-30 against a 200 control probe); dl.min.io returns 410 for both pinned
+    # releases (probed 2026-10-01); and the operator's locally cached copies, the only
+    # source for a byte-identical mirror, were lost from Docker Desktop on 2026-10-01.
+    # The operator chose to replace MinIO with moto (motoserver/moto, Apache-2.0, Docker
+    # Hub, amd64+arm64) instead of building AGPLv3 MinIO from source: the scanner needs
+    # only three S3 behaviours (list_buckets, get_bucket_encryption, and the
+    # ServerSideEncryptionConfigurationNotFoundError for an unencrypted bucket, see
+    # quirk/scanner/aws_connector.py), all verified live against moto 5.2.3.
+    # The service names (`minio`, `minio-seed`, `mh-storage-archive`, `mh-storage-seed`),
+    # the `minio` hostname and the minioadmin/minioadmin credentials are KEPT as historical
+    # names to bound the blast radius; the rename is a pending todo
+    # (261001-rename-chaos-lab-minio-services-to-s3.md). MinIO's :9001 console is gone.
+    # moto keeps state in memory, so the seed re-runs on every `up`.
+    # If Docker Hub ever refuses this image too, Phase 220 D-04's checkable
+    # registry-refusal skip (tests/chaos_registry_probe.py +
+    # tests/test_chaos_lab_idempotency.py) applies; moto is also on PyPI (Apache-2.0),
+    # so `FROM python:3.13-slim` + `pip install "moto[server]==5.2.3"` is the fallback.
+    image: motoserver/moto:5.2.3
     profiles: ["storage-s3"]
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_KMS_SECRET_KEY: "lab-key:e6QwR1eRz0t8u3y2z6mP/m4G2D8jH7yB3KvN0aN8z7M="
+      MOTO_PORT: "9000"
     ports:
       - "29000:9000"
-      - "29001:9001"
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost:9000/"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
 
   minio-seed:
-    # quay.io for the same reason as the `minio` service above — see that comment.
-    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # moto, not MinIO's mc client -- see the `minio` service's comment above (D-01R).
+    # The seed runs boto3 from the same moto image.
+    image: motoserver/moto:5.2.3
     profiles: ["storage-s3"]
     restart: "no"
     depends_on:
       minio:
         condition: service_healthy
     volumes:
-      - ./storage/minio-seed.sh:/minio-seed.sh:ro
-    entrypoint: ["/bin/sh", "/minio-seed.sh"]
+      - ./storage/s3-seed.py:/s3-seed.py:ro
+    entrypoint: ["python", "/s3-seed.py", "http://minio:9000", "encrypted-bucket:sse", "unencrypted-bucket:plain"]
 
   # ===========================================================================================
   # PHASE 32 — EMAIL CHAOS LAB (profile: email)
@@ -1695,22 +1704,17 @@ services:
         ipv4_address: "10.80.0.41"
 
   mh-storage-archive:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # moto, NOT MinIO -- see the `minio` service's comment above (Phase 220 D-01R) for the
+    # history and why the MinIO-era names and minioadmin creds are kept. MinIO's :9001
+    # console no longer exists, so this host has one plaintext-HTTP listener (:9000).
+    image: motoserver/moto:5.2.3
     profiles: ["multihost"]
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_KMS_SECRET_KEY: "lab-key:e6QwR1eRz0t8u3y2z6mP/m4G2D8jH7yB3KvN0aN8z7M="
+      MOTO_PORT: "9000"
     expose:
       - "9000"
-      - "9001"
     healthcheck:
-      # `local`, NOT `archive`. This check runs INSIDE the MinIO container, where MinIO's bundled
-      # mc has its own built-in `local` alias. `archive` is the alias the SEED script creates in a
-      # different container; using it here made the host permanently unhealthy and blocked the
-      # whole profile on first bring-up.
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost:9000/"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -1720,15 +1724,16 @@ services:
         ipv4_address: "10.80.0.50"
 
   mh-storage-seed:
-    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # moto + boto3 seed -- see the `minio` service's comment above (D-01R).
+    image: motoserver/moto:5.2.3
     profiles: ["multihost"]
     restart: "no"
     depends_on:
       mh-storage-archive:
         condition: service_healthy
     volumes:
-      - ./storage/minio-seed-multihost.sh:/minio-seed.sh:ro
-    entrypoint: ["/bin/sh", "/minio-seed.sh"]
+      - ./storage/s3-seed.py:/s3-seed.py:ro
+    entrypoint: ["python", "/s3-seed.py", "http://mh-storage-archive:9000", "finance-archive-encrypted:sse", "finance-archive-plain:plain"]
     networks:
       - labnet
 
@@ -2224,7 +2229,8 @@ services:
     cap_add:
       - NET_RAW
     environment:
-      # MinIO's lab credentials. The S3 connector reads these from the environment; without them
+      # The S3 lab's credentials (minioadmin: historical MinIO-era names, now served by moto,
+      # Phase 220 D-01R). The S3 connector reads these from the environment; without them
       # `aws_endpoint_url` alone cannot enumerate buckets, Data at Rest stays UNASSESSED, and the
       # readiness score is flatteringly high for the wrong reason.
       AWS_ACCESS_KEY_ID: minioadmin

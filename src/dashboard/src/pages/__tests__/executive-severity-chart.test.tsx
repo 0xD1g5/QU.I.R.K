@@ -6,7 +6,7 @@
 //     see the coverage note at the end of this file
 //   - Chart is interactive (hover shows count)  <- UNCOVERED, see below
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest"
-import { render, within } from "@testing-library/react"
+import { render, within, waitFor } from "@testing-library/react"
 
 // MEASURED (this task): the global test-setup.ts ResizeObserver stub never
 // fires a callback, and Recharts' <ResponsiveContainer> also reads its
@@ -122,10 +122,28 @@ vi.mock("@/components/RegressionAlertChip", () => ({
   RegressionAlertChip: () => null,
 }))
 
+// 220-01 (D-08): see executive-score-gauge.test.tsx's identical comment —
+// executive.tsx:231-250's loadManifest() effect calls the real, un-mocked
+// fetchApi() on mount. Diagnosed in 220-diag/DIAGNOSIS.md as a
+// dangling-async-update hygiene defect, not a demonstrated cause of the
+// 260927 batch flake. Mocked and awaited the same way.
+const fetchApiMock = vi.fn().mockImplementation(() =>
+  Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+)
+vi.mock("@/lib/api", () => ({
+  fetchApi: (...args: unknown[]) => fetchApiMock(...args),
+}))
+
 describe("ExecutivePage — UAT-7-04", () => {
   it("renders one severity chart category label per severity present in the fixture with counts derived from the same fixture", async () => {
     const { ExecutivePage } = await import("@/pages/executive")
     const { container } = render(<ExecutivePage />)
+
+    // Settle the manifest fetch before any assertion runs, so the effect's
+    // async continuation (setManifest) never resolves after the test ends.
+    await waitFor(() =>
+      expect(fetchApiMock).toHaveBeenCalledWith("/api/reports/latest/manifest")
+    )
 
     // Recharts appends an off-screen `#recharts_measurement_span` to
     // `document.body` for its own text-width measurement (DOMUtils.js) —

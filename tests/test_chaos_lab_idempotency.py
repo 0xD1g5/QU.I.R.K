@@ -19,6 +19,12 @@ from pathlib import Path
 
 import pytest
 
+from tests.chaos_registry_probe import (
+    classify_registry_refusal,
+    control_probe,
+    should_skip,
+    skip_reason,
+)
 from tests.cli_helpers import run_fork_safe
 
 LAB_DIR = (
@@ -122,10 +128,22 @@ def test_profile_re_up_is_idempotent(profile: str) -> None:
 
     try:
         r1 = _up(profile)
-        assert r1.returncode == 0, (
-            f"{profile} first up failed (rc={r1.returncode}):\n"
-            f"STDOUT:\n{r1.stdout}\nSTDERR:\n{r1.stderr}"
-        )
+        if r1.returncode != 0:
+            # Phase 220 D-04: skip ONLY when the failure is a registry pull
+            # refusal naming a specific image AND an anonymous control probe
+            # against a known-public repo on the same registry returns 200
+            # (registry reachable; refusal is image-specific, not an
+            # outage). Any other failure — including a refusal whose
+            # control probe also fails — falls through to the assert below.
+            refusal = classify_registry_refusal(r1.stdout + "\n" + r1.stderr)
+            probe = control_probe(refusal.registry) if refusal else (None, None)
+            if refusal is not None and should_skip(refusal, probe):
+                pytest.skip(skip_reason(refusal, probe))
+            assert r1.returncode == 0, (
+                f"{profile} first up failed (rc={r1.returncode}); "
+                f"registry_refusal={refusal!r} control_probe={probe!r}:\n"
+                f"STDOUT:\n{r1.stdout}\nSTDERR:\n{r1.stderr}"
+            )
         # Let seed sidecars settle before re-up.
         time.sleep(15)
         r2 = _up(profile)

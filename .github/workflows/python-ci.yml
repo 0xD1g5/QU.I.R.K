@@ -434,7 +434,18 @@ jobs:
           pip install pytest
 
       - name: Run full test suite
-        run: pytest -q -m ""
+        run: pytest -q -m "" -rs --junitxml=pytest-junit.xml
+
+      # 220-01 (D-10 CI leg, consumed by 220-08): per-node JUnit evidence so
+      # a later CI run can prove test_vitest_substitute_nodes_pass PASSED
+      # rather than skipped, read from the artifact rather than inferred.
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: linux-full-suite-junit
+          path: pytest-junit.xml
+          retention-days: 14
 
   browser-e2e:
     name: Browser E2E

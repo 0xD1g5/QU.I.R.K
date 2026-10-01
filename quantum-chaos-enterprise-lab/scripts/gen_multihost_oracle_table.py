@@ -30,7 +30,7 @@ HOSTS = [
     ("10.80.0.31", "mh-cache-session", "Redis 7.4.1, no TLS/auth"),
     ("10.80.0.40", "mh-identity-dc", "OpenLDAP, 389 cleartext + 636"),
     ("10.80.0.41", "mh-saml-idp", "simplesamlphp IdP metadata"),
-    ("10.80.0.50", "mh-storage-archive", "MinIO; 1 SSE-S3 + 1 UNENCRYPTED bucket"),
+    ("10.80.0.50", "mh-storage-archive", "S3 (moto); 1 SSE-S3 + 1 UNENCRYPTED bucket"),
     ("10.80.0.60", "mh-pki-ca", "step-ca 0.28.1"),
     ("10.80.0.70", "mh-ssh-jump", "OpenSSH server"),
     ("10.80.0.101", "mh-vpn-gateway", "expired certificate"),
