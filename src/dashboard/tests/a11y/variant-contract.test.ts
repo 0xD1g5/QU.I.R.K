@@ -132,7 +132,7 @@ describe("fixture handler contract (221-03)", () => {
 
   const honouring = new Set(
     FIXTURE_HANDLERS.filter(
-      (h: Handler) => ("body" in h.empty || "emptyFrom" in h.empty) && "hold" in h.loading,
+      (h: Handler) => decisionKinds(h.empty, ["body", "emptyFrom"]).length === 1 && decisionKinds(h.loading, ["hold"]).length === 1,
     ).map((h: Handler) => h.id),
   )
   const allIds = new Set(FIXTURE_HANDLERS.map((h: Handler) => h.id))
