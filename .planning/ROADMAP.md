@@ -290,7 +290,7 @@ Plans:
 Plans:
 - [x] 221-01-PLAN.md — Loud first: variant render-state guard, VARIANTS allowlist, stale-server/identity refusal, 216 W1 probe repair; Linux CI shown RED before any fix (W1)
 - [x] 221-02-PLAN.md — Measure DS severity-chip family + cytoscape label/fill token pairs (shrink-only ratchets, no colour change) (W2)
-- [ ] 221-03-PLAN.md — Declarative fixture-handler table: explicit empty/loading decision per endpoint, hold-open loading, compare zero-diff + acted-on /compare marker re-probe, run-time fetch coverage (W3)
+- [x] 221-03-PLAN.md — Declarative fixture-handler table: explicit empty/loading decision per endpoint, hold-open loading, compare zero-diff + acted-on /compare marker re-probe, run-time fetch coverage (W3)
 - [ ] 221-04-PLAN.md — INT-01: re-point 12 Phase-220-owned todos to new backlog 999.118 / 999.119 + HORIZON rows; operator check of CBOM light system node on port 4180 (W4, checkpoint)
 - [ ] 221-05-PLAN.md — Harness lifecycle fix (process-group kill, --strictPort), held-skeleton loading nav, run-time endpoint declaration check; Linux CI identity-green (W5)
 - [ ] 221-06-PLAN.md — Sweep /scans + /sensors; UNMEASURED-EXCLUSIONS.md enforced from source (W6)
