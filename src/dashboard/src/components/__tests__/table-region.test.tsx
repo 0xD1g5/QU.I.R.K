@@ -112,6 +112,12 @@ describe("Table wrapper conditional keyboard focusability", () => {
     expect(region).toBeTruthy()
   })
 
+  it.each(["", "   "])("falls back to the default name when regionLabel is blank (%j) — never a nameless region", (blank) => {
+    mockDims(OVERFLOW_HORIZONTAL)
+    renderTable({ regionLabel: blank })
+    expect(screen.getByRole("region", { name: "Scrollable table" })).toBeTruthy()
+  })
+
   it("does not spread regionLabel onto the table element and keeps aria-label on the table", () => {
     mockDims(OVERFLOW_HORIZONTAL)
     renderTable({ regionLabel: "X", "aria-label": "Y" })

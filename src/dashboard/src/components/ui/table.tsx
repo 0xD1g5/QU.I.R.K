@@ -20,7 +20,8 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
         if (overflows) {
           el.tabIndex = 0
           el.setAttribute("role", "region")
-          el.setAttribute("aria-label", regionLabel ?? "Scrollable table")
+          // `||` + trim, not `??`: a blank label would make a nameless region (D-02).
+          el.setAttribute("aria-label", regionLabel?.trim() || "Scrollable table")
         } else {
           el.removeAttribute("tabindex")
           el.removeAttribute("role")
