@@ -184,24 +184,6 @@ def descriptor(x, y, width, size, fg, opacity=0.72):
             f'opacity="{opacity}">{DESCRIPTOR}</text>')
 
 
-def dial(cx, cy, r, w, fg):
-    """256 ticks outside the ring, one per root of X^256+1 (large formats only).
-
-    Every 32nd tick is long. The ticks around the tail are left out.
-    """
-    out = []
-    r0 = r + w / 2 + w * 0.22
-    for k in range(N):
-        a = (2 * k + 1) * math.pi / N
-        if abs((a - SEAM + math.pi) % (2 * math.pi) - math.pi) < math.radians(9):
-            continue
-        ln = w * (0.34 if k % 32 == 0 else 0.13)
-        x0, y0 = cx + r0 * math.cos(a), cy + r0 * math.sin(a)
-        x1, y1 = cx + (r0 + ln) * math.cos(a), cy + (r0 + ln) * math.sin(a)
-        out.append(f"M{f(x0)} {f(y0)}L{f(x1)} {f(y1)}")
-    return [f'<path d="{" ".join(out)}" stroke="{fg}" stroke-width="{f(w * 0.045)}" opacity=".55"/>']
-
-
 def lattice_field(cx, cy, r, w, tail, W, H, fg, keep_out):
     """The lattice the lens is looking at, continued across the canvas.
 
@@ -213,7 +195,7 @@ def lattice_field(cx, cy, r, w, tail, W, H, fg, keep_out):
     s = r * 0.31
     sh = s * 0.36
     dot = r / 15 * 0.55
-    outer = r + w / 2 + w * 0.9          # clears ring + dial
+    outer = r + w / 2 + w * 0.55         # clears the ring
     ux, uy = math.cos(SEAM), math.sin(SEAM)
     out = []
     jr = int(H / s) + 2
@@ -305,7 +287,7 @@ def build():
         cap, top, pad = 120, 62, 40
         body, W, *_ = logo_display(pad, top, cap, fg)
         files[f"quirk-logo-display{sfx}.svg"] = svg(W + 2 * pad, 262, body, "QU.I.R.K.", bg)
-    # 5. hero (16:9): display logo on the lattice field, with the 256-tick dial
+    # 5. hero (16:9): display logo on the lattice field
     for sfx, fg, bg in (("", INK, PAPER), ("-dark", PAPER, INK)):
         W, H, cap = 1600, 900, 196
         _, lw, *_ = logo_display(0, 0, cap, fg)
@@ -315,7 +297,7 @@ def build():
         keep = [(tx - 40, top - 50, tx + ww + 40, desc_y + 30)]
         field = lattice_field(cx, cy, r, w, r * 26 / 36, W, H, fg, keep)
         files[f"quirk-hero{sfx}.svg"] = svg(
-            W, H, field + dial(cx, cy, r, w, fg) + body + [descriptor(tx + cap * 0.12, desc_y, ww - cap * 0.12, 25, fg)], FULL, bg)
+            W, H, field + body + [descriptor(tx + cap * 0.12, desc_y, ww - cap * 0.12, 25, fg)], FULL, bg)
 
     stale = {"quirk-lockup.svg", "quirk-lockup-dark.svg", "quirk-lockup-stacked.svg",
              "quirk-lockup-stacked-dark.svg", "quirk-wordmark.svg", "quirk-wordmark-dark.svg",

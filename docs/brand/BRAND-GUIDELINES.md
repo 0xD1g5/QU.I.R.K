@@ -36,7 +36,7 @@ The logo is **responsive**: the larger it is shown, the more detail it carries.
 48 px     mark         + 3×3 lattice + ghost node
 24 px+    logo         lens-as-Q + U.I.R.K.
 80 px+    display      oversized lens
-960 px+   hero         + 256-tick dial + lattice field across the canvas
+960 px+   hero         + lattice field fading across the canvas
 ```
 
 ### Choosing a version
@@ -81,7 +81,7 @@ Use this section to brief anyone who will present the brand. In a pitch, mention
 | 4 | Centre point nudged off its node | Learning With Errors: b = As + e. The error is the quirk | MLWE |
 | 5 | Ink `#0D0124` | 0x0D01 = 3329, the ML-KEM modulus q | FIPS 203 |
 | 6 | Signal `#7FE001` | 0x7FE001 = 8,380,417 = 2²³ − 2¹³ + 1, the ML-DSA modulus q | FIPS 204 |
-| + | Hero only: 256 ticks around the lens, every 32nd long | The same 256 roots, made explicit on the largest format | — |
+| + | Hero only: the lattice fading across the background | The field uses the exact basis and origin of the 3×3 inside the lens, so the lens is looking at one window of a lattice that keeps going | MLWE |
 
 **Not encoded:** SLH-DSA (FIPS 205), FN-DSA (draft FIPS 206), HQC. Don't claim them. A Merkle-fork treatment of the K is a candidate for a future version.
 
@@ -154,7 +154,8 @@ QU.I.R.K. is the instrument, and the client report is the consultancy's delivera
 - Don't add gradients, glows, drop shadows, bevels or outline strokes.
 - Don't stretch, skew, rotate or re-proportion the lens and the letters independently.
 - Don't use the lattice-bearing mark below 48 px. Switch to the favicon.
-- Don't use the hero's dial and lattice field at small sizes. At small sizes they turn into noise.
+- Don't use the hero's lattice field at small sizes. At small sizes it turns into noise.
+- Don't add tick marks, dials or other rings around the lens.
 - Don't set the descriptor in a different face or tracking.
 
 ---
