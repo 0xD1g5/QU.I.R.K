@@ -35,7 +35,13 @@ def test_minio_compose_profile_storage_s3():
     compose = (LAB_DIR / "docker-compose.yml").read_text()
     # Version-agnostic: the minio image is pinned to a dated RELEASE tag
     # (digest/version pinning, v5.6), so assert the prefix not a literal :latest.
-    assert "minio/minio:" in compose
+    # Phase 220 D-03: the literal "minio/minio:" substring used to assert this
+    # also matched the withdrawn quay.io reference, so repointing to the GHCR
+    # mirror (ghcr.io/0xd1g5/minio:RELEASE...) would silently pass a stale
+    # assertion. Assert the new mirror prefix AND the absence of the retired
+    # quay.io reference so a regression back to quay.io fails loudly.
+    assert "ghcr.io/0xd1g5/minio:RELEASE." in compose
+    assert "quay.io/minio/" not in compose
     assert "storage-s3" in compose
     assert "minio-seed" in compose
 

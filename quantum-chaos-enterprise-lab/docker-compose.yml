@@ -984,15 +984,27 @@ services:
   # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
   # ===========================================================================================
   minio:
-    # quay.io, NOT Docker Hub: MinIO withdrew `minio/minio` and `minio/mc` from Docker Hub.
-    # Verified 2026-09-13 — the Docker Hub API returns `{"message":"object not found"}` for BOTH
-    # repositories, and a pull fails with `pull access denied ... repository does not exist`. This
-    # broke `test_profile_re_up_is_idempotent[storage-s3]` on every CI run; it had been carried as
-    # an "environmental / Docker Hub rate limit" flake, which was wrong — the images are gone, so
-    # the profile could never have come up again.
-    # The exact pinned tag exists on quay.io and was verified with `docker manifest inspect`, so
-    # the CHAOS-05 image-pin discipline is preserved (no drift to :latest).
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # ghcr.io, NOT Docker Hub and NOT quay.io: MinIO withdrew `minio/minio` and
+    # `minio/mc` from Docker Hub (verified 2026-09-13), then the quay.io mirror of
+    # those same two repos also started returning 401 UNAUTHORIZED to anonymous
+    # pulls (measured 2026-09-30, confirmed against a 200 control probe on
+    # quay.io's prometheus/node-exporter, so it is the MinIO repos specifically,
+    # not a quay.io-wide outage). This is the SECOND
+    # registry to withdraw/privatize these images; see the Phase 220 todo
+    # (260930-minio-images-withdrawn-from-quay-chaos-lab-cannot-pull-in-ci.md) and
+    # Phase 220 D-04's honest, checkable registry-refusal skip in
+    # tests/chaos_registry_probe.py / tests/test_chaos_lab_idempotency.py, which
+    # only fires when a refusal names this exact image AND an anonymous control
+    # probe on the refusing registry still returns 200.
+    # These are byte-identical mirrors of the operator's locally cached images
+    # (source IDs sha256:14cea493d9a3 for minio, sha256:993e8c454a7e for mc),
+    # pushed to this project's own GHCR namespace in Phase 220 so CI can pull them
+    # anonymously. The exact pinned tags are unchanged from the quay.io era, so the
+    # CHAOS-05 image-pin discipline is preserved (no drift to :latest).
+    # MinIO is licensed AGPLv3, which permits redistribution; corresponding source:
+    # https://github.com/minio/minio/tree/RELEASE.2025-09-07T16-13-09Z and
+    # https://github.com/minio/mc/tree/RELEASE.2024-11-21T17-21-54Z
+    image: ghcr.io/0xd1g5/minio:RELEASE.2025-09-07T16-13-09Z
     profiles: ["storage-s3"]
     command: server /data --console-address ":9001"
     environment:
@@ -1010,8 +1022,8 @@ services:
       start_period: 10s
 
   minio-seed:
-    # quay.io for the same reason as the `minio` service above — see that comment.
-    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # GHCR mirror for the same reason as the `minio` service above — see that comment.
+    image: ghcr.io/0xd1g5/mc:RELEASE.2024-11-21T17-21-54Z
     profiles: ["storage-s3"]
     restart: "no"
     depends_on:
@@ -1695,7 +1707,9 @@ services:
         ipv4_address: "10.80.0.41"
 
   mh-storage-archive:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # GHCR mirror — see the `minio` service's comment above (Phase 220 D-01/D-03)
+    # for the full history, provenance, and AGPLv3 source-code offer.
+    image: ghcr.io/0xd1g5/minio:RELEASE.2025-09-07T16-13-09Z
     profiles: ["multihost"]
     command: server /data --console-address ":9001"
     environment:
@@ -1720,7 +1734,8 @@ services:
         ipv4_address: "10.80.0.50"
 
   mh-storage-seed:
-    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+    # GHCR mirror — see the `minio` service's comment above.
+    image: ghcr.io/0xd1g5/mc:RELEASE.2024-11-21T17-21-54Z
     profiles: ["multihost"]
     restart: "no"
     depends_on:

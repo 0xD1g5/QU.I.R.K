@@ -540,6 +540,8 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-database`
 
 The `storage-s3` profile (introduced in Phase 28) ships a MinIO S3-compatible object storage server. A seed container creates two buckets on startup: one encrypted (SSE-S3) and one unencrypted, providing QU.I.R.K.'s S3 connector with a clean positive/negative pair for encryption-at-rest detection.
 
+**Image source (Phase 220, 2026-10-01):** `minio` and `minio-seed` pull `ghcr.io/0xd1g5/minio:RELEASE.2025-09-07T16-13-09Z` and `ghcr.io/0xd1g5/mc:RELEASE.2024-11-21T17-21-54Z` — byte-identical mirrors of the upstream MinIO releases, pushed to this project's own GHCR namespace after Docker Hub withdrew the images (2026-09-13) and quay.io then privatized them too (2026-09-30). See `quantum-chaos-enterprise-lab/README.md`'s "Phase 220 MinIO mirror" note and `docker-compose.yml`'s AGPLv3 source-code offer.
+
 | Port  | Service       | Bucket              | SSE Mode | Expected Finding     | Severity |
 |-------|---------------|---------------------|----------|----------------------|----------|
 | 29000 | minio         | encrypted-bucket    | SSE-S3   | `S3/sse-s3`          | (none)   |
@@ -1260,6 +1262,8 @@ everything is fine:
 ```bash
 docker inspect kenchan0130/simplesamlphp:1.19.7 --format '{{.Architecture}}'
 ```
+
+`mh-storage-archive` and `mh-storage-seed` pull the same GHCR-mirrored MinIO images as the `storage-s3` profile (§3.17) — see that section's "Image source" note.
 
 | Host | Service | Posture under test | Finding domain |
 |------|---------|--------------------|----------------|
