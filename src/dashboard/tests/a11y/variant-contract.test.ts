@@ -140,7 +140,23 @@ describe("variant-contract (221-01)", () => {
     // no early exit may bypass shutdownPreview with the bare synchronous cleanup + exit pair
     expect(RUN_A11Y_SOURCE).not.toMatch(/cleanup\(\)\s*\n\s*process\.exit\(1\)/)
     const fin = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.lastIndexOf("} finally {"))
-    expect(fin.indexOf("await shutdownPreview()")).toBeGreaterThan(-1)
+    expect(fin.indexOf("await teardown()")).toBeGreaterThan(-1)
+  })
+
+  it("run-a11y.mjs has ONE idempotent teardown whose latch precedes any await, and a signal's status wins (221 WR-10)", () => {
+    const fn = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("function teardown() {"))
+    const body = fn.slice(0, fn.indexOf("\n}\n"))
+    expect(body, "teardown() not found").toContain("if (!teardownPromise) {")
+    const latch = body.indexOf("shuttingDown = true")
+    expect(latch, "teardown never sets the shuttingDown latch").toBeGreaterThan(-1)
+    expect(latch, "shuttingDown latch must be set before the first await").toBeLessThan(body.indexOf("await "))
+    // exactly one place in the harness closes the browser and shuts the preview down
+    expect(RUN_A11Y_SOURCE.split("await shutdownPreview()").length - 1, "shutdownPreview called outside teardown()").toBe(1)
+    expect(RUN_A11Y_SOURCE).toContain("if (abortCode === null) abortCode = code")
+    expect(RUN_A11Y_SOURCE).toContain("if (abortCode !== null) process.exit(abortCode)")
+    const catchBlock = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.lastIndexOf("} catch (err) {"), RUN_A11Y_SOURCE.lastIndexOf("} finally {"))
+    expect(catchBlock.indexOf("if (abortCode !== null) {"), "loop catch does not yield to a signal").toBeGreaterThan(-1)
+    expect(catchBlock.indexOf("if (abortCode !== null) {")).toBeLessThan(catchBlock.indexOf("exitCode = 1"))
   })
 
   it("run-a11y.mjs navigates loading on 'load' and derives endpoints at run time (221 D-06/D-08)", () => {

@@ -250,10 +250,28 @@ async function shutdownPreview() {
 // 221 WR-04: every exit path goes through the same async teardown as the normal end (browser
 // close, group SIGTERM escalating to SIGKILL, port-release proof). The synchronous `cleanup` on
 // 'exit' stays as a last resort for paths that bypass this (uncaught exceptions).
+// 221 WR-10: ONE idempotent teardown. The latch is set synchronously, before any await, so the
+// preview's early-exit listener cannot misreport a teardown-in-progress as a --strictPort
+// refusal, and a signal racing the route loop's own catch/finally joins the same teardown
+// instead of starting a second one that polls the same port and decides the exit status.
+let teardownPromise = null
+function teardown() {
+  if (!teardownPromise) {
+    shuttingDown = true
+    teardownPromise = (async () => {
+      await browser?.close().catch(() => {})
+      await shutdownPreview()
+    })()
+  }
+  return teardownPromise
+}
+// 221 WR-10: the FIRST abort's status wins (a signal's 130/143 is never overwritten by a later
+// in-loop exit 1), and every exit after teardown reads it.
+let abortCode = null
 async function abort(code) {
-  await browser?.close().catch(() => {})
-  await shutdownPreview()
-  process.exit(code)
+  if (abortCode === null) abortCode = code
+  await teardown()
+  process.exit(abortCode)
 }
 process.on('exit', () => { shuttingDown = true; cleanup() })
 process.on('SIGINT', () => { void abort(130) })
@@ -794,12 +812,22 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
   await page.close()
 }
 } catch (err) {
-  console.error(`[a11y] FAIL: sweep aborted by an uncaught error: ${err?.stack ?? err}`)
-  exitCode = 1
+  // 221 WR-10: a signal that closes the browser (or a terminal/CI group SIGINT that kills Chrome
+  // directly) rejects the in-flight page call, and that rejection can be dispatched before the
+  // signal handler. Give a pending signal a moment to land, then yield to it: an interrupted run
+  // is reported as interrupted, never as an "uncaught error" with exit 1.
+  if (abortCode === null) await new Promise(r => setTimeout(r, 250))
+  if (abortCode !== null) {
+    console.error(`[a11y] sweep interrupted (exit ${abortCode}); in-flight page call ended: ${err?.message ?? err}`)
+  } else {
+    console.error(`[a11y] FAIL: sweep aborted by an uncaught error: ${err?.stack ?? err}`)
+    exitCode = 1
+  }
 } finally {
-  await browser.close().catch(() => {})
-  await shutdownPreview()
+  await teardown()
 }
+// 221 WR-10: a signal that arrived during the sweep or its teardown owns the exit status.
+if (abortCode !== null) process.exit(abortCode)
 
 // 216 D-17: in-process ledger collection is gone. Theme is now a per-process dimension
 // (D-01/D-02), so a single `--update-baselines` invocation can only ever see ONE theme — it
