@@ -61,8 +61,14 @@ describe("variant-contract (221-01)", () => {
       for (const [handler, sel] of entries) {
         expect(typeof sel === "string" && sel.length > 0, `route "${slug}" marker for ${handler} is not a non-empty string`).toBe(true)
       }
+      expect(route.insensitiveEndpoints, `route "${slug}" has variantMarkers; insensitiveEndpoints applies only to variantInsensitive routes`).toBeUndefined()
     } else {
       expect(typeof insensitive).toBe("string")
+      // 221 WR-03: each consumed endpoint carries its own reason; no self-attested blanket opt-out.
+      for (const [id, why] of Object.entries((route.insensitiveEndpoints ?? {}) as Record<string, unknown>)) {
+        expect(FIXTURE_HANDLERS.some((h: { id: string }) => h.id === id), `route "${slug}" insensitiveEndpoints names unknown handler "${id}"`).toBe(true)
+        expect(typeof why === "string" && why.length >= 20 && !isPlaceholderJustification(why), `route "${slug}" insensitiveEndpoints["${id}"] reason is empty or a placeholder`).toBe(true)
+      }
       expect(
         isPlaceholderJustification(insensitive),
         `route "${slug}" variantInsensitive reason is a placeholder`,
@@ -100,6 +106,13 @@ describe("variant-contract (221-01)", () => {
     expect(absence).toBeGreaterThan(-1)
     expect(wait).toBeLessThan(absence)
     expect(RUN_A11Y_SOURCE).toContain("emptyWitnesses,")
+  })
+
+  it("run-a11y.mjs enforces insensitiveEndpoints on variantInsensitive routes (221 WR-03)", () => {
+    expect(RUN_A11Y_SOURCE).toContain("insensitiveEndpoints does not declare")
+    const block = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("} else if (variantInsensitive) {"))
+    expect(block.indexOf("exitCode = 1"), "variantInsensitive branch never fails").toBeGreaterThan(-1)
+    expect(block.indexOf("exitCode = 1")).toBeLessThan(block.indexOf("new AxePuppeteer("))
   })
 
   it("run-a11y.mjs owns its preview by process group with strictPort (221 D-02)", () => {

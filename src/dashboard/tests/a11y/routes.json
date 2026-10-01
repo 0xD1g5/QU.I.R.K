@@ -31,7 +31,10 @@
   {
     "slug": "motion",
     "path": "/motion",
-    "variantInsensitive": "default fixture carries no email endpoints, so default and empty render the same empty-state card; no marker is present in default and absent in empty"
+    "variantInsensitive": "default fixture carries no email endpoints, so default and empty render the same empty-state card; no marker is present in default and absent in empty",
+    "insensitiveEndpoints": {
+      "scan-latest": "motion renders only the email/broker sections of /api/scan/latest; fixture-scan.json has neither, so default and empty both render the same two EmptyStateCards and loading holds the page on its skeleton with no marker to prove it. Recorded as UNMEASURED-EXCLUSIONS motion:scan-latest (221 WR-03)"
+    }
   },
   {
     "slug": "data-at-rest",

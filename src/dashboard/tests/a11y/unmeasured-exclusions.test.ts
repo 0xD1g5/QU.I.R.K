@@ -19,6 +19,7 @@ interface Route {
   slug: string
   path: string
   variantInsensitive?: string
+  insensitiveEndpoints?: Record<string, string>
   unmarkedEndpoints?: Record<string, string>
   loadingRetired?: string
 }
@@ -45,6 +46,10 @@ function deriveRequired(): Map<string, string> {
     // (E) unmarked endpoints
     for (const id of Object.keys(r.unmarkedEndpoints ?? {})) {
       req.set(`${r.slug}:${id}`, `routes.json ${r.slug} leaves endpoint ${id} unmarked`)
+    }
+    // (E2) 221 WR-03: each honouring endpoint a variantInsensitive route consumes
+    for (const id of Object.keys(r.insensitiveEndpoints ?? {})) {
+      req.set(`${r.slug}:${id}`, `routes.json ${r.slug} is variantInsensitive yet consumes endpoint ${id}`)
     }
     // (F) retired loading legs
     if (r.loadingRetired) req.set(`${r.slug}:loading`, `routes.json ${r.slug} retires its loading leg`)

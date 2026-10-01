@@ -273,7 +273,14 @@ try {
 let exitCode = 0
 const summary = []
 
-for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, loadingSelector, emptySelector, loadingRetired } of ROUTES) {
+// 221 D-06 / WR-03: ids of the honouring (empty AND loading), non-chrome handlers a page requested.
+function honouringHits(urls) {
+  return [...new Set(urls.map(u => matchHandler(u)).filter(Boolean)
+    .filter(h => h.scope !== 'chrome' && (h.empty.body !== undefined || h.empty.emptyFrom) && h.loading.hold === true)
+    .map(h => h.id))]
+}
+
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, insensitiveEndpoints, loadingSelector, emptySelector, loadingRetired } of ROUTES) {
   // 221-06 D-08 fallback: a route whose only data endpoint is also the auth/chrome probe cannot be
   // caught mid-load. Skipped LOUDLY (named exclusion row in UNMEASURED-EXCLUSIONS.md), never silently.
   if (VARIANT === 'loading' && loadingRetired) {
@@ -372,9 +379,7 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
       emptyWitnesses = (await page.$$(sel)).length
     }
     // 221 D-06: any honouring, non-chrome handler this page actually requested must be declared.
-    const hitIds = [...new Set(apiRequests.map(u => matchHandler(u)).filter(Boolean)
-      .filter(h => h.scope !== 'chrome' && (h.empty.body !== undefined || h.empty.emptyFrom) && h.loading.hold === true)
-      .map(h => h.id))]
+    const hitIds = honouringHits(apiRequests)
     const declared = new Set([...Object.keys(variantMarkers), ...Object.keys(unmarkedEndpoints ?? {})])
     const undeclared = hitIds.filter(id => !declared.has(id))
     for (const id of undeclared) {
@@ -414,10 +419,23 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
     }
   } else if (variantInsensitive) {
     console.log(`[a11y] NOTE [${slug}]: variant-insensitive — ${variantInsensitive}`)
-    const hit = [...new Set(apiRequests.map(u => matchHandler(u)).filter(Boolean)
-      .filter(h => h.scope !== 'chrome' && (h.empty.body !== undefined || h.empty.emptyFrom) && h.loading.hold === true)
-      .map(h => h.id))]
+    // 221 WR-03: the opt-out is not self-attested. Every honouring, non-chrome endpoint the page
+    // actually requested must be named in insensitiveEndpoints with its own reason (and its own
+    // UNMEASURED-EXCLUSIONS row), mirroring unmarkedEndpoints on marked routes.
+    const hit = honouringHits(apiRequests)
     console.log(`[a11y] NOTE [${slug}]: honouring endpoints hit: ${hit.join(', ') || '(none)'}`)
+    const undeclaredInsensitive = hit.filter(id => !Object.hasOwn(insensitiveEndpoints ?? {}, id))
+    for (const id of undeclaredInsensitive) {
+      console.error(
+        `[a11y] FAIL [${slug}]: variant-insensitive route requested honouring endpoint '${id}' that insensitiveEndpoints does not declare — mark the route, or give '${id}' its own reason and exclusion row (221 WR-03)`,
+      )
+    }
+    if (undeclaredInsensitive.length > 0) {
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
+      await page.close()
+      continue
+    }
   }
 
   // Run axe with WCAG 2A/2AA tags
