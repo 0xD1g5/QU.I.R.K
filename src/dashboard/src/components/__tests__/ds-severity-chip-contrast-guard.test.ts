@@ -40,9 +40,12 @@ function measure(): Record<string, number> {
       const text = resolveColor(`--ds-${chip}`, block, dark)
       const dim = resolveColor(`--ds-${chip}-dim`, block, dark)
       if (!text || !dim) throw new Error(`ds chip guard: cannot resolve ${chip} in ${theme}`)
+      // 221 WR-07: contrastRatio needs opaque hex; a translucent text token would measure NaN.
+      if (!text.startsWith("#")) throw new Error(`ds chip guard: ${chip} text in ${theme} is not opaque hex: ${text}`)
       for (const surface of SURFACES) {
         const s = resolveColor(surface, block, dark)
         if (!s) throw new Error(`ds chip guard: cannot resolve ${surface} in ${theme}`)
+        if (!s.startsWith("#")) throw new Error(`ds chip guard: ${surface} in ${theme} is not opaque hex: ${s}`)
         out[`${theme}|${chip}|${surface}`] = Math.round(contrastRatio(text, blendOver(dim, s)) * 100) / 100
       }
     }
@@ -88,6 +91,14 @@ describe("DS severity-chip family contrast (221-02)", () => {
   })
   it("probe: ratchet flags an orphan baseline key", () => {
     expect(ratchetViolations({}, { "a|b": 3.5 }).join()).toContain("orphan")
+  })
+  it("probe: ratchet flags a non-finite ratio, new or baselined (221 WR-07)", () => {
+    expect(ratchetViolations({ "a|b": NaN }, {}).join()).toContain("non-finite")
+    expect(ratchetViolations({ "a|b": NaN }, { "a|b": 3.5 }).join()).toContain("non-finite")
+    expect(ratchetViolations({ "a|b": Infinity }, {}).join()).toContain("non-finite")
+  })
+  it("probe: every measured ratio is finite", () => {
+    for (const [k, r] of Object.entries(measure())) expect(Number.isFinite(r), `${k} = ${r}`).toBe(true)
   })
   it("probe: ratchet passes a held pair and a passing pair", () => {
     expect(ratchetViolations({ "a|b": 3.5, "c|d": 6 }, { "a|b": 3.5 })).toEqual([])

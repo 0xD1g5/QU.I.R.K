@@ -13,6 +13,11 @@ export function ratchetViolations(
 ): string[] {
   const out: string[] = []
   for (const [key, ratio] of Object.entries(measured)) {
+    // 221 WR-07: NaN fails every comparison below, so a non-finite ratio would pass silently.
+    if (!Number.isFinite(ratio)) {
+      out.push(`${key} measured a non-finite ratio (${ratio})`)
+      continue
+    }
     const base = baseline[key]
     if (base === undefined) {
       if (ratio < floor) out.push(`new failing pair ${key}: ${ratio} < ${floor}`)
