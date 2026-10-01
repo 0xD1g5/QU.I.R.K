@@ -2193,3 +2193,26 @@ of whether the live dashboard session that triggered the export was in light or 
 exported from a dark-theme session and one exported from a light-theme session are equivalent — this
 is intentional, not a bug: the printed deliverable is a client-facing artifact and is not expected to
 carry the operator's personal theme preference.
+
+## 30. Keyboard Access to Table Regions (Phase 219, v5.26 — KBD-01)
+
+Every table on the dashboard that is too wide or too tall for the space it renders in now becomes a
+single stop in the page's Tab order. Tab to it, and the arrow keys — ArrowLeft, ArrowRight, ArrowUp,
+ArrowDown, PageUp, PageDown, Home, End (where the browser's native handling applies them to the
+table's overflow axis) — scroll it in place, the same way a mouse wheel or scrollbar drag would. A
+visible focus ring appears around the table region when it receives keyboard focus; it does not
+appear when the same region is clicked with a mouse, so sighted keyboard users get an unambiguous
+cue without a ring appearing on every mouse interaction.
+
+A table that already fits its space adds no Tab stop at all, and no screen-reader region — there is
+nothing to scroll, so there is nothing to announce. A table that does overflow is exposed to a screen
+reader as a named region: on pages with more than one table (for example Data at Rest's database,
+object storage, Kubernetes secrets and vault panels, or Compare's several findings-and-subscore
+tables) each region carries its own distinct name, such as "Database encryption findings" or
+"Endpoints only in scan B," so a screen-reader user can tell which table they have landed on without
+reading its contents first. A single-table page uses the generic name "Scrollable table."
+
+The accepted accessibility exception that previously covered this gap (`scrollable-region-focusable`
+in `src/dashboard/tests/a11y/ACCEPTED-VIOLATIONS.md`) was **withdrawn** in Phase 219, not renewed —
+the underlying behavior is now fixed at the source, in the shared `Table` component, rather than
+accepted as ongoing debt.

@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,530 lines, in reading order.
+Five guides, 6,534 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3945,13 +3945,16 @@ quirk errors --dump-md > docs/error-codes.md
     for all baselined rules. The existing stale-entry ratchet still fires against the range's
     **lower bound**, so a `countRange` is not a one-way ratchet that only ever loosens: a live
     count below the declared floor still fails as "Baseline is stale," exactly as an exact-count
-    entry would. Only `data-at-rest`'s `scrollable-region-focusable` entry carries a range today
-    — it absorbs a real macOS-vs-Linux render disagreement recorded in
-    `a11y-baseline-environment-mismatch.md`. That range is **transitional**: Phase 219 (KBD-01)
-    adds a `tabIndex`/`role` to `components/ui/table.tsx` that removes the render-dependence
-    entirely, and is expected to **retire** the range rather than renew it. A `countRange` is
-    hand-added once to a baseline entry and is then carried forward automatically across every
-    later CI regeneration — declaring one is **not** the "hand-patching a baseline count" the
+    entry would. The only range ever declared — `data-at-rest`'s `scrollable-region-focusable`
+    entry, absorbing a real macOS-vs-Linux render disagreement recorded in
+    `a11y-baseline-environment-mismatch.md` — was **retired** in Phase 219 (KBD-01): once
+    `components/ui/table.tsx` gained conditional `tabIndex`/`role` (applied only while the
+    wrapper actually overflows), the rule's render-dependence vanished and it dropped out of
+    every baseline entirely in CI run `36795176372`. No committed baseline currently declares a
+    `countRange`. The mechanism itself is not retired — it remains available, opt-in, for a
+    future entry that is genuinely render-dependent; it simply has no live user today. A
+    `countRange` is hand-added once to a baseline entry and is then carried forward automatically
+    across every later CI regeneration — declaring one is **not** the "hand-patching a baseline count" the
     next bullet forbids; it declares a bound in advance, it does not edit an already-observed
     count after the fact.
 - **Regenerating a11y baselines — the sanctioned procedure (Phase 185, D-03).** Baselines
@@ -4003,9 +4006,10 @@ quirk errors --dump-md > docs/error-codes.md
   is locally installed — so a local a11y result is **diagnostic-only** and never decides a
   committed baseline; only the pinned, CI-run result does. **Amendment:** the pin makes
   comparison sound **between CI runs** — it does not, and was never claimed to, make a local
-  macOS run agree with a Linux CI run for a genuinely render-dependent count. That residual
-  disagreement is exactly what the one transitional `countRange` entry above absorbs; the pin's
-  rationale is unchanged, this just states its actual scope rather than an implied broader one.
+  macOS run agree with a Linux CI run for a genuinely render-dependent count. The one entry that
+  needed such a range — `data-at-rest`'s `scrollable-region-focusable` — was retired in Phase 219
+  (KBD-01), so no committed baseline relies on a `countRange` today; the pin's rationale is
+  unchanged, this just states its actual scope rather than an implied broader one.
   - **Why the exact pin needs no scheduled staleness check.** A `chrome-version: stable` pin
     resolves against Google's rolling "current" distribution
     (`dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`), which genuinely drops
