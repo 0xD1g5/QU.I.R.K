@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T05:05:31.000Z"
-last_activity: 2026-10-01 -- Phase 220 (CI Instrument Truth, CITRUTH-01/02/03) plans 01-07 EXECUTED, NOT verified, NOT merged. Vitest 14-node flake NOT REPRODUCED in 10 attempts (hygiene fix + self-diagnosing census + JUnit artifact, 10/10 local leg); MinIO replaced by moto (D-01R), both idempotency nodes pass from a cache-less anonymous pull (re-confirmed 220-07); branch_ci_state.py + ARTIFACT-05 phase-close gate + CI-aware verifier patch. Local full-suite failing set {} vs main {multihost, storage-s3}. Branch phase-220-ci-instrument-truth pushed at the commit carrying this edit (sha in 220-07-SUMMARY). Next -- 220-08 CI acceptance dispatch, then verification.
+last_updated: "2026-10-01T12:03:01.000Z"
+last_activity: "2026-10-01 -- Phase 220 (CI Instrument Truth) COMPLETE, verified human_needed at cd85c281 (CI green, branch_ci_state exit 0). SC1 root cause NOT REPRODUCED, accepted by operator override. CITRUTH-02 main leg is post-merge. F-220-08-1 (TS2556 in 3 executive tests) fixed in cd85c281. Branch pushed, NOT merged; next: PR + merge, then the post-merge main check, then milestone v5.26 audit/close"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 35
-  completed_plans: 34
-  percent: 83
+  completed_plans: 35
+  percent: 100
 ---
 
 # Project State
@@ -1536,7 +1536,23 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 220 CI acceptance (220-08), then verification
+## Next Cycle — merge Phase 220, check `main`, then close milestone v5.26
+
+**Phase 220 is COMPLETE (2026-10-01), verified `human_needed` at `cd85c281`, NOT merged.** The
+branch `phase-220-ci-instrument-truth` is pushed. The close commit sits directly on `cd85c281`,
+whose CI was observed green: Python CI 36854156107 and Dashboard Quality 36854158859, all jobs
+success. `branch_ci_state.py` exited 0 and `check_ci_truth` returned `[]`. 220-08 found
+F-220-08-1: Dashboard Quality was red at `8c6be117` with TS2556 in three `executive-*.test.tsx`
+mocks from `c0d98faf`, which vitest never type-checks. It was fixed in `cd85c281`. SC1's root-cause
+clause is met by **operator override**: the flake was NOT REPRODUCED, and the batch now
+self-diagnoses. CITRUTH-01/03 are `[x]`. **CITRUTH-02 stays `[ ]` until Python CI on `main` at the
+merge sha is success with `[multihost]`/`[storage-s3]` passed in its JUnit artifact.** Next: open a
+PR and merge, run that check and flip CITRUTH-02, then audit and close v5.26 (6/6 phases). Any
+commit on the branch before merge (this one excepted) needs re-push + re-dispatch + re-verify.
+
+**Prior Next Cycle note, superseded above:** 2026-10-01 (220-07) — Phase 220 CI acceptance (220-08), then verification.
+
+**(superseded)** Next Cycle — Phase 220 CI acceptance (220-08), then verification
 
 **Phase 220 is EXECUTED through 220-07 (7 of 8 plans), NOT verified, NOT merged.** Branch
 `phase-220-ci-instrument-truth`, 18 commits ahead of `origin/main` (`8b3b087c`, which already

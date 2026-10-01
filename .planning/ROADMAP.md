@@ -126,7 +126,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 - [x] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
 - [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [x] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
-- [ ] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
+- [x] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
 
 ### Phase Details
 
@@ -273,7 +273,7 @@ Plans:
 - [x] 220-05-PLAN.md — CITRUTH-03: ARTIFACT-05 pre-commit gate — phase close requires recorded green CI at HEAD (wave 2)
 - [x] 220-06-PLAN.md — CITRUTH-03: gsd-verifier Step 9 CI-truth local patch + revert detector + CLAUDE.md/CONTRIBUTING (wave 2)
 - [x] 220-07-PLAN.md — cache-less MinIO proof, CLAUDE.md corrections, UAT Series 220, vault, todos closed, hand-edited state, push (wave 3)
-- [ ] 220-08-PLAN.md — CI acceptance: refusal at HEAD, 3x Python CI + Dashboard Quality per-node evidence, green leg, zero commits (wave 4)
+- [x] 220-08-PLAN.md — CI acceptance: refusal at HEAD, 3x Python CI + Dashboard Quality per-node evidence, green leg, zero commits (wave 4)
 
 ### Progress
 
@@ -284,7 +284,7 @@ Plans:
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
-| 220. CI Instrument Truth | 7/8 | Executed 01-07; 220-08 CI acceptance + verification pending | - |
+| 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg post-merge) | 2026-10-01 |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 
