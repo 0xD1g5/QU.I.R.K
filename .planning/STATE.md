@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
 status: in_progress
-last_updated: "2026-10-01T12:03:01.000Z"
-last_activity: "2026-10-01 -- Phase 220 (CI Instrument Truth) COMPLETE, verified human_needed at cd85c281 (CI green, branch_ci_state exit 0). SC1 root cause NOT REPRODUCED, accepted by operator override. CITRUTH-02 main leg is post-merge. F-220-08-1 (TS2556 in 3 executive tests) fixed in cd85c281. Branch pushed, NOT merged; next: PR + merge, then the post-merge main check, then milestone v5.26 audit/close"
+last_updated: "2026-10-01T17:15:00.000Z"
+last_activity: "2026-10-01 -- Phase 221 (Close gap: a11y blind spots + empty/loading variant legs) ADDED to v5.26 as gap closure for v5.26-MILESTONE-AUDIT.md (gaps_found): HARNESS-03 B1 + INT-01 (10 todos orphaned on closed Phase 220). Not planned; next: /gsd-plan-phase 221"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
   total_plans: 35
   completed_plans: 35
-  percent: 100
+  percent: 86
 ---
 
 # Project State
@@ -1385,6 +1385,17 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
   **This reopens v5.24.** The milestone stood at all 7 phases `[x]` and was paused awaiting this very
   decision; the close sequence now sits behind Phase 207.1.
+
+- Phase 221 added at end of v5.26 (2026-10-01) — gap closure for `.planning/v5.26-MILESTONE-AUDIT.md`
+  (`gaps_found`): HARNESS-03 blocker B1 (empty/loading fixture-variant legs near-vacuous, 1 of 10
+  endpoints honour the variant) + INT-01 (10 a11y blind-spot todos still name `Owner: Phase 220`,
+  which closed without absorbing them). Invoked as `--insert 221`, routed to add-phase because no
+  Phase 221 existed. `gsd-sdk query phase.add` appended the block at ROADMAP.md EOF, after the
+  Backlog section and a stray `</content>` tag, and wrote no checklist row or Progress row. It was
+  relocated into v5.26 by hand. `state.add-roadmap-evolution` WAS run, and it corrupted this file:
+  it dropped `last_activity`, inserted ~35 blank lines, and wrote a duplicate `### Roadmap
+  Evolution` at EOF. It was restored from a pre-image byte-identical, then this entry was
+  hand-edited.
 
 ## Current Position
 Phase: 218 (Contrast Violations — Design Calls & Closing Assertion) — **EXECUTED, 6 of 6 plans,
