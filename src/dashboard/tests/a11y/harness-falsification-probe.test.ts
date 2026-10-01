@@ -27,6 +27,10 @@
  * Phase 217 changes a real contrast token or Phase 218/219 renames a real
  * route — this file never reads either.
  *
+ * 221-01: Injection D and the Control exact-count node now drive the real
+ * compareToBaseline (216-VERIFICATION W1: they were tautologies over a local
+ * `classify`).
+ *
  * ALL NODES BELOW ARE GREEN, BY DESIGN. This file is a positive test about
  * negative behaviour: it asserts the injected failures ARE caught, the
  * repaired guard's OWN vacuity/naming/range rules. The live RED evidence
@@ -38,7 +42,7 @@
  */
 import { describe, it, expect } from "vitest"
 import { extractBadgeMaps, dispositionCoverage } from "./badge-map-extractor.mjs"
-import { baselineFilename, THEMES } from "./baseline-diff.mjs"
+import { baselineFilename, THEMES, compareToBaseline } from "./baseline-diff.mjs"
 
 // Fabricated source text, chosen not to collide with any real map name in
 // `src/pages/*.tsx`. Do NOT derive this from a real page — a real map
@@ -148,33 +152,45 @@ describe("harness-falsification-probe (216-06) -- synthetic input, no filesystem
   })
 
   describe("Injection D: range ceiling and floor (opt-in countRange, D-10/D-12)", () => {
-    // These exercise the SAME range semantics `compareToBaseline` implements
-    // (ceiling = ceiling of countRange, floor = floor of countRange), applied
-    // directly to a synthetic countRange tuple so the two-sided-band shape
-    // is probed without needing a real axe violations array. What input
-    // makes each fail: a live count exactly at the ceiling+1 (5) must
-    // regress; exactly at the floor-1 (1) must go stale; 2, 3, 4 (inside
-    // [2,4] inclusive) must do neither.
-    const countRange: [number, number] = [2, 4]
-    function classify(liveCount: number): "regression" | "stale" | "ok" {
-      const [floor, ceiling] = countRange
-      if (liveCount > ceiling) return "regression"
-      if (liveCount < floor) return "stale"
-      return "ok"
+    // 221-01 (216-VERIFICATION W1 repair): these nodes drive the REAL
+    // `compareToBaseline`, not a local reimplementation. Each one fails if the
+    // production ceiling branch, floor branch, or range-honouring logic is
+    // removed. A live count of 5 (above ceiling 4) must regress; 1 (below
+    // floor 2) must go stale; 2, 3, 4 (inside [2,4] inclusive) must do neither.
+    const entry = {
+      rule: "probe-rule",
+      count: 4,
+      countRange: [2, 4] as [number, number],
+      justification: "synthetic probe entry with a real, non-placeholder justification",
+    }
+    function live(n: number) {
+      return [
+        {
+          id: "probe-rule",
+          impact: "moderate",
+          nodes: Array.from({ length: n }, (_, i) => ({ html: `<div id="probe-${i}"></div>` })),
+        },
+      ]
     }
 
     it("a live count of 5 (above the ceiling of 4) is exactly one regression", () => {
-      expect(classify(5)).toBe("regression")
+      const r = compareToBaseline("probe-route", live(5), [entry])
+      expect(r.regressions).toHaveLength(1)
+      expect(r.staleEntries).toHaveLength(0)
     })
 
     it("a live count of 1 (below the floor of 2) is exactly one stale entry", () => {
-      expect(classify(1)).toBe("stale")
+      const r = compareToBaseline("probe-route", live(1), [entry])
+      expect(r.staleEntries).toHaveLength(1)
+      expect(r.regressions).toHaveLength(0)
     })
 
     it.each([2, 3, 4])(
       "a live count of %d (inside [2,4]) triggers neither a regression nor a stale entry",
       (liveCount) => {
-        expect(classify(liveCount)).toBe("ok")
+        const r = compareToBaseline("probe-route", live(liveCount), [entry])
+        expect(r.regressions).toHaveLength(0)
+        expect(r.staleEntries).toHaveLength(0)
       },
     )
   })
@@ -202,14 +218,17 @@ describe("harness-falsification-probe (216-06) -- synthetic input, no filesystem
     })
 
     it("an exact-count entry (no countRange) matching its live count reports neither a regression nor a stale entry", () => {
-      // Mirrors compareToBaseline's degenerate "no range declared" path:
+      // Drives the real compareToBaseline's "no range declared" path:
       // ceiling === floor === the exact baseline count.
-      const baselineCount = 3
-      const liveCount = 3
-      const ceiling = baselineCount
-      const floor = baselineCount
-      expect(liveCount > ceiling).toBe(false)
-      expect(liveCount < floor).toBe(false)
+      const baseline = [
+        { rule: "probe-rule", count: 3, justification: "synthetic probe entry with a real, non-placeholder justification" },
+      ]
+      const liveViolations = [
+        { id: "probe-rule", impact: "moderate", nodes: [{ html: "<a></a>" }, { html: "<b></b>" }, { html: "<i></i>" }] },
+      ]
+      const r = compareToBaseline("probe-route", liveViolations, baseline)
+      expect(r.regressions).toHaveLength(0)
+      expect(r.staleEntries).toHaveLength(0)
     })
   })
 })
