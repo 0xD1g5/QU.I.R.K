@@ -12,6 +12,13 @@ export const DEFAULT_LOADING_SELECTOR = '.animate-pulse'
 // by an error branch, so "every marker absent" from a crash or an error string does not pass.
 export const DEFAULT_EMPTY_SELECTOR = '[data-testid="empty-state"]'
 
+// 221 WR-12: the witness count the empty leg requires. Shared by the guard and by the harness's
+// wait, so run-a11y.mjs waits for exactly the count this guard will demand (not for the first
+// witness, which on a multi-panel route like /hardware appears before its siblings).
+export function emptyWitnessesNeeded(markers) {
+  return Math.max(1, Object.keys(markers ?? {}).length)
+}
+
 /**
  * @param {object} args
  * @param {string} args.variant   'default' | 'empty' | 'loading'
@@ -56,7 +63,7 @@ export function renderStateViolations({
   }
   // 221 WR-02: one empty-state witness per marked endpoint (a /hardware drift panel stuck in its
   // error branch leaves 2 of 3 witnesses and fails, instead of passing as "absent").
-  const needEmpty = Math.max(1, entries.length)
+  const needEmpty = emptyWitnessesNeeded(markers)
   if (variant === 'empty' && !(Number.isFinite(emptyWitnesses) && emptyWitnesses >= needEmpty)) {
     out.push(
       `${prefix} found ${Number.isFinite(emptyWitnesses) ? emptyWitnesses : 'no'} empty-state witness(es) "${emptySelector}", need ${needEmpty} (one per marked endpoint) — no proof the empty fixture rendered an empty state`,

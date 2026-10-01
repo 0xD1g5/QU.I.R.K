@@ -6,7 +6,7 @@
  * failures ARE caught. Live RED evidence belongs in 221-VERIFICATION, not here.
  */
 import { describe, it, expect } from "vitest"
-import { renderStateViolations, DEFAULT_LOADING_SELECTOR, DEFAULT_EMPTY_SELECTOR } from "./variant-guard.mjs"
+import { renderStateViolations, emptyWitnessesNeeded, DEFAULT_LOADING_SELECTOR, DEFAULT_EMPTY_SELECTOR } from "./variant-guard.mjs"
 import { VARIANTS, resolveVariant } from "./baseline-diff.mjs"
 
 const A = ".probe-marker-a"
@@ -54,6 +54,16 @@ describe("variant-guard-probe (221-01) -- synthetic input, no filesystem I/O", (
     const v = renderStateViolations({ variant: "empty", slug: "probe-route", markers, present: {}, emptyWitnesses: 1 })
     expect(v).toHaveLength(1)
     expect(v[0]).toContain("need 2")
+  })
+
+  // 221 WR-12: the harness waits for exactly this count, so it must equal what the guard demands.
+  it("emptyWitnessesNeeded is one per marked endpoint (min 1) and matches the guard's threshold", () => {
+    expect(emptyWitnessesNeeded(undefined)).toBe(1)
+    expect(emptyWitnessesNeeded({ x: A })).toBe(1)
+    const three = { x: A, y: B, z: ".probe-marker-c" }
+    expect(emptyWitnessesNeeded(three)).toBe(3)
+    expect(renderStateViolations({ variant: "empty", slug: "probe-route", markers: three, present: {}, emptyWitnesses: 2 })).toHaveLength(1)
+    expect(renderStateViolations({ variant: "empty", slug: "probe-route", markers: three, present: {}, emptyWitnesses: 3 })).toEqual([])
   })
 
   it("loading with all markers absent and skeleton true is legitimate", () => {

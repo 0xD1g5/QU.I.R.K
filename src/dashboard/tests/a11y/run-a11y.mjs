@@ -68,7 +68,7 @@ import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
-import { renderStateViolations, DEFAULT_LOADING_SELECTOR, DEFAULT_EMPTY_SELECTOR } from './variant-guard.mjs'
+import { renderStateViolations, emptyWitnessesNeeded, DEFAULT_LOADING_SELECTOR, DEFAULT_EMPTY_SELECTOR } from './variant-guard.mjs'
 import { matchHandler } from './fixture-handlers.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -116,6 +116,8 @@ const PREVIEW_PORT = 4173
 const PREVIEW_HOST = 'localhost'
 const CONNECT_TIMEOUT_MS = 30_000
 const CONNECT_POLL_MS = 250
+// 221 WR-12: bound on the empty-leg witness-count condition wait.
+const EMPTY_WITNESS_WAIT_MS = 10_000
 
 // Read config files
 const ROUTES = JSON.parse(readFileSync(resolve(A11Y_DIR, 'routes.json'), 'utf8'))
@@ -421,10 +423,22 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
     }
     // 221 WR-02: under `empty`, WAIT for the positive empty-state witness before the instantaneous
     // marker-absence probe below, so a page that has not rendered yet cannot pass by absence.
+    // 221 WR-12: wait for the REQUIRED COUNT, not the first match. /hardware needs one witness
+    // from each of three independently fetched panels, and networkidle2 tolerates two in-flight
+    // requests, so reading the count when the first witness appears is a race in a required job.
+    // A condition wait (bounded), never a sleep; a timeout fails loudly with the observed count.
     if (VARIANT === 'empty') {
       const sel = emptySelector ?? DEFAULT_EMPTY_SELECTOR
-      await page.waitForSelector(sel, { timeout: 5_000 }).catch(() => null)
+      const needEmpty = emptyWitnessesNeeded(variantMarkers)
+      const reached = await page
+        .waitForFunction((s, n) => document.querySelectorAll(s).length >= n, { timeout: EMPTY_WITNESS_WAIT_MS }, sel, needEmpty)
+        .then(() => true, () => false)
       emptyWitnesses = (await page.$$(sel)).length
+      if (!reached) {
+        console.error(
+          `[a11y] FAIL [${slug}]: waited ${EMPTY_WITNESS_WAIT_MS}ms for ${needEmpty} empty-state witness(es) "${sel}"; observed ${emptyWitnesses} (221 WR-12)`,
+        )
+      }
     }
     // 221 D-06: any honouring, non-chrome handler this page actually requested must be declared.
     const hitIds = honouringHits(apiRequests)

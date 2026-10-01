@@ -107,8 +107,11 @@ describe("variant-contract (221-01)", () => {
     expect(guard).toBeLessThan(axe)
   })
 
-  it("run-a11y.mjs waits for the empty-state witness before the marker-absence probe (221 WR-02)", () => {
-    const wait = RUN_A11Y_SOURCE.indexOf("await page.waitForSelector(sel, { timeout: 5_000 })")
+  it("run-a11y.mjs waits for the REQUIRED empty-witness count before the marker-absence probe (221 WR-02/WR-12)", () => {
+    // WR-12: a first-match wait (waitForSelector) reads the count before sibling panels render.
+    const wait = RUN_A11Y_SOURCE.indexOf(".waitForFunction((s, n) => document.querySelectorAll(s).length >= n,")
+    expect(RUN_A11Y_SOURCE).toContain("const needEmpty = emptyWitnessesNeeded(variantMarkers)")
+    expect(RUN_A11Y_SOURCE).not.toContain("await page.waitForSelector(sel, { timeout: 5_000 })")
     const absence = RUN_A11Y_SOURCE.indexOf("present[selector] = !!(await page.$(selector))")
     expect(wait, "no empty-state witness wait").toBeGreaterThan(-1)
     expect(absence).toBeGreaterThan(-1)
