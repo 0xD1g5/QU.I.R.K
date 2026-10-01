@@ -209,7 +209,7 @@ export function FindingsPage() {
 
   if (!data?.findings?.length) {
     return (
-      <EmptyStateCard message="No findings recorded in this scan — run a scan first: quirk --targets-file targets.txt. Results will appear here automatically." />
+      <EmptyStateCard emptyFor="scan-latest" message="No findings recorded in this scan — run a scan first: quirk --targets-file targets.txt. Results will appear here automatically." />
     )
   }
 

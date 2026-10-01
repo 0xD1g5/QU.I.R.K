@@ -349,7 +349,7 @@ export function RoadmapPage() {
     return (
       <div className="space-y-4 py-8">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Remediation Roadmap</h1>
-        <p className="text-muted-foreground text-sm" data-testid="empty-state">
+        <p className="text-muted-foreground text-sm" data-a11y-empty="scan-latest">
           No remediation items in this scan — either no findings exist or the scoring engine produced no recommendations.
         </p>
       </div>

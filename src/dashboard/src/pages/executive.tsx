@@ -349,7 +349,7 @@ export function ExecutivePage() {
     return (
       <div className="space-y-4 py-8">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Executive Summary</h1>
-        <p className="text-muted-foreground text-sm" data-testid="empty-state">
+        <p className="text-muted-foreground text-sm" data-a11y-empty="scan-latest">
           No scan data available. Run a scan first: <code>quirk --targets-file targets.txt</code>
         </p>
       </div>

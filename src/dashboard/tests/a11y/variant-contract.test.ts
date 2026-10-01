@@ -107,10 +107,10 @@ describe("variant-contract (221-01)", () => {
     expect(guard).toBeLessThan(axe)
   })
 
-  it("run-a11y.mjs waits for the REQUIRED empty-witness count before the marker-absence probe (221 WR-02/WR-12)", () => {
-    // WR-12: a first-match wait (waitForSelector) reads the count before sibling panels render.
-    const wait = RUN_A11Y_SOURCE.indexOf(".waitForFunction((s, n) => document.querySelectorAll(s).length >= n,")
-    expect(RUN_A11Y_SOURCE).toContain("const needEmpty = emptyWitnessesNeeded(variantMarkers)")
+  it("run-a11y.mjs waits for EVERY required per-endpoint witness before the marker-absence probe (221 WR-02/WR-12/WR-13)", () => {
+    // WR-12: a first-match wait (waitForSelector) reads witnesses before sibling panels render.
+    const wait = RUN_A11Y_SOURCE.indexOf(".waitForFunction(ss => ss.every(s => document.querySelector(s) !== null),")
+    expect(RUN_A11Y_SOURCE).toContain("const required = requiredEmptyWitnesses(variantMarkers)")
     expect(RUN_A11Y_SOURCE).not.toContain("await page.waitForSelector(sel, { timeout: 5_000 })")
     const absence = RUN_A11Y_SOURCE.indexOf("present[selector] = !!(await page.$(selector))")
     expect(wait, "no empty-state witness wait").toBeGreaterThan(-1)
@@ -289,5 +289,89 @@ describe("fixture handler contract (221-03)", () => {
     })
     expect(hits, `${needle} must be emitted exactly once in src/ (found: ${hits.join(", ") || "none"})`).toHaveLength(1)
     expect(hits[0].endsWith(" x1"), `${needle} emitted more than once in ${hits[0]}`).toBe(true)
+  })
+})
+
+// 221 WR-13: the empty-state witness is bound to an endpoint and never emitted by an error
+// branch. Both properties were previously ASSUMED (the witness lived unconditionally on
+// EmptyStateCard, and schedules.tsx renders an EmptyStateCard as its error branch). Sites are
+// scanned from src/ at test time, never hand-listed.
+describe("empty-state witness binding (221 WR-13)", () => {
+  const srcRoot = path.resolve(__dirname, "../../src")
+  const files: string[] = []
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) { if (e.name !== "__tests__") walk(p) }
+      else if (/\.tsx$/.test(e.name) && !/\.test\.tsx$/.test(e.name)) files.push(p)
+    }
+  }
+  walk(srcRoot)
+  const handlerIds = new Set(FIXTURE_HANDLERS.map((h: { id: string }) => h.id))
+  const SITE = /\b(emptyFor|data-a11y-empty)=(?:"([^"]+)"|\{([^}]+)\})/g
+  type Site = { file: string; line: number; attr: string; literal?: string; expr?: string; tag: string; before: string }
+  const sites: Site[] = []
+  for (const f of files) {
+    const text = readFileSync(f, "utf-8")
+    for (const m of text.matchAll(SITE)) {
+      const before = text.slice(0, m.index)
+      const tagStart = before.lastIndexOf("<")
+      const tag = (before.slice(tagStart).match(/^<([A-Za-z][\w.]*)/) ?? [])[1] ?? "?"
+      sites.push({
+        file: path.relative(srcRoot, f), line: before.split("\n").length, attr: m[1],
+        literal: m[2], expr: m[3], tag, before: text.slice(0, tagStart),
+      })
+    }
+  }
+  const rel = (s: Site) => `${s.file}:${s.line}`
+  // The governing condition of an emission site: the nearest preceding line (within 8) that
+  // opens a branch: `if (`, a ternary `?` (not `?.`/`??`), or `&&`.
+  const BRANCH = /\bif\s*\(|\?(?![.?])|&&/
+  const governingCondition = (before: string): string | null => {
+    const lines = before.split("\n").slice(-8).reverse()
+    for (const l of lines) if (BRANCH.test(l)) return l.trim()
+    return null
+  }
+  const ERRORISH = /error|\berr\b|fail/i
+  const emission = sites.filter((s) => s.tag === "EmptyStateCard" || /^[a-z]/.test(s.tag))
+
+  it("finds the witness sites (vacuity guard)", () => {
+    expect(emission.length).toBeGreaterThanOrEqual(15)
+  })
+
+  it("EmptyStateCard emits the witness only from its emptyFor prop (no unconditional witness)", () => {
+    const card = readFileSync(path.join(srcRoot, "components/EmptyStateCard.tsx"), "utf-8")
+    expect(card).toContain("data-a11y-empty={emptyFor}")
+    expect(card).not.toMatch(/data-a11y-empty="/)
+    expect(card).not.toContain('data-testid="empty-state"')
+  })
+
+  it("every literal witness id is a fixture handler id", () => {
+    const bad = sites.filter((s) => s.literal !== undefined && !handlerIds.has(s.literal)).map((s) => `${rel(s)} ${s.literal}`)
+    expect(bad, `unknown handler ids: ${bad.join(", ")}`).toEqual([])
+  })
+
+  it("no witness is emitted on a branch whose condition mentions an error", () => {
+    const bad: string[] = []
+    for (const s of emission) {
+      if (s.file === "components/EmptyStateCard.tsx") continue // the definition, not a call site
+      const cond = governingCondition(s.before)
+      if (cond === null) bad.push(`${rel(s)} <${s.tag}> has no governing branch condition within 8 lines`)
+      else if (ERRORISH.test(cond)) bad.push(`${rel(s)} <${s.tag}> is on an error branch: ${cond}`)
+    }
+    expect(bad, bad.join("\n")).toEqual([])
+  })
+
+  it("a dynamic witness is only a pass-through of an emptyFor prop", () => {
+    const bad = sites.filter((s) => s.expr !== undefined && s.expr.trim() !== "emptyFor").map((s) => `${rel(s)} {${s.expr}}`)
+    expect(bad, bad.join(", ")).toEqual([])
+  })
+
+  const marked = ROUTES.flatMap((r) =>
+    Object.keys((r.variantMarkers ?? {}) as Record<string, string>).map((id) => [r.slug, id] as const),
+  )
+  it.each(marked)("route %s marked endpoint %s has at least one bound witness site in src/", (slug, id) => {
+    const hits = sites.filter((s) => s.literal === id)
+    expect(hits.length, `route "${slug}": no emptyFor="${id}" / data-a11y-empty="${id}" in src/; the empty leg could never witness it`).toBeGreaterThan(0)
   })
 })

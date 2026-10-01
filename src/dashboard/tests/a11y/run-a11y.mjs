@@ -68,7 +68,7 @@ import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
-import { renderStateViolations, emptyWitnessesNeeded, DEFAULT_LOADING_SELECTOR, DEFAULT_EMPTY_SELECTOR } from './variant-guard.mjs'
+import { renderStateViolations, requiredEmptyWitnesses, DEFAULT_LOADING_SELECTOR } from './variant-guard.mjs'
 import { matchHandler } from './fixture-handlers.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -383,7 +383,7 @@ function honouringHits(urls) {
 // 221 WR-04: any uncaught rejection inside the sweep (newPage, AxePuppeteer.analyze, ...) still
 // reaches the full teardown below instead of only the synchronous single-SIGTERM `cleanup`.
 try {
-for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, insensitiveEndpoints, loadingSelector, emptySelector, loadingRetired } of ROUTES) {
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, insensitiveEndpoints, loadingSelector, loadingRetired } of ROUTES) {
   // 221-06 D-08 fallback: a route whose only data endpoint is also the auth/chrome probe cannot be
   // caught mid-load. Skipped LOUDLY (named exclusion row in UNMEASURED-EXCLUSIONS.md), never silently.
   if (VARIANT === 'loading' && loadingRetired) {
@@ -476,20 +476,23 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
     }
     // 221 WR-02: under `empty`, WAIT for the positive empty-state witness before the instantaneous
     // marker-absence probe below, so a page that has not rendered yet cannot pass by absence.
-    // 221 WR-12: wait for the REQUIRED COUNT, not the first match. /hardware needs one witness
-    // from each of three independently fetched panels, and networkidle2 tolerates two in-flight
-    // requests, so reading the count when the first witness appears is a race in a required job.
-    // A condition wait (bounded), never a sleep; a timeout fails loudly with the observed count.
+    // 221 WR-12: wait for EVERY required witness, not the first match. /hardware needs one from
+    // each of three independently fetched panels, and networkidle2 tolerates two in-flight
+    // requests, so reading witnesses when the first appears is a race in a required job.
+    // A condition wait (bounded), never a sleep; a timeout fails loudly naming what was observed.
+    // 221 WR-13: each witness is bound to its marked endpoint ([data-a11y-empty="<id>"]).
     if (VARIANT === 'empty') {
-      const sel = emptySelector ?? DEFAULT_EMPTY_SELECTOR
-      const needEmpty = emptyWitnessesNeeded(variantMarkers)
+      const required = requiredEmptyWitnesses(variantMarkers)
+      const sels = Object.values(required)
       const reached = await page
-        .waitForFunction((s, n) => document.querySelectorAll(s).length >= n, { timeout: EMPTY_WITNESS_WAIT_MS }, sel, needEmpty)
+        .waitForFunction(ss => ss.every(s => document.querySelector(s) !== null), { timeout: EMPTY_WITNESS_WAIT_MS }, sels)
         .then(() => true, () => false)
-      emptyWitnesses = (await page.$$(sel)).length
+      emptyWitnesses = {}
+      for (const [id, sel] of Object.entries(required)) emptyWitnesses[id] = (await page.$$(sel)).length
       if (!reached) {
+        const seen = Object.entries(emptyWitnesses).map(([id, n]) => `${id}=${n}`).join(', ')
         console.error(
-          `[a11y] FAIL [${slug}]: waited ${EMPTY_WITNESS_WAIT_MS}ms for ${needEmpty} empty-state witness(es) "${sel}"; observed ${emptyWitnesses} (221 WR-12)`,
+          `[a11y] FAIL [${slug}]: waited ${EMPTY_WITNESS_WAIT_MS}ms for one empty-state witness per marked endpoint; observed ${seen} (221 WR-12/WR-13)`,
         )
       }
     }
@@ -523,7 +526,6 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
       skeleton,
       loadingSelector: loadingSelector ?? DEFAULT_LOADING_SELECTOR,
       emptyWitnesses,
-      emptySelector: emptySelector ?? DEFAULT_EMPTY_SELECTOR,
     })
     if (rsViolations.length > 0) {
       for (const line of rsViolations) console.error(`[a11y] FAIL [${slug}]: ${line}`)
