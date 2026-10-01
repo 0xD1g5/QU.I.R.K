@@ -6,10 +6,15 @@
  * classes in index.css, not Tailwind arbitrary-value background utilities), so its empty
  * baseline says nothing about them. This guard MEASURES them.
  *
- * Chip set is discovered from index.css at run time (vacuity floor 5).
- * For each theme x chip x surface: text = --ds-<chip> of that theme;
- * background = --ds-<chip>-dim (the .light block does not redefine -dim, so
- * it falls back to the dark rgba tint) alpha-blended over the surface token.
+ * Chip set is discovered from index.css at run time (vacuity floor 5), and
+ * cross-checked against the count of every `-chip {` rule so it cannot shrink
+ * silently (221 WR-08: a hyphenated `.severity-very-high-chip` was invisible to
+ * the former `[a-z]+` discovery).
+ * For each theme x chip x surface: text and background are the tokens the chip
+ * RULE itself names in its `color:` and `background:` declarations (221 WR-08:
+ * never assumed from the naming convention); the .light block does not redefine
+ * the -dim tints, so they fall back to the dark rgba tint, alpha-blended over
+ * the surface token.
  * Surface assumption: the only consumer is qramm/QuestionCard.tsx, which sits
  * in a shadcn <Card> (bg-card), not directly on a --ds-bg-* token, so BOTH
  * --ds-bg-base and --ds-bg-surface are measured as bounding cases.
@@ -31,14 +36,31 @@ delete baseline._comment
 const { dark, light } = themeBlocks(css)
 const SURFACES = ["--ds-bg-base", "--ds-bg-surface"]
 
-const chips = [...new Set([...css.matchAll(/\.severity-([a-z]+)-chip\b/g)].map((m) => m[1]))].sort()
+// 221 WR-08: parse each chip rule body and take the custom property its declarations reference.
+const CHIP_RULE = /\.severity-([a-z][\w-]*?)-chip\s*\{([^}]*)\}/g
+const chipRules = [...css.matchAll(CHIP_RULE)].map((m) => ({ chip: m[1], body: m[2] }))
+const chips = [...new Set(chipRules.map((r) => r.chip))].sort()
+const allChipRuleHeads = [...css.matchAll(/-chip\s*\{/g)].length
+
+function declVar(chip: string, body: string, prop: "color" | "background"): string {
+  const propRe = prop === "color" ? "color" : "background(?:-color)?"
+  const m = body.match(new RegExp(`(?:^|[;\\s])${propRe}\\s*:\\s*([^;]+);?`))
+  if (!m) throw new Error(`ds chip guard: .severity-${chip}-chip has no ${prop} declaration`)
+  const v = m[1].trim().match(/^var\((--[\w-]+)\)$/)
+  if (!v) throw new Error(`ds chip guard: .severity-${chip}-chip ${prop} is not a single var(--token): ${m[1].trim()}`)
+  return v[1]
+}
+
+const chipTokens = Object.fromEntries(
+  chipRules.map((r) => [r.chip, { text: declVar(r.chip, r.body, "color"), bg: declVar(r.chip, r.body, "background") }]),
+)
 
 function measure(): Record<string, number> {
   const out: Record<string, number> = {}
   for (const [theme, block] of [["dark", dark], ["light", light]] as const) {
     for (const chip of chips) {
-      const text = resolveColor(`--ds-${chip}`, block, dark)
-      const dim = resolveColor(`--ds-${chip}-dim`, block, dark)
+      const text = resolveColor(chipTokens[chip].text, block, dark)
+      const dim = resolveColor(chipTokens[chip].bg, block, dark)
       if (!text || !dim) throw new Error(`ds chip guard: cannot resolve ${chip} in ${theme}`)
       // 221 WR-07: contrastRatio needs opaque hex; a translucent text token would measure NaN.
       if (!text.startsWith("#")) throw new Error(`ds chip guard: ${chip} text in ${theme} is not opaque hex: ${text}`)
@@ -58,6 +80,20 @@ describe("DS severity-chip family contrast (221-02)", () => {
     expect(chips.length).toBeGreaterThanOrEqual(5)
   })
 
+  it("discovers every -chip rule in index.css, so the chip set cannot shrink silently (221 WR-08)", () => {
+    expect(chipRules.length, "a .severity-<x>-chip selector is declared more than once").toBe(chips.length)
+    expect(chips.length, `${allChipRuleHeads} "-chip {" rules in index.css but ${chips.length} severity chips discovered`).toBe(allChipRuleHeads)
+  })
+
+  it("reads text and background from each chip rule's own declarations (221 WR-08)", () => {
+    for (const chip of chips) {
+      expect(chipTokens[chip].text, `${chip} color token`).toMatch(/^--[\w-]+$/)
+      expect(chipTokens[chip].bg, `${chip} background token`).toMatch(/^--[\w-]+$/)
+    }
+    // live index.css today: the convention holds, so the measured pairs are unchanged by WR-08
+    expect(chipTokens.critical).toEqual({ text: "--ds-critical", bg: "--ds-critical-dim" })
+  })
+
   it("measures every theme x chip x surface pair", () => {
     expect(Object.keys(measure()).length).toBe(chips.length * 2 * SURFACES.length)
   })
@@ -69,7 +105,7 @@ describe("DS severity-chip family contrast (221-02)", () => {
 
   it("baseline keys are well-formed and below 4.5", () => {
     for (const [k, v] of Object.entries(baseline)) {
-      expect(k).toMatch(/^(dark|light)\|[a-z]+\|--ds-bg-(base|surface)$/)
+      expect(k).toMatch(/^(dark|light)\|[a-z][\w-]*\|--ds-bg-(base|surface)$/)
       expect(v as number).toBeLessThan(4.5)
     }
   })
