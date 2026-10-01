@@ -80,7 +80,10 @@ export function LifecycleEventList({
             message={`No lifecycle changes detected — Hardware tier, bridge mitigation status, EOL proximity, and CVE correlation held steady since the last scan on ${lastScanLabel}. Advisory only — this has no effect on the readiness score.`}
           />
         ) : (
-          <div className="divide-y divide-border">
+          // 221 CR-01: endpoint-identity hook for the a11y variant guard (routes.json
+          // variantMarkers["hardware-drift"]). Rendered only on the populated branch, so it is
+          // absent under the empty/loading fixture variants and when the drift fetch fails.
+          <div className="divide-y divide-border" data-a11y-marker="hardware-drift">
             {events.map((event, i) => (
               <LifecycleEventRow key={`${event.host}-${event.port}-${event.event_type}-${i}`} event={event} />
             ))}

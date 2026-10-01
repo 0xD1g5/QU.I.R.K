@@ -85,8 +85,8 @@
     "contentMarker": "table tbody tr",
     "variantMarkers": {
       "scan-latest": "table tbody tr",
-      "hardware-drift": ".font-data",
-      "vendor-trends": ".divide-y.divide-border"
+      "hardware-drift": "[data-a11y-marker=\"hardware-drift\"]",
+      "vendor-trends": "[data-a11y-marker=\"vendor-trends\"]"
     }
   },
   {

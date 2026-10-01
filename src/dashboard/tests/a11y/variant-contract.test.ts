@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
 import { VARIANTS, isPlaceholderJustification } from "./baseline-diff.mjs"
 import { FIXTURE_HANDLERS } from "./fixture-handlers.mjs"
@@ -162,5 +162,53 @@ describe("fixture handler contract (221-03)", () => {
     for (const id of Object.keys(unmarked)) {
       expect(allIds.has(id), `route "${slug}" unmarkedEndpoints names unknown handler "${id}"`).toBe(true)
     }
+  })
+
+  // 221 CR-01: a marker shared by two handlers on one route is satisfied by EITHER handler's
+  // component, so the default leg cannot fail when one of them breaks (the /hardware
+  // `.font-data` / `.divide-y.divide-border` defect). Selectors must be distinct per route.
+  it.each(ROUTES.map((r) => r.slug))("route %s gives every handler a distinct marker selector", (slug) => {
+    const route = ROUTES.find((r) => r.slug === slug)!
+    const markers = (route.variantMarkers ?? {}) as Record<string, string>
+    const bySelector = new Map<string, string[]>()
+    for (const [id, sel] of Object.entries(markers)) bySelector.set(sel, [...(bySelector.get(sel) ?? []), id])
+    for (const [sel, ids] of bySelector) {
+      expect(ids.length, `route "${slug}": handlers ${ids.join(", ")} share marker "${sel}"`).toBe(1)
+    }
+  })
+
+  // 221 CR-01: an identity-bearing `[data-a11y-marker="<id>"]` selector must name its own
+  // handler id and be emitted by exactly one component, so it cannot be satisfied by another
+  // endpoint's panel. Occurrences are scanned from src/ at test time, never hand-listed.
+  const MARKER_ATTR = /^\[data-a11y-marker="([^"]+)"\]$/
+  const srcRoot = path.resolve(__dirname, "../../src")
+  const srcFiles: string[] = []
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) { if (e.name !== "__tests__") walk(p) }
+      else if (/\.(tsx|ts)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) srcFiles.push(p)
+    }
+  }
+  walk(srcRoot)
+  const attrMarkers = ROUTES.flatMap((r) =>
+    Object.entries((r.variantMarkers ?? {}) as Record<string, string>)
+      .filter(([, sel]) => MARKER_ATTR.test(sel))
+      .map(([id, sel]) => [r.slug, id, sel.match(MARKER_ATTR)![1]] as const),
+  )
+
+  it("at least one route uses an identity-bearing data-a11y-marker (vacuity guard)", () => {
+    expect(attrMarkers.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it.each(attrMarkers)("route %s marker for %s ([data-a11y-marker=%s]) is unique to one component", (slug, id, value) => {
+    expect(value, `route "${slug}": data-a11y-marker value must equal the handler id`).toBe(id)
+    const needle = `data-a11y-marker="${value}"`
+    const hits = srcFiles.flatMap((f) => {
+      const n = readFileSync(f, "utf-8").split(needle).length - 1
+      return n > 0 ? [`${path.relative(srcRoot, f)} x${n}`] : []
+    })
+    expect(hits, `${needle} must be emitted exactly once in src/ (found: ${hits.join(", ") || "none"})`).toHaveLength(1)
+    expect(hits[0].endsWith(" x1"), `${needle} emitted more than once in ${hits[0]}`).toBe(true)
   })
 })

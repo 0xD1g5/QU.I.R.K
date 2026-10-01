@@ -63,7 +63,9 @@ export function VendorTrendList({
         ) : events.length === 0 ? (
           <EmptyStateCard message="No vendor PQC status trends recorded — No fleet-wide vendor PQC status transitions have been confirmed yet. Advisory only — this has no effect on the readiness score." />
         ) : (
-          <div className="divide-y divide-border">
+          // 221 CR-01: endpoint-identity hook for the a11y variant guard (routes.json
+          // variantMarkers["vendor-trends"]). Populated branch only, as for LifecycleEventList.
+          <div className="divide-y divide-border" data-a11y-marker="vendor-trends">
             {events.map((event, i) => (
               <VendorTrendRow key={`${event.vendor}-${event.event_type}-${i}`} event={event} />
             ))}
