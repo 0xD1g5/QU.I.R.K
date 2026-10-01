@@ -113,3 +113,77 @@ hypothesis worth testing first: re-run the batch under CPU contention and see if
 defect; a passing re-run is not evidence of health, in the same way this project already records that
 a skip is not a pass.
 
+
+## Root Cause (Phase 220, 2026-10-01)
+
+**NOT REPRODUCED.** A diagnostic campaign (Phase 220 Plan 01, full record at
+`.planning/phases/220-ci-instrument-truth/220-diag/DIAGNOSIS.md`) ran the real batched invocation
+10 times across plain runs, CPU contention (20x `yes` on a 10-core machine), concurrent with a real
+Playwright/chromium browser suite, a live local HTTP server answering the jsdom-resolved fetch
+origin, and the combination of all three simultaneously — the closest local approximation of this
+todo's own "first failure happened while a Playwright suite was running" hypothesis. Every attempt
+returned `cited={'passed': 36, 'failed': 0, 'skipped': 0, 'total': 36}` with zero `act()` warnings,
+zero unhandled rejections, zero ECONNREFUSED/fetch errors, and zero console.error lines.
+
+**What was fixed (as hygiene, not as a demonstrated cause):**
+
+- `src/dashboard/src/pages/__tests__/executive-score-gauge.test.tsx`
+- `src/dashboard/src/pages/__tests__/executive-severity-chart.test.tsx`
+- `src/dashboard/src/pages/__tests__/executive-driver-cards.test.tsx`
+
+All three rendered `ExecutivePage` without mocking `@/lib/api`'s `fetchApi`, so
+`executive.tsx:231-250`'s `loadManifest()` effect issued a real, un-awaited network call on every
+render. Each file now mocks `fetchApi` (mirroring `executive-report-downloads.test.tsx`'s in-repo
+pattern) and `await waitFor(...)`s the mock's invocation before any assertion runs, so the effect's
+async continuation settles inside the test instead of potentially outliving it. This is a genuine
+correctness-hygiene fix, grounded in the in-repo pattern, not in a demonstrated causal link to the
+14-node failure — DIAGNOSIS.md shows `act=0` held in this environment whether or not the fetch was
+mocked.
+
+**What remains a hypothesis, not demonstrated:** the todo's own load/timing hypothesis (cross-file
+module state, a shared-worker race, or a timing-sensitive `waitFor` under load) was tested via
+CPU contention, concurrent-Playwright, live-server, and single-worker-pool (`--poolOptions.threads.
+singleThread=true`) isolation runs — none reproduced a failure, so none of these mechanisms were
+confirmed OR ruled out with positive evidence; they simply did not fire in 10 attempts on this
+platform (macOS, Node v26.10.0, vitest 2.1.9). `FindingsPage`'s `UAT-7-37` combined-filter test is
+the one node that visibly slows under contention (up to ~2.84s, ~57% of vitest's 5000ms default
+`testTimeout`) but never crossed the timeout or failed in any attempt — named here as the closest
+thing to a live timeout-class candidate, not as a cause.
+
+An attempted act()-warning regression-guard assertion (mutation-proving: temporarily remove one
+executive test's `await waitFor(...)` and confirm the batch goes red) did NOT turn the batch red,
+even with the fetchApi mock changed to resolve after a 20ms delay — `executive.tsx`'s own
+`cancelled`-flag guard structurally prevents a stray `setManifest` call after unmount, so no guard
+assertion was added to `test_vitest_substitute_nodes_pass` (an assertion that cannot be shown to
+fail on the defect it targets is a tautology, not a guard).
+
+**Not Cluster 2.** TRIAGE-149 Cluster 2 (`docs/test-triage-149.md:57-75`) is a Python/pytest
+`AttributeError: PlaywrightContextManager` shared-singleton-teardown defect in an entirely
+different test suite and runtime. It shares no mechanism, error signature, or file set with this
+vitest batch failure. `docs/test-triage-149.md` is left unchanged.
+
+**Separate finding, not a cause:** `--maxWorkers=1` (the flag this todo's own next-step text named)
+silently collects zero tests in this vitest 2.1.9/npm combination, regardless of flag position or
+`=`-vs-space syntax; `--poolOptions.threads.singleThread=true` is the working equivalent and was
+used instead for the single-worker isolation runs.
+
+## Local acceptance (D-10)
+
+10 consecutive batched runs of `tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass -m "" -q -rP`, after the fetchApi-mock fixes above, all reporting `1 passed`:
+
+| Run | Timestamp (UTC) | Condition | Result |
+|---|---|---|---|
+| 1 | 2026-10-01T03:21:19Z | plain | 1 passed |
+| 2 | 2026-10-01T03:21:25Z | plain | 1 passed |
+| 3 | 2026-10-01T03:21:32Z | plain | 1 passed |
+| 4 | 2026-10-01T03:21:50Z | CPU contention (20x `yes`, 10-core machine) | 1 passed |
+| 5 | 2026-10-01T03:22:11Z | plain | 1 passed |
+| 6 | 2026-10-01T03:22:19Z | plain | 1 passed |
+| 7 | 2026-10-01T03:22:32Z | concurrent with `pytest tests/test_browser_e2e.py -m "" -q` (real Playwright/chromium, 9 passed) | 1 passed |
+| 8 | 2026-10-01T03:22:54Z | plain | 1 passed |
+| 9 | 2026-10-01T03:23:02Z | plain | 1 passed |
+| 10 | 2026-10-01T03:23:13Z | plain | 1 passed |
+
+Full detail (per-run census lines) in `.planning/phases/220-ci-instrument-truth/220-diag/DIAGNOSIS.md` "## D-10 Local Leg".
+
+CI acceptance: recorded in 220-VERIFICATION.md / 220-diag/CI-EVIDENCE.md (220-08).
