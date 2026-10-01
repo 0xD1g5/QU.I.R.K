@@ -264,7 +264,16 @@ Plans:
   1. `test_vitest_substitute_nodes_pass`'s 14 nodes are diagnosed (documented root cause) and demonstrated passing across repeated batched `Linux Full Suite` runs — not merely observed green once, since a single green run is a sample, not evidence of health.
   2. `Python CI` runs green on `main`'s current HEAD, with `test_chaos_lab_idempotency[multihost]`/`[storage-s3]` either fixed or skipping cleanly and honestly (a stated, checkable condition — e.g. registry unreachable) rather than failing or silently passing on masked errors.
   3. Phase verification consults its own branch's live CI state before reporting `passed`, demonstrated against a real branch rather than asserted — closing the v5.25 gap where five phases verified `passed` over a failing `main`.
-**Plans**: TBD
+**Plans**: 8 plans in 4 waves
+Plans:
+- [ ] 220-01-PLAN.md — CITRUTH-01: self-diagnosing vitest batch + CI JUnit artifact, load/bisect diagnosis, act()-leak fix, D-10 local 10-run leg (wave 1)
+- [ ] 220-02-PLAN.md — CITRUTH-02: checkable registry-refusal skip, MinIO services repointed to GHCR, chaos-lab docs + vault (wave 1)
+- [ ] 220-03-PLAN.md — CITRUTH-02: operator-approved GHCR push + public visibility, anonymous 200 proof (wave 2, checkpoints)
+- [ ] 220-04-PLAN.md — CITRUTH-03: scripts/branch_ci_state.py (TDD, mocked gh, workflow-derived drift guard, first live refusal) (wave 1)
+- [ ] 220-05-PLAN.md — CITRUTH-03: ARTIFACT-05 pre-commit gate — phase close requires recorded green CI at HEAD (wave 2)
+- [ ] 220-06-PLAN.md — CITRUTH-03: gsd-verifier Step 9 CI-truth local patch + revert detector + CLAUDE.md/CONTRIBUTING (wave 2)
+- [ ] 220-07-PLAN.md — cache-less MinIO proof, CLAUDE.md corrections, UAT Series 220, vault, todos closed, hand-edited state, push (wave 3)
+- [ ] 220-08-PLAN.md — CI acceptance: refusal at HEAD, 3x Python CI + Dashboard Quality per-node evidence, green leg, zero commits (wave 4)
 
 ### Progress
 
