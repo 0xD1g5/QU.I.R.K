@@ -186,8 +186,28 @@ const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVI
   detached: true,
 })
 previewProc.stderr.on('data', d => process.stderr.write(d))
-// 221: stdout carries vite's "Port 4173 is in use, trying another one" notice.
+// 221 IN-01: with --strictPort vite never hops ports; a busy port makes it exit with an error,
+// which the 'exit' listener below reports immediately.
 previewProc.stdout.on('data', d => process.stdout.write(d))
+
+// 221 WR-04: exit status is declared before any shutdown path can assign it (no TDZ on early exit).
+let exitCode = 0
+let shuttingDown = false
+let browser
+// 221 WR-04: the preview runs detached in its own process group, so a harness killed without
+// running its 'exit' handlers (SIGKILL, OOM, CI step timeout) leaves vite orphaned on the port.
+// Log the group id so a CI always() step can reap it (`kill -- -<pgid>` / `pkill -g <pgid>`).
+console.log(`[a11y] preview process group: ${previewProc.pid}`)
+previewProc.on('error', e => {
+  console.error(`[a11y] FAIL: preview spawn failed: ${e.message}`)
+  process.exit(1)
+})
+previewProc.on('exit', (code, sig) => {
+  if (!shuttingDown) {
+    console.error(`[a11y] FAIL: preview exited early (${code ?? sig}) — e.g. a --strictPort refusal`)
+    process.exit(1)
+  }
+})
 
 // Ensure preview is killed on exit
 // 221 D-02: signal the whole process group (negative pid), not just the npm wrapper.
@@ -208,6 +228,7 @@ async function waitForPortFree(timeoutMs) {
   return await assertPortFree(PREVIEW_HOST, PREVIEW_PORT)
 }
 async function shutdownPreview() {
+  shuttingDown = true
   cleanup()
   if (!(await waitForPortFree(3_000))) {
     if (previewProc.pid) {
@@ -224,17 +245,24 @@ async function shutdownPreview() {
     console.log(`[a11y] Preview shut down; port ${PREVIEW_PORT} free`)
   }
 }
-process.on('exit', cleanup)
-process.on('SIGINT', () => { cleanup(); process.exit(130) })
-process.on('SIGTERM', () => { cleanup(); process.exit(143) })
+// 221 WR-04: every exit path goes through the same async teardown as the normal end (browser
+// close, group SIGTERM escalating to SIGKILL, port-release proof). The synchronous `cleanup` on
+// 'exit' stays as a last resort for paths that bypass this (uncaught exceptions).
+async function abort(code) {
+  await browser?.close().catch(() => {})
+  await shutdownPreview()
+  process.exit(code)
+}
+process.on('exit', () => { shuttingDown = true; cleanup() })
+process.on('SIGINT', () => { void abort(130) })
+process.on('SIGTERM', () => { void abort(143) })
 
 // Wait for preview to be ready
 try {
   await waitForPort(PREVIEW_HOST, PREVIEW_PORT, CONNECT_TIMEOUT_MS)
 } catch (err) {
   console.error('[a11y] ERROR: Preview server did not start:', err.message)
-  cleanup()
-  process.exit(1)
+  await abort(1)
 }
 console.log(`[a11y] Preview ready at http://${PREVIEW_HOST}:${PREVIEW_PORT}`)
 
@@ -251,26 +279,30 @@ if (!identity || identity.variant !== VARIANT) {
   console.error(
     `[a11y] FAIL: preview server reports variant ${identity ? identity.variant : '(no sentinel response)'}, expected ${VARIANT} — not the server this sweep spawned (221 D-02)`,
   )
-  cleanup()
-  process.exit(1)
+  await abort(1)
 }
 console.log(`[a11y] Preview identity confirmed: variant=${identity.variant} pid=${identity.pid}`)
 
 // --- Launch headless Chrome ---
-let browser
+// 221 WR-04: puppeteer's default handleSIGINT/SIGTERM/SIGHUP call process.exit() themselves and
+// pre-empt abort(), skipping the preview teardown. The harness owns its signals.
+const OWN_SIGNALS = { handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false }
 try {
-  browser = await puppeteer.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] })
+  browser = await puppeteer.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'], ...OWN_SIGNALS })
 } catch {
   const execPath = process.env.PUPPETEER_EXECUTABLE_PATH
   if (!execPath) {
     console.error('[a11y] ERROR: System Chrome not found. Set PUPPETEER_EXECUTABLE_PATH to a Chrome binary.')
-    cleanup()
-    process.exit(1)
+    await abort(1)
   }
-  browser = await puppeteer.launch({ executablePath: execPath, headless: true, args: ['--no-sandbox'] })
+  try {
+    browser = await puppeteer.launch({ executablePath: execPath, headless: true, args: ['--no-sandbox'], ...OWN_SIGNALS })
+  } catch (err) {
+    console.error(`[a11y] ERROR: Chrome launch failed (${execPath}): ${err.message}`)
+    await abort(1)
+  }
 }
 
-let exitCode = 0
 const summary = []
 
 // 221 D-06 / WR-03: ids of the honouring (empty AND loading), non-chrome handlers a page requested.
@@ -280,6 +312,9 @@ function honouringHits(urls) {
     .map(h => h.id))]
 }
 
+// 221 WR-04: any uncaught rejection inside the sweep (newPage, AxePuppeteer.analyze, ...) still
+// reaches the full teardown below instead of only the synchronous single-SIGTERM `cleanup`.
+try {
 for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, insensitiveEndpoints, loadingSelector, emptySelector, loadingRetired } of ROUTES) {
   // 221-06 D-08 fallback: a route whose only data endpoint is also the auth/chrome probe cannot be
   // caught mid-load. Skipped LOUDLY (named exclusion row in UNMEASURED-EXCLUSIONS.md), never silently.
@@ -731,9 +766,13 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
   summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, incomplete: incompleteCount, status: routeStatus })
   await page.close()
 }
-
-await browser.close()
-await shutdownPreview()
+} catch (err) {
+  console.error(`[a11y] FAIL: sweep aborted by an uncaught error: ${err?.stack ?? err}`)
+  exitCode = 1
+} finally {
+  await browser.close().catch(() => {})
+  await shutdownPreview()
+}
 
 // 216 D-17: in-process ledger collection is gone. Theme is now a per-process dimension
 // (D-01/D-02), so a single `--update-baselines` invocation can only ever see ONE theme — it

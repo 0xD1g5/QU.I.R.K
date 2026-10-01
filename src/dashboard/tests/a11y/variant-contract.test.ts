@@ -122,6 +122,16 @@ describe("variant-contract (221-01)", () => {
     expect(RUN_A11Y_SOURCE).not.toContain("previewProc.kill('SIGTERM')")
   })
 
+  it("run-a11y.mjs routes every exit through the async teardown and owns its signals (221 WR-04)", () => {
+    for (const needle of ["previewProc.on('error'", "previewProc.on('exit'", "async function abort(", "handleSIGINT: false", "} finally {"]) {
+      expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
+    }
+    // no early exit may bypass shutdownPreview with the bare synchronous cleanup + exit pair
+    expect(RUN_A11Y_SOURCE).not.toMatch(/cleanup\(\)\s*\n\s*process\.exit\(1\)/)
+    const fin = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.lastIndexOf("} finally {"))
+    expect(fin.indexOf("await shutdownPreview()")).toBeGreaterThan(-1)
+  })
+
   it("run-a11y.mjs navigates loading on 'load' and derives endpoints at run time (221 D-06/D-08)", () => {
     for (const needle of ["waitUntil", "'load'", "matchHandler", "does not declare"]) {
       expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
