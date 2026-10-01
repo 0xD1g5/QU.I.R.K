@@ -66,7 +66,7 @@ CHECKS = [
      lambda n: n >= 1,
      "Data at Rest — needs mysql_targets; this finding was missing before 2026-09-17"),
 
-    ("S3 / MinIO  (.50)", True,
+    ("S3 / moto  (.50)", True,
      "SELECT COUNT(*) FROM crypto_endpoints WHERE protocol LIKE '%S3%' "
      "OR service_detail LIKE '%bucket%' OR service_detail LIKE '%S3%'",
      lambda n: n >= 1,

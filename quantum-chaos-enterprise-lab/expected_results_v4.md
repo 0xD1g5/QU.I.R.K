@@ -528,7 +528,7 @@ so detection here is reproducible and the scoring-model change moved no finding.
 | 10.80.0.31 | mh-cache-session | Redis 7.4.1, no TLS/auth | handshake blocked | MEDIUM:1 INFO:11 |
 | 10.80.0.40 | mh-identity-dc | OpenLDAP, 389 cleartext + 636 | _INFO only — no actionable finding_ | INFO:11 |
 | 10.80.0.41 | mh-saml-idp | simplesamlphp IdP metadata ⚠️ amd64-only image — see note below | **plaintext HTTP** | **HIGH:1** INFO:10 |
-| 10.80.0.50 | mh-storage-archive | MinIO; 1 SSE-S3 + 1 UNENCRYPTED bucket | **plaintext HTTP** | **HIGH:2** INFO:9 |
+| 10.80.0.50 | mh-storage-archive | S3 (moto); 1 SSE-S3 + 1 UNENCRYPTED bucket | **plaintext HTTP** | **HIGH:1** (OBSERVED 2026-10-01, scoped scan; see note below) |
 | 10.80.0.60 | mh-pki-ca | step-ca 0.28.1 | expiring <30d, untrusted CA, QV ECDSA key | MEDIUM:3 INFO:11 |
 | 10.80.0.70 | mh-ssh-jump | OpenSSH server | _INFO only — no actionable finding_ | INFO:11 |
 | 10.80.0.101 | mh-vpn-gateway | expired certificate | **expired cert**, untrusted CA, QV RSA key, legacy ciphers | **CRITICAL:1** MEDIUM:2 LOW:1 INFO:11 |
@@ -561,6 +561,12 @@ generated: findings JSON, run-stats, executive summary, technical findings, scor
 intelligence JSON, CBOM (JSON + XML), HTML, DOCX — 11 files. PDF generation fails **inside the
 prober** (no Playwright browser in the sensor image); export the PDF from the dashboard's `/print`
 view on the host instead.
+
+> **Phase 220 (2026-10-01):** this aggregate was measured while `.50` ran MinIO. With moto,
+> `.50` carries one plaintext-HTTP HIGH instead of two (OBSERVED in a scoped scan; see the `.50`
+> note below the per-host table). A fresh full-estate run would therefore be expected to show
+> **13 HIGH**. That figure is DERIVED and has not been measured. The full estate was not re-scanned
+> in Phase 220, so the 14 HIGH above stays as the dated measurement it is.
 
 *"37 hosts scanned" against 31 targets is not an error, and the surplus is worth knowing because it
 is where the connector evidence lives. `select distinct host` for this `scan_run_id` returns exactly
@@ -704,14 +710,28 @@ run's findings JSON:
 
 | Host | Intended posture | In `evidence_summary` | In findings |
 |---|---|---|---|
-| `mh-storage-archive` 10.80.0.50 | 1 UNENCRYPTED S3 bucket | `dar_storage_unencrypted_count: 1` ✅ | ❌ — its 2 HIGHs are both `Plaintext HTTP` on 9000/9001 |
+| `mh-storage-archive` 10.80.0.50 | 1 UNENCRYPTED S3 bucket | `dar_storage_unencrypted_count: 1` ✅ | ❌ — its HIGH is `Plaintext HTTP` on 9000 (was 2 HIGHs on 9000/9001 while it ran MinIO; see note below) |
 | `mh-db-finance` 10.80.0.30 | Postgres, no TLS | `dar_db_plaintext_count: 1` ✅ | ❌ — INFO only |
 | `mh-saml-idp` 10.80.0.41 | weak SAML signing | `identity_saml_weak_signing_ratio: 0.0054` ✅ | ❌ in CLI — but the DASHBOARD emits it, twice (see cross-surface parity above) |
 
 The previous revision of this oracle claimed 10.80.0.50 produced an "unencrypted-bucket finding
-| **HIGH:2**". The severity COUNT was right and the MEANING was wrong — both HIGHs are plaintext-HTTP
+| **HIGH:2**". The severity COUNT was right and the MEANING was wrong — both HIGHs were plaintext-HTTP
 on the MinIO API and console ports. A count-only oracle cannot catch that; this is why the per-host
 table above carries measured finding TITLES, not just counts.
+
+**Phase 220 (2026-10-01, D-01R): .50 now runs moto, not MinIO, and is HIGH:1.** MinIO's images
+became unpullable from every channel, so the lab's S3 services run `motoserver/moto:5.2.3`
+(Apache-2.0) under their historical MinIO-era names. moto has no web console, so the second
+plaintext-HTTP HIGH (MinIO's :9001 console) is gone. :9001 now reads as an INFO "Informational
+protocol observation", like every other closed port in `ports_tls`. The `.50` row above is a
+**hand-edited exception** to this table's generated-from-one-run provenance. It was OBSERVED in a scan
+from `mh-prober` scoped to `10.80.0.50/32` with this profile's `ports_tls` and only the S3 connector
+enabled: `.50` HIGH:1 (`Plaintext HTTP service detected` on 9000). The S3 connector reported
+`finance-archive-plain` as `S3/unencrypted` HIGH and `finance-archive-encrypted` as `S3/sse-s3`
+with no severity. The INFO count is left off on purpose. The scoped run's INFO:13 is not comparable to
+the 2026-09-14 full-estate run's INFO:9, and the full estate was not re-scanned. Regenerating
+with `scripts/gen_multihost_oracle_table.py` from the 2026-09-14 findings JSON would re-emit the
+stale MinIO-era HIGH:2. Evidence: `.planning/phases/220-ci-instrument-truth/220-diag/MOTO-PROOF.md`.
 
 #### (c) Postures with no distinguishing detection
 
@@ -756,7 +776,7 @@ resolver, and a connector aimed at a host that cannot answer yields silence or a
 
 ## Profile: storage-s3
 
-*MinIO S3-compatible server. Seed creates `encrypted-bucket` (SSE-S3) + `unencrypted-bucket` (no SSE) for STOR-01.*
+*S3-compatible server: moto (`motoserver/moto:5.2.3`, Apache-2.0) since Phase 220 D-01R, MinIO before. The `minio`/`minio-seed` service names and `minioadmin` creds are historical. `storage/s3-seed.py` (boto3) creates `encrypted-bucket` (SSE-S3) + `unencrypted-bucket` (no SSE) for STOR-01. MinIO's :9001 console is gone, so the profile publishes 29000 only.*
 
 ```bash
 PROFILE_ARGS="--profile storage-s3" ./lab.sh up
@@ -764,9 +784,8 @@ PROFILE_ARGS="--profile storage-s3" ./lab.sh up
 
 | Port | Service | Provider | Expected protocol | Encryption Mode | Public Access | KMS Key | Versioning | Expected condition / tag | Notes |
 |-----:|---------|----------|-------------------|-----------------|---------------|---------|------------|--------------------------|-------|
-| 29000 | minio (encrypted-bucket) | MinIO | S3 | SSE-S3 (AES256) | private | S3-managed | n/a | (no finding) → `protocol=S3, service_detail=S3/sse-s3` | aws_connector.py L257 |
-| 29000 | minio (unencrypted-bucket) | MinIO | S3 | none | private | none | n/a | `protocol=S3, service_detail=S3/unencrypted` (HIGH) | aws_connector.py L252,263,268 |
-| 29001 | minio-console | MinIO Console | HTTP | n/a | local-only | n/a | n/a | not scanned | management UI |
+| 29000 | minio (encrypted-bucket) | moto (S3 API) | S3 | SSE-S3 (AES256) | private | S3-managed | n/a | (no finding) → `protocol=S3, service_detail=S3/sse-s3` | aws_connector.py L257 |
+| 29000 | minio (unencrypted-bucket) | moto (S3 API) | S3 | none | private | none | n/a | `protocol=S3, service_detail=S3/unencrypted` (HIGH) | aws_connector.py L252,263,268 |
 
 **Reference:** Scanner: `quirk/scanner/aws_connector.py`. Evidence keys: `dar_storage_unencrypted_count`, `dar_storage_aws_managed_count`, `dar_storage_unencrypted_ratio`. Detail in `labs/storage/expected_results.md`.
 

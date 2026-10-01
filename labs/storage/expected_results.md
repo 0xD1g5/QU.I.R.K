@@ -1,19 +1,19 @@
 # Phase 28 — Object Storage Audit Expected Results
 
-**Lab:** MinIO local S3-compatible server (Docker Compose profile `storage-s3`)
+**Lab:** moto local S3-compatible server (`motoserver/moto:5.2.3`; MinIO until Phase 220 D-01R, 2026-10-01) (Docker Compose profile `storage-s3`)
 **Phase:** 28 — Object Storage Audit
 **Requirements:** STOR-01
 
 ## Lab Setup
 
-Boot the MinIO chaos profile:
+Boot the S3 chaos profile (the `minio` service name is historical; it runs moto):
 
 ```sh
 cd quantum-chaos-enterprise-lab
 docker compose --profile storage-s3 up -d
 ```
 
-The `minio-seed` init container creates two buckets:
+The `minio-seed` init container runs `quantum-chaos-enterprise-lab/storage/s3-seed.py` (boto3) and creates two buckets:
 
 | Bucket               | Encryption  | Expected Finding         |
 |----------------------|-------------|--------------------------|
@@ -31,7 +31,7 @@ connectors:
   aws_endpoint_url: http://localhost:29000
 ```
 
-Set ambient AWS credentials to MinIO test creds:
+Set ambient AWS credentials to the lab's test creds (historical MinIO-era values, accepted by moto):
 
 ```sh
 export AWS_ACCESS_KEY_ID=minioadmin
@@ -77,6 +77,6 @@ docker compose --profile storage-s3 down -v
 
 ## Limitations
 
-- SSE-KMS validation is deferred — MinIO does not run an external KMS sidecar in this profile
-  (28-CONTEXT.md Deferred Ideas).
+- SSE-KMS validation is deferred — the profile's S3 server (moto since Phase 220; MinIO before) is
+  not wired to a KMS in this profile (28-CONTEXT.md Deferred Ideas).
 - Azure Blob and GCS validation requires real cloud credentials; not part of this chaos lab.
