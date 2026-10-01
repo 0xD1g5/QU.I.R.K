@@ -267,8 +267,8 @@ Plans:
 **Plans**: 8 plans in 4 waves
 Plans:
 - [ ] 220-01-PLAN.md — CITRUTH-01: self-diagnosing vitest batch + CI JUnit artifact, load/bisect diagnosis, act()-leak fix, D-10 local 10-run leg (wave 1)
-- [ ] 220-02-PLAN.md — CITRUTH-02: checkable registry-refusal skip, MinIO services repointed to GHCR, chaos-lab docs + vault (wave 1)
-- [ ] 220-03-PLAN.md — CITRUTH-02: operator-approved GHCR push + public visibility, anonymous 200 proof (wave 2, checkpoints)
+- [ ] 220-02-PLAN.md — CITRUTH-02: checkable registry-refusal skip, MinIO services repointed to GHCR, chaos-lab docs + vault (wave 1; GHCR repoint superseded by 220-03)
+- [ ] 220-03-PLAN.md — CITRUTH-02: replace MinIO with moto (D-01R, 2026-10-01: cached source images lost, every upstream channel closed), boto3 seed, oracles + docs, cache-less proof (wave 2, autonomous)
 - [ ] 220-04-PLAN.md — CITRUTH-03: scripts/branch_ci_state.py (TDD, mocked gh, workflow-derived drift guard, first live refusal) (wave 1)
 - [ ] 220-05-PLAN.md — CITRUTH-03: ARTIFACT-05 pre-commit gate — phase close requires recorded green CI at HEAD (wave 2)
 - [ ] 220-06-PLAN.md — CITRUTH-03: gsd-verifier Step 9 CI-truth local patch + revert detector + CLAUDE.md/CONTRIBUTING (wave 2)
