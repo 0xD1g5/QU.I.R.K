@@ -250,10 +250,10 @@ Plans:
   3. The `scrollable-region-focusable` accepted-violation entry is withdrawn from the accepted-violations list, not renewed, and the axe/a11y suite stays green without it.
 **Plans**: 4 plans in 4 waves
 Plans:
-- [ ] 219-01-PLAN.md — Conditional focusable/named region in table.tsx (mutation-proven unit test) + 14 regionLabels + rebuilt statics (wave 1)
-- [ ] 219-02-PLAN.md — Keyboard-only Playwright walkthrough + control node, mutation-proven against a rebuilt bundle (wave 2)
-- [ ] 219-03-PLAN.md — CI-only axe round-trip: withdraw scrollable-region-focusable, retire countRange, resolve D-09 todo, per-step CI proof (wave 3)
-- [ ] 219-04-PLAN.md — Docs (operators-guide, master-guide regen, report-interpretation), UAT Series 219, vault sync, VALIDATION close, hand-edited state (wave 4)
+- [x] 219-01-PLAN.md — Conditional focusable/named region in table.tsx (mutation-proven unit test) + 14 regionLabels + rebuilt statics (wave 1)
+- [x] 219-02-PLAN.md — Keyboard-only Playwright walkthrough + control node, mutation-proven against a rebuilt bundle (wave 2)
+- [x] 219-03-PLAN.md — CI-only axe round-trip: withdraw scrollable-region-focusable, retire countRange, resolve D-09 todo, per-step CI proof (wave 3)
+- [x] 219-04-PLAN.md — Docs (operators-guide, master-guide regen, report-interpretation), UAT Series 219, vault sync, VALIDATION close, hand-edited state (wave 4)
 **UI hint**: yes
 
 ### Phase 220: CI Instrument Truth
@@ -274,7 +274,7 @@ Plans:
 | 216. A11y Harness Repair | 8/8 | Complete | 2026-09-29 |
 | 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
-| 219. Keyboard Access | 0/? | Not started | - |
+| 219. Keyboard Access | 4/4 | Executed, awaiting verification | - |
 | 220. CI Instrument Truth | 0/? | Not started | - |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)

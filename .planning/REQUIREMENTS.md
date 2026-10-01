@@ -181,7 +181,7 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
 
 ### Keyboard Access
 
-- [ ] **KBD-01**: A keyboard user can scroll any table region independently —
+- [x] **KBD-01**: A keyboard user can scroll any table region independently —
       `components/ui/table.tsx` gains the `tabIndex`/`role` its own accepted-violation justification
       says it needs, and the `scrollable-region-focusable` acceptance is withdrawn rather than
       renewed
@@ -261,7 +261,7 @@ Filled during roadmap creation.
 | FIX-03 | Phase 217 | Complete |
 | FIX-04 | Phase 218 | Complete (218-03/218-04) |
 | FIX-05 | Phase 218 | Complete, qualified (see FIX-05 note above) |
-| KBD-01 | Phase 219 | Pending |
+| KBD-01 | Phase 219 | Complete (219-01..219-03) |
 | CITRUTH-01 | Phase 220 | Pending |
 | CITRUTH-02 | Phase 220 | Pending |
 | CITRUTH-03 | Phase 220 | Pending |
