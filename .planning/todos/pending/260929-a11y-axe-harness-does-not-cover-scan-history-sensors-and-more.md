@@ -2,7 +2,8 @@
 
 **Filed:** 2026-09-29, from Phase 217 (217-01 executor observation; `217-UI-REVIEW.md` top fix #2).
 **Priority:** P2 — silent coverage gap in a gate whose green is read as "the dashboard is AA".
-**Owner:** Phase 220 (CI Instrument Truth). Relevant to Phase 218 FIX-05's "anywhere" wording.
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 
 ## Evidence (enumerated 2026-09-29, not from a list)
 

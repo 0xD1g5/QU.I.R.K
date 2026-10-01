@@ -3,8 +3,8 @@
 **Filed:** 2026-09-29, by the Phase 216 verifier (`gaps_found`, blocker B1), mechanism confirmed
 independently at close-out.
 **Priority:** P1 — two of the four CI a11y gate steps prove far less than their names claim.
-**Owner:** Phase 220 (CI Instrument Truth) is the natural home; it is the same defect class as the
-theme axis Phase 216 just repaired, one axis over.
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 
 ## The observation
 

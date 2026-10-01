@@ -4,7 +4,8 @@
 triage).
 **Priority:** P2 — a confirmed, axe-measured contrast failure (not just an instrument-coverage
 gap), on a design-decision literal that a dedicated guard already protects for a different reason.
-**Owner:** Phase 220 (CI Instrument Truth).
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 **Status:** open, not triaged.
 
 ## What happens

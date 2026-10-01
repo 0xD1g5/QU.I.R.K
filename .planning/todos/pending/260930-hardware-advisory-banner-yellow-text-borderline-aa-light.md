@@ -4,7 +4,8 @@
 triage).
 **Priority:** P3 — axe-confirmed live violation; hand-calculated ratio is borderline (~4.6-4.9:1
 against an approximated tinted background) and needs a precise re-measurement, not a guess.
-**Owner:** Phase 220 (CI Instrument Truth).
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 **Status:** open, not triaged.
 
 ## What happens

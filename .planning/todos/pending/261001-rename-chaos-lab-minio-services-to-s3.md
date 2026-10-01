@@ -2,7 +2,8 @@
 
 **Filed:** 2026-10-01, by plan 220-03 (Phase 220 D-03R).
 **Priority:** P3. This is cosmetic and misleading-name debt, with no functional defect.
-**Owner:** unassigned. A quick task, or fold it into the next chaos-lab phase.
+**Owner:** 999.119 (HORIZON.md ledger row; backlog .planning/backlog/999.119-ci-and-chaos-lab-hygiene-carry-forward/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 
 ## Why this exists
 
