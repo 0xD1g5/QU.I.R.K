@@ -286,17 +286,17 @@ Plans:
   2. Each of the 10 todos listed under the audit's INT-01 is either fixed with evidence or explicitly re-pointed to a live owner (a HORIZON.md row and/or `backlog/999.NNN/`). None of them still names `Owner: Phase 220` at milestone close. The set is enumerated from `.planning/todos/pending/` at run time, not from this list.
   3. Every guard blind spot that a todo names (Tailwind shorthand badges, DS severity-chip tokens, cytoscape canvas labels, axe pages not covered) is either measured by an instrument or recorded as a named, unmeasured exclusion. It is never left as an implicit pass.
   4. HARNESS-03 moves from `[~]` to `[x]` only if criterion 1 holds; otherwise it stays PARTIAL with the remaining gap stated.
-**Plans**: 9 plans (7 waves)
+**Plans**: 9 plans (9 waves, fully serialized: one shared working tree, so no two plans build, mutate files, bind port 4173 or assert a clean tree/HEAD at once)
 Plans:
 - [ ] 221-01-PLAN.md — Loud first: variant render-state guard, VARIANTS allowlist, stale-server/identity refusal, 216 W1 probe repair; Linux CI shown RED before any fix (W1)
-- [ ] 221-02-PLAN.md — Measure DS severity-chip family + cytoscape label/fill token pairs (shrink-only ratchets, no colour change) (W1)
-- [ ] 221-03-PLAN.md — Declarative fixture-handler table: explicit empty/loading decision per endpoint, hold-open loading, compare zero-diff, run-time fetch coverage (W2)
-- [ ] 221-04-PLAN.md — INT-01: re-point 12 Phase-220-owned todos to new backlog 999.118 / 999.119 + HORIZON rows; operator check of CBOM light system node (W2, checkpoint)
-- [ ] 221-05-PLAN.md — Harness lifecycle fix (process-group kill, --strictPort), held-skeleton loading nav, run-time endpoint declaration check; Linux CI identity-green (W3)
-- [ ] 221-06-PLAN.md — Sweep /scans + /sensors; UNMEASURED-EXCLUSIONS.md enforced from source (W4)
-- [ ] 221-07-PLAN.md — Linux baseline regeneration (true empty/loading + new routes), justification re-point, all four sweeps green (W5)
-- [ ] 221-08-PLAN.md — Mutation evidence M1b-M6; HARNESS-03 per D-13 + FIX-05 note; retire satisfied todos (W6)
-- [ ] 221-09-PLAN.md — Docs + UAT Series 221 + vault sync; STATE/ROADMAP hand-edits; branch_ci_state.py exit 0 at close SHA (W7)
+- [ ] 221-02-PLAN.md — Measure DS severity-chip family + cytoscape label/fill token pairs (shrink-only ratchets, no colour change) (W2)
+- [ ] 221-03-PLAN.md — Declarative fixture-handler table: explicit empty/loading decision per endpoint, hold-open loading, compare zero-diff + acted-on /compare marker re-probe, run-time fetch coverage (W3)
+- [ ] 221-04-PLAN.md — INT-01: re-point 12 Phase-220-owned todos to new backlog 999.118 / 999.119 + HORIZON rows; operator check of CBOM light system node on port 4180 (W4, checkpoint)
+- [ ] 221-05-PLAN.md — Harness lifecycle fix (process-group kill, --strictPort), held-skeleton loading nav, run-time endpoint declaration check; Linux CI identity-green (W5)
+- [ ] 221-06-PLAN.md — Sweep /scans + /sensors; UNMEASURED-EXCLUSIONS.md enforced from source (W6)
+- [ ] 221-07-PLAN.md — Linux baseline regeneration (true empty/loading + new routes), justification re-point, all four sweeps green (W7)
+- [ ] 221-08-PLAN.md — Mutation evidence M1b-M6; HARNESS-03 per D-13 + FIX-05 note; retire satisfied todos (W8)
+- [ ] 221-09-PLAN.md — Docs + UAT Series 221 + vault sync; STATE/ROADMAP hand-edits; branch_ci_state.py exit 0 at close SHA (W9)
 
 ### Progress
 
