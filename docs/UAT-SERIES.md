@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
+**Last Updated:** 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
+DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
+reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
+MinIO" notes in Series 218/219 annotated as fixed. No version bump. Prior: 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
 cases, all five PASS — UAT-219-05, the D-10 operator keyboard spot-check, flipped from SKIP
 (DEFERRED) to PASS on the operator's own confirmation ("keyboard pass") at verification. The gating proof is
 UAT-219-04's CI-only axe round-trip withdrawing `scrollable-region-focusable` from all 4
@@ -2415,14 +2419,16 @@ All of these services show status `Up` or `running`:
 
 ---
 
-### UAT-28-01: S3 Chaos Lab End-to-End — MinIO Bucket Encryption Scan
+### UAT-28-01: S3 Chaos Lab End-to-End — Lab S3 (moto) Bucket Encryption Scan
 
-> Added Phase 28 (2026-04-25): STOR-01 — validate `_scan_s3_encryption` against MinIO chaos lab buckets. Tests S3 severity ladder (HIGH unencrypted, no finding SSE-S3) and dar_storage_* evidence counters.
+> Added Phase 28 (2026-04-25): STOR-01 — validate `_scan_s3_encryption` against the chaos lab's S3 buckets. Tests S3 severity ladder (HIGH unencrypted, no finding SSE-S3) and dar_storage_* evidence counters.
+>
+> Updated Phase 220 (2026-10-01): the lab's S3 server was MinIO until Phase 220 replaced it with `motoserver/moto:5.2.3` (D-01R; the MinIO images were withdrawn from every registry). The endpoint (`:29000`), the `minio` service name and the `minioadmin` credentials are unchanged, and the scanner verdict was re-observed against moto (`220-diag/MOTO-PROOF.md`). The seed script is now `storage/s3-seed.py`; `storage/minio-seed.sh` was deleted. Result line unchanged.
 
-**Prerequisites:** Docker installed; `quantum-chaos-enterprise-lab/storage/minio-seed.sh` present; Phase 28 complete.
+**Prerequisites:** Docker installed; `quantum-chaos-enterprise-lab/storage/s3-seed.py` present (run by the `minio-seed` compose service); Phase 28 complete.
 
 **Steps:**
-1. Start the MinIO storage-s3 profile:
+1. Start the storage-s3 profile (moto S3 server + seed):
    ```bash
    cd quantum-chaos-enterprise-lab && docker compose --profile storage-s3 up -d
    ```
@@ -2434,7 +2440,7 @@ All of these services show status `Up` or `running`:
      aws_region: us-east-1
      aws_endpoint_url: http://localhost:29000
    ```
-4. Set MinIO test credentials:
+4. Set the lab's S3 test credentials (the lab keeps the `minioadmin` values):
    ```bash
    export AWS_ACCESS_KEY_ID=minioadmin
    export AWS_SECRET_ACCESS_KEY=minioadmin
@@ -30975,7 +30981,8 @@ baselines + ledger). Second dispatch `36777724820` (head `12cc9438`): Axe + Cons
 dispatch `36778111199` (same head): `2 failed, 5210 passed, 118 skipped, 75 xfailed, 6 xpassed` —
 `test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]` and `[storage-s3]`,
 byte-identical failing-node set and pass count to `main`'s latest run `36728169611` (the
-permanently withdrawn MinIO-image chaos-lab nodes per CLAUDE.md, not a regression). 5 residual
+permanently withdrawn MinIO-image chaos-lab nodes per CLAUDE.md, not a regression; [2026-10-01,
+Phase 220: no longer permanent. MinIO was replaced with moto and both nodes pass, see Series 220]). 5 residual
 axe nodes across 2 files that carried 217-04's "unknown — needs triage" attribution were resolved
 via a local, reverted per-node debug probe: certificates-dark's bare `--status-critical` text span,
 compare-light's teal `label-eyebrow` + magenta "Worsened" advisory-firewall hues, hardware-light's
@@ -31160,7 +31167,8 @@ grep -l countRange src/dashboard/tests/a11y/baseline-*.json | wc -l
 **Pass Criteria:** all three commands return `0`; a second CI dispatch after the withdrawal
 commit reports the Axe + Console Gate green on all 4 sweep steps (dark/light/empty/loading); the
 Linux Full Suite failing-node set on the branch is identical to `main`'s (the 2 permanent,
-withdrawn-MinIO-image chaos-lab Docker nodes, not an environmental or new failure).
+withdrawn-MinIO-image chaos-lab Docker nodes, not an environmental or new failure; [2026-10-01,
+Phase 220: fixed by replacing MinIO with moto, see Series 220]).
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-30  **Tester:** automated
@@ -31209,5 +31217,212 @@ Tab until the table region shows the teal ring, ArrowLeft/ArrowRight (and Down/P
 it while the page stays put; widening so the table fits (Tab skips it) and the light-theme ring
 were offered as optional. The operator's two-word confirmation does not itemise which optional
 steps were exercised, so only the core Tab-to-region + arrow-scroll claim is attested here.
+
+---
+
+## Series 220: CI Instrument Truth (Phase 220 — v5.26)
+
+**Last Updated:** 2026-10-01 (Phase 220 execution, plans 01-07; 220-08 CI acceptance pending). Seven
+cases. UAT-220-01 covers the batched vitest gate (CITRUTH-01: NOT REPRODUCED in 10 diagnostic
+attempts, hygiene fix, self-diagnosing census, 10/10 local leg); UAT-220-02 the checkable
+registry-refusal skip (CITRUTH-02, 220-02); UAT-220-03 the moto replacement for the withdrawn MinIO
+images, proven from a cache-less pull (CITRUTH-02, 220-03 + 220-07); UAT-220-04 `branch_ci_state.py`
+(CITRUTH-03, 220-04); UAT-220-05 the ARTIFACT-05 phase-close gate (CITRUTH-03, 220-05); UAT-220-06
+the verifier CI-truth patch revert detector (CITRUTH-03, 220-06). UAT-220-07, the live D-15
+demonstration on this phase's own branch, is SKIP DEFERRED: its refusal and green legs are recorded in
+`220-VERIFICATION.md` by 220-08 and the verifier, not here. CITRUTH-02's "green on `main`" leg can only
+be checked after the PR merges and is not claimed by any case below.
+
+### UAT-220-01: Batched Vitest Substitute Gate Is Stable And Self-Diagnosing
+
+**ID:** UAT-220-01
+**Title:** The batched `test_vitest_substitute_nodes_pass` gate passes repeatedly under load, and a
+failure would carry its own diagnostic census
+**Maps to:** CITRUTH-01
+
+**What to test:** The intermittent 14-node failure seen on 2026-09-27 does not recur across repeated
+batched runs (D-10 local leg), and the gate prints a `[220-01] warnings` census so a recurrence can be
+diagnosed from its own output.
+
+**Steps:**
+```
+.venv/bin/python -m pytest "tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass" -m "" -q -rP
+```
+
+**Pass Criteria:** 1 passed (not skipped: npm and `src/dashboard/node_modules` must be present); the
+`-rP` output contains a `[220-01] warnings act=` census line; `220-diag/DIAGNOSIS.md` records 10/10
+consecutive batched passes including one under CPU contention.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **1 passed in 6.13s**, `[205-06]
+cited={'passed': 36, 'failed': 0, 'skipped': 0, 'total': 36}`, census `[220-01] warnings act=0 unhandled=0
+econnrefused=0 console_error=0`. `220-01-SUMMARY.md` and
+`220-diag/DIAGNOSIS.md` record the D-10 local leg (10/10 consecutive batched passes, one under 20x
+`yes` CPU contention, one concurrent with a real Playwright suite) and the verdict, **NOT REPRODUCED
+in 10 attempts**. The fix applied was hygiene (an un-mocked `fetchApi` in three
+`executive-*.test.tsx` files), not a demonstrated cause. The D-10 CI leg (3 `Linux Full Suite`
+dispatches, node `passed` read per step) is recorded by 220-08 in `220-VERIFICATION.md`; a green
+local run is a sample, not a root cause.
+
+### UAT-220-02: Registry-Refusal Skip Is Checkable, Never Generic
+
+**ID:** UAT-220-02
+**Title:** `test_profile_re_up_is_idempotent` skips only on a named registry refusal with a successful
+public control probe
+**Maps to:** CITRUTH-02
+
+**What to test:** The pure classifier in `tests/chaos_registry_probe.py` recognises
+`unauthorized`/`denied`/`not found` pull errors and names the refused image, the anonymous control
+probe (`library/alpine:3.20` on docker.io) is consulted, and any other non-zero `up` still fails.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_chaos_registry_probe.py -q
+```
+
+**Pass Criteria:** 0 failed; the count is recorded below.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **14 passed**. The skip is registered in
+`tests/skip_registry.py` by qualname (220-02, `0cf2eb35`). It did not fire in the cache-less run of
+UAT-220-03: both nodes passed.
+
+### UAT-220-03: S3 Lab Profiles (moto) Come Up From A Cache-Less Anonymous Pull
+
+**ID:** UAT-220-03
+**Title:** `storage-s3` and `multihost` pass the idempotency gate with `motoserver/moto:5.2.3` pulled
+anonymously from an empty local cache
+**Maps to:** CITRUTH-02
+
+**What to test:** MinIO's images were withdrawn from every registry (quay 401, Docker Hub 404,
+dl.min.io 410), so the four S3 services now run `motoserver/moto:5.2.3` (D-01R). The proof must not
+rely on a cached image, and it must be a PASS, not the D-04 skip.
+
+**Steps:**
+```
+cd quantum-chaos-enterprise-lab && ./lab.sh down && cd ..
+docker rmi motoserver/moto:5.2.3
+docker images | grep -iE "moto|minio"          # must print nothing
+# credential-free client config so the pull is anonymous
+DOCKER_CONFIG=<dir with {"auths":{},"currentContext":"desktop-linux"}> \
+  .venv/bin/python -m pytest \
+  "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[storage-s3]" \
+  "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]" -m "" -q -rs
+```
+
+**Pass Criteria:** the `docker images` check is empty before the run; 2 passed, 0 skipped; the image
+present afterwards is the one the test pulled.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Observed twice. 220-03 (`220-diag/MOTO-PROOF.md`): `2 passed, 29 deselected in 185.61s`.
+220-07 (`220-diag/CACHELESS.md`, re-run before the push): `docker rmi` deleted
+`sha256:91fd602a21f4…`, the `docker images` grep was empty, then `2 passed in 68.00s` with no
+skips, and the re-pulled image was again `sha256:91fd602a21f49cf9eb82fdf474015a3c131d40104c8297ea6a2ca920708ae32c`.
+The scanner verdict against moto (unencrypted-bucket HIGH `S3/unencrypted`, encrypted-bucket
+`S3/sse-s3` no finding) is in MOTO-PROOF.md. A local run is not the CI leg: the CI observation of
+these two nodes is recorded by 220-08.
+
+### UAT-220-04: branch_ci_state Reports CI Truth At Branch HEAD
+
+**ID:** UAT-220-04
+**Title:** `scripts/branch_ci_state.py` exits 0 only for green-at-HEAD; a stale-sha success is
+unobserved, and a `gh` failure exits 2
+**Maps to:** CITRUTH-03
+
+**What to test:** Verdicts are computed against the branch HEAD sha and the repo-owned required-job
+set (not branch protection), with precedence red > unobserved > green.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_branch_ci_state.py -q
+python3 scripts/branch_ci_state.py --branch phase-220-ci-instrument-truth --compare-main; echo "exit=$?"
+```
+
+**Pass Criteria:** 0 failed; the live call before any dispatch exits non-zero.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **29 passed**. The first live refusal is
+`220-diag/ci-state-refusal-1.json` (exit 1, verdict `unobserved`: no run on the never-pushed branch).
+220-04 recorded four reverted mutation probes, each turning the suite red.
+
+### UAT-220-05: Phase Close Requires Recorded Green CI At HEAD (ARTIFACT-05)
+
+**ID:** UAT-220-05
+**Title:** The pre-commit phase-close gate blocks unless VERIFICATION.md carries a green `ci:` block
+observed at exactly the local HEAD
+**Maps to:** CITRUTH-03
+
+**What to test:** `scripts/verify_phase_gates.py::check_ci_truth` re-derives required-ness, rejects
+stale or mismatched shas, and accepts a `ci_waiver` only when its node set equals `main`'s failing set.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_verify_phase_gates.py -q -k "ci_truth or ci_block"
+```
+
+**Pass Criteria:** 0 failed; the count is recorded below.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **44 passed, 46 deselected**. Includes the
+hook-integration pair (`test_hook_integration_phase_close_with_green_ci_block_at_head_succeeds` /
+`..._without_ci_block_rejected`) that drives a real `.githooks/pre-commit` in a disposable repo.
+220-05 recorded eight reverted mutation probes, each turning the suite red.
+
+### UAT-220-06: Verifier CI-Truth Patch Revert Detector
+
+**ID:** UAT-220-06
+**Title:** A revert of the local `gsd-verifier` CI-truth patch turns a repo test red
+**Maps to:** CITRUTH-03
+
+**What to test:** `tests/test_gsd_verifier_ci_patch.py` asserts the behaviour-bearing text of
+`~/.claude/agents/gsd-verifier.md` (Step 9 rule 0, exit 1/2 force `gaps_found`, Step 9b no-defer,
+the `ci:` template) and that it equals its `gsd-local-patches` snapshot.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_gsd_verifier_ci_patch.py -q -rs
+```
+
+**Pass Criteria:** 0 failed, 0 skipped on the operator machine.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time on the operator machine: **8 passed**. In the
+`Linux Full Suite` CI job it **skips** at module level (no operator toolchain there; registered
+`environment_capability`). A skip there is not a pass and is not evidence the patch is in force.
+
+### UAT-220-07: Live D-15 Demonstration On A Real Branch
+
+**ID:** UAT-220-07
+**Title:** Verification refuses `passed` on `phase-220-ci-instrument-truth` while its CI is red or
+unobserved at HEAD, and accepts once it is green
+**Maps to:** CITRUTH-03
+
+**What to test:** The D-15 demonstration against this phase's own branch: at least one live refusal
+and one live green, both recorded in `220-VERIFICATION.md`.
+
+**Steps:**
+```
+git push -u origin phase-220-ci-instrument-truth
+gh workflow run 'Python CI' --ref phase-220-ci-instrument-truth
+gh workflow run 'Dashboard Quality' --ref phase-220-ci-instrument-truth
+python3 scripts/branch_ci_state.py --branch phase-220-ci-instrument-truth --compare-main; echo "exit=$?"
+```
+
+**Pass Criteria:** a refusal (exit 1) before or during the runs and exit 0 once every required job is
+green at HEAD, both recorded in `220-VERIFICATION.md`'s `ci:` block / `## CI State` section.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_branch_ci_state.py::test_successful_run_at_older_sha_is_unobserved_not_green`)
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** The cited node is the unit-level substitute for the stale-sha refusal path. It is
+necessary but not sufficient (D-15). The live legs run in 220-08 and the verifier, after this case is
+written, and are recorded in `220-VERIFICATION.md`, not here. The first live refusal already exists
+(`220-diag/ci-state-refusal-1.json`, exit 1, `unobserved`), but on the "no run at all" path, not the
+stale-sha path.
 
 ---
