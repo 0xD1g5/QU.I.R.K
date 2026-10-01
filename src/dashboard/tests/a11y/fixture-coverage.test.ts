@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync, readdirSync } from "node:fs"
-import { FIXTURE_HANDLERS, matchHandler } from "./fixture-handlers.mjs"
+import { FIXTURE_HANDLERS, matchHandler, compareZeroDiff } from "./fixture-handlers.mjs"
 import path from "node:path"
 
 // Phase 185 D-14 / 221-03 D-06: "covered but blind" guard, now enumerated at RUN TIME.
@@ -151,6 +151,33 @@ describe("a11y fixture table covers every /api/ fetch target (D-14, 221 D-06)", 
     for (const id of ["hardware-drift", "vendor-trends", "compare", "findings"]) {
       expect(ids, `handler "${id}" missing from FIXTURE_HANDLERS`).toContain(id)
     }
+  })
+
+  // 221 WR-09: the empty compare fixture must be a CompareResponse that can occur. ComparePage
+  // renders scan_a/scan_b scores and per-subscore a/b values next to the deltas, so a/b must
+  // agree with the zeroed deltas (no "55 -> 62, delta 0").
+  it("compareZeroDiff yields a consistent zero diff (221 WR-09)", () => {
+    const fixture = JSON.parse(readFileSync(path.resolve(__dirname, "fixture-compare.json"), "utf-8"))
+    const out = compareZeroDiff(fixture) as {
+      scan_a: { scan_id: string; scanned_at: string; score: number; subscores: Record<string, number> }
+      scan_b: { scan_id: string; scanned_at: string; score: number; subscores: Record<string, number> }
+      score_delta: number
+      subscore_deltas: Record<string, number>
+      [k: string]: unknown
+    }
+    expect(out.scan_b.score - out.scan_a.score).toBe(out.score_delta)
+    expect(out.score_delta).toBe(0)
+    const keys = Object.keys(out.subscore_deltas)
+    expect(keys.length).toBeGreaterThan(0)
+    for (const k of keys) {
+      expect(out.scan_b.subscores[k] - out.scan_a.subscores[k], `subscore ${k}`).toBe(out.subscore_deltas[k])
+    }
+    expect(out.scan_b.scan_id).toBe(fixture.scan_b.scan_id)
+    expect(out.scan_b.scanned_at).toBe(fixture.scan_b.scanned_at)
+    for (const [k, v] of Object.entries(fixture)) {
+      if (Array.isArray(v)) expect(out[k], `list ${k} not emptied`).toEqual([])
+    }
+    expect(() => compareZeroDiff({ ...fixture, subscore_deltas: null })).not.toThrow()
   })
 
   it("fixture-storyline.json parses and carries all ten locked FindingStoryline keys", () => {

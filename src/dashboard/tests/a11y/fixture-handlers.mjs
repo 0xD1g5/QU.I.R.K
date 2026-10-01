@@ -153,16 +153,24 @@ export function matchHandler(url) {
 
 /**
  * Zero-diff CompareResponse derived from the default compare fixture (221 RESEARCH
- * Finding 3): keeps scan_a/scan_b, zeroes score_delta and every subscore delta, and
- * empties every list key. Never `{}`, which crashes ComparePage with a TypeError.
+ * Finding 3): never `{}`, which crashes ComparePage with a TypeError.
+ *
+ * 221 WR-09: a TRUE zero diff, never an impossible one. scan_b is scan_a's score and
+ * subscores under scan_b's own identity (scan_id, scanned_at), so the rendered "a -> b"
+ * values agree with score_delta = 0 and every subscore delta = 0. Every list key is
+ * emptied; a null/absent subscore_deltas cannot throw inside the middleware.
  */
 export function compareZeroDiff(fixture) {
+  const a = fixture.scan_a ?? {}
+  const b = fixture.scan_b ?? {}
   const out = {}
   for (const [key, value] of Object.entries(fixture)) {
-    if (key === "scan_a" || key === "scan_b") out[key] = value
-    else if (key === "score_delta") out[key] = 0
+    if (key === "scan_a") out[key] = structuredClone(a)
+    else if (key === "scan_b") {
+      out[key] = { ...structuredClone(a), scan_id: b.scan_id, scanned_at: b.scanned_at }
+    } else if (key === "score_delta") out[key] = 0
     else if (key === "subscore_deltas") {
-      out[key] = Object.fromEntries(Object.keys(value).map((k) => [k, 0]))
+      out[key] = Object.fromEntries(Object.keys(value ?? {}).map((k) => [k, 0]))
     } else if (Array.isArray(value)) out[key] = []
     else out[key] = value
   }
