@@ -68,7 +68,7 @@ import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
-import { renderStateViolations, DEFAULT_LOADING_SELECTOR } from './variant-guard.mjs'
+import { renderStateViolations, DEFAULT_LOADING_SELECTOR, DEFAULT_EMPTY_SELECTOR } from './variant-guard.mjs'
 import { matchHandler } from './fixture-handlers.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -273,7 +273,7 @@ try {
 let exitCode = 0
 const summary = []
 
-for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, loadingSelector, loadingRetired } of ROUTES) {
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, loadingSelector, emptySelector, loadingRetired } of ROUTES) {
   // 221-06 D-08 fallback: a route whose only data endpoint is also the auth/chrome probe cannot be
   // caught mid-load. Skipped LOUDLY (named exclusion row in UNMEASURED-EXCLUSIONS.md), never silently.
   if (VARIANT === 'loading' && loadingRetired) {
@@ -360,8 +360,16 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
   if (variantMarkers) {
     const present = {}
     let skeleton
+    let emptyWitnesses
     if (VARIANT === 'loading') {
       skeleton = !!(await page.waitForSelector(loadingSelector ?? DEFAULT_LOADING_SELECTOR, { timeout: 5_000 }).catch(() => null))
+    }
+    // 221 WR-02: under `empty`, WAIT for the positive empty-state witness before the instantaneous
+    // marker-absence probe below, so a page that has not rendered yet cannot pass by absence.
+    if (VARIANT === 'empty') {
+      const sel = emptySelector ?? DEFAULT_EMPTY_SELECTOR
+      await page.waitForSelector(sel, { timeout: 5_000 }).catch(() => null)
+      emptyWitnesses = (await page.$$(sel)).length
     }
     // 221 D-06: any honouring, non-chrome handler this page actually requested must be declared.
     const hitIds = [...new Set(apiRequests.map(u => matchHandler(u)).filter(Boolean)
@@ -394,6 +402,8 @@ for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, 
       present,
       skeleton,
       loadingSelector: loadingSelector ?? DEFAULT_LOADING_SELECTOR,
+      emptyWitnesses,
+      emptySelector: emptySelector ?? DEFAULT_EMPTY_SELECTOR,
     })
     if (rsViolations.length > 0) {
       for (const line of rsViolations) console.error(`[a11y] FAIL [${slug}]: ${line}`)

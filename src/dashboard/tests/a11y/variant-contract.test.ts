@@ -93,6 +93,15 @@ describe("variant-contract (221-01)", () => {
     expect(guard).toBeLessThan(axe)
   })
 
+  it("run-a11y.mjs waits for the empty-state witness before the marker-absence probe (221 WR-02)", () => {
+    const wait = RUN_A11Y_SOURCE.indexOf("await page.waitForSelector(sel, { timeout: 5_000 })")
+    const absence = RUN_A11Y_SOURCE.indexOf("present[selector] = !!(await page.$(selector))")
+    expect(wait, "no empty-state witness wait").toBeGreaterThan(-1)
+    expect(absence).toBeGreaterThan(-1)
+    expect(wait).toBeLessThan(absence)
+    expect(RUN_A11Y_SOURCE).toContain("emptyWitnesses,")
+  })
+
   it("run-a11y.mjs owns its preview by process group with strictPort (221 D-02)", () => {
     for (const needle of ["detached: true", "--strictPort", "process.kill(-", "SIGKILL"]) {
       expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)

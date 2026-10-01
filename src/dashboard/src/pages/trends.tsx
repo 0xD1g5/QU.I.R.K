@@ -127,7 +127,7 @@ export function TrendsPage() {
     return (
       <div className="space-y-4 py-8">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Trends</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-sm" data-testid="empty-state">
           No trend data available. Run a scan first to initialize the trends view.
         </p>
       </div>
@@ -139,7 +139,7 @@ export function TrendsPage() {
     return (
       <div className="space-y-4 py-8">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Trends</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-sm" data-testid="empty-state">
           No scan history yet. Run two or more scans to see trend lines.
         </p>
       </div>
