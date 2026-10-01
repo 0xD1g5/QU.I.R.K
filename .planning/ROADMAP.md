@@ -295,7 +295,7 @@ Plans:
 - [x] 221-05-PLAN.md — Harness lifecycle fix (process-group kill, --strictPort), held-skeleton loading nav, run-time endpoint declaration check; Linux CI identity-green (W5)
 - [x] 221-06-PLAN.md — Sweep /scans + /sensors; UNMEASURED-EXCLUSIONS.md enforced from source (W6)
 - [x] 221-07-PLAN.md — Linux baseline regeneration (true empty/loading + new routes), justification re-point, all four sweeps green (W7)
-- [ ] 221-08-PLAN.md — Mutation evidence M1b-M6; HARNESS-03 per D-13 + FIX-05 note; retire satisfied todos (W8)
+- [x] 221-08-PLAN.md — Mutation evidence M1b-M6; HARNESS-03 per D-13 + FIX-05 note; retire satisfied todos (W8)
 - [ ] 221-09-PLAN.md — Docs + UAT Series 221 + vault sync; STATE/ROADMAP hand-edits; branch_ci_state.py exit 0 at close SHA (W9)
 
 ### Progress
