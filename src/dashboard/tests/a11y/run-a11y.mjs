@@ -273,7 +273,14 @@ try {
 let exitCode = 0
 const summary = []
 
-for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, loadingSelector } of ROUTES) {
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, loadingSelector, loadingRetired } of ROUTES) {
+  // 221-06 D-08 fallback: a route whose only data endpoint is also the auth/chrome probe cannot be
+  // caught mid-load. Skipped LOUDLY (named exclusion row in UNMEASURED-EXCLUSIONS.md), never silently.
+  if (VARIANT === 'loading' && loadingRetired) {
+    console.log(`[a11y] NOTE [${slug}]: loading leg retired — ${loadingRetired}`)
+    summary.push({ slug, violations: 0, console: 0, incomplete: 0, status: 'RETIRED' })
+    continue
+  }
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
   console.log(`[a11y] Scanning ${slug} [${THEME}] (${url})...`)
 

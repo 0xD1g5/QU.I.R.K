@@ -154,6 +154,8 @@ describe("fixture handler contract (221-03)", () => {
     const route = ROUTES.find((r) => r.slug === slug)!
     const markers = (route.variantMarkers ?? {}) as Record<string, string>
     for (const id of Object.keys(markers)) {
+      // 221-06: a route that retires its loading leg only needs the handler to honour empty.
+      if ((route as { loadingRetired?: string }).loadingRetired && decisionKinds(FIXTURE_HANDLERS.find((h: Handler) => h.id === id)?.empty ?? {}, ["body", "emptyFrom"]).length === 1) continue
       expect(honouring.has(id), `route "${slug}" marks handler "${id}", which does not honour both empty and loading`).toBe(true)
     }
     const unmarked = (route.unmarkedEndpoints ?? {}) as Record<string, string>

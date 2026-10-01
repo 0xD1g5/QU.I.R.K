@@ -96,5 +96,22 @@
     "variantMarkers": {
       "compare": "table tbody tr"
     }
+  },
+  {
+    "slug": "scan-history",
+    "path": "/scans",
+    "contentMarker": "table tbody tr",
+    "variantMarkers": {
+      "scans": "table tbody tr"
+    },
+    "loadingRetired": "GET /api/scans is both this page's data and AuthProvider.tsx:77's auth probe (and the sidebar's ScanSelector/ScanDateBadge fetch); holding it blanks the whole app shell, so no page skeleton can be caught. The loading leg is skipped for this route and recorded as an exclusion (221-06, D-08 fallback)"
+  },
+  {
+    "slug": "sensors",
+    "path": "/sensors",
+    "contentMarker": "table tbody tr",
+    "variantMarkers": {
+      "sensor-registry": "[aria-label^=\"status:\"]"
+    }
   }
 ]
