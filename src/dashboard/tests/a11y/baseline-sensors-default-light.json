@@ -1,0 +1,19 @@
+{
+  "route": "sensors",
+  "generated": "2026-10-01T19:13:55.433Z",
+  "entries": [
+    {
+      "rule": "color-contrast",
+      "count": 1,
+      "impact": "serious",
+      "wcag": [
+        "1.4.3"
+      ],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
+      "justification": "Route /sensors, theme light, default variant, rule color-contrast. First measured in Phase 221 (221-07, regeneration run 36912565231). The single node is the sensor-registry `Stale` status Badge (`bg-[var(--ds-high-dim)] text-[var(--ds-high)]`), a DS severity-chip `high` pair; Phase 221 plan 221-02 measured light|high|surface at 3.42:1 against the 4.5:1 AA floor (light theme inherits the dark rgba -dim tints). Not a new defect class and not impact critical. Attribution: re-pointed to backlog 999.118 (HORIZON.md), DS severity chips row; colour change needs an operator design call and is not made in Phase 221.",
+      "samples": [
+        "<div class=\"inline-flex items-ce...\" aria-label=\"status: Stale\">"
+      ]
+    }
+  ]
+}
