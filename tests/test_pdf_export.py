@@ -84,22 +84,20 @@ def test_pdf_image_wait_does_not_fail_export_on_timeout(dashboard_client):
     assert page.predicates, "export no longer waits for images at all"
 
 
-def test_pdf_image_wait_predicate_accepts_broken_image(dashboard_client):
-    """WR-01: the predicate must be satisfied by a broken (404) image, which is complete
-    with naturalWidth 0 -- the wait is for settling, not for successful decode."""
+def test_pdf_image_wait_uses_the_settle_predicate(dashboard_client):
+    """WR-01: the export waits on IMAGE_SETTLE_PREDICATE (complete, not decoded).
+
+    Its real-browser behaviour against a broken image is proven in
+    tests/test_browser_e2e.py::test_222_image_settle_predicate_accepts_broken_image,
+    which runs in the Browser E2E job (Chromium is absent from Linux Full Suite).
+    """
     import unittest.mock as mock
 
-    from playwright.sync_api import sync_playwright as real_pw
+    from quirk.dashboard.api.routes.pdf import IMAGE_SETTLE_PREDICATE
 
     page = _FakePage()
     with mock.patch("quirk.dashboard.api.routes.pdf.sync_playwright", _fake_playwright(page)):
-        dashboard_client.post("/api/export/pdf")
-    assert page.predicates
-    with real_pw() as p:
-        browser = p.chromium.launch(headless=True)
-        try:
-            pg = browser.new_page()
-            pg.set_content('<img src="http://127.0.0.1:9/nope.svg">')
-            pg.wait_for_function(page.predicates[0], timeout=5_000)
-        finally:
-            browser.close()
+        resp = dashboard_client.post("/api/export/pdf")
+    assert resp.status_code == 200, resp.text
+    assert page.predicates == [IMAGE_SETTLE_PREDICATE]
+    assert "naturalWidth" not in IMAGE_SETTLE_PREDICATE

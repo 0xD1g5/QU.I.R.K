@@ -585,6 +585,20 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
         )
 
 
+def test_222_image_settle_predicate_accepts_broken_image():
+    """Phase 222 WR-01: the export's image wait is satisfied by a broken (404) image.
+
+    A broken image is `complete` with naturalWidth 0; the predicate must settle on it
+    rather than stall the export until its 15s timeout.
+    """
+    from quirk.dashboard.api.routes.pdf import IMAGE_SETTLE_PREDICATE
+
+    with chromium_page() as page:
+        page.set_content('<img src="http://127.0.0.1:9/nope.svg">')
+        page.wait_for_function(IMAGE_SETTLE_PREDICATE, timeout=5_000)
+        assert page.evaluate("document.images[0].naturalWidth") == 0
+
+
 def test_222_export_pdf_carries_colophon_logo(dashboard_origin, tmp_path):
     """Phase 222 D-18 — the dashboard Export PDF ends with the QU.I.R.K. colophon logo.
 
