@@ -1,5 +1,56 @@
 # Milestones
 
+## v5.26 Accessibility & Instrument Truth (Development complete: 2026-10-02 — untagged)
+
+**Phases completed:** 7 phases (215-221, 221 a gap-closure insert), 44 plans, 44 SUMMARY files
+**Requirements:** **15/15 satisfied**, FIX-05 qualified to what its instruments measure, CITRUTH-01
+by operator override
+**Audit:** `tech_debt` (`.planning/milestones/v5.26-MILESTONE-AUDIT.md`, re-audit at `main`
+`4415fbf2`) — requirements 15/15, phases 7/7, integration 9/10 seams WIRED + 1 PARTIAL with 0
+broken, flows 3/3, Nyquist 7/7, 21 tech-debt items across 8 groups. The first audit (`gaps_found` at
+`1cb06689`) is preserved under `v5.26-phases/221-…/221-evidence/`.
+**Scale:** 170 commits (159 non-merge), 237 files, +14,945 / -1,659, 5 days (2026-09-28 ->
+2026-10-02), merged to `main` through 11 PRs (#38-#50); `main` green on all three workflows at close.
+
+**What it was about:** draining the dashboard's WCAG-AA badge-contrast debt as one unit — a
+reopening of `BACK-A11Y-01`, lost at the v5.0 archive and rediscovered three times — and repairing
+the instruments that let 45 real violations sit behind green gates, including CI gates that reported
+green on a required job without measuring it.
+
+**Highlights:**
+- **Ratchet before repair.** A repo-wide contrast guard over all 76 non-test `.tsx` in both themes,
+  one derived `auditedFiles()`, and a two-direction mutation probe turned an invisible liability into
+  a shrink-only baseline; Phases 217-218 drained it to `{}`.
+- **The axe harness measures what its names claim.** Dark and light sweeps with per-theme baselines;
+  `/certificates` and `/hardware` no longer PASS while rendering sub-AA badges; the empty/loading
+  variant legs — found near-vacuous by the first audit — are mutation-proven by Phase 221, and every
+  unmeasured place is a source-derived row (UX-01..17) that cannot be silently omitted.
+- **Keyboard access:** table regions focus and scroll; the `scrollable-region-focusable` acceptance
+  was withdrawn outright.
+- **CI truth:** `main` green again (the MinIO images were a registry withdrawal, misdiagnosed twice
+  as flaky; moto replaced them), and a phase can no longer verify `passed` over red or unobserved
+  branch CI (`branch_ci_state.py` + the ARTIFACT-05 pre-commit gate).
+
+**The best process outcome was catching the milestone's own failure mode inside it.** Ten a11y todos
+were handed to Phase 220, which never took them — owner lines naming a closed phase, the shape that
+lost `BACK-A11Y-01`. The first audit caught it; Phase 221 re-homed them to `999.118`/`999.119`; the
+re-audit then found HORIZON claiming a gate that did not exist. The gate was built at close
+(`test_no_pending_todo_points_at_a_closed_owner`) and its first run found **six** dangling pointers,
+not the one or two predicted: four already-resolved todos never moved, UAT-7-21, and P2b scan-depth
+dilution, which Phase 212 had handed to a v5.25-close decision that never happened.
+
+**Known open at close: 21 audit tech-debt items + 44 pending todos + 2 open debug sessions**
+(counted from disk — not from `gsd-sdk query audit-open`, which caps its todo count at 5). Owned
+forward: `999.118` (a11y design calls and blind spots: 10/20 DS-chip pairs, 8 cytoscape pairs, the
+CBOM light system-node labels at 1.25:1, the `/sensors` Stale badge, 13 generically-named tables,
+light-theme empty/loading legs), `999.119` (Windows Sensor E2E empty token on branch dispatch;
+MinIO-era names under moto), `999.120` (P2b, P1, operator-reserved).
+
+**This close was hand-written under a pre-image + full-diff protocol** — `phase.complete` /
+`milestone.complete` and every mutating `state.*` / `roadmap.*` verb remain UNSAFE on this machine.
+`ROADMAP.md`'s `## Backlog` section was diff-verified byte-identical (243 lines), and every line
+removed from `ROADMAP.md` was checked present in the archive.
+
 ## v5.25 Score Truth & Release Cut (Shipped: 2026-09-28 — tag `v5.25.0`)
 
 **Phases completed:** 5 phases (210-214), 40 plans on disk / 41 SUMMARY files

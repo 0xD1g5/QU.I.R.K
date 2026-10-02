@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.26
 milestone_name: Accessibility & Instrument Truth
-status: in_progress
-last_updated: "2026-10-02T01:30:00.000Z"
-last_activity: "2026-10-01 -- Phase 221 COMPLETE: verified passed 4/4 at 72b6e4b2 (branch_ci_state exit 0; Python CI 36926796359, Dashboard Quality 36926793305). Code review 3 iterations, CR-01 + WR-01..WR-13 fixed with mutation proofs. HARNESS-03 [x]; FIX-05 qualified (999.118). All 7 v5.26 phases done; branch phase-221-a11y-gap-closure pushed, NOT merged; next: PR + merge, then v5.26 milestone audit/close"
+status: milestone_complete
+last_updated: "2026-10-02T12:00:00.000Z"
+last_activity: "2026-10-02 -- v5.26 CLOSED + ARCHIVED by hand: re-audit tech_debt 15/15 at main 4415fbf2; pre-close cleanup PR #50 merged (57d6ef82: todo->owner gate, 6 dangling pointers drained, 999.120 filed); archives at .planning/milestones/v5.26-*, phases moved to v5.26-phases/, REQUIREMENTS.md removed. Next: /gsd-new-milestone (PM review first)"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -16,6 +16,28 @@ progress:
 # Project State
 
 ## Deferred Items
+
+### v5.26 milestone close (2026-10-02) — acknowledged and deferred
+
+**Counts re-derived from disk, NOT from `gsd-sdk query audit-open`** (it caps the todo count at 5).
+**44 pending todos + 2 open debug sessions + 21 audit tech-debt items** (8 groups; full list in the
+frontmatter of `.planning/milestones/v5.26-MILESTONE-AUDIT.md`, not re-tabulated here so it cannot
+drift from that file).
+
+Every pending todo that names an owner now names a live one: this is enforced by
+`tests/test_backlog_reconciliation_gate.py::test_no_pending_todo_points_at_a_closed_owner`, added
+at this close. Todos with no owner field at all are not policed by it.
+
+| Category | Item | Status |
+|----------|------|--------|
+| backlog | `999.118` a11y design calls + instrument blind spots | **OPEN, P2** — FIX-05's qualified residue: 10/20 DS-chip pairs, 8 cytoscape pairs, CBOM light system-node labels 1.25:1 (UAT-221-11 FAIL), `/sensors` Stale 3.42:1, 13 generically-named tables, UX-17 light x empty/loading, UAT-7-21 rendered colours. Colour changes are operator design calls. |
+| backlog | `999.119` CI + chaos-lab hygiene | **OPEN, P3** — Windows Sensor E2E empty `--api-token` on branch dispatch (CLAUDE.md `DISPATCH_ADVISORY_JOBS` exception lives until it closes); MinIO-era names under moto. |
+| backlog | `999.120` P2b scan-depth dilution | **OPEN, P1, OPERATOR-RESERVED** — Phase 212 handed it to a v5.25-close decision that never happened; the owner phase is the operator's call. |
+| ci | CITRUTH-01 vitest flake | Closed by operator override, root cause NOT REPRODUCED; a green run is a sample. |
+| record | `216-VERIFICATION.md` `gaps_found`, `220-VERIFICATION.md` `human_needed` | Superseded by 221's verification and the re-audit; left as written, not rewritten. |
+| todo | `261001-compare-page-tolerate-empty-object-response` | `Owner: unassigned` (honest, P3). |
+| todo | `211-http-on-tls-designated-port-…`, `260927-kerberos-dnssec-may-share-the-saml-cli-reporting-gap` | Parity gaps adjacent to XSURF-04, no owner. |
+| debug | `github-release-notes-and-ci-failures`, `sensor-enroll-id-mismatch` | open sessions under `.planning/debug/` |
 
 ### v5.25 milestone close (2026-09-28) — acknowledged and deferred
 
@@ -268,11 +290,11 @@ Also carried, not in `audit-open`'s scope:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-28)
+See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.26 — Phase 217 COMPLETE (verified 2026-09-29); next is Phase 218 (Contrast Violations — Design Calls & Closing Assertion). *Superseded text follows:* None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
+**Current focus:** None — **v5.26 is closed and archived (2026-10-02).** Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Committed for v5.27 already: the claim-by-claim review of every user-facing doc that gates the social launch (HORIZON 2026-09-30 row). Live owners carried in: `999.118`, `999.119`, `999.120` (P1, operator-reserved).
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1398,6 +1420,15 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   hand-edited.
 
 ## Current Position
+Phase: — (milestone v5.26 closed 2026-10-02; no phase open)
+Plan: —
+Status: v5.26 Accessibility & Instrument Truth CLOSED and ARCHIVED. 7 of 7 phases, 44 of 44 plans,
+15/15 requirements. Re-audit `tech_debt` at `main` `4415fbf2`. Pre-close cleanup merged as PR #50
+(`57d6ef82`). Archives: `.planning/milestones/v5.26-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` and
+`v5.26-phases/`. Untagged; `v5.25.0` is still the latest tag.
+Last activity: 2026-10-02 — milestone close, hand-written under the pre-image + full-diff protocol.
+
+**Prior position (Phase 221 close, superseded 2026-10-02):**
 Phase: 221 (Close gap: a11y blind spots + empty/loading variant legs) — **COMPLETE, 9 of 9 plans,
 verified `passed` 4/4 on 2026-10-01** at `72b6e4b2` (CI green per `221-VERIFICATION.md` `ci:` block).
 Branch `phase-221-a11y-gap-closure` is pushed and NOT merged. Next: PR + merge, then the v5.26
@@ -3226,7 +3257,15 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Last session: 2026-09-28/29 — **the release shipped, and then the release notes had to be corrected
+Last session: 2026-10-01/02 — **merged #49, re-audited v5.26, built the gate the ledger claimed, and
+closed the milestone.** The re-audit cleared both first-audit gaps but found HORIZON claiming that
+`test_backlog_reconciliation_gate.py` policed todo owners; it never read `.planning/todos/`. Building
+that gate (rather than rewording the claim) found six dangling pointers where the audit predicted one
+or two — the audit's own grep looked at `**Owner**` lines and missed the `resolves_phase:` field.
+Four of the six were already resolved in code and had simply never been moved. Lesson, again: a
+written claim that a gate exists is a hypothesis until the gate fails on a planted input.
+
+Earlier session: 2026-09-28/29 — **the release shipped, and then the release notes had to be corrected
 because shipping falsified them.** Sequence: Phase 214 executed 8 plans and stopped at plan 214-09's
 blocking checkpoint with the tag operator-reserved -> the **operator** created and pushed the
 annotated `v5.25.0` tag himself (tagger `Digs`, 19:12:10 -0400; no agent tagged, ever) -> run
