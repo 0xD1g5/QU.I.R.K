@@ -4,13 +4,13 @@ milestone: v5.27
 milestone_name: Launch Readiness
 status: planning
 last_updated: "2026-10-02T13:50:00.000Z"
-last_activity: "2026-10-02 -- Phase 222 context gathered (222-CONTEXT.md, 21 decisions; operator call D-14 pulls the BRAND-03 raster pipeline slice into 222 for the DOCX colophon PNG). Precondition: PR #52 must merge before any 222 execution commit. STATE.md hand-edited from a pre-image: gsd-sdk state.record-session corrupted it (hit #20)"
+last_activity: "2026-10-02 -- Phase 222 plans 01-07 executed (222-07 CI observation and PR pending); UAT Series 222 recorded, operator approved README light/dark (UAT-222-01). STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -1420,12 +1420,12 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   hand-edited.
 
 ## Current Position
-Phase: Not started (defining requirements)
-Plan: —
-Status: Milestone v5.27 Launch Readiness roadmap created 2026-10-02 — 5 phases (222–226): brand
-adoption (222–223) -> pre-launch doc review (224–225) -> v5.27.0 release cut (226). Next:
-`/gsd-discuss-phase 222`.
-Last activity: 2026-10-02 — milestone v5.27 started (hand-edited from a pre-image).
+Phase: 222 (Brand Identity Landed) — all 7 plans executed on branch `phase-222-brand-identity-landed`
+Plan: 7 of 7
+Status: Awaiting CI observation at the final HEAD, phase PR, then gsd-verifier and phase close. Phase 222
+is NOT complete and NOT merged to main. Progress percent above is plan-based for this phase only
+(phases 223-226 are unplanned).
+Last activity: 2026-10-02 — Phase 222 plan progress recorded before CI observation (hand-edited from a pre-image).
 
 **Prior position (v5.26 close, superseded 2026-10-02):**
 Phase: — (milestone v5.26 closed 2026-10-02; no phase open)
@@ -2778,6 +2778,13 @@ Next milestone's numbering continues at Phase 161.
   aborting non-TTY `--fuzz` path (UAT-96-02/96-03), a raw-URL-disclosure gap in
   `SpecParsingError`'s message (UAT-94-05), and 5 stale/quoted doc-grep patterns.
 
+- **Phase 222 (2026-10-02):** D-24 determinism spike found the report-logo PNG byte-identical across macOS
+  and linux/amd64 (resvg-py 0.5.0), so the PNG freshness gate compares bytes with no tolerance; the CI-runner
+  confirmation is a 222-07 leg. README logo renders at 64 px height. D-25: no rows were added to
+  `docs/uat-disposition-ledger.jsonl` for Series 222 (deliberate deviation from D-21, matches series 200-221).
+  D-22: the HTML footer now prints in PDFs. D-14: the BRAND-03 raster scaffold landed in 222; favicon outputs
+  remain in Phase 223.
+
 - Numbering continues at Phase 154 (v5.12 ended at 153). Phase order is dependency-driven:
   identity/data-model (154) must land before drift detection (155) since every diff feature
   reconciles "the same device across two scans"; reporting/OT-ICS safety (156) depends on
@@ -3272,8 +3279,12 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/222-brand-identity-landed/222-CONTEXT.md` — Phase 222 context gathered
-2026-10-02; next `/gsd-plan-phase 222` (after PR #52 merges).
+Resume file: `.planning/phases/222-brand-identity-landed/222-07-PLAN.md` — Phase 222 stopped at 222-07
+(all plans executed, UAT Series 222 committed); resume with CI observation at the final HEAD, the phase PR
+and then `gsd-verifier`. No commit may land between the CI observation and the phase-close commit.
+
+Previous resume point: `.planning/phases/222-brand-identity-landed/222-CONTEXT.md` — Phase 222 context gathered
+2026-10-02 (superseded).
 
 Latest session: 2026-10-02 — **discussed Phase 222.** Live checks found python-docx 1.2.0 cannot embed
 SVG, so the DOCX colophon logo needs a PNG; the operator pulled the raster pipeline slice (renderer +
