@@ -48,18 +48,28 @@
  *     longer produces any violation to range. The `countRange` field itself (the opt-in,
  *     per-entry mechanism in `baseline-diff.mjs`'s `compareToBaseline`) remains available for a
  *     future render-dependent entry; no committed baseline currently declares one.
+ *   - 221 D-02 (preview lifecycle): the `npm -> sh -> vite` chain orphans the vite grandchild on
+ *     Linux when only the npm pid is signalled, so every sweep after the first measured sweep
+ *     1's default-variant server (CI run 36881093817: "Preview ready" 15-19 ms after the
+ *     previous sweep's). The preview is therefore spawned detached in its own process group
+ *     and the whole group is killed (SIGTERM, escalating to SIGKILL); `--strictPort` refuses a
+ *     silent port hop; a pre-spawn free-port check, a post-shutdown free-port assertion and the
+ *     /__a11y-variant identity sentinel together make "the server this sweep measured is the
+ *     server it spawned" checkable rather than assumed.
  *   - The axe rule definitions come from `axe-core` 4.11.4, pinned only indirectly through
  *     `@axe-core/puppeteer`'s exact version pin in package.json.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { createConnection } from 'node:net'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { AxePuppeteer } from '@axe-core/puppeteer'
 import { buildBaselineEntries, compareToBaseline, resolveVariant, resolveTheme, baselineFilename } from './baseline-diff.mjs'
+import { renderStateViolations, requiredEmptyWitnesses, DEFAULT_LOADING_SELECTOR } from './variant-guard.mjs'
+import { matchHandler } from './fixture-handlers.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -106,6 +116,8 @@ const PREVIEW_PORT = 4173
 const PREVIEW_HOST = 'localhost'
 const CONNECT_TIMEOUT_MS = 30_000
 const CONNECT_POLL_MS = 250
+// 221 WR-12: bound on the empty-leg witness-count condition wait.
+const EMPTY_WITNESS_WAIT_MS = 10_000
 
 // Read config files
 const ROUTES = JSON.parse(readFileSync(resolve(A11Y_DIR, 'routes.json'), 'utf8'))
@@ -152,50 +164,233 @@ if (!existsSync(distIndex)) {
   })
 }
 
+// 221 D-02: refuse to sweep when something already answers on the port. A stale preview left
+// by a previous sweep would otherwise be measured instead of the server this run spawns.
+function assertPortFree(host, port) {
+  return new Promise(resolveP => {
+    const socket = createConnection({ host, port })
+    socket.on('connect', () => { socket.destroy(); resolveP(false) })
+    socket.on('error', () => { socket.destroy(); resolveP(true) })
+  })
+}
+if (!(await assertPortFree(PREVIEW_HOST, PREVIEW_PORT))) {
+  console.error(
+    `[a11y] FAIL: port ${PREVIEW_PORT} already answers before this sweep spawned its own preview — stale server from a previous sweep? (221 D-02)`,
+  )
+  process.exit(1)
+}
+
 console.log('[a11y] Starting vite preview with VITE_A11Y_FIXTURE=1...')
-const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVIEW_PORT)], {
+const previewProc = spawn('npm', ['run', 'preview', '--', '--port', String(PREVIEW_PORT), '--strictPort'], {
   cwd: DASHBOARD_DIR,
-  stdio: 'pipe',
+  stdio: ['ignore', 'pipe', 'pipe'],
   env: previewEnv,
+  detached: true,
 })
 previewProc.stderr.on('data', d => process.stderr.write(d))
+// 221 IN-01: with --strictPort vite never hops ports; a busy port makes it exit with an error,
+// which the 'exit' listener below reports immediately.
+previewProc.stdout.on('data', d => process.stdout.write(d))
+
+// 221 WR-04: exit status is declared before any shutdown path can assign it (no TDZ on early exit).
+let exitCode = 0
+let shuttingDown = false
+let browser
+// 221 WR-04: the preview runs detached in its own process group, so a harness killed without
+// running its 'exit' handlers (SIGKILL, OOM, CI step timeout) leaves vite orphaned on the port.
+// Log the group id so a CI always() step can reap it (`kill -- -<pgid>` / `pkill -g <pgid>`).
+console.log(`[a11y] preview process group: ${previewProc.pid}`)
+previewProc.on('error', e => {
+  console.error(`[a11y] FAIL: preview spawn failed: ${e.message}`)
+  process.exit(1)
+})
+previewProc.on('exit', (code, sig) => {
+  if (!shuttingDown) {
+    console.error(`[a11y] FAIL: preview exited early (${code ?? sig}) — e.g. a --strictPort refusal`)
+    process.exit(1)
+  }
+})
 
 // Ensure preview is killed on exit
+// 221 D-02: signal the whole process group (negative pid), not just the npm wrapper.
+// Synchronous so it is safe inside process.on('exit').
 function cleanup() {
-  if (!previewProc.killed) previewProc.kill('SIGTERM')
+  if (previewProc.pid) {
+    try { process.kill(-previewProc.pid, 'SIGTERM') } catch {}
+  }
 }
-process.on('exit', cleanup)
-process.on('SIGINT', () => { cleanup(); process.exit(130) })
-process.on('SIGTERM', () => { cleanup(); process.exit(143) })
+
+// 221 D-02: normal-end shutdown that proves the port was actually released.
+async function waitForPortFree(timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (await assertPortFree(PREVIEW_HOST, PREVIEW_PORT)) return true
+    await new Promise(r => setTimeout(r, 100))
+  }
+  return await assertPortFree(PREVIEW_HOST, PREVIEW_PORT)
+}
+async function shutdownPreview() {
+  shuttingDown = true
+  cleanup()
+  if (!(await waitForPortFree(3_000))) {
+    if (previewProc.pid) {
+      try { process.kill(-previewProc.pid, 'SIGKILL') } catch {}
+    }
+    await waitForPortFree(2_000)
+  }
+  if (!(await assertPortFree(PREVIEW_HOST, PREVIEW_PORT))) {
+    console.error(
+      `[a11y] FAIL: preview server still listening on ${PREVIEW_PORT} after group SIGKILL — next sweep would measure a stale server (221 D-02)`,
+    )
+    exitCode = 1
+  } else {
+    console.log(`[a11y] Preview shut down; port ${PREVIEW_PORT} free`)
+  }
+}
+// 221 WR-04: every exit path goes through the same async teardown as the normal end (browser
+// close, group SIGTERM escalating to SIGKILL, port-release proof). The synchronous `cleanup` on
+// 'exit' stays as a last resort for paths that bypass this (uncaught exceptions).
+// 221 WR-10: ONE idempotent teardown. The latch is set synchronously, before any await, so the
+// preview's early-exit listener cannot misreport a teardown-in-progress as a --strictPort
+// refusal, and a signal racing the route loop's own catch/finally joins the same teardown
+// instead of starting a second one that polls the same port and decides the exit status.
+// 221 WR-11: puppeteer's browser.close() has no timeout; a wedged Chrome (hung renderer, stuck
+// CDP Browser.close) must never keep the teardown from reaching the preview group kill.
+const BROWSER_CLOSE_TIMEOUT_MS = 3_000
+async function closeBrowserBounded() {
+  if (!browser) return
+  let timer
+  const closed = await Promise.race([
+    browser.close().then(() => true, () => true),
+    new Promise(r => { timer = setTimeout(() => r(false), BROWSER_CLOSE_TIMEOUT_MS) }),
+  ])
+  clearTimeout(timer)
+  if (!closed) {
+    console.error(`[a11y] browser.close() did not resolve in ${BROWSER_CLOSE_TIMEOUT_MS}ms; killing Chrome and continuing to the preview teardown (221 WR-11)`)
+    try { browser.process()?.kill('SIGKILL') } catch {}
+  }
+}
+let teardownPromise = null
+function teardown() {
+  if (!teardownPromise) {
+    shuttingDown = true
+    teardownPromise = (async () => {
+      await closeBrowserBounded()
+      await shutdownPreview()
+    })()
+  }
+  return teardownPromise
+}
+// 221 WR-10: the FIRST abort's status wins (a signal's 130/143 is never overwritten by a later
+// in-loop exit 1), and every exit after teardown reads it.
+let abortCode = null
+async function abort(code) {
+  if (abortCode === null) abortCode = code
+  await teardown()
+  process.exit(abortCode)
+}
+process.on('exit', () => { shuttingDown = true; cleanup() })
+// 221 WR-11: on a signal, the preview group is signalled SYNCHRONOUSLY first (before any
+// await), so nothing the browser does can keep vite on the port. A SECOND signal while the
+// teardown is still running forces the synchronous path: SIGKILL the preview group, then exit
+// with the first signal's status. Without this, repeated Ctrl-C/SIGTERM only re-awaited the same
+// close (puppeteer's own handlers are disabled), and the only way out was a SIGKILL of the
+// harness, which skips every exit handler and orphans vite on 4173.
+function onSignal(code) {
+  if (abortCode !== null) {
+    console.error(`[a11y] second signal during teardown; SIGKILL preview group ${previewProc.pid} and exit ${abortCode} (221 WR-11)`)
+    if (previewProc.pid) {
+      try { process.kill(-previewProc.pid, 'SIGKILL') } catch {}
+    }
+    try { browser?.process()?.kill('SIGKILL') } catch {}
+    process.exit(abortCode)
+  }
+  shuttingDown = true
+  cleanup()
+  void abort(code)
+}
+process.on('SIGINT', () => onSignal(130))
+process.on('SIGTERM', () => onSignal(143))
 
 // Wait for preview to be ready
 try {
   await waitForPort(PREVIEW_HOST, PREVIEW_PORT, CONNECT_TIMEOUT_MS)
 } catch (err) {
   console.error('[a11y] ERROR: Preview server did not start:', err.message)
-  cleanup()
-  process.exit(1)
+  await abort(1)
 }
 console.log(`[a11y] Preview ready at http://${PREVIEW_HOST}:${PREVIEW_PORT}`)
 
-// --- Launch headless Chrome ---
-let browser
+// 221 D-02: identity assertion — the server on the port must be the one this sweep spawned,
+// serving the variant this sweep asked for.
+let identity = null
 try {
-  browser = await puppeteer.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] })
+  const resp = await fetch(`http://${PREVIEW_HOST}:${PREVIEW_PORT}/__a11y-variant`)
+  identity = await resp.json()
+} catch {
+  identity = null
+}
+if (!identity || identity.variant !== VARIANT) {
+  console.error(
+    `[a11y] FAIL: preview server reports variant ${identity ? identity.variant : '(no sentinel response)'}, expected ${VARIANT} — not the server this sweep spawned (221 D-02)`,
+  )
+  await abort(1)
+}
+// 221 WR-05: the variant alone does not prove ownership (a leftover preview of the SAME variant
+// would pass). The answering server's process must belong to the process group this sweep spawned
+// (detached spawn => pgid === previewProc.pid).
+let identityPgid = NaN
+try {
+  identityPgid = Number(execFileSync('ps', ['-o', 'pgid=', '-p', String(identity.pid)]).toString().trim())
+} catch {}
+if (!Number.isInteger(identityPgid) || identityPgid !== previewProc.pid) {
+  console.error(
+    `[a11y] FAIL: preview server pid ${identity.pid} is in process group ${Number.isNaN(identityPgid) ? '(unknown)' : identityPgid}, not this sweep's group ${previewProc.pid} — not the server this sweep spawned (221 WR-05)`,
+  )
+  await abort(1)
+}
+console.log(`[a11y] Preview identity confirmed: variant=${identity.variant} pid=${identity.pid} pgid=${identityPgid}`)
+
+// --- Launch headless Chrome ---
+// 221 WR-04: puppeteer's default handleSIGINT/SIGTERM/SIGHUP call process.exit() themselves and
+// pre-empt abort(), skipping the preview teardown. The harness owns its signals.
+const OWN_SIGNALS = { handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false }
+try {
+  browser = await puppeteer.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'], ...OWN_SIGNALS })
 } catch {
   const execPath = process.env.PUPPETEER_EXECUTABLE_PATH
   if (!execPath) {
     console.error('[a11y] ERROR: System Chrome not found. Set PUPPETEER_EXECUTABLE_PATH to a Chrome binary.')
-    cleanup()
-    process.exit(1)
+    await abort(1)
   }
-  browser = await puppeteer.launch({ executablePath: execPath, headless: true, args: ['--no-sandbox'] })
+  try {
+    browser = await puppeteer.launch({ executablePath: execPath, headless: true, args: ['--no-sandbox'], ...OWN_SIGNALS })
+  } catch (err) {
+    console.error(`[a11y] ERROR: Chrome launch failed (${execPath}): ${err.message}`)
+    await abort(1)
+  }
 }
 
-let exitCode = 0
 const summary = []
 
-for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
+// 221 D-06 / WR-03: ids of the honouring (empty AND loading), non-chrome handlers a page requested.
+function honouringHits(urls) {
+  return [...new Set(urls.map(u => matchHandler(u)).filter(Boolean)
+    .filter(h => h.scope !== 'chrome' && (h.empty.body !== undefined || h.empty.emptyFrom) && h.loading.hold === true)
+    .map(h => h.id))]
+}
+
+// 221 WR-04: any uncaught rejection inside the sweep (newPage, AxePuppeteer.analyze, ...) still
+// reaches the full teardown below instead of only the synchronous single-SIGTERM `cleanup`.
+try {
+for (const { slug, path: routePath, contentMarker, interaction, variantMarkers, unmarkedEndpoints, variantInsensitive, insensitiveEndpoints, loadingSelector, loadingRetired } of ROUTES) {
+  // 221-06 D-08 fallback: a route whose only data endpoint is also the auth/chrome probe cannot be
+  // caught mid-load. Skipped LOUDLY (named exclusion row in UNMEASURED-EXCLUSIONS.md), never silently.
+  if (VARIANT === 'loading' && loadingRetired) {
+    console.log(`[a11y] NOTE [${slug}]: loading leg retired — ${loadingRetired}`)
+    summary.push({ slug, violations: 0, console: 0, incomplete: 0, status: 'RETIRED' })
+    continue
+  }
   const url = `http://${PREVIEW_HOST}:${PREVIEW_PORT}${routePath}`
   console.log(`[a11y] Scanning ${slug} [${THEME}] (${url})...`)
 
@@ -219,9 +414,20 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
     if (m.type() === 'warn' || m.type() === 'error') consoleMsgs.push(m.text())
   })
   page.on('pageerror', e => consoleMsgs.push(String(e)))
+  // 221 D-06: record every /api/ request so consumption is derived at run time.
+  const apiRequests = []
+  page.on('request', r => {
+    try {
+      const u = new URL(r.url())
+      if (u.pathname.startsWith('/api/')) apiRequests.push(u.pathname + u.search)
+    } catch {}
+  })
 
+  // 221 D-08: under `loading` the held request never settles, so networkidle2 would time out.
+  // Navigate on 'load', then wait for the skeleton as positive proof of the loading state.
+  const waitUntil = VARIANT === 'loading' ? 'load' : 'networkidle2'
   try {
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 })
+    await page.goto(url, { waitUntil, timeout: 30_000 })
   } catch (err) {
     console.error(`[a11y] ERROR: Navigation to ${url} failed: ${err.message}`)
     exitCode = 1
@@ -250,6 +456,98 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
       console.error(
         `[a11y] FAIL [${slug}]: content marker "${contentMarker}" not found — route rendered empty`,
       )
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
+      await page.close()
+      continue
+    }
+  }
+
+  // 221 D-05: render-state guard. BEFORE the axe scan and any baseline write. Under default
+  // every declared marker must be present; under empty/loading every one must be absent (and
+  // under loading the skeleton must be present). A sweep that measured the wrong server or a
+  // fixture that did not take effect fails here instead of baselining a hollow page.
+  if (variantMarkers) {
+    const present = {}
+    let skeleton
+    let emptyWitnesses
+    if (VARIANT === 'loading') {
+      skeleton = !!(await page.waitForSelector(loadingSelector ?? DEFAULT_LOADING_SELECTOR, { timeout: 5_000 }).catch(() => null))
+    }
+    // 221 WR-02: under `empty`, WAIT for the positive empty-state witness before the instantaneous
+    // marker-absence probe below, so a page that has not rendered yet cannot pass by absence.
+    // 221 WR-12: wait for EVERY required witness, not the first match. /hardware needs one from
+    // each of three independently fetched panels, and networkidle2 tolerates two in-flight
+    // requests, so reading witnesses when the first appears is a race in a required job.
+    // A condition wait (bounded), never a sleep; a timeout fails loudly naming what was observed.
+    // 221 WR-13: each witness is bound to its marked endpoint ([data-a11y-empty="<id>"]).
+    if (VARIANT === 'empty') {
+      const required = requiredEmptyWitnesses(variantMarkers)
+      const sels = Object.values(required)
+      const reached = await page
+        .waitForFunction(ss => ss.every(s => document.querySelector(s) !== null), { timeout: EMPTY_WITNESS_WAIT_MS }, sels)
+        .then(() => true, () => false)
+      emptyWitnesses = {}
+      for (const [id, sel] of Object.entries(required)) emptyWitnesses[id] = (await page.$$(sel)).length
+      if (!reached) {
+        const seen = Object.entries(emptyWitnesses).map(([id, n]) => `${id}=${n}`).join(', ')
+        console.error(
+          `[a11y] FAIL [${slug}]: waited ${EMPTY_WITNESS_WAIT_MS}ms for one empty-state witness per marked endpoint; observed ${seen} (221 WR-12/WR-13)`,
+        )
+      }
+    }
+    // 221 D-06: any honouring, non-chrome handler this page actually requested must be declared.
+    const hitIds = honouringHits(apiRequests)
+    const declared = new Set([...Object.keys(variantMarkers), ...Object.keys(unmarkedEndpoints ?? {})])
+    const undeclared = hitIds.filter(id => !declared.has(id))
+    for (const id of undeclared) {
+      console.error(
+        `[a11y] FAIL [${slug}]: page requested honouring endpoint '${id}' that routes.json does not declare — add a marker or an unmarkedEndpoints reason (221 D-06)`,
+      )
+    }
+    if (undeclared.length > 0) {
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
+      await page.close()
+      continue
+    }
+    for (const selector of Object.values(variantMarkers)) {
+      if (VARIANT === 'default') {
+        present[selector] = !!(await page.waitForSelector(selector, { timeout: 5_000 }).catch(() => null))
+      } else {
+        present[selector] = !!(await page.$(selector))
+      }
+    }
+    const rsViolations = renderStateViolations({
+      variant: VARIANT,
+      slug,
+      markers: variantMarkers,
+      present,
+      skeleton,
+      loadingSelector: loadingSelector ?? DEFAULT_LOADING_SELECTOR,
+      emptyWitnesses,
+    })
+    if (rsViolations.length > 0) {
+      for (const line of rsViolations) console.error(`[a11y] FAIL [${slug}]: ${line}`)
+      exitCode = 1
+      summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
+      await page.close()
+      continue
+    }
+  } else if (variantInsensitive) {
+    console.log(`[a11y] NOTE [${slug}]: variant-insensitive — ${variantInsensitive}`)
+    // 221 WR-03: the opt-out is not self-attested. Every honouring, non-chrome endpoint the page
+    // actually requested must be named in insensitiveEndpoints with its own reason (and its own
+    // UNMEASURED-EXCLUSIONS row), mirroring unmarkedEndpoints on marked routes.
+    const hit = honouringHits(apiRequests)
+    console.log(`[a11y] NOTE [${slug}]: honouring endpoints hit: ${hit.join(', ') || '(none)'}`)
+    const undeclaredInsensitive = hit.filter(id => !Object.hasOwn(insensitiveEndpoints ?? {}, id))
+    for (const id of undeclaredInsensitive) {
+      console.error(
+        `[a11y] FAIL [${slug}]: variant-insensitive route requested honouring endpoint '${id}' that insensitiveEndpoints does not declare — mark the route, or give '${id}' its own reason and exclusion row (221 WR-03)`,
+      )
+    }
+    if (undeclaredInsensitive.length > 0) {
       exitCode = 1
       summary.push({ slug, violations: 0, console: consoleMsgs.length, incomplete: 0, status: 'FAIL' })
       await page.close()
@@ -550,9 +848,23 @@ for (const { slug, path: routePath, contentMarker, interaction } of ROUTES) {
   summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length, incomplete: incompleteCount, status: routeStatus })
   await page.close()
 }
-
-await browser.close()
-cleanup()
+} catch (err) {
+  // 221 WR-10: a signal that closes the browser (or a terminal/CI group SIGINT that kills Chrome
+  // directly) rejects the in-flight page call, and that rejection can be dispatched before the
+  // signal handler. Give a pending signal a moment to land, then yield to it: an interrupted run
+  // is reported as interrupted, never as an "uncaught error" with exit 1.
+  if (abortCode === null) await new Promise(r => setTimeout(r, 250))
+  if (abortCode !== null) {
+    console.error(`[a11y] sweep interrupted (exit ${abortCode}); in-flight page call ended: ${err?.message ?? err}`)
+  } else {
+    console.error(`[a11y] FAIL: sweep aborted by an uncaught error: ${err?.stack ?? err}`)
+    exitCode = 1
+  }
+} finally {
+  await teardown()
+}
+// 221 WR-10: a signal that arrived during the sweep or its teardown owns the exit status.
+if (abortCode !== null) process.exit(abortCode)
 
 // 216 D-17: in-process ledger collection is gone. Theme is now a per-process dimension
 // (D-01/D-02), so a single `--update-baselines` invocation can only ever see ONE theme — it

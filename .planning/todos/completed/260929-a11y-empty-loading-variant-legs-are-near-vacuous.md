@@ -3,8 +3,8 @@
 **Filed:** 2026-09-29, by the Phase 216 verifier (`gaps_found`, blocker B1), mechanism confirmed
 independently at close-out.
 **Priority:** P1 — two of the four CI a11y gate steps prove far less than their names claim.
-**Owner:** Phase 220 (CI Instrument Truth) is the natural home; it is the same defect class as the
-theme axis Phase 216 just repaired, one axis over.
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 
 ## The observation
 
@@ -81,3 +81,14 @@ captured by a sweep that waits for content.
   It rewrote four of them: `certificates-{empty,loading}-dark` went `(none)` → `color-contrast:2`,
   and `hardware-{empty,loading}-dark` went `color-contrast:3 + scrollable-region-focusable:1` →
   `color-contrast:8`. True only of `data-at-rest` (2→2) and `compare`. Corrected.
+
+## Resolution (Phase 221, 2026-10-01)
+
+The real root cause was a leaked preview server: the vite grandchild survived the npm wrapper's
+SIGTERM on Linux, so every sweep after the first measured the default-variant server. The
+"1 of 10 handlers honours the variant" mechanism above was wrong (RESEARCH Findings 1-2). Fixed with
+process-group kill, `--strictPort`, a `/__a11y-variant` identity sentinel, a per-route render-state
+guard, and a declarative handler table with a variant contract. Each leg was shown able to fail:
+see `.planning/phases/221-close-gap-a11y-blind-spots-empty-loading-variant-legs/221-evidence/mutations.md`
+(M1b run 36913766698, M2b run 36914404491, M3 local, M4/M5 contract tests); restored green at
+Linux run 36913079235. One loading leg is retired by name (`/scans`, exclusion UX-12).

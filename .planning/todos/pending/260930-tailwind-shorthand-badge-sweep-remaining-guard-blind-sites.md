@@ -3,6 +3,8 @@
 **Filed:** 2026-09-30 (Phase 218 plan 218-04, D-07/D-08 TODO-220 ledger)
 **Priority:** P3 — no known failing pair confirmed; this is an instrument-coverage gap, not a
 confirmed defect
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 **Status:** open, not triaged
 
 ## What happens

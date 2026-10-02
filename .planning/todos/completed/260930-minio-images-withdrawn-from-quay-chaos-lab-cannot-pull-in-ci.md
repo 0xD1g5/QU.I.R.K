@@ -61,3 +61,44 @@ oracle that mentions MinIO) in the same change. Re-verify with a **cache-less** 
 
 - The compose comment at ~:986 ("quay.io, NOT Docker Hub … Verified 2026-09-13") — true then, stale now.
 - Every "environmental" label on these two nodes, so the next red run is not waved through.
+
+## Resolution (Phase 220)
+
+**Closed 2026-10-01 by Phase 220 (CITRUTH-02), plans 220-02, 220-03 and 220-07. Option 3 chosen:
+MinIO replaced.** Operator decision D-01R (2026-10-01) superseded the original choice (option 1,
+GHCR mirror, D-01, 2026-09-30). The mirror was abandoned because its only source, the two cached
+images (`14cea493d9a3`, `993e8c454a7e`), was gone from Docker Desktop on resume, and every upstream
+channel was closed: Docker Hub 404, quay.io 401, dl.min.io **410** for both pinned releases. Building
+from source (option 2) would have made the project an AGPLv3 binary publisher and the owner of a
+multi-arch Go build.
+
+- **Fix (220-03, `bc389a44` / `1911a241`):** the four services `minio`, `minio-seed`,
+  `mh-storage-archive` and `mh-storage-seed` run `motoserver/moto:5.2.3` (Apache-2.0, Docker Hub,
+  amd64+arm64). Seeding is one boto3 script, `storage/s3-seed.py`, run from the same image. Both
+  mc shell scripts were deleted. The endpoints (`:29000`, `10.80.0.50:9000`), the `minio` service
+  names and the `minioadmin` creds are kept (rename tracked in `261001-rename-chaos-lab-minio-services-to-s3.md`).
+  The scanner needs only `list_buckets`, `get_bucket_encryption` and
+  `ServerSideEncryptionConfigurationNotFoundError`, all verified against moto.
+- **Honest skip (220-02, D-04, `0cf2eb35`):** `test_profile_re_up_is_idempotent` skips only when the
+  first `up` fails with a registry `unauthorized`/`denied`/`not found` pull error naming the image AND
+  an anonymous control probe (`library/alpine:3.20` on docker.io) succeeds. Any other failure still
+  fails. The skip did not fire in either proof below.
+- **Cache-less proofs:** `220-diag/MOTO-PROOF.md` (220-03: `docker rmi`, empty `docker images`, then
+  `2 passed` with an anonymous client config) and `220-diag/CACHELESS.md` (220-07, re-run at the
+  pre-push tree: same steps, `2 passed in 68.00s`, re-pulled digest
+  `sha256:91fd602a21f49cf9eb82fdf474015a3c131d40104c8297ea6a2ca920708ae32c`, identical to 220-03's).
+- **Observed behaviour change:** MinIO's `:9001` console is gone, so the multihost `.50` HIGH count
+  is 1 (observed by a scoped scan), not 2. The full-estate aggregate 14 -> 13 HIGH is marked DERIVED in
+  `expected_results_v4.md`.
+- **Docs touched:** `docker-compose.yml` comments, `quantum-chaos-enterprise-lab/README.md`,
+  `expected_results_v4.md`, `labs/storage/expected_results.md`, `docs/chaos-lab.md` (+ vault
+  `Chaos-Lab.md`), `docs/UAT-SERIES.md` (UAT-28-01 reworded; Series 220 UAT-220-02/03; the two
+  "permanently withdrawn" notes annotated), and CLAUDE.md. `lab.sh` references no image and was not
+  edited. The "environmental" label on these nodes in `STATE.md`'s v5.25 Deferred Items row was
+  annotated as superseded.
+
+**This todo is closed on local cache-less evidence, not on CI.** The CI leg (both nodes `passed`, not
+skipped, on the branch's `Linux Full Suite` dispatch) is recorded by 220-08 in
+`220-diag/CI-EVIDENCE.md` and `220-VERIFICATION.md`; the "green on `main`" leg can only be checked
+after the PR merges. **If 220-08's CI leg fails or skips either node, move this file back to
+`.planning/todos/pending/`** (`git mv`) and record the run id and the reason here.

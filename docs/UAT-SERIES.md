@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
+**Last Updated:** 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
+DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
+reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
+MinIO" notes in Series 218/219 annotated as fixed. No version bump. Prior: 2026-09-30 (Phase 219 close — Keyboard Access, KBD-01. Series 219 added: 5
 cases, all five PASS — UAT-219-05, the D-10 operator keyboard spot-check, flipped from SKIP
 (DEFERRED) to PASS on the operator's own confirmation ("keyboard pass") at verification. The gating proof is
 UAT-219-04's CI-only axe round-trip withdrawing `scrollable-region-focusable` from all 4
@@ -2415,14 +2419,16 @@ All of these services show status `Up` or `running`:
 
 ---
 
-### UAT-28-01: S3 Chaos Lab End-to-End — MinIO Bucket Encryption Scan
+### UAT-28-01: S3 Chaos Lab End-to-End — Lab S3 (moto) Bucket Encryption Scan
 
-> Added Phase 28 (2026-04-25): STOR-01 — validate `_scan_s3_encryption` against MinIO chaos lab buckets. Tests S3 severity ladder (HIGH unencrypted, no finding SSE-S3) and dar_storage_* evidence counters.
+> Added Phase 28 (2026-04-25): STOR-01 — validate `_scan_s3_encryption` against the chaos lab's S3 buckets. Tests S3 severity ladder (HIGH unencrypted, no finding SSE-S3) and dar_storage_* evidence counters.
+>
+> Updated Phase 220 (2026-10-01): the lab's S3 server was MinIO until Phase 220 replaced it with `motoserver/moto:5.2.3` (D-01R; the MinIO images were withdrawn from every registry). The endpoint (`:29000`), the `minio` service name and the `minioadmin` credentials are unchanged, and the scanner verdict was re-observed against moto (`220-diag/MOTO-PROOF.md`). The seed script is now `storage/s3-seed.py`; `storage/minio-seed.sh` was deleted. Result line unchanged.
 
-**Prerequisites:** Docker installed; `quantum-chaos-enterprise-lab/storage/minio-seed.sh` present; Phase 28 complete.
+**Prerequisites:** Docker installed; `quantum-chaos-enterprise-lab/storage/s3-seed.py` present (run by the `minio-seed` compose service); Phase 28 complete.
 
 **Steps:**
-1. Start the MinIO storage-s3 profile:
+1. Start the storage-s3 profile (moto S3 server + seed):
    ```bash
    cd quantum-chaos-enterprise-lab && docker compose --profile storage-s3 up -d
    ```
@@ -2434,7 +2440,7 @@ All of these services show status `Up` or `running`:
      aws_region: us-east-1
      aws_endpoint_url: http://localhost:29000
    ```
-4. Set MinIO test credentials:
+4. Set the lab's S3 test credentials (the lab keeps the `minioadmin` values):
    ```bash
    export AWS_ACCESS_KEY_ID=minioadmin
    export AWS_SECRET_ACCESS_KEY=minioadmin
@@ -30975,7 +30981,8 @@ baselines + ledger). Second dispatch `36777724820` (head `12cc9438`): Axe + Cons
 dispatch `36778111199` (same head): `2 failed, 5210 passed, 118 skipped, 75 xfailed, 6 xpassed` —
 `test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]` and `[storage-s3]`,
 byte-identical failing-node set and pass count to `main`'s latest run `36728169611` (the
-permanently withdrawn MinIO-image chaos-lab nodes per CLAUDE.md, not a regression). 5 residual
+permanently withdrawn MinIO-image chaos-lab nodes per CLAUDE.md, not a regression; [2026-10-01,
+Phase 220: no longer permanent. MinIO was replaced with moto and both nodes pass, see Series 220]). 5 residual
 axe nodes across 2 files that carried 217-04's "unknown — needs triage" attribution were resolved
 via a local, reverted per-node debug probe: certificates-dark's bare `--status-critical` text span,
 compare-light's teal `label-eyebrow` + magenta "Worsened" advisory-firewall hues, hardware-light's
@@ -31160,7 +31167,8 @@ grep -l countRange src/dashboard/tests/a11y/baseline-*.json | wc -l
 **Pass Criteria:** all three commands return `0`; a second CI dispatch after the withdrawal
 commit reports the Axe + Console Gate green on all 4 sweep steps (dark/light/empty/loading); the
 Linux Full Suite failing-node set on the branch is identical to `main`'s (the 2 permanent,
-withdrawn-MinIO-image chaos-lab Docker nodes, not an environmental or new failure).
+withdrawn-MinIO-image chaos-lab Docker nodes, not an environmental or new failure; [2026-10-01,
+Phase 220: fixed by replacing MinIO with moto, see Series 220]).
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-30  **Tester:** automated
@@ -31209,5 +31217,477 @@ Tab until the table region shows the teal ring, ArrowLeft/ArrowRight (and Down/P
 it while the page stays put; widening so the table fits (Tab skips it) and the light-theme ring
 were offered as optional. The operator's two-word confirmation does not itemise which optional
 steps were exercised, so only the core Tab-to-region + arrow-scroll claim is attested here.
+
+---
+
+## Series 220: CI Instrument Truth (Phase 220 — v5.26)
+
+**Last Updated:** 2026-10-01 (Phase 220 execution, plans 01-07; 220-08 CI acceptance pending). Seven
+cases. UAT-220-01 covers the batched vitest gate (CITRUTH-01: NOT REPRODUCED in 10 diagnostic
+attempts, hygiene fix, self-diagnosing census, 10/10 local leg); UAT-220-02 the checkable
+registry-refusal skip (CITRUTH-02, 220-02); UAT-220-03 the moto replacement for the withdrawn MinIO
+images, proven from a cache-less pull (CITRUTH-02, 220-03 + 220-07); UAT-220-04 `branch_ci_state.py`
+(CITRUTH-03, 220-04); UAT-220-05 the ARTIFACT-05 phase-close gate (CITRUTH-03, 220-05); UAT-220-06
+the verifier CI-truth patch revert detector (CITRUTH-03, 220-06). UAT-220-07, the live D-15
+demonstration on this phase's own branch, is SKIP DEFERRED: its refusal and green legs are recorded in
+`220-VERIFICATION.md` by 220-08 and the verifier, not here. CITRUTH-02's "green on `main`" leg can only
+be checked after the PR merges and is not claimed by any case below.
+
+### UAT-220-01: Batched Vitest Substitute Gate Is Stable And Self-Diagnosing
+
+**ID:** UAT-220-01
+**Title:** The batched `test_vitest_substitute_nodes_pass` gate passes repeatedly under load, and a
+failure would carry its own diagnostic census
+**Maps to:** CITRUTH-01
+
+**What to test:** The intermittent 14-node failure seen on 2026-09-27 does not recur across repeated
+batched runs (D-10 local leg), and the gate prints a `[220-01] warnings` census so a recurrence can be
+diagnosed from its own output.
+
+**Steps:**
+```
+.venv/bin/python -m pytest "tests/test_uat_disposition_integrity.py::test_vitest_substitute_nodes_pass" -m "" -q -rP
+```
+
+**Pass Criteria:** 1 passed (not skipped: npm and `src/dashboard/node_modules` must be present); the
+`-rP` output contains a `[220-01] warnings act=` census line; `220-diag/DIAGNOSIS.md` records 10/10
+consecutive batched passes including one under CPU contention.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **1 passed in 6.13s**, `[205-06]
+cited={'passed': 36, 'failed': 0, 'skipped': 0, 'total': 36}`, census `[220-01] warnings act=0 unhandled=0
+econnrefused=0 console_error=0`. `220-01-SUMMARY.md` and
+`220-diag/DIAGNOSIS.md` record the D-10 local leg (10/10 consecutive batched passes, one under 20x
+`yes` CPU contention, one concurrent with a real Playwright suite) and the verdict, **NOT REPRODUCED
+in 10 attempts**. The fix applied was hygiene (an un-mocked `fetchApi` in three
+`executive-*.test.tsx` files), not a demonstrated cause. The D-10 CI leg (3 `Linux Full Suite`
+dispatches, node `passed` read per step) is recorded by 220-08 in `220-VERIFICATION.md`; a green
+local run is a sample, not a root cause.
+
+### UAT-220-02: Registry-Refusal Skip Is Checkable, Never Generic
+
+**ID:** UAT-220-02
+**Title:** `test_profile_re_up_is_idempotent` skips only on a named registry refusal with a successful
+public control probe
+**Maps to:** CITRUTH-02
+
+**What to test:** The pure classifier in `tests/chaos_registry_probe.py` recognises
+`unauthorized`/`denied`/`not found` pull errors and names the refused image, the anonymous control
+probe (`library/alpine:3.20` on docker.io) is consulted, and any other non-zero `up` still fails.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_chaos_registry_probe.py -q
+```
+
+**Pass Criteria:** 0 failed; the count is recorded below.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **14 passed**. The skip is registered in
+`tests/skip_registry.py` by qualname (220-02, `0cf2eb35`). It did not fire in the cache-less run of
+UAT-220-03: both nodes passed.
+
+### UAT-220-03: S3 Lab Profiles (moto) Come Up From A Cache-Less Anonymous Pull
+
+**ID:** UAT-220-03
+**Title:** `storage-s3` and `multihost` pass the idempotency gate with `motoserver/moto:5.2.3` pulled
+anonymously from an empty local cache
+**Maps to:** CITRUTH-02
+
+**What to test:** MinIO's images were withdrawn from every registry (quay 401, Docker Hub 404,
+dl.min.io 410), so the four S3 services now run `motoserver/moto:5.2.3` (D-01R). The proof must not
+rely on a cached image, and it must be a PASS, not the D-04 skip.
+
+**Steps:**
+```
+cd quantum-chaos-enterprise-lab && ./lab.sh down && cd ..
+docker rmi motoserver/moto:5.2.3
+docker images | grep -iE "moto|minio"          # must print nothing
+# credential-free client config so the pull is anonymous
+DOCKER_CONFIG=<dir with {"auths":{},"currentContext":"desktop-linux"}> \
+  .venv/bin/python -m pytest \
+  "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[storage-s3]" \
+  "tests/test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[multihost]" -m "" -q -rs
+```
+
+**Pass Criteria:** the `docker images` check is empty before the run; 2 passed, 0 skipped; the image
+present afterwards is the one the test pulled.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Observed twice. 220-03 (`220-diag/MOTO-PROOF.md`): `2 passed, 29 deselected in 185.61s`.
+220-07 (`220-diag/CACHELESS.md`, re-run before the push): `docker rmi` deleted
+`sha256:91fd602a21f4…`, the `docker images` grep was empty, then `2 passed in 68.00s` with no
+skips, and the re-pulled image was again `sha256:91fd602a21f49cf9eb82fdf474015a3c131d40104c8297ea6a2ca920708ae32c`.
+The scanner verdict against moto (unencrypted-bucket HIGH `S3/unencrypted`, encrypted-bucket
+`S3/sse-s3` no finding) is in MOTO-PROOF.md. A local run is not the CI leg: the CI observation of
+these two nodes is recorded by 220-08.
+
+### UAT-220-04: branch_ci_state Reports CI Truth At Branch HEAD
+
+**ID:** UAT-220-04
+**Title:** `scripts/branch_ci_state.py` exits 0 only for green-at-HEAD; a stale-sha success is
+unobserved, and a `gh` failure exits 2
+**Maps to:** CITRUTH-03
+
+**What to test:** Verdicts are computed against the branch HEAD sha and the repo-owned required-job
+set (not branch protection), with precedence red > unobserved > green.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_branch_ci_state.py -q
+python3 scripts/branch_ci_state.py --branch phase-220-ci-instrument-truth --compare-main; echo "exit=$?"
+```
+
+**Pass Criteria:** 0 failed; the live call before any dispatch exits non-zero.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **29 passed**. The first live refusal is
+`220-diag/ci-state-refusal-1.json` (exit 1, verdict `unobserved`: no run on the never-pushed branch).
+220-04 recorded four reverted mutation probes, each turning the suite red.
+
+### UAT-220-05: Phase Close Requires Recorded Green CI At HEAD (ARTIFACT-05)
+
+**ID:** UAT-220-05
+**Title:** The pre-commit phase-close gate blocks unless VERIFICATION.md carries a green `ci:` block
+observed at exactly the local HEAD
+**Maps to:** CITRUTH-03
+
+**What to test:** `scripts/verify_phase_gates.py::check_ci_truth` re-derives required-ness, rejects
+stale or mismatched shas, and accepts a `ci_waiver` only when its node set equals `main`'s failing set.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_verify_phase_gates.py -q -k "ci_truth or ci_block"
+```
+
+**Pass Criteria:** 0 failed; the count is recorded below.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time: **44 passed, 46 deselected**. Includes the
+hook-integration pair (`test_hook_integration_phase_close_with_green_ci_block_at_head_succeeds` /
+`..._without_ci_block_rejected`) that drives a real `.githooks/pre-commit` in a disposable repo.
+220-05 recorded eight reverted mutation probes, each turning the suite red.
+
+### UAT-220-06: Verifier CI-Truth Patch Revert Detector
+
+**ID:** UAT-220-06
+**Title:** A revert of the local `gsd-verifier` CI-truth patch turns a repo test red
+**Maps to:** CITRUTH-03
+
+**What to test:** `tests/test_gsd_verifier_ci_patch.py` asserts the behaviour-bearing text of
+`~/.claude/agents/gsd-verifier.md` (Step 9 rule 0, exit 1/2 force `gaps_found`, Step 9b no-defer,
+the `ci:` template) and that it equals its `gsd-local-patches` snapshot.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_gsd_verifier_ci_patch.py -q -rs
+```
+
+**Pass Criteria:** 0 failed, 0 skipped on the operator machine.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live at this case's write time on the operator machine: **8 passed**. In the
+`Linux Full Suite` CI job it **skips** at module level (no operator toolchain there; registered
+`environment_capability`). A skip there is not a pass and is not evidence the patch is in force.
+
+### UAT-220-07: Live D-15 Demonstration On A Real Branch
+
+**ID:** UAT-220-07
+**Title:** Verification refuses `passed` on `phase-220-ci-instrument-truth` while its CI is red or
+unobserved at HEAD, and accepts once it is green
+**Maps to:** CITRUTH-03
+
+**What to test:** The D-15 demonstration against this phase's own branch: at least one live refusal
+and one live green, both recorded in `220-VERIFICATION.md`.
+
+**Steps:**
+```
+git push -u origin phase-220-ci-instrument-truth
+gh workflow run 'Python CI' --ref phase-220-ci-instrument-truth
+gh workflow run 'Dashboard Quality' --ref phase-220-ci-instrument-truth
+python3 scripts/branch_ci_state.py --branch phase-220-ci-instrument-truth --compare-main; echo "exit=$?"
+```
+
+**Pass Criteria:** a refusal (exit 1) before or during the runs and exit 0 once every required job is
+green at HEAD, both recorded in `220-VERIFICATION.md`'s `ci:` block / `## CI State` section.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_branch_ci_state.py::test_successful_run_at_older_sha_is_unobserved_not_green`)
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** The cited node is the unit-level substitute for the stale-sha refusal path. It is
+necessary but not sufficient (D-15). The live legs run in 220-08 and the verifier, after this case is
+written, and are recorded in `220-VERIFICATION.md`, not here. The first live refusal already exists
+(`220-diag/ci-state-refusal-1.json`, exit 1, `unobserved`), but on the "no run at all" path, not the
+stale-sha path.
+
+---
+
+## Series 221: Close Gap — A11y Blind Spots + Empty/Loading Variant Legs (Phase 221 — v5.26)
+
+**Last Updated:** 2026-10-01 (Phase 221 execution, plans 01-09). Eleven cases. Until this phase the
+`empty` and `loading` a11y sweeps on Linux CI silently measured the first sweep's leaked preview server,
+so their baselines held default-variant numbers (HARNESS-03). UAT-221-01/02 cover the loud-first refusal
+and the identity-confirmed sweeps after the lifecycle fix; UAT-221-03/04 the render-state guard and the
+handler/route contracts; UAT-221-05/06 the empty- and loading-leg mutations; UAT-221-07 the `/scans` and
+`/sensors` routes with Linux baselines; UAT-221-08 the DS-chip and cytoscape token guards (FIX-05);
+UAT-221-09 the UNMEASURED-EXCLUSIONS ledger; UAT-221-10 the todo Owner close gate (INT-01). UAT-221-11
+records the operator's verdict on the CBOM light-theme system node as FAIL: a confirmed, measured
+(1.25:1) rendered defect owned by backlog 999.118, not fixed in this phase. Vitest counts below were
+re-run live at write time.
+
+### UAT-221-01: Stale Preview Server Is Refused Loudly
+
+**ID:** UAT-221-01
+**Title:** The a11y harness refuses to run when port 4173 already answers
+**Maps to:** HARNESS-03
+
+**What to test:** Landing the guards without fixing the lifecycle must turn Linux CI red, proving the
+refusal fires on the real leak and is not decorative.
+
+**Steps:**
+```
+gh run view 36904731159 --repo 0xD1g5/QU.I.R.K --json conclusion,headSha
+```
+
+**Pass Criteria:** Dashboard Quality run 36904731159 at head `c25bf9d1` concluded `failure`, with the
+light-theme sweep step failing on the stale-server refusal and the dark sweep green.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Evidence `221-evidence/ci-loud-first.md` (per-step conclusions read, not the run
+conclusion). Build, Lint, Test and the dark sweep succeeded; the light sweep failed; empty and loading
+were skipped. The predicted red is the proof that the guard can fail.
+
+### UAT-221-02: Sweeps Measure Their Own Server After The Lifecycle Fix
+
+**ID:** UAT-221-02
+**Title:** Each sweep starts its own `vite preview --strictPort`, confirms identity, and frees the port
+**Maps to:** HARNESS-03
+
+**What to test:** After the process-group lifecycle fix every sweep logs
+`Preview identity confirmed: variant=<v>` with a distinct pid and `port 4173 free` afterwards, and the
+four-sweep gate is green at the regenerated-baselines head.
+
+**Steps:**
+```
+gh run view 36913079235 --repo 0xD1g5/QU.I.R.K --json conclusion,headSha
+```
+
+**Pass Criteria:** run 36911414229 (head `5be40733`) shows identity `variant=empty` confirmed for the
+empty sweep with distinct pids; run 36913079235 (head `aeba7616`) shows Axe + Console Gate with the dark,
+light, empty and loading sweeps all success.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Evidence `221-evidence/ci-after-lifecycle-fix.md` and `ci-regen-green.md`. In 36911414229
+the empty sweep failed only on a count diff (certificates color-contrast 0 below the leak-era baseline
+of 1), which is the leak-era baseline being corrected, resolved by the Linux regeneration in 221-07
+(run 36912565231).
+
+### UAT-221-03: The Render-State Guard Can Fail
+
+**ID:** UAT-221-03
+**Title:** `renderStateViolations` flags a present marker under `empty`/`loading` and a missing skeleton
+**Maps to:** HARNESS-03
+
+**What to test:** The pure render-state evaluator reports exactly one violation for each vacuous
+variant and none for a legitimate one.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/variant-guard-probe.test.ts
+```
+
+**Pass Criteria:** 9 passed, 0 failed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `variant-guard-probe.test.ts (9 tests)` passed, including "empty with a marker
+present is exactly one violation naming the selector and 'present'". A mutation of the production
+`compareToBaseline` floor branch turned the sibling probe red (`221-evidence/w1-probe-mutation.log`).
+
+### UAT-221-04: Handler And Route Variant Contract
+
+**ID:** UAT-221-04
+**Title:** Every fixture handler and route carries an explicit empty/loading decision
+**Maps to:** HARNESS-03
+
+**What to test:** `variant-contract.test.ts` requires each of the 12 handlers to declare exactly one of
+`empty.{body|emptyFrom|na}` and a loading decision, and each route to declare markers or a written
+`variantInsensitive` reason.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/variant-contract.test.ts tests/a11y/fixture-coverage.test.ts
+```
+
+**Pass Criteria:** 0 failed; counts recorded below.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `variant-contract.test.ts (56 tests)` and `fixture-coverage.test.ts (40 tests)`
+passed. Mutations M4 (delete a handler's `empty`) and M5 (a route marking a handler that does not honour
+both variants) were each red with the offending handler named (`221-evidence/mutations.md`).
+
+### UAT-221-05: Empty-Leg Mutation Goes Red On Linux
+
+**ID:** UAT-221-05
+**Title:** Making the hardware handler ignore `empty` fails the empty leg on CI
+**Maps to:** HARNESS-03
+
+**What to test:** On a throwaway branch, mutate `empty` for the hardware-drift handler so it serves
+default content (mutation M2b), dispatch Dashboard Quality, and confirm a render-state failure naming the
+marker. (M2a was a mis-applied mutation and is not counted.)
+
+**Steps:**
+```
+gh run view 36914404491 --repo 0xD1g5/QU.I.R.K --log-failed | grep "render state"
+```
+
+**Pass Criteria:** the log contains `render state [hardware/empty]: marker ".font-data" (hardware-drift)
+is present`; restoring returns to green (run 36913079235).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Evidence `221-evidence/mutations.md`. The Axe job's own sweep steps were skipped because the
+`Test` step went red first on the contract tests; the sweep-level line comes from the Regenerate job,
+which runs the same `run-a11y.mjs`. The throwaway branches were deleted locally and remotely.
+
+### UAT-221-06: Loading-Leg Mutation Goes Red
+
+**ID:** UAT-221-06
+**Title:** A loading handler that answers immediately fails the loading leg
+**Maps to:** HARNESS-03
+
+**What to test:** Mutation M3 (loading handlers answer immediately) makes the render-state guard fail on
+the routes whose markers then appear, and restoring yields zero render-state lines.
+
+**Steps:** see `221-evidence/mutations.md` section M3 (local `node tests/a11y/run-a11y.mjs` loading sweep
+before and after the mutation).
+
+**Pass Criteria:** `render state [root/loading]` and 7 further routes reported, exit 1; restore gives 0
+render-state lines, exit 0.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage)
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Run locally on macOS only (the render-state mechanism is platform independent), and the
+production mutation cannot be re-run from a unit node: it needs a built preview and Chrome, and the CI
+loading sweep proves only the green direction (36913079235, `variant=loading` identity confirmed). The
+red direction is recorded, not re-executable here, hence an honest GAP rather than PASS.
+
+### UAT-221-07: /scans And /sensors Are Swept With Linux Baselines
+
+**ID:** UAT-221-07
+**Title:** `scan-history` and `sensors` routes are in the sweep with Linux-regenerated baselines
+**Maps to:** HARNESS-03, FIX-05
+
+**What to test:** Both routes appear in `routes.json`, have baselines for every applicable
+(variant, theme), and the Linux four-sweep gate is green at the regenerated head.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/variant-contract.test.ts tests/a11y/fixture-coverage.test.ts
+```
+
+**Pass Criteria:** 0 failed; CI run 36913079235 green (see UAT-221-02).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live, 96 passed across the two files. The one new baseline entry is `sensors`
+default-light color-contrast 1 (the `Stale` badge, DS `high` chip, 3.42:1), accepted with a written
+justification and owned by 999.118. The `/scans` loading leg is retired as exclusion UX-12. FIX-05
+therefore stays qualified: it is true only of what RATCHET-01 measures.
+
+### UAT-221-08: DS Chip And Cytoscape Token Pairs Are Measured
+
+**ID:** UAT-221-08
+**Title:** Shrink-only contrast ratchets exist for the DS severity chips and cytoscape node labels
+**Maps to:** FIX-05
+
+**What to test:** The two guards measure every theme x chip x surface pair and every cytoscape
+label/fill pair at run time, hold a shrink-only baseline, and can flag a new, worsened, fixed or orphan
+pair.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/__tests__/ds-severity-chip-contrast-guard.test.ts src/components/__tests__/cytoscape-label-contrast-guard.test.ts
+```
+
+**Pass Criteria:** 0 failed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: 10 passed (DS chip guard) and 4 passed (cytoscape guard). 10 of 20 DS pairs fail
+AA and are baselined with their ratios, not fixed; no colour token was changed. Mutation logs:
+`221-evidence/ds-chip-mutation.log`, `cytoscape-mutation.log`. PASS here means the instrument works, not
+that the colours pass.
+
+### UAT-221-09: Unmeasured Exclusions Are Enforced From Source
+
+**ID:** UAT-221-09
+**Title:** Every blind spot is a measured route or a named UNMEASURED-EXCLUSIONS row
+**Maps to:** HARNESS-03
+
+**What to test:** `unmeasured-exclusions.test.ts` derives the required rows from source and fails on a
+missing row, an orphan row, a placeholder reason, a non-HORIZON owner or a future date.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/unmeasured-exclusions.test.ts
+```
+
+**Pass Criteria:** 24 passed, 0 failed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `unmeasured-exclusions.test.ts (24 tests)` passed.
+
+### UAT-221-10: Re-Pointed Todos Have Live Owners
+
+**ID:** UAT-221-10
+**Title:** No pending todo names Phase 220 as owner; 999.118 and 999.119 reconcile
+**Maps to:** INT-01
+
+**What to test:** The Owner close gate prints nothing and the backlog reconciliation gate passes with its
+local-only leg running.
+
+**Steps:**
+```
+grep -rln "Owner.*Phase 220" .planning/todos/pending
+.venv/bin/python -m pytest tests/test_backlog_reconciliation_gate.py -q
+```
+
+**Pass Criteria:** the grep prints nothing; 11 passed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `11 passed`. Evidence `221-evidence/todo-owner-gate-final.txt`. The twelve
+todos are owned by 999.118 (design calls and instrument blind spots) or 999.119 (CI and chaos-lab
+hygiene).
+
+### UAT-221-11: CBOM Light-Theme System Node Labels Are Readable
+
+**ID:** UAT-221-11
+**Title:** Operator verdict on the CBOM graph system nodes in light theme
+**Maps to:** FIX-05
+
+**What to test:** Open `/cbom`, Graph tab, light theme, and read the three system node labels
+(chaos-lab.local:443, :8443, :22).
+
+**Steps:** `quirk serve` against the default fixture DB, switch to light theme, open CBOM then Graph.
+
+**Pass Criteria:** all three labels are legible.
+
+**Result:** - [ ] PASS  - [x] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** operator
+**Notes:** Operator verdict, verbatim: "no I cannot read their labels". Three grey rounded-rectangle
+nodes, measured at 1.25:1 (`cbom|system|light`, 221-02). This is a confirmed rendered defect, not
+fixed in Phase 221 (no colour token was changed); it is recorded in backlog 999.118 as
+"rendered defect, operator-confirmed 2026-10-01". FIX-05's qualification stands because of it.
 
 ---

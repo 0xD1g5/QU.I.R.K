@@ -2,6 +2,8 @@
 
 **Filed:** 2026-09-29 (during Phase 216 close-out)
 **Priority:** P2 — a required-ish CI job, red on a phase branch, green on `main`
+**Owner:** 999.119 (HORIZON.md ledger row; backlog .planning/backlog/999.119-ci-and-chaos-lab-hygiene-carry-forward/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 **Status:** pending
 
 ## What happened

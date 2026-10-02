@@ -127,3 +127,20 @@ both are now downloadable from one screen without ever "showing" the other surfa
 consulting-grade report, 15/100) and do NOT press Export PDF in the same session. If asked why both
 exist, the honest answer is that they are two different pipelines and consolidating them is tracked
 work, not an accident discovered live.
+
+## Resolution (v5.26 re-audit, 2026-10-02)
+
+All three named causes are fixed on `main` (verified against live code at `4415fbf2`, not a summary):
+
+- **A (one certificate, two CRITICALs):** one shared emitter, `quirk/engine/findings_evaluator.py:1140`,
+  deduplicates on (host, port, serial) via the `seen` guard (`:1164`, `:1221-1223`). The dashboard
+  (`quirk/dashboard/api/routes/scan.py:413`) and CLI (`run_scan.py:4102`) both call it.
+- **B (CLI never reports SAML):** the same `run_scan.py:4102` call.
+- **C (two scans merged as "latest"):** `scan.py` filters on `scan_run_id`; the 5-minute window
+  survives only as a fallback.
+
+Phase 210 verified `gaps_found` (17 vs 18); Phase 211 closed the residue (`127913ca`, `c1245a55`) and
+verified `passed`. Gates: `tests/test_cross_surface_parity.py`,
+`tests/test_evidence_finding_vocabulary_parity.py`. Adjacent parity gaps NOT closed by this todo stay
+in their own pending todos: `211-http-on-tls-designated-port-has-no-dashboard-equivalent.md` and
+`260927-kerberos-dnssec-may-share-the-saml-cli-reporting-gap.md`.

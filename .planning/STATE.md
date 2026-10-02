@@ -1,21 +1,43 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.26
-milestone_name: Accessibility & Instrument Truth
-status: in_progress
-last_updated: "2026-10-01T01:49:54.000Z"
-last_activity: 2026-09-30 -- Phase 219 (Keyboard Access, KBD-01) VERIFIED passed 3/3 and marked complete BY HAND (no phase.complete). Table wrapper focusable only while overflowing (role=region + name, ring-2); keyboard-only E2E executed in CI; operator spot-check "keyboard pass"; scrollable-region-focusable WITHDRAWN from all baselines + ledger, countRange retired. CI on HEAD 39de6f15 per-step: Dashboard Quality 4/4 green (36800692384); Python CI fails only the 2 MinIO nodes, set identical to main (36800690414). Review 0 Critical / 1 Warning (WR-01 fixed c0e0d1f4) / 2 Info. Branch phase-219-keyboard-access pushed, NOT merged. Next -- merge 219 PR, then Phase 220 (CI Instrument Truth).
+milestone: v5.27
+milestone_name: Launch Readiness
+status: planning
+last_updated: "2026-10-02T13:50:00.000Z"
+last_activity: "2026-10-02 -- Phase 222 context gathered (222-CONTEXT.md, 21 decisions; operator call D-14 pulls the BRAND-03 raster pipeline slice into 222 for the DOCX colophon PNG). Precondition: PR #52 must merge before any 222 execution commit. STATE.md hand-edited from a pre-image: gsd-sdk state.record-session corrupted it (hit #20)"
 progress:
-  total_phases: 6
-  completed_phases: 5
-  total_plans: 27
-  completed_plans: 27
-  percent: 83
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Deferred Items
+
+### v5.26 milestone close (2026-10-02) — acknowledged and deferred
+
+**Counts re-derived from disk, NOT from `gsd-sdk query audit-open`** (it caps the todo count at 5).
+**44 pending todos + 2 open debug sessions + 21 audit tech-debt items** (8 groups; full list in the
+frontmatter of `.planning/milestones/v5.26-MILESTONE-AUDIT.md`, not re-tabulated here so it cannot
+drift from that file).
+
+Every pending todo that names an owner now names a live one: this is enforced by
+`tests/test_backlog_reconciliation_gate.py::test_no_pending_todo_points_at_a_closed_owner`, added
+at this close. Todos with no owner field at all are not policed by it.
+
+| Category | Item | Status |
+|----------|------|--------|
+| backlog | `999.118` a11y design calls + instrument blind spots | **OPEN, P2** — FIX-05's qualified residue: 10/20 DS-chip pairs, 8 cytoscape pairs, CBOM light system-node labels 1.25:1 (UAT-221-11 FAIL), `/sensors` Stale 3.42:1, 13 generically-named tables, UX-17 light x empty/loading, UAT-7-21 rendered colours. Colour changes are operator design calls. |
+| backlog | `999.119` CI + chaos-lab hygiene | **OPEN, P3** — Windows Sensor E2E empty `--api-token` on branch dispatch (CLAUDE.md `DISPATCH_ADVISORY_JOBS` exception lives until it closes); MinIO-era names under moto. |
+| backlog | `999.120` P2b scan-depth dilution | **OPEN, P1, OPERATOR-RESERVED** — Phase 212 handed it to a v5.25-close decision that never happened; the owner phase is the operator's call. |
+| ci | CITRUTH-01 vitest flake | Closed by operator override, root cause NOT REPRODUCED; a green run is a sample. |
+| record | `216-VERIFICATION.md` `gaps_found`, `220-VERIFICATION.md` `human_needed` | Superseded by 221's verification and the re-audit; left as written, not rewritten. |
+| todo | `261001-compare-page-tolerate-empty-object-response` | `Owner: unassigned` (honest, P3). |
+| todo | `211-http-on-tls-designated-port-…`, `260927-kerberos-dnssec-may-share-the-saml-cli-reporting-gap` | Parity gaps adjacent to XSURF-04, no owner. |
+| debug | `github-release-notes-and-ci-failures`, `sensor-enroll-id-mismatch` | open sessions under `.planning/debug/` |
 
 ### v5.25 milestone close (2026-09-28) — acknowledged and deferred
 
@@ -31,7 +53,7 @@ The single largest deferral, and the only one with an operator instruction attac
 | Category | Item | Status |
 |----------|------|--------|
 | backlog | `999.117-dashboard-accessibility-debt` | **DEFERRED AS ONE UNIT** — own milestone or bundled whole into the next; explicitly NOT piecemeal. 45 of 103 badge pairs below WCAG AA. Reopening of `BACK-A11Y-01`. 8-item breakdown in `HORIZON.md`. |
-| ci | `Linux Full Suite` red on `main` | `test_chaos_lab_idempotency[multihost]`/`[storage-s3]`, Docker registry `unauthorized`. Environmental, pre-existing, identical node set on `main` and PR #37. Not the vitest flake. |
+| ci | `Linux Full Suite` red on `main` | `test_chaos_lab_idempotency[multihost]`/`[storage-s3]`, Docker registry `unauthorized`. Environmental, pre-existing, identical node set on `main` and PR #37. Not the vitest flake. **[Superseded 2026-10-01, Phase 220: NOT environmental — a permanent registry withdrawal of the MinIO images. Fixed on branch `phase-220-ci-instrument-truth` by replacing MinIO with moto (D-01R); CI leg 220-08, `main` leg post-merge.]** |
 | audit | W-1/W-2 — XSURF-04 gates 1 of 3 divergence classes | Scope-corrected in the archived REQUIREMENTS.md rather than left reading clean. |
 | audit | W-3 — DENOM-04 clamp oracle skips in CI | Gitignored artifact under `quirk-output/`; fix is a committed fixture. |
 | audit | W-7 — `requirements-completed` frontmatter absent from 35 of 41 SUMMARY files | Requirement coverage rested on 2 independent sources, not the 3 the workflow assumes. Process gap. |
@@ -268,11 +290,11 @@ Also carried, not in `audit-open`'s scope:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-28)
+See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.26 — Phase 217 COMPLETE (verified 2026-09-29); next is Phase 218 (Contrast Violations — Design Calls & Closing Assertion). *Superseded text follows:* None — **v5.25 is closed and archived.** Planning the next milestone via `/gsd-new-milestone`. The strongest candidate is already written up: the dashboard accessibility unit (backlog `999.117`, 8 items, sizes and spike flags in `HORIZON.md` § "Carried forward from v5.25"), which the operator asked to be worked together rather than piecemeal. a11y light-theme CI step is intentionally RED on this branch until plan 216-08 lands the Linux-generated light baselines — not a regression.
+**Current focus:** None — **v5.26 is closed and archived (2026-10-02).** Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Committed for v5.27 already: the claim-by-claim review of every user-facing doc that gates the social launch (HORIZON 2026-09-30 row). Live owners carried in: `999.118`, `999.119`, `999.120` (P1, operator-reserved).
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1386,7 +1408,48 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   **This reopens v5.24.** The milestone stood at all 7 phases `[x]` and was paused awaiting this very
   decision; the close sequence now sits behind Phase 207.1.
 
+- Phase 221 added at end of v5.26 (2026-10-01) — gap closure for `.planning/v5.26-MILESTONE-AUDIT.md`
+  (`gaps_found`): HARNESS-03 blocker B1 (empty/loading fixture-variant legs near-vacuous, 1 of 10
+  endpoints honour the variant) + INT-01 (10 a11y blind-spot todos still name `Owner: Phase 220`,
+  which closed without absorbing them). Invoked as `--insert 221`, routed to add-phase because no
+  Phase 221 existed. `gsd-sdk query phase.add` appended the block at ROADMAP.md EOF, after the
+  Backlog section and a stray `</content>` tag, and wrote no checklist row or Progress row. It was
+  relocated into v5.26 by hand. `state.add-roadmap-evolution` WAS run, and it corrupted this file:
+  it dropped `last_activity`, inserted ~35 blank lines, and wrote a duplicate `### Roadmap
+  Evolution` at EOF. It was restored from a pre-image byte-identical, then this entry was
+  hand-edited.
+
 ## Current Position
+Phase: Not started (defining requirements)
+Plan: —
+Status: Milestone v5.27 Launch Readiness roadmap created 2026-10-02 — 5 phases (222–226): brand
+adoption (222–223) -> pre-launch doc review (224–225) -> v5.27.0 release cut (226). Next:
+`/gsd-discuss-phase 222`.
+Last activity: 2026-10-02 — milestone v5.27 started (hand-edited from a pre-image).
+
+**Prior position (v5.26 close, superseded 2026-10-02):**
+Phase: — (milestone v5.26 closed 2026-10-02; no phase open)
+Plan: —
+Status: v5.26 Accessibility & Instrument Truth CLOSED and ARCHIVED. 7 of 7 phases, 44 of 44 plans,
+15/15 requirements. Re-audit `tech_debt` at `main` `4415fbf2`. Pre-close cleanup merged as PR #50
+(`57d6ef82`). Archives: `.planning/milestones/v5.26-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` and
+`v5.26-phases/`. Untagged; `v5.25.0` is still the latest tag.
+Last activity: 2026-10-02 — milestone close, hand-written under the pre-image + full-diff protocol.
+
+**Prior position (Phase 221 close, superseded 2026-10-02):**
+Phase: 221 (Close gap: a11y blind spots + empty/loading variant legs) — **COMPLETE, 9 of 9 plans,
+verified `passed` 4/4 on 2026-10-01** at `72b6e4b2` (CI green per `221-VERIFICATION.md` `ci:` block).
+Branch `phase-221-a11y-gap-closure` is pushed and NOT merged. Next: PR + merge, then the v5.26
+milestone audit/close. Historical note on the pre-verification state follows:
+All nine plans ran serially on branch `phase-221-a11y-gap-closure`. The
+phase is NOT closed: the gsd-verifier has not run, and the phase-close commit needs a
+`221-VERIFICATION.md` `ci:` block observed at the exact HEAD (ARTIFACT-05). The CI observation
+(`python3 scripts/branch_ci_state.py --branch phase-221-a11y-gap-closure --compare-main`) is saved
+untracked at `221-evidence/branch-ci-state.json`; its verdict and exit code are in `221-09-SUMMARY.md`,
+not here, because this file cannot name its own SHA.
+Plan: 9 of 9 executed.
+
+**Prior position (Phase 218, superseded; kept for history):**
 Phase: 218 (Contrast Violations — Design Calls & Closing Assertion) — **EXECUTED, 6 of 6 plans,
 pending verification.** No `217-VERIFICATION.md`-equivalent exists yet for 218; the phase-level
 ROADMAP checkbox is deliberately left unflipped (verification's job, not the executor's, per D-15).
@@ -1536,7 +1599,54 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — Phase 219 verification, then Phase 220
+## Next Cycle — define v5.27 requirements, create the roadmap, then `/gsd-discuss-phase 222`
+
+v5.27 Launch Readiness opened 2026-10-02 after a PM review (HORIZON rationale row of that date).
+Phase 222 starts by refreshing PR #46 (brand identity v1) against `main` and merging it with CI green;
+its last run (2026-10-01) had a red Linux Full Suite from before the moto fix. PR #45 is a stale
+Phase 219 pause record to close.
+
+**Prior Next Cycle note, superseded above:** merge Phase 220, check `main`, then close milestone v5.26
+
+**Phase 220 is COMPLETE (2026-10-01), verified `human_needed` at `cd85c281`, NOT merged.** The
+branch `phase-220-ci-instrument-truth` is pushed. The close commit sits directly on `cd85c281`,
+whose CI was observed green: Python CI 36854156107 and Dashboard Quality 36854158859, all jobs
+success. `branch_ci_state.py` exited 0 and `check_ci_truth` returned `[]`. 220-08 found
+F-220-08-1: Dashboard Quality was red at `8c6be117` with TS2556 in three `executive-*.test.tsx`
+mocks from `c0d98faf`, which vitest never type-checks. It was fixed in `cd85c281`. SC1's root-cause
+clause is met by **operator override**: the flake was NOT REPRODUCED, and the batch now
+self-diagnoses. CITRUTH-01/03 are `[x]`. **CITRUTH-02 stays `[ ]` until Python CI on `main` at the
+merge sha is success with `[multihost]`/`[storage-s3]` passed in its JUnit artifact.** **UPDATE 2026-10-01: MET.** PR #47 was merged as
+`c7431aca`. Python CI 36868142296 on `main` succeeded on every job, both S3 nodes PASSED in JUnit,
+and CITRUTH-02 is `[x]`. `main` is green for the first time since the MinIO withdrawal. Next: open a
+PR and merge, run that check and flip CITRUTH-02, then audit and close v5.26 (6/6 phases). Any
+commit on the branch before merge (this one excepted) needs re-push + re-dispatch + re-verify.
+
+**Prior Next Cycle note, superseded above:** 2026-10-01 (220-07) — Phase 220 CI acceptance (220-08), then verification.
+
+**(superseded)** Next Cycle — Phase 220 CI acceptance (220-08), then verification
+
+**Phase 220 is EXECUTED through 220-07 (7 of 8 plans), NOT verified, NOT merged.** Branch
+`phase-220-ci-instrument-truth`, 18 commits ahead of `origin/main` (`8b3b087c`, which already
+contains Phase 219 via PR #44) including this edit's own commit, and pushed to `origin` with
+this commit as its HEAD. The pushed sha is recorded in `220-07-SUMMARY.md`. 220-08 dispatches
+`Python CI` (3x) and `Dashboard Quality` against that exact sha and **must make zero commits**:
+under ARTIFACT-05 (220-05), any commit after the CI observation makes the recorded `ci:` block
+stale. CITRUTH-01: 220-01's verdict on the 14-node vitest flake is **NOT REPRODUCED in 10 attempts**.
+The un-mocked ExecutivePage `fetchApi` was fixed as hygiene, the batch now prints a `[220-01]`
+census, and the job uploads a JUnit artifact. The local D-10 leg was 10/10. CITRUTH-02: MinIO was
+replaced by `motoserver/moto:5.2.3` (D-01R; the GHCR mirror was abandoned when the cached source
+images were lost). Both idempotency nodes pass from a cache-less anonymous pull (220-03, re-confirmed
+220-07 at the same digest), with the D-04 refusal skip checkable. CITRUTH-03:
+`scripts/branch_ci_state.py`, the ARTIFACT-05 phase-close gate, and the CI-aware `gsd-verifier`
+local patch with a revert-detector test. The local full-suite failing-node set is {} vs `main`'s
+{`[multihost]`, `[storage-s3]`}. Todos 260927 and 260930 moved to `completed/`, each with a
+move-back clause if 220-08's CI leg fails. The ROADMAP Phase 220 checkbox, the 220-08 plan line,
+and the three CITRUTH boxes are deliberately left unchecked. No toolchain state verb was used.
+Resume with 220-08, then the verifier.
+
+**Prior Next Cycle note, superseded above:** 2026-09-30 (Phase 219 close) — Phase 219
+verification, then Phase 220. (Phase 219 has since been verified and merged, PR #44.)
 
 **Phase 219 is EXECUTED (all 4 plans), NOT merged.** `git rev-list --count main..HEAD` = **9** at
 the start of this close-out (before this edit's own commit), branch `phase-219-keyboard-access`.
@@ -3162,7 +3272,26 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Last session: 2026-09-28/29 — **the release shipped, and then the release notes had to be corrected
+Resume file: `.planning/phases/222-brand-identity-landed/222-CONTEXT.md` — Phase 222 context gathered
+2026-10-02; next `/gsd-plan-phase 222` (after PR #52 merges).
+
+Latest session: 2026-10-02 — **discussed Phase 222.** Live checks found python-docx 1.2.0 cannot embed
+SVG, so the DOCX colophon logo needs a PNG; the operator pulled the raster pipeline slice (renderer +
+script + drift gate) from 223 into 222 (D-14). PyPI's readme_renderer 46.0 strips `<source>`, so the
+README `<img>` fallback must be the Ink logo. PR #46 conflicts only on `.planning/HORIZON.md`.
+`gsd-sdk state.record-session` corrupted this file (hit #20: `status` overwritten with a truncated
+roadmap string, `last_activity` dropped, 28 blank lines inserted, only line 1 of the multi-line
+`Last session` value replaced); pre-image restored byte-identical and this edit made by hand.
+
+Last session: 2026-10-01/02 — **merged #49, re-audited v5.26, built the gate the ledger claimed, and
+closed the milestone.** The re-audit cleared both first-audit gaps but found HORIZON claiming that
+`test_backlog_reconciliation_gate.py` policed todo owners; it never read `.planning/todos/`. Building
+that gate (rather than rewording the claim) found six dangling pointers where the audit predicted one
+or two — the audit's own grep looked at `**Owner**` lines and missed the `resolves_phase:` field.
+Four of the six were already resolved in code and had simply never been moved. Lesson, again: a
+written claim that a gate exists is a hypothesis until the gate fails on a planted input.
+
+Earlier session: 2026-09-28/29 — **the release shipped, and then the release notes had to be corrected
 because shipping falsified them.** Sequence: Phase 214 executed 8 plans and stopped at plan 214-09's
 blocking checkpoint with the tag operator-reserved -> the **operator** created and pushed the
 annotated `v5.25.0` tag himself (tagger `Digs`, 19:12:10 -0400; no agent tagged, ever) -> run

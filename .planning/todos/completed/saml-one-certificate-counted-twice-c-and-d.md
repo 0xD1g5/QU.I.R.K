@@ -81,3 +81,14 @@ Only SAML writes a serial into `service_detail`, so SAML is the only protocol wh
 duplication is *checkable* today. That is NOT evidence that no other protocol double-counts — it is
 evidence that nothing else exposes a comparable identity. Do not read the narrow blast radius as a
 clean bill of health for the other producers.
+
+## Resolution (v5.26 re-audit, 2026-10-02)
+
+Both halves are fixed on `main`, by a different shape than this todo preferred:
+
+- **D (score counts the certificate twice):** `quirk/intelligence/evidence.py:164`, `:288-302`
+  (`445fc131`) skips a certificate already counted.
+- **C (duplicate finding):** a plain dedupe in the shared emitter
+  (`quirk/engine/findings_evaluator.py:1164`, `:1221`), not the merged
+  "Weak SAML certificate (signing, encryption)" finding. Recorded as a design decision in
+  `.planning/decisions/XSURF-01-saml-dual-use-certificate-dedupe.md`: the first row's `use` wins.

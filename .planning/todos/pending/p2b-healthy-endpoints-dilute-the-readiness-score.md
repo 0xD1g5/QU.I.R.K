@@ -4,11 +4,14 @@ created: 2026-09-14
 source: 999.115 scoring-model work (task 22) — survived all six model changes
 priority: P1
 requirement: null
-resolves_phase: 212
+resolves_phase: null  # was 212 (closed); owner is 999.120
 target: next milestone — the last open property in the P1-P8 suite
 ---
 
 # P2b — observing more healthy endpoints still RAISES the readiness score
+
+**Owner:** 999.120 (HORIZON.md ledger row).
+**Re-pointed:** 2026-10-02 by the v5.26 re-audit. Phase 212 (decision-only) recommended NONE and handed implementation to an OPERATOR-RESERVED post-v5.25 phase that was never assigned.
 
 Scanning more ports on the same hosts improves the client's grade without improving the
 client's security. This is the one property in `tests/test_score_properties.py` that all six

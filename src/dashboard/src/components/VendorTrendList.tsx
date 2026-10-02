@@ -29,6 +29,8 @@ export interface VendorTrendListProps {
   truncated?: boolean
   loading?: boolean
   error?: string | null
+  /** 221 WR-13: fixture handler id whose empty response the empty branch witnesses (a11y only). */
+  emptyFor?: string
 }
 
 export function VendorTrendList({
@@ -36,6 +38,7 @@ export function VendorTrendList({
   truncated = false,
   loading = false,
   error = null,
+  emptyFor,
 }: VendorTrendListProps) {
   return (
     <Card className="border-l-4 border-l-[hsl(180_37%_47%)]">
@@ -61,9 +64,11 @@ export function VendorTrendList({
         ) : error ? (
           <p className="text-sm text-muted-foreground">{error}</p>
         ) : events.length === 0 ? (
-          <EmptyStateCard message="No vendor PQC status trends recorded — No fleet-wide vendor PQC status transitions have been confirmed yet. Advisory only — this has no effect on the readiness score." />
+          <EmptyStateCard emptyFor={emptyFor} message="No vendor PQC status trends recorded — No fleet-wide vendor PQC status transitions have been confirmed yet. Advisory only — this has no effect on the readiness score." />
         ) : (
-          <div className="divide-y divide-border">
+          // 221 CR-01: endpoint-identity hook for the a11y variant guard (routes.json
+          // variantMarkers["vendor-trends"]). Populated branch only, as for LifecycleEventList.
+          <div className="divide-y divide-border" data-a11y-marker="vendor-trends">
             {events.map((event, i) => (
               <VendorTrendRow key={`${event.vendor}-${event.event_type}-${i}`} event={event} />
             ))}

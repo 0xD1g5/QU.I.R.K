@@ -1,6 +1,6 @@
 {
   "route": "compare",
-  "generated": "2026-10-01T00:16:10.314Z",
+  "generated": "2026-10-01T19:13:52.494Z",
   "entries": [
     {
       "rule": "color-contrast",
@@ -10,7 +10,7 @@
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /compare, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 2 -> 2. Phase 217-04 left both remaining nodes marked 'needs triage' for Phase 218; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) resolved both: (1) a `label-eyebrow` span (`LifecycleEventList.tsx:58`, \"Recent Lifecycle Changes\") using the Phase-156 HWLC-11 advisory-firewall TEAL literal `hsl(180 37% 47%)`; (2) `LifecycleEventRow.tsx`'s \"Worsened\" direction-indicator span (`LifecycleEventRow.tsx:47`) using the same firewall's magenta literal `hsl(300 45% 55%)`. Both hues are pinned in `lifecycle-advisory-guard.test.ts`'s FORBIDDEN_PALETTE (Phase 156 HWLC-11 / D-07) to keep this section visually distinct from the scored-finding palette -- that guard protects the HUE choice, not its contrast ratio, and neither hue clears AA against a light background (~2.9:1 and ~3.9:1 respectively, hand calculation 2026-09-30). Neither is one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so neither is a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md.",
+      "justification": "Route /compare, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 2 -> 2. Phase 217-04 left both remaining nodes marked 'needs triage' for Phase 218; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) resolved both: (1) a `label-eyebrow` span (`LifecycleEventList.tsx:58`, \"Recent Lifecycle Changes\") using the Phase-156 HWLC-11 advisory-firewall TEAL literal `hsl(180 37% 47%)`; (2) `LifecycleEventRow.tsx`'s \"Worsened\" direction-indicator span (`LifecycleEventRow.tsx:47`) using the same firewall's magenta literal `hsl(300 45% 55%)`. Both hues are pinned in `lifecycle-advisory-guard.test.ts`'s FORBIDDEN_PALETTE (Phase 156 HWLC-11 / D-07) to keep this section visually distinct from the scored-finding palette -- that guard protects the HUE choice, not its contrast ratio, and neither hue clears AA against a light background (~2.9:1 and ~3.9:1 respectively, hand calculation 2026-09-30). Neither is one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so neither is a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md.",
       "samples": [
         "<span class=\"label-eyebrow\" style=\"color: rgb(76, 164, 164);\">Recent Lifecycle Changes</span>",
         "<span>Worsened</span>"

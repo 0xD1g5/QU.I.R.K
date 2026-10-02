@@ -538,15 +538,16 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-database`
 
 ### 3.17 storage-s3 Profile (v4.3 — DAR)
 
-The `storage-s3` profile (introduced in Phase 28) ships a MinIO S3-compatible object storage server. A seed container creates two buckets on startup: one encrypted (SSE-S3) and one unencrypted, providing QU.I.R.K.'s S3 connector with a clean positive/negative pair for encryption-at-rest detection.
+The `storage-s3` profile (introduced in Phase 28) ships an S3-compatible object storage server: moto since Phase 220, MinIO before. A seed container creates two buckets on startup: one encrypted (SSE-S3) and one unencrypted, providing QU.I.R.K.'s S3 connector with a clean positive/negative pair for encryption-at-rest detection.
+
+**Image source (Phase 220, 2026-10-01): moto, not MinIO.** `minio` and `minio-seed` run `motoserver/moto:5.2.3` (Apache-2.0, Docker Hub, amd64+arm64). MinIO's images became unpullable from every channel: Docker Hub withdrew them (2026-09-13), quay.io refused anonymous pulls (2026-09-30), and dl.min.io returns 410 for the pinned releases. The cached copies a planned GHCR mirror depended on were lost on 2026-10-01. The scanner needs only three S3 behaviours (`list_buckets`, `get_bucket_encryption`, and the `ServerSideEncryptionConfigurationNotFoundError` for an unencrypted bucket), and moto implements all three. The endpoint is unchanged (`localhost:29000`, via `MOTO_PORT=9000`). The seed is `storage/s3-seed.py` (boto3, run from the same image). The service names, the `minio` hostname and the `minioadmin` credentials are historical names, kept deliberately. MinIO's admin console (29001) no longer exists. See `quantum-chaos-enterprise-lab/README.md`'s "Phase 220: MinIO replaced by moto" note. The scanner itself still supports real MinIO endpoints as a customer target; only the lab stopped running one.
 
 | Port  | Service       | Bucket              | SSE Mode | Expected Finding     | Severity |
 |-------|---------------|---------------------|----------|----------------------|----------|
 | 29000 | minio         | encrypted-bucket    | SSE-S3   | `S3/sse-s3`          | (none)   |
 | 29000 | minio         | unencrypted-bucket  | None     | `S3/unencrypted`     | HIGH     |
-| 29001 | minio-console | (admin UI)          | —        | —                    | —        |
 
-Credentials: access key `minioadmin`, secret key `minioadmin`.
+Credentials: access key `minioadmin`, secret key `minioadmin` (historical MinIO-era values, kept so the seed and the scanner configs need no edit).
 
 **Start:**
 
@@ -1261,6 +1262,8 @@ everything is fine:
 docker inspect kenchan0130/simplesamlphp:1.19.7 --format '{{.Architecture}}'
 ```
 
+`mh-storage-archive` and `mh-storage-seed` run the same `motoserver/moto:5.2.3` image as the `storage-s3` profile (§3.17), on `10.80.0.50:9000`. See that section's "Image source" note. With no MinIO console on :9001, `.50` carries one plaintext-HTTP HIGH (on :9000) instead of two. That was observed in a scoped scan on 2026-10-01 (`expected_results_v4.md`, `.50` note).
+
 | Host | Service | Posture under test | Finding domain |
 |------|---------|--------------------|----------------|
 | 10.80.0.10 | mh-edge-legacy | TLS 1.0/1.1 + weak ciphers | data in motion |
@@ -1272,7 +1275,7 @@ docker inspect kenchan0130/simplesamlphp:1.19.7 --format '{{.Architecture}}'
 | 10.80.0.31 | mh-cache-session | Redis 7.4.1, no TLS/auth | in motion (broker/cache) |
 | 10.80.0.40 | mh-identity-dc | OpenLDAP, 389 cleartext + 636 | identity |
 | 10.80.0.41 | mh-saml-idp | simplesamlphp IdP metadata | identity (federation) |
-| 10.80.0.50 | mh-storage-archive | MinIO: 1 SSE-S3 + 1 UNENCRYPTED bucket | data at rest (object) |
+| 10.80.0.50 | mh-storage-archive | S3 (moto): 1 SSE-S3 + 1 UNENCRYPTED bucket | data at rest (object) |
 | 10.80.0.60 | mh-pki-ca | step-ca 0.28.1 | PKI / CA |
 | 10.80.0.70 | mh-ssh-jump | OpenSSH jump host | in motion (SSH) |
 | 10.80.0.101–.104 | mh-vpn-gateway, mh-mail-relay, mh-vendor-portal, mh-backup-console | expired certificates | certificate lifecycle |
@@ -1557,8 +1560,7 @@ All lab ports across all profiles, sorted by port number:
 | 26379 | redis-broker (plain)     | broker    | Redis plaintext listener (no auth)        |
 | 26380 | redis-broker (TLS)       | broker    | Weak cipher suite on broker TLS endpoint  |
 | 28200 | vault-30                 | vault     | PKI/auth/transit DAR audit                |
-| 29000 | minio                    | storage-s3| S3/unencrypted HIGH (unencrypted-bucket)  |
-| 29001 | minio-console            | storage-s3| MinIO admin UI (no scanner finding)       |
+| 29000 | minio (moto)             | storage-s3| S3/unencrypted HIGH (unencrypted-bucket)  |
 | 29092 | kafka-broker (plain)     | broker    | Kafka plaintext listener detected         |
 | 29093 | kafka-broker (TLS)       | broker    | Weak cipher suite on broker TLS endpoint  |
 | 30025 | postfix-email (SMTP)     | email     | STARTTLS-downgrade MEDIUM + weak-cipher HIGH |

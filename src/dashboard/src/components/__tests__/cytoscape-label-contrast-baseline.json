@@ -1,0 +1,11 @@
+{
+  "_comment": "Phase 221 D-10 (2026-10-01): measured failing cytoscape label/fill TOKEN pairs (token-level only; rendered canvas is an exclusion), recorded not fixed. Re-pointed to 999.118 for an operator design call. Shrink-only: a fixed pair must be deleted.",
+  "cbom|Safe|dark": 2.3,
+  "cbom|At Risk|dark": 2.13,
+  "cbom|At Risk|light": 3.8,
+  "cbom|Vulnerable|light": 2.64,
+  "cbom|Unknown|light": 2.38,
+  "cbom|system|light": 1.25,
+  "exposure-map|node|dark": 3.14,
+  "exposure-map|node|light": 3.98
+}

@@ -4,169 +4,71 @@ import path from 'path'
 import { readFileSync } from 'node:fs'
 import type { Plugin, Connect } from 'vite'
 import type { ServerResponse } from 'node:http'
+import { FIXTURE_HANDLERS, matchHandler, compareZeroDiff } from './tests/a11y/fixture-handlers.mjs'
 
 function a11yFixture(): Plugin {
   // Fixture files are loaded lazily inside configureServer/configurePreviewServer,
   // after the VITE_A11Y_FIXTURE guard, so a fresh clone without fixture files
   // does not crash vite dev/build when the env-var is not set (WR-05).
+  //
+  // 221 D-03: the per-endpoint decisions live in tests/a11y/fixture-handlers.mjs (a pure,
+  // contract-tested table). This function is only an interpreter over that table.
   function buildHandler() {
-    const scanFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8')
-    const trendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8')
+    const fileCache = new Map<string, string>()
+    for (const h of FIXTURE_HANDLERS) {
+      if ('file' in h.default && !fileCache.has(h.default.file)) {
+        fileCache.set(h.default.file, readFileSync(path.resolve(__dirname, './tests/a11y', h.default.file), 'utf8'))
+      }
+    }
     const qrammFixtureRaw = JSON.parse(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-qramm.json'), 'utf8')) as Record<string, unknown>
-    // Phase 185 D-14 — /hardware and /compare fixtures (plan 185-04). Loaded lazily here
-    // alongside the fixtures above, same WR-05 rationale.
-    const hardwareDriftFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-hardware-drift.json'), 'utf8')
-    const vendorTrendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-vendor-trends.json'), 'utf8')
-    const compareFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-compare.json'), 'utf8')
-    // Phase 202-07 — /api/findings/{id}/storyline fixture (STORY-01/STORY-02, D-04).
-    // Loaded lazily here alongside the fixtures above, same WR-05 rationale. Serves a
-    // fully-populated S1 storyline so the a11y opened-drawer capture baselines a real
-    // attribution panel rather than the S8 error state behind an unmatched-request 404.
-    const storylineFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-storyline.json'), 'utf8')
     const noCache = (r: ServerResponse) => r.setHeader('Cache-Control', 'no-store')
+    const sendJson = (r: ServerResponse, body: string) => {
+      noCache(r); r.setHeader('Content-Type', 'application/json')
+      r.end(body)
+    }
+    const defaultBody = (h: (typeof FIXTURE_HANDLERS)[number]): string => {
+      const src = h.default
+      if ('file' in src) return fileCache.get(src.file) as string
+      if ('qrammKey' in src) return JSON.stringify(qrammFixtureRaw[src.qrammKey] ?? src.fallback)
+      return JSON.stringify(src.json)
+    }
     return (req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
       const variant = process.env.VITE_A11Y_FIXTURE_VARIANT
-      if (req.url?.startsWith('/api/scan/latest')) {
-        if (variant === 'empty') {
-          noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end('{}')
+      // 221 D-02: identity sentinel. Lets the harness prove the server answering the port is
+      // the one it spawned, with the variant it asked for. Lives inside buildHandler, so it is
+      // only mounted behind the VITE_A11Y_FIXTURE guard below (never in a normal dev/preview).
+      if (req.url === '/__a11y-variant') {
+        // 221 WR-05: `||`, matching baseline-diff.mjs resolveVariant, so an empty-string
+        // VITE_A11Y_FIXTURE_VARIANT reports 'default' on both sides.
+        sendJson(res, JSON.stringify({ variant: variant || 'default', pid: process.pid }))
+        return
+      }
+      const h = matchHandler(req.url)
+      if (!h) { next(); return }
+      if (variant === 'empty') {
+        if ('body' in h.empty) {
+          const b = h.empty.body
+          sendJson(res, typeof b === 'string' ? b : JSON.stringify(b))
           return
         }
-        if (variant === 'loading') {
-          // Delay response so first-paint shows the loading skeleton/spinner
-          setTimeout(() => {
-            noCache(res); res.setHeader('Content-Type', 'application/json')
-            res.end(scanFixture)
-          }, 3000)
+        if ('emptyFrom' in h.empty) {
+          sendJson(res, JSON.stringify(compareZeroDiff(JSON.parse(defaultBody(h)))))
           return
         }
+        // {na}: declared non-applicability (reason enforced by variant-contract.test.ts)
+      }
+      if (variant === 'loading' && 'hold' in h.loading) {
+        // 221 D-08: hold the request open for the whole sweep. res.end is NEVER called.
+        // 221 WR-06: nothing here releases it, and nothing needs to. A held response ends when
+        // the browser page closes (its socket closes), when vite's own close function
+        // (createServerCloseFn) destroys every open socket before server.close(), or when the
+        // harness kills the preview's process group. A previous httpServer 'close' listener
+        // could never fire while a held socket was open (Node emits 'close' only after every
+        // connection ends), so it was dead code. held-release.test.ts measures the property.
         noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(scanFixture)
         return
       }
-      if (req.url?.startsWith('/api/scans')) {
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end('[]')
-        return
-      }
-      if (req.url?.startsWith('/api/trends')) {
-        if (variant === 'empty') {
-          noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end('{}')
-          return
-        }
-        if (variant === 'loading') {
-          setTimeout(() => {
-            noCache(res); res.setHeader('Content-Type', 'application/json')
-            res.end(trendsFixture)
-          }, 3000)
-          return
-        }
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(trendsFixture)
-        return
-      }
-      // Phase 185 D-14 — /hardware and /compare fixtures (plan 185-04). Both new hardware
-      // prefixes are independent (no shared prefix) but kept adjacent per this file's
-      // existing longest-prefix-first convention, above any future broader /api/hardware match.
-      if (req.url?.startsWith('/api/hardware/vendor-trends')) {
-        if (variant === 'empty') {
-          noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ events: [], truncated: false }))
-          return
-        }
-        if (variant === 'loading') {
-          setTimeout(() => {
-            noCache(res); res.setHeader('Content-Type', 'application/json')
-            res.end(vendorTrendsFixture)
-          }, 3000)
-          return
-        }
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(vendorTrendsFixture)
-        return
-      }
-      if (req.url?.startsWith('/api/hardware/drift')) {
-        if (variant === 'empty') {
-          noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({
-            has_prior_scan: false,
-            latest_scan_at: null,
-            latest_events: [],
-            historical_events: [],
-            historical_truncated: false,
-          }))
-          return
-        }
-        if (variant === 'loading') {
-          setTimeout(() => {
-            noCache(res); res.setHeader('Content-Type', 'application/json')
-            res.end(hardwareDriftFixture)
-          }, 3000)
-          return
-        }
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(hardwareDriftFixture)
-        return
-      }
-      if (req.url?.startsWith('/api/compare')) {
-        if (variant === 'empty') {
-          noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end('{}')
-          return
-        }
-        if (variant === 'loading') {
-          setTimeout(() => {
-            noCache(res); res.setHeader('Content-Type', 'application/json')
-            res.end(compareFixture)
-          }, 3000)
-          return
-        }
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(compareFixture)
-        return
-      }
-      // Phase 202-07 — /api/findings/{id}/storyline fixture (STORY-01/STORY-02, D-04).
-      // Placed before the QRAMM block below; no existing prefix (checked above) is a
-      // prefix of "/api/findings", and none of the QRAMM prefixes below could shadow it
-      // either, so ordering relative to them is not load-bearing — kept here for
-      // proximity to the other per-page-data handlers.
-      if (req.url?.startsWith('/api/findings')) {
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(storylineFixture)
-        return
-      }
-      // QRAMM API fixtures — matched in specificity order (longest prefix first)
-      if (req.url?.match(/^\/api\/qramm\/sessions\/\d+\/answers/)) {
-        const key = 'GET /api/qramm/sessions/1/answers'
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify(qrammFixtureRaw[key] ?? []))
-        return
-      }
-      if (req.url?.match(/^\/api\/qramm\/sessions\/\d+/)) {
-        const key = 'GET /api/qramm/sessions/1'
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify(qrammFixtureRaw[key] ?? {}))
-        return
-      }
-      if (req.url?.startsWith('/api/qramm/sessions')) {
-        const key = 'GET /api/qramm/sessions'
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify(qrammFixtureRaw[key] ?? []))
-        return
-      }
-      if (req.url?.startsWith('/api/qramm/questions')) {
-        const key = 'GET /api/qramm/questions'
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify(qrammFixtureRaw[key] ?? []))
-        return
-      }
-      if (req.url?.startsWith('/api/qramm/profiles')) {
-        noCache(res); res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ profile_id: 1, session_id: 1, multiplier: 1.0 }))
-        return
-      }
-      next()
+      sendJson(res, defaultBody(h))
     }
   }
 

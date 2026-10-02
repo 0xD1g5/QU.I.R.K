@@ -40,7 +40,8 @@
 - ✅ **v5.23 Deliverable Experience** — Phases 199–202, 28 plans (development complete 2026-09-12; audit `gaps_found` 14/14, 1 blocker operator-accepted; merged to main 2026-09-13) → `.planning/milestones/v5.23-ROADMAP.md`
 - ✅ **v5.24 UAT Coverage Drain** — Phases 203–209 incl. the insert 207.1, 53 plans (development complete 2026-09-27; audit `tech_debt`, 17/18 requirements + 1 PARTIAL, integration 4/4, Nyquist 8/8; merged to main 2026-09-27 `b262aa82`; untagged by design) → `.planning/milestones/v5.24-ROADMAP.md`
 - ✅ **v5.25 Score Truth & Release Cut** — Phases 210–214, 40 plans (**SHIPPED 2026-09-28 — tag `v5.25.0`, published to PyPI**, the first tagged release since `v5.21.0` and carrying four milestones of work; audit `tech_debt`, 15/15 requirements with 2 scope-qualified, integration 6/6 seams, Nyquist 5/5) → `.planning/milestones/v5.25-ROADMAP.md`
-- ⏳ **v5.26 Accessibility & Instrument Truth** — Phases 215–220 (opened 2026-09-28; in progress) → see `## Milestone v5.26` below
+- ✅ **v5.26 Accessibility & Instrument Truth** — Phases 215–221 (221 a gap-closure insert), 44 plans (development complete 2026-10-02; untagged; re-audit `tech_debt`, 15/15 requirements, integration 9/10 seams + 0 broken, Nyquist 7/7; merged to main via 11 PRs, #38–#50) → `.planning/milestones/v5.26-ROADMAP.md`
+- 🚧 **v5.27 Launch Readiness** — Phases 222–226 (in progress)
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -96,186 +97,131 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
 is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
-## Milestone v5.26: Accessibility & Instrument Truth
+## Current Milestone: v5.27 Launch Readiness (Phases 222–226)
 
-**Status:** In progress — opened 2026-09-28 (Phases 215–220). This is a reopening of
-`BACK-A11Y-01` (filed 2026-05-22, v5.0 Phase 87; lost at that milestone's archive; rediscovered a
-third time on 2026-09-28 by a red CI gate). Full milestone context:
-`.planning/PROJECT.md` § "Current Milestone: v5.26", `.planning/REQUIREMENTS.md`,
-`.planning/HORIZON.md` § "Carried forward from v5.25", and
-`.planning/backlog/999.117-dashboard-accessibility-debt/IDEA.md`.
+**Goal:** Make QU.I.R.K. ready to show the public. It should carry its own identity on every product
+surface, every user-facing doc claim should be verified against the code, and a tagged release should
+contain all of it. The operator posts QUIRK publicly only after this milestone closes (launch gate).
+Requirements: `.planning/REQUIREMENTS.md` (14, BRAND-01..07, DOC-03..06, REL-05..07).
 
-**Operator scoping constraint:** the accessibility work is drained AS ONE UNIT — phases below split
-by *kind of work* (instrument, harness, violation-drain, design-review, keyboard, CI), never by
-*which dashboard page*. RATCHET runs first because every FIX requirement is verified against its
-baseline. FIX-02's spike is sequenced ahead of FIX-03's bulk edit inside the same phase. FIX-04/05
-close the accessibility arc last, behind an operator visual-review checkpoint. CITRUTH is an
-independent CI-instrument work-stream and may run in parallel with the accessibility phases. Phase 216 is
-also parallel-safe, and deliberately so: its two harness repairs are *discovery* instruments that can
-GROW the contrast baseline, so they must land before Phase 218 asserts that baseline is empty.
+**Sequencing is binding: BRAND -> DOC -> REL.** Brand lands first because the doc review checks the
+README claim by claim and retakes its hero screenshot against the branded dashboard; REL is last
+because the tag must contain the reviewed docs and the new identity. Inside BRAND, BRAND-01 (landing
+PR #46) gates every other brand requirement, so it opens Phase 222.
 
 ### Phases
 
-- [x] **Phase 215: Instrument Ratchet** - Convert the 45 invisible badge-contrast failures into a derived, shrink-only baseline that every later fix is verified against
-  <!-- Phase-level checkbox intentionally left unflipped by 215-04: this repo's
-       scripts/verify_phase_gates.py pre-commit hook blocks a ROADMAP.md phase-close
-       checkbox flip that lacks a NN-VERIFICATION.md (produced by the gsd-verifier
-       subagent, not the plan executor) and, separately, this phase's human checkpoint
-       (215-04 Task 4) has not yet been approved. Flip this after both land. -->
-- [x] **Phase 216: A11y Harness Repair** - Give `run-a11y.mjs` a real theme axis, close the fixture-dependent PASS gap, and fix the `data-at-rest` exact-count pin
-- [x] **Phase 217: Contrast Violations — Structural Drain** - Apply the 11 zero-design-input swaps and, after a classification spike, bring the 29 `text-black` sites to AA in both themes
-- [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
-- [x] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
-- [ ] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
+- [ ] **Phase 222: Brand Identity Landed** - Merge PR #46 refreshed against `main` with required CI green, then put the brand on the README and on every generated report's colophon
+- [ ] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + mark, favicon raster pipeline with a drift gate, the `--ds-accent` decision, and every old-branding pin re-worded in the same phase
+- [ ] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc
+- [ ] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard
+- [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
 
 ### Phase Details
 
-### Phase 215: Instrument Ratchet
-**Goal**: The dashboard's badge-contrast debt is measurable, bounded, and provably enforced — every page, both themes, derived from source at run time, with a baseline that can only shrink.
-**Depends on**: Nothing (first phase of the milestone)
-**Requirements**: RATCHET-01, RATCHET-02, RATCHET-03, RATCHET-04
+### Phase 222: Brand Identity Landed
+**Goal**: The brand identity from PR #46 is on `main`, reproducible from its generator, and visible everywhere QU.I.R.K. presents itself outside the dashboard chrome: the README on GitHub and PyPI, and the colophon of every generated report.
+**Depends on**: Nothing (first phase of v5.27; BRAND-01 gates every other brand requirement and runs first inside this phase)
+**Requirements**: BRAND-01, BRAND-04, BRAND-05
 **Success Criteria** (what must be TRUE):
-  1. A single contrast guard test evaluates every dashboard page and both themes, deriving its badge-pair set from source at run time (no hand-maintained list of files or pairs).
-  2. The 45 known failures are recorded in a checked-in, shrink-only baseline — a new sub-AA pair fails CI, and a fixed pair requires (and gets) a baseline update, never a silent widening.
-     **Corrected 2026-09-28 (215-03/215-04):** "45" was the raw count of failing badge-pair
-     OCCURRENCES as 999.117 measured them over the pages+sidebar (11-file) set — a class string
-     repeated verbatim across N files counts N times. The guard's checked-in baseline is keyed
-     `file|bgToken|fgSpec|theme` (D-06, no line numbers), which deduplicates an identical class
-     string repeated *within one file* and splits per theme, so it holds **35 distinct entries**,
-     not 45. Both figures are correct measurements of two different things — the original "45" is
-     preserved above rather than overwritten, and "35" is the number the checked-in baseline
-     actually holds. See `215-03-SUMMARY.md`'s "Count Trap" section for the full live re-derivation
-     (103 raw pairs / 57 unique triples / 45 raw failing occurrences / 29 unique failing triples /
-     35 distinct failing baseline keys).
-  3. `auditedFiles()` exists in exactly one place in the codebase; the verbatim copy in `theme-token-vocabulary.test.ts` is deleted and both call sites use the single derived source.
-  4. A mutation probe injects a sub-AA badge pair and the guard demonstrably goes red, with the failing output captured as evidence rather than asserted in prose.
-**Plans**: 4 plans
-Plans:
-- [x] 215-01-PLAN.md — Foundation modules: derived `auditedFiles()` (76 files) + the four badge-extraction primitives promoted into `color-contrast-helpers.ts`
-- [x] 215-02-PLAN.md — RATCHET-03: widen both existing consumers to 76 files, delete the verbatim copies, add the forever-exempt/debt exemption machinery
-- [x] 215-03-PLAN.md — RATCHET-01/02: pure evaluator, repo-wide badge-contrast guard, checked-in shrink-only baseline
-- [x] 215-04-PLAN.md — RATCHET-04: two-direction mutation probe, mechanical Tailwind JIT guard, count-prose correction and phase close
+  1. PR #46 is merged into `main` after being refreshed against it, with `python3 scripts/branch_ci_state.py --branch <pr-branch> --compare-main` exiting 0 at the PR head that was merged. If the refreshed run is red, its failing-node set is diffed node by node against `main` and resolved, not assumed environmental.
+  2. Running `python3 docs/brand/build_logo.py` on `main` leaves `git status --porcelain docs/brand/` empty (the committed SVGs regenerate byte-identically).
+  3. `README.md` shows the brand logo through a `<picture>` element with `prefers-color-scheme` light and dark sources, each an absolute `raw.githubusercontent.com` URL that resolves (HTTP 200), and the logo renders correctly on GitHub in both light and dark themes. (The PyPI render is observed after publishing, in Phase 226 / REL-07.)
+  4. A report generated on disk (HTML, PDF and DOCX) carries a small "Generated by" brand logo in its footer or colophon, and the dashboard `/print` export carries it too, or its exclusion is recorded with a reason. A report with `report.branding.logo_path` set still shows the client/consultancy cover logo exactly as before.
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 216: A11y Harness Repair
-**Goal**: The axe/a11y harness can actually see what it claims to sweep — both themes, and routes whose fixtures currently mask real failures — and the one flaky baseline in this area stops producing false local/CI disagreement.
-**Depends on**: Nothing (independent of Phase 215; may run in parallel with Phase 217). The
-ratchet/baseline idiom this phase extends is a convention, not a build dependency — and because
-HARNESS-01/02 are *discovery* instruments that can GROW the contrast baseline, running this early
-is preferable to running it late. See Phase 218's dependency note.
-**Requirements**: HARNESS-01, HARNESS-02, HARNESS-03
+### Phase 223: Dashboard Brand Adoption
+**Goal**: A dashboard user sees the QU.I.R.K. brand, not the old electric-blue `Q`, in the sidebar and the browser tab in both themes, with the accessibility ratchets still green, and no test, UAT case or generated artifact still pinning the old branding.
+**Depends on**: Phase 222 (PR #46's `docs/brand/` sources must be on `main`)
+**Requirements**: BRAND-02, BRAND-03, BRAND-06, BRAND-07
 **Success Criteria** (what must be TRUE):
-  1. `npm run a11y:check` sweeps both light and dark themes for every route in `routes.json`, with a separate baseline per theme.
-     — **NOT MET AS WRITTEN** (substance met). Both themes are swept for every route with a
-     separate baseline per theme, but by TWO commands — `a11y:check:dark` and
-     `a11y:check:light` — because `a11y:check` stays a dark alias for the guides and the
-     harness's own remediation messages. See `216-NOT-MET-AS-WRITTEN.md`.
-  2. `/certificates` and `/hardware` no longer report PASS while rendering badges below AA — the fixture-dependent blind spot that let 2.30:1 badges pass is closed for both proof routes.
-  3. The `data-at-rest` baseline uses a tolerance/range rather than an exact count, and running it repeatedly on macOS and in CI no longer disagrees.
-     — **MET, SCOPE-QUALIFIED to the `default` variant** (both themes): `countRange: [1, 2]`,
-     bounds measured macOS 1 / Linux 2. The `empty` and `loading` variants keep a wider
-     0-vs-2 divergence, deliberately un-ranged because a `[0, 2]` floor would disable the
-     D-12 shrink-only ratchet; pre-existing, CI-green, tracked as a Phase 219 / KBD-01 todo.
-**Plans**: 8 plans in 6 waves
-Plans:
-- [x] 216-01-PLAN.md — Theme-explicit baseline naming + 40-file rename + call-site lockstep (wave 1)
-- [x] 216-02-PLAN.md — Fixture blind-spot closure: label module, source-derived coverage gate, enriched fixture, /certificates contentMarker (wave 1)
-- [x] 216-03-PLAN.md — Opt-in per-entry countRange tolerance + Phase 185 D-06 docstring amendment (wave 2)
-- [x] 216-04-PLAN.md — Light/dark sweep mechanics, theme-explicit npm scripts, both CI jobs, drift contract test (wave 3)
-- [x] 216-05-PLAN.md — Theme-complete ACCEPTED-VIOLATIONS ledger via a browser-free a11y:ledger (wave 4)
-- [x] 216-06-PLAN.md — Falsification evidence: synthetic probe + three verbatim RED captures (wave 5)
-- [x] 216-07-PLAN.md — Operators guide, master-guide regen, UAT Series 216, vault sync (wave 5)
-- [x] 216-08-PLAN.md — Linux CI baseline provenance, justifications, measured tolerance bounds (wave 6, LAST)
+  1. In both dark and light themes, the wide sidebar shows the brand primary logo and the narrow sidebar shows the mark. Both are inline SVG following `currentColor`, both keep the accessible name "QU.I.R.K.", and the Phase 216-219 contrast, axe (both themes) and keyboard ratchets stay green over the new chrome.
+  2. The browser tab shows the brand favicon, served as SVG, PNG and ICO. A scripted raster pipeline produces the PNG and ICO; its renderer is a dev-only dependency that appears in no runtime extra in `pyproject.toml`. A new generator-drift freshness test fails when a committed raster stops matching its SVG source, and it has a row in CLAUDE.md's generator-drift table.
+  3. The `--ds-accent` teal (`src/dashboard/src/index.css`, dark and light blocks) is explicitly decided, kept or changed, as an operator design call in this phase's discuss. The decision is recorded with measured contrast ratios for both themes. Brand Signal `#7FE001` is not a UI token, and the app background is unchanged.
+  4. The branding test (`dashboard-branding.test.tsx`), `UAT-7-31`'s pass criteria in `docs/UAT-SERIES.md`, its `docs/uat-disposition-ledger.jsonl` row, and a regenerated `docs/uat-coverage-gaps.md` are re-worded in this phase, and the UAT freshness and reconciliation gates are green. No test is skipped or deleted to get there.
+  5. No served surface still shows the old blue-`Q` favicon or wordmark: a source grep for the old asset/markup returns nothing outside history and archives.
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 217: Contrast Violations — Structural Drain
-**Goal**: Every badge-contrast site that can be fixed by convention or classification (not a genuine design call) reaches AA in both themes, without regressing the text-on-white contrast Phase 213 already established.
-**Depends on**: Phase 215 (RATCHET-01's baseline is how every swap in this phase is verified)
-**Requirements**: FIX-01, FIX-02, FIX-03
+### Phase 224: Doc Claim Ledger & Verification
+**Goal**: Every claim a reader can act on in QU.I.R.K.'s user-facing docs is true of the code as it stands, checked by something other than the doc itself, and the docs mention the capabilities that actually ship.
+**Depends on**: Phase 223 (the README and dashboard-facing docs are reviewed against the branded product, so branding changes cannot invalidate the review afterwards)
+**Requirements**: DOC-03, DOC-04
 **Success Criteria** (what must be TRUE):
-  1. The 11 zero-design-input swaps (7 × `--risk-badge-high`, 4 × `--qs-node-safe`) are applied, each now using its existing `-foreground` sibling, and RATCHET's baseline count for these sites drops to zero.
-     **Note added 215-04:** "11" is a 999.117 raw-occurrence classification count (pre-dating
-     RATCHET-01/02's per-key dedup), not a count of distinct `badge-contrast-baseline.json`
-     entries — Phase 217 must re-derive the actual entry count for these sites from the live
-     baseline rather than assuming 11 keys will disappear.
-  2. FIX-02's spike classifies 3–4 of the 29 `text-black` sites as badge-background vs. text-on-white use and records the resulting plan shape (mixed vs. uniform) before any bulk edit to the remaining sites lands.
-  3. All 29 `--status-warning`/`--chart-tls` sites reach AA as badge backgrounds in both themes, while the text-on-white use of the same tokens (Phase 213's fix) keeps its existing contrast.
-     **Note added 215-04:** "29" is the same kind of raw-occurrence count as "11" above, carried
-     over from 999.117's pre-RATCHET classification — re-derive against the live baseline's
-     distinct keys before treating 29 as a completion target.
-  4. RATCHET's baseline reflects zero remaining failures for the categories this phase owns (11 free swaps + 29 spiked sites).
-**Plans**: 5 plans in 4 waves
-Plans:
-- [x] 217-01-PLAN.md — FIX-01: 11 text-white -> -foreground sibling swaps, badge baseline -12 keys in the same commit (wave 1)
-- [x] 217-02-PLAN.md — FIX-02 spike: 217-SPIKE.md full classification + recorded plan shape, D-09 text-on-white guard proven red under 2 mutations (wave 1, before any FIX-03 edit)
-- [x] 217-03-PLAN.md — FIX-03: mint --status-warning-foreground/--chart-tls-foreground, repoint 29 badge sites, baseline = exactly FIX-04's 5 keys (wave 2)
-- [x] 217-04-PLAN.md — CI-only axe baseline round-trip (Linux artifact), drained justifications rewritten, residual per-route attribution for Phase 218 (wave 3)
-- [x] 217-05-PLAN.md — Operator both-theme visual check, UAT Series 217, vault sync, hand-edited STATE/ROADMAP/REQUIREMENTS (wave 4)
+  1. A classification artifact lists every `docs/` file and root-level doc, enumerated from the repository at run time (e.g. `git ls-files`), each marked user-facing or internal with a reason. Its file count matches a fresh enumeration; nothing is taken from a hand list.
+  2. A claim ledger holds every checkable claim from each user-facing doc (commands, flags, install paths, scanner/connector names, config keys, output paths, version strings, feature assertions), attributed to its doc and line.
+  3. Every ledger row is marked TRUE, FIXED (doc corrected) or REMOVED (claim deleted), with the independent verification method it used (command run, source grep, registry hit). Zero rows are unverified.
+  4. Live capabilities the docs omitted (scanners, connectors, CLI commands, enumerated from source) are added to the appropriate user-facing doc, and each addition is itself a verified ledger row.
+**Plans**: TBD
+
+### Phase 225: Doc Publication & Hero Retake
+**Goal**: The reviewed docs reach every place they are read: the regenerated master guide, the Obsidian vault, and a README hero screenshot that shows the branded dashboard as it really is.
+**Depends on**: Phase 224 (the master guide is regenerated from the corrected source guides) and Phase 223 (the hero is taken against the branded dashboard)
+**Requirements**: DOC-05, DOC-06
+**Success Criteria** (what must be TRUE):
+  1. `docs/quirk-master-guide.md` is regenerated after the Phase 224 source-guide edits and `tests/test_master_guide_freshness.py` passes.
+  2. Every doc edited in this milestone that has a vault counterpart is synced to `20_Dev-Work/QUIRK/Guides/` in vault `Digs`, with the vault copy matching its source below the frontmatter.
+  3. `docs/images/dashboard-hero.png` is retaken against the branded dashboard served from the canonical DB (`./quirk-output/quirk.db`), and the operator confirms it shows correct, non-mirrored score gauges.
+  4. `docs/images/dashboard-hero-1.png` and `-2.png` are removed or referenced: no unreferenced hero image remains in `docs/images/`.
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 218: Contrast Violations — Design Calls & Closing Assertion
-**Goal**: The 5 remaining badge pairs that require a real design decision are resolved with the operator's eyes on the result, and the milestone can assert — not estimate — that the dashboard's badge-contrast debt is drained.
-**Depends on**: Phase 217 **and Phase 216** — 217 because the closing assertion requires every
-non-design-call site already fixed; **216 because it can grow the baseline this phase asserts is
-empty.** HARNESS-01 adds a light-theme sweep and HARNESS-02 closes a fixture blind spot that is
-currently masking 2.30:1 badges on `/certificates` and `/hardware`; both are discovery mechanisms
-that may surface contrast failures never counted among the 45. FIX-05 is only meaningful once every
-discovery instrument is live, so this phase cannot close before 216 has landed and its findings have
-been drained.
-**Requirements**: FIX-04, FIX-05
+### Phase 226: Release v5.27.0
+**Goal**: A public user can install QU.I.R.K. 5.27.0 from PyPI and get the branded, doc-reviewed product, including the untagged v5.26 accessibility work, and the operator's launch gate is recorded as open.
+**Depends on**: Phase 225 (the tag must contain the reviewed docs and the new identity)
+**Requirements**: REL-05, REL-06, REL-07
 **Success Criteria** (what must be TRUE):
-  1. The operator visually reviews and approves new values for all 5 design-call pairs (`--destructive` + white dark ×2, `--quantum-safe` + paired foreground light ×2, `--badge-modbus` + white dark ×1), following the same review path Phase 213-09 used for light-palette values. **Human checkpoint: operator sign-off required before these values merge.**
-  2. All 5 approved values are applied and pass AA 4.5:1 in the theme each pair is used in.
-  3. RATCHET-01 reports an empty baseline — zero badge pairs anywhere in the dashboard below 4.5:1
-     in either theme — measured **after** Phase 216's theme axis and fixture-blind-spot fixes are
-     live, so the assertion covers everything the repaired instruments can see, not only the
-     original 45.
-**Plans**: 6 plans in 5 waves
-Plans:
-- [x] 218-01-PLAN.md — FIX-04 candidate prep: two-method ratio + collateral table, guard-blind triage, canonical-DB renderability, reversible candidate patches (wave 1, no commits)
-- [x] 218-02-PLAN.md — D-07(1) roadmap runtime-style badges derive fg from their own bg + D-10 text-destructive-on-card guard, both mutation-proven (wave 1)
-- [x] 218-03-PLAN.md — BLOCKING operator checkpoint: 3 live rounds in quirk serve, theme toggled on screen, choice per pair recorded verbatim, tree reverted (wave 2)
-- [x] 218-04-PLAN.md — Apply operator-chosen FIX-04 values + D-07(2) shadcn destructive guard + FOLD sites; badge baseline -> {} by key set (wave 3)
-- [x] 218-05-PLAN.md — CI-only axe baseline round-trip, D-09 per-node residual attribution, Phase 220 todos (wave 4)
-- [x] 218-06-PLAN.md — Closing assertion ("empty baseline + N named sites fixed + M blind spots to 220"), UAT Series 218, vault, hand-edited state (wave 5)
-**UI hint**: yes
-
-### Phase 219: Keyboard Access
-**Goal**: A keyboard-only user can operate any scrollable table region in the dashboard without a mouse, closing the one accepted violation whose own justification says it is not accepted as permanent debt.
-**Depends on**: Nothing (independent of the contrast work-stream; may run in parallel with Phases 215–218)
-**Requirements**: KBD-01
-**Success Criteria** (what must be TRUE):
-  1. `components/ui/table.tsx` exposes a focusable, keyboard-scrollable region (`tabIndex`, appropriate `role`) usable app-wide across every table consumer, not just one page.
-  2. A keyboard-only walkthrough (Tab to the region, arrow/PageDown to scroll) succeeds on at least one representative page with a mouse disconnected.
-  3. The `scrollable-region-focusable` accepted-violation entry is withdrawn from the accepted-violations list, not renewed, and the axe/a11y suite stays green without it.
-**Plans**: 4 plans in 4 waves
-Plans:
-- [x] 219-01-PLAN.md — Conditional focusable/named region in table.tsx (mutation-proven unit test) + 14 regionLabels + rebuilt statics (wave 1)
-- [x] 219-02-PLAN.md — Keyboard-only Playwright walkthrough + control node, mutation-proven against a rebuilt bundle (wave 2)
-- [x] 219-03-PLAN.md — CI-only axe round-trip: withdraw scrollable-region-focusable, retire countRange, resolve D-09 todo, per-step CI proof (wave 3)
-- [x] 219-04-PLAN.md — Docs (operators-guide, master-guide regen, report-interpretation), UAT Series 219, vault sync, VALIDATION close, hand-edited state (wave 4)
-**UI hint**: yes
-
-### Phase 220: CI Instrument Truth
-**Goal**: The gates that report CI health actually measure it — the intermittent required-job flake is diagnosed rather than tolerated, `main`'s Python CI is green, and phase verification can no longer report `passed` over a red branch.
-**Depends on**: Nothing (independent CI-instrument work-stream; may run in parallel with Phases 215–219)
-**Requirements**: CITRUTH-01, CITRUTH-02, CITRUTH-03
-**Success Criteria** (what must be TRUE):
-  1. `test_vitest_substitute_nodes_pass`'s 14 nodes are diagnosed (documented root cause) and demonstrated passing across repeated batched `Linux Full Suite` runs — not merely observed green once, since a single green run is a sample, not evidence of health.
-  2. `Python CI` runs green on `main`'s current HEAD, with `test_chaos_lab_idempotency[multihost]`/`[storage-s3]` either fixed or skipping cleanly and honestly (a stated, checkable condition — e.g. registry unreachable) rather than failing or silently passing on masked errors.
-  3. Phase verification consults its own branch's live CI state before reporting `passed`, demonstrated against a real branch rather than asserted — closing the v5.25 gap where five phases verified `passed` over a failing `main`.
+  1. `pyproject.toml` declares 5.27.0, the editable reinstall is done, and `tests/test_version.py` passes. `README.md`, the `docs/UAT-SERIES.md` header and the UAT-1-02 pass criteria carry 5.27.0.
+  2. `CHANGELOG.md` has a `## [5.27.0]` section that moves the v5.26 and v5.27 entries out of `[Unreleased]`.
+  3. Tag `v5.27.0` is pushed, and the `release.yml` run publishes to PyPI and GitHub Releases. The GitHub release body is composed from the `[5.27.0]` CHANGELOG section, not boilerplate.
+  4. A clean venv that installs from PyPI reports `quirk --version` = 5.27.0, and the PyPI project page renders the README brand logo.
+  5. The launch gate is recorded as closed in `.planning/HORIZON.md` and `.planning/STATE.md`.
 **Plans**: TBD
 
 ### Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 215. Instrument Ratchet | 4/4 | Complete | 2026-09-29 |
-| 216. A11y Harness Repair | 8/8 | Complete | 2026-09-29 |
-| 217. Contrast Violations — Structural Drain | 5/5 | Complete | 2026-09-29 |
-| 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
-| 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
-| 220. CI Instrument Truth | 0/? | Not started | - |
+| 222. Brand Identity Landed | 0/TBD | Not started | - |
+| 223. Dashboard Brand Adoption | 0/TBD | Not started | - |
+| 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
+| 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
+| 226. Release v5.27.0 | 0/TBD | Not started | - |
+
+## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged)
+
+**7 phases (215-221, 221 inserted to close the first audit's gaps), 44 plans, 15/15 requirements
+satisfied.** Re-audit `tech_debt` at `main` `4415fbf2`: integration 9/10 seams WIRED + 1 PARTIAL,
+0 broken, flows 3/3, Nyquist 7/7. Full detail: `.planning/milestones/v5.26-ROADMAP.md` ·
+requirements: `.planning/milestones/v5.26-REQUIREMENTS.md` · audit:
+`.planning/milestones/v5.26-MILESTONE-AUDIT.md` (the superseded first audit, `gaps_found` at
+`1cb06689`, is preserved under `v5.26-phases/221-…/221-evidence/`).
+
+**It drained the debt it was opened for.** `BACK-A11Y-01` — lost at the v5.0 archive and
+rediscovered three times — is now a measured, shrink-only number: the RATCHET-01 badge-contrast
+baseline is `{}` in both themes, the axe harness sweeps dark and light, the empty/loading variant
+legs are mutation-proven to exercise those states, and every place the harness does not measure is
+a named, source-derived row in `UNMEASURED-EXCLUSIONS.md` (UX-01..17). `main` is green on Python CI
+again (MinIO replaced by moto), and phase verification now refuses `passed` over red or unobserved
+branch CI (`scripts/branch_ci_state.py` + the ARTIFACT-05 pre-commit gate).
+
+Carried forward, stated rather than absorbed:
+
+- **FIX-05 is qualified.** "Zero badge pair below AA" is true of what RATCHET-01 measures. The
+  residue — 10/20 DS severity-chip pairs, 8 cytoscape label pairs, the `/sensors` light `Stale`
+  badge (3.42:1), the CBOM light system-node labels (1.25:1, UAT-221-11 FAIL) and the 13 `<Table>`
+  consumers with the generic region name — is owned by HORIZON `999.118`.
+- **CITRUTH-01 closed by operator override.** The 14-node vitest flake was not reproduced in 10
+  attempts; the batch now self-diagnoses. A green run is a sample, not health.
+- **The todo → owner hand-off now has a gate.** `INT-01` (ten todos owned by a closed phase) was
+  repaired by hand, then the re-audit found HORIZON claiming a gate that did not exist;
+  `test_no_pending_todo_points_at_a_closed_owner` now enforces it, and its first run found six
+  dangling pointers (four already-resolved todos, UAT-7-21 → 999.118, P2b → new `999.120`).
+- **P2b scan-depth dilution has a live owner for the first time** — `999.120` (P1,
+  operator-reserved). Phase 212 handed it to a phase that was never assigned at the v5.25 close.
+- `999.119`: Windows Sensor E2E empty `--api-token` on branch dispatch (the `DISPATCH_ADVISORY_JOBS`
+  exception lives until it closes) and the chaos lab's MinIO-era service names under moto.
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 

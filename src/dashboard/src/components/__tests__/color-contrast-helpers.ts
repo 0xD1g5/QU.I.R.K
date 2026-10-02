@@ -20,6 +20,9 @@
  * elsewhere would be indefensible. All four remain pure functions of their
  * arguments — no test-runner import, no filesystem read — matching this
  * module's existing discipline.
+ *
+ * Phase 221 plan 221-02 added `blendOver` (alpha compositing) and
+ * `resolveColor` (hex / rgba / HSL-triplet token resolution), still pure.
  */
 
 /** Relative luminance per WCAG 2.1 §Relative luminance. */
@@ -99,4 +102,47 @@ export function foregroundHex(classes: string, block: string, fallback: string):
 export function backgroundToken(classes: string): string | null {
   const m = classes.match(/bg-\[hsl\(var\(--([\w-]+)\)\)\]/)
   return m ? m[1] : null
+}
+
+/**
+ * Alpha-composite an `rgba(r, g, b, a)` (or opaque `#rrggbb`) foreground over
+ * an opaque `#rrggbb` background and return lowercase `#rrggbb`. Per channel:
+ * round(a * fg + (1 - a) * bg). Throws on malformed input. (Phase 221 plan
+ * 221-02: the DS `-dim` chip tints are translucent, so the real chip
+ * background is the tint blended over the surface it sits on.)
+ */
+export function blendOver(rgba: string, bgHex: string): string {
+  const bg = bgHex.trim().match(/^#([0-9a-fA-F]{6})$/)
+  if (!bg) throw new Error(`blendOver: bad background '${bgHex}'`)
+  const bgCh = [0, 2, 4].map((i) => parseInt(bg[1].slice(i, i + 2), 16))
+  const hex = rgba.trim().match(/^#([0-9a-fA-F]{6})$/)
+  let fg: number[]
+  let a = 1
+  if (hex) {
+    fg = [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16))
+  } else {
+    const m = rgba
+      .trim()
+      .match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/)
+    if (!m) throw new Error(`blendOver: bad foreground '${rgba}'`)
+    fg = [Number(m[1]), Number(m[2]), Number(m[3])]
+    a = m[4] === undefined ? 1 : Number(m[4])
+  }
+  const toHex = (v: number) => v.toString(16).padStart(2, "0")
+  return `#${fg.map((c, i) => toHex(Math.round(a * c + (1 - a) * bgCh[i]))).join("")}`
+}
+
+/**
+ * Resolve a `--token` (with or without leading dashes) to a colour string
+ * from `block`, falling back to `fallbackBlock` when `block` does not declare
+ * it. Handles hex literals (returned lowercase), `rgba(...)` strings
+ * (returned verbatim, trimmed) and HSL triplets (delegated to resolveToken).
+ * Returns null when neither block declares it.
+ */
+export function resolveColor(token: string, block: string, fallbackBlock: string): string | null {
+  const name = token.replace(/^--/, "")
+  const re = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6}\\b|rgba?\\([^)]*\\))`)
+  const m = block.match(re) ?? (block.includes(`--${name}:`) ? null : fallbackBlock.match(re))
+  if (m) return m[1].startsWith("#") ? m[1].toLowerCase() : m[1].trim()
+  return resolveToken(name, block, block.includes(`--${name}:`) ? "" : fallbackBlock)
 }

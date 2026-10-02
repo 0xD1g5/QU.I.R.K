@@ -8,13 +8,13 @@ D-07: impact and WCAG criterion are properties of the *rule*, not the node, so e
 recorded once per (route, rule) pair below. Each row carries a `count`, which is what makes
 the grand total below mechanically reconstructible from this ledger alone.
 
-Totals: 6 route(s), 6 (route, rule) entries, 11 accepted violation node(s).
+Totals: 7 route(s), 7 (route, rule) entries, 12 accepted violation node(s).
 
 ## certificates [dark]
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| color-contrast | 1 | serious | 1.4.3 | Route /certificates, theme dark, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The single node is a bare `text-sm text-[hsl(var(--status-critical))] flex items-center gap-1` span with no badge background -- not one of the three named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`), and not a RATCHET-01 badge pair (`badge-contrast-baseline.json` is `{}` as of 218-04), so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-status-critical-bare-text-span-fails-aa-dark-certificates.md (measures ~4.0:1 against dark `--card`, below the 4.5:1 AA floor, corroborated by hand calculation 2026-09-30). |
+| color-contrast | 1 | serious | 1.4.3 | Route /certificates, theme dark, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The single node is a bare `text-sm text-[hsl(var(--status-critical))] flex items-center gap-1` span with no badge background -- not one of the three named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`), and not a RATCHET-01 badge pair (`badge-contrast-baseline.json` is `{}` as of 218-04), so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-status-critical-bare-text-span-fails-aa-dark-certificates.md (measures ~4.0:1 against dark `--card`, below the 4.5:1 AA floor, corroborated by hand calculation 2026-09-30). |
 
 <details><summary>color-contrast evidence samples (1)</summary>
 
@@ -26,7 +26,7 @@ Totals: 6 route(s), 6 (route, rule) entries, 11 accepted violation node(s).
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| color-contrast | 2 | serious | 1.4.3 | Route /compare, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 2 -> 2. Phase 217-04 left both remaining nodes marked 'needs triage' for Phase 218; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) resolved both: (1) a `label-eyebrow` span (`LifecycleEventList.tsx:58`, "Recent Lifecycle Changes") using the Phase-156 HWLC-11 advisory-firewall TEAL literal `hsl(180 37% 47%)`; (2) `LifecycleEventRow.tsx`'s "Worsened" direction-indicator span (`LifecycleEventRow.tsx:47`) using the same firewall's magenta literal `hsl(300 45% 55%)`. Both hues are pinned in `lifecycle-advisory-guard.test.ts`'s FORBIDDEN_PALETTE (Phase 156 HWLC-11 / D-07) to keep this section visually distinct from the scored-finding palette -- that guard protects the HUE choice, not its contrast ratio, and neither hue clears AA against a light background (~2.9:1 and ~3.9:1 respectively, hand calculation 2026-09-30). Neither is one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so neither is a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md. |
+| color-contrast | 2 | serious | 1.4.3 | Route /compare, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 2 -> 2. Phase 217-04 left both remaining nodes marked 'needs triage' for Phase 218; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) resolved both: (1) a `label-eyebrow` span (`LifecycleEventList.tsx:58`, "Recent Lifecycle Changes") using the Phase-156 HWLC-11 advisory-firewall TEAL literal `hsl(180 37% 47%)`; (2) `LifecycleEventRow.tsx`'s "Worsened" direction-indicator span (`LifecycleEventRow.tsx:47`) using the same firewall's magenta literal `hsl(300 45% 55%)`. Both hues are pinned in `lifecycle-advisory-guard.test.ts`'s FORBIDDEN_PALETTE (Phase 156 HWLC-11 / D-07) to keep this section visually distinct from the scored-finding palette -- that guard protects the HUE choice, not its contrast ratio, and neither hue clears AA against a light background (~2.9:1 and ~3.9:1 respectively, hand calculation 2026-09-30). Neither is one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so neither is a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md. |
 
 <details><summary>color-contrast evidence samples (2)</summary>
 
@@ -39,7 +39,7 @@ Totals: 6 route(s), 6 (route, rule) entries, 11 accepted violation node(s).
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| color-contrast | 1 | serious | 1.4.3 | Route /findings (storyline interaction fixture), theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The single node is a `<span style="color: var(--ds-ok)">+7</span>` delta indicator, part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see (neither the arbitrary-value `bg-[hsl(var(--x))]` shape nor Tailwind theme-class shorthand). Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md. |
+| color-contrast | 1 | serious | 1.4.3 | Route /findings (storyline interaction fixture), theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The single node is a `<span style="color: var(--ds-ok)">+7</span>` delta indicator, part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see (neither the arbitrary-value `bg-[hsl(var(--x))]` shape nor Tailwind theme-class shorthand). Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md. |
 
 <details><summary>color-contrast evidence samples (1)</summary>
 
@@ -51,7 +51,7 @@ Totals: 6 route(s), 6 (route, rule) entries, 11 accepted violation node(s).
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| color-contrast | 5 | serious | 1.4.3 | Route /hardware, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 5 -> 5. Phase 217-04 sampled only 3 of the 5 nodes (axe truncates `samples` to 3) and left the other 2 as 'unknown -- needs triage'; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) identified all 5: (1)-(2) two `role="note"` advisory banners using Tailwind default `text-yellow-700 dark:text-yellow-300` on a `bg-yellow-500/10` panel; (3) the `label-eyebrow` TEAL span (`LifecycleEventList.tsx:58`, "Recent Lifecycle Changes", Phase-156 HWLC-11 firewall hue); (4) `LifecycleEventRow.tsx`'s "Worsened" magenta span (`LifecycleEventRow.tsx:47`, same HWLC-11 firewall family); (5) a second `label-eyebrow` TEAL span (`VendorTrendList.tsx:45`, "Vendor PQC Status Trends", Phase-161 HWLC-19 firewall hue). None are one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so none are FIX-05 failures. Attribution: non-badge, outside RATCHET-01 -- nodes (3)-(5) handed to Phase 220: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md; nodes (1)-(2) handed to Phase 220: .planning/todos/pending/260930-hardware-advisory-banner-yellow-text-borderline-aa-light.md. |
+| color-contrast | 5 | serious | 1.4.3 | Route /hardware, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 5 -> 5. Phase 217-04 sampled only 3 of the 5 nodes (axe truncates `samples` to 3) and left the other 2 as 'unknown -- needs triage'; 218-05's local per-node probe (temporary debug print in run-a11y.mjs, reverted before commit) identified all 5: (1)-(2) two `role="note"` advisory banners using Tailwind default `text-yellow-700 dark:text-yellow-300` on a `bg-yellow-500/10` panel; (3) the `label-eyebrow` TEAL span (`LifecycleEventList.tsx:58`, "Recent Lifecycle Changes", Phase-156 HWLC-11 firewall hue); (4) `LifecycleEventRow.tsx`'s "Worsened" magenta span (`LifecycleEventRow.tsx:47`, same HWLC-11 firewall family); (5) a second `label-eyebrow` TEAL span (`VendorTrendList.tsx:45`, "Vendor PQC Status Trends", Phase-161 HWLC-19 firewall hue). None are one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so none are FIX-05 failures. Attribution: non-badge, outside RATCHET-01 -- nodes (3)-(5) re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md; nodes (1)-(2) re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-hardware-advisory-banner-yellow-text-borderline-aa-light.md. |
 
 <details><summary>color-contrast evidence samples (3)</summary>
 
@@ -65,7 +65,7 @@ Totals: 6 route(s), 6 (route, rule) entries, 11 accepted violation node(s).
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| color-contrast | 1 | serious | 1.4.3 | Route /qramm-assessment, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is the `severity-accent-chip` `Badge` (`components/qramm/QuestionCard.tsx:91-97`, `role="status"`, "Auto-filled from scan"), part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md. |
+| color-contrast | 1 | serious | 1.4.3 | Route /qramm-assessment, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is the `severity-accent-chip` `Badge` (`components/qramm/QuestionCard.tsx:91-97`, `role="status"`, "Auto-filled from scan"), part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md. |
 
 <details><summary>color-contrast evidence samples (1)</summary>
 
@@ -77,10 +77,22 @@ Totals: 6 route(s), 6 (route, rule) entries, 11 accepted violation node(s).
 
 | Rule | Count | Impact | WCAG | Justification |
 |------|-------|--------|------|---------------|
-| color-contrast | 1 | serious | 1.4.3 | Route / (root/dashboard-home), theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is a `text-primary underline` navigation link ("View trends ->"), a text link rather than a badge-background pair, measuring ~3.5:1 against white (hand calculation 2026-09-30), below the 4.5:1 AA floor. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-text-primary-nav-link-fails-aa-light-root.md. |
+| color-contrast | 1 | serious | 1.4.3 | Route / (root/dashboard-home), theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is a `text-primary underline` navigation link ("View trends ->"), a text link rather than a badge-background pair, measuring ~3.5:1 against white (hand calculation 2026-09-30), below the 4.5:1 AA floor. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-text-primary-nav-link-fails-aa-light-root.md. |
 
 <details><summary>color-contrast evidence samples (1)</summary>
 
 - `<a class="text-primary underline" href="/trends" data-discover="true">View trends →</a>`
+
+</details>
+
+## sensors [light]
+
+| Rule | Count | Impact | WCAG | Justification |
+|------|-------|--------|------|---------------|
+| color-contrast | 1 | serious | 1.4.3 | Route /sensors, theme light, default variant, rule color-contrast. First measured in Phase 221 (221-07, regeneration run 36912565231). The single node is the sensor-registry `Stale` status Badge (`bg-[var(--ds-high-dim)] text-[var(--ds-high)]`), a DS severity-chip `high` pair; Phase 221 plan 221-02 measured light|high|surface at 3.42:1 against the 4.5:1 AA floor (light theme inherits the dark rgba -dim tints). Not a new defect class and not impact critical. Attribution: re-pointed to backlog 999.118 (HORIZON.md), DS severity chips row; colour change needs an operator design call and is not made in Phase 221. |
+
+<details><summary>color-contrast evidence samples (1)</summary>
+
+- `<div class="inline-flex items-ce..." aria-label="status: Stale">`
 
 </details>

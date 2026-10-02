@@ -1,0 +1,13 @@
+{
+  "_comment": "Phase 221 D-10 (2026-10-01): measured failing DS severity-chip pairs, recorded not fixed. Re-pointed to 999.118 for an operator design call; never fixed here. Shrink-only: a fixed pair must be deleted.",
+  "dark|critical|--ds-bg-surface": 4.23,
+  "light|accent|--ds-bg-base": 3.15,
+  "light|accent|--ds-bg-surface": 2.86,
+  "light|critical|--ds-bg-surface": 4.08,
+  "light|high|--ds-bg-base": 3.78,
+  "light|high|--ds-bg-surface": 3.42,
+  "light|medium|--ds-bg-base": 4.27,
+  "light|medium|--ds-bg-surface": 3.88,
+  "light|ok|--ds-bg-base": 3.88,
+  "light|ok|--ds-bg-surface": 3.54
+}

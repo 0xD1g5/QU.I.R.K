@@ -8,13 +8,13 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 953
-- Disposition counts: DEFERRED 40, FAIL 5, GAP 30, OBSOLETE 2, PASS 790, SKIP_OTHER 86
-- Open GAP (drainable) cases: 43
+- Total case headings: 971
+- Disposition counts: DEFERRED 41, FAIL 6, GAP 31, OBSOLETE 2, PASS 805, SKIP_OTHER 86
+- Open GAP (drainable) cases: 44
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (43 cases, all series)
+## Open GAP Worklist (44 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
@@ -61,6 +61,7 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-206-05 | 206 | Partial Conversions Are Qualified With Verbatim Uncovered Bullets | no substitute coverage. A standing gate asserting that every qualified PASS quotes |
 | UAT-217-07 | 217 | Certificates Safe/At Risk Badges Confirmed — The 30-89-Day Amber Expiry Text Leg Has No Fixture Row | no fixture row: covered by the automated D-09 guard |
 | UAT-217-08 | 217 | Findings/Trends Amber Badges Confirmed — No Chart-TLS (Blue) Badge Rows In The Canonical DB | no fixture row: covered by badge-contrast-guard + CI axe baselines |
+| UAT-221-06 | 221 | Loading-Leg Mutation Goes Red | no substitute coverage |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 

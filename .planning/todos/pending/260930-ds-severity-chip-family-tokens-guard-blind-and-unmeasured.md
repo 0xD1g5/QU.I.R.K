@@ -4,7 +4,8 @@
 triage).
 **Priority:** P3 — one confirmed axe violation in this family so far (qramm-assessment,
 `severity-accent-chip`); the sibling classes/tokens are unmeasured.
-**Owner:** Phase 220 (CI Instrument Truth).
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 **Status:** open, not triaged.
 
 ## What happens
@@ -45,3 +46,8 @@ Measure every `--ds-*` chip pair (`severity-critical`, `severity-high`, `severit
 `--quantum-safe`. Any failing pair gets a design-call-style operator review (same shape as
 FIX-04); a general guard could then assert the whole family the way
 `muted-token-contrast-guard.test.ts` does for `--ds-text-muted`.
+
+## Phase 221 note (2026-10-01)
+
+Measured by `src/dashboard/src/components/__tests__/ds-severity-chip-contrast-guard.test.ts`; failing
+pairs ratcheted, not fixed (they need an operator design call). Ratios in 999.118. Stays pending.

@@ -48,8 +48,8 @@
 #   pg_scanner_user: lab fixture credential for mh-db-finance; the template ships none because there is no default database to scan
 #   pg_scanner_password: as above — a throwaway chaos-lab value, not a secret
 #   enable_s3: true — mh-storage-archive holds one SSE-S3 and one deliberately UNENCRYPTED bucket so the at-rest contrast is real; the template ships it false
-#   aws_endpoint_url: http://10.80.0.50:9000, the profile's MinIO endpoint; the template ships none so the real AWS endpoint is used
-#   aws_region: us-east-1, required by the S3 client against MinIO; the template ships none
+#   aws_endpoint_url: http://10.80.0.50:9000, the profile's S3 endpoint (moto since Phase 220; MinIO before); the template ships none so the real AWS endpoint is used
+#   aws_region: us-east-1, required by the S3 client against the lab's S3 server; the template ships none
 #   broker_targets: 10.80.0.31, this profile's Redis (mh-cache-session); the template ships none
 #   mysql_targets: 10.80.0.111, this profile's MySQL (mh-db-hr); the template ships none
 #   mysql_scanner_user: lab fixture credential for mh-db-hr, which seeds no dedicated scanner account
@@ -203,7 +203,7 @@ connectors:
   # deliberately UNENCRYPTED bucket so the at-rest contrast is real rather than asserted.
   #
   # `aws_endpoint_url` is REQUIRED and is what was missing on the first pass. Without it the
-  # connector never talks to MinIO, no endpoint is classified `S3`, and — the part that actually
+  # connector never talks to the lab's S3 server, no endpoint is classified `S3`, and — the part that actually
   # matters for the score — `_dar_assessed()` reads protocol_counts for
   # POSTGRESQL/MYSQL/RDS/S3/AZURE_BLOB/KUBERNETES/VAULT and returns False, so the whole
   # Data at Rest domain is dropped from the rollup as UNASSESSED rather than scoring badly.

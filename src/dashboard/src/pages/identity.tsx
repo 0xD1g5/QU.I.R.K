@@ -138,7 +138,7 @@ export function IdentityPage() {
 
       {/* Identity findings table (D-11) */}
       {identityFindings.length === 0 ? (
-        <EmptyStateCard message="No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan." />
+        <EmptyStateCard emptyFor="scan-latest" message="No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan." />
       ) : (
         <>
           <div className="flex gap-3 items-center">

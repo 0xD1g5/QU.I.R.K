@@ -8,7 +8,7 @@
 //  own `_gaugeColor()` — already covered structurally by ScoreGauge's own
 //  render, not re-asserted pixel-for-pixel here.)
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 
 const FIXTURE = {
   meta: { scan_id: "scan-1", scanned_at: "2026-09-01T00:00:00Z", total_endpoints: 4, total_findings: 6 },
@@ -56,10 +56,31 @@ vi.mock("@/components/RegressionAlertChip", () => ({
   RegressionAlertChip: () => null,
 }))
 
+// 220-01 (D-08): executive.tsx's loadManifest() effect (executive.tsx:231-250)
+// calls the real, un-mocked @/lib/api fetchApi() on mount. Diagnosed in
+// 220-diag/DIAGNOSIS.md as a dangling-async-update hygiene defect (not a
+// demonstrated cause of the 260927 batch flake, which 10 diagnostic attempts
+// under contention/concurrent-Playwright/live-server load never reproduced) —
+// mocked here the way executive-report-downloads.test.tsx does it, so the
+// fetch settles deterministically and the test awaits that settlement before
+// ending instead of leaving a promise in flight past teardown.
+const fetchApiMock = vi.fn().mockImplementation(() =>
+  Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+)
+vi.mock("@/lib/api", () => ({
+  fetchApi: (...args: unknown[]) => fetchApiMock(...args),
+}))
+
 describe("ExecutivePage — UAT-7-03", () => {
   it("renders the executive score gauge with the fixture score, its rating label, and the confidence badge", async () => {
     const { ExecutivePage } = await import("@/pages/executive")
     render(<ExecutivePage />)
+
+    // Settle the manifest fetch before any assertion runs, so the effect's
+    // async continuation (setManifest) never resolves after the test ends.
+    await waitFor(() =>
+      expect(fetchApiMock).toHaveBeenCalledWith("/api/reports/latest/manifest")
+    )
 
     // Numeric score value 0-100, taken from the fixture. The score renders
     // twice on this page (the ScoreGauge SVG text, and ExecutiveVerdict's
