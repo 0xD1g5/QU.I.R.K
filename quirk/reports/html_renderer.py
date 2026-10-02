@@ -135,6 +135,19 @@ def _severity_color(severity: str) -> str:
 # Use FileSystemLoader so templates are found without pip reinstall (RESEARCH.md Pattern 2).
 # This works for both development installs and editable installs without package data rebuild.
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+_ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
+
+
+def _load_colophon_logo_b64() -> Optional[str]:
+    """Base64 of the packaged Paper brand SVG for the report colophon (never raises).
+
+    Deliberately separate from _load_logo_b64 / the client cover-logo precedence chain.
+    """
+    try:
+        with open(os.path.join(_ASSETS_DIR, "quirk-logo-dark.svg"), "rb") as fh:
+            return base64.b64encode(fh.read()).decode("ascii")
+    except Exception:
+        return None
 
 # Phase 100 / CR-01: maximum logo file size (bytes) — generous for any real logo.
 # Files larger than this are rejected with a stderr advisory; logo is omitted.
@@ -1317,6 +1330,8 @@ def render_html_report(
         logo_mime=logo_mime,
         # Phase 200 / RPT-01: branding identity block (cover + header/footer)
         branding=branding,
+        # Phase 222 / BRAND-05 D-11/D-22: fixed product colophon (Paper variant on the dark report ground)
+        colophon_logo_b64=_load_colophon_logo_b64(),
     )
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
