@@ -87,11 +87,16 @@ def export_pdf() -> Response:
 
                 page.goto(print_url, wait_until="networkidle", timeout=30_000)
                 page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
-                # Phase 222 D-18: the colophon logo must be decoded before printing
-                page.wait_for_function(
-                    "() => Array.from(document.images).every(i => i.complete && i.naturalWidth > 0)",
-                    timeout=15_000,
-                )
+                # Phase 222 D-18: wait for in-flight images (the colophon logo) to
+                # settle before printing. A broken image is also `complete`, so a 404
+                # or aborted decorative asset neither stalls nor fails the export (WR-01).
+                try:
+                    page.wait_for_function(
+                        "() => Array.from(document.images).every(i => i.complete)",
+                        timeout=15_000,
+                    )
+                except Exception:  # noqa: BLE001 - decorative; never gate the export
+                    pass
 
                 pdf_bytes = page.pdf(
                     format="A4",
