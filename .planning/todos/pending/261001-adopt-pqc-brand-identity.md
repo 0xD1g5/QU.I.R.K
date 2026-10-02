@@ -6,9 +6,12 @@ priority: medium
 area: dashboard, CLI, reports, README/docs, release packaging
 requirement: none yet. Promote to a phase when scheduled
 status: pending
+resolves_phase: 223  # NOT 222 (D-26): 222 lands BRAND-01/04/05 + raster scaffold; 223 finishes the dashboard surfaces
 ---
 
 # Adopt the PQC brand identity (docs/brand/) across every product surface
+
+**Progress (2026-10-02):** Phase 222 landed BRAND-01/04/05 plus the raster scaffold (docs/brand on main, README logo, report colophon, PNG pipeline + freshness gate); Phase 223 finishes it (sidebar, favicon, --ds-accent, old-branding re-word).
 
 The new identity is a lens-as-Q logo with six post-quantum easter eggs. It lives in `docs/brand/`, and
 its rules are in `docs/brand/BRAND-GUIDELINES.md`. Nothing in the product uses it yet. Today's branding
