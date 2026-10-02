@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-10-02T13:30:00.000Z"
 last_activity: "2026-10-02 -- v5.27 Launch Readiness OPENED (PM review: brand adoption -> pre-launch doc review -> v5.27.0 release cut; brand scope logo+accent decision; 999.120 P2b deferred to v5.28). Defining requirements on branch v527-open. STATE.md hand-edited from a pre-image: gsd-sdk state.milestone-switch dropped 179 history lines + inserted blank lines (hit #19)"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -1422,9 +1422,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone v5.27 Launch Readiness opened 2026-10-02 — defining requirements. Phases continue
-from 222. Theme: brand adoption -> pre-launch doc review -> v5.27.0 release cut (launch gate for the
-operator's social post).
+Status: Milestone v5.27 Launch Readiness roadmap created 2026-10-02 — 5 phases (222–226): brand
+adoption (222–223) -> pre-launch doc review (224–225) -> v5.27.0 release cut (226). Next:
+`/gsd-discuss-phase 222`.
 Last activity: 2026-10-02 — milestone v5.27 started (hand-edited from a pre-image).
 
 **Prior position (v5.26 close, superseded 2026-10-02):**

@@ -133,17 +133,17 @@ Deferred from this milestone with an owner:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BRAND-01 | — | Pending |
-| BRAND-02 | — | Pending |
-| BRAND-03 | — | Pending |
-| BRAND-04 | — | Pending |
-| BRAND-05 | — | Pending |
-| BRAND-06 | — | Pending |
-| BRAND-07 | — | Pending |
-| DOC-03 | — | Pending |
-| DOC-04 | — | Pending |
-| DOC-05 | — | Pending |
-| DOC-06 | — | Pending |
-| REL-05 | — | Pending |
-| REL-06 | — | Pending |
-| REL-07 | — | Pending |
+| BRAND-01 | Phase 222 | Pending |
+| BRAND-02 | Phase 223 | Pending |
+| BRAND-03 | Phase 223 | Pending |
+| BRAND-04 | Phase 222 | Pending |
+| BRAND-05 | Phase 222 | Pending |
+| BRAND-06 | Phase 223 | Pending |
+| BRAND-07 | Phase 223 | Pending |
+| DOC-03 | Phase 224 | Pending |
+| DOC-04 | Phase 224 | Pending |
+| DOC-05 | Phase 225 | Pending |
+| DOC-06 | Phase 225 | Pending |
+| REL-05 | Phase 226 | Pending |
+| REL-06 | Phase 226 | Pending |
+| REL-07 | Phase 226 | Pending |
