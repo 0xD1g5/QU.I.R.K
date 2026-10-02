@@ -88,7 +88,7 @@ def test_pdf_image_wait_uses_the_settle_predicate(dashboard_client):
     """WR-01: the export waits on IMAGE_SETTLE_PREDICATE (complete, not decoded).
 
     Its real-browser behaviour against a broken image is proven in
-    tests/test_browser_e2e.py::test_222_image_settle_predicate_accepts_broken_image,
+    tests/test_pdf_image_settle.py::test_222_image_settle_predicate_accepts_broken_image,
     which runs in the Browser E2E job (Chromium is absent from Linux Full Suite).
     """
     import unittest.mock as mock
