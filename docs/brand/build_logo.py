@@ -20,6 +20,7 @@ Run:  python3 docs/brand/build_logo.py   (stdlib only; writes into docs/brand/)
 from __future__ import annotations
 
 import math
+import sys
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent
@@ -263,7 +264,7 @@ THEMES = (("", INK, None), ("-dark", PAPER, INK))
 FULL = "QU.I.R.K. — Quantum Infrastructure Readiness Kit"
 
 
-def build():
+def build(out: Path = OUT):
     files = {}
     # 1. mark (icon) -- 120 x 120 artboard
     for sfx, fg, bg in THEMES:
@@ -303,11 +304,11 @@ def build():
              "quirk-lockup-stacked-dark.svg", "quirk-wordmark.svg", "quirk-wordmark-dark.svg",
              "quirk-wordmark-lens.svg", "quirk-wordmark-lens-dark.svg"}
     for fn in stale:
-        (OUT / fn).unlink(missing_ok=True)
+        (out / fn).unlink(missing_ok=True)
     for fn, content in files.items():
-        (OUT / fn).write_text(content)
+        (out / fn).write_text(content, encoding="utf-8")
         print("wrote", fn)
 
 
 if __name__ == "__main__":
-    build()
+    build(Path(sys.argv[1]) if len(sys.argv) > 1 else OUT)
