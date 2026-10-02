@@ -783,3 +783,126 @@ def test_narrowing_is_not_vacuous_on_the_real_corpus():
         entry["id"] == "BACK-51" and entry["title"] == "Phases"
         for entry in kept.values()
     ), "BACK-51::Phases should be narrowed away"
+
+
+# ---------------------------------------------------------------------------
+# Todo -> live-owner leg (v5.26 re-audit N3, 2026-10-02).
+#
+# INT-01 (v5.26 audit, 2026-10-01) found ten pending todos whose only owner was
+# a phase that had already closed. The repair re-pointed them at 999.118 /
+# 999.119 by hand, and HORIZON.md then claimed this module gated the result. It
+# did not: nothing above reads `.planning/todos/`. The re-audit found the same
+# loss through a field the repair never grepped (`resolves_phase:`) -- six
+# todos, not the one or two it predicted. This leg makes the claim true.
+#
+# A todo pointer is DANGLING when it names an owner that can no longer act:
+#   - `resolves_phase: N` or an `**Owner...:**` line citing `Phase N`, where
+#     phase N is checked `[x]` in ROADMAP.md or any archived *-ROADMAP.md;
+#   - an `**Owner...:**` line citing `999.N` with no HORIZON.md table row, or
+#     whose row's status cell says CLOSED / RESOLVED / DRAINED.
+#
+# Deliberately NOT enforced: that every todo HAS an owner. ~30 older todos carry
+# no owner field at all; an `**Owner:** unassigned` line is an honest record,
+# not a dangling one. This leg polices pointers that rot at a close, which is
+# the BACK-A11Y-01 / INT-01 loss mode -- not the size of the backlog.
+#
+# Runs in CI: `.planning/todos/`, ROADMAP.md, HORIZON.md and the recent
+# archived roadmaps are git-tracked. A phase whose roadmap is not visible on
+# this checkout is UNKNOWN and is not flagged, so the leg can under-report on a
+# thin checkout, never over-report.
+# ---------------------------------------------------------------------------
+
+TODOS_PENDING_DIR = REPO_ROOT / ".planning" / "todos" / "pending"
+ROADMAP_PATH = REPO_ROOT / ".planning" / "ROADMAP.md"
+
+_CLOSED_PHASE_RE = re.compile(r"^\s*-\s*\[[xX]\]\s*\*\*Phase\s+(\d+(?:\.\d+)*)\b", re.M)
+_RESOLVES_PHASE_RE = re.compile(r"^resolves_phase:\s*['\"]?(\d+(?:\.\d+)*)", re.M)
+_OWNER_LINE_RE = re.compile(r"^\*\*Owner[^*]*:\*\*\s*(.*)$", re.M)
+_PHASE_REF_RE = re.compile(r"\bPhase\s+(\d+(?:\.\d+)*)\b")
+_BACKLOG_REF_RE = re.compile(r"\b(999\.\d+)\b")
+_HORIZON_ROW_RE = re.compile(r"^\|\s*\**(999\.\d+)\**\s*\|\s*([^|]*)\|", re.M)
+_TERMINAL_STATUS_RE = re.compile(r"\b(CLOSED|RESOLVED|DRAINED)\b")
+
+
+def _closed_phases(roadmap_paths: list[Path]) -> set[str]:
+    closed: set[str] = set()
+    for path in roadmap_paths:
+        closed.update(_CLOSED_PHASE_RE.findall(path.read_text(encoding="utf-8", errors="replace")))
+    return closed
+
+
+def _horizon_rows(horizon_text: str) -> dict[str, str]:
+    """999.N -> status cell, from table rows only (prose mentions never count)."""
+    return {m.group(1): m.group(2) for m in _HORIZON_ROW_RE.finditer(horizon_text)}
+
+
+def _todo_pointers(text: str) -> tuple[list[str], list[str]]:
+    """(phase numbers, 999.N ids) this todo names as its owner."""
+    phases = _RESOLVES_PHASE_RE.findall(text)
+    backlog: list[str] = []
+    for value in _OWNER_LINE_RE.findall(text):
+        if value.strip().lower().startswith("unassigned"):
+            continue
+        phases += _PHASE_REF_RE.findall(value)
+        backlog += _BACKLOG_REF_RE.findall(value)
+    return phases, backlog
+
+
+def _dangling_pointers(todo_paths: list[Path], closed: set[str], rows: dict[str, str]) -> list[str]:
+    offenders = []
+    for path in todo_paths:
+        phases, backlog = _todo_pointers(path.read_text(encoding="utf-8", errors="replace"))
+        for phase in phases:
+            if phase in closed:
+                offenders.append(f"{path.name}: owner Phase {phase} is closed")
+        for item in backlog:
+            if item not in rows:
+                offenders.append(f"{path.name}: owner {item} has no HORIZON.md table row")
+            elif _TERMINAL_STATUS_RE.search(rows[item]):
+                offenders.append(f"{path.name}: owner {item}'s HORIZON.md row is closed")
+    return offenders
+
+
+def test_no_pending_todo_points_at_a_closed_owner():
+    todo_paths = sorted(TODOS_PENDING_DIR.glob("*.md"))
+    roadmaps = [ROADMAP_PATH] + sorted(MILESTONES_DIR.glob("*-ROADMAP.md"))
+    closed = _closed_phases([p for p in roadmaps if p.is_file()])
+    rows = _horizon_rows(HORIZON_PATH.read_text(encoding="utf-8", errors="replace"))
+
+    # Non-vacuity: a regex that silently stops matching must not read as clean.
+    pointing = [p for p in todo_paths if any(_todo_pointers(p.read_text(encoding="utf-8")))]
+    assert todo_paths and pointing and closed and rows, (
+        f"vacuous: {len(todo_paths)} todos, {len(pointing)} with an owner pointer, "
+        f"{len(closed)} closed phases, {len(rows)} HORIZON 999.* rows -- a parser has "
+        "stopped matching; fix the parser, do not delete this assertion"
+    )
+
+    offenders = _dangling_pointers(todo_paths, closed, rows)
+    if offenders:
+        detail = "\n".join(f"  - {o}" for o in offenders)
+        pytest.fail(
+            f"{len(offenders)} pending todo pointer(s) name an owner that can no longer act:\n"
+            f"{detail}\n\nFix: re-point each at a live HORIZON.md 999.* row, or move a "
+            "resolved todo to .planning/todos/completed/ with a Resolution section. Do not "
+            "delete the pointer to make this pass."
+        )
+
+
+def test_dangling_pointer_detection_each_shape(tmp_path):
+    """Each dangling shape is caught, and each live / honest shape is not."""
+    cases = {
+        "a.md": ("---\nresolves_phase: 215\n---\n", True),
+        "b.md": ("**Owner:** Phase 220 (CI Instrument Truth)\n", True),
+        "c.md": ("**Owner:** 999.117 (drained)\n", True),
+        "d.md": ("**Owner:** 999.999 (no row)\n", True),
+        "e.md": ("**Owner:** 999.118 (live)\n", False),
+        "f.md": ("**Owner phase:** unassigned, or Phase 220\n", False),
+        "g.md": ("---\nresolves_phase: null\n---\n", False),
+        "h.md": ("---\nresolves_phase: 222\n---\n", False),
+    }
+    for name, (body, _) in cases.items():
+        (tmp_path / name).write_text(body, encoding="utf-8")
+    rows = {"999.117": " P2 — DRAINED ", "999.118": " P2 — OPEN "}
+    offenders = _dangling_pointers(sorted(tmp_path.glob("*.md")), {"215", "220"}, rows)
+    flagged = {o.split(":")[0] for o in offenders}
+    assert flagged == {n for n, (_, bad) in cases.items() if bad}, offenders

@@ -132,3 +132,12 @@ docker exec chaoslab-mh-prober-1 quirk --config /scan-config.yaml \
 # then edit multihost-scan-config.yaml's ports_tls to [443,80] and re-run:
 # totals.endpoints drops 219 -> 54 and the score drops 91 -> 89 on IDENTICAL infrastructure.
 ```
+
+## Resolution (v5.26 re-audit, 2026-10-02)
+
+Fixed: HORIZON `999.113` CLOSED 2026-09-13. `quirk/intelligence/scoring.py:404` divides certificate
+ratios by `certs_observed`, `:412` endpoint ratios by `assessable_endpoint_count`. Fix `0b0ed1c7`,
+red-proof pair `a49c7dd6` -> `9fadfaa2`, test `tests/test_score_denominator_999_113.py`; Phase 211
+verified `passed` and measured DENOM-03 live. The narrower leftovers live elsewhere:
+`999.113-domain-connector-ratio-denominator-is-approximate.md` (pending) and scan-depth dilution
+(`p2b-healthy-endpoints-dilute-the-readiness-score.md`, owner `999.120`).
