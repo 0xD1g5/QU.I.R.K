@@ -111,7 +111,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 
 ### Phases
 
-- [ ] **Phase 222: Brand Identity Landed** - Merge PR #46 refreshed against `main` with required CI green, then put the brand on the README and on every generated report's colophon
+- [x] **Phase 222: Brand Identity Landed** - Merge PR #46 refreshed against `main` with required CI green, then put the brand on the README and on every generated report's colophon (completed 2026-10-02)
 - [ ] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + mark, favicon raster pipeline with a drift gate, the `--ds-accent` decision, and every old-branding pin re-worded in the same phase
 - [ ] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc
 - [ ] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard
@@ -191,7 +191,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 222. Brand Identity Landed | 7/7 | In Progress | - |
+| 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
 | 223. Dashboard Brand Adoption | 0/TBD | Not started | - |
 | 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
