@@ -50,8 +50,18 @@ export function isPlaceholderJustification(value) {
 // each hold their own baseline data instead of silently sharing the happy-path fixture's
 // file. `resolveVariant` normalizes an unset or empty-string variant to "default" so the
 // unsuffixed run never collides with a literal "" segment in the filename.
+// 221 D-02/T-221-03: the variant allowlist, symmetric with THEMES. An unknown variant throws
+// instead of silently selecting a baseline set that does not exist.
+export const VARIANTS = Object.freeze(['default', 'empty', 'loading'])
+
 export function resolveVariant(env) {
-  return (env && env.VITE_A11Y_FIXTURE_VARIANT) || 'default'
+  const value = (env && env.VITE_A11Y_FIXTURE_VARIANT) || 'default'
+  if (!VARIANTS.includes(value)) {
+    throw new Error(
+      `resolveVariant: unsupported VITE_A11Y_FIXTURE_VARIANT "${value}" — must be one of: ${VARIANTS.join(', ')}`,
+    )
+  }
+  return value
 }
 
 // 216 D-01/D-02: the harness-side theme allowlist. Deliberately NARROWER than the app's own

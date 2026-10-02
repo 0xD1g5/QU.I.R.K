@@ -77,7 +77,7 @@ export function ScanHistoryPage() {
       </div>
 
       {sessions.length === 0 ? (
-        <EmptyStateCard message="No scans yet — run your first scan from the CLI or the New Scan form to see history here." />
+        <EmptyStateCard emptyFor="scans" message="No scans yet — run your first scan from the CLI or the New Scan form to see history here." />
       ) : (
         <Table>
           <TableHeader>

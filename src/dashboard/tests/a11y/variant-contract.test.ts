@@ -1,0 +1,377 @@
+import { describe, it, expect } from "vitest"
+import { readFileSync, readdirSync } from "node:fs"
+import path from "node:path"
+import { VARIANTS, isPlaceholderJustification } from "./baseline-diff.mjs"
+import { FIXTURE_HANDLERS } from "./fixture-handlers.mjs"
+
+// Phase 221 / HARNESS-03 / 221-CONTEXT.md D-05, D-06. Run-time enumeration contract:
+// every route in routes.json must carry exactly one variant decision (per-endpoint
+// `variantMarkers`, or a written `variantInsensitive` reason), and the VARIANTS allowlist,
+// npm scripts, CI steps and harness guards must not drift apart. Occurrence sets are derived
+// at test time, never from a hand-listed array (mutation M5 targets the route decision).
+
+const PACKAGE_JSON = JSON.parse(readFileSync(path.resolve(__dirname, "../../package.json"), "utf-8"))
+const WORKFLOW_TEXT = readFileSync(
+  path.resolve(__dirname, "../../../../.github/workflows/dashboard-quality.yml"),
+  "utf-8",
+)
+const RUN_A11Y_SOURCE = readFileSync(path.resolve(__dirname, "run-a11y.mjs"), "utf-8")
+const ROUTES: Array<Record<string, unknown> & { slug: string }> = JSON.parse(
+  readFileSync(path.resolve(__dirname, "routes.json"), "utf-8"),
+)
+const NON_DEFAULT = VARIANTS.filter((v: string) => v !== "default")
+
+describe("variant-contract (221-01)", () => {
+  it("VARIANTS carries at least three entries (vacuity guard)", () => {
+    expect(Array.isArray(VARIANTS)).toBe(true)
+    expect(VARIANTS.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it("routes.json carries at least 13 routes (vacuity guard)", () => {
+    expect(ROUTES.length).toBeGreaterThanOrEqual(13)
+  })
+
+  it.each(NON_DEFAULT)("package.json declares a11y:check:%s and a11y:baseline:%s, each setting VITE_A11Y_FIXTURE_VARIANT=%s", (v) => {
+    for (const kind of ["check", "baseline"]) {
+      const script = PACKAGE_JSON.scripts[`a11y:${kind}:${v}`]
+      expect(script, `missing npm script a11y:${kind}:${v}`).toBeTruthy()
+      expect(script).toContain(`VITE_A11Y_FIXTURE_VARIANT=${v}`)
+    }
+  })
+
+  it.each(NON_DEFAULT)("dashboard-quality.yml names both npm run a11y:check:%s and npm run a11y:baseline:%s", (v) => {
+    expect(WORKFLOW_TEXT, `no "npm run a11y:check:${v}" step`).toContain(`npm run a11y:check:${v}`)
+    expect(WORKFLOW_TEXT, `no "npm run a11y:baseline:${v}" step`).toContain(`npm run a11y:baseline:${v}`)
+  })
+
+  it.each(ROUTES.map((r) => r.slug))("route %s carries exactly one variant decision", (slug) => {
+    const route = ROUTES.find((r) => r.slug === slug)!
+    const markers = route.variantMarkers as Record<string, unknown> | undefined
+    const insensitive = route.variantInsensitive
+    const hasMarkers = markers !== undefined
+    const hasInsensitive = insensitive !== undefined
+    expect(
+      hasMarkers !== hasInsensitive,
+      `route "${slug}" must have exactly one of variantMarkers or variantInsensitive (D-06)`,
+    ).toBe(true)
+    if (hasMarkers) {
+      expect(typeof markers).toBe("object")
+      const entries = Object.entries(markers!)
+      expect(entries.length, `route "${slug}" variantMarkers is empty`).toBeGreaterThan(0)
+      for (const [handler, sel] of entries) {
+        expect(typeof sel === "string" && sel.length > 0, `route "${slug}" marker for ${handler} is not a non-empty string`).toBe(true)
+      }
+      expect(route.insensitiveEndpoints, `route "${slug}" has variantMarkers; insensitiveEndpoints applies only to variantInsensitive routes`).toBeUndefined()
+    } else {
+      expect(typeof insensitive).toBe("string")
+      // 221 WR-03: each consumed endpoint carries its own reason; no self-attested blanket opt-out.
+      for (const [id, why] of Object.entries((route.insensitiveEndpoints ?? {}) as Record<string, unknown>)) {
+        expect(FIXTURE_HANDLERS.some((h: { id: string }) => h.id === id), `route "${slug}" insensitiveEndpoints names unknown handler "${id}"`).toBe(true)
+        expect(typeof why === "string" && why.length >= 20 && !isPlaceholderJustification(why), `route "${slug}" insensitiveEndpoints["${id}"] reason is empty or a placeholder`).toBe(true)
+      }
+      expect(
+        isPlaceholderJustification(insensitive),
+        `route "${slug}" variantInsensitive reason is a placeholder`,
+      ).toBe(false)
+    }
+  })
+
+  // 221 WR-06: the held-response release is measured behaviourally in held-release.test.ts; a
+  // string-containment check here could stay green with the mechanism removed or broken.
+  it("vite.config.ts is table-driven: imports fixture-handlers.mjs (221 D-03)", () => {
+    const vite = readFileSync(path.resolve(__dirname, "../../vite.config.ts"), "utf-8")
+    expect(vite).toContain("fixture-handlers.mjs")
+  })
+
+  it("run-a11y.mjs refuses a pre-existing server on the port (221 D-02)", () => {
+    expect(RUN_A11Y_SOURCE).toContain("already answers before this sweep")
+  })
+
+  it("run-a11y.mjs checks the /__a11y-variant sentinel (221 D-02)", () => {
+    expect(RUN_A11Y_SOURCE).toContain("__a11y-variant")
+  })
+
+  it("the sentinel normalises the variant like resolveVariant and the harness checks process-group ownership (221 WR-05)", () => {
+    const vite = readFileSync(path.resolve(__dirname, "../../vite.config.ts"), "utf-8")
+    expect(vite).toContain("variant: variant || 'default'")
+    expect(vite).not.toContain("variant ?? 'default'")
+    expect(RUN_A11Y_SOURCE).toContain("['-o', 'pgid=', '-p', String(identity.pid)]")
+    expect(RUN_A11Y_SOURCE).toContain("identityPgid !== previewProc.pid")
+  })
+
+  it("run-a11y.mjs applies renderStateViolations before the axe scan (221 D-05)", () => {
+    const guard = RUN_A11Y_SOURCE.indexOf("renderStateViolations(")
+    const axe = RUN_A11Y_SOURCE.indexOf("new AxePuppeteer(")
+    expect(guard).toBeGreaterThan(-1)
+    expect(axe).toBeGreaterThan(-1)
+    expect(guard).toBeLessThan(axe)
+  })
+
+  it("run-a11y.mjs waits for EVERY required per-endpoint witness before the marker-absence probe (221 WR-02/WR-12/WR-13)", () => {
+    // WR-12: a first-match wait (waitForSelector) reads witnesses before sibling panels render.
+    const wait = RUN_A11Y_SOURCE.indexOf(".waitForFunction(ss => ss.every(s => document.querySelector(s) !== null),")
+    expect(RUN_A11Y_SOURCE).toContain("const required = requiredEmptyWitnesses(variantMarkers)")
+    expect(RUN_A11Y_SOURCE).not.toContain("await page.waitForSelector(sel, { timeout: 5_000 })")
+    const absence = RUN_A11Y_SOURCE.indexOf("present[selector] = !!(await page.$(selector))")
+    expect(wait, "no empty-state witness wait").toBeGreaterThan(-1)
+    expect(absence).toBeGreaterThan(-1)
+    expect(wait).toBeLessThan(absence)
+    expect(RUN_A11Y_SOURCE).toContain("emptyWitnesses,")
+  })
+
+  it("run-a11y.mjs enforces insensitiveEndpoints on variantInsensitive routes (221 WR-03)", () => {
+    expect(RUN_A11Y_SOURCE).toContain("insensitiveEndpoints does not declare")
+    const block = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("} else if (variantInsensitive) {"))
+    expect(block.indexOf("exitCode = 1"), "variantInsensitive branch never fails").toBeGreaterThan(-1)
+    expect(block.indexOf("exitCode = 1")).toBeLessThan(block.indexOf("new AxePuppeteer("))
+  })
+
+  it("run-a11y.mjs owns its preview by process group with strictPort (221 D-02)", () => {
+    for (const needle of ["detached: true", "--strictPort", "process.kill(-", "SIGKILL"]) {
+      expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
+    }
+    expect(RUN_A11Y_SOURCE).not.toContain("previewProc.kill('SIGTERM')")
+  })
+
+  it("run-a11y.mjs routes every exit through the async teardown and owns its signals (221 WR-04)", () => {
+    for (const needle of ["previewProc.on('error'", "previewProc.on('exit'", "async function abort(", "handleSIGINT: false", "} finally {"]) {
+      expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
+    }
+    // no early exit may bypass shutdownPreview with the bare synchronous cleanup + exit pair
+    expect(RUN_A11Y_SOURCE).not.toMatch(/cleanup\(\)\s*\n\s*process\.exit\(1\)/)
+    const fin = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.lastIndexOf("} finally {"))
+    expect(fin.indexOf("await teardown()")).toBeGreaterThan(-1)
+  })
+
+  it("run-a11y.mjs has ONE idempotent teardown whose latch precedes any await, and a signal's status wins (221 WR-10)", () => {
+    const fn = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("function teardown() {"))
+    const body = fn.slice(0, fn.indexOf("\n}\n"))
+    expect(body, "teardown() not found").toContain("if (!teardownPromise) {")
+    const latch = body.indexOf("shuttingDown = true")
+    expect(latch, "teardown never sets the shuttingDown latch").toBeGreaterThan(-1)
+    expect(latch, "shuttingDown latch must be set before the first await").toBeLessThan(body.indexOf("await "))
+    // exactly one place in the harness closes the browser and shuts the preview down
+    expect(RUN_A11Y_SOURCE.split("await shutdownPreview()").length - 1, "shutdownPreview called outside teardown()").toBe(1)
+    expect(RUN_A11Y_SOURCE).toContain("if (abortCode === null) abortCode = code")
+    expect(RUN_A11Y_SOURCE).toContain("if (abortCode !== null) process.exit(abortCode)")
+    const catchBlock = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.lastIndexOf("} catch (err) {"), RUN_A11Y_SOURCE.lastIndexOf("} finally {"))
+    expect(catchBlock.indexOf("if (abortCode !== null) {"), "loop catch does not yield to a signal").toBeGreaterThan(-1)
+    expect(catchBlock.indexOf("if (abortCode !== null) {")).toBeLessThan(catchBlock.indexOf("exitCode = 1"))
+  })
+
+  it("run-a11y.mjs bounds browser.close(), signals the preview group before any await, and a second signal forces exit (221 WR-11)", () => {
+    // the only browser.close() CALL (not prose) is the bounded one
+    const closeCalls = RUN_A11Y_SOURCE.match(/browser\??\.close\(\)\s*[.;)]/g) ?? []
+    expect(closeCalls.length, `an unbounded browser.close() call exists: ${closeCalls.join(" | ")}`).toBe(1)
+    expect(RUN_A11Y_SOURCE).toContain("browser.close().then(() => true, () => true),")
+    expect(RUN_A11Y_SOURCE).toMatch(/setTimeout\(\(\) => r\(false\), BROWSER_CLOSE_TIMEOUT_MS\)/)
+    const td = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("function teardown() {"))
+    expect(td.slice(0, td.indexOf("\n}\n"))).toContain("await closeBrowserBounded()")
+    const sig = RUN_A11Y_SOURCE.slice(RUN_A11Y_SOURCE.indexOf("function onSignal(code) {"))
+    const body = sig.slice(0, sig.indexOf("\n}\n"))
+    expect(body, "onSignal() not found").toContain("void abort(code)")
+    expect(body.indexOf("cleanup()"), "signal path must signal the preview group before abort()").toBeGreaterThan(-1)
+    expect(body.indexOf("cleanup()")).toBeLessThan(body.indexOf("void abort(code)"))
+    const second = body.slice(body.indexOf("if (abortCode !== null) {"), body.indexOf("shuttingDown = true"))
+    expect(second, "second signal does not force").toContain("'SIGKILL'")
+    expect(second).toContain("process.exit(abortCode)")
+    expect(RUN_A11Y_SOURCE).toContain("process.on('SIGINT', () => onSignal(130))")
+    expect(RUN_A11Y_SOURCE).toContain("process.on('SIGTERM', () => onSignal(143))")
+  })
+
+  it("run-a11y.mjs navigates loading on 'load' and derives endpoints at run time (221 D-06/D-08)", () => {
+    for (const needle of ["waitUntil", "'load'", "matchHandler", "does not declare"]) {
+      expect(RUN_A11Y_SOURCE, `missing ${needle}`).toContain(needle)
+    }
+  })
+})
+
+// 221-03 / D-03: every fixture handler carries an explicit empty AND loading decision.
+// Failure messages name the handler id (mutation M4: delete a handler's `empty` key).
+type Handler = (typeof FIXTURE_HANDLERS)[number]
+const decisionKinds = (d: unknown, keys: string[]): string[] =>
+  d && typeof d === "object" ? keys.filter((k) => k in (d as object)) : []
+const goodReason = (r: unknown): boolean =>
+  typeof r === "string" && r.length >= 20 && !isPlaceholderJustification(r)
+
+describe("fixture handler contract (221-03)", () => {
+  it("FIXTURE_HANDLERS carries at least 12 handlers with unique ids (vacuity guard)", () => {
+    expect(FIXTURE_HANDLERS.length).toBeGreaterThanOrEqual(12)
+    const ids = FIXTURE_HANDLERS.map((h: Handler) => h.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it.each(FIXTURE_HANDLERS.map((h: Handler) => h.id))("handler %s has explicit empty and loading decisions", (id) => {
+    const h = FIXTURE_HANDLERS.find((x: Handler) => x.id === id)!
+    expect(h.default, `handler "${id}" has no default source`).toBeTruthy()
+    const empty = decisionKinds(h.empty, ["body", "emptyFrom", "na"])
+    expect(empty.length, `handler "${id}" must declare exactly one of empty.{body|emptyFrom|na}`).toBe(1)
+    const loading = decisionKinds(h.loading, ["hold", "na"])
+    expect(loading.length, `handler "${id}" must declare exactly one of loading.{hold|na}`).toBe(1)
+    if ("na" in (h.empty as object)) {
+      expect(goodReason((h.empty as { na: string }).na), `handler "${id}" empty.na is empty or a placeholder`).toBe(true)
+    }
+    if ("hold" in (h.loading as object)) {
+      expect((h.loading as { hold: unknown }).hold, `handler "${id}" loading.hold must be true`).toBe(true)
+    }
+    if ("na" in (h.loading as object)) {
+      expect(goodReason((h.loading as { na: string }).na), `handler "${id}" loading.na is empty or a placeholder`).toBe(true)
+    }
+    if (h.scope !== undefined) {
+      expect(goodReason(h.scopeReason), `handler "${id}" scopeReason is empty or a placeholder`).toBe(true)
+    }
+  })
+
+  const honouring = new Set(
+    FIXTURE_HANDLERS.filter(
+      (h: Handler) => decisionKinds(h.empty, ["body", "emptyFrom"]).length === 1 && decisionKinds(h.loading, ["hold"]).length === 1,
+    ).map((h: Handler) => h.id),
+  )
+  const allIds = new Set(FIXTURE_HANDLERS.map((h: Handler) => h.id))
+
+  it.each(ROUTES.map((r) => r.slug))("route %s variantMarkers keys are handlers that honour both variants", (slug) => {
+    const route = ROUTES.find((r) => r.slug === slug)!
+    const markers = (route.variantMarkers ?? {}) as Record<string, string>
+    for (const id of Object.keys(markers)) {
+      // 221-06: a route that retires its loading leg only needs the handler to honour empty.
+      if ((route as { loadingRetired?: string }).loadingRetired && decisionKinds(FIXTURE_HANDLERS.find((h: Handler) => h.id === id)?.empty ?? {}, ["body", "emptyFrom"]).length === 1) continue
+      expect(honouring.has(id), `route "${slug}" marks handler "${id}", which does not honour both empty and loading`).toBe(true)
+    }
+    const unmarked = (route.unmarkedEndpoints ?? {}) as Record<string, string>
+    for (const id of Object.keys(unmarked)) {
+      expect(allIds.has(id), `route "${slug}" unmarkedEndpoints names unknown handler "${id}"`).toBe(true)
+    }
+  })
+
+  // 221 CR-01: a marker shared by two handlers on one route is satisfied by EITHER handler's
+  // component, so the default leg cannot fail when one of them breaks (the /hardware
+  // `.font-data` / `.divide-y.divide-border` defect). Selectors must be distinct per route.
+  it.each(ROUTES.map((r) => r.slug))("route %s gives every handler a distinct marker selector", (slug) => {
+    const route = ROUTES.find((r) => r.slug === slug)!
+    const markers = (route.variantMarkers ?? {}) as Record<string, string>
+    const bySelector = new Map<string, string[]>()
+    for (const [id, sel] of Object.entries(markers)) bySelector.set(sel, [...(bySelector.get(sel) ?? []), id])
+    for (const [sel, ids] of bySelector) {
+      expect(ids.length, `route "${slug}": handlers ${ids.join(", ")} share marker "${sel}"`).toBe(1)
+    }
+  })
+
+  // 221 CR-01: an identity-bearing `[data-a11y-marker="<id>"]` selector must name its own
+  // handler id and be emitted by exactly one component, so it cannot be satisfied by another
+  // endpoint's panel. Occurrences are scanned from src/ at test time, never hand-listed.
+  const MARKER_ATTR = /^\[data-a11y-marker="([^"]+)"\]$/
+  const srcRoot = path.resolve(__dirname, "../../src")
+  const srcFiles: string[] = []
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) { if (e.name !== "__tests__") walk(p) }
+      else if (/\.(tsx|ts)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) srcFiles.push(p)
+    }
+  }
+  walk(srcRoot)
+  const attrMarkers = ROUTES.flatMap((r) =>
+    Object.entries((r.variantMarkers ?? {}) as Record<string, string>)
+      .filter(([, sel]) => MARKER_ATTR.test(sel))
+      .map(([id, sel]) => [r.slug, id, sel.match(MARKER_ATTR)![1]] as const),
+  )
+
+  it("at least one route uses an identity-bearing data-a11y-marker (vacuity guard)", () => {
+    expect(attrMarkers.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it.each(attrMarkers)("route %s marker for %s ([data-a11y-marker=%s]) is unique to one component", (slug, id, value) => {
+    expect(value, `route "${slug}": data-a11y-marker value must equal the handler id`).toBe(id)
+    const needle = `data-a11y-marker="${value}"`
+    const hits = srcFiles.flatMap((f) => {
+      const n = readFileSync(f, "utf-8").split(needle).length - 1
+      return n > 0 ? [`${path.relative(srcRoot, f)} x${n}`] : []
+    })
+    expect(hits, `${needle} must be emitted exactly once in src/ (found: ${hits.join(", ") || "none"})`).toHaveLength(1)
+    expect(hits[0].endsWith(" x1"), `${needle} emitted more than once in ${hits[0]}`).toBe(true)
+  })
+})
+
+// 221 WR-13: the empty-state witness is bound to an endpoint and never emitted by an error
+// branch. Both properties were previously ASSUMED (the witness lived unconditionally on
+// EmptyStateCard, and schedules.tsx renders an EmptyStateCard as its error branch). Sites are
+// scanned from src/ at test time, never hand-listed.
+describe("empty-state witness binding (221 WR-13)", () => {
+  const srcRoot = path.resolve(__dirname, "../../src")
+  const files: string[] = []
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) { if (e.name !== "__tests__") walk(p) }
+      else if (/\.tsx$/.test(e.name) && !/\.test\.tsx$/.test(e.name)) files.push(p)
+    }
+  }
+  walk(srcRoot)
+  const handlerIds = new Set(FIXTURE_HANDLERS.map((h: { id: string }) => h.id))
+  const SITE = /\b(emptyFor|data-a11y-empty)=(?:"([^"]+)"|\{([^}]+)\})/g
+  type Site = { file: string; line: number; attr: string; literal?: string; expr?: string; tag: string; before: string }
+  const sites: Site[] = []
+  for (const f of files) {
+    const text = readFileSync(f, "utf-8")
+    for (const m of text.matchAll(SITE)) {
+      const before = text.slice(0, m.index)
+      const tagStart = before.lastIndexOf("<")
+      const tag = (before.slice(tagStart).match(/^<([A-Za-z][\w.]*)/) ?? [])[1] ?? "?"
+      sites.push({
+        file: path.relative(srcRoot, f), line: before.split("\n").length, attr: m[1],
+        literal: m[2], expr: m[3], tag, before: text.slice(0, tagStart),
+      })
+    }
+  }
+  const rel = (s: Site) => `${s.file}:${s.line}`
+  // The governing condition of an emission site: the nearest preceding line (within 8) that
+  // opens a branch: `if (`, a ternary `?` (not `?.`/`??`), or `&&`.
+  const BRANCH = /\bif\s*\(|\?(?![.?])|&&/
+  const governingCondition = (before: string): string | null => {
+    const lines = before.split("\n").slice(-8).reverse()
+    for (const l of lines) if (BRANCH.test(l)) return l.trim()
+    return null
+  }
+  const ERRORISH = /error|\berr\b|fail/i
+  const emission = sites.filter((s) => s.tag === "EmptyStateCard" || /^[a-z]/.test(s.tag))
+
+  it("finds the witness sites (vacuity guard)", () => {
+    expect(emission.length).toBeGreaterThanOrEqual(15)
+  })
+
+  it("EmptyStateCard emits the witness only from its emptyFor prop (no unconditional witness)", () => {
+    const card = readFileSync(path.join(srcRoot, "components/EmptyStateCard.tsx"), "utf-8")
+    expect(card).toContain("data-a11y-empty={emptyFor}")
+    expect(card).not.toMatch(/data-a11y-empty="/)
+    expect(card).not.toContain('data-testid="empty-state"')
+  })
+
+  it("every literal witness id is a fixture handler id", () => {
+    const bad = sites.filter((s) => s.literal !== undefined && !handlerIds.has(s.literal)).map((s) => `${rel(s)} ${s.literal}`)
+    expect(bad, `unknown handler ids: ${bad.join(", ")}`).toEqual([])
+  })
+
+  it("no witness is emitted on a branch whose condition mentions an error", () => {
+    const bad: string[] = []
+    for (const s of emission) {
+      if (s.file === "components/EmptyStateCard.tsx") continue // the definition, not a call site
+      const cond = governingCondition(s.before)
+      if (cond === null) bad.push(`${rel(s)} <${s.tag}> has no governing branch condition within 8 lines`)
+      else if (ERRORISH.test(cond)) bad.push(`${rel(s)} <${s.tag}> is on an error branch: ${cond}`)
+    }
+    expect(bad, bad.join("\n")).toEqual([])
+  })
+
+  it("a dynamic witness is only a pass-through of an emptyFor prop", () => {
+    const bad = sites.filter((s) => s.expr !== undefined && s.expr.trim() !== "emptyFor").map((s) => `${rel(s)} {${s.expr}}`)
+    expect(bad, bad.join(", ")).toEqual([])
+  })
+
+  const marked = ROUTES.flatMap((r) =>
+    Object.keys((r.variantMarkers ?? {}) as Record<string, string>).map((id) => [r.slug, id] as const),
+  )
+  it.each(marked)("route %s marked endpoint %s has at least one bound witness site in src/", (slug, id) => {
+    const hits = sites.filter((s) => s.literal === id)
+    expect(hits.length, `route "${slug}": no emptyFor="${id}" / data-a11y-empty="${id}" in src/; the empty leg could never witness it`).toBeGreaterThan(0)
+  })
+})

@@ -307,6 +307,7 @@ export function ComparePage() {
 
       <div className="mt-8">
         <LifecycleEventList
+          emptyFor="compare"
           events={data.hardware_drift}
           historicalEvents={[]}
           hasPriorScan={true}

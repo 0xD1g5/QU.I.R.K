@@ -2,7 +2,8 @@
 
 **Filed:** 2026-09-29, from the Phase 217 operator visual checkpoint (217-05; `UAT-217-07`, `UAT-217-08` recorded GAP).
 **Priority:** P3 — covered at unit level (D-09 guard, badge ratchet), but never seen rendered.
-**Owner:** Phase 220, alongside `260929-a11y-empty-loading-variant-legs-are-near-vacuous.md` (same class: fixture data too thin for the check that relies on it).
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 
 ## Gaps
 

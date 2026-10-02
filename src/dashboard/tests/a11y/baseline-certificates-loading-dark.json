@@ -1,19 +1,5 @@
 {
   "route": "certificates",
-  "generated": "2026-10-01T00:16:43.779Z",
-  "entries": [
-    {
-      "rule": "color-contrast",
-      "count": 1,
-      "impact": "serious",
-      "wcag": [
-        "1.4.3"
-      ],
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /certificates, theme dark, loading fixture variant, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The single node is a bare `text-sm text-[hsl(var(--status-critical))] flex items-center gap-1` span with no badge background -- not one of the three named design-call tokens (`--destructive`, `--quantum-safe`, `--badge-modbus`), and not a RATCHET-01 badge pair (`badge-contrast-baseline.json` is `{}` as of 218-04), so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-status-critical-bare-text-span-fails-aa-dark-certificates.md (measures ~4.0:1 against dark `--card`, below the 4.5:1 AA floor, corroborated by hand calculation 2026-09-30).",
-      "samples": [
-        "<span class=\"text-sm text-[hsl(var(--status-critical))] flex items-center gap-1\">"
-      ]
-    }
-  ]
+  "generated": "2026-10-01T19:14:24.398Z",
+  "entries": []
 }

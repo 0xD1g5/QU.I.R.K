@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+**Last Updated:** 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -31424,5 +31424,270 @@ necessary but not sufficient (D-15). The live legs run in 220-08 and the verifie
 written, and are recorded in `220-VERIFICATION.md`, not here. The first live refusal already exists
 (`220-diag/ci-state-refusal-1.json`, exit 1, `unobserved`), but on the "no run at all" path, not the
 stale-sha path.
+
+---
+
+## Series 221: Close Gap — A11y Blind Spots + Empty/Loading Variant Legs (Phase 221 — v5.26)
+
+**Last Updated:** 2026-10-01 (Phase 221 execution, plans 01-09). Eleven cases. Until this phase the
+`empty` and `loading` a11y sweeps on Linux CI silently measured the first sweep's leaked preview server,
+so their baselines held default-variant numbers (HARNESS-03). UAT-221-01/02 cover the loud-first refusal
+and the identity-confirmed sweeps after the lifecycle fix; UAT-221-03/04 the render-state guard and the
+handler/route contracts; UAT-221-05/06 the empty- and loading-leg mutations; UAT-221-07 the `/scans` and
+`/sensors` routes with Linux baselines; UAT-221-08 the DS-chip and cytoscape token guards (FIX-05);
+UAT-221-09 the UNMEASURED-EXCLUSIONS ledger; UAT-221-10 the todo Owner close gate (INT-01). UAT-221-11
+records the operator's verdict on the CBOM light-theme system node as FAIL: a confirmed, measured
+(1.25:1) rendered defect owned by backlog 999.118, not fixed in this phase. Vitest counts below were
+re-run live at write time.
+
+### UAT-221-01: Stale Preview Server Is Refused Loudly
+
+**ID:** UAT-221-01
+**Title:** The a11y harness refuses to run when port 4173 already answers
+**Maps to:** HARNESS-03
+
+**What to test:** Landing the guards without fixing the lifecycle must turn Linux CI red, proving the
+refusal fires on the real leak and is not decorative.
+
+**Steps:**
+```
+gh run view 36904731159 --repo 0xD1g5/QU.I.R.K --json conclusion,headSha
+```
+
+**Pass Criteria:** Dashboard Quality run 36904731159 at head `c25bf9d1` concluded `failure`, with the
+light-theme sweep step failing on the stale-server refusal and the dark sweep green.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Evidence `221-evidence/ci-loud-first.md` (per-step conclusions read, not the run
+conclusion). Build, Lint, Test and the dark sweep succeeded; the light sweep failed; empty and loading
+were skipped. The predicted red is the proof that the guard can fail.
+
+### UAT-221-02: Sweeps Measure Their Own Server After The Lifecycle Fix
+
+**ID:** UAT-221-02
+**Title:** Each sweep starts its own `vite preview --strictPort`, confirms identity, and frees the port
+**Maps to:** HARNESS-03
+
+**What to test:** After the process-group lifecycle fix every sweep logs
+`Preview identity confirmed: variant=<v>` with a distinct pid and `port 4173 free` afterwards, and the
+four-sweep gate is green at the regenerated-baselines head.
+
+**Steps:**
+```
+gh run view 36913079235 --repo 0xD1g5/QU.I.R.K --json conclusion,headSha
+```
+
+**Pass Criteria:** run 36911414229 (head `5be40733`) shows identity `variant=empty` confirmed for the
+empty sweep with distinct pids; run 36913079235 (head `aeba7616`) shows Axe + Console Gate with the dark,
+light, empty and loading sweeps all success.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Evidence `221-evidence/ci-after-lifecycle-fix.md` and `ci-regen-green.md`. In 36911414229
+the empty sweep failed only on a count diff (certificates color-contrast 0 below the leak-era baseline
+of 1), which is the leak-era baseline being corrected, resolved by the Linux regeneration in 221-07
+(run 36912565231).
+
+### UAT-221-03: The Render-State Guard Can Fail
+
+**ID:** UAT-221-03
+**Title:** `renderStateViolations` flags a present marker under `empty`/`loading` and a missing skeleton
+**Maps to:** HARNESS-03
+
+**What to test:** The pure render-state evaluator reports exactly one violation for each vacuous
+variant and none for a legitimate one.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/variant-guard-probe.test.ts
+```
+
+**Pass Criteria:** 9 passed, 0 failed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `variant-guard-probe.test.ts (9 tests)` passed, including "empty with a marker
+present is exactly one violation naming the selector and 'present'". A mutation of the production
+`compareToBaseline` floor branch turned the sibling probe red (`221-evidence/w1-probe-mutation.log`).
+
+### UAT-221-04: Handler And Route Variant Contract
+
+**ID:** UAT-221-04
+**Title:** Every fixture handler and route carries an explicit empty/loading decision
+**Maps to:** HARNESS-03
+
+**What to test:** `variant-contract.test.ts` requires each of the 12 handlers to declare exactly one of
+`empty.{body|emptyFrom|na}` and a loading decision, and each route to declare markers or a written
+`variantInsensitive` reason.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/variant-contract.test.ts tests/a11y/fixture-coverage.test.ts
+```
+
+**Pass Criteria:** 0 failed; counts recorded below.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `variant-contract.test.ts (56 tests)` and `fixture-coverage.test.ts (40 tests)`
+passed. Mutations M4 (delete a handler's `empty`) and M5 (a route marking a handler that does not honour
+both variants) were each red with the offending handler named (`221-evidence/mutations.md`).
+
+### UAT-221-05: Empty-Leg Mutation Goes Red On Linux
+
+**ID:** UAT-221-05
+**Title:** Making the hardware handler ignore `empty` fails the empty leg on CI
+**Maps to:** HARNESS-03
+
+**What to test:** On a throwaway branch, mutate `empty` for the hardware-drift handler so it serves
+default content (mutation M2b), dispatch Dashboard Quality, and confirm a render-state failure naming the
+marker. (M2a was a mis-applied mutation and is not counted.)
+
+**Steps:**
+```
+gh run view 36914404491 --repo 0xD1g5/QU.I.R.K --log-failed | grep "render state"
+```
+
+**Pass Criteria:** the log contains `render state [hardware/empty]: marker ".font-data" (hardware-drift)
+is present`; restoring returns to green (run 36913079235).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Evidence `221-evidence/mutations.md`. The Axe job's own sweep steps were skipped because the
+`Test` step went red first on the contract tests; the sweep-level line comes from the Regenerate job,
+which runs the same `run-a11y.mjs`. The throwaway branches were deleted locally and remotely.
+
+### UAT-221-06: Loading-Leg Mutation Goes Red
+
+**ID:** UAT-221-06
+**Title:** A loading handler that answers immediately fails the loading leg
+**Maps to:** HARNESS-03
+
+**What to test:** Mutation M3 (loading handlers answer immediately) makes the render-state guard fail on
+the routes whose markers then appear, and restoring yields zero render-state lines.
+
+**Steps:** see `221-evidence/mutations.md` section M3 (local `node tests/a11y/run-a11y.mjs` loading sweep
+before and after the mutation).
+
+**Pass Criteria:** `render state [root/loading]` and 7 further routes reported, exit 1; restore gives 0
+render-state lines, exit 0.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage)
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Run locally on macOS only (the render-state mechanism is platform independent), and the
+production mutation cannot be re-run from a unit node: it needs a built preview and Chrome, and the CI
+loading sweep proves only the green direction (36913079235, `variant=loading` identity confirmed). The
+red direction is recorded, not re-executable here, hence an honest GAP rather than PASS.
+
+### UAT-221-07: /scans And /sensors Are Swept With Linux Baselines
+
+**ID:** UAT-221-07
+**Title:** `scan-history` and `sensors` routes are in the sweep with Linux-regenerated baselines
+**Maps to:** HARNESS-03, FIX-05
+
+**What to test:** Both routes appear in `routes.json`, have baselines for every applicable
+(variant, theme), and the Linux four-sweep gate is green at the regenerated head.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/variant-contract.test.ts tests/a11y/fixture-coverage.test.ts
+```
+
+**Pass Criteria:** 0 failed; CI run 36913079235 green (see UAT-221-02).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live, 96 passed across the two files. The one new baseline entry is `sensors`
+default-light color-contrast 1 (the `Stale` badge, DS `high` chip, 3.42:1), accepted with a written
+justification and owned by 999.118. The `/scans` loading leg is retired as exclusion UX-12. FIX-05
+therefore stays qualified: it is true only of what RATCHET-01 measures.
+
+### UAT-221-08: DS Chip And Cytoscape Token Pairs Are Measured
+
+**ID:** UAT-221-08
+**Title:** Shrink-only contrast ratchets exist for the DS severity chips and cytoscape node labels
+**Maps to:** FIX-05
+
+**What to test:** The two guards measure every theme x chip x surface pair and every cytoscape
+label/fill pair at run time, hold a shrink-only baseline, and can flag a new, worsened, fixed or orphan
+pair.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/__tests__/ds-severity-chip-contrast-guard.test.ts src/components/__tests__/cytoscape-label-contrast-guard.test.ts
+```
+
+**Pass Criteria:** 0 failed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: 10 passed (DS chip guard) and 4 passed (cytoscape guard). 10 of 20 DS pairs fail
+AA and are baselined with their ratios, not fixed; no colour token was changed. Mutation logs:
+`221-evidence/ds-chip-mutation.log`, `cytoscape-mutation.log`. PASS here means the instrument works, not
+that the colours pass.
+
+### UAT-221-09: Unmeasured Exclusions Are Enforced From Source
+
+**ID:** UAT-221-09
+**Title:** Every blind spot is a measured route or a named UNMEASURED-EXCLUSIONS row
+**Maps to:** HARNESS-03
+
+**What to test:** `unmeasured-exclusions.test.ts` derives the required rows from source and fails on a
+missing row, an orphan row, a placeholder reason, a non-HORIZON owner or a future date.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run tests/a11y/unmeasured-exclusions.test.ts
+```
+
+**Pass Criteria:** 24 passed, 0 failed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `unmeasured-exclusions.test.ts (24 tests)` passed.
+
+### UAT-221-10: Re-Pointed Todos Have Live Owners
+
+**ID:** UAT-221-10
+**Title:** No pending todo names Phase 220 as owner; 999.118 and 999.119 reconcile
+**Maps to:** INT-01
+
+**What to test:** The Owner close gate prints nothing and the backlog reconciliation gate passes with its
+local-only leg running.
+
+**Steps:**
+```
+grep -rln "Owner.*Phase 220" .planning/todos/pending
+.venv/bin/python -m pytest tests/test_backlog_reconciliation_gate.py -q
+```
+
+**Pass Criteria:** the grep prints nothing; 11 passed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** automated
+**Notes:** Re-run live: `11 passed`. Evidence `221-evidence/todo-owner-gate-final.txt`. The twelve
+todos are owned by 999.118 (design calls and instrument blind spots) or 999.119 (CI and chaos-lab
+hygiene).
+
+### UAT-221-11: CBOM Light-Theme System Node Labels Are Readable
+
+**ID:** UAT-221-11
+**Title:** Operator verdict on the CBOM graph system nodes in light theme
+**Maps to:** FIX-05
+
+**What to test:** Open `/cbom`, Graph tab, light theme, and read the three system node labels
+(chaos-lab.local:443, :8443, :22).
+
+**Steps:** `quirk serve` against the default fixture DB, switch to light theme, open CBOM then Graph.
+
+**Pass Criteria:** all three labels are legible.
+
+**Result:** - [ ] PASS  - [x] FAIL  - [ ] SKIP
+**Date:** 2026-10-01  **Tester:** operator
+**Notes:** Operator verdict, verbatim: "no I cannot read their labels". Three grey rounded-rectangle
+nodes, measured at 1.25:1 (`cbom|system|light`, 221-02). This is a confirmed rendered defect, not
+fixed in Phase 221 (no colour token was changed); it is recorded in backlog 999.118 as
+"rendered defect, operator-confirmed 2026-10-01". FIX-05's qualification stands because of it.
 
 ---

@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,534 lines, in reading order.
+Five guides, 6,554 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3939,6 +3939,26 @@ quirk errors --dump-md > docs/error-codes.md
     cost for near-zero signal. A light-theme sweep requested against `empty`/`loading` is
     **refused loudly** (the harness exits non-zero before starting the preview server or
     browser) rather than silently skipped or silently run against the wrong theme.
+  - **The `empty`/`loading` legs now measure what their names say (Phase 221, HARNESS-03).**
+    Until Phase 221, on Linux CI every sweep after the first silently measured the first
+    sweep's preview server, so the empty and loading baselines actually held default-variant
+    numbers. The harness now refuses to run if port 4173 already answers, starts its own
+    `vite preview --strictPort`, confirms the server's identity through a `/__a11y-variant`
+    endpoint (a server reporting the wrong variant fails the sweep), and stops the whole
+    server process group afterwards, asserting the port is free. Under `empty`, each route's
+    declared per-endpoint markers (`variantMarkers` in `routes.json`) must be **absent**.
+    Under `loading`, the fixture holds the requests open, the harness waits for the skeleton
+    (`.animate-pulse` or a route's `loadingSelector`), and the markers must again be absent.
+    A leg that renders default content therefore fails loudly instead of passing vacuously.
+    Every fixture endpoint carries an explicit empty and loading decision in
+    `tests/a11y/fixture-handlers.mjs`, enforced by `variant-contract.test.ts`.
+  - **What is deliberately not measured is a named row, not silence (Phase 221).**
+    `src/dashboard/tests/a11y/UNMEASURED-EXCLUSIONS.md` is hand-maintained, but
+    `unmeasured-exclusions.test.ts` derives the set of required rows from source at run time,
+    so a blind spot is either swept or listed with a reason, an owner (a `999.NNN` backlog
+    item) and a date. The `/scans` and `/sensors` routes joined the sweep in Phase 221; the
+    `/scans` loading leg is a recorded exclusion (UX-12) because `/api/scans` doubles as the
+    auth probe and cannot be held open without blanking the shell.
   - **Per-entry count tolerance (Phase 216, HARNESS-03).** Tolerance is **opt-in and
     per-entry**, via a two-element `countRange: [floor, ceiling]` on a baseline entry. An entry
     with no `countRange` keeps today's exact-integer semantics unchanged — this is the default

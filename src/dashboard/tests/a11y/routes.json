@@ -1,5 +1,14 @@
 [
-  { "slug": "root",          "path": "/" },
+  {
+    "slug": "root",
+    "path": "/",
+    "variantMarkers": {
+      "scan-latest": ".recharts-wrapper"
+    },
+    "unmarkedEndpoints": {
+      "trends": "root also requests /api/trends but its chart cannot be isolated from the scan-latest chart by selector (marker probe: svg.recharts-surface and .recharts-wrapper vanish together); no distinguishing selector, 221-06 records the exclusion"
+    }
+  },
   {
     "slug": "findings",
     "path": "/findings",
@@ -7,17 +16,105 @@
       "slug": "findings-storyline",
       "trigger": "table tbody button[aria-haspopup=\"dialog\"]",
       "awaitSelector": "[role=\"dialog\"]"
+    },
+    "variantMarkers": {
+      "scan-latest": "table tbody tr"
     }
   },
-  { "slug": "identity",      "path": "/identity" },
-  { "slug": "motion",        "path": "/motion" },
-  { "slug": "data-at-rest",  "path": "/data-at-rest" },
-  { "slug": "certificates",  "path": "/certificates", "contentMarker": "table tbody tr" },
-  { "slug": "cbom",          "path": "/cbom" },
-  { "slug": "roadmap",       "path": "/roadmap" },
-  { "slug": "trends",        "path": "/trends" },
-  { "slug": "qramm",            "path": "/qramm" },
-  { "slug": "qramm-assessment", "path": "/qramm/assessment" },
-  { "slug": "hardware", "path": "/hardware", "contentMarker": "table tbody tr" },
-  { "slug": "compare",  "path": "/compare?a=1&b=2", "contentMarker": ".font-data" }
+  {
+    "slug": "identity",
+    "path": "/identity",
+    "variantMarkers": {
+      "scan-latest": "table tbody tr"
+    }
+  },
+  {
+    "slug": "motion",
+    "path": "/motion",
+    "variantInsensitive": "default fixture carries no email endpoints, so default and empty render the same empty-state card; no marker is present in default and absent in empty",
+    "insensitiveEndpoints": {
+      "scan-latest": "motion renders only the email/broker sections of /api/scan/latest; fixture-scan.json has neither, so default and empty both render the same two EmptyStateCards and loading holds the page on its skeleton with no marker to prove it. Recorded as UNMEASURED-EXCLUSIONS motion:scan-latest (221 WR-03)"
+    }
+  },
+  {
+    "slug": "data-at-rest",
+    "path": "/data-at-rest",
+    "variantMarkers": {
+      "scan-latest": "table tbody tr"
+    }
+  },
+  {
+    "slug": "certificates",
+    "path": "/certificates",
+    "contentMarker": "table tbody tr",
+    "variantMarkers": {
+      "scan-latest": "table tbody tr"
+    }
+  },
+  {
+    "slug": "cbom",
+    "path": "/cbom",
+    "variantMarkers": {
+      "scan-latest": "table tbody tr"
+    }
+  },
+  {
+    "slug": "roadmap",
+    "path": "/roadmap",
+    "variantMarkers": {
+      "scan-latest": "canvas"
+    }
+  },
+  {
+    "slug": "trends",
+    "path": "/trends",
+    "variantMarkers": {
+      "trends": "table tbody tr"
+    }
+  },
+  {
+    "slug": "qramm",
+    "path": "/qramm",
+    "variantInsensitive": "all /api/qramm/* handlers serve questionnaire/session content that is not scan-driven; the variant does not apply. See fixture handler decisions"
+  },
+  {
+    "slug": "qramm-assessment",
+    "path": "/qramm/assessment",
+    "variantInsensitive": "all /api/qramm/* handlers serve questionnaire/session content that is not scan-driven; the variant does not apply. See fixture handler decisions"
+  },
+  {
+    "slug": "hardware",
+    "path": "/hardware",
+    "contentMarker": "table tbody tr",
+    "variantMarkers": {
+      "scan-latest": "table tbody tr",
+      "hardware-drift": "[data-a11y-marker=\"hardware-drift\"]",
+      "vendor-trends": "[data-a11y-marker=\"vendor-trends\"]"
+    }
+  },
+  {
+    "slug": "compare",
+    "path": "/compare?a=1&b=2",
+    "contentMarker": ".font-data",
+    "variantMarkers": {
+      "compare": "table tbody tr"
+    }
+  },
+  {
+    "slug": "scan-history",
+    "path": "/scans",
+    "contentMarker": "table tbody tr",
+    "variantMarkers": {
+      "scans": "table tbody tr"
+    },
+    "loadingRetired": "GET /api/scans is both this page's data and AuthProvider.tsx:77's auth probe (and the sidebar's ScanSelector/ScanDateBadge fetch); holding it blanks the whole app shell, so no page skeleton can be caught. The loading leg is skipped for this route and recorded as an exclusion (221-06, D-08 fallback)"
+  },
+  {
+    "slug": "sensors",
+    "path": "/sensors",
+    "contentMarker": "table tbody tr",
+    "variantMarkers": {
+      "sensor-registry": "[aria-label^=\"status:\"]"
+    }
+  }
 ]

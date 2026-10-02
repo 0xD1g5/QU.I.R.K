@@ -36,6 +36,8 @@ export interface LifecycleEventListProps {
   lastScanDate?: string | null
   loading?: boolean
   error?: string | null
+  /** 221 WR-13: fixture handler id whose empty response the empty branches witness (a11y only). */
+  emptyFor?: string
 }
 
 export function LifecycleEventList({
@@ -45,6 +47,7 @@ export function LifecycleEventList({
   lastScanDate,
   loading = false,
   error = null,
+  emptyFor,
 }: LifecycleEventListProps) {
   const [historyOpen, setHistoryOpen] = useState(false)
 
@@ -74,13 +77,16 @@ export function LifecycleEventList({
         ) : error ? (
           <p className="text-sm text-muted-foreground">{error}</p>
         ) : !hasPriorScan ? (
-          <EmptyStateCard message="No prior scan to compare against — This is the first scan recorded for these targets. Lifecycle tracking (tier changes, EOL proximity, CVE deltas) begins on the next scan of the same devices." />
+          <EmptyStateCard emptyFor={emptyFor} message="No prior scan to compare against — This is the first scan recorded for these targets. Lifecycle tracking (tier changes, EOL proximity, CVE deltas) begins on the next scan of the same devices." />
         ) : events.length === 0 ? (
-          <EmptyStateCard
+          <EmptyStateCard emptyFor={emptyFor}
             message={`No lifecycle changes detected — Hardware tier, bridge mitigation status, EOL proximity, and CVE correlation held steady since the last scan on ${lastScanLabel}. Advisory only — this has no effect on the readiness score.`}
           />
         ) : (
-          <div className="divide-y divide-border">
+          // 221 CR-01: endpoint-identity hook for the a11y variant guard (routes.json
+          // variantMarkers["hardware-drift"]). Rendered only on the populated branch, so it is
+          // absent under the empty/loading fixture variants and when the drift fetch fails.
+          <div className="divide-y divide-border" data-a11y-marker="hardware-drift">
             {events.map((event, i) => (
               <LifecycleEventRow key={`${event.host}-${event.port}-${event.event_type}-${i}`} event={event} />
             ))}

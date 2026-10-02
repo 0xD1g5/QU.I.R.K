@@ -98,7 +98,7 @@ function CbomTable({ components }: CbomTableProps) {
 
   if (!components.length) {
     return (
-      <EmptyStateCard message="No CBOM components in this scan — ensure the scanner completed successfully and that motion + data-at-rest scanners ran." />
+      <EmptyStateCard emptyFor="scan-latest" message="No CBOM components in this scan — ensure the scanner completed successfully and that motion + data-at-rest scanners ran." />
     )
   }
 

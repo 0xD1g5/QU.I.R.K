@@ -2,7 +2,8 @@
 
 **Filed:** 2026-09-30, from the Phase 218-03 operator checkpoint.
 **Priority:** P2. This is probably a live AA failure on canvas text, and every contrast instrument is blind to it.
-**Owner:** Phase 220 (CI Instrument Truth). The instrument side is the canvas blind spot.
+**Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
+**Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
 
 ## Evidence
 
@@ -19,3 +20,9 @@ measured**. Re-derive every fill × theme × label pair before fixing.
 
 Cytoscape draws to `<canvas>`. axe sees no text nodes, and `badge-contrast-guard` only reads
 `bg-[hsl(var(--x))]` class strings.
+
+## Phase 221 note (2026-10-01)
+
+Measured by `src/dashboard/src/components/__tests__/cytoscape-label-contrast-guard.test.ts`; failing
+pairs ratcheted in `cytoscape-label-contrast-baseline.json`, not fixed (design call). Ratios in
+999.118. Stays pending.

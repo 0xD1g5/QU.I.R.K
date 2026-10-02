@@ -306,7 +306,7 @@ export function DataAtRestPage() {
           Database Encryption
         </h2>
         {dbFindings.length === 0 ? (
-          <EmptyStateCard message="No database endpoints scanned in this session — enable the DB scanner in your config or scan a database host." />
+          <EmptyStateCard emptyFor="scan-latest" message="No database endpoints scanned in this session — enable the DB scanner in your config or scan a database host." />
         ) : (
           <DatabaseTable findings={dbFindings} />
         )}
@@ -317,7 +317,7 @@ export function DataAtRestPage() {
           Object Storage
         </h2>
         {objFindings.length === 0 ? (
-          <EmptyStateCard message="No object storage buckets scanned in this session — enable the object storage scanner or configure cloud credentials." />
+          <EmptyStateCard emptyFor="scan-latest" message="No object storage buckets scanned in this session — enable the object storage scanner or configure cloud credentials." />
         ) : (
           <ObjectStorageTable findings={objFindings} />
         )}
@@ -328,7 +328,7 @@ export function DataAtRestPage() {
           Kubernetes Secrets
         </h2>
         {k8sFindings.length === 0 ? (
-          <EmptyStateCard message="No Kubernetes secrets scanned in this session — enable the Kubernetes scanner or configure cluster access." />
+          <EmptyStateCard emptyFor="scan-latest" message="No Kubernetes secrets scanned in this session — enable the Kubernetes scanner or configure cluster access." />
         ) : (
           <KubernetesTable findings={k8sFindings} />
         )}
@@ -339,7 +339,7 @@ export function DataAtRestPage() {
           Vault
         </h2>
         {vaultFindings.length === 0 ? (
-          <EmptyStateCard message="No Vault mounts scanned in this session — enable the Vault connector or configure a Vault address." />
+          <EmptyStateCard emptyFor="scan-latest" message="No Vault mounts scanned in this session — enable the Vault connector or configure a Vault address." />
         ) : (
           <VaultTable findings={vaultFindings} />
         )}

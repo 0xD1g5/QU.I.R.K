@@ -1,0 +1,14 @@
+[
+  {
+    "scan_id": "a11y-scan-0001",
+    "scanned_at": "2026-09-30T14:20:00Z",
+    "total_endpoints": 42,
+    "score": 68,
+    "profile": "standard",
+    "calibration": "default",
+    "target": "10.0.0.0/24",
+    "finding_counts": { "high": 7, "medium": 12, "low": 5 },
+    "rating": "At Risk",
+    "rating_cap_reason": null
+  }
+]

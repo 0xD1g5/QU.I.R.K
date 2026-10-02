@@ -123,7 +123,7 @@ export function SensorsPage() {
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>Sensors</h1>
 
       {sensors.length === 0 ? (
-        <EmptyStateCard message="No sensors enrolled. Run: quirk sensor enroll --console <url> to register a sensor." />
+        <EmptyStateCard emptyFor="sensor-registry" message="No sensors enrolled. Run: quirk sensor enroll --console <url> to register a sensor." />
       ) : (
         <SensorsTable sensors={sensors} />
       )}

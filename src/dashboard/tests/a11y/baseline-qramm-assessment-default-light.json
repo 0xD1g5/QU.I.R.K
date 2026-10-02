@@ -1,6 +1,6 @@
 {
   "route": "qramm-assessment",
-  "generated": "2026-10-01T00:16:07.037Z",
+  "generated": "2026-10-01T19:13:49.369Z",
   "entries": [
     {
       "rule": "color-contrast",
@@ -10,7 +10,7 @@
         "1.4.3"
       ],
       "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/color-contrast?application=axe-puppeteer",
-      "justification": "Route /qramm-assessment, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is the `severity-accent-chip` `Badge` (`components/qramm/QuestionCard.tsx:91-97`, `role=\"status\"`, \"Auto-filled from scan\"), part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- handed to Phase 220: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md.",
+      "justification": "Route /qramm-assessment, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is the `severity-accent-chip` `Badge` (`components/qramm/QuestionCard.tsx:91-97`, `role=\"status\"`, \"Auto-filled from scan\"), part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md.",
       "samples": [
         "<div class=\"inline-flex items-ce...\" role=\"status\" aria-label=\"Question 2 auto-fill...\">"
       ]

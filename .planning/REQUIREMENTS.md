@@ -90,7 +90,7 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
       baselined with hand-written per-entry justifications naming FIX-01/02/03/04/05 and the
       draining phase. Settled by measurement: plan 216-06 confirmed the failures land in axe
       `violations`, never `incomplete`, so the blind spot is closed rather than relabelled.
-- [~] **HARNESS-03**: The `data-at-rest` baseline's render-dependent rule uses a tolerance instead of
+- [x] **HARNESS-03**: The `data-at-rest` baseline's render-dependent rule uses a tolerance instead of
       an exact count, and stops disagreeing between macOS and CI
       — Complete (Phase 216) **SCOPE-QUALIFIED to the `default` fixture variant, both themes.**
       `countRange: [1, 2]` on `scrollable-region-focusable` in `baseline-data-at-rest-default-dark`
@@ -108,6 +108,21 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
       Also tracked at
       `.planning/todos/pending/260929-a11y-data-at-rest-empty-loading-zero-vs-two-divergence.md`,
       pointed at Phase 219 / KBD-01, which withdraws the acceptance outright.
+      **Phase 221 (D-13, 2026-10-01): the empty/loading legs are now truthful.** Root cause was a
+      leaked preview server (the vite grandchild was orphaned on Linux, so every sweep after the
+      first measured the default-variant server), not the "1 of 10 handlers" mechanism above; fixed
+      by process-group kill + `--strictPort` + a `/__a11y-variant` identity sentinel, plus a
+      per-route render-state guard and a declarative handler table with a variant contract. Each
+      leg is shown able to fail on a production change: M1b (run 36913766698, `preview server
+      reports variant default, expected empty`), M2b (run 36914404491, `render state
+      [hardware/empty]: marker ".font-data" ... is present`), M3 (local, `render state
+      [root/loading]` on 8 routes), M4/M5 (contract tests red), restored green at Linux run
+      36913079235 (all four sweeps). **One loading leg is retired, by name:** `/scans` (slug
+      `scan-history`, exclusion UX-12 in `src/dashboard/tests/a11y/UNMEASURED-EXCLUSIONS.md`):
+      `GET /api/scans` doubles as the auth probe, so holding it blanks the whole shell; the
+      empty leg for `/scans` is measured. Baselines are Linux-regenerated (run 36912565231); the
+      macOS-vs-Linux count divergence on `data-at-rest` stays with KBD-01 / Phase 219. Evidence:
+      `221-evidence/mutations.md`.
 
 ### Contrast Violations
 
@@ -178,6 +193,17 @@ Three checks run at the milestone boundary (2026-09-28) against live source, not
       see `218-CLOSING-ASSERTION.md`: "empty baseline + 7 named blind-spot sites fixed + 9
       instrument blind spots handed to Phase 220." The 9 instrument-blind-spot sites are NOT
       claimed closed by this checkbox; they are tracked as Phase 220 todos.
+      **Phase 221 note (D-11, D-12):** the 9 instrument blind spots handed to Phase 220 are
+      re-pointed to backlog 999.118 (HORIZON.md); DS severity-chip and cytoscape label/fill token
+      pairs are now MEASURED (`ds-severity-chip-contrast-guard.test.ts`,
+      `cytoscape-label-contrast-guard.test.ts`; failing pairs ratcheted, not fixed, as they need
+      design calls); remaining blind spots are named rows in
+      `src/dashboard/tests/a11y/UNMEASURED-EXCLUSIONS.md`, enforced from source. **Still qualified,
+      not unqualified-complete:** the new measurement surfaced a pair below 4.5:1 that the
+      RATCHET-01 baseline does not contain: `/sensors` light, the sensor-registry `Stale` status
+      badge (DS `high` chip, 3.42:1), accepted in `ACCEPTED-VIOLATIONS.md` and owned by 999.118.
+      FIX-05's wording ("zero badge pair anywhere ... either theme") is therefore true only of what
+      RATCHET-01 measures.
 
 ### Keyboard Access
 
@@ -255,12 +281,12 @@ Filled during roadmap creation.
 | RATCHET-04 | Phase 215 | Complete |
 | HARNESS-01 | Phase 216 | Complete |
 | HARNESS-02 | Phase 216 | Complete |
-| HARNESS-03 | Phase 216 | PARTIAL (default variant only; empty/loading legs near-vacuous — verifier B1) |
+| HARNESS-03 | Phase 216, 221 | Complete (Phase 216 default variant; Phase 221 empty/loading legs, mutation-proven; `/scans` loading leg retired as named exclusion UX-12) |
 | FIX-01 | Phase 217 | Complete |
 | FIX-02 | Phase 217 | Complete |
 | FIX-03 | Phase 217 | Complete |
 | FIX-04 | Phase 218 | Complete (218-03/218-04) |
-| FIX-05 | Phase 218 | Complete, qualified (see FIX-05 note above) |
+| FIX-05 | Phase 218, 221 | Complete, qualified (see FIX-05 note above; 221 added measurement, `/sensors` `Stale` badge 3.42:1 accepted, owner 999.118) |
 | KBD-01 | Phase 219 | Complete (219-01..219-03) |
 | CITRUTH-01 | Phase 220 | Complete — stabilised (10/10 local, 4/4 CI); root cause NOT REPRODUCED, accepted by operator override 2026-10-01 |
 | CITRUTH-02 | Phase 220 | Complete — post-merge main leg verified 2026-10-01: Python CI 36868142296 at merge c7431aca success, [multihost]/[storage-s3] PASSED in JUnit (moto) |

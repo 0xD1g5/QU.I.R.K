@@ -183,7 +183,7 @@ export function HardwarePage() {
       )}
 
       {sorted.length === 0 ? (
-        <EmptyStateCard message="No hardware devices detected. Run a scan with SSH targets to fingerprint hardware." />
+        <EmptyStateCard emptyFor="scan-latest" message="No hardware devices detected. Run a scan with SSH targets to fingerprint hardware." />
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -351,6 +351,7 @@ export function HardwarePage() {
       )}
 
       <LifecycleEventList
+        emptyFor="hardware-drift"
         events={drift?.latest_events ?? []}
         historicalEvents={drift?.historical_events ?? []}
         historicalTruncated={drift?.historical_truncated ?? false}
@@ -361,6 +362,7 @@ export function HardwarePage() {
       />
 
       <VendorTrendList
+        emptyFor="vendor-trends"
         events={vendorTrends?.events ?? []}
         truncated={vendorTrends?.truncated ?? false}
         loading={vendorTrendsLoading}

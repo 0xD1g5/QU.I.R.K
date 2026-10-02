@@ -145,7 +145,7 @@ const OUT_OF_SCOPE_MAPS: Record<string, string> = {
   "identity.tsx:SEVERITY_STYLES": "out of HARNESS-02 scope (D-05..D-09 name only /certificates + /hardware)",
   "identity.tsx:STATUS_BADGE_STYLES": "out of HARNESS-02 scope (D-05..D-09 name only /certificates + /hardware)",
   "motion.tsx:SEVERITY_STYLES": "out of HARNESS-02 scope (D-05..D-09 name only /certificates + /hardware)",
-  "scan-history.tsx:SEVERITY_STYLES": "out of HARNESS-02 scope (D-05..D-09 name only /certificates + /hardware)",
+  "scan-history.tsx:SEVERITY_STYLES": "/scans is axe-swept since Phase 221 (221-06); fixture-scans.json's single session renders the HIGH/MEDIUM/LOW badges (non-zero finding_counts). Key reach is not raw-field derivable here (the map keys are not fixture field values), so it stays a self-covering row",
   "trends.tsx:SEVERITY_STYLES": "out of HARNESS-02 scope (D-05..D-09 name only /certificates + /hardware)",
 }
 

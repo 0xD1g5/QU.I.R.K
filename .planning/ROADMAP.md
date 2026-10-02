@@ -127,6 +127,7 @@ GROW the contrast baseline, so they must land before Phase 218 asserts that base
 - [x] **Phase 218: Contrast Violations — Design Calls & Closing Assertion** - Resolve the 5 genuine design-call pairs under operator visual review and close the milestone's accessibility arc with an empty baseline
 - [x] **Phase 219: Keyboard Access** - Give `components/ui/table.tsx` real keyboard focus/scroll and withdraw the `scrollable-region-focusable` acceptance
 - [x] **Phase 220: CI Instrument Truth** - Stabilise the intermittent required-job vitest nodes, get `Python CI` green on `main`, and make phase verification branch-CI-aware
+- [x] **Phase 221: Close gap: a11y blind spots + empty/loading variant legs** - Close `v5.26-MILESTONE-AUDIT.md`'s two gaps: HARNESS-03 blocker B1 (near-vacuous empty/loading variant legs) and INT-01 (10 a11y todos orphaned on closed Phase 220)
 
 ### Phase Details
 
@@ -275,6 +276,28 @@ Plans:
 - [x] 220-07-PLAN.md — cache-less MinIO proof, CLAUDE.md corrections, UAT Series 220, vault, todos closed, hand-edited state, push (wave 3)
 - [x] 220-08-PLAN.md — CI acceptance: refusal at HEAD, 3x Python CI + Dashboard Quality per-node evidence, green leg, zero commits (wave 4)
 
+### Phase 221: Close gap: a11y blind spots + empty/loading variant legs
+**Goal**: The accessibility debt this milestone was opened to drain has a live owner and an honest measurement. The empty/loading fixture-variant axe legs test what their names claim, and none of the 10 instrument-blind-spot todos handed to Phase 220 (which never picked them up) is archived ownerless at milestone close.
+**Depends on**: Phase 220 (gap closure from `.planning/v5.26-MILESTONE-AUDIT.md`, `status: gaps_found`)
+**Requirements**: HARNESS-03 (B1 — currently `[~]` PARTIAL), FIX-05 (INT-01 orphaned handoff)
+**Gap Closure**: Closes audit gaps HARNESS-03 (partial) and INT-01 (orphaned handoff)
+**Success Criteria** (what must be TRUE):
+  1. The empty and loading fixture variants are honoured by every fixture endpoint the axe harness hits, not 1 of 10. Each variant leg is shown to be able to fail, by a mutation or probe on a production change, not just by being green (todo `260929-a11y-empty-loading-variant-legs-are-near-vacuous`, 216 blocker B1).
+  2. Each of the 10 todos listed under the audit's INT-01 is either fixed with evidence or explicitly re-pointed to a live owner (a HORIZON.md row and/or `backlog/999.NNN/`). None of them still names `Owner: Phase 220` at milestone close. The set is enumerated from `.planning/todos/pending/` at run time, not from this list.
+  3. Every guard blind spot that a todo names (Tailwind shorthand badges, DS severity-chip tokens, cytoscape canvas labels, axe pages not covered) is either measured by an instrument or recorded as a named, unmeasured exclusion. It is never left as an implicit pass.
+  4. HARNESS-03 moves from `[~]` to `[x]` only if criterion 1 holds; otherwise it stays PARTIAL with the remaining gap stated.
+**Plans**: 9 plans (9 waves, fully serialized: one shared working tree, so no two plans build, mutate files, bind port 4173 or assert a clean tree/HEAD at once)
+Plans:
+- [x] 221-01-PLAN.md — Loud first: variant render-state guard, VARIANTS allowlist, stale-server/identity refusal, 216 W1 probe repair; Linux CI shown RED before any fix (W1)
+- [x] 221-02-PLAN.md — Measure DS severity-chip family + cytoscape label/fill token pairs (shrink-only ratchets, no colour change) (W2)
+- [x] 221-03-PLAN.md — Declarative fixture-handler table: explicit empty/loading decision per endpoint, hold-open loading, compare zero-diff + acted-on /compare marker re-probe, run-time fetch coverage (W3)
+- [x] 221-04-PLAN.md — INT-01: re-point 12 Phase-220-owned todos to new backlog 999.118 / 999.119 + HORIZON rows; operator check of CBOM light system node on port 4180 (W4, checkpoint)
+- [x] 221-05-PLAN.md — Harness lifecycle fix (process-group kill, --strictPort), held-skeleton loading nav, run-time endpoint declaration check; Linux CI identity-green (W5)
+- [x] 221-06-PLAN.md — Sweep /scans + /sensors; UNMEASURED-EXCLUSIONS.md enforced from source (W6)
+- [x] 221-07-PLAN.md — Linux baseline regeneration (true empty/loading + new routes), justification re-point, all four sweeps green (W7)
+- [x] 221-08-PLAN.md — Mutation evidence M1b-M6; HARNESS-03 per D-13 + FIX-05 note; retire satisfied todos (W8)
+- [x] 221-09-PLAN.md — Docs + UAT Series 221 + vault sync; STATE/ROADMAP hand-edits; branch_ci_state.py exit 0 at close SHA (W9)
+
 ### Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -285,6 +308,7 @@ Plans:
 | 218. Contrast Violations — Design Calls & Closing Assertion | 6/6 | Complete | 2026-09-30 |
 | 219. Keyboard Access | 4/4 | Complete | 2026-09-30 |
 | 220. CI Instrument Truth | 8/8 | Complete (SC1 via operator override; CITRUTH-02 main leg verified post-merge, run 36868142296) | 2026-10-01 |
+| 221. Close gap: a11y blind spots + empty/loading variant legs | 9/9 | Complete (verified passed 4/4 at 72b6e4b2; CI green, Python CI 36926796359 + Dashboard Quality 36926793305) | 2026-10-01 |
 
 ## Previous Milestone: v5.25 Score Truth & Release Cut — SHIPPED 2026-09-28 (tag `v5.25.0`)
 
