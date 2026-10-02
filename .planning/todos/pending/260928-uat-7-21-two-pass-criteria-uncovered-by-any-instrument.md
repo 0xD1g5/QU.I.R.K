@@ -1,11 +1,12 @@
 ---
-resolves_phase: 215
+resolves_phase: null  # was 215 (closed); owner is 999.118
 ---
 
 # UAT-7-21: two Pass Criteria bullets are covered by no instrument
 
 **Filed:** 2026-09-28 (Phase 213 close, UIFIX-02)
-**Owner phase:** unassigned
+**Owner:** 999.118 (HORIZON.md ledger row).
+**Re-pointed:** 2026-10-02 by the v5.26 re-audit. Its `resolves_phase: 215` named a closed phase and 217 declined it ("not badges"); a rendered-value colour instrument is a 999.118 blind spot.
 **Tag-blocking:** no — but read the caveat below before a release cut
 
 ## What

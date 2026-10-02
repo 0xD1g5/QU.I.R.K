@@ -14,6 +14,7 @@ const A11Y_DIR = __dirname
 const APP_TSX = readFileSync(path.resolve(A11Y_DIR, "../../src/App.tsx"), "utf-8")
 const HORIZON = readFileSync(path.resolve(A11Y_DIR, "../../../../.planning/HORIZON.md"), "utf-8")
 const LEDGER = readFileSync(path.resolve(A11Y_DIR, "UNMEASURED-EXCLUSIONS.md"), "utf-8")
+const RUN_A11Y = readFileSync(path.resolve(A11Y_DIR, "run-a11y.mjs"), "utf-8")
 
 interface Route {
   slug: string
@@ -58,6 +59,12 @@ function deriveRequired(): Map<string, string> {
   for (const k of CONCEPTUAL) req.set(k, "conceptual blind spot with no source artefact")
   // 221 WR-01: keyed on REACHABILITY, not on a handler id merely existing. A scan-coverage entry
   // shadowed by an earlier one would be dead, and must not retire this row.
+  // (H) v5.26 re-audit N4: the harness refuses light for non-default variants (216 D-03), so the
+  // empty-state text 221 made those legs render is never contrast-checked in light. Keyed on the
+  // refusal guard itself: sweep light there and this row becomes an orphan that must be removed.
+  if (/THEME !== 'dark' && VARIANT !== 'default'/.test(RUN_A11Y)) {
+    req.set("theme:light-empty-loading", "run-a11y.mjs refuses theme=light for non-default variants")
+  }
   if (matchHandler("/api/scans/1/coverage")?.id !== "scan-coverage") {
     req.set("scan-history-expanded-row", "no FIXTURE_HANDLERS entry reachably serves /api/scans/{id}/coverage")
   }

@@ -91,3 +91,14 @@ spike are independent and can run any time; the ratchets from 221-02 turn each f
 - Lifecycle hues are guarded by `FORBIDDEN_PALETTE`; the guard must be edited in the same change.
 - New tokens need `:root` and `.light` parity (`theme-token-vocabulary.test.ts`).
 - Fixing a failing key must shrink the matching baseline JSON in the same change (the ratchet fails in the improvement direction until it does).
+
+## Added by the v5.26 re-audit (2026-10-02)
+
+Three items the re-audit (`.planning/v5.26-MILESTONE-AUDIT.md`, N1/N4/N5) found without a live owner.
+
+| Item | Feasibility | Size | Unknowns | Spike? |
+|---|---|---|---|---|
+| UAT-7-21 rendered-colour bullets (todo `260928-uat-7-21-two-pass-criteria-uncovered-by-any-instrument.md`) | **LIKELY** — `hardcoded-color-audit.test.tsx` is source-only; a rendered check reads `getComputedStyle` of the accent and page background in the axe harness | S-M | Whether the electric-blue value has a single canonical token to assert against | no |
+| Light-theme empty/loading legs (UX-17) | **CONFIRMED** — `run-a11y.mjs:100` refuses `theme=light` for non-default variants (216 D-03); lifting it needs light baselines for the empty and loading legs and two CI steps in `dashboard-quality.yml` | M | Whether the empty legs' light text fails AA at all (unmeasured) | no |
+| 13 `<Table>` consumers with the generic region name | **CONFIRMED** — `src/dashboard/src/components/ui/table.tsx:24` falls back to `"Scrollable table"`; 17 consumer files, 4 pass `regionLabel` (cbom, compare, data-at-rest, motion) | S (one prop per site) | none | no |
+

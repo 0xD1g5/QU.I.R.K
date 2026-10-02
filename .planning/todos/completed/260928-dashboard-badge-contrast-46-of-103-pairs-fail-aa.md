@@ -29,3 +29,10 @@ milestone's archive), not a new finding.
 
 **Operator intent: work these together — own milestone, or bundled whole into the next one.
 Not piecemeal.**
+
+## Resolution (v5.26 re-audit, 2026-10-02)
+
+Drained. HORIZON `999.117` is DRAINED: the RATCHET-01 baseline `badge-contrast-baseline.json` is `{}`
+at Phase 218 close (FIX-05), re-confirmed on `main` at `4415fbf2` by the v5.26 re-audit. 218-CONTEXT
+said this todo "closes with FIX-05" and it was never moved. The residue that RATCHET-01 does not
+measure (DS severity chips, cytoscape labels, `/sensors` Stale badge) is owned by `999.118`.
