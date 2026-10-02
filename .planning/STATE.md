@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.26
-milestone_name: Accessibility & Instrument Truth
-status: milestone_complete
-last_updated: "2026-10-02T12:00:00.000Z"
-last_activity: "2026-10-02 -- v5.26 CLOSED + ARCHIVED by hand: re-audit tech_debt 15/15 at main 4415fbf2; pre-close cleanup PR #50 merged (57d6ef82: todo->owner gate, 6 dangling pointers drained, 999.120 filed); archives at .planning/milestones/v5.26-*, phases moved to v5.26-phases/, REQUIREMENTS.md removed. Next: /gsd-new-milestone (PM review first)"
+milestone: v5.27
+milestone_name: Launch Readiness
+status: planning
+last_updated: "2026-10-02T13:50:00.000Z"
+last_activity: "2026-10-02 -- Phase 222 context gathered (222-CONTEXT.md, 21 decisions; operator call D-14 pulls the BRAND-03 raster pipeline slice into 222 for the DOCX colophon PNG). Precondition: PR #52 must merge before any 222 execution commit. STATE.md hand-edited from a pre-image: gsd-sdk state.record-session corrupted it (hit #20)"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 44
-  completed_plans: 44
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -1420,6 +1420,14 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   hand-edited.
 
 ## Current Position
+Phase: Not started (defining requirements)
+Plan: —
+Status: Milestone v5.27 Launch Readiness roadmap created 2026-10-02 — 5 phases (222–226): brand
+adoption (222–223) -> pre-launch doc review (224–225) -> v5.27.0 release cut (226). Next:
+`/gsd-discuss-phase 222`.
+Last activity: 2026-10-02 — milestone v5.27 started (hand-edited from a pre-image).
+
+**Prior position (v5.26 close, superseded 2026-10-02):**
 Phase: — (milestone v5.26 closed 2026-10-02; no phase open)
 Plan: —
 Status: v5.26 Accessibility & Instrument Truth CLOSED and ARCHIVED. 7 of 7 phases, 44 of 44 plans,
@@ -1591,7 +1599,14 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — merge Phase 220, check `main`, then close milestone v5.26
+## Next Cycle — define v5.27 requirements, create the roadmap, then `/gsd-discuss-phase 222`
+
+v5.27 Launch Readiness opened 2026-10-02 after a PM review (HORIZON rationale row of that date).
+Phase 222 starts by refreshing PR #46 (brand identity v1) against `main` and merging it with CI green;
+its last run (2026-10-01) had a red Linux Full Suite from before the moto fix. PR #45 is a stale
+Phase 219 pause record to close.
+
+**Prior Next Cycle note, superseded above:** merge Phase 220, check `main`, then close milestone v5.26
 
 **Phase 220 is COMPLETE (2026-10-01), verified `human_needed` at `cd85c281`, NOT merged.** The
 branch `phase-220-ci-instrument-truth` is pushed. The close commit sits directly on `cd85c281`,
@@ -3256,6 +3271,17 @@ Found at Phase 208 close (2026-09-22):
 | costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
+
+Resume file: `.planning/phases/222-brand-identity-landed/222-CONTEXT.md` — Phase 222 context gathered
+2026-10-02; next `/gsd-plan-phase 222` (after PR #52 merges).
+
+Latest session: 2026-10-02 — **discussed Phase 222.** Live checks found python-docx 1.2.0 cannot embed
+SVG, so the DOCX colophon logo needs a PNG; the operator pulled the raster pipeline slice (renderer +
+script + drift gate) from 223 into 222 (D-14). PyPI's readme_renderer 46.0 strips `<source>`, so the
+README `<img>` fallback must be the Ink logo. PR #46 conflicts only on `.planning/HORIZON.md`.
+`gsd-sdk state.record-session` corrupted this file (hit #20: `status` overwritten with a truncated
+roadmap string, `last_activity` dropped, 28 blank lines inserted, only line 1 of the multi-line
+`Last session` value replaced); pre-image restored byte-identical and this edit made by hand.
 
 Last session: 2026-10-01/02 — **merged #49, re-audited v5.26, built the gate the ledger claimed, and
 closed the milestone.** The re-audit cleared both first-audit gaps but found HORIZON claiming that
