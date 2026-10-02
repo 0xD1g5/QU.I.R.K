@@ -87,6 +87,11 @@ def export_pdf() -> Response:
 
                 page.goto(print_url, wait_until="networkidle", timeout=30_000)
                 page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
+                # Phase 222 D-18: the colophon logo must be decoded before printing
+                page.wait_for_function(
+                    "() => Array.from(document.images).every(i => i.complete && i.naturalWidth > 0)",
+                    timeout=15_000,
+                )
 
                 pdf_bytes = page.pdf(
                     format="A4",
