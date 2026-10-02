@@ -1,6 +1,39 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-09-28)
+## Current State (updated 2026-10-02)
+
+**v5.26 Accessibility & Instrument Truth CLOSED and ARCHIVED 2026-10-02 — development complete,
+untagged.** All 7 phases complete (215–221; 221 inserted to close the first audit's two gaps), 44
+plans, **15 of 15 requirements satisfied**, FIX-05 qualified to what its instruments measure. The
+first audit returned `gaps_found` (HARNESS-03 partial, INT-01 orphaned hand-off); Phase 221 closed
+both and the re-audit at `main` `4415fbf2` returned `tech_debt`: integration 9/10 seams WIRED + 1
+PARTIAL, 0 broken, flows 3/3, Nyquist 7/7. Archived to `.planning/milestones/v5.26-*`;
+`.planning/REQUIREMENTS.md` removed on purpose. `v5.25.0` remains the latest tag.
+
+**`BACK-A11Y-01` is no longer invisible.** The debt lost at the v5.0 archive is a measured,
+shrink-only number: the RATCHET-01 badge-contrast baseline is `{}` in both themes; the axe harness
+sweeps dark and light with per-theme baselines; the empty/loading variant legs are mutation-proven;
+every unmeasured place is a source-derived row in `UNMEASURED-EXCLUSIONS.md` (UX-01..17); tables
+are keyboard-scrollable. What the instruments still cannot see, or see failing, is owned by
+HORIZON `999.118`, not by a phase that will close.
+
+**The CI instruments tell the truth again.** `main` is green on Python CI (the MinIO images were a
+permanent registry withdrawal, misdiagnosed twice as flaky; moto replaced them), and phase
+verification refuses `passed` over red or unobserved branch CI (`scripts/branch_ci_state.py`,
+`verify_phase_gates.check_ci_truth`). The 14-node vitest flake was closed by operator override:
+not reproduced in 10 attempts, now self-diagnosing.
+
+**What to carry forward.** The milestone's own failure mode recurred inside it: ten a11y todos were
+handed to Phase 220, which never took them, so they named a closed phase as owner — the exact
+archive-loss shape that lost `BACK-A11Y-01`. It was repaired by hand, then the re-audit found the
+ledger claiming a gate that did not exist. That gate now exists
+(`test_no_pending_todo_points_at_a_closed_owner`); its first run found **six** dangling pointers
+where the audit predicted one or two, including P2b scan-depth dilution, which Phase 212 had handed
+to a v5.25-close decision that never happened. It is now `999.120` (P1, operator-reserved).
+
+<details>
+<summary>Current State at the v5.25 close (2026-09-28) — superseded</summary>
+
 
 **v5.25 Score Truth & Release Cut CLOSED and ARCHIVED 2026-09-28 — and it SHIPPED.** All 5 phases
 complete (210–214), 40 plans, **15 of 15 requirements satisfied**, two of them (XSURF-04, UIFIX-02)
@@ -274,7 +307,9 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.26 Accessibility & Instrument Truth — OPENED 2026-09-28 *(Phases 215+)*
+</details>
+
+## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged; opened 2026-09-28, Phases 215–221)
 
 **Goal:** Drain the dashboard's WCAG-AA badge-contrast debt as one unit, and repair the instruments
 that let 45 real violations sit behind three green gates — including the CI gates that report green
@@ -1691,7 +1726,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Archive v5.16 and v5.17 untagged rather than tag a release whose source carries the wrong version (2026-08-28, re-affirmed 2026-09-01) | `pyproject.toml` still reads `5.15.0`. Since `release.yml` now triggers on `v[0-9]*`, a wrong tag fires a real release instead of silently no-opping — the failure mode that made v5.13/v5.14 "shipped" on paper only | ⚠️ Revisit — correct, but two milestones of user-visible fixes are now unshipped on `main`. The blocker is a broken local editable install (stale `__editable__.quirk-4.0.0.pth`) preventing the `pip install -e . --no-deps` that a version bump requires. Strongest candidate for v5.18's opening scope |
 
 ---
-*Last updated: 2026-09-28 after the v5.25 Score Truth & Release Cut milestone*
+*Last updated: 2026-10-02 after the v5.26 Accessibility & Instrument Truth milestone*
 
 ## Evolution
 

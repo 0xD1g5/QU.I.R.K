@@ -73,6 +73,7 @@ _PAUSE_RECORD_RE = re.compile(
 )
 
 _MILESTONE_RE = re.compile(r"^milestone:\s*(?P<version>\S+)\s*$", re.MULTILINE)
+_STATUS_RE = re.compile(r"^status:\s*(?P<status>\S+)\s*$", re.MULTILINE)
 
 # `.planning/` is gitignored; a checkout without it (or a CI job that does not
 # provision it) has nothing to police. Skip honestly rather than pass vacuously.
@@ -107,6 +108,32 @@ def _current_milestone() -> str | None:
     return m.group("version") if m else None
 
 
+def _between_milestones() -> bool:
+    """True after a milestone close and before the next one opens.
+
+    The close moves every phase row into `milestones/<version>-ROADMAP.md`, so
+    the live ROADMAP.md legitimately carries ZERO phase boxes. Added 2026-10-02
+    (v5.26 close): the positive control below failed on exactly that state at
+    the v5.25 close too (`b501d3bc`, run 36512285080), hidden behind the two
+    MinIO chaos-lab nodes that were red on the same run.
+    """
+    m = _STATUS_RE.search(_state_text())
+    return bool(m) and m.group("status") == "milestone_complete"
+
+
+def _archived_roadmap() -> Path | None:
+    version = _current_milestone()
+    return MILESTONES_DIR / f"{version}-ROADMAP.md" if version else None
+
+
+def _archived_phase_boxes() -> dict[str, str]:
+    archive = _archived_roadmap()
+    if archive is None or not archive.is_file():
+        return {}
+    text = archive.read_text(encoding="utf-8")
+    return {m.group("num"): m.group("box") for m in _PHASE_BOX_RE.finditer(text)}
+
+
 def test_roadmap_phase_boxes_are_parseable() -> None:
     """Positive control: the extractor must find real rows.
 
@@ -115,6 +142,15 @@ def test_roadmap_phase_boxes_are_parseable() -> None:
     `feedback_measure_with_a_method_independent_of_the_audited_code`.
     """
     boxes = _phase_boxes()
+    if not boxes and _between_milestones():
+        # Prove the regex on the archive the close just wrote, instead of
+        # passing vacuously on an empty live roadmap.
+        boxes = _archived_phase_boxes()
+        assert boxes, (
+            f"STATE.md says milestone_complete, but {_archived_roadmap()} parses zero "
+            "phase checkboxes (or is missing). Either the archive was never written, "
+            "or _PHASE_BOX_RE no longer matches the phase-row format."
+        )
     assert boxes, (
         "Parsed zero phase checkboxes from .planning/ROADMAP.md. The heading "
         "format likely changed; _PHASE_BOX_RE needs updating. Until it is, "
@@ -175,6 +211,25 @@ def test_resume_02_open_milestone_is_not_archived() -> None:
         "invisible. It sat unnoticed for ~3 months last time. Either finish those "
         "phases, or carry them forward into the next milestone's ROADMAP.md "
         "explicitly before archiving this one."
+    )
+
+
+def test_resume_02b_closed_milestone_archive_has_no_open_phase() -> None:
+    """Between milestones, RESUME-02 has no live rows to read; check the archive.
+
+    A milestone recorded as closed must not have been archived with an unchecked
+    phase inside it -- the same BACK-A11Y-01 invisibility, seen from the archive.
+    """
+    if not _between_milestones():
+        return  # an open milestone is policed by RESUME-02 against the live roadmap
+    unchecked = sorted(
+        (num for num, box in _archived_phase_boxes().items() if box == " "),
+        key=lambda n: float(n),
+    )
+    assert not unchecked, (
+        f"Milestone {_current_milestone()} is marked milestone_complete, but its archive "
+        f"{_archived_roadmap()} still has unchecked phase(s): {', '.join(unchecked)}. "
+        "Finish them or carry them into the next milestone before calling it closed."
     )
 
 
