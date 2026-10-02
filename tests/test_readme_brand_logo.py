@@ -5,6 +5,7 @@ variant; GitHub honours the two prefers-color-scheme sources.
 """
 
 import re
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -67,6 +68,8 @@ def test_no_relative_or_other_assets_in_block():
 
 
 def test_h1_unchanged():
-    assert "\n# QU.I.R.K. — v5.25.0\n" in "\n" + _readme(), (
+    # Derived from pyproject.toml so a version bump does not turn this red (WR-03).
+    ver = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    assert f"\n# QU.I.R.K. — v{ver}\n" in "\n" + _readme(), (
         "Phase 222 D-08: H1 must be kept unchanged"
     )
