@@ -661,6 +661,14 @@ ALLOWED_SKIPS = [
         "value alone does not identify a cause. Runs for real in the Browser E2E job.",
     ),
     (
+        "test_report_colophon.py",
+        "_render_or_skip",
+        "environment_capability",
+        "render_pdf_report() degraded (no Chromium in Linux Full Suite by design), so no PDF exists "
+        "to assert the Phase 222 colophon against. Runs for real in the Browser E2E job (advisory) "
+        "and locally; recorded in 222 VERIFICATION.",
+    ),
+    (
         "test_brand_assets_freshness.py",
         "_require_renderer",
         "optional_extra",
