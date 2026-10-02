@@ -428,10 +428,12 @@ jobs:
       # D-01: .[all] only — identity (impacket) and hw (pysnmp) are
       # intentionally excluded from [all] (pyproject.toml lines 60-66, 129-132). Tests gated on those
       # extras take their skip path here; that is expected and still counts as green.
+      # Phase 222 D-16: brand PNG drift gate must EXECUTE here; pin must equal pyproject [dev] (asserted by tests/test_brand_assets_freshness.py)
       - name: Install project with all extras and pytest
         run: |
           pip install -e ".[all]"
           pip install pytest
+          pip install "resvg-py==0.5.0"
 
       - name: Run full test suite
         run: pytest -q -m "" -rs --junitxml=pytest-junit.xml
