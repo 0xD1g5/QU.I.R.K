@@ -60,6 +60,7 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
       pipeline produces the PNG and ICO; the renderer is a dev-only dependency and never a runtime
       extra. A generator-drift freshness gate fails if the committed rasters stop matching their
       SVG source, and it is listed in CLAUDE.md's generator-drift table.
+      Note (Phase 222 D-14): renderer (resvg-py, dev-only) + scripts/build_brand_rasters.py + tests/test_brand_assets_freshness.py scaffold landed in 222 for the report-logo PNG; favicon PNG/ICO outputs remain.
 - [ ] **BRAND-04**: The README shows the brand logo correctly on GitHub light and dark themes via
       `<picture>` + `prefers-color-scheme`, and it renders on PyPI (absolute
       `raw.githubusercontent.com` URL).
