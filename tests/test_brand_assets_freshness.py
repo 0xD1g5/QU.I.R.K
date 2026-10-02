@@ -86,13 +86,21 @@ def test_brand_svgs_regenerate_byte_identical(tmp_path):
 
 def test_brand_generator_gate_is_not_vacuous(tmp_path):
     mod = _load_build_logo()
-    mod.INK = "#0D0125"  # post-import mutation; build() reads the global at call time
+    # THEMES is evaluated at import time, so mutating INK alone never reaches the
+    # quirk-logo*/quirk-mark* variants; rebind THEMES (what those loops read) as well.
+    mod.INK = "#0D0125"
+    mod.THEMES = (("", "#0D0125", None), ("-dark", mod.PAPER, "#0D0125"))
     _regenerate(mod, tmp_path)
     differing = [
         p.name for p in tmp_path.glob("*.svg")
         if not (BRAND_DIR / p.name).exists() or p.read_bytes() != (BRAND_DIR / p.name).read_bytes()
     ]
     assert differing, "mutating the generator's Ink colour changed no SVG; the gate is vacuous"
+    # The packaged/rasterised/README-pinned logo must itself be sensitive (WR-04).
+    for name in ("quirk-logo.svg", "quirk-logo-dark.svg"):
+        assert (tmp_path / name).read_bytes() != (BRAND_DIR / name).read_bytes(), (
+            f"mutating the generator's Ink colour left {name} unchanged; the gate is vacuous for it"
+        )
 
 
 @pytest.mark.parametrize("src,dst", COPIES)
