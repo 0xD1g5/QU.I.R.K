@@ -166,7 +166,7 @@ def test_docx_full_branding_all_fields_present(tmp_path):
     ):
         assert value in full_text, f"{value!r} missing from DOCX output"
 
-    assert len(doc.inline_shapes) > 0, "logo picture not embedded in DOCX output"
+    assert doc.paragraphs[0]._p.xpath(".//w:drawing"), "cover logo picture not embedded in DOCX output (Phase 222 D-23: scoped to the cover paragraph)"
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ def test_degradation_nonexistent_logo_path_no_crash_either_surface(tmp_path):
     result = render_docx_report(path=docx_path, cfg=cfg, findings=[])
     assert result is True, "DOCX render must complete despite an unreadable logo path"
     doc = Document(docx_path)
-    assert len(doc.inline_shapes) == 0, "no picture expected for an unreadable logo"
+    assert not doc.paragraphs[0]._p.xpath(".//w:drawing"), "no cover picture expected for an unreadable logo (Phase 222 D-23: scoped to the cover paragraph)"
     full_text = "\n".join(p.text for p in doc.paragraphs)
     assert "[ Insert organization logo here ]" in full_text, "placeholder must be kept on degradation"
 
