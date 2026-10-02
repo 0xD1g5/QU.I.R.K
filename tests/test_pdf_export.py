@@ -89,23 +89,17 @@ def test_pdf_image_wait_predicate_accepts_broken_image(dashboard_client):
     with naturalWidth 0 -- the wait is for settling, not for successful decode."""
     import unittest.mock as mock
 
-    pytest.importorskip("playwright.sync_api")
     from playwright.sync_api import sync_playwright as real_pw
 
     page = _FakePage()
     with mock.patch("quirk.dashboard.api.routes.pdf.sync_playwright", _fake_playwright(page)):
         dashboard_client.post("/api/export/pdf")
     assert page.predicates
-    try:
-        with real_pw() as p:
-            browser = p.chromium.launch(headless=True)
-            try:
-                pg = browser.new_page()
-                pg.set_content('<img src="http://127.0.0.1:9/nope.svg">')
-                pg.wait_for_function(page.predicates[0], timeout=5_000)
-            finally:
-                browser.close()
-    except Exception as exc:  # chromium missing is an environment skip, timeout is a failure
-        if "Executable doesn't exist" in str(exc):
-            pytest.skip("chromium not installed")
-        raise
+    with real_pw() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
+            pg = browser.new_page()
+            pg.set_content('<img src="http://127.0.0.1:9/nope.svg">')
+            pg.wait_for_function(page.predicates[0], timeout=5_000)
+        finally:
+            browser.close()
