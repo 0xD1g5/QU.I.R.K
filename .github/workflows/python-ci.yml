@@ -428,10 +428,12 @@ jobs:
       # D-01: .[all] only — identity (impacket) and hw (pysnmp) are
       # intentionally excluded from [all] (pyproject.toml lines 60-66, 129-132). Tests gated on those
       # extras take their skip path here; that is expected and still counts as green.
+      # Phase 222 D-16: brand PNG drift gate must EXECUTE here; pin must equal pyproject [dev] (asserted by tests/test_brand_assets_freshness.py)
       - name: Install project with all extras and pytest
         run: |
           pip install -e ".[all]"
           pip install pytest
+          pip install "resvg-py==0.5.0"
 
       - name: Run full test suite
         run: pytest -q -m "" -rs --junitxml=pytest-junit.xml
@@ -519,4 +521,4 @@ jobs:
       # IS present, and this job is the only place in CI where Chromium exists. Its first leg runs
       # in Linux Full Suite, where it guards the skip-never-error contract (D-10) directly.
       - name: Run the browser E2E leg
-        run: pytest tests/test_pdf_decomposition_render.py tests/test_browser_e2e.py tests/test_browser_e2e_skip_contract.py -q -m ""
+        run: pytest tests/test_pdf_decomposition_render.py tests/test_report_colophon.py tests/test_pdf_image_settle.py tests/test_browser_e2e.py tests/test_browser_e2e_skip_contract.py -q -rA -m ""

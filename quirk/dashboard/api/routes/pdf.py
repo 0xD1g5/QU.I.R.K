@@ -22,6 +22,10 @@ from quirk.dashboard.api.middleware.csrf import require_csrf
 
 router = APIRouter(dependencies=[Depends(require_auth), Depends(require_csrf)])
 
+# Phase 222 WR-01: images must SETTLE (loaded or errored), not decode. A broken
+# image is `complete` with naturalWidth 0, so it cannot stall the export.
+IMAGE_SETTLE_PREDICATE = "() => Array.from(document.images).every(i => i.complete)"
+
 # Module-level import allows test mocking via patch("quirk.dashboard.api.routes.pdf.sync_playwright")
 try:
     from playwright.sync_api import sync_playwright
@@ -87,6 +91,13 @@ def export_pdf() -> Response:
 
                 page.goto(print_url, wait_until="networkidle", timeout=30_000)
                 page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
+                # Phase 222 D-18: wait for in-flight images (the colophon logo) to
+                # settle before printing. A broken image is also `complete`, so a 404
+                # or aborted decorative asset neither stalls nor fails the export (WR-01).
+                try:
+                    page.wait_for_function(IMAGE_SETTLE_PREDICATE, timeout=15_000)
+                except Exception:  # noqa: BLE001 - decorative; never gate the export
+                    pass
 
                 pdf_bytes = page.pdf(
                     format="A4",

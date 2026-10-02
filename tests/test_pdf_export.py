@@ -31,3 +31,73 @@ def test_pdf_export_graceful_degradation(dashboard_client):
     assert resp.status_code == 503
     body = resp.json()
     assert body["detail"] == format_error("DASHBOARD-012")
+
+
+class _FakePage:
+    """Records the image-settle predicate; optionally raises on it."""
+
+    def __init__(self, image_wait_exc=None):
+        self.predicates = []
+        self._exc = image_wait_exc
+
+    def route(self, *a, **k):
+        pass
+
+    def goto(self, *a, **k):
+        pass
+
+    def wait_for_selector(self, *a, **k):
+        pass
+
+    def wait_for_function(self, expression, **k):
+        self.predicates.append(expression)
+        if self._exc is not None:
+            raise self._exc
+
+    def pdf(self, **k):
+        return b"%PDF-1.4 fake"
+
+
+def _fake_playwright(page):
+    import unittest.mock as mock
+
+    browser = mock.MagicMock()
+    browser.new_context.return_value.new_page.return_value = page
+    pw = mock.MagicMock()
+    pw.chromium.launch.return_value = browser
+    cm = mock.MagicMock()
+    cm.__enter__.return_value = pw
+    return mock.MagicMock(return_value=cm)
+
+
+def test_pdf_image_wait_does_not_fail_export_on_timeout(dashboard_client):
+    """WR-01: an image that never settles must not turn the export into a 503/500."""
+    import unittest.mock as mock
+
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+    page = _FakePage(image_wait_exc=PlaywrightTimeoutError("Timeout 15000ms exceeded"))
+    with mock.patch("quirk.dashboard.api.routes.pdf.sync_playwright", _fake_playwright(page)):
+        resp = dashboard_client.post("/api/export/pdf")
+    assert resp.status_code == 200, resp.text
+    assert resp.content.startswith(b"%PDF")
+    assert page.predicates, "export no longer waits for images at all"
+
+
+def test_pdf_image_wait_uses_the_settle_predicate(dashboard_client):
+    """WR-01: the export waits on IMAGE_SETTLE_PREDICATE (complete, not decoded).
+
+    Its real-browser behaviour against a broken image is proven in
+    tests/test_pdf_image_settle.py::test_222_image_settle_predicate_accepts_broken_image,
+    which runs in the Browser E2E job (Chromium is absent from Linux Full Suite).
+    """
+    import unittest.mock as mock
+
+    from quirk.dashboard.api.routes.pdf import IMAGE_SETTLE_PREDICATE
+
+    page = _FakePage()
+    with mock.patch("quirk.dashboard.api.routes.pdf.sync_playwright", _fake_playwright(page)):
+        resp = dashboard_client.post("/api/export/pdf")
+    assert resp.status_code == 200, resp.text
+    assert page.predicates == [IMAGE_SETTLE_PREDICATE]
+    assert "naturalWidth" not in IMAGE_SETTLE_PREDICATE

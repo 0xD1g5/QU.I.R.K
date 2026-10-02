@@ -1,3 +1,9 @@
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/quirk-logo-dark.svg">
+<source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/quirk-logo.svg">
+<img src="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/quirk-logo.svg" alt="QU.I.R.K." height="64">
+</picture>
+
 [![Python Staleness Gate](https://img.shields.io/github/actions/workflow/status/0xD1g5/QU.I.R.K/python-staleness.yml?branch=main&label=CI)](https://github.com/0xD1g5/QU.I.R.K/actions/workflows/python-staleness.yml)
 [![PyPI version](https://img.shields.io/pypi/v/quirk-scanner.svg)](https://pypi.org/project/quirk-scanner/)
 [![License: MIT](https://img.shields.io/github/license/0xD1g5/QU.I.R.K)](LICENSE)

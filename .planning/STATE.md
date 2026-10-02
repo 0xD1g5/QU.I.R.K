@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
-status: planning
-last_updated: "2026-10-02T13:50:00.000Z"
-last_activity: "2026-10-02 -- Phase 222 context gathered (222-CONTEXT.md, 21 decisions; operator call D-14 pulls the BRAND-03 raster pipeline slice into 222 for the DOCX colophon PNG). Precondition: PR #52 must merge before any 222 execution commit. STATE.md hand-edited from a pre-image: gsd-sdk state.record-session corrupted it (hit #20)"
+status: executing
+last_updated: "2026-10-02T23:30:00.000Z"
+last_activity: "2026-10-02 -- Phase 222 COMPLETE (verified passed 44/44 at 5e64914b, CI green; 1 operator override for the WR-01 image-settle wait). BRAND-01/04/05 Complete, BRAND-03 Pending (Phase 223). PR #53 open, NOT merged. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 7
+  completed_plans: 7
+  percent: 20
 ---
 
 # Project State
@@ -1420,12 +1420,14 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   hand-edited.
 
 ## Current Position
-Phase: Not started (defining requirements)
-Plan: —
-Status: Milestone v5.27 Launch Readiness roadmap created 2026-10-02 — 5 phases (222–226): brand
-adoption (222–223) -> pre-launch doc review (224–225) -> v5.27.0 release cut (226). Next:
-`/gsd-discuss-phase 222`.
-Last activity: 2026-10-02 — milestone v5.27 started (hand-edited from a pre-image).
+Phase: 222 (Brand Identity Landed) — COMPLETE 2026-10-02 (1 of 5 phases in v5.27)
+Plan: 7 of 7
+Status: Verified `passed` 44/44 (1 operator-accepted override: WR-01 settle-not-decode image wait) at
+5e64914b, branch_ci_state exit 0 (Python CI 37068629768, Dashboard Quality 37068629784; Browser E2E
+26 passed 0 failed). Phase work lives on `phase-222-brand-identity-landed`, PR #53 — NOT yet merged to
+main (merge is the operator's). Next: merge PR #53, then `/gsd-discuss-phase 223` (Dashboard Brand
+Adoption; BRAND-03 favicon outputs, the 261001 todo resolves there).
+Last activity: 2026-10-02 — Phase 222 closed (hand-edited from a pre-image).
 
 **Prior position (v5.26 close, superseded 2026-10-02):**
 Phase: — (milestone v5.26 closed 2026-10-02; no phase open)
@@ -2778,6 +2780,13 @@ Next milestone's numbering continues at Phase 161.
   aborting non-TTY `--fuzz` path (UAT-96-02/96-03), a raw-URL-disclosure gap in
   `SpecParsingError`'s message (UAT-94-05), and 5 stale/quoted doc-grep patterns.
 
+- **Phase 222 (2026-10-02):** D-24 determinism spike found the report-logo PNG byte-identical across macOS
+  and linux/amd64 (resvg-py 0.5.0), so the PNG freshness gate compares bytes with no tolerance; the CI-runner
+  confirmation is a 222-07 leg. README logo renders at 64 px height. D-25: no rows were added to
+  `docs/uat-disposition-ledger.jsonl` for Series 222 (deliberate deviation from D-21, matches series 200-221).
+  D-22: the HTML footer now prints in PDFs. D-14: the BRAND-03 raster scaffold landed in 222; favicon outputs
+  remain in Phase 223.
+
 - Numbering continues at Phase 154 (v5.12 ended at 153). Phase order is dependency-driven:
   identity/data-model (154) must land before drift detection (155) since every diff feature
   reconciles "the same device across two scans"; reporting/OT-ICS safety (156) depends on
@@ -3272,8 +3281,12 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/222-brand-identity-landed/222-CONTEXT.md` — Phase 222 context gathered
-2026-10-02; next `/gsd-plan-phase 222` (after PR #52 merges).
+Resume file: `.planning/phases/222-brand-identity-landed/222-07-PLAN.md` — Phase 222 stopped at 222-07
+(all plans executed, UAT Series 222 committed); resume with CI observation at the final HEAD, the phase PR
+and then `gsd-verifier`. No commit may land between the CI observation and the phase-close commit.
+
+Previous resume point: `.planning/phases/222-brand-identity-landed/222-CONTEXT.md` — Phase 222 context gathered
+2026-10-02 (superseded).
 
 Latest session: 2026-10-02 — **discussed Phase 222.** Live checks found python-docx 1.2.0 cannot embed
 SVG, so the DOCX colophon logo needs a PNG; the operator pulled the raster pipeline slice (renderer +
