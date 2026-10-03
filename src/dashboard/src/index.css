@@ -33,9 +33,9 @@
     --popover: 220 18% 11%;            /* #161921 raised/surface */
     --popover-foreground: 220 43% 96%;
 
-    /* ── Accent: Obsidian Pro teal — interactive elements only ── */
-    --primary: 180 37% 47%;            /* #4ba8a8 */
-    --primary-foreground: 220 22% 12%;
+    /* ── Accent: Ink-violet — interactive elements only (BRAND-GUIDELINES v2 Product UI, Phase 222.1) ── */
+    --primary: 261 85% 75%;            /* #af89f5 Ink-violet accent */
+    --primary-foreground: 261 92% 6.9%; /* Ink-ish #0d0122 label */
 
     --secondary: 220 18% 11%;          /* #161921 surface bg */
     --secondary-foreground: 220 43% 96%;
@@ -43,8 +43,8 @@
     --muted: 220 21% 7%;               /* #0d0f14 */
     --muted-foreground: 220 16% 52%;   /* #717e98 labels */
 
-    --accent: 180 37% 47%;             /* #4ba8a8 teal — matches primary */
-    --accent-foreground: 220 22% 12%;
+    --accent: 261 85% 75%;             /* #af89f5 Ink-violet — matches primary */
+    --accent-foreground: 261 92% 6.9%; /* Ink-ish #0d0122 label */
 
     --destructive: 0 68% 60%;          /* #e05555 critical */
     /* Phase 218 FIX-04 D-01, operator-chosen 2026-09-30, 5.50:1 (was 3.82:1) */
@@ -52,7 +52,7 @@
 
     --border: 220 24% 19%;             /* #252d3e */
     --input: 220 24% 19%;
-    --ring: 180 37% 47%;               /* teal focus ring */
+    --ring: 261 85% 75%;               /* #af89f5 violet focus ring */
 
     --radius: 0.375rem;                /* 6px — Obsidian Pro btn/input radius */
 
@@ -66,9 +66,9 @@
     --ds-text:            #f0f2f8;
     --ds-text-muted:      #717e98;
     --ds-text-faint:      #4a5568;
-    --ds-accent:          #4ba8a8;
-    --ds-accent-dim:      rgba(75, 168, 168, 0.12);
-    --ds-accent-bdr:      rgba(75, 168, 168, 0.28);
+    --ds-accent:          #af89f5;
+    --ds-accent-dim:      rgba(175, 137, 245, 0.10);
+    --ds-accent-bdr:      rgba(175, 137, 245, 0.28);
     --ds-critical:        #e05555;
     --ds-critical-dim:    rgba(224, 85, 85, 0.10);
     --ds-critical-bdr:    rgba(224, 85, 85, 0.28);
@@ -89,6 +89,7 @@
     --quantum-vulnerable: 0 68% 60%;   /* #e05555 critical */
     --severity-high: 28 64% 52%;       /* #d4893a */
     --severity-medium: 220 16% 50%;    /* #8892a4 neutral */
+    /* Status colour (QRAMM level 3): keeps its teal, decoupled from the accent since Phase 222.1 D-10 */
     --severity-low: 180 37% 47%;       /* #4ba8a8 teal info */
     --severity-info: 220 16% 50%;      /* #8892a4 */
 
@@ -165,8 +166,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 22% 12%;
 
-    --primary: 180 45% 41%;            /* #4ba8a8 slightly deepened for light */
-    --primary-foreground: 220 22% 12%;
+    --primary: 261 60% 50%;            /* #6933cc Ink-violet, light */
+    --primary-foreground: 0 0% 100%;   /* white label */
 
     --secondary: 220 20% 94%;          /* #f1f3f9 surface */
     --secondary-foreground: 220 22% 12%;
@@ -174,15 +175,15 @@
     --muted: 220 20% 94%;
     --muted-foreground: 220 17% 40%;   /* #525e78 */
 
-    --accent: 180 45% 41%;
-    --accent-foreground: 220 22% 12%;
+    --accent: 261 60% 50%;             /* #6933cc */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 64% 47%;          /* #c83a3a */
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 16% 84%;             /* #d8dde8 */
     --input: 220 16% 84%;
-    --ring: 180 45% 41%;
+    --ring: 261 60% 50%;
 
     /* ── Obsidian Pro light tokens ── */
     --ds-bg-page:         #f6f7fb;
@@ -194,7 +195,9 @@
     --ds-text:            #11141c;
     --ds-text-muted:      #525e78;
     --ds-text-faint:      #8a93a8;
-    --ds-accent:          #3a9696;
+    --ds-accent:          #6933cc;
+    --ds-accent-dim:      rgba(105, 51, 204, 0.06);
+    --ds-accent-bdr:      rgba(105, 51, 204, 0.28);
     --ds-critical:        #c83a3a;
     --ds-high:            #b46b1b;
     --ds-ok:              #2c8a5d;
