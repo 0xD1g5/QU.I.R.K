@@ -89,8 +89,6 @@ const AUDITED = auditedFiles()
  */
 const THEME_INVARIANT: Record<string, string> = {
   radius: "structural (border-radius), not a colour — parity does not apply",
-  "ds-accent-dim": "pre-existing gap, not introduced by Phase 213, see 213-02-SUMMARY",
-  "ds-accent-bdr": "pre-existing gap, not introduced by Phase 213, see 213-02-SUMMARY",
   "ds-critical-dim": "pre-existing gap, not introduced by Phase 213, see 213-02-SUMMARY",
   "ds-critical-bdr": "pre-existing gap, not introduced by Phase 213, see 213-02-SUMMARY",
   "ds-high-dim": "pre-existing gap, not introduced by Phase 213, see 213-02-SUMMARY",

@@ -6,7 +6,7 @@ triage).
 against white; below the 4.5:1 AA-normal-text floor).
 **Owner:** 999.118 (HORIZON.md ledger row; backlog .planning/backlog/999.118-a11y-design-calls-and-instrument-blind-spots/).
 **Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
-**Status:** open, not triaged.
+**Status:** closed 2026-10-02 by Phase 222.1 (see Resolution).
 
 ## What happens
 
@@ -31,3 +31,14 @@ Either introduce a link-specific darker `--primary`-derived colour for light-the
 (parallel to the `-foreground` token pattern used elsewhere), or confirm with an operator whether
 `--primary` itself should darken in light theme (checking the button/focus-ring/active-nav
 collateral first, the same way 218-CANDIDATES.md's collateral tables did for `--quantum-safe`).
+
+## Resolution (2026-10-02, Phase 222.1 D-17)
+
+Fixed as a direct consequence of the v2 accent (D-08), not by a targeted change. The light
+`--primary` on `--card` (white) contrast went from 3.43:1 to 7.13:1 (222.1-CONTRAST-TABLE.md,
+section 2; `--primary` light is now `#6933cc`, was `#3a9898`).
+
+Confirmed on CI: run 37090989519 (workflow_dispatch, head e6849490) regenerated
+`baseline-root-default-light.json` with `color-contrast` 1 -> 0 (row "baseline-root-default-light.json
+| color-contrast | 1 | 0 | SHRINK" in 222.1-AXE-SHRINK-DIFF.md). The baseline was tightened shrink-only
+in commit 6abc4a60 (`test(222.1-04): tighten axe baselines from CI run 37090989519`).

@@ -102,7 +102,7 @@ insistence on a real, correctly-formed tag rather than another silent gap.
 **Goal:** Make QU.I.R.K. ready to show the public. It should carry its own identity on every product
 surface, every user-facing doc claim should be verified against the code, and a tagged release should
 contain all of it. The operator posts QUIRK publicly only after this milestone closes (launch gate).
-Requirements: `.planning/REQUIREMENTS.md` (14, BRAND-01..07, DOC-03..06, REL-05..07).
+Requirements: `.planning/REQUIREMENTS.md` (15 as of 2026-10-02: BRAND-01..08, DOC-03..06, REL-05..07; BRAND-08 added with Phase 222.1).
 
 **Sequencing is binding: BRAND -> DOC -> REL.** Brand lands first because the doc review checks the
 README claim by claim and retakes its hero screenshot against the branded dashboard; REL is last
@@ -112,7 +112,8 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 ### Phases
 
 - [x] **Phase 222: Brand Identity Landed** - Merge PR #46 refreshed against `main` with required CI green, then put the brand on the README and on every generated report's colophon (completed 2026-10-02)
-- [ ] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + mark, favicon raster pipeline with a drift gate, the `--ds-accent` decision, and every old-branding pin re-worded in the same phase
+- [x] **Phase 222.1: Brand Guidelines v2 and Dashboard Re-theme** (INSERTED 2026-10-02) - BRAND-GUIDELINES v2 gains a Product UI palette and a below-48 px glyph rule; the dashboard adopts the Ink-violet accent on its current grounds (sketch 001 B, revised from C) with no ratchet pair regressing
+- [ ] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + favicon-tier glyph in the existing 48 px narrow sidebar (sketch 002 A), favicon raster pipeline with a drift gate, and every old-branding pin re-worded in the same phase
 - [ ] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc
 - [ ] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard
 - [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
@@ -138,15 +139,36 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 - [x] 222-07-PLAN.md — UAT series + CI acceptance
 **UI hint**: yes
 
+### Phase 222.1: Brand Guidelines v2 and Dashboard Re-theme (INSERTED)
+
+**Goal**: The dashboard's own palette reads as the QU.I.R.K. brand in both themes: an Ink-violet accent on the existing grounds, written down as a Product UI section of the brand guidelines, with every accessibility ratchet still green and no measured pair worse than today.
+**Depends on**: Phase 222 (the `docs/brand/` sources and guidelines are on `main`)
+**Requirements**: BRAND-06, BRAND-08
+**Why inserted (2026-10-02, operator)**: Phase 223's discuss surfaced that BRAND-GUIDELINES v1 defines a logo palette but no product UI palette, so the only accent options were "keep or darken teal". The operator found that too restrictive, chose to sketch first (`.planning/sketches/001-brand-ui-palette`, `002-narrow-sidebar-glyph`), and picked variant C plus a 40 px mark in a 64 px narrow sidebar. **Revised the same day after viewing the sketches** (C/C had been picked from descriptions): palette **B** (violet accent, current grounds, so the kickoff's "no background re-theme" call stands) and glyph **A** (favicon-tier glyph at 24 px in the unchanged 48 px rail; the 48 px mark minimum stays). It stays split out of 223 so the accent change and its ratchet moves are verified on their own.
+**Success Criteria** (what must be TRUE):
+  1. `docs/brand/BRAND-GUIDELINES.md` v2 has a Product UI section that names the UI accent (Ink hue, about 261 deg) per theme with measured ratios, states that the product grounds are unchanged, and the rule that status colours stay a separate system. It states that the favicon construction is the form for every rendering below the 48 px lattice-mark minimum, including the dashboard's narrow sidebar (sketch 002 A); the minimum stays 48 px. Signal `#7FE001` is still the logo error point only and is never a UI token.
+  2. `src/dashboard/src/index.css` implements the accent in both theme blocks: `--ds-accent` (+ `-dim`/`-bdr`), and the shadcn HSL tokens (`--accent`, `--primary`, `--ring`, and their `-foreground` pairs). Ground and text tokens do not change. Measured contrast ratios for every accent-on-ground pair, in both themes, are recorded in the phase artifacts.
+  3. No contrast pair measured before the phase is worse after it. That covers the 216-219 contrast and axe ratchets (both themes), `ds-chip-contrast-baseline.json`, and the keyboard ratchet. No baseline is loosened or regenerated to absorb a regression.
+  4. Dashboard statics are rebuilt and committed, and the operator has visually confirmed both themes against the running dashboard (human UAT).
+**Plans**: 6 plans
+Plans:
+- [x] 222.1-01-PLAN.md — Cut phase branch; Wave-0 instruments: D-04 ground-luminance guard + D-12 shrink-only baseline diff script
+- [x] 222.1-02-PLAN.md — Ink-violet accent tokens in index.css (both blocks, palette B; grounds/text unchanged, D-04 diff proof) + forced guard companions, D-16 xfail re-point, radar fill, D-13 contrast table incl. D-20 tint pairs
+- [x] 222.1-03-PLAN.md — BRAND-GUIDELINES v2 (Product UI section; 48 px mark minimum kept, favicon form below 48 px incl. the narrow sidebar) + doc/token contract test
+- [x] 222.1-04-PLAN.md — Rebuild/commit statics; CI-regenerated axe baselines proven shrink-only (D-12)
+- [x] 222.1-05-PLAN.md — Operator docs + master-guide regen + vault sync; close todo 260930 and narrow 999.118 (D-17)
+- [x] 222.1-06-PLAN.md — Operator UAT both themes; UAT Series 222.1; CITRUTH-03 CI observation; VALIDATION sign-off; PR
+**UI hint**: yes
+
 ### Phase 223: Dashboard Brand Adoption
 **Goal**: A dashboard user sees the QU.I.R.K. brand, not the old electric-blue `Q`, in the sidebar and the browser tab in both themes, with the accessibility ratchets still green, and no test, UAT case or generated artifact still pinning the old branding.
-**Depends on**: Phase 222 (PR #46's `docs/brand/` sources must be on `main`)
-**Requirements**: BRAND-02, BRAND-03, BRAND-06, BRAND-07
+**Depends on**: Phase 222.1 (the chrome is built on the v2 accent and the below-48 px glyph rule), and Phase 222 (PR #46's `docs/brand/` sources must be on `main`)
+**Requirements**: BRAND-02, BRAND-03, BRAND-07 (BRAND-06 moved to Phase 222.1 on 2026-10-02)
 **Success Criteria** (what must be TRUE):
-  1. In both dark and light themes, the wide sidebar shows the brand primary logo and the narrow sidebar shows the mark. Both are inline SVG following `currentColor`, both keep the accessible name "QU.I.R.K.", and the Phase 216-219 contrast, axe (both themes) and keyboard ratchets stay green over the new chrome.
+  1. In both dark and light themes, the wide sidebar shows the brand primary logo and the narrow sidebar shows the favicon-tier glyph at 24 px in the existing 48 px rail (operator, 2026-10-02, sketch 002 A, revised from C). Both are inline SVG following `currentColor`, both keep the accessible name "QU.I.R.K.", and the Phase 216-219 contrast, axe (both themes) and keyboard ratchets stay green over the new chrome.
   2. The browser tab shows the brand favicon, served as SVG, PNG and ICO. A scripted raster pipeline produces the PNG and ICO; its renderer is a dev-only dependency that appears in no runtime extra in `pyproject.toml`. A new generator-drift freshness test fails when a committed raster stops matching its SVG source, and it has a row in CLAUDE.md's generator-drift table.
      Note (Phase 222 D-14): renderer (resvg-py, dev-only) + scripts/build_brand_rasters.py + tests/test_brand_assets_freshness.py scaffold landed in 222 for the report-logo PNG; favicon PNG/ICO outputs remain.
-  3. The `--ds-accent` teal (`src/dashboard/src/index.css`, dark and light blocks) is explicitly decided, kept or changed, as an operator design call in this phase's discuss. The decision is recorded with measured contrast ratios for both themes. Brand Signal `#7FE001` is not a UI token, and the app background is unchanged.
+  3. ~~The `--ds-accent` teal is explicitly decided in this phase's discuss; the app background is unchanged.~~ **Moved to Phase 222.1 (2026-10-02).** The operator decided it in this phase's discuss: Ink-violet accent on the current grounds (sketch 001 B, revised from C after viewing the sketches), so the app background stays unchanged. The narrow sidebar keeps its 48 px width; no offset change remains here.
   4. The branding test (`dashboard-branding.test.tsx`), `UAT-7-31`'s pass criteria in `docs/UAT-SERIES.md`, its `docs/uat-disposition-ledger.jsonl` row, and a regenerated `docs/uat-coverage-gaps.md` are re-worded in this phase, and the UAT freshness and reconciliation gates are green. No test is skipped or deleted to get there.
   5. No served surface still shows the old blue-`Q` favicon or wordmark: a source grep for the old asset/markup returns nothing outside history and archives.
 **Plans**: TBD
@@ -192,6 +214,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
+| 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | Complete (verified passed 12/12 at 92a73017; CI green, Python CI 37096708811 + Dashboard Quality 37096708809; PR #54) | 2026-10-03 |
 | 223. Dashboard Brand Adoption | 0/TBD | Not started | - |
 | 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-02T23:30:00.000Z"
-last_activity: "2026-10-02 -- Phase 222 COMPLETE (verified passed 44/44 at 5e64914b, CI green; 1 operator override for the WR-01 image-settle wait). BRAND-01/04/05 Complete, BRAND-03 Pending (Phase 223). PR #53 open, NOT merged. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-03T06:00:00.000Z"
+last_activity: "2026-10-03 -- Phase 222.1 COMPLETE (verified passed 12/12 at 92a73017, branch_ci_state exit 0; PR #54 open, NOT merged). BRAND-06/08 Complete. QRAMM CSRF 403 fixed in-phase (a4286c22); compliance-map follow-on filed as todo 261002. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
-  total_phases: 5
-  completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
-  percent: 20
+  total_phases: 6
+  completed_phases: 2
+  total_plans: 13
+  completed_plans: 13
+  percent: 33
 ---
 
 # Project State
@@ -1419,7 +1419,50 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   Evolution` at EOF. It was restored from a pre-image byte-identical, then this entry was
   hand-edited.
 
+- Phase 222.1 inserted after Phase 222 (2026-10-02) — **Brand Guidelines v2 and Dashboard
+  Re-theme.** Surfaced in Phase 223's discuss: BRAND-GUIDELINES v1 defines a logo palette but no
+  product UI palette, so BRAND-06's only options were keep or darken teal (light teal measured
+  3.16-3.51:1, a live axe violation). The operator found the rules too restrictive and chose to
+  sketch first (`.planning/sketches/001-brand-ui-palette`, `002-narrow-sidebar-glyph`; gitignored,
+  on disk). Picks: 001 **C** (Ink-violet accent on Ink/Paper grounds) and 002 **C** (40 px lattice
+  mark in a 64 px narrow sidebar; v2 lowers the mark minimum from 48 to 40 px; Claude had not flagged on
+  the tab that 40 < 48, and the operator re-confirmed after being told). **This reverses the v5.27
+  kickoff call "no background re-theme"**: BRAND-06 was amended with the clause struck through rather
+  than deleted, and its owner moved 223 -> 222.1. New **BRAND-08** (guidelines v2 + tokens, no
+  ratchet pair may regress). `gsd-sdk query phase.insert 222` wrote the details block only. The
+  checklist row, the Progress row, the goal and the criteria were hand-edited, and the 223 block was
+  amended (depends on 222.1, criterion 3 moved). `state.patch` and `state.add-roadmap-evolution`
+  were deliberately NOT used. The 223 discuss checkpoint is kept at
+  `.planning/phases/223-dashboard-brand-adoption/223-DISCUSS-CHECKPOINT.json`.
+
 ## Current Position
+Phase: 222.1 (Brand Guidelines v2 and Dashboard Re-theme) — COMPLETE 2026-10-03 (2 of 6 phases in v5.27)
+(v5.27 is 6 phases: 222 done, 222.1 done, 223, 224, 225, 226)
+Plan: 6 of 6
+Status: Verified `passed` 12/12 at `92a73017` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0, all 7 required jobs
+green; main green at 2055a889). BRAND-06 + BRAND-08 Complete (flipped by hand). PR #54 OPEN, NOT merged — merge is the
+operator's call. Closed by hand; no `phase.complete`.
+Next: merge PR #54, then resume `/gsd-discuss-phase 223` (its checkpoint's BRAND-07 lock loses the test_dashboard_theme
+xfail re-point, done here as D-16).
+Follow-ons filed: todo `261002-qramm-compliance-map-scores-never-populate` (non-CVI compliance rows always null by design —
+operator product call; Calculate Score in the compliance tab never refetches rows — S). Stale PASS evidence flagged, not
+re-dispositioned: UAT-51-04 (curl POST /score without CSRF header cannot return 200), UAT-54-05, UAT-Q-53-02.
+Last activity: 2026-10-03 — 222.1 verified + closed; 2026-10-02 — operator both-themes UAT "approved" after an in-phase fix
+of a pre-existing QRAMM Calculate Score 403 (raw `fetch()` with no `X-Quirk-Request`, since 58-04; `a4286c22`, `f4545343`).
+Hand-edited from a pre-image.
+
+Decisions this phase: final accent tokens dark `#af89f5` / light `#6933cc` (palette B) on unchanged grounds and text; axe
+shrink set = root-default-light and qramm-assessment-default-light color-contrast 1 -> 0 plus two deleted chip keys
+(CI run 37090989519 artifact only); D-16 TRIAGE-149 accent xfails retired and re-pointed; D-20 tint decreases accepted
+and recorded; UAT historical-note convention = one dated `**222.1 note (2026-10-02):**` line on UAT-54-04, UAT-195-08,
+UAT-219-05 (UAT-65-02 not annotated: its completed dots use `--ds-ok`), no Result line edited.
+
+Phase 223 handoff (D-02, RESEARCH R8): grounds and text are unchanged, so 223's BrandLogo currentColor figures
+17.13 / 18.41 stay valid with no re-measure (222.1-CONTRAST-TABLE.md section 1). The D-16 xfail re-point is done.
+223 builds the favicon-tier 24 px glyph in the unchanged 48 px narrow-sidebar rail per guidelines v2 section 2, and
+`tests/test_browser_e2e.py` UAT-7-23's 48 px aside assertion stays valid.
+
+**Prior position (Phase 222 close, superseded 2026-10-02; PR #53 has since MERGED as 2055a889):**
 Phase: 222 (Brand Identity Landed) — COMPLETE 2026-10-02 (1 of 5 phases in v5.27)
 Plan: 7 of 7
 Status: Verified `passed` 44/44 (1 operator-accepted override: WR-01 settle-not-decode image wait) at
@@ -3281,7 +3324,11 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/222-brand-identity-landed/222-07-PLAN.md` — Phase 222 stopped at 222-07
+Resume file: `.planning/phases/222.1-brand-guidelines-v2-and-dashboard-re-theme/222.1-06-SUMMARY.md` — Phase 222.1
+stopped at 222.1-06 (all plans executed); resume with `gsd-verifier`. No commit may land between the CI observation
+and the phase-close commit.
+
+Earlier resume file (superseded): `.planning/phases/222-brand-identity-landed/222-07-PLAN.md` — Phase 222 stopped at 222-07
 (all plans executed, UAT Series 222 committed); resume with CI observation at the final HEAD, the phase PR
 and then `gsd-verifier`. No commit may land between the CI observation and the phase-close commit.
 

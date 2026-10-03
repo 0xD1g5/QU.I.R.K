@@ -8,7 +8,7 @@ D-07: impact and WCAG criterion are properties of the *rule*, not the node, so e
 recorded once per (route, rule) pair below. Each row carries a `count`, which is what makes
 the grand total below mechanically reconstructible from this ledger alone.
 
-Totals: 7 route(s), 7 (route, rule) entries, 12 accepted violation node(s).
+Totals: 5 route(s), 5 (route, rule) entries, 10 accepted violation node(s).
 
 ## certificates [dark]
 
@@ -58,30 +58,6 @@ Totals: 7 route(s), 7 (route, rule) entries, 12 accepted violation node(s).
 - `<div role="note" class="rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300">Hardware findings are advisory-only and do not affect the readiness score.</div>`
 - `<div role="note" class="rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300">Based on SNMP-derived network-path evidence; not independently confirmed by traffic inspection.</div>`
 - `<span class="label-eyebrow" style="color: rgb(76, 164, 164);">Recent Lifecycle Changes</span>`
-
-</details>
-
-## qramm-assessment [light]
-
-| Rule | Count | Impact | WCAG | Justification |
-|------|-------|--------|------|---------------|
-| color-contrast | 1 | serious | 1.4.3 | Route /qramm-assessment, theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is the `severity-accent-chip` `Badge` (`components/qramm/QuestionCard.tsx:91-97`, `role="status"`, "Auto-filled from scan"), part of the `.severity-*-chip` / `--ds-*` design-token family (`index.css` ~line 297-320) that `badge-contrast-evaluator.ts` cannot see. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-ds-severity-chip-family-tokens-guard-blind-and-unmeasured.md. |
-
-<details><summary>color-contrast evidence samples (1)</summary>
-
-- `<div class="inline-flex items-ce..." role="status" aria-label="Question 2 auto-fill...">`
-
-</details>
-
-## root [light]
-
-| Rule | Count | Impact | WCAG | Justification |
-|------|-------|--------|------|---------------|
-| color-contrast | 1 | serious | 1.4.3 | Route / (root/dashboard-home), theme light, rule color-contrast. Unchanged by Phase 218 (218-05 CI round-trip, run 36776265139): count stayed 1 -> 1. The sole node is a `text-primary underline` navigation link ("View trends ->"), a text link rather than a badge-background pair, measuring ~3.5:1 against white (hand calculation 2026-09-30), below the 4.5:1 AA floor. Not one of the three named design-call tokens, and RATCHET-01's badge baseline is `{}` as of 218-04, so it is not a FIX-05 failure. Attribution: non-badge, outside RATCHET-01 -- re-pointed to backlog 999.118 (HORIZON.md) by Phase 221; prior owner Phase 220 closed without picking it up: .planning/todos/pending/260930-text-primary-nav-link-fails-aa-light-root.md. |
-
-<details><summary>color-contrast evidence samples (1)</summary>
-
-- `<a class="text-primary underline" href="/trends" data-discover="true">View trends →</a>`
 
 </details>
 

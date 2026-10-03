@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 6,554 lines, in reading order.
+Five guides, 6,557 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3471,7 +3471,7 @@ credential fields — so an OFF connector shows none of them.
   are plain, visible text inputs — unlike the masked credential fields above, these are
   identifiers that land in the job's stored `config.yaml` in cleartext by design (D-04); only the
   matching password/token fields are masked and non-persisted.
-- **A field you have touched shows a small teal "Set" badge** next to its label — the same visual
+- **A field you have touched shows a small accent-coloured (violet since v5.27, Phase 222.1) "Set" badge** next to its label — the same visual
   language as the connector-level "Set" badge, now also available per-field.
 - **Rejected values return a 422 naming the field**, at both submit and the Effective Config
   preview — e.g. an out-of-range timeout or a malformed cluster entry. The banner is prefixed
@@ -3913,6 +3913,9 @@ quirk errors --dump-md > docs/error-codes.md
   (teal buttons, orange/red/green badges) are numerically unchanged — only the foreground text
   moved, to clear WCAG 2.1 AA contrast (teal buttons: 2.81:1 → 6.27:1). This is a contrast
   fix, not a redesign.
+  Since Phase 222.1 the accent is Ink-violet (#af89f5 dark, #6933cc light) on the unchanged
+  grounds, per BRAND-GUIDELINES v2; primary buttons show Ink text in dark and white text in light
+  (7.39:1 and 7.13:1).
 - **Accessibility gate (Phase 165, A11Y-01/A11Y-04; theme dimension added Phase 216,
   HARNESS-01)** — `npm run a11y:check` (and its `:empty`/`:loading` variants) in
   `src/dashboard/` now enforce a per-route, per-rule *count budget* rather than a selector

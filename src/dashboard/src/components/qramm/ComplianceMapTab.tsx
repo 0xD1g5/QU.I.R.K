@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { QRAMMContext } from "@/context/QRAMMContext"
+import { fetchApi } from "@/lib/api"
 import type { QRAMMComplianceMapRow, QRAMMScoreResponse } from "@/types/api"
 
 const FRAMEWORK_KEYS = [
@@ -92,7 +93,7 @@ export function ComplianceMapTab() {
     setScoring(true)
     setScoreError(null)
     try {
-      const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}/score`, {
+      const resp = await fetchApi(`/api/qramm/sessions/${ctx.sessionId}/score`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profile_multiplier: ctx.profile?.multiplier ?? null }),
@@ -118,7 +119,7 @@ export function ComplianceMapTab() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(`/api/qramm/sessions/${ctx.sessionId}/compliance-map`)
+    fetchApi(`/api/qramm/sessions/${ctx.sessionId}/compliance-map`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data: QRAMMComplianceMapRow[]) => {
         if (cancelled) return
