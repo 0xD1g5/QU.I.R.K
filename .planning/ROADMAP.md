@@ -152,12 +152,12 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
   4. Dashboard statics are rebuilt and committed, and the operator has visually confirmed both themes against the running dashboard (human UAT).
 **Plans**: 6 plans
 Plans:
-- [ ] 222.1-01-PLAN.md — Cut phase branch; Wave-0 instruments: D-04 ground-luminance guard + D-12 shrink-only baseline diff script
-- [ ] 222.1-02-PLAN.md — Ink-violet accent tokens in index.css (both blocks, palette B; grounds/text unchanged, D-04 diff proof) + forced guard companions, D-16 xfail re-point, radar fill, D-13 contrast table incl. D-20 tint pairs
-- [ ] 222.1-03-PLAN.md — BRAND-GUIDELINES v2 (Product UI section; 48 px mark minimum kept, favicon form below 48 px incl. the narrow sidebar) + doc/token contract test
-- [ ] 222.1-04-PLAN.md — Rebuild/commit statics; CI-regenerated axe baselines proven shrink-only (D-12)
-- [ ] 222.1-05-PLAN.md — Operator docs + master-guide regen + vault sync; close todo 260930 and narrow 999.118 (D-17)
-- [ ] 222.1-06-PLAN.md — Operator UAT both themes; UAT Series 222.1; CITRUTH-03 CI observation; VALIDATION sign-off; PR
+- [x] 222.1-01-PLAN.md — Cut phase branch; Wave-0 instruments: D-04 ground-luminance guard + D-12 shrink-only baseline diff script
+- [x] 222.1-02-PLAN.md — Ink-violet accent tokens in index.css (both blocks, palette B; grounds/text unchanged, D-04 diff proof) + forced guard companions, D-16 xfail re-point, radar fill, D-13 contrast table incl. D-20 tint pairs
+- [x] 222.1-03-PLAN.md — BRAND-GUIDELINES v2 (Product UI section; 48 px mark minimum kept, favicon form below 48 px incl. the narrow sidebar) + doc/token contract test
+- [x] 222.1-04-PLAN.md — Rebuild/commit statics; CI-regenerated axe baselines proven shrink-only (D-12)
+- [x] 222.1-05-PLAN.md — Operator docs + master-guide regen + vault sync; close todo 260930 and narrow 999.118 (D-17)
+- [x] 222.1-06-PLAN.md — Operator UAT both themes; UAT Series 222.1; CITRUTH-03 CI observation; VALIDATION sign-off; PR
 **UI hint**: yes
 
 ### Phase 223: Dashboard Brand Adoption
@@ -214,7 +214,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
-| 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 0/6 | Not started | - |
+| 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | In Progress | - |
 | 223. Dashboard Brand Adoption | 0/TBD | Not started | - |
 | 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
