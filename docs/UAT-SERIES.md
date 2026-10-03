@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+**Last Updated:** 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -8707,6 +8707,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-08  **Tester:** Digs
 **Notes:** UAT-54-04
+**222.1 note (2026-10-02):** the accent this case calls "teal" is Ink-violet since Phase 222.1 (dark #af89f5, light #6933cc, BRAND-GUIDELINES v2); the step applies with that colour. See UAT-222.1-01.
 
 ---
 
@@ -26367,6 +26368,7 @@ surface deferred per the MAP-01 spike decision (UAT-195-07); no live crown-jewel
 inspected DB, so the badge-rendering path is unexercisable with the current environment. Expected
 per the plan's own acceptance note ("if none exist, that is expected"). See `195-06-SUMMARY.md`
 walkthrough step 7.
+**222.1 note (2026-10-02):** the accent this case calls "teal" is Ink-violet since Phase 222.1 (dark #af89f5, light #6933cc, BRAND-GUIDELINES v2); the step applies with that colour. See UAT-222.1-01.
 
 ---
 
@@ -31217,6 +31219,7 @@ Tab until the table region shows the teal ring, ArrowLeft/ArrowRight (and Down/P
 it while the page stays put; widening so the table fits (Tab skips it) and the light-theme ring
 were offered as optional. The operator's two-word confirmation does not itemise which optional
 steps were exercised, so only the core Tab-to-region + arrow-scroll claim is attested here.
+**222.1 note (2026-10-02):** the accent this case calls "teal" is Ink-violet since Phase 222.1 (dark #af89f5, light #6933cc, BRAND-GUIDELINES v2); the step applies with that colour. See UAT-222.1-01.
 
 ---
 
@@ -31866,5 +31869,177 @@ substitutes for or duplicates the cover logo.
 **Result:** - [x] PASS (2026-10-02 Phase 222 plan 222-04 — tests/test_report_colophon.py::test_cover_logo_unchanged_with_colophon_html, tests/test_report_colophon.py::test_cover_logo_unchanged_with_colophon_docx, tests/test_report_colophon.py::test_docx_section_footer_unchanged; tests/test_report_branding.py changed in exactly two D-23 hunks, `data:image/png;base64,` count unchanged)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-02  **Tester:** automated
 **Notes:** Phase 222 adds no rows to `docs/uat-disposition-ledger.jsonl` (D-25), matching series 200-221.
+
+---
+
+## Series 222.1: Brand Guidelines v2 and Dashboard Re-theme (Phase 222.1 — v5.27)
+
+**Last Updated:** 2026-10-02 (Phase 222.1 execution, plans 01-06). Seven cases. Phase 222.1 moved the dashboard
+accent family from teal to the Ink-violet of BRAND-GUIDELINES v2 (dark `#af89f5`, light `#6933cc`) on the
+unchanged grounds, text and status colours (BRAND-06, BRAND-08), rewrote the guidelines to v2 with a Product UI
+section, tightened two axe baselines and two chip-contrast keys from CI evidence only, and fixed a pre-existing
+QRAMM Calculate Score 403 found during the operator's visual check. No version bump. UAT-222.1-01 is the
+operator's both-themes check; UAT-222.1-07 covers the QRAMM CSRF fix.
+
+### UAT-222.1-01: Both Themes Read As The Brand (Violet Accent On Unchanged Grounds)
+
+**ID:** UAT-222.1-01
+**Title:** The operator confirms dark and light themes show the violet accent on the unchanged grounds, status colours unchanged, visible violet focus ring
+**Maps to:** BRAND-06, BRAND-08
+
+**What to test:** `quirk serve --host 127.0.0.1 --port 8512 --no-open` on the rebuilt committed statics; the
+operator walks both themes: home page, Tab focus ring, /qramm/assessment (chip + radar), /findings and
+/certificates status colours.
+
+**Steps:**
+```
+.venv/bin/quirk serve --host 127.0.0.1 --port 8512 --no-open
+Open http://127.0.0.1:8512/ ; dark theme, then light theme via the toggle
+Home, Tab focus ring, /qramm/assessment (Scorecard tab Calculate Score), /findings, /certificates
+```
+
+**Pass Criteria:** Accent is violet in both themes, grounds/text/status colours unchanged, focus ring visible,
+the faint-link todo 260930 reads clearly in light, and Calculate Score populates the scorecard.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** operator
+**Notes:** Served CSS `assets/index-COFYerxP.css` equalled the committed `quirk/dashboard/static/assets/index-COFYerxP.css`;
+`curl` returned HTTP 200 on http://127.0.0.1:8512/. The D-20 tint figures shown to the operator were the measured
+ones (active row light 14.58 -> 13.84, dark 15.76 -> 15.58; hover rows light 5.99 -> 5.85, dark 4.38 -> 4.36).
+Operator reply 1, verbatim: "4 - Score did not populate.  It could not calcualte score, said to check connction.  We should check to see if QRAMM is functioning as expected.\n\nOther than 4 everything looks awesome".
+Step 4 therefore initially FAILED, on a PRE-EXISTING defect (not caused by 222.1): Calculate Score had returned
+403 on any live server since 58-04 (see UAT-222.1-07), and was fixed in-phase (`a4286c22`, `f4545343`). Operator
+reply 2 after re-checking step 4, verbatim: "approved". Observation items (a)-(d) (healthcare teal, violet
+categorical colours near the accent, /print radar, D-20 tint decrease): the operator raised no issues; they
+gave no itemised comment, so these are recorded as "no issues raised", not as individually confirmed. Plan 02's
+open classification call (dark `--print-fg-inverse` on `--ds-accent`, 2.81 -> 2.72) stays N/A: `print.tsx`
+wraps every return path in `className="light quirk-print"`, and the operator did not object.
+
+### UAT-222.1-02: Accent Tokens Are Violet In Both Theme Blocks
+
+**ID:** UAT-222.1-02
+**Title:** `index.css` carries the v2 primary and accent tokens in the light and dark blocks
+**Maps to:** BRAND-06
+
+**What to test:** The dashboard theme contract asserts the palette B primary and accent values.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_dashboard_theme.py -q -m ""
+```
+
+**Pass Criteria:** 3 passed including the primary and accent token nodes.
+
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — tests/test_dashboard_theme.py::test_primary_color_token, tests/test_dashboard_theme.py::test_accent_color_token; 31 passed across the three pytest files of this series on 2026-10-02)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** automated
+**Notes:** The 222.1-02 re-point of the TRIAGE-149 accent xfails (D-16) is closed by these nodes.
+
+### UAT-222.1-03: Grounds And Text Unchanged; The Monotone Rule Is Guarded
+
+**ID:** UAT-222.1-03
+**Title:** No ground got lighter in dark or darker in light than before 222.1, and only the 16 accent-family values changed
+**Maps to:** BRAND-08
+
+**What to test:** The ground-luminance guard is frozen to the pre-222.1 ramp; the D-04 diff-grep prints nothing
+and the resolved-token diff shows exactly 16 changed values (8 dark, 8 light), all accent-family
+(222.1-02-SUMMARY, 222.1-CONTRAST-TABLE.md section 1).
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/__tests__/ground-luminance-monotone-guard.test.ts
+```
+
+**Pass Criteria:** 6 tests pass, including "dark grounds are no lighter than before Phase 222.1 (D-04)" and
+"light grounds are no darker than before Phase 222.1 (D-04)".
+
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — "dark grounds are no lighter than before Phase 222.1 (D-04)", "light grounds are no darker than before Phase 222.1 (D-04)"; 3 vitest files / 23 passed on 2026-10-02; mutation proof in 222.1-01-SUMMARY)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** automated
+**Notes:** Mutating dark `--ds-bg-base` to `#202020` made the dark guard fail (`lighter (0.0144 > 0.0048)`), then reverted.
+
+### UAT-222.1-04: A11y Ratchets Only Shrink
+
+**ID:** UAT-222.1-04
+**Title:** The axe baselines and the DS chip-contrast baseline changed only by shrinking, from CI evidence
+**Maps to:** BRAND-08
+
+**What to test:** The shrink-only diff script and its tests; the chip-contrast guard; the CI run whose artifact
+supplied the baselines.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_a11y_baseline_shrink_diff.py -q -m ""
+cd src/dashboard && npx vitest run src/components/__tests__/ds-severity-chip-contrast-guard.test.ts
+```
+
+**Pass Criteria:** 13 pytest nodes pass; the chip guard passes; `222.1-AXE-SHRINK-DIFF.md` has 4 PASS lines:
+two axe color-contrast counts 1 -> 0 (root-default-light, qramm-assessment-default-light) and two deleted
+chip keys (light accent on base 3.15, on surface 2.86).
+
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — tests/test_a11y_baseline_shrink_diff.py::test_axe_count_increase_fails, tests/test_a11y_baseline_shrink_diff.py::test_ratio_key_deleted_passes, "holds the shrink-only ratchet against ds-chip-contrast-baseline.json", "baseline keys are well-formed and below 4.5"; CI run 37090989519 produced exactly the two expected stale-baseline lines, CI run 37091189599 Axe + Console Gate success at 6abc4a60)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** automated
+**Notes:** Baselines were taken from the CI artifact only, never regenerated locally (D-12).
+
+### UAT-222.1-05: Brand Guidelines v2 Contract
+
+**ID:** UAT-222.1-05
+**Title:** BRAND-GUIDELINES v2 has a Product UI section, keeps the 48 px mark minimum, and names the favicon form below 48 px
+**Maps to:** BRAND-08
+
+**What to test:** The v2 contract test ties the quoted hexes and ratios to `index.css`.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_brand_guidelines_v2.py -q -m ""
+```
+
+**Pass Criteria:** 15 passed.
+
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — tests/test_brand_guidelines_v2.py::test_product_ui_accent_hexes_match_tokens, tests/test_brand_guidelines_v2.py::test_mark_minimum_stays_48px, tests/test_brand_guidelines_v2.py::test_favicon_row_covers_below_48_and_narrow_sidebar; 15 passed in the file)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** automated
+**Notes:** RED against v1 (13 failed, 2 passed) before the edit; mutation of the Mark row to 40 px failed one node.
+
+### UAT-222.1-06: Dashboard Statics Rebuilt And Fresh
+
+**ID:** UAT-222.1-06
+**Title:** The committed `quirk/dashboard/static` matches a clean build of `src/dashboard`
+**Maps to:** BRAND-08
+
+**What to test:** The bundle freshness script and the Bundle Freshness Gate job.
+
+**Steps:**
+```
+bash scripts/check-bundle-freshness.sh
+```
+
+**Pass Criteria:** prints "Bundle is fresh"; Bundle Freshness Gate job `success`.
+
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — `bash scripts/check-bundle-freshness.sh` exit 0 "Bundle is fresh" at f4545343; Bundle Freshness Gate job success in Dashboard Quality run 37091189599 at 6abc4a60)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** automated
+**Notes:** The final-HEAD Bundle Freshness Gate conclusion is recorded in `222.1-06-SUMMARY.md`.
+
+### UAT-222.1-07: QRAMM Calculate Score Sends The CSRF Header
+
+**ID:** UAT-222.1-07
+**Title:** QRAMM Calculate Score sends the CSRF header
+**Maps to:** BRAND-08 (defect found during UAT-222.1-01 step 4; pre-existing since 54-05/58-04, fixed in-phase)
+
+**What to test:** ScorecardTab and ComplianceMapTab Calculate Score POSTs carry `X-Quirk-Request: 1` and the
+compliance-map GET goes through `fetchApi`. Live: the identical `POST /api/qramm/sessions/1/score` is 403
+without the header and 200 with it.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/qramm/__tests__/qramm-csrf-header.test.tsx
+```
+
+**Pass Criteria:** 3 tests pass.
+
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — "ScorecardTab Calculate Score POST carries X-Quirk-Request: 1", "ComplianceMapTab Calculate Score POST carries X-Quirk-Request: 1", "ComplianceMapTab compliance-map GET goes through fetchApi (header present)"; 3/3 red before `a4286c22`, 3 passed after; live 403 -> 200 and the operator's score POSTs returning 200 in the server log)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-02  **Tester:** automated + operator
+**Notes:** Root cause: `ScorecardTab.tsx:80` and `ComplianceMapTab.tsx:95` used raw `fetch()` with no CSRF header;
+`require_csrf` was wired to every router in 58-04 (`6cbb4698`, 2026-05-09), the raw fetch dates from 54-05
+(`04df0847`, 2026-05-07). `ComplianceMapTab.tsx:121` also bypassed `fetchApi` (no `X-API-Key`, would 401 with
+auth enabled). Statics rebuilt in `f4545343`. Existing cases whose PASS could not have exercised a live server
+for this path: see `222.1-06-SUMMARY.md` (UAT-51-04 curl without the header; UAT-54-05 predates 58-04).
 
 ---
