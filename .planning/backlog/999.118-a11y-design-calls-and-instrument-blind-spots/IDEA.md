@@ -22,8 +22,6 @@ Measured by Phase 221 plan 221-02 (token pairs resolved from `src/dashboard/src/
 |---|---|
 | dark\|critical\|surface | 4.23 |
 | light\|critical\|surface | 4.08 |
-| light\|accent\|base | 3.15 |
-| light\|accent\|surface | 2.86 |
 | light\|high\|base | 3.78 |
 | light\|high\|surface | 3.42 |
 | light\|medium\|base | 4.27 |
@@ -31,7 +29,8 @@ Measured by Phase 221 plan 221-02 (token pairs resolved from `src/dashboard/src/
 | light\|ok\|base | 3.88 |
 | light\|ok\|surface | 3.54 |
 
-10 of 20 pairs fail; baseline `ds-chip-contrast-baseline.json`. Light theme inherits the dark rgba `-dim` tints.
+8 of 20 pairs fail; baseline `ds-chip-contrast-baseline.json`. Light theme inherits the dark rgba severity `-dim` tints (the accent has its own light `-dim`/`-bdr` since 222.1 D-09).
+The light accent-on-base and accent-on-surface pairs were closed by Phase 222.1 (Ink-violet accent; chip baseline keys deleted, D-11).
 
 ### Cytoscape node labels (`--chart-node-label` vs fill) — todo `260930-cytoscape-graph-node-labels-single-colour-fails-aa-cbom-exposure-map.md`
 
@@ -53,7 +52,7 @@ Measured by Phase 221 plan 221-02 (token pairs resolved from `src/dashboard/src/
 | Todo | Measured / stated | Theme |
 |---|---|---|
 | `260930-lifecycle-advisory-firewall-hues-fail-aa-in-light-theme.md` | ~2.9:1 / ~3.9:1 (hand calculation, axe-confirmed failure) | light |
-| `260930-text-primary-nav-link-fails-aa-light-root.md` | ~3.5:1 (hand calculation, axe-confirmed) | light |
+| `260930-text-primary-nav-link-fails-aa-light-root.md` (CLOSED by Phase 222.1; now in todos/completed/) | ~3.5:1 (hand calculation, axe-confirmed) | light |
 | `260930-status-critical-bare-text-span-fails-aa-dark-certificates.md` | ~4.0:1 (hand calculation, axe-confirmed) | dark |
 | `260930-hardware-advisory-banner-yellow-text-borderline-aa-light.md` | ~4.6-4.9:1 approximated, needs precise re-measurement (figure from its todo) | light |
 | `260930-tailwind-shorthand-badge-sweep-remaining-guard-blind-sites.md` | evaluator extension for `bg-destructive`/`bg-primary` shorthand; a named exclusion in `UNMEASURED-EXCLUSIONS.md` (written by 221-06) | both |
@@ -69,7 +68,7 @@ Measured by Phase 221 plan 221-02 (token pairs resolved from `src/dashboard/src/
 
 | Item | Feasibility | Size | Unknowns | Spike? |
 |---|---|---|---|---|
-| DS chip light-theme tints | **CONFIRMED** — light block `src/dashboard/src/index.css:195-202` defines `--ds-*` text colours; the `-dim` tints are not redefined there so light inherits the dark rgba, which is the root of the 10 failures; guard is `ds-severity-chip-contrast-guard.test.ts` | S-M, operator-gated (design call) | Whether light needs its own opaque `-dim` tints or darker text | no |
+| DS chip light-theme tints | **CONFIRMED** — light block `src/dashboard/src/index.css:195-202` defines `--ds-*` text colours; the severity `-dim` tints are not redefined there so light inherits the dark rgba, which is the root of the 8 remaining failures (light now defines its own accent `-dim`/`-bdr`, 222.1 D-09); guard is `ds-severity-chip-contrast-guard.test.ts` | S-M, operator-gated (design call) | Whether light needs its own opaque `-dim` tints or darker text | no |
 | Cytoscape per-fill label colour | **CONFIRMED** — one `--chart-node-label` per theme (`src/dashboard/src/index.css:133` dark, `:243` light); roadmap graph already uses a per-phase label colour (Phase 218 D-07(3)); `cbom.tsx:60` `QS_TOKEN` drives fills | M | exposure-map has two node classes; CA hub passes at 16-18:1 | no |
 | CBOM system node light label | **CONFIRMED token-level** — `cbom.tsx:307-312` sets `background-color: slateDark` and `color: slateLight`; light block `index.css:238,240` makes slate-dark 24% and slate-light 30% lightness (the "role reverses" comment) | S | Whether it renders as described (operator look) | no |
 | Lifecycle advisory hues | **LIKELY** — hues are pinned by `lifecycle-advisory-guard.test.ts:14` `FORBIDDEN_PALETTE` (and `vendor-trend-advisory-guard.test.ts`); fixing means editing the guard's literals too | S-M, operator-gated | Whether the guard's purpose (keep hues distinct from severity) survives a darker teal/magenta | no |
