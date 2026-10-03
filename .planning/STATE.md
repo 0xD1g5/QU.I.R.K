@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-02T23:30:00.000Z"
-last_activity: "2026-10-02 -- Phase 222 COMPLETE (verified passed 44/44 at 5e64914b, CI green; 1 operator override for the WR-01 image-settle wait). BRAND-01/04/05 Complete, BRAND-03 Pending (Phase 223). PR #53 open, NOT merged. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-03T02:00:00.000Z"
+last_activity: "2026-10-02 -- Phase 222.1 RE-PLANNED for operator-revised palette B (violet accent #af89f5/#6933cc on current grounds) + glyph A (favicon-tier glyph in 48px rail); D-20 tint pairs accepted+recorded; plan-checker 0 blockers, 4 warnings fixed by hand. STATE.md hand-edited from a pre-image"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 1
-  total_plans: 7
+  total_plans: 13
   completed_plans: 7
-  percent: 20
+  percent: 17
 ---
 
 # Project State
@@ -1419,7 +1419,34 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   Evolution` at EOF. It was restored from a pre-image byte-identical, then this entry was
   hand-edited.
 
+- Phase 222.1 inserted after Phase 222 (2026-10-02) — **Brand Guidelines v2 and Dashboard
+  Re-theme.** Surfaced in Phase 223's discuss: BRAND-GUIDELINES v1 defines a logo palette but no
+  product UI palette, so BRAND-06's only options were keep or darken teal (light teal measured
+  3.16-3.51:1, a live axe violation). The operator found the rules too restrictive and chose to
+  sketch first (`.planning/sketches/001-brand-ui-palette`, `002-narrow-sidebar-glyph`; gitignored,
+  on disk). Picks: 001 **C** (Ink-violet accent on Ink/Paper grounds) and 002 **C** (40 px lattice
+  mark in a 64 px narrow sidebar; v2 lowers the mark minimum from 48 to 40 px; Claude had not flagged on
+  the tab that 40 < 48, and the operator re-confirmed after being told). **This reverses the v5.27
+  kickoff call "no background re-theme"**: BRAND-06 was amended with the clause struck through rather
+  than deleted, and its owner moved 223 -> 222.1. New **BRAND-08** (guidelines v2 + tokens, no
+  ratchet pair may regress). `gsd-sdk query phase.insert 222` wrote the details block only. The
+  checklist row, the Progress row, the goal and the criteria were hand-edited, and the 223 block was
+  amended (depends on 222.1, criterion 3 moved). `state.patch` and `state.add-roadmap-evolution`
+  were deliberately NOT used. The 223 discuss checkpoint is kept at
+  `.planning/phases/223-dashboard-brand-adoption/223-DISCUSS-CHECKPOINT.json`.
+
 ## Current Position
+Phase: 222.1 (Brand Guidelines v2 and Dashboard Re-theme) — INSERTED 2026-10-02, PLANNED (6 plans, waves 1-6 sequential; palette B + glyph A, revised 2026-10-02)
+(v5.27 is now 6 phases: 222 done, 222.1, 223, 224, 225, 226)
+Plan: 0 of 6
+Next: `/gsd-execute-phase 222.1`. Plan 01 cuts branch `phase-222.1-brand-guidelines-v2` and commits the
+uncommitted 222.1 insertion edits (REQUIREMENTS/ROADMAP/STATE) as its first commit. Plan 06 is an
+operator-led UAT checkpoint. Then resume `/gsd-discuss-phase 223`; its checkpoint's BRAND-07 lock loses the
+test_dashboard_theme xfail re-point (moved to 222.1 D-16).
+Last activity: 2026-10-02 — Operator viewed sketches and revised C/C to B/A (records amended, research updated, plans revised + re-checked: 0 blockers); earlier: Phase 222.1 planned (--skip-ui by operator; research executed the token set
+against the real vitest suite, 442 green). Hand-edited from a pre-image after state.planned-phase misbehaved.
+
+**Prior position (Phase 222 close, superseded 2026-10-02; PR #53 has since MERGED as 2055a889):**
 Phase: 222 (Brand Identity Landed) — COMPLETE 2026-10-02 (1 of 5 phases in v5.27)
 Plan: 7 of 7
 Status: Verified `passed` 44/44 (1 operator-accepted override: WR-01 settle-not-decode image wait) at

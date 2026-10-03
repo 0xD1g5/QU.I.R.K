@@ -52,8 +52,10 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
 - [x] **BRAND-01**: PR #46 (brand identity v1, `docs/brand/`) is refreshed against `main` and merged
       with every required job green, as `scripts/branch_ci_state.py` defines required.
       `python3 docs/brand/build_logo.py` regenerates the committed SVGs byte-identically.
-- [ ] **BRAND-02**: A dashboard user sees the brand primary logo in the wide sidebar and the mark in
-      the narrow sidebar, in both themes. Both are inline SVG following `currentColor` and keep the
+- [ ] **BRAND-02**: A dashboard user sees the brand primary logo in the wide sidebar and the brand
+      glyph in the narrow sidebar, in both themes. **Amended 2026-10-02 (operator, sketch 002 A):** the
+      narrow-sidebar glyph is the favicon-tier construction (ring, tail, error point) at 24 px in the
+      existing 48 px rail, since the v1 lattice-mark minimum is 48 px. Both are inline SVG following `currentColor` and keep the
       accessible name "QU.I.R.K.". The 216-219 contrast and keyboard ratchets stay green over the new
       chrome.
 - [ ] **BRAND-03**: The browser tab shows the brand favicon (SVG, PNG and ICO). A scripted raster
@@ -70,7 +72,23 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
 - [ ] **BRAND-06**: The `--ds-accent` teal is explicitly decided, kept or changed, in the phase
       discuss as an operator design call. The decision is recorded with measured contrast ratios
       for both themes. If changed, the ratchets stay green. Brand Signal `#7FE001` is not adopted as
-      a UI token, and the app background is not re-themed.
+      a UI token. ~~The app background is not re-themed.~~
+      **Amended 2026-10-02 (operator, Phase 223 discuss):** decided as **changed**, to an Ink-violet
+      accent (dark about `#ac84f5`, light about `#6933cc`, final values tuned in 222.1) on Ink (dark) and
+      Paper (light) grounds, from `.planning/sketches/001-brand-ui-palette` variant C. That reverses the
+      kickoff's "no background re-theme" clause, struck through above rather than deleted. Owner
+      moved from Phase 223 to Phase 222.1.
+      **Revised 2026-10-02 (operator, after viewing the sketches; C had been picked from a description):**
+      variant **B**: the same Ink-violet accent on the **current** grounds. Backgrounds and text tokens
+      are not re-themed, so the struck kickoff clause is back in force. The C wording above is history.
+- [ ] **BRAND-08**: Brand guidelines v2. `docs/brand/BRAND-GUIDELINES.md` gains a Product UI
+      section (accent at Ink hue, status colours kept separate, Signal never a UI token) and states that
+      the favicon construction is the form for every rendering below the 48 px lattice-mark minimum,
+      including the dashboard's narrow sidebar (sketch 002 A; the minimum itself is unchanged). The
+      dashboard accent tokens implement it in both themes; grounds and text tokens are unchanged
+      (sketch 001 B, revised 2026-10-02 from C). No contrast, axe, keyboard or `ds-chip-contrast-baseline.json`
+      pair gets worse, and no baseline is loosened to absorb a regression. Added 2026-10-02
+      (operator), Phase 222.1.
 - [ ] **BRAND-07**: Every artifact pinning the old electric-blue branding is re-worded in the same
       phase: the branding test, `UAT-7-31` pass criteria, its `uat-disposition-ledger.jsonl` row, and
       a regenerated `uat-coverage-gaps.md`. No test is skipped or deleted to get there, and no surface
@@ -139,7 +157,8 @@ Deferred from this milestone with an owner:
 | BRAND-03 | Phase 223 | Pending |
 | BRAND-04 | Phase 222 | Complete |
 | BRAND-05 | Phase 222 | Complete |
-| BRAND-06 | Phase 223 | Pending |
+| BRAND-06 | Phase 222.1 (moved from 223, 2026-10-02) | Pending |
+| BRAND-08 | Phase 222.1 | Pending |
 | BRAND-07 | Phase 223 | Pending |
 | DOC-03 | Phase 224 | Pending |
 | DOC-04 | Phase 224 | Pending |
