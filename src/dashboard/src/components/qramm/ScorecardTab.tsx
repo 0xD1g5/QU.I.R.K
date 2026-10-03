@@ -157,8 +157,8 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                 <Radar
                   name="Assessment"
                   dataKey="score"
-                  fill="rgba(75, 168, 168, 0.20)"
-                  fillOpacity={ctx.scoreResult ? 1 : 0}
+                  fill="hsl(var(--accent))"
+                  fillOpacity={ctx.scoreResult ? 0.2 : 0}
                   stroke="hsl(var(--accent))"
                   strokeOpacity={ctx.scoreResult ? 1 : 0}
                   isAnimationActive={false}
