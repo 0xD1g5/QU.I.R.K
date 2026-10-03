@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { QRAMMContext } from "@/context/QRAMMContext"
+import { fetchApi } from "@/lib/api"
 import {
   DIMENSIONS,
   MATURITY_LABEL,
@@ -77,7 +78,7 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
     setCalculating(true)
     setError(null)
     try {
-      const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}/score`, {
+      const resp = await fetchApi(`/api/qramm/sessions/${ctx.sessionId}/score`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
