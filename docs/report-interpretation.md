@@ -1804,7 +1804,7 @@ there is currently no "declared reachability" legend row or red edge anywhere in
 
 ### Crown jewels (v5.24)
 
-Endpoints named in `assessment.crown_jewels` render with an accent-teal ring. This is an
+Endpoints named in `assessment.crown_jewels` render with an accent-coloured ring. This is an
 **operator declaration, never an inference** — no probe can discover which system a client cares
 about, so QU.I.R.K. does not guess. An empty declaration marks nothing, and that is the honest
 result rather than a nominated "most important" host. CA hub nodes are never marked, whatever is
