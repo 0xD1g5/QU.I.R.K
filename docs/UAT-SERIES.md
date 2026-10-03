@@ -31952,9 +31952,9 @@ cd src/dashboard && npx vitest run src/components/__tests__/ground-luminance-mon
 **Pass Criteria:** 6 tests pass, including "dark grounds are no lighter than before Phase 222.1 (D-04)" and
 "light grounds are no darker than before Phase 222.1 (D-04)".
 
-**Result:** - [x] PASS (2026-10-02 Phase 222.1 — "dark grounds are no lighter than before Phase 222.1 (D-04)", "light grounds are no darker than before Phase 222.1 (D-04)"; 3 vitest files / 23 passed on 2026-10-02; mutation proof in 222.1-01-SUMMARY)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — vitest nodes cited in Notes; 3 vitest files, 23 passed on 2026-10-02; mutation proof in 222.1-01-SUMMARY)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-02  **Tester:** automated
-**Notes:** Mutating dark `--ds-bg-base` to `#202020` made the dark guard fail (`lighter (0.0144 > 0.0048)`), then reverted.
+**Notes:** Vitest citations: "dark grounds are no lighter than before Phase 222.1 (D-04)", "light grounds are no darker than before Phase 222.1 (D-04)". Mutating dark `--ds-bg-base` to `#202020` made the dark guard fail (`lighter (0.0144 > 0.0048)`), then reverted.
 
 ### UAT-222.1-04: A11y Ratchets Only Shrink
 
@@ -32034,9 +32034,9 @@ cd src/dashboard && npx vitest run src/components/qramm/__tests__/qramm-csrf-hea
 
 **Pass Criteria:** 3 tests pass.
 
-**Result:** - [x] PASS (2026-10-02 Phase 222.1 — "ScorecardTab Calculate Score POST carries X-Quirk-Request: 1", "ComplianceMapTab Calculate Score POST carries X-Quirk-Request: 1", "ComplianceMapTab compliance-map GET goes through fetchApi (header present)"; 3/3 red before `a4286c22`, 3 passed after; live 403 -> 200 and the operator's score POSTs returning 200 in the server log)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-02 Phase 222.1 — vitest nodes cited in Notes; 3/3 red before `a4286c22`, 3 passed after; live 403 -> 200 and the operator's score POSTs returning 200 in the server log)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-02  **Tester:** automated + operator
-**Notes:** Root cause: `ScorecardTab.tsx:80` and `ComplianceMapTab.tsx:95` used raw `fetch()` with no CSRF header;
+**Notes:** Vitest citations: "ScorecardTab Calculate Score POST carries X-Quirk-Request: 1", "ComplianceMapTab Calculate Score POST carries X-Quirk-Request: 1", "ComplianceMapTab compliance-map GET goes through fetchApi (header present)". Root cause: `ScorecardTab.tsx:80` and `ComplianceMapTab.tsx:95` used raw `fetch()` with no CSRF header;
 `require_csrf` was wired to every router in 58-04 (`6cbb4698`, 2026-05-09), the raw fetch dates from 54-05
 (`04df0847`, 2026-05-07). `ComplianceMapTab.tsx:121` also bypassed `fetchApi` (no `X-API-Key`, would 401 with
 auth enabled). Statics rebuilt in `f4545343`. Existing cases whose PASS could not have exercised a live server
