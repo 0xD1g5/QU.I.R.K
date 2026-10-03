@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-03T04:00:00.000Z"
-last_activity: "2026-10-02 -- Phase 222.1 all 6 plans executed (UAT Series 222.1, QRAMM CSRF fix a4286c22/f4545343); awaiting CI observation at final HEAD, PR, gsd-verifier. STATE.md hand-edited from a pre-image. Prior: Phase 222.1 RE-PLANNED for operator-revised palette B (violet accent #af89f5/#6933cc on current grounds) + glyph A (favicon-tier glyph in 48px rail); D-20 tint pairs accepted+recorded; plan-checker 0 blockers, 4 warnings fixed by hand. STATE.md hand-edited from a pre-image"
+last_updated: "2026-10-03T06:00:00.000Z"
+last_activity: "2026-10-03 -- Phase 222.1 COMPLETE (verified passed 12/12 at 92a73017, branch_ci_state exit 0; PR #54 open, NOT merged). BRAND-06/08 Complete. QRAMM CSRF 403 fixed in-phase (a4286c22); compliance-map follow-on filed as todo 261002. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 13
   completed_plans: 13
-  percent: 17
+  percent: 33
 ---
 
 # Project State
@@ -1436,16 +1436,20 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `.planning/phases/223-dashboard-brand-adoption/223-DISCUSS-CHECKPOINT.json`.
 
 ## Current Position
-Phase: 222.1 (Brand Guidelines v2 and Dashboard Re-theme) — INSERTED 2026-10-02, EXECUTED (6 of 6 plans); NOT closed
-(v5.27 is 6 phases: 222 done, 222.1 executed, 223, 224, 225, 226)
+Phase: 222.1 (Brand Guidelines v2 and Dashboard Re-theme) — COMPLETE 2026-10-03 (2 of 6 phases in v5.27)
+(v5.27 is 6 phases: 222 done, 222.1 done, 223, 224, 225, 226)
 Plan: 6 of 6
-Status: All plans executed on branch `phase-222.1-brand-guidelines-v2`. Awaiting the CITRUTH-03 CI observation at
-the final HEAD, the phase PR, and `gsd-verifier`. No Complete row and no `phase.complete`; BRAND-06/BRAND-08 boxes are
-flipped by hand in the phase-close commit after verification. Merge is the operator's call.
-Next: gsd-verifier on 222.1, then PR merge, then resume `/gsd-discuss-phase 223`.
-Last activity: 2026-10-02 — 222.1-06: operator both-themes UAT "approved" after an in-phase fix of a pre-existing QRAMM
-Calculate Score 403 (raw `fetch()` with no `X-Quirk-Request`, since 58-04; `a4286c22`, `f4545343`); Series 222.1 (7 cases)
-committed; hand-edited from a pre-image.
+Status: Verified `passed` 12/12 at `92a73017` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0, all 7 required jobs
+green; main green at 2055a889). BRAND-06 + BRAND-08 Complete (flipped by hand). PR #54 OPEN, NOT merged — merge is the
+operator's call. Closed by hand; no `phase.complete`.
+Next: merge PR #54, then resume `/gsd-discuss-phase 223` (its checkpoint's BRAND-07 lock loses the test_dashboard_theme
+xfail re-point, done here as D-16).
+Follow-ons filed: todo `261002-qramm-compliance-map-scores-never-populate` (non-CVI compliance rows always null by design —
+operator product call; Calculate Score in the compliance tab never refetches rows — S). Stale PASS evidence flagged, not
+re-dispositioned: UAT-51-04 (curl POST /score without CSRF header cannot return 200), UAT-54-05, UAT-Q-53-02.
+Last activity: 2026-10-03 — 222.1 verified + closed; 2026-10-02 — operator both-themes UAT "approved" after an in-phase fix
+of a pre-existing QRAMM Calculate Score 403 (raw `fetch()` with no `X-Quirk-Request`, since 58-04; `a4286c22`, `f4545343`).
+Hand-edited from a pre-image.
 
 Decisions this phase: final accent tokens dark `#af89f5` / light `#6933cc` (palette B) on unchanged grounds and text; axe
 shrink set = root-default-light and qramm-assessment-default-light color-contrast 1 -> 0 plus two deleted chip keys
