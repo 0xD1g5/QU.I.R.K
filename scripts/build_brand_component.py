@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     text = render()
     if args.check:
-        current = OUTPUT_PATH.read_text(encoding="utf-8", newline="") if OUTPUT_PATH.exists() else None
+        current = OUTPUT_PATH.read_bytes().decode("utf-8") if OUTPUT_PATH.exists() else None
         if current != text:
             print(f"{OUTPUT_PATH} is stale. Regenerate with: {REGEN_COMMAND}", file=sys.stderr)
             return 1

@@ -204,7 +204,7 @@ COMPONENT_PATH = REPO_ROOT / "src" / "dashboard" / "src" / "components" / "Brand
 
 
 def _component_text() -> str:
-    return COMPONENT_PATH.read_text(encoding="utf-8", newline="")
+    return COMPONENT_PATH.read_bytes().decode("utf-8")
 
 
 def test_brand_component_matches_generator():
