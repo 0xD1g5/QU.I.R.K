@@ -1,11 +1,12 @@
 """Phase 222 BRAND-01/BRAND-05 gate: brand assets must match their generators.
 
 A generator-drift gate in the same family as test_severity_bands_freshness.py.
-There is no last_verified date to bump. Three legs (D-17):
+There is no last_verified date to bump. Four legs (D-17, Phase 223 D-11):
 
 1. every docs/brand/*.svg byte-matches a fresh run of docs/brand/build_logo.py
-2. the three packaged/dashboard copies byte-match their docs/brand source
-3. every scripts.build_brand_rasters.TARGETS PNG byte-matches a fresh render
+2. the packaged/dashboard copies (incl. public/favicon.svg) byte-match their docs/brand source
+3. every scripts.build_brand_rasters.TARGETS PNG (incl. the favicon PNG) byte-matches a fresh render
+4. the favicon ICO byte-matches a fresh pack_ico render, and the committed file's structure is parsed
 
 Regenerate with:
     python3 docs/brand/build_logo.py
@@ -13,6 +14,8 @@ Regenerate with:
     cp docs/brand/quirk-logo.svg quirk/reports/assets/quirk-logo.svg
     cp docs/brand/quirk-logo-dark.svg quirk/reports/assets/quirk-logo-dark.svg
     cp docs/brand/quirk-logo.svg src/dashboard/src/assets/brand/quirk-logo.svg
+    cp docs/brand/quirk-favicon-dark.svg src/dashboard/public/favicon.svg
+    then: cd src/dashboard && npm run build (copies public/ into quirk/dashboard/static/)
 Do not hand-edit these files.
 
 PNG comparison is bytes only: the D-24 spike showed a linux/amd64 render of
@@ -28,6 +31,7 @@ import contextlib
 import importlib.util
 import io
 import os
+import struct
 import tomllib
 from pathlib import Path
 
@@ -43,6 +47,7 @@ COPIES = [
     ("docs/brand/quirk-logo.svg", "quirk/reports/assets/quirk-logo.svg"),
     ("docs/brand/quirk-logo-dark.svg", "quirk/reports/assets/quirk-logo-dark.svg"),
     ("docs/brand/quirk-logo.svg", "src/dashboard/src/assets/brand/quirk-logo.svg"),
+    ("docs/brand/quirk-favicon-dark.svg", "src/dashboard/public/favicon.svg"),
 ]
 
 
@@ -112,9 +117,62 @@ def test_packaged_brand_copies_byte_equal(src, dst):
 
 def test_report_logo_png_matches_fresh_render(tmp_path):
     _require_renderer()
+    build_brand_rasters.render_all(tmp_path)
     for _src, dst, _h in build_brand_rasters.TARGETS:
-        build_brand_rasters.render_all(tmp_path)
         assert (tmp_path / dst).read_bytes() == (REPO_ROOT / dst).read_bytes(), (
+            f"{dst} is stale. Regenerate with: python -m scripts.build_brand_rasters"
+        )
+
+
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+
+def _parse_ico(data: bytes):
+    reserved, kind, count = struct.unpack("<HHH", data[:6])
+    entries = []
+    for i in range(count):
+        w, h, cc, rsv, planes, bits, length, offset = struct.unpack(
+            "<BBBBHHII", data[6 + 16 * i : 22 + 16 * i]
+        )
+        entries.append((w, h, cc, rsv, planes, bits, length, offset))
+    return (reserved, kind, count), entries
+
+
+def test_pack_ico_layout():
+    a, b = PNG_MAGIC + b"A", PNG_MAGIC + b"BB"
+    out = build_brand_rasters.pack_ico([(16, a), (32, b)])
+    header, entries = _parse_ico(out)
+    assert header == (0, 1, 2)
+    assert entries[0][7] == 6 + 16 * 2
+    assert entries[1][7] == entries[0][7] + len(a)
+    for (w, h, _cc, _r, planes, bits, length, offset), size, payload in zip(
+        entries, (16, 32), (a, b)
+    ):
+        assert (w, h, planes, bits, length) == (size, size, 1, 32, len(payload))
+        assert out[offset : offset + length] == payload
+    big = build_brand_rasters.pack_ico([(256, a)])
+    _h, e = _parse_ico(big)
+    assert (e[0][0], e[0][1]) == (0, 0)
+
+
+def test_favicon_ico_structure():
+    data = (REPO_ROOT / "src/dashboard/public/favicon.ico").read_bytes()
+    header, entries = _parse_ico(data)
+    assert header == (0, 1, 3)
+    assert {e[0] for e in entries} == {16, 32, 48}
+    for w, _h, _cc, _r, _p, _b, length, offset in entries:
+        payload = data[offset : offset + length]
+        assert payload.startswith(PNG_MAGIC)
+        assert struct.unpack(">II", payload[16:24]) == (w, w)
+
+
+def test_favicon_ico_matches_fresh_render():
+    _require_renderer()
+    for src, dst, sizes in build_brand_rasters.ICO_TARGETS:
+        fresh = build_brand_rasters.pack_ico(
+            [(s, build_brand_rasters.render(REPO_ROOT / src, s)) for s in sizes]
+        )
+        assert (REPO_ROOT / dst).read_bytes() == fresh, (
             f"{dst} is stale. Regenerate with: python -m scripts.build_brand_rasters"
         )
 
