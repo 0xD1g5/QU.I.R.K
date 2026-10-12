@@ -3445,7 +3445,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 
 **Pass Criteria:**
 - Page loads within 5 seconds
-- QU.I.R.K. wordmark visible in sidebar
+- QU.I.R.K. brand logo visible in sidebar
 - No JavaScript console errors (check DevTools)
 - No blank white screen
 
@@ -3461,7 +3461,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 1. Check browser tab
 2. Inspect page source: `curl -s http://127.0.0.1:8512 | grep favicon`
 
-**Expected:** QU.I.R.K. electric-blue favicon displayed in browser tab.
+**Expected:** QU.I.R.K. brand favicon (the lens glyph on an Ink tile) displayed in browser tab.
 
 **Pass Criteria:**
 - Favicon appears in browser tab (not browser default icon)
@@ -3980,10 +3980,10 @@ Both are appearance claims jsdom cannot honestly assert: the theme is applied as
 
 **Steps:**
 1. Open dashboard at full desktop width (≥ 1024px)
-2. Confirm sidebar shows full 240px width with text labels and QU.I.R.K. wordmark
+2. Confirm sidebar shows full 240px width with text labels and the QU.I.R.K. brand logo
 3. Slowly resize browser window to below 1024px width
 4. Observe sidebar collapse to 48px icon-only mode
-5. Verify QU.I.R.K. wordmark changes to "Q" monogram
+5. Verify the QU.I.R.K. brand logo changes to the favicon-tier glyph
 6. Click each navigation icon — verify navigation still works
 7. Hover over a nav icon — verify tooltip shows page name
 8. Resize back above 1024px — verify sidebar expands to full width with labels
@@ -3993,7 +3993,7 @@ Both are appearance claims jsdom cannot honestly assert: the theme is applied as
 **Pass Criteria:**
 - Above 1024px: sidebar shows 240px with full text labels
 - Below 1024px: sidebar collapses to 48px icon-only
-- Wordmark transitions to monogram on collapse
+- Brand logo transitions to the favicon-tier glyph on collapse
 - All navigation icons remain clickable and route correctly
 - Tooltips appear on hover in collapsed state
 - Transition is smooth (no layout jumps or flicker)
@@ -4023,6 +4023,7 @@ There is no JS state, no `matchMedia` listener and no `useMediaQuery` hook whose
 
 **That GAP is now closed.** Phase 207 built the real browser harness and flipped UAT-7-01, UAT-7-17 and UAT-7-32; Phase 207.1 (COV-10) flipped the two cases left orphaned between COV-04 and COV-05 — this one and UAT-7-29. The reasoning above stopped being load-bearing the moment a real layout engine was available; it is kept because it is the record of WHY a browser was required, and because the close depends on it: criterion 6 ("transition is smooth — no layout jumps or flicker") still has no mechanical referent in any engine and was recorded HUMAN-UAT rather than absorbed into the PASS. **That HUMAN-UAT item was discharged by operator verdict on 2026-09-27, taking this case from a stated 5 of 6 to 6 of 6** — see `207.1-HUMAN-UAT.md`. The routing is what made the sixth criterion closable at all; had it been silently dropped there would have been nothing left to verify, and had it been mechanized into a proxy assertion the verdict would have been manufactured rather than observed.
 
+**223 note (2026-10-11):** the wordmark and "Q" monogram this case's Result names are the generated BrandLogo logo and favicon-tier glyph since Phase 223 (BRAND-02); the Result above is dated evidence for the retired markup and stays as recorded. The re-pointed node is re-run in UAT-223-05.
 
 ---
 
@@ -4258,27 +4259,26 @@ That is why this case stayed **GAP**, not DEFERRED — no substitute existed. It
 **Steps:**
 1. Open dashboard at `http://127.0.0.1:8512`
 2. Check browser tab title
-3. Check sidebar header for QU.I.R.K. wordmark
+3. Check sidebar header for the QU.I.R.K. brand logo
 4. Check favicon in browser tab
 
 **Expected:** Professional branding visible throughout.
 
 **Pass Criteria:**
 - Browser tab title shows `QU.I.R.K. — Quantum Readiness Dashboard` or similar branded title
-- Sidebar displays bold monospace electric-blue QU.I.R.K. wordmark
-- Favicon shows electric-blue "Q" (not browser default icon)
+- Sidebar displays the QU.I.R.K. brand logo in the wide sidebar and the favicon-tier glyph in the narrow sidebar, both inline SVG in the theme foreground colour with the accessible name QU.I.R.K.
+- Favicon shows the brand favicon, the lens glyph on an Ink tile (not browser default icon)
 - No JS console errors on page load
 
-**Result:** - [x] PASS (2026-09-21 Phase 206 — QUALIFIED PASS: converted to vitest coverage, but 1 of 4 Pass Criteria bullets remain uncovered by the cited node and are named verbatim in Notes below)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-21  **Tester:** automated  
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/dashboard-branding.test.tsx::"renders the QUIRK wordmark in the sidebar and the configured document title"`.
+**Result:** - [x] PASS (2026-10-11 Phase 223 — QUALIFIED PASS: vitest coverage re-pointed to the BrandLogo brand logo and favicon, but 1 of 4 Pass Criteria bullets remain uncovered by the cited node and are named verbatim in Notes below)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated  
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/dashboard-branding.test.tsx::"renders the brand logo and glyph in the sidebar and links the brand favicon"`.
 
 **PARTIAL COVERAGE — this citation must NOT be read as a full attestation.** 1 of this case's 4 Pass Criteria bullets are NOT covered by the cited node. Quoted verbatim from this case's own Pass Criteria above:
 
 - No JS console errors on page load
 
-That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 207); it is not asserted here. Coverage of the remaining three is split across two tiers, stated rather than left implied. Render tier: the real `Sidebar` is rendered and the element carrying `QU.I.R.K.` is asserted with its `font-black` / `font-mono` / `text-accent` classes — the colour asserted as the `accent` design token rather than as a hex literal, because a hardcoded hex is exactly what UAT-7-21 forbids. Static-document tier: `document.title` is never set at runtime and the favicon is three static `<link rel="icon">` tags; both live in `src/dashboard/index.html`, which Vite copies verbatim into the build, so the node asserts them against `index.html` itself. That is not the banned source-text-regex substitution — a `<title>` element in a static HTML document is not a render behaviour; the static document IS the artifact the Pass Criterion describes.
-
+That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 207); it is not asserted here. Coverage of the remaining three is split across two tiers, stated rather than left implied. Render tier: the real `Sidebar` is rendered and both brand SVGs are asserted by role `img` and accessible name `QU.I.R.K.`, with `currentColor` on the Ink parts, exactly one Signal error point each, no `<title>` and no retyped wordmark text node; the login card is rendered the same way in a second node. Static-document tier: `document.title` is never set at runtime and the favicon is three static `<link>` tags in `src/dashboard/index.html`, which Vite copies verbatim into the build; the node asserts that their targets exist with PNG/ICO magic bytes and `favicon.svg` byte-equal to `docs/brand/quirk-favicon-dark.svg`. That is not the banned source-text-regex substitution — a `<title>` element in a static HTML document is not a render behaviour; the static document IS the artifact the Pass Criterion describes. Re-worded by Phase 223 (BRAND-07); the Phase 206 wording described the retired electric-blue wordmark and favicon.
 
 ---
 

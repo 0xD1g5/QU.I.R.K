@@ -1,5 +1,6 @@
 """Phase 7 — BRAND-01: Dashboard CSS token audit."""
 import os
+import re
 
 
 CSS_FILE = os.path.join(
@@ -38,10 +39,16 @@ def test_accent_color_token():
 
 
 def test_sidebar_wordmark_present():
-    """Sidebar component must contain the QU.I.R.K. text mark."""
-    sidebar_file = os.path.join(
-        os.path.dirname(__file__), "..", "src", "dashboard", "src",
-        "components", "sidebar.tsx"
+    """Sidebar renders the generated BrandLogo, which carries the accessible name QU.I.R.K. (Phase 223 D-16)."""
+    base = os.path.join(
+        os.path.dirname(__file__), "..", "src", "dashboard", "src", "components"
     )
-    content = open(sidebar_file).read()
-    assert "QU.I.R.K." in content
+    content = open(os.path.join(base, "sidebar.tsx")).read()
+    assert 'import { BrandLogo } from "@/components/BrandLogo"' in content
+    assert '<BrandLogo variant="logo"' in content
+    assert '<BrandLogo variant="glyph"' in content
+    squashed = re.sub(r"\s+", "", content)
+    assert ">QU.I.R.K.<" not in squashed
+    assert ">Q<" not in squashed
+    brand = open(os.path.join(base, "BrandLogo.tsx")).read()
+    assert 'aria-label="QU.I.R.K."' in brand

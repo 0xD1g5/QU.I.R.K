@@ -8,7 +8,8 @@
  *
  * Design contract: 102-UI-SPEC.md (LOCKED).
  * Font weights: font-normal (400) and font-semibold (600) only.
- * Accent color: teal (--primary) on submit button only.
+ * Accent color: --primary (Ink-violet since Phase 222.1) on submit button only.
+ * Product logo: generated BrandLogo (Phase 223 D-23), not a retyped wordmark.
  * Error color: --destructive on inline error text only.
  */
 
@@ -25,6 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
+import { BrandLogo } from "@/components/BrandLogo"
 
 export function LoginPage() {
   const { setToken } = useAuth()
@@ -76,10 +78,8 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
-          {/* Product wordmark — teal accent, font-semibold (600) */}
-          <span className="text-accent font-semibold text-base tracking-widest font-mono">
-            QU.I.R.K.
-          </span>
+          {/* Product logo (Phase 223 D-23): generated BrandLogo, foreground colour, accessible name QU.I.R.K. */}
+          <BrandLogo variant="logo" className="h-7 w-auto text-foreground" />
           {/* Page heading — text-xl font-semibold (600) */}
           <CardTitle className="text-xl font-semibold mt-2">
             Dashboard Login
