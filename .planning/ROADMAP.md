@@ -177,7 +177,7 @@ Plans:
 - [x] 223-02-PLAN.md — Generated BrandLogo component (Ink to currentColor, logo/glyph variants), byte gate + contract + non-vacuity, Signal colour-audit exemption
 - [x] 223-03-PLAN.md — Sidebar + login adopt BrandLogo; branding vitest, theme test and Browser E2E mount guard + UAT-7-01/7-23 nodes re-pointed; UAT-7-31/7-02/7-23 re-worded with ledger + coverage gaps in one commit; statics rebuilt
 - [x] 223-04-PLAN.md — Full Browser E2E file run (main-vs-branch failing-node sets); header/badge measured; ratchets + criterion-5 residue grep; interim CI observation
-- [ ] 223-05-PLAN.md — CLAUDE.md drift-table row, brand docs, configuration wording + master guide + vault; folded todo closed with residue re-homed
+- [x] 223-05-PLAN.md — CLAUDE.md drift-table row, brand docs, configuration wording + master guide + vault; folded todo closed with residue re-homed
 - [ ] 223-06-PLAN.md — Operator UAT (both themes, wide/narrow, tab, login); UAT Series 223; CITRUTH-03 observation; VALIDATION sign-off; PR
 **UI hint**: yes
 
