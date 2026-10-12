@@ -178,7 +178,7 @@ Plans:
 - [x] 223-03-PLAN.md — Sidebar + login adopt BrandLogo; branding vitest, theme test and Browser E2E mount guard + UAT-7-01/7-23 nodes re-pointed; UAT-7-31/7-02/7-23 re-worded with ledger + coverage gaps in one commit; statics rebuilt
 - [x] 223-04-PLAN.md — Full Browser E2E file run (main-vs-branch failing-node sets); header/badge measured; ratchets + criterion-5 residue grep; interim CI observation
 - [x] 223-05-PLAN.md — CLAUDE.md drift-table row, brand docs, configuration wording + master guide + vault; folded todo closed with residue re-homed
-- [ ] 223-06-PLAN.md — Operator UAT (both themes, wide/narrow, tab, login); UAT Series 223; CITRUTH-03 observation; VALIDATION sign-off; PR
+- [x] 223-06-PLAN.md — Operator UAT (both themes, wide/narrow, tab, login); UAT Series 223; CITRUTH-03 observation; VALIDATION sign-off; PR
 **UI hint**: yes
 
 ### Phase 224: Doc Claim Ledger & Verification
@@ -222,7 +222,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
 | 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | Complete (verified passed 12/12 at 92a73017; CI green, Python CI 37096708811 + Dashboard Quality 37096708809; PR #54) | 2026-10-03 |
-| 223. Dashboard Brand Adoption | 0/TBD | Not started | - |
+| 223. Dashboard Brand Adoption | 6/6 | In Progress (all plans executed; verification pending) | - |
 | 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
