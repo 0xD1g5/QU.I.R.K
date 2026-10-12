@@ -79,7 +79,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
           {/* Product logo (Phase 223 D-23): generated BrandLogo, foreground colour, accessible name QU.I.R.K. */}
-          <BrandLogo variant="logo" className="h-7 w-auto text-foreground" />
+          <BrandLogo variant="logo" className="h-7 w-auto self-start text-foreground" />
           {/* Page heading — text-xl font-semibold (600) */}
           <CardTitle className="text-xl font-semibold mt-2">
             Dashboard Login
