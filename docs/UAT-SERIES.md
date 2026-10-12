@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+**Last Updated:** 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -3445,7 +3445,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 
 **Pass Criteria:**
 - Page loads within 5 seconds
-- QU.I.R.K. wordmark visible in sidebar
+- QU.I.R.K. brand logo visible in sidebar
 - No JavaScript console errors (check DevTools)
 - No blank white screen
 
@@ -3461,7 +3461,7 @@ Phase 186 per D-09, in the same shape as UAT-6-06's correction above.
 1. Check browser tab
 2. Inspect page source: `curl -s http://127.0.0.1:8512 | grep favicon`
 
-**Expected:** QU.I.R.K. electric-blue favicon displayed in browser tab.
+**Expected:** QU.I.R.K. brand favicon (the lens glyph on an Ink tile) displayed in browser tab.
 
 **Pass Criteria:**
 - Favicon appears in browser tab (not browser default icon)
@@ -3980,10 +3980,10 @@ Both are appearance claims jsdom cannot honestly assert: the theme is applied as
 
 **Steps:**
 1. Open dashboard at full desktop width (≥ 1024px)
-2. Confirm sidebar shows full 240px width with text labels and QU.I.R.K. wordmark
+2. Confirm sidebar shows full 240px width with text labels and the QU.I.R.K. brand logo
 3. Slowly resize browser window to below 1024px width
 4. Observe sidebar collapse to 48px icon-only mode
-5. Verify QU.I.R.K. wordmark changes to "Q" monogram
+5. Verify the QU.I.R.K. brand logo changes to the favicon-tier glyph
 6. Click each navigation icon — verify navigation still works
 7. Hover over a nav icon — verify tooltip shows page name
 8. Resize back above 1024px — verify sidebar expands to full width with labels
@@ -3993,7 +3993,7 @@ Both are appearance claims jsdom cannot honestly assert: the theme is applied as
 **Pass Criteria:**
 - Above 1024px: sidebar shows 240px with full text labels
 - Below 1024px: sidebar collapses to 48px icon-only
-- Wordmark transitions to monogram on collapse
+- Brand logo transitions to the favicon-tier glyph on collapse
 - All navigation icons remain clickable and route correctly
 - Tooltips appear on hover in collapsed state
 - Transition is smooth (no layout jumps or flicker)
@@ -4023,6 +4023,7 @@ There is no JS state, no `matchMedia` listener and no `useMediaQuery` hook whose
 
 **That GAP is now closed.** Phase 207 built the real browser harness and flipped UAT-7-01, UAT-7-17 and UAT-7-32; Phase 207.1 (COV-10) flipped the two cases left orphaned between COV-04 and COV-05 — this one and UAT-7-29. The reasoning above stopped being load-bearing the moment a real layout engine was available; it is kept because it is the record of WHY a browser was required, and because the close depends on it: criterion 6 ("transition is smooth — no layout jumps or flicker") still has no mechanical referent in any engine and was recorded HUMAN-UAT rather than absorbed into the PASS. **That HUMAN-UAT item was discharged by operator verdict on 2026-09-27, taking this case from a stated 5 of 6 to 6 of 6** — see `207.1-HUMAN-UAT.md`. The routing is what made the sixth criterion closable at all; had it been silently dropped there would have been nothing left to verify, and had it been mechanized into a proxy assertion the verdict would have been manufactured rather than observed.
 
+**223 note (2026-10-11):** the wordmark and "Q" monogram this case's Result names are the generated BrandLogo logo and favicon-tier glyph since Phase 223 (BRAND-02); the Result above is dated evidence for the retired markup and stays as recorded. The re-pointed node is re-run in UAT-223-05.
 
 ---
 
@@ -4258,27 +4259,26 @@ That is why this case stayed **GAP**, not DEFERRED — no substitute existed. It
 **Steps:**
 1. Open dashboard at `http://127.0.0.1:8512`
 2. Check browser tab title
-3. Check sidebar header for QU.I.R.K. wordmark
+3. Check sidebar header for the QU.I.R.K. brand logo
 4. Check favicon in browser tab
 
 **Expected:** Professional branding visible throughout.
 
 **Pass Criteria:**
 - Browser tab title shows `QU.I.R.K. — Quantum Readiness Dashboard` or similar branded title
-- Sidebar displays bold monospace electric-blue QU.I.R.K. wordmark
-- Favicon shows electric-blue "Q" (not browser default icon)
+- Sidebar displays the QU.I.R.K. brand logo in the wide sidebar and the favicon-tier glyph in the narrow sidebar, both inline SVG in the theme foreground colour with the accessible name QU.I.R.K.
+- Favicon shows the brand favicon, the lens glyph on an Ink tile (not browser default icon)
 - No JS console errors on page load
 
-**Result:** - [x] PASS (2026-09-21 Phase 206 — QUALIFIED PASS: converted to vitest coverage, but 1 of 4 Pass Criteria bullets remain uncovered by the cited node and are named verbatim in Notes below)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-21  **Tester:** automated  
-**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/dashboard-branding.test.tsx::"renders the QUIRK wordmark in the sidebar and the configured document title"`.
+**Result:** - [x] PASS (2026-10-11 Phase 223 — QUALIFIED PASS: vitest coverage re-pointed to the BrandLogo brand logo and favicon, but 1 of 4 Pass Criteria bullets remain uncovered by the cited node and are named verbatim in Notes below)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated  
+**Notes:** DEFERRED — covered by `src/dashboard/src/components/__tests__/dashboard-branding.test.tsx::"renders the brand logo and glyph in the sidebar and links the brand favicon"`.
 
 **PARTIAL COVERAGE — this citation must NOT be read as a full attestation.** 1 of this case's 4 Pass Criteria bullets are NOT covered by the cited node. Quoted verbatim from this case's own Pass Criteria above:
 
 - No JS console errors on page load
 
-That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 207); it is not asserted here. Coverage of the remaining three is split across two tiers, stated rather than left implied. Render tier: the real `Sidebar` is rendered and the element carrying `QU.I.R.K.` is asserted with its `font-black` / `font-mono` / `text-accent` classes — the colour asserted as the `accent` design token rather than as a hex literal, because a hardcoded hex is exactly what UAT-7-21 forbids. Static-document tier: `document.title` is never set at runtime and the favicon is three static `<link rel="icon">` tags; both live in `src/dashboard/index.html`, which Vite copies verbatim into the build, so the node asserts them against `index.html` itself. That is not the banned source-text-regex substitution — a `<title>` element in a static HTML document is not a render behaviour; the static document IS the artifact the Pass Criterion describes.
-
+That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 207); it is not asserted here. Coverage of the remaining three is split across two tiers, stated rather than left implied. Render tier: the real `Sidebar` is rendered and both brand SVGs are asserted by role `img` and accessible name `QU.I.R.K.`, with `currentColor` on the Ink parts, exactly one Signal error point each, no `<title>` and no retyped wordmark text node; the login card is rendered the same way in a second node. Static-document tier: `document.title` is never set at runtime and the favicon is three static `<link>` tags in `src/dashboard/index.html`, which Vite copies verbatim into the build; the node asserts that their targets exist with PNG/ICO magic bytes and `favicon.svg` byte-equal to `docs/brand/quirk-favicon-dark.svg`. That is not the banned source-text-regex substitution — a `<title>` element in a static HTML document is not a render behaviour; the static document IS the artifact the Pass Criterion describes. Re-worded by Phase 223 (BRAND-07); the Phase 206 wording described the retired electric-blue wordmark and favicon.
 
 ---
 
@@ -4466,7 +4466,7 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 
 **Pass Criteria:**
 - `GET /api/config` returns `{"vertical": "general"}` (unauthenticated, like `/api/health`)
-- Sidebar shows NO "Healthcare Posture" nav item and NO edition badge under the wordmark
+- Sidebar shows NO "Healthcare Posture" nav item and NO edition badge beside the brand logo
 - New Scan page shows NO healthcare preset banner
 - Executive page shows NO edition badge or HIPAA callout
 - Direct navigation to `/healthcare` does not render the HIPAA posture page
@@ -4495,7 +4495,7 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 
 **Pass Criteria:**
 - `GET /api/config` returns `{"vertical": "healthcare"}`
-- Sidebar shows "Healthcare Posture" nav item (HeartPulse icon, accent highlight) and "Healthcare Edition" badge under the wordmark (wide sidebar only)
+- Sidebar shows "Healthcare Posture" nav item (HeartPulse icon, accent highlight) and "Healthcare Edition" badge beside the brand logo (wide sidebar only)
 - `/healthcare` renders the HIPAA posture page
 - New Scan preset banner present; "Apply" fills targets `ehr/pacs/portal/pharmacy.hospital.internal`, profile "standard", calibration "strict"
 - Executive page shows the edition badge and HIPAA callout
@@ -32043,3 +32043,188 @@ auth enabled). Statics rebuilt in `f4545343`. Existing cases whose PASS could no
 for this path: see `222.1-06-SUMMARY.md` (UAT-51-04 curl without the header; UAT-54-05 predates 58-04).
 
 ---
+
+---
+
+## Series 223: Dashboard Brand Adoption (Phase 223 — v5.27)
+
+**Last Updated:** 2026-10-11 (Phase 223 execution, plans 01-06). Seven cases. Phase 223 put the QU.I.R.K. brand
+on the dashboard chrome: a generated `BrandLogo` component (logo and favicon-tier glyph, currentColor, one
+accessible name) replaces the retyped wordmark and the "Q" monogram in the sidebar and on the login card, and the
+browser tab carries the brand favicon as SVG, PNG and ICO from a gated dev-only pipeline (BRAND-02, BRAND-03,
+BRAND-07). No version bump. UAT-223-01 is the operator's both-themes check; UAT-223-05 re-runs the Browser E2E
+nodes that UAT-7-01 and UAT-7-23 were re-pointed to.
+
+### UAT-223-01: The Brand Chrome Reads Correctly In Both Themes (Wide, Narrow, Tab, Login)
+
+**ID:** UAT-223-01
+**Title:** The operator confirms the sidebar brand logo, the narrow-sidebar glyph, the browser-tab favicon and the login card logo in dark and light themes
+**Maps to:** BRAND-02, BRAND-03, BRAND-07
+
+**What to test:** `quirk serve --host 127.0.0.1 --port 8512 --no-open` on the committed statics; the operator walks
+both themes at desktop width, below 1024 px, the browser tab, and a second ephemeral server showing the login card.
+
+**Steps:**
+```
+.venv/bin/quirk serve --host 127.0.0.1 --port 8512 --no-open
+Open http://127.0.0.1:8512/ ; hard-reload; dark theme, then light theme via the toggle
+Narrow the window below 1024 px and widen it again; look at the browser tab icon
+Open the second temporary server http://127.0.0.1:8513/ (login card only; do not log in)
+```
+
+**Pass Criteria:** The logo shows in the theme text colour with the green point the only coloured part; the glyph
+replaces it below 1024 px, centred in the 48 px rail; the tab icon is the lens on a dark tile; the login card shows
+the brand logo and no typed wordmark; the header height and the healthcare badge fit are unchanged; the light-theme
+Signal dot (1.53:1 on white) is accepted as a graphic-dot exemption, not fixed.
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — operator reply recorded verbatim in Notes)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** operator
+**Notes:** Served bundle `assets/index-7niZ_kqq.js` equalled the committed `quirk/dashboard/static/assets/index-7niZ_kqq.js`;
+`curl` returned HTTP 200 on http://127.0.0.1:8512/; the served `/favicon.svg` was byte-equal to
+`docs/brand/quirk-favicon-dark.svg`. The ephemeral login server on port 8513 (env-only random token, never written or
+printed) also returned HTTP 200 with the same bundle. The steps were presented verbatim; step 6 carried the measured
+figures from 223-04: header 49 px at 1440 and 900 px in both themes, healthcare 51 px at 1440, the healthcare badge left
+edge 117 px beyond the logo right edge 109 px. Step 5 asked whether the 1.53:1 light-theme Signal dot reads acceptably
+(BRAND-GUIDELINES section 5: logos are exempt from WCAG 1.4.3 and 1.4.11). Operator reply, verbatim: "approved". The
+operator added no separate remark on the Signal dot or header height; the approval covers the presented steps including
+step 5's acceptability question, and nothing more is claimed. Both servers were stopped afterwards.
+
+### UAT-223-02: BrandLogo Is Generated, Follows currentColor, And Carries The Name Once
+
+**ID:** UAT-223-02
+**Title:** `BrandLogo.tsx` byte-matches its generator, uses currentColor for Ink, keeps Signal, and exposes one accessible name
+**Maps to:** BRAND-02
+
+**What to test:** The brand-assets drift gate covers the generated component, its contract, its non-vacuity and its
+light-variant sources.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_brand_assets_freshness.py -q -m ""
+.venv/bin/python -m scripts.build_brand_component --check
+```
+
+**Pass Criteria:** 16 passed, including the four BrandLogo nodes; the generator check exits 0.
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — tests/test_brand_assets_freshness.py::test_brand_component_matches_generator, tests/test_brand_assets_freshness.py::test_brand_component_contract, tests/test_brand_assets_freshness.py::test_brand_component_gate_is_not_vacuous, tests/test_brand_assets_freshness.py::test_brand_component_sources_are_light_variants; 16 passed in the file)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated
+**Notes:** Plan 223-04's first CI observation caught a Python 3.13-only `Path.read_text(newline=)` in the gate and
+generator (fixed in 14d47758); the nodes pass on the CI interpreter.
+
+### UAT-223-03: Favicon SVG, PNG And ICO Come From A Gated Dev-Only Pipeline
+
+**ID:** UAT-223-03
+**Title:** The favicon SVG copy, the PNG and the stdlib-packed ICO byte-match a fresh render, and the renderer pin stays dev-only
+**Maps to:** BRAND-03
+
+**What to test:** The brand-assets gate renders the PNG and ICO and compares bytes; the ICO layout and the dev-only
+renderer pin are asserted separately.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_brand_assets_freshness.py -q -m ""
+file src/dashboard/public/favicon.ico
+```
+
+**Pass Criteria:** 16 passed; the ICO holds 16, 32 and 48 px PNG-embedded entries; the public and committed static
+favicons are byte-equal.
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — tests/test_brand_assets_freshness.py::test_report_logo_png_matches_fresh_render, tests/test_brand_assets_freshness.py::test_favicon_ico_matches_fresh_render, tests/test_brand_assets_freshness.py::test_favicon_ico_structure, tests/test_brand_assets_freshness.py::test_pack_ico_layout, tests/test_brand_assets_freshness.py::test_renderer_pin_is_dev_only_and_matches_ci, tests/test_brand_assets_freshness.py::test_packaged_brand_copies_byte_equal[docs/brand/quirk-favicon-dark.svg-src/dashboard/public/favicon.svg]; 16 passed in the file)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated
+**Notes:** Plan 223-01 RED run: 4 failed and 8 passed before the assets were regenerated, so the favicon legs were
+observed failing first.
+
+### UAT-223-04: Sidebar And Login Render The Brand Logo With No Retyped Wordmark
+
+**ID:** UAT-223-04
+**Title:** The sidebar renders the logo (wide) and glyph (narrow) and links the brand favicon, and the login card renders the logo
+**Maps to:** BRAND-02, BRAND-07
+
+**What to test:** The branding vitest renders the real sidebar and the login card; the theme contract keeps the
+sidebar brand name.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/__tests__/dashboard-branding.test.tsx
+.venv/bin/python -m pytest tests/test_dashboard_theme.py -q -m ""
+```
+
+**Pass Criteria:** 2 vitest tests pass and 3 theme tests pass; no typed "QU.I.R.K." text node remains in the
+sidebar or on the login card.
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — "renders the brand logo and glyph in the sidebar and links the brand favicon", "renders the brand logo on the login card without a retyped wordmark", tests/test_dashboard_theme.py::test_sidebar_wordmark_present; 2 vitest and 3 pytest passed in 223-03)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated
+**Notes:** UAT-7-31 stays a QUALIFIED PASS: its cited node was re-pointed to the first title above, and the one
+uncovered Pass Criteria bullet is still named verbatim in its Notes.
+
+### UAT-223-05: Browser E2E Mount Guard And Sidebar Collapse Re-pointed, Keyboard Ratchet Still Green
+
+**ID:** UAT-223-05
+**Title:** The real-browser nodes UAT-7-01 and UAT-7-23 point to pass against the branded sidebar, and the KBD-01 keyboard nodes still pass
+**Maps to:** BRAND-02, BRAND-07
+
+**What to test:** The Playwright harness mount guard and the 1440/900 px sidebar collapse by role and accessible
+name instead of retyped text, plus both KBD-01 nodes.
+
+**Steps:**
+```
+.venv/bin/python -m pytest tests/test_browser_e2e.py -q -m "" -rA
+```
+
+**Pass Criteria:** 10 passed locally with Chromium, and the CI Browser E2E job log shows PASSED lines for the same
+nodes (job 114636834617: 26 passed, 0 failed).
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — tests/test_browser_e2e.py::test_uat_7_01_spa_mounts_without_blank_screen, tests/test_browser_e2e.py::test_uat_7_23_sidebar_responsive_collapse, tests/test_browser_e2e.py::test_kbd_01_keyboard_only_table_region_scroll, tests/test_browser_e2e.py::test_kbd_01_keyboard_control_unfocused_region_does_not_scroll; local run 10 passed, 0 failed, and CI Python CI run 38195409145 Browser E2E job 26 passed, 0 failed with literal PASSED lines for all four -- CI-EXEMPT: these nodes DO execute in CI, for real, in the non-gating Browser E2E job which installs Chromium; they skip only in Linux Full Suite, where Chromium is deliberately absent)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated
+**Notes:** The Browser E2E job is continue-on-error, so its conclusion proves nothing; the PASSED lines and the job's
+own count were read from its log (223-04 observation at 14d47758, docs-only commits since). The harness brand-name
+locator count is 3 and the UAT-7-23 Result above is dated evidence for the retired markup, unchanged.
+
+### UAT-223-06: Contrast, Axe And Colour-Audit Ratchets Are Unchanged
+
+**ID:** UAT-223-06
+**Title:** The contrast guards, the hardcoded-colour audit and the axe gate stay green with the new Signal literal exempted by name
+**Maps to:** BRAND-07
+
+**What to test:** The one new `#7FE001` literal lives in the generated component and is a `FOREVER_EXEMPT` entry; no
+axe baseline or chip-contrast baseline was touched.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/__tests__/hardcoded-color-audit.test.tsx src/components/__tests__/ground-luminance-monotone-guard.test.ts
+.venv/bin/python -m pytest tests/test_a11y_baseline_shrink_diff.py -q -m ""
+```
+
+**Pass Criteria:** The 13 contrast, ground and audit guard files pass (75 tests in 223-04); the shrink-only script
+tests pass (13); the Axe + Console Gate is green in Dashboard Quality run 38195410735.
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — "finds no hardcoded hex or raw hsl color literals in the major dashboard page and shell components", "FOREVER_EXEMPT and DEBT_BASELINE are mutually disjoint — no site is excused twice", "guard is not vacuous: at least 9 grounds per theme are measured", tests/test_a11y_baseline_shrink_diff.py::test_axe_count_increase_fails; 75 vitest tests in 13 files and 13 pytest passed in 223-04)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated
+**Notes:** Full dashboard vitest in 223-04: 106 files, 826 passed, 2 skipped. `a11y:check:dark` and
+`a11y:check:light` reported zero violations locally. No axe baseline was regenerated, so there is no shrink diff to
+attach. Dashboard Quality run 38195410735 concluded success, with Axe + Console Gate, E2E Smoke and Bundle Freshness
+Gate all success.
+
+### UAT-223-07: No Served Surface Shows The Old Branding
+
+**ID:** UAT-223-07
+**Title:** No served dashboard source or static carries the electric-blue accent, the retyped wordmark or the Q monogram
+**Maps to:** BRAND-03, BRAND-07
+
+**What to test:** The criterion-5 residue greps over the dashboard sources and the committed statics, and the bundle
+freshness gate.
+
+**Steps:**
+```
+grep -rnIiE "3b9dff|electric-blue" src/dashboard quirk/dashboard/static
+cmp src/dashboard/public/favicon.svg quirk/dashboard/static/favicon.svg
+scripts/check-bundle-freshness.sh
+```
+
+**Pass Criteria:** The grep prints nothing, the favicons are byte-identical and the bundle is fresh.
+
+**Result:** - [x] PASS (2026-10-11 Phase 223 — the criterion-5 greps returned nothing in 223-04, and the Bundle Freshness Gate passed in Dashboard Quality run 38195410735)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-11  **Tester:** automated
+**Notes:** Excluded by reason, deferred at the v5.27 kickoff and re-homed to todo 261003: the report template accent
+`#3b9dff` in `report.html.j2`, the HTML renderer summary colour, and the terminal `#3b9dff` in the CLI writer, init
+command and banner. They are report-palette and terminal colours, not served dashboard surfaces.

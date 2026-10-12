@@ -113,7 +113,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 
 - [x] **Phase 222: Brand Identity Landed** - Merge PR #46 refreshed against `main` with required CI green, then put the brand on the README and on every generated report's colophon (completed 2026-10-02)
 - [x] **Phase 222.1: Brand Guidelines v2 and Dashboard Re-theme** (INSERTED 2026-10-02) - BRAND-GUIDELINES v2 gains a Product UI palette and a below-48 px glyph rule; the dashboard adopts the Ink-violet accent on its current grounds (sketch 001 B, revised from C) with no ratchet pair regressing
-- [ ] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + favicon-tier glyph in the existing 48 px narrow sidebar (sketch 002 A), favicon raster pipeline with a drift gate, and every old-branding pin re-worded in the same phase
+- [x] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + favicon-tier glyph in the existing 48 px narrow sidebar (sketch 002 A), favicon raster pipeline with a drift gate, and every old-branding pin re-worded in the same phase
 - [ ] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc
 - [ ] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard
 - [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
@@ -171,7 +171,14 @@ Plans:
   3. ~~The `--ds-accent` teal is explicitly decided in this phase's discuss; the app background is unchanged.~~ **Moved to Phase 222.1 (2026-10-02).** The operator decided it in this phase's discuss: Ink-violet accent on the current grounds (sketch 001 B, revised from C after viewing the sketches), so the app background stays unchanged. The narrow sidebar keeps its 48 px width; no offset change remains here.
   4. The branding test (`dashboard-branding.test.tsx`), `UAT-7-31`'s pass criteria in `docs/UAT-SERIES.md`, its `docs/uat-disposition-ledger.jsonl` row, and a regenerated `docs/uat-coverage-gaps.md` are re-worded in this phase, and the UAT freshness and reconciliation gates are green. No test is skipped or deleted to get there.
   5. No served surface still shows the old blue-`Q` favicon or wordmark: a source grep for the old asset/markup returns nothing outside history and archives.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [x] 223-01-PLAN.md — Cut phase branch; favicon raster pipeline (PNG + stdlib ICO) from the Ink-tile favicon, gate legs, rebuilt statics
+- [x] 223-02-PLAN.md — Generated BrandLogo component (Ink to currentColor, logo/glyph variants), byte gate + contract + non-vacuity, Signal colour-audit exemption
+- [x] 223-03-PLAN.md — Sidebar + login adopt BrandLogo; branding vitest, theme test and Browser E2E mount guard + UAT-7-01/7-23 nodes re-pointed; UAT-7-31/7-02/7-23 re-worded with ledger + coverage gaps in one commit; statics rebuilt
+- [x] 223-04-PLAN.md — Full Browser E2E file run (main-vs-branch failing-node sets); header/badge measured; ratchets + criterion-5 residue grep; interim CI observation
+- [x] 223-05-PLAN.md — CLAUDE.md drift-table row, brand docs, configuration wording + master guide + vault; folded todo closed with residue re-homed
+- [x] 223-06-PLAN.md — Operator UAT (both themes, wide/narrow, tab, login); UAT Series 223; CITRUTH-03 observation; VALIDATION sign-off; PR
 **UI hint**: yes
 
 ### Phase 224: Doc Claim Ledger & Verification
@@ -215,7 +222,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
 | 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | Complete (verified passed 12/12 at 92a73017; CI green, Python CI 37096708811 + Dashboard Quality 37096708809; PR #54) | 2026-10-03 |
-| 223. Dashboard Brand Adoption | 0/TBD | Not started | - |
+| 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
 | 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |

@@ -52,13 +52,13 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
 - [x] **BRAND-01**: PR #46 (brand identity v1, `docs/brand/`) is refreshed against `main` and merged
       with every required job green, as `scripts/branch_ci_state.py` defines required.
       `python3 docs/brand/build_logo.py` regenerates the committed SVGs byte-identically.
-- [ ] **BRAND-02**: A dashboard user sees the brand primary logo in the wide sidebar and the brand
+- [x] **BRAND-02**: A dashboard user sees the brand primary logo in the wide sidebar and the brand
       glyph in the narrow sidebar, in both themes. **Amended 2026-10-02 (operator, sketch 002 A):** the
       narrow-sidebar glyph is the favicon-tier construction (ring, tail, error point) at 24 px in the
       existing 48 px rail, since the v1 lattice-mark minimum is 48 px. Both are inline SVG following `currentColor` and keep the
       accessible name "QU.I.R.K.". The 216-219 contrast and keyboard ratchets stay green over the new
       chrome.
-- [ ] **BRAND-03**: The browser tab shows the brand favicon (SVG, PNG and ICO). A scripted raster
+- [x] **BRAND-03**: The browser tab shows the brand favicon (SVG, PNG and ICO). A scripted raster
       pipeline produces the PNG and ICO; the renderer is a dev-only dependency and never a runtime
       extra. A generator-drift freshness gate fails if the committed rasters stop matching their
       SVG source, and it is listed in CLAUDE.md's generator-drift table.
@@ -89,7 +89,7 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
       (sketch 001 B, revised 2026-10-02 from C). No contrast, axe, keyboard or `ds-chip-contrast-baseline.json`
       pair gets worse, and no baseline is loosened to absorb a regression. Added 2026-10-02
       (operator), Phase 222.1.
-- [ ] **BRAND-07**: Every artifact pinning the old electric-blue branding is re-worded in the same
+- [x] **BRAND-07**: Every artifact pinning the old electric-blue branding is re-worded in the same
       phase: the branding test, `UAT-7-31` pass criteria, its `uat-disposition-ledger.jsonl` row, and
       a regenerated `uat-coverage-gaps.md`. No test is skipped or deleted to get there, and no surface
       still shows the old blue-Q favicon.
@@ -153,13 +153,13 @@ Deferred from this milestone with an owner:
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BRAND-01 | Phase 222 | Complete |
-| BRAND-02 | Phase 223 | Pending |
-| BRAND-03 | Phase 223 | Pending |
+| BRAND-02 | Phase 223 | Complete |
+| BRAND-03 | Phase 223 | Complete |
 | BRAND-04 | Phase 222 | Complete |
 | BRAND-05 | Phase 222 | Complete |
 | BRAND-06 | Phase 222.1 (moved from 223, 2026-10-02) | Complete |
 | BRAND-08 | Phase 222.1 | Complete |
-| BRAND-07 | Phase 223 | Pending |
+| BRAND-07 | Phase 223 | Complete |
 | DOC-03 | Phase 224 | Pending |
 | DOC-04 | Phase 224 | Pending |
 | DOC-05 | Phase 225 | Pending |

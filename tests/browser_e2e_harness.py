@@ -46,8 +46,8 @@ from quirk.models import Base, CryptoEndpoint
 SEED_SCAN_RUN_ID = "2026-09-26T12:00:00"
 SEED_SCANNED_AT = datetime(2026, 9, 26, 12, 0, 0)
 
-# Viewport wide enough for the `hidden lg:block` full sidebar wordmark
-# (src/dashboard/src/components/sidebar.tsx:87) to render rather than the `Q` monogram.
+# Viewport wide enough for the `hidden lg:block` full sidebar brand logo
+# (src/dashboard/src/components/sidebar.tsx) to render rather than the glyph.
 _VIEWPORT = {"width": 1440, "height": 900}
 
 # The literal signature of app.py's unbuilt-dashboard placeholder branch
@@ -59,11 +59,11 @@ _SIDEBAR_NAV = 'nav[aria-label="Dashboard navigation"]'
 # LoginPage's form. Its presence means an API token resolved and AuthProvider flipped
 # to `unauthenticated` (src/dashboard/src/pages/login.tsx:95).
 _LOGIN_FORM = 'form[aria-label="Dashboard login"]'
-# Present on both the shell sidebar and LoginPage, so NOT sufficient alone — see D-04 below.
-_WORDMARK = "QU.I.R.K."
+# Accessible name of the generated BrandLogo (role=img); LoginPage renders the same logo, so NOT sufficient alone — see D-04 below.
+_BRAND_NAME = "QU.I.R.K."
 
 # /print is chrome-free (App.tsx:80-82 returns <PrintPage/> above the shell), so it has no sidebar
-# nav and no `aside` wordmark. These are its own bundle-only mount signals — see
+# nav and no `aside` brand logo. These are its own bundle-only mount signals — see
 # assert_print_view_mounted(). `body[data-ready="true"]` is the selector POST /api/export/pdf itself
 # waits on (quirk/dashboard/api/routes/pdf.py:87).
 _PRINT_READY = 'body[data-ready="true"]'
@@ -500,7 +500,7 @@ def assert_spa_mounted(page) -> None:
     )
 
     # (c) Not the login form. QU.I.R.K. alone cannot distinguish these — LoginPage renders the
-    #     same wordmark (src/dashboard/src/pages/login.tsx:80-82) — so assert the authenticated
+    #     same BrandLogo (role img, name QU.I.R.K., src/dashboard/src/pages/login.tsx) — so assert the authenticated
     #     shell's sidebar nav, which only the dashboard renders.
     assert page.locator(_LOGIN_FORM).count() == 0, (
         "D-04 mount guard: the login form is present, so AuthProvider's GET /api/scans probe "
@@ -515,13 +515,13 @@ def assert_spa_mounted(page) -> None:
         "pass was prevented — do not trust anything else observed on this page."
     )
 
-    # (d) The sidebar wordmark is visible — an element only the built bundle can produce.
+    # (d) The sidebar brand logo is visible — an element only the built bundle can produce.
     #     Checked last so the more specific failures above report first.
-    wordmark = page.locator("aside").get_by_text(_WORDMARK, exact=True).first
-    assert wordmark.is_visible(), (
-        f"D-04 mount guard: the sidebar wordmark '{_WORDMARK}' is not visible. A vacuous pass "
-        "was prevented: the built bundle renders it at "
-        "src/dashboard/src/components/sidebar.tsx:87 and nothing else does."
+    logo = page.locator("aside").get_by_role("img", name=_BRAND_NAME).first
+    assert logo.is_visible(), (
+        f"D-04 mount guard: the sidebar brand logo (role=img, name '{_BRAND_NAME}') is not visible. "
+        "A vacuous pass was prevented: the built bundle renders it via "
+        "src/dashboard/src/components/BrandLogo.tsx in sidebar.tsx and nothing else in the shell does."
     )
 
 
@@ -532,7 +532,7 @@ def assert_print_view_mounted(page) -> None:
     dashboard shell (``src/dashboard/src/App.tsx:80-82`` returns ``<PrintPage />`` before ``Sidebar``
     or ``Routes`` are reached, with an in-code comment stating the omission is deliberate — a second
     registration inside the shell would render the sidebar on the print view). So there is no
-    ``nav[aria-label="Dashboard navigation"]`` and no ``aside`` wordmark to assert, by design.
+    ``nav[aria-label="Dashboard navigation"]`` and no ``aside`` brand logo to assert, by design.
 
     This is the same guard pointed at the print view's own bundle-only artifacts, so ``/print`` is
     not the one route in the UAT-7-32 walk that can pass vacuously:

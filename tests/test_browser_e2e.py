@@ -167,12 +167,12 @@ def test_uat_7_01_spa_mounts_without_blank_screen(dashboard_origin):
         # case's, so it is NOT widened here; the wrapper below changes only what a timeout
         # REPORTS, never how long it waits.
         #
-        # W-04: both states D-04 exists to catch make this wordmark never appear — the
-        # placeholder branch renders `QU.I.R.K. Dashboard`, which `exact=True` correctly
-        # refuses to match, and an unmounted bundle renders nothing at all. Without the
+        # W-04: both states D-04 exists to catch make this brand logo never appear — the
+        # placeholder branch renders the TEXT `QU.I.R.K. Dashboard`, which an img-role locator
+        # can never match, and an unmounted bundle renders nothing at all. Without the
         # wrapper both surface as an opaque 5s TimeoutError instead of their named cause.
         with diagnosing_mount_failure(page, guard=assert_spa_mounted):
-            page.get_by_text("QU.I.R.K.", exact=True).first.wait_for(
+            page.locator("aside").get_by_role("img", name="QU.I.R.K.").first.wait_for(
                 state="visible", timeout=5000
             )
 
@@ -437,7 +437,7 @@ def test_uat_7_17_export_pdf_download(dashboard_origin, tmp_path):
         # leg can fire with 0 children — a FALSE failure claiming the bundle never mounted.
         #
         # `0eddf3ba` fixed exactly this shape in test_uat_7_32 and left this second call site
-        # untouched. test_uat_7_01 is safe only by accident: its wordmark wait implies a commit.
+        # untouched. test_uat_7_01 is safe only by accident: its brand-logo wait implies a commit.
         # The `diagnosing_mount_failure` wrapper is what keeps the added wait from swallowing
         # D-04's named diagnosis into an opaque timeout — see its docstring.
         with diagnosing_mount_failure(page, guard=assert_spa_mounted):
@@ -652,15 +652,15 @@ def test_222_export_pdf_carries_colophon_logo(dashboard_origin, tmp_path):
 def test_uat_7_23_sidebar_responsive_collapse(dashboard_origin):
     """UAT-7-23 — sidebar collapses/expands at the 1024px breakpoint (COV-10).
 
-    Asserted as MEASURED layout only (``bounding_box()["width"]``, visibility of the wordmark vs.
-    the monogram) — never via the ``class`` attribute. ``sidebar.tsx:78``'s class string
+    Asserted as MEASURED layout only (``bounding_box()["width"]``, visibility of the brand logo vs.
+    the glyph) — never via the ``class`` attribute. ``sidebar.tsx:78``'s class string
     ``"w-12 lg:w-60"`` is present at EVERY viewport width; asserting it in a real browser would
     reproduce the exact vacuity the original GAP note banned (D-04). Only a measured box
     distinguishes the two states.
 
     Covers 5 of the case's 6 pass criteria:
       1. width collapses to 48px below 1024px and expands back to 240px above it
-      2. wordmark/monogram visibility inverts with the breakpoint
+      2. brand logo/glyph visibility inverts with the breakpoint
       3. the collapsed-state "New Scan" tooltip renders through the Radix portal (D-05)
       4. a nav click while collapsed still routes correctly (D-06)
       5. re-crossing the breakpoint upward restores the expanded width
@@ -683,16 +683,16 @@ def test_uat_7_23_sidebar_responsive_collapse(dashboard_origin):
         assert_spa_mounted(page)
 
         aside = page.locator("aside")
-        wordmark = aside.get_by_text("QU.I.R.K.", exact=True)
-        monogram = aside.get_by_text("Q", exact=True)
+        logo = aside.locator('svg[data-brand-variant="logo"]')
+        glyph = aside.locator('svg[data-brand-variant="glyph"]')
 
         # Above the breakpoint: the harness's own hard-coded 1440x900 viewport (D-03).
         assert aside.bounding_box()["width"] == 240, (
             "UAT-7-23: expected the aside to measure 240px wide above the 1024px breakpoint "
             "at 1440x900."
         )
-        assert wordmark.is_visible(), "UAT-7-23: expected the QU.I.R.K. wordmark visible at 1440px."
-        assert not monogram.is_visible(), "UAT-7-23: expected the Q monogram hidden at 1440px."
+        assert logo.is_visible(), "UAT-7-23: expected the QU.I.R.K. brand logo visible at 1440px."
+        assert not glyph.is_visible(), "UAT-7-23: expected the favicon-tier glyph hidden at 1440px."
 
         # Cross below the breakpoint. No wait between the resize and the measurement: this is a
         # pure Tailwind CSS media query with no matchMedia/useMediaQuery listener in the loop
@@ -704,8 +704,8 @@ def test_uat_7_23_sidebar_responsive_collapse(dashboard_origin):
             "UAT-7-23: expected the aside to measure 48px wide below the 1024px breakpoint "
             "at 900x900."
         )
-        assert monogram.is_visible(), "UAT-7-23: expected the Q monogram visible at 900px."
-        assert not wordmark.is_visible(), "UAT-7-23: expected the QU.I.R.K. wordmark hidden at 900px."
+        assert glyph.is_visible(), "UAT-7-23: expected the favicon-tier glyph visible at 900px."
+        assert not logo.is_visible(), "UAT-7-23: expected the QU.I.R.K. brand logo hidden at 900px."
 
         # Collapsed-state tooltip (D-05): reached through the Radix portal, on the PAGE not the
         # sidebar subtree (TooltipContent portals outside <aside>). get_by_role("tooltip") is a
@@ -1184,7 +1184,7 @@ def test_kbd_01_keyboard_only_table_region_scroll(dashboard_origin):
     """
     with chromium_page() as page:
         # Mount at the harness's default 1440x900 viewport FIRST (same idiom as UAT-7-23): the
-        # D-04 mount guard asserts the full-width sidebar wordmark, which is only rendered above
+        # D-04 mount guard asserts the sidebar brand logo (role img), which is only rendered above
         # the 1024px breakpoint. Narrowing happens only after the guard passes.
         page.goto(dashboard_origin + _KBD_01_ROUTE)
         with diagnosing_mount_failure(page, guard=assert_spa_mounted):
@@ -1292,7 +1292,7 @@ def test_kbd_01_keyboard_control_unfocused_region_does_not_scroll(dashboard_orig
     """
     with chromium_page() as page:
         # Mount at the harness's default 1440x900 viewport FIRST (same idiom as UAT-7-23): the
-        # D-04 mount guard asserts the full-width sidebar wordmark, which is only rendered above
+        # D-04 mount guard asserts the sidebar brand logo (role img), which is only rendered above
         # the 1024px breakpoint. Narrowing happens only after the guard passes.
         page.goto(dashboard_origin + _KBD_01_ROUTE)
         with diagnosing_mount_failure(page, guard=assert_spa_mounted):

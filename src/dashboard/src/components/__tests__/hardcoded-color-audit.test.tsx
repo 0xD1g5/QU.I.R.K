@@ -273,6 +273,15 @@ const FOREVER_EXEMPT: Record<string, { literal: string; guard: string; decision:
       "vendor-trend-advisory-guard.test.ts's FORBIDDEN_PALETTE for the same Phase 161 advisory-firewall " +
       "reason.",
   },
+  "components/BrandLogo.tsx|#7FE001": {
+    literal: "#7FE001",
+    guard: "tests/test_brand_assets_freshness.py",
+    decision: "Phase 223 D-03/D-07; BRAND-GUIDELINES §5",
+    why:
+      "Signal #7FE001 is the logo's single error point, never a UI token. The component is generated " +
+      "from docs/brand/ and byte-locked by tests/test_brand_assets_freshness.py. Tokenising it would " +
+      "violate tests/test_brand_guidelines_v2.py (7fe001 must not appear in index.css).",
+  },
 }
 
 /**

@@ -23,6 +23,7 @@ import {
   Network,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { BrandLogo } from "@/components/BrandLogo"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -81,13 +82,11 @@ export function Sidebar() {
       )}
     >
       {/* Logo / title */}
-      <div className="flex items-center gap-2 px-3 lg:px-5 py-4 border-b border-border">
-        {/* Full wordmark on wide sidebar */}
-        <span className="text-accent font-black text-base hidden lg:block tracking-widest font-mono leading-none">
-          QU.I.R.K.
-        </span>
-        {/* Monogram on narrow sidebar */}
-        <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>
+      <div className="flex items-center gap-2 px-3 lg:px-5 py-3 lg:py-2.5 border-b border-border">
+        {/* Primary logo on wide sidebar (Phase 223 D-06, 28 px) */}
+        <BrandLogo variant="logo" className="hidden lg:block h-7 w-auto text-foreground" />
+        {/* Favicon-tier glyph on narrow sidebar (Phase 223 D-01/D-07, 24 px in the 48 px rail) */}
+        <BrandLogo variant="glyph" className="lg:hidden h-6 w-6 shrink-0 text-foreground" />
 
         {/* Edition badge — only rendered for non-general verticals */}
         {vertical.id !== "general" && (
@@ -101,7 +100,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* New Scan CTA — above all nav items, below wordmark */}
+      {/* New Scan CTA — above all nav items, below logo */}
       <div className="px-2 py-3 border-b border-border">
         <Tooltip>
           <TooltipTrigger asChild>

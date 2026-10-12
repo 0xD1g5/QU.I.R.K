@@ -1,11 +1,12 @@
-// Phase 206 Plan 10 (COV-04) — UAT-7-31: Dashboard Page Title and Branding.
+// Phase 206 Plan 10 (COV-04), re-pointed by Phase 223 (BRAND-02/03/07) — UAT-7-31: Dashboard Page Title and Branding.
 //
 // Pass Criteria under test (docs/UAT-SERIES.md UAT-7-31):
-//   - Sidebar displays bold monospace electric-blue QU.I.R.K. wordmark
-//       -> asserted by a REAL `Sidebar` render (render assertion).
+//   - Sidebar displays the QU.I.R.K. brand logo (wide) and favicon-tier glyph (narrow)
+//       -> asserted by a REAL `Sidebar` render (render assertion); the login card
+//          is rendered the same way in a second node.
 //   - Browser tab title shows a branded title
-//   - Favicon shows an electric-blue "Q" (not the browser default)
-//       -> asserted against `src/dashboard/index.html` (static-document
+//   - Favicon shows the brand favicon, the lens glyph on an Ink tile
+//       -> asserted against `src/dashboard/index.html` and `public/` (static-document
 //          assertion — see the treatment note below).
 //
 // TAB-TITLE / FAVICON TREATMENT, stated explicitly rather than left implied:
@@ -23,8 +24,12 @@
 // HTML document are not render behaviours; the static document IS the artifact
 // the Pass Criterion describes. This mirrors D-A1's carve-out reasoning for
 // UAT-7-21 and, like it, is justified per-claim, not a general loosening: the
-// wordmark half of this same case IS a render behaviour and is asserted by
+// logo half of this same case IS a render behaviour and is asserted by
 // rendering, not by reading a file.
+//
+// Byte-equality of favicon.png / favicon.ico to a FRESH render is owned by
+// tests/test_brand_assets_freshness.py because vitest has no renderer; this
+// file checks only the magic bytes and the SVG source copy.
 //
 // Uncovered Pass Criteria bullet, named explicitly per CONTEXT's partial-
 // coverage rule: "No JS console errors on page load" is UAT-7-32's subject and
@@ -36,6 +41,7 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Sidebar } from "@/components/sidebar"
+import { LoginPage } from "@/pages/login"
 
 vi.mock("@/context/auth-context", () => ({
   useAuth: () => ({ status: "authenticated", setToken: () => {}, logout: () => {} }),
@@ -65,8 +71,11 @@ const INDEX_HTML = readFileSync(
   "utf-8",
 )
 
+const REPO = path.resolve(__dirname, "../../../../..")
+const PUBLIC = path.resolve(__dirname, "../../../public")
+
 describe("Dashboard branding — UAT-7-31", () => {
-  it("renders the QUIRK wordmark in the sidebar and the configured document title", () => {
+  it("renders the brand logo and glyph in the sidebar and links the brand favicon", () => {
     render(
       <TooltipProvider>
         <MemoryRouter initialEntries={["/"]}>
@@ -75,25 +84,53 @@ describe("Dashboard branding — UAT-7-31", () => {
       </TooltipProvider>,
     )
 
-    // Wordmark — render assertion against the real Sidebar.
-    const wordmark = screen.getByText("QU.I.R.K.")
-    expect(wordmark).toBeInTheDocument()
-    // "bold monospace electric-blue": weight and typeface are literal classes;
-    // the colour is the `accent` design token (the electric-blue defined in
-    // index.css), asserted as the token rather than as a hex literal because
-    // hardcoded hex on components is what UAT-7-21 forbids.
-    expect(wordmark.className).toContain("font-black")
-    expect(wordmark.className).toContain("font-mono")
-    expect(wordmark.className).toContain("text-accent")
-
-    // Collapsed-sidebar monogram ships alongside the full wordmark.
-    expect(screen.getByText("Q")).toBeInTheDocument()
+    // jsdom ignores the Tailwind hidden / lg:hidden classes, so both variants resolve.
+    const imgs = screen.getAllByRole("img", { name: "QU.I.R.K." })
+    expect(imgs).toHaveLength(2)
+    expect(
+      imgs.map((el) => el.getAttribute("data-brand-variant")).sort(),
+    ).toEqual(["glyph", "logo"])
+    for (const svg of imgs) {
+      expect(svg.querySelectorAll('[fill="#7FE001"]')).toHaveLength(1)
+      expect(svg.innerHTML).not.toMatch(/#0D0124/i)
+      expect(
+        svg.querySelectorAll('[stroke="currentColor"],[fill="currentColor"]').length,
+      ).toBeGreaterThan(0)
+      expect(svg.querySelector("title")).toBeNull()
+      const cls = svg.getAttribute("class") ?? ""
+      expect(cls).toContain("text-foreground")
+      expect(cls).not.toContain("text-accent")
+    }
+    expect(screen.queryByText("QU.I.R.K.")).toBeNull()
+    expect(screen.queryByText("Q")).toBeNull()
 
     // Tab title + favicon — static-document assertions (see the treatment note
     // at the head of this file).
     expect(INDEX_HTML).toContain(
       "<title>QU.I.R.K. — Quantum Readiness Dashboard</title>",
     )
-    expect(INDEX_HTML).toMatch(/<link rel="icon"[^>]*href="\/favicon\.svg"/)
+    const hrefs = [
+      ...INDEX_HTML.matchAll(/<link rel="[^"]*icon"[^>]*href="\/([^"]+)"/g),
+    ].map((m) => m[1])
+    expect(hrefs).toEqual(["favicon.svg", "favicon.png", "favicon.ico"])
+
+    expect(
+      readFileSync(path.join(PUBLIC, "favicon.svg")).equals(
+        readFileSync(path.join(REPO, "docs/brand/quirk-favicon-dark.svg")),
+      ),
+    ).toBe(true)
+    const png = readFileSync(path.join(PUBLIC, "favicon.png"))
+    expect([...png.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47])
+    const ico = readFileSync(path.join(PUBLIC, "favicon.ico"))
+    expect([...ico.subarray(0, 4)]).toEqual([0, 0, 1, 0])
+    expect(ico.readUInt16LE(4)).toBe(3)
+  })
+
+  it("renders the brand logo on the login card without a retyped wordmark", () => {
+    render(<LoginPage />)
+    const imgs = screen.getAllByRole("img", { name: "QU.I.R.K." })
+    expect(imgs).toHaveLength(1)
+    expect(imgs[0].getAttribute("data-brand-variant")).toBe("logo")
+    expect(screen.queryByText("QU.I.R.K.")).toBeNull()
   })
 })

@@ -13,12 +13,14 @@ The generator takes an optional output directory: `python3 docs/brand/build_logo
 deleting any file in `docs/brand/` breaks published pages, so treat these filenames as a public URL
 contract. `tests/test_readme_brand_logo.py` pins the exact URLs.
 
-**Rasters.** PNGs are produced by `python -m scripts.build_brand_rasters` (resvg-py, dev-only).
+**Rasters.** The report PNG and the dashboard favicon PNG/ICO are produced by `python -m scripts.build_brand_rasters` (resvg-py, dev-only).
 
 **Freshness gate.** `tests/test_brand_assets_freshness.py` fails if any SVG, packaged copy
-(`quirk/reports/assets/`, `src/dashboard/src/assets/brand/`) or PNG drifts from its generator.
-Regenerate with `python3 docs/brand/build_logo.py` and `python -m scripts.build_brand_rasters`,
-then recommit.
+(`quirk/reports/assets/`, `src/dashboard/src/assets/brand/`, `src/dashboard/public/favicon.svg`),
+PNG/ICO raster or `src/dashboard/src/components/BrandLogo.tsx` drifts from its generator.
+Regenerate with `python3 docs/brand/build_logo.py`, `python -m scripts.build_brand_rasters`,
+`python3 -m scripts.build_brand_component`, the four `cp` copies listed in that test's docstring,
+then `cd src/dashboard && npm run build`, and recommit.
 
 | Logo | Mark | Hero |
 |---|---|---|

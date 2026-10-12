@@ -1626,7 +1626,7 @@ pre-vertical QU.I.R.K.
 | Vertical | Effect |
 |----------|--------|
 | `general` | Default. No vertical-specific UI; identical to pre-vertical QU.I.R.K. |
-| `healthcare` | Adds a "Healthcare Posture" sidebar nav item + HIPAA posture page (`/healthcare`), a "Healthcare Edition" badge under the wordmark, and an EHR/PACS/portal scan preset on the New Scan page |
+| `healthcare` | Adds a "Healthcare Posture" sidebar nav item + HIPAA posture page (`/healthcare`), a "Healthcare Edition" badge beside the brand logo in the wide sidebar header, and an EHR/PACS/portal scan preset on the New Scan page |
 
 ### Resolution order
 
