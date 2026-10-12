@@ -171,7 +171,14 @@ Plans:
   3. ~~The `--ds-accent` teal is explicitly decided in this phase's discuss; the app background is unchanged.~~ **Moved to Phase 222.1 (2026-10-02).** The operator decided it in this phase's discuss: Ink-violet accent on the current grounds (sketch 001 B, revised from C after viewing the sketches), so the app background stays unchanged. The narrow sidebar keeps its 48 px width; no offset change remains here.
   4. The branding test (`dashboard-branding.test.tsx`), `UAT-7-31`'s pass criteria in `docs/UAT-SERIES.md`, its `docs/uat-disposition-ledger.jsonl` row, and a regenerated `docs/uat-coverage-gaps.md` are re-worded in this phase, and the UAT freshness and reconciliation gates are green. No test is skipped or deleted to get there.
   5. No served surface still shows the old blue-`Q` favicon or wordmark: a source grep for the old asset/markup returns nothing outside history and archives.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 223-01-PLAN.md — Cut phase branch; favicon raster pipeline (PNG + stdlib ICO) from the Ink-tile favicon, gate legs, rebuilt statics
+- [ ] 223-02-PLAN.md — Generated BrandLogo component (Ink to currentColor, logo/glyph variants), byte gate + contract + non-vacuity, Signal colour-audit exemption
+- [ ] 223-03-PLAN.md — Sidebar + login adopt BrandLogo; branding vitest, theme test and Browser E2E mount guard + UAT-7-01/7-23 nodes re-pointed; UAT-7-31/7-02/7-23 re-worded with ledger + coverage gaps in one commit; statics rebuilt
+- [ ] 223-04-PLAN.md — Full Browser E2E file run (main-vs-branch failing-node sets); header/badge measured; ratchets + criterion-5 residue grep; interim CI observation
+- [ ] 223-05-PLAN.md — CLAUDE.md drift-table row, brand docs, configuration wording + master guide + vault; folded todo closed with residue re-homed
+- [ ] 223-06-PLAN.md — Operator UAT (both themes, wide/narrow, tab, login); UAT Series 223; CITRUTH-03 observation; VALIDATION sign-off; PR
 **UI hint**: yes
 
 ### Phase 224: Doc Claim Ledger & Verification
