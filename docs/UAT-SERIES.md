@@ -4466,7 +4466,7 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 
 **Pass Criteria:**
 - `GET /api/config` returns `{"vertical": "general"}` (unauthenticated, like `/api/health`)
-- Sidebar shows NO "Healthcare Posture" nav item and NO edition badge under the wordmark
+- Sidebar shows NO "Healthcare Posture" nav item and NO edition badge beside the brand logo
 - New Scan page shows NO healthcare preset banner
 - Executive page shows NO edition badge or HIPAA callout
 - Direct navigation to `/healthcare` does not render the HIPAA posture page
@@ -4495,7 +4495,7 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 
 **Pass Criteria:**
 - `GET /api/config` returns `{"vertical": "healthcare"}`
-- Sidebar shows "Healthcare Posture" nav item (HeartPulse icon, accent highlight) and "Healthcare Edition" badge under the wordmark (wide sidebar only)
+- Sidebar shows "Healthcare Posture" nav item (HeartPulse icon, accent highlight) and "Healthcare Edition" badge beside the brand logo (wide sidebar only)
 - `/healthcare` renders the HIPAA posture page
 - New Scan preset banner present; "Apply" fills targets `ehr/pacs/portal/pharmacy.hospital.internal`, profile "standard", calibration "strict"
 - Executive page shows the edition badge and HIPAA callout
