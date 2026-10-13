@@ -14,36 +14,38 @@ Before following this guide, confirm the following:
   [Getting Started](getting-started.md) to install and configure QUIRK before proceeding.
 - **(b) `[hw]` extras installed** (hardware scanning only). SNMP hardware scanning
   requires `pip install 'quirk-scanner[hw]'`. This extra is **not included** in `[all]`
-  due to the size of the pysnmp dependency. See
+  because pysnmp is an explicit opt-in. See
   [Operator's Guide §2.2](operators-guide.md#22-optional-extras-matrix) for the full
   optional extras matrix and the install command.
 - **(c) Port 8512 connectivity.** The console host must be reachable from each sensor
   host on port 8512 (the default QUIRK console API port). Sensors push scan results
   to the console over this port.
-- **(d) Python 3.11+.** This guide assumes a Python 3.11 or higher environment on all
-  hosts.
+- **(d) Python 3.10+.** This guide assumes a Python 3.10 or higher environment on all
+  hosts (CI tests 3.11).
 
 ---
 
 ## 1. Deploy the Console
 
-Install QU.I.R.K. on the console host. Use `pip install quirk-scanner` for the core
-scanner, or `pip install 'quirk-scanner[all]'` for full scanner coverage including
-optional extras (excludes `[identity]` and `[hw]`):
+Install QU.I.R.K. on the console host. The console is the dashboard server, so it needs
+the `[dashboard]` extra; `pip install 'quirk-scanner[all]'` includes it along with the other
+optional extras (it excludes `[identity]`, `[api]` and `[hw]`):
 
 ```bash
 pip install 'quirk-scanner[all]'
 ```
 
-Start the server. The console binds loopback only by default; pass `--host 0.0.0.0`
-to make it reachable over the network from sensor hosts:
+Start the server. The console binds loopback only by default; to make it reachable over
+the network from sensor hosts, set an operator token and pass `--host 0.0.0.0`:
 
 ```bash
+export QUIRK_API_TOKEN="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
 quirk serve --host 0.0.0.0 --port 8512
 ```
 
 The default port is 8512. QUIRK refuses to start on a network-reachable interface
-when no `QUIRK_API_TOKEN` environment variable is set, unless you pass `--insecure`
+when no operator token is configured (neither the `QUIRK_API_TOKEN` environment variable
+nor `security.api_token` in the `config.yaml` it loads), unless you pass `--insecure`
 to explicitly acknowledge a token-less bind on a trusted, firewalled segment. For
 reverse-proxy and cloud-hosted console deployments, see
 [Operator's Guide §8.1](operators-guide.md#81-provision-the-console).
@@ -60,7 +62,8 @@ check fails, confirm port 8512 is permitted between the sensor and console hosts
 **Fields the sensor operator needs.** When you enroll a sensor (§2), the sensor's
 `sensor.yaml` will contain two key fields required for push authentication:
 
-- `console_url` — the base URL of the console (e.g. `https://console.corp:8512`)
+- `console_url` — the base URL of the console (e.g. `https://console.corp:8512`; `quirk serve` itself
+  speaks plain HTTP, so an `https://` URL needs a TLS-terminating reverse proxy in front of it)
 - `console_api_token` — the per-sensor push credential minted by `quirk console enroll`
 
 ---
@@ -94,19 +97,26 @@ Bearer token (copy now — shown once, never recoverable):
 > value is gone after this terminal session. If the token is lost, you must revoke
 > the sensor and re-enroll (see §3.2 and §3.3).
 
-The `sensor_id` (a UUID) for this sensor is printed to stderr and will also be stored
-in the sensor's `sensor.yaml` after Step 2.
+The `sensor_id` (a UUID) for this sensor is printed to stderr. Pass it as `--sensor-id`
+in Step 2 so the sensor's `sensor.yaml` carries the id the console minted. If you omit
+`--sensor-id`, the sensor generates its own random UUID, the console does not recognise
+it, and `quirk sensor push` is rejected with HTTP 403.
 
 ### Step 2 — Sensor host: write the sensor configuration
 
 On the sensor host, run `quirk sensor enroll` with the console URL, the matching
-segment label, and the bearer token from Step 1:
+segment label, the `sensor_id` and the bearer token from Step 1:
 
 ```bash
 quirk sensor enroll https://<console-host>:8512 \
   --segment <label> \
+  --sensor-id <sensor-id-from-step-1> \
   --api-token <bearer-token-from-step-1>
 ```
+
+Use an `http://` console URL when the sensor reaches `quirk serve` directly, and `https://`
+when a TLS-terminating reverse proxy is in front of it (see
+[Operator's Guide §8.1](operators-guide.md#81-provision-the-console)).
 
 The `--api-token` flag writes the console-minted token directly to the
 `console_api_token` field in `sensor.yaml`. If you omit `--api-token`, that field is
@@ -118,13 +128,16 @@ URL is a private or RFC1918 address:
 ```bash
 quirk sensor enroll https://10.0.0.5:8512 \
   --segment segment-a \
+  --sensor-id <sensor-id-from-step-1> \
   --api-token <bearer-token-from-step-1> \
   --allow-internal-console
 ```
 
 **`sensor.yaml` default location:**
-- Linux / macOS: `~/.config/quirk/sensor.yaml`
-- Windows: `%APPDATA%\quirk\sensor.yaml`
+- Linux: `~/.config/quirk/sensor.yaml`
+- macOS: `~/Library/Application Support/quirk/sensor.yaml`
+- Windows: a `quirk` folder under `%USERPROFILE%\AppData\Local` (the non-roaming per-user
+  config directory that the `platformdirs` library returns)
 
 Use `--config <path>` to write `sensor.yaml` to a custom location (useful in CI or
 when running multiple sensors on the same host). After enrollment, the sensor is ready
@@ -192,6 +205,7 @@ has three steps:
    ```bash
    quirk sensor enroll https://<console-host>:8512 \
      --segment <original-label> \
+     --sensor-id <new-sensor-id> \
      --api-token <new-bearer-token>
    ```
    This overwrites `sensor.yaml` with the new `sensor_id` and `console_api_token`.
@@ -211,9 +225,13 @@ standard rotation procedure:
 2. **Treat the sensor as untrusted** until re-enrolled with a new token. Do not rely
    on scan results from the compromised `sensor_id`.
 
-3. **Review scan/push logs** for anomalous pushes from that `sensor_id` in the time
-   window before revocation. Look for unexpected push timing, unusual finding volumes,
-   or pushes from unexpected IP addresses.
+3. **Review the console's request log and push audit records** for anomalous pushes
+   from that `sensor_id` in the time window before revocation. `quirk serve` logs the
+   client address and status of every request, and each push attempt that is not
+   rate-limited is recorded as an audit row (destination `sensor_push`). Look for
+   unexpected push timing or pushes from unexpected IP addresses. The audit row carries the time, status and error summary but
+   not the sensor ID or source address; accepted pushes are also recorded in the
+   `sensor_pushes` table with their `sensor_id` and receive time.
 
 4. **Re-enroll with a new token** following the same three steps as §3.3.
 
@@ -225,7 +243,7 @@ the response.
 
 ## 3.5 Hardening Environment Variables
 
-Two security controls are configured only by environment variable — there is no config-file
+These two security controls are configured only by environment variable — there is no config-file
 equivalent and no CLI flag, so an operator who does not know they exist cannot switch them on.
 
 | Variable | Default | Effect |
@@ -242,8 +260,7 @@ quirk serve --port 8512
 Both are read at request time by middleware, so they must be set in the environment of the
 `quirk serve` process — exporting them in a different shell has no effect.
 
-See [Configuration](configuration.md) for the non-security `QUIRK_*` variables
-(`QUIRK_SERVE_HOST`, `QUIRK_SERVE_PORT`, `QUIRK_OUTPUT_DIR`).
+See [Configuration](configuration.md) for the other `QUIRK_*` environment variables.
 
 ---
 
@@ -258,10 +275,18 @@ in `[all]`:
 pip install 'quirk-scanner[hw]'
 ```
 
-Once installed, enable SNMP scanning and configure the community string in your
-`config.yaml`. For the full config key reference including `enable_snmp` and
-`snmp_community` defaults, placement under the `scan:` block, and sample output,
-see [Operator's Guide §9.1](operators-guide.md#91-enable-snmp-scanning).
+Once installed, enable SNMP scanning and configure the community string under the
+`connectors:` block of your `config.yaml` (not under `scan:`, which fails to load), or pass
+`--enable-snmp` on the command line:
+
+```yaml
+connectors:
+  enable_snmp: true          # default: false
+  snmp_community: "public"   # default: "public"
+```
+
+For SNMPv3 credentials and sample output, see
+[Operator's Guide §9.1](operators-guide.md#91-enable-snmp-scanning).
 
 **Network prerequisites:**
 
@@ -273,8 +298,11 @@ see [Operator's Guide §9.1](operators-guide.md#91-enable-snmp-scanning).
   Using `"public"` on networks with a custom community string will cause all probes
   to fail silently.
 
-QUIRK attempts SNMPv3 auth+priv first (when a per-host credential is configured), falls
-back to SNMPv2c, then to no-SNMP, and always reports which tier actually succeeded — see
+QUIRK attempts SNMPv3 first (when a per-host or `default` credential is configured), falls
+back to SNMPv2c, then to no SNMP, and records the outcome in the SNMP column. That label is
+not always the tier that answered: `v3 failed → v2c` is shown whether or not the v2c fallback
+answered, and an authenticated v3 session without privacy (authNoPriv) is labelled
+`v3 noAuthNoPriv`. See
 [Operator's Guide §9.1.1](operators-guide.md#911-snmpv3-authpriv-scanning-phase-139) for
 configuring per-host SNMPv3 credentials.
 
@@ -294,7 +322,7 @@ Use the checklist below to diagnose a missing or incomplete hardware inventory.
 |---------|-------|-----|
 | No hardware rows appear at all | Verify `[hw]` extras are installed: `pip show pysnmp` | Run `pip install 'quirk-scanner[hw]'` |
 | Devices appear with `vendor: unknown` / `model: unknown` | UDP 161 may be blocked between the QUIRK host and scan targets | Open a firewall rule permitting UDP 161 from the QUIRK scan host to each scan target |
-| Devices missing despite reachable network | Wrong community string — probes reach devices but are rejected | Set `snmp_community` to the device's configured read-only community (see [operators-guide.md §9.1](operators-guide.md#91-enable-snmp-scanning)) |
+| Devices appear with `vendor: unknown` although UDP 161 is open | Wrong community string — the device drops the request, which looks the same as a blocked port | Set `snmp_community` to the device's configured read-only community (see [operators-guide.md §9.1](operators-guide.md#91-enable-snmp-scanning)) |
 | Probes fail on SNMPv3-only devices (no v2c community enabled) | No `snmp_v3_credentials` entry configured for this host | Configure a per-host SNMPv3 USM credential (see [operators-guide.md §9.1.1](operators-guide.md#911-snmpv3-authpriv-scanning-phase-139)) |
-| SNMP column shows `v3 failed → v2c` | SNMPv3 was attempted but authentication failed | Verify the configured `auth_key_env`/`priv_key_env` passphrases match the device's USM user |
-| Target absent entirely from hardware results | Scan target is unreachable at layer 3 | Verify routing and confirm the host is reachable from the QUIRK scan host, and that the host is included in the configured scan scope |
+| SNMP column shows `v3 failed → v2c` | SNMPv3 was attempted but did not succeed (wrong user or passphrase, or no response); the label does not say whether v2c then answered | Verify the configured `auth_key_env`/`priv_key_env` passphrases match the device's USM user |
+| Target absent entirely from hardware results | Scan target is unreachable at layer 3, or produced no TLS, SSH or PQC result (SNMP only probes hosts the scan has already reached) | Verify routing and confirm the host is reachable from the QUIRK scan host, and that the host is included in the configured scan scope |

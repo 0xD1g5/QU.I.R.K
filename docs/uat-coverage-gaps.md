@@ -8,13 +8,13 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 993
-- Disposition counts: DEFERRED 41, FAIL 6, GAP 31, OBSOLETE 2, PASS 827, SKIP_OTHER 86
-- Open GAP (drainable) cases: 44
+- Total case headings: 1005
+- Disposition counts: DEFERRED 41, FAIL 7, GAP 32, OBSOLETE 2, PASS 838, SKIP_OTHER 85
+- Open GAP (drainable) cases: 45
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (44 cases, all series)
+## Open GAP Worklist (45 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
@@ -34,6 +34,7 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-67-04 | 67 | ScannerStatusCard renders on Executive page when failures exist (RESUME-02) | no substitute coverage; needs a frontend component test for ScannerStatusCard -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding |
 | UAT-85-08 | 85 | Real dashboard hero screenshot replaces placeholder (LAUNCH-01) | no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent |
 | UAT-89-01-01 | 89 | three new weak-TLS profiles start and auto-register (LAB-01/02/04) | no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01 |
+| UAT-96-05 | 96 | `--fuzz-jwt-alg-confusion` against fuzz-target yields CRITICAL (FUZZ-04, LAB-01) | no substitute coverage; cannot run as written even with the fuzz-target lab up: the CLI fuzzes https://<first configured fqdn> or https://localhost per run_scan.py:3260, never the plain-HTTP fixture on localhost:20100, and config-lab-fuzz.yaml does not exist; tests/test_rest_fuzzer_probes.py::TestAlgConfusionProbeAccepted::test_alg_confusion_accepted_is_critical covers only the probe's CRITICAL classification against a mocked server, not this end-to-end run; re-dispositioned 2026-10-13 from a SKIP that blamed only the missing live service; tracked in todo 261012-doc224-chaos-lab-scanner-cannot-reach-fixtures |
 | UAT-96-08 | 96 | `fuzz-target` chaos profile appears in `./lab.sh profiles` (LAB-01) | no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01 |
 | UAT-134-01 | 134 | CBOM Page — Hardware Inventory [DEVICE]/[FIRMWARE] labels — Manual | no substitute coverage; the case's core assertion is the React HardwareInventory component's rendering behavior in src/dashboard/src/pages/cbom.tsx -- two badge rows per device, DEVICE and FIRMWARE badge colors, tier-based row coloring, and complete section absence when hardware_devices is empty. No vitest test file anywhere under src/dashboard/src/pages/__tests__/ references HardwareInventory or hardwareDevices; the only related coverage is the backend data-shape unit test tests/test_dashboard_api.py::test_derive_hw_components_bridge_status_promoted_and_null, which proves the API payload shape but not the frontend render. A live hwcompat chaos-lab scan plus browser walkthrough, or a new HardwareInventory vitest test, is needed to close this gap |
 | UAT-152-01 | 152 | `segmented-network` chaos lab profile smoke test (DISC-09) — Human-Led | no substitute coverage; this case's assertion is real network-layer behavior, an iptables-REJECT gateway producing genuine TCP RST on the dead subnet versus a genuine open TLS port on the live subnet, observed via nmap against live containers on the segmented-network chaos-lab profile. No unit test in tests/test_nmap_provider.py, tests/test_nmap_parser.py, or elsewhere exercises real network RST/timeout behavior -- those tests parse pre-canned nmap output text, not live network responses, so none can substitute for this case's live-fire assertion. The segmented-network profile and its segnet-gateway/segnet-live-tls/segnet-prober services are confirmed present in quantum-chaos-enterprise-lab/docker-compose.yml and expected_results_segmented_network.md exists, but the live smoke test itself requires the Docker daemon, unavailable this plan per D-01 |

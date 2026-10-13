@@ -30,8 +30,9 @@ Commands:
                   predates the newest commit touching quirk/.
   all             Start ALL profiles at once — every service, every vulnerability
   profiles        Print all known docker-compose profiles (one per line)
-  certs           Generate all chaos-lab self-signed certs (mTLS CA/client +
-                  labs/email + labs/grpc-tls) without starting containers
+  certs           Generate the mTLS CA/client, labs/email and labs/grpc-tls
+                  certs without starting containers (broker, postgres-tls,
+                  redis-tls and kafka-tls certs: make -C labs/<profile> certs)
   down            Stop the lab (docker compose down)
   reset           Down + remove volumes + start fresh (down -v + up -d)
   status          Show running containers/ports for this lab project
@@ -228,9 +229,14 @@ PY
 # --- Stale locally-built image detection -------------------------------------
 #
 # `up` runs `compose up -d`, which reuses any existing image regardless of how
-# far the repo has moved. Every service in this lab is a pinned public image
-# EXCEPT the prober, which is built from this checkout -- so the prober is the
-# only one that can silently run stale code.
+# far the repo has moved. 24 services in this lab are built locally from this
+# checkout (every service with a `build:` key in docker-compose.yml); the rest
+# are pinned public images. Only two of the built images carry QU.I.R.K.'s own
+# scanner code: `segnet-prober` and `mh-prober`, both built from the repo root
+# with sensor.Dockerfile (`COPY . /quirk/`). A stale fixture image only serves
+# an old fixture; a stale prober silently scans with old scanner code. This
+# check covers `mh-prober` (multihost profile) only -- rebuild `segnet-prober`
+# by hand after scanner changes.
 #
 # That is not hypothetical: on 2026-09-14 a multihost scan reported a confident
 # 91/100 from a prober built before the v3 scoring change. The same evidence

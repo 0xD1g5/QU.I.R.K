@@ -705,8 +705,12 @@ QU.I.R.K. is a consulting-grade cryptographic inventory scanner and readiness as
 for enterprise networks. It discovers, classifies, and scores an organization's full cryptographic
 surface — TLS endpoints, SSH services, API/JWT tokens, cloud KMS configurations, containers,
 and source code — then produces a Cryptographic Bill of Materials (CBOM) and a prioritized
-quantum-readiness roadmap. It is delivered as a CLI + local web dashboard, with a SaaS platform
-on the strategic roadmap.
+quantum-readiness roadmap. It is a **dashboard-first, CLI-complete** application: the local web
+dashboard is the primary way to run scans, review results and export the deliverable, and every
+scan capability stays scriptable from the CLI for automation, scheduling, distributed sensors and
+repeat engagements. (Repositioned 2026-10-12 from "CLI + local web dashboard". The GUI-first
+transition backlog is HORIZON 999.121; the former "SaaS platform on the strategic roadmap" clause
+moved there too.)
 
 Primary users: security consultants, IT generalists, and compliance officers running
 post-quantum readiness assessments as a billable service.

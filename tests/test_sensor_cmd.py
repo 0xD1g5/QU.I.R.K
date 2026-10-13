@@ -289,7 +289,7 @@ def test_enroll_allow_internal_console_passes_rfc1918(tmp_path):
     This is the on-prem/lab scenario where the console lives on a private network
     (e.g. Docker console-net 10.30.0.x).  validate_external_url must be called
     with allow_internal=True so the URL is accepted.  Metadata service IPs are
-    ALWAYS blocked — this test uses a plain RFC1918 address.
+    blocked separately — this test uses a plain RFC1918 address.
     """
     from quirk.util.url_allowlist import validate_external_url
     from quirk.cli.sensor_cmd import _cmd_enroll

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-12T00:00:00.000Z"
-last_activity: "2026-10-12 -- Phase 223 COMPLETE (verified passed 4/4 at f7e4f05a, branch_ci_state exit 0; PR #55 open, NOT merged). BRAND-02/03/07 Complete. Review WR-01 (login logo centred) fixed in-phase; WR-02..04 filed as todo 261012; report-header wordmark re-homed to todo 261003 (operator). STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-13T00:00:00.000Z"
+last_activity: "2026-10-13 -- Phase 224 all 18 plans executed (224-18 Task 1: UAT Series 224, 12 cases, 11 PASS + UAT-224-10 FAIL = disclosed 4.0% residual). Ledger 9801 rows / 32 docs; front-door docs verified exhaustively; ~135 doc224 todos (7 security findings tracked privately). Awaiting CI observation, PR and gsd-verifier. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 37
+  completed_plans: 37
   percent: 50
 ---
 
@@ -1436,6 +1436,36 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `.planning/phases/223-dashboard-brand-adoption/223-DISCUSS-CHECKPOINT.json`.
 
 ## Current Position
+Phase: 224 (Doc Claim Ledger & Verification) — all 18 plans executed 2026-10-13; awaiting CI observation, PR and `gsd-verifier` (3 of 6 phases in v5.27 complete; 224 NOT closed)
+Plan: 18 of 18
+Status: Branch `phase-224-doc-claim-ledger-verification`. 224-18 Task 1 committed: UAT Series 224 (12 cases;
+UAT-224-10 is an honest FAIL recording the residual below), `docs/uat-coverage-gaps.md` regenerated, full suite failing-node
+set equal to main's (one pre-existing flaky Playwright node). Task 2 (push, CI dispatch, CITRUTH-03, PR) follows this commit.
+Last activity: 2026-10-13 — Phase 224 execution complete. Hand-edited from a pre-image (no gsd-sdk state verbs).
+
+Decisions this phase:
+- The doc classification (`docs/doc-classification.jsonl`) and claim ledger (`docs/doc-claim-ledger.jsonl`, 9801 rows:
+  TRUE 4552 / FIXED 3121 / REMOVED 2128, 32 docs) are tracked and gated by `tests/test_doc_claim_ledger_gate.py`
+  (coverage, row floor 1000, wrong-package sweep, anchors resolve, no self-referential or planning-internal evidence).
+  Rows anchor on text, not line numbers; the ledger is a pure function of the work/ledger-parts (re-merge is byte-identical).
+- Docs reframed dashboard-first, CLI-complete (D-16). GHCR image and Homebrew tap removed from the docs (owned by HORIZON
+  999.122); every wrong-package install line removed. Private vulnerability reporting is enabled (PVR, 224-07).
+- Three cleanup rounds after 224-17 (GC2 behavioural re-audit, GC3 absolute/negative wording sweep, FD exhaustive
+  front-door pass). Three independent adversarial audits measured the deep reference docs' false-claim rate FLAT:
+  2/56, 3/70, 3/75 — pooled 8/201 = 4.0% (Wilson 95% CI 2.0–7.7%). The front-door docs (README, getting-started,
+  installation, quirk-overview) were verified assertion by assertion; the deep-doc residual is DISCLOSED (UAT-224-10)
+  and owned by HORIZON 999.123 (generate the "what" from source, shrink the prose — a from-scratch rewrite was rejected).
+- ~135 product todos filed (`.planning/todos/pending/26101[23]-doc224-*`), unfixed by this docs-only phase, including
+  `--auth-*` credentials stripped by the JWKS hook. 7 security findings are tracked privately via GitHub Security
+  Advisories (no detail here; their todo files are untracked). Also dead features documented honestly
+  (code-signing TLS-EKU path, semgrep `p/cryptography` 404, sensor merge keeping one endpoint per sensor).
+- D-15: the 224-17 dry run (seed 2240, n = 100) reproduced 100/100 after fixes; the phase verifier samples seed 224, n = 100.
+
+Phase 225 handoff (DOC-05/DOC-06): vault-sync every guide 224 edited, final master-guide regen check, README hero retake.
+Phase 226 handoff (REL-05): the 5.27.0 bump must move version-anchored ledger rows in the same commit and fold
+CHANGELOG [Unreleased] (DCL-CHANGELOG rows) with the changelog.d fragments (todo 261013-doc224-changelog-unreleased-towncrier-fold).
+
+**Prior position (Phase 223 close, superseded 2026-10-13):**
 Phase: 223 (Dashboard Brand Adoption) — COMPLETE 2026-10-12 (3 of 6 phases in v5.27)
 Plan: 6 of 6
 Status: Verified `passed` 4/4 in-scope criteria at `f7e4f05a` (CITRUTH-03: `branch_ci_state.py --compare-main`
@@ -3346,7 +3376,11 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/223-dashboard-brand-adoption/223-06-SUMMARY.md` — Phase 223 stopped at 223-06 (all plans
+Resume file: `.planning/phases/224-doc-claim-ledger-verification/224-18-SUMMARY.md` — Phase 224 stopped at 224-18 (all plans
+executed, UAT Series 224 committed); resume with `gsd-verifier` (seed 224, n = 100). No commit may land between the CI
+observation and the phase-close commit.
+
+Earlier resume file (superseded): `.planning/phases/223-dashboard-brand-adoption/223-06-SUMMARY.md` — Phase 223 stopped at 223-06 (all plans
 executed, UAT Series 223 committed); resume with `gsd-verifier`. No commit may land between the CI observation and the
 phase-close commit.
 

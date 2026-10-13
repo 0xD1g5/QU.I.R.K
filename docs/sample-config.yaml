@@ -13,9 +13,9 @@ scan:
   # real SSH listener -- a TLS ClientHello against SSH answers with
   # WRONG_VERSION_NUMBER, and QU.I.R.K. surfaces that as a usable endpoint
   # signal (`tls_blocker_reason`/`scan_error`), not a swallowed exception.
-  # Live-confirmed this phase against a local sshd on 127.0.0.1:22 (the
-  # chaos lab's `ssh-alt` container on 2222 was unreachable at decision
-  # time). Port 22 is intentionally NOT part of the shipped
+  # Mechanism re-checked 2026-10-12 against a local listener that sends an
+  # SSH banner, and covered by tests/test_tls_error_categorization.py.
+  # Port 22 is intentionally NOT part of the shipped
   # `CONSULTING_TLS_PORTS` default (`quirk/interactive.py`) -- this sample
   # is meant to be illustrative, not a scan-scope precedent to copy blindly.
   ports_tls: [22, 443, 8443]
@@ -38,7 +38,7 @@ targets:
 connectors:
   enable_aws: false  # off: requires-credentials - AWS_ACCESS_KEY_ID / IAM profile not configured
   enable_azure: false  # off: requires-credentials - Azure subscription / auth not configured
-  enable_adcs: false  # off: requires-extra-install - requires the quirk[adcs] extras group (ldap3), not installed by [all]
+  enable_adcs: false  # off: requires-extra-install - requires the quirk-scanner[adcs] extras group (ldap3); [all] includes it
   # adcs_targets:
   #   - ldap://dc.example.com
 
@@ -46,10 +46,9 @@ output:
   directory: "tmp/sample_output"
   db_path: "tmp/sample_output/sample.sqlite"
 
-# Report Branding & Templates — Phase 200 (v5.23+)
-# Every key below is optional; omitting this whole block reproduces today's
-# rendering exactly. report.branding.logo_path is preferred over the
-# deprecated assessment.logo_path fallback.
+# Report Branding & Templates — Phase 200 (5.25.0+)
+# Every key below is optional and defaults to unset. report.branding.logo_path
+# is preferred over the legacy assessment.logo_path fallback.
 # report:
 #   branding:
 #     logo_path: /path/to/your-org-logo.png
@@ -61,7 +60,7 @@ output:
 #   template_dir: /path/to/custom/templates
 #   profile: my-profile
 
-# Jira Ticketing — Phase 104 (v5.3+)
+# Jira Ticketing — Phase 104 (5.5.0+)
 # Create one Jira issue per finding with SHA-256 fingerprint dedup.
 # Requires: pip install "quirk-scanner[tickets]"
 #           QUIRK_CONFIG_PATH env var pointing to this file
@@ -80,12 +79,12 @@ output:
 #     auth_mode: cloud                         # cloud (default) or server (PAT)
 #     allow_internal: false                    # set true for self-hosted Jira on RFC1918
 #
-# ServiceNow Ticketing (v5.3+ / Phase 105) — use with: quirk ticket create --backend servicenow
+# ServiceNow Ticketing (5.5.0+ / Phase 105) — use with: quirk ticket create --backend servicenow
 # Requires: QUIRK_CONFIG_PATH env var pointing to this file; QUIRK_DB_PATH for audit rows.
 #           QUIRK_SNOW_USER  — set to your ServiceNow username
 #           QUIRK_SNOW_PASSWORD — set to your ServiceNow password
 # SECURITY: store env var NAMES here only — never credential values.
-#           instance_url MUST be https://; http:// is rejected at parse time (SSRF guard).
+#           instance_url MUST be https://; http:// is rejected at parse time (credentials must not travel in cleartext).
 #
 #   servicenow:
 #     instance_url: https://acme.service-now.com  # required: MUST be https://
@@ -94,9 +93,9 @@ output:
 #     table: incident                             # optional: default incident
 #     allow_internal: false                       # set true for self-hosted on RFC1918
 
-# SIEM Export (syslog/CEF) — Phase 103 (v5.3+)
+# SIEM Export (syslog/CEF) — Phase 103 (5.5.0+)
 # Deliver one CEF:0 event per finding to a syslog collector after each scheduled scan.
-# Requires: QUIRK_CONFIG_PATH env var pointing to this file; QUIRK_DB_PATH for the audit row.
+# Requires: QUIRK_CONFIG_PATH env var pointing to this file.
 # TCP framing note: raw TCP only (no octet-count, no TLS). Configure receiver for LF-terminated
 #   or raw-bytes syslog input. TLS-wrapped syslog is deferred to a future release.
 #
@@ -109,7 +108,8 @@ output:
 
 # Vertical Editions — quick task 260611-g0b (v5.6+)
 # Run the dashboard as an industry-specific edition. Operator-side deployment
-# setting — resolved once at server startup, no user-facing picker.
+# setting — read from the config file each time GET /api/config is served (the
+# dashboard asks once when it loads), no user-facing picker.
 # Resolution order: QUIRK_VERTICAL env var > this key > "general" default.
 # NOTE: this key is read from the file QUIRK_CONFIG_PATH points at (default
 #   ./config.yaml), NOT the --config CLI flag. Invalid values fall back

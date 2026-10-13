@@ -8,10 +8,11 @@ A scanner lens over a lattice, and the lens is always the Q. The geometry carrie
 
 The generator takes an optional output directory: `python3 docs/brand/build_logo.py [OUT_DIR]`.
 
-**Public URL contract.** The repo `README.md` (and therefore every published PyPI page) loads
-`quirk-logo.svg` and `quirk-logo-dark.svg` from `raw.githubusercontent.com` on `main`. Renaming or
-deleting any file in `docs/brand/` breaks published pages, so treat these filenames as a public URL
-contract. `tests/test_readme_brand_logo.py` pins the exact URLs.
+**Public URL contract.** The repo `README.md` loads `quirk-logo.svg` and `quirk-logo-dark.svg` from
+`raw.githubusercontent.com` on `main`, and so does the PyPI page of any release built from that
+README (the 5.25.0 page predates the logo). Renaming or deleting either of those two files breaks those
+pages, so treat their filenames as a public URL contract. `tests/test_readme_brand_logo.py` pins the
+exact URLs.
 
 **Rasters.** The report PNG and the dashboard favicon PNG/ICO are produced by `python -m scripts.build_brand_rasters` (resvg-py, dev-only).
 

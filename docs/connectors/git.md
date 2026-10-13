@@ -1,8 +1,13 @@
 # Git / Source Code Connector Setup
 
-QU.I.R.K.'s source code connector uses semgrep to scan Git repositories for cryptographic
-anti-patterns: weak algorithm usage, hardcoded keys, insecure random number generation, and
-deprecated protocol invocations.
+QU.I.R.K.'s source code connector uses semgrep to scan local source-code checkouts (for
+example a Git working copy) with the Semgrep registry ruleset `p/cryptography`. It scans
+directories on the scan host's filesystem; it does not clone repositories.
+
+> **Known issue (observed 2026-10-12):** the Semgrep registry returned HTTP 404 for
+> `https://semgrep.dev/c/p/cryptography`, the registry URL for a pack named `p/cryptography`,
+> while the same URL pattern for other packs such as `p/security-audit` returned HTTP 200. Until the connector's ruleset name is
+> corrected, expect the source scan to return no findings. This is tracked as a product bug.
 
 ## Prerequisites
 
@@ -16,7 +21,8 @@ deprecated protocol invocations.
   brew install semgrep
   ```
 
-- The repository must be accessible as a local filesystem path, or cloneable via HTTP/SSH
+- The repository must already exist as a directory on the scan host's local filesystem (clone
+  it yourself first if needed)
 
 ## config.yaml Snippet
 
@@ -24,82 +30,43 @@ deprecated protocol invocations.
 connectors:
   enable_source: true
   source_targets:
-    - "/path/to/local/repo"              # local filesystem path
-    - "https://github.com/org/repo"      # public GitHub repo (cloned temporarily)
-    - "http://gitea.internal/org/repo"   # internal Gitea instance
+    - "/path/to/local/repo"              # existing local directory
+    - "/srv/checkouts/another-repo"      # another existing local directory
 ```
 
-Each entry in `source_targets` is passed directly to semgrep as the scan path. Remote URLs
-require git to be installed and the URL to be accessible from the scan host.
+Each entry in `source_targets` is passed to semgrep as the scan path, after QU.I.R.K. validates
+it. Entries that start with `-`, contain `..` or shell metacharacters, or are not an existing
+directory (including every `http://`, `https://` or `ssh://` URL) are rejected and reported as an
+`invalid_input` error instead of being scanned.
 
 ## What Gets Scanned
 
-semgrep runs QU.I.R.K.'s built-in crypto anti-pattern ruleset (`p/cryptography`) against all
-source files in the repository. The ruleset targets common insecure patterns across multiple
-languages:
-
-| Anti-Pattern | Finding type | Example |
-|--------------|--------------|---------|
-| Weak hash algorithm | `WEAK_ALGORITHM` | `hashlib.md5()`, `hashlib.sha1()`, `DES.new()` |
-| Hardcoded cryptographic key | `HARDCODED_KEY` | `key = "mysecretkey123"` |
-| Weak random for cryptographic use | `WEAK_RANDOM` | `random.randint()` for key generation |
-| Deprecated TLS protocol version | `DEPRECATED_PROTOCOL` | `ssl.PROTOCOL_TLSv1`, `ssl.PROTOCOL_SSLv3` |
-
-## Supported Languages
-
-The `p/cryptography` semgrep ruleset covers: Python, Go, Java, JavaScript/TypeScript, Ruby.
-
-Other file types in the repository are skipped automatically.
+semgrep runs the Semgrep registry ruleset `p/cryptography` (maintained by Semgrep, not shipped
+with QU.I.R.K.) against the directory. Which patterns and languages it covers is defined by that
+ruleset, not by QU.I.R.K.; see the known issue above.
 
 ## How the Scan Works
 
 QU.I.R.K. calls:
 
 ```
-semgrep --json --config p/cryptography <repo_path>
+semgrep --json --config p/cryptography -- <repo_path>
 ```
 
-Each finding from the `results` list is converted to a QU.I.R.K. finding with:
+Each entry from the `results` list is converted to one QU.I.R.K. endpoint record with:
 - The semgrep `check_id` as the rule identifier
-- The file path and line number as the location
-- The full semgrep finding JSON stored for dashboard drill-down
+- The file path and line number (`path:line`) as the location
+- The full semgrep result JSON stored in `source_scan_json`
 
-The default scan timeout is **300 seconds** per repository.
-
-## Private Repository Access
-
-**SSH-authenticated repos:**
-
-```bash
-ssh-add ~/.ssh/id_ed25519
-```
-
-QU.I.R.K. inherits SSH agent state from the host environment.
-
-**Token-authenticated HTTP repos (Gitea, GitHub):**
-
-Include credentials in the URL:
-
-```yaml
-source_targets:
-  - "http://admin:your-token@gitea.internal/org/repo"
-```
-
-Or use a `~/.netrc` file to store credentials without embedding them in `config.yaml`:
-
-```
-machine gitea.internal
-login admin
-password your-token
-```
+The default scan timeout is **300 seconds** per repository; raise `scan.timeouts.source_seconds`
+in `config.yaml` to change it.
 
 ## Graceful Degradation
 
-If semgrep is not found on `PATH`, the source connector returns an empty result set and logs:
-
-```
-semgrep not found — install with: pip install semgrep
-```
+If semgrep is not found on `PATH`, the source connector returns an empty result set and, in
+verbose runs, logs a message that begins `semgrep is not installed`. The rest of that message
+carries an install hint that is known to be wrong; use `pip install semgrep` or
+`brew install semgrep` as shown in Prerequisites.
 
 All other scanners (TLS, SSH, cloud, container) continue to run normally. Install semgrep and
 re-run to include source code results.
@@ -109,6 +76,5 @@ re-run to include source code results.
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
 | Empty results for all repos | semgrep not on PATH | Run `which semgrep`; if not found, run `pip install semgrep` |
-| `git clone` fails for remote URL | SSH key not loaded or HTTP credentials missing | Run `ssh-add` or embed credentials in the URL |
-| Scan times out | Large monorepo exceeding 300s | Narrow scope by pointing `source_targets` at a specific subdirectory instead of the repo root |
-| `Rules fetch failed` | No internet access for `p/cryptography` ruleset | Pre-download the ruleset: `semgrep --config p/cryptography --no-rewrite-rule-ids .` on a machine with internet, then use the cached rules path |
+| `invalid_input` / `nonexistent_path` error for a target | The entry is a URL or a path that is not an existing directory | Clone the repository first and list the local directory in `source_targets` |
+| Scan times out | Large monorepo exceeding 300s | Raise `scan.timeouts.source_seconds`, or point `source_targets` at a specific subdirectory instead of the repo root |

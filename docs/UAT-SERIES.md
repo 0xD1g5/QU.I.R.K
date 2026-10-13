@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+**Last Updated:** 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -12436,7 +12436,7 @@ deleting either series must not delete the detection, per Phase 175 D-03
 - The finding describes RS256→HS256 algorithm substitution.
 - The scan completes without exception.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires a live fuzz-target service on localhost:20100 from the chaos lab, not available in this environment)
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; cannot run as written even with the fuzz-target lab up: the CLI fuzzes https://<first configured fqdn> or https://localhost per run_scan.py:3260, never the plain-HTTP fixture on localhost:20100, and config-lab-fuzz.yaml does not exist; tests/test_rest_fuzzer_probes.py::TestAlgConfusionProbeAccepted::test_alg_confusion_accepted_is_critical covers only the probe's CRITICAL classification against a mocked server, not this end-to-end run; re-dispositioned 2026-10-13 from a SKIP that blamed only the missing live service; tracked in todo 261012-doc224-chaos-lab-scanner-cannot-reach-fixtures)
 **Date:** _____________  **Tester:** _____________
 
 ---
@@ -32228,3 +32228,281 @@ scripts/check-bundle-freshness.sh
 **Notes:** Excluded by reason, deferred at the v5.27 kickoff and re-homed to todo 261003: the report template accent
 `#3b9dff` in `report.html.j2`, the HTML renderer summary colour, and the terminal `#3b9dff` in the CLI writer, init
 command and banner. They are report-palette and terminal colours, not served dashboard surfaces.
+
+## Series 224: Doc Claim Ledger & Verification (Phase 224 — v5.27)
+
+**Last Updated:** 2026-10-13 (Phase 224 execution, plans 01-17 plus the GC, GC2, GC3 and FD remediation rounds).
+Twelve cases. Phase 224 classified every tracked doc file and recorded every checkable claim in the user-facing docs
+in a tracked ledger, `docs/doc-claim-ledger.jsonl`. Each row is dispositioned TRUE, FIXED or REMOVED with a named
+method and evidence that is independent of the doc, and a standing structural gate checks the ledger (DOC-03,
+DOC-04). No version bump. **What this series does not claim:** it does not claim the deep reference docs are free of
+false claims. Three independent adversarial audits found a flat false-claim rate of about 4% in sampled ledger rows
+(UAT-224-10, recorded FAIL). That residual is disclosed, not fixed, and HORIZON 999.123 owns it. The four front-door
+docs (README, getting-started, installation, quirk-overview) were re-derived in a separate exhaustive round
+(UAT-224-11). Product defects found during verification are filed as todos and are still open; 7 security findings
+are tracked privately (UAT-224-12).
+
+### UAT-224-01: The Doc Classification Equals The Tracked Doc Set
+
+**ID:** UAT-224-01
+**Title:** `docs/doc-classification.jsonl` gives exactly one well-formed class to every tracked `docs/**` file and root doc file, re-derived from `git ls-files` on every run
+**Maps to:** DOC-03
+
+**What to test:** The gate's classification tests, and a second enumeration method (D-03) that does not use the
+gate's `git ls-files` listing.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_doc_claim_ledger_gate.py::test_classification_matches_tracked_docs tests/test_doc_claim_ledger_gate.py::test_classification_rows_well_formed tests/test_doc_claim_ledger_gate.py::test_classification_is_not_vacuous
+# second method: os.walk(docs) + root files minus ROOT_NON_DOC_FILES, keep a path only if `git ls-files --error-unmatch <path>` exits 0
+```
+
+**Pass Criteria:** 3 passed. The second method gives the same path set as the classification.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — tests/test_doc_claim_ledger_gate.py::test_classification_matches_tracked_docs, tests/test_doc_claim_ledger_gate.py::test_classification_rows_well_formed, tests/test_doc_claim_ledger_gate.py::test_classification_is_not_vacuous; 3 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** The classification has 83 rows: 32 user-facing, 19 historical, 19 asset, 10 internal and 3 generated. The second method walked 92 candidate files, dropped 9 untracked ones (`.DS_Store` files, a `__pycache__` file, and the gitignored root files `AGENTS.md`, `CLAUDE.md`, `RESTRUCTURE-AUDIT-2026-03-31.md`, `SECURITY_TEAM_MEMO.md`, `uat-auto-results.json`), and kept 83. That set equals the classification. Root files other than `*.md` are classified too, per D-18 (`LICENSE`, `SECURITY_CHECKLIST.txt`). `CHANGELOG.md` is user-facing only for `[Unreleased]`, per D-04.
+
+### UAT-224-02: Every Ledger Row Carries A Status, A Method And Independent Evidence
+
+**ID:** UAT-224-02
+**Title:** Every ledger row is valid JSON with a status, a method and evidence in the format that method requires; its anchor resolves in the doc, and its evidence never cites the doc itself
+**Maps to:** DOC-04
+
+**What to test:** The gate's row-completeness, live-flag, evidence-format, anchor and self-reference tests over the
+committed 9,801-row ledger.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_doc_claim_ledger_gate.py::test_ledger_lines_are_valid_json tests/test_doc_claim_ledger_gate.py::test_ledger_rows_complete tests/test_doc_claim_ledger_gate.py::test_ledger_live_flag_matches_method tests/test_doc_claim_ledger_gate.py::test_ledger_evidence_format_matches_method tests/test_doc_claim_ledger_gate.py::test_ledger_anchors_resolve tests/test_doc_claim_ledger_gate.py::test_evidence_is_never_the_doc_itself
+```
+
+**Pass Criteria:** 6 passed.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — tests/test_doc_claim_ledger_gate.py::test_ledger_lines_are_valid_json, tests/test_doc_claim_ledger_gate.py::test_ledger_rows_complete, tests/test_doc_claim_ledger_gate.py::test_ledger_live_flag_matches_method, tests/test_doc_claim_ledger_gate.py::test_ledger_evidence_format_matches_method, tests/test_doc_claim_ledger_gate.py::test_ledger_anchors_resolve, tests/test_doc_claim_ledger_gate.py::test_evidence_is_never_the_doc_itself; 6 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** The ledger has 9,801 rows across 32 docs: TRUE 4,552, FIXED 3,121, REMOVED 2,128. By method: command-run 4,609, source-grep 4,019, test-node 641, primary-source 311, registry 221. This gate is structural, per D-06. It checks that each row is present, well-formed and anchored, and that its evidence has the right shape. It does not re-execute any claim, so a green run here says nothing about whether the recorded evidence is true. UAT-224-09 and UAT-224-10 cover that question, and UAT-224-10 is a FAIL. The full gate file gave 60 passed on 2026-10-13. The negative controls in that file show each check flags a malformed row.
+
+### UAT-224-03: Every User-Facing Doc Is Covered And The Ledger Is Not Vacuous
+
+**ID:** UAT-224-03
+**Title:** Every user-facing doc has at least one ledger row or an explicit `no-checkable-claims` reason, and the ledger stays above its row floor
+**Maps to:** DOC-03
+
+**What to test:** The per-doc coverage test and the 1,000-row floor.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_doc_claim_ledger_gate.py::test_every_user_facing_doc_is_covered tests/test_doc_claim_ledger_gate.py::test_ledger_is_not_vacuous
+```
+
+**Pass Criteria:** 2 passed.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — tests/test_doc_claim_ledger_gate.py::test_every_user_facing_doc_is_covered, tests/test_doc_claim_ledger_gate.py::test_ledger_is_not_vacuous; 2 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** All 32 user-facing docs have ledger rows. The gate checks only that each doc has at least one row. The stronger per-line check, which requires every candidate line in a doc to map to a row or a reasoned skip, is the phase workbench tool `coverage_check.py`. That tool is untracked and does not run in CI. Each plan and remediation round recorded COVERAGE-OK for the docs it owned, and UAT-224-11 re-runs the tool for the four front-door docs.
+
+### UAT-224-04: The Dashboard-First Quick Start Works In A Clean Venv
+
+**ID:** UAT-224-04
+**Title:** `pip install 'quirk-scanner[all]'`, then `quirk serve`, then New Scan works with no hand-written config and no token on loopback, as the reordered Quick Start says
+**Maps to:** DOC-04 (D-16)
+
+**What to test:** The clean-venv path against the published 5.25.0 wheel, plus the nodes that pin each step:
+loopback with no token passes through, and `POST /api/jobs` creates a job and requires the CSRF header.
+
+**Steps:**
+```
+python3.13 -m venv <scratch>/v && <scratch>/v/bin/pip install 'quirk-scanner[all]'
+cd <empty scratch dir> && HOME=<scratch> <scratch>/v/bin/quirk serve --no-open
+curl http://127.0.0.1:8512/api/scans ; POST /api/jobs without and with X-Quirk-Request: 1
+.venv/bin/python -m pytest -q -m "" tests/test_jobs_api.py::test_post_job_creates_row tests/test_jobs_api.py::test_post_job_requires_csrf tests/test_dashboard_auth_apikey.py::test_auth_disabled_passthrough tests/test_console_hardening.py::test_loopback_no_token_starts
+```
+
+**Pass Criteria:** `GET /api/scans` returns 200 with no token, and `POST /api/jobs` returns 403 without the header
+and 201 with it. The four nodes pass.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — tests/test_jobs_api.py::test_post_job_creates_row, tests/test_jobs_api.py::test_post_job_requires_csrf, tests/test_dashboard_auth_apikey.py::test_auth_disabled_passthrough, tests/test_console_hardening.py::test_loopback_no_token_starts; 4 passed, plus the 224-02 clean-venv probe verdict D16-PATH: HOLDS)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** Plan 224-02 ran the probe with Python 3.13.16 and `quirk-scanner[all]` 5.25.0 from PyPI, in an empty working directory with no token. Results: the startup banner read `operator auth : DISABLED`; `/` returned 200; `GET /api/scans` returned 200 with `[]`; `POST /api/jobs` returned 403 (QRK-DASHBOARD-002) without the header and 201 with `X-Quirk-Request: 1`; the job reached `discovery`; `DELETE` returned 204. The FD round re-ran the same path from a scratch directory on 2026-10-13 (`fd-gsi-frontdoor-probe.sh`). The FD-OVW round found that a plain `pip install quirk-scanner` cannot start the dashboard: it prints `[QRK-INSTALL-002]` and exits 1, because uvicorn is not installed. The docs now name the `[dashboard]` extra, and the Quick Start installs `[all]`. Admin and ops subcommands with no API route stay documented as CLI-only, and closing that gap is 999.121.
+
+### UAT-224-05: The Private Vulnerability Reporting Channel Is Live
+
+**ID:** UAT-224-05
+**Title:** GitHub private vulnerability reporting is enabled on 0xD1g5/QU.I.R.K, which is the channel SECURITY.md and CODE_OF_CONDUCT.md name
+**Maps to:** DOC-04 (D-17)
+
+**What to test:** The live repository setting, read through the GitHub API, and the channel URL the two docs give.
+
+**Steps:**
+```
+gh api repos/0xD1g5/QU.I.R.K/private-vulnerability-reporting
+grep -n "security/advisories/new" SECURITY.md CODE_OF_CONDUCT.md
+```
+
+**Pass Criteria:** The API returns `{"enabled":true}`, and both docs give `https://github.com/0xD1g5/QU.I.R.K/security/advisories/new`.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — the gh api call returned enabled true at 2026-10-13T14:55:09Z; the operator enabled the setting at the 224-07 checkpoint and replied verbatim "enabled")  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** Research measured `{"enabled":false}` on 2026-10-12. The operator changed the setting at the plan 224-07 checkpoint. The executor never changes repository settings. Plan 224-07 read `{"enabled":true}` before and after the operator's reply. Today's re-run returned `{"enabled":true}` again, and the grep found the URL at SECURITY.md:13 and CODE_OF_CONDUCT.md:40. The `<owner>/<repo>` placeholder was replaced with the real slug (FIXED rows).
+
+### UAT-224-06: No Wrong-Package Or Unpublished Install Instruction Remains
+
+**ID:** UAT-224-06
+**Title:** No user-facing doc tells a reader to `pip install` the wrong PyPI package, or to install from a GHCR image or Homebrew tap that is not published
+**Maps to:** DOC-04 (D-09, D-17)
+
+**What to test:** The wrong-package sweep and its stale-exemption check, plus greps for GHCR and Homebrew
+install commands over the 32 user-facing docs.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_doc_claim_ledger_gate.py::test_no_wrong_package_install_instructions tests/test_doc_claim_ledger_gate.py::test_wrong_install_exemptions_are_not_stale
+grep -n -i ghcr <32 user-facing docs>
+grep -rnE "docker (pull|run)[^|]*ghcr|brew (install|tap)[^|]*quirk|homebrew-quirk" <tracked *.md outside historical dirs>
+```
+
+**Pass Criteria:** 2 passed. The install-command grep prints nothing. Any remaining GHCR mention says the image is
+private or is in a released (historical) CHANGELOG section.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — tests/test_doc_claim_ledger_gate.py::test_no_wrong_package_install_instructions, tests/test_doc_claim_ledger_gate.py::test_wrong_install_exemptions_are_not_stale; 2 passed; the install-command grep printed nothing)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** The GHCR grep hit three lines. `docs/release-process.md:322` and `:332` say the GHCR package is private and is not a distribution channel. `CHANGELOG.md:698` is in a released section, which is historical under D-04. Homebrew appears only as a way to install Python and other third-party tools (installation.md, connectors/docker.md), which D-09 allows, and at `release-process.md:312`, which says QUIRK is not distributed as a Homebrew formula. The sweep has one reasoned exemption: report-interpretation.md quotes the dashboard's DOCX message verbatim, and that message names the wrong package. The product defect is todo `261012-doc224-install-hints-name-wrong-pypi-package`. A public image and a Homebrew tap are owned by 999.122.
+
+### UAT-224-07: Capabilities Missing From The Docs Are Now Documented
+
+**ID:** UAT-224-07
+**Title:** A source-derived capability inventory finds no scanner, subcommand or compliance framework missing from operators-guide §6, its subcommand list, or the README
+**Maps to:** DOC-04 (SC#4, D-12, D-13)
+
+**What to test:** Rebuild the run-time inventory from source, then run the omission check on the four keys.
+
+**Steps:**
+```
+W=.planning/phases/224-doc-claim-ledger-verification/work
+HOME=<scratch> .venv/bin/python $W/capabilities/build_inventory.py
+.venv/bin/python $W/capabilities/check_omissions.py --keys ops_section6_missing,ops_subcommands_missing,readme_missing,readme_frameworks_missing
+```
+
+**Pass Criteria:** The script prints `OMISSIONS-CLOSED` with 0 remaining on every key, and every exemption has a
+name and a reason.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — build_inventory printed Records 53; check_omissions printed OMISSIONS-CLOSED ops_section6_missing,ops_subcommands_missing,readme_missing,readme_frameworks_missing and exited 0)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** Raw counts from today's run: ops_section6_missing 2, both exempt; the other three keys 0. The exemption list, quoted from the script output: `enable_nmap` [toggle] "Selects the discovery engine (builtin vs nmap) that runs before fingerprinting; set by the --discovery flag. It is not a scanner, so it is not a peer of the operators-guide section 6 scanner table." `enable_authenticated_mode` [toggle] "A mode switch that lets other scanners use credentials; it adds no scanner of its own." `enable_recurring_otics` [toggle] "Modifier that permits recurring (scheduled) OT/ICS scans; enable_modbus and enable_bacnet scans are unaffected. It gates schedule behaviour of existing scanners, and is documented in operators-guide section 12." The inventory reports two other keys that are not part of SC#4. connectors_without_page = 2 (`s3`, `azure_blob`): 224-17 recorded NO PAGE for both, because their setup is on the AWS and Azure pages. second_method_disagreements = 7: 224-17 explained each one as a naming or nesting difference. The workbench scripts are untracked phase artifacts and are not run in CI.
+
+### UAT-224-08: Generated Docs Are Fresh After The Source-Guide Edits
+
+**ID:** UAT-224-08
+**Title:** `docs/quirk-master-guide.md` and `docs/uat-coverage-gaps.md` byte-match their generators after Phase 224's source-guide and UAT-SERIES edits
+**Maps to:** DOC-04 (D-11)
+
+**What to test:** The two generator-drift gates, run after the master guide was regenerated at the front-door consolidation and
+after the coverage-gaps file was regenerated in this series' commit.
+
+**Steps:**
+```
+.venv/bin/python -m scripts.generate_uat_coverage_gaps > docs/uat-coverage-gaps.md
+.venv/bin/python -m pytest -q -m "" tests/test_master_guide_freshness.py::test_master_guide_is_current tests/test_uat_coverage_gaps_freshness.py::test_uat_coverage_gaps_is_current
+```
+
+**Pass Criteria:** 2 passed.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — tests/test_master_guide_freshness.py::test_master_guide_is_current, tests/test_uat_coverage_gaps_freshness.py::test_uat_coverage_gaps_is_current; 2 passed)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** Phase 224 edited all five master-guide sources (getting-started, installation, configuration, operators-guide, admin-guide), and the master guide was regenerated after each round. Phase 225 (DOC-05) still owns the final regeneration check and the Obsidian vault sync for every doc this phase edited. Neither is done here.
+
+### UAT-224-09: Sampled TRUE Rows Reproduce When Their Evidence Is Re-Run
+
+**ID:** UAT-224-09
+**Title:** A seeded, stratified sample of TRUE ledger rows reproduces when its recorded evidence is re-run (the D-15 dry run)
+**Maps to:** DOC-04 (D-15)
+
+**What to test:** The 224-17 dry run (seed 2240, n = 100, stratified), and a re-run today of that sample's
+mechanical legs against the current ledger, since later rounds changed many rows.
+
+**Steps:**
+```
+W=.planning/phases/224-doc-claim-ledger-verification/work
+.venv/bin/python $W/tools/sample_true_rows.py --seed 2240 --n 100 --out <sample>
+.venv/bin/python $W/tools/rerun_sample.py <sample rows still TRUE in docs/doc-claim-ledger.jsonl> --out <results> --only source-grep,test-node,primary-source
+```
+
+**Pass Criteria:** Every row whose evidence does not reproduce is either fixed and re-checked, or shown to be a
+harness artifact by a hand check.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — 224-17 dry run: 97 of 100 reproduced before fix and 100 of 100 after fix, 13 rows corrected in the 224-17 D-15 fix; today's mechanical re-run on the 95 sampled rows still TRUE: source-grep 35 of 35, test-node 8 of 8, primary-source 6 of 8 automated plus the other 2 confirmed by hand as harness artifacts)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** The 224-17 sample had at least 5 rows per method (command-run 41, source-grep 37, test-node 9, primary-source 8, registry 5) and at least 5 from each large doc (README 5, configuration 18, operators-guide 20, report-interpretation 15, chaos-lab 11). Three rows did not reproduce. DCL-CONFIG-B-0700 cited an xfail node as passing, and 12 sibling rows had the same defect. DCL-ARCH-0254 had a trimmed `ls` observation. DCL-CONFIG-A-0351 had a stale line number. All were fixed. Since that run, the GC2, GC3 and FD rounds changed the ledger: 5 of the 100 sampled rows are no longer TRUE (3 FIXED, 2 REMOVED). Today's re-run covered the 51 mechanical rows among the 95 still TRUE. The two automated primary-source misses are DCL-INSTALL-0032 and DCL-CHAOSLAB-0466, and both are harness artifacts. For the first, curl's `{main,universe}` brace glob concatenated two archives; fetched separately, jammy main lists python3 and git, and universe lists python3-pip and python3-venv. For the second, `&gt;` and tag stripping broke the match; the quoted Docker text is present on both pages. The 44 command-run and registry rows were not re-executed today. The phase-close verifier draws a new sample with seed 224, n = 100, stratified the same way. With zero failures, that sample bounds the non-reproduction rate at about 3% (rule of three). It is a separate measurement and has not been run here. This case measures whether evidence reproduces, not whether claims are true. UAT-224-10 measures truth.
+
+### UAT-224-10: The Deep Reference Docs Still Carry A Measured Residual Of False Claims
+
+**ID:** UAT-224-10
+**Title:** Independent adversarial audits of sampled ledger rows find no doc claim that is false as the doc now reads
+**Maps to:** DOC-04
+
+**What to test:** Three adversarial audits, each run independently of the rows' recorded evidence. Each audit
+re-derived every assertion in a sampled row from source, call-path traces, test nodes, isolated CLI probes and
+primary sources.
+
+**Steps:**
+```
+Audit 1 (224-EVIDENCE-AUDIT.md): seed 20261013, n = 56, 4 per ledger part 03-16
+Audit 2 (224-EVIDENCE-AUDIT-2.md, after GC2): seed 20261014, n = 70, 5 per part 03-16
+Audit 3 (224-EVIDENCE-AUDIT-3.md, after GC3): seed 20261015, n = 75, 5 per part 03-17
+```
+
+**Pass Criteria:** Zero WRONG verdicts. A WRONG verdict means the doc is false as it now reads.
+
+**Result:** - [ ] PASS  - [x] FAIL (2026-10-13 Phase 224 — WRONG in 2 of 56, 3 of 70 and 3 of 75 sampled rows; pooled 8 of 201 = 4.0%, Wilson 95% interval 2.0-7.7%; the rate stayed flat across three cleanup rounds; disclosed, not fixed; owner HORIZON 999.123)  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** This is the honest reading of Phase 224. The four front-door docs were verified exhaustively (UAT-224-11). The deep reference docs were not: `operators-guide.md`, `configuration.md`, `report-interpretation.md`, `chaos-lab.md`, `architecture.md`, `cbom-guide.md`, the connector pages and the other reference pages. Each round fixed the class of defect it targeted, and PROVEN rose from 64% to 84% between audits 1 and 2. The WRONG rate did not move (3.6%, 4.3%, 4.0%), because the remaining false claims are spread across many classes rather than concentrated in one. The doc text behind all 8 WRONG verdicts was corrected (OPS-B-0436, REPORTINT-0229, CHAOSLAB-0803, CONFIG-B-0164, CONN-AWS-0041, GETSTARTED-0112, OPS-A-1229, and REPORTINT-1006 via its sibling row 1009), in rounds GC2, GC3, FD-GSI and FD-A3FIX. The rate is an estimate for the rows no audit sampled. The live ledger has 7,673 TRUE and FIXED rows. If the per-part samples represent them, which sampling 4-5 rows per part does not guarantee, the interval corresponds to roughly 150-590 rows that are still false. HORIZON 999.123 (P2) owns the follow-up: generate config, CLI and finding-title reference material from source with byte-match freshness gates, shrink the hand-written prose, and re-measure the rate before and after. A from-scratch rewrite was considered and rejected. This case stays FAIL until a later audit measures a materially lower rate.
+
+### UAT-224-11: The Four Front-Door Docs Were Re-Derived Assertion By Assertion
+
+**ID:** UAT-224-11
+**Title:** Every assertion in README.md, docs/getting-started.md, docs/installation.md and docs/quirk-overview.md was re-derived by path-driving evidence in the FD round, and every candidate line stays mapped to a ledger row or a reasoned skip
+**Maps to:** DOC-03, DOC-04
+
+**What to test:** The per-line coverage check for each front-door doc against its ledger part, and the FD round's
+recorded probe set.
+
+**Steps:**
+```
+W=.planning/phases/224-doc-claim-ledger-verification/work
+python3 $W/tools/coverage_check.py README.md $W/ledger-parts/224-04.jsonl $W/ledger-parts/224-04.skips.jsonl
+python3 $W/tools/coverage_check.py docs/getting-started.md $W/ledger-parts/224-03.jsonl $W/ledger-parts/224-03.skips.jsonl
+python3 $W/tools/coverage_check.py docs/installation.md $W/ledger-parts/224-03.jsonl $W/ledger-parts/224-03.skips.jsonl
+python3 $W/tools/coverage_check.py docs/quirk-overview.md $W/ledger-parts/224-11.jsonl $W/ledger-parts/224-11.skips.jsonl
+ls $W/probes | grep -E "^fd-"
+```
+
+**Pass Criteria:** COVERAGE-OK for all four docs, and the FD probe scripts and outputs are on disk.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — coverage_check printed COVERAGE-OK for README.md, docs/getting-started.md, docs/installation.md and docs/quirk-overview.md against their ledger parts after the FD-README, FD-GSI and FD-OVW rounds)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** Rows per doc after the FD round: README 193 (165 live), getting-started 154 live, installation 187 live, quirk-overview 123 live (44 TRUE, 79 FIXED). The evidence came from real end-to-end runs in an isolated HOME. These included CLI scans of loopback TLS listeners, `quirk serve` from a scratch directory with a New Scan job, a clean `pip install quirk-scanner` venv, a sensor enroll, push and revoke cycle, live SDK clients with stubbed transports, and primary sources fetched on 2026-10-13. Each FD summary reports zero assertions resting on existence-only evidence. That figure is the round's own report: no adversarial audit has sampled these four docs since the FD round. `coverage_check.py` is meant to run against part files. Run against the merged ledger, it reports 10 false gaps for quirk-overview, because merged rows store post-edit `line_end` values and the tool reads them as pre-edit values (for example, DCL-OVERVIEW-0007 has `line_end` 57 in the part and 43 in the merged ledger). The part-mode results above are the valid check. Defects found in this round: one security finding (tracked privately), and, filed as todos, check-in rows that skip assign_tier, Kerberos pre-auth read as no-preauth, refused mail ports counted as plaintext, and the cert-expiry severity split between dashboard and report.
+
+### UAT-224-12: Product Defects Found By Verification Are Filed As Todos And Remain Unfixed; Security Findings Are Tracked Privately
+
+**ID:** UAT-224-12
+**Title:** Each product defect the doc verification found is a tracked todo, or, for a security finding, tracked privately; the docs were narrowed to what the code does today; no product behaviour was changed (D-10).
+**Maps to:** DOC-04 (D-10)
+
+**What to test:** Count the Phase 224 todos on disk and in git, confirm the difference is exactly the security findings
+that are tracked privately, and confirm the branch changes no product behaviour.
+
+**Steps:**
+```
+ls .planning/todos/pending/ | grep -cE '^26101[23]-doc224-.*\.md$'
+git ls-files .planning/todos/pending | grep -cE '/26101[23]-doc224-.*\.md$'
+git diff --stat origin/main..HEAD -- quirk run_scan.py src/dashboard/src pyproject.toml packaging scripts .github
+```
+
+**Pass Criteria:** The on-disk count minus the tracked count equals the number of doc224 security findings tracked
+privately (6; a seventh security finding predates the doc224 naming). The product-code diff contains no behaviour
+change.
+
+**Result:** - [x] PASS (2026-10-13 Phase 224 — 135 doc224 todo files on disk and 129 tracked; the 6 untracked files are security findings tracked privately, 7 security findings in all; the product-code diff is one file, quirk/scanner/hw_cve.py, holding the catalog last_verified date and a re-verification comment only)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** Seven security findings from the doc verification are tracked privately and are not described here. None is fixed, because this is a docs-only phase; the affected doc passages were reworded neutrally. Other high-priority defects from the same rounds, tracked as public todos: `261013-doc224-jwks-auth-hook-strips-credential-before-send.md` (the JWKS request hook strips every `--auth-*` credential before the request is sent, so authenticated JWKS scanning never sends credentials), `261013-doc224-token-rotate-env-precedence.md`, `261013-doc224-trusted-targets-cli-skips-include-ips.md`, `261013-doc224-trusted-targets-skips-broker-targets-and-schedules.md`. The 135 doc224 todos on disk break down as 24 high, 56 medium, 46 low, and 9 with no priority field. The `hw_cve.py` change is the 30-day staleness re-verification: all 6 CVE entries were checked against the NVD API and matched, and the scanner logic did not change. `quantum-chaos-enterprise-lab/` changes are lab usage text, a compose comment and the oracle file, and are not product code.

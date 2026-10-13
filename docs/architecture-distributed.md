@@ -1,5 +1,11 @@
 # QU.I.R.K. v5.4 — Distributed On-Prem Scanner Architecture
 
+> **Status (added 2026-10-13): historical design record.** This is the v5.4 (Phase 106) design
+> contract, kept as written. Its transport and security statements (sections 3 and 6) describe
+> the design, not the shipped behaviour: the shipped `POST /api/sensor/push` route authenticates
+> each sensor with its own bearer token. For current behaviour see
+> [operators-guide.md §8](operators-guide.md#8-distributed-sensor-deployment).
+
 > **Canonical contract.** This document is the single source of truth for the v5.4
 > distributed sensor/console architecture. Every downstream phase (107 data-model →
 > 108 sensor/WinCI → 109 ingestion → 110 merge → 111 dashboard → 112 chaos-lab/stab)
