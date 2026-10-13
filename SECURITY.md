@@ -10,7 +10,7 @@ coordinated-disclosure timeline.
 **Preferred channel — GitHub private vulnerability reporting:**
 
 Open a confidential advisory at
-`https://github.com/<owner>/<repo>/security/advisories/new`.
+`https://github.com/0xD1g5/QU.I.R.K/security/advisories/new`.
 
 This is the canonical contact channel. It keeps the report encrypted in transit,
 gives us audit history, and lets us coordinate the fix + disclosure with you
@@ -74,11 +74,12 @@ The following classes of vulnerability are in-scope and will be triaged on the
   vulnerable port" against the chaos lab are not security vulnerabilities —
   they are working as designed.
 - **Dev-mode bypass paths** that are explicitly documented in code as
-  development-only conveniences (e.g., `--unsafe-no-auth` style local flags)
-  are out of scope. If you believe a dev-mode bypass is reachable in a
+  deliberate operator opt-ins (e.g., `quirk serve --insecure`, which
+  acknowledges running the dashboard on a network-reachable interface with no
+  API token) are out of scope. If you believe a dev-mode bypass is reachable in a
   production install, that IS in scope — file it.
 - **Vulnerabilities requiring local filesystem access at scanner-user
-  privilege level** (e.g., "if I can write to `~/.quirk/config.yaml` I can
+  privilege level** (e.g., "if I can write to `./config.yaml` I can
   cause the scanner to do X"). These are equivalent to "I am already the
   user" and do not represent a security boundary the scanner protects.
 
@@ -88,7 +89,7 @@ Every QU.I.R.K. release published to PyPI ships with Sigstore attestations
 generated automatically by the GitHub Actions release workflow via
 keyless OIDC signing. Downstream consumers can verify provenance before
 install — see [`docs/release-process.md`](docs/release-process.md) for the
-exact `gh attestation verify` and `cosign verify-blob` commands.
+exact `pypi-attestations` commands.
 
 If you discover a release whose Sigstore attestation does NOT verify against
 the expected GitHub Actions workflow identity, treat that as a high-severity

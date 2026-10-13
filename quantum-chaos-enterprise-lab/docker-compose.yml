@@ -1270,7 +1270,8 @@ services:
   # ML-DSA-65 (Dilithium) certificate from the image's bundled /opt/nginx/pki/.
   # Scanner probe: raw openssl s_client -connect 127.0.0.1:39444 -groups X25519MLKEM768
   #   (sslyze cannot handshake with this endpoint — see D-01 in 90-CONTEXT.md).
-  # Requires --allow-internal-targets for live QUIRK scan (loopback bind).
+  # Loopback bind. --allow-internal-targets is NOT needed: the TLS scanner and PQC probe never read it
+  # (run_scan.py passes it only to the JWT, OpenAPI and SAML phases).
   oqs-nginx:
     image: openquantumsafe/nginx@sha256:6ca18ac692f347ea9d4c3fdab4231189f2146570cd03c4d8fb486bba208ef870
     profiles: ["oqs-nginx"]

@@ -52,14 +52,19 @@ _SSH_PATH_CAVEAT: tuple[str, ...] = (
 )
 
 # 2026-08-31 TRIAGE-176-03 malformed-command-line note.
+# Phase 224 (GC3, 2026-10-13): the original note said every affected scan fell
+# back to the banner grab with no SSH algorithm data. Running the PyPI 5.15.0
+# _run_ssh_audit against ssh-audit 3.3.0 disproved that: the stray port argument
+# is ignored and port 22 is audited, so port-22 services were recorded correctly
+# and services on other ports got port 22's algorithms. The needles pin the
+# corrected note, which still names the cutoff date, the cause and the re-scan.
 _TRIAGE_176_03_NOTE: tuple[str, ...] = (
     "before 2026-08-31",
-    "that was a",
-    "bug, not your setup",
-    "malformed command line",
-    "silent-fallback path above ran on every scan",
-    "no ssh algorithm data",
-    "re-scan any ssh hosts",
+    "separate argument instead of as `host:port`",
+    "port 22 is audited",
+    "got the algorithms of the same host's port 22",
+    "re-scan",
+    "non-standard ports",
 )
 
 
@@ -108,8 +113,8 @@ def test_ssh_path_caveat_documented():
 
 def test_triage_176_03_note_documented():
     """§6.2 must retain the 2026-08-31 TRIAGE-176-03 callout explaining that
-    an ssh-audit install before that date produced no extra detail because
-    of the malformed command line."""
+    releases before that date passed the port to ssh-audit as a separate
+    argument, so non-22 SSH ports were audited as port 22."""
     text = _read(_OPS_GUIDE)
     missing = [needle for needle in _TRIAGE_176_03_NOTE if needle not in text]
     assert not missing, f"§6.2 TRIAGE-176-03 note missing: {missing}"

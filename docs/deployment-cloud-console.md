@@ -15,16 +15,19 @@ the console in the cloud instead of on an on-prem jump host.)*
 ## 1. Why this works
 
 Sensors are **outbound-only**: each one runs a segment-local scan and pushes a
-signed, compressed envelope *out* to the console. Nothing ever connects *into* the
+zstd-compressed envelope *out* to the console. Nothing ever connects *into* the
 internal network. That makes "agents inside, server in the cloud" a natural fit —
-the sensors phone home, exactly like any agent/EDR model.
+the sensors phone home, exactly like any agent/EDR model. A segment with no
+outbound HTTPS at all (a true air gap) cannot push: it writes a `.qpush` file with
+`quirk sensor export-results`, and you load it on the console with
+`quirk console import-results`.
 
 ```
    Internal segments                          Cloud VM (public IP + DNS)
  ┌────────────────────┐                  ┌───────────────────────────────┐
  │ sensor A (DMZ)     │── HTTPS :443 ───▶│  Caddy / nginx  (TLS, public) │
  │ sensor B (prod)    │── HTTPS :443 ───▶│        │  proxy to loopback    │
- │ sensor C (air-gap) │   (per-sensor    │  quirk console 127.0.0.1:8512 │
+ │ sensor C (corp)    │   (per-sensor    │  quirk serve   127.0.0.1:8512 │
  └────────────────────┘    bearer token) │  SQLite + merge → 1 CBOM      │
                                           └───────────────────────────────┘
 ```
@@ -36,19 +39,25 @@ the sensors phone home, exactly like any agent/EDR model.
 2. **A TLS-terminating reverse proxy** is the only public listener; the console
    binds `127.0.0.1` and is never directly reachable.
 3. **An operator API token** (`QUIRK_API_TOKEN`) gates the dashboard and operator
-   API. The console **refuses to start** on a network-reachable interface if this
-   token is missing (see §6).
+   API. The console **refuses to start** on a network-reachable interface if no
+   operator token is configured (this variable, or `security.api_token` in the
+   console's config file; see §6). On a loopback bind the guard does not apply, so
+   behind the proxy a missing token leaves the dashboard open — confirm the
+   startup summary says `operator auth : ENABLED`.
 
 ---
 
 ## 2. Prerequisites
 
-- A small VM (1 vCPU / 1–2 GB RAM is plenty) running Debian 12 or Ubuntu 22.04+.
+- A small VM running **Debian 12 or Ubuntu 24.04, or newer** (the cloud-init file
+  is written for Debian/Ubuntu). Older releases do not work with the commands
+  below: Debian 11 ships Python 3.9 (below the 3.10 floor), and Ubuntu 22.04's
+  pip 22.0.2 rejects the `--break-system-packages` flag that §3, §4.1 and §7 use.
 - A DNS name (e.g. `quirk.example.com`) with an **A/AAAA record** pointing at the
   VM's public IP. Automatic TLS needs this resolvable before you start.
 - Inbound firewall: **22 (SSH), 80 + 443 (web)**. Nothing else — and in particular
   **never** expose `8512`.
-- Each sensor host: Python 3.11+ and `pip install "quirk-scanner[all]"`.
+- Each sensor host: Python 3.10+ and `pip install "quirk-scanner[all]"`.
 
 You can deploy two ways:
 
@@ -90,6 +99,10 @@ Skip to §5 to enroll sensors.
 
 ## 4. Manual path (step by step)
 
+The `deploy/` files used below are in the repository, not in the PyPI package.
+Clone it on the VM first (`git clone https://github.com/0xD1g5/QU.I.R.K` and `cd`
+into it) so the `deploy/...` paths in §4.2–§4.4 resolve.
+
 ### 4.1 Service account + install
 
 ```bash
@@ -97,6 +110,8 @@ sudo addgroup --system quirk
 sudo adduser  --system --ingroup quirk --no-create-home --shell /usr/sbin/nologin quirk
 sudo mkdir -p /etc/quirk /var/lib/quirk
 sudo chown -R quirk:quirk /var/lib/quirk
+# The console's SQLite DB is created at quirk-output/quirk.db relative to the
+# service's working directory, i.e. /var/lib/quirk/quirk-output/quirk.db.
 
 # Console package (entry point: `quirk`)
 sudo pip3 install --break-system-packages "quirk-scanner[all]"
@@ -117,8 +132,8 @@ Key values (full list in [`deploy/console.env.example`](../deploy/console.env.ex
 
 | Variable | Set it to | Why |
 |----------|-----------|-----|
-| `QUIRK_API_TOKEN` | a 32-byte random string | Operator/dashboard auth. **Required** for a public bind. |
-| `QUIRK_TRUST_PROXY` | `127.0.0.1` | Proxy is on the same host → console recovers the real sensor IP from `X-Forwarded-For`. |
+| `QUIRK_API_TOKEN` | a 32-byte random string | Operator/dashboard auth. **Required** for a public bind unless `security.api_token` is set in the console's config file: with neither, the console refuses to start on a non-loopback address unless you pass `--insecure`. |
+| `QUIRK_TRUST_PROXY` | `127.0.0.1` | Proxy is on the same host → console recovers the real sensor IP from `X-Forwarded-For`. `127.0.0.1` is also what the console uses when this is unset. |
 | `QUIRK_HSTS` | `1` | TLS is terminated in front, so HSTS is safe. |
 | `QUIRK_CORS_ORIGINS` | `https://your.domain` | Restrict the dashboard origin. |
 | `QUIRK_SENSOR_IP_ALLOWLIST` | *(optional)* sensor egress IPs/CIDRs | Defense-in-depth on push (see §6). |
@@ -160,7 +175,7 @@ sudo ln -s /etc/nginx/sites-available/quirk-console /etc/nginx/sites-enabled/
 sudoedit /etc/nginx/sites-available/quirk-console     # set server_name to your domain
 sudo certbot --nginx -d your.domain                   # provisions + wires up TLS
 sudo nginx -t && sudo systemctl reload nginx
-# certbot installs a renewal timer; confirm:
+# certbot schedules renewal via cron or a systemd timer; if it is a timer, confirm:
 systemctl list-timers | grep certbot
 ```
 </details>
@@ -187,20 +202,25 @@ groups), mirror the same allow-list there and restrict SSH to your admin IPs.
 On the **console host**, mint one per-sensor token per sensor:
 
 ```bash
-# As the operator (token in env so the CLI is authenticated)
-export QUIRK_API_TOKEN="<your-operator-token>"
-quirk console enroll --segment dmz
-# → Bearer token (copy now — shown once): <per-sensor-token>
-# → sensor_id: <uuid>
+# `console enroll` writes straight to the console database (it makes no network
+# call and does not use the operator token), so it must target the same DB file
+# the service uses:
+sudo -u quirk env QUIRK_DB_PATH=/var/lib/quirk/quirk-output/quirk.db \
+  quirk console enroll --segment dmz
+# → stdout: Bearer token (copy now — shown once, never recoverable): <per-sensor-token>
+# → stderr: sensor_id: <uuid>
 ```
 
 On each **sensor host** (inside the customer network):
 
 ```bash
 pip install "quirk-scanner[all]"
-quirk sensor enroll https://your.domain --segment dmz
-# Edit ~/.config/quirk/sensor.yaml:
+# --sensor-id must be the sensor_id that `console enroll` printed; without it
+# the sensor invents its own UUID, which the console does not recognize.
+quirk sensor enroll https://your.domain --segment dmz --sensor-id <uuid-from-console-enroll>
+# Edit the sensor config (on Linux: ~/.config/quirk/sensor.yaml):
 #   console_api_token: <per-sensor-token-from-console-enroll>
+# (or pass --api-token <per-sensor-token> to `sensor enroll` to write it for you)
 quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
 ```
 
@@ -208,10 +228,11 @@ The sensor connects **out** to `https://your.domain:443`; the proxy terminates T
 and forwards to the loopback console. The push client enforces `verify=True`, so the
 cloud console **must** present a valid certificate — which the reverse proxy does.
 
-Then merge on the console as usual:
+Then merge on the console as usual (against the console's database):
 
 ```bash
-quirk sensor merge        # one CBOM + one score across all sensors
+sudo -u quirk env QUIRK_DB_PATH=/var/lib/quirk/quirk-output/quirk.db quirk sensor merge
+# one CBOM + one score across all sensors
 ```
 
 ---
@@ -220,15 +241,19 @@ quirk sensor merge        # one CBOM + one score across all sensors
 
 Everything here is enforced or configurable in this release.
 
-- [ ] **Operator token set.** Without `QUIRK_API_TOKEN`, the console **refuses to
-      start** on any non-loopback bind. (The `--insecure` flag overrides this only
+- [ ] **Operator token set.** Without `QUIRK_API_TOKEN` (or `security.api_token` in
+      the console's config file), the console **refuses to start** on any non-loopback bind. (The `--insecure` flag overrides this only
       for intentionally token-less binds on trusted, firewalled segments — don't use
-      it on a public VM.)
+      it on a public VM.) The refusal does not cover the loopback bind this guide
+      uses: with the token missing, the console still starts and serves the
+      dashboard unauthenticated through the proxy, so check for
+      `operator auth : ENABLED` in the startup summary.
 - [ ] **Console binds loopback**, reverse proxy is the only public listener. The
       systemd unit already does this.
-- [ ] **`QUIRK_TRUST_PROXY=127.0.0.1`** so the rate limiter and audit log see the
-      real sensor IP, not the proxy's. (Without it, every sensor collapses to one
-      rate-limit bucket.) Widen only if the proxy is on a different host.
+- [ ] **`QUIRK_TRUST_PROXY=127.0.0.1`** so the rate limiter, the IP allowlist and the
+      request log see the real sensor IP, not the proxy's. This is also the default when the variable
+      is unset; setting it just makes the intent explicit. Widen it only if the
+      proxy is on a different host.
 - [ ] **TLS via Caddy or nginx+certbot**, auto-renewing.
 - [ ] **`QUIRK_HSTS=1`** once TLS is live.
 - [ ] **`QUIRK_CORS_ORIGINS`** pinned to your real dashboard origin.
@@ -237,12 +262,13 @@ Everything here is enforced or configurable in this release.
       pushes from any other source get `403` before token handling. Per-sensor
       tokens still apply regardless; this is layered defense, not the primary gate.
 - [ ] **Security response headers** (`X-Content-Type-Options`, `X-Frame-Options`,
-      `Referrer-Policy`, `Permissions-Policy`) are added to every response
-      automatically.
-- [ ] **`/etc/quirk/console.env` is `chmod 640 root:quirk`** — secrets not
-      world-readable.
+      `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy`) are
+      added automatically to every response except CORS preflight (`OPTIONS`)
+      replies, which the CORS layer answers before the headers middleware runs.
+- [ ] **`/etc/quirk/console.env` is `chmod 640`** — secrets not world-readable
+      (`root:quirk` on the manual path; the cloud-init file leaves it `quirk:quirk`).
 
-The console prints a one-line security summary at startup — confirm it on first boot:
+The console prints a short security summary at startup — confirm it on first boot:
 
 ```
 QU.I.R.K. Dashboard security summary:
@@ -261,7 +287,8 @@ QU.I.R.K. Dashboard security summary:
 **Revoke a sensor** (lost token, decommissioned host):
 
 ```bash
-quirk console revoke-sensor <sensor_id>     # future pushes from it → 401
+sudo -u quirk env QUIRK_DB_PATH=/var/lib/quirk/quirk-output/quirk.db \
+  quirk console revoke-sensor <sensor_id>     # future pushes from it → 401
 ```
 
 **Re-enroll a sensor** whose raw token was lost: revoke, then
@@ -274,11 +301,14 @@ sudo pip3 install --break-system-packages -U "quirk-scanner[all]"
 sudo systemctl restart quirk-console
 ```
 
-**Back up** `/var/lib/quirk/` (the SQLite DB + spool) on your normal schedule.
+**Back up** `/var/lib/quirk/` (it holds the console's SQLite DB under
+`quirk-output/`) on your normal schedule.
 
-**Audit trail:** every push attempt — success or rejection — writes an
-`IntegrationDelivery` row, including the new `sensor_ip_not_allowed` reason when the
-IP allowlist blocks a source.
+**Audit trail:** every push attempt that reaches the push handler — success or
+rejection — writes an `IntegrationDelivery` row, including the `sensor_ip_not_allowed`
+reason when the IP allowlist blocks a source. A request the rate limiter refuses
+(more than 60 POSTs a minute from one address, HTTP 429) writes no row. The row
+holds the time, status and error summary, not the sensor ID or source address.
 
 ---
 
@@ -289,6 +319,7 @@ IP allowlist blocks a source.
   rather than mixing engagements on one box.
 - **Not a managed SaaS.** There's no central fleet-management plane; sensors are
   enrolled per console.
-- **DNS-rebinding / TOCTOU** on the SSRF guard remains an accepted residual risk
-  for the on-prem threat model (see `SECURITY.md`). The cloud console's exposure is
-  governed by the token + proxy + firewall layers above.
+- **DNS-rebinding / TOCTOU** on the SSRF guard is documented as an accepted
+  residual risk for the on-prem threat model (see the module note in
+  `quirk/util/url_allowlist.py`). The cloud console's exposure is governed by the
+  token + proxy + firewall layers above.

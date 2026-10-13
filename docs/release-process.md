@@ -16,7 +16,7 @@ backwards-incompatible change to them triggers a MAJOR bump:
 - **Scanner output schema** — JSON/YAML field names, types, and ordering
   guarantees for the top-level scan-output objects consumed by automation.
 - **CycloneDX CBOM JSON** — field names and structure within the emitted CBOM.
-- **CLI exit codes** — the numeric exit codes documented in the CLI help.
+- **CLI exit codes** — the numeric exit codes the `quirk` commands return.
 
 The chaos lab fixtures, internal Python module paths, and test infrastructure
 are explicitly NOT public API and may change without a MAJOR bump.
@@ -45,30 +45,39 @@ version-bearing surface derives from it:
 - `quirk/__init__.py::__version__` resolves at import time via
   `importlib.metadata.version("quirk-scanner")` (with a `tomllib` fallback for
   unpackaged in-tree dev runs).
-- The CLI banner, dashboard footer, CBOM metadata, and `CHANGELOG.md` heading
-  all flow from `quirk.__version__`.
-- `tests/test_version.py` (Phase 37 invariant) enforces parity across six
-  surfaces — `pyproject.toml` is the truth, every other surface must match.
+- The CLI banner and `--version` output, CBOM metadata, and the report writer's
+  platform and intelligence versions all flow from `quirk.__version__`. The
+  `CHANGELOG.md` section heading is the exception: towncrier writes it from the
+  `--version` argument you pass in step 4.
+- `tests/test_version.py` enforces parity across the version-bearing surfaces
+  (package, CBOM builder, report writer, intelligence config, installed
+  distribution metadata) — `pyproject.toml` is the truth, every other surface
+  must match. Its CLI `--version` subprocess check is marked `xfail(strict=False)`,
+  so that one leg cannot fail the suite; confirm `quirk --version` yourself
+  after the bump.
 
-**To bump the version, edit `pyproject.toml [project.version]` and nothing
-else.** Any other version literal anywhere in the tree is a regression.
+**To bump the version, edit `pyproject.toml [project.version]` and no other code or
+packaging metadata.** A version literal in any code surface is a regression. The one
+hand-maintained exception is prose: the README title (`# QU.I.R.K. — vX.Y.Z`, line 13)
+is not derived from `pyproject.toml` and is updated by hand in step 9.
 
 ## Release Runbook
 
 Step-by-step procedure for cutting a release. All steps are required.
 
 **Interpreter rule:** run every command in this runbook with `.venv/bin/python`,
-`.venv/bin/pytest`, or `.venv/bin/pip` — never bare `python3`/`pip`. On macOS, bare
-`python3` resolves to Homebrew's system interpreter, which has historically carried an
-orphan editable `quirk` install (from a renamed/relocated predecessor project) and
-answered a stale, phantom version from `importlib.metadata`. This is not a hypothetical:
-it produced a broken `/opt/homebrew/bin/quirk` shim that was first on `PATH` and crashed
-with `ModuleNotFoundError: No module named 'run_scan'` when invoked. See Phase 177 /
-RELEASE-01 for the full investigation and cleanup.
+`.venv/bin/pytest`, or `.venv/bin/pip` — never bare `python3`/`pip`. A bare
+`python3` can resolve to a different interpreter than the project's virtual
+environment (on macOS, to Apple's or Homebrew's system Python), and a stale or
+orphan `quirk` install in that interpreter answers `importlib.metadata` queries with
+a phantom version. `tests/test_version.py::test_single_distribution_provides_quirk`
+guards against it: it fails when more than one installed distribution claims the
+`quirk` import package.
 
-1. **Verify CI is green on `main`.** Every required check (lint, unit tests,
-   staleness gates, version-parity test) must be passing on the commit you
-   intend to tag. If anything is red, fix it before proceeding.
+1. **Verify CI is green on `main`.** Every required check (the Python CI
+   workflow's full suite, including the version-parity test; the Dashboard
+   Quality workflow; and the Python Staleness Gate) must be passing on the
+   commit you intend to tag. If anything is red, fix it before proceeding.
 
 2. **Run a release dry-run before tagging.** Before touching `pyproject.toml`,
    manually trigger `.github/workflows/release.yml` via `workflow_dispatch`
@@ -105,8 +114,8 @@ RELEASE-01 for the full investigation and cleanup.
    by construction on the first tag that reached it.
 
 3. **Bump the version in `pyproject.toml`.** Edit `[project.version]` to the
-   new value (e.g. `4.10.0`). This is the only edit — every other surface
-   derives from it.
+   new value (`X.Y.Z`). This is the only code or metadata edit — every
+   runtime version surface derives from it.
 
 4. **Build the changelog with towncrier.**
 
@@ -115,7 +124,7 @@ RELEASE-01 for the full investigation and cleanup.
    ```
 
    This consumes every `changelog.d/*.md` fragment, prepends a new
-   `## X.Y.Z` section to `CHANGELOG.md`, and removes the consumed fragment
+   `## [X.Y.Z] - <date>` section to `CHANGELOG.md`, and removes the consumed fragment
    files. The `--yes` flag skips the interactive confirmation.
 
 5. **Commit the release prep with explicit paths.**
@@ -159,14 +168,16 @@ RELEASE-01 for the full investigation and cleanup.
 8. **Verify the published release.** Once the workflow is green:
    - Confirm the new version appears on PyPI:
      `pip index versions quirk-scanner` should list `X.Y.Z`.
-   - Confirm the release page on GitHub carries the wheel, sdist, and
-     attestation bundle.
+   - Confirm the GitHub release page carries the Windows operator zip
+     (`quirk-windows-X.Y.Z.zip`). The wheel and sdist are published to PyPI,
+     not attached to the GitHub release.
    - Run the downstream attestation verification command (see below) against
      the published artifact as a sanity check.
 
 9. **Update the milestone documentation.** Mark the corresponding milestone
-   complete in `.planning/ROADMAP.md` and propagate the release version into
-   the README badges if the badge URL embeds the version. If a tag ever fails
+   complete in whatever roadmap you keep, and update the version in the README
+   title by hand. The README badges do not embed a version (the PyPI badge reads
+   the live version from shields.io), so they need no edit. If a tag ever fails
    to produce a release run — silently, with no red step to notice — the
    Release Tag Hygiene Guard below is the standing backstop that catches it
    on the next scheduled run.
@@ -182,9 +193,9 @@ gh workflow run release-tag-hygiene.yml
 ```
 
 **Why it exists:** the runbook above assumes every pushed tag produces a
-release run. It doesn't always. `v5.9` never matched `release.yml`'s strict
-`v*.*.*` glob (it's a two-component tag), and `v5.10.0` was tagged locally
-but never pushed to origin. Both incidents produced zero Actions events —
+release run. It doesn't always. `v5.9` never matched `release.yml`'s then-strict
+`v*.*.*` glob (it's a two-component tag), and `v5.10.0` was, at the time,
+tagged locally but never pushed to origin. Both incidents produced zero Actions events —
 push-time checks have nothing to react to. As a result, three milestones
 shipped no Windows build with zero signal that anything was wrong. This
 guard runs on a schedule instead, so silence gets checked periodically
@@ -192,17 +203,21 @@ rather than trusted.
 
 **What it checks:** every git tag matching the loose pattern `v[0-9]*` is
 cross-referenced against successful `release.yml` runs and existing GitHub
-Release objects. The loose pattern is deliberately broader than
-`release.yml`'s own `v*.*.*` glob — that mismatch is exactly how `v5.9` gets
-caught instead of silently skipped.
+Release objects. The loose pattern matches what `release.yml` now triggers on
+(`v[0-9]*`) and is deliberately broader than the strict `v*.*.*` glob that
+`release.yml` used before RVW-004 and `release-container.yml` still uses — that
+mismatch is exactly how `v5.9` got caught instead of silently skipped.
 
 **What red means:** one or more release-like tags exist with no successful
 release run and no baseline entry. Remediation options, in priority order:
 
 1. **Re-cut and push the tag correctly** — if the tag was malformed or never
    pushed, fix it at the source.
-2. **Run the release workflow for that tag** — if the tag is correct but the
-   release run failed or never happened, trigger `release.yml` against it.
+2. **Push the tag again so a real release run starts** — if the tag is correct
+   but the release run failed or never happened. Dispatching `release.yml` by
+   hand against the tag ref does not do this: that is a dry run that publishes
+   nothing (step 2 of the runbook), even though the guard counts any successful
+   `release.yml` run on that ref as backing the tag.
 3. **Add a reviewed line to `.github/tag-hygiene-baseline.txt`** — only when
    the gap is a deliberate, dispositioned historical exception (e.g. a
    PyPI-only release), not a current failure waiting to be fixed.
@@ -226,13 +241,13 @@ publisher with these exact values:
 | Field                  | Value                |
 | ---------------------- | -------------------- |
 | PyPI project name      | `quirk-scanner`           |
-| Owner                  | `<gh-org-or-user>`   |
-| Repository name        | `<repo-name>`        |
+| Owner                  | `0xD1g5`             |
+| Repository name        | `QU.I.R.K`           |
 | Workflow filename      | `release.yml`        |
 | Environment name       | `release`            |
 
-After the first successful publish, PyPI converts this from "pending" to a
-permanent Trusted Publisher binding.
+On first use, PyPI converts the "pending" publisher into a normal Trusted
+Publisher.
 
 ### GitHub `release` environment
 
@@ -243,76 +258,81 @@ branch.
 
 ### GitHub private vulnerability reporting
 
-Enable private vulnerability reporting in repo Settings → Security & analysis.
-`SECURITY.md` points reporters at this channel and assumes it is on.
+Private vulnerability reporting must be enabled on the repository.
+`SECURITY.md` points reporters at this channel and assumes it is on. It is
+enabled on `0xD1g5/QU.I.R.K`; re-check it after any repository transfer or
+rename.
 
 ## Attestation Verification (for downstream consumers)
 
-Every release ships Sigstore attestations generated by the GitHub Actions
-workflow via keyless OIDC signing. Consumers can verify the provenance of a
-downloaded artifact before installing it.
+Every release is published to PyPI by the GitHub Actions workflow through
+Trusted Publishers with `attestations: true`, so PyPI hosts a Sigstore-signed
+provenance attestation (PEP 740) for each uploaded file. Consumers can verify
+the provenance of a downloaded artifact before installing it.
 
-### GitHub CLI path
+### PyPI attestation path
 
-```bash
-gh attestation verify --owner <gh-org> dist/quirk-scanner-X.Y.Z-py3-none-any.whl
-```
-
-This returns exit code 0 on success and prints the signing identity (the
-GitHub Actions workflow that produced the artifact). Use this for sdists too:
+Use PyPA's `pypi-attestations` tool. It fetches the provenance PyPI holds for
+the file and checks it against the publishing repository:
 
 ```bash
-gh attestation verify --owner <gh-org> dist/quirk-scanner-X.Y.Z.tar.gz
+pip install pypi-attestations
+pypi-attestations verify pypi \
+  --repository https://github.com/0xD1g5/QU.I.R.K \
+  pypi:quirk_scanner-X.Y.Z-py3-none-any.whl
 ```
 
-### cosign alternative
-
-For environments without the GitHub CLI, `cosign` verifies the same Sigstore
-bundle:
+This prints `OK: quirk_scanner-X.Y.Z-py3-none-any.whl` and exits 0 on success.
+Use it for the sdist too:
 
 ```bash
-cosign verify-blob \
-  --bundle quirk-scanner-X.Y.Z-py3-none-any.whl.sigstore \
-  --certificate-identity-regexp '^https://github.com/<gh-org>/<repo>/' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  quirk-scanner-X.Y.Z-py3-none-any.whl
+pypi-attestations verify pypi \
+  --repository https://github.com/0xD1g5/QU.I.R.K \
+  pypi:quirk_scanner-X.Y.Z.tar.gz
 ```
 
-The `--certificate-identity-regexp` pins the verifier to attestations
-produced by the official repository workflow. Substitute the actual
-GitHub org/repo at install time.
+The published file names use an underscore (`quirk_scanner-`), not the
+hyphenated distribution name.
+
+`gh attestation verify` does **not** work for these files: the attestations are
+stored on PyPI, not in GitHub's attestation store, so the GitHub CLI answers
+`HTTP 404` for the wheel's digest. Likewise no `.sigstore` bundle is attached to
+the GitHub release, so a `cosign verify-blob --bundle` flow has nothing to
+verify against.
 
 ### What is deliberately NOT shipped
 
 QU.I.R.K. does NOT ship a `curl | bash` installer (per LAUNCH-07 — this is a
-deliberate non-feature). Every supported install path carries verifiable
+deliberate non-feature). The supported install path carries verifiable
 provenance:
 
 - **PyPI** (`pip install quirk-scanner`) — Sigstore attestations via Trusted
   Publishers.
-- **Homebrew** (planned) — Homebrew's audit + bottle signing.
-- **GHCR** (planned, Phase 85) — cosign-signed container images.
+
+QU.I.R.K. is not distributed as a public container image or a Homebrew
+formula; neither channel is offered, so do not look for one.
 
 If you encounter instructions on a third-party site that ask you to pipe a
 shell script from the internet directly into `bash` to install QU.I.R.K., do
 not run them — they are not endorsed by the project.
 
-## Container Image (LAUNCH-03)
+## Container Image Build (internal, not a distribution channel)
 
-Multi-arch container images are published to **GitHub Container Registry**
-on every `v*.*.*` tag push, in parallel with — and downstream of — the PyPI
-publish workflow.
+The release pipeline builds a multi-arch container image on every `v*.*.*` tag
+push, in parallel with the PyPI publish workflow. **The resulting GHCR package
+is private. QU.I.R.K. does not offer a public container image**, so there is no
+supported `docker pull` path for evaluators; install from PyPI instead. A
+public image is a deferred item, not a promise of this document.
 
 ### Coordinates
 
 - **Workflow:** `.github/workflows/release-container.yml`
-- **Trigger:** push of a `v*.*.*` tag (the same trigger that drives
-  `release.yml`).
-- **Registry:** `ghcr.io/0xd1g5/quirk` (lowercase per GHCR namespace rules;
-  the GitHub org `0xD1g5` is normalized to `0xd1g5` for the image path).
-- **Tags published per release:** `:latest` and `:vX.Y.Z`.
+- **Trigger:** push of a `v*.*.*` tag. Unlike `release.yml`, this trigger is
+  strict, so a two-component tag does not start it.
+- **Push target:** `ghcr.io/0xd1g5/quirk` (a private package), tagged `:latest`
+  and `:vX.Y.Z`.
 - **Platforms:** `linux/amd64`, `linux/arm64` — built via
-  `docker/build-push-action@v6` with QEMU emulation in GitHub Actions.
+  `docker/build-push-action` with QEMU emulation in GitHub Actions.
 
 ### How the container stays in lock-step with the PyPI wheel
 
@@ -325,151 +345,18 @@ RUN pip install --no-cache-dir "quirk-scanner[all]==${QUIRK_VERSION}"
 `QUIRK_VERSION` is injected by the workflow from the triggering git tag.
 Before the build runs, the workflow polls
 `https://pypi.org/pypi/quirk-scanner/${version}/json` for up to 10 minutes so the
-container build only proceeds once the PyPI wheel has propagated. This means
-**the bits inside the container are byte-identical to `pip install quirk-scanner`
-on the host** — no parallel build path, no source-tree drift.
+container build only proceeds once the PyPI release has propagated. The
+container therefore installs the same PyPI release as `pip install quirk-scanner`
+on the host — there is no parallel build path.
 
-### Verification after a release
-
-After a tag publish has completed both workflows:
-
-```bash
-docker pull ghcr.io/0xd1g5/quirk:vX.Y.Z
-docker run --rm ghcr.io/0xd1g5/quirk:vX.Y.Z
-```
-
-The container's default `CMD` is `quirk --help`, so a successful run prints
-the CLI help banner including the version string. Confirm the version
-matches the tag.
-
-For multi-arch confirmation:
-
-```bash
-docker buildx imagetools inspect ghcr.io/0xd1g5/quirk:vX.Y.Z
-```
-
-The manifest list MUST contain both `linux/amd64` and `linux/arm64`
-descriptors.
-
-### One-time setup (first publish only)
-
-The GHCR package is created as **private** on first publish. Flip it to
-public so unauthenticated `docker pull` works for evaluators:
-
-1. Open `https://github.com/0xD1g5/QU.I.R.K/pkgs/container/quirk` after the
-   first successful `release-container` workflow run.
-2. Click **Package settings -> Change visibility -> Public**.
-3. Confirm with the package name.
-
-Subsequent publishes inherit the public visibility automatically.
+The image's default `CMD` is `quirk --help`.
 
 ### What this image deliberately does NOT include
 
-- **`playwright` browsers** — `quirk-scanner[all]` declares `playwright` as an
-  optional extra, but the headless browser binaries are out of scope for the
-  v4.10 GHCR ship to keep the image lean. Pull them at runtime inside the
-  container if a specific scan path needs them.
-- **Distroless / Alpine variants** — `python:3.11-slim` is the only base
-  (per Phase 85 D-LAUNCH Docker). `alpine` has musl/cryptography wheel
-  friction; distroless removes the shell users need for first-run debugging.
-
-## Homebrew Tap (LAUNCH-02)
-
-QU.I.R.K. ships a Homebrew tap formula so macOS consultants can install with a
-single command, with no Python / pip / virtualenv knowledge required. The tap
-is a **personal/org tap** (`0xD1g5/homebrew-quirk`), **not** homebrew-core —
-homebrew-core's submission and review process is too slow for v4.10's launch
-window, and a personal tap lets us iterate without external maintainer review.
-
-**End-user install command** (the only line users need):
-
-```bash
-brew install 0xD1g5/quirk/quirk
-```
-
-The canonical formula source is `Formula/quirk.rb` in this repo. On each
-release, the file is copied verbatim into the tap repo so that code review +
-changelog continuity happen here, not in the (low-traffic) tap repo.
-
-### One-time tap-repo bootstrap
-
-Do this once, before the first v4.10 release ships:
-
-1. Create the GitHub repo `0xD1g5/homebrew-quirk` (public, MIT-licensed, no
-   wiki / no issues — it is a pure formula host). The `homebrew-` prefix is
-   mandatory: `brew tap 0xD1g5/quirk` strips the prefix when resolving.
-2. Initialize the repo with a top-level `Formula/` directory.
-3. Copy `Formula/quirk.rb` from this repo to `Formula/quirk.rb` of the tap repo.
-4. Commit + push with message `chore: bootstrap homebrew-quirk tap`.
-5. Smoke-test the tap: `brew tap 0xD1g5/quirk && brew tap-info 0xD1g5/quirk`
-   (the formula will still fail to install at this stage because the
-   `url`/`sha256` are placeholders pointing at a non-existent 0.0.0 release —
-   that is expected and resolves at the first real release below).
-
-### Per-release formula update procedure
-
-After every PyPI publish (Trusted Publishers workflow per the earlier
-"PyPI Trusted Publishers" section in this document), update the formula:
-
-1. **Wait for PyPI sdist availability.** The sdist must be reachable at:
-
-   ```
-   https://files.pythonhosted.org/packages/source/q/quirk-scanner/quirk-scanner-X.Y.Z.tar.gz
-   ```
-
-   (replace `X.Y.Z` with the release version). PyPI's CDN is usually <30s
-   behind the publish step; if `curl -fsSI <url>` 404s, wait and retry.
-
-2. **Compute the sdist sha256:**
-
-   ```bash
-   curl -fsSL https://files.pythonhosted.org/packages/source/q/quirk-scanner/quirk-scanner-X.Y.Z.tar.gz \
-     | shasum -a 256
-   ```
-
-3. **Edit `Formula/quirk.rb` in BOTH this repo AND the tap repo.** Update:
-   - `url` → bump `X.Y.Z` in both occurrences of the version segment.
-   - `sha256` → paste the value from step 2.
-   - The formula `version` is implicit from the `url` filename — no separate
-     bump needed.
-
-4. **Commit + push both repos** with message
-   `chore(homebrew): bump quirk to vX.Y.Z`.
-
-5. **Smoke-test the published install** on a clean macOS arm64 machine:
-
-   ```bash
-   brew untap 0xD1g5/quirk 2>/dev/null || true
-   brew tap 0xD1g5/quirk
-   brew install 0xD1g5/quirk/quirk
-   quirk --version   # must print X.Y.Z
-   ```
-
-   This exercises the formula's `test do` block via `brew test quirk` as well
-   as the actual user install path.
-
-### Why pipx-style venv isolation
-
-Homebrew's system Python (`python@3.11`) should never host third-party
-packages — `pip install` into the Homebrew Python is unsupported and breaks
-on every `brew upgrade python@3.11`. The standard Homebrew-idiomatic answer
-for a Python CLI is a virtualenv created under the formula's `libexec`, with
-the entrypoint script symlinked into `bin` via `bin.install_symlink` — that
-is exactly what `Formula/quirk.rb` does via `Language::Python::Virtualenv`.
-The user-facing effect is identical to `pipx install quirk-scanner`: one isolated
-Python environment per CLI, no cross-contamination, clean `brew uninstall`.
-The formula also `depends_on "pipx"` so users have it available for other
-Python CLIs, matching Homebrew's published guidance for Python tooling.
-
-### What this section deliberately does NOT do
-
-- **Submit to homebrew-core.** Out of scope for v4.10; the personal tap ships
-  immediately and is fully sufficient for the LAUNCH-02 success criterion.
-  Revisit homebrew-core as a future milestone once the formula has been
-  stable across several releases.
-- **Bottle / pre-built binaries.** The formula installs from PyPI sdist on
-  the user's machine. Bottle generation requires a homebrew-core-style build
-  farm and is not justified for the v4.10 audience.
+- **`playwright` browsers** — `quirk-scanner[all]` installs the `playwright`
+  package (through its `dashboard` extra), but no browser binaries are installed
+  in the image, to keep it lean.
+- **Distroless / Alpine variants** — `python:3.11-slim` is the only base image.
 
 ---
 
@@ -490,56 +377,42 @@ rest of the release pipeline is built around:
   that the attestation chain does not cover — the user has no way to verify that
   the script they execute is the script we published, and even if it is, the script
   itself can fetch arbitrary downstream artifacts without further attestation.
-- **No `gh attestation verify` step is possible.** The supported install paths all
-  funnel through artifacts that are verifiable post-fetch and pre-execute. A
+- **No attestation verification step is possible.** The supported install path
+  funnels through artifacts that are verifiable post-fetch and pre-execute. A
   bash trampoline executes as it streams; verification after the fact is
   meaningless.
 - **Defense against TLS-stripping / DNS-hijack scenarios.** A compromised mirror,
   a typosquatted host, or an attacker positioned to MITM HTTPS (for example via a
-  rogue CA in a managed device) can substitute their script. `pip install`
-  against PyPI verifies signatures against the index's PEP 458 manifest; `brew
-  install` verifies the formula sha256 against a tap commit; `docker pull`
-  verifies the manifest digest. `curl | bash` verifies nothing.
+  rogue CA in a managed device) can substitute their script. `pip install` can
+  pin each artifact to a known hash with `--require-hashes`, and the PyPI
+  attestation described above ties a file to the repository that built it.
+  `curl | bash` verifies nothing.
 - **No incident-response surface.** If a `curl | bash` script is found
   compromised, every machine that ever ran it is potentially in scope; there is
   no version pinning, no rollback narrative, no `pip uninstall` story. The
-  supported install paths all leave a recoverable inventory.
+  supported install path leaves a recoverable inventory.
 
-### Supported install paths
+### Supported install path
 
-Use one of:
+Use:
 
-- **`pip install quirk-scanner[all]`** — PyPI, signed with Sigstore + Trusted
-  Publishers (verify with `gh attestation verify`; see the *Attestation
-  Verification* section above).
-- **`brew install 0xD1g5/quirk/quirk`** — Homebrew personal tap; formula sha256
-  pins the PyPI sdist (see the *Homebrew Tap (LAUNCH-02)* section).
-- **`docker run ghcr.io/0xd1g5/quirk:latest`** — Multi-arch GHCR image
-  (`linux/amd64` + `linux/arm64`) built by `release-container.yml` with
-  `provenance: true` (see the *Container Image (LAUNCH-03)* section).
+- **`pip install quirk-scanner[all]`** — PyPI, published with Trusted
+  Publishers and PyPI-hosted Sigstore attestations (verify with
+  `pypi-attestations`; see the *Attestation Verification* section above).
 
 ### For consumers who need automated provisioning
 
-The right pattern is to wrap one of the supported install commands in your
-existing configuration-management tooling — Ansible, Chef, Salt, Puppet, or a
-plain shell script you author and review locally — and run `gh attestation
-verify` (for the PyPI path) as a first-class step of the playbook. Examples:
+The right pattern is to wrap the supported install command in your existing
+configuration-management tooling — Ansible, Chef, Salt, Puppet, or a plain
+shell script you author and review locally — pin an explicit version, and run
+`pypi-attestations verify pypi` as a first-class step of the playbook.
 
-- **Ansible:** `community.general.pip` module with `name: quirk-scanner[all]`,
-  followed by a `command:` task that runs `gh attestation verify` against the
-  installed wheel.
-- **Chef:** `python_package 'quirk-scanner'` with an explicit version pin, followed
-  by a verify resource.
-- **Docker-based CI runners:** pull `ghcr.io/0xd1g5/quirk:vX.Y.Z` with a
-  specific tag (not `:latest`) and verify the manifest digest in your
-  pre-execute hook.
-
-All three patterns preserve the attestation chain end-to-end; a `curl … | bash`
-trampoline cannot.
+This preserves the attestation chain end-to-end; a `curl … | bash` trampoline
+cannot.
 
 ### Status
 
-**Permanent.** This is not revisited on later milestones. `REQUIREMENTS.md`
-explicitly classifies `curl | bash` as an anti-feature for a security tool — never.
-Any future contributor proposing a `curl … | bash` installer should be pointed at
-this section before any code is written.
+**Permanent.** This is not revisited on later milestones; `curl | bash` is an
+anti-feature for a security tool — never. Any future contributor proposing a
+`curl … | bash` installer should be pointed at this section before any code is
+written.

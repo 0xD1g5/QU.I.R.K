@@ -5,8 +5,14 @@ estates. This is the single canonical entry point — read top-to-bottom for a d
 walkthrough or jump to the section you need. Each section is short by design and links
 to a deeper doc where one exists.)*
 
+QU.I.R.K. is dashboard-first and CLI-complete. Start a scan from the dashboard's **New Scan**
+page, or run it from the command line against a config file. Both paths run the same scanner:
+the dashboard writes a per-job config and launches `run_scan.py` with it. The CLI is the
+supported route for automation, sensors and repeat engagements. This guide covers both; §3
+starts with the dashboard.
+
 **Prerequisites:**
-- Python 3.11+
+- Python 3.10+ (CI tests 3.11)
 - macOS / Linux host with outbound network reach to scan targets
 - (Optional) Docker for the chaos lab smoke test
 
@@ -14,13 +20,18 @@ to a deeper doc where one exists.)*
 
 ## 1. Install
 
-QU.I.R.K. installs from PyPI. Use `pip install quirk` for the core scanner (TLS, SSH,
-JWT, Discovery, Fingerprint), or `pip install quirk-scanner[all]` for a one-shot install of
-every optional bundle except `[identity]`. The `[identity]` extra (Kerberos, SAML,
-DNSSEC) is intentionally excluded from `[all]` because impacket transitively downgrades
-the `cryptography` package, breaking the TLS scanner (Phase 45-01 D-07). Install
-`pip install quirk-scanner[identity]` separately into its own environment if you need
-identity-protocol coverage.
+QU.I.R.K. installs from PyPI as `quirk-scanner`. (The PyPI project named `quirk` is an
+unrelated package; do not install it.) Use `pip install quirk-scanner` for the core scanner
+(TLS, SSH, JWT, Discovery, Fingerprint), or `pip install 'quirk-scanner[all]'` for a one-shot
+install of the optional bundles that are safe to combine. Quote the extras: zsh, the macOS
+default shell, treats `[...]` as a glob and fails with `no matches found`. `[all]` leaves out
+four extras: `[identity]` (Kerberos), `[hw]` (SNMP, Modbus and BACnet hardware scanning),
+`[api]` (OpenAPI spec validation and the active REST fuzzer) and `[dev]` (build tooling).
+`[identity]` is excluded because `impacket` depends on `pyOpenSSL`, whose own `cryptography`
+requirement can make pip downgrade the `cryptography` package the TLS scanner relies on
+(Phase 45-01 D-07). Install `pip install 'quirk-scanner[identity]'` separately, into its own
+environment, if you need Kerberos coverage. SAML and DNSSEC need no extra: they run on `lxml`
+and `dnspython`, which are core dependencies.
 
 > See also: [`docs/installation.md`](installation.md) for full install reference,
 > system requirements, and OS package prerequisites.
@@ -29,11 +40,18 @@ identity-protocol coverage.
 
 ## 2. Configure
 
-QU.I.R.K. reads `./config.yaml` by default and accepts `--config <path>` to point at
-another file. The config has six top-level blocks: `assessment`, `scan`, `targets`,
-`connectors`, `output`, and `intelligence`. The `connectors.enable_*` flags are gated
-by optional extras — enabling a flag whose extra is missing does **not** fail the run;
-it emits a `missing_extra` advisory finding (Phase 45 INSTALL-02).
+The CLI takes its settings from a YAML config file passed with `--config <path>`. It does not
+read `./config.yaml` on its own: run without `--config` and the interactive wizard starts
+instead. The dashboard's New Scan page does not build the scan from that file; it generates
+a per-job config from the form (§3.1.2 previews it) and launches the scanner with it. Only the
+`security.allow_internal_targets` and `security.trusted_targets` policy keys are read from the
+server's own config file (`QUIRK_CONFIG_PATH`, default `./config.yaml`). A config file must
+contain the `assessment`, `scan` and `output` blocks; `targets`, `connectors`, `intelligence`,
+`security`, `report`, `broker_credentials` and `remediation_aliases` are optional. Some
+`connectors.enable_*` flags need an optional extra. Enabling one whose extra is missing does
+**not** fail the run. Most such connectors (for example Kerberos, database, GCP/Kubernetes/Vault,
+AD CS, S/MIME, email and broker) then emit a `missing_extra` advisory finding (Phase 45
+INSTALL-02). The `[hw]` connectors (SNMP, Modbus and BACnet) emit no advisory finding.
 
 ### 2.0 What a stock install scans out of the box (v5.19 — Phase 184.2)
 
@@ -46,7 +64,7 @@ everything else ships **off with a stated reason**:
   empty target list — they do nothing until you populate `jwt_targets`, `container_targets`,
   `source_targets`, `dnssec_targets`, or `saml_targets` respectively.
 - **Email and broker connectors (`enable_email`, `enable_broker`) are on, and unlike the five
-  above they are NOT inert.** Both scan every host in the general `targets:` block. Email has no
+  above they are NOT inert.** Both probe every host on which port fingerprinting found a TLS candidate port (skipped as `no-eligible-targets` when there is none). Email has no
   dedicated target list; broker now does — **`connectors.broker_targets`** (Phase 190, TRIAGE-06)
   lets you name explicit `host`/`host:port` entries that are probed *in addition to* each broker
   family's hardcoded default ports (`broker_azure_namespaces`/`broker_sqs_regions` similarly
@@ -58,8 +76,8 @@ everything else ships **off with a stated reason**:
   respected via the `_user_set_fields` mechanism (Phase 72 D-02/WR-11).
 - **Everything else ships `false`**, each with an inline reason: credentials required (AWS,
   Azure, GCP, database, S3, Blob, Kubernetes, Vault), an optional extras package required
-  (Kerberos, S/MIME, AD CS, SNMP), or the connector probes live OT/ICS equipment and needs
-  explicit opt-in (Modbus, BACnet).
+  (Kerberos, S/MIME, AD CS, SNMP), the connector probes live OT/ICS equipment and needs
+  explicit opt-in (Modbus, BACnet), or the key is not a scanner toggle at all (`enable_nmap`, `enable_codesign`, `enable_authenticated_mode`, `enable_recurring_otics`; each is driven by a CLI flag or the scheduler).
 - **The default TLS port list widened from 3 ports to 17** — `scan.ports_tls` now matches the
   same `CONSULTING_TLS_PORTS` set the CLI wizard and the dashboard's "Common TLS ports" scope
   already used. This means a stock scan now also TLS-probes ports commonly used by PostgreSQL,
@@ -97,17 +115,23 @@ quirk --config config.yaml  # use the generated config
 | Extra | Adds | Typical use |
 |-------|------|-------------|
 | `quirk-scanner[dashboard]` | FastAPI server + Playwright PDF rendering | Local web dashboard, PDF reports |
-| `quirk-scanner[identity]` | impacket, ldap3 | Kerberos / AD CS scanners (install separately — not in `[all]`). SAML / DNSSEC need no extra: `signxml`, `lxml` and `dnspython` are core dependencies. **Interacts with the core `sslyze` dependency:** sslyze caps `cryptography<47`. A *clean* install is unaffected — `pip install -e ".[all,identity]"` resolves cryptography 46.0.7 with pyOpenSSL 26.2.0, which accepts it. But an *incremental* `pip install sslyze` into an environment already holding a newer pyOpenSSL (26.4.0 requires `cryptography>=49`) downgrades cryptography and leaves pyOpenSSL unsatisfied, because pip's resolver does not reconsider already-installed distributions. If you see that warning, re-run the full install command to re-resolve the environment and confirm with `pip check`. QUIRK imports pyOpenSSL nowhere, so only impacket-backed Kerberos/AD scanning is affected in the meantime. |
+| `quirk-scanner[identity]` | impacket, ldap3 | Kerberos scanner (install separately — not in `[all]`). SAML / DNSSEC need no extra: `lxml` and `dnspython` are core dependencies. **Interacts with the core `sslyze` dependency:** sslyze caps `cryptography<47`. A *clean* install is unaffected — `pip install -e ".[all,identity]"` resolves cryptography 46.0.7 with pyOpenSSL 26.2.0, which accepts it. But an *incremental* `pip install sslyze` into an environment already holding a newer pyOpenSSL (26.4.0 requires `cryptography>=49`) downgrades cryptography and leaves pyOpenSSL unsatisfied, because pip's resolver does not reconsider already-installed distributions. If you see that warning, re-run the full install command to re-resolve the environment and confirm with `pip check`. QUIRK imports pyOpenSSL nowhere, so only impacket-backed Kerberos scanning is affected in the meantime. |
+| `quirk-scanner[adcs]` | ldap3 | AD CS and S/MIME scanners (in `[all]`) |
 | `quirk-scanner[cloud]` | google-api-python-client, google-auth, azure-mgmt-storage, kubernetes, google-cloud-container, azure-mgmt-containerservice, hvac | GCP, Azure Blob/AKS, Kubernetes and HashiCorp Vault connectors |
-| `quirk-scanner[db]` | psycopg2-binary, PyMySQL | Postgres / MySQL TLS-mode + RDS scanning |
-| `quirk-scanner[motion]` | redis, kafka-python (via `[broker]` + `[kafka]`) | Broker scanner (Kafka / Redis). The email scanner and all broker **TLS** probing need no extra — `sslyze` is a core dependency as of v5.22. |
-| `quirk-scanner[all]` | Everything above **except** `[identity]` | One-shot enterprise install |
+| `quirk-scanner[db]` | psycopg2-binary, PyMySQL | Postgres / MySQL TLS-mode scanning (RDS encryption is part of the AWS connector) |
+| `quirk-scanner[motion]` | redis, kafka-python (via `[broker]` + `[kafka]`) | Broker scanner (Kafka / Redis). The email scanner and all broker **TLS** probing need no extra — `sslyze` is a core dependency since 5.25.0; earlier releases left it undeclared. |
+| `quirk-scanner[hw]` | pysnmp, sysdescrparser, pymodbus, bacpypes3 | SNMP, Modbus and BACnet hardware scanning (not in `[all]`) |
+| `quirk-scanner[api]` | openapi-spec-validator, schemathesis | OpenAPI spec scanning and the active REST fuzzer (not in `[all]`) |
+| `quirk-scanner[docx]` | python-docx | DOCX report (in `[all]`) |
+| `quirk-scanner[notify]` | slack-sdk | Slack notification channel (in `[all]`) |
+| `quirk-scanner[tickets]` | jira | Jira ticketing (in `[all]`) |
+| `quirk-scanner[all]` | `[dashboard]`, `[cloud]`, `[db]`, `[motion]`, `[adcs]`, `[docx]`, `[notify]`, `[tickets]`, `[cbom]` and `[redis]` | One-shot enterprise install; **excludes** `[identity]`, `[hw]`, `[api]` and `[dev]` |
 
 ### 2.3 Vertical editions (v5.6+)
 
 The dashboard can run as an industry-specific edition (currently `general` or
 `healthcare`). Set `QUIRK_VERTICAL=healthcare` in the server environment, or add a
-top-level `vertical: healthcare` key to the YAML file `QUIRK_CONFIG_PATH` points at.
+top-level `vertical: healthcare` key to the YAML file `QUIRK_CONFIG_PATH` points at (default `./config.yaml`).
 The env var wins; unknown values fall back silently to `general`. Verify the active
 edition after startup with `curl http://127.0.0.1:8512/api/config` (unauthenticated,
 returns `{"vertical": "..."}`).
@@ -120,16 +144,22 @@ EHR/PACS/portal scan preset; general installs are unchanged. See
 > config block and flag, [`docs/sample-config.yaml`](sample-config.yaml) for an
 > annotated example.
 
-### 2.4 Dashboard security tail (v5.10+ — Phase 143)
+### 2.4 Dashboard security tail (first released in 5.11.0 — Phase 143)
 
 Three small operator-facing additions shipped in Phase 143:
 
-- **Scan-date badge** — every dashboard view now shows a persistent "Last scan: {date} {time}"
-  (or "No scan yet") badge in the sidebar, so you always know at a glance how current the data
-  you're looking at is. See [`docs/report-interpretation.md`](report-interpretation.md) §11.
+- **Scan-date badge** — every page that has the dashboard sidebar (all except the sign-in screen
+  and the `/print` export page) shows a persistent "Last scan: {date} {time}" (or "No scan yet")
+  badge in the sidebar. It shows the newest scan in the database as of page load, not the scan
+  picked in the scan selector, so it tells you how current the latest data is, not which scan you
+  are viewing. See [`docs/report-interpretation.md`](report-interpretation.md) §11.
 - **`security.trusted_targets` scan-consent allowlist** — an opt-in list of exact hosts/IPs and
-  CIDR ranges QUIRK is authorized to scan, enforced identically at both the CLI and the
-  dashboard's "New Scan" entry point. Empty/absent = allow-all (backward compatible). See
+  CIDR ranges QUIRK is authorized to scan. Empty/absent = allow-all (backward compatible). The
+  two entry points check different things. The CLI checks the config's `targets.fqdns`,
+  `targets.cidrs` and `connectors.broker_targets` hosts, but not `targets.include_ips`, so an IP
+  listed there is scanned even when it is outside the allowlist. The dashboard's "New Scan" page
+  checks every form target against the server config's list, but not `broker_targets` entered in
+  the Connectors panel. See
   [`docs/configuration.md`](configuration.md) § `security.trusted_targets`.
 - **Windows Authenticode signing (build mechanism, not yet activated)** — the
   `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
@@ -137,16 +167,22 @@ Three small operator-facing additions shipped in Phase 143:
   `QUIRK_SIGNING_CERT_BASE64`/`QUIRK_SIGNING_CERT_PASSWORD` repo secrets. **No real signing
   certificate exists yet** — until one is provisioned and those secrets are added, released
   Windows binaries remain unsigned (the release notes' "UNSIGNED BINARY NOTICE" is accurate and
-  unchanged). The mechanism activates automatically, with no code changes, the moment a real
-  certificate secret is configured.
+  unchanged). The signing step activates automatically, with no code changes, the moment a real
+  certificate secret is configured; the release notes' unsigned-binary notice is static text and
+  would then need editing.
 
 ### 2.4.1 `GET /api/config/effective` — auth-gated, unlike `GET /api/config` (PARITY-01, Phase 192)
 
-The dashboard's pre-existing `GET /api/config` endpoint returns the server's base config and does
+The dashboard's pre-existing `GET /api/config` endpoint returns only the active vertical and does
 not require the dashboard API token. The new `GET /api/config/effective` endpoint — added for the
 New Scan page's Effective config panel (§3.1.2) — **does require the dashboard API token** when
-`security.api_token` is set, because it accepts caller-supplied form parameters (targets, profile,
-etc.) and returns the exact merged, redacted config those parameters would produce; treat it as an
+`QUIRK_API_TOKEN` (or `security.api_token` in the server's config) is set, because it accepts caller-supplied form parameters (targets, profile,
+etc.). Keep the server's config file a complete, valid QUIRK config so its `security.api_token` is
+read. The endpoint returns the merged, redacted
+config those parameters would produce, with two differences from the job a submission writes: it
+always shows `security.allow_internal_targets: false` (a real job takes that value from the server's
+config file), and its `output.directory` is a temporary path rather than `output/jobs/<job id>`.
+Treat it as an
 authenticated preview endpoint, not a public config-read endpoint. Credential fields in its
 response are always redacted to `•••• (set)` / `•••• (not set)` regardless of caller — there is no
 authenticated mode that returns real credential values.
@@ -155,19 +191,51 @@ authenticated mode that returns real credential values.
 
 ## 3. Scan
 
-Two entry points: `quirk` (no args) launches the interactive wizard (recommended for first
-use); `quirk --config config.yaml` runs non-interactively against a pre-authored
-config (recommended for CI and customer engagements). Targets accept multi-line paste,
-`@filepath` indirection, `--targets-file <path>`, and IPv4 CIDR ranges (Phase 47).
-Outputs land in `output.directory` (default `./quirk-output/`): an HTML report, a PDF,
-`executive.md`, `technical.md`, `findings-<ts>.json`, `intelligence-<ts>.json`, and
-the CycloneDX CBOM as both `cbom-<ts>.json` and `cbom-<ts>.xml`.
+There are three ways to start a scan: the dashboard's **New Scan** page (§3.0), the
+interactive CLI wizard, and the CLI against a pre-authored config file (§3.0.1). All three run
+the same scanner.
+
+### 3.0 Start a scan from the dashboard
+
+1. Start the dashboard with `quirk serve`. It listens on `127.0.0.1:8512`, and it refuses a
+   non-loopback `--host` unless a dashboard token is set or `--insecure` is passed. Open
+   `http://127.0.0.1:8512` in a browser.
+2. Click **New Scan** in the sidebar (route `/scan/new`).
+3. Fill in the form, top to bottom: **Targets** (a hostname, IP address, CIDR range or a
+   comma-separated list; a newline-separated list is rejected), **Scan Profile** (Quick,
+   Standard or Deep), **Calibration** (Strict, Balanced or Lenient), **Port Scope** (Top 1000
+   ports, Common TLS ports, All ports or Custom) and the **Enable nmap discovery** checkbox
+   (forced on for Top 1000 and All ports). When the active vertical edition has a preset
+   (§2.3), an **Apply** button fills the form from it. The collapsed **Connectors** (§3.1.4),
+   **Advanced** (§3.1.5) and **Effective config** (§3.1.2) panels sit between these options
+   and the button.
+4. Click **Run Scan**. The dashboard validates the targets, starts the scan in the background
+   and opens the job page (`/scan/job/<job id>`), which shows progress and, once the scan has
+   completed, its Scan Coverage chips (§3.1.3). A dashboard-started scan writes its config, log
+   and reports under `output/jobs/<job id>/`, relative to the directory `quirk serve` was started
+   in. The Executive page's download buttons (§3.1.7) read the latest report set from the output
+   directory named by the server's config file instead, so they do not offer the reports of a
+   dashboard-started scan.
+
+### 3.0.1 Start a scan from the CLI
+
+Run `quirk` with no arguments to launch the interactive wizard (recommended for first use), or
+`quirk --config config.yaml` to run non-interactively against a pre-authored config
+(recommended for CI and customer engagements). Targets accept a comma-separated list,
+`@filepath` indirection (the file must sit under the current directory),
+`--targets-file <path>` (which replaces the config's targets), and CIDR ranges (Phase 47).
+Outputs land in `output.directory` (`./quirk-output` in the starter config): an HTML report, a
+DOCX report, a PDF (when Playwright's Chromium is installed), `executive-summary-<ts>.md`,
+`technical-findings-<ts>.md`, `scorecard-<ts>.md`, `roadmap-<ts>.md`, `findings-<ts>.json`,
+`intelligence-<ts>.json`, `run-stats-<ts>.json`, and the CycloneDX CBOM as both
+`cbom-<ts>.cdx.json` and `cbom-<ts>.cdx.xml`. The SQLite database is `output.db_path`.
 
 ### 3.1 Interpreting Results
 
-Findings carry a severity, a quantum-readiness band (`safe` / `at-risk` / `vulnerable`),
-and (where the title joins `COMPLIANCE_MAP`) PCI-DSS / HIPAA / FIPS 140-3 control
-references. The CBOM enumerates every cryptographic asset discovered.
+Findings carry a severity and, where the finding title joins `COMPLIANCE_MAP`, control
+references from PCI-DSS, HIPAA, FIPS 140-3, SOC 2 and ISO 27001; the dashboard classifies each
+endpoint's quantum safety as Safe, At Risk, Vulnerable or Unknown. The CBOM lists the
+cryptographic assets the scan discovered.
 
 > See also: [`docs/getting-started.md`](getting-started.md) for a zero-to-first-scan
 > walkthrough, [`docs/report-interpretation.md`](report-interpretation.md) for
@@ -187,16 +255,18 @@ unassessed and what to do about it:
   gauge rather than a `0`. A scan with zero assessed domains shows an explicit "Readiness score not
   computed" statement instead of a score.
 - **What to scan to raise coverage.** The six domains are `hygiene`, `modern_tls`,
-  `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. The first four are fed
-  by the core TLS/certificate scan path and are assessed by nearly every scan. The two domains most
-  often left unassessed are:
-  - `data_at_rest` — needs the storage and vault connector scanners (§6) enabled and reachable.
+  `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. `hygiene`,
+  `modern_tls` and `agility_signals` are assessed whenever the scan finds at least one assessable
+  endpoint; `identity_trust` also needs an observed certificate or a Kerberos, SAML, DNSSEC,
+  S/MIME or AD CS endpoint. The two domains most often left unassessed are:
+  - `data_at_rest` — needs a database, RDS, S3, Azure Blob, Kubernetes or Vault connector
+    scanner (§6) enabled and reachable.
   - `data_in_motion` — needs the email or broker scanners (§6.2) enabled and reachable.
   If a report consistently shows fewer than 6 of 6 domains assessed, check `connectors:` in your
   config for these scanners before treating the score as final.
 - **Scores are not comparable across scoring versions.** A lower number after a scoring-version
   upgrade may simply reflect honest exclusion of previously-fabricated points, not a regression —
-  do not compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s Unreleased
+  do not compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s 5.25.0
   entry for the full migration decision record.
 - **Scoring v3 lowers scores substantially, by design.** Expect a large drop on estates carrying
   open CRITICAL/HIGH findings, and a cap at the top of GOOD on any estate with no observed hybrid
@@ -211,22 +281,23 @@ unassessed and what to do about it:
 
 The New Scan page in the dashboard has a collapsed "Effective config" panel above the Run Scan
 button. Expanding it fetches `GET /api/config/effective` with your current form selections
-(targets, profile, calibration, nmap toggle, port scope, custom ports, vertical) and previews the
-**exact config that submission would run with** — not the server's base config file, and not a
-static default. It re-fetches automatically as you change form fields while the panel stays open,
-and never fetches at all if you leave it collapsed.
+(targets, profile, calibration, nmap toggle, port scope, custom ports, vertical, and any Connectors
+or Advanced fields you touched) and previews the **config that submission would run with**, apart
+from the two fields §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
+change form fields while the panel stays open, and never fetches at all if you leave it collapsed.
 
 Two tabs render the same server response two ways:
 
-- **Grouped** (default) — one card per config section (Targets, Scan, Connectors, Output,
+- **Grouped** (default) — one table per config section (Targets, Scan, Connectors, Output,
   Assessment, Intelligence, Security), one row per field, with a provenance badge: "Overridden"
-  (you changed it on the form) or "Preset: {vertical}" (a vertical preset applied it); a field with
-  neither badge is a plain default.
-- **Raw YAML** — the identical redacted payload rendered as YAML text, for operators who want to
-  copy the exact config into a file.
+  (the job config the form generates sets the value, rather than the built-in default) or
+  "Preset: {profile}" (the scan profile's preset applied it, for example "Preset: standard"); a
+  field with neither badge is a plain default.
+- **Raw YAML** — the identical redacted payload, rendered as indented JSON text under the "Raw
+  YAML" tab label (JSON is valid YAML), for operators who want to copy the exact config into a file.
 
 **Credentials never leave the server.** Any credential-bearing field (e.g. `connectors.vault_token`,
-broker credentials) renders only the literal placeholder text `•••• (set)` or `•••• (not set)` —
+`security.api_token`) renders only the literal placeholder text `•••• (set)` or `•••• (not set)` —
 never a real value, in either tab, and never inside an editable input. If you ever see a real
 credential value in the Raw YAML tab, that is a redaction bypass and should be reported
 immediately.
@@ -236,10 +307,10 @@ the panel is advisory-only and never gates the Run Scan button.
 
 ### 3.1.3 Scan Coverage chips (OBS-02, Phase 192)
 
-Both the scan-job page (while a scan is running/completed) and the scan-history page (per past
+Both the scan-job page (once the job has completed) and the scan-history page (per past
 scan, via the row's expand chevron) show a "Scan Coverage" chip pair: `{N} ran` (green) /
 `{M} skipped` (neutral outline), reading through `GET /api/scans/{scan_run_id}/coverage` (or the
-`GET /api/jobs/{job_id}/coverage` convenience wrapper for an in-progress job). Both endpoints
+`GET /api/jobs/{job_id}/coverage` convenience wrapper that resolves a job's scan run). Both endpoints
 require the dashboard API token like every other `/api/scans`/`/api/jobs` route.
 
 Expanding "Show detail" reveals one row per scanner phase — ran rows show duration, skipped rows
@@ -261,16 +332,18 @@ Broker, OT/ICS, and Source & API — matching the CLI's `connectors.enable_*` su
 not a dashboard-only subset.
 
 **Unavailable connectors are shown, never hidden.** A connector whose required optional extra is not
-installed on the server appears as a disabled toggle with its reason and the verbatim
-`pip install quirk[<extra>]` hint always visible — no hover required. This is advisory only: even if
+installed on the server appears as a disabled toggle with its reason always visible, followed by
+the server's install hint where one is mapped to the connector — no hover required. (The hint text
+currently spells the package `quirk`; the PyPI package is `quirk-scanner`, so install
+`'quirk-scanner[<extra>]'`.) This is advisory only: even if
 you could somehow force the toggle on, submitting a job that would run an unavailable connector is
 rejected server-side with an HTTP 422 that names the connector and the reason, including when the
 request bypasses the dashboard entirely and calls the job-creation API directly. The disabled switch
 is a convenience that saves you a failed submission; the actual guarantee is server-enforced.
 
 **Credential entry.** Toggling on a connector that needs a credential (e.g. AD CS, PostgreSQL/MySQL
-database scanning, SNMP community string, broker/SNMPv3 per-host auth) reveals a masked credential
-input. Every credential field is:
+database scanning, SNMP community string, broker or SNMPv3 credentials for the default host)
+reveals a masked credential input. Every credential field is:
 
 - **masked** as you type, like a password field;
 - **never saved** — the value is used only for that one scan submission, is not written to the job's
@@ -281,30 +354,36 @@ Cloud connectors (AWS, Azure, GCP) show an ambient-credentials note instead of a
 your environment's or instance's own credential chain (IAM role, service principal, application
 default credentials) and have no dashboard-fillable secret.
 
-**Enabling a connector with no credential supplied is allowed, not blocked.** Submission succeeds; the
-scan records a `missing-credentials` skip for that phase in its Scan Coverage disclosure (see
-`docs/report-interpretation.md` §22) rather than the job being rejected. The panel shows a
-non-blocking amber warning at submit time if you enable a connector and leave its credential blank,
-so the outcome isn't a surprise, but it never stops you from submitting.
+**Enabling a connector with no credential supplied is allowed, not blocked.** Submission succeeds
+rather than the job being rejected. Two checks run before launch, and both only warn. The panel
+shows a non-blocking amber note beneath a connector that is enabled with every credential field
+blank. At submit time the server also returns blank-credential warnings for AD CS, Database and
+SNMP (not Vault or Broker), and the job page repeats them. Neither warning stops you from submitting.
+Once the scan is running, the Vault phase is the only one that skips for a missing credential: with
+Vault enabled, a Vault address set, and neither `vault_token` nor a `VAULT_TOKEN` environment
+variable, the scan records a `missing-credentials` skip for that phase in its Scan Coverage
+disclosure (see `docs/report-interpretation.md` §22). Other credentialed connectors run without a
+credential and report their own errors.
 
-Also new this phase: **`GET /api/connectors/availability`**, the auth-gated endpoint the panel reads.
-It requires the same dashboard bearer token as every other `/api/*` route, probes every connector's
-real availability fresh on every call (no caching — a `pip install` you just ran is reflected on your
-very next fetch), and returns each connector's `available` flag, `reason` (when unavailable), and
-`install_hint` (the exact `pip install quirk[...]` string). `docs/api-reference.md` does not exist yet
-as a project convention (per CLAUDE.md's documentation checklist); this section is the interim
-documentation for that endpoint until that reference file is created.
+**`GET /api/connectors/availability`** is the auth-gated endpoint the panel reads. Once a dashboard
+API token is configured it requires that token, like every `/api/*` route except `/api/health` and
+`/api/config` (with no token configured, it answers without credentials), re-probes
+every connector on each call (the response is not cached; connectors that gate on a scanner module's
+import-time flag, such as GCP, Kubernetes and Vault, only notice a package you just installed after
+`quirk serve` restarts), and returns each connector's `available` flag, `reason` (when unavailable),
+and `install_hint`. There is no `docs/api-reference.md` yet; this section is the interim
+documentation for that endpoint.
 
 **Setting connector targets and endpoints (PARITY-05/PARITY-06, Phase 197).** Toggling on a
 connector that has target-list, endpoint, or identifier fields reveals them beneath its toggle —
 in the same place a credential input would render, stacked below it when both are present. These
-fields render **only when the connector is both available and ON** — the same visibility gate as
-credential fields — so an OFF connector shows none of them.
+fields render **only when the connector is both available and ON**, so an OFF connector shows none
+of them.
 
 - **List fields** (e.g. "JWT Targets", "Container Targets", "GKE Clusters") are one free-text
-  `<textarea>`, comma- or newline-separated, matching the main scan-level Targets field's own
-  convention. Clearing a list field back to blank **deletes the key from the submission** rather
-  than sending an empty list — this delta-only semantics means an untouched form produces the
+  `<textarea>`, comma- or newline-separated (unlike the main scan-level Targets field, which is
+  comma-separated only). Clearing a list field back to blank **deletes the key from the submission**
+  rather than sending an empty list — this delta-only semantics means an untouched form produces the
   exact same submit body and Effective Config query string as before this phase (D-08).
 - **GKE/AKS clusters** use a compact pairlist syntax instead of plain hostnames:
   `name@location` for GKE (e.g. `prod-cluster-1@us-east1`), `name@resource-group` for AKS (e.g.
@@ -330,15 +409,19 @@ credential fields — so an OFF connector shows none of them.
   are plain, visible text inputs — unlike the masked credential fields above, these are
   identifiers that land in the job's stored `config.yaml` in cleartext by design (D-04); only the
   matching password/token fields are masked and non-persisted.
-- **A field you have touched shows a small accent-coloured (violet since v5.27, Phase 222.1) "Set" badge** next to its label — the same visual
-  language as the connector-level "Set" badge, now also available per-field.
+- **A field you have touched shows a small accent-coloured "Set" badge (teal in 5.25.0, violet in
+  later builds)** next to its label — the same visual language as the connector-level "Set" badge,
+  now also available per-field.
 - **Rejected values return a 422 naming the field**, at both submit and the Effective Config
-  preview — e.g. an out-of-range timeout or a malformed cluster entry. The banner is prefixed
-  "Scan rejected: " followed by the backend's message, such as
-  `Unknown connector key(s): {key}` for a typo'd field name, or `{key!r} is not a recognized
-  connector overlay field (must be a known enable_* toggle or one of the supported connector
-  detail fields)` for a real-but-out-of-phase-scope field like a secret. Submit and preview are
-  guaranteed to agree on every accept/reject decision (PARITY-06).
+  preview — e.g. an out-of-range timeout or a malformed cluster entry. At submit, an unavailable
+  connector is rejected with a "Scan rejected: " banner that names the connector and the reason;
+  a malformed value is rejected with an inline error that starts "Value error, ", such as
+  `'smime_timeout' must be between 1 and 300`, `Unknown connector key(s): {key}` for a typo'd field
+  name, or `'{key}' is not a recognized connector overlay field (must be a known enable_* toggle or
+  one of the supported connector detail fields)` for a real-but-out-of-scope field like a secret.
+  The preview returns the same 422 for the same values, but its panel shows only the generic
+  "Effective config unavailable" notice. Submit and preview share one validator, so they agree on
+  every accept/reject decision (PARITY-06).
 
 See [`docs/configuration.md`](configuration.md#connector-detail-fields-settable-from-the-dashboard-parity-0506-phase-197)
 for the full 37-field reference (types, defaults, bounds, gating flags).
@@ -361,19 +444,22 @@ Inside, the panel exposes 27 controls, in these groups:
 - **Send SNI during TLS probes** — a switch controlling `scan.include_sni`.
 - **Timeouts & Retry** — the original default/TLS/SSH timeout fields (seconds) and retry count,
   plus two new fields: **Backoff base (seconds)** and **Backoff max (seconds)**, both accepting
-  decimals. Submitting a base greater than max returns a 422 naming both fields.
+  decimals. Submitting a base greater than max returns a 422 naming both fields. The retry count
+  and both backoff fields are validated and written to the job config, but no scanner reads them
+  yet, so they currently change nothing.
 - **Per-Scanner Timeouts** — a new compact grid of 11 short-labeled numeric fields (Fingerprint,
   JWT, Container, Source, DNSSEC, SAML, Kerberos, Vault, DB Connect, Broker, Email), each
-  overriding that scanner's individual timeout. Accepted range is 1-600 seconds — wider than the
-  three original timeout fields' 1-300 bound; see D-11 in the configuration reference for why the
-  bounds intentionally differ.
+  overriding that scanner's individual timeout (the DNSSEC, SAML and Kerberos fields are accepted
+  but those three scanners do not read them yet, so they currently change nothing). Accepted range
+  is 1-600 seconds — wider than the three original timeout fields' 1-300 bound; see D-11 in the
+  configuration reference for why the bounds intentionally differ.
 - **Concurrency** — a new group of 5 worker-pool-size fields (Scan, Fingerprint, TLS, SSH, Motion
   concurrency), 1-500 each. Motion concurrency is the shared worker pool for email and broker
   connector scanning.
 - **TLS-Designated Ports** — a second port/range field beside TLS Ports, overriding
-  `scan.tls_designated_ports`: ports listed here are treated as TLS even if plaintext is detected,
-  overriding the plaintext-on-TLS-port classifier. Same comma-separated format and inline format
-  validation as TLS Ports.
+  `scan.tls_designated_ports`: a plaintext HTTP service found on a port listed here is reported
+  as the HIGH "HTTP on TLS-designated port" finding, in addition to the well-known TLS ports. Same
+  comma-separated format and inline format validation as TLS Ports.
 - **Data Classification** — a Public/Internal/Confidential/Regulated dropdown controlling
   `assessment.data_classification`; see D-21 in the configuration reference for why there is no
   fifth option.
@@ -382,22 +468,24 @@ No control exists for `scan.openapi_spec_path` or either hardware retention-days
 recorded, intentional gaps (D-04); see the configuration reference for why.
 
 **Every control here is advisory client-side only; the server's 422 response is authoritative.**
-The Input field for TLS Ports shows a red hint if you type something that doesn't look like a
+The Input field for TLS Ports shows an amber hint if you type something that doesn't look like a
 port/range list, but that hint is a courtesy — the actual validation happens server-side when you
 submit, and a rejected value returns a full-width 422 banner naming the offending field.
 
-**Every edit updates the Effective Config preview live**, badged `user` to distinguish it from a
-value coming from the active vertical preset or scan profile — the same provenance-badge mechanism
-`docs/report-interpretation.md` §22 documents for the Connectors panel. See "Dashboard form vs.
-presets precedence" in [`docs/configuration.md`](configuration.md#dashboard-form-vs-presets-precedence)
-for the full mechanism (delta-only writes, `_user_set_fields`, overlay-merged-last) — this panel
-follows it identically to the Connectors panel, it does not have a separate precedence rule of its
-own.
+**While the Effective Config preview is expanded, every edit updates it live.** A value you set
+appears badged "Overridden" to distinguish it from a built-in default or a scan-profile preset
+(§3.1.2); clearing a field removes the override, and a value the server rejects turns the panel
+into the "Effective config unavailable" notice. The Advanced panel does not share the
+Connectors panel's precedence rule: an explicit connector toggle always beats the scan profile, but
+a scan value that equals the profile's baseline default (for example `fingerprint_concurrency:
+200` under the quick profile) is replaced by the profile. See "Dashboard form vs. presets
+precedence" in [`docs/configuration.md`](configuration.md#dashboard-form-vs-presets-precedence)
+for the full mechanism (delta-only writes, `_user_set_fields`, overlay-merged-last).
 
 ### 3.1.6 Exposure Map tab — attack-path visualization (MAP-02, Phase 195)
 
-The dashboard sidebar carries a new "Exposure Map" nav entry, opening a read-only
-`/exposure-map` tab (Tier A — no write actions, auth-gated like every other dashboard tab). It
+The dashboard sidebar carries an "Exposure Map" nav entry, opening a read-only
+`/exposure-map` tab (no write actions, auth-gated like every other dashboard tab). It
 renders a node/edge graph of verified-only relationships between scanned endpoints, sourced
 exclusively from `GET /api/exposure-map`, with no client-side data fabrication — see
 `docs/report-interpretation.md` §23 for the full client-facing explanation of what the graph shows
@@ -407,19 +495,20 @@ Two things operators should know that are specific to how this tab behaves, not 
 client:
 
 - **A zero-edge graph is an honest, expected result, not a failure.** Most scans will not populate
-  either edge type (shared SPKI fingerprints or confirmed hardware crypto-bridge chains) unless the
-  target environment actually has that condition. Seeing the "No path data available" empty state
-  after a scan completes normally does not indicate anything went wrong with the scan or the tab.
-- **The tab is read-only in this release.** There is no "declare a reachability path" or
-  "mark crown jewel" action anywhere in the UI — that declaration workflow was evaluated in a
-  dedicated spike (`.planning/phases/195-quantum-exposure-map/195-SPIKE-DECISION.md`) and deferred
-  to a future release given the added persistence/CRUD/UX cost. Everything currently on this tab is
-  derived read-time from existing scan data; there is nothing to configure or maintain for it.
+  any edge type (shared SPKI fingerprints, confirmed hardware crypto-bridge chains, or a shared
+  certificate authority) unless the target environment actually has that condition. Seeing the
+  "No path data available" empty state after a scan completes normally does not indicate anything
+  went wrong with the scan or the tab.
+- **The tab is read-only.** There is no "declare a reachability path" or "mark crown jewel"
+  action anywhere in the UI. Crown jewels are declared in the config file as
+  `assessment.crown_jewels` (hosts, IPs or FQDNs) and are highlighted on the map; everything else
+  on this tab is derived at read time from existing scan data, so there is nothing else to
+  configure or maintain for it.
 
-### 3.1.7 Report deliverable downloads (DELIV-01/DELIV-02, Phase 209, v5.24)
+### 3.1.7 Report deliverable downloads (DELIV-01/DELIV-02, Phase 209, first released in 5.25.0)
 
 The Executive page's header row carries a five-format download button group — HTML, PDF, DOCX,
-CBOM (JSON), CBOM (XML) — beside the pre-existing Export PDF button. It is backed by two new,
+CBOM (JSON), CBOM (XML) — beside the pre-existing Export PDF button. It is backed by two
 auth-gated endpoints under `quirk/dashboard/api/routes/reports.py`. See
 `docs/report-interpretation.md` §26 for what each format contains and the difference between these
 downloads and the Export PDF button; this section documents the endpoints themselves.
@@ -434,17 +523,19 @@ never 404/500:
   "formats": {
     "html":      {"available": true,  "reason": null},
     "pdf":       {"available": true,  "reason": null},
-    "docx":      {"available": false, "reason": "DOCX requires the optional extra: pip install quirk[docx]"},
+    "docx":      {"available": false, "reason": "DOCX requires the optional extra: ..."},
     "cbom-json": {"available": true,  "reason": null},
     "cbom-xml":  {"available": true,  "reason": null}
   }
 }
 ```
 
-An unreadable config or a missing output directory degrades to every format reporting `available:
+(The real `docx` reason ends with an install hint that currently spells the package `quirk`; the
+PyPI package is `quirk-scanner`, so install `'quirk-scanner[docx]'`.) An unreadable config or a
+missing output directory degrades to every format reporting `available:
 false` with reason `"No scan has run yet."` rather than raising an error — the same
-fail-to-safe-empty-value discipline `docs/report-interpretation.md` §23 documents for the Exposure
-Map's crown-jewel loader.
+fail-to-safe-empty-value approach the Exposure Map's crown-jewel loader takes
+(`quirk/dashboard/api/routes/exposure_map.py`).
 
 **`GET /api/reports/latest/{format}`** — downloads one artifact. `{format}` accepts exactly five
 values: `html`, `pdf`, `docx`, `cbom-json`, `cbom-xml`, returning `text/html`,
@@ -455,67 +546,73 @@ format-to-template map, so an unlisted or malformed value is a routing miss, not
 error to work around. There is no way to request an older scan's artifacts through this route (see
 below).
 
-**Auth is required, same as every other dashboard API route** (§2.4) — a Bearer token or
-`X-API-Key` header. A plain browser navigation to the URL, or a naive `curl` without the header,
-returns `401` — and a saved `401` response body looks exactly like a corrupt download. The correct
+**Auth is required once a dashboard API token is configured, same as every other dashboard API
+route except `/api/health` and `/api/config`** (see `docs/configuration.md` § Dashboard
+Authentication) — a Bearer token or `X-API-Key` header. With a token configured, a plain browser
+navigation to the URL, or a naive `curl` without the header, returns `401` — and a saved `401`
+response body looks exactly like a corrupt download. With no token configured (which `quirk serve`
+allows on a loopback bind), these routes, like the rest of the dashboard API except
+`/api/sensor/push`, answer without credentials. The correct
 invocation:
 
 ```bash
 curl -H "Authorization: Bearer $QUIRK_API_TOKEN" \
   -o report.pdf \
-  "http://localhost:8000/api/reports/latest/pdf"
+  "http://127.0.0.1:8512/api/reports/latest/pdf"
 ```
 
-**Latest-scan-only, and why.** Both endpoints always resolve to the most recently rendered artifact
-group — there is no scan-id or filename parameter, and none can be safely added without revisiting
-this design. The report artifacts are stamped with the moment `write_reports()` rendered them, not
-with `scan_run_id` (the scan's own start time); on a long scan those two instants can differ by the
-scan's full duration, and **nothing on disk associates a `scan_run_id` with the artifact stamp it
-produced**. Until that association exists, serving "the report for scan X" is not something this
-API can do honestly, and a future scan-id-scoped route would need it built first, not just added to
-this router's path.
+**Latest-scan-only, and why.** Both endpoints resolve to the newest `run-stats-<stamp>.json` group
+in the output directory named by the server's config file (`QUIRK_CONFIG_PATH`, default
+`./config.yaml`). If that directory has no `run-stats-*.json` file, they fall back to the newest
+`report-<stamp>.html` group and report `scan_time` as `null`. There is no scan-id or filename parameter. The report artifacts are stamped with
+the moment `write_reports()` rendered them, not with `scan_run_id` (the scan's own start time); on
+a long scan those two instants can differ by the scan's full duration. `run-stats-<stamp>.json`
+records `started_utc`, which equals the scan's `scan_run_id`, but these routes never read it, so
+serving "the report for scan X" would need a route built on that field.
 
 **Score parity across the two pipelines (Phase 210 XSURF-01..04, Phase 211 legacy-TLS/plaintext-HTTP
-fix) — reconfirmed live, one scan, one estate.** These download endpoints and the Export PDF
-button read different artifacts (see `docs/report-interpretation.md` §26 for the full account). As
-of Phase 211, every headline number checked matched for one live scan
-(`scan_run_id 2026-09-28T13:16:55.319715+00:00`, 775 endpoints): the **headline score** (18/100 on
-both), all **six subscores**, the **cap reason string**, the **CRITICAL finding count** (6 = 6),
-and the **certificate count** (20 = 20) — regression-gated by `tests/test_cross_surface_parity.py`
-and `tests/test_evidence_finding_vocabulary_parity.py`. This closes the three Phase 210
-cross-surface defects (a double-counted SAML certificate, an identity finding missing from the
-CLI's findings output, a "latest scan" query that could merge two runs) plus the two Phase 211
-scoring-vocabulary defects described next.
+fix).** These download endpoints and the Export PDF button read different artifacts (see
+`docs/report-interpretation.md` §26 for the full account). For one persisted scan the report
+pipeline and the dashboard pipeline are asserted to agree on the **headline score**, the
+**CRITICAL finding count** and the **certificate count**
+(`tests/test_cross_surface_parity.py`), and on the Modern TLS subscore for the legacy-TLS and
+plaintext-HTTP vocabulary (`tests/test_evidence_finding_vocabulary_parity.py`).
 
-**The headline score used to differ, and now agrees — because a scoring input changed, which
-matters if you compare an old scan's score to a new one.** The "Legacy TLS versions present"
-Modern TLS contributor is no longer derived from the count of ALL LOW-severity findings (a proxy
-any newly-added LOW-severity finding class could silently inflate); it is now derived from which
-endpoints actually accept TLS 1.0/1.1. On the reference estate the old proxy produced 17/100
-(report) vs 18/100 (dashboard) for the same scan; the endpoint-derived signal produces 18/100 on
-both. **If you re-run an older scan and its Modern TLS or Hygiene subscore moves relative to what
-was reported before this fix, that is expected and correct** — not a regression.
+**A scoring input changed, which matters if you compare an old scan's score to a new one.** The
+"Legacy TLS versions present" Modern TLS contributor is no longer derived from the count of ALL
+LOW-severity findings (a proxy any newly-added LOW-severity finding class could silently inflate);
+it is now derived from which endpoints actually accept TLS 1.0/1.1. **If you re-run an older scan
+and its Modern TLS subscore moves relative to what was reported before this change, that is
+expected and correct** — not a regression.
 
-**One known, disclosed gap remains — not fixed, not tag-blocking, disclosed here on purpose.** The
-finding title `"HTTP on TLS-designated port"` has no dashboard-side emission site and cannot be
-bridged the way the two fixed legs above were. It measured 0 on the reference estate, so it did
-not affect the measurement above, but a report-side scan that finds a plaintext-HTTP service on a
-TLS-designated port will show a Hygiene-category score the dashboard pipeline cannot reproduce.
-Tracked at
+**A known finding-vocabulary gap remains.** The finding title `"HTTP on TLS-designated port"` has no
+dashboard-side emission site and cannot be bridged the way the two fixed legs above were, so a
+report-side scan that finds a plaintext-HTTP service on a TLS-designated port will show a
+Hygiene-category score the dashboard pipeline cannot reproduce. Tracked at
 `.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`.
 
-This is one measurement on one estate — not a guarantee the two pipelines can never diverge. If an
-operator observes the **headline score, a subscore, the CRITICAL count, or the certificate count**
-differing between a downloaded report and the dashboard's live view for the same scan, check first
-whether the report contains an `"HTTP on TLS-designated port"` finding — that is the one known way
-they can still diverge. Any other divergence is a defect to file.
+This agreement is regression-gated for a scan scored with the default calibration, not a guarantee
+the two pipelines can never diverge. If an operator observes the **headline score, a subscore, the
+CRITICAL count, or the certificate count** differing between a downloaded report and the
+dashboard's live view for the same scan, check first for the known causes of a score difference:
+the report contains an `"HTTP on TLS-designated port"` finding; the scan includes Kerberos, DNSSEC,
+S/MIME or AD CS rows, whose findings only the dashboard derives (the report pipeline evaluates SAML
+identity rows but not Kerberos or DNSSEC, and runs no certificate checks on S/MIME or AD CS rows); a
+certificate is within 30 days of expiry, which the dashboard rates HIGH and the report rates MEDIUM; the config sets
+`intelligence.calibration_overrides`, which the report applies and the dashboard does not; or the
+scan is an older one, because the dashboard's Executive view scores every scan, including an older
+one opened by scan id, with the profile recorded in the newest intelligence file in the output
+directory. Other dashboard pages score differently: Scan History uses each dashboard job's own
+calibration (`balanced` for a CLI-launched scan), and Compare and Trends score with the default
+`balanced` profile. Any other divergence is a defect to file.
 
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
-`--fuzz` enables active REST crypto-posture probing against discovered OpenAPI
-endpoints (see [`docs/configuration.md`](configuration.md#rest-fuzzing-active-crypto-posture-probes)
-for the full flag reference and guardrail table). Two things every operator scheduling
-QU.I.R.K. runs needs to know before wiring `--fuzz` into automation:
+`--fuzz` enables active REST crypto-posture probing against discovered OpenAPI endpoints. It
+requires an OpenAPI spec (`--openapi-spec`) and the `[api]` extra (see
+[`docs/configuration.md`](configuration.md#rest-fuzzing-active-crypto-posture-probes) for the full
+flag reference and guardrail table). Three things every operator scheduling QU.I.R.K. runs needs
+to know before wiring `--fuzz` into automation:
 
 - **`--fuzz` requires an interactive terminal.** If stdin is not a TTY — piped input, a
   CI/CD job, a cron job, any headless invocation — the scanner refuses to run fuzzing at
@@ -525,25 +622,31 @@ QU.I.R.K. runs needs to know before wiring `--fuzz` into automation:
   a cron or CI run fail with `FUZZ-001`, that is the gate working as intended — drop
   `--fuzz` from unattended/scheduled invocations, or run it manually from an interactive
   session instead.
-- **`--fuzz` is never silently skipped.** Earlier behaviour could let a non-interactive
-  `--fuzz` invocation complete normally with fuzzing quietly disabled and no indication
-  in the output. That is no longer possible — either fuzzing runs (interactive session,
-  confirmed) or the scan refuses to start (non-interactive, `FUZZ-001`, exit 2). There is
-  no third, quiet outcome.
-- **`--fuzz-budget` is bounded, and out-of-range values are rejected, not clamped.** The
-  default is 50 requests; values above the hard ceiling documented in
+- **A non-interactive `--fuzz` is refused, not skipped.** Releases up to 5.15.0 let a
+  non-interactive `--fuzz` invocation complete with exit code 0 and fuzzing disabled, with only a
+  stderr line saying so. Since 5.18.0 a non-interactive run refuses to start (`FUZZ-001`, exit 2).
+  In an interactive session the scan does start, and fuzzing still needs something to fuzz: with
+  no `--openapi-spec` (or no OpenAPI endpoints discovered) the fuzz phase is skipped with no console
+  message and the scan exits 0. The skip is recorded only as a `no-eligible-targets` entry in the
+  scan's Scan Coverage disclosure. Answering the `CONFIRM` prompt with anything else also skips
+  fuzzing while the rest of the scan continues.
+- **`--fuzz-budget` has a hard ceiling, and values above it are rejected, not clamped.** The
+  default is 50 requests; with `--fuzz`, values above the hard ceiling documented in
   [`docs/configuration.md`](configuration.md#rest-fuzzing-active-crypto-posture-probes)
   are rejected up front with coded error `FUZZ-002` and exit 2 — the scan does not
-  silently reduce an over-budget request down to the ceiling and proceed.
+  silently reduce an over-budget request down to the ceiling and proceed. There is no lower
+  bound check: `0` or a negative value passes the budget check, and the fuzzer then dispatches no
+  budgeted probe requests (with `--fuzz-jwt-alg-confusion` it can still fetch the target's JWKS
+  once, which is not counted against the budget).
 
 See [`docs/error-codes.md`](error-codes.md) for the full `FUZZ` error-domain cause/fix
 text for `FUZZ-001` and `FUZZ-002`.
 
-### 3.3 Report Branding, Templates, and Profiles (Phase 200, v5.23 — RPT-01..RPT-04)
+### 3.3 Report Branding, Templates, and Profiles (Phase 200, first released in 5.25.0 — RPT-01..RPT-04)
 
 Reports can carry a client's own branding (cover logo, client/engagement identity text), an
 operator-authored template override directory, and a named, reusable "report profile" that
-bundles both. See [`docs/configuration.md`](configuration.md#report-block-phase-200-v523--rpt-01rpt-02rpt-03rpt-04)
+bundles both. See [`docs/configuration.md`](configuration.md#report-block-phase-200-v525--rpt-01rpt-02rpt-03rpt-04)
 for the full `report:` config key reference.
 
 #### Three similarly-named flags — do not confuse them
@@ -553,13 +656,14 @@ controls a different axis of behavior:
 
 | Flag / config key | Controls | Values |
 |---|---|---|
-| `--profile` (CLI) / preset applied by `apply_profile`| **Scan** behavior — timeouts and TLS enumeration depth | `quick` / `standard` / `deep` |
-| `--score-profile` (CLI) / `intelligence.profile` | **Scoring calibration** — how heavily agility/identity findings are weighted | `lenient` / `balanced` / `strict` |
+| `--profile` (CLI) / preset applied by `apply_profile`| **Scan** behavior — timeouts, concurrency, TLS enumeration depth, and whether email/broker scanning runs when the config leaves them unset | `quick` / `standard` / `deep` |
+| `--score-profile` (CLI) / `intelligence.profile` | **Scoring calibration** — how heavily the agility, identity, data-at-rest and data-in-motion penalties are weighted (x0.7 lenient, x1.0 balanced, x1.4 strict) | `lenient` / `balanced` / `strict` |
 | `--report-profile` (CLI) / `report.profile` | **Report branding/templates** — which saved branding+template bundle to apply to this run's deliverables | any saved profile name |
 
-None of the three overlap: `--profile deep` does not affect scoring or branding; `--score-profile
-strict` does not affect timeouts or branding; `--report-profile housestyle` does not affect
-timeouts or scoring.
+The three settings do not overlap: `--profile deep` does not change the scoring calibration or
+branding; `--score-profile strict` does not affect timeouts or branding; `--report-profile housestyle`
+does not affect timeouts or scoring. The scan profile can still move the score indirectly: a deeper
+TLS enumeration, or the email and broker phases `standard`/`deep` turn on, can find more to score.
 
 #### Saving and applying a report profile
 
@@ -614,14 +718,16 @@ it is really three:
 
 ### 3.4 Score-Lift Badges and the Projected Score on the Remediation Roadmap (Phase 201, LIFT-01..LIFT-05)
 
-Every roadmap item that can be quantified now carries a `(+N pts)` badge — the readiness score
-this scan would have if that one item were resolved, computed by a real second call into the
+A roadmap item whose resolution would raise the score carries a `(+N pts)` badge — the number of
+readiness-score points this scan would gain if that one item were resolved, computed by a real second call into the
 scoring engine over a copy of the scan's evidence, never a fixed points table. Items whose
-resolution changes no scoring input (process/governance work, and coverage/lifecycle items) show
-no badge at all — a blank means "not measurable," never `0 pts`. A separate "Projected score if
-all items resolved: {N}" figure is one additional independent rescore with everything resolved at
-once — it is usually smaller than summing the individual badges, because the score's four
-subscores are each capped and can only give up so much headroom. Neither number ever changes the
+resolution changes no scoring input (the three process/governance items, "Increase TLS
+enumeration coverage" and "Standardize mTLS lifecycle operations") show no badge at all, and neither
+does a modelable item whose rescore gains nothing. A badge is shown only for a positive gain, never
+as `0 pts`. A separate "Projected score if all items resolved:
+{N}" figure is one additional independent rescore with everything resolved at once — it is
+usually smaller than summing the individual badges, because the score's six domain subscores are
+each capped at 25 and can only give up so much headroom. Neither number ever changes the
 readiness score you see today; every surface that shows the projected number also shows, verbatim:
 "Advisory — this projection is a simulation and does not affect the readiness score." See
 `docs/report-interpretation.md` §7.1 for the full explanation, the exact list of unmodelable item
@@ -643,8 +749,9 @@ is the intended effect of unifying the two previously-independent categorization
 
 ## 4. Validation / Smoke Test
 
-Before pointing QU.I.R.K. at a production estate, run it against the bundled chaos
-lab to confirm the install is healthy and findings render correctly. The lab spins up
+Before pointing QU.I.R.K. at a production estate, run it against the chaos lab in the
+repository (`quantum-chaos-enterprise-lab/`; it is not part of the PyPI package) to confirm the
+install is healthy and findings render correctly. The lab spins up
 intentionally weak TLS, SSH, JWT, container, broker, and email targets via Docker
 Compose profiles, with an oracle of expected findings per profile.
 
@@ -665,9 +772,10 @@ quirk errors                 # human-readable table
 quirk errors --dump-md       # the Markdown source of docs/error-codes.md
 ```
 
-`docs/error-codes.md` is generated from this command, and a CI gate asserts the committed
-file byte-matches the live output — so the catalogue and the code cannot drift apart. If
-you are reading a code that is not in the file, regenerate rather than hand-editing:
+In a source checkout, `docs/error-codes.md` is generated from this command, and a CI gate
+asserts the committed file byte-matches the live output — so a drift between the catalogue
+and the code fails CI on the next pull request or push to `main`. If you are reading a code that is not in the file, regenerate rather than
+hand-editing:
 
 ```bash
 quirk errors --dump-md > docs/error-codes.md
@@ -676,34 +784,37 @@ quirk errors --dump-md > docs/error-codes.md
 ### 5.1 Scan failures
 
 - **Permission denied on a target** — confirm the QU.I.R.K. host can reach the port;
-  check firewall and security-group rules. TCP-connect failures surface as a
-  `connection refused` / `timeout` finding rather than crashing the scan.
+  check firewall and security-group rules. TCP-connect failures surface as an INFO
+  "Informational protocol observation" finding whose detail reads `CLOSED: REFUSED`,
+  `CLOSED: TIMEOUT` or `CLOSED: UNREACHABLE`, rather than crashing the scan.
 - **Timeouts** — adjust the relevant `scan.timeouts.<scanner>_seconds` knob
-  (`tls_seconds`, `ssh_seconds`, `dnssec_seconds`, etc.). See
+  (`tls_seconds`, `ssh_seconds`, `jwt_seconds`, etc.; the `dnssec_seconds`, `saml_seconds` and
+  `kerberos_seconds` knobs are not read yet). See
   [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) for per-scanner defaults.
 - **`missing_extra` advisory finding** — install the named extra
-  (e.g. `pip install quirk-scanner[identity]` for Kerberos). Phase 45 INSTALL-02 surfaces
-  these instead of silently skipping the scanner. As of v5.17 (Phase 173), this signal — a
+  (e.g. `pip install 'quirk-scanner[identity]'` for Kerberos). Phase 45 INSTALL-02 surfaces
+  these instead of silently skipping the scanner. As of 5.18.0 (Phase 173), this signal — a
   `[QRK-INSTALL-001]` stderr advisory plus a `scan_error_category=missing_extra` finding — is
   emitted consistently across scanner families: the broker connector now checks all three of its
   optional dependencies (`sslyze`, `kafka-python`, `redis`), not just `sslyze`, and the smime/adcs
   connectors emit the signal for the first time (both previously failed silently with only a bare
   log line). If you enable a connector and see this advisory, install the named extra
-  (`pip install quirk-scanner[motion]` for the broker's Kafka/Redis clients,
-  `quirk-scanner[adcs]` for smime/adcs; a missing `sslyze` means a broken install —
+  (`pip install 'quirk-scanner[motion]'` for the broker's Kafka/Redis clients,
+  `'quirk-scanner[adcs]'` for smime/adcs; a missing `sslyze` means a broken install —
   it is a core dependency, so reinstall `quirk-scanner` rather than adding an extra)
   or leave the connector disabled.
-- **`[QRK-CONFIG-001]` on startup — non-numeric `scan.ports_tls` / `scan.tls_designated_ports`
-  entry** — as of v5.20 (Phase 189, TRIAGE-04), a port-list value that isn't a bare integer or a
-  quoted digit-string (e.g. a typo like `"84a4"`) is now rejected loudly at config-load time
-  instead of being silently ignored. Fix the offending entry named in the error message. A quoted
-  digit-string such as `"8444"` is valid and behaves identically to a bare `8444` — only truly
-  non-numeric values raise this error. If you have an older config with a quoted port value that
+- **`[QRK-CONFIG-001]` on startup — invalid `scan.ports_tls` / `scan.tls_designated_ports`
+  entry** — as of 5.21.0 (Phase 189, TRIAGE-04), a port-list value that isn't a valid TCP port is
+  now rejected loudly at config-load time instead of being silently ignored: a non-numeric value
+  (e.g. a typo like `"84a4"`), a non-integral number such as `8444.5`, or a number outside
+  1-65535 (`0`, `-1`, `70000`). Fix the offending entry named in the error message. A quoted
+  digit-string such as `"8444"` is valid and behaves identically to a bare `8444`.
+  If you have an older config with a quoted port value that
   never triggered this error before upgrading, re-check that scan's report: prior to Phase 189
   such a value silently never matched the TLS-designation override, so its effective scope may
   have been narrower than intended. See [`docs/configuration.md`](configuration.md) §
   "Port-list value coercion and `QRK-CONFIG-001`" for details.
-- **A skipped scan phase leaves no `run_stats.timings_sec` key** — as of v5.17 (Phase 173), a
+- **A skipped scan phase leaves no `run_stats.timings_sec` key** — as of 5.18.0 (Phase 173), a
   phase that did not actually run (disabled connector, no targets, missing extra) omits its key
   from `run_stats.timings_sec` entirely, rather than recording a phantom near-zero duration. A
   phase that ran and legitimately found nothing still writes its key (with a real, possibly small,
@@ -716,20 +827,24 @@ quirk errors --dump-md > docs/error-codes.md
 
 ### 5.2 Database / output
 
-- **`db_path` permission error** — confirm the directory is writable. Default is
-  `./quirk.db` under the working directory.
-- **Migrations** — schema migrations are additive only (`_ensure_*_columns` helpers
-  in `quirk/db.py`); deleting `quirk.db` is safe but loses scan history.
-- **CBOM file generation** — every run emits `cbom-<ts>.json` and `cbom-<ts>.xml`;
-  both must validate against CycloneDX 1.6.
-- **PDF render failure** — install `quirk-scanner[dashboard]` (which pulls Playwright) and run
+- **`output.db_path` permission error** — confirm the directory is writable. The key has no
+  built-in default; the starter config sets `./quirk-output/quirk.db`.
+- **Migrations** — schema migrations run automatically at start-up and are additive
+  (`_ensure_columns` and `_ensure_*_table` helpers in `quirk/db.py`; one QRAMM table is rebuilt
+  once to add a foreign key); deleting the database file is safe but loses scan history.
+- **CBOM file generation** — every scan that reaches the reporting stage writes
+  `cbom-<ts>.cdx.json` and `cbom-<ts>.cdx.xml` (a `--check-in` re-probe writes neither). The JSON
+  file is validated against the CycloneDX 1.6 schema as it is written; a validation failure adds a
+  coverage-gap advisory row instead of stopping the scan.
+  The XML file is not validated by the scanner.
+- **PDF render failure** — install `'quirk-scanner[dashboard]'` (which pulls Playwright) and run
   `playwright install chromium` once on the host.
 
 ### 5.3 Dashboard
 
 - **Vite build errors** — only relevant when rebuilding the React SPA from source; the
   published wheel ships a built bundle at `quirk/dashboard/static/`.
-- **Stale `.vite/`** — delete `.vite/` under `src/dashboard/` and rebuild.
+- **Stale Vite cache** — delete `node_modules/.vite` under `src/dashboard/` and rebuild.
 - **Port conflict on 8512** — pass `quirk serve --port <other>`. The dashboard binds
   loopback only by default.
 - **CORS rejection in the browser (v5.11+)** — should no longer happen out of the box:
@@ -741,18 +856,17 @@ quirk errors --dump-md > docs/error-codes.md
   [Configuration → CORS Allowlist](configuration.md#cors-allowlist-v511--phase-147-drain-03--wr-02).
 - **Data not loading** — confirm a recent scan has populated `quirk.db`; the dashboard
   reads SQLite directly.
-- **`quirk serve` starts but every API call renders an empty state — check for multiple
+- **`quirk serve` exits at start-up with `Multiple QU.I.R.K. DBs found` — check for multiple
   candidate DBs.** `_default_db_path()` (`quirk/dashboard/api/deps.py`) checks, in order,
   `QUIRK_DB_PATH`, then whether more than one of `./quirk.db`, `./output/quirk.db`,
-  `./quirk-output/quirk.db` exists. If **more than one** of those three paths is present, it
-  raises `ValueError: Multiple QU.I.R.K. DBs found` — and because this check runs inside a
-  FastAPI `Depends()`, it fires on *every request*, not at startup. The server itself starts
-  cleanly with no error printed to the console; the dashboard just silently renders empty
-  states over the failed API calls, which reads exactly like "no scan data yet." Fix: set
-  `QUIRK_DB_PATH=<path-to-the-db-you-want>` before running `quirk serve` to disambiguate
-  explicitly. Also worth checking: a stray 0-byte `quirk.db` left over from an earlier run in
-  the working directory counts toward this conflict even though it holds no data — delete it
-  if it isn't the DB you intend to serve.
+  `./quirk-output/quirk.db` exists. If exactly one exists it is used, and if none exists the
+  dashboard falls back to `./quirk-output/quirk.db`. If **more than one** of those three paths is
+  present, creating the app raises `ValueError: Multiple QU.I.R.K. DBs found at [...]; set
+  QUIRK_DB_PATH explicitly`, so `quirk serve` prints that traceback and exits with status 1
+  instead of starting. Fix: set `QUIRK_DB_PATH=<path-to-the-db-you-want>` before running
+  `quirk serve` to disambiguate explicitly. Also worth checking: a stray 0-byte `quirk.db` left
+  over from an earlier run in the working directory counts toward this conflict even though it
+  holds no data — delete it if it isn't the DB you intend to serve.
 - **Certificates page — Expiry column is sortable (Phase 213, v5.25 — UIFIX-01).** Click the
   Expiry column header to sort the certificate inventory ascending (soonest-expiring first); click
   again to reverse to descending. Certificates with no recorded expiry sort to the end in both
@@ -765,13 +879,17 @@ quirk errors --dump-md > docs/error-codes.md
   intentionally theme-independent: it always renders in a fixed light palette regardless of the
   live dashboard's theme at export time. See
   [Report Interpretation → Dashboard Colours Follow the Active Theme](report-interpretation.md#29-dashboard-colours-follow-the-active-theme-phase-213-v525--uifix-02).
-- **Appearance note (Phase 165, A11Y-03)** — primary and accent buttons, and the
-  severity/quantum-safety badges described in
-  [Report Interpretation](report-interpretation.md#4-severity-tiers), now render dark text
-  instead of white. Muted label text is also very slightly lighter. All underlying colours
-  (teal buttons, orange/red/green badges) are numerically unchanged — only the foreground text
-  moved, to clear WCAG 2.1 AA contrast (teal buttons: 2.81:1 → 6.27:1). This is a contrast
-  fix, not a redesign.
+- **Appearance note (Phase 165, A11Y-03, released in 5.18.0)** — primary and accent buttons now
+  render dark text instead of white, and so do the orange HIGH badges (severity tiers are
+  described in [Report Interpretation](report-interpretation.md#4-severity-tiers)) on the
+  Findings, Trends, Data at Rest and Identity pages and some green status badges, such as the
+  Data at Rest encryption and TLS chips. Red CRITICAL and Vulnerable badges, and the green Safe
+  badges in the Findings, CBOM and Certificates quantum-safety columns, kept white text. Muted
+  label text is also very slightly lighter. The button and badge background colours were
+  numerically unchanged — only the foreground text moved, to clear WCAG 2.1 AA contrast (teal
+  buttons: 2.81:1 → 6.06:1). This is a contrast fix, not a redesign. After 5.25.0 (unreleased),
+  the orange badges on Compare, Scan History, Hardware and Motion, and the green badges on
+  Certificates and Hardware, also switched to dark text.
   Since Phase 222.1 the accent is Ink-violet (#af89f5 dark, #6933cc light) on the unchanged
   grounds, per BRAND-GUIDELINES v2; primary buttons show Ink text in dark and white text in light
   (7.39:1 and 7.13:1).
@@ -828,8 +946,8 @@ quirk errors --dump-md > docs/error-codes.md
     **lower bound**, so a `countRange` is not a one-way ratchet that only ever loosens: a live
     count below the declared floor still fails as "Baseline is stale," exactly as an exact-count
     entry would. The only range ever declared — `data-at-rest`'s `scrollable-region-focusable`
-    entry, absorbing a real macOS-vs-Linux render disagreement recorded in
-    `a11y-baseline-environment-mismatch.md` — was **retired** in Phase 219 (KBD-01): once
+    entry, absorbing a real macOS-vs-Linux render disagreement — was **retired** in Phase 219
+    (KBD-01): once
     `components/ui/table.tsx` gained conditional `tabIndex`/`role` (applied only while the
     wrapper actually overflows), the rule's render-dependence vanished and it dropped out of
     every baseline entirely in CI run `36795176372`. No committed baseline currently declares a
@@ -842,9 +960,9 @@ quirk errors --dump-md > docs/error-codes.md
 - **Regenerating a11y baselines — the sanctioned procedure (Phase 185, D-03).** Baselines
   **must** be generated on a Linux CI runner, not a contributor's local machine. Font metrics,
   overflow behavior, and other render-time properties differ enough between macOS and Linux that
-  a rule which never fires locally can fire on Linux, and vice versa — this is exactly what
-  happened when 33 baselines were batch-generated on macOS on 2026-08-27 and 31 of them were
-  never checked against the Linux runner that actually enforces the gate. To regenerate:
+  a rule which never fires locally can fire on Linux, and vice versa — the `data-at-rest`
+  baselines were bumped by hand in September 2026 with commit messages reading
+  "macOS-generated, Linux-enforced". To regenerate:
   1. Dispatch the permanent `a11y-regenerate-baselines` job in
      `.github/workflows/dashboard-quality.yml` (`workflow_dispatch`, runs on `ubuntu-latest`):
      `gh workflow run dashboard-quality.yml --ref <branch>`. `workflow_dispatch` works from any
@@ -853,8 +971,9 @@ quirk errors --dump-md > docs/error-codes.md
      `gh run download <run-id> --name a11y-baselines-<run-id>`. The artifact now contains
      **per-theme** `baseline-*-dark.json` / `baseline-*-light.json` files, plus the regenerated
      `ACCEPTED-VIOLATIONS.md` — **both must be committed together**, since `ACCEPTED-VIOLATIONS.md`
-     is a rendering of the baseline JSON and the two will silently disagree if only one is
-     updated. As of Phase 216, `ACCEPTED-VIOLATIONS.md` is produced by `npm run a11y:ledger` — a
+     is a rendering of the baseline JSON: if only one is updated the two disagree, and the
+     `accepted-violations-freshness` test in the Dashboard Quality `Test` step fails.
+     As of Phase 216, `ACCEPTED-VIOLATIONS.md` is produced by `npm run a11y:ledger` — a
      browser-free command that re-renders the ledger straight from the committed baseline JSON on
      disk (no preview server, no Chrome launch, ~0.2s). CI runs `a11y:ledger` itself as the final
      step of `a11y-regenerate-baselines`, after all `a11y:baseline*` steps and before the artifact
@@ -871,10 +990,10 @@ quirk errors --dump-md > docs/error-codes.md
   written per-entry triage naming the rule, the route, and why it is accepted (justified in the
   ledger) or being fixed; a decrease may be committed freely; (4) commit the reviewed baselines
   and ledger together. **Hand-patching a baseline count locally, without going through this
-  procedure, is NOT sanctioned.** This is not a stylistic preference — it is how Phase 177 fixed
-  three `data-at-rest` counts by hand after a first-ever remote CI run surfaced them, without
-  regenerating on Linux CI or auditing the other 31 baselines, and that gap went unnoticed for
-  9 days before a later phase (185) had to rediscover and close it. Hand-patching a count quiets
+  procedure, is NOT sanctioned.** This is not a stylistic preference — Phase 177 fixed three
+  `data-at-rest` counts by hand (default, empty and loading baselines, 2026-09-02) without
+  regenerating on Linux CI, and Phase 185 (2026-09-06) had to add the regeneration job to close
+  that gap. Hand-patching a count quiets
   the gate without ever establishing whether the change was a genuine environment artifact or a
   real regression slipping through — treat any future local count edit the same way: as a defect
   to be replaced with the CI-regeneration procedure above, not a shortcut to repeat.
@@ -885,25 +1004,25 @@ quirk errors --dump-md > docs/error-codes.md
   `src/dashboard/tests/a11y/pinned-deps.test.ts` so the three occurrences can never drift apart or
   regress to a floating channel name (`stable`/`beta`/`dev`/`latest`). Local `a11y:check` runs
   intentionally do **not** pin — `run-a11y.mjs` launches Puppeteer's `channel: 'chrome'`, whatever
-  is locally installed — so a local a11y result is **diagnostic-only** and never decides a
-  committed baseline; only the pinned, CI-run result does. **Amendment:** the pin makes
+  is locally installed — so a local a11y result is **diagnostic-only** and must not decide a
+  committed baseline; only the pinned, CI-run result should. This is a procedure, not a guard:
+  `npm run a11y:baseline` still writes baseline files on a local machine. **Amendment:** the pin makes
   comparison sound **between CI runs** — it does not, and was never claimed to, make a local
   macOS run agree with a Linux CI run for a genuinely render-dependent count. The one entry that
   needed such a range — `data-at-rest`'s `scrollable-region-focusable` — was retired in Phase 219
   (KBD-01), so no committed baseline relies on a `countRange` today; the pin's rationale is
   unchanged, this just states its actual scope rather than an implied broader one.
-  - **Why the exact pin needs no scheduled staleness check.** A `chrome-version: stable` pin
-    resolves against Google's rolling "current" distribution
-    (`dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`), which genuinely drops
-    old builds as new ones ship. The exact pin above instead resolves against the **Chrome for
-    Testing** archive (`storage.googleapis.com/chrome-for-testing-public/152.0.7977.82/...`),
-    which is a *versioned, retained* archive — old builds do not disappear. An exact CfT pin is
-    therefore **more durable** than `stable`, not less, and does not need a `last_verified`-style
-    staleness gate; one was explicitly considered for this pin and declined as unnecessary scope.
+  - **Why the exact pin needs no scheduled staleness check.** The exact pin resolves against the
+    **Chrome for Testing** archive
+    (`storage.googleapis.com/chrome-for-testing-public/152.0.7977.82/...`), whose
+    `known-good-versions.json` lists the versions for which all assets are available for download
+    (152.0.7977.82 is listed). A versioned download is a more durable pin than a floating channel
+    name, so no `last_verified`-style staleness gate was added for it.
   - **Recovery if the pinned build ever becomes unfetchable.** `pinned-deps.test.ts` can only
     detect "never floats to `stable`" and "all three occurrences agree" — it cannot detect an
     exact pin that CfT has stopped serving. If `setup-chrome` fails to acquire the pinned build in
-    CI: (1) dispatch the regeneration job with `chrome-version: stable` temporarily; (2) read the
+    CI: (1) on a branch, temporarily set the regeneration job's `chrome-version` to `stable` (the
+    job takes no input for it) and dispatch the workflow; (2) read the
     resolved version from that run's "Record resolved Chrome version" step; (3) re-pin all three
     occurrences in `dashboard-quality.yml` to the newly resolved version; (4) regenerate baselines
     under the new pin per the D-03 procedure above; (5) triage any count changes per the D-10
@@ -912,13 +1031,12 @@ quirk errors --dump-md > docs/error-codes.md
 ### 5.3.1 UAT corpus integrity gate
 
 `tests/test_uat_zero_undispositioned_gate.py` fails the build the moment any case in
-`docs/UAT-SERIES.md` (the 666-case UAT gating document) has an all-unchecked `**Result:**`
+`docs/UAT-SERIES.md` (the UAT gating document) has an all-unchecked `**Result:**`
 line — it rides the existing `Linux Full Suite` CI job rather than a pre-commit hook, so it
 cannot be bypassed with `--no-verify`. If you add a new UAT case, give it a real disposition
 (PASS/FAIL, or a checked SKIP with a `DEFERRED — covered by <test-node>` or `GAP — no substitute
-coverage` annotation) before committing. Full rationale and worked fix instructions are in
-`CLAUDE.md`'s "UAT Corpus Integrity Gate (UATREC-04)" section and in the gate test's own module
-docstring.
+coverage` annotation) before committing. Full rationale and worked fix instructions are in the
+gate test's own module docstring.
 
 ### 5.4 Connector gotchas
 
@@ -932,53 +1050,71 @@ docs: [`docs/connectors/aws.md`](connectors/aws.md),
 
 ## 6. Per-Scanner Reference
 
-Each scanner emits findings into the same `crypto_endpoints` SQLite table; runtime
-ordering is governed by `run_scan.py` phase timers. Cloud and infra connectors with
-dedicated docs link out; protocol scanners that lack a connector doc get a short
-inline subsection below the table.
+Each scanner runs inside `run_scan.py` and, apart from the hardware, SNMP and OT/ICS
+fingerprinting scanners, records its results as rows in the same `crypto_endpoints` SQLite table
+(those fingerprinting scanners write advisory rows to a separate `hardware_devices` table).
+Cloud and infra connectors with dedicated docs link out; protocol scanners that lack a
+connector doc get a short inline subsection below the table. Every scanner in the
+product has a row in the table: the identity, OT/ICS, API and hardware scanners follow
+the connector rows.
 
 ### 6.1 Compact reference table
 
 | Scanner | Scans | Config flag(s) | Optional deps | Sample finding |
 |---------|-------|----------------|---------------|----------------|
-| Discovery (nmap) | TCP port discovery before fingerprinting | wizard prompt, `--targets-file`, `cidrs:` | `nmap` binary | (advisory) "Scanner skipped — optional extra not installed" |
+| Discovery | TCP port discovery before fingerprinting: nmap by default in the dashboard (its default Top 1000 scope forces nmap) and in the interactive wizard; built-in by default for a `--config` run unless `--discovery nmap` | `--discovery builtin\|nmap`, `--targets-file`, `targets.cidrs` | `nmap` binary (only when nmap discovery runs) | — |
 | TLS | TLS handshake, cert chain, ciphers, key sizes | `scan.ports_tls`, `scan.tls_designated_ports`, `scan.include_sni`, `timeouts.tls_seconds` | `sslyze` (core) | "TLS certificate expired" |
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
-| JWT/API | JWT signing-alg discovery | `connectors.enable_jwt`, `jwt_targets` | (none) | (algorithm-classification findings) |
+| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS/verify-disabled` advisory when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
-| Source code | semgrep on git repos | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep-rule findings) |
-| DNSSEC | DNSKEY / DS / RRSIG | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | `quirk-scanner[identity]` | (algorithm + chain findings) |
-| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` | (etype findings) |
-| SAML | SAML IdP signing/digest algorithms | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | `quirk-scanner[identity]` | (signature-alg findings) |
-| Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `timeouts.email_seconds` | `sslyze` (core) | "STARTTLS downgrade risk on SMTP" |
+| Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
+| DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
+| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
+| SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
+| Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `connectors.enable_email`, `timeouts.email_seconds` | `sslyze` (core) | "STARTTLS downgrade risk on SMTP" |
 | Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `sslyze` (core) + `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
-| AWS | ACM certs, KMS keys, CloudFront, ELB | `connectors.enable_aws`, `aws_region`, `aws_profile` | `boto3` (core) | (KMS / cert findings) — see [`docs/connectors/aws.md`](connectors/aws.md) |
-| Azure | Key Vault keys + certs, App Gateway TLS | `connectors.enable_azure`, `azure_subscription_id`, `azure_keyvault_urls` | (varies) | — see [`docs/connectors/azure.md`](connectors/azure.md) |
-| GCP | KMS + GCS storage encryption | `connectors.enable_gcp`, `gcp_project_id` | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#kubernetes--enable_k8s--gcp--enable_gcp) |
-| Database | Postgres / MySQL ssl-mode + RDS encryption | `connectors.enable_db`, `pg_targets`, `mysql_targets`, scanner user/password | `quirk-scanner[db]` | [connector-field-reference.md](connector-field-reference.md#database--enable_db) |
-| Object storage | S3 bucket encryption + Azure Blob encryption | `connectors.enable_s3`, `enable_blob` | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#object-storage--enable_s3--enable_aws) |
-| Kubernetes | EKS/GKE/AKS encryption + secret enumeration | `connectors.enable_k8s`, `k8s_provider`, `k8s_cluster_name`, kubeconfig fields | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#kubernetes--enable_k8s--gcp--enable_gcp) |
+| AWS | ACM certs, KMS keys, CloudFront, ELB, RDS encryption at rest | `connectors.enable_aws`, `aws_region`, `aws_profile` | `boto3` (core) | (KMS / cert findings) — see [`docs/connectors/aws.md`](connectors/aws.md) |
+| Azure | Key Vault keys (known limitation: currently emits no endpoints), App Gateway TLS policies | `connectors.enable_azure`, `azure_subscription_id`, `azure_keyvault_urls` | (none, core) | — see [`docs/connectors/azure.md`](connectors/azure.md) |
+| GCP | Cloud KMS, Cloud SQL TLS enforcement, GCS bucket encryption | `connectors.enable_gcp`, `gcp_project_id` | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#kubernetes--enable_k8s--gcp--enable_gcp) |
+| Database | Postgres / MySQL server SSL enforcement | `connectors.enable_db`, `pg_targets`, `mysql_targets`, `pg_scanner_user`/`pg_scanner_password`, `mysql_scanner_user`/`mysql_scanner_password` | `quirk-scanner[db]` | [connector-field-reference.md](connector-field-reference.md#database--enable_db) |
+| Object storage | S3 bucket encryption + Azure Blob encryption | `connectors.enable_s3`, `enable_blob` | `boto3` (core) for S3; `quirk-scanner[cloud]` for Blob | [connector-field-reference.md](connector-field-reference.md#object-storage--enable_s3--enable_aws) |
+| Kubernetes | EKS/GKE/AKS encryption + secret type enumeration | `connectors.enable_k8s`, `k8s_provider`, `k8s_cluster_name`, `k8s_kubeconfig`, `k8s_context` | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#kubernetes--enable_k8s--gcp--enable_gcp) |
 | Vault | Transit keys + PKI + auth methods | `connectors.enable_vault`, `vault_addr`, `vault_token`, `vault_transit_mount` | `quirk-scanner[cloud]` (`hvac`) | [connector-field-reference.md](connector-field-reference.md#hashicorp-vault--enable_vault) |
 | Docker (image SBOM) | (uses container scanner) | (see Container row) | `syft` | [`docs/connectors/docker.md`](connectors/docker.md) |
 | Git (semgrep) | (uses source scanner) | (see Source row) | `semgrep` | [`docs/connectors/git.md`](connectors/git.md) |
+| PQC probe | Negotiates `X25519MLKEM768` against every TLS target (post-quantum hybrid key exchange) | none: runs with the TLS phase | host `openssl` with ML-KEM support (advisory fallback without it) | `pqc-hybrid-detected` |
+| S/MIME | S/MIME signing certificates in AD `userCertificate` / `userSMIMECertificate` over anonymous LDAP | `connectors.enable_smime`, `smime_targets`, `smime_search_base`, `smime_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (weak-signing-alg / weak-rsa-key / expired certificate rows, protocol `SMIME`) |
+| AD CS | Read-only LDAP enumeration of AD CS certificate authorities and templates (ESC1, ESC2, ESC3, ESC6) | `connectors.enable_adcs`, `adcs_targets`, `adcs_search_base`, `adcs_user`, `adcs_password` or `QUIRK_ADCS_PASSWORD`, `adcs_timeout` | `quirk-scanner[adcs]` (`ldap3`) | `coverage-gap\|ESC4\|reason=not-ldap-observable` |
+| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` (the TLS-certificate check finds nothing in a real scan) | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
+| OpenAPI spec | Security schemes, plaintext `http://` servers and unauthenticated paths in a local or in-scope OpenAPI/Swagger spec | `--openapi-spec FILE_OR_URL` | `quirk-scanner[api]` | `plaintext_server` |
+| REST fuzzing | Active crypto-posture fuzzing of the API described by the spec (TLS downgrade, weak ciphers, HSTS, JWT alg confusion) | `--openapi-spec` plus `--fuzz`, `--fuzz-jwt-alg-confusion`, `--fuzz-budget`; see [§3.2](#32-active-rest-fuzzing---fuzz--interactive-only-by-design) | `quirk-scanner[api]` | `tls_downgrade_accepted` |
+| Hardware fingerprint | Vendor, model, firmware and CNSA 2.0 tier of SSH-reachable devices (SSH banner, HTTP management interface) | none: runs in the SSH phase; see [§9](#9-hardware-scanning) | (none, core) | (advisory device row; no score impact) |
+| SNMP | sysDescr / sysName / sysObjectID device fingerprinting (SNMPv2c; SNMPv3 per host) | `--enable-snmp`, `connectors.enable_snmp`, `snmp_community`, `snmp_v3_credentials`; see [§9.1](#91-enable-snmp-scanning) | `quirk-scanner[hw]` | (advisory device row) |
+| Modbus / BACnet | One read-only Modbus FC 43/14 exchange, or one BACnet Who-Is plus ReadProperty requests for model name and firmware revision, per host (OT/ICS) | `--enable-modbus`, `--enable-bacnet`, `connectors.enable_modbus`, `enable_bacnet`, `enable_recurring_otics`; see [§9.4](#94-otics-fingerprinting-modbus--bacnet-phase-141) and [§12](#12-otics-recurring-scan-safety) | `quirk-scanner[hw]` | (advisory device row) |
 
 ### 6.2 Protocol scanner details
 
 #### TLS scanner
 
-Probes every `(host, port)` pair in `scan.ports_tls`, performs a full TLS handshake
-via `sslyze`, and walks the certificate chain. Findings include expired certificates,
-weak signature algorithms (SHA-1, MD5), short RSA keys (<2048), deprecated TLS
-versions (1.0, 1.1), and weak cipher suites. Activated by the core install — no extra
-required.
+With built-in discovery it fingerprints every `(host, port)` pair built from the targets and
+`scan.ports_tls` (plus port 502 when Modbus is enabled). When nmap discovery runs, it fingerprints only
+the open pairs nmap found, and nmap's port list goes beyond `scan.ports_tls` (it adds 22, 80, 8080
+and 8000, or uses the top 1000 or all ports for those scopes). In both cases
+the ports that answer TLS get a full handshake via `sslyze`, and the scanner reads the
+received certificate chain and whether it verifies. Findings include expired and
+soon-to-expire certificates, self-signed certificates, certificates from an untrusted
+CA, undersized or quantum-vulnerable RSA and ECDSA keys, legacy TLS versions (1.0 and
+1.1), and legacy cipher suites. Activated by the core install — no extra required.
 
 #### SSH scanner
 
-Pulls the SSH banner from each target, then runs `ssh-audit` to enumerate KEX
-algorithms, host-key types, and cipher/MAC suites. Emits a "SSH quantum planning
-advisory" when only classical KEX is offered, and surfaces specific weaknesses (e.g.
-`diffie-hellman-group1-sha1`, `ssh-rsa` host keys with short moduli). Requires the
-`ssh-audit` binary on `PATH`.
+Runs `ssh-audit` against each target to enumerate KEX algorithms, host-key types, and
+cipher/MAC suites, taking the SSH banner from its output (without `ssh-audit` it grabs the raw
+banner instead; see below). Every SSH endpoint scanned without an error gets an INFO
+"SSH quantum planning advisory", and the CBOM classifier assigns each algorithm a NIST
+quantum security level (0 for the classical KEX and signature algorithms) and a classical
+strength (e.g. `diffie-hellman-group1-sha1` 80 bits, `ssh-rsa` 112 bits). The per-algorithm
+detail requires the `ssh-audit` binary on `PATH`.
 
 **Optional prerequisite — `ssh-audit`:** the SSH scanner's per-algorithm classification
 (KEX, host-key, MAC breakdown) depends on the external `ssh-audit` binary
@@ -995,11 +1131,13 @@ SSH banner grab and emits only a single generic "SSH quantum planning advisory" 
 with no per-algorithm KEX/host-key/MAC breakdown or per-algorithm NIST quantum level. Install
 `ssh-audit` before scanning if you need that detail.
 
-> **If you installed `ssh-audit` before 2026-08-31 and saw no additional detail, that was a
-> bug, not your setup.** The scanner invoked `ssh-audit` with a malformed command line, so the
-> silent-fallback path above ran on every scan regardless of whether the binary was present.
-> Scans from affected versions recorded no SSH algorithm data, and their CBOMs contain no SSH
-> algorithm components. Re-scan any SSH hosts you need per-algorithm inventory for.
+> **If you scanned SSH hosts with a release before 2026-08-31 (PyPI 5.15.0 or earlier; fixed in
+> 5.18.0), check the SSH detail of any host on a non-standard port.** Those releases passed the
+> port to `ssh-audit` as a separate argument instead of as `host:port`. With `ssh-audit` 3.3.0
+> that extra argument is ignored and port 22 is audited, so a service on port 22 was recorded
+> correctly. A service on any other port got the algorithms of the same host's port 22 when that
+> port runs SSH, and otherwise fell back to the banner grab with no per-algorithm data. Re-scan
+> any SSH hosts on non-standard ports that you need per-algorithm inventory for.
 
 Note that `ssh-audit` must be on the `PATH` of the process running the scan. If QU.I.R.K. is
 installed in a virtualenv and you invoke it via an absolute interpreter path
@@ -1009,91 +1147,187 @@ the environment, or ensure the directory containing `ssh-audit` is on `PATH`.
 
 #### JWT/API scanner
 
-Iterates over `jwt_targets` and inspects either local JWT samples or live token
-endpoints to discover the signing algorithm declared in the JWT header. Classifies
-each algorithm against the `algorithm-classification` ruleset and emits findings for
-algorithms that fail post-quantum guidance per FIPS 203 / 204 / 205 and NIST IR 8547.
-Gated by `connectors.enable_jwt`.
+Iterates over `jwt_targets` (API base URLs), probes `/.well-known/jwks.json`,
+`/oauth/jwks` and the OIDC discovery document in that order, stopping at the first that
+returns keys, and emits one `JWT` endpoint per key with the key's algorithm and, for RSA
+and EC keys, its size. Gated by `connectors.enable_jwt`.
 
 **Security note — `allow_insecure_jwks`:** By default the JWT scanner verifies TLS
-certificates when fetching JWKS endpoints (`allow_insecure_jwks: false`). Set
-`allow_insecure_jwks: true` only when scanning internal or dev endpoints that use
-self-signed or expired certificates. When this flag is enabled:
+certificates when fetching JWKS endpoints (`security.allow_insecure_jwks: false`). Set
+`security.allow_insecure_jwks: true` (or pass `--allow-insecure-jwks`) only when scanning
+internal or dev endpoints that use self-signed or expired certificates. It is a
+`security:` key, not a `connectors:` key. When this flag is enabled:
 
 - TLS certificate verification is disabled for JWKS fetches only (other scan phases
   are unaffected).
-- A `HIGH` severity advisory finding (`ADVISORY_JWKS_VERIFY_DISABLED`) is automatically
-  emitted for every JWKS URL fetched, so the override is always visible in reports.
+- A `HIGH`-severity `ADVISORY` endpoint row (`ADVISORY_JWKS_VERIFY_DISABLED`, recorded as
+  `JWKS/verify-disabled`) is stored for every JWKS URL fetched. It does not become a
+  finding: neither the CLI findings evaluator nor the dashboard's findings produce one for
+  it, and the HTML report's Endpoint Inventory shows it only as an `ADVISORY` row for the
+  JWKS URL, without the label or the severity.
 - QUIRK remains a passive inventory tool — it does not rely on JWKS key material for
   any authentication decision, so a MITM on the JWKS URI cannot escalate privileges.
   The threat model accepts this for controlled assessment environments.
 
-See `docs/configuration.md` §Connectors for the full `allow_insecure_jwks` config key
-reference.
+See the `security:` block reference in `docs/configuration.md` for the full
+`allow_insecure_jwks` config key reference.
 
 #### Container scanner
 
-For each entry in `container_targets`, generates a Syft SBOM of the named Docker
-image and scans the resulting package list for crypto libraries flagged in the
-quantum-readiness ruleset (e.g. legacy OpenSSL, vendored mbedTLS). Emits "Container
-image uses quantum-vulnerable crypto library" findings with the image digest and
-package version. Requires `syft` on `PATH` and `connectors.enable_container=true`.
+For each entry in `container_targets`, generates a Syft SBOM of the named image and
+keeps the packages whose names are on a fixed crypto-library allowlist (OpenSSL and
+its `libssl`/`libcrypto` packages, mbedTLS, wolfSSL, GnuTLS, NSS, libgcrypt, Botan, and
+the Python `cryptography`, `pyopenssl`, `pycryptodome`, `bcrypt` and `pynacl`
+packages). Emits "Container image uses quantum-vulnerable crypto library (name@version)"
+findings. Requires `syft` on `PATH` and `connectors.enable_container=true`.
 
 #### Source-code scanner
 
-Walks each git repository in `source_targets` (local clone or remote URL) and runs
-semgrep with the QU.I.R.K. ruleset to detect hardcoded weak primitives, cipher
-construction patterns, and PRNG misuse. Findings carry the file path and line range.
-Requires `semgrep` on `PATH` and `connectors.enable_source=true`.
+Runs semgrep with the registry pack `p/cryptography` against each directory in
+`source_targets`. As of 2026-10-12 the Semgrep registry answered HTTP 404 for that pack
+name (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
+path to an existing local directory (for example a clone); remote URLs are not fetched,
+and a path that is missing or contains `..` or shell metacharacters is rejected with an
+`invalid_input` row. Findings carry the semgrep rule id and `file:line`. Requires
+`semgrep` on `PATH` and `connectors.enable_source=true`.
 
 #### DNSSEC scanner
 
-Resolves DNSKEY, DS, and RRSIG records for each domain in `dnssec_targets` and
-classifies the signing algorithms (RSASHA1, RSASHA256, ECDSAP256SHA256, ED25519, etc.)
-against the quantum-readiness rubric. Reports broken chains, missing DS records, and
-signing algorithms misaligned with NIST IR 8547 guidance. Requires `quirk-scanner[identity]`.
+Resolves DNSKEY and DS records for each domain in `dnssec_targets` and classifies the
+signing algorithms (RSASHA1, RSASHA256, ECDSAP256SHA256, ED25519, etc.) against RFC
+8624 / RFC 9905 severities. Reports unsigned zones (`unsigned-zone`), NSEC exposure
+(`nsec-exposure`), a DS record that matches no DNSKEY (`ds-chain-broken`), and SHA-1 DS
+digests (`sha1-ds-digest`). Requires no extra — `dnspython` is a core dependency.
 
 #### Kerberos scanner
 
-Connects to KDC port 88 on each entry in `kerberos_targets` and enumerates supported
-encryption types (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`,
-`des-cbc-md5`, etc.). Findings flag any KDC still offering DES/RC4 enctypes and note
-where AES-only enforcement is missing. Requires `quirk-scanner[identity]`.
+Sends an unauthenticated AS-REQ to KDC port 88 on each entry in `kerberos_targets`
+(over TCP, falling back to UDP if the TCP probe fails) and reads the supported encryption types
+(`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`, `des-cbc-md5`, etc.). DES
+enctypes are CRITICAL, `rc4-hmac` and `aes128-cts-hmac-sha1-96` are HIGH, and the AES-256
+enctypes are SAFE. Requires `quirk-scanner[identity]` (`impacket`).
 
 #### SAML scanner
 
-Fetches the SAML IdP metadata for each entry in `saml_targets` and inspects the
-declared SignatureMethod and DigestMethod algorithms (`rsa-sha1`, `rsa-sha256`,
-`ecdsa-sha256`, etc.). Findings flag IdPs still signing with SHA-1 or otherwise
-non-conformant primitives. Requires `quirk-scanner[identity]`.
+Fetches the SAML IdP metadata (or OIDC discovery document) for each entry in
+`saml_targets`, classifies the signing and encryption certificates by key algorithm
+and size, and flags SHA-1 algorithm URIs in `SignatureMethod` and `alg:SigningMethod`
+elements ("SHA-1 algorithm URI detected in SAML metadata"). Requires no extra —
+`lxml` is a core dependency.
 
 #### Email scanner
 
 Probes 7 email-TLS ports per target — SMTP `25`/`465`/`587`, IMAP `143`/`993`, POP3
-`110`/`995` — handling both implicit TLS and STARTTLS upgrades. Findings include
-"STARTTLS downgrade risk on SMTP", missing implicit-TLS on submission, and weak
-ciphers on the negotiated channel. Requires no extra — `sslyze` is a core dependency.
+`110`/`995` — handling both implicit TLS and STARTTLS upgrades. Gated by
+`connectors.enable_email`. Findings include "STARTTLS downgrade risk on SMTP" (port 25
+only, when TLS was actually negotiated), "Weak cipher suite on email TLS endpoint", and
+"Non-PFS cipher suite on email TLS endpoint". Requires no extra — `sslyze` is a core
+dependency.
 
 #### Broker scanner
 
 Probes message-broker endpoints across five protocol families: Kafka (configurable
 listeners), AMQP (RabbitMQ), Redis, Azure Service Bus (per `broker_azure_namespaces`),
 and Amazon SQS (per `broker_sqs_regions`). Findings include plaintext-listener
-detection, weak TLS configuration, and missing authentication. Gated by
-`connectors.enable_broker=true` and requires `quirk-scanner[motion]` for its Kafka/Redis
-clients (`sslyze`, which drives the TLS probe itself, is a core dependency).
+detection ("Plaintext Kafka listener detected", "Plaintext AMQP listener detected",
+"Plaintext Redis listener (no auth)") and weak TLS configuration ("Weak cipher suite on
+broker TLS endpoint"). Gated by `connectors.enable_broker=true` and requires
+`quirk-scanner[motion]` for its Kafka/Redis clients (`sslyze`, which drives the TLS probe
+itself, is a core dependency).
 
 **Non-default ports (Phase 190, TRIAGE-06):** each family's default port table is fixed; to
 also probe a broker running on a non-standard port, list it in `connectors.broker_targets`
 (`host` / `host:port` / `[ipv6]:port`). Declared ports are probed *in addition to* the
 defaults — this can only widen coverage, never narrow it. An explicitly-named `host:port` that
-never responds produces exactly one `ADVISORY`-severity row rather than failing silently. See
+never responds produces exactly one `ADVISORY` row (severity `INFO`,
+`BROKER/target-unreached`) rather than failing silently. See
 [`docs/configuration.md`](configuration.md) for full syntax and semantics.
+
+#### PQC-hybrid probe
+
+Runs as its own phase and never through `sslyze`, whose bundled OpenSSL cannot complete
+a hybrid handshake. For every TLS target it runs one `openssl s_client` subprocess and
+records a TLS endpoint tagged `pqc-hybrid-detected` when the negotiated TLS 1.3 group is
+`X25519MLKEM768`; the probe has an 8-second timeout and there is no config key to
+disable it. If the scanning host's own `openssl` does not list ML-KEM
+(`openssl list -kem-algorithms`), the probe cannot test the target, and it emits an
+`ADVISORY` row (`pqc-hybrid-detected|advisory=openssl-too-old`) instead. That advisory
+row is counted in `pqc_hybrid_endpoint_count`, the same evidence counter a real
+detection feeds, so on such a host the probe can count as a hybrid endpoint in the
+PQC readiness score without having detected one.
+
+#### S/MIME scanner
+
+Binds anonymously to each LDAP entry in `smime_targets` (`ldap://host:port`,
+`ldaps://host:port`, or a bare `host[:port]`) and pages through the AD
+`userCertificate` and `userSMIMECertificate` attributes. The search base is
+`smime_search_base`, or a base DN derived from the target's Kerberos realm; with
+neither, the target is skipped. Only certificates that fail a check are emitted (one
+row per certificate, protocol `SMIME`): HIGH for a weak signature algorithm or an RSA
+key under 2048 bits, MEDIUM for an expired certificate that is otherwise sound. A target that
+cannot be bound or searched gets one `smime-unreachable` row carrying the error instead. It reads
+no mailbox content or message envelope data. Gated by `connectors.enable_smime`; needs
+`ldap3` from `quirk-scanner[adcs]`.
+
+#### AD CS scanner
+
+Enumerates the CA and certificate-template objects under the target domain's
+`CN=Public Key Services` container with read-only LDAP; it never enrolls, requests, or
+writes anything. A CA with a weak signing algorithm or RSA key is HIGH. Templates are
+checked for the LDAP-observable ESC1, ESC2, ESC3 and ESC6 conditions (HIGH). ESC4, ESC5,
+ESC7 and ESC8 cannot be observed over LDAP, so each target gets one LOW
+`coverage-gap|ESC<n>|reason=not-ldap-observable` row per class, and a target that
+cannot be bound or searched gets one LOW `adcs-unreachable` row. Gated by
+`connectors.enable_adcs`; credentials come from `adcs_user` and `adcs_password` (or the
+`QUIRK_ADCS_PASSWORD` environment variable); needs `ldap3` from `quirk-scanner[adcs]`.
+
+#### Code-signing inventory
+
+Opt-in through the `--inventory-code-signing` CLI flag; `connectors.enable_codesign` does
+not change scan behaviour. It finds code-signing certificates in one place that works in a
+real scan: LDAP `userCertificate` attributes on `codesign_targets`, read with an anonymous
+bind. The flag also runs a second check over the certificates the TLS phase captured, but
+that check reads an EKU list the TLS scanner never records, so it finds nothing in a real
+scan, even for a server whose certificate carries the CodeSigning EKU. Findings use
+protocol `CODE_SIGNING`: HIGH for a SHA-1 signature, an RSA key under 2048 bits, an EC
+key under 256 bits, or an expired certificate, and MEDIUM when expiry is within 90 days.
+The LDAP source needs `ldap3` from `quirk-scanner[adcs]`.
+
+#### OpenAPI spec scanner
+
+`--openapi-spec FILE_OR_URL` parses a local spec file, or an HTTP(S) URL that is inside the
+scan targets, and emits `OPENAPI` rows for each security scheme
+(`security_scheme:<name>`), each plaintext `http://` server (`plaintext_server`), and each
+operation with no security requirement (`unauthenticated_endpoint:<METHOD> <path>`). A
+spec containing an external `$ref` is refused, and specs over 10 MB are rejected before
+parsing. Without the `[api]` extra the scanner returns a single `missing_extra` row
+instead of scanning. See §3.2 for the interactive active fuzzer that builds on the same
+spec.
+
+#### REST crypto-posture fuzzer
+
+`--fuzz` (with `--openapi-spec`) sends a bounded number of live requests to the API:
+it checks for accepted TLS downgrades (`tls_downgrade_accepted`), weak ciphers
+(`cipher_weak`), a missing HSTS header (`hsts_missing`) and, when credentials are
+supplied, a spec-declared `http://` endpoint they would be sent to (`http_creds`), and, with `--fuzz-jwt-alg-confusion`, JWT algorithm-confusion
+(`alg_confusion`). It refuses to run unless an operator types `CONFIRM` at a terminal,
+and `--fuzz-budget` is capped at 500 requests. The full behaviour, including why it is
+interactive-only, is in §3.2. Needs `quirk-scanner[api]`.
+
+#### Hardware, SNMP and OT/ICS fingerprinting
+
+These scanners identify network devices rather than crypto endpoints, and they write
+advisory `hardware_devices` rows with no score impact. Hardware fingerprinting needs no
+flag: while an SSH target is scanned, the SSH banner is matched against the hardware
+catalog; when the banner does not identify the vendor, a best-effort probe of the device's
+HTTP management interface is tried instead. SNMP (`--enable-snmp`) and Modbus/BACnet
+(`--enable-modbus`, `--enable-bacnet`) are opt-in, need `quirk-scanner[hw]`, and are covered, with their safety rules, in §9.
 
 ### quirk doctor
 
-Pre-engagement health check. Runs eight diagnostic probes and prints a
-Rich-formatted dashboard. Exit code is the machine-readable signal:
+Pre-engagement health check. Runs eight diagnostic categories (the scanner-binaries
+category checks three binaries) and prints a Rich-formatted table. Exit code is the
+machine-readable signal:
 
 - `0` — all non-informational checks pass; QUIRK is ready to scan
 - `1` — one or more non-informational checks failed; address before scanning
@@ -1104,7 +1338,7 @@ Rich-formatted dashboard. Exit code is the machine-readable signal:
 quirk doctor
 ```
 
-No flags are accepted. Invoke before each client engagement.
+It takes no flags (extra arguments are ignored). Invoke before each client engagement.
 
 #### Categories
 
@@ -1114,10 +1348,13 @@ No flags are accepted. Invoke before each client engagement.
 | 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | non-informational | yes |
 | 3 | Compliance framework freshness (within `STALENESS_THRESHOLD_DAYS`) | non-informational | yes |
 | 4 | QRAMM module availability | informational | **no** |
-| 5 | Database (`./quirk.db` reachable) | non-informational | yes |
+| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes |
 | 6 | Configuration (`./config.yaml` parses) | non-informational | yes (malformed); informational only if file is absent |
-| 7 | Network connectivity (DNS probe) | informational | **no** |
-| 8 | Dashboard process (port 8512) | informational | **no** |
+| 7 | Network connectivity (DNS lookup of `example.com`) | informational | **no** |
+| 8 | Dashboard process (HTTP HEAD to `http://127.0.0.1:8512/`) | informational | **no** |
+
+The Python check requires 3.11 or newer, although the package metadata (`requires-python`)
+allows 3.10.
 
 #### Symbols
 
@@ -1136,27 +1373,29 @@ $ quirk doctor
 │ Python environment      │ [✓] Python 3.14                               │
 │ Binary: nmap            │ [✓] /opt/homebrew/bin/nmap                    │
 │ Binary: syft            │ [✓] /opt/homebrew/bin/syft                    │
-│ Binary: semgrep         │ [✗] semgrep not found in PATH                 │
+│ Binary: semgrep         │ [✗] [QRK-INSTALL-008] `semgrep` binary not…   │
 │ Compliance freshness    │ [✓] all frameworks within freshness window    │
-│ QRAMM module            │ [!] QRAMM module not installed — Phase 51     │
-│ Database (quirk.db)     │ [✓] ./quirk.db reachable                      │
+│ QRAMM module            │ [✓] QRAMM module available                    │
+│ Database (quirk.db)     │ [✓] DB at ./quirk-output/quirk.db reachable   │
 │ Configuration           │ [✓] ./config.yaml parses cleanly              │
-│ Network connectivity    │ [✓] outbound TCP to 8.8.8.8:53 OK             │
-│ Dashboard process       │ [!] dashboard not running on port 8512        │
+│ Network connectivity    │ [✓] DNS lookup succeeded for example.com      │
+│ Dashboard process       │ [!] Dashboard unreachable at 127.0.0.1:8512   │
 └─────────────────────────┴───────────────────────────────────────────────┘
 $ echo $?
 1
 ```
 
 (In the example above, `semgrep` is missing — a non-informational failure that
-exits 1.)
+exits 1. Real failure cells carry the full error code and a `Fix:` hint, and wrap across
+several lines; they are truncated here.)
 
 ---
 
 ## 7. Compliance Map Maintenance
 
 QU.I.R.K. ships a `COMPLIANCE_MAP` in `quirk/compliance/__init__.py` that joins
-finding titles to PCI-DSS, HIPAA (45 CFR §164.312), and FIPS 140-3 controls.
+finding titles to PCI-DSS 4.0.1, HIPAA (45 CFR §164.312), FIPS 140-3, SOC 2 and
+ISO 27001:2022 controls.
 Regulators publish revisions on their own cadences; this runbook documents how
 QU.I.R.K. maintainers keep the map current and how operators can verify freshness on
 demand.
@@ -1164,12 +1403,14 @@ demand.
 ### 7.1 Quarterly review checklist
 
 1. Run `quirk compliance status` and confirm every framework's `Last Verified` date is
-   within the last 90 days.
+   within the last 90 days (the maintainers' quarterly target; the CI gate in §7.3 only
+   fails past 365 days).
 2. Visit each publisher URL (table below) and check for newly published revisions.
 3. If a revision exists, follow §7.4 "Upgrade path".
 4. If no revision exists but `last_verified` is older than 90 days, update
-   `last_verified` to today after re-reading the current source — this re-confirms our
-   reading and resets the staleness clock.
+   `last_verified` to today only after re-reading the current source — the date attests
+   that someone did, and bumping it to clear a failing gate without re-reading is not a
+   re-verification.
 5. Run `pytest tests/test_compliance_schema.py tests/test_compliance_freshness.py
    tests/test_compliance_title_join.py` — all green.
 6. Commit and push.
@@ -1179,11 +1420,11 @@ demand.
 | Framework | Publisher | Monitor URL |
 |-----------|-----------|-------------|
 | PCI-DSS | PCI Security Standards Council | https://www.pcisecuritystandards.org/document_library/ |
-| HIPAA 45 CFR §164.312 (publisher landing) | HHS / ECFR | https://www.hhs.gov/hipaa/for-professionals/index.html |
+| HIPAA 45 CFR §164.312 (publisher landing) | HHS / ECFR | https://www.hhs.gov/hipaa/for-professionals/index.html (answers HTTP 403 to non-browser clients; open it in a browser) |
 | HIPAA 45 CFR §164.312 (canonical regulation text) | HHS / ECFR | https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164 |
 | FIPS 140-3 | NIST CSRC | https://csrc.nist.gov/publications/fips |
 | SOC 2 (Trust Services Criteria) | AICPA | https://www.aicpa-cima.com/resources/landing/aicpa-trust-services-criteria |
-| ISO 27001:2022 | ISO / national body | https://www.iso.org/standard/27001 |
+| ISO 27001:2022 | ISO / national body | https://www.iso.org/standard/27001 (answers HTTP 403 to non-browser clients; open it in a browser) |
 
 ### 7.3 How to detect drift
 
@@ -1195,11 +1436,13 @@ customer:
   `quirk/compliance/__init__.py`). This is the 12-month staleness gate (COMPLY-08).
 - **`tests/test_compliance_schema.py`** — fails when any entry is missing `framework`,
   `control`, `version`, `last_verified`, or `source_url`.
-- **`tests/test_compliance_title_join.py`** — fails when an emitted finding title is
-  not in `COMPLIANCE_MAP` or `UNMAPPED_TITLES`.
+- **`tests/test_compliance_title_join.py`** — is meant to fail when an emitted finding
+  title is not in `COMPLIANCE_MAP` or `UNMAPPED_TITLES`. That check is currently marked
+  as an expected failure (non-strict `xfail`) because emitted titles are unmapped (seven
+  today: three code-signing, three SAML and one OIDC), so it does not block the build.
 - **`tests/test_compliance_cli.py`** — smoke for `quirk compliance status` (text +
   JSON).
-- **`tests/test_compliance_report_section.py`** — verifies the HTML/PDF "Compliance
+- **`tests/test_compliance_report_section.py`** — verifies the HTML report's "Compliance
   Summary" section.
 
 Operators can run `quirk compliance status` ad hoc before customer engagements to
@@ -1215,7 +1458,8 @@ quirk compliance status --format json
 
 ### 7.4 Upgrade path: PCI-DSS 4.0.1 → 4.1 (worked example)
 
-1. PCI SSC publishes PCI-DSS v4.1 at
+1. When PCI SSC publishes a revision of PCI-DSS (this example assumes a v4.1; the map
+   currently carries 4.0.1), it appears at
    https://www.pcisecuritystandards.org/document_library/.
 2. Maintainer reviews the diff: control numbers may shift; requirement text may add
    new clauses.
@@ -1223,7 +1467,10 @@ quirk compliance status --format json
    - Update the `_PCI_4_0_1_URL` constant — rename and re-point to the v4.1 PDF, or
      add a `_PCI_4_1_URL` alongside.
    - Update the `_pci()` helper — change `"version": "4.0.1"` → `"version": "4.1"`.
-   - Update `_PHASE_49_VERIFIED` to today's ISO date.
+   - Update `_PHASE_49_VERIFIED` to today's ISO date. That constant is shared by the
+     `_pci()`, `_hipaa()` and `_fips()` helpers, so bumping it re-dates all three
+     frameworks: re-verify HIPAA and FIPS 140-3 first, or give the revised framework its
+     own constant. SOC 2 and ISO 27001 use `_PHASE_52_VERIFIED`.
    - For any control numbers that moved (e.g. `4.2.1` → `4.2.2`): edit each affected
      `COMPLIANCE_MAP` entry's `_pci("X")` argument.
 4. Run `pytest tests/test_compliance_schema.py tests/test_compliance_freshness.py
@@ -1236,6 +1483,16 @@ quirk compliance status --format json
 The same shape applies to HIPAA 45 CFR §164.312 revisions (edit `_HIPAA_164_312_URL`
 + `_hipaa()` helper) and FIPS 140-3 revisions (edit `_FIPS_140_3_URL` + the relevant
 entries).
+
+### 7.5 CMVP validated-modules cache
+
+The CMVP attestation feed is a separate catalog, `quirk/compliance/cmvp_cache.json`, with
+its own `last_verified` date and a 90-day staleness threshold
+(`quirk/compliance/cmvp.py`). Re-verify it by reading its `source_url` (the NIST CSRC
+validated-modules search page) and editing `last_verified` by hand; do not use
+`quirk compliance cmvp refresh` for this. An earlier version of that command wrote an
+empty algorithm list over the cache entries it could not parse (fixed from 5.15.0,
+commit `a7cf302`), and a hand check is the only re-verification the date attests.
 
 ---
 
@@ -1260,9 +1517,10 @@ quantum-readiness score.)*
                            one CBOM + one score
 ```
 
-Each sensor is a standard `pip install quirk-scanner[all]` deployment. Sensors
-communicate with the console over HTTPS using a shared HMAC key and a shared console
-API token set at enrollment time.
+Each sensor is a standard `pip install "quirk-scanner[all]"` deployment. Sensors
+communicate with the console over HTTPS (use an `https://` console URL) and authenticate each
+push with their own per-sensor token (§8.1.1). Each push also carries an HMAC-SHA256
+signature made with a key the sensor generates locally at enrollment.
 
 ### 8.1 Provision the console
 
@@ -1273,8 +1531,8 @@ routable address so sensors can reach it over the network:
 # Console host (Linux / macOS)
 pip install "quirk-scanner[all]"
 
-# Set the shared API token BEFORE starting the server.
-# Sensors must send this same token in every push request.
+# Set the operator API token BEFORE starting the server. It protects the dashboard and
+# the operator API; sensors do not use it (each sensor pushes with its own token, §8.1.1).
 export QUIRK_API_TOKEN="<your-strong-random-token>"
 
 # Start the server — bind to a specific interface or 0.0.0.0 for all interfaces.
@@ -1284,36 +1542,46 @@ quirk serve --host 0.0.0.0 --port 8512
 
 > **Security note:** Do not expose the console port to untrusted networks without an
 > HTTPS reverse proxy and IP allowlist in front of it. Set `QUIRK_API_TOKEN` to a
-> strong random value before starting the server; `quirk serve` without this variable
-> runs with authentication disabled (appropriate only for local dev/testing).
+> strong random value before starting the server; `quirk serve` with neither this variable
+> nor a `security.api_token` in the config it reads (`QUIRK_CONFIG_PATH`, else
+> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing).
 >
-> As a guardrail, `quirk serve` now **refuses to start** on a network-reachable
-> interface when no `QUIRK_API_TOKEN` is configured, unless you pass `--insecure` to
+> As a guardrail, `quirk serve` **refuses to start** on a network-reachable
+> interface when neither token is configured, unless you pass `--insecure` to
 > explicitly acknowledge a token-less bind on a trusted, firewalled segment. When the
 > console runs behind a reverse proxy, set `QUIRK_TRUST_PROXY` (default `127.0.0.1`)
-> so per-IP rate limiting and the audit log see the real sensor address rather than
-> the proxy's. For a **cloud-hosted console** (e.g. on Linode) with internal sensors
+> so per-IP rate limiting and the sensor IP allowlist see the real sensor address rather
+> than the proxy's. For a **cloud-hosted console** (e.g. on Linode) with internal sensors
 > pushing in, follow the hardened, end-to-end walkthrough in
 > [`deployment-cloud-console.md`](deployment-cloud-console.md) and the ready-to-use
-> files under [`deploy/`](../deploy/).
+> files under [`deploy/`](../deploy/). To restrict which source addresses may push, set
+> `QUIRK_SENSOR_IP_ALLOWLIST` (comma-separated IPs or CIDRs; unset allows any source),
+> described in the [admin guide](admin-guide.md).
 
-### 8.1.1 v5.5 per-sensor authentication model (migration from v5.4)
+`quirk serve`, `quirk console enroll`, `quirk console revoke-sensor` and `quirk sensor
+merge` all use the same console database: `QUIRK_DB_PATH` if set, otherwise
+`./quirk-output/quirk.db` relative to the directory you run them from. One exception: if
+that directory holds exactly one legacy database (`./quirk.db` or `./output/quirk.db`) and
+no `./quirk-output/quirk.db`, they use the legacy file, and if it holds more than one of the
+three they stop with a "Multiple QU.I.R.K. DBs found" error. Run them from the
+same directory (or export `QUIRK_DB_PATH`) so a sensor enrolled with `quirk console enroll`
+is known to the server that receives its pushes.
 
-In v5.5, every sensor authenticates `POST /api/sensor/push` with its **own per-sensor
-token** issued by `quirk console enroll`. This replaces the v5.4 shared-token model
-(where all sensors used the same `QUIRK_API_TOKEN`). The cutover is clean — there is no
-dual-accept period (D-10).
+### 8.1.1 Per-sensor authentication model
+
+Every sensor authenticates `POST /api/sensor/push` with its **own per-sensor
+token** issued by `quirk console enroll`. The shared `QUIRK_API_TOKEN` is not accepted on
+this route, and there is no dual-accept period. Builds from before 5.5.0 used that shared
+token for pushes; the first PyPI release with the sensor commands is 5.5.0, which already
+uses per-sensor tokens, so a PyPI install never had the shared-token model.
 
 | Component | Role |
 |-----------|------|
-| `QUIRK_API_TOKEN` env var (or `security.api_token` in `config.yaml`) | Console's shared token; governs operator/dashboard auth — **unaffected** |
+| `QUIRK_API_TOKEN` env var (or `security.api_token` in `config.yaml`) | Console's shared token; governs operator/dashboard auth, not sensor pushes |
 | Enrollment token from `quirk console enroll` | **The per-sensor push credential.** Shown once; only its SHA-256 hash is stored in `sensor_tokens`. Place this raw value in `console_api_token` in `sensor.yaml` on the sensor host. |
 | `console_api_token` in `sensor.yaml` | Must hold the sensor's per-sensor enrollment token (not the shared `QUIRK_API_TOKEN`) |
 
-**What changed from v5.4:** Each sensor now uses its own revocable enrollment token to
-authenticate push requests. The shared `QUIRK_API_TOKEN` no longer authenticates pushes.
-
-**Migration steps (per sensor host):**
+**Provisioning steps (per sensor host):**
 
 1. On the **console host**, print the enrollment token for the sensor:
    ```bash
@@ -1321,9 +1589,11 @@ authenticate push requests. The shared `QUIRK_API_TOKEN` no longer authenticates
    # → Bearer token: <per-sensor-token>  (copy now — shown once)
    # → sensor_id: <uuid>
    ```
-2. On each **sensor host**, open `sensor.yaml` and set:
+2. On the **sensor host**, run `quirk sensor enroll` with that `sensor_id` and token
+   (§8.2) so `sensor.yaml` carries both. The `sensor_id` must match: a push whose envelope
+   `sensor_id` differs from the one the token belongs to is rejected with HTTP 403.
    ```yaml
-   console_api_token: <per-sensor-token>   # replace the old QUIRK_API_TOKEN value here
+   console_api_token: <per-sensor-token>   # written by --api-token, or edit it in by hand
    ```
 3. If the raw enrollment token was lost, revoke and re-enroll:
    ```bash
@@ -1338,11 +1608,12 @@ unaffected by per-sensor push tokens.
 
 ### 8.2 Enroll each sensor
 
-On the **console host**, provision a sensor row for each sensor. Each invocation creates
-a new `sensors` row in the console database and prints a **per-sensor push token** to
-stdout. This token **IS** the push credential — place it in `console_api_token` in
-`sensor.yaml` on the sensor host. It is shown once and never recoverable; only its
-SHA-256 hash is stored in `sensor_tokens`.
+On the **console host**, provision a sensor row for each sensor. Each invocation without
+`--sensor-id` creates a new `sensors` row in the console database and prints a
+**per-sensor push token** to stdout (the generated `sensor_id` goes to stderr). This
+token **IS** the push credential — place it in `console_api_token` in `sensor.yaml` on the
+sensor host. It is shown once and never recoverable; only its SHA-256 hash is stored in
+`sensor_tokens`.
 
 ```bash
 # Console host — run once per sensor
@@ -1354,24 +1625,40 @@ quirk console enroll --segment segment-a
 quirk console enroll --segment segment-b
 ```
 
-On each **sensor host**, run `quirk sensor enroll` and set `console_api_token` to the
-enrollment token printed above:
+On each **sensor host**, run `quirk sensor enroll` with the `sensor_id` and the token
+printed above. `--sensor-id` binds this sensor to the console-side row (without it
+the sensor invents a random UUID that the token does not belong to, and every push is
+rejected with HTTP 403), and `--api-token` writes the token into `console_api_token`:
 
 ```bash
 # Sensor host — Linux / macOS
 quirk sensor enroll https://<console-host>:8512 \
-  --segment <label>
-# Then edit sensor.yaml: set console_api_token to the per-sensor enrollment token.
+  --segment <label> \
+  --sensor-id <sensor_id-from-quirk-console-enroll> \
+  --api-token <per-sensor-token-from-quirk-console-enroll>
 # e.g.:
 quirk sensor enroll https://console.corp:8512 \
-  --segment segment-a
-# Edit ~/.config/quirk/sensor.yaml:
-#   console_api_token: <per-sensor-token-from-quirk-console-enroll>
+  --segment segment-a \
+  --sensor-id 022ca970-c50c-460e-9940-fdef9f29edce \
+  --api-token <per-sensor-token>
 ```
 
+To keep the token out of shell history, omit `--api-token` and edit `console_api_token`
+into `sensor.yaml` by hand instead.
+
+`quirk sensor enroll` never contacts the console. It checks the console URL (the host
+must resolve; a private or loopback address needs `--allow-internal-console`, which is
+remembered in `sensor.yaml` for later pushes; cloud-metadata addresses and hostnames are
+refused), generates the sensor's HMAC key and writes `sensor.yaml`.
+It also prints an "Enrollment
+token" of its own; that value is generated locally, stored nowhere and is not the push
+credential, so ignore it and use the token that `quirk console enroll` printed. Running
+`enroll` again with the same `--sensor-id` leaves an existing `sensor.yaml` untouched.
+
 Enrollment writes `sensor.yaml` to the default platform config directory:
-- **Linux / macOS:** `~/.config/quirk/sensor.yaml` (XDG `user_config_dir`)
-- **Windows:** `%APPDATA%\quirk\sensor.yaml`
+- **Linux:** `~/.config/quirk/sensor.yaml` (`$XDG_CONFIG_HOME/quirk/sensor.yaml` when that variable is set)
+- **macOS:** `~/Library/Application Support/quirk/sensor.yaml` (`$XDG_CONFIG_HOME/quirk/sensor.yaml` when that variable is set)
+- **Windows:** `%LOCALAPPDATA%\quirk\quirk\sensor.yaml`
 
 The file stores the `sensor_id` (UUID), `segment` label, HMAC key, console URL, and the
 `console_api_token` used to authenticate push requests.
@@ -1391,12 +1678,27 @@ quirk sensor push
 quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
 ```
 
-`quirk sensor push` runs a local scan using the target list in the scan config,
-serialises the findings into a signed, compressed `.qpush` envelope, and delivers it to
-the console over HTTPS. The console responds HTTP 200 on success.
+`quirk sensor push` runs a local scan using the target list in the scan config
+(`--scan-config` defaults to `config.yaml` in the current directory),
+serialises the findings into a zstd-compressed JSON envelope signed with the sensor's HMAC
+key (the same payload `quirk sensor export-results` writes to a `.qpush` file, §8.6), and
+delivers it to the console over HTTPS. The console responds HTTP 200 on success. If the
+sensor was enrolled with `--allow-internal-console`, the local scan is also started with
+`--allow-internal-targets`, so private-address targets in the segment can be scanned.
+
+The push is retried up to 5 attempts with exponential backoff on connection errors,
+timeouts and HTTP 5xx responses. Its exit code tells a scheduler what happened: `0`
+delivered (HTTP 200) or already accepted (HTTP 409), `1` `sensor.yaml` missing or invalid,
+`2` rejected by the console with a 4xx status, `3` console unreachable, `4` any other
+push failure. In the `2`, `3` and `4` cases the payload is spooled. The console also
+rejects a push whose `pushed_at` differs from its own clock by more than 15 minutes
+(HTTP 422, `replay_window_exceeded`), so keep sensor clocks in sync.
 
 If the console is temporarily unreachable, the payload is spooled to
-`user_data_dir("quirk")/spool/` and retried automatically on the next invocation.
+`user_data_dir("quirk")/spool/` (Linux `~/.local/share/quirk/spool/`, macOS
+`~/Library/Application Support/quirk/spool/`) and re-sent first-in first-out at the start
+of the next invocation. The spool keeps at most 100 files or 500 MB; beyond that the
+oldest payloads are evicted with a warning.
 
 ### 8.4 Merge into a unified CBOM
 
@@ -1407,29 +1709,48 @@ On the **console host**, run the merge after all sensors have pushed:
 quirk sensor merge
 
 # Optional flags:
-quirk sensor merge --stale-days 7       # ignore sensors silent > 7 days
-quirk sensor merge --output-dir ./out   # write CBOM / reports here
+quirk sensor merge --stale-days 7       # ignore sensors silent > 7 days (default 30)
+quirk sensor merge --db /path/to/quirk.db   # merge a database other than the default
 ```
 
-`quirk sensor merge` re-runs `compute_readiness_score()` and `build_cbom()` over the
-union of all pushed `CryptoEndpoint` rows, producing:
+`quirk sensor merge` has no output-directory flag: the CBOM files are written next to the
+console database. It re-runs `compute_readiness_score()` and `build_cbom()` over the
+console's own latest local scan session (`CryptoEndpoint` rows with no sensor) plus **one
+endpoint row per sensor**: the single most recent row that sensor pushed, not its whole
+latest push. A sensor that pushed many endpoints therefore contributes one of them to the
+merged CBOM and score (a known defect, tracked for a fix). The merge produces:
 
-- One merged CBOM (`cbom-<ts>.json` + `cbom-<ts>.xml`)
+- One merged CBOM (`cbom-<YYYYMMDDTHHMMSS>.cdx.json` + `cbom-<YYYYMMDDTHHMMSS>.cdx.xml`)
 - One unified quantum-readiness score
-- A `coverage_warning` if any enrolled sensor has not pushed within `stale_days`
+- A `coverage_warning` if any enrolled sensor is overdue, meaning it has not pushed within
+  twice its expected cadence (`expected_cadence_minutes`, default 1440). Sensors silent
+  for longer than `--stale-days` are treated as decommissioned and left out of the warning.
+
+With no endpoints at all (no sensor has pushed), the command prints `Score: None (None)` and
+writes no CBOM. Its warning names any sensor enrolled within the last `--stale-days` days
+that has not pushed as overdue; with no such sensor it reads "No endpoints found".
 
 **MERGE-03 behaviour:** If two or more sensors scanned the same logical hostname and port
 (e.g. `crypto.internal:443` appearing in both a DMZ and a PCI segment), the CBOM will
 contain **one component per sensor** — distinct by `sensor_id` — not a de-duplicated
-single entry. The `(sensor_id, host, port)` uniqueness key is the correct model for
-segmented networks where the same address exists in multiple security zones.
+single entry. The CBOM builder embeds the `sensor_id` in the `bom_ref` of each host:port
+component (for example `crypto/certificate/<sensor_id>:crypto.internal:443`), which is the
+correct model for segmented networks where the same address exists in multiple security
+zones.
+
+The dashboard's **Sensors** page (`/sensors`) lists every enrolled sensor with its segment,
+version and last push time, and a status of `current`, `stale` (no push within twice its
+expected cadence) or `unknown` (never pushed). The **Executive** page shows the latest
+merge's coverage warning when a sensor did not contribute, and a score gauge for each
+segment. The gauges are recomputed from the current sensor rows each time the page loads
+(with the same one-endpoint-per-sensor limit), not read back from the stored merge.
 
 ### 8.5 Windows sensor installation
 
 QU.I.R.K. sensors run on Windows with no additional configuration beyond the standard
 Python install.
 
-**Prerequisites:** Python 3.11+ for Windows, available from https://www.python.org/downloads/
+**Prerequisites:** Python 3.10 or newer for Windows (the package declares `requires-python >=3.10`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
 
 **Install:**
 
@@ -1443,25 +1764,29 @@ pip install "quirk-scanner[all]"
 ```powershell
 # Enroll (one-time)
 quirk sensor enroll https://<console-host>:8512 `
-  --segment segment-windows
-# Then edit %APPDATA%\quirk\sensor.yaml:
-#   console_api_token: <per-sensor-token-from-quirk-console-enroll>
+  --segment segment-windows `
+  --sensor-id <sensor_id-from-quirk-console-enroll> `
+  --api-token <per-sensor-token-from-quirk-console-enroll>
 
-# sensor.yaml written to: $env:APPDATA\quirk\sensor.yaml
+# sensor.yaml written to: $env:LOCALAPPDATA\quirk\quirk\sensor.yaml
 
 # Push findings
 quirk sensor push --scan-config C:\quirk\sensor-scan.yaml
 ```
 
-**`sensor.yaml` path on Windows:** `%APPDATA%\quirk\sensor.yaml`
-(resolved via `platformdirs.user_config_dir("quirk")` at runtime).
+**`sensor.yaml` path on Windows:** `%LOCALAPPDATA%\quirk\quirk\sensor.yaml`
+(resolved via `platformdirs.user_config_dir("quirk")` at runtime, which on Windows is the
+per-user local application-data folder with the application name repeated as the author folder).
 
 **SIGTERM note:** The QU.I.R.K. scheduler uses `signal.SIGTERM` for graceful shutdown on
-Linux/macOS but guards it with `sys.platform != 'win32'` (`scheduler_cmd.py:283-284`).
-On Windows, use Ctrl+C or the Windows Service stop API instead of SIGTERM.
+Linux/macOS but guards it with `sys.platform != 'win32'` (`quirk/cli/scheduler_cmd.py`).
+On Windows, stop it with Ctrl+C instead of SIGTERM.
 
-**nmap dependency:** The TLS scanner requires `nmap` on `PATH`. Download the Windows
-installer from https://nmap.org/download.html and confirm `nmap.exe` is accessible:
+**nmap dependency:** `nmap` is used only when nmap discovery is selected: `--discovery nmap`
+(which the dashboard passes for its nmap and wide port-scope options), or a yes to the
+interactive wizard's nmap prompt, whose default is yes. The default built-in discovery of a
+`--config` scan needs no `nmap` binary. If you use it, download the Windows
+installer from https://nmap.org/download.html and confirm `nmap.exe` is accessible on `PATH`:
 
 ```powershell
 nmap --version
@@ -1474,7 +1799,7 @@ For sensors with no network path to the console, use file-based export/import:
 ```bash
 # Sensor host (no console connectivity)
 quirk sensor export-results
-# → writes <sensor_id>-<payload_id>.qpush to the current directory (or --output-dir)
+# → writes <sensor_id>-<payload_id>.qpush to the current directory (or the --output directory)
 ```
 
 Transfer the `.qpush` file to the console host via USB, secure file share, or any
@@ -1485,36 +1810,42 @@ out-of-band channel, then import:
 quirk console import-results /path/to/<sensor_id>-<payload_id>.qpush
 ```
 
-The console validates the HMAC signature, decompresses the envelope, deduplicates by
-`payload_id` (idempotent re-import is safe), and ingests the findings. Run
-`quirk sensor merge` afterwards to produce the unified CBOM.
+The console decompresses the envelope, checks its required fields, rejects a `payload_id`
+it has already imported (a second import of the same file exits with status 1 and ingests
+nothing), and ingests the findings. The sensor must already be enrolled on the console
+(`quirk console enroll --sensor-id <uuid>`, §8.2) or the import fails. Move the `.qpush` file
+over a channel you trust. Run `quirk sensor merge` afterwards to produce the unified CBOM.
 
 ---
 
 ### 8.8 Windows sensor deployment (zip + Scheduled Task)
 
-*(v5.6+ — frozen binary; no Python required on the sensor host)*
+*(5.5.1 and later — frozen binary; no Python required on the sensor host)*
 
 For Windows sensor hosts where a Python runtime is not available (or not desired),
 download the pre-built `quirk-windows-<version>.zip` asset from the [GitHub Release](
-https://github.com/0xD1g5/QU.I.R.K/releases) for your target version. The zip bundles
+https://github.com/0xD1g5/QU.I.R.K/releases) for your target version. Most releases from
+5.5.1 on carry one (5.11.0 does not), and the version in the file name does not always
+match the release tag, so take the asset attached to the release you want. The zip bundles
 the frozen `quirk.exe` onedir executable together with `install.ps1`, `uninstall.ps1`,
 and a `sensor.sample.yaml` reference config — no Python install required on the sensor
 host.
 
 #### Unsigned binary notice
 
-The zip asset is **NOT Authenticode-signed**. Authenticode signing is deferred to a
-future milestone. Operators may see a Windows SmartScreen prompt ("Windows protected your
-PC") when running `install.ps1` or `quirk.exe` for the first time. To proceed: click
-**More info**, then **Run anyway**. Operators who require signed binaries should build
-from source until Authenticode signing is implemented.
+The zip asset is **NOT Authenticode-signed**: the `quirk.exe` in the 5.25.0 asset has no
+signature, and Authenticode signing is deferred. Windows SmartScreen or your endpoint
+protection may therefore warn when you run `install.ps1` or `quirk.exe` for the first
+time; approve it according to your organisation's policy. Operators who require signed
+binaries should build from source until Authenticode signing is implemented.
 
 #### Prerequisites
 
-- **PowerShell 5.1+** (built in to Windows 10/11 and Windows Server 2016+).
-- An enrollment token issued by `quirk console enroll` on the console host. See
-  §8.1.1 for how to provision per-sensor push credentials via
+- **PowerShell 5.1+** (built in to Windows 10/11 and Windows Server 2016+). The examples
+  below use `pwsh` (PowerShell 7); with the built-in Windows PowerShell run
+  `powershell -File install.ps1 ...` instead.
+- An enrollment token and `sensor_id` issued by `quirk console enroll` on the console host.
+  See §8.1.1 for how to provision per-sensor push credentials via
   `quirk console enroll --segment <label>`.
 - Network access from the Windows host to the QUIRK console on its listen port
   (default 8512).
@@ -1529,8 +1860,9 @@ from source until Authenticode signing is implemented.
    ```
 
 2. Run `install.ps1`. The installer copies the bundle to
-   `%LOCALAPPDATA%\Programs\QUIRK` (**no admin elevation required**), enrolls the
-   sensor against the console, tightens the sensor config ACL to the current user,
+   `%LOCALAPPDATA%\Programs\QUIRK` (**no admin elevation required**), runs
+   `quirk.exe sensor enroll` to write the sensor config (this does not contact the
+   console), tightens the sensor config ACL to the current user,
    and registers a daily Scheduled Task named **"QUIRK Sensor Push"** that runs
    `quirk.exe sensor push` on the chosen cadence.
 
@@ -1573,6 +1905,26 @@ from source until Authenticode signing is implemented.
    `%LOCALAPPDATA%\Programs\QUIRK\config\sensor.yaml`. The config file is ACL-restricted
    to the current user immediately after enrollment.
 
+   Two things the installer does not do for you. First, `install.ps1` has no `-SensorId`
+   parameter, so the `sensor.yaml` it writes holds a random `sensor_id` that the token does
+   not belong to, and every push is rejected with HTTP 403 until they match. Open
+   `sensor.yaml` in an editor and replace the value of `sensor_id:` with the UUID that
+   `quirk console enroll` printed (editing the file in place keeps the ACL it was given).
+   Second, it does not give the Scheduled Task a scan config. The task runs
+   `quirk.exe sensor push --config "<sensor.yaml>"` with no `--scan-config`, and the default
+   is a relative `config.yaml`, which will not normally exist in the task's working
+   directory: the local scan then fails with a warning and an empty result set is pushed,
+   so the console shows the sensor as current while nothing was scanned. Point the task
+   at a scan config by its full path:
+
+   ```powershell
+   $cfg = "$env:LOCALAPPDATA\Programs\QUIRK\config\sensor.yaml"
+   $exe = "$env:LOCALAPPDATA\Programs\QUIRK\quirk\quirk.exe"
+   $action = New-ScheduledTaskAction -Execute $exe `
+       -Argument "sensor push --config `"$cfg`" --scan-config `"C:\quirk\sensor-scan.yaml`""
+   Set-ScheduledTask -TaskName "QUIRK Sensor Push" -Action $action
+   ```
+
 #### Scheduled Task
 
 `install.ps1` registers a Windows Scheduled Task named **"QUIRK Sensor Push"** that runs
@@ -1588,7 +1940,8 @@ Disable-ScheduledTask -TaskName "QUIRK Sensor Push"
 
 # Run the push immediately (outside the schedule)
 & "$env:LOCALAPPDATA\Programs\QUIRK\quirk\quirk.exe" sensor push `
-    --config "$env:LOCALAPPDATA\Programs\QUIRK\config\sensor.yaml"
+    --config "$env:LOCALAPPDATA\Programs\QUIRK\config\sensor.yaml" `
+    --scan-config C:\quirk\sensor-scan.yaml
 ```
 
 #### Uninstall
@@ -1605,8 +1958,11 @@ pwsh -File uninstall.ps1 -KeepConfig
 ```
 
 `-KeepConfig` removes the binary bundle but leaves `%LOCALAPPDATA%\Programs\QUIRK\config\`
-intact so a future `install.ps1` run can reuse the existing sensor identity without
-re-enrolling.
+intact. A later `install.ps1` run does not reuse that identity, though: it always runs
+`sensor enroll` without `--sensor-id`, and enroll keeps an existing `sensor.yaml` only
+when its `sensor_id` matches the one being enrolled, so a reinstall writes a fresh random
+`sensor_id` and HMAC key. Restore the console's `sensor_id` in `sensor.yaml` afterwards
+(or keep a copy of the file and put it back).
 
 #### Security note — sensor config at rest
 
@@ -1622,13 +1978,13 @@ quirk console revoke-sensor <sensor_id>
 quirk console enroll --segment <label>
 ```
 
-Then re-run `install.ps1` on the Windows host with the new enrollment token.
+Then re-run `install.ps1` on the Windows host with the new enrollment token and set `sensor_id` in `sensor.yaml` to the new UUID, as above.
 
 ---
 
 ### 8.9 Automatic Merge
 
-*(v5.5+)*
+*(5.5.0 and later)*
 
 When every enrolled (non-revoked) sensor has pushed its latest results, the console can
 merge them automatically — eliminating the need to run `quirk sensor merge` manually in
@@ -1645,7 +2001,7 @@ sensor push (AUTOMERGE-02).
 #### Disabling auto-merge
 
 Add the `console.auto_merge` block to your console `config.yaml`. Set `enabled` to
-`false` for explicit manual-only control (v5.4 behaviour):
+`false` for explicit manual-only control:
 
 ```yaml
 console:
@@ -1657,7 +2013,9 @@ console:
 
 The toggle is read at evaluation time (per push). Changing the setting takes effect on
 the next push; any in-flight pushes or merge tasks that have already started are
-unaffected.
+unaffected. The console process reads the file named by the `QUIRK_CONFIG_PATH`
+environment variable, or `./config.yaml` in its working directory when that is unset; if
+the file is absent or unreadable the defaults apply (enabled, `all-sensors-in`).
 
 #### Trigger conditions
 
@@ -1666,39 +2024,40 @@ available:
 
 **`all-sensors-in`** (default)
 
-The merge fires once every non-revoked enrolled sensor has checked in with a push newer
-than the latest `MergeRun`. This is the safest choice for fixed-fleet deployments — you
-always get a full-coverage CBOM. Revoked sensors are excluded from the "all in" set
+The merge fires once every sensor that still has an unrevoked token has pushed at least
+once and the newest push is later than the latest `MergeRun`. This is the safest choice for
+fixed-fleet deployments — you get a full-coverage CBOM as soon as the whole fleet has
+reported. Revoked sensors are excluded from the "all in" set
 (Phase 113 `revoked_at`), so revoking a decommissioned sensor does not block the merge.
 
 **`cadence-window`**
 
-The merge fires when the elapsed time since the last `MergeRun` exceeds a configured
-window. The push that crosses the window boundary triggers the merge with whatever has
-arrived at that moment. Sensors that have not pushed by the window deadline are listed in
-a `coverage_warning` on the merged CBOM. This mode suits deployments where not all
+The merge fires when the elapsed time since the last `MergeRun` reaches a configured
+window (or immediately when no merge has run yet). The push that crosses the window
+boundary triggers the merge with whatever has arrived at that moment. Sensors that are
+overdue (never pushed, or no push within twice their expected cadence) are listed in the
+merge run's `coverage_warning`, which the dashboard Executive page shows; a sensor silent
+for more than 30 days is treated as decommissioned and left out. This mode suits deployments where not all
 sensors push on the same cadence or where time-bounded merges are preferred over
 full-coverage guarantees.
 
 Set the window explicitly with `cadence_window_minutes` (integer, minutes). If omitted,
-the console defaults to the per-sensor `expected_cadence_minutes` value (default 1440
-— 24 hours).
+the console uses the `expected_cadence_minutes` of the first enrolled sensor (1440 — 24
+hours — for every sensor enrolled with `quirk console enroll`).
 
 ```yaml
 console:
   auto_merge:
     enabled: true
     trigger_condition: cadence-window
-    cadence_window_minutes: 720    # merge every 12 hours
+    cadence_window_minutes: 720    # merge on the first push 12+ hours after the last merge
 ```
 
 #### Idempotency and duplicate merges
 
-On single-tenant deployments, a narrow race between two simultaneous final pushes can
-produce a second `MergeRun` row before the first has committed. This is harmless — the
-rows are identical and the `scanned_at` timestamps on sensor findings are never
-rewritten. The background task re-checks the condition before merging, so most
-near-simultaneous pushes coalesce to one merge.
+The `scanned_at` timestamps on sensor findings are never rewritten by a merge. The
+background task re-checks, before merging, whether a `MergeRun` already covers the latest
+push and does nothing if so, so near-simultaneous pushes normally coalesce to one merge.
 
 #### Reading auto-merge outcomes
 
@@ -1710,13 +2069,13 @@ Every auto-merge writes an `IntegrationDelivery` audit row:
 | `status` | `ok` | `failed` |
 | `error_summary` | *(empty)* | Sanitised error message |
 
-Query via the dashboard or directly in SQLite:
+Query it directly in SQLite (the dashboard does not display these rows):
 
 ```sql
-SELECT destination, status, error_summary, created_at
+SELECT destination, status, error_summary, attempted_at
 FROM integration_deliveries
 WHERE destination = 'auto_merge'
-ORDER BY created_at DESC
+ORDER BY attempted_at DESC
 LIMIT 10;
 ```
 
@@ -1727,7 +2086,7 @@ then run `quirk sensor merge` manually to retry.
 
 #### Manual merge is unchanged (AUTOMERGE-03)
 
-The `quirk sensor merge` command remains available and works identically to v5.4 — the
+The `quirk sensor merge` command remains available — the
 same Option-A union CBOM, `coverage_warning`, and sensor-local `scanned_at`. Auto-merge
 and manual merge call the same underlying `merge_scan()` function. Operators who need
 explicit control, scripted post-push merge verification, or a one-off merge after
@@ -1736,15 +2095,17 @@ enabling `all-sensors-in` with auto-merge disabled can always run:
 ```bash
 quirk sensor merge
 # Or with custom options:
-quirk sensor merge --stale-days 7 --output-dir /var/quirk/merge-out
+quirk sensor merge --stale-days 7 --db /var/quirk/quirk.db
 ```
 
 ---
 
 ### 8.7 All-configurations / settings reference (999.59)
 
-The table below covers every knob relevant to distributed sensor deployments, closing
-the settings-coverage gap (999.59). For the full single-host config reference see
+This section covers the per-scanner timeouts, the output paths and the sensor identity
+fields of a scan (999.59). Other sensor settings are documented where they are used: the
+`console.auto_merge` block in §8.9, `QUIRK_SENSOR_IP_ALLOWLIST` in §8.1, and the
+`sensor.yaml` written by `quirk sensor enroll` in §8. For the full single-host config reference see
 [`docs/configuration.md`](configuration.md).
 
 #### `scan.timeouts.*` — per-scanner timeout knobs
@@ -1768,27 +2129,39 @@ Set in `config.yaml` under the `scan.timeouts` block. All values are in seconds.
 | `scan.timeouts.fingerprint_seconds` | 4 | Fingerprint probe |
 | `scan.timeouts.default_seconds` | 5 | Fallback for unlisted scanners |
 
+These are the values used when a key is absent. The `fingerprint_seconds` default of 4
+is the `standard` scan profile's value (`quick` 3, `deep` 6); the others do not change
+with the profile. `dnssec_seconds`, `saml_seconds` and `kerberos_seconds` are accepted
+but not currently read: the DNSSEC, SAML and Kerberos scanners always use 10 seconds.
+
 See [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) for retry policies and jitter.
 
 #### `output.directory` — report output path
 
 ```yaml
 output:
-  directory: "./quirk-output"   # default; relative to CWD or absolute
+  directory: "./quirk-output"   # relative to CWD or absolute
+  db_path: "./quirk-output/quirk.db"
 ```
 
-All scan outputs (HTML/PDF/DOCX reports, CBOM JSON/XML, findings JSON,
-`executive.md`, `technical.md`, `intelligence-*.json`) land here. On sensor nodes,
-`quirk sensor push` uses a temporary directory for the local scan and discards it after
-push; set `--scan-config` and a stable `output.directory` if you want per-push
-artefacts retained on the sensor host.
+`output.directory` and `output.db_path` are both required keys of a scan config (the
+interactive wizard proposes `quirk-output` and `quirk-output/quirk.db`). All scan outputs
+(HTML/PDF/DOCX reports, `cbom-<stamp>.cdx.json` and `.cdx.xml`, `findings-<stamp>.json`,
+`executive-summary-<stamp>.md`, `technical-findings-<stamp>.md`,
+`intelligence-<stamp>.json`) land in `output.directory`. On sensor nodes,
+`quirk sensor push` runs the local scan with a temporary directory as its working
+directory and discards it after the push, so a relative `output.directory` is deleted with
+it; use an absolute `output.directory` if you want per-push artefacts retained on the
+sensor host. Keep `output.db_path` relative and ending in `.db`: the push looks for the
+scan database as `*.db` under that temporary directory, and a database anywhere else (or
+named `*.sqlite`) is not found, so the push carries no findings.
 
 #### Sensor identity fields in scan output
 
 | Field | Location | Description |
 |-------|----------|-------------|
-| `sensor_id` | `CryptoEndpoint` DB column; CBOM component metadata | UUID assigned at `quirk sensor enroll`; `nullable=True` (NULL = implicit local sensor, backward-compatible with pre-v5.4 scans) |
-| `segment` | `CryptoEndpoint` DB column; findings JSON | Network-segment label passed via `--segment` at enroll time; appears in `findings-<ts>.json` per-finding and in the merged CBOM |
+| `sensor_id` | `CryptoEndpoint` DB column; embedded in the `bom_ref` of each host:port CBOM component | UUID minted by `quirk console enroll` and passed to the sensor with `quirk sensor enroll --sensor-id` (a random UUID if omitted); `nullable=True` (NULL = implicit local sensor, backward-compatible with scans from before sensors existed, i.e. before 5.5.0) |
+| `segment` | `CryptoEndpoint` DB column | Network-segment label passed via `--segment` at enroll time; the Executive page shows a score gauge per segment of the latest merge |
 
 These two fields are the differentiators for MERGE-03 — two findings with identical
 `host:port` but different `sensor_id` values are intentional and correct; they represent
@@ -1798,11 +2171,15 @@ the same logical endpoint discovered independently in two network segments.
 
 ## 9. Hardware Scanning
 
-Hardware scanning is an advanced, opt-in capability that fingerprints network devices
-(switches, routers, access points) via SNMP, assigns CNSA 2.0 remediation tiers, and
-annotates crypto-bridge topology. Operators who have not installed the `[hw]` extra and
-do not manage network hardware can complete §1–§8 without interruption — the scanner
-runs cleanly with the extra absent.
+Hardware scanning fingerprints network and infrastructure devices (switches, routers,
+firewalls, load balancers, HSMs, management controllers), assigns CNSA 2.0 remediation
+tiers, and annotates crypto-bridge topology. Two fingerprinting methods need no extra and
+no flag: SSH-banner matching runs for every SSH endpoint a scan finds, and HTTP-management
+probing follows for each one whose banner names no known vendor. The SNMP sweep, Modbus/TCP and BACnet/IP probing are opt-in and need
+the `[hw]` extra; with `[hw]` installed, an SSH host those two methods leave unidentified also
+gets an SNMP probe even when SNMP is off (§9.1). Operators who have not installed the `[hw]` extra and do not manage network
+hardware can complete §1–§8 without interruption — the scanner runs cleanly with the
+extra absent.
 
 ### 9.1 Enable SNMP Scanning
 
@@ -1812,26 +2189,37 @@ runs cleanly with the extra absent.
 pip install 'quirk-scanner[hw]'
 ```
 
-This extra adds `pysnmp` and the hardware fingerprinting engine. See the §2.2 optional
-extras matrix for a full dependency list.
+This extra adds `pysnmp` and `sysdescrparser` (SNMP) and `pymodbus` and `bacpypes3`
+(Modbus/TCP and BACnet/IP). See the §2.2 optional extras matrix for a full dependency list.
 
 **Step 2 — Enable SNMP in your config.**
 
-Add the following two keys under the `scan:` block in `config.yaml`:
+Add the following two keys under the `connectors:` block in `config.yaml` (the `--enable-snmp`
+command-line flag turns the first one on without editing the file):
 
 ```yaml
-scan:
+connectors:
   enable_snmp: true          # default: false — must be explicitly set to opt in
   snmp_community: "public"   # SNMPv2c community string; default: "public"
 ```
 
-`enable_snmp` defaults to `false`. If you omit the key or leave it as `false`, the
-scan runs cleanly with no error and no hardware devices appear in the output — this is
-the expected behaviour when `[hw]` is not installed or when SNMP coverage is not needed.
+Under `scan:` these keys do not load: the config loader rejects them with
+`TypeError: ScanCfg.__init__() got an unexpected keyword argument 'enable_snmp'`. When
+`snmp_community` is not set in the YAML, the `QUIRK_SNMP_COMMUNITY` environment variable
+(which the dashboard's Connectors panel uses) supplies it; an explicit YAML value wins.
 
-**Step 3 — Run the scan.** The SNMP probe executes **after all endpoint scans complete**
-and targets every unique host IP discovered during the full scan (TLS, SSH, fingerprint,
-etc.), not just SSH endpoints. No additional target list is required.
+`enable_snmp` defaults to `false`. If you omit the key or leave it as `false`, the
+scan runs cleanly with no error and the SNMP sweep of every scanned host does not run.
+Devices fingerprinted from SSH banners or HTTP management pages still appear. With `[hw]`
+installed, though, `enable_snmp: false` does not stop all SNMP traffic: hardware
+fingerprinting still probes each SSH host whose banner and management page identified no
+vendor (SNMPv2c with the community `public`, or SNMPv3 when a credential matches the host),
+and records any vendor it reads. Without `[hw]` no SNMP probe is sent.
+
+**Step 3 — Run the scan.** The SNMP probe executes **after the TLS, SSH and PQC-probe phases
+complete** and targets every unique host that produced a TLS, SSH or PQC-probe endpoint,
+not just SSH hosts. No additional target list is required. Each probe uses the
+`scan.timeouts.default_seconds` timeout (5 seconds unless you change it).
 
 **What QUIRK probes.** Three SNMP OIDs are queried per host:
 
@@ -1841,14 +2229,14 @@ etc.), not just SSH endpoints. No additional target list is required.
 | `1.3.6.1.2.1.1.5.0` | `sysName` | Device hostname |
 | `1.3.6.1.2.1.1.2.0` | `sysObjectID` | Enterprise OID — fallback vendor identification |
 
-**Sample output.** Discovered hardware devices appear as a separate findings block:
+**Sample output.** Discovered hardware devices are summarised in the executive summary
+(`executive-summary-<stamp>.md`) under a Hardware PQC Advisory heading; the per-device
+rows are in the HTML and DOCX reports and on the dashboard's Hardware page:
 
 ```text
-Hardware Devices Found: 3
+### Hardware PQC Advisory
 
-  192.168.1.1   Cisco Catalyst 9300    Tier 1  HIGH   Replace by 2030
-  192.168.1.254 Juniper EX2300         Tier 2  MEDIUM Upgrade firmware 2030-2033
-  10.0.0.1      Aruba 2930F            Tier 3  LOW    Accept + monitor, re-evaluate 2033+
+> **Advisory only — not included in readiness score.** 3 hardware device(s) fingerprinted. Tier 1 (replace by 2030): 1, Tier 2 (firmware upgrade 2030–2033): 1, Tier 3 (monitor, re-evaluate 2033+): 1, N/A (EOL before migration window): 0. See full report for device-level detail.
 ```
 
 For the full config-key reference (all `scan.*` defaults, type constraints, and
@@ -1863,7 +2251,12 @@ the SNMPv2c community-string scanning above. SNMPv3 credentials are configured p
 globally — a network may have a mix of v3-capable and v2c-only devices.
 
 **Configure a v3 credential.** Add a `connectors.snmp_v3_credentials` entry keyed by host
-(see `docs/configuration.md` for the full field reference):
+(see `docs/configuration.md` for the full field reference). An entry keyed `default`
+applies to every host that has no entry of its own. `auth_protocol` accepts `SHA`
+(the default), `SHA224`, `SHA256`, `SHA384` or `SHA512`; `priv_protocol` accepts `AES`
+(the default), `AES128`, `AES192` or `AES256`. Any other `auth_protocol` is rejected when
+the config loads, and so is any other `priv_protocol` on an entry that sets `priv_key_env`
+(an entry without a privacy key never uses its `priv_protocol`):
 
 ```yaml
 connectors:
@@ -1887,11 +2280,16 @@ environment, never from the command line.
 2. **v2c fallback** — if v3 fails (wrong credentials) or the host offers a weaker protocol
    than requested, QUIRK falls back to the SNMPv2c community-string probe (§9.1) so the
    vendor/model identification can still succeed.
-3. **none** — if neither v3 nor v2c gets a response, no SNMP finding is recorded for that
-   host.
+3. **none** — if neither v3 nor v2c gets a response, no vendor or model is identified from
+   SNMP. The host still gets a hardware row: an existing fingerprinted row whose vendor is
+   still `Unknown` has its SNMP column set (`none`, or `v3-failed-fell-back` /
+   `v3-protocol-mismatch` when v3 was tried), and a host with no row gets a new `Unknown`
+   device row on port 161 marked Tier N/A.
 
-Each outcome is recorded honestly, not collapsed into a generic "SNMP succeeded" label — see
-`docs/report-interpretation.md` for the five distinct labels this produces in reports and the
+Each outcome gets its own label rather than a generic "SNMP succeeded", with one known
+exception: an authenticated but unencrypted v3 session (authNoPriv) is labelled
+`v3 noAuthNoPriv`, the same as an unauthenticated one. See
+`docs/report-interpretation.md` for the distinct labels this produces in reports and the
 dashboard, including the important distinction between an intentional v2c-only scan and a
 genuine v3 credential failure (`v3-failed-fell-back`).
 
@@ -1899,15 +2297,24 @@ genuine v3 credential failure (`v3-failed-fell-back`).
 
 ### 9.2 CNSA 2.0 Remediation Tiers
 
-Each discovered hardware device is assigned a tier derived from CNSA 2.0 (Commercial
-National Security Algorithm Suite 2.0) guidance on post-quantum migration timelines.
+Each hardware device fingerprinted from an SSH endpoint or by the Modbus/BACnet OT pass is
+assigned a tier derived from CNSA 2.0 (Commercial National Security Algorithm Suite 2.0)
+guidance on post-quantum migration timelines. A device found only by the SNMP probe skips this derivation and is stored as
+Tier N/A whatever its vendor or EOL date, so read Tier N/A on a port-161 row as "not tiered".
 
 | Tier | Severity | Deadline | Meaning |
 |------|----------|----------|---------|
 | Tier 1 | HIGH | Replace by 2030 | No PQC upgrade path — device must be replaced |
 | Tier 2 | MEDIUM | Upgrade firmware 2030-2033 | PQC firmware upgrade path exists |
-| Tier 3 | LOW | Accept + monitor, re-evaluate 2033+ | PQC roadmap exists but upgrade is distant |
+| Tier 3 | LOW | Accept + monitor, re-evaluate 2033+ | The catalog records PQC support (or the vendor is silent and the match is high confidence) |
 | Tier N/A | INFO | EOL before PQC migration window | Device won't survive to the migration deadline |
+
+**How the tier is derived** (`quirk/scanner/hardware_tier.py`). A device whose EOL date is
+before 2030-01-01 is Tier N/A, checked first. Otherwise a low or unknown fingerprint
+confidence caps the tier at Tier 2 (Tier 3 only when the catalog says PQC is supported).
+At medium or high confidence the catalog's `pqc_status` decides: `unsupported` is Tier 1,
+`partial` is Tier 2, `supported` is Tier 3, and `vendor-silent` is Tier 3 at high
+confidence and Tier 2 otherwise.
 
 **Client-facing action.** When presenting findings: Tier 1 devices require an active
 replacement plan — no firmware path exists, so budget and procurement lead time need to
@@ -1972,8 +2379,9 @@ device's remediation requirement. The device still needs replacement or firmware
 per its CNSA tier (see §9.2 above). The bridge annotation — at either status — is advisory
 context about network topology; it is not a mitigation credit and should not be presented
 to a client as one. `upstream_mitigated` is a stronger signal than `partial_only`, but it
-still carries a mandatory caveat on every rendered surface: "Based on SNMP-derived
-network-path evidence; not independently confirmed by traffic inspection." See
+still carries a mandatory caveat: "Based on SNMP-derived network-path evidence; not
+independently confirmed by traffic inspection." (verbatim in the HTML and DOCX reports and
+the dashboard `/hardware` tab; the executive summary carries an equivalent sentence). See
 `docs/report-interpretation.md` §10.5 for the full rendering/badge contract across HTML,
 PDF, DOCX, and the dashboard `/hardware` tab.
 
@@ -2017,20 +2425,24 @@ UDP).
   sends only FC 43/14 (Read Device Identification); BACnet sends only Who-Is/I-Am
   discovery plus ReadProperty — no WriteProperty, no broadcast beyond the single
   directed-unicast Who-Is.
-- **Single in-flight per host.** QUIRK never has more than one OT/ICS probe outstanding
-  against a given host at a time.
-- **One-strike circuit breaker.** Any anomalous response — timeout, malformed frame,
-  connection reset, or exception — immediately aborts further OT/ICS probing of that host
-  for the rest of the scan. There is no retry and no backoff, deliberately stricter than
-  QUIRK's standard scan retry policy elsewhere.
+- **One request at a time per fingerprinted endpoint.** For each endpoint it fingerprints,
+  QUIRK runs the Modbus probe and then the BACnet probe in sequence, each sending one request
+  at a time. Endpoints are fingerprinted in parallel, though, so a host with more than one
+  SSH endpoint is probed once per endpoint and can have two OT/ICS probes outstanding at once.
+- **One-strike circuit breaker.** Any anomalous response — a timeout after contact was
+  made, a malformed frame, a connection reset, or an exception — ends that probe on the
+  spot and records "Probe aborted". There is no retry and no backoff, deliberately
+  stricter than QUIRK's standard scan retry policy elsewhere. The Modbus and BACnet probes
+  are independent of each other: an aborted Modbus probe does not stop the BACnet probe of
+  the same host.
 - **Short, dedicated timeout.** Both probes use a conservative default timeout (2s),
   shorter than QUIRK's general scan timeout, to minimize the time spent holding a
   connection open against fragile embedded devices.
 
-**Enable the flags:**
+**Enable the flags** (targets come from the config's `targets` block, or from `--targets-file`; there is no `--target` flag):
 
 ```bash
-python run_scan.py --target 10.0.5.0/24 --enable-modbus --enable-bacnet
+python run_scan.py --config config.yaml --enable-modbus --enable-bacnet
 ```
 
 **Result labeling.** Every OT/ICS probe attempt resolves to one of five states, shown
@@ -2040,9 +2452,9 @@ scanned" binary):
 | State | Meaning |
 |-------|---------|
 | Identified (Modbus / BACnet badge) | Vendor/model/firmware successfully read |
-| No response | Host did not respond within the timeout |
+| No response | Nothing usable answered: for Modbus the TCP connection was never established (port closed or host unreachable); for BACnet no I-Am came back within the timeout |
 | No match | A response was received but carried no usable vendor identity |
-| **Probe aborted** | The one-strike circuit breaker fired — a real anomalous response, not "nothing happened" |
+| **Probe aborted** | The one-strike circuit breaker fired — a real anomalous response, including a timeout after the Modbus connection opened or during the BACnet ReadProperty, not "nothing happened" |
 | Not attempted (em dash) | The flag was off, or (Modbus only) port 502 was never observed open |
 
 The **"Probe aborted" state is operationally significant** — it tells the consultant the
@@ -2068,36 +2480,46 @@ live NVD API call, so correlation works fully offline and cannot be used to fing
 scanning host to an external service. This is the fourth advisory-only hardware signal after
 SNMP (§9.1), CNSA 2.0 tiers (§9.2), and Modbus/BACnet (§9.4).
 
-**`quirk cve status` — catalog freshness.** Mirrors `quirk qramm status`/`quirk compliance
-status` exactly:
+**`quirk cve status` — catalog freshness.** Same table shape as `quirk qramm status` (source,
+last verified, days remaining, status); `quirk compliance status` prints a different, per-framework table:
 
 ```bash
 quirk cve status
 quirk cve status --format json
 ```
 
-Reports the CVE snapshot's `last_verified` date, days elapsed, days remaining before the
-30-day staleness threshold, and a FRESH/STALE verdict. Exit code `0` when fresh, `1` when
-stale — the same 0/1 convention used by `quirk qramm status` (§7) so CI and pre-engagement
-scripts can gate on it. Like the QRAMM and compliance catalogs, `QUIRK_CI_STALENESS_OVERRIDE_DATE`
-overrides "today" for staleness-gate testing; a malformed override value is logged as a warning
-and ignored, falling back to the real system date rather than crashing the command.
+The text form prints one row: the source (`NVD`), the snapshot's `last_verified` date, the
+days remaining before the 30-day staleness threshold, and a FRESH/STALE status. With
+`--format json` it prints the source, `last_verified`, a `verdict` and the catalog entries
+(vendor, model, CVE id, severity, `affected_before`, source URL). Exit code `0` when fresh,
+`1` when stale — the same 0/1 convention used by `quirk qramm status` (§7) so CI and
+pre-engagement scripts can gate on it. As with `quirk qramm status` (but not
+`quirk compliance status`, which always uses the real date),
+`QUIRK_CI_STALENESS_OVERRIDE_DATE` overrides "today" for staleness-gate testing; a malformed
+override value is logged as a warning and ignored, falling back to the real system date
+rather than crashing the command. The override moves the text output and the exit code, but
+the `verdict` printed by `--format json` always uses the real date, so read the exit code when
+you use the override.
 
 **The CVE advisory scanner signal.** During report/dashboard generation, QUIRK calls
 `correlate_device(vendor, model, firmware)` for every device with a known (non-"Unknown")
 vendor. Firmware comes from whatever protocol already fingerprinted the device (Modbus/BACnet
-firmware strings preferred, SNMP/SSH/HTTP vendor+model otherwise). Two confidence levels:
+firmware strings only; devices fingerprinted by SNMP, SSH or HTTP carry no firmware string, so
+only catalog entries without a version boundary can match them). Two confidence levels:
 
 - **high confidence** — the device's parsed firmware version falls inside a CVE entry's
   documented affected range (an NVD "prior to X" boundary, exclusive `<`).
 - **medium confidence** — only a vendor+model match exists (the curated entry has no
-  version boundary, or the device's firmware string could not be parsed); QUIRK does not
-  guess whether the specific firmware is actually affected.
+  version boundary); QUIRK does not guess whether the specific firmware is actually
+  affected. An entry that does have a version boundary never matches a device whose
+  firmware string is missing or cannot be parsed.
 
 **Firmware CVE matches are advisory-only — never a severity finding, and never a score or
 remediation-tier input.** This is a hard architectural boundary (CVE-01/CVE-04): the CVE
-correlation module imports nothing from `intelligence/scoring.py` or `hardware_tier.py`, and
-a dedicated regression test (`tests/test_cve_score_guard.py`) enforces this in CI. Operators
+correlation module imports nothing from `intelligence/scoring.py` or `hardware_tier.py` (it
+imports only standard-library modules), and a dedicated regression test
+(`tests/test_cve_score_guard.py`) enforces in CI that no score weight is CVE-derived and that
+`assign_tier()` ignores CVE attributes. Operators
 should treat CVE matches as "worth investigating," not as a scored risk the readiness score
 already accounts for.
 
@@ -2122,22 +2544,26 @@ See `docs/report-interpretation.md` §10.7 for the report/dashboard rendering co
 ### 9.6 Device Re-Identification Fields (Phase 154)
 
 As of Phase 154, every fingerprinted `HardwareDevice` row carries three new per-device fields
-that improve re-identification across scans and honesty about probe outcomes. None of these
+that record device-identity evidence and honest probe outcomes. None of these
 are rendered as report or dashboard columns yet (deferred to a later release) — they are
 scanner-internal fields today, documented here so operators understand the underlying data
 model and the retention/last-known-good behavior it drives.
 
 - **`ssh_host_key_fingerprint`** — the SHA256 SSH host-key fingerprint QUIRK's existing
   `ssh-audit` run already captures for the device. Because a host key is tied to the device
-  itself (not its current IP), this fingerprint is the stable secondary identity key that
-  survives a DHCP lease renewal or a re-IP — something a `host:port` match alone cannot do.
+  itself (not its current IP), this fingerprint is an identity signal that would survive a
+  DHCP lease renewal or a re-IP, which a `host:port` match alone cannot. QUIRK records it but
+  does not yet match devices on it: drift reconciliation, the last-known-good projection and
+  history retention all key on `(host, port)`.
 
 - **`match_confidence`** — `high` when a `ssh_host_key_fingerprint` was captured for the
   device, `low` when the device could only be matched on `host:port`. `low` covers three
   distinct cases operators should be aware of: HTTP-only devices, SNMP-only devices, and —
   importantly — **SSH-reachable devices scanned from a host that does not have `ssh-audit`
   installed**. Operators who want `high`-confidence coverage across their SSH-reachable
-  hardware should install `ssh-audit` on the scanning host (see §1).
+  hardware should install `ssh-audit` on the scanning host (see §6.2). A device found only by
+  the standalone bulk SNMP sweep (a port-161 row built outside `fingerprint_one()`) gets no
+  `match_confidence` value at all (NULL), not `low`.
 
 - **`probe_status`** — `success` when the fingerprinting probe got any response at all,
   including an honest `vendor="Unknown"` result (an unrecognized device that still answered
@@ -2145,7 +2571,7 @@ model and the retention/last-known-good behavior it drives.
   nothing on the device answered at all.
 
 **`match_confidence` is not the same field as the pre-existing `confidence` column.**
-`confidence` (used elsewhere in hardware fingerprinting, e.g. §9.5's CVE correlation) describes
+`confidence` (used elsewhere in hardware fingerprinting, e.g. §9.2's tier-assignment cap) describes
 confidence in a *probe result* — how sure QUIRK is about a parsed vendor/model/firmware value.
 `match_confidence` describes confidence in *cross-scan device identity* — how sure QUIRK is
 that two rows scanned at different times represent the same physical device. A device can have
@@ -2168,9 +2594,9 @@ full mechanism.
 - **Lowering it deletes history irreversibly on the next scan.** The purge is a hard delete, not
   an archive — once a drift event ages past the configured window and a scan runs, that row is
   gone. Lower the value only when the older history is genuinely no longer needed.
-- **No separate command or schedule.** The purge runs automatically as part of every scan's
-  normal completion — there is no `quirk hardware purge` equivalent for drift events and no cron
-  job to configure.
+- **No separate command or schedule.** The purge runs automatically during every full scan's
+  hardware-persistence step (a `--check-in` re-probe does not run it) — there is no
+  `quirk hardware purge` equivalent for drift events and no cron job to configure.
 
 ---
 
@@ -2193,7 +2619,8 @@ compliance mappings and the BACnet vendor catalog. CI enforces this via
 365 days old.
 
 When CI (or a local `pytest` run) reports the EOL catalog stale, follow the same 3-step
-re-verification procedure documented in `CLAUDE.md`'s Staleness Review Cadence section:
+re-verification procedure the other date-gated catalogs use (never bump the date without
+actually re-verifying it against the sources):
 
 1. Re-verify each `EOL_TABLE` entry against its `source_url` — confirm the published EOL/EOS
    dates have not changed and are still cited to a live vendor or aggregator page.
@@ -2205,15 +2632,17 @@ from this catalog automatically during fingerprinting via `apply_eol_date()`. Mo
 paths (SSH banner, HTTP management, SNMP, Modbus, BACnet) converge on a single call site inside
 `fingerprint_one()`; the standalone SNMP-only bulk-discovery sweep in `run_scan.py` builds its own
 `HardwareDevice` rows outside that waterfall and calls `apply_eol_date()` separately at its own
-construction site, so every code path that creates a device row populates `eol_date` — not just
-the ones routed through `fingerprint_one()`. This interacts with the pre-existing (Phase
+construction site, so rows from both paths get `eol_date` from the catalog, not just the ones
+routed through `fingerprint_one()`. (If a fingerprint raises before that terminal step, the
+`failed` row it returns has no `eol_date`.) This interacts with the pre-existing (Phase
 128) CNSA 2.0 tier-assignment rule in `hardware_tier.py::assign_tier()`: a device whose EOL date
 falls before 2030-01-01 is assigned **Tier N/A**, regardless of its PQC support status. Because
 the EOL catalog was dormant before this phase, populating a real EOL date can legitimately move
 a previously Tier 1/2/3 device to Tier N/A on its very next scan. **This is intended behavior,
 not a regression** — a device whose vendor has already end-of-lifed it is not a candidate for
-PQC remediation planning in the same sense as a supported device, so Tier N/A correctly routes
-it toward replacement guidance instead. Operators who see a device's tier shift to Tier N/A after
+PQC remediation planning in the same sense as a supported device, so Tier N/A takes it out of
+the PQC tiers: the dashboard and the reports label it "EOL before PQC migration window" (an INFO
+advisory on the dashboard) instead of giving it a PQC deadline. Operators who see a device's tier shift to Tier N/A after
 upgrading to a build that includes this catalog should expect it, not file a bug.
 
 **Lifecycle drift events.** Every hardware-device commit during a scan now triggers
@@ -2260,7 +2689,7 @@ the scored-finding chrome elsewhere on the page.
 **What appears.** Each row shows: an event-type icon and label, the device's identity
 (`host:port` plus vendor/model), the literal `{old_value} → {new_value}` transition, a direction
 indicator, and the detection date. The most recent events render inline; older ones are tucked
-behind a collapsible "N historical events" disclosure so the section doesn't dominate the page on
+behind a collapsible "Show older lifecycle changes (N)" disclosure so the section doesn't dominate the page on
 a long-running device.
 
 **The four event types** are the same ones recorded by §9.7's reconciliation engine, with these
@@ -2300,9 +2729,10 @@ cost of a full scan.
 python run_scan.py --config config.yaml --check-in
 ```
 
-**`--check-in` is a bare boolean opt-in on `run_scan.py`, not a `--profile` value.** It cannot be
-combined with `--profile`'s `quick`/`standard`/`deep` choices — it is a separate short-circuit
-that fires immediately after database initialization, before any profile-driven scan logic runs.
+**`--check-in` is a bare boolean opt-in on `run_scan.py`, not a `--profile` value.** If you pass
+`--profile` with it, the profile has no effect — `--check-in` is a separate short-circuit that
+fires immediately after database initialization, and none of the timeout, concurrency or
+connector defaults a profile sets are read by the check-in re-probe.
 
 **What it does and does not do:**
 
@@ -2312,18 +2742,25 @@ that fires immediately after database initialization, before any profile-driven 
   all skipped entirely.
 - **No non-hardware scanner phases.** TLS, SSH, JWT/API, container, source-code, and cloud KMS
   scanning are all skipped. Only the hardware-fingerprinting probe family is re-run.
-- **Only the device's own probe family is re-run.** Each device's stored `fingerprint_method`
-  (`ssh_banner`, `http_mgmt`, `snmp`, `modbus`, or `bacnet`) determines which single probe
-  re-fires — a device originally fingerprinted via SSH is re-probed via SSH only, never promoted
-  to a different probe family.
+- **The device's stored `fingerprint_method` decides where re-probing starts.** An `ssh_banner`
+  device gets a fresh SSH banner grab followed by the normal fingerprint waterfall, so the
+  HTTP-management and SNMP probes still fire when the new banner no longer identifies the
+  vendor; an `snmp` device skips the HTTP-management probe; a `modbus` or `bacnet` device gets
+  only the OT/ICS probes; an `http_mgmt` device, or one with no recorded method, gets the full
+  waterfall. With `connectors.enable_bacnet` on, the BACnet probe also runs against every
+  re-probed device, as it does in a normal scan.
 - **`modbus`/`bacnet` devices are skipped** when `connectors.enable_modbus` /
   `connectors.enable_bacnet` are off, exactly as they are during a normal scan — a check-in never
   force-enables OT/ICS probing.
 - **An empty fleet is a clean no-op.** If no `HardwareDevice` rows exist yet (no prior scan has
   ever fingerprinted a device), `--check-in` prints an operator message and exits `0` with **zero
-  database writes** — it never errors out.
-- **Persists only `HardwareDevice` and `hardware_drift_events` rows**, through the same
-  `persist_and_reconcile()` chokepoint (§9.7) used by a full scan. Every row it writes carries
+  hardware or drift rows written** — it never errors out (the database file itself is still
+  created and migrated first, because the short-circuit runs after database initialization).
+- **Persists only hardware rows** — `HardwareDevice`, `hardware_drift_events` and
+  `vendor_pqc_trend_events` — through the same `persist_and_reconcile()` chokepoint (§9.7)
+  used by a full scan, which also applies the history-retention purge and the lifecycle
+  notifications of §9.12 (when those are configured, each delivery attempt also adds an
+  `integration_deliveries` audit row). Every `HardwareDevice` and drift row it writes carries
   **`is_partial_scan=True`**.
 - **Never produces a readiness score or a full report.** A check-in run does not invoke the
   scoring engine, the HTML/PDF/DOCX report writer, or the CLI/markdown executive summary. Run a
@@ -2338,12 +2775,14 @@ that fires immediately after database initialization, before any profile-driven 
 ```
 
 **Where check-in-sourced data shows up afterward.** Devices and drift events written by a
-check-in carry `is_partial_scan=True`. They stay visible everywhere the equivalent full-scan data
+check-in carry `is_partial_scan=True`. They stay visible where the equivalent full-scan data
 would be — the `/hardware` and `/compare` dashboard pages, `GET /api/hardware/drift`, and
-`CompareResponse.hardware_drift` — badged rather than filtered out (see
-`docs/report-interpretation.md`'s check-in section for the exact reader-facing wording and the
-`/trends`/`/compare` readiness-score exclusion). A check-in run is never selectable as a scored
-scan on `/api/scans` or `/api/trends`.
+`CompareResponse.hardware_drift` — marked rather than filtered out: drift events show a
+"Partial re-probe" badge on the dashboard, and the HTML and DOCX reports and the executive
+summary add a partial re-probe banner when check-in device rows are present (see
+`docs/report-interpretation.md`'s check-in section for the exact reader-facing wording). A
+check-in never writes a scan record (no `crypto_endpoints` rows), so it does not appear in the
+scan lists that feed `/api/scans` or `/api/trends`.
 
 **Putting a check-in on a schedule (Phase 162, HWLC-20).** Rather than remembering to run
 `--check-in` by hand, register it with the scheduler:
@@ -2355,7 +2794,8 @@ quirk scheduler run      # the long-running dispatch loop
 
 - **No `--target` is needed or accepted as meaningful.** A check-in re-probes the fleet already
   recorded in the database (`latest_successful_hardware_devices()`), so there is nothing to aim
-  it at. The stored target reads `(known fleet)` in `quirk schedule list` and on the dashboard.
+  it at. With `--target` omitted, the stored target reads `(known fleet)` in
+  `quirk schedule list` and on the dashboard; a `--target` you do pass is stored but ignored.
 - **No `--profile` applies.** The dispatcher emits `run_scan --check-in` and deliberately no
   `--profile`, because check-in mode short-circuits before any profile is read. A dispatched
   command that named a profile would misrepresent what actually runs.
@@ -2386,8 +2826,9 @@ detected and confirmed.
 and serve different questions: "did this device change?" vs. "did this vendor's catalog posture
 change?"
 
-**Confirmation gate.** Like every other lifecycle signal in QUIRK, a vendor trend event only
-fires after N-of-M confirmation (N=2 of M=3, the same defaults used everywhere else in QUIRK) —
+**Confirmation gate.** Like the tier, bridge-evidence and EOL-state drift events of §9.7 (CVE-delta
+events are not gated), a vendor trend event only fires after N-of-M confirmation (N=2 of M=3,
+the same `DEFAULT_N`/`DEFAULT_M` the drift events use) —
 but the window here samples the **3 most-recently-scanned distinct devices of that vendor**, not
 repeated scans of one device and not the vendor's entire fleet. This means a single noisy or
 repeatedly-rescanned host cannot, by itself, trigger a vendor-level event, but it also means the
@@ -2399,23 +2840,25 @@ observed device never produces an event — there is nothing to compare it again
 
 ```bash
 curl -H "Authorization: Bearer $QUIRK_API_TOKEN" \
-  "http://localhost:8000/api/hardware/vendor-trends?limit=50"
+  "http://127.0.0.1:8512/api/hardware/vendor-trends?limit=50"
 ```
 
-- Authenticated the same way as every other dashboard API route (§2.4) — no separate
-  credential.
+- Authenticated with the same dashboard bearer token as the other authenticated dashboard API
+  routes (§2.4; `/api/health` and `/api/config` are open, and the sensor push route takes a sensor
+  token instead) — no separate credential.
 - `limit` accepts 1–200 (default 50); a `truncated: true` flag in the response body indicates
   more rows exist than were returned.
 - Each event exposes `vendor`, `event_type`, `old_value`, `new_value`, `detected_at`, and
   `confirmed_at` — no host/port, no score, no numeric field.
 
 **Advisory-only, no score contribution.** Like `hardware_drift_events`, vendor PQC trend
-events never affect the readiness score — `quirk/scanner/hardware_drift.py` and
-`quirk/models_util.py` are never imported by `quirk/intelligence/scoring.py`, machine-enforced
-by `tests/test_cve_score_guard.py`.
+events never affect the readiness score — `quirk/intelligence/scoring.py` imports neither
+`quirk/scanner/hardware_drift.py` nor `quirk/models_util.py`, and `tests/test_cve_score_guard.py`
+enforces in CI that the scoring module never references `hardware_drift` and that no
+vendor-trend module imports the scoring engine or references its weights.
 
-**Now rendered in every report format.** As of Phase 161 (HWLC-19) vendor PQC trend events are
-rendered in the HTML, DOCX and CLI technical reports and on the dashboard `/hardware` page — see
+**Now rendered in the reports.** As of Phase 161 (HWLC-19) vendor PQC trend events are
+rendered in the HTML (and the PDF made from it), DOCX and CLI technical reports and on the dashboard `/hardware` page — see
 §9.11 below. The endpoint above remains available for direct queries.
 
 ---
@@ -2444,7 +2887,9 @@ serves.
 ### 9.12 Hardware Lifecycle Notifications (Phase 161, HWLC-14)
 
 QUIRK can notify you when a scan detects that a device's lifecycle posture got *worse*. Enable it
-with the `notify_on_hardware_lifecycle` key in your config's `notifications:` block — see
+with the `notify_on_hardware_lifecycle` key in the `notifications:` block of the YAML file that
+`QUIRK_CONFIG_PATH` names in the scanning process's environment — the scan's own `--config` is
+not consulted, so with `QUIRK_CONFIG_PATH` unset nothing is sent and nothing is audited. See
 `docs/configuration.md`. It is **off by default**.
 
 **What triggers a notification**
@@ -2471,25 +2916,33 @@ either configured changes nothing.
 **Audit trail**
 
 Every delivery attempt — success or failure — is recorded in the `integration_deliveries` table
-with a composite identifier of the form `{host}:{port}:{event_type}:{event_id}`, so a specific
-alert can be traced back to the exact drift event that produced it.
+(one row per configured channel). Qualifying events from one hardware-persistence batch are sent
+as one summary (a scan run with SNMP enabled persists, and notifies, its SNMP-only devices as a
+second batch), and the `scan_id` column carries a composite identifier of the form
+`{host}:{port}:{event_type}:{event_id}` naming the first qualifying drift event of that
+summary, so an alert can be traced back to the drift event that produced it.
 
 **Failure isolation**
 
 Notification delivery is advisory-only and can never abort a scan. The dispatch hook sits inside
 `persist_and_reconcile()` and is wrapped so that a failing SMTP server, an unreachable webhook, a
-misconfigured credential, or an entirely uninstalled notification extra is logged and audited but
+misconfigured credential, or an entirely uninstalled notification extra is logged (and a failed
+send is also audited) but
 leaves the scan, the sensor push, or the air-gap import completely unaffected. If you enable
 notifications and see nothing arrive, check the `integration_deliveries` rows first — the attempt
-will be recorded there with its error summary even when delivery failed.
+will be recorded there with its error summary even when delivery failed. No rows at all after a
+qualifying change means `QUIRK_CONFIG_PATH` does not name the config that enables the key, that
+config has neither an `email:` nor a `webhook:` block, or the file failed to parse (a malformed
+YAML file disables notifications silently, with no log line).
 
 ---
 
 ## 10. Discovery Liveness Pre-Pass
 
-As of Phase 145 (DISC-03), every nmap-discovery batch runs a cheap TCP-based liveness
+As of Phase 145 (DISC-03), every nmap-discovery batch (a scan run with `--discovery nmap`) runs a cheap TCP-based liveness
 pre-pass before its full port sweep. This shrinks scan time on large, sparse ranges by
-skipping the expensive `-sT` sweep against hosts that never answer.
+skipping the expensive `-sT` sweep against hosts that never answer. A run that reuses cached
+discovery results (`--cache --resume`) runs no pre-pass at all (see §10.5).
 
 ### 10.1 What it does
 
@@ -2497,7 +2950,7 @@ Before `run_nmap_discovery()` sweeps a batch, QUIRK runs `run_nmap_liveness_chec
 against that same batch: an `nmap -sn -PS<ports>` probe (host discovery only — `-sn` —
 using a TCP SYN ping on the given ports, `-PS`, with `-n` to skip DNS resolution). Hosts
 that respond are swept normally; hosts that do not respond are excluded from the sweep
-and recorded as `liveness_skip` rows (see §10.4 and `docs/report-interpretation.md`).
+and recorded as `liveness_skip` rows (see §10.5 and `docs/report-interpretation.md`).
 
 This is **TCP-based, not ICMP-based** — `-PS` sends a TCP packet with the SYN flag to
 the probed ports rather than an ICMP echo request. That matters because segmented
@@ -2517,9 +2970,9 @@ safe, reliability-first default (D-03) rather than a narrower approximation.
 ### 10.3 Privilege fallback
 
 nmap's SYN-ping probe (`-PS`) normally requires raw-socket privileges. When those
-privileges are not available, nmap silently substitutes a TCP connect probe for the SYN
-probe — and its XML output is byte-identical either way, so there is no way to detect
-the substitution from the probe's own results.
+privileges are not available, nmap automatically substitutes a TCP `connect` call for the
+SYN probe. QUIRK does not try to detect the substitution from the probe's results; it
+decides from the scanning process's own privileges instead.
 
 QUIRK checks `os.geteuid()` exactly once per scan (via `_is_privileged()` in
 `run_scan.py`) and, whenever the process is **not** confirmed to be running as root —
@@ -2531,7 +2984,7 @@ discloses the possible downgrade two ways:
   a TCP connect probe (no raw-socket privileges detected) — results remain valid but the
   pre-pass will run slower than intended."*
 - A single persisted `privilege_fallback` advisory row in the scan artifact (one per
-  scan, not one per batch — see §10.4).
+  scan, not one per batch — see §10.5).
 
 **Results remain valid either way** — a TCP connect probe still correctly determines
 host liveness, it is just slower than a raw SYN probe. Running the scan as root (or via
@@ -2540,9 +2993,11 @@ and the fallback-disclosure call never fires.
 
 ### 10.4 What happens on failure
 
-If the pre-pass itself fails (nmap errors, times out, or is missing) for a batch, QUIRK
+If the pre-pass itself fails (nmap errors or times out) for a batch, QUIRK
 does not lose that batch's hosts: it logs the failure and sweeps the entire batch
-unfiltered, exactly as if no pre-pass had run. A batch where every host is
+unfiltered, exactly as if no pre-pass had run. (When nmap is not installed at all, the batch
+loop never starts: the scan falls back to builtin discovery, or fails for the `top1000`/`all`
+port scopes.) A batch where every host is
 non-responsive short-circuits entirely — the sweep subprocess is never spawned for a
 fully-dead batch.
 
@@ -2550,11 +3005,15 @@ fully-dead batch.
 
 Every liveness-skipped host produces its own `CryptoEndpoint` row in the scan artifact
 with `scan_error_category="liveness_skip"` and the real host address, so a skipped host
-is never silently dropped from the record. See `docs/report-interpretation.md` for how
+is never silently dropped from that scan's record. The exception is a rerun that reuses cached
+discovery results (`--cache --resume`): it replays only the cached targets, runs no pre-pass,
+and records no `liveness_skip` or `privilege_fallback` rows, so hosts the original run skipped
+are absent from the rerun's record. See `docs/report-interpretation.md` for how
 to interpret `liveness_skip` and `privilege_fallback` rows in a delivered report.
 
 > **Operator note:** the total number of undetermined (skipped) hosts is now surfaced
-> as an aggregate "Hosts undetermined" count in every report surface — see
+> as an aggregate "Hosts undetermined" count in the HTML (and PDF) and DOCX reports, the
+> executive summary and the CLI summary table (not the technical summary or the dashboard) — see
 > `docs/report-interpretation.md` §13.
 
 ## 11. Chunked Discovery Progress and Per-Batch Scaling
@@ -2578,7 +3037,9 @@ nmap subprocess timeout and timing aggressiveness to that batch's own size.
 
   This line is suppressed when `--quiet` is set. Both the dashboard fields and the CLI
   line are written from the exact same batch-loop bookkeeping in `run_scan.py`, so the
-  numbers always agree.
+  numbers agree. One exception: on a resumed scan, a batch skipped as already complete
+  prints `Discovery: batch N/M — skipped (completed on a prior run)` and does not update
+  the dashboard line until the next batch that actually runs.
 
 ### 11.2 Per-batch timeout scaling (DISC-05)
 
@@ -2592,30 +3053,28 @@ timeout_seconds = min(300, 30 + 0.26 * batch_size)
 
 - **Base:** 30 seconds.
 - **Per-host scaling:** 0.26 seconds added per host in the batch.
-- **Ceiling:** clamped to 300 seconds — the same ceiling the pre-Phase-146 fixed timeout
-  used, so no batch can run longer than before. A small batch (e.g. one host) finishes
+- **Ceiling:** clamped to 300 seconds per nmap call — the value the dashboard passed on every
+  call before Phase 146 (the CLI's old `--nmap-timeout` default was 1800 seconds). A small batch (e.g. one host) finishes
   its timeout budget in well under a second over the base; a full 1024-host batch stays
   at or below the 300s ceiling.
 
 ### 11.3 Per-batch timing template (DISC-05/DISC-06/DISC-07)
 
-Alongside the timeout, each batch also selects an nmap `-T` timing template based on its
-own size: `-T4` (aggressive) for batches at or below 256 hosts, `-T3` (normal) for
-batches larger than that. In practice this only changes nmap's RTT-probe timing —
-`_default_nmap_args` already hardcodes `--max-retries 1`, `--host-timeout 10s`, and
-`--max-parallelism 100`, and per verified nmap documentation those explicit flags
-override the `-T` template's own defaults for those specific values regardless of argv
-order.
+Alongside the timeout, each batch also selects an nmap `-T` timing template for its port
+sweep (the liveness pre-pass does not get one) based on its own size: `-T4` (aggressive)
+for batches at or below 256 hosts, `-T3` (normal, nmap's default) for batches larger than
+that. In practice `-T4` only changes nmap's RTT timeouts and caps its TCP scan delay at
+10 ms — `_default_nmap_args` already hardcodes `--max-retries 1`, `--host-timeout 10s`,
+and `--max-parallelism 100`, and per the nmap documentation explicit fine-grained options
+take precedence over the template's defaults for those values.
 
 ### 11.4 `--nmap-timeout` no longer governs chunked discovery
 
-The CLI's `--nmap-timeout` flag no longer applies inside the Phase 144 chunked discovery
-batch loop — the per-batch formula in §11.2 fully replaces it there. The dashboard's
-spawned `run_scan.py` subprocess also no longer passes a static `--nmap-timeout 300`
-argument, since that static value could otherwise silently override the per-batch
-formula; the 300s ceiling is now enforced entirely by the formula's own clamp. The flag
-remains meaningful for any future non-batched discovery code path and its `--help` text
-reflects this.
+The CLI's `--nmap-timeout` flag is deprecated and has no effect: nmap discovery always runs
+through the chunked batch loop, whose per-batch formula in §11.2 replaces it, and no code
+path reads the flag any more (its `--help` text says so). The dashboard's spawned
+`run_scan.py` subprocess also no longer passes a static `--nmap-timeout 300` argument; the
+300s ceiling is enforced entirely by the formula's own clamp.
 
 ### 11.5 CLI and dashboard share one discovery implementation (DISC-06)
 
@@ -2629,13 +3088,14 @@ discovery code path. This is locked by a static/AST-based regression test
 ## 12. OT/ICS Recurring-Scan Safety
 
 Phase 141 (§9.4) introduced Modbus/BACnet fingerprinting with a deliberately narrow safety
-model — a single read-only request per probe, a one-strike circuit breaker, and off-by-default
+model — read-only requests only (one Modbus Read Device Identification request; one BACnet
+Who-Is plus two ReadProperty requests), a one-strike circuit breaker, and off-by-default
 flags. That safety model was designed and validated for a **one-off, operator-initiated scan**.
 Phase 156 closes a gap that model didn't cover: what happens when those same flags are wired
 into a *recurring*, unattended scheduled scan.
 
-**Why the gate exists.** The Modbus and BACnet scanners were designed for exactly one read-only
-request per engagement, run by a human who has obtained authorization and is watching the
+**Why the gate exists.** The Modbus and BACnet scanners were designed for one read-only
+probe per host in a single engagement, run by a human who has obtained authorization and is watching the
 outcome. Unbounded, unattended recurring probing against fragile production control systems —
 PLCs, RTUs, building-automation controllers — is a real outage risk, not a theoretical one; this
 is the same risk class documented in §9.4's risk warning, now compounded by removing the human
@@ -2648,7 +3108,7 @@ allow Modbus/BACnet probing to reach a device if **both** of these hold:
    with.
 2. The schedule's own cron expression's minimum firing gap is at or above the 168-hour
    (7-day) floor — see `docs/configuration.md`'s [OT/ICS Recurring-Scan Cadence
-   Floor](configuration.md#ot-ics-recurring-scan-cadence-floor-v513-phase-156) section for
+   Floor](configuration.md#otics-recurring-scan-cadence-floor-phase-156) section for
    exactly how that gap is derived.
 
 If either condition fails, `enable_modbus`/`enable_bacnet` are silently stripped from that run's
@@ -2669,18 +3129,19 @@ it dispatches, so at creation time it cannot know whether OT/ICS will ever actua
 for that schedule.
 
 **Where to look when PLCs stop being fingerprinted.** If Modbus/BACnet devices that used to
-appear in scheduled-scan results stop showing up, check the scheduler's log output for a line
-matching this shape:
+appear in scheduled-scan results stop showing up, open that run's generated config,
+`scan-config.generated.yaml`, in `<output directory>/scheduled/<schedule name>/<timestamp>/`. A
+suppressed run has no `enable_modbus`/`enable_bacnet` keys under `connectors` there. Each
+suppressed dispatch also logs a line of this shape at INFO level (logger `quirk.cli.scheduler_cmd`):
 
 ```
-OT/ICS probing suppressed for schedule 'nightly-plant-scan' (cron='0 * * * *'): removed keys ('enable_modbus', 'enable_bacnet') — reason: ...
+OT/ICS probing suppressed for schedule 'nightly-plant-scan' (cron='0 * * * *'): removed keys ['enable_modbus', 'enable_bacnet'] — reason: cadence floor
 ```
 
-The literal text `OT/ICS probing suppressed` always appears, followed by the schedule name, the
-exact keys that were stripped from the generated config, and the reason (cadence-floor violation
-or the recurring opt-in being off). This line is emitted at INFO level on every suppressed
-dispatch — it is the single place to look first when a scheduled scan silently stops covering
-OT/ICS devices it used to cover.
+It names the schedule, the exact keys stripped from the generated config, and the reason
+(`cadence floor`, or `opt-in not enabled` when the recurring opt-in is off). `quirk scheduler run`
+configures no log handler, so this INFO line is not printed to the terminal by default; the
+generated config is the record you can always check.
 
 ## 13. Discovery Batch Resume
 
@@ -2706,7 +3167,8 @@ batches (batches 61-64).
    ```
 
    This prints every scan that has checkpoint rows but never reached a completed
-   `reports` stage, newest first, with its last completed stage and age. Rows older
+   `reports` stage, newest first, with the stage and status of its most recent checkpoint
+   and its age. Rows older
    than 72h are highlighted, but a run stays resumable until its batch cache files
    expire at 720h (see 13.4).
 
@@ -2722,7 +3184,8 @@ batches (batches 61-64).
 
 Note that an interrupted scan does **not** print its own `scan_run_id` to the console
 — `--list-resumable` is the supported way to recover it. The ID is echoed only on the
-resumed run, in the `Resuming scan <id>: N stages complete` line.
+resumed run, in the `Resuming scan <id>: N stages complete` line. A batch that is skipped on resume
+prints `Discovery: batch N/M — skipped (completed on a prior run)` instead of the usual progress line.
 
 `--cache` is not required for batch resume — batch resume does NOT require `--cache`.
 Per-batch resume state is written on every run that has a `--db-path` set,
@@ -2758,7 +3221,8 @@ responsive host generates no advisory record.
 
 Those advisory records are what let a resumed scan report the same coverage as an
 uninterrupted one. They are the same "undetermined host" entries that appear in the
-scan summary's `Hosts undetermined` count and as `ADVISORY` findings in the report.
+scan summary's `Hosts undetermined` count and, in the scan's findings, as INFO
+`Informational protocol observation` findings with the detail `liveness pre-pass: no response`.
 Without them cached, a resumed run would silently under-report its own scope by one
 batch's worth of hosts for every batch it skipped — the report would look like a
 completed smaller scan rather than an interrupted larger one. If you need to reclaim
@@ -2777,7 +3241,7 @@ The per-batch cache files under `{output_dir}/.cache/` contain the discovered
 host/port inventory for their batch **and the address of every non-responsive host in
 it** — in effect, a full record of which addresses were swept and which answered. They
 live in the same `{output_dir}` that already holds the CBOM, the delivered report, and
-the SQLite DB. Apply the same handling
+(at the config template's default `db_path`) the SQLite DB. Apply the same handling
 (storage, retention, access control) to `{output_dir}/.cache/` that you already apply
 to the rest of the output directory — it is not a separate trust tier.
 
@@ -2813,75 +3277,84 @@ Jira and ServiceNow ticket dispatch (`quirk ticket create`) is configured under
 for the `ticketing:` config block and CLI usage. This section covers one operator-visible behavior
 change from Phase 178.
 
-### 14.1 One-time ticket re-key (v5.18 / IDENT-01)
+### 14.1 One-time ticket re-key (first released in 5.19.0 / IDENT-01)
 
 Finding fingerprints — the dedup key used to decide "have I already opened a ticket for this" —
 are now computed from a **normalized** title (`quirk/ticketing/base.py::compute_fingerprint`,
-routed through `quirk.compliance.normalize_finding_title`). Before Phase 178, the fingerprint
-hashed the raw title text, and one finding family interpolates a changing value into that title:
-`"Certificate expiring in {N} day(s)"`, where `N` counts down every day. That meant a still-open
-certificate-expiry finding minted a brand-new fingerprint — and therefore a brand-new Jira issue
-or ServiceNow incident — on every single scan, instead of being recognized as the same finding it
-was yesterday.
+routed through `quirk.compliance.normalize_finding_title`). Before Phase 178 (5.18.0 and earlier),
+the fingerprint hashed the raw title text. The normalization drops the label or version that five
+container-image finding titles interpolate: `End-of-life <label> in container image`,
+`Severely outdated Python cryptography package (<version>) in container image`,
+`Outdated Python cryptography package (<version>) in container image`,
+`Outdated pyOpenSSL package (<version>) in container image`, and
+`Outdated libgcrypt (<version>) in container image`. The table also maps the dashboard's
+`"Certificate expiring in {N} day(s)"` title, but `quirk ticket create` reads the scan's
+`findings-*.json`, whose certificate-expiry title (`TLS certificate expiring within 30 days`) never
+carried a day count, so ticketed certificate-expiry findings keep their fingerprint.
 
-**The only affected family is certificate-expiry findings.** No other finding title changed its
-fingerprint-relevant classification in this phase.
+**The affected families are those five container-image titles.** Every other title the scan
+writes hashes to the same fingerprint as before.
 
-**What operators will see on the next `quirk ticket create` run:** any certificate-expiry finding
-that already has an open ticket will look "new" exactly once, because its normalized fingerprint
+**What operators will see on the next `quirk ticket create` run:** any finding from those five
+families that already has an open ticket will look "new" exactly once, because its normalized fingerprint
 no longer matches the fingerprint stored on the existing ticket. Jira stores the fingerprint as a Jira **label**
-on the issue (`labels: [fp]`, matched via `JQL labels = "<fp>"`); ServiceNow stores it in the
+on the issue (`labels: [fp]`, matched via the JQL `project = "<key>" AND labels = "<fp>"`); ServiceNow stores it in the
 incident's **`correlation_id`** field (matched via `sysparm_query=correlation_id=<fp>`). Neither
 lookup finds the old-fingerprint record, so exactly ONE duplicate ticket is created per affected
 finding. After that single miss, the new fingerprint is stable and dedup works normally on every
 subsequent run — this is a one-time event, not a recurring duplication.
 
-No migration or tracker readback is performed against already-issued tickets — reading back
-existing Jira/ServiceNow state is explicitly out of scope (see `.planning/REQUIREMENTS.md`). If
-you want to avoid seeing the duplicate, close the old certificate-expiry ticket manually before
+No migration is performed against already-issued tickets: QUIRK does not rewrite the
+fingerprint stored on existing Jira issues or ServiceNow incidents. If
+you want to avoid seeing the duplicate, close the old ticket for that finding manually before
 running `quirk ticket create` again; QUIRK will open a fresh one under the new, stable fingerprint.
 
 **This is not a dedup regression.** Two different vulnerable container-image libraries found at
 the same host and port still produce two distinct tickets after this change, exactly as before —
 fingerprinting deliberately does NOT collapse findings that differ only in which library or
-package they name (T-178-01). Only the day-counting cert-expiry title was made fingerprint-stable;
+package they name (T-178-01). Only the five container-image titles above changed fingerprint;
 everything else that already deduplicated correctly continues to do so.
 
-## 15. Remediation Tracking Scope (v5.18+ — Phase 179)
+## 15. Remediation Tracking Scope (first released in 5.19.0 — Phase 179)
 
 Phase 179 changed what a remediation item *is*. Previously, roadmap items were computed fresh on
-every scan from live evidence counters and existed only in memory — nothing was persisted, and
+every scan from live evidence counters and were never stored in the database (only written into
+that scan's report files), and
 progress could only ever be reported as a boolean (an item is either present in the current
 roadmap or it isn't). A remediation item is now a stable, kind-derived ID (e.g.
 `plaintext-http-exposure`) with its constituent findings recorded explicitly, per scan, in the
 database. That is what makes "6 of 8 verified closed" an expressible fact rather than an
-approximation — fixing 1 of 8 affected endpoints no longer reads as "nothing happened," and fixing
-the 8th no longer makes the item silently vanish with no closure record.
+approximation, and fixing the 8th leaves a closure record instead of the item silently vanishing.
+The closures are recorded against the earlier scan's records, not the new scan's (see §16, "The
+four states"), so the new scan's own burndown does not count them.
 
 Three things operators should understand about how this tracking behaves:
 
 - **A per-scan scope signature is recorded**, capturing what the scan actually covered — port
   scope, `--profile`, which optional extras were enabled, whether credentials were supplied, and
-  which sensors contributed. Closure comparisons are refused outright when two scans' signatures
+  which sensors are enrolled with the console (the enrolled fleet, not the sensors whose data is in
+  this scan, so enrolling or removing a sensor between two scans makes them non-comparable). Closure
+  comparisons are refused outright when two scans' signatures
   don't match, rather than silently comparing scans that covered different ground. A re-engagement
   run with `--profile quick` cannot be misread as having verified — let alone closed — findings
   that only a deeper prior scan actually covered.
 - **Probe health is asserted positively, per protocol family, not inferred from the scan exiting
   cleanly.** A scan can exit 0 while a specific probe (SSH, TLS, JWT, etc.) silently produced no
-  usable evidence — this is precisely the failure mode a prior integration defect (TRIAGE-176-03)
+  usable evidence — this is precisely the failure mode a prior integration defect
   demonstrated for SSH. Health is now derived from whether that family actually produced evidence,
   not from the absence of an error.
-- **`not_observed` is a real, persisted third state — distinct from both `open` and `closed`.** An
-  item this scan did not see evidence for is recorded as `not_observed`, never inferred as
-  `closed`. A report reading "9 closed, 4 open, 12 not observed" is telling you something true and
-  useful: those 12 were not verified this scan, one way or the other. It does not mean nothing was
-  found there — it means the question wasn't answered this run (a narrower port scope, a disabled
-  connector, an unreachable host). Treat `not_observed` as "we did not check," never as "there's
-  nothing there."
+- **`not_observed` is a real, persisted state, and it is the state every finding starts in.** A
+  finding is never inferred `closed` from absence. But in this release `not_observed` is also
+  the state a finding keeps when the scan *detected* it: nothing promotes a detected finding to
+  `open` (see §16, "The four states"). So `not_observed` means "not verified closed", which covers
+  both "found again this scan" and "not checked this run" (a narrower port scope, a disabled
+  connector, an unreachable host). Never read it as "there's nothing there", and do not read it
+  as "we did not check" either; use the scan's findings list to tell the two apart.
 
 See `docs/configuration.md` §"Remediation Aliases" for the related `remediation_aliases:` config
-key, which lets an operator manually declare that two identities across engagements are the same
-asset — the human-in-the-loop mechanism this phase uses instead of automated re-scan matching.
+key, which is meant to let an operator manually declare that two identities across engagements
+are the same asset. Today the key is parsed and validated only; nothing applies it yet, so a
+finding that moved to a new host or IP still reads as two unrelated findings.
 
 ### Known limitation — sensor-origin findings are excluded from closure tracking
 
@@ -2895,7 +3368,7 @@ scope signature and no way to be evaluated for closure.
 **What this means in practice:** in a hybrid or fully distributed deployment, sensor-origin
 findings will never appear in remediation burndown or closure figures — not because nothing was
 found, and not because of a bug, but because sensor pushes were structurally excluded from this
-tracking mechanism by design decision (179-CONTEXT.md, "Sensor-Origin Coverage"). If you run a
+tracking mechanism by design. If you run a
 distributed sensor fleet and expect to see sensor-discovered findings close out over time, you
 will not — closure figures will only ever reflect CLI-scanned findings. This is worth knowing
 *before* you plan a distributed engagement around burndown reporting, not after you notice the
@@ -2912,11 +3385,11 @@ mismatch check without ever having actually evaluated whether the compared scans
 That is worse than the current gap, because it would silently masquerade as a valid comparison
 instead of visibly declining to compare.
 
-A follow-up to revisit this — either by extending scope signatures to a per-sensor keying scheme,
-or by permanently accepting the exclusion and surfacing it in reports instead — is tracked in
-`.planning/ROADMAP.md` under `## Backlog` → "Remediation Coverage (post-v5.18)".
+Revisiting this — either by extending scope signatures to a per-sensor keying scheme, or by
+permanently accepting the exclusion and surfacing it in reports instead — is an open question,
+not a scheduled change.
 
-## 16. Closure Verification (v5.18+ — Phase 180-181)
+## 16. Closure Verification (first released in 5.19.0 — Phases 180-181)
 
 Phase 179 gave a remediation item a stable identity and a per-scan record. Phase 180 adds the
 piece that identity was missing: a machine-observed decision about whether that item is actually
@@ -2926,11 +3399,15 @@ and how the dashboard behaves when there is nothing to show.
 
 ### Where it surfaces
 
-Closure state and the remediation burndown are now visible on every report surface:
+Closure state and the remediation burndown appear on the surfaces below. They do not appear in
+any markdown file the CLI writes (executive summary, technical findings, scorecard, roadmap) or on
+the dashboard's `/print` page, which the dashboard's Export PDF renders:
 
-- **CLI markdown, HTML, and DOCX reports** each render a "Remediation Burndown" section, per
-  deadline, with a shared advisory caption held byte-identical across all three renderers by a
-  test — see `docs/report-interpretation.md` §16 for how to read it with a client.
+- **The HTML report (and the PDF printed from it) and the DOCX report** each render a "Remediation
+  Burndown" section, per deadline, with an advisory caption — see `docs/report-interpretation.md`
+  §16 for how to read it with a client. The technical-markdown renderer has the same section, and a
+  test holds its caption byte-identical with the other two, but the CLI never passes it closure
+  data, so the `technical-findings-*.md` file carries no burndown and no refusal.
 - **The CBOM** carries a `vulnerabilities` array (CycloneDX VEX), one entry per remediation item,
   with `not_observed` mapped to `in_triage` — never `not_affected`. See
   `docs/report-interpretation.md` §16 for the full state-mapping table.
@@ -2941,11 +3418,12 @@ Closure state and the remediation burndown are now visible on every report surfa
 
 ### Dashboard behavior when closure data is absent
 
-A scan that has no persisted closure data — no prior comparable scan, a freshly initialized
-database, or a scan that predates Phase 179 — shows an **explicit "closure state was not computed
-for this scan" message**, never a table of zeros and never a burndown row that reads as "0
-closed." An operator seeing an empty panel must not report "all clear"; the panel is telling you
-closure was not computed, not that nothing needs fixing.
+A scan with no persisted remediation fingerprints — a scan that predates Phase 179, or one whose
+findings feed no fingerprint-tracked remediation item — shows an **explicit "closure state was not
+computed for this scan" message** instead of a table of zeros. An operator seeing that message must
+not report "all clear"; the panel is telling you closure was not computed, not that nothing needs
+fixing. A scan that has fingerprints but no comparable prior scan still shows the table, not this
+message (see "the burndown block is empty / says not computed" below).
 
 **Any closure lookup failure degrades the panel to empty and is logged — the endpoint never returns a 500.**
 The dashboard's `/api/scan/latest` response reuses the same advisory-only
@@ -2957,30 +3435,41 @@ case is a missing badge or an empty burndown block, not a broken page.
 
 ### The four states
 
-A finding's closure state is always one of exactly four values (`quirk/intelligence/remediation.py`
-`ITEM_STATES`):
+`ITEM_STATES` in `quirk/intelligence/remediation.py` defines four closure states. In this
+release only three of them are ever written, and they are written to different scans' records:
 
-- **`open`** — the finding was rechecked this scan and is still present.
-- **`closed`** — the finding was present in a comparable prior scan and the current scan positively
-  rechecked that same host:port with a healthy probe and did not find it there.
-- **`not_observed`** — the question was not answered this scan, one way or the other. See the
-  troubleshooting list below for the specific reasons this happens.
-- **`resurfaced`** — an item that was previously `closed` has come back. It is counted as open for
-  reporting purposes, but reported as its own line rather than folded silently into `open`, and its
-  closure history is retained rather than discarded.
+- **`not_observed`** — every finding a scan detects is recorded in this state
+  (`DEFAULT_ITEM_STATE`), and nothing later moves a still-present finding to `open`. It also
+  stays the state of anything the scan could not verify (see the troubleshooting list below).
+- **`closed`** — written to the **earlier** scan's record of a finding, when that finding was
+  present in a comparable prior scan and the current scan positively rechecked the same host:port
+  with a healthy probe and did not find it. The current scan has no record of a finding it did not
+  find, so the current scan's burndown and roadmap badges never count it as closed; the closure is
+  kept on the prior scan's record and in the closure event log.
+- **`resurfaced`** — written to the current scan's record when a finding whose most recent earlier
+  record is `closed` is detected again. It is counted as open-like for reporting, but reported as
+  its own line rather than folded into `open`, and its closure history is retained.
+- **`open`** — defined, but no code path writes it, so every `open` count is 0.
+
+A plaintext HTTP finding cannot close while its host:port is still recorded with protocol `HTTP`:
+no probe family claims that protocol, so the probe-health check for that host:port reads
+`not_run`. It can close only once the current scan records that host:port under a protocol a
+healthy probe family claims (for example `TLS`, after the port is moved to HTTPS) and the finding
+is gone.
 
 **Absence alone never closes an item.** A host that stops appearing in a scan — because it was
 decommissioned, because the target list shrank, because a segment of the network was unreachable —
 is not evidence anything was fixed. Closure requires the current scan to have positively rechecked
-that specific host:port and found the finding gone, not merely to have not seen it. This mirrors
-the guardrail vulnerability scanners such as Qualys, Tenable, and Orca already apply: a scanner
-does not mark a finding closed unless it recheck that exact target.
+that specific host:port and found the finding gone, not merely to have not seen it.
 
 ### Why an item reads `not_observed` — troubleshooting
 
 If a client or colleague asks "why does this say `not_observed` instead of `closed`?", the answer
-is always one of:
+is one of:
 
+- **The current scan found it again.** A detected finding is recorded as `not_observed` (see "The
+  four states" above). Check the scan's findings list first: if the finding is there, it is still
+  present.
 - **No comparable prior scan exists.** This is the first scan of this estate, or no prior scan's
   scope signature matches closely enough to compare against.
 - **The scope signature is missing or mismatched.** Port scope, `--profile`, enabled optional
@@ -2997,10 +3486,10 @@ is always one of:
 - **No endpoint was rechecked at that host:port.** The current scan simply did not touch that
   address this run.
 
-Treat `not_observed` as **"we did not verify"**, never as **"nothing was found."** These read
-almost identically in a report, and the difference matters: telling a client "12 items came back
-clean" when the true state is "we did not check 12 items this run" is the exact misreading this
-state exists to prevent.
+Treat `not_observed` as **"not verified closed"**, never as **"nothing was found."** Telling a
+client "12 items came back clean" when the true state is "12 items were not verified closed" is
+the exact misreading this state exists to prevent. Because detected findings share the state, do
+not tell a client "we did not check" those 12 either until the findings list confirms it.
 
 ### Troubleshooting — "the burndown block is empty / says not computed"
 
@@ -3009,13 +3498,19 @@ the whole-scan level instead of the per-item level. Check, in order:
 
 - **No comparable prior scan exists** — this is the first scan of this estate, or nothing prior
   matches closely enough.
-- **The scope signature differs** — port scope, `--profile`, enabled optional extras, credential
-  presence, sensor set, **or the target set** — the five axes named verbatim in the report's
-  refusal statement (e.g. "Closure not computed: scan scope differs from the prior scan.").
+- **The scope signature is missing, from a different signature version, or differs** — port
+  scope, `--profile`, enabled optional extras, credential presence, sensor set, **or the target
+  set** (the scope signature, §15). The report's refusal statement names which of five reasons
+  applied: "Closure not computed: no comparable prior scan exists.", "...a scope signature is
+  missing on one side of the comparison.", "...the scope signature version differs between the two
+  scans.", "...the target-set digest is absent.", or "...scan scope differs from the prior scan."
 
-The report and dashboard both state the refusal explicitly rather than showing an all-zero table —
-if you see the refusal message, the fix is to rerun with a scope that matches the prior scan you
-want to compare against, not to look for a hidden toggle.
+The exported report (HTML and the PDF printed from it, and DOCX) states
+the refusal explicitly rather than showing an all-zero table. The dashboard Roadmap page does not
+read the refusal: a refused scan still stores its remediation fingerprints, so the page draws the
+burndown table with every item counted as Not Verified and no refusal statement. Read the reason
+from the exported report. If you see the refusal message, the fix is to rerun with a scope that
+matches the prior scan you want to compare against, not to look for a hidden toggle.
 
 ### There is no closure override
 
@@ -3044,14 +3539,23 @@ truth, not two that can drift apart. As of this writing that catalog carries:
 - **Digital signatures** — December 31, 2031 (FIPS 186-5 / DSS), for HVAs and high-impact systems.
 - **NIST-owned/operated subset** — December 31, 2027, an earlier deadline for a narrower system
   set.
+- **FAR contractor amendment** — December 31, 2030, the date by which covered contractors must
+  comply with NIST FIPS that incorporate PQC algorithms.
+
+The burndown itself uses the two algorithm-class deadlines (key establishment and digital
+signatures) plus the `unmapped` bucket; the two organisation-scoped dates are catalogued but are
+not burned down.
 
 Source: Federal Register Vol. 91 No. 121 (2026-06-25), FR Doc 2026-12909, Executive Order 14412.
 The catalog is re-verified on a 90-day cadence against that `source_url`, the same cadence as the
-QRAMM and CMVP catalogs described at the top of this file.
+QRAMM and CMVP catalogs described in §7.
 
 **CNSA 2.0 dates are a deliberate, documented omission, not a gap that was missed.**
 `media.defense.gov` returns HTTP 403 to non-browser user agents, so no CNSA 2.0 date literal has
-been added anywhere in the codebase. Do not fill this in from a secondary source — a
+been added to this catalog or to the burndown. The hardware PQC advisory is separate and does carry
+years: its tier text hard-codes 2030 and 2033 targets (labelled "CNSA 2.0 deadline" in the HTML
+report, and used as the remediation text of the dashboard's hardware advisory findings), so do not
+read those as catalog dates. Do not fill this in from a secondary source — a
 transcription error in a compliance-adjacent date is the exact failure class this catalog exists to
 prevent. If CNSA 2.0 dates become genuinely needed, they must be re-sourced directly and added with
 the same `source_url` discipline the EO 14412 dates already follow.
@@ -3074,9 +3578,10 @@ Three things burndown and closure will never do, by design:
   fabricated deadline. `unmapped` is reported, never dropped.
 
 > **Client Conversation — Closure:**
-> "This report's `not_observed` count is not 'nothing found' — it means we didn't recheck those
-> items this run, usually because this scan's scope differed from the prior one, or a probe family
-> came back unhealthy. Nothing here can be marked closed by a flag; a finding only closes when we
+> "This report's `not_observed` count is not 'nothing found' — it means none of those items was
+> verified closed this run: either we found them again, or we could not recheck them because this
+> scan's scope differed from the prior one or a probe family came back unhealthy. Nothing here can
+> be marked closed by a flag; a finding only closes when we
 > positively recheck it and it's gone. And a `resurfaced` item means something we believed fixed
 > came back — that's reported separately from ordinary open items so it isn't lost in the count."
 
@@ -3086,51 +3591,64 @@ Three things burndown and closure will never do, by design:
 
 ### What changed for operators
 
-A scan with an open **CRITICAL** finding — for example, an expired TLS certificate — now
-**completes report generation successfully** instead of halting. Before this phase, a scan whose
-numeric score placed it in `EXCELLENT`, `GOOD`, or `MODERATE` while a CRITICAL finding remained
-open would fail every report-writing path (CLI, HTML/PDF, DOCX) with:
+A scan with an open **CRITICAL** finding — for example, an expired TLS certificate —
+**completes report generation successfully** instead of halting. Before Phase 184.4 (first
+released in 5.19.0), a scan whose numeric score placed it in `EXCELLENT`, `GOOD`, or `MODERATE`
+while a CRITICAL finding remained open would fail every report-writing path (CLI, HTML/PDF, DOCX)
+with:
 
 ```
 Report generation halted: executive headline 'EXCELLENT' is inconsistent with 1 CRITICAL
 finding(s). Review findings before generating the report.
 ```
 
-If you have seen this error in the field, it is fixed: the readiness **band** shown in the report
-now automatically floors to `FAIR` whenever at least one CRITICAL finding is open, so it never
-disagrees with the findings the report is also showing. The numeric score itself is unaffected —
-see `docs/report-interpretation.md` §19, "The Severity Floor," for the full client-facing
-explanation of why the number and the band can differ, and the exact worked example (89/100
-scoring `FAIR`, not `EXCELLENT`).
+If you have seen this error in the field, it is fixed: Phase 184.4 gave the readiness **band** a
+severity floor, so the band shown in the report floors to `FAIR` whenever at least one CRITICAL
+finding is open and never disagrees with the findings the report is also showing.
+
+**Since 5.25.0 the number is limited as well.** Scoring v3 applies the same protection to the
+score itself: open CRITICAL and HIGH findings set an absolute ceiling that the score is compressed
+into — 1 or more CRITICAL at most 34 (`POOR`), 5 or more CRITICAL at most 25, 3 or more HIGH at
+most 54, 1 or 2 HIGH at most 69 (the lowest applicable ceiling wins) — and an estate with no
+observed hybrid post-quantum key exchange is held to the top of `GOOD` (84). A capped score
+always carries its reason, for example "1 open CRITICAL finding — score limited to 32 (computed
+93)". The band is derived from the capped number, and the band floor stays in place as a second,
+independent guarantee. See `docs/report-interpretation.md` §19, "The Severity Floor," for the
+client-facing explanation (its band-only worked example describes the behaviour before 5.25.0).
 
 ### Where operators will see it
 
 - **CLI**, **HTML/PDF**, **DOCX**, and the **scorecard** all show a short `Cap reason` annotation
-  beside the score/band headline whenever the band has been capped — never elsewhere in the
-  document, and never present at all when the band is uncapped.
+  beside the score/band headline whenever the score or band has been capped — never elsewhere in
+  the document, and never present at all when nothing is capped.
 - **The dashboard Executive page and the print page** — the same screen the original defect
-  (BACK-89) was filed against — now show the cap reason beside the readiness headline, next to the
-  confidence badge. This closes the dashboard's copy of the same halt-on-generate defect: the
-  dashboard's own scan-scoring path previously computed the band without seeing the scan's
-  findings at all, which could show an uncapped `EXCELLENT` on the dashboard for the same scan
-  whose exported report showed `FAIR` — those two views now always agree.
-- No configuration change, migration, or re-scan is required. Historical scan sessions pick up the
-  corrected band automatically the next time their report or dashboard view is rendered, because
-  the band is recomputed at render time rather than stored.
+  (BACK-89) was filed against — now show the cap reason beside the readiness headline. On the
+  Executive page it sits directly under the confidence badge; the print page shows it under the
+  Overall Readiness score and prints confidence on a separate line below the score row. The
+  dashboard computes this score itself, with the same scoring function as the exported report but
+  from the scan's stored endpoints and the findings it derives from them, so it is a separate
+  computation: nothing checks that the dashboard's cap reason matches the report's.
+- No configuration change or migration is required. Historical scan sessions show the corrected
+  band in the dashboard the next time they are viewed, because the dashboard recomputes the score
+  and band from stored scan data on every request rather than storing them. Report files already
+  written to disk are not re-rendered; a new scan writes a new report with the corrected band.
 
 ### Troubleshooting
 
 If you still see `Report generation halted` on a current QU.I.R.K. version, that indicates a scan
 whose evidence was assembled without its findings list attached to the scoring call — verify you
-are running a version that includes Phase 184.4 (`v5.19` or later) and, if the error persists,
-capture the full evidence/findings payload for the scan and file it, since every production call
-site that renders a band is now required to pass its findings to the scorer.
+are running a version that includes Phase 184.4 (5.19.0 or later) and, if the error persists,
+capture the full evidence/findings payload for the scan and file it, since the report writers and
+the dashboard's scan views pass their findings to the scorer. Two surfaces show a band computed
+without findings: `quirk sensor merge` prints `Score: N (BAND)`, and the Slack drift notification's
+`Score Band:` header is mapped from the trend score. Both bands ignore open CRITICAL and HIGH
+findings (no severity floor and no consequence ceiling). Do not quote either.
 
 ## 18. SPKI Fingerprint Capture and Key Reuse (Phase 191, SPKI-01/SPKI-02)
 
 ### What is captured
 
-Every TLS scan now computes a SHA-256 hash of each leaf certificate's SubjectPublicKeyInfo (SPKI)
+Every TLS scan (5.21.0 and later) computes a SHA-256 hash of each leaf certificate's SubjectPublicKeyInfo (SPKI)
 and stores it on `CryptoEndpoint.cert_spki_fingerprint`. This is captured at TLS certificate parse
 only — the two `cryptography` x509 parse sites in `quirk/scanner/tls_scanner.py` (the `sslyze`
 path and the stdlib-`ssl` fallback path). Scanners that persist raw `*_scan_json` blobs instead of
@@ -3164,11 +3682,12 @@ Key reuse — TLS endpoints sharing an identical SPKI fingerprint — is derived
 time by a `GROUP BY cert_spki_fingerprint HAVING COUNT(*) >= 2` query
 (`quirk/intelligence/key_reuse.py::compute_key_reuse_clusters`); there is no stored cluster table
 or denormalized "is shared" column to keep in sync. The resulting "Key Reuse" section renders in
-the CLI technical markdown, the HTML report, and the DOCX report — **not** the dashboard UI in
-this release. It is advisory-only and never affects the readiness score; see
+the CLI technical markdown, the HTML report, and the DOCX report; the dashboard's Exposure Map
+page also draws key-reuse clusters (scoped to the displayed scan, where the reports aggregate
+across every scan in the database). It is advisory-only and never affects the readiness score; see
 `docs/report-interpretation.md` §21 for the client-facing explanation of how to read it.
 
-## 19. Finding Storyline Drawer (Phase 202, v5.23 — STORY-01/STORY-02)
+## 19. Finding Storyline Drawer (Phase 202, first released in 5.25.0 — STORY-01/STORY-02)
 
 Every row in the dashboard findings table has a `Storyline` button in its rightmost column. Opening
 it is fully keyboard-operable: `Tab` to the button and press `Enter` (or click it), and a drawer
@@ -3189,7 +3708,7 @@ findings show no narrative, and the one-theme display rule.
 
 ---
 
-## 20. Browser E2E Tests (Phase 207, v5.24 — COV-05, COV-10)
+## 20. Browser E2E Tests (Phase 207, first released in 5.25.0 — COV-05, COV-10)
 
 Six UAT cases are structurally impossible to cover with the jsdom-based dashboard test runner —
 they need a real browser engine. They are now covered by real Playwright tests:
@@ -3204,7 +3723,9 @@ they need a real browser engine. They are now covered by real Playwright tests:
 | `UAT-7-29` | A real Cytoscape node drags and its visible edge's endpoint follows **mid-drag**, not merely after release |
 
 They live in `tests/test_browser_e2e.py` and `tests/test_pdf_decomposition_render.py`, with shared
-setup in `tests/browser_e2e_harness.py`.
+setup in `tests/browser_e2e_harness.py`. `tests/test_browser_e2e.py` also holds later additions that
+need a real browser: `test_222_export_pdf_carries_colophon_logo` and two keyboard-scroll nodes,
+`test_kbd_01_keyboard_only_table_region_scroll` and its control.
 
 **`UAT-7-23` and `UAT-7-29` (Phase 207.1, COV-10) each ship with a dedicated red-proof control
 node** — `test_uat_7_23_control_no_viewport_change` and `test_uat_7_29_control_no_mousedown`. A
@@ -3217,7 +3738,8 @@ the main test.
 
 ### Running them locally
 
-One-time setup — roughly 2 minutes and about 91 MiB:
+One-time setup (it downloads Chromium; on macOS the browser and its headless shell take about
+0.5 GB on disk):
 
 ```bash
 .venv/bin/python -m playwright install chromium
@@ -3229,8 +3751,8 @@ Then:
 .venv/bin/python -m pytest tests/test_browser_e2e.py tests/test_pdf_decomposition_render.py -q -m ""
 ```
 
-The `-m ""` is required: `pyproject.toml` sets `addopts = -m 'not slow'`, which would otherwise
-deselect part of this surface.
+The `-m ""` is harmless but not needed: `pyproject.toml` sets `addopts = -m 'not slow'`, and
+neither file carries a `slow` marker, so the same 11 nodes are collected with or without it.
 
 **Read this before trusting a green local run.** Without that Chromium install these tests
 **SKIP** — they do not fail. A green run that never installed Chromium has proven *nothing*, and
@@ -3254,7 +3776,73 @@ In the required **Linux Full Suite** job these same nodes **skip**, because that
 installs no Chromium. A skip there is not a pass; the coverage claim rests entirely on the Browser
 E2E job's real execution, and each case's recorded disposition says exactly that.
 
-One node behaves differently and it is not a fault: `UAT-88-03` skips in *any* full-suite run,
-whether or not Chromium is installed, because it is affected by that shared-singleton
-contamination. It passes standalone and in the Browser E2E job. If you are reading a Linux Full
-Suite log and expecting it to pass there, you will think something has broken — it has not.
+One node behaves differently and it is not a fault: `UAT-88-03` can skip in a full-suite run even
+where Chromium is installed, because an earlier test in the same process can tear down the shared
+Playwright singleton; its skip reason then names TRIAGE-149 Cluster 2. It passes standalone and in
+the Browser E2E job, whose run step lists its file first. If you are reading a Linux Full Suite log
+and expecting it to pass there, you will think something has broken — it has not.
+
+---
+
+## 21. Command Reference
+
+The CLI covers every scan capability (the dashboard launches `run_scan.py` itself) and is the supported path for automation, scheduling, sensors and repeat engagements; the dashboard is the primary interactive path.
+
+This table was enumerated from the argv dispatch in `run_scan.py` and from each command's `--help`; "CLI only" means no `/api` route of the dashboard backs the command.
+
+| Command | Purpose | Key flags | Dashboard counterpart |
+|---------|---------|-----------|-----------------------|
+| `quirk init` | Generate a starter config.yaml | `--output` | CLI only |
+| `quirk serve` | Start the QU.I.R.K. web dashboard | `--port`, `--host`, `--no-open`, `--insecure` | This command starts the dashboard |
+| `quirk compliance` | Inspect QUIRK's compliance mapping data (FIPS 140-3, HIPAA, ISO 27001, PCI-DSS, SOC 2); actions `status` and `cmvp` | `status`, `cmvp` | CLI only |
+| `quirk compliance status` | Print per-framework version, last_verified date, and source URL | `--format` (`text` or `json`) | CLI only |
+| `quirk compliance cmvp` | Inspect the CMVP attestation cache (actions `status` and `refresh`; use only `status`) | `status`, `refresh` | CLI only |
+| `quirk compliance cmvp status` | Print CMVP cache freshness (read-only) | `--format` (`text` or `json`) | CLI only |
+| `quirk compliance cmvp refresh` | Refresh CMVP cache from NIST. **Do not run it**: see the warning below the table | `--dry-run` | CLI only |
+| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries, compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (arguments are ignored) | CLI only |
+| `quirk schedule` | Manage scheduled scans | `add`, `list`, `enable`, `disable`, `remove` | Schedules page (list, enable, disable, delete); the page cannot create a schedule |
+| `quirk schedule add` | Add a new scheduled scan | `--name`, `--cron`, `--target`, `--check-in` | `POST /api/schedules` also creates one, but no page calls it: the Schedules page's Add Schedule sheet only prints this command |
+| `quirk schedule list` | List all scheduled scans | `--config` | Schedules page: `GET /api/schedules` |
+| `quirk schedule enable` | Enable a scheduled scan | `name`, `--config` | Schedules page toggle: `PATCH /api/schedules/{schedule_id}` |
+| `quirk schedule disable` | Disable a scheduled scan | `name`, `--config` | Schedules page toggle: `PATCH /api/schedules/{schedule_id}` |
+| `quirk schedule remove` | Remove a scheduled scan | `name`, `--config` | Schedules page delete: `DELETE /api/schedules/{schedule_id}` |
+| `quirk scheduler` | Run the scheduled-scan dispatcher (action `run`) | `run` | CLI only |
+| `quirk scheduler run` | Start the scheduler dispatch loop | `--config`, `--scan-config`, `--once` | CLI only |
+| `quirk qramm` | Dispatcher for `quirk qramm status`; it has no help of its own | `status` | CLI only |
+| `quirk qramm status` | Print the QRAMM model version, last_verified date, days remaining and freshness status | none | CLI only |
+| `quirk cve` | Dispatcher for `quirk cve status`; it has no help of its own | `status` | CLI only |
+| `quirk cve status` | Print the firmware CVE catalog source, last_verified date, days remaining and freshness status | `--format json` | CLI only |
+| `quirk analyze-token` | Decode and classify a bearer/JWT token; passive: no signature verification, no network requests, no DB writes | `--json`, `TOKEN`, `@FILE` or `-` (stdin) | CLI only |
+| `quirk token` | Dashboard API token management (actions `generate`, `rotate`, `show`) | `generate`, `rotate`, `show` | CLI only |
+| `quirk token generate` | Generate and persist a new dashboard API token | `--config` | CLI only |
+| `quirk token rotate` | Write a new `security.api_token` to the `--config` file; a server reading that file rejects the old token from its next request, but a `QUIRK_API_TOKEN` set in the server's environment takes precedence and stays valid | `--config` | CLI only |
+| `quirk token show` | Show the persisted YAML token (not the env-var value) | `--config` | CLI only |
+| `quirk export` | Export scan findings to an external destination; needs at least one destination flag | `--siem`, `--input`, `--output-dir` | CLI only |
+| `quirk ticket` | Create tickets from scan findings (action `create`) | `create`, `--backend`, `--input`, `--output-dir` | CLI only |
+| `quirk ticket create` | Create Jira or ServiceNow tickets from the latest (or a named) findings file; per-finding delivery failures are recorded as failed and do not change the exit status, but an unreachable backend or a database without the audit table fails the run | `--backend`, `--input`, `--output-dir` | CLI only |
+| `quirk sensor` | Distributed sensor management | `enroll`, `push`, `export-results`, `merge` | Sensors page lists enrolled sensors (read-only); every action is CLI |
+| `quirk sensor enroll` | Write the sensor's local `sensor.yaml` (console URL, `sensor_id`, segment, push token, HMAC key); it does not contact the console | `console_url`, `--segment`, `--sensor-id`, `--api-token` | CLI only |
+| `quirk sensor push` | Run a local scan and push the results to the console | `--config`, `--scan-config` | Sending is CLI only; the console receives pushes at `POST /api/sensor/push` |
+| `quirk sensor export-results` | Export results to a .qpush file for air-gap transfer | `--config`, `--scan-config`, `--output` | CLI only |
+| `quirk sensor merge` | Merge sensor data into a unified CBOM and score (see section 8) | `--db`, `--stale-days` | Read-only: `GET /api/merge/latest` feeds the Executive page; the merge itself is CLI only |
+| `quirk console` | Console-side management for distributed sensors | `import-results`, `enroll`, `revoke-sensor` | Sensors page lists enrolled sensors (read-only); every action is CLI |
+| `quirk console import-results` | Import a .qpush air-gap file into the console | `file`, `--config` | CLI only |
+| `quirk console enroll` | Provision a new sensor: write the sensor and token rows and mint a bearer token | `--segment`, `--sensor-id`, `--engagement`, `--config` | CLI only |
+| `quirk console revoke-sensor` | Revoke the active token(s) for a sensor | `sensor_id`, `--config` | CLI only |
+| `quirk errors` | Print the QU.I.R.K. operator error code reference | `code`, `--domain`, `--dump-md` | CLI only |
+| `quirk report` | Manage named report branding/template profiles (action `profile`) | `profile` | CLI only |
+| `quirk report profile` | Save or list report branding/template profiles | `save`, `list` | CLI only |
+| `quirk report profile save` | Save the current config's report branding/template settings as a named profile | `name`, `--config` | CLI only |
+| `quirk report profile list` | List saved report profile names | none | CLI only |
+| `quirk db` | Database maintenance subcommands (action `migrate`) | `migrate` | CLI only |
+| `quirk db migrate` | Idempotent, additive-only schema migration of an existing quirk.db; see the warning below the table | `--db`, `--config`, `--dry-run` | CLI only |
+
+**Three commands do not print help.** `quirk doctor --help` ignores its arguments and runs the health check (exit status 1 when a check fails); `quirk qramm --help` and `quirk cve --help` print the scan CLI usage instead, and `quirk qramm status --help` and `quirk cve status --help` run the status report; `quirk cve status` takes `--format json` through hand-written argument handling, so no usage text lists it.
+
+**Never run `quirk compliance cmvp refresh`.** It rewrites the CMVP attestation cache from NIST, and an earlier version of it silently emptied algorithm lists it could not parse (RVW-022, fixed in commit `a7cf302`); re-verify the cache by hand against its source URL instead, and use `quirk compliance cmvp status` for the read-only check.
+
+**Scheduling needs the dispatcher.** There is no `quirk schedule run`; the long-running dispatch loop is `quirk scheduler run`. The dashboard stores, toggles and deletes schedules but never dispatches them, so a stored schedule fires only while `quirk scheduler run` is running.
+
+**`quirk db migrate` needs an explicit `--db`.** Without `--db` or `--config` it falls back to `./quirk.db`, not the dashboard's `./quirk-output/quirk.db`, and creates an empty database there; pass `--db quirk-output/quirk.db`. `--dry-run` can stop with `NoSuchTableError` on a database created by an older release (see the upgrade guide).
+
+**Flag and path gotchas.** `quirk export` and `quirk ticket create` search `./output` for the latest `findings-*.json` unless `--input` or `--output-dir` is given; `quirk sensor enroll` needs the `--sensor-id` that `quirk console enroll` printed; `quirk sensor merge` has no `--output-dir` option.

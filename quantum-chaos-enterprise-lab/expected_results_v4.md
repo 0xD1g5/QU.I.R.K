@@ -352,20 +352,34 @@ PROFILE_ARGS="--profile dnssec" ./lab.sh up
 
 > **Profile name note:** The Docker Compose profile is `dnssec` (compose is the source of truth). The v3 oracle used the service name `bind9` — that was a drift error, corrected here.
 
-| Zone | Algorithm | Algorithm ID | Expected Finding | Severity |
-|------|-----------|-------------|-----------------|----------|
-| weak.example.com | RSASHA1 | 5 | DNSSEC weak signing algorithm (SHA-1 collision-vulnerable) | CRITICAL |
-| weak.example.com | RSASHA1-NSEC3-SHA1 | 7 | DNSSEC weak signing algorithm (SHA-1) | CRITICAL |
-| unsigned.example.com | NONE | — | Unsigned zone — DNS responses are unauthenticated | HIGH |
-| nsec.example.com | ECDSAP256SHA256 | 13 | NSEC zone enumeration exposure | MEDIUM |
+The lab serves four zones from `bind9/zones.conf`; keys and denial-of-existence records come from
+`bind9/generate-zones.sh`.
 
-**Scanner validation command:**
+| Zone | Algorithm | Algorithm ID | Denial of existence | Expected Finding (dashboard title) | Severity |
+|------|-----------|-------------|---------------------|-----------------------------------|----------|
+| weak.chaos.local | RSASHA1 | 5 | NSEC | `DNSSEC: RSASHA1` (SHA-1 collision-vulnerable) | CRITICAL |
+| weak.chaos.local | — | — | NSEC | `DNSSEC: NSEC` (zone enumeration by walking) | MEDIUM |
+| unsigned.chaos.local | NONE | — | — | `DNSSEC: NONE` (unsigned zone, responses unauthenticated) | HIGH |
+| safe.chaos.local | ECDSAP256SHA256 | 13 | NSEC3 | (none — clean baseline) | — |
+| broken.chaos.local | ECDSAP256SHA256 | 13 | — | DS key-tag mismatch (`DNSSEC: DS MISMATCH`, HIGH) — not asserted here: the DS record sits at the zone apex rather than in a parent zone, and no lab run has confirmed the scanner reads it | — |
+
+**Scanner validation command:** DNSSEC scanning is config-driven — there is no DNSSEC target flag,
+and `--targets-file` does not feed it. Set these keys in the scan config (without
+`dnssec_resolver` every query goes to port 53, not to the lab's 15353):
+```yaml
+connectors:
+  enable_dnssec: true
+  dnssec_targets:
+    - weak.chaos.local
+    - unsigned.chaos.local
+    - safe.chaos.local
+  dnssec_resolver: "127.0.0.1:15353"
+```
 ```
 docker compose --profile dnssec up -d && sleep 5
-printf '%s\n' weak.example.com unsigned.example.com nsec.example.com > targets.txt
-quirk --targets-file targets.txt
+quirk --config config.yaml
 ```
-**Expected:** DNSSEC scanner returns >= 1 CRITICAL finding (RSASHA1) for weak.example.com, 1 HIGH finding (unsigned zone) for unsigned.example.com, and 1 MEDIUM finding (NSEC) for nsec.example.com. ECDSAP256SHA256 zones produce no algorithm severity finding.
+**Expected:** the DNSSEC scanner records endpoint rows for each zone on port 15353 (protocol `DNSSEC`). The dashboard derives 1 CRITICAL (`DNSSEC: RSASHA1`) and 1 MEDIUM (`DNSSEC: NSEC`) finding for weak.chaos.local and 1 HIGH (`DNSSEC: NONE`) finding for unsigned.chaos.local; safe.chaos.local (ECDSAP256SHA256 + NSEC3) produces none. The dashboard lists them on the Identity page and also merges them into its findings list (`/api/scan/latest`). They are **not** written to the CLI `findings-*.json`: the CLI risk engine has no Kerberos/DNSSEC evaluator (tracked as a todo).
 
 **Ports:** 15353/udp, 15353/tcp (service: bind9-dnssec)
 
@@ -392,7 +406,7 @@ docker compose --profile saml up -d && sleep 10
 echo http://localhost:8080/simplesaml/saml2/idp/metadata.php > targets.txt
 quirk --targets-file targets.txt
 ```
-**Expected:** SAML scanner returns 1 CRITICAL finding for RSA-1024 signing certificate and optionally 1 HIGH finding if SHA-1 algorithm URI is present in metadata. Findings appear in the Identity tab (source="saml"), not the Findings tab.
+**Expected:** SAML scanner returns 1 CRITICAL finding for RSA-1024 signing certificate and optionally 1 HIGH finding if SHA-1 algorithm URI is present in metadata. Findings appear on the dashboard's Identity page (source="saml") and are merged into its findings list; since Phase 210 the CLI also writes them to `findings-*.json`.
 
 ---
 
@@ -412,15 +426,19 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 |-----:|---------|---------|-----------|-----------------|----------|
 | 88 | samba-dc | 23 | rc4-hmac | Kerberos weak etype: rc4-hmac | HIGH |
 | 88 | samba-dc | 17 | aes128-cts-hmac-sha1-96 | Kerberos weak etype: aes128-cts-hmac-sha1-96 | HIGH |
-| 389 | samba-dc | — | LDAP | LDAP service exposed on standard port | INFO |
 
-**Scanner validation command:**
+Port 389 (LDAP) is also published by `samba-dc`, but no scanner code emits a finding for it; an
+earlier revision of this oracle listed an INFO "LDAP service exposed on standard port" row that no
+code path produces, and it has been removed.
+
+**Scanner validation command:** Kerberos scanning is config-driven — `--targets-file` does not feed
+it. Set `connectors.enable_kerberos: true` and `connectors.kerberos_targets: ["127.0.0.1"]` in the
+scan config (it needs the `[identity]` extra), then:
 ```
 docker compose --profile kerberos up -d && sleep 15
-echo localhost > targets.txt
-quirk --targets-file targets.txt
+quirk --config config.yaml
 ```
-**Expected:** Kerberos scanner returns >= 2 HIGH findings for weak etypes (rc4-hmac, aes128-cts-hmac-sha1-96).
+**Expected:** the dashboard derives >= 2 HIGH findings for weak etypes (`Kerberos weak etype: rc4-hmac`, `Kerberos weak etype: aes128-cts-hmac-sha1-96`), listed on the Identity page and merged into its findings list (`/api/scan/latest`). They are **not** written to the CLI `findings-*.json`: the CLI risk engine has no Kerberos/DNSSEC evaluator (tracked as a todo).
 
 ---
 
@@ -702,16 +720,20 @@ port is in `ports_tls`, and it still did not fire. Not diagnosed further; the po
 connector-suppression interaction (Phase 121) is the prime suspect and is named as a known unknown in
 `.planning/backlog/999.110-multi-host-lab-topology/IDEA.md`.
 
-#### (b) Scored but never reported — the evidence carries it, the findings do not
+#### (b) Scored, but absent from the CLI findings — the evidence carries it, `findings-*.json` does not
 
-**This is the more dangerous class, because the host looks clean in the findings table while the
-weakness is silently moving the score.** Confirmed by reading `evidence_summary` against the same
+**This is the more dangerous class, because the host looks clean in the CLI findings while the
+weakness is silently moving the score.** The dashboard does surface the S3 and Postgres postures: its Data at
+Rest page derives HIGH rows for an `s3/unencrypted` bucket and a PostgreSQL `ssl-off` or
+`plaintext-connections-allowed` posture (`quirk/dashboard/api/routes/scan.py:593` `_derive_dar_findings`,
+`:649`, `:690`), and the SAML case is covered below. The gap is the CLI report pipeline (corrected 2026-10-13,
+Phase 224; this heading used to say "never reported"). Confirmed by reading `evidence_summary` against the same
 run's findings JSON:
 
 | Host | Intended posture | In `evidence_summary` | In findings |
 |---|---|---|---|
-| `mh-storage-archive` 10.80.0.50 | 1 UNENCRYPTED S3 bucket | `dar_storage_unencrypted_count: 1` ✅ | ❌ — its HIGH is `Plaintext HTTP` on 9000 (was 2 HIGHs on 9000/9001 while it ran MinIO; see note below) |
-| `mh-db-finance` 10.80.0.30 | Postgres, no TLS | `dar_db_plaintext_count: 1` ✅ | ❌ — INFO only |
+| `mh-storage-archive` 10.80.0.50 | 1 UNENCRYPTED S3 bucket | `dar_storage_unencrypted_count: 1` ✅ | ❌ in CLI — its HIGH is `Plaintext HTTP` on 9000 (the DASHBOARD Data at Rest page lists the unencrypted bucket as HIGH) (was 2 HIGHs on 9000/9001 while it ran MinIO; see note below) |
+| `mh-db-finance` 10.80.0.30 | Postgres, no TLS | `dar_db_plaintext_count: 1` ✅ | ❌ in CLI (INFO only) — the DASHBOARD Data at Rest page lists it as HIGH |
 | `mh-saml-idp` 10.80.0.41 | weak SAML signing | `identity_saml_weak_signing_ratio: 0.0054` ✅ | ❌ in CLI — but the DASHBOARD emits it, twice (see cross-surface parity above) |
 
 The previous revision of this oracle claimed 10.80.0.50 produced an "unencrypted-bucket finding
@@ -936,7 +958,7 @@ docker compose --profile smime up -d && sleep 10
 quirk --config config.yaml
 ```
 
-**Expected:** SMIME scanner returns **2 HIGH findings** (alice, bob); **0 findings from carol**. Findings appear in the Identity tab (`source="smime"`). **No IMAP traffic, no mailbox access** (privacy invariant, enforced by SMIME-08 AST gate in Plan 79-04). Idempotent — re-running `./lab.sh up --profile smime` must not produce duplicate LDIF entries; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`) on subsequent runs.
+**Expected:** SMIME scanner records **2 endpoint rows rated HIGH** (alice, bob) and **no row for carol**. These are endpoint severities, not findings: neither the CLI findings evaluator nor the dashboard's identity-finding derivation lists S/MIME rows, so they appear in no findings list (dashboard or `findings-*.json`). The rows count toward the Identity scoring domain and appear in the CBOM. **No IMAP traffic, no mailbox access** (privacy invariant, enforced by SMIME-08 AST gate in Plan 79-04). Idempotent — re-running `./lab.sh up --profile smime` must not produce duplicate LDIF entries; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`) on subsequent runs.
 
 **Ports:** `38900/tcp` (LDAP) — chosen to avoid 636 (`ldaps` profile) and 389 (`kerberos`/samba-DC profile). LDAPS (38901) intentionally **not** exposed in Phase 79; deferred to Phase 82.
 
@@ -968,24 +990,23 @@ PROFILE_ARGS="--profile adcs" ./lab.sh up
 | `CN=SafeTemplate,CN=Certificate Templates,...` | `pKICertificateTemplate` | benign defaults, email-protection EKU only | (none — SAFE) | — | — |
 | ESC5 / ESC7 / ESC8 classes | non-LDAP-observable | (no LDAP attribute) | ADCS-COVERAGE-GAP (one per class) | LOW | `identity_adcs_coverage_gap_count` |
 
-**Scanner validation command:** **documented gap** — there is no `--adcs-target`
-/ `--adcs-base` CLI flag, and unlike S/MIME, `quirk/config.py`'s
-`ConnectorsCfg` dataclass does not declare `enable_adcs` / `adcs_targets` /
-`adcs_search_base` fields either, so `config.yaml` cannot set them (`ConnectorsCfg(**conn_raw)`
-raises `TypeError` on an undeclared key). `run_scan.py`'s `_run_adcs_phase()`
-reads those attributes via `getattr(cfg.connectors, "enable_adcs", False)`,
-which is real scanner code, but there is currently no supported way to set
-`enable_adcs=True` through the CLI or a config file — the ADCS scanner is
-unreachable end-to-end pending a config-schema fix. This lab profile remains
-useful for `tests/test_adcs_no_writes.py` / `tests/test_adcs_ast_gate.py`
-unit-level and directly-invoked coverage; there is no sanctioned end-user
-invocation to document here.
-
+**Scanner validation command:** AD CS discovery is config-driven — there is no `--adcs-target` /
+`--adcs-base` CLI flag. `quirk/config.py`'s `ConnectorsCfg` declares `enable_adcs`, `adcs_targets`
+and `adcs_search_base` (added in Phase 184.2; before that the scanner was unreachable end-to-end).
+It needs the `[adcs]` extra (also part of `[all]`):
+```yaml
+connectors:
+  enable_adcs: true
+  adcs_targets:
+    - ldap://localhost:38910
+  adcs_search_base: dc=quirk,dc=lab
+```
 ```bash
 docker compose --profile adcs up -d && sleep 12
+quirk --config config.yaml
 ```
 
-**Expected:** ADCS scanner returns **1 HIGH weak-signing finding** (QuirkLabCA RSA-1024 SHA-1), **1 HIGH ESC1 finding** (BadTemplate-ESC1), **0 from SafeTemplate**, and exactly **4 LOW ADCS-COVERAGE-GAP findings** (one per non-LDAP-observable ESC class: ESC4, ESC5, ESC7, ESC8 per D-80-R8). Findings appear in the Identity tab (`source="adcs"`, `protocol="ADCS"`). **No certificate enrollment, no CSR generation, no LDAP modify/add/delete operations** (privacy invariant, enforced by `tests/test_adcs_no_writes.py` + `tests/test_adcs_ast_gate.py` per ADCS-09). Idempotent — re-running `./lab.sh up --profile adcs` must not error; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`).
+**Expected:** ADCS scanner returns **1 HIGH weak-signing finding** (QuirkLabCA RSA-1024 SHA-1), **1 HIGH ESC1 finding** (BadTemplate-ESC1), **0 from SafeTemplate**, and exactly **4 LOW ADCS-COVERAGE-GAP findings** (one per non-LDAP-observable ESC class: ESC4, ESC5, ESC7, ESC8 per D-80-R8). These are endpoint rows (`protocol="ADCS"`) with a severity, not findings: neither the CLI findings evaluator nor the dashboard's identity-finding derivation lists AD CS rows. The rows count toward the Identity scoring domain and appear in the CBOM. **No certificate enrollment, no CSR generation, no LDAP modify/add/delete operations** (privacy invariant, enforced by `tests/test_adcs_no_writes.py` + `tests/test_adcs_ast_gate.py` per ADCS-09). Idempotent — re-running `./lab.sh up --profile adcs` must not error; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`).
 
 **Ports:** `38910/tcp` (LDAP) — chosen to avoid 38900 (`smime` profile), 636 (`ldaps`), and 389 (`kerberos`). LDAPS intentionally **not** exposed in Phase 80; deferred to a Phase 82 follow-up.
 
@@ -1012,8 +1033,21 @@ single source of truth for chaos-lab state across version bumps.
 ## Profile: postgres-tls
 
 *Phase 89 / LAB-01. PostgreSQL with intentionally weak TLS — RSA key-exchange ciphers (no PFS),
-TLS 1.2 only. Scanner probe: sslyze `ProtocolWithOpportunisticTlsEnum.POSTGRES` on host port
-**39432**. Expected total: 1 HIGH + 1 MEDIUM finding.*
+TLS 1.2 only — on host port **39432**.*
+
+**Corrected 2026-10-13 (Phase 224).** This section used to expect an sslyze
+`ProtocolWithOpportunisticTlsEnum.POSTGRES` probe producing `protocol=POSTGRES-TLS` rows and the findings
+"Weak cipher suite on database TLS endpoint" (HIGH) and "RSA-2048 certificate" (MEDIUM). None of that exists:
+the only sslyze STARTTLS use in QUIRK is the email scanner (`quirk/scanner/email_scanner.py:83-86`), no code
+emits `POSTGRES-TLS`, and neither finding title appears anywhere in `quirk/`. A plain TLS handshake on 39432
+also fails, because PostgreSQL requires its SSLRequest negotiation before TLS.
+
+**What QUIRK actually observes** is through the DB connector (`quirk/scanner/db_connector.py`), which needs
+`connectors.enable_db: true`, `connectors.pg_targets: ["127.0.0.1:39432"]` and credentials
+(`pg_scanner_user: chaos`, `pg_scanner_password: chaos`; the lab user is the container superuser, so the
+`pg_read_all_stats` privilege check passes). The connector records **SSL posture only — no protocol version,
+cipher suite or certificate**, so the weak ciphers and RSA key exchange this profile configures are not
+visible to QUIRK.
 
 ```bash
 PROFILE_ARGS="--profile postgres-tls" ./lab.sh up
@@ -1021,8 +1055,7 @@ PROFILE_ARGS="--profile postgres-tls" ./lab.sh up
 
 | Port | Service | Expected protocol | Expected condition / tag | Notes |
 |-----:|---------|-------------------|--------------------------|-------|
-| 39432 | postgres-tls (STARTTLS) | POSTGRES-TLS | `protocol=POSTGRES-TLS, service_detail=POSTGRES-TLS:5432`; risk: "Weak cipher suite on database TLS endpoint" (HIGH, TLS-03) | sslyze ProtocolWithOpportunisticTlsEnum.POSTGRES; ciphers AES128-SHA:AES256-SHA (RSA-KX, no PFS) |
-| 39432 | postgres-tls (cert) | POSTGRES-TLS | `protocol=POSTGRES-TLS`; risk: "RSA-2048 certificate (quantum-vulnerable)" (MEDIUM, TLS-02) | Self-signed RSA-2048 cert CN=postgres-tls.chaos.local |
+| 39432 | postgres-tls (DB connector) | POSTGRESQL | `service_detail=PostgreSQL/ssl-enforced` (no severity) when every backend in `pg_stat_ssl` uses SSL, or `PostgreSQL/plaintext-connections-allowed (N non-SSL)` (HIGH) when any non-SSL backend exists at scan time (`db_connector.py:149-170`) | `ssl = on`, so the `PostgreSQL/ssl-off` (HIGH) branch is not taken. Which Tier 3 row appears depends on the backends present when the scan runs: `pg_hba.conf` allows non-SSL local-socket (`local ... trust`) sessions, so it is not fixed by configuration alone |
 
 **Weak TLS knobs (`labs/postgres-tls/postgresql.conf`):**
 - `ssl_ciphers = 'AES128-SHA:AES256-SHA'` — RSA key exchange, no forward secrecy
@@ -1266,12 +1299,8 @@ PROFILE_ARGS="--profile fuzz-target" ./lab.sh up
 
 **lab.sh note:** `_derive_all_profiles()` discovers `fuzz-target` dynamically by parsing `docker-compose.yml` — **no `ALL_PROFILES` edit to `lab.sh` was needed** (LAB-01 rationale: dynamic discovery via `yq` or `grep` fallback, per `_derive_all_profiles` at line 58 of `lab.sh`).
 
-**Scanner validation command:**
-```
-echo http://localhost:20100 > targets.txt
-quirk --targets-file targets.txt \
-  --fuzz --openapi-spec http://localhost:20100/openapi.json
-```
+**Scanner validation command:** none through the CLI. `run_scan.py` builds the fuzzer's base URL as `https://<first configured target host>` (`https://localhost` when none is set), so it never fuzzes the plain-HTTP port 20100, and a targets file containing `http://localhost:20100` is rejected as an invalid target. The profile can only be exercised by calling `quirk.scanner.rest_fuzzer.run_fuzz_scan(base_url="http://localhost:20100", ...)` directly; the expectation below has not been reproduced.
+
 **Expected:** REST fuzzer returns >= 2 findings: HSTS_MISSING (HIGH) + ALG_CONFUSION (CRITICAL, when `--fuzz-jwt-alg-confusion` is set and a Bearer RS256 token is supplied via `CredentialContext`).
 
 **Requirements:** LAB-01 (Phase 96 chaos lab fuzz-target profile).

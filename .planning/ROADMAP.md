@@ -190,7 +190,26 @@ Plans:
   2. A claim ledger holds every checkable claim from each user-facing doc (commands, flags, install paths, scanner/connector names, config keys, output paths, version strings, feature assertions), attributed to its doc and line.
   3. Every ledger row is marked TRUE, FIXED (doc corrected) or REMOVED (claim deleted), with the independent verification method it used (command run, source grep, registry hit). Zero rows are unverified.
   4. Live capabilities the docs omitted (scanners, connectors, CLI commands, enumerated from source) are added to the appropriate user-facing doc, and each addition is itself a verified ledger row.
-**Plans**: TBD
+**Plans**: 18 plans
+Plans:
+- [x] 224-01-PLAN.md — Cut phase branch from origin/main (carry PROJECT/HORIZON/999.121 edits); doc classification (docs/ + every root doc, two-method set check); structural ledger gate; empty ledger
+- [x] 224-02-PLAN.md — Scratch truth index + capability inventory/omission diff; extraction/verification/merge toolkit; clean-venv install + dashboard-first Quick Start probes
+- [x] 224-03-PLAN.md — getting-started + installation + admin-guide claims; D-16 GUI-first getting-started; master guide regen
+- [x] 224-04-PLAN.md — README claims; D-16 intro + Quick Start reframe; D-13 capability mentions; D-09 promise removals
+- [x] 224-05-PLAN.md — report-interpretation claims (subscore count, CNSA/primary-source, version labels)
+- [x] 224-06-PLAN.md — chaos-lab claims against compose/lab.sh/oracles (non-live, D-08)
+- [x] 224-07-PLAN.md — SECURITY / CODE_OF_CONDUCT / CONTRIBUTING / LICENSE / SECURITY_CHECKLIST; operator enables private vulnerability reporting (checkpoint)
+- [x] 224-08-PLAN.md — release-process / upgrade-guide / deployment-cloud-console; GHCR + Homebrew removals; HORIZON owner row
+- [x] 224-09-PLAN.md — connectors/* + connector-field-reference + sample-config; D-13 connector pages decision; product-code todos
+- [x] 224-10-PLAN.md — architecture + architecture-distributed + intelligence-schema claims
+- [x] 224-11-PLAN.md — cbom-guide + quirk-overview + brand docs; generated-doc source review (error-codes)
+- [x] 224-12-PLAN.md — configuration.md part A (Assessment .. Scan Profiles) + master guide regen
+- [x] 224-13-PLAN.md — configuration.md part B (Port Scope .. end) + master guide regen
+- [x] 224-14-PLAN.md — operators-guide part A (opening/D-16, install, §1-§7, §6 D-13 scanner rows) + master guide regen
+- [x] 224-15-PLAN.md — operators-guide part B (§8-§20) + master guide regen
+- [x] 224-16-PLAN.md — operators-guide §21 Command Reference enumerated from the argv dispatch (D-13/D-16) + master guide regen
+- [x] 224-17-PLAN.md — Ledger merge; coverage + floor + wrong-package gate tests; CHANGELOG [Unreleased] (D-20); SC#4 re-diff; D-15 dry-run
+- [x] 224-18-PLAN.md — UAT Series 224 + coverage gaps; full suite; pre-observation metadata; CITRUTH-03 CI observation; VALIDATION sign-off; PR
 
 ### Phase 225: Doc Publication & Hero Retake
 **Goal**: The reviewed docs reach every place they are read: the regenerated master guide, the Obsidian vault, and a README hero screenshot that shows the branded dashboard as it really is.
@@ -223,7 +242,7 @@ Plans:
 | 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
 | 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | Complete (verified passed 12/12 at 92a73017; CI green, Python CI 37096708811 + Dashboard Quality 37096708809; PR #54) | 2026-10-03 |
 | 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
-| 224. Doc Claim Ledger & Verification | 0/TBD | Not started | - |
+| 224. Doc Claim Ledger & Verification | 18/18 | In Progress | - |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
 

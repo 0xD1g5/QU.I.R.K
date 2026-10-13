@@ -6,7 +6,7 @@ pull request and every push to `main`.
 
 ## Running the test suite
 
-To reproduce exactly what CI runs, use:
+To select the same tests CI runs (CI uses Python 3.11 on `ubuntu-latest`), use:
 
 ```bash
 pytest -q -m ""
@@ -15,56 +15,41 @@ pytest -q -m ""
 The empty `-m ""` matters: `pyproject.toml` sets a repo-wide default of
 `addopts = "-m 'not slow'"`, so a bare `pytest -q` skips slow-marked tests and runs a
 **narrower** subset than CI does. `pytest -q -m ""` overrides that default and includes
-slow tests too, matching the `Linux Full Suite` job's invocation verbatim.
+slow tests too, selecting the same tests as the `Linux Full Suite` job (CI adds `-rs` and
+a JUnit report flag on top of this command).
 
 Before running the full suite, install the project with all the same extras CI uses:
 
 ```bash
 pip install -e ".[all]"
 pip install pytest
+pip install "resvg-py==0.5.0"
 ```
+
+The `resvg-py` pin is what lets the brand-asset drift gate render its PNG instead of
+skipping; locally that test skips without it, in CI it must run.
+
+CI also sets up Node 24 and runs `npm ci` in `src/dashboard/` before the suite. With npm on
+`PATH` and `src/dashboard/node_modules` present, the vitest substitute-execution test in
+`tests/test_uat_disposition_integrity.py` runs; without them it skips. To match CI, run
+`npm ci` in `src/dashboard/` first.
 
 ## Installing the pre-commit artifact gate
 
-QUIRK enforces phase-completion artifact hygiene — `VERIFICATION.md` presence,
-`VALIDATION.md` freshness, `docs/UAT-SERIES.md` coverage for user-facing plans, and a
-destructive-deletion guard for `.planning/phases/` — via a local git hook, not a CI
-check: `.planning/` is gitignored on this public repo, so CI never sees it and cannot
-enforce anything against it.
+This hook is for maintainers; contributors should leave it alone. `.githooks/pre-commit`
+runs `scripts/verify_phase_gates.py` on every commit. Its phase-close checks only run when
+a commit closes a phase, but its archive check runs on every commit and compares the
+tracked roadmap state with the maintainers' unpublished planning records. A fresh clone
+does not contain those records, so with the hook installed it rejects every commit there,
+even one that touches no planning file, and under a Python without PyYAML it exits with a
+`ModuleNotFoundError` traceback instead. CI does not run it, so a contribution never
+needs it.
 
-Install the hook once per clone:
+Maintainers install it once per clone:
 
 ```bash
 git config core.hooksPath .githooks
 ```
-
-That's it — `git commit` now runs `scripts/verify_phase_gates.py` before every commit.
-It's cheap on unrelated commits (the phase-close checks only fire when the staged
-`.planning/ROADMAP.md` diff contains a Phase-checkbox flip to complete) and blocks the
-commit with a clear message when a gate is violated.
-
-**ARTIFACT-05: recorded CI truth at phase close.** A phase-close commit also requires
-the phase's `NN-VERIFICATION.md` frontmatter to carry a `ci:` block. The block must show
-every required workflow (Python CI, Dashboard Quality) observed and green at exactly the
-current local HEAD. Produce it with:
-
-```bash
-python3 scripts/branch_ci_state.py --branch "$(git branch --show-current)" --compare-main
-```
-
-Paste its JSON output verbatim under `ci:`. The script exits 0 (green), 1 (red, or no
-completed run at HEAD), or 2 (state unknowable, e.g. `gh` not authenticated). CI does not
-run on a branch push by itself, so push first and then dispatch both workflows
-(`gh workflow run 'Python CI' --ref <branch>`, `gh workflow run 'Dashboard Quality' --ref
-<branch>`). Any commit made after that observation, including a docs-only one, makes the
-block stale and requires a fresh dispatch and a re-recorded block. The only way to close
-over red required jobs is an operator-written `ci_waiver: {reason, failing_nodes}`, and
-only when those nodes exactly equal the failures `main` already has.
-
-`git commit --no-verify` bypasses this hook entirely — that's git's own designed escape
-hatch, not something this hook can prevent. Treat it as a safety net, not a hard
-guarantee: a contributor who skips the one-time `core.hooksPath` setup, or who commits
-with `--no-verify`, gets zero enforcement, silently.
 
 ## Docker containers during `-m ""` runs
 
@@ -72,10 +57,12 @@ with `--no-verify`, gets zero enforcement, silently.
 containers whenever a Docker daemon is reachable — this is intentional, since CI's
 `ubuntu-latest` runner has Docker preinstalled and genuinely exercises those tests there.
 Expect containers to come up and be torn down again (`./lab.sh down`) as part of the run.
-A bare `pytest -q` (without the `-m ""` override) deselects `slow` tests and never touches
-Docker. If you want to pre-generate the chaos lab's self-signed profile certs ahead of
-time, run `./lab.sh certs` from `quantum-chaos-enterprise-lab/` — it materializes every
-profile's certs without starting any containers.
+A bare `pytest -q` (without the `-m ""` override) deselects `slow` tests and never starts
+containers. To pre-generate chaos lab certs ahead of time, run `./lab.sh certs` from
+`quantum-chaos-enterprise-lab/`. It creates the mTLS CA/client pair and the `email` and
+`grpc-tls` profile certs without starting any containers. It does not create the
+`broker`, `postgres-tls`, `redis-tls` or `kafka-tls` certs; run
+`make -C labs/<profile> certs` from the repository root for each of those.
 
 ## What "green" means
 
@@ -83,15 +70,17 @@ Green means **0 failed**. Skips and xfails are expected and do not make a run re
 
 Most skips come from optional extras that are deliberately not installed alongside
 `.[all]` — `identity` (impacket) and `hw` (pysnmp) are intentionally excluded from the
-`all` meta-extra (see `pyproject.toml`), so any test gated on those extras takes its
-"optional extra not installed" skip path. Other skips come from tests that need live
+`all` meta-extra (see `pyproject.toml`), so any test gated on those extras skips with a
+reason naming the missing package, for example "pysnmp not installed" or "impacket not
+installed". Other skips come from tests that need live
 infrastructure not available in CI or a local dev sandbox.
 
-Every skip or xfail marker in the suite must be registered in `tests/skip_registry.py`.
+Every skip or xfail marker in the suite, apart from the auto-allowed `importorskip` case
+described below, must be registered in `tests/skip_registry.py`.
 This is enforced by `tests/test_skip_registry.py::test_no_unregistered_skips`, an
 AST-walking meta-gate that fails the build if a new, unregistered skip/xfail slips in.
 
-**Entries are keyed by `(file, test_qualname)`, not by line number** (Phase 184). The
+**Entries are keyed by `(file, test_qualname)`, not by line number.** The
 qualname is the AST-derived dotted path of the construct's enclosing
 `ClassDef`/`FunctionDef` chain — the literal `<module>` is used for module-scope skips.
 This means moving a skip within its file, or adding/removing unrelated lines above it,
@@ -120,10 +109,12 @@ as the suite grows and tests get triaged. The only fixed target is 0 failed.
 ## Why some tests are quarantined
 
 A number of tests are currently marked `skip` or `xfail(strict=False)` rather than
-deleted, because they were individually investigated and dispositioned during the
-Phase 149 test-suite triage rather than silently ignored. The full disposition ledger —
-every quarantined test, its root cause, and why it is not simply fixed or deleted — is
-documented in [docs/test-triage-149.md](docs/test-triage-149.md).
+deleted, because they were individually investigated and dispositioned during a
+test-suite triage rather than silently ignored. The disposition ledger for that triage —
+each test it quarantined, its root cause, and why it is not simply fixed or deleted — is
+documented in [docs/test-triage-149.md](docs/test-triage-149.md). Tests quarantined
+later are not all named there; `tests/skip_registry.py` records a category and a reason
+for every registered skip and xfail.
 
 If you're touching a file with a quarantined test in it, read that ledger entry first;
 it usually tells you whether your change is expected to un-quarantine the test or is
@@ -134,12 +125,13 @@ unrelated.
 The `Linux Full Suite` job in `.github/workflows/python-ci.yml` runs the command above
 on `ubuntu-latest` with Python 3.11 on every pull request and every push to `main`. It
 has no `continue-on-error` — a newly introduced failing test fails the build. There is
-no separate opt-in step; if your PR breaks the suite, the check goes red and blocks
-merge.
+no separate opt-in step; if your PR breaks the suite, the check goes red and we expect it
+fixed before merge. (GitHub branch protection on `main` currently requires only the
+`Windows Sensor Smoke` check, so the merge button does not enforce this by itself.)
 
 ## Before you open a PR
 
-A short checklist, mirroring the code standards in `CLAUDE.md`:
+A short checklist:
 
 - Follow PEP 8 for Python changes.
 - Run `python -m compileall` on any Python files you touched.

@@ -4,7 +4,7 @@ This guide covers three topics:
 
 1. **What a CBOM is** — plain-English explanation for compliance officers and executives
 2. **How QU.I.R.K. produces the CBOM** — technical pipeline for consultants and engineers
-3. **Citing the CBOM as compliance evidence** — audit language for NIST SP 800-208, CNSA 2.0, and ISO 27001
+3. **Citing the CBOM as compliance evidence** — what the CBOM does and does not establish, with audit language for the frameworks QU.I.R.K. maps
 
 ---
 
@@ -17,64 +17,75 @@ algorithm, key, and protocol in use across a system or network. It is the crypto
 of a Software Bill of Materials (SBOM) — a list of ingredients, not just a report that says
 "encryption is present."
 
-Without a CBOM, an organization does not know which of its systems use RSA-2048 (broken by a
-sufficiently powerful quantum computer using Shor's algorithm), which use AES-256 (quantum-safe
-with a 128-bit effective security margin after Grover's algorithm), and which use deprecated
-algorithms like 3DES or RC4. The CBOM makes that inventory explicit, machine-readable, and auditable.
+Without a CBOM, an organization does not know which of its systems use RSA-2048 (which Shor's
+algorithm would break on a sufficiently powerful quantum computer), which use AES-256 (classified
+quantum-safe by QU.I.R.K.), and which use legacy algorithms like 3DES. The CBOM makes that
+inventory explicit, machine-readable, and auditable.
 
 ### Why the CBOM Matters for Compliance
 
-Three regulatory drivers make the CBOM a required starting artifact:
-
 **NIST Post-Quantum Cryptography (PQC) Program**
 
-NIST's post-quantum cryptography program culminated in FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), and
-FIPS 205 (SLH-DSA) — the first standardized post-quantum algorithms. Before any organization can
-begin migration to these algorithms, it must know what it is migrating away from. NIST IR 8547 and
-the broader NIST CBOM guidance explicitly use the CycloneDX CBOM schema as the inventory format.
+NIST published the first three post-quantum standards — FIPS 203 (ML-KEM), FIPS 204 (ML-DSA) and
+FIPS 205 (SLH-DSA) — on August 13, 2024. Before an organization can migrate to these algorithms,
+it must know what it is migrating away from. NIST's draft transition report, IR 8547
+(*Transition to Post-Quantum Cryptography Standards*), describes how quantum-vulnerable algorithms
+are expected to be deprecated and disallowed; a CBOM is the inventory that tells you which of
+those algorithms you actually use.
 
-**NIST SP 800-208**
+**OMB Memorandum M-23-02**
 
-NIST SP 800-208 (Recommendation for Stateful Hash-Based Signature Schemes) requires organizations
-to inventory their cryptographic assets before beginning migration planning. A CBOM produced by
-QU.I.R.K. satisfies this inventory requirement.
+For U.S. federal agencies, OMB Memorandum M-23-02 establishes requirements to inventory active
+cryptographic systems, with a focus on High Value Assets and high impact systems. A QU.I.R.K. CBOM
+is a machine-readable inventory of the cryptography it observed on the targets you scanned. It does
+not by itself satisfy an agency's M-23-02 submission, which has its own scope and format.
 
-**CNSA 2.0 (Commercial National Security Algorithm Suite 2.0)**
+**CNSA 2.0**
 
-NSA's CNSA 2.0 (August 2022) sets migration deadlines for National Security Systems (NSS):
-cryptographic inventory by 2025, algorithm migration beginning by 2026. A CBOM is the starting
-artifact for CNSA 2.0 compliance work. The `quantum-vulnerable` / `quantum-safe` labels in the
-QU.I.R.K. CBOM map directly to CNSA 2.0 algorithm classification categories.
+QU.I.R.K. does not encode CNSA 2.0 requirements or dates in its CBOM classifier or labels, and this
+guide does not state them: NSA's CNSA 2.0 publication cannot be fetched by automated tooling (HTTP
+403), so the dates have not been verified against the primary source. Take CNSA 2.0 algorithms and
+deadlines from NSA's own publication.
 
 ### What a CBOM Contains
 
-Each component entry in the CBOM represents one discovered cryptographic algorithm and includes:
+Each algorithm component in the CBOM represents one distinct algorithm and carries:
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| Algorithm name | Canonical algorithm identifier | `RSA-2048`, `TLS_AES_256_GCM_SHA384`, `ssh-ed25519` |
-| Location | System, service, or endpoint where it was discovered | `192.168.1.10:443` (TLS), `10.0.0.5:22` (SSH) |
-| Quantum-safety classification | One of three labels (see below) | `quantum-vulnerable` |
-| NIST PQC security level | 0–5 scale from NIST's evaluation criteria | `0` (quantum-vulnerable), `3` (NIST level 3) |
-| Classical security strength | Equivalent classical security in bits | `112` bits |
+| Algorithm name | Algorithm identifier as normalized by the builder | `RSA-2048`, `AES-256-GCM`, `ssh-ed25519` |
+| Primitive | CycloneDX crypto primitive | `pke`, `signature`, `ae` |
+| NIST security level | `nistQuantumSecurityLevel` — the NIST security strength category; `0` means none of the categories is met (CycloneDX allows 0–6) | `0` for RSA-2048, `3` for ML-KEM-768 |
+| Classical security strength | `classicalSecurityLevel`, in bits | `112` for RSA-2048 |
+| FIPS 140-3 status | `quirk:fips140-3-status` property: `approved` or `non-approved` | `non-approved` for RSA |
+
+Where an endpoint was scanned, the location (host and port) appears in the certificate and protocol
+component names, for example `protocol:tls:192.168.1.10:443`; algorithm components are shared across
+endpoints.
 
 **The three quantum-safety labels:**
 
-| Label | Meaning | Examples |
-|-------|---------|---------|
-| `quantum-safe` | Algorithm withstands known quantum attacks | AES-256-GCM, ML-KEM-768, SHA-384 |
-| `quantum-vulnerable` | Algorithm broken by Shor's or Grover's algorithm | RSA (any size), ECDSA, DH, SHA-256 |
-| `unknown` | Algorithm not recognized or no algorithm present | Unrecognized cipher, `alg:none` JWT header |
+The CBOM file itself does not contain these label strings. They are derived from the NIST security
+level by `quantum_safety_label()` and appear in the dashboard, the API, and `quirk analyze-token`
+(the dashboard and the API display them as `Safe`, `Vulnerable` and `Unknown`).
+
+| Label | NIST level | Examples |
+|-------|-----------|----------|
+| `quantum-safe` | 1 or higher | `AES-256-GCM`, `ML-KEM-768`, `SHA-384` |
+| `quantum-vulnerable` | 0 | `RSA`, `RSA-1024` to `RSA-4096`, `ECDSA`, `X25519`, `SHA-256` |
+| `unknown` | none (algorithm not recognized, or a table entry that carries no level) | an unrecognized cipher name, an RSA key size the table does not list (for example `RSA-8192`) |
 
 ### CBOM Output Formats
 
-QU.I.R.K. produces two artifacts per scan run:
+QU.I.R.K. writes two CBOM files per scan run:
 
-- **`cbom-{timestamp}.cdx.json`** — CycloneDX 1.6 JSON format
-- **`cbom-{timestamp}.cdx.xml`** — CycloneDX 1.6 XML format
+- **`cbom-{timestamp}.cdx.json`** — CycloneDX 1.6 JSON
+- **`cbom-{timestamp}.cdx.xml`** — CycloneDX 1.6 XML
 
-Both files are written to the `output/` directory and validate against the CycloneDX 1.4+ schema.
-The timestamp in the filename ties each inventory to a specific point in time for audit traceability.
+Both are written to the configured output directory (`output.directory`, `./quirk-output` in the
+shipped config template). After writing the JSON file, QU.I.R.K. validates it against the CycloneDX
+1.6 JSON schema; a failure is recorded as a warning finding and the file is kept. The timestamp
+(UTC, `YYYYMMDD-HHMMSS`) ties each inventory to a specific point in time.
 
 ---
 
@@ -90,37 +101,29 @@ Scan targets → CryptoEndpoints → Algorithm extraction → Classification →
 
 #### Step 1: Discovery
 
-QU.I.R.K. scans configured targets across seven scan surfaces and produces `CryptoEndpoint`
-database records. Each record contains the raw cryptographic material discovered at that endpoint:
+QU.I.R.K. scans the configured targets and stores one `CryptoEndpoint` database record per
+discovered endpoint or finding. Each record carries the raw cryptographic material for its
+protocol. The CBOM builder has a dedicated branch for these record types:
 
-| Scan surface | Raw data captured |
-|-------------|-------------------|
-| TLS | Cipher suites, certificate algorithm, certificate chain, EC curves, TLS version |
-| SSH | KEX algorithms, host key algorithms, encryption algorithms, MAC algorithms (via ssh-audit) |
-| JWT/API | JWT algorithm (`alg` header), JWKS public key algorithm and key size |
-| Container | Cryptographic library names and versions (via Syft) |
-| Source code | Cryptographic anti-patterns found by semgrep (rule IDs reference specific algorithms) |
-| AWS cloud | KMS key specs, ACM certificate algorithms, CloudFront TLS policies, ELBv2 listener algorithms |
-| Azure cloud | Key Vault key types, App Gateway TLS settings |
-| GCP cloud | Cloud KMS key specs, Cloud SQL TLS enforcement, GCS bucket encryption (added v4.3) |
-| Database | PostgreSQL pg_stat_ssl, MySQL SSL status, RDS StorageEncrypted (added v4.3) |
-| Object storage | S3 SSE mode, Azure Blob CMK, GCS CMEK (added v4.3) |
-| Kubernetes | EKS/GKE/AKS encryption API, etcd EncryptionConfiguration provider (added v4.3) |
-| HashiCorp Vault | Transit key types, PKI CA certificates, auth method list (added v4.3) |
-| Email | SMTP/STARTTLS, SMTPS, submission, IMAP/IMAPS, POP3/POP3S cipher and protocol (added v4.4) |
-| Message brokers | Kafka, RabbitMQ, Redis TLS posture and plaintext-listener detection (added v4.4) |
+- **TLS** (the default branch) — cipher suite, certificate public-key and signature algorithms
+- **SSH** — KEX, host-key, encryption and MAC algorithms parsed from ssh-audit JSON
+- **JWT** and **bearer token** — the declared JWT algorithm
+- **Container** — cryptographic library names found by Syft (recorded as a coverage note)
+- **Source code** — an algorithm hint taken from the semgrep rule ID
+- **Cloud** (AWS, Azure, GCP) — KMS and Key Vault key specs and certificate algorithms
+- **Identity** (Kerberos, SAML, DNSSEC, S/MIME, AD CS) and **code signing** — the algorithm named by the finding
+- **Data at rest** (Vault, MySQL, PostgreSQL/RDS, S3 / Azure Blob) — an algorithm only when the record names one; plaintext and unencrypted endpoints produce a coverage note instead. Azure Blob rows currently never register an algorithm: every Blob container, including one encrypted with a customer-managed or platform-managed key, gets the `unencrypted S3/Blob endpoint` coverage note (a known defect)
 
 #### Step 2: Algorithm Extraction
 
 The CBOM builder (`quirk/cbom/builder.py`, `build_cbom()`) reads each `CryptoEndpoint` and
 extracts individual algorithm names. One endpoint typically contributes multiple algorithms:
 
-- A TLS endpoint yields: certificate public-key algorithm + accepted cipher suites decomposed
-  into constituent algorithms (key exchange, authentication, encryption, MAC) + EC curves
+- A TLS endpoint yields: the certificate public-key and signature algorithms + the recorded
+  cipher suite decomposed into constituent algorithms (key exchange, authentication, encryption, MAC)
 - An SSH endpoint yields: KEX algorithms + host-key algorithms + encryption algorithms +
   MAC algorithms (parsed from the `ssh_audit_json` field)
-- A JWT endpoint yields: the `alg` header value (e.g., `RS256`, `HS256`) + JWKS public key
-  algorithm and key size
+- A JWT endpoint yields: the JWT algorithm recorded for the key (e.g., `RS256`, `ES256`) and its key size
 
 **TLS cipher suite decomposition example:**
 
@@ -132,23 +135,27 @@ TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 → MAC: SHA-384
 ```
 
-Algorithms are deduplicated across all endpoints. If 50 TLS endpoints all accept
+The decomposition is name-based: every `ECDHE` or `ECDH` key exchange is recorded as `X25519`,
+whatever curve was actually negotiated.
+
+Algorithms are deduplicated across all endpoints. If 50 TLS endpoints all record
 `TLS_AES_256_GCM_SHA384`, the CBOM contains one `AES-256-GCM` component, not 50.
 
 #### Step 3: Classification
 
-`classify_algorithm()` in `quirk/cbom/classifier.py` maps each algorithm name to a
-`(CryptoPrimitive, nist_level, classical_bits)` tuple:
+`classify_algorithm()` in `quirk/cbom/classifier.py` looks the name up in a table of 120 entries
+(`_ALGORITHM_TABLE`) and returns a `(CryptoPrimitive, nist_level, classical_bits)` tuple:
 
-- **`CryptoPrimitive`**: The type of cryptographic operation — `KEY_AGREE`, `PKE` (public-key
-  encryption), `SIGNATURE`, `BLOCK_CIPHER`, `AE` (authenticated encryption), `HASH`, `MAC`,
-  `KEM`, or `UNKNOWN`
-- **`nist_level`**: NIST PQC security level on the 0–5 scale:
-  - `0` = quantum-vulnerable (broken by Shor's or Grover-weakened below acceptable threshold)
-  - `1`–`5` = quantum-safe at increasing security strength (maps to NIST PQC evaluation categories)
-  - `None` = algorithm not recognized
+- **`CryptoPrimitive`**: The type of cryptographic operation — for example `KEY_AGREE`, `PKE`
+  (public-key encryption), `SIGNATURE`, `BLOCK_CIPHER`, `AE` (authenticated encryption), `HASH`,
+  `MAC`, `KEM`, or `UNKNOWN`
+- **`nist_level`**: the NIST security strength category:
+  - `0` = none of the categories is met; QU.I.R.K. labels this quantum-vulnerable
+  - `1`–`5` = quantum-safe, at increasing security strength
+  - `None` = algorithm not recognized, or one of the 11 table entries that carry no level (for
+    example the DNSSEC names `rsasha256` and `rsasha512`, and `sha1`)
 - **`classical_bits`**: Equivalent classical security strength in bits (e.g., 112 for RSA-2048,
-  128 for AES-128, 256 for AES-256)
+  128 for AES-128-GCM, 256 for AES-256-GCM)
 
 The classifier performs normalization before lookup:
 1. Strip vendor suffixes (`@openssh.com`, `@libssh.org`, etc.)
@@ -157,73 +164,95 @@ The classifier performs normalization before lookup:
 4. Fuzzy normalization: hyphen insertion between letter/digit boundaries
    (e.g., `aes256gcm` → `aes-256-gcm`)
 
+A name that is still not found returns `(UNKNOWN, None, None)`.
+
 #### Step 4: Quantum Safety Labeling
 
 `quantum_safety_label(nist_level)` assigns the human-readable label:
 
 ```python
 if nist_level is None:
-    return "unknown"       # Algorithm not recognized or no algorithm present
+    return "unknown"             # algorithm not recognized
 if nist_level == 0:
-    return "quantum-vulnerable"  # Broken by Shor's or Grover-weakened
-return "quantum-safe"      # nist_level >= 1: meets NIST PQC security level 1+
+    return "quantum-vulnerable"  # none of the NIST categories is met
+return "quantum-safe"            # nist_level >= 1
 ```
 
-These are the exact three strings returned by the function. They appear verbatim in the CycloneDX
-output and in QU.I.R.K.'s JSON reports.
+These are the only three strings the function returns. The labels are not written into the
+CycloneDX file — the file carries `nistQuantumSecurityLevel` — but `quirk analyze-token` prints
+them, and the dashboard and the API show them as `Safe`, `Vulnerable` and `Unknown`.
 
 #### Step 5: CycloneDX Serialization
 
-The deduplicated algorithm components are assembled into a `cyclonedx.model.bom.Bom` object with
-three component types:
+The deduplicated components are assembled into a `cyclonedx.model.bom.Bom` object. The cryptographic
+asset components are:
 
 - **Algorithm components** (`CRYPTOGRAPHIC_ASSET / ALGORITHM`): One per unique algorithm, carrying
   `AlgorithmProperties` (primitive, nist_quantum_security_level, classical_security_level,
   execution_environment)
-- **Certificate components** (`CRYPTOGRAPHIC_ASSET / CERTIFICATE`): One per TLS/cloud endpoint
-  with a certificate, carrying `CertificateProperties` (subject, issuer, validity dates,
-  signature algorithm ref, public key ref)
-- **Protocol components** (`CRYPTOGRAPHIC_ASSET / PROTOCOL`): One per TLS/SSH endpoint, carrying
-  `ProtocolProperties` (type, version, cipher suites with algorithm references)
+- **Certificate components** (`CRYPTOGRAPHIC_ASSET / CERTIFICATE`): One per TLS-style endpoint with a
+  certificate public-key algorithm, carrying `CertificateProperties` (subject, issuer, validity
+  dates, signature algorithm ref, public key ref)
+- **Protocol components** (`CRYPTOGRAPHIC_ASSET / PROTOCOL`): One per TLS or SSH endpoint, carrying
+  `ProtocolProperties` (type, version, cipher suites with algorithm references). TLS is the
+  builder's default branch, so an endpoint whose protocol has no dedicated skip also gets a
+  `protocol:tls` component. One known case is the `ADVISORY` row the PQC probe writes when the
+  scanning host's OpenSSL cannot test for ML-KEM: it yields a second, empty `protocol:tls`
+  component for the same host and port.
+
+When hardware devices were inventoried the CBOM also contains device and firmware components, and
+when remediation items exist it carries VEX entries.
 
 The Bom is serialized to JSON and XML using `cyclonedx-python-lib` (`JsonV1Dot6` / `XmlV1Dot6`
 serializers), producing CycloneDX 1.6 output.
 
 ### Algorithm Classification Reference Table
 
-The table below documents representative algorithms from the QU.I.R.K. algorithm table.
-Use these for consultant accuracy when explaining findings to clients.
+The table below shows how representative entries of the algorithm table are classified. Names are
+the table keys (matching is case-insensitive); a bare family name such as `DH` or `HMAC-SHA256`
+is **not** a key and classifies as `unknown`. Use the exact names below when explaining findings.
 
 | Algorithm | CryptoPrimitive | NIST Level | Quantum Label | Reason |
 |-----------|----------------|-----------|---------------|--------|
-| RSA (any size) | `PKE` | 0 | `quantum-vulnerable` | Shor's algorithm solves integer factorization in polynomial time |
-| ECDSA / EC | `SIGNATURE` | 0 | `quantum-vulnerable` | Shor's algorithm solves elliptic curve discrete logarithm |
-| X25519 / Curve25519 | `KEY_AGREE` | 0 | `quantum-vulnerable` | Shor's algorithm breaks elliptic curve key agreement |
-| DH / DHE (all groups) | `KEY_AGREE` | 0 | `quantum-vulnerable` | Shor's algorithm solves discrete logarithm |
-| Ed25519 | `SIGNATURE` | 0 | `quantum-vulnerable` | Shor's algorithm breaks elliptic curve signature |
-| AES-256-GCM | `AE` | 1 | `quantum-safe` | Grover halving leaves 128-bit effective security — above NIST threshold |
-| AES-128-GCM | `AE` | 1 | `quantum-safe` | 64-bit effective post-Grover — marginal but classified safe |
-| ChaCha20-Poly1305 | `AE` | 1 | `quantum-safe` | 256-bit symmetric key, Grover leaves 128-bit effective |
-| SHA-256 | `HASH` | 0 | `quantum-vulnerable` | Grover halving to 128-bit effective — below NIST threshold |
-| SHA-384 | `HASH` | 2 | `quantum-safe` | Grover halving leaves 192-bit effective |
-| SHA-512 | `HASH` | 2 | `quantum-safe` | Grover halving leaves 256-bit effective |
-| SHA-1 | `HASH` | 0 | `quantum-vulnerable` | Grover halving to 80-bit effective + classical collision attacks |
-| HMAC-SHA256 | `HASH` | 0 | `quantum-vulnerable` | 128-bit effective after Grover |
-| HMAC-SHA512 | `HASH` | 2 | `quantum-safe` | 256-bit effective after Grover |
-| ML-KEM-512 (FIPS 203) | `KEM` | 1 | `quantum-safe` | NIST PQC finalist — designed for quantum resistance |
-| ML-KEM-768 (FIPS 203) | `KEM` | 3 | `quantum-safe` | NIST PQC — level 3 security |
-| ML-KEM-1024 (FIPS 203) | `KEM` | 5 | `quantum-safe` | NIST PQC — highest security level |
-| ML-DSA-65 (FIPS 204) | `SIGNATURE` | 3 | `quantum-safe` | NIST PQC — level 3 digital signature |
-| ML-DSA-87 (FIPS 204) | `SIGNATURE` | 5 | `quantum-safe` | NIST PQC — level 5 digital signature |
-| SLH-DSA-256 (FIPS 205) | `SIGNATURE` | 5 | `quantum-safe` | NIST PQC stateless hash-based signature |
-| RS256 (JWT) | `SIGNATURE` | 0 | `quantum-vulnerable` | RSA-PKCS1 + SHA-256 — RSA component is vulnerable |
-| HS256 (JWT) | `MAC` | 0 | `quantum-vulnerable` | HMAC-SHA256 — Grover halving to 128-bit effective |
-| alg:none (JWT) | `UNKNOWN` | 0 | `quantum-vulnerable` | No signature — critical vulnerability (not a quantum issue) |
-| 3DES | `BLOCK_CIPHER` | 0 | `quantum-vulnerable` | 112-bit effective classical security + SWEET32 attack |
+| `RSA`, `RSA-2048`, `RSA-4096` | `PKE` | 0 | `quantum-vulnerable` | Shor's algorithm factors integers in polynomial time |
+| `ECDSA`, `EC` | `SIGNATURE` | 0 | `quantum-vulnerable` | Elliptic-curve based; classified level 0 by the table |
+| `X25519`, `curve25519-sha256` | `KEY_AGREE` | 0 | `quantum-vulnerable` | Elliptic-curve based; classified level 0 by the table |
+| `dh-2048`, `diffie-hellman-group14-sha256` | `KEY_AGREE` | 0 | `quantum-vulnerable` | Shor's algorithm solves discrete logarithms in polynomial time |
+| `Ed25519` | `SIGNATURE` | 0 | `quantum-vulnerable` | Elliptic-curve based; classified level 0 by the table |
+| `AES-256-GCM` | `AE` | 1 | `quantum-safe` | 256-bit classical strength; level 1 in the table |
+| `AES-128-GCM` | `AE` | 1 | `quantum-safe` | 128-bit classical strength; level 1 in the table |
+| `ChaCha20-Poly1305` | `AE` | 1 | `quantum-safe` | 256-bit classical strength; level 1 in the table |
+| `SHA-256` | `HASH` | 0 | `quantum-vulnerable` | 128-bit classical strength; level 0 in the table |
+| `SHA-384` | `HASH` | 2 | `quantum-safe` | 192-bit classical strength |
+| `SHA-512` | `HASH` | 2 | `quantum-safe` | 256-bit classical strength |
+| `SHA-1` | `HASH` | 0 | `quantum-vulnerable` | 80-bit classical strength; level 0 in the table |
+| `hmac-sha2-256` | `HASH` | 0 | `quantum-vulnerable` | 128-bit classical strength; level 0 in the table |
+| `hmac-sha2-512` | `HASH` | 2 | `quantum-safe` | 256-bit classical strength |
+| `ML-KEM-512` (FIPS 203) | `KEM` | 1 | `quantum-safe` | Module-lattice KEM standardized in FIPS 203 |
+| `ML-KEM-768` (FIPS 203) | `KEM` | 3 | `quantum-safe` | Level 3 |
+| `ML-KEM-1024` (FIPS 203) | `KEM` | 5 | `quantum-safe` | Level 5 |
+| `ML-DSA-65` (FIPS 204) | `SIGNATURE` | 3 | `quantum-safe` | Level 3 digital signature |
+| `ML-DSA-87` (FIPS 204) | `SIGNATURE` | 5 | `quantum-safe` | Level 5 digital signature |
+| `SLH-DSA-256` (FIPS 205) | `SIGNATURE` | 5 | `quantum-safe` | Stateless hash-based signature |
+| `RS256` (JWT) | `SIGNATURE` | 0 | `quantum-vulnerable` | RSA-based signature; classified level 0 |
+| `HS256` (JWT) | `MAC` | 0 | `quantum-vulnerable` | Classified level 0 by the table |
+| `none` (JWT `alg` header) | `UNKNOWN` | 0 | `quantum-vulnerable` | No signature — a critical authentication weakness, not a quantum issue |
+| `3DES` | `BLOCK_CIPHER` | 0 | `quantum-vulnerable` | 112-bit classical strength; level 0 in the table |
 
-> **Note on `alg:none`:** The `quantum-vulnerable` label for `alg:none` JWTs reflects that
-> `nist_level == 0`, but the actual risk is a critical authentication bypass, not a quantum
-> computing threat. The finding severity in QU.I.R.K.'s risk engine is CRITICAL for this reason.
+The symmetric and hash levels are the table's own assignments, not a statement about any
+standard. Grover's algorithm searches an unsorted space of N items in O(sqrt(N)) steps.
+
+> **DNSSEC algorithm names:** The DNSSEC scanner records the DNSKEY algorithm name (for example
+> `ECDSAP256SHA256`), and those names are separate table keys. `ecdsap256sha256` and
+> `ecdsap384sha384` (DNSSEC algorithms 13 and 14) are classified at NIST level 1 and 3, so a zone
+> signed with them is labelled `quantum-safe`, although plain `ECDSA` is level 0.
+> `rsasha256` and `rsasha512` carry no level and are labelled `unknown`. This inconsistency in the
+> table is an open defect; do not cite the label of a DNSSEC algorithm component as a
+> quantum-safety determination.
+
+> **Note on `alg:none`:** The `quantum-vulnerable` label for a JWT whose `alg` is `none` reflects
+> that `nist_level == 0`, but the actual risk is a critical authentication bypass, not a quantum
+> computing threat. `quirk analyze-token` reports `alg:none` as a CRITICAL finding.
 
 ---
 
@@ -231,137 +260,104 @@ Use these for consultant accuracy when explaining findings to clients.
 
 *(Audience: auditors, compliance teams, consultants preparing evidence packages)*
 
-### NIST SP 800-208 Alignment
+A QU.I.R.K. CBOM is evidence of what cryptography the scanner observed on the targets in scope at
+one point in time. It is not a certification, and it does not on its own demonstrate that any
+framework's requirements are met.
 
-NIST SP 800-208 (Recommendation for Stateful Hash-Based Signature Schemes) and the broader NIST
-PQC migration guidance require a cryptographic inventory as a precondition for post-quantum
-migration planning. The QU.I.R.K. CBOM satisfies this inventory requirement.
+### NIST Post-Quantum Cryptography Alignment
+
+QU.I.R.K. classifies each algorithm with the NIST security strength category carried in the
+CycloneDX `nistQuantumSecurityLevel` field (`0` means none of the categories is met). It labels
+the table entries `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (FIPS 203), `ML-DSA-44`, `ML-DSA-65`,
+`ML-DSA-87` (FIPS 204) and `SLH-DSA-128`, `SLH-DSA-192`, `SLH-DSA-256` (FIPS 205) as quantum-safe.
+FIPS 205's full parameter-set names, such as `SLH-DSA-SHA2-128s`, are not table keys and classify
+as `unknown`.
 
 **Suggested audit language:**
 
 > *"A cryptographic inventory was produced using QU.I.R.K. v[version] on [date]. The inventory
 > covers [N] endpoints across [network ranges / business units]. Cryptographic algorithms were
-> classified against the NIST Post-Quantum Cryptography evaluation criteria (NIST IR 8413) using
-> the 0–5 NIST PQC security level scale. The complete inventory is attached as CBOM artifact
-> `cbom-[timestamp].cdx.json` in CycloneDX 1.6 format, conforming to NIST IR 8547 guidance.
-> Quantum-vulnerable components have been identified and are addressed in the accompanying
-> migration roadmap."*
+> classified by NIST security strength category using the CycloneDX `nistQuantumSecurityLevel`
+> field. The complete inventory is attached as CBOM artifact `cbom-[timestamp].cdx.json` in
+> CycloneDX 1.6 format. Quantum-vulnerable components have been identified and are addressed in the
+> accompanying migration roadmap."*
 
 **Key facts for the auditor package:**
-- QU.I.R.K. uses `nist_quantum_security_level` as defined in CycloneDX 1.4+ schema
-- Classification maps to NIST IR 8413 (Status Report on the Third Round of the NIST PQC
-  Evaluation Process) security level categories
-- The CBOM file includes BOM serial number, timestamp, and tool metadata (name: QU.I.R.K.,
-  version: [version]) for chain-of-custody documentation
+- `nistQuantumSecurityLevel` is defined in the CycloneDX 1.6 schema (minimum 0, maximum 6)
+- The CBOM file includes a BOM serial number, a timestamp, and the producing tool in
+  `metadata.component` (name: QU.I.R.K., version: [version]) for chain-of-custody documentation
 
-### CNSA 2.0 Alignment
+### CNSA 2.0
 
-NSA's CNSA 2.0 (Commercial National Security Algorithm Suite 2.0, August 2022) requires
-National Security System operators to:
-- Complete a cryptographic inventory by 2025
-- Begin migration to CNSA 2.0 algorithms by 2026 (software and firmware)
-- Complete migration to CNSA 2.0 algorithms by 2030–2033 (depending on system type)
+See "Why the CBOM Matters for Compliance" above. QU.I.R.K. does not map its CBOM labels to CNSA 2.0
+algorithm classes, so do not cite this CBOM as a CNSA 2.0 compliance determination. It can serve
+as the starting inventory for that work.
 
-The QU.I.R.K. CBOM is suitable as the CNSA 2.0 inventory artifact. The `quantum-vulnerable`
-label identifies systems using pre-quantum algorithms that CNSA 2.0 requires replacing.
+### Framework Mappings Carried by Findings
 
-**Suggested audit language:**
+QU.I.R.K. attaches machine-readable control references to findings for five frameworks, listed by
+`quirk compliance status`: FIPS 140-3, HIPAA 45 CFR, ISO 27001:2022, PCI-DSS 4.0.1 and SOC 2 CC.
+The references appear on findings and in reports; the CBOM file does not carry them. Its only
+compliance-related data are the `quirk:fips140-3-status` and `quirk:cmvp-coverage` properties
+described below. Each mapping is a QU.I.R.K. judgement about
+which control a finding bears on, not an assessment result.
 
-> *"Per CNSA 2.0 requirements, a full cryptographic inventory was conducted on [date] using
-> QU.I.R.K. v[version]. The inventory identified [N] quantum-vulnerable components across [N]
-> systems. Specific components mapped to CNSA 2.0 algorithm classes are documented in the
-> attached CBOM (`cbom-[timestamp].cdx.json`). A phased migration plan targeting CNSA 2.0
-> compliance by [year] is attached separately."*
+**PCI DSS 4.0.1.** Findings carry references to Requirements 4.2.1, 4.2.1.1, 6.3.3 and 8.3.2 (for example
+plaintext or weak transport encryption, expired, self-signed or untrusted certificates,
+outdated cryptographic packages in container images, and an unauthenticated plaintext Redis
+listener).
 
-**CNSA 2.0 algorithm mapping:**
+**HIPAA 45 CFR § 164.312.** Findings carry references to § 164.312(a)(2)(iv), (e)(1) and
+(e)(2)(ii). The regulation text for these specifications reads: "(iv) Encryption and decryption
+(Addressable). Implement a mechanism to encrypt and decrypt electronic protected health
+information." and "(ii) Encryption (Addressable). Implement a mechanism to encrypt electronic
+protected health information whenever deemed appropriate."
 
-| CNSA 2.0 Required Algorithm | QU.I.R.K. CBOM Label | Migration Priority |
-|-----------------------------|---------------------|--------------------|
-| ML-KEM (FIPS 203) — key establishment | `quantum-safe` | — already compliant |
-| ML-DSA (FIPS 204) — signatures | `quantum-safe` | — already compliant |
-| SLH-DSA (FIPS 205) — signatures | `quantum-safe` | — already compliant |
-| RSA (any size) | `quantum-vulnerable` | Replace with ML-KEM/ML-DSA |
-| ECDSA / ECDH (P-256, P-384, etc.) | `quantum-vulnerable` | Replace with ML-KEM/ML-DSA |
-| DH / DHE | `quantum-vulnerable` | Replace with ML-KEM |
-| AES-256 | `quantum-safe` | — already compliant |
-| SHA-384 / SHA-512 | `quantum-safe` | — already compliant |
+**FIPS 140-3** (*Security Requirements for Cryptographic Modules*). Every algorithm component in
+the CycloneDX CBOM carries a `quirk:fips140-3-status` property set to `approved` (NIST level of 1
+or higher) or `non-approved` (NIST level 0 or unknown). The property is derived from QU.I.R.K.'s
+NIST level, not from a CMVP validation. When QU.I.R.K.'s bundled CMVP cache lists validated
+modules for the algorithm family, the component also carries an informational
+`quirk:cmvp-coverage` property naming those modules; it does not change `quirk:fips140-3-status`.
 
-### PCI DSS 4.0.1 Alignment
+**SOC 2.** Findings carry references to Common Criteria CC6.6 and CC6.7.
 
-PCI DSS 4.0.1 Requirement 4.2.1 mandates that strong cryptography is used to protect Primary Account Data (PAD) in transit. Requirement 12.3.3 requires a cryptographic inventory and targeted risk analysis for all cryptographic suites and protocols in use. QU.I.R.K. findings now carry machine-readable PCI DSS control references (added in v4.6 via the `quirk/compliance/` module).
-
-**Suggested audit language:**
-
-> *"A cryptographic inventory was conducted on [date] using QU.I.R.K. v[version] in support of PCI DSS 4.0.1 Requirements 4.2.1 and 12.3.3. Findings carrying a `PCI-DSS 4.0.1` compliance reference are included in the attached report. The complete inventory is attached as CBOM artifact `cbom-[timestamp].cdx.json`."*
-
----
-
-### HIPAA 45 CFR § 164.312 Alignment
-
-HIPAA Technical Safeguard § 164.312(a)(2)(iv) (Encryption and Decryption) and § 164.312(e)(2)(ii) (Encryption) require covered entities to implement encryption of electronic protected health information (ePHI) at rest and in transit when deemed reasonable and appropriate. QU.I.R.K. findings identify weak or absent encryption that bears on these requirements, and findings carry machine-readable HIPAA control references (added in v4.6).
-
----
-
-### FIPS 140-3 Alignment
-
-FIPS 140-3 (Security Requirements for Cryptographic Modules) governs cryptographic module validation for U.S. federal use. Starting in v4.7, every algorithm component in the CycloneDX CBOM carries a `quirk:fips140-3-status` property set to `approved` (NIST level ≥ 1) or `non-approved` (NIST level 0 or unknown). This annotation enables direct alignment with FIPS 140-3 module usage requirements without secondary analysis.
-
----
-
-### SOC 2 (Trust Services Criteria) Alignment
-
-SOC 2 CC6 (Logical and Physical Access Controls) requires cryptographic controls to protect data in transit and at rest. QU.I.R.K. findings carry machine-readable SOC 2 control references for CC6 sub-criteria (added in v4.7 Phase 52).
-
----
-
-### ISO 27001 / ISO 27002:2022 Alignment
-
-ISO 27002:2022 Control 8.24 (Use of cryptography) requires organizations to define rules on the
-use of cryptographic controls and maintain an inventory of cryptographic assets. The QU.I.R.K.
-CBOM satisfies the inventory component of Control 8.24. Machine-readable ISO 27001:2022 control
-references are attached to findings from v4.7 onward (Phase 52).
+**ISO 27001:2022.** Findings carry references to Annex A controls 8.24 and 8.26.
 
 **Suggested audit language:**
 
-> *"Consistent with ISO 27002:2022 Control 8.24, a cryptographic asset inventory has been
-> maintained. The current inventory, produced on [date] using QU.I.R.K. v[version], covers [N]
-> systems and is available as CBOM artifact `cbom-[timestamp].cdx.json`. The inventory was
-> produced using the CycloneDX 1.6 CBOM schema and classifies cryptographic assets against NIST
-> PQC security levels."*
+> *"A cryptographic inventory was produced on [date] using QU.I.R.K. v[version]. Findings carrying
+> a `PCI-DSS 4.0.1` compliance reference are included in the attached report, and the complete
+> inventory is attached as CBOM artifact `cbom-[timestamp].cdx.json`. The inventory was produced
+> using the CycloneDX 1.6 CBOM schema."*
 
 ### CycloneDX Schema Validation
 
-The CBOM files produced by QU.I.R.K. can be spot-checked against the CycloneDX schema to confirm
-their structure before submission as audit evidence:
+QU.I.R.K. validates the JSON CBOM against the CycloneDX 1.6 schema right after writing it. You can
+also spot-check a file's structure before submitting it as audit evidence. Run this from the
+directory that contains your output directory (`quirk-output` by default):
 
 ```bash
-# Quick structure verification
 python3 - <<'EOF'
-import json, pathlib
+import glob, json, pathlib
 
-cbom_path = pathlib.Path("output/cbom-latest.cdx.json")   # or use exact filename
-if not cbom_path.exists():
-    # List available CBOM files
-    import glob
-    files = sorted(glob.glob("output/cbom-*.cdx.json"))
-    if files:
-        cbom_path = pathlib.Path(files[-1])
-    else:
-        print("No CBOM files found in output/")
-        raise SystemExit(1)
+files = sorted(glob.glob("quirk-output/cbom-*.cdx.json"))
+if not files:
+    print("No CBOM files found in quirk-output/")
+    raise SystemExit(1)
 
-with open(cbom_path) as f:
-    data = json.load(f)
+data = json.loads(pathlib.Path(files[-1]).read_text())
+components = data.get("components", [])
+algorithms = [
+    c for c in components
+    if c.get("cryptoProperties", {}).get("assetType") == "algorithm"
+]
 
 print(f"BOM format   : {data.get('bomFormat')}")
 print(f"Spec version : {data.get('specVersion')}")
 print(f"Serial number: {data.get('serialNumber')}")
-print(f"Components   : {len(data.get('components', []))}")
-
-labels = [c.get('cryptoProperties', {}).get('algorithmProperties', {}).get('nistQuantumSecurityLevel')
-          for c in data.get('components', [])
-          if c.get('cryptoProperties', {}).get('assetType') == 'algorithm']
-print(f"Algorithm components: {sum(1 for l in labels if l is not None)}")
+print(f"Components   : {len(components)}")
+print(f"Algorithm components: {len(algorithms)}")
 EOF
 ```
 
@@ -382,16 +378,15 @@ For compliance evidence packages, retain the following alongside each CBOM:
 |----------|---------|-----------|
 | `cbom-{timestamp}.cdx.json` | Machine-readable inventory (JSON) | With the scan session |
 | `cbom-{timestamp}.cdx.xml` | Machine-readable inventory (XML) | With the scan session |
-| `assessment-{timestamp}.md` | Human-readable report | With the scan session |
+| `report-{timestamp}.html` and `executive-summary-{timestamp}.md` | Human-readable reports | With the scan session |
 | QU.I.R.K. version (`quirk --version`) | Tool provenance | In the cover sheet |
 | Scan configuration (`config.yaml`) | Scope documentation | With the scan session |
 
 The timestamp in the CBOM filename ties the inventory to a specific point in time. For compliance
 purposes, this timestamp represents the "as-of" date for the cryptographic inventory.
 
-Some auditor toolchains have a preference for JSON or XML format. QU.I.R.K. produces both; include
-both in evidence packages to maximize compatibility. If the receiving system supports CycloneDX
-CBOM import, the JSON artifact is typically the preferred format.
+Some auditor toolchains prefer JSON or XML. QU.I.R.K. produces both; include both in evidence
+packages to maximize compatibility.
 
 ---
 
@@ -400,13 +395,13 @@ CBOM import, the JSON artifact is typically the preferred format.
 ### CBOM Checklist for Auditors
 
 - [ ] `bomFormat` is `CycloneDX`
-- [ ] `specVersion` is `1.6` (or `1.4` / `1.5` — all validate against CycloneDX CBOM schema)
+- [ ] `specVersion` is `1.6`
 - [ ] `serialNumber` is present (unique identifier for this CBOM)
 - [ ] `metadata.timestamp` matches the scan date in the evidence package
 - [ ] `metadata.component.name` is `QU.I.R.K.` and `version` is recorded
 - [ ] `components` array is non-empty
 - [ ] Algorithm components include `nistQuantumSecurityLevel` property
-- [ ] Algorithm components include `quirk:fips140-3-status` property (`approved` or `non-approved`) — v4.7+
+- [ ] Algorithm components include `quirk:fips140-3-status` property (`approved` or `non-approved`)
 - [ ] Both JSON and XML artifacts are present
 
 ### Classification Logic Summary
@@ -419,25 +414,24 @@ Algorithm → classify_algorithm() → (CryptoPrimitive, nist_level, classical_b
                     "quantum-vulnerable" | "quantum-safe" | "unknown"
 ```
 
-The `nist_level` and `quantum_safety_label` values appear in the CycloneDX `algorithmProperties`
-block of each algorithm component in the CBOM.
+The `nist_level` and `classical_bits` values appear in the CycloneDX `algorithmProperties` block of
+each algorithm component in the CBOM. The `quantum_safety_label` result is derived from the level
+for the dashboard, API and CLI output; it is not written into the CBOM file.
 
 ---
 
-## Additions in v5.x
+## Additional CBOM Behaviors
 
-The five-step pipeline above is unchanged; the v5.x series extended which component types the CBOM surfaces and how merged scans are represented.
+The five-step pipeline above covers the common case. The builder also handles these:
 
-- **PQC-hybrid components (v5.0, Phase 90)** — `X25519MLKEM768` is recognised by the classifier (`PQC probe module`) and emitted as a genuine quantum-safe KEM component in the CBOM, not as a classical fallback. The agility subscore gains a `+8.0` PQC-hybrid bonus when such a component is present.
-- **BEARER_TOKEN branch (v5.1, Phase 94)** — JWT / opaque-bearer auth endpoints now produce a dedicated CBOM branch with evidence counters; `SCORE_WEIGHTS` adds `+10.0` for this surface.
-- **CODE_SIGNING branch (v5.1, Phase 95)** — LDAP+TLS-EKU code-signing certificates are emitted as their own CBOM branch with cross-source fingerprint deduplication.
-- **REST_FUZZ skip (v5.1, Phase 96)** — fuzz-only API probes no longer pollute the CBOM as phantom TLS components; an evidence counter records the skipped surface.
-- **Distributed-mode merge keys (v5.4, Phase 110, MERGE-03)** — when multiple sensors push findings to a central console, the builder threads a `_sensor_prefix` through TLS and codesign surrogate keys, and `sensor_id` is added to `_tls_surrogate_key` / `_codesign_surrogate_key` so per-sensor findings are preserved through merge without cross-sensor collision.
-- **Coverage of zero-algorithm profiles (v5.0, Phase 42 OBS-1)** — five formerly-zero-algorithm chaos-lab profiles (`database`, `registry`, `source`, `ssh-weak`, `storage-s3`) now emit affirmative coverage-note properties so the CBOM records "scanned but no algorithms surfaced" rather than appearing as a silent gap.
+- **PQC-hybrid components** — `X25519MLKEM768` is recognised by the classifier (it is a KEM entry at NIST level 3) and is emitted as a quantum-safe KEM component, not as a classical fallback. The agility subscore's `+8.0` PQC-hybrid bonus is keyed to the PQC probe's `pqc-hybrid-detected` endpoint marker, not to the CBOM component. The probe also sets that marker on the advisory row it writes when the scanning host's OpenSSL cannot test for ML-KEM, so the bonus is applied in that case too although nothing was detected (an open defect).
+- **Bearer-token branch** — when the operator-supplied bearer token is a JWT, the scan adds a `BEARER_TOKEN` endpoint with the token's declared `alg`, and the builder's dedicated branch registers that algorithm and adds a `bearer-token-declared-algorithm` coverage note recording that it is declared, not verified. An opaque (non-JWT) bearer token declares no algorithm, so it adds nothing to the CBOM.
+- **Code-signing branch** — code-signing certificates are emitted as their own branch, deduplicated by fingerprint; when a TLS certificate with the same subject, algorithm and expiry exists, the TLS component is kept and annotated with a `quirk:code-signing-eku` property.
+- **REST fuzz endpoints** — fuzz-only API probes are skipped when certificate and protocol components are built, so they do not appear as phantom TLS components.
+- **Distributed-mode merge keys** — when multiple sensors push findings to a central console, the builder prefixes certificate and protocol component references with the sensor ID, and includes `sensor_id` in the TLS and code-signing surrogate keys, so per-sensor findings are preserved through a merge.
+- **Zero-algorithm profiles** — endpoints that surface no algorithm (for example the chaos-lab `database`, `registry`, `source`, `ssh-weak` and `storage-s3` profiles) are covered by a test that requires the CBOM to contain either real algorithm components or an affirmative coverage note, rather than leaving a silent gap.
 
 ---
-
-*Guide version: 2026-05-28 (updated for v5.5; v5.x additions section above documents CBOM-relevant Phases 90, 94, 95, 96, 110)*
 
 *Canonical references: `quirk/cbom/classifier.py` (`quantum_safety_label()`, `_ALGORITHM_TABLE`),
 `quirk/cbom/builder.py` (`build_cbom()`), `quirk/compliance/` (framework mappings)*

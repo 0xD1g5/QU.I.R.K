@@ -1,3 +1,8 @@
+HISTORICAL SNAPSHOT (dated 2026-10-12): QU.I.R.K. v5.6.0 security-team checklist,
+kept for the record referenced by the 5.6.0 release notes. Not maintained.
+The "License" line below is superseded: QU.I.R.K. is MIT licensed (see LICENSE).
+Current guidance: README.md and SECURITY.md.
+
 ================================================================================
 QU.I.R.K. v5.6.0 — SECURITY TEAM QUICK REFERENCE CHECKLIST
 ================================================================================
