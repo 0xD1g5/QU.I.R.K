@@ -4,7 +4,7 @@ milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
 last_updated: "2026-10-13T00:00:00.000Z"
-last_activity: "2026-10-13 -- Phase 224 COMPLETE (verified passed 5/5 at 38df9001, 1 operator override: goal clause NOT MET AS WRITTEN, deep-doc residual 4.0% disclosed, HORIZON 999.123; branch_ci_state exit 0). PR #56 merged at a8875830; gap-closure commits + this close go to main in a follow-up PR. DOC-03/04 Complete. Hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_activity: "2026-10-13 -- Phase 225 context gathered (225-CONTEXT.md, D-01..D-15; recommend-and-lock). Phase 224 COMPLETE; PR #56 + #57 merged (main c3012d15). Branch phase-225-doc-publication-hero-retake. Next: /gsd-plan-phase 225. Hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 6
   completed_phases: 4
