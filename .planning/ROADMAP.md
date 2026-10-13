@@ -114,7 +114,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 - [x] **Phase 222: Brand Identity Landed** - Merge PR #46 refreshed against `main` with required CI green, then put the brand on the README and on every generated report's colophon (completed 2026-10-02)
 - [x] **Phase 222.1: Brand Guidelines v2 and Dashboard Re-theme** (INSERTED 2026-10-02) - BRAND-GUIDELINES v2 gains a Product UI palette and a below-48 px glyph rule; the dashboard adopts the Ink-violet accent on its current grounds (sketch 001 B, revised from C) with no ratchet pair regressing
 - [x] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + favicon-tier glyph in the existing 48 px narrow sidebar (sketch 002 A), favicon raster pipeline with a drift gate, and every old-branding pin re-worded in the same phase
-- [ ] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc
+- [x] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc (completed 2026-10-13)
 - [ ] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard
 - [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
 
@@ -242,7 +242,7 @@ Plans:
 | 222. Brand Identity Landed | 7/7 | Complete (verified passed 44/44 at 5e64914b, 1 operator override; CI green, Python CI 37068629768 + Dashboard Quality 37068629784) | 2026-10-02 |
 | 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | Complete (verified passed 12/12 at 92a73017; CI green, Python CI 37096708811 + Dashboard Quality 37096708809; PR #54) | 2026-10-03 |
 | 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
-| 224. Doc Claim Ledger & Verification | 18/18 | In Progress | - |
+| 224. Doc Claim Ledger & Verification | 18/18 | Complete (verified passed 5/5 at 38df9001 with 1 operator override, goal clause NOT MET AS WRITTEN: deep-doc residual 4.0% disclosed, HORIZON 999.123; CI green, Python CI 38457496020 + Dashboard Quality 38457500158; PR #56 merged at a8875830, gap-closure PR follows) | 2026-10-13 |
 | 225. Doc Publication & Hero Retake | 0/TBD | Not started | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
 

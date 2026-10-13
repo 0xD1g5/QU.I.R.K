@@ -96,12 +96,12 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
 
 ### Pre-launch doc review (DOC)
 
-- [ ] **DOC-03**: The set of user-facing docs is enumerated from the repository, with each `docs/`
+- [x] **DOC-03**: The set of user-facing docs is enumerated from the repository, with each `docs/`
       file and root doc classified as user-facing or internal and a reason given, rather than taken
       from a hand list. Every checkable claim in each user-facing doc (commands, flags, install paths,
       scanner/connector names, config keys, output paths, version strings, feature assertions) is
       extracted into a claim ledger.
-- [ ] **DOC-04**: Every claim in the ledger is verified by a method independent of the doc: run the
+- [x] **DOC-04**: Every claim in the ledger is verified by a method independent of the doc: run the
       command, grep the flag in source, or hit the registry. Each one is marked TRUE, FIXED (doc
       corrected) or REMOVED (claim deleted). Live capabilities the docs omit (scanners, connectors,
       CLI commands) are added. No claim stays unverified.
@@ -160,8 +160,8 @@ Deferred from this milestone with an owner:
 | BRAND-06 | Phase 222.1 (moved from 223, 2026-10-02) | Complete |
 | BRAND-08 | Phase 222.1 | Complete |
 | BRAND-07 | Phase 223 | Complete |
-| DOC-03 | Phase 224 | Pending |
-| DOC-04 | Phase 224 | Pending |
+| DOC-03 | Phase 224 | Complete |
+| DOC-04 | Phase 224 | Complete (as scoped: every ledger row verified independently; deep reference docs carry a measured 4.0% residual false-claim rate, disclosed in UAT-224-10 and owned by HORIZON 999.123; operator override 2026-10-13) |
 | DOC-05 | Phase 225 | Pending |
 | DOC-06 | Phase 225 | Pending |
 | REL-05 | Phase 226 | Pending |
