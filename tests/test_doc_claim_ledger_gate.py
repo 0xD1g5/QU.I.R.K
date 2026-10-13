@@ -12,6 +12,13 @@ WHAT THIS ENFORCES
        doc (TRUE/FIXED), evidence whose FORMAT matches its method, a ``live``
        flag consistent with the method, and evidence that is not the doc
        itself or planning-internal prose (SC#3, DOC-04).
+    3a. Every live (TRUE/FIXED) row names exactly ONE line of its doc as
+       committed, through ``section`` (the enclosing heading's label, or null
+       before the first heading) + ``anchor`` + ``occurrence`` (1-based among
+       the section's lines holding the anchor; null when only one does). An
+       anchor that merely occurs somewhere in the doc is not enough: the
+       merge used to place a row on the k-th copy of a repeated line, which
+       attributed claims to the wrong copy (SC#2).
     4. Every user-facing doc has at least one ledger row, or is classified
        ``no-checkable-claims`` with a reason (D-06).
     5. The ledger holds more than ``LEDGER_ROW_FLOOR`` rows, so a truncated
@@ -307,6 +314,142 @@ def find_unresolved_anchors(
     return msgs
 
 
+_FENCE_OPEN_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+_ATX_HEADING_RE = re.compile(r"^(#{1,6})\s")
+
+
+def _heading_labels(lines: list[str], doc: str) -> list[tuple[int, str]]:
+    """``[(line_no, label)]`` for every markdown heading outside a fence.
+
+    Only ``.md`` docs have headings. A label is the heading line with trailing
+    whitespace removed. When the doc repeats a heading line, each copy is
+    prefixed by the fewest nearest ancestor headings (joined with ``" > "``)
+    that tell the copies apart, and ``" [k]"`` is appended if even the full
+    ancestor path repeats."""
+    if not doc.lower().endswith(".md"):
+        return []
+    heads: list[tuple[int, int, str]] = []
+    fence: str | None = None
+    for n, line in enumerate(lines, start=1):
+        fm = _FENCE_OPEN_RE.match(line)
+        if fm:
+            ch = fm.group(1)[0]
+            if fence is None:
+                fence = ch
+            elif ch == fence:
+                fence = None
+            continue
+        hm = _ATX_HEADING_RE.match(line) if fence is None else None
+        if hm:
+            heads.append((n, len(hm.group(1)), line.rstrip()))
+    ancestors: list[list[str]] = []
+    for i, (_, level, _) in enumerate(heads):
+        chain: list[str] = []
+        for j in range(i - 1, -1, -1):
+            if heads[j][1] < level:
+                chain.append(heads[j][2])
+                level = heads[j][1]
+        ancestors.append(chain)
+
+    def path(i: int, k: int) -> str:
+        return " > ".join(list(reversed(ancestors[i][:k])) + [heads[i][2]])
+
+    labels = [h[2] for h in heads]
+    for text in {h[2] for h in heads}:
+        same = [i for i, h in enumerate(heads) if h[2] == text]
+        if len(same) < 2:
+            continue
+        for i in same:
+            k = 0
+            while (k < len(ancestors[i])
+                   and sum(path(j, k) == path(i, k) for j in same) > 1):
+                k += 1
+            labels[i] = path(i, k)
+        full = list(labels)
+        for i in same:
+            twins = [j for j in same if full[j] == full[i]]
+            if len(twins) > 1:
+                labels[i] = f"{full[i]} [{twins.index(i) + 1}]"
+    return [(heads[i][0], labels[i]) for i in range(len(heads))]
+
+
+def find_unresolvable_or_ambiguous_rows(
+    rows: list[dict], read_doc: Callable[[str], str | None],
+) -> list[str]:
+    """Live rows whose ``section`` + ``anchor`` + ``occurrence`` do not name
+    exactly one line of their doc as committed.
+
+    ``section`` is a heading label (see ``_heading_labels``) or ``None`` for
+    the text before the first heading; a section runs from its heading to the
+    line before the next heading of any level. ``occurrence`` is the 1-based
+    index among the section's lines that contain the anchor, and must be
+    ``None`` when exactly one does. REMOVED rows must carry ``None`` for
+    both. ``line`` is never consulted."""
+    msgs: list[str] = []
+    cache: dict[str, tuple[list[str], list[tuple[int, str]]] | None] = {}
+    for i, row in enumerate(rows, start=1):
+        rid = _ident(row, i)
+        if "section" not in row or "occurrence" not in row:
+            msgs.append(f"{rid}: missing section/occurrence keys")
+            continue
+        section, occ = row["section"], row["occurrence"]
+        if row.get("status") not in ("TRUE", "FIXED"):
+            if section is not None or occ is not None:
+                msgs.append(f"{rid}: REMOVED row must have section and "
+                            "occurrence null")
+            continue
+        if section is not None and (not isinstance(section, str)
+                                    or not section.strip()):
+            msgs.append(f"{rid}: section must be null or a heading label")
+            continue
+        if occ is not None and (isinstance(occ, bool) or not isinstance(occ, int)
+                                or occ < 1):
+            msgs.append(f"{rid}: occurrence must be null or a positive int, "
+                        f"got {occ!r}")
+            continue
+        doc = row.get("doc", "")
+        if doc not in cache:
+            text = read_doc(doc)
+            if text is None:
+                cache[doc] = None
+            else:
+                lines = text.split("\n")
+                cache[doc] = (lines, _heading_labels(lines, doc))
+        entry = cache[doc]
+        if entry is None:
+            msgs.append(f"{rid}: doc {doc!r} cannot be read")
+            continue
+        lines, heads = entry
+        if section is None:
+            lo, hi = 1, (heads[0][0] - 1) if heads else len(lines)
+        else:
+            idx = [k for k, (_, label) in enumerate(heads) if label == section]
+            if len(idx) != 1:
+                msgs.append(f"{rid}: section {section!r} matches {len(idx)} "
+                            f"headings in {doc}")
+                continue
+            k = idx[0]
+            lo = heads[k][0]
+            hi = heads[k + 1][0] - 1 if k + 1 < len(heads) else len(lines)
+        anchor = row.get("anchor")
+        hits = [n for n in range(lo, hi + 1)
+                if isinstance(anchor, str) and anchor and anchor in lines[n - 1]]
+        where = f"section {section!r} of {doc} (lines {lo}-{hi})"
+        if not hits:
+            msgs.append(f"{rid}: anchor not found in {where}: "
+                        f"{str(anchor)[:60]!r}")
+        elif occ is None and len(hits) > 1:
+            msgs.append(f"{rid}: anchor occurs on {len(hits)} lines of {where} "
+                        f"({hits[:6]}) and occurrence is null")
+        elif occ is not None and len(hits) == 1:
+            msgs.append(f"{rid}: occurrence {occ} set but the anchor occurs on "
+                        f"one line of {where}; use null")
+        elif occ is not None and occ > len(hits):
+            msgs.append(f"{rid}: occurrence {occ} out of range 1..{len(hits)} "
+                        f"in {where}")
+    return msgs
+
+
 def find_malformed_evidence(
     rows: list[dict],
     path_exists: Callable[[str], bool] = _repo_file_exists,
@@ -514,6 +657,19 @@ def test_ledger_anchors_resolve() -> None:
         "re-disposition the row.")
 
 
+def test_live_rows_resolve_to_exactly_one_line() -> None:
+    def read_doc(rel: str) -> str | None:
+        p = REPO_ROOT / rel
+        return _read(p) if p.is_file() else None
+
+    msgs = find_unresolvable_or_ambiguous_rows(_ledger_rows(), read_doc)
+    assert not msgs, "\n".join(msgs[:200]) + (
+        f"\n({len(msgs)} rows)\nFix: set the row's section to the label of the "
+        "heading it sits under, and occurrence to the anchor's 1-based line "
+        "index in that section (null when the anchor occurs on one line of "
+        "it); or lengthen the anchor. Regenerate the ledger with merge_ledger.")
+
+
 def test_evidence_is_never_the_doc_itself() -> None:
     msgs = find_self_referential_evidence(_ledger_rows())
     assert not msgs, "\n".join(msgs) + (
@@ -667,6 +823,110 @@ def test_negative_control_anchor_not_flagged() -> None:
     assert find_unresolved_anchors([row], lambda d: row["anchor"] + " x") == []
     removed = _good_row(status="REMOVED", fix="deleted")
     assert find_unresolved_anchors([removed], lambda d: "absent") == []
+
+
+# A doc with a repeated anchor in two sections, a duplicated heading and a
+# fenced "# comment" that is not a heading.
+_SECTION_DOC = "\n".join([
+    "intro: run quirk serve-like",    # 1  (before any heading: section None)
+    "# Guide",                        # 2
+    "## Usage",                       # 3
+    "Run quirk serve here.",          # 4
+    "```bash",                        # 5
+    "# not a heading",                # 6
+    "quirk serve --port 1",           # 7
+    "```",                            # 8
+    "## Repeat",                      # 9
+    "quirk serve again once",         # 10
+    "## Alpha",                       # 11
+    "### Notes",                      # 12
+    "same note line here",            # 13
+    "## Beta",                        # 14
+    "### Notes",                      # 15
+    "same note line here",            # 16
+    "",
+])
+
+
+def _sec_row(**over: object) -> dict:
+    row = _good_row(doc="docs/sec.md", anchor="quirk serve", section="## Usage",
+                    occurrence=None)
+    row.update(over)
+    return row
+
+
+def _sec_flags(*rows: dict) -> list[str]:
+    return find_unresolvable_or_ambiguous_rows(
+        list(rows), lambda d: _SECTION_DOC if d == "docs/sec.md" else None)
+
+
+def test_negative_control_ambiguous_anchor_without_occurrence_flagged() -> None:
+    # "quirk serve" is on lines 4 and 7 of ## Usage (the fenced "#" line is
+    # not a heading, so both sit in one section).
+    msgs = _sec_flags(_sec_row())
+    assert len(msgs) == 1 and "DCL-README-0001" in msgs[0], msgs
+
+
+def test_negative_control_missing_section_heading_flagged() -> None:
+    assert _sec_flags(_sec_row(section="## Nowhere"))
+    assert _sec_flags(_sec_row(section="### Notes"))  # 2 headings carry it
+
+
+def test_negative_control_occurrence_out_of_range_flagged() -> None:
+    for occ in (0, 3, -1, True, "1"):
+        assert _sec_flags(_sec_row(occurrence=occ)), occ
+
+
+def test_negative_control_occurrence_on_single_line_flagged() -> None:
+    assert _sec_flags(_sec_row(section="## Repeat", occurrence=1))
+
+
+def test_negative_control_anchor_outside_its_section_flagged() -> None:
+    # the anchor exists in the doc, but not in the named section
+    assert _sec_flags(_sec_row(anchor="quirk serve again", section="## Usage"))
+    assert _sec_flags(_sec_row(anchor="intro: run quirk", section="## Usage"))
+
+
+def test_negative_control_removed_row_carrying_section_flagged() -> None:
+    assert _sec_flags(_sec_row(status="REMOVED", fix="gone", occurrence=1))
+    assert _sec_flags(_sec_row(status="REMOVED", fix="gone"))
+
+
+def test_negative_control_missing_section_keys_flagged() -> None:
+    row = _sec_row()
+    del row["section"]
+    assert _sec_flags(row)
+
+
+def test_negative_control_section_plus_occurrence_not_flagged() -> None:
+    rows = [
+        _sec_row(occurrence=1),
+        _sec_row(id="DCL-README-0002", occurrence=2),
+        _sec_row(id="DCL-README-0003", section="## Repeat"),
+        _sec_row(id="DCL-README-0004", anchor="intro: run quirk", section=None),
+        _sec_row(id="DCL-README-0005", anchor="same note line",
+                 section="## Beta > ### Notes"),
+        _sec_row(id="DCL-README-0006", status="REMOVED", fix="gone",
+                 anchor="text that is gone", section=None),
+    ]
+    assert _sec_flags(*rows) == []
+
+
+def test_negative_control_rows_sharing_unique_anchor_not_flagged() -> None:
+    rows = [_sec_row(section="## Repeat", anchor="quirk serve again"),
+            _sec_row(id="DCL-README-0002", section="## Repeat",
+                     anchor="quirk serve again")]
+    assert _sec_flags(*rows) == []
+
+
+def test_negative_control_non_markdown_doc_is_one_section() -> None:
+    text = "# comment\nkey: one\n# comment\nkey: two\n"
+    row = _good_row(doc="docs/x.yaml", anchor="key: two", section=None,
+                    occurrence=None)
+    reader = lambda d: text  # noqa: E731
+    assert find_unresolvable_or_ambiguous_rows([row], reader) == []
+    assert find_unresolvable_or_ambiguous_rows(
+        [dict(row, section="# comment")], reader)
 
 
 _EXISTS = {"quirk/config.py", "tests/test_jobs_api.py"}
