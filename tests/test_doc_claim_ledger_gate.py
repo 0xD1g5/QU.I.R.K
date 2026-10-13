@@ -31,8 +31,9 @@ WHAT THIS ENFORCES
 HOW TO FIX A FAILURE
     Every failing message ends with a ``Fix:`` line. In short: add or remove
     the row in ``docs/doc-classification.jsonl``; correct the ledger row; or,
-    if a doc edit moved the claim text, update the row's ``anchor``.
-    ``line`` is informational and is never compared.
+    if a doc edit moved the claim text, update the row's ``anchor`` (and its
+    ``section`` / ``occurrence`` when the heading or the anchor's repeats
+    changed). ``line`` is informational and is never compared.
 
 WHY A PYTEST TEST, NOT A PRE-COMMIT HOOK OR DEDICATED CI STEP
     It rides the existing ``Linux Full Suite`` job (``pytest -q -m ""``), so it
@@ -72,8 +73,9 @@ LEDGER_PATH = REPO_ROOT / "docs" / "doc-claim-ledger.jsonl"
 CLASSIFICATION_PATH = REPO_ROOT / "docs" / "doc-classification.jsonl"
 
 LEDGER_KEYS = (
-    "id", "doc", "line", "line_end", "pre_edit_line", "anchor", "claim",
-    "kind", "status", "method", "live", "evidence", "fix", "verified",
+    "id", "doc", "line", "line_end", "pre_edit_line", "anchor", "section",
+    "occurrence", "claim", "kind", "status", "method", "live", "evidence",
+    "fix", "verified",
 )
 VALID_CLASSES = frozenset(
     {"user-facing", "generated", "historical", "internal", "asset"})
@@ -684,7 +686,8 @@ def _good_row(**over: object) -> dict:
     row: dict = {
         "id": "DCL-README-0001", "doc": "README.md", "line": None,
         "line_end": None, "pre_edit_line": 10,
-        "anchor": "quirk run --config config.yaml", "claim": "run command",
+        "anchor": "quirk run --config config.yaml", "section": None,
+        "occurrence": None, "claim": "run command",
         "kind": "command", "status": "TRUE", "method": "primary-source",
         "live": True,
         "evidence": 'https://csrc.nist.gov/pubs/fips/203/final -> '

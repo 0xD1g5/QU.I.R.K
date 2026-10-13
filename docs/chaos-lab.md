@@ -1238,7 +1238,7 @@ PROFILE_ARGS="--profile oqs-nginx" ./lab.sh up
 
 > **Loopback bind note:** `oqs-nginx` publishes only `127.0.0.1:39444`, so scan it from the lab host.
 > The TLS scanner and the PQC probe do not consult `security.allow_internal_targets`, so a scan of
-> `127.0.0.1` does not need `--allow-internal-targets` (the compose file's comment says it does).
+> `127.0.0.1` does not need `--allow-internal-targets` (the compose file's comment says the same).
 > Host OpenSSL >= 3.5 is required for the hybrid handshake, and 39444 is
 > not in the default TLS port list, so add it to `scan.ports_tls`.
 

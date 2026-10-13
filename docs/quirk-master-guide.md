@@ -2222,7 +2222,7 @@ outside it:
 
 #### `security.allow_internal_targets`
 
-`security.allow_internal_targets` (default `false`) controls whether the scanners that fetch a URL, namely the JWT/JWKS, OpenAPI spec and SAML metadata probes and the REST fuzzer, may contact internal and loopback addresses (RFC1918 ranges, `127.x.x.x`, link-local). The SSRF guard's cloud-metadata block still applies when it is `true`. The dashboard reads this flag from the server's own config file (`QUIRK_CONFIG_PATH`, default `./config.yaml`) and copies it into each job it dispatches; a browser cannot set it. The CLI equivalent is `--allow-internal-targets`. It does **not** restrict which targets you can scan: the core TLS, SSH and fingerprint scans, and the dashboard's New Scan form, accept loopback and RFC1918 targets either way.
+`security.allow_internal_targets` (default `false`) controls whether the scanners that fetch a URL, namely the JWT/JWKS, OpenAPI spec and SAML metadata probes and the REST fuzzer, may contact internal and loopback addresses (RFC1918 ranges, `127.x.x.x`, link-local). A URL on the cloud-metadata address `169.254.169.254` is still refused when it is `true`. The dashboard reads this flag from the server's own config file (`QUIRK_CONFIG_PATH`, default `./config.yaml`) and copies it into each job it dispatches; a browser cannot set it. The CLI equivalent is `--allow-internal-targets`. It does **not** restrict which targets you can scan: the core TLS, SSH and fingerprint scans, and the dashboard's New Scan form, accept loopback and RFC1918 targets either way.
 
 ```yaml
 security:
@@ -2284,7 +2284,7 @@ default shown; unknown keys under `security:` are ignored.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `allow_internal_targets` | bool | `false` | Let the URL-fetching scanners (JWT/JWKS, OpenAPI spec, SAML metadata, REST fuzzer) contact RFC1918, loopback and link-local addresses; the cloud-metadata block still applies. CLI: `--allow-internal-targets`. See `security.allow_internal_targets` above. |
+| `allow_internal_targets` | bool | `false` | Let the URL-fetching scanners (JWT/JWKS, OpenAPI spec, SAML metadata, REST fuzzer) contact RFC1918, loopback and link-local addresses; a URL on the cloud-metadata address `169.254.169.254` is still refused. CLI: `--allow-internal-targets`. See `security.allow_internal_targets` above. |
 | `allow_cleartext_broker_probe` | bool | `false` | Permit broker management-API probes over plain HTTP and Redis probes with `ssl_cert_reqs=none`. CLI: `--allow-cleartext-broker-probe`. Each RabbitMQ host scanned gets a HIGH advisory; Redis targets get none. |
 | `allow_insecure_jwks` | bool | `false` | Disable TLS certificate verification for JWKS fetches. CLI: `--allow-insecure-jwks`. Each affected target gets a HIGH advisory. This is a `security:` key, not a `connectors:` key. |
 | `api_token` | string | `""` | Dashboard API token; empty means dashboard authentication is off. Written by `quirk token generate`; the `QUIRK_API_TOKEN` environment variable overrides it. See Dashboard Authentication. |
@@ -2327,7 +2327,7 @@ Authenticated-scanning, fuzzing and OpenAPI flags are covered in more depth in t
 | `--list-resumable` | `false` | List interrupted scans that can be resumed with `--resume-scan-id`, then exit |
 | `--azure-servicebus-namespace NAME` | none (repeatable) | Azure Service Bus namespace to probe; may be given more than once |
 | `--aws-sqs-region REGION` | none (repeatable) | AWS SQS region to probe; may be given more than once |
-| `--allow-internal-targets` | `false` | Let the JWT/JWKS, OpenAPI spec URL, SAML metadata and REST-fuzzer fetches reach RFC1918, loopback and link-local IPs; the cloud-metadata block still applies. The SAML scanner emits a HIGH advisory for each internal target it fetches. Same as `security.allow_internal_targets` |
+| `--allow-internal-targets` | `false` | Let the JWT/JWKS, OpenAPI spec URL, SAML metadata and REST-fuzzer fetches reach RFC1918, loopback and link-local IPs; a URL on the cloud-metadata address `169.254.169.254` is still refused. The SAML scanner emits a HIGH advisory for each internal target it fetches. Same as `security.allow_internal_targets` |
 | `--allow-cleartext-broker-probe` | `false` | Permit broker management-API probes over HTTP (no TLS) and Redis `ssl_cert_reqs=none`. Emits one HIGH advisory per RabbitMQ host scanned; Redis targets get none. Same as `security.allow_cleartext_broker_probe` |
 | `--allow-insecure-jwks` | `false` | Disable TLS certificate verification for JWKS fetches. Emits one HIGH advisory per JWKS URL fetched. Same as `security.allow_insecure_jwks` |
 | `--job-id ID` | none | Dashboard job ID for progress reporting; does nothing when absent (set by the dashboard) |
@@ -2780,7 +2780,7 @@ are documented in [Admin Guide §3.5](#35-hardening-environment-variables).
 
 | Control | Description |
 |---------|-------------|
-| **SSRF protection** | Every channel validates the destination URL/host via `validate_external_url()` before connecting — loopback, RFC1918, and cloud metadata IPs are blocked (ISEC-01). There is no `allow_internal` option for notification channels, so an SMTP relay or webhook on a private address is refused. |
+| **SSRF protection** | Every channel validates the destination URL/host via `validate_external_url()` before connecting — loopback and RFC1918 addresses are blocked, and a destination on the cloud-metadata address `169.254.169.254` is refused (ISEC-01). There is no `allow_internal` option for notification channels, so an SMTP relay or webhook on a private address is refused. |
 | **Secret scrubbing** | Any exception raised during delivery is passed through `safe_str()` before being written to the `integration_deliveries` audit log. When the message matches a credential pattern (Slack `xox*` tokens, `hooks.slack.com` webhook URLs, `smtp://user:pass@` strings, `Authorization` headers and similar), the whole message is replaced by the exception class name (ISEC-02). Other text is kept as is. |
 | **Failure isolation** | A delivery failure on one channel never blocks other channels or corrupts the scan record. The scheduler `_dispatch_schedule` wraps the entire notification call in `try/except` (NOTIFY-07). |
 | **Optional Slack dep** | `slack_sdk` is an optional dependency. Missing `slack_sdk` logs a WARNING instead of raising `ImportError`. Install with `pip install quirk-scanner[notify]` (ISEC-04). |
@@ -3185,12 +3185,12 @@ quirk ticket create --backend servicenow
 1. **https-only parse-time check** — `_parse_servicenow_cfg` returns `None` (the
    `ticketing.servicenow` block is treated as not configured) if `instance_url` does not start
    with `https://`. This check fires before any DNS lookup or TCP connection.
-2. **`validate_external_url()` runtime guard** — Loopback addresses (`127.x.x.x`), RFC1918
-   ranges (`10.x`, `172.16–31.x`, `192.168.x`), and cloud metadata IPs (`169.254.169.254`)
-   are blocked by default.
+2. **`validate_external_url()` runtime guard** — Loopback addresses (`127.x.x.x`) and RFC1918
+   ranges (`10.x`, `172.16–31.x`, `192.168.x`) are blocked by default, and an `instance_url` on
+   the cloud-metadata address `169.254.169.254` is refused.
 
 For self-hosted ServiceNow deployed on an internal network, set `allow_internal: true`.
-This allows RFC1918 `instance_url` values; the cloud-metadata block still applies.
+This allows RFC1918 `instance_url` values; an `instance_url` on `169.254.169.254` is still refused.
 
 #### CLI usage: `quirk ticket create --backend servicenow`
 
