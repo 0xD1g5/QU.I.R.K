@@ -4,13 +4,13 @@ milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
 last_updated: "2026-10-13T00:00:00.000Z"
-last_activity: "2026-10-13 -- Phase 224 all 18 plans executed (224-18 Task 1: UAT Series 224, 12 cases, 11 PASS + UAT-224-10 FAIL = disclosed 4.0% residual). Ledger 9801 rows / 32 docs; front-door docs verified exhaustively; ~135 doc224 todos (7 security findings tracked privately). Awaiting CI observation, PR and gsd-verifier. STATE.md hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_activity: "2026-10-13 -- Phase 224 COMPLETE (verified passed 5/5 at 38df9001, 1 operator override: goal clause NOT MET AS WRITTEN, deep-doc residual 4.0% disclosed, HORIZON 999.123; branch_ci_state exit 0). PR #56 merged at a8875830; gap-closure commits + this close go to main in a follow-up PR. DOC-03/04 Complete. Hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 37
   completed_plans: 37
-  percent: 50
+  percent: 67
 ---
 
 # Project State
@@ -1436,7 +1436,12 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `.planning/phases/223-dashboard-brand-adoption/223-DISCUSS-CHECKPOINT.json`.
 
 ## Current Position
-Phase: 224 (Doc Claim Ledger & Verification) — all 18 plans executed 2026-10-13; awaiting CI observation, PR and `gsd-verifier` (3 of 6 phases in v5.27 complete; 224 NOT closed)
+Phase: 224 (Doc Claim Ledger & Verification) — COMPLETE 2026-10-13 (4 of 6 phases in v5.27)
+Verified `passed` 5/5 at `38df9001` with one operator override (goal clause "every claim is true" NOT MET AS WRITTEN: front-door docs
+exhaustive, deep-doc residual 4.0% disclosed, HORIZON 999.123). Verifier gaps 2 (stale cites) and 3 (line attribution, fixed by
+section-scoped anchors + gate) closed and re-verified. CITRUTH-03: `branch_ci_state.py --compare-main` exit 0 (Python CI 38457496020 +
+Dashboard Quality 38457500158). PR #56 merged by the operator at `a8875830`; the gap-closure commits and this close go to main in a follow-up PR.
+Next: merge the follow-up PR, then `/gsd-discuss-phase 225`.
 Plan: 18 of 18
 Status: Branch `phase-224-doc-claim-ledger-verification`. 224-18 Task 1 committed: UAT Series 224 (12 cases;
 UAT-224-10 is an honest FAIL recording the residual below), `docs/uat-coverage-gaps.md` regenerated, full suite failing-node

@@ -1648,8 +1648,8 @@ into `sensor.yaml` by hand instead.
 
 `quirk sensor enroll` never contacts the console. It checks the console URL (the host
 must resolve; a private or loopback address needs `--allow-internal-console`, which is
-remembered in `sensor.yaml` for later pushes; cloud-metadata addresses and hostnames are
-refused), generates the sensor's HMAC key and writes `sensor.yaml`.
+remembered in `sensor.yaml` for later pushes; a console URL on the cloud-metadata address
+`169.254.169.254` is refused), generates the sensor's HMAC key and writes `sensor.yaml`.
 It also prints an "Enrollment
 token" of its own; that value is generated locally, stored nowhere and is not the push
 credential, so ignore it and use the token that `quirk console enroll` printed. Running
