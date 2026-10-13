@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,394 lines, in reading order.
+Five guides, 7,395 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -1635,7 +1635,7 @@ Setting `openapi_spec_path` in the config is equivalent to passing `--openapi-sp
 |-------|----------|
 | **$ref SSRF** | Any `$ref` that does not start with `#` (e.g. `http://169.254.169.254/...`) raises `SpecParsingError` *before* the OAS validator runs. Zero outbound requests on SSRF-shaped input. |
 | **10 MB size cap** | Specs larger than 10 MB are rejected before `yaml.safe_load`. Prevents billion-laughs and oversized-YAML DoS. |
-| **Scope gate** | A spec URL's host must equal a configured `targets.fqdns` entry. Rejected before any network request. After the scope check, the URL also passes the SSRF guard (cloud-metadata addresses are blocked; loopback and private addresses are blocked unless `--allow-internal-targets` is set). |
+| **Scope gate** | A spec URL's host must equal a configured `targets.fqdns` entry. Rejected before any network request. After the scope check, the URL also passes the SSRF guard (`validate_external_url`): a spec URL on the cloud-metadata address `169.254.169.254` is refused, and loopback and private addresses are blocked unless `--allow-internal-targets` is set. |
 | **Graceful degradation** | When `[api]` is not installed (`OPENAPI_AVAILABLE = False`), the scanner returns a single `missing_extra` advisory endpoint and continues; no exception is raised. |
 
 #### Findings produced
@@ -1820,7 +1820,7 @@ would complete and exit `0` with fuzzing quietly skipped); it no longer can be. 
 | 2 | Hard budget ceiling | `--fuzz-budget` default 50, hard max **500** — values above 500 are rejected before any request |
 | 3 | Rate cap 5 req/s | Probe requests are rate-limited to 5 per second using the nmap TokenBucket pattern |
 | 4 | CONFIRM prompt | TTY: user must type the literal word `CONFIRM`; any other input aborts with zero requests sent |
-| 5 | Per-request scope enforcement | Every probe URL is validated via `validate_external_url` before dispatch: cloud-metadata addresses are rejected, and loopback or private addresses are rejected unless `--allow-internal-targets` is set. The base URL is built from the first `targets.fqdns` entry (`https://localhost` when there is none) |
+| 5 | Per-request scope enforcement | Every probe URL is validated via `validate_external_url` before dispatch: a probe URL on the cloud-metadata address `169.254.169.254` is rejected, and loopback or private addresses are rejected unless `--allow-internal-targets` is set. The base URL is built from the first `targets.fqdns` entry (`https://localhost` when there is none) |
 | 6 | 5xx cascade stop | After 3 consecutive failures (HTTP 5xx responses or request errors), the fuzzer stops sending probes and logs a warning |
 
 **As of 5.18.0 (Phase 172, SAFE-02):** the budget ceiling in guardrail #2 is enforced at
@@ -3024,11 +3024,12 @@ For Jira Data Center/Server, generate a PAT under **Profile → Personal Access 
 #### SSRF protection
 
 `jira_url` is validated by QUIRK's `validate_external_url()` guard before any connection
-is made. Loopback addresses (`127.x.x.x`), RFC1918 ranges (`10.x`, `172.16–31.x`,
-`192.168.x`), and cloud metadata IPs (`169.254.169.254`) are blocked by default.
+is made. Loopback addresses (`127.x.x.x`) and RFC1918 ranges (`10.x`, `172.16–31.x`,
+`192.168.x`) are blocked by default, and a `jira_url` on the cloud-metadata address
+`169.254.169.254` is refused.
 
 For self-hosted Jira deployed on an internal network, set `allow_internal: true`. This
-allows RFC1918 `jira_url` values; the cloud-metadata block still applies.
+allows RFC1918 `jira_url` values; a `jira_url` on `169.254.169.254` is still refused.
 
 #### CLI usage: `quirk ticket create`
 
@@ -5011,8 +5012,8 @@ into `sensor.yaml` by hand instead.
 
 `quirk sensor enroll` never contacts the console. It checks the console URL (the host
 must resolve; a private or loopback address needs `--allow-internal-console`, which is
-remembered in `sensor.yaml` for later pushes; cloud-metadata addresses and hostnames are
-refused), generates the sensor's HMAC key and writes `sensor.yaml`.
+remembered in `sensor.yaml` for later pushes; a console URL on the cloud-metadata address
+`169.254.169.254` is refused), generates the sensor's HMAC key and writes `sensor.yaml`.
 It also prints an "Enrollment
 token" of its own; that value is generated locally, stored nowhere and is not the push
 credential, so ignore it and use the token that `quirk console enroll` printed. Running
