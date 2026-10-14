@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,409 lines, in reading order.
+Five guides, 7,414 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -1137,7 +1137,7 @@ connector disposition table" below for all 25 keys.
 | `enable_bacnet` | bool | `false` | Enable BACnet/IP OT/ICS fingerprinting (47808/UDP); requires `quirk-scanner[hw]` extras. See `docs/operators-guide.md` §9.4 for the safety model. |
 | `enable_recurring_otics` | bool | `false` | **Not a connector toggle** — a scheduler safety gate for recurring Modbus/BACnet probing, not a scanner enable by itself. Opt-in required before a *recurring* (scheduled) run may probe Modbus/BACnet. Gates recurring probing only — a one-off, operator-initiated scan with `enable_modbus`/`enable_bacnet` set is unaffected and needs no new flag. See [OT/ICS Recurring-Scan Cadence Floor](#otics-recurring-scan-cadence-floor-phase-156) below. |
 | `enable_nmap` | bool | `false` | **Not a connector toggle** — a discovery driver, not a scan connector. Driven by the `--discovery nmap` CLI flag / the dashboard's nmap checkbox, either of which overwrites this value at scan start; it is not a durable config-file control. |
-| `enable_authenticated_mode` | bool | `false` | **Not a connector toggle** — driven by the credential CLI flags (see "Authenticated Scanning" below). `quirk schedule add` refuses a `--config` file where this is `true` (`SCHED-AUTH-001`); the scheduler's `--scan-config`, which recurring runs actually load, is not checked. |
+| `enable_authenticated_mode` | bool | `false` | **Not a connector toggle** — driven by the credential CLI flags (see "Authenticated Scanning" below). `quirk schedule add` refuses a `--config` file where this is `true` (`SCHED-AUTH-001`); `quirk scheduler run` refuses to start when its `--scan-config` enables it, and strips it from each recurring run. |
 | `aws_region` | string | `"us-east-1"` | AWS region for cloud connector |
 | `aws_profile` | string | `null` | AWS named profile; `null` uses the default credential chain |
 | `azure_subscription_id` | string | `null` | Azure subscription UUID |
@@ -1339,7 +1339,7 @@ The table lists the 25 `enable_*` flags plus `broker_targets`.
 | `enable_modbus` | `false` | `probes-live-equipment` | unsolicited OT/ICS probing can disrupt production plant equipment |
 | `enable_bacnet` | `false` | `probes-live-equipment` | same rationale as Modbus |
 | `enable_nmap` | `false` | `not-a-connector` | driven by the `--discovery nmap` CLI flag, which overwrites this value at scan start |
-| `enable_authenticated_mode` | `false` | `not-a-connector` | driven by the credential CLI flags; `quirk schedule add` refuses a `--config` file where this is `true`, but the scheduler's `--scan-config` is not checked |
+| `enable_authenticated_mode` | `false` | `not-a-connector` | driven by the credential CLI flags; `quirk schedule add` refuses a `--config` file where this is `true`; `quirk scheduler run` refuses a `--scan-config` that enables it and strips it from each run |
 | `enable_recurring_otics` | `false` | `not-a-connector` | a scheduler safety gate for recurring Modbus/BACnet probing, not a scanner toggle by itself |
 | `enable_codesign` | `false` | `not-a-connector` | driven entirely by the `--inventory-code-signing` CLI flag |
 
@@ -1728,7 +1728,9 @@ that injects a synthetic sentinel value across all 11 stored/rendered surfaces a
 #### Scheduler rejection (QRK-SCHED-AUTH-001)
 
 Scheduled scans cannot use authenticated mode. Running `quirk schedule add` against a config
-file that contains `enable_authenticated_mode: true` exits immediately with:
+file that contains `enable_authenticated_mode: true` exits immediately, and `quirk scheduler run`
+refuses to start when its `--scan-config` enables it (and strips the flag from each recurring run
+in case the file changes later). Both print:
 
 ```
 [QRK-SCHED-AUTH-001] Authenticated scan configs cannot be scheduled — credentials are ephemeral and cannot be persisted. Fix: Run an authenticated scan interactively with `quirk --auth-bearer` (or `--auth-api-key` / `--auth-basic`).
@@ -2257,9 +2259,12 @@ The dashboard checks the targets typed into the form and the Connectors-panel ho
 server's own config file (`QUIRK_CONFIG_PATH`), and writes the server's `trusted_targets` list
 into the generated job config, so the scan subprocess enforces it as well. If the server config
 cannot be read, job creation is refused with `QRK-DASHBOARD-014` instead of running unchecked. Scheduled
-scans (added on the Schedules page or with `quirk schedule`) are checked only when they run, against
-the `trusted_targets` in the `--scan-config` file `quirk scheduler run` was started with; without
-one, no list applies.
+scans (added on the Schedules page or with `quirk schedule add`) are checked against the server's
+`trusted_targets` when they are created, when they are enabled again, and when `quirk schedule add`
+runs (an unreadable server config refuses with `QRK-DASHBOARD-014`). A recurring run started
+without `--scan-config` carries the server's `trusted_targets` and `allow_internal_targets` into
+its generated config, so the scan enforces them; with `--scan-config`, that file's own `security`
+block applies.
 
 ```yaml
 security:
