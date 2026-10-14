@@ -489,3 +489,65 @@ def test_embedded_v4_forms_do_not_loosen_existing_verdicts():
 def test_public_v6_verdict_unchanged(mock_gai):
     mock_gai.return_value = [_ai_v6("2606:4700:4700::1111")]
     assert validate_external_url("http://pub.example.test/").ok is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 225.1: the AUDIT-09 accepted-risk note is derived from source, not
+# hand-maintained. The pinning-caller set is regenerated at run time.
+# ---------------------------------------------------------------------------
+
+def _modules_constructing_pinned_adapter() -> set[str]:
+    """Modules under quirk/ with a real ``PinnedIPAdapter(`` call.
+
+    Uses tokenize so comments, docstrings and prose cannot satisfy the match.
+    """
+    import io
+    import tokenize
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    found: set[str] = set()
+    for path in sorted((root / "quirk").rglob("*.py")):
+        rel = path.relative_to(root).as_posix()
+        if rel == "quirk/util/pinned_adapter.py" or "__pycache__" in rel:
+            continue
+        toks = [
+            t for t in tokenize.generate_tokens(
+                io.StringIO(path.read_text(encoding="utf-8")).readline
+            )
+            if t.type not in (tokenize.COMMENT, tokenize.STRING, tokenize.NL,
+                              tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT)
+        ]
+        for a, b in zip(toks, toks[1:]):
+            if a.type == tokenize.NAME and a.string == "PinnedIPAdapter" \
+                    and b.type == tokenize.OP and b.string == "(":
+                found.add(rel)
+                break
+    return found
+
+
+def _doc_block(label: str) -> set[str]:
+    """Paths listed one-per-line under *label* in the module docstring."""
+    import re
+    from quirk.util import url_allowlist
+
+    doc = url_allowlist.__doc__ or ""
+    m = re.search(re.escape(label) + r"[ \t]*\n((?:[ \t]+quirk/\S+\.py[ \t]*\n)+)", doc)
+    assert m, f"module docstring has no '{label}' block"
+    return {ln.strip() for ln in m.group(1).splitlines() if ln.strip()}
+
+
+def test_accepted_risk_note_names_exactly_the_pinning_callers():
+    scanned = _modules_constructing_pinned_adapter()
+    assert len(scanned) >= 1, "scan found no PinnedIPAdapter callers (vacuous)"
+    named = _doc_block("Pinned callers:")
+    assert scanned == named, (
+        f"scanned={scanned!r} but the AUDIT-09 note names {named!r}"
+    )
+
+
+def test_accepted_risk_note_names_unpinned_ticketing_callers():
+    unpinned = _doc_block("Not pinned:")
+    assert "quirk/ticketing/jira.py" in unpinned
+    assert "quirk/ticketing/servicenow.py" in unpinned
+    assert not (unpinned & _modules_constructing_pinned_adapter())

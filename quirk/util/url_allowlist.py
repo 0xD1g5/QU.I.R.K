@@ -33,10 +33,24 @@ Residual risk — TOCTOU / DNS rebinding (accepted, Phase 120 T-120-04):
     (1) On-prem threat model: QUIRK targets operator-controlled networks; the operator
         administers both the network and the set of scan targets, reducing DNS-rebind
         attack surface compared to a multi-tenant SaaS deployment.
-    (2) Phase 123 SSRF-05 (PinnedIPAdapter): HTTP/HTTPS fetch callers receive
-        resolved_ip from ValidationResult and pin their connection via PinnedIPAdapter
-        (or equivalent), closing the requests/httpx TOCTOU window by forcing connect
-        to the validated IP rather than re-resolving.
+    (2) Phase 123 SSRF-05 (PinnedIPAdapter): only the callers listed below pin their
+        connection to the validated address (``ValidationResult.resolved_ip``), which
+        closes the requests TOCTOU window for them. The list is checked against the
+        source by tests/test_url_allowlist_ssrf.py, so it cannot drift silently.
+        Pinned callers:
+          quirk/scanner/rest_fuzzer.py
+        Every other ``validate_external_url`` caller connects by hostname and re-resolves
+        at connect time, so it is NOT pinned and carries the residual risk in (1):
+        Not pinned:
+          quirk/scanner/openapi_scanner.py
+          quirk/scanner/saml_scanner.py
+          quirk/scanner/jwt_scanner.py
+          quirk/cli/sensor_cmd.py
+          quirk/notify/channels/webhook.py
+          quirk/notify/channels/slack.py
+          quirk/siem/transport.py
+          quirk/ticketing/jira.py
+          quirk/ticketing/servicenow.py
     (3) smtplib compensating control: the SMTP notification path is operator-configured
         and protected by TLS certificate verification, which provides a compensating
         control against connect-time redirect to an attacker-controlled host.
