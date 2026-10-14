@@ -16,7 +16,9 @@ Run::
 
 Exit codes:
     0  every mapped pair is body-equal and no tracked doc is unmapped
-    1  drift (a vault body differs or is missing) or an unmapped tracked doc
+    1  drift (a vault body differs or is missing), an unmapped tracked doc,
+       a refused (not provably owned) vault note, or a STALE MAPPING key
+       whose source doc is not tracked
     2  vault root absent or unreadable -- verdict unknown, never green
 
 Vault note convention: ``---\\n`` + frontmatter lines + ``---\\n`` + ONE blank
@@ -309,6 +311,16 @@ def tracked_markdown(repo_root: pathlib.Path = REPO_ROOT) -> list[str]:
         if p.endswith(".md") and (p.startswith("docs/") or "/" not in p))
 
 
+def find_stale_mapping(tracked, mapping) -> list[str]:
+    """MAPPING sources that are not tracked (deleted/renamed docs).
+
+    225-REVIEW WR-05: plan_sync skips these, so without this check a dead
+    MAPPING row and its stale vault note would pass ``--check`` silently.
+    """
+    tracked_set = set(tracked)
+    return [src for src in mapping if src not in tracked_set]
+
+
 def find_unmapped(tracked, mapping, exempt, exempt_globs) -> list[str]:
     bad = []
     for path in tracked:
@@ -379,7 +391,7 @@ def plan_sync(repo_root, vault_root, tracked, today, write) -> list[PairResult]:
 # CLI
 # --------------------------------------------------------------------------
 
-def _report(results, unmapped, xcheck) -> None:
+def _report(results, unmapped, xcheck, stale=()) -> None:
     for r in results:
         extra = f" REFUSED: {r.detail}; left untouched" if r.detail else ""
         print(f"{r.status:9s} {r.source} -> {r.target} "
@@ -387,6 +399,10 @@ def _report(results, unmapped, xcheck) -> None:
     for u in unmapped:
         print(f"UNMAPPED tracked doc: {u} (add to MAPPING or EXEMPT, "
               f"Phase 225 D-06)", file=sys.stderr)
+    for src in stale:
+        print(f"STALE MAPPING: {src} is not tracked (remove or rename its "
+              f"MAPPING row; vault note {MAPPING.get(src, '?')} is no longer "
+              f"synced)", file=sys.stderr)
     for m in xcheck:
         print(m, file=sys.stderr)
 
@@ -416,6 +432,7 @@ def main(argv=None, *, tracked=None, today=None) -> int:
     # independently refuses every pair whose note is not provably its sync.
     xcheck = cross_check(MAPPING, scan_vault_sources(vault_root), set(tracked))
     unmapped = find_unmapped(tracked, MAPPING, EXEMPT, EXEMPT_GLOBS)
+    stale = find_stale_mapping(tracked, MAPPING)
     results = plan_sync(REPO_ROOT, vault_root, tracked, today,
                         write=args.write)
 
@@ -423,14 +440,14 @@ def main(argv=None, *, tracked=None, today=None) -> int:
         # Re-run as a check so the exit code reflects the post-write state.
         results_after = plan_sync(REPO_ROOT, vault_root, tracked, today,
                                   write=False)
-        _report(results, unmapped, xcheck)
+        _report(results, unmapped, xcheck, stale)
         results = results_after
     else:
-        _report(results, unmapped, xcheck)
+        _report(results, unmapped, xcheck, stale)
 
     bad = [r for r in results if r.status in ("drift", "missing", "refused")]
     mismatches = [m for m in xcheck if m.startswith("MISMATCH")]
-    code = 1 if (bad or unmapped or mismatches) else 0
+    code = 1 if (bad or unmapped or mismatches or stale) else 0
     if any(r.status in ("drift", "missing") for r in bad) and not args.write:
         print(f"drift: fix with `{FIX_CMD}`", file=sys.stderr)
     if any(r.status == "refused" for r in bad):
@@ -441,6 +458,7 @@ def main(argv=None, *, tracked=None, today=None) -> int:
             "exit": code,
             "pairs": [dataclasses.asdict(r) for r in results],
             "unmapped": unmapped,
+            "stale_mapping": stale,
             "cross_check": xcheck,
         }, indent=2))
     return code

@@ -20,6 +20,7 @@ from scripts.sync_vault_guides import (
     VaultPathError,
     cross_check,
     diff_count,
+    find_stale_mapping,
     find_unmapped,
     main,
     new_note_frontmatter,
@@ -209,8 +210,9 @@ def test_main_write_leaves_mismatched_vault_note_untouched(tmp_path):
     original = (b"---\nproject: QU.I.R.K.\nsource: docs/not-admin.md\n"
                 b"updated: 2020-01-01\n---\n\nrepurposed note\n")
     target.write_bytes(original)
+    # Every MAPPING source tracked, so the refusal is the ONLY red reason.
     code = main(["--write", "--vault-root", str(vault)],
-                tracked=["docs/admin-guide.md"], today=TODAY)
+                tracked=sorted(MAPPING), today=TODAY)
     assert code == 1, "CR-01: a refused pair must exit nonzero"
     assert target.read_bytes() == original
 
@@ -293,3 +295,25 @@ def test_atomic_write_refuses_symlinked_target(tmp_path):
     with pytest.raises(VaultPathError):
         _atomic_write(link, "clobber\n")
     assert outside.read_bytes() == b"precious\n"
+
+
+def test_stale_mapping_key_is_reported_and_fails_check(tmp_path, capsys):
+    """225-REVIEW WR-05: a MAPPING source that is no longer tracked fails."""
+    tracked = sorted(set(MAPPING) - {"docs/admin-guide.md"})
+    assert find_stale_mapping(tracked, MAPPING) == ["docs/admin-guide.md"]
+    assert find_stale_mapping(sorted(MAPPING), MAPPING) == [], "negative control"
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    assert main(["--write", "--vault-root", str(vault)],
+                tracked=sorted(MAPPING), today=TODAY) == 0, "green control"
+    capsys.readouterr()
+    assert main(["--check", "--vault-root", str(vault)],
+                tracked=tracked, today=TODAY) == 1
+    assert "STALE MAPPING: docs/admin-guide.md" in capsys.readouterr().err
+
+
+def test_every_mapping_source_is_tracked():
+    stale = set(MAPPING) - set(_tracked())
+    assert not stale, (
+        f"225-REVIEW WR-05: MAPPING rows whose source is not tracked: "
+        f"{sorted(stale)}; remove or rename them in scripts/sync_vault_guides.py")
