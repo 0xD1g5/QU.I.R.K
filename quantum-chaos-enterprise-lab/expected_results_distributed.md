@@ -151,6 +151,8 @@ production pattern.
 human-UAT (deferred by design; see `distributed-e2e.sh` for the orchestration script).
 Automated CI floor: `tests/test_distributed_topology.py` (10 static assertions).
 
+The e2e script enrolls both sensors with `--allow-internal-console --allow-insecure-console`: the lab console listens on plain HTTP (`http://console:8512`) inside the isolated `console-net` docker network, and a non-loopback `http://` console URL needs the explicit opt-in.
+
 ---
 
 ---
