@@ -238,6 +238,8 @@ standard rotation procedure:
    IP addresses. The audit row carries the time, status, error summary and source
    address, and, once the sensor is authenticated, the sensor ID; accepted pushes are
    also recorded in the `sensor_pushes` table with their `sensor_id` and receive time.
+   Refused pushes from one address are recorded at most once a minute; the next such row
+   counts the refusals in between in its error summary.
 
 4. **Re-enroll with a new token** following the same three steps as §3.3.
 

@@ -117,3 +117,40 @@ def test_rate_limit_audit_failure_still_429(monkeypatch, caplog):
         resp = client.post("/api/sensor/push", content=b"x")
     assert resp.status_code == 429
     assert "Rate-limit audit row failed" in caplog.text
+
+
+def test_rate_limited_audit_rows_coalesce_per_source_and_window(monkeypatch):
+    """Repeated refusals from one source write one row per window, and the
+    next row carries the number of refusals it stands in for."""
+    import quirk.dashboard.api.middleware.rate_limit as rl
+
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    clock = [1000.0]
+    monkeypatch.setattr(rl.time, "monotonic", lambda: clock[0])
+    client, Session = _app()
+    _exhaust(client, "/api/sensor/push")
+    for _ in range(25):
+        assert client.post("/api/sensor/push", content=b"x").status_code == 429
+    limited = [r for r in _rows(Session) if r.status == "rate_limited"]
+    assert len(limited) == 1
+    assert limited[0].error_summary == "rate_limited"
+
+    # Next window: the source is still flooding, so the bucket refills and
+    # refusals resume; exactly one more row, counting the 24 coalesced ones.
+    clock[0] += rl._WINDOW_SECONDS + 1
+    _exhaust(client, "/api/sensor/push")
+    for _ in range(5):
+        assert client.post("/api/sensor/push", content=b"x").status_code == 429
+    limited = [r for r in _rows(Session) if r.status == "rate_limited"]
+    assert len(limited) == 2
+    assert "24 further" in limited[1].error_summary
+    assert limited[1].client_ip == "testclient"
+
+
+def test_rate_limit_audit_state_is_bounded(monkeypatch):
+    import quirk.dashboard.api.middleware.rate_limit as rl
+
+    mw = rl.RateLimitMiddleware(app=None)
+    for i in range(rl._MAX_AUDIT_SOURCES + 50):
+        mw._note_refusal(f"198.51.100.{i}", float(i))
+    assert len(mw._audited) <= rl._MAX_AUDIT_SOURCES
