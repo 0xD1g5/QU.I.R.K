@@ -15,6 +15,7 @@ import ipaddress
 import socket
 from dataclasses import dataclass
 from typing import Final
+from urllib.parse import urlparse
 
 RC_NOT_IN_ALLOWLIST: Final[str] = "not_in_trusted_targets"
 
@@ -60,36 +61,126 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
     return ValidationResult(False, RC_NOT_IN_ALLOWLIST, host_or_ip[:32])
 
 
-def _broker_target_hosts(cfg) -> list:
-    """Phase 190 / T-190-01: extract the HOST component of every
-    connectors.broker_targets entry, tolerant of malformed entries (config
-    load-time validation in quirk/config.py already rejects those before this
-    is ever called; this stays defensive rather than importing quirk.config's
-    _parse_host_port, to avoid a circular import — quirk/config.py does not
-    import this module, but keeping this module dependency-free of quirk.config
-    keeps the import direction simple and one-way).
+# D-07 / D-26: every host-shaped ConnectorsCfg field must be dispositioned here.
+# "check"          -> every host value is checked against trusted_targets.
+# "check-registry" -> image references; only an EXPLICIT registry host is checked
+#                     (first "/" component containing "." or ":" or == "localhost").
+#                     A reference with no explicit registry (``nginx:1.25``) uses the
+#                     default registry and is not checked.
+# "exempt: <why>"  -> not a scan target; the reason is the record.
+# A run-time test walks dataclasses.fields(ConnectorsCfg) so a new field cannot
+# ship undispositioned. The enable_* flag is deliberately NOT consulted: a stale
+# untrusted host in a disabled connector is refused with the field named, which is
+# safer than a list that silently starts being contacted once the connector is on.
+_CLOUD_ID = (
+    "exempt: cloud provider control-plane identifier reached through the provider "
+    "API, not an operator-network host"
+)
+CONNECTOR_HOST_FIELD_DISPOSITION: Final[dict] = {
+    "jwt_targets": "check",
+    "saml_targets": "check",
+    "kerberos_targets": "check",
+    "dnssec_targets": "check",
+    "smime_targets": "check",
+    "adcs_targets": "check",
+    "codesign_targets": "check",
+    "pg_targets": "check",
+    "mysql_targets": "check",
+    "broker_targets": "check",
+    "vault_addr": "check",
+    "aws_endpoint_url": "check",
+    "container_targets": "check-registry",
+    "dnssec_resolver": (
+        "exempt: resolver infrastructure the operator configures for DNSSEC "
+        "queries; not a scan target"
+    ),
+    "source_targets": (
+        "exempt: repository paths scanned from the local filesystem or a clone the "
+        "operator configures, not scan targets"
+    ),
+    "azure_keyvault_urls": _CLOUD_ID,
+    "broker_azure_namespaces": _CLOUD_ID,
+    "broker_sqs_regions": _CLOUD_ID,
+    "gke_clusters": _CLOUD_ID,
+    "aks_clusters": _CLOUD_ID,
+}
+
+
+def _extract_host(value) -> "str | None":
+    """Best-effort HOST of a target value. Never imports quirk.config.
+
+    Handles URLs, ``[v6]``/``[v6]:port``, ``host:port``, bare hosts, dicts and
+    objects with a ``host`` attribute. Anything unparseable is returned whole
+    (stripped) so it is checked as a unit and fails closed.
     """
+    if isinstance(value, dict):
+        value = value.get("host")
+    elif value is not None and not isinstance(value, str):
+        value = getattr(value, "host", None)
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    if "://" in candidate:
+        try:
+            host = urlparse(candidate).hostname
+        except ValueError:
+            host = None
+        return host or candidate
+    if candidate.startswith("["):
+        rb = candidate.find("]")
+        host = candidate[1:rb].strip() if rb != -1 else candidate
+        return host or candidate
+    if candidate.count(":") == 1:
+        return candidate.split(":", 1)[0].strip() or candidate
+    return candidate
+
+
+def _registry_host(image_ref) -> "str | None":
+    """Explicit registry host of an image reference, else None (default registry)."""
+    if not isinstance(image_ref, str):
+        return None
+    ref = image_ref.strip()
+    if "/" not in ref:
+        return None
+    first = ref.split("/", 1)[0]
+    if "." in first or ":" in first or first == "localhost":
+        return first.rsplit(":", 1)[0] if ":" in first and not first.startswith("[") else first
+    return None
+
+
+def _field_values(connectors, name):
+    if isinstance(connectors, dict):
+        raw = connectors.get(name)
+    else:
+        raw = getattr(connectors, name, None)
+    if raw is None:
+        return []
+    if isinstance(raw, (list, tuple, set, frozenset)):
+        return list(raw)
+    return [raw]
+
+
+def connector_host_values(connectors) -> list:
+    """``(field_name, host)`` for every host named by a ``check``/``check-registry`` field."""
+    pairs = []
+    if connectors is None:
+        return pairs
+    for name, disposition in CONNECTOR_HOST_FIELD_DISPOSITION.items():
+        if disposition not in ("check", "check-registry"):
+            continue
+        for value in _field_values(connectors, name):
+            host = _registry_host(value) if disposition == "check-registry" else _extract_host(value)
+            if host:
+                pairs.append((name, host))
+    return pairs
+
+
+def _broker_target_hosts(cfg) -> list:
+    """Thin wrapper kept for callers: hosts of connectors.broker_targets."""
     connectors = getattr(cfg, "connectors", None)
-    raw_targets = list(getattr(connectors, "broker_targets", None) or [])
-    hosts = []
-    for entry in raw_targets:
-        if not isinstance(entry, str):
-            continue
-        candidate = entry.strip()
-        if not candidate:
-            continue
-        if candidate.startswith("["):
-            rbracket_idx = candidate.find("]")
-            host = candidate[1:rbracket_idx].strip() if rbracket_idx != -1 else candidate
-        elif candidate.count(":") == 1:
-            host = candidate.split(":", 1)[0].strip()
-        else:
-            # Bare hostname, or a bare (unbracketed) IPv6 literal with no
-            # port — either way the whole string is the host.
-            host = candidate
-        if host:
-            hosts.append(host)
-    return hosts
+    return [h for _n, h in connector_host_values(connectors) if _n == "broker_targets"]
 
 
 def enforce_trusted_targets(cfg) -> None:
@@ -99,15 +190,22 @@ def enforce_trusted_targets(cfg) -> None:
     trusted = list(getattr(cfg.security, "trusted_targets", None) or [])
     if not trusted:
         return  # D-03: allow-all when empty
-    all_targets = (
+    plain = (
         list(cfg.targets.fqdns or [])
         + list(cfg.targets.cidrs or [])
-        + _broker_target_hosts(cfg)
+        + list(getattr(cfg.targets, "include_ips", None) or [])
     )
-    for target in all_targets:
+    for target in plain:
         result = is_target_trusted(target, trusted)
         if not result.ok:
             raise ValueError(
                 f"Target {result.redacted_preview!r} is not in the trusted-targets "
                 f"allowlist (security.trusted_targets in config.yaml)."
+            )
+    for field_name, host in connector_host_values(getattr(cfg, "connectors", None)):
+        result = is_target_trusted(host, trusted)
+        if not result.ok:
+            raise ValueError(
+                f"Target {result.redacted_preview!r} (connectors.{field_name}) is not in "
+                f"the trusted-targets allowlist (security.trusted_targets in config.yaml)."
             )
