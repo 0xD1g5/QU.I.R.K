@@ -11,6 +11,7 @@ approved capture is 3360 wide); height only has to be positive because the
 capture sizes its viewport to the content, so height varies (approved: 2362).
 """
 
+import re
 import shutil
 import struct
 from pathlib import Path
@@ -21,8 +22,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 HERO_REL = "docs/images/dashboard-hero.png"
 RAW_HERO = "https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/" + HERO_REL
 MAX_BYTES = 1_048_576
-LEDGERS = {"docs/doc-classification.jsonl", "docs/doc-claim-ledger.jsonl"}
-TEXT_SUFFIXES = {".md", ".py", ".txt", ".rst", ".toml", ".yml", ".yaml", ".json", ".ts", ".tsx"}
 
 
 def _readme() -> str:
@@ -60,22 +59,64 @@ def test_hero_png_dimensions_and_size():
     assert len(data) < MAX_BYTES, f"Phase 225 D-09: hero is {len(data)} bytes (>= 1 MiB)"
 
 
+def _user_facing_markdown(tracked: list[str]) -> dict[str, str]:
+    """Root-level and docs/ markdown only: never tests, scripts or ledgers.
+
+    225-REVIEW WR-03: the old corpus included every tracked .py, so this test
+    file (HERO_REL) and the capture script's --out default "referenced" the
+    hero forever and the gate could not fail.
+    """
+    out = {}
+    for p in tracked:
+        if not p.endswith(".md") or not (p.startswith("docs/") or "/" not in p):
+            continue
+        f = REPO_ROOT / p
+        if f.is_file():
+            out[p] = f.read_text(encoding="utf-8", errors="ignore")
+    return out
+
+
+def _image_link_re(name: str) -> re.Pattern:
+    """An actual markdown ``](...name)`` or HTML ``src="...name"`` link whose
+    path component is exactly ``name`` (``logo.png`` != ``quirk-logo.png``)."""
+    return re.compile(
+        r"""(?:\]\(|src=["'])[^)"'\s]*?(?<![\w.-])"""
+        + re.escape(name) + r"""(?=[)"'\s#?])""")
+
+
+def find_orphan_images(images: list[str], docs: dict[str, str]) -> list[str]:
+    corpus = "\n".join(docs.values())
+    return [p for p in images if not _image_link_re(Path(p).name).search(corpus)]
+
+
 def test_no_orphan_images_in_docs_images():
     tracked = _tracked()
     images = [p for p in tracked if p.startswith("docs/images/")]
     assert images, "Phase 225 D-12: no tracked docs/images/* found"
-    corpus = ""
-    for p in tracked:
-        if p in LEDGERS or p.startswith("docs/images/"):
-            continue
-        if Path(p).suffix.lower() not in TEXT_SUFFIXES:
-            continue
-        f = REPO_ROOT / p
-        if f.is_file():
-            corpus += f.read_text(encoding="utf-8", errors="ignore")
-    orphans = [p for p in images if Path(p).name not in corpus]
-    assert not orphans, f"Phase 225 D-12: orphan images (no tracked doc references them): {orphans}"
+    docs = _user_facing_markdown(tracked)
+    assert "README.md" in docs and not any(
+        p.endswith(".py") for p in docs), "corpus must be user-facing markdown"
+    orphans = find_orphan_images(images, docs)
+    assert not orphans, f"Phase 225 D-12: orphan images (no README/docs link): {orphans}"
 
+
+def test_orphan_image_detector_can_fail():
+    """Negative controls for the D-12 gate (225-REVIEW WR-03)."""
+    docs = {
+        "README.md": "![hero](https://raw.example/main/docs/images/hero.png)\n"
+                     "prose naming docs/images/prose-only.png is not a link\n"
+                     '<img src="images/quirk-logo.png" alt="x">\n',
+    }
+    images = ["docs/images/hero.png", "docs/images/unreferenced.png",
+              "docs/images/prose-only.png", "docs/images/logo.png",
+              "docs/images/quirk-logo.png"]
+    assert find_orphan_images(images, docs) == [
+        "docs/images/unreferenced.png", "docs/images/prose-only.png",
+        "docs/images/logo.png"]
+    # The real corpus must not "reference" an image only this file names.
+    real = _user_facing_markdown(_tracked())
+    assert find_orphan_images(["docs/images/zz-not-a-real-image.png"], real) == [
+        "docs/images/zz-not-a-real-image.png"]
 
 # --------------------------------------------------------------------------
 # 225-REVIEW CR-02: the capture serves a snapshot, never the canonical DB, and
