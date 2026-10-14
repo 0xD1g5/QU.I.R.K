@@ -75,7 +75,10 @@ def run_token(argv: list[str]) -> None:
     # --- rotate ---
     rot_parser = subparsers.add_parser(
         "rotate",
-        help="Rotate the dashboard API token (old token invalid immediately)",
+        help=(
+            "Rotate the dashboard API token in the config file (a server reading "
+            "this file rejects the old token from its next request)"
+        ),
     )
     rot_parser.add_argument(
         "--config",
@@ -102,11 +105,12 @@ def run_token(argv: list[str]) -> None:
         _write_token_to_config(config_path, token)
         print(f"Token written to {config_path} (security.api_token):")
         print(token)
-        env_token = os.environ.get("QUIRK_API_TOKEN", "")
-        if env_token:
-            print(
-                "Note: QUIRK_API_TOKEN env var is set and takes precedence over the YAML value."
-            )
+        print(
+            "Note: a QUIRK_API_TOKEN set in the dashboard server's environment "
+            "takes precedence over this file and is not changed by this command."
+        )
+        if os.environ.get("QUIRK_API_TOKEN", ""):
+            print("QUIRK_API_TOKEN is also set in this shell.")
         sys.exit(0)
 
     if args.action == "show":
