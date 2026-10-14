@@ -1544,10 +1544,10 @@ connectors:
 quirk --config config.yaml --inventory-code-signing
 ```
 
-The scanner performs an anonymous LDAP bind with a paged search (page size 500). User DNs and
-certificate subject CNs that appear in log output are passed through `safe_str()`, which hides
-exception text that looks like a credential; it does not strip control characters or newlines
-from a DN. The scanner makes no network request other than its LDAP queries, and certificate
+The scanner performs an anonymous LDAP bind with a paged search (page size 500). User DNs, hosts and
+certificate subject CNs that appear in log output or stored fields have control characters
+removed, including newlines and terminal escape sequences; exception text in log lines goes
+through `safe_str()`. The scanner makes no network request other than its LDAP queries, and certificate
 details flow only into the normal scan outputs (database, CBOM, and reports).
 
 **In-process TLS EKU check:** Even without `codesign_targets` configured, the `--inventory-code-signing`

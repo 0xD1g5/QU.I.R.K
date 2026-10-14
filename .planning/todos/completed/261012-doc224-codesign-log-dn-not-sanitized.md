@@ -4,8 +4,9 @@ created: 2026-10-12
 source: Phase 224 doc-claim ledger (DOC-04, D-10); ledger rows DCL-CONFIG-A-* (configuration.md Code-Signing Certificate Connector)
 priority: low
 area: quirk/scanner/codesign_scanner.py, quirk/util/safe_exc.py
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-10-14
+resolves_phase: 225.1
 ---
 
 # Code-signing scanner logs LDAP DNs through `safe_str()`, which does not strip control characters
@@ -19,13 +20,17 @@ leaves control characters untouched. Reproduced 2026-10-12: `safe_str('CN=ev\nil
 the DNs and CNs were "sanitized via safe_str() (control characters and newlines are removed)"; the doc now says only
 what `safe_str` does.
 
-- [ ] Run LDAP-derived strings through `quirk.util.sanitize.sanitize_scanner_text` or a small control-character
+- [x] Run LDAP-derived strings through `quirk.util.sanitize.sanitize_scanner_text` or a small control-character
       stripper before logging, or pass `%r` of the value.
-- [ ] Add a test that a DN containing `\n` and `\x1b` is escaped in the log record.
-- [ ] Then restore the "control characters are removed" sentence in `docs/configuration.md`.
+- [x] Add a test that a DN containing `\n` and `\x1b` is escaped in the log record.
+- [x] Then restore the "control characters are removed" sentence in `docs/configuration.md`.
 
 ## Feasibility & Effort
 
 **CONFIRMED** (live call above; call sites at `codesign_scanner.py` `safe_str(user_dn)` and `safe_str(base_dn)`).
 Effort **S**: a helper plus two call-site edits and one test. Severity is low because the scanner logs to the
 operator's own console and the DN comes from the operator's own directory. No spike needed.
+
+## Resolution (225.1-12)
+
+`quirk/util/log_text.py::strip_control_chars` removes C0, DEL and C1 characters; the code-signing scanner applies it to host, base DN, user DN and CN text in logs and stored fields. The S/MIME scanner had the same unfiltered DN and received the same fix. Tests: `tests/test_log_text.py`, `tests/test_codesign_scanner.py`, `tests/test_smime_scanner.py`. Rows written by earlier scans keep the old `str: ` prefix (no migration; nothing parses it).
