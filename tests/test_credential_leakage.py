@@ -496,10 +496,42 @@ def test_valid_references_still_resolve(tmp_path, monkeypatch) -> None:
         assert _resolve_reference("bearer", "", prompt="x") == "typed"
 
 
-def test_cli_reference_error_output_omits_reference() -> None:
+_MINIMAL_CLI_CONFIG = """\
+assessment:
+  name: reference-error-test
+  data_classification: internal
+  report_owner: tests
+  timezone: UTC
+scan:
+  concurrency: 1
+  ports_tls: [443]
+targets:
+  fqdns: []
+  cidrs: []
+  include_ips: []
+  exclude_ips: []
+connectors: {}
+output:
+  directory: @OUT@
+  db_path: @DB@
+"""
+
+
+def test_cli_reference_error_output_omits_reference(tmp_path) -> None:
     from tests.cli_helpers import run_cli
 
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        _MINIMAL_CLI_CONFIG.replace("@OUT@", str(tmp_path / "out")).replace(
+            "@DB@", str(tmp_path / "quirk.db")
+        ),
+        encoding="utf-8",
+    )
     marker = "ZQXV9417cliref"
-    proc = run_cli(["--auth-bearer", marker], timeout=120)
+    proc = run_cli(["--config", str(cfg), "--auth-bearer", marker], timeout=120)
     assert proc.returncode != 0
+    # The run must actually reach the credential-reference error (D-17), not
+    # exit earlier for an unrelated reason.
+    assert "credential reference" in proc.stderr
+    assert "'bearer'" in proc.stderr
     assert marker not in proc.stderr and marker not in proc.stdout
