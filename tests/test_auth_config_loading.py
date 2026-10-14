@@ -267,3 +267,38 @@ def test_unconstructable_yaml_value_is_the_unreadable_state(cfg, monkeypatch, ca
         serve(host="127.0.0.1", no_open=True)
     assert exc.value.code == 2
     assert "DASHBOARD-014" in capsys.readouterr().err
+
+
+def test_every_token_state_reader_handles_the_error_state():
+    """Run-time source scan: every function in quirk/ that obtains a
+    TokenState either returns it whole or reads its ``.error``. A helper that
+    keeps only ``.token`` would turn the unreadable state into "no token"."""
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "quirk"
+    readers = {"resolve_operator_token", "_resolve_token_state"}
+    seen, offenders = [], []
+    for path in sorted(root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8-sig"))
+        for fn in ast.walk(tree):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            calls = [
+                n for n in ast.walk(fn)
+                if isinstance(n, ast.Call)
+                and getattr(n.func, "id", getattr(n.func, "attr", None)) in readers
+            ]
+            if not calls:
+                continue
+            seen.append(f"{path.name}:{fn.name}")
+            returns_whole = any(
+                isinstance(n, ast.Return) and n.value in calls for n in ast.walk(fn)
+            )
+            reads_error = any(
+                isinstance(n, ast.Attribute) and n.attr == "error" for n in ast.walk(fn)
+            )
+            if not (returns_whole or reads_error):
+                offenders.append(f"{path.relative_to(root.parent)}:{fn.lineno} {fn.name}")
+    assert len(seen) >= 3, seen
+    assert not offenders, f"TokenState readers that drop the error state: {offenders}"

@@ -386,7 +386,7 @@ def serve_dashboard(db_path, config_path=None):
     # AUTH PASSTHROUGH — READ THIS BEFORE CHANGING EITHER LINE BELOW. This is the single most
     # likely cause of a confusing Tier-2 failure. src/dashboard/src/context/AuthProvider.tsx
     # probes GET /api/scans on mount: 200 -> authenticated; 401 -> unauthenticated -> LoginPage
-    # renders with no sidebar and no routes. middleware/auth._get_configured_token() resolves
+    # renders with no sidebar and no routes. quirk/util/server_config.resolve_operator_token() resolves
     # QUIRK_API_TOKEN first, then falls back to reading
     # os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml") and returning cfg.security.api_token.
     # Auth is disabled (passthrough) only when BOTH resolve empty. So the env var must be POPPED

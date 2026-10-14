@@ -19,11 +19,6 @@ def _resolve_token_state() -> TokenState:
     return resolve_operator_token()
 
 
-def _get_configured_token() -> str:
-    """Configured operator token, or '' when auth is not configured."""
-    return _resolve_token_state().token
-
-
 _bearer = HTTPBearer(auto_error=False)
 
 
