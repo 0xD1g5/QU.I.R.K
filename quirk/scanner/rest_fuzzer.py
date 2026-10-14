@@ -379,7 +379,8 @@ def _fetch_jwks_public_key_pem(
         session.mount(jwks_url, PinnedIPAdapter(_jwks_pinned))
 
     try:
-        resp = session.request("GET", jwks_url, timeout=10)
+        # record the status; do not follow redirects (the pinned adapter covers only the validated URL)
+        resp = session.request("GET", jwks_url, timeout=10, allow_redirects=False)
         if resp.status_code != 200:
             return None
         jwks = resp.json()
@@ -636,6 +637,8 @@ def run_fuzz_scan(
             if _dispatch_pinned:
                 session.mount(url, PinnedIPAdapter(_dispatch_pinned))
 
+            # record the status; do not follow redirects (the pinned adapter covers only the validated URL)
+            kwargs["allow_redirects"] = False
             try:
                 response = session.request(**kwargs)
                 # Budget counter increments ONLY after successful dispatch (Pitfall 3)
@@ -731,6 +734,8 @@ def run_fuzz_scan(
                         _alg_pinned = getattr(alg_scope, "resolved_ip", "")
                         if _alg_pinned:
                             session.mount(url, PinnedIPAdapter(_alg_pinned))
+                        # record the status; do not follow redirects (the pinned adapter covers only the validated URL)
+                        alg_kwargs["allow_redirects"] = False
                         try:
                             alg_resp = session.request(**alg_kwargs)
                             # CR-01: count the forged-token request against the budget ceiling.
