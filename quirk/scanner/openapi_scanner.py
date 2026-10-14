@@ -39,6 +39,7 @@ except ImportError:
     OPENAPI_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.outbound_fetch import OutboundFetchRejected, fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import _redact_url_preview, validate_external_url
 
@@ -162,12 +163,35 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
             f"OpenAPI spec URL rejected ({vr.reason}): {vr.redacted_preview!r}"
         )
 
+    def _in_scope(hop_url: str) -> None:
+        host = (urlparse(hop_url).hostname or "").lower()
+        if not host or host not in allowed_hosts:
+            raise SpecParsingError(
+                f"OpenAPI spec URL is outside configured scan-target scope — "
+                f"URL fetch is only permitted for URLs whose host is in the targets list: "
+                f"{_redact_url_preview(hop_url)!r}"
+            )
+
     try:
-        resp = httpx.get(url, timeout=15, follow_redirects=True)
+        resp = fetch_validated(
+            url,
+            fetch=lambda u, h: httpx.get(u, timeout=15, follow_redirects=False, headers=h),
+            allow_internal=allow_internal,
+            extra_check=_in_scope,
+        )
         resp.raise_for_status()
-    except Exception as exc:
+    except SpecParsingError:
+        raise
+    except OutboundFetchRejected as exc:
         raise SpecParsingError(
-            f"Failed to fetch OpenAPI spec URL: {safe_str(exc)}"
+            f"OpenAPI spec URL rejected ({exc.reason}): {exc.preview!r}"
+        ) from exc
+    except Exception as exc:
+        detail = type(exc).__name__
+        if isinstance(exc, httpx.HTTPStatusError):
+            detail += f" HTTP {exc.response.status_code}"
+        raise SpecParsingError(
+            f"Failed to fetch OpenAPI spec URL ({detail}): {_redact_url_preview(url)!r}"
         ) from exc
 
     content = resp.content

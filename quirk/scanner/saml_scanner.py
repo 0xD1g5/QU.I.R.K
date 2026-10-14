@@ -31,7 +31,8 @@ from urllib.parse import urlparse
 from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from quirk.models import CryptoEndpoint
-from quirk.util.url_allowlist import validate_external_url
+from quirk.util.outbound_fetch import OutboundFetchRejected, fetch_validated
+from quirk.util.url_allowlist import _redact_url_preview, validate_external_url
 from quirk.assessment.migration_advisor import _matches  # Phase 77 D-03 — word-boundary SHA1 detection
 
 try:
@@ -76,26 +77,33 @@ def _fetch_metadata(
     before issuing any outbound HTTP request. Blocked URLs return None with zero
     outbound requests.
 
-    Follows redirects. Uses system CA bundle (verify=True) so a network-positioned
+    Follows redirects one hop at a time, validating each hop. Uses system CA bundle (verify=True) so a network-positioned
     attacker cannot serve a forged metadata document via a fake TLS connection.
     Returns raw bytes on success, None on any error.
     """
-    result = validate_external_url(url, allow_internal=allow_internal)
-    if not result.ok:
-        logging.getLogger(__name__).warning(
-            "SAML: blocked fetch to %r (%s)", result.redacted_preview, result.reason
-        )
-        return None
     try:
-        response = httpx.get(url, timeout=timeout, follow_redirects=True, verify=True)
+        response = fetch_validated(
+            url,
+            fetch=lambda u, h: httpx.get(
+                u, timeout=timeout, follow_redirects=False, verify=True, headers=h
+            ),
+            allow_internal=allow_internal,
+        )
         if response.status_code == 200:
             return response.content
         logging.getLogger(__name__).warning(
-            "SAML fetch %s returned HTTP %d", url, response.status_code
+            "SAML fetch %s returned HTTP %d", _redact_url_preview(url), response.status_code
+        )
+        return None
+    except OutboundFetchRejected as exc:
+        logging.getLogger(__name__).warning(
+            "SAML: blocked fetch to %r (%s)", exc.preview, exc.reason
         )
         return None
     except Exception as exc:
-        logging.getLogger(__name__).warning("SAML fetch failed for %s: %s", url, exc)
+        logging.getLogger(__name__).warning(
+            "SAML fetch failed for %r (%s)", _redact_url_preview(url), type(exc).__name__
+        )
         return None
 
 

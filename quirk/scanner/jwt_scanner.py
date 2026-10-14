@@ -23,6 +23,7 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.outbound_fetch import fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import validate_external_url
 
@@ -159,12 +160,23 @@ def _fetch_jwks(
         if _use_client:
             with httpx.Client(
                 timeout=timeout,
-                follow_redirects=True,
+                follow_redirects=False,
                 verify=verify_tls,
                 event_hooks={"request": [_strip_auth_from_log]},
             ) as _client:
-                return _client.get(fetch_url, headers=_hdrs)
-        return httpx.get(fetch_url, timeout=timeout, follow_redirects=True, verify=verify_tls)
+                return fetch_validated(
+                    fetch_url,
+                    fetch=lambda u, h: _client.get(u, headers=h),
+                    headers=_hdrs,
+                    allow_internal=allow_internal,
+                )
+        return fetch_validated(
+            fetch_url,
+            fetch=lambda u, h: httpx.get(
+                u, timeout=timeout, follow_redirects=False, verify=verify_tls, headers=h or None
+            ),
+            allow_internal=allow_internal,
+        )
 
     for path in JWKS_PATHS:
         url = base_url + path
@@ -183,8 +195,8 @@ def _fetch_jwks(
             # JWKS endpoints, verify_tls becomes False here. Accepted-risk threat model:
             # a MITM on the JWKS URI could inject attacker-supplied key material, but
             # QUIRK is not a relying party verifying tokens for auth — it is cataloguing
-            # signing algorithms. A HIGH ADVISORY_JWKS_VERIFY_DISABLED finding is always
-            # emitted when allow_insecure_jwks is true (Phase 57 HARDEN-SCAN-01).
+            # signing algorithms. A HIGH ADVISORY_JWKS_VERIFY_DISABLED row is emitted for
+            # each fetched URL when allow_insecure_jwks is true (Phase 57 HARDEN-SCAN-01).
             # validate_external_url() runs on every probe URL above and every jwks_uri below.
             resp = _get(url)
             if resp.status_code != 200:

@@ -144,3 +144,146 @@ def test_helper_imports_no_http_client():
         elif isinstance(n, ast.ImportFrom):
             names.add((n.module or "").split(".")[0])
     assert not names & {"httpx", "requests"}
+
+
+# ---------------------------------------------------------------------------
+# Loopback two-server integration tests
+# ---------------------------------------------------------------------------
+import logging
+import threading
+import uuid
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+from quirk.scanner.openapi_scanner import SpecParsingError, _fetch_spec_bytes_from_url
+from quirk.scanner.saml_scanner import _fetch_metadata
+from quirk.scanner.jwt_scanner import _fetch_jwks
+from quirk.util import url_allowlist
+
+
+def _make_server(routes):
+    hits = []
+
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self):
+            hits.append(self.path)
+            status, loc, body = routes.get(self.path.split("?")[0], (404, None, b"nope"))
+            self.send_response(status)
+            if loc:
+                self.send_header("Location", loc)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    srv.hits = hits
+    return srv
+
+
+@pytest.fixture
+def servers():
+    made = []
+
+    def make(routes):
+        s = _make_server(routes)
+        made.append(s)
+        return s
+
+    yield make
+    for s in made:
+        s.shutdown()
+        s.server_close()
+
+
+def test_openapi_hop_out_of_scope_rejected(servers):
+    b = servers({"/real.yaml": (200, None, b"openapi: 3.0.0\n")})
+    a = servers({"/spec.yaml": (302, f"http://localhost:{b.server_port}/real.yaml", b"")})
+    with pytest.raises(SpecParsingError, match="scope"):
+        _fetch_spec_bytes_from_url(
+            f"http://127.0.0.1:{a.server_port}/spec.yaml", ["127.0.0.1"], allow_internal=True)
+    assert b.hits == []
+
+
+def test_openapi_same_host_redirect_followed(servers):
+    routes_a = {}
+    a2 = servers(routes_a)
+    routes_a["/spec.yaml"] = (302, f"http://127.0.0.1:{a2.server_port}/real.yaml", b"")
+    routes_a["/real.yaml"] = (200, None, b"openapi: 3.0.0\n")
+    out = _fetch_spec_bytes_from_url(
+        f"http://127.0.0.1:{a2.server_port}/spec.yaml", ["127.0.0.1"], allow_internal=True)
+    assert out == b"openapi: 3.0.0\n"
+
+
+class _Spy:
+    def __init__(self):
+        self.urls = []
+
+    def __call__(self, url, allow_internal=False):
+        self.urls.append(url)
+        return url_allowlist.validate_external_url(url, allow_internal=allow_internal)
+
+
+def test_openapi_metadata_hop_refused(servers):
+    a = servers({"/s.yaml": (302, "http://169.254.169.254/x", b"")})
+    spy = _Spy()
+    with patch("quirk.util.outbound_fetch.validate_external_url", spy):
+        with pytest.raises(SpecParsingError):
+            _fetch_spec_bytes_from_url(
+                f"http://127.0.0.1:{a.server_port}/s.yaml", ["127.0.0.1"], allow_internal=True)
+    assert len(a.hits) == 1
+    assert spy.urls[-1] == "http://169.254.169.254/x"
+
+
+def test_saml_metadata_hop_refused(servers):
+    a = servers({"/m": (302, "http://169.254.169.254/x", b"")})
+    spy = _Spy()
+    with patch("quirk.util.outbound_fetch.validate_external_url", spy):
+        assert _fetch_metadata(f"http://127.0.0.1:{a.server_port}/m", 5, allow_internal=True) is None
+    assert len(a.hits) == 1
+    assert spy.urls[-1] == "http://169.254.169.254/x"
+
+
+def test_jwks_metadata_hop_refused(servers):
+    a = servers({"/.well-known/jwks.json": (302, "http://169.254.169.254/x", b"")})
+    spy = _Spy()
+    with patch("quirk.util.outbound_fetch.validate_external_url", spy):
+        keys, path, _ = _fetch_jwks(f"http://127.0.0.1:{a.server_port}", 3, allow_internal=True)
+    assert keys is None
+    assert any(u == "http://169.254.169.254/x" for u in spy.urls)
+
+
+def test_openapi_fetch_error_message_has_no_query_value(servers):
+    a = servers({})
+    sentinel = "SENTINEL-" + uuid.uuid4().hex
+    with pytest.raises(SpecParsingError) as ei:
+        _fetch_spec_bytes_from_url(
+            f"http://127.0.0.1:{a.server_port}/missing.yaml?access_token={sentinel}",
+            ["127.0.0.1"], allow_internal=True)
+    msg = str(ei.value)
+    assert "HTTPStatusError" in msg and "404" in msg
+    assert sentinel not in msg
+
+
+def test_saml_failure_log_uses_redacted_preview(servers, caplog):
+    a = servers({})
+    sentinel = "SENTINEL-" + uuid.uuid4().hex
+    with caplog.at_level(logging.WARNING):
+        assert _fetch_metadata(
+            f"http://127.0.0.1:{a.server_port}/m?k={sentinel}", 3, allow_internal=True) is None
+    assert "404" in caplog.text
+    assert sentinel not in caplog.text
+    # connection-level failure: closed port
+    s2 = _make_server({})
+    port = s2.server_port
+    s2.shutdown()
+    s2.server_close()
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        assert _fetch_metadata(
+            f"http://127.0.0.1:{port}/m?k={sentinel}", 2, allow_internal=True) is None
+    assert sentinel not in caplog.text
+    assert "ConnectError" in caplog.text
