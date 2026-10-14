@@ -4,8 +4,9 @@ created: 2026-10-13
 source: Phase 224 doc-claim ledger (DOC-04), gap closure gc2-OPS; ledger row DCL-OPS-C-0029 (docs/operators-guide.md Command Reference, `quirk token rotate`)
 priority: high
 area: quirk/cli/token_cmd.py (generate/rotate), quirk/dashboard/api/middleware/auth.py (_get_configured_token)
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-10-14
+resolves_phase: 225.1
 ---
 
 # `token rotate` can leave the old token valid when the server has `QUIRK_API_TOKEN` set
@@ -27,8 +28,8 @@ a different shell than the one that started `serve` (the normal case) gets no wa
 The help string (`token_cmd.py:78`, "old token invalid immediately") overstates this. The operators-guide Command
 Reference row is now narrowed; the CLI help string still says it.
 
-- [ ] Change the rotate help text, and have `rotate` say that a server-side `QUIRK_API_TOKEN` is unaffected.
-- [ ] Test: rotating with a server-side `QUIRK_API_TOKEN` set produces the warning.
+- [x] Change the rotate help text, and have `rotate` say that a server-side `QUIRK_API_TOKEN` is unaffected.
+- [x] Test: rotating with a server-side `QUIRK_API_TOKEN` set produces the warning.
 
 ## Feasibility & Effort
 

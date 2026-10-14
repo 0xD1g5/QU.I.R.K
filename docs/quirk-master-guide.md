@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,395 lines, in reading order.
+Five guides, 7,397 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -2384,7 +2384,7 @@ The `quirk token` subcommand manages the `security.api_token` key in your QUIRK 
 | Subcommand | Description |
 |------------|-------------|
 | `quirk token generate` | Mint a new CSPRNG token (`secrets.token_urlsafe(32)`) and write it to `security.api_token` in your config file. Prints the token to stdout so you can copy it for browser login. |
-| `quirk token rotate` | Identical to `generate` — overwrites `security.api_token` with a new token, immediately invalidating the previous one. Any active dashboard session using the old token will be returned to the login form on the next API request. |
+| `quirk token rotate` | Identical to `generate` — overwrites `security.api_token` with a new token. A server reading this file rejects the old token from its next request, and any active dashboard session using it is returned to the login form. A `QUIRK_API_TOKEN` set in the server's environment takes precedence over the file and is not changed by this command. |
 | `quirk token show` | Print the currently persisted token from the YAML config file. Reads the raw YAML value; does **not** read `QUIRK_API_TOKEN`. Exits 1 if the config file is not found. |
 
 Pass `--config /path/to/config.yaml` to any subcommand to target a non-default config location (the default is `config.yaml` in the current directory). `generate` and `rotate` re-write the whole file as YAML, so comments and key ordering in the config are lost (a warning is printed to stderr), and they create the file if it does not exist.
@@ -2393,7 +2393,7 @@ Pass `--config /path/to/config.yaml` to any subcommand to target a non-default c
 # Generate a token and write it to config.yaml
 quirk token generate --config config.yaml
 
-# Rotate the token (invalidates the old one immediately)
+# Rotate the token (a server reading this file rejects the old one from its next request)
 quirk token rotate --config config.yaml
 
 # Show the currently configured token (reads YAML, not env var)
@@ -2419,7 +2419,7 @@ security:
   api_token: ""   # populated by: quirk token generate --config config.yaml
 ```
 
-Run `quirk token generate --config config.yaml` to write a random token into this field. Once the token is non-empty, the dashboard requires authentication on every `/api/*` request except the two open routes above. The dashboard reads the YAML token from the file named by `QUIRK_CONFIG_PATH` (default `./config.yaml` in the server's working directory), not from the `--config` you gave `quirk token`, so make sure both name the same file, and keep that file a complete, valid QUIRK config (as `quirk init` writes it). For production deployments, set `QUIRK_API_TOKEN`.
+Run `quirk token generate --config config.yaml` to write a random token into this field. Once the token is non-empty, the dashboard requires authentication on every `/api/*` request except the two open routes above. The dashboard reads the YAML token from the file named by `QUIRK_CONFIG_PATH` (default `./config.yaml` in the server's working directory), not from the `--config` you gave `quirk token`, so make sure both name the same file. An absent or empty file means authentication is off. A token in the file enables authentication even when the file holds only a `security:` section. A file that exists but cannot be read or parsed (malformed YAML, or a top level or `security` entry that is not a mapping) stops `quirk serve` with exit code 2 and makes every protected `/api/*` route answer 503 (`DASHBOARD-014`) until the file is fixed. For production deployments, set `QUIRK_API_TOKEN`.
 
 #### Token precedence
 
@@ -2453,7 +2453,7 @@ curl -H "Authorization: Bearer <your-token>" http://localhost:8512/api/scans
 2. If authentication is enabled, you are presented with a "Dashboard Login" card. Paste your token (from `quirk token show`) into the password field and click **Unlock Dashboard**.
 3. A correct token loads the full dashboard. An incorrect token shows an inline error ("Invalid token. Check your token and try again.") and clears the input — no page redirect occurs.
 4. Click **Sign out** in the sidebar to clear the session and return to the login form. The token is removed from browser storage immediately.
-5. **Mid-session token rotation:** If you run `quirk token rotate` while a browser session is open, the next API request from that session returns HTTP 401 and the dashboard automatically returns you to the login form. Re-enter the new token to resume.
+5. **Mid-session token rotation:** If you run `quirk token rotate` while a browser session is open, the next API request from that session returns HTTP 401 and the dashboard automatically returns you to the login form. Re-enter the new token to resume. A `QUIRK_API_TOKEN` set in the server's environment keeps its value, so rotate that variable where the server runs.
 
 #### Auth-disabled passthrough (development convenience)
 
@@ -3541,8 +3541,8 @@ The dashboard's pre-existing `GET /api/config` endpoint returns only the active 
 not require the dashboard API token. The new `GET /api/config/effective` endpoint — added for the
 New Scan page's Effective config panel (§3.1.2) — **does require the dashboard API token** when
 `QUIRK_API_TOKEN` (or `security.api_token` in the server's config) is set, because it accepts caller-supplied form parameters (targets, profile,
-etc.). Keep the server's config file a complete, valid QUIRK config so its `security.api_token` is
-read. The endpoint returns the merged, redacted
+etc.). A `security.api_token` is read from the server's config file even when the file holds only a
+`security:` section. The endpoint returns the merged, redacted
 config those parameters would produce, with two differences from the job a submission writes: it
 always shows `security.allow_internal_targets: false` (a real job takes that value from the server's
 config file), and its `output.directory` is a temporary path rather than `output/jobs/<job id>`.
@@ -4908,7 +4908,9 @@ quirk serve --host 0.0.0.0 --port 8512
 > HTTPS reverse proxy and IP allowlist in front of it. Set `QUIRK_API_TOKEN` to a
 > strong random value before starting the server; `quirk serve` with neither this variable
 > nor a `security.api_token` in the config it reads (`QUIRK_CONFIG_PATH`, else
-> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing).
+> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing). A config file that
+> exists but cannot be read or parsed stops `quirk serve` (exit code 2) and makes protected `/api/*` routes
+> answer 503 (`DASHBOARD-014`).
 >
 > As a guardrail, `quirk serve` **refuses to start** on a network-reachable
 > interface when neither token is configured, unless you pass `--insecure` to

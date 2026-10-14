@@ -177,8 +177,8 @@ The dashboard's pre-existing `GET /api/config` endpoint returns only the active 
 not require the dashboard API token. The new `GET /api/config/effective` endpoint — added for the
 New Scan page's Effective config panel (§3.1.2) — **does require the dashboard API token** when
 `QUIRK_API_TOKEN` (or `security.api_token` in the server's config) is set, because it accepts caller-supplied form parameters (targets, profile,
-etc.). Keep the server's config file a complete, valid QUIRK config so its `security.api_token` is
-read. The endpoint returns the merged, redacted
+etc.). A `security.api_token` is read from the server's config file even when the file holds only a
+`security:` section. The endpoint returns the merged, redacted
 config those parameters would produce, with two differences from the job a submission writes: it
 always shows `security.allow_internal_targets: false` (a real job takes that value from the server's
 config file), and its `output.directory` is a temporary path rather than `output/jobs/<job id>`.
@@ -1544,7 +1544,9 @@ quirk serve --host 0.0.0.0 --port 8512
 > HTTPS reverse proxy and IP allowlist in front of it. Set `QUIRK_API_TOKEN` to a
 > strong random value before starting the server; `quirk serve` with neither this variable
 > nor a `security.api_token` in the config it reads (`QUIRK_CONFIG_PATH`, else
-> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing).
+> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing). A config file that
+> exists but cannot be read or parsed stops `quirk serve` (exit code 2) and makes protected `/api/*` routes
+> answer 503 (`DASHBOARD-014`).
 >
 > As a guardrail, `quirk serve` **refuses to start** on a network-reachable
 > interface when neither token is configured, unless you pass `--insecure` to
