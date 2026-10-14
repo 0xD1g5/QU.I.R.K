@@ -232,11 +232,12 @@ standard rotation procedure:
 
 3. **Review the console's request log and push audit records** for anomalous pushes
    from that `sensor_id` in the time window before revocation. `quirk serve` logs the
-   client address and status of every request, and each push attempt that is not
-   rate-limited is recorded as an audit row (destination `sensor_push`). Look for
-   unexpected push timing or pushes from unexpected IP addresses. The audit row carries the time, status and error summary but
-   not the sensor ID or source address; accepted pushes are also recorded in the
-   `sensor_pushes` table with their `sensor_id` and receive time.
+   client address and status of every request, and each push attempt is recorded as an
+   audit row (destination `sensor_push`), including pushes refused by the rate limiter
+   (status `rate_limited`). Look for unexpected push timing or pushes from unexpected
+   IP addresses. The audit row carries the time, status, error summary and source
+   address, and, once the sensor is authenticated, the sensor ID; accepted pushes are
+   also recorded in the `sensor_pushes` table with their `sensor_id` and receive time.
 
 4. **Re-enroll with a new token** following the same three steps as §3.3.
 

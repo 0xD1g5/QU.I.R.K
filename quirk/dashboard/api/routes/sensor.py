@@ -25,8 +25,8 @@ T-109-07  safe_str(exc) on all error paths; fixed strings for 409/unknown-sensor
 T-109-08  IntegrationDelivery row written on EVERY attempt, committed outside ingest try.
 T-109-09  Sensor lookup before any persistence; unknown → 4xx + audit.
 T-109-10  UNIQUE constraint + rollback-first → 409 fixed string (never stringify exc).
-T-109-11  X-Sensor-Signature header read + structurally validated; carried as qpush_sig;
-          crypto verification deferred v5.5 (hmac_key column absent in Phase 107 schema).
+T-109-11  X-Sensor-Signature header read; its hmac-sha256=<hex> shape is checked and the
+          value is carried as qpush_sig metadata.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ _MAX_DECOMPRESS_BYTES = 20 * 1024 * 1024  # zstd cap (mirrors console_cmd.py D-0
 _ZSTD_MAX_WINDOW = 32 * 1024 * 1024
 _REPLAY_WINDOW = timedelta(minutes=15)    # pushed_at must be within ±15 min of received_at
 
-# X-Sensor-Signature structural prefix (T-109-11 — crypto verify deferred v5.5)
+# X-Sensor-Signature expected prefix (T-109-11)
 _SIG_PREFIX = "hmac-sha256="
 
 # ---------------------------------------------------------------------------
@@ -416,8 +416,8 @@ async def sensor_push(
         raise HTTPException(status_code=413, detail="Payload too large (10 MB limit)")
 
     # ------------------------------------------------------------------
-    # T-109-11 — X-Sensor-Signature: read + structural validate; carry as qpush_sig
-    # (crypto verify deferred v5.5 — hmac_key column absent from Phase 107 schema)
+    # T-109-11 — X-Sensor-Signature: read, check the hmac-sha256=<hex> shape,
+    # carry the value as qpush_sig metadata
     # ------------------------------------------------------------------
     qpush_sig: str | None = None
     raw_sig = request.headers.get("X-Sensor-Signature")

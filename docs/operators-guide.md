@@ -1527,7 +1527,7 @@ quantum-readiness score.)*
 Each sensor is a standard `pip install "quirk-scanner[all]"` deployment. Sensors
 communicate with the console over HTTPS (use an `https://` console URL) and authenticate each
 push with their own per-sensor token (§8.1.1). Each push also carries an HMAC-SHA256
-signature made with a key the sensor generates locally at enrollment.
+value made with a key the sensor generates locally at enrollment.
 
 ### 8.1 Provision the console
 
@@ -1694,7 +1694,7 @@ quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
 
 `quirk sensor push` runs a local scan using the target list in the scan config
 (`--scan-config` defaults to `config.yaml` in the current directory),
-serialises the findings into a zstd-compressed JSON envelope signed with the sensor's HMAC
+serialises the findings into a zstd-compressed JSON envelope carrying an HMAC value made with the sensor's HMAC
 key (the same payload `quirk sensor export-results` writes to a `.qpush` file, §8.6), and
 delivers it to the console over HTTPS. The console responds HTTP 200 on success. If the
 sensor was enrolled with `--allow-internal-console`, the local scan is also started with

@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,435 lines, in reading order.
+Five guides, 7,436 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4912,7 +4912,7 @@ quantum-readiness score.)*
 Each sensor is a standard `pip install "quirk-scanner[all]"` deployment. Sensors
 communicate with the console over HTTPS (use an `https://` console URL) and authenticate each
 push with their own per-sensor token (§8.1.1). Each push also carries an HMAC-SHA256
-signature made with a key the sensor generates locally at enrollment.
+value made with a key the sensor generates locally at enrollment.
 
 #### 8.1 Provision the console
 
@@ -5079,7 +5079,7 @@ quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
 
 `quirk sensor push` runs a local scan using the target list in the scan config
 (`--scan-config` defaults to `config.yaml` in the current directory),
-serialises the findings into a zstd-compressed JSON envelope signed with the sensor's HMAC
+serialises the findings into a zstd-compressed JSON envelope carrying an HMAC value made with the sensor's HMAC
 key (the same payload `quirk sensor export-results` writes to a `.qpush` file, §8.6), and
 delivers it to the console over HTTPS. The console responds HTTP 200 on success. If the
 sensor was enrolled with `--allow-internal-console`, the local scan is also started with
@@ -7486,11 +7486,12 @@ standard rotation procedure:
 
 3. **Review the console's request log and push audit records** for anomalous pushes
    from that `sensor_id` in the time window before revocation. `quirk serve` logs the
-   client address and status of every request, and each push attempt that is not
-   rate-limited is recorded as an audit row (destination `sensor_push`). Look for
-   unexpected push timing or pushes from unexpected IP addresses. The audit row carries the time, status and error summary but
-   not the sensor ID or source address; accepted pushes are also recorded in the
-   `sensor_pushes` table with their `sensor_id` and receive time.
+   client address and status of every request, and each push attempt is recorded as an
+   audit row (destination `sensor_push`), including pushes refused by the rate limiter
+   (status `rate_limited`). Look for unexpected push timing or pushes from unexpected
+   IP addresses. The audit row carries the time, status, error summary and source
+   address, and, once the sensor is authenticated, the sensor ID; accepted pushes are
+   also recorded in the `sensor_pushes` table with their `sensor_id` and receive time.
 
 4. **Re-enroll with a new token** following the same three steps as §3.3.
 
