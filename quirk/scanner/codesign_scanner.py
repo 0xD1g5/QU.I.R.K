@@ -38,7 +38,6 @@ from cryptography.x509 import (
 from cryptography.x509.oid import ExtendedKeyUsageOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
-
 from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.log_text import strip_control_chars

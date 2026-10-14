@@ -29,7 +29,6 @@ from cryptography.x509 import (
     load_pem_x509_certificate,
 )
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
-
 from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.log_text import strip_control_chars
@@ -255,8 +254,7 @@ def scan_smime_targets(
                     parsed = _parse_smime_cert(bytes(cert_bytes))
                     if parsed is None:
                         log.warning(
-                            "SMIME: cert parse failed for %s (%s)",
-                            strip_control_chars(user_dn), attr_name
+                            "SMIME: cert parse failed for %s (%s)", strip_control_chars(user_dn), attr_name
                         )
                         continue
 
