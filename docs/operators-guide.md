@@ -155,11 +155,12 @@ Three small operator-facing additions shipped in Phase 143:
   are viewing. See [`docs/report-interpretation.md`](report-interpretation.md) §11.
 - **`security.trusted_targets` scan-consent allowlist** — an opt-in list of exact hosts/IPs and
   CIDR ranges QUIRK is authorized to scan. Empty/absent = allow-all (backward compatible). The
-  two entry points check different things. The CLI checks the config's `targets.fqdns`,
-  `targets.cidrs` and `connectors.broker_targets` hosts, but not `targets.include_ips`, so an IP
-  listed there is scanned even when it is outside the allowlist. The dashboard's "New Scan" page
-  checks every form target against the server config's list, but not `broker_targets` entered in
-  the Connectors panel. See
+  two entry points check the same inputs. The CLI checks the config's `targets.fqdns`,
+  `targets.cidrs`, `targets.include_ips` and every host-naming `connectors.*` field (checked
+  whether or not that connector is enabled, and the explicit registry host of a container image
+  reference). The dashboard's "New Scan" page checks the form targets and the Connectors-panel
+  hosts against the server config's list, and writes that list into the job config so the scan
+  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. See
   [`docs/configuration.md`](configuration.md) § `security.trusted_targets`.
 - **Windows Authenticode signing (build mechanism, not yet activated)** — the
   `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
@@ -179,9 +180,10 @@ New Scan page's Effective config panel (§3.1.2) — **does require the dashboar
 `QUIRK_API_TOKEN` (or `security.api_token` in the server's config) is set, because it accepts caller-supplied form parameters (targets, profile,
 etc.). A `security.api_token` is read from the server's config file even when the file holds only a
 `security:` section. The endpoint returns the merged, redacted
-config those parameters would produce, with two differences from the job a submission writes: it
-always shows `security.allow_internal_targets: false` (a real job takes that value from the server's
-config file), and its `output.directory` is a temporary path rather than `output/jobs/<job id>`.
+config those parameters would produce, with two differences from the job a submission writes: its
+`output.directory` is a temporary path rather than `output/jobs/<job id>`, and credential values never
+reach it. It shows the server config's own `security.allow_internal_targets`, the value a real job takes. The preview receives credentials by name only: the New Scan page sends only the names of the credential fields you have filled, and the
+response marks each as `set` or `not set`.
 Treat it as an
 authenticated preview endpoint, not a public config-read endpoint. Credential fields in its
 response are always redacted to `•••• (set)` / `•••• (not set)` regardless of caller — there is no
@@ -283,7 +285,7 @@ The New Scan page in the dashboard has a collapsed "Effective config" panel abov
 button. Expanding it fetches `GET /api/config/effective` with your current form selections
 (targets, profile, calibration, nmap toggle, port scope, custom ports, vertical, and any Connectors
 or Advanced fields you touched) and previews the **config that submission would run with**, apart
-from the two fields §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
+from the output directory §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
 change form fields while the panel stays open, and never fetches at all if you leave it collapsed.
 
 Two tabs render the same server response two ways:
@@ -301,6 +303,11 @@ Two tabs render the same server response two ways:
 never a real value, in either tab, and never inside an editable input. If you ever see a real
 credential value in the Raw YAML tab, that is a redaction bypass and should be reported
 immediately.
+
+The preview shows `•••• (set)` for a credential field you have filled in on the New Scan form, even
+though the form's value never leaves the browser through this panel: the page sends only the
+field names, not the values, and the server marks each named credential as set. A field you have
+left empty shows the server's own state (its config file or environment).
 
 A failed fetch renders an "Effective config unavailable" notice without blocking scan submission —
 the panel is advisory-only and never gates the Run Scan button.

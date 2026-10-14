@@ -1344,10 +1344,11 @@ the CLI's scan profiles resolve to a single effective config through one shared 
 - **The Effective Config preview resolves through the scan's own path**, not a client-side
   simulation: `GET /api/config/effective` builds the job dict with the same `build_job_config_dict`,
   then runs `load_config` and `apply_profile`, as a real submission does. Its scan, connector-toggle
-  and assessment values are the ones the scan runs with. Three things can differ: it always shows
-  `security.allow_internal_targets` as `false` (the real job takes it from the server config), its
-  `output` paths point at a temporary directory, and it does not include
-  credentials typed into the form.
+  and assessment values are the ones the scan runs with. It shows the server config's own
+  `security.allow_internal_targets`, as a real job does. Its `output` paths point at a temporary
+  directory, and it never receives credential values typed into the form: for each credential the
+  form has filled it shows `set` (the form sends only the field names), and for the rest it shows
+  whether the server's config or environment holds one.
 
 ### Connectors panel: explicit toggle vs. custom-port-scope suppression (D-13/D-14, Phase 193)
 
@@ -1509,10 +1510,14 @@ The New Scan page exposes a "Port Scope" selector with the four options describe
 First released in 5.11.0, `security.trusted_targets` is a server-enforced scan-consent allowlist —
 a list of exact hosts/IPs and CIDR ranges QU.I.R.K. is authorized to scan. It is enforced at a
 check used by **both** the CLI (`quirk`/`run_scan.py`) and the dashboard's "New Scan"
-(`/scan/new`) entry point, with the same matching function. The two entry points check different
-inputs. The CLI checks the scan targets and the `connectors.broker_targets` hosts in its config.
-The dashboard checks only the targets typed into the form, against the server's own config file
-(`QUIRK_CONFIG_PATH`); a broker target entered in the Connectors panel is not checked. Scheduled
+(`/scan/new`) entry point, with the same matching function. Both entry points check the
+same inputs: `targets.fqdns`, `targets.cidrs`, `targets.include_ips`, and every host-naming
+`connectors.*` field (such as `broker_targets`, `jwt_targets` or `vault_targets`), whether or not
+the connector is enabled. For a container image reference the explicit registry host is checked.
+The dashboard checks the targets typed into the form and the Connectors-panel hosts against the
+server's own config file (`QUIRK_CONFIG_PATH`), and writes the server's `trusted_targets` list
+into the generated job config, so the scan subprocess enforces it as well. If the server config
+cannot be read, job creation is refused with `QRK-DASHBOARD-014` instead of running unchecked. Scheduled
 scans (added on the Schedules page or with `quirk schedule`) are checked only when they run, against
 the `trusted_targets` in the `--scan-config` file `quirk scheduler run` was started with; without
 one, no list applies.
@@ -1529,7 +1534,7 @@ security:
 |----------|------|
 | **Empty or absent (default)** | Allow-all — backward compatible with every existing scan config/CLI invocation. No enforcement happens. |
 | **Populated** | Only the listed hosts/IPs/CIDRs may be scan targets. A checked target outside the list is rejected **before any scan begins** (see above for which inputs each entry point checks). |
-| **Matching semantics** | Exact, case-sensitive string match against a listed entry, or CIDR containment for entries written as `a.b.c.d/nn`: an IP target (or the DNS-resolved addresses of a hostname target) inside a listed CIDR is allowed. A CIDR scan target is only allowed when that exact CIDR string is listed. No wildcard subdomain matching — `*.acme.com` is not supported; list every FQDN explicitly. The CLI also checks broker target hosts under `connectors.broker_targets`; the dashboard does not. |
+| **Matching semantics** | Exact, case-sensitive string match against a listed entry, or CIDR containment for entries written as `a.b.c.d/nn`: an IP target (or the DNS-resolved addresses of a hostname target) inside a listed CIDR is allowed. A CIDR scan target is only allowed when that exact CIDR string is listed. No wildcard subdomain matching — `*.acme.com` is not supported; list every FQDN explicitly. Connector host fields are matched the same way on the CLI and in the dashboard. |
 | **CLI rejection** | `run_scan.py` raises `ValueError` naming the redacted out-of-allowlist target, aborting before `init_db()`/scan execution. |
 | **Dashboard rejection** | The `/scan/new` → `POST /api/jobs` endpoint returns **HTTP 422** for an out-of-allowlist target — no `ScanJob` database row is created and no subprocess is spawned. |
 

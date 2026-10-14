@@ -4,8 +4,9 @@ created: 2026-10-13
 source: Phase 224 GC3 sweep (ledger parts 224-12/224-13, docs/configuration.md Port Scope / precedence)
 priority: medium
 area: quirk/dashboard/api/config_preview.py (resolve_effective_config), quirk/dashboard/api/routes/jobs.py (create_job)
-status: pending
-resolves_phase: null
+status: completed
+resolves_phase: 225.1
+completed: 2026-10-14
 ---
 
 # Effective Config preview shows a different `security` and credential state than the job it previews
@@ -25,9 +26,9 @@ with `true`.
 docs/configuration.md ("Dashboard form vs. presets precedence") now lists the three differences: this
 flag, the temporary output paths, and credentials.
 
-- [ ] Load the server's `allow_internal_targets` in `resolve_effective_config` the same fail-closed way
+- [x] Load the server's `allow_internal_targets` in `resolve_effective_config` the same fail-closed way
       create_job does, or drop the Security section's value from the preview.
-- [ ] Decide whether the preview should show credential-name fragments (as set / not set).
+- [x] Decide whether the preview should show credential-name fragments (as set / not set).
 
 ## Feasibility & Effort
 

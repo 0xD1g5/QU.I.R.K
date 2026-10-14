@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,397 lines, in reading order.
+Five guides, 7,409 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -2083,10 +2083,11 @@ the CLI's scan profiles resolve to a single effective config through one shared 
 - **The Effective Config preview resolves through the scan's own path**, not a client-side
   simulation: `GET /api/config/effective` builds the job dict with the same `build_job_config_dict`,
   then runs `load_config` and `apply_profile`, as a real submission does. Its scan, connector-toggle
-  and assessment values are the ones the scan runs with. Three things can differ: it always shows
-  `security.allow_internal_targets` as `false` (the real job takes it from the server config), its
-  `output` paths point at a temporary directory, and it does not include
-  credentials typed into the form.
+  and assessment values are the ones the scan runs with. It shows the server config's own
+  `security.allow_internal_targets`, as a real job does. Its `output` paths point at a temporary
+  directory, and it never receives credential values typed into the form: for each credential the
+  form has filled it shows `set` (the form sends only the field names), and for the rest it shows
+  whether the server's config or environment holds one.
 
 #### Connectors panel: explicit toggle vs. custom-port-scope suppression (D-13/D-14, Phase 193)
 
@@ -2248,10 +2249,14 @@ The New Scan page exposes a "Port Scope" selector with the four options describe
 First released in 5.11.0, `security.trusted_targets` is a server-enforced scan-consent allowlist —
 a list of exact hosts/IPs and CIDR ranges QU.I.R.K. is authorized to scan. It is enforced at a
 check used by **both** the CLI (`quirk`/`run_scan.py`) and the dashboard's "New Scan"
-(`/scan/new`) entry point, with the same matching function. The two entry points check different
-inputs. The CLI checks the scan targets and the `connectors.broker_targets` hosts in its config.
-The dashboard checks only the targets typed into the form, against the server's own config file
-(`QUIRK_CONFIG_PATH`); a broker target entered in the Connectors panel is not checked. Scheduled
+(`/scan/new`) entry point, with the same matching function. Both entry points check the
+same inputs: `targets.fqdns`, `targets.cidrs`, `targets.include_ips`, and every host-naming
+`connectors.*` field (such as `broker_targets`, `jwt_targets` or `vault_targets`), whether or not
+the connector is enabled. For a container image reference the explicit registry host is checked.
+The dashboard checks the targets typed into the form and the Connectors-panel hosts against the
+server's own config file (`QUIRK_CONFIG_PATH`), and writes the server's `trusted_targets` list
+into the generated job config, so the scan subprocess enforces it as well. If the server config
+cannot be read, job creation is refused with `QRK-DASHBOARD-014` instead of running unchecked. Scheduled
 scans (added on the Schedules page or with `quirk schedule`) are checked only when they run, against
 the `trusted_targets` in the `--scan-config` file `quirk scheduler run` was started with; without
 one, no list applies.
@@ -2268,7 +2273,7 @@ security:
 |----------|------|
 | **Empty or absent (default)** | Allow-all — backward compatible with every existing scan config/CLI invocation. No enforcement happens. |
 | **Populated** | Only the listed hosts/IPs/CIDRs may be scan targets. A checked target outside the list is rejected **before any scan begins** (see above for which inputs each entry point checks). |
-| **Matching semantics** | Exact, case-sensitive string match against a listed entry, or CIDR containment for entries written as `a.b.c.d/nn`: an IP target (or the DNS-resolved addresses of a hostname target) inside a listed CIDR is allowed. A CIDR scan target is only allowed when that exact CIDR string is listed. No wildcard subdomain matching — `*.acme.com` is not supported; list every FQDN explicitly. The CLI also checks broker target hosts under `connectors.broker_targets`; the dashboard does not. |
+| **Matching semantics** | Exact, case-sensitive string match against a listed entry, or CIDR containment for entries written as `a.b.c.d/nn`: an IP target (or the DNS-resolved addresses of a hostname target) inside a listed CIDR is allowed. A CIDR scan target is only allowed when that exact CIDR string is listed. No wildcard subdomain matching — `*.acme.com` is not supported; list every FQDN explicitly. Connector host fields are matched the same way on the CLI and in the dashboard. |
 | **CLI rejection** | `run_scan.py` raises `ValueError` naming the redacted out-of-allowlist target, aborting before `init_db()`/scan execution. |
 | **Dashboard rejection** | The `/scan/new` → `POST /api/jobs` endpoint returns **HTTP 422** for an out-of-allowlist target — no `ScanJob` database row is created and no subprocess is spawned. |
 
@@ -3519,11 +3524,12 @@ Three small operator-facing additions shipped in Phase 143:
   are viewing. See [`docs/report-interpretation.md`](report-interpretation.md) §11.
 - **`security.trusted_targets` scan-consent allowlist** — an opt-in list of exact hosts/IPs and
   CIDR ranges QUIRK is authorized to scan. Empty/absent = allow-all (backward compatible). The
-  two entry points check different things. The CLI checks the config's `targets.fqdns`,
-  `targets.cidrs` and `connectors.broker_targets` hosts, but not `targets.include_ips`, so an IP
-  listed there is scanned even when it is outside the allowlist. The dashboard's "New Scan" page
-  checks every form target against the server config's list, but not `broker_targets` entered in
-  the Connectors panel. See
+  two entry points check the same inputs. The CLI checks the config's `targets.fqdns`,
+  `targets.cidrs`, `targets.include_ips` and every host-naming `connectors.*` field (checked
+  whether or not that connector is enabled, and the explicit registry host of a container image
+  reference). The dashboard's "New Scan" page checks the form targets and the Connectors-panel
+  hosts against the server config's list, and writes that list into the job config so the scan
+  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. See
   [`docs/configuration.md`](#configuration) § `security.trusted_targets`.
 - **Windows Authenticode signing (build mechanism, not yet activated)** — the
   `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
@@ -3543,9 +3549,10 @@ New Scan page's Effective config panel (§3.1.2) — **does require the dashboar
 `QUIRK_API_TOKEN` (or `security.api_token` in the server's config) is set, because it accepts caller-supplied form parameters (targets, profile,
 etc.). A `security.api_token` is read from the server's config file even when the file holds only a
 `security:` section. The endpoint returns the merged, redacted
-config those parameters would produce, with two differences from the job a submission writes: it
-always shows `security.allow_internal_targets: false` (a real job takes that value from the server's
-config file), and its `output.directory` is a temporary path rather than `output/jobs/<job id>`.
+config those parameters would produce, with two differences from the job a submission writes: its
+`output.directory` is a temporary path rather than `output/jobs/<job id>`, and credential values never
+reach it. It shows the server config's own `security.allow_internal_targets`, the value a real job takes. The preview receives credentials by name only: the New Scan page sends only the names of the credential fields you have filled, and the
+response marks each as `set` or `not set`.
 Treat it as an
 authenticated preview endpoint, not a public config-read endpoint. Credential fields in its
 response are always redacted to `•••• (set)` / `•••• (not set)` regardless of caller — there is no
@@ -3647,7 +3654,7 @@ The New Scan page in the dashboard has a collapsed "Effective config" panel abov
 button. Expanding it fetches `GET /api/config/effective` with your current form selections
 (targets, profile, calibration, nmap toggle, port scope, custom ports, vertical, and any Connectors
 or Advanced fields you touched) and previews the **config that submission would run with**, apart
-from the two fields §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
+from the output directory §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
 change form fields while the panel stays open, and never fetches at all if you leave it collapsed.
 
 Two tabs render the same server response two ways:
@@ -3665,6 +3672,11 @@ Two tabs render the same server response two ways:
 never a real value, in either tab, and never inside an editable input. If you ever see a real
 credential value in the Raw YAML tab, that is a redaction bypass and should be reported
 immediately.
+
+The preview shows `•••• (set)` for a credential field you have filled in on the New Scan form, even
+though the form's value never leaves the browser through this panel: the page sends only the
+field names, not the values, and the server marks each named credential as set. A field you have
+left empty shows the server's own state (its config file or environment).
 
 A failed fetch renders an "Effective config unavailable" notice without blocking scan submission —
 the panel is advisory-only and never gates the Run Scan button.
