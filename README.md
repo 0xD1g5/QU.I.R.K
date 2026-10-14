@@ -25,7 +25,7 @@ It produces three things:
 > [!IMPORTANT]
 > **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, HTTP and SNMP requests, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and the dashboard's New Scan form can also check targets against an optional trusted-targets allowlist (`security.trusted_targets`), but the check does not yet cover every target field: the CLI does not check `targets.include_ips`. See the [Operator's Guide](docs/operators-guide.md).
 
-![QU.I.R.K. dashboard — executive summary](docs/images/dashboard-hero.png)
+![QU.I.R.K. dashboard — executive summary](https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/images/dashboard-hero.png)
 *The executive summary for a scan of the bundled chaos lab, which is deliberately weak. The score is capped at 20 because six CRITICAL findings are open, even though the computed score is 78. It shows the harvest-now-decrypt-later verdict, the first three remediation steps, and the six subscores.*
 
 ## For your role
