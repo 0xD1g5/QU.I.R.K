@@ -431,3 +431,61 @@ def test_fetch_spec_bytes_from_url_invalid_port_end_to_end_does_not_crash():
         )
     assert "hunter2" not in str(exc_info.value)
 
+
+
+# ---------------------------------------------------------------------------
+# Phase 225.1: the metadata check covers IPv4 addresses carried inside IPv6
+# forms, plus the Alibaba Cloud metadata address.
+# ---------------------------------------------------------------------------
+
+_EMBEDDED_AND_PROVIDER_URLS = [
+    ("http://[::ffff:169.254.169.254]/", "embedded_v4_mapped"),
+    ("http://[::ffff:a9fe:a9fe]/", "embedded_v4_mapped_hex"),
+    ("http://[2002:a9fe:a9fe::]/", "embedded_v4_6to4"),
+    ("http://[64:ff9b::a9fe:a9fe]/", "embedded_v4_nat64"),
+    ("http://100.100.100.200/", "provider_alibaba"),
+    ("http://[::ffff:100.100.100.200]/", "provider_alibaba_mapped"),
+]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [u for u, _ in _EMBEDDED_AND_PROVIDER_URLS],
+    ids=[i for _, i in _EMBEDDED_AND_PROVIDER_URLS],
+)
+def test_metadata_block_applies_to_embedded_v4_forms(url):
+    """The metadata check sees the address and any IPv4 address it carries."""
+    r = validate_external_url(url, allow_internal=True)
+    assert r.ok is False
+    assert r.reason == RC_METADATA_SERVICE_IP
+    # Without allow_internal the same forms are refused too (reason may vary
+    # with the Python patch level for the embedded forms).
+    assert validate_external_url(url, allow_internal=False).ok is False
+
+
+def test_metadata_block_provider_addresses():
+    """Alibaba's metadata IPv4 literal keeps the metadata reason either way."""
+    for allow in (True, False):
+        r = validate_external_url("http://100.100.100.200/", allow_internal=allow)
+        assert r.ok is False
+        assert r.reason == RC_METADATA_SERVICE_IP
+
+
+@patch("quirk.util.url_allowlist.socket.getaddrinfo")
+def test_metadata_block_applies_to_resolved_embedded_v4(mock_gai):
+    mock_gai.return_value = [_ai_v6("::ffff:169.254.169.254")]
+    r = validate_external_url("http://meta.example.test/", allow_internal=True)
+    assert r.ok is False
+    assert r.reason == RC_METADATA_SERVICE_IP
+
+
+def test_embedded_v4_forms_do_not_loosen_existing_verdicts():
+    """No loosening: embedded internal stays allowed only when internal is allowed."""
+    assert validate_external_url("http://[::ffff:10.0.0.5]/", allow_internal=True).ok is True
+    assert validate_external_url("http://[64:ff9b::808:808]/", allow_internal=False).ok is False
+
+
+@patch("quirk.util.url_allowlist.socket.getaddrinfo")
+def test_public_v6_verdict_unchanged(mock_gai):
+    mock_gai.return_value = [_ai_v6("2606:4700:4700::1111")]
+    assert validate_external_url("http://pub.example.test/").ok is True

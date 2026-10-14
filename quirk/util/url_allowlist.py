@@ -101,7 +101,11 @@ RC_CONSOLE_ENDPOINT: Final[str] = "console_endpoint"  # SSRF-04 / D-01: reflecti
 _METADATA_IPS: frozenset[ipaddress.IPv4Address | ipaddress.IPv6Address] = frozenset({
     ipaddress.ip_address("169.254.169.254"),  # AWS / Azure IMDS, GCP
     ipaddress.ip_address("fd00:ec2::254"),    # AWS IMDS IPv6
+    ipaddress.ip_address("100.100.100.200"),  # Alibaba Cloud ECS instance metadata: https://www.alibabacloud.com/help/en/ecs/user-guide/view-instance-metadata
 })
+
+# RFC 6052 well-known NAT64 prefix; the low 32 bits carry an IPv4 address.
+_NAT64_WKP: Final = ipaddress.ip_network("64:ff9b::/96")
 
 # Cloud metadata service HOSTNAME aliases (Phase 120 SP-01).
 # Matched BEFORE DNS resolution so a hostile DNS can't return a non-metadata IP
@@ -219,6 +223,26 @@ def _get_console_endpoint() -> tuple[str | None, int | None]:
         return (None, None)
 
 
+def _embedded_ipv4(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> ipaddress.IPv4Address | None:
+    """Return the IPv4 address carried inside an IPv6 address, if any.
+
+    Covers IPv4-mapped (``::ffff:a.b.c.d``), 6to4 (``2002::/16``) and the
+    NAT64 well-known prefix (``64:ff9b::/96``). Computed explicitly rather
+    than via the stdlib's property delegation, which varies by patch release.
+    """
+    if not isinstance(ip, ipaddress.IPv6Address):
+        return None
+    if ip.ipv4_mapped is not None:
+        return ip.ipv4_mapped
+    if ip.sixtofour is not None:
+        return ip.sixtofour
+    if ip in _NAT64_WKP:
+        return ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+    return None
+
+
 def _classify_ip(
     ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
     url: str,
@@ -232,8 +256,13 @@ def _classify_ip(
     Metadata IPs and the console's own endpoint are ALWAYS rejected —
     ``allow_internal`` cannot bypass them.
     """
+    # The checks below look at the address itself and at any IPv4 address it
+    # carries; a hit on any candidate rejects. The raw address is never replaced.
+    embedded = _embedded_ipv4(ip)
+    candidates = [ip] if embedded is None else [ip, embedded]
+
     # Metadata — always blocked.
-    if ip in _METADATA_IPS:
+    if any(c in _METADATA_IPS for c in candidates):
         return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_url_preview(url))
 
     # Console self-SSRF — always blocked (SSRF-04 / D-01), BEFORE the
@@ -254,7 +283,7 @@ def _classify_ip(
             console_ips.add(ipaddress.ip_address(console_host))
         except ValueError:
             pass
-        if ip in console_ips:
+        if any(c in console_ips for c in candidates):
             # Mirrors the metadata block's no-log, redacted-return style.
             return ValidationResult(False, RC_CONSOLE_ENDPOINT, _redact_url_preview(url))
 
@@ -262,11 +291,11 @@ def _classify_ip(
     if allow_internal:
         return None
 
-    if ip.is_loopback:
+    if any(c.is_loopback for c in candidates):
         return ValidationResult(False, RC_LOOPBACK, _redact_url_preview(url))
-    if ip.is_link_local:
+    if any(c.is_link_local for c in candidates):
         return ValidationResult(False, RC_LINK_LOCAL, _redact_url_preview(url))
-    if ip.is_private or ip.is_reserved:
+    if any(c.is_private or c.is_reserved for c in candidates):
         return ValidationResult(False, RC_INTERNAL_IP, _redact_url_preview(url))
     return None
 
