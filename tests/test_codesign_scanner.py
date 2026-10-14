@@ -204,3 +204,38 @@ def test_tls_eku_check():
     assert len(eps) == 1
     assert eps[0].protocol == "CODE_SIGNING"
     assert eps[0].host == "tls-server.example.com"
+
+
+# ---------------------------------------------------------------------------
+# SECH-04 (D-11): control characters in an LDAP DN never reach logs or fields.
+# ---------------------------------------------------------------------------
+
+_EVIL_DN = "uid=ev\nil\x1b[31m,ou=people,dc=quirk,dc=lab"
+
+
+def test_dn_control_chars_stripped_from_stored_fields():
+    entry = _entry("signer1", _load("codesign_rsa1024_sha1.der"))
+    entry["dn"] = _EVIL_DN
+    eps = _run_with_entries([entry])
+    assert len(eps) == 1
+    ep = eps[0]
+    user_dn = json.loads(ep.codesign_scan_json)["user_dn"]
+    for text in (ep.service_detail, user_dn):
+        assert "\n" not in text and "\x1b" not in text
+        assert not text.startswith("str: ")
+    assert user_dn == "uid=evil[31m,ou=people,dc=quirk,dc=lab"
+
+
+def test_dn_control_chars_stripped_from_log_line(caplog):
+    entry = _entry("signer1", b"not a certificate")
+    entry["dn"] = _EVIL_DN
+    with caplog.at_level("WARNING"):
+        _run_with_entries([entry])
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "cert parse failed" in text
+    assert "\x1b" not in text and "ev\nil" not in text
+
+
+def test_exception_sites_keep_safe_str():
+    src = pathlib.Path(codesign_scanner.__file__).read_text(encoding="utf-8")
+    assert src.count("safe_str(exc") >= 4

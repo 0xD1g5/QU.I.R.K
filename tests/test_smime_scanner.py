@@ -139,3 +139,26 @@ def test_no_entries_yields_no_endpoints():
     """Empty paged_search result → zero findings, no crash."""
     eps = _run_with_entries([])
     assert eps == []
+
+
+_EVIL_DN = "uid=ev\nil\x1b[31m,ou=people,dc=quirk,dc=lab"
+
+
+def test_dn_control_chars_stripped_from_persisted_fields():
+    entry = _entry("alice", _load("alice.der"))
+    entry["dn"] = _EVIL_DN
+    eps = _run_with_entries([entry])
+    assert len(eps) == 1
+    user_dn = json.loads(eps[0].smime_scan_json)["user_dn"]
+    for text in (eps[0].service_detail, user_dn):
+        assert "\n" not in text and "\x1b" not in text
+
+
+def test_dn_control_chars_stripped_from_log_line(caplog):
+    entry = _entry("alice", b"not a certificate")
+    entry["dn"] = _EVIL_DN
+    with caplog.at_level("WARNING"):
+        _run_with_entries([entry])
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "cert parse failed" in text
+    assert "\x1b" not in text and "ev\nil" not in text
