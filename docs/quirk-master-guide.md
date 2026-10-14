@@ -273,7 +273,7 @@ quirk --config config.yaml --openapi-spec https://api.acme.com/openapi.json
 
 - **SSRF guard** — any `$ref` that is not an intra-document reference (`#/...`), such as `http://169.254.169.254/`, raises a `SpecParsingError` *before* the validator sees the document. No outbound request is made. The scan logs the error and continues without spec findings.
 - **10 MB size cap** — specs larger than 10 MB are rejected before parsing. This is a size guard against oversized-spec denial of service.
-- **Scope gate** — the host of the spec URL you pass must equal a configured `targets.fqdns` entry; any other host is rejected before any network request. A host that resolves to a private or loopback address is also rejected unless you pass `--allow-internal-targets`.
+- **Scope gate** — the host of the spec URL you pass must equal a configured `targets.fqdns` entry; any other host is rejected before any network request. A host that resolves to a private or loopback address is also rejected unless you pass `--allow-internal-targets`. The spec fetch follows at most 5 redirects, and each hop must pass the same host-scope gate and URL check.
 - **Graceful degradation** — if the `[api]` extras group is not installed, the scanner returns a single INFO record marked `missing_extra` (it produces no finding) and the scan continues; no error is raised.
 
 Install the `[api]` extras group to enable spec validation:
@@ -1616,7 +1616,7 @@ quirk --config config.yaml --openapi-spec /path/to/openapi.yaml
 quirk --config config.yaml --openapi-spec https://api.acme.com/openapi.json
 ```
 
-The `--openapi-spec` flag accepts either a local file path or a URL. A URL's host must equal one of the configured `targets.fqdns` entries — out-of-scope URLs are rejected before any network request is made.
+The `--openapi-spec` flag accepts either a local file path or a URL. A URL's host must equal one of the configured `targets.fqdns` entries — out-of-scope URLs are rejected before any network request is made. The fetch follows at most 5 redirects, and each hop must pass the same host-scope gate and URL check.
 
 #### `scan.openapi_spec_path` config key
 
@@ -1635,7 +1635,7 @@ Setting `openapi_spec_path` in the config is equivalent to passing `--openapi-sp
 |-------|----------|
 | **$ref SSRF** | Any `$ref` that does not start with `#` (e.g. `http://169.254.169.254/...`) raises `SpecParsingError` *before* the OAS validator runs. Zero outbound requests on SSRF-shaped input. |
 | **10 MB size cap** | Specs larger than 10 MB are rejected before `yaml.safe_load`. Prevents billion-laughs and oversized-YAML DoS. |
-| **Scope gate** | A spec URL's host must equal a configured `targets.fqdns` entry. Rejected before any network request. After the scope check, the URL also passes the SSRF guard (`validate_external_url`): a spec URL on the cloud-metadata address `169.254.169.254` is refused, and loopback and private addresses are blocked unless `--allow-internal-targets` is set. |
+| **Scope gate** | A spec URL's host must equal a configured `targets.fqdns` entry. Rejected before any network request. After the scope check, the URL also passes the SSRF guard (`validate_external_url`): a spec URL on the cloud-metadata address `169.254.169.254` is refused, and loopback and private addresses are blocked unless `--allow-internal-targets` is set. The fetch follows at most 5 redirects, and each hop must pass the same host-scope gate and URL check. |
 | **Graceful degradation** | When `[api]` is not installed (`OPENAPI_AVAILABLE = False`), the scanner returns a single `missing_extra` advisory endpoint and continues; no exception is raised. |
 
 #### Findings produced

@@ -156,7 +156,7 @@ quirk --config config.yaml --openapi-spec https://api.acme.com/openapi.json
 
 - **SSRF guard** — any `$ref` that is not an intra-document reference (`#/...`), such as `http://169.254.169.254/`, raises a `SpecParsingError` *before* the validator sees the document. No outbound request is made. The scan logs the error and continues without spec findings.
 - **10 MB size cap** — specs larger than 10 MB are rejected before parsing. This is a size guard against oversized-spec denial of service.
-- **Scope gate** — the host of the spec URL you pass must equal a configured `targets.fqdns` entry; any other host is rejected before any network request. A host that resolves to a private or loopback address is also rejected unless you pass `--allow-internal-targets`.
+- **Scope gate** — the host of the spec URL you pass must equal a configured `targets.fqdns` entry; any other host is rejected before any network request. A host that resolves to a private or loopback address is also rejected unless you pass `--allow-internal-targets`. The spec fetch follows at most 5 redirects, and each hop must pass the same host-scope gate and URL check.
 - **Graceful degradation** — if the `[api]` extras group is not installed, the scanner returns a single INFO record marked `missing_extra` (it produces no finding) and the scan continues; no error is raised.
 
 Install the `[api]` extras group to enable spec validation:

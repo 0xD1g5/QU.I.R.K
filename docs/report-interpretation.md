@@ -1139,6 +1139,7 @@ is a genuine redaction, not a truncation: userinfo (`user:pass@`), the query str
 the fragment are stripped before the preview is built. Scheme, host, and a truncated
 path are kept.
 
+When the spec download itself fails, the error names the exception type, the HTTP status when there is one, and the redacted URL preview.
 A spec that downloads but fails to parse gets an error with no URL in it at all. As a general
 practice, keep credentials out of spec URLs.
 
