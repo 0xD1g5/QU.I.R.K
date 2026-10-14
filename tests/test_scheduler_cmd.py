@@ -503,3 +503,94 @@ def test_malformed_cron_expr_does_not_crash_loop(tmp_path, monkeypatch):
     assert len(popen_calls) == 1, (
         f"Expected exactly 1 Popen call (good-cron), got {len(popen_calls)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# 225.1-10 / D-08: server security carry-through + authenticated-mode gate
+# ---------------------------------------------------------------------------
+
+
+def _server_cfg(tmp_path, monkeypatch, body):
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text(body, encoding="utf-8")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+
+
+def _gen(tmp_path, scan_config=None, target="10.0.0.7"):
+    db_path = _make_db(tmp_path)
+    schedule = _add_schedule(db_path, name="sec-test", target=target)
+    out = tmp_path / "out"
+    out.mkdir(exist_ok=True)
+    path = _materialize_scan_config(schedule, scan_config, out)
+    with open(path, encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def test_materialize_carries_server_security(tmp_path, monkeypatch):
+    _server_cfg(
+        tmp_path, monkeypatch,
+        "security:\n  trusted_targets: [10.0.0.0/24]\n  allow_internal_targets: true\n",
+    )
+    data = _gen(tmp_path)
+    assert data["security"]["trusted_targets"] == ["10.0.0.0/24"]
+    assert data["security"]["allow_internal_targets"] is True
+    assert "10.0.0.7" in data["targets"]["include_ips"]
+
+
+def test_materialize_no_server_config_adds_no_allowlist(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(tmp_path / "absent.yaml"))
+    data = _gen(tmp_path)
+    sec = data.get("security") or {}
+    assert "trusted_targets" not in sec
+    assert not sec.get("allow_internal_targets")
+
+
+def test_materialize_scan_config_keeps_own_security(tmp_path, monkeypatch):
+    _server_cfg(tmp_path, monkeypatch, "security:\n  trusted_targets: [10.0.0.0/24]\n")
+    scan = tmp_path / "scan.yaml"
+    scan.write_text("security:\n  trusted_targets: [192.0.2.0/24]\n", encoding="utf-8")
+    data = _gen(tmp_path, scan_config=str(scan))
+    assert data["security"]["trusted_targets"] == ["192.0.2.0/24"]
+
+
+def test_dispatch_skipped_when_server_config_unreadable(tmp_path, monkeypatch):
+    _server_cfg(tmp_path, monkeypatch, "security: [unclosed\n")
+    db_path = _make_db(tmp_path)
+    _add_schedule(db_path, name="skip-me", cron_expr="* * * * *")
+    spawned = []
+    monkeypatch.setattr(
+        "quirk.cli.scheduler_cmd.subprocess.Popen",
+        lambda *a, **k: spawned.append(a) or FakePopen(0),
+    )
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
+    run_scheduler(["run", "--once", "--config", db_path])
+    assert spawned == []
+    runs = _all_runs(db_path)
+    assert len(runs) == 1 and runs[0].status == "failed"
+
+
+def test_run_scheduler_refuses_authenticated_scan_config(tmp_path, monkeypatch, capsys):
+    db_path = _make_db(tmp_path)
+    scan = tmp_path / "scan.yaml"
+    scan.write_text("connectors:\n  enable_authenticated_mode: true\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as ei:
+        run_scheduler(["run", "--once", "--config", db_path, "--scan-config", str(scan)])
+    assert ei.value.code == 2
+    assert "SCHED-AUTH-001" in capsys.readouterr().err
+
+
+def test_run_scheduler_accepts_plain_scan_config(tmp_path, monkeypatch):
+    db_path = _make_db(tmp_path)
+    scan = tmp_path / "scan.yaml"
+    scan.write_text("connectors:\n  enable_authenticated_mode: false\n", encoding="utf-8")
+    run_scheduler(["run", "--once", "--config", db_path, "--scan-config", str(scan)])
+
+
+def test_materialize_strips_authenticated_mode_flipped_after_startup(tmp_path, monkeypatch, caplog):
+    scan = tmp_path / "scan.yaml"
+    scan.write_text("connectors:\n  enable_authenticated_mode: true\n", encoding="utf-8")
+    import logging
+    with caplog.at_level(logging.INFO):
+        data = _gen(tmp_path, scan_config=str(scan))
+    assert not data["connectors"].get("enable_authenticated_mode")
+    assert "authenticated mode" in caplog.text
