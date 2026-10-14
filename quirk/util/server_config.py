@@ -6,10 +6,20 @@ exists but cannot be read. Only ``security.api_token`` is consulted, so a
 file holding just a ``security:`` section is valid. Error reasons are built
 from an allow-list (path, exception class, line/column) and never carry
 file content or the token.
+
+Only a path that does not exist is "no config" (fresh install). A path that
+exists but cannot be reached (permission denied, a directory, a dangling
+symlink) is the error state. Once this process has read a populated file at a
+path, a later missing or empty read of that same path is also the error state,
+so a running server never drops to "auth not configured" because its config
+file was moved aside, truncated mid-edit, or briefly unavailable. Restart the
+process after deliberately removing a config file.
 """
 from __future__ import annotations
 
 import os
+import stat
+import threading
 from dataclasses import dataclass
 from typing import Optional
 
@@ -36,15 +46,31 @@ def _reason(path: str, exc: BaseException) -> str:
     return reason
 
 
-def read_server_config(path: str) -> tuple[Optional[dict], Optional[str]]:
-    """Return ``(data, error)``.
+# Absolute paths this process has read as a populated mapping.
+_populated_paths: set = set()
+_populated_lock = threading.Lock()
 
-    ``(None, None)`` for a missing file, ``({}, None)`` for an empty or
-    comment-only file, ``(None, reason)`` when the file cannot be read or is
-    not a mapping.
-    """
-    if not os.path.isfile(path):
+
+def _key(path: str) -> str:
+    return os.path.abspath(path)
+
+
+def _seen_populated(path: str) -> bool:
+    with _populated_lock:
+        return _key(path) in _populated_paths
+
+
+def _read_once(path: str) -> tuple[Optional[dict], Optional[str]]:
+    try:
+        st = os.stat(path)
+    except FileNotFoundError:
+        if os.path.lexists(path):
+            return None, f"{path}: dangling symbolic link"
         return None, None
+    except OSError as exc:
+        return None, _reason(path, exc)
+    if not stat.S_ISREG(st.st_mode):
+        return None, f"{path}: not a regular file"
     try:
         with open(path, "r", encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
@@ -54,6 +80,30 @@ def read_server_config(path: str) -> tuple[Optional[dict], Optional[str]]:
         return {}, None
     if not isinstance(data, dict):
         return None, f"{path}: top level is not a mapping"
+    return data, None
+
+
+def read_server_config(path: str) -> tuple[Optional[dict], Optional[str]]:
+    """Return ``(data, error)``.
+
+    ``(None, None)`` for a missing file, ``({}, None)`` for an empty or
+    comment-only file, ``(None, reason)`` when the path cannot be reached, is
+    not a regular file, cannot be read or is not a mapping. A missing or empty
+    read of a path this process already read as populated is ``(None, reason)``.
+    """
+    data, error = _read_once(path)
+    if error:
+        return None, error
+    if data:
+        with _populated_lock:
+            _populated_paths.add(_key(path))
+        return data, None
+    if _seen_populated(path):
+        state = "missing" if data is None else "empty"
+        return None, (
+            f"{path}: {state} after this process read it with settings; "
+            "restore the file or restart"
+        )
     return data, None
 
 

@@ -146,3 +146,103 @@ def test_resolver_indirection_is_live(cfg, monkeypatch):
         auth_module, "_resolve_token_state", lambda: TokenState("", "x: Error")
     )
     assert tc.get("/api/scans").status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# Only a missing file means "no config". A path that exists but cannot be
+# reached, and a populated file that disappears or is emptied while the
+# process runs, are the DASHBOARD-014 state.
+# ---------------------------------------------------------------------------
+
+
+def test_permission_error_on_stat_answers_503(cfg, monkeypatch):
+    import os as _os
+
+    import quirk.util.server_config as sc
+
+    real_stat = _os.stat
+
+    def denied(path, *a, **k):
+        if str(path) == str(cfg):
+            raise PermissionError(13, "Permission denied", str(path))
+        return real_stat(path, *a, **k)
+
+    monkeypatch.setattr(sc.os, "stat", denied)
+    state = sc.resolve_operator_token()
+    assert state.token == "" and state.error and "PermissionError" in state.error
+    assert sc.load_server_security().error
+    assert _client().get("/api/scans").status_code == 503
+
+
+def test_untraversable_parent_directory_answers_503(tmp_path, monkeypatch):
+    import quirk.util.server_config as sc
+
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    (locked / "config.yaml").write_text(f"security:\n  api_token: {TOKEN}\n")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(locked / "config.yaml"))
+    locked.chmod(0)
+    try:
+        assert sc.resolve_operator_token().error
+        assert _client().get("/api/scans").status_code == 503
+    finally:
+        locked.chmod(0o755)
+
+
+def test_path_is_a_directory_answers_503(tmp_path, monkeypatch):
+    import quirk.util.server_config as sc
+
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(tmp_path))
+    state = sc.resolve_operator_token()
+    assert state.token == "" and state.error
+    assert sc.load_server_security().error
+    assert _client().get("/api/scans").status_code == 503
+
+
+def test_dangling_symlink_answers_503(cfg):
+    import quirk.util.server_config as sc
+
+    cfg.symlink_to(cfg.parent / "moved-away.yaml")
+    assert sc.resolve_operator_token().error
+    assert _client().get("/api/scans").status_code == 503
+
+
+@pytest.mark.parametrize("change", ["removed", "emptied", "unreadable"])
+def test_running_server_refuses_when_config_changes_after_token_seen(cfg, change):
+    cfg.write_text(f"security:\n  api_token: {TOKEN}\n")
+    tc = _client()
+    hdr = {"Authorization": f"Bearer {TOKEN}"}
+    assert tc.get("/api/scans", headers=hdr).status_code == 200
+    if change == "removed":
+        cfg.unlink()
+    elif change == "emptied":
+        cfg.write_text("")
+    else:
+        cfg.unlink()
+        cfg.mkdir()
+    assert tc.get("/api/scans").status_code == 503
+    assert tc.get("/api/scans", headers=hdr).status_code == 503
+
+
+def test_config_removed_after_serve_start_answers_503(cfg, monkeypatch):
+    uvicorn = pytest.importorskip("uvicorn")
+    cfg.write_text(f"security:\n  api_token: {TOKEN}\n")
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
+    from quirk.dashboard.server import serve
+
+    serve(host="0.0.0.0", no_open=True)
+    cfg.unlink()
+    assert _client().get("/api/scans").status_code == 503
+
+
+def test_fresh_install_states_stay_auth_off(tmp_path, monkeypatch):
+    """Positive control: never-populated absent/empty/comment files are auth off."""
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    for name, body in (("absent.yaml", None), ("empty.yaml", ""), ("c.yaml", "# x\n")):
+        path = tmp_path / name
+        if body is not None:
+            path.write_text(body)
+        monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
+        assert _client().get("/api/scans").status_code == 200, name
