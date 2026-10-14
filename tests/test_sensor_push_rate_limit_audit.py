@@ -1,6 +1,8 @@
 """Sensor push audit rows: source address, sensor id, and rate-limited pushes (225.1 D-12)."""
 from __future__ import annotations
 
+import logging
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
@@ -83,6 +85,21 @@ def _exhaust(client, path, n=60):
         client.post(path, content=b"x")
 
 
+def test_rate_limited_push_writes_audit_row(monkeypatch):
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    client, Session = _app()
+    _exhaust(client, "/api/sensor/push")
+    before = len([r for r in _rows(Session) if r.status == "rate_limited"])
+    assert before == 0
+    resp = client.post("/api/sensor/push", content=b"x")
+    assert resp.status_code == 429
+    limited = [r for r in _rows(Session) if r.status == "rate_limited"]
+    assert len(limited) == 1
+    assert limited[0].destination == "sensor_push"
+    assert limited[0].client_ip == "testclient"
+    assert limited[0].sensor_id is None
+
+
 def test_rate_limit_on_other_route_writes_no_audit_row(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     client, Session = _app()
@@ -90,3 +107,13 @@ def test_rate_limit_on_other_route_writes_no_audit_row(monkeypatch):
     resp = client.post("/api/jobs", content=b"x")
     assert resp.status_code == 429
     assert [r for r in _rows(Session) if r.status == "rate_limited"] == []
+
+
+def test_rate_limit_audit_failure_still_429(monkeypatch, caplog):
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    client, _ = _app(commit_fails=True)
+    _exhaust(client, "/api/sensor/push")
+    with caplog.at_level(logging.WARNING):
+        resp = client.post("/api/sensor/push", content=b"x")
+    assert resp.status_code == 429
+    assert "Rate-limit audit row failed" in caplog.text
