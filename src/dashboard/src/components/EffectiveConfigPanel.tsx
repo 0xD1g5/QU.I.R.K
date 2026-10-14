@@ -72,6 +72,9 @@ interface EffectiveConfigPanelProps {
   // the `connectors` prop above — an empty/undefined delta must produce the
   // identical query string this panel produced before this phase.
   advanced?: AdvancedScanFields
+  // Phase 225.1 (D-24): NAMES of the credential fields the operator has
+  // filled. Names only, never values; omitted from the query when empty.
+  credentialKeys?: string[]
 }
 
 function formatValue(value: unknown): string {
@@ -103,6 +106,9 @@ function buildQuery(props: EffectiveConfigPanelProps, vertical: string): string 
   // identical query string the panel produced before this phase.
   if (props.advanced && Object.keys(props.advanced).length > 0) {
     params.set("advanced", JSON.stringify(props.advanced))
+  }
+  if (props.credentialKeys && props.credentialKeys.length > 0) {
+    params.set("credential_keys", JSON.stringify([...props.credentialKeys].sort()))
   }
   return params.toString()
 }
