@@ -445,6 +445,12 @@ _EMBEDDED_AND_PROVIDER_URLS = [
     ("http://[64:ff9b::a9fe:a9fe]/", "embedded_v4_nat64"),
     ("http://100.100.100.200/", "provider_alibaba"),
     ("http://[::ffff:100.100.100.200]/", "provider_alibaba_mapped"),
+    ("http://[::169.254.169.254]/", "embedded_v4_compatible"),
+    ("http://[::ffff:0:a9fe:a9fe]/", "embedded_v4_translated"),
+    ("http://[64:ff9b:1::a9fe:a9fe]/", "embedded_v4_nat64_local_96"),
+    ("http://[64:ff9b:1:a9fe:a9:fe00::]/", "embedded_v4_nat64_local_48"),
+    ("http://[64:ff9b:1:0:a9:fea9:fe00:0]/", "embedded_v4_nat64_local_64"),
+    ("http://[2001:0:4136:e378:8000:63bf:5601:5601]/", "embedded_v4_teredo_client"),
 ]
 
 
@@ -551,3 +557,18 @@ def test_accepted_risk_note_names_unpinned_ticketing_callers():
     assert "quirk/ticketing/jira.py" in unpinned
     assert "quirk/ticketing/servicenow.py" in unpinned
     assert not (unpinned & _modules_constructing_pinned_adapter())
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://[::808:808]/",
+        "http://[::ffff:0:808:808]/",
+        "http://[64:ff9b:1::808:808]/",
+        "http://[2001:0:4136:e378:8000:63bf:f7f7:f7f7]/",
+    ],
+)
+def test_embedded_v4_forms_with_public_v4_pass_when_internal_allowed(url):
+    """Positive control: the extra embedded forms add metadata candidates only;
+    with allow_internal they do not reject an address carrying a public IPv4."""
+    assert validate_external_url(url, allow_internal=True).ok is True

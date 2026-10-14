@@ -120,6 +120,21 @@ _METADATA_IPS: frozenset[ipaddress.IPv4Address | ipaddress.IPv6Address] = frozen
 
 # RFC 6052 well-known NAT64 prefix; the low 32 bits carry an IPv4 address.
 _NAT64_WKP: Final = ipaddress.ip_network("64:ff9b::/96")
+# RFC 8215 local-use NAT64 prefix. Operators carve /48../96 sub-prefixes out
+# of it, so the IPv4 address sits at any RFC 6052 section 2.2 position.
+_NAT64_LOCAL: Final = ipaddress.ip_network("64:ff9b:1::/48")
+# IPv4-compatible (::/96, deprecated by RFC 4291) and IPv4-translated
+# (::ffff:0:0:0/96, RFC 2765) forms carry the IPv4 address in the low 32 bits.
+_V4_COMPATIBLE: Final = ipaddress.ip_network("::/96")
+_V4_TRANSLATED: Final = ipaddress.ip_network("::ffff:0:0:0/96")
+# RFC 6052 section 2.2 layouts: (prefix length, [(first bit, bit count), ...])
+# of the IPv4 address inside the 128-bit value; bits 64-71 are the u octet.
+_RFC6052_LAYOUTS: Final = (
+    (48, ((48, 16), (72, 16))),
+    (56, ((56, 8), (72, 24))),
+    (64, ((72, 32),)),
+    (96, ((96, 32),)),
+)
 
 # Cloud metadata service HOSTNAME aliases (Phase 120 SP-01).
 # Matched BEFORE DNS resolution so a hostile DNS can't return a non-metadata IP
@@ -237,24 +252,43 @@ def _get_console_endpoint() -> tuple[str | None, int | None]:
         return (None, None)
 
 
-def _embedded_ipv4(
-    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
-) -> ipaddress.IPv4Address | None:
-    """Return the IPv4 address carried inside an IPv6 address, if any.
+def _bits(value: int, first: int, count: int) -> int:
+    return (value >> (128 - first - count)) & ((1 << count) - 1)
 
-    Covers IPv4-mapped (``::ffff:a.b.c.d``), 6to4 (``2002::/16``) and the
-    NAT64 well-known prefix (``64:ff9b::/96``). Computed explicitly rather
-    than via the stdlib's property delegation, which varies by patch release.
+
+def _embedded_ipv4s(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> list[ipaddress.IPv4Address]:
+    """Return every IPv4 address an IPv6 address may carry.
+
+    Covers IPv4-mapped (``::ffff:a.b.c.d``), IPv4-compatible (``::a.b.c.d``),
+    IPv4-translated (``::ffff:0:a.b.c.d``), 6to4 (``2002::/16``), Teredo
+    (server and client), the NAT64 well-known prefix (``64:ff9b::/96``) and
+    the NAT64 local-use prefix (``64:ff9b:1::/48``, every RFC 6052 layout).
+    Computed explicitly rather than via the stdlib's property delegation,
+    which varies by patch release.
     """
     if not isinstance(ip, ipaddress.IPv6Address):
-        return None
+        return []
+    value = int(ip)
+    out: list[ipaddress.IPv4Address] = []
     if ip.ipv4_mapped is not None:
-        return ip.ipv4_mapped
+        out.append(ip.ipv4_mapped)
     if ip.sixtofour is not None:
-        return ip.sixtofour
-    if ip in _NAT64_WKP:
-        return ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
-    return None
+        out.append(ip.sixtofour)
+    if ip.teredo is not None:
+        out.extend(ip.teredo)
+    if ip in _NAT64_WKP or ip in _V4_TRANSLATED:
+        out.append(ipaddress.IPv4Address(value & 0xFFFFFFFF))
+    if ip in _V4_COMPATIBLE and value > 1:
+        out.append(ipaddress.IPv4Address(value & 0xFFFFFFFF))
+    if ip in _NAT64_LOCAL:
+        for _plen, parts in _RFC6052_LAYOUTS:
+            v4 = 0
+            for first, count in parts:
+                v4 = (v4 << count) | _bits(value, first, count)
+            out.append(ipaddress.IPv4Address(v4))
+    return list(dict.fromkeys(out))
 
 
 def _classify_ip(
@@ -272,8 +306,7 @@ def _classify_ip(
     """
     # The checks below look at the address itself and at any IPv4 address it
     # carries; a hit on any candidate rejects. The raw address is never replaced.
-    embedded = _embedded_ipv4(ip)
-    candidates = [ip] if embedded is None else [ip, embedded]
+    candidates = [ip, *_embedded_ipv4s(ip)]
 
     # Metadata — always blocked.
     if any(c in _METADATA_IPS for c in candidates):
