@@ -114,9 +114,14 @@ quirk sensor enroll https://<console-host>:8512 \
   --api-token <bearer-token-from-step-1>
 ```
 
-Use an `http://` console URL when the sensor reaches `quirk serve` directly, and `https://`
-when a TLS-terminating reverse proxy is in front of it (see
-[Operator's Guide §8.1](operators-guide.md#81-provision-the-console)).
+Use an `https://` console URL, with a TLS-terminating reverse proxy in front of `quirk serve`
+(see [Operator's Guide §8.1](operators-guide.md#81-provision-the-console)). An `http://` console
+URL is accepted when its host is loopback (`localhost`, `127.0.0.0/8`, `::1`), or for any other
+host when you pass `--allow-insecure-console` (isolated lab networks). The flag is a separate
+choice from `--allow-internal-console`: that one covers private addresses, this one covers the
+URL scheme, and neither implies the other. `quirk sensor push` applies the same rule to the
+console URL in an existing `sensor.yaml`; to change it, re-enroll with an `https://` URL or with
+`--allow-insecure-console`.
 
 The `--api-token` flag writes the console-minted token directly to the
 `console_api_token` field in `sensor.yaml`. If you omit `--api-token`, that field is

@@ -1677,6 +1677,16 @@ quirk token show --config config.yaml
 
 ---
 
+## Sensor Config (`sensor.yaml`)
+
+`quirk sensor enroll` writes `sensor.yaml` for a sensor host; the full enrollment walk-through is in the
+[Operator's Guide §8](operators-guide.md). Two keys record how the console URL was accepted:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `allow_internal_console` | bool | `false` | Written by `--allow-internal-console`; lets the console URL resolve to a private/RFC1918 address. |
+| `allow_insecure_console` | bool | `false` | Written by `--allow-insecure-console`; accepts an `http://` console URL for a non-loopback host. `quirk sensor push` reads it, so an enrollment made with the flag keeps working. An `https://` URL, or an `http://` URL on a loopback host, does not need it. |
+
 ## Dashboard Authentication (Phase 102, AUTH-01..03)
 
 The QUIRK dashboard (served by `quirk serve`) optionally enforces token-based authentication on its `/api/*` routes, with two exceptions: `GET /api/health` and `GET /api/config` are always open (the login page needs them before a token exists). `POST /api/sensor/push` is separate: it always requires a per-sensor token and does not accept the dashboard token. Authentication is **off by default** — an empty or absent `security.api_token` means the dashboard is accessible without credentials (suitable for local development only). `quirk serve` refuses to bind a network-reachable host without a token unless you pass `--insecure`.

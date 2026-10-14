@@ -1658,7 +1658,12 @@ into `sensor.yaml` by hand instead.
 `quirk sensor enroll` never contacts the console. It checks the console URL (the host
 must resolve; a private or loopback address needs `--allow-internal-console`, which is
 remembered in `sensor.yaml` for later pushes; a console URL on the cloud-metadata address
-`169.254.169.254` is refused), generates the sensor's HMAC key and writes `sensor.yaml`.
+`169.254.169.254` is refused). The console URL must use `https://` unless its host is loopback;
+pass `--allow-insecure-console` to accept `http://` for another host (isolated lab networks). The
+flag prints a warning and is remembered in `sensor.yaml` as `allow_insecure_console` (default
+`false`), and `quirk sensor push` applies the same rule to an existing `sensor.yaml`: re-enroll
+with an `https://` URL, or with the flag. `--allow-insecure-console` is separate from
+`--allow-internal-console` (scheme versus address range). `quirk sensor enroll` then generates the sensor's HMAC key and writes `sensor.yaml`.
 It also prints an "Enrollment
 token" of its own; that value is generated locally, stored nowhere and is not the push
 credential, so ignore it and use the token that `quirk console enroll` printed. Running
@@ -1889,6 +1894,7 @@ binaries should build from source until Authenticode signing is implemented.
    | `-Segment` | `"windows"` | Network segment label written to the sensor config. |
    | `-Time` | `"03:00"` | Daily trigger time for the Scheduled Task (HH:MM format). |
    | `-AllowInternalConsole` | *(switch)* | Pass to allow the sensor to reach a console on a private/RFC1918 address (on-prem or lab). |
+   | `-AllowInsecureConsole` | *(switch)* | Pass to accept an `http://` console URL for a non-loopback host (isolated lab networks); passes `--allow-insecure-console` to enroll. |
 
    Example — production console:
 
@@ -3830,7 +3836,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk ticket` | Create tickets from scan findings (action `create`) | `create`, `--backend`, `--input`, `--output-dir` | CLI only |
 | `quirk ticket create` | Create Jira or ServiceNow tickets from the latest (or a named) findings file; per-finding delivery failures are recorded as failed and do not change the exit status, but an unreachable backend or a database without the audit table fails the run | `--backend`, `--input`, `--output-dir` | CLI only |
 | `quirk sensor` | Distributed sensor management | `enroll`, `push`, `export-results`, `merge` | Sensors page lists enrolled sensors (read-only); every action is CLI |
-| `quirk sensor enroll` | Write the sensor's local `sensor.yaml` (console URL, `sensor_id`, segment, push token, HMAC key); it does not contact the console | `console_url`, `--segment`, `--sensor-id`, `--api-token` | CLI only |
+| `quirk sensor enroll` | Write the sensor's local `sensor.yaml` (console URL, `sensor_id`, segment, push token, HMAC key); it does not contact the console | `console_url` (`https://`, or `http://` for loopback), `--segment`, `--sensor-id`, `--api-token`, `--allow-internal-console`, `--allow-insecure-console` | CLI only |
 | `quirk sensor push` | Run a local scan and push the results to the console | `--config`, `--scan-config` | Sending is CLI only; the console receives pushes at `POST /api/sensor/push` |
 | `quirk sensor export-results` | Export results to a .qpush file for air-gap transfer | `--config`, `--scan-config`, `--output` | CLI only |
 | `quirk sensor merge` | Merge sensor data into a unified CBOM and score (see section 8) | `--db`, `--stale-days` | Read-only: `GET /api/merge/latest` feeds the Executive page; the merge itself is CLI only |
