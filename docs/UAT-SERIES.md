@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+**Last Updated:** 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -10788,8 +10788,9 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Pass criteria:** Steps 6 and 7 both true; commit lands; README still embeds correctly when rendered on github.com.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent)
+**Result:** - [x] PASS (2026-10-13 Phase 225 — QUALIFIED PASS: scripted capture via scripts/capture_readme_hero.py plus operator confirmation UAT-225-04 cover the local legs, but the github.com and PyPI render leg is owed post-merge to Phase 226 REL-07 and named verbatim in Notes below)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
+**Notes (Phase 225, 2026-10-13):** Steps 1-8 above are SUPERSEDED, left visible for history. The hero is now captured by `scripts/capture_readme_hero.py` from the canonical scan DB, not the `tls-cert-defects` profile at 1440x900, and the operator confirmed it in UAT-225-04. Owed post-merge, named verbatim: the README hero rendering on github.com and PyPI from `main` is observable only after merge, owner Phase 226 REL-07.
 
 ### UAT-85-09: Asciinema demo recorded + README link updated (LAUNCH-01)
 
@@ -32506,3 +32507,128 @@ change.
 **Result:** - [x] PASS (2026-10-13 Phase 224 — 135 doc224 todo files on disk and 129 tracked; the 6 untracked files are security findings tracked privately, 7 security findings in all; the product-code diff is one file, quirk/scanner/hw_cve.py, holding the catalog last_verified date and a re-verification comment only)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-13  **Tester:** automated
 **Notes:** Seven security findings from the doc verification are tracked privately and are not described here. None is fixed, because this is a docs-only phase; the affected doc passages were reworded neutrally. Other high-priority defects from the same rounds, tracked as public todos: `261013-doc224-jwks-auth-hook-strips-credential-before-send.md` (the JWKS request hook strips every `--auth-*` credential before the request is sent, so authenticated JWKS scanning never sends credentials), `261013-doc224-token-rotate-env-precedence.md`, `261013-doc224-trusted-targets-cli-skips-include-ips.md`, `261013-doc224-trusted-targets-skips-broker-targets-and-schedules.md`. The 135 doc224 todos on disk break down as 24 high, 56 medium, 46 low, and 9 with no priority field. The `hw_cve.py` change is the 30-day staleness re-verification: all 6 CVE entries were checked against the NVD API and matched, and the scanner logic did not change. `quantum-chaos-enterprise-lab/` changes are lab usage text, a compose comment and the oracle file, and are not product code.
+
+## Series 225: Doc Publication & Hero Retake (Phase 225 — v5.27)
+
+**Last Updated:** 2026-10-13 (Phase 225 execution, plans 01-04). Five cases. Phase 225 added the docs-to-vault sync
+instrument (`scripts/sync_vault_guides.py`), retook the README hero against the branded dashboard and embedded it by
+absolute raw URL, and refit the executive gauge row (`executive.tsx` gap-8 to gap-7) so all seven gauges render on one
+row at the 1200 px content cap. That last item is a user-visible dashboard change outside the original plan; its
+scripted guard is `scripts/capture_readme_hero.py` (fails `GAUGES_WRAPPED`) and the operator approved the result in
+UAT-225-04. No version bump. **What this series does not claim:** it does not claim the README hero renders correctly
+on github.com or PyPI. That is observable only after merge and is owed to Phase 226 REL-07 (UAT-225-05, UAT-85-08).
+
+### UAT-225-01: The Master Guide Byte-Matches Its Generator
+
+**ID:** UAT-225-01
+**Title:** `docs/quirk-master-guide.md` is current against `scripts/build_master_guide.py`
+**Maps to:** DOC-05
+
+**What to test:** Regenerate the master guide and diff it against the committed file.
+
+**Steps:**
+```
+.venv/bin/python -m scripts.build_master_guide > docs/quirk-master-guide.md
+git diff --exit-code docs/quirk-master-guide.md
+```
+
+**Pass Criteria:** The diff is empty (exit 0).
+
+**Result:** - [x] PASS (2026-10-13 Phase 225 — covered by `tests/test_master_guide_freshness.py::test_master_guide_is_current`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** The final regeneration after every other Phase 225 repo change is recorded in 225-04-SUMMARY.md and in
+225-VERIFICATION. No Phase 225 change touched the five source guides.
+
+### UAT-225-02: The Docs-To-Vault Sync Instrument Maps Every Doc And Reports Drift
+
+**ID:** UAT-225-02
+**Title:** `scripts/sync_vault_guides.py` parses, renders, confines writes, flags unmapped docs and reports drift
+**Maps to:** DOC-05
+
+**What to test:** The instrument's logic and completeness tests, which run in CI without a vault.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_sync_vault_guides.py
+.venv/bin/python -m scripts.sync_vault_guides --check
+```
+
+**Pass Criteria:** The logic and completeness tests pass; on the operator machine `--check` exits 0 with body-diff 0
+for every mapped pair.
+
+**Result:** - [x] PASS (2026-10-13 Phase 225 — covered by `tests/test_sync_vault_guides.py::test_completeness_every_tracked_md_is_mapped_or_exempt` and `tests/test_sync_vault_guides.py::test_write_refuses_target_outside_vault_root` and `tests/test_sync_vault_guides.py::test_drifted_body_is_counted`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** The live-vault node `test_live_vault_in_sync` is deliberately not cited because it skips in CI. The 225-01
+first pass wrote the drifted pairs and ended with `--check` exit 0; the final post-UAT `--check` is a local-only
+instrument result recorded in 225-04-SUMMARY.md.
+
+### UAT-225-03: The README Hero Static Contract Holds And No Orphan Images Remain
+
+**ID:** UAT-225-03
+**Title:** The README embeds the hero by absolute raw URL, the PNG is within bounds, and `docs/images/` has no orphans
+**Maps to:** DOC-06
+
+**What to test:** The four static-contract tests plus the doc-claim classification gate.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_readme_hero.py tests/test_doc_claim_ledger_gate.py::test_classification_matches_tracked_docs
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-13 Phase 225 — covered by `tests/test_readme_hero.py::test_readme_hero_uses_absolute_raw_url` and `tests/test_readme_hero.py::test_readme_has_no_relative_docs_images_link` and `tests/test_readme_hero.py::test_hero_png_dimensions_and_size` and `tests/test_readme_hero.py::test_no_orphan_images_in_docs_images` and `tests/test_doc_claim_ledger_gate.py::test_classification_matches_tracked_docs`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** automated
+**Notes:** These nodes check the README text and the PNG file on disk. They do not check what the raw URL serves; see
+UAT-225-05.
+
+### UAT-225-04: The Operator Confirms The Branded, One-Row-Gauge Hero
+
+**ID:** UAT-225-04
+**Title:** The operator confirms the retaken hero shows the branded dashboard with all seven gauges on one row
+**Maps to:** DOC-06
+
+**What to test:** The candidate hero captured by `scripts/capture_readme_hero.py` from the canonical scan DB, and the
+executive page gauge row it depends on.
+
+**Steps:**
+```
+.venv/bin/python scripts/capture_readme_hero.py   # serves the committed statics, captures, asserts gauges_one_row
+Open http://127.0.0.1:8512/ and view docs/images/dashboard-hero.png
+Check: brand chrome, Overall plus six subscore gauges on ONE row, gauge arcs not mirrored, no alert banner
+```
+
+**Pass Criteria:** The operator approves the image; the capture asserts all seven gauge tops share one row and fails
+`GAUGES_WRAPPED` otherwise.
+
+**Result:** - [x] PASS (2026-10-13 Phase 225 — operator reply recorded verbatim in Notes)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-13  **Tester:** operator
+**Notes:** Three capture iterations preceded approval (225-03-SUMMARY.md). The final capture: viewport 1680x1181, all
+seven gauge tops at y=794, arc-reach delta 0.0 on all seven, canonical DB sha256 unchanged, alert dismissed. The
+gauge-row fit is the dashboard change `c890c5a8` (`executive.tsx` gap-8 to gap-7); vitest cannot see wrap geometry, so
+the scripted guard is the capture script's `gauges_one_row` assertion, which is not a CI node, and this case rests on
+the operator's approval. Operator reply, verbatim: "all good.  approved". Known cosmetic the operator accepted: the
+"Severity Breakdown" title peeks at the bottom edge of the image.
+
+### UAT-225-05: The Raw URL Serves The New Hero Bytes After Merge
+
+**ID:** UAT-225-05
+**Title:** `raw.githubusercontent.com/.../main/docs/images/dashboard-hero.png` serves the retaken image
+**Maps to:** DOC-06
+
+**What to test:** After the PR merges to main, the raw URL's byte count equals the committed file's.
+
+**Steps:**
+```
+curl -s -o /dev/null -w '%{http_code} %{size_download}' https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/images/dashboard-hero.png
+wc -c < docs/images/dashboard-hero.png
+```
+
+**Pass Criteria:** HTTP 200 and the two byte counts are equal.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; raw-URL byte equality is observable only after the PR merges to main, owed post-merge to Phase 226 REL-07 and the 225-05 STATE.md hand-off)
+**Date:** _____________  **Tester:** _____________
+**Notes:** Not DEFERRED to `tests/test_readme_hero.py::test_readme_hero_uses_absolute_raw_url`: that node only checks
+the README text contains the URL, never what the URL serves. Before merge the raw URL returns 200 for the OLD
+823452-byte image, so a 200 proves nothing. Owed post-merge and carried into Phase 226 REL-07, together with the
+github.com and PyPI render leg of UAT-85-08.
