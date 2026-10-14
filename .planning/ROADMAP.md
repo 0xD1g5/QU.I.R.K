@@ -116,7 +116,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 - [x] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + favicon-tier glyph in the existing 48 px narrow sidebar (sketch 002 A), favicon raster pipeline with a drift gate, and every old-branding pin re-worded in the same phase
 - [x] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc (completed 2026-10-13)
 - [x] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard (completed 2026-10-14)
-- [ ] **Phase 225.1: Pre-release security hardening** (INSERTED 2026-10-14) - Harden auth config loading, outbound URL validation, scan-consent coverage and error/log text before the v5.27.0 tag
+- [x] **Phase 225.1: Pre-release security hardening** (INSERTED 2026-10-14) - Harden auth config loading, outbound URL validation, scan-consent coverage and error/log text before the v5.27.0 tag
 - [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
 
 ### Phase Details
@@ -282,7 +282,7 @@ Plans:
 | 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
 | 224. Doc Claim Ledger & Verification | 18/18 | Complete (verified passed 5/5 at 38df9001 with 1 operator override, goal clause NOT MET AS WRITTEN: deep-doc residual 4.0% disclosed, HORIZON 999.123; CI green, Python CI 38457496020 + Dashboard Quality 38457500158; PR #56 merged at a8875830, gap-closure PR follows) | 2026-10-13 |
 | 225. Doc Publication & Hero Retake | 5/5 | Complete (verified passed 35/35 at 9fe5d31e; code review 2 Critical + 6 Warning fixed in-phase; CI green, Python CI 38509803397 + Dashboard Quality 38509803494; PR #58) | 2026-10-14 |
-| 225.1. Pre-release security hardening (INSERTED) | 16/16 | In progress (verification pending) | - |
+| 225.1. Pre-release security hardening (INSERTED) | 16/16 | Complete (verified passed 6/6 at d489ad2f with operator sign-off on 3 review-fix behaviours + 1 visual check; code review 1 Critical + 10 Warning fixed in-phase; CI green, Python CI 38621425272 + Dashboard Quality 38621425671; PR #59) | 2026-10-14 |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged)

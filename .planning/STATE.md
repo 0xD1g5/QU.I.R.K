@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-14T19:00:00.000Z"
-last_activity: "2026-10-14 -- Phase 225.1 plans 01-16 executed (tracked work complete, code review 1 Critical + 10 Warning fixed in-phase); next: verify + CI close. Hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-14T21:00:00.000Z"
+last_activity: "2026-10-14 -- Phase 225.1 CLOSED, verified passed 6/6 at d489ad2f with operator sign-off; CI green; PR #59 open. Next: merge PR #59, then Phase 226. Hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 58
   completed_plans: 58
-  percent: 71
+  percent: 86
 ---
 
 # Project State
@@ -1443,7 +1443,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 225.1 (Pre-release security hardening) — EXECUTED 2026-10-14, 16 of 16 plans, verification pending (225 COMPLETE; 5 of 7 phases in v5.27)
+Phase: 225.1 (Pre-release security hardening) — COMPLETE 2026-10-14, 16 of 16 plans, verified passed 6/6 (6 of 7 phases in v5.27; next 226)
 Plans 225.1-01..16 tracked work complete on branch `phase-225.1-pre-release-security-hardening`: strict operator-token config
 loading (SECH-01); per-hop redirect validation for the URL-fetching scanners, metadata checks over IPv4 carried in IPv6, and a
 sensor console URL scheme policy with `--allow-insecure-console` (SECH-02); `trusted_targets` over `include_ips`, connector host
@@ -1455,11 +1455,12 @@ Required code review after plan 15 found 1 Critical + 10 Warning; all 11 fixed i
 (`e70bd237`..`f86ea11c`). Plan 16 added the scheduler-side doc sentence, ledger row and test for a config file that goes missing
 or empty after it was read with settings (`01f9c548`).
 Full local suite at `f86ea11c`: 4 failed, 5742 passed; the failing set equals the 225.1-01 local baseline (macOS py3.14 nodes).
-Next: CITRUTH-03 observation at the pushed HEAD and the phase PR, then `gsd-verifier` for 225.1. REQUIREMENTS SECH-01..05 and the
-Phase 225.1 checkbox are flipped by hand in the phase-close commit after verification. Then 226.
+CI green at `d489ad2f` (`branch_ci_state.py --compare-main` exit 0; Python CI 38621425272, Dashboard Quality 38621425671); PR #59 open.
+Verified passed 6/6 after operator sign-off on the CR-01 restart-after-removal behaviour, the WR-03 JWKS remediation-item change,
+the WR-02 coalesced audit rows (accepted as meeting SC4) and the New Scan preview visual check. 8 Info review findings left open.
+REQUIREMENTS SECH-01..05 flipped by hand in the phase-close commit. Next: merge PR #59, then `/gsd-discuss-phase 226`.
 Plan: 16 of 16
-Status: Phase 225 COMPLETE; PR #58 MERGED (f91d8a66). Phase 225.1 executed, verification pending. ROADMAP `16/16` means tracked
-work complete; verification owns the verdict.
+Status: Phase 225 COMPLETE; PR #58 MERGED (f91d8a66). Phase 225.1 COMPLETE (verified passed); PR #59 open, unmerged.
 HAND-OFF to Phase 226 (REL-05): the 5.27.0 release notes carry the upgrade-visible behaviours in `changelog.d/phase-225.1.bugfix.md`:
 an existing config file that cannot be read stops `quirk serve` and makes protected routes answer 503; a config file that goes
 missing or empty after a running server or scheduler read it with settings is treated as unreadable until it is restored or the
@@ -1467,7 +1468,7 @@ process restarts; sensors need an `https://` console URL for non-loopback hosts 
 HAND-OFF to Phase 226 (REL-07): post-merge raw-URL byte check for the README hero (HTTP 200 AND `size_download` equal to
 `wc -c < docs/images/dashboard-hero.png`) is still owed; other relative README links that will not resolve on PyPI (LICENSE,
 SECURITY.md, docs/*.md) are flagged for 226.
-Last activity: 2026-10-14 — Phase 225.1 plans 01-16 executed. Hand-edited from a pre-image (no gsd-sdk state verbs).
+Last activity: 2026-10-14 — Phase 225.1 closed after verification. Hand-edited from a pre-image (no gsd-sdk state verbs).
 
 **Prior position (Phase 225 close, superseded 2026-10-14):**
 Phase: 225 (Doc Publication & Hero Retake) — COMPLETE 2026-10-14
