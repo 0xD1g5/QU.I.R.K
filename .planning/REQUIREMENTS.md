@@ -124,6 +124,28 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
       5.27.0, and the PyPI project page renders the README logo. The launch gate is recorded as
       closed in HORIZON.md and STATE.md.
 
+### Pre-release security hardening (SECH)
+
+- [ ] **SECH-01**: Harden dashboard operator-auth configuration loading: `quirk serve` and the API
+      handle every config-file state explicitly (`DASHBOARD-014`), and `quirk token` states how a
+      server-side `QUIRK_API_TOKEN` interacts with the file.
+- [ ] **SECH-02**: Harden outbound URL validation for URL-fetching scanners and for sensor
+      enrollment, including redirect handling and the `--allow-insecure-console` opt-in.
+- [ ] **SECH-03**: `security.trusted_targets` covers every host a scan contacts, whatever the entry
+      point: `targets.include_ips`, every host-naming connector field (enumerated from the config
+      schema at test time), the dashboard job YAML, schedules at create and enable time, and
+      scheduled runs; the scheduler's authenticated-mode gate checks the scan config recurring runs
+      load; the Effective Config preview shows the server's real `allow_internal_targets` and a
+      set/not-set state for each credential name.
+- [ ] **SECH-04**: Harden error and log text and the sensor push audit trail: allow-list error
+      messages for URL fetches and credential references, control-character stripping for LDAP DNs,
+      and audit rows for every sensor-push outcome, including rate-limited pushes, with source
+      address and sensor id.
+- [ ] **SECH-05**: Security-related findings and notes match behaviour: the JWKS verify-disabled
+      advisory is a HIGH finding on both the CLI and dashboard pipelines, survives resume and has no
+      readiness-score impact, and the `url_allowlist` accepted-risk note names exactly the callers
+      that pin, checked from source by a test.
+
 ## Future Requirements
 
 Deferred from this milestone with an owner:
@@ -164,6 +186,11 @@ Deferred from this milestone with an owner:
 | DOC-04 | Phase 224 | Complete (as scoped: every ledger row verified independently; deep reference docs carry a measured 4.0% residual false-claim rate, disclosed in UAT-224-10 and owned by HORIZON 999.123; operator override 2026-10-13) |
 | DOC-05 | Phase 225 | Complete |
 | DOC-06 | Phase 225 | Complete |
+| SECH-01 | Phase 225.1 | Pending |
+| SECH-02 | Phase 225.1 | Pending |
+| SECH-03 | Phase 225.1 | Pending |
+| SECH-04 | Phase 225.1 | Pending |
+| SECH-05 | Phase 225.1 | Pending |
 | REL-05 | Phase 226 | Pending |
 | REL-06 | Phase 226 | Pending |
 | REL-07 | Phase 226 | Pending |

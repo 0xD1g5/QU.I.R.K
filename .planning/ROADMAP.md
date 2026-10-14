@@ -116,6 +116,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 - [x] **Phase 223: Dashboard Brand Adoption** - Sidebar logo + favicon-tier glyph in the existing 48 px narrow sidebar (sketch 002 A), favicon raster pipeline with a drift gate, and every old-branding pin re-worded in the same phase
 - [x] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc (completed 2026-10-13)
 - [x] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard (completed 2026-10-14)
+- [ ] **Phase 225.1: Pre-release security hardening** (INSERTED 2026-10-14) - Harden auth config loading, outbound URL validation, scan-consent coverage and error/log text before the v5.27.0 tag
 - [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
 
 ### Phase Details
@@ -229,9 +230,40 @@ Plans:
 - [x] 225-05-PLAN.md — Full suite + CI-view simulation, hand-edited STATE/ROADMAP, push/dispatch/CITRUTH-03 green at HEAD, PR, VALIDATION sign-off, Obsidian phase note
 **UI hint**: yes
 
+### Phase 225.1: Pre-release security hardening (INSERTED)
+**Goal**: Before the v5.27.0 tag, the security controls behave as the docs describe and the docs describe them as they behave.
+**Depends on**: Phase 225
+**Requirements**: SECH-01, SECH-02, SECH-03, SECH-04, SECH-05
+**Success Criteria** (what must be TRUE):
+  1. Dashboard operator-auth configuration loading handles every config-file state explicitly, and `quirk token` states how a server-side `QUIRK_API_TOKEN` interacts with the file (SECH-01).
+  2. Outbound URL validation is hardened for URL-fetching scanners and sensor enrollment, including redirect handling and the `--allow-insecure-console` opt-in (SECH-02).
+  3. `security.trusted_targets` covers every host a scan contacts whatever the entry point, schedules and scheduled runs included, and the Effective Config preview shows the server's real `allow_internal_targets` and a set/not-set state per credential name (SECH-03).
+  4. Error and log text for URL fetches, credential references and LDAP DNs is allow-listed or sanitised, and every sensor-push outcome, rate-limited pushes included, has an audit row with source address and sensor id (SECH-04).
+  5. The JWKS verify-disabled advisory is a HIGH finding on both pipelines with no readiness-score impact, and the `url_allowlist` accepted-risk note names exactly the callers that pin (SECH-05).
+  6. Every fix has a negative-control test recorded red on pre-fix code, with the auth-config and URL-validation tests mutation-proven; docs and `docs/doc-claim-ledger.jsonl` rows match the code; generated docs are regenerated; the vault is synced; `scripts/branch_ci_state.py --compare-main` exits 0 at the close commit's parent.
+**Plans**: 16 plans
+
+Plans:
+- [ ] 225.1-01-PLAN.md — branch, SECH requirements, hygiene check, baseline
+- [ ] 225.1-02-PLAN.md — auth config loading, DASHBOARD-014, token CLI wording + docs
+- [ ] 225.1-03-PLAN.md — outbound URL validation hardening, accepted-risk note derived from source
+- [ ] 225.1-04-PLAN.md — REST fuzzer and RabbitMQ probe do not follow redirects
+- [ ] 225.1-05-PLAN.md — score-neutral finding category
+- [ ] 225.1-06-PLAN.md — shared per-hop outbound fetch helper for URL-fetching scanners + docs
+- [ ] 225.1-07-PLAN.md — JWKS verify-disabled HIGH finding on both pipelines
+- [ ] 225.1-08-PLAN.md — trusted_targets over include_ips, connector fields and job YAML, preview API
+- [ ] 225.1-09-PLAN.md — New Scan preview credential display + trusted_targets docs
+- [ ] 225.1-10-PLAN.md — schedule trust checks and scheduler gate + docs
+- [ ] 225.1-11-PLAN.md — sensor console URL policy, `--allow-insecure-console`, lab + Windows installer + docs
+- [ ] 225.1-12-PLAN.md — credential-reference and DN text hygiene + docs
+- [ ] 225.1-13-PLAN.md — sensor push audit rows + sensor docs
+- [ ] 225.1-14-PLAN.md — JWKS finding and score-neutral advisory docs
+- [ ] 225.1-15-PLAN.md — UAT Series 225.1, changelog fragments, HORIZON rows, generated-doc and vault gates
+- [ ] 225.1-16-PLAN.md — full suite, push, CITRUTH-03, PR, phase note
+
 ### Phase 226: Release v5.27.0
 **Goal**: A public user can install QU.I.R.K. 5.27.0 from PyPI and get the branded, doc-reviewed product, including the untagged v5.26 accessibility work, and the operator's launch gate is recorded as open.
-**Depends on**: Phase 225 (the tag must contain the reviewed docs and the new identity)
+**Depends on**: Phase 225 (the tag must contain the reviewed docs and the new identity) and Phase 225.1 (the tag must contain the pre-release security hardening)
 **Requirements**: REL-05, REL-06, REL-07
 **Success Criteria** (what must be TRUE):
   1. `pyproject.toml` declares 5.27.0, the editable reinstall is done, and `tests/test_version.py` passes. `README.md`, the `docs/UAT-SERIES.md` header and the UAT-1-02 pass criteria carry 5.27.0.
@@ -250,6 +282,7 @@ Plans:
 | 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
 | 224. Doc Claim Ledger & Verification | 18/18 | Complete (verified passed 5/5 at 38df9001 with 1 operator override, goal clause NOT MET AS WRITTEN: deep-doc residual 4.0% disclosed, HORIZON 999.123; CI green, Python CI 38457496020 + Dashboard Quality 38457500158; PR #56 merged at a8875830, gap-closure PR follows) | 2026-10-13 |
 | 225. Doc Publication & Hero Retake | 5/5 | Complete (verified passed 35/35 at 9fe5d31e; code review 2 Critical + 6 Warning fixed in-phase; CI green, Python CI 38509803397 + Dashboard Quality 38509803494; PR #58) | 2026-10-14 |
+| 225.1. Pre-release security hardening (INSERTED) | 0/16 | Planned | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged)
