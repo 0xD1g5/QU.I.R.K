@@ -8,8 +8,8 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 1005
-- Disposition counts: DEFERRED 41, FAIL 7, GAP 32, OBSOLETE 2, PASS 838, SKIP_OTHER 85
+- Total case headings: 1010
+- Disposition counts: DEFERRED 41, FAIL 7, GAP 32, OBSOLETE 2, PASS 843, SKIP_OTHER 85
 - Open GAP (drainable) cases: 45
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
@@ -32,7 +32,6 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-48-02 | 48 | HTML All Findings Table Includes Description Column (CONTEXT-02) | no substitute coverage; the only candidate, tests/test_reports_writer.py::test_html_report_has_description_column, is unconditionally skipped per TRIAGE-149 Playwright flakiness, and a skip is not proof of coverage; needs that flake fixed or a non-Playwright equivalent |
 | UAT-50-03 | 50 | Obsidian vault sync produced both Reference notes with correct frontmatter (DOCS-03) | no substitute coverage; needs a filesystem check of the Obsidian vault Reference notes and _QUIRK-Hub.md wikilinks, which lives outside the repo and is not reachable from pytest |
 | UAT-67-04 | 67 | ScannerStatusCard renders on Executive page when failures exist (RESUME-02) | no substitute coverage; needs a frontend component test for ScannerStatusCard -- partial_failures render, badge severity, aria-labels; no component or test file exists yet, grep found zero hits; structurally a frontend-only case per 168-07's guard-boundary finding |
-| UAT-85-08 | 85 | Real dashboard hero screenshot replaces placeholder (LAUNCH-01) | no substitute coverage; needs a real browser screenshot capture of the live dashboard, a release-time manual step with no unit-test equivalent |
 | UAT-89-01-01 | 89 | three new weak-TLS profiles start and auto-register (LAB-01/02/04) | no substitute coverage; needs a live docker-compose bring-up plus healthcheck of the postgres-tls/redis-tls/kafka-tls chaos-lab profiles, inherently requiring Docker, out of scope per D-01 |
 | UAT-96-05 | 96 | `--fuzz-jwt-alg-confusion` against fuzz-target yields CRITICAL (FUZZ-04, LAB-01) | no substitute coverage; cannot run as written even with the fuzz-target lab up: the CLI fuzzes https://<first configured fqdn> or https://localhost per run_scan.py:3260, never the plain-HTTP fixture on localhost:20100, and config-lab-fuzz.yaml does not exist; tests/test_rest_fuzzer_probes.py::TestAlgConfusionProbeAccepted::test_alg_confusion_accepted_is_critical covers only the probe's CRITICAL classification against a mocked server, not this end-to-end run; re-dispositioned 2026-10-13 from a SKIP that blamed only the missing live service; tracked in todo 261012-doc224-chaos-lab-scanner-cannot-reach-fixtures |
 | UAT-96-08 | 96 | `fuzz-target` chaos profile appears in `./lab.sh profiles` (LAB-01) | no substitute coverage; needs a live docker-compose bring-up of the fuzz-target chaos-lab profile plus live HTTP checks against its openapi.json, jwks.json, and probe endpoints, inherently requiring Docker, out of scope per D-01 |
@@ -63,6 +62,7 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-217-07 | 217 | Certificates Safe/At Risk Badges Confirmed — The 30-89-Day Amber Expiry Text Leg Has No Fixture Row | no fixture row: covered by the automated D-09 guard |
 | UAT-217-08 | 217 | Findings/Trends Amber Badges Confirmed — No Chart-TLS (Blue) Badge Rows In The Canonical DB | no fixture row: covered by badge-contrast-guard + CI axe baselines |
 | UAT-221-06 | 221 | Loading-Leg Mutation Goes Red | no substitute coverage |
+| UAT-225-05 | 225 | The Raw URL Serves The New Hero Bytes After Merge | no substitute coverage; raw-URL byte equality is observable only after the PR merges to main, owed post-merge to Phase 226 REL-07 and the 225-05 STATE.md hand-off |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 

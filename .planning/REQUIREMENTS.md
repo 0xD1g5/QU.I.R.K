@@ -105,10 +105,10 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
       command, grep the flag in source, or hit the registry. Each one is marked TRUE, FIXED (doc
       corrected) or REMOVED (claim deleted). Live capabilities the docs omit (scanners, connectors,
       CLI commands) are added. No claim stays unverified.
-- [ ] **DOC-05**: `docs/quirk-master-guide.md` is regenerated after the source-guide edits, and its
+- [x] **DOC-05**: `docs/quirk-master-guide.md` is regenerated after the source-guide edits, and its
       freshness gate is green. Every edited doc with a vault counterpart is synced to
       `20_Dev-Work/QUIRK/Guides/` in vault `Digs`.
-- [ ] **DOC-06**: The README hero screenshot is retaken against the branded dashboard from the
+- [x] **DOC-06**: The README hero screenshot is retaken against the branded dashboard from the
       canonical DB (`./quirk-output/quirk.db`), showing correct (non-mirrored) score gauges. The
       unreferenced `dashboard-hero-1/-2.png` are removed or referenced.
 
@@ -162,8 +162,8 @@ Deferred from this milestone with an owner:
 | BRAND-07 | Phase 223 | Complete |
 | DOC-03 | Phase 224 | Complete |
 | DOC-04 | Phase 224 | Complete (as scoped: every ledger row verified independently; deep reference docs carry a measured 4.0% residual false-claim rate, disclosed in UAT-224-10 and owned by HORIZON 999.123; operator override 2026-10-13) |
-| DOC-05 | Phase 225 | Pending |
-| DOC-06 | Phase 225 | Pending |
+| DOC-05 | Phase 225 | Complete |
+| DOC-06 | Phase 225 | Complete |
 | REL-05 | Phase 226 | Pending |
 | REL-06 | Phase 226 | Pending |
 | REL-07 | Phase 226 | Pending |

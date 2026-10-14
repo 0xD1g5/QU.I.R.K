@@ -674,4 +674,13 @@ ALLOWED_SKIPS = [
         "resvg-py is a [dev]-only renderer (Phase 222 D-15). Skips only outside CI; with CI set the "
         "helper pytest.fail()s so the required Linux Full Suite job can never skip the PNG drift gate.",
     ),
+    (
+        "test_sync_vault_guides.py",
+        "test_live_vault_in_sync",
+        "environment_capability",
+        "The operator's Obsidian vault (~/vaults/Digs/20_Dev-Work/QUIRK or $QUIRK_VAULT_ROOT) is "
+        "absent: the Linux Full Suite CI job has no vault, so the LIVE-03 docs->vault body parity "
+        "check has nothing to read. A skip is not evidence the vault is in sync; run "
+        "scripts/sync_vault_guides.py --check locally.",
+    ),
 ]

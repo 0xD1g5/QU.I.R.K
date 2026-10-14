@@ -560,7 +560,7 @@ export function ExecutivePage() {
       {/* Score gauges row */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap justify-around gap-8">
+          <div className="flex flex-wrap justify-around gap-7">
             <div className="flex flex-col items-center gap-1">
               {/* Phase 188 SCORE-06 / T-188-13: a not-computed score (zero
                   domains assessed) must never coerce to a 0 gauge — render an

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-13T00:00:00.000Z"
-last_activity: "2026-10-13 -- Phase 224 COMPLETE (verified passed 5/5 at 38df9001, 1 operator override: goal clause NOT MET AS WRITTEN, deep-doc residual 4.0% disclosed, HORIZON 999.123; branch_ci_state exit 0). PR #56 merged at a8875830; gap-closure commits + this close go to main in a follow-up PR. DOC-03/04 Complete. Hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-14T00:00:00.000Z"
+last_activity: "2026-10-14 -- Phase 225 COMPLETE (verified passed 35/35 at 9fe5d31e; code review 2 Critical + 6 Warning fixed in-phase; branch_ci_state exit 0). PR #58 open. DOC-05/06 Complete. Hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 37
-  completed_plans: 37
-  percent: 67
+  completed_phases: 5
+  total_plans: 42
+  completed_plans: 42
+  percent: 83
 ---
 
 # Project State
@@ -1436,17 +1436,20 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `.planning/phases/223-dashboard-brand-adoption/223-DISCUSS-CHECKPOINT.json`.
 
 ## Current Position
-Phase: 224 (Doc Claim Ledger & Verification) — COMPLETE 2026-10-13 (4 of 6 phases in v5.27)
-Verified `passed` 5/5 at `38df9001` with one operator override (goal clause "every claim is true" NOT MET AS WRITTEN: front-door docs
-exhaustive, deep-doc residual 4.0% disclosed, HORIZON 999.123). Verifier gaps 2 (stale cites) and 3 (line attribution, fixed by
-section-scoped anchors + gate) closed and re-verified. CITRUTH-03: `branch_ci_state.py --compare-main` exit 0 (Python CI 38457496020 +
-Dashboard Quality 38457500158). PR #56 merged by the operator at `a8875830`; the gap-closure commits and this close go to main in a follow-up PR.
-Next: merge the follow-up PR, then `/gsd-discuss-phase 225`.
-Plan: 18 of 18
-Status: Branch `phase-224-doc-claim-ledger-verification`. 224-18 Task 1 committed: UAT Series 224 (12 cases;
-UAT-224-10 is an honest FAIL recording the residual below), `docs/uat-coverage-gaps.md` regenerated, full suite failing-node
-set equal to main's (one pre-existing flaky Playwright node). Task 2 (push, CI dispatch, CITRUTH-03, PR) follows this commit.
-Last activity: 2026-10-13 — Phase 224 execution complete. Hand-edited from a pre-image (no gsd-sdk state verbs).
+Phase: 225 (Doc Publication & Hero Retake) — COMPLETE 2026-10-14 (5 of 6 phases in v5.27)
+Verified `passed` 35/35 at `9fe5d31e`, no overrides. Required code review found 2 Critical (vault sync could overwrite a
+mismatched note; hero capture served the live canonical DB) + 6 Warning; all 8 fixed in-phase with proven-red tests, plus a
+Python 3.11 compat fix (`Path.read_text(newline=)` is 3.13+). CITRUTH-03: `branch_ci_state.py --compare-main` exit 0 at `9fe5d31e`
+(Python CI 38509803397 + Dashboard Quality 38509803494).
+Plans 225-01..05 tracked work complete on branch `phase-225-doc-publication-hero-retake`: vault sync instrument + 4 connector pages,
+scripted hero capture + retaken README hero (operator-approved gauge-row gap-8 -> gap-7 dashboard fix), UAT Series 225, CI/PR close-out.
+Next: merge PR #58, then `/gsd-discuss-phase 226`.
+Plan: 5 of 5
+Status: Phase 224 COMPLETE (PR #56 + #57 merged). Phase 225 COMPLETE; PR #58 open, unmerged.
+HAND-OFF to Phase 226 (REL-07): post-merge raw-URL byte check for the README hero (HTTP 200 AND `size_download` equal to
+`wc -c < docs/images/dashboard-hero.png`) is owed until the Phase 225 PR merges; other relative README links that will not resolve
+on PyPI (LICENSE, SECURITY.md, docs/*.md) are flagged for 226, not fixed in 225.
+Last activity: 2026-10-14 — Phase 225 closed. Hand-edited from a pre-image (no gsd-sdk state verbs).
 
 Decisions this phase:
 - The doc classification (`docs/doc-classification.jsonl`) and claim ledger (`docs/doc-claim-ledger.jsonl`, 9801 rows:
