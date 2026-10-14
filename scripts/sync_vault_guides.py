@@ -302,9 +302,11 @@ def write_pair(repo_root: pathlib.Path, vault_root: pathlib.Path,
 # --------------------------------------------------------------------------
 
 def tracked_markdown(repo_root: pathlib.Path = REPO_ROOT) -> list[str]:
+    # close_fds=False + no cwd keeps the posix_spawn path (macOS fork-safety,
+    # see tests/cli_helpers.run_fork_safe) when called from inside pytest.
     out = subprocess.run(
         ["git", "-C", str(repo_root), "ls-files", "-z"],
-        capture_output=True, text=True, check=True).stdout
+        capture_output=True, text=True, check=True, close_fds=False).stdout
     files = [p for p in out.split("\0") if p]
     return sorted(
         p for p in files
@@ -407,12 +409,15 @@ def _report(results, unmapped, xcheck, stale=()) -> None:
         print(m, file=sys.stderr)
 
 
-def main(argv=None, *, tracked=None, today=None) -> int:
+def main(argv=None, *, tracked=None, today=None, repo_root=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--write", action="store_true")
     ap.add_argument("--vault-root", default=None)
+    ap.add_argument("--repo-root", default=None,
+                    help="repo checkout to sync from (default: this repo, "
+                         "or $QUIRK_SYNC_REPO_ROOT)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
@@ -424,8 +429,14 @@ def main(argv=None, *, tracked=None, today=None) -> int:
               file=sys.stderr)
         return 2
 
+    # 225-REVIEW WR-04: the repo root is overridable (kwarg > --repo-root >
+    # $QUIRK_SYNC_REPO_ROOT > this checkout) so CI can drive main() end to
+    # end against a temporary git repo.
+    repo_root = pathlib.Path(
+        repo_root or args.repo_root
+        or os.environ.get("QUIRK_SYNC_REPO_ROOT") or REPO_ROOT).expanduser()
     if tracked is None:
-        tracked = tracked_markdown(REPO_ROOT)
+        tracked = tracked_markdown(repo_root)
     today = today or datetime.date.today().isoformat()
 
     # CR-01: the source: cross-check runs BEFORE any write; write_pair then
@@ -433,12 +444,12 @@ def main(argv=None, *, tracked=None, today=None) -> int:
     xcheck = cross_check(MAPPING, scan_vault_sources(vault_root), set(tracked))
     unmapped = find_unmapped(tracked, MAPPING, EXEMPT, EXEMPT_GLOBS)
     stale = find_stale_mapping(tracked, MAPPING)
-    results = plan_sync(REPO_ROOT, vault_root, tracked, today,
+    results = plan_sync(repo_root, vault_root, tracked, today,
                         write=args.write)
 
     if args.write:
         # Re-run as a check so the exit code reflects the post-write state.
-        results_after = plan_sync(REPO_ROOT, vault_root, tracked, today,
+        results_after = plan_sync(repo_root, vault_root, tracked, today,
                                   write=False)
         _report(results, unmapped, xcheck, stale)
         results = results_after

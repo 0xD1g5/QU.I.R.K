@@ -27,6 +27,7 @@ from scripts.sync_vault_guides import (
     parse_note,
     render_note,
     resolve_target,
+    tracked_markdown,
     write_pair,
 )
 from tests.cli_helpers import run_fork_safe
@@ -317,3 +318,61 @@ def test_every_mapping_source_is_tracked():
     assert not stale, (
         f"225-REVIEW WR-05: MAPPING rows whose source is not tracked: "
         f"{sorted(stale)}; remove or rename them in scripts/sync_vault_guides.py")
+
+
+# --------------------------------------------------------------------------
+# 225-REVIEW WR-04: drive main() end to end against a temporary git repo, so
+# the exit-0 path, --write, and the real tracked_markdown() run in CI.
+# --------------------------------------------------------------------------
+
+def _git_repo(tmp_path: Path, files: dict[str, str]) -> Path:
+    root = _repo(tmp_path, files)
+    git = shutil.which("git")
+    if git is None:
+        pytest.fail("git binary not available; this gate requires git")
+    for argv in (["init", "-q"], ["add", "-A"]):
+        res = run_fork_safe([git, "-C", str(root), *argv], timeout=30)
+        assert res.returncode == 0, res.stderr
+    return root
+
+
+def test_tracked_markdown_filter_on_temp_repo(tmp_path):
+    root = _git_repo(tmp_path, {
+        "README.md": "r\n", "docs/a.md": "a\n", "docs/connectors/b.md": "b\n",
+        "docs/x.txt": "x\n", "sub/c.md": "c\n", "notes.txt": "n\n"})
+    (root / "docs/untracked.md").write_text("u\n", encoding="utf-8")
+    assert tracked_markdown(root) == [
+        "README.md", "docs/a.md", "docs/connectors/b.md"]
+
+
+def test_tracked_markdown_matches_independent_enumeration():
+    assert tracked_markdown(REPO_ROOT) == _tracked()
+
+
+def test_main_end_to_end_check_write_check_on_temp_repo(tmp_path, capsys):
+    files = {src: f"# {src}\nbody\n" for src in MAPPING}
+    files["README.md"] = "readme\n"  # EXEMPT
+    repo = _git_repo(tmp_path, files)
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    argv = ["--vault-root", str(vault)]
+    assert main(["--check", *argv], repo_root=repo, today=TODAY) == 1, (
+        "empty vault: every pair is missing")
+    assert main(["--write", *argv], repo_root=repo, today=TODAY) == 0
+    note = vault / MAPPING["docs/admin-guide.md"]
+    fm, body = parse_note(note.read_text(encoding="utf-8"))
+    assert body == "# docs/admin-guide.md\nbody\n"
+    assert "source: docs/admin-guide.md" in fm
+    capsys.readouterr()
+    assert main(["--check", "--json", *argv], repo_root=repo, today=TODAY) == 0
+    import json
+    report = json.loads(capsys.readouterr().out)
+    assert report["exit"] == 0 and len(report["pairs"]) == len(MAPPING)
+    assert {p["status"] for p in report["pairs"]} == {"in-sync"}
+    # Negative control: drift one source -> red again, and --write repairs it.
+    (repo / "docs/admin-guide.md").write_text("changed\n", encoding="utf-8")
+    assert main(["--check", *argv], repo_root=repo, today=TODAY) == 1
+    assert main(["--write", *argv], repo_root=repo, today=TODAY) == 0
+    assert parse_note(note.read_text(encoding="utf-8"))[1] == "changed\n"
+    # --repo-root CLI flag reaches the same code path.
+    assert main(["--check", "--repo-root", str(repo), *argv], today=TODAY) == 0
