@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
+from quirk.intelligence.scoring import _scored_severity_counts
+
 ROADMAP_VERSION = "1.0.0"
 
 _PHASE_ORDER = {"NOW": 0, "NEXT": 1, "LATER": 2}
@@ -131,11 +133,7 @@ def build_phased_roadmap(
         if isinstance(evidence.get("scan_error", {}), Mapping)
         else {}
     )
-    sev = (
-        evidence.get("finding_severity_counts", {})
-        if isinstance(evidence.get("finding_severity_counts", {}), Mapping)
-        else {}
-    )
+    sev = _scored_severity_counts(evidence)
 
     endpoints = max(0, _as_int(totals.get("endpoints", 0)))
     unknown_count = max(0, _as_int(protocol_counts.get("UNKNOWN", 0)))

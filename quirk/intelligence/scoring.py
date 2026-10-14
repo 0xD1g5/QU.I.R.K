@@ -269,6 +269,20 @@ def _top_of_band(band: str) -> int:
     return (min(higher) - 1) if higher else 100
 
 
+def _scored_severity_counts(evidence: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Severity counts that feed the score (D-25).
+
+    Prefers ``scored_finding_severity_counts`` (excludes score-neutral
+    categories); falls back to ``finding_severity_counts`` for older
+    evidence dicts that lack it.
+    """
+    scored = evidence.get("scored_finding_severity_counts")
+    if isinstance(scored, Mapping):
+        return scored
+    legacy = evidence.get("finding_severity_counts", {})
+    return legacy if isinstance(legacy, Mapping) else {}
+
+
 def _consequence_ceiling(critical_count: int, high_count: int) -> Tuple[Optional[int], Optional[str]]:
     """999.115 C — the highest score an estate may hold given its ABSOLUTE
     count of high-consequence findings, irrespective of how small a proportion
@@ -387,7 +401,7 @@ def compute_readiness_score(
     cert_obs = evidence.get("certificate_observations", {}) if isinstance(evidence.get("certificate_observations", {}), Mapping) else {}
     cert_keys = evidence.get("cert_key_type_counts", {}) if isinstance(evidence.get("cert_key_type_counts", {}), Mapping) else {}
     scan_error = evidence.get("scan_error", {}) if isinstance(evidence.get("scan_error", {}), Mapping) else {}
-    sev = evidence.get("finding_severity_counts", {}) if isinstance(evidence.get("finding_severity_counts", {}), Mapping) else {}
+    sev = _scored_severity_counts(evidence)
 
     endpoints = max(0, _as_int(totals.get("endpoints", 0)))
 

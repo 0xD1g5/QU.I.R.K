@@ -37,18 +37,24 @@ def _ensure(evidence: Dict[str, Any], key: str) -> Dict[str, Any]:
     return sub
 
 
+def _zero(sev: Dict[str, Any], keys: Any) -> None:
+    for k in keys:
+        sev[k] = 0
+
+
 def _resolve_plaintext_http_exposure(evidence: Dict[str, Any]) -> None:
     evidence["plaintext_http_count"] = 0
     evidence["http_on_tls_port_count"] = 0
 
 
 def _resolve_high_impact_findings(evidence: Dict[str, Any]) -> None:
-    sev = _ensure(evidence, "finding_severity_counts")
+    # D-25: zero the scored counts too, or the lift would miss the score input.
+    for key in ("finding_severity_counts", "scored_finding_severity_counts"):
+        if key in evidence or key == "finding_severity_counts":
+            _zero(_ensure(evidence, key), ("HIGH", "CRITICAL"))
     # Do NOT decrement totals.findings — the agility ratio denominator is
     # max(findings, 1); zeroing only the HIGH/CRITICAL numerator is the
     # honest model (plan action notes).
-    sev["HIGH"] = 0
-    sev["CRITICAL"] = 0
 
 
 def _resolve_expired_certificates(evidence: Dict[str, Any]) -> None:
@@ -77,8 +83,9 @@ def _resolve_unknown_open_services(evidence: Dict[str, Any]) -> None:
 
 
 def _resolve_legacy_tls_versions(evidence: Dict[str, Any]) -> None:
-    sev = _ensure(evidence, "finding_severity_counts")
-    sev["LOW"] = 0
+    for key in ("finding_severity_counts", "scored_finding_severity_counts"):
+        if key in evidence or key == "finding_severity_counts":
+            _zero(_ensure(evidence, key), ("LOW",))
 
 
 def _resolve_ecdsa_adoption_planning(evidence: Dict[str, Any]) -> None:
