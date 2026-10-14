@@ -106,6 +106,7 @@ def require_sensor_auth(
             status="failed",
             attempted_at=now,
             error_summary=error_summary,
+            client_ip=request.client.host if request.client else None,
         )
         db.add(row)
         try:
