@@ -262,3 +262,34 @@ def test_write_preserves_crlf_frontmatter_and_extra_keys(tmp_path):
         b"---\r\nproject: QU.I.R.K.\r\nsource: docs/a.md\r\nupdated: "
         + TODAY.encode() + b"\r\naliases: [Admin]\r\n---\r\n\r\n# A\nchanged\n")
     assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "in-sync"
+
+
+def test_atomic_write_never_follows_a_planted_temp_symlink(tmp_path):
+    """225-REVIEW WR-06: a symlink at the old fixed temp name must not be
+    followed, and the target must end up a regular file inside the vault."""
+    repo = _repo(tmp_path, {"docs/a.md": "# A\nnew\n"})
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_bytes(b"precious\n")
+    (vault / "A.md.tmp-sync").symlink_to(outside)
+    assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "created"
+    assert outside.read_bytes() == b"precious\n"
+    note = vault / "A.md"
+    assert note.is_file() and not note.is_symlink()
+    assert note.read_text(encoding="utf-8").endswith("# A\nnew\n")
+    assert oct(note.stat().st_mode & 0o777) == oct(0o644)
+    leftovers = [p.name for p in vault.iterdir()
+                 if p.name not in ("A.md", "A.md.tmp-sync")]
+    assert not leftovers, f"temp files leaked: {leftovers}"
+
+
+def test_atomic_write_refuses_symlinked_target(tmp_path):
+    from scripts.sync_vault_guides import _atomic_write
+    outside = tmp_path / "outside.txt"
+    outside.write_bytes(b"precious\n")
+    link = tmp_path / "note.md"
+    link.symlink_to(outside)
+    with pytest.raises(VaultPathError):
+        _atomic_write(link, "clobber\n")
+    assert outside.read_bytes() == b"precious\n"

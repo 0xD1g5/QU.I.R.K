@@ -43,6 +43,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_VAULT_ROOT = pathlib.Path.home() / "vaults/Digs/20_Dev-Work/QUIRK"
@@ -237,14 +238,29 @@ def _read_text(path: pathlib.Path) -> str:
 
 
 def _atomic_write(path: pathlib.Path, text: str) -> None:
+    """Write ``text`` to ``path`` via a uniquely-named sibling + os.replace.
+
+    225-REVIEW WR-06: the temp file comes from ``mkstemp`` (O_CREAT|O_EXCL),
+    so a pre-existing symlink at any predictable temp name is never followed,
+    and a symlinked target is refused outright.
+    """
+    if path.is_symlink():
+        raise VaultPathError(f"symlinked vault target refused: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp-sync")
     try:
-        with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        mode = path.stat().st_mode & 0o7777
+    except FileNotFoundError:
+        mode = 0o644
+    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix="." + path.name,
+                                    suffix=".tmp-sync")
+    tmp = pathlib.Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
             fh.write(text)
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     finally:
-        if tmp.exists():
+        if tmp.exists() or tmp.is_symlink():
             tmp.unlink()
 
 
