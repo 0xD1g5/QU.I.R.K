@@ -26,6 +26,13 @@ from typing import Optional
 import yaml
 
 
+class ServerConfigError(RuntimeError):
+    """The server config file exists but cannot be used (DASHBOARD-014).
+
+    The message is the allow-listed reason from ``read_server_config``.
+    """
+
+
 @dataclass(frozen=True)
 class TokenState:
     token: str

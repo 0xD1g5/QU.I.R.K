@@ -310,7 +310,9 @@ field names, not the values, and the server marks each named credential as set. 
 left empty shows the server's own state (its config file or environment).
 
 A failed fetch renders an "Effective config unavailable" notice without blocking scan submission —
-the panel is advisory-only and never gates the Run Scan button.
+the panel is advisory-only and never gates the Run Scan button. If the server's own config file
+cannot be read, the preview answers 503 (`DASHBOARD-014`) and shows this notice, and a submission
+is refused with the same code until the file is fixed.
 
 ### 3.1.3 Scan Coverage chips (OBS-02, Phase 192)
 

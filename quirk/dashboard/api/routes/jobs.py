@@ -798,6 +798,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     # directory is created, so a 422 here leaves no trace.
     from quirk.dashboard.api.config_preview import resolve_effective_config
     from quirk.dashboard.api.connector_availability import probe_all_connectors
+    from quirk.util.server_config import ServerConfigError
 
     # Phase 194 / PARITY-04 / D-01: same try block as build_job_config_dict
     # below -- a parse_port_spec ValueError from an advanced ports_tls value
@@ -817,6 +818,9 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
             scan_overlay=scan_overlay,
             assessment_overlay=assessment_overlay,
         )
+    except ServerConfigError as exc:
+        logger.error("Server security configuration could not be read: %s", exc)
+        raise HTTPException(status_code=503, detail=format_error("DASHBOARD-014")) from None
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

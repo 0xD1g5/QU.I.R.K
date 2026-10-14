@@ -14,6 +14,7 @@ server-side (T-192-18 / D-07), and badges each field's provenance (D-04).
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -21,6 +22,8 @@ from pydantic import ValidationError
 
 from quirk.config import get_vertical
 from quirk.config_redaction import REDACTED_SET, REDACTED_UNSET, redact_config
+from quirk.errors import format_error
+from quirk.util.server_config import ServerConfigError
 from quirk.dashboard.api.config_preview import resolve_effective_config
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.routes.jobs import build_advanced_overlays
@@ -33,6 +36,8 @@ from quirk.dashboard.api.schemas import (
     validate_connectors_overlay,
     validate_credential_names,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -264,6 +269,9 @@ def get_effective_config(
             scan_overlay=scan_overlay,
             assessment_overlay=assessment_overlay,
         )
+    except ServerConfigError as exc:
+        logger.error("Server security configuration could not be read: %s", exc)
+        raise HTTPException(status_code=503, detail=format_error("DASHBOARD-014")) from None
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

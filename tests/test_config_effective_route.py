@@ -291,6 +291,32 @@ def test_preview_allow_internal_false_without_server_config(monkeypatch, tmp_pat
     assert _security_field(r.json(), "allow_internal_targets")["value"] is False
 
 
+def test_preview_refuses_like_submit_when_server_config_unreadable(monkeypatch, tmp_path):
+    """With the token in the environment, auth passes, so the preview itself
+    must refuse an unreadable server config with the same 503 submit gives."""
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text("security:\n  allow_internal_targets: true\n bad: [\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    monkeypatch.setenv("QUIRK_API_TOKEN", "env-token")
+    hdr = {"Authorization": "Bearer env-token", "X-Quirk-Request": "1"}
+    _, tc = _app_with_db()
+    preview = tc.get("/api/config/effective", headers=hdr)
+    submit = tc.post("/api/jobs", json={"targets": "example.com"}, headers=hdr)
+    assert submit.status_code == 503 and "DASHBOARD-014" in submit.text
+    assert preview.status_code == 503, preview.text
+    assert "DASHBOARD-014" in preview.text
+
+
+def test_resolver_raises_on_unreadable_server_config(monkeypatch, tmp_path):
+    from quirk.util.server_config import ServerConfigError
+
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text("- not a mapping\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    with pytest.raises(ServerConfigError):
+        resolve_effective_config(targets="example.com")
+
+
 def _no_server_cfg(monkeypatch, tmp_path):
     monkeypatch.setenv("QUIRK_CONFIG_PATH", str(tmp_path / "absent.yaml"))
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)

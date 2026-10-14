@@ -28,7 +28,7 @@ from quirk.config import AppConfig, load_config
 from quirk.dashboard.api.deps import _default_db_path
 from quirk.dashboard.api.routes.jobs import build_job_config_dict
 from quirk.engine.profiles import apply_profile
-from quirk.util.server_config import load_server_security
+from quirk.util.server_config import ServerConfigError, load_server_security
 
 # Nested dataclass fields on ScanCfg that are walked separately (never part of
 # the shallow per-field snapshot below — apply_profile mutates their PARENT
@@ -113,16 +113,20 @@ def resolve_effective_config(
     with tempfile.TemporaryDirectory() as tmp_dir:
         output_dir = Path(tmp_dir)
         # 225.1 / D-09: the server's real allow_internal_targets, read the
-        # same way create_job reads it. An unreadable server config fails
-        # safe (False) and surfaces nothing.
+        # same way create_job reads it. An unreadable server config raises
+        # ServerConfigError, which the route answers with the same 503
+        # (DASHBOARD-014) submit gives, so the preview never shows a config
+        # a submission could not run with.
         sec = load_server_security()
+        if sec.error:
+            raise ServerConfigError(sec.error)
         config_dict = build_job_config_dict(
             output_dir,
             targets or "",
             db_path,
             calibration,
-            allow_internal_targets=False if sec.error else sec.allow_internal_targets,
-            trusted_targets=None if sec.error else sec.trusted_targets,
+            allow_internal_targets=sec.allow_internal_targets,
+            trusted_targets=sec.trusted_targets,
             port_scope=port_scope,
             custom_ports=custom_ports,
             connectors_overlay=connectors_overlay,
