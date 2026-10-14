@@ -16,6 +16,7 @@ from quirk.reports.content_model import (
     REMEDIATION_CATALOG,
     _classify_finding,
 )
+from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 from quirk.util.weak_crypto import has_legacy_tls_versions_signal
@@ -479,6 +480,30 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
             )
             adv["category"] = "coverage_gap"
             findings.append(adv)
+            continue
+
+        # Phase 225.1 SECH-05 / D-13: a JWKS fetch made with certificate
+        # verification disabled is a HIGH, score-neutral configuration finding
+        # (category config_advisory; see quirk/intelligence/evidence.py).
+        if proto == "ADVISORY" and getattr(e, "service_detail", "") == ADVISORY_JWKS_VERIFY_DISABLED:
+            jwks = _build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title="JWKS fetched with TLS certificate verification disabled",
+                description=(
+                    f"The JWKS at {host} was fetched with TLS certificate "
+                    "verification disabled (allow_insecure_jwks / "
+                    "--allow-insecure-jwks). Keys obtained this way could have "
+                    "been supplied by a network attacker."
+                ),
+                recommendation=(
+                    "Install a certificate the scanner trusts on the JWKS "
+                    "endpoint and remove the allow_insecure_jwks setting."
+                ),
+            )
+            jwks["category"] = "config_advisory"
+            findings.append(jwks)
             continue
 
         # Scan errors are normalized into blocker/advisory findings.

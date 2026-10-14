@@ -132,6 +132,10 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # findings_evaluator.py:653-671, byte-identical title and condition.
     # identity.
     "TLS certificate issued by untrusted CA": "TLS certificate issued by untrusted CA",
+
+    # scan.py JWKS verify-disabled ADVISORY row and findings_evaluator.py emit
+    # the byte-identical title on the same service_detail marker. identity.
+    "JWKS fetched with TLS certificate verification disabled": "JWKS fetched with TLS certificate verification disabled",
 }
 
 # ---------------------------------------------------------------------------
@@ -219,6 +223,9 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # (scan.py:292-293), below the HIGH/CRITICAL catch-all threshold ->
     # constitutes no theme at all.
     "TLS certificate issued by untrusted CA": "unreachable",
+    # NOT in any fingerprint tuple; dashboard severity is HIGH (scan.py JWKS
+    # verify-disabled site) -> high-impact-findings catch-all only.
+    "JWKS fetched with TLS certificate verification disabled": "catchall-only",
 }
 
 
