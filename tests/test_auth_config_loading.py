@@ -246,3 +246,24 @@ def test_fresh_install_states_stay_auth_off(tmp_path, monkeypatch):
             path.write_text(body)
         monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
         assert _client().get("/api/scans").status_code == 200, name
+
+
+def test_unconstructable_yaml_value_is_the_unreadable_state(cfg, monkeypatch, capsys):
+    """An impossible date literal makes the YAML loader raise ValueError, not
+    YAMLError; it is still the coded DASHBOARD-014 state everywhere."""
+    import quirk.util.server_config as sc
+
+    cfg.write_text(f"assessment:\n  date: 2026-13-45\nsecurity:\n  api_token: {TOKEN}\n")
+    state = sc.resolve_operator_token()
+    assert state.token == "" and "ValueError" in state.error
+    assert sc.load_server_security().error
+    resp = _client().get("/api/scans")
+    assert resp.status_code == 503 and "DASHBOARD-014" in resp.text
+    uvicorn = pytest.importorskip("uvicorn")
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
+    from quirk.dashboard.server import serve
+
+    with pytest.raises(SystemExit) as exc:
+        serve(host="127.0.0.1", no_open=True)
+    assert exc.value.code == 2
+    assert "DASHBOARD-014" in capsys.readouterr().err

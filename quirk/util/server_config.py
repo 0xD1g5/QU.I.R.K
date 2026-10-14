@@ -74,7 +74,10 @@ def _read_once(path: str) -> tuple[Optional[dict], Optional[str]]:
     try:
         with open(path, "r", encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
-    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+    except Exception as exc:  # noqa: BLE001 - YAMLError, OSError, and constructor errors
+        # The loader's constructors raise plain ValueError/TypeError (for
+        # example an impossible date literal) as well as YAMLError; every
+        # failure to build the document is the unreadable state.
         return None, _reason(path, exc)
     if data is None:
         return {}, None

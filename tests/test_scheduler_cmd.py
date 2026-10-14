@@ -569,6 +569,24 @@ def test_dispatch_skipped_when_server_config_unreadable(tmp_path, monkeypatch):
     assert len(runs) == 1 and runs[0].status == "failed"
 
 
+def test_dispatch_marks_failed_when_server_config_value_cannot_be_built(tmp_path, monkeypatch):
+    """A YAML value the loader cannot construct (an impossible date) is the
+    unreadable state too: the run is marked failed and the loop keeps going."""
+    _server_cfg(tmp_path, monkeypatch, "assessment:\n  date: 2026-13-45\n")
+    db_path = _make_db(tmp_path)
+    _add_schedule(db_path, name="bad-date", cron_expr="* * * * *")
+    spawned = []
+    monkeypatch.setattr(
+        "quirk.cli.scheduler_cmd.subprocess.Popen",
+        lambda *a, **k: spawned.append(a) or FakePopen(0),
+    )
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
+    run_scheduler(["run", "--once", "--config", db_path])
+    assert spawned == []
+    runs = _all_runs(db_path)
+    assert len(runs) == 1 and runs[0].status == "failed"
+
+
 def test_run_scheduler_refuses_authenticated_scan_config(tmp_path, monkeypatch, capsys):
     db_path = _make_db(tmp_path)
     scan = tmp_path / "scan.yaml"
