@@ -45,6 +45,7 @@ from platformdirs import user_config_dir, user_data_dir
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 import quirk
+from quirk.util.hosts import is_loopback_host
 from quirk.util.no_redirect import _NoRedirectHandler          # STAB-02 prerequisite
 from quirk.util.url_allowlist import validate_external_url
 
@@ -114,6 +115,17 @@ def run_sensor(argv: list[str]) -> None:
             "Cloud metadata service IPs (169.254.169.254) are ALWAYS blocked. "
             "This flag is persisted in sensor.yaml so subsequent `push` calls "
             "also allow the internal console URL without repeating the flag."
+        ),
+    )
+
+    enroll_p.add_argument(
+        "--allow-insecure-console",
+        dest="allow_insecure_console",
+        action="store_true",
+        default=False,
+        help=(
+            "Accept an http:// console URL for a non-loopback host (for isolated "
+            "lab networks). Persisted in sensor.yaml so later pushes accept it too."
         ),
     )
 
@@ -199,6 +211,23 @@ def _default_sensor_yaml_path() -> str:
 
 
 # ---------------------------------------------------------------------------
+# SECH-02: console URL scheme policy
+# ---------------------------------------------------------------------------
+
+
+def _console_scheme_allowed(console_url: str, allow_insecure: bool) -> bool:
+    """https always passes; http passes for loopback hosts or with the opt-in."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(console_url)
+    scheme = (parsed.scheme or "").lower()
+    if scheme == "http":
+        return allow_insecure or is_loopback_host(parsed.hostname or "")
+    # https and any other scheme: other schemes are rejected by validate_external_url.
+    return True
+
+
+# ---------------------------------------------------------------------------
 # SENSOR-01: enroll
 # ---------------------------------------------------------------------------
 
@@ -226,6 +255,20 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
                 file=sys.stderr,
             )
         sys.exit(1)
+
+    allow_insecure: bool = bool(getattr(args, "allow_insecure_console", False))
+    if not _console_scheme_allowed(console_url, allow_insecure):
+        print(
+            "ERROR: console URL must use https:// unless the host is loopback; "
+            "pass --allow-insecure-console to accept http:// for this host.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if allow_insecure and not _console_scheme_allowed(console_url, False):
+        print(
+            "WARNING: --allow-insecure-console set; the console URL uses http://.",
+            file=sys.stderr,
+        )
 
     # Resolve config path
     config_path: str = args.config or _default_sensor_yaml_path()
@@ -283,6 +326,7 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
         "hmac_key": hmac_key,
         "console_api_token": api_token,
         "allow_internal_console": allow_internal,
+        "allow_insecure_console": allow_insecure,
     }
 
     # Atomic write
@@ -718,6 +762,18 @@ def _cmd_push(args: argparse.Namespace) -> None:
     if not result.ok:
         print(
             f"ERROR: console URL blocked by SSRF allowlist — {result.reason}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # SECH-02: same scheme rule as enroll, applied before any header/client is built.
+    if not _console_scheme_allowed(
+        console_url, bool(sensor_cfg.get("allow_insecure_console", False))
+    ):
+        print(
+            "ERROR: console URL in sensor.yaml must use https:// unless the host is "
+            "loopback; re-enroll with https://, or with --allow-insecure-console "
+            "for an isolated lab network.",
             file=sys.stderr,
         )
         sys.exit(1)
