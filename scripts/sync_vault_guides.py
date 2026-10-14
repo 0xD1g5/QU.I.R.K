@@ -21,7 +21,14 @@ Exit codes:
 
 Vault note convention: ``---\\n`` + frontmatter lines + ``---\\n`` + ONE blank
 line + the source bytes verbatim. A write preserves every frontmatter line
-except ``updated:``, writes only when the body differs, and never deletes.
+except ``updated:`` (and the note's own LF/CRLF frontmatter line endings),
+writes only when the body differs, and never deletes.
+
+Ownership guard (225-REVIEW CR-01): an EXISTING vault note is only ever
+overwritten when its frontmatter parses and declares ``source:`` equal to the
+MAPPING source. A note with no/unparseable frontmatter, no ``source:`` key, or
+a different ``source:`` is reported as ``refused`` (exit 1) and left
+byte-identical -- in both ``--check`` and ``--write`` modes.
 """
 
 from __future__ import annotations
@@ -110,40 +117,82 @@ class VaultPathError(ValueError):
 class PairResult:
     source: str
     target: str
-    status: str  # in-sync | drift | missing | written | created
+    status: str  # in-sync | drift | missing | written | created | refused
     diff_lines: int = 0
+    detail: str = ""
 
 
 # --------------------------------------------------------------------------
 # Pure helpers
 # --------------------------------------------------------------------------
 
+def note_newline(text: str) -> str | None:
+    """Line ending of a note's opening ``---`` fence, or None if absent."""
+    if text.startswith("---\r\n"):
+        return "\r\n"
+    if text.startswith("---\n"):
+        return "\n"
+    return None
+
+
 def parse_note(text: str) -> tuple[list[str], str]:
     """Split a vault note into (frontmatter lines, body).
 
-    Exactly one blank separator line after the closing ``---`` is stripped.
-    A note without leading ``---`` returns ([], text).
+    Accepts LF or CRLF fences. Exactly one blank separator line after the
+    closing ``---`` is stripped. A note without a leading ``---`` fence (or
+    with an unterminated one) returns ([], text).
     """
-    if not text.startswith("---\n"):
+    nl = note_newline(text)
+    if nl is None:
         return [], text
-    rest = text[4:]
+    rest = text[3 + len(nl):]
     lines = rest.splitlines(keepends=True)
     for idx, line in enumerate(lines):
         if line.rstrip("\r\n") == "---":
             fm = [ln.rstrip("\r\n") for ln in lines[:idx]]
             body = "".join(lines[idx + 1:])
-            if body.startswith("\n"):
-                body = body[1:]
+            for sep in ("\r\n", "\n"):
+                if body.startswith(sep):
+                    body = body[len(sep):]
+                    break
             return fm, body
     return [], text
 
 
-def render_note(fm_lines: list[str], body: str, today: str) -> str:
-    """Render a note: frontmatter verbatim except ``updated:``."""
+def render_note(fm_lines: list[str], body: str, today: str,
+                newline: str = "\n") -> str:
+    """Render a note: frontmatter verbatim except ``updated:``.
+
+    ``newline`` is the frontmatter's own line ending, so a CRLF note keeps
+    CRLF frontmatter on rewrite.
+    """
     out = []
     for line in fm_lines:
         out.append(f"updated: {today}" if line.startswith("updated:") else line)
-    return "---\n" + "\n".join(out) + "\n---\n\n" + body
+    nl = newline
+    return "---" + nl + nl.join(out) + nl + "---" + nl + nl + body
+
+
+def declared_source(fm_lines: list[str]) -> str | None:
+    for line in fm_lines:
+        if line.startswith("source:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+def ownership_problem(fm_lines: list[str], source_rel: str) -> str | None:
+    """Why an existing note must NOT be overwritten for ``source_rel``.
+
+    None means the note provably is a sync of ``source_rel``.
+    """
+    if not fm_lines:
+        return "no parseable frontmatter; not provably a sync of this source"
+    src = declared_source(fm_lines)
+    if src is None:
+        return "frontmatter has no source: key; not provably a sync"
+    if src != source_rel:
+        return f"vault source: {src!r} but MAPPING says {source_rel!r}"
+    return None
 
 
 def new_note_frontmatter(source_rel: str, today: str) -> list[str]:
@@ -213,15 +262,20 @@ def write_pair(repo_root: pathlib.Path, vault_root: pathlib.Path,
                               diff_count("", source))
         return PairResult(source_rel, target_rel, "missing",
                           diff_count("", source))
-    fm, body = parse_note(_read_text(target))
+    text = _read_text(target)
+    fm, body = parse_note(text)
     n = diff_count(body, source)
+    # CR-01: ownership is checked BEFORE any write decision. A note that is
+    # not provably a sync of this source is never touched.
+    problem = ownership_problem(fm, source_rel)
+    if problem is not None:
+        return PairResult(source_rel, target_rel, "refused", n, problem)
     if n == 0:
         return PairResult(source_rel, target_rel, "in-sync", 0)
     if not write:
         return PairResult(source_rel, target_rel, "drift", n)
-    if not fm:
-        fm = new_note_frontmatter(source_rel, today)
-    _atomic_write(target, render_note(fm, source, today))
+    _atomic_write(target, render_note(fm, source, today,
+                                      newline=note_newline(text) or "\n"))
     return PairResult(source_rel, target_rel, "written", n)
 
 
@@ -255,10 +309,7 @@ def _source_of(path: pathlib.Path) -> str | None:
         fm, _ = parse_note(_read_text(path))
     except (OSError, UnicodeDecodeError):
         return None
-    for line in fm:
-        if line.startswith("source:"):
-            return line.split(":", 1)[1].strip()
-    return None
+    return declared_source(fm)
 
 
 def scan_vault_sources(vault_root: pathlib.Path,
@@ -314,8 +365,9 @@ def plan_sync(repo_root, vault_root, tracked, today, write) -> list[PairResult]:
 
 def _report(results, unmapped, xcheck) -> None:
     for r in results:
+        extra = f" REFUSED: {r.detail}; left untouched" if r.detail else ""
         print(f"{r.status:9s} {r.source} -> {r.target} "
-              f"(diff lines: {r.diff_lines})", file=sys.stderr)
+              f"(diff lines: {r.diff_lines}){extra}", file=sys.stderr)
     for u in unmapped:
         print(f"UNMAPPED tracked doc: {u} (add to MAPPING or EXEMPT, "
               f"Phase 225 D-06)", file=sys.stderr)
@@ -344,10 +396,12 @@ def main(argv=None, *, tracked=None, today=None) -> int:
         tracked = tracked_markdown(REPO_ROOT)
     today = today or datetime.date.today().isoformat()
 
+    # CR-01: the source: cross-check runs BEFORE any write; write_pair then
+    # independently refuses every pair whose note is not provably its sync.
+    xcheck = cross_check(MAPPING, scan_vault_sources(vault_root), set(tracked))
+    unmapped = find_unmapped(tracked, MAPPING, EXEMPT, EXEMPT_GLOBS)
     results = plan_sync(REPO_ROOT, vault_root, tracked, today,
                         write=args.write)
-    unmapped = find_unmapped(tracked, MAPPING, EXEMPT, EXEMPT_GLOBS)
-    xcheck = cross_check(MAPPING, scan_vault_sources(vault_root), set(tracked))
 
     if args.write:
         # Re-run as a check so the exit code reflects the post-write state.
@@ -358,11 +412,14 @@ def main(argv=None, *, tracked=None, today=None) -> int:
     else:
         _report(results, unmapped, xcheck)
 
-    bad = [r for r in results if r.status in ("drift", "missing")]
+    bad = [r for r in results if r.status in ("drift", "missing", "refused")]
     mismatches = [m for m in xcheck if m.startswith("MISMATCH")]
     code = 1 if (bad or unmapped or mismatches) else 0
-    if bad and not args.write:
+    if any(r.status in ("drift", "missing") for r in bad) and not args.write:
         print(f"drift: fix with `{FIX_CMD}`", file=sys.stderr)
+    if any(r.status == "refused" for r in bad):
+        print("refused: a mapped vault note is not provably a sync of its "
+              "source; repair it by hand (Phase 225 CR-01)", file=sys.stderr)
     if args.json:
         print(json.dumps({
             "exit": code,

@@ -177,3 +177,88 @@ def test_live_vault_in_sync():
     code = main(["--check", "--vault-root", str(root)], tracked=_tracked())
     assert code == 0, (
         f"Phase 225 D-06: vault out of sync (exit {code}); run `{FIX}`")
+
+
+# --------------------------------------------------------------------------
+# 225-REVIEW CR-01: ownership guard -- never overwrite a note that is not
+# provably a sync of its MAPPING source; preserve extra keys (LF and CRLF).
+# --------------------------------------------------------------------------
+
+def test_write_refuses_mismatched_source_note_byte_identical(tmp_path):
+    repo = _repo(tmp_path, {"docs/a.md": "# A\nnew\n"})
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "A.md"
+    original = ("---\nproject: QU.I.R.K.\nsource: docs/other.md\n"
+                "updated: 2020-01-01\n---\n\nhand-authored operator note\n")
+    note.write_bytes(original.encode("utf-8"))
+    res = write_pair(repo, vault, "docs/a.md", "A.md", TODAY)
+    assert res.status == "refused" and "docs/other.md" in res.detail
+    assert note.read_bytes() == original.encode("utf-8"), (
+        "CR-01: a MISMATCH note must be left byte-identical")
+    # Negative control: the same note with the right source IS written.
+    note.write_bytes(original.replace("docs/other.md", "docs/a.md")
+                     .encode("utf-8"))
+    assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "written"
+
+
+def test_main_write_leaves_mismatched_vault_note_untouched(tmp_path):
+    vault = tmp_path / "vault"
+    target = vault / MAPPING["docs/admin-guide.md"]
+    target.parent.mkdir(parents=True)
+    original = (b"---\nproject: QU.I.R.K.\nsource: docs/not-admin.md\n"
+                b"updated: 2020-01-01\n---\n\nrepurposed note\n")
+    target.write_bytes(original)
+    code = main(["--write", "--vault-root", str(vault)],
+                tracked=["docs/admin-guide.md"], today=TODAY)
+    assert code == 1, "CR-01: a refused pair must exit nonzero"
+    assert target.read_bytes() == original
+
+
+@pytest.mark.parametrize("original", [
+    b"plain operator note with no frontmatter\n",
+    b"---\nproject: QU.I.R.K.\nno closing fence\n",
+    b"---\nproject: QU.I.R.K.\nupdated: 2020-01-01\n---\n\nno source key\n",
+])
+def test_write_refuses_unowned_note(tmp_path, original):
+    repo = _repo(tmp_path, {"docs/a.md": "# A\n"})
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "A.md"
+    note.write_bytes(original)
+    for write in (False, True):
+        res = write_pair(repo, vault, "docs/a.md", "A.md", TODAY, write=write)
+        assert res.status == "refused", (write, res)
+    assert note.read_bytes() == original
+
+
+def test_write_preserves_extra_keys_lf(tmp_path):
+    repo = _repo(tmp_path, {"docs/a.md": "# A\nchanged\n"})
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "A.md"
+    note.write_bytes(b"---\nproject: QU.I.R.K.\ntype: reference\n"
+                     b"source: docs/a.md\nupdated: 2020-01-01\n"
+                     b"aliases: [Admin]\ntags: [quirk]\n---\n\n# A\nold\n")
+    assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "written"
+    assert note.read_bytes() == (
+        b"---\nproject: QU.I.R.K.\ntype: reference\nsource: docs/a.md\n"
+        b"updated: " + TODAY.encode() + b"\naliases: [Admin]\ntags: [quirk]\n"
+        b"---\n\n# A\nchanged\n")
+
+
+def test_write_preserves_crlf_frontmatter_and_extra_keys(tmp_path):
+    repo = _repo(tmp_path, {"docs/a.md": "# A\nchanged\n"})
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "A.md"
+    note.write_bytes(b"---\r\nproject: QU.I.R.K.\r\nsource: docs/a.md\r\n"
+                     b"updated: 2020-01-01\r\naliases: [Admin]\r\n---\r\n\r\n"
+                     b"# A\nold\n")
+    fm, body = parse_note(note.read_text(encoding="utf-8", newline=""))
+    assert fm[-1] == "aliases: [Admin]" and body == "# A\nold\n"
+    assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "written"
+    assert note.read_bytes() == (
+        b"---\r\nproject: QU.I.R.K.\r\nsource: docs/a.md\r\nupdated: "
+        + TODAY.encode() + b"\r\naliases: [Admin]\r\n---\r\n\r\n# A\nchanged\n")
+    assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "in-sync"
