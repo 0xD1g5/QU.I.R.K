@@ -194,6 +194,7 @@ def build_job_config_dict(
     ] = None,
     scan_overlay: Optional[Dict[str, Any]] = None,
     assessment_overlay: Optional[Dict[str, Any]] = None,
+    trusted_targets: Optional[List[str]] = None,
 ) -> dict:
     """Build the dict a dashboard-dispatched scan's job config YAML is dumped from.
 
@@ -307,6 +308,10 @@ def build_job_config_dict(
             "allow_internal_targets": allow_internal_targets,
         },
     }
+    # 225.1 / D-07: carry the server's trusted_targets into the job YAML so
+    # run_scan.py's own enforce_trusted_targets gate enforces it.
+    if trusted_targets:
+        config["security"]["trusted_targets"] = list(trusted_targets)
     # D-14: an explicit operator toggle (connectors_overlay) beats the
     # custom-port-scope suppression above (enable_email/enable_broker=False),
     # so the overlay is merged LAST — {**suppression, **overlay}. D-13:
@@ -722,22 +727,16 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
             detail="No valid targets provided — targets must not be empty or whitespace-only",
         )
 
-    # Phase 143 / TAIL-02 / D-04: server-enforced trusted-targets consent gate — same
-    # chokepoint function run_scan.py's CLI path calls, per D-04's dual-entry-point wording.
-    # Fail-safe: mirrors the allow_internal_targets load pattern below — load server-side
-    # SecurityCfg fresh, fail-open-to-empty-allowlist only on load error (an unreachable/missing
-    # config.yaml must not accidentally BLOCK all scans; D-03's "empty = allow-all" posture
-    # applies symmetrically to the fail-safe path here, unlike allow_internal_targets's
-    # fail-CLOSED posture — trusted_targets' own default IS "allow all").
-    from quirk.util.target_trust import is_target_trusted
-    trusted_targets_cfg: list = []
-    try:
-        from quirk.config import load_config  # lazy import — avoids cycles
-        _cfg_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
-        _cfg = load_config(_cfg_path)
-        trusted_targets_cfg = list(getattr(_cfg.security, "trusted_targets", None) or [])
-    except Exception:
-        trusted_targets_cfg = []
+    # Phase 143 / TAIL-02 / D-04: server-enforced trusted-targets consent gate.
+    # 225.1 / D-03, D-07: one tolerant reader; an unreadable server config is a
+    # 503, never an empty (allow-all) list. Overlay connector hosts are checked too.
+    from quirk.util.server_config import load_server_security
+    from quirk.util.target_trust import connector_host_values, is_target_trusted
+    sec = load_server_security()
+    if sec.error:
+        logger.error("Server security configuration could not be read: %s", sec.error)
+        raise HTTPException(status_code=503, detail=format_error("DASHBOARD-014"))
+    trusted_targets_cfg: list = sec.trusted_targets
     if trusted_targets_cfg:
         for _target in all_valid_tokens:
             _result = is_target_trusted(_target, trusted_targets_cfg)
@@ -747,6 +746,16 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
                     detail=(
                         f"Target {_result.redacted_preview!r} is not in the trusted-targets "
                         f"allowlist (security.trusted_targets in config.yaml)."
+                    ),
+                )
+        for _field, _host in connector_host_values(payload.connectors or {}):
+            _result = is_target_trusted(_host, trusted_targets_cfg)
+            if not _result.ok:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Target {_result.redacted_preview!r} (connectors.{_field}) is not in "
+                        f"the trusted-targets allowlist (security.trusted_targets in config.yaml)."
                     ),
                 )
 
@@ -851,16 +860,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     # dropped by ScanSubmitRequest extra="ignore". We source the flag from the
     # server-side config — QUIRK_CONFIG_PATH env wins, falling back to
     # ./config.yaml. Any resolution failure defaults to False (fail-safe deny).
-    allow_internal = False
-    try:
-        from quirk.config import load_config  # lazy import — avoids cycles
-        cfg_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
-        cfg = load_config(cfg_path)
-        allow_internal = bool(getattr(cfg.security, "allow_internal_targets", False))
-    except Exception:
-        # Fail-safe default: deny internal targeting when config is missing or
-        # broken. Production callers can opt in only via valid server config.
-        allow_internal = False
+    allow_internal = sec.allow_internal_targets
 
     # Phase 193 / PARITY-02 (D-13/D-14): connectors_overlay threads the
     # operator's accepted toggles into the job YAML — build_job_config_dict
@@ -869,6 +869,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         config_dict = build_job_config_dict(
             output_dir, normalized_targets, db_path, payload.calibration,
             allow_internal_targets=allow_internal,
+            trusted_targets=sec.trusted_targets,
             port_scope=payload.port_scope,
             custom_ports=payload.custom_ports,
             connectors_overlay=payload.connectors,

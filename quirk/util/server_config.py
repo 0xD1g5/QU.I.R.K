@@ -73,3 +73,37 @@ def resolve_operator_token() -> TokenState:
     if not isinstance(security, dict):
         return TokenState("", f"{path}: 'security' is not a mapping")
     return TokenState(str(security.get("api_token", "") or ""), None)
+
+
+@dataclass(frozen=True)
+class ServerSecurity:
+    allow_internal_targets: bool
+    trusted_targets: list
+    error: Optional[str]
+
+
+def load_server_security() -> ServerSecurity:
+    """Tolerant reader for the server's ``security`` block (D-07, D-03).
+
+    Supplies ``allow_internal_targets`` and ``trusted_targets`` to dashboard
+    jobs and the Effective Config preview. A missing or empty file is the
+    documented default (False, allow-all); a file that exists but cannot be
+    read is an ``error`` the caller must refuse on, never an empty list.
+    Coercion matches ``quirk/config.py``.
+    """
+    path = server_config_path()
+    data, error = read_server_config(path)
+    if error:
+        return ServerSecurity(False, [], error)
+    if not data:
+        return ServerSecurity(False, [], None)
+    security = data.get("security")
+    if security is None:
+        return ServerSecurity(False, [], None)
+    if not isinstance(security, dict):
+        return ServerSecurity(False, [], f"{path}: 'security' is not a mapping")
+    return ServerSecurity(
+        bool(security.get("allow_internal_targets", False)),
+        list(security.get("trusted_targets") or []),
+        None,
+    )

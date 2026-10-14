@@ -31,6 +31,7 @@ from quirk.dashboard.api.schemas import (
     ConfigResponse,
     ConfigSection,
     validate_connectors_overlay,
+    validate_credential_names,
 )
 
 router = APIRouter()
@@ -165,6 +166,14 @@ def get_effective_config(
             "so preview and submit can never disagree on what is valid."
         ),
     ),
+    credential_keys: Optional[str] = Query(
+        None,
+        description=(
+            "JSON-encoded list of credential NAMES the New Scan form has "
+            "filled; names only, never values. Validated by the same "
+            "allow-list as job submission."
+        ),
+    ),
 ) -> ConfigEffectiveResponse:
     """GET /api/config/effective — resolved, redacted, provenance-badged config
     preview matching what a `POST /api/jobs` submission with these query
@@ -192,6 +201,21 @@ def get_effective_config(
             )
         try:
             connectors_overlay = validate_connectors_overlay(connectors_overlay)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # 225.1 / D-09, D-24: names-only credential presence; same allow-list as submit.
+    credential_names: set = set()
+    if credential_keys is not None:
+        _bad = "credential_keys must be a JSON list of credential name strings"
+        try:
+            _names = json.loads(credential_keys)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=422, detail=_bad) from exc
+        if not isinstance(_names, list) or not all(isinstance(n, str) for n in _names):
+            raise HTTPException(status_code=422, detail=_bad)
+        try:
+            credential_names = set(validate_credential_names(_names))
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -260,6 +284,10 @@ def get_effective_config(
         fields = _build_section_fields(
             section_name, section_dict, user_paths, preset_changed, connectors_user_set,
         )
+        if section_name == "connectors" and credential_names:
+            for f in fields:
+                if f.redacted and f.name in credential_names:
+                    f.credential_status = "set"
         redacted_field_count += sum(1 for f in fields if f.redacted)
         sections.append(ConfigSection(name=section_name, title=title, fields=fields))
 
