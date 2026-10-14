@@ -72,6 +72,42 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def stamp_from_scanned_at(scanned_at: str) -> str:
+    """'2026-09-28T13:21:39...' -> '20260928-132139' (the artifact filename stamp)."""
+    ymd, hms = scanned_at.split("T", 1)
+    return ymd.replace("-", "") + "-" + hms[:8].replace(":", "")
+
+
+def build_scoped_config(stamp: str, workdir: str, evidence: dict) -> str:
+    """Write a config whose output.directory holds ONLY the canonical scan's real
+    report artifacts (symlinked, never regenerated), so the executive header's
+    "Report from scan" refers to the scan the dashboard is displaying rather than
+    a newer unrelated run-stats file in quirk-output/. Returns the config path.
+    """
+    import yaml
+
+    src_dir = REPO_ROOT / "quirk-output"
+    out_dir = Path(workdir) / "reports"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    linked = []
+    for f in sorted(src_dir.glob(f"*-{stamp}.*")):
+        (out_dir / f.name).symlink_to(f)
+        linked.append(f.name)
+    if not any(n.startswith("report-") and n.endswith(".html") for n in linked) or not any(
+        n.startswith("run-stats-") for n in linked
+    ):
+        raise SystemExit(
+            f"NO_REPORT_ARTIFACTS: quirk-output/ has no report-{stamp}.html + "
+            f"run-stats-{stamp}.json for the canonical scan; generate them first."
+        )
+    cfg = yaml.safe_load((REPO_ROOT / "config.yaml").read_text())
+    cfg.setdefault("output", {})["directory"] = str(out_dir)
+    cfg_path = Path(workdir) / "config.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg))
+    evidence["report_artifacts"] = {"stamp": stamp, "files": linked}
+    return str(cfg_path)
+
+
 def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
@@ -84,7 +120,7 @@ def _get(url: str) -> bytes:
 
 
 @contextlib.contextmanager
-def serve_dashboard(db_path: Path):
+def serve_dashboard(db_path: Path, config_path: str | None = None):
     """Background a loopback uvicorn serving the dashboard app; yield its origin."""
     port = _free_port()
     env = dict(os.environ)
@@ -93,7 +129,7 @@ def serve_dashboard(db_path: Path):
     # Auth passthrough only when BOTH token sources resolve empty.
     env.pop("QUIRK_API_TOKEN", None)
     tmp = tempfile.mkdtemp(prefix="quirk-hero-")
-    env["QUIRK_CONFIG_PATH"] = os.path.join(tmp, "absent", "config.yaml")
+    env["QUIRK_CONFIG_PATH"] = config_path or os.path.join(tmp, "absent", "config.yaml")
     # close_fds=False and no cwd: avoids the macOS fork() SIGSEGV path.
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "quirk.dashboard.api.app:app",
@@ -228,15 +264,68 @@ def capture(args, origin: str, scan: dict, evidence: dict) -> None:
             if bad:
                 raise SystemExit(f"GAUGE_MIRRORED: arc reach differs from expected: {bad}")
 
-            box = page.locator(_GAUGES_CARD).bounding_box()
-            scroll_y = page.evaluate("() => window.scrollY")
-            card_top = box["y"] + scroll_y
-            card_bottom = card_top + box["height"]
-            clip = {"x": 0, "y": 0, "width": W,
-                    "height": math.ceil(card_bottom + args.pad)}
+            # Issue 4: dismiss the regression alert (a real, dismissible control)
+            # BEFORE measuring, since removing it shifts layout.
+            alert = page.get_by_role("alert").filter(has_text="finding(s) detected")
+            if alert.count() > 0:
+                btn = alert.get_by_role("button", name="Dismiss regression alert")
+                if btn.count() != 1:
+                    raise SystemExit("ALERT_NOT_DISMISSIBLE: regression banner has no dismiss button.")
+                btn.click()
+                try:
+                    alert.wait_for(state="detached", timeout=5000)
+                except Exception:
+                    raise SystemExit("ALERT_NOT_DISMISSED: banner still present after clicking dismiss.")
+                evidence["alert_dismissed"] = True
+            else:
+                evidence["alert_dismissed"] = False
+
+            hdr = page.get_by_text("Report from scan:")
+            if hdr.count() == 0:
+                raise SystemExit("NO_REPORT_HEADER: executive header does not read 'Report from scan: ...'.")
+            evidence["report_header"] = hdr.first.inner_text()
+
+            # Issue 2: all 7 gauges must share one row.
+            tops = page.evaluate(
+                "(sel) => Array.from(document.querySelector(sel).querySelectorAll('svg'))"
+                ".map(s => Math.round(s.getBoundingClientRect().top))",
+                _GAUGES_CARD,
+            )
+            evidence["gauge_tops"] = tops
+            evidence["gauges_one_row"] = len(set(tops)) == 1
+            if len(set(tops)) != 1 and not args.allow_wrapped_gauges:
+                raise SystemExit(f"GAUGES_WRAPPED: gauges are not on one row (tops={tops}); raise --width.")
+
+            # Issue 1: the sidebar is viewport-height, so grow the viewport to the
+            # clip bottom and re-measure until stable (layout can shift).
+            def measure():
+                b = page.locator(_GAUGES_CARD).bounding_box()
+                return math.ceil(b["y"] + page.evaluate("() => window.scrollY") + b["height"]), b
+            vh = H
+            for _ in range(4):
+                bottom, box = measure()
+                need = bottom + args.pad
+                if need <= vh and vh == need:
+                    break
+                vh = need
+                page.set_viewport_size({"width": W, "height": vh})
+                page.wait_for_timeout(300)
+            bottom, box = measure()
+            card_bottom = box["y"] + page.evaluate("() => window.scrollY") + box["height"]
+            clip = {"x": 0, "y": 0, "width": W, "height": math.ceil(card_bottom + args.pad)}
+            if clip["height"] != vh:
+                raise SystemExit(f"VIEWPORT_UNSTABLE: viewport {vh} != clip {clip['height']}.")
+            nav_clipped = page.evaluate(
+                "(sel) => { const n = document.querySelector(sel); return n.scrollHeight > n.clientHeight + 1; }",
+                _SIDEBAR_NAV,
+            )
+            evidence["viewport"] = {"width": W, "height": vh}
+            evidence["sidebar_nav_overflowing"] = nav_clipped
+            if nav_clipped:
+                raise SystemExit("SIDEBAR_NAV_CLIPPED: nav list still scrolls at this viewport height.")
             evidence["clip"] = clip
             evidence["card_bottom"] = card_bottom
-            page.screenshot(path=str(out), full_page=True, clip=clip, animations="disabled")
+            page.screenshot(path=str(out), clip=clip, animations="disabled")
         finally:
             browser.close()
 
@@ -257,6 +346,8 @@ def main(argv=None) -> int:
     ap.add_argument("--height", type=int, default=900)
     ap.add_argument("--out", default="docs/images/dashboard-hero.png")
     ap.add_argument("--db", default=str(REPO_ROOT / "quirk-output" / "quirk.db"))
+    ap.add_argument("--allow-wrapped-gauges", action="store_true",
+                    help="Do not fail when the 7 gauges wrap (layout is max-w-[1200px]; width cannot fix it).")
     ap.add_argument("--pad", type=int, default=24)
     ap.add_argument("--evidence-json", default=None)
     args = ap.parse_args(argv)
@@ -270,11 +361,20 @@ def main(argv=None) -> int:
     before = _sha256(db)
     evidence: dict = {"db": str(db), "db_sha256_before": before,
                       "viewport": {"width": args.width, "height": args.height}}
-    with serve_dashboard(db) as origin:
+    # Resolve the canonical scan first (throwaway server) so the real server can be
+    # started with a report dir scoped to that scan's artifacts.
+    with serve_dashboard(db) as probe_origin:
+        meta0 = json.loads(_get(probe_origin + "/api/scan/latest")).get("meta") or {}
+    scanned_at = meta0.get("scanned_at")
+    if not scanned_at:
+        raise SystemExit("NO_SCAN_META: /api/scan/latest meta.scanned_at is missing.")
+    workdir = tempfile.mkdtemp(prefix="quirk-hero-reports-")
+    cfg_path = build_scoped_config(stamp_from_scanned_at(scanned_at), workdir, evidence)
+    with serve_dashboard(db, cfg_path) as origin:
         scan = json.loads(_get(origin + "/api/scan/latest"))
         score = scan.get("score") or {}
-        evidence["scan"] = {"id": scan.get("scan_id") or scan.get("id"),
-                            "timestamp": scan.get("timestamp") or scan.get("scan_timestamp")}
+        m_ = scan.get("meta") or {}
+        evidence["scan"] = {"id": m_.get("scan_id"), "timestamp": m_.get("scanned_at")}
         evidence["score"] = score
         evidence["meta"] = scan.get("meta")
         html = _get(origin + "/").decode("utf-8", "replace")
