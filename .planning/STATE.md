@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-14T12:00:00.000Z"
-last_activity: "2026-10-14 -- Phase 225.1 planned: 16 plans in 11 waves, SECH-01..05 added, branch cut from origin/main. Prior: Phase 225 COMPLETE (verified passed 35/35 at 9fe5d31e), PR #58 merged. Hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-14T19:00:00.000Z"
+last_activity: "2026-10-14 -- Phase 225.1 plans 01-16 executed (tracked work complete, code review 1 Critical + 10 Warning fixed in-phase); next: verify + CI close. Hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 58
-  completed_plans: 42
+  completed_plans: 58
   percent: 71
 ---
 
@@ -1443,16 +1443,40 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 225.1 (Pre-release security hardening) — PLANNED 2026-10-14, 0 of 16 plans executed (225 COMPLETE; 5 of 7 phases in v5.27)
+Phase: 225.1 (Pre-release security hardening) — EXECUTED 2026-10-14, 16 of 16 plans, verification pending (225 COMPLETE; 5 of 7 phases in v5.27)
+Plans 225.1-01..16 tracked work complete on branch `phase-225.1-pre-release-security-hardening`: strict operator-token config
+loading (SECH-01); per-hop redirect validation for the URL-fetching scanners, metadata checks over IPv4 carried in IPv6, and a
+sensor console URL scheme policy with `--allow-insecure-console` (SECH-02); `trusted_targets` over `include_ips`, connector host
+fields, dashboard jobs, schedules and scheduled runs, plus the Effective Config preview's server settings and credential presence
+(SECH-03); redacted URL-fetch text, scheme-and-kind credential-reference errors, DN control-character stripping, and sensor-push
+audit rows with source address and sensor id (SECH-04); a score-neutral HIGH JWKS verify-disabled finding and a source-derived
+`url_allowlist` accepted-risk note (SECH-05).
+Required code review after plan 15 found 1 Critical + 10 Warning; all 11 fixed in-phase with a test recorded red before each fix
+(`e70bd237`..`f86ea11c`). Plan 16 added the scheduler-side doc sentence, ledger row and test for a config file that goes missing
+or empty after it was read with settings (`01f9c548`).
+Full local suite at `f86ea11c`: 4 failed, 5742 passed; the failing set equals the 225.1-01 local baseline (macOS py3.14 nodes).
+Next: CITRUTH-03 observation at the pushed HEAD and the phase PR, then `gsd-verifier` for 225.1. REQUIREMENTS SECH-01..05 and the
+Phase 225.1 checkbox are flipped by hand in the phase-close commit after verification. Then 226.
+Plan: 16 of 16
+Status: Phase 225 COMPLETE; PR #58 MERGED (f91d8a66). Phase 225.1 executed, verification pending. ROADMAP `16/16` means tracked
+work complete; verification owns the verdict.
+HAND-OFF to Phase 226 (REL-05): the 5.27.0 release notes carry the upgrade-visible behaviours in `changelog.d/phase-225.1.bugfix.md`:
+an existing config file that cannot be read stops `quirk serve` and makes protected routes answer 503; a config file that goes
+missing or empty after a running server or scheduler read it with settings is treated as unreadable until it is restored or the
+process restarts; sensors need an `https://` console URL for non-loopback hosts unless `--allow-insecure-console` is given.
+HAND-OFF to Phase 226 (REL-07): post-merge raw-URL byte check for the README hero (HTTP 200 AND `size_download` equal to
+`wc -c < docs/images/dashboard-hero.png`) is still owed; other relative README links that will not resolve on PyPI (LICENSE,
+SECURITY.md, docs/*.md) are flagged for 226.
+Last activity: 2026-10-14 — Phase 225.1 plans 01-16 executed. Hand-edited from a pre-image (no gsd-sdk state verbs).
+
+**Prior position (Phase 225 close, superseded 2026-10-14):**
+Phase: 225 (Doc Publication & Hero Retake) — COMPLETE 2026-10-14
 Verified `passed` 35/35 at `9fe5d31e`, no overrides. Required code review found 2 Critical (vault sync could overwrite a
 mismatched note; hero capture served the live canonical DB) + 6 Warning; all 8 fixed in-phase with proven-red tests, plus a
 Python 3.11 compat fix (`Path.read_text(newline=)` is 3.13+). CITRUTH-03: `branch_ci_state.py --compare-main` exit 0 at `9fe5d31e`
 (Python CI 38509803397 + Dashboard Quality 38509803494).
 Plans 225-01..05 tracked work complete on branch `phase-225-doc-publication-hero-retake`: vault sync instrument + 4 connector pages,
 scripted hero capture + retaken README hero (operator-approved gauge-row gap-8 -> gap-7 dashboard fix), UAT Series 225, CI/PR close-out.
-Next: /gsd-execute-phase 225.1 (Pre-release security hardening, SECH-01..05; 16 plans in 11 waves). PR #58 MERGED 2026-10-14; branch cut from origin/main. Then 226.
-Plan: 0 of 16
-Status: Phase 224 COMPLETE (PR #56 + #57 merged). Phase 225 COMPLETE; PR #58 MERGED (f91d8a66). Phase 225.1 planned, not started.
 HAND-OFF to Phase 226 (REL-07): post-merge raw-URL byte check for the README hero (HTTP 200 AND `size_download` equal to
 `wc -c < docs/images/dashboard-hero.png`) is owed until the Phase 225 PR merges; other relative README links that will not resolve
 on PyPI (LICENSE, SECURITY.md, docs/*.md) are flagged for 226, not fixed in 225.
@@ -3391,7 +3415,11 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/224-doc-claim-ledger-verification/224-18-SUMMARY.md` — Phase 224 stopped at 224-18 (all plans
+Resume file: `.planning/phases/225.1-pre-release-security-hardening/225.1-16-SUMMARY.md` — Phase 225.1 stopped at 225.1-16
+(all plans executed, UAT Series 225.1 committed); resume with `gsd-verifier`. No commit may land between the CI observation and
+the phase-close commit.
+
+Earlier resume file (superseded): `.planning/phases/224-doc-claim-ledger-verification/224-18-SUMMARY.md` — Phase 224 stopped at 224-18 (all plans
 executed, UAT Series 224 committed); resume with `gsd-verifier` (seed 224, n = 100). No commit may land between the CI
 observation and the phase-close commit.
 

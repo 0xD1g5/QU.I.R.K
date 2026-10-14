@@ -244,22 +244,22 @@ Plans:
 **Plans**: 16 plans
 
 Plans:
-- [ ] 225.1-01-PLAN.md — branch, SECH requirements, hygiene check, baseline
-- [ ] 225.1-02-PLAN.md — auth config loading, DASHBOARD-014, token CLI wording + docs
-- [ ] 225.1-03-PLAN.md — outbound URL validation hardening, accepted-risk note derived from source
-- [ ] 225.1-04-PLAN.md — REST fuzzer and RabbitMQ probe do not follow redirects
-- [ ] 225.1-05-PLAN.md — score-neutral finding category
-- [ ] 225.1-06-PLAN.md — shared per-hop outbound fetch helper for URL-fetching scanners + docs
-- [ ] 225.1-07-PLAN.md — JWKS verify-disabled HIGH finding on both pipelines
-- [ ] 225.1-08-PLAN.md — trusted_targets over include_ips, connector fields and job YAML, preview API
-- [ ] 225.1-09-PLAN.md — New Scan preview credential display + trusted_targets docs
-- [ ] 225.1-10-PLAN.md — schedule trust checks and scheduler gate + docs
-- [ ] 225.1-11-PLAN.md — sensor console URL policy, `--allow-insecure-console`, lab + Windows installer + docs
-- [ ] 225.1-12-PLAN.md — credential-reference and DN text hygiene + docs
-- [ ] 225.1-13-PLAN.md — sensor push audit rows + sensor docs
-- [ ] 225.1-14-PLAN.md — JWKS finding and score-neutral advisory docs
-- [ ] 225.1-15-PLAN.md — UAT Series 225.1, changelog fragments, HORIZON rows, generated-doc and vault gates
-- [ ] 225.1-16-PLAN.md — full suite, push, CITRUTH-03, PR, phase note
+- [x] 225.1-01-PLAN.md — branch, SECH requirements, hygiene check, baseline
+- [x] 225.1-02-PLAN.md — auth config loading, DASHBOARD-014, token CLI wording + docs
+- [x] 225.1-03-PLAN.md — outbound URL validation hardening, accepted-risk note derived from source
+- [x] 225.1-04-PLAN.md — REST fuzzer and RabbitMQ probe do not follow redirects
+- [x] 225.1-05-PLAN.md — score-neutral finding category
+- [x] 225.1-06-PLAN.md — shared per-hop outbound fetch helper for URL-fetching scanners + docs
+- [x] 225.1-07-PLAN.md — JWKS verify-disabled HIGH finding on both pipelines
+- [x] 225.1-08-PLAN.md — trusted_targets over include_ips, connector fields and job YAML, preview API
+- [x] 225.1-09-PLAN.md — New Scan preview credential display + trusted_targets docs
+- [x] 225.1-10-PLAN.md — schedule trust checks and scheduler gate + docs
+- [x] 225.1-11-PLAN.md — sensor console URL policy, `--allow-insecure-console`, lab + Windows installer + docs
+- [x] 225.1-12-PLAN.md — credential-reference and DN text hygiene + docs
+- [x] 225.1-13-PLAN.md — sensor push audit rows + sensor docs
+- [x] 225.1-14-PLAN.md — JWKS finding and score-neutral advisory docs
+- [x] 225.1-15-PLAN.md — UAT Series 225.1, changelog fragments, HORIZON rows, generated-doc and vault gates
+- [x] 225.1-16-PLAN.md — full suite, push, CITRUTH-03, PR, phase note
 
 ### Phase 226: Release v5.27.0
 **Goal**: A public user can install QU.I.R.K. 5.27.0 from PyPI and get the branded, doc-reviewed product, including the untagged v5.26 accessibility work, and the operator's launch gate is recorded as open.
@@ -282,7 +282,7 @@ Plans:
 | 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
 | 224. Doc Claim Ledger & Verification | 18/18 | Complete (verified passed 5/5 at 38df9001 with 1 operator override, goal clause NOT MET AS WRITTEN: deep-doc residual 4.0% disclosed, HORIZON 999.123; CI green, Python CI 38457496020 + Dashboard Quality 38457500158; PR #56 merged at a8875830, gap-closure PR follows) | 2026-10-13 |
 | 225. Doc Publication & Hero Retake | 5/5 | Complete (verified passed 35/35 at 9fe5d31e; code review 2 Critical + 6 Warning fixed in-phase; CI green, Python CI 38509803397 + Dashboard Quality 38509803494; PR #58) | 2026-10-14 |
-| 225.1. Pre-release security hardening (INSERTED) | 0/16 | Planned | - |
+| 225.1. Pre-release security hardening (INSERTED) | 16/16 | In progress (verification pending) | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged)
