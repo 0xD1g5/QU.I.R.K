@@ -88,3 +88,42 @@ def test_sqlite_db_config_not_rejected(tmp_path):
     assert _config_has_authenticated_mode(db_path) is False, (
         "A SQLite DB passed via --config must not be treated as an auth config"
     )
+
+
+# --------------------------------------------------------------------------
+# 225.1-10 / D-08: `quirk schedule add` checks the SERVER config trusted_targets
+# --------------------------------------------------------------------------
+
+def _run_add(tmp_path, monkeypatch, server_yaml, target):
+    import argparse
+    from rich.console import Console
+    from quirk.cli.schedule_cmd import _cmd_add
+
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text(server_yaml, encoding="utf-8")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    args = argparse.Namespace(
+        name="nightly", cron="0 2 * * 1", target=target, profile="balanced",
+        config=str(tmp_path / "sched.db"), check_in=False,
+    )
+    _cmd_add(args, Console())
+
+
+def test_add_untrusted_target_exits_2(tmp_path, monkeypatch):
+    with pytest.raises(SystemExit) as ei:
+        _run_add(tmp_path, monkeypatch, "security:\n  trusted_targets: [127.0.0.1]\n", "10.9.9.9")
+    assert ei.value.code == 2
+
+
+def test_add_trusted_target_ok(tmp_path, monkeypatch):
+    _run_add(tmp_path, monkeypatch, "security:\n  trusted_targets: [127.0.0.1]\n", "127.0.0.1")
+
+
+def test_add_empty_allowlist_ok(tmp_path, monkeypatch):
+    _run_add(tmp_path, monkeypatch, "security:\n  trusted_targets: []\n", "10.9.9.9")
+
+
+def test_add_unreadable_server_config_exits_2(tmp_path, monkeypatch):
+    with pytest.raises(SystemExit) as ei:
+        _run_add(tmp_path, monkeypatch, "security: [unclosed\n", "127.0.0.1")
+    assert ei.value.code == 2

@@ -115,8 +115,6 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
         sys.exit(2)
 
     db_path = _resolve_db_path(args.config)
-    # Ensure tables exist (idempotent)
-    init_db(db_path)
 
     # Phase 162 HWLC-20 / D-02: a check-in ignores `target` entirely — it
     # re-probes whatever latest_successful_hardware_devices() returns. The column
@@ -133,6 +131,27 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
             )
             sys.exit(2)
         target = args.target
+
+        # 225.1 / D-08: check against the SERVER config (QUIRK_CONFIG_PATH /
+        # ./config.yaml), never --config, which is a DB path here.
+        from quirk.util.server_config import load_server_security
+        from quirk.util.target_trust import is_target_trusted
+
+        sec = load_server_security()
+        if sec.error:
+            console.print(f"[red]{format_error('DASHBOARD-014')}[/red]")
+            sys.exit(2)
+        if sec.trusted_targets:
+            result = is_target_trusted(target, sec.trusted_targets)
+            if not result.ok:
+                console.print(
+                    f"[red]Target {result.redacted_preview!r} is not in the trusted-targets "
+                    f"allowlist (security.trusted_targets in config.yaml).[/red]"
+                )
+                sys.exit(2)
+
+    # Ensure tables exist (idempotent)
+    init_db(db_path)
 
     row = ScheduledScan(
         name=args.name,
