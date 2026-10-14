@@ -386,10 +386,22 @@ def scan_openapi_spec(
     """
     _targets = cfg_targets or []
 
-    # Graceful degradation: missing optional dep → missing_extra endpoint, never raise
+    # Determine if input is a URL or a local file path
+    is_url = bool(path_or_url) and (
+        path_or_url.startswith("http://") or path_or_url.startswith("https://")
+    )
+
+    # Graceful degradation: missing optional dep → missing_extra endpoint, never raise.
+    # A URL is recorded without userinfo, query or fragment (D-10).
     if not OPENAPI_AVAILABLE:
+        if not path_or_url:
+            degraded_host = "unknown"
+        elif is_url:
+            degraded_host = _redact_url_preview(path_or_url, max_len=64)
+        else:
+            degraded_host = path_or_url[:64]
         return [CryptoEndpoint(
-            host=path_or_url[:64] if path_or_url else "unknown",
+            host=degraded_host,
             port=0,
             protocol="OPENAPI",
             service_detail="openapi-spec-validator not installed",
@@ -397,9 +409,6 @@ def scan_openapi_spec(
             scan_error_category="missing_extra",
             scanned_at=_scanned_at(),
         )]
-
-    # Determine if input is a URL or a local file path
-    is_url = path_or_url.startswith("http://") or path_or_url.startswith("https://")
 
     if is_url:
         raw_bytes = _fetch_spec_bytes_from_url(path_or_url, _targets, allow_internal=allow_internal)
