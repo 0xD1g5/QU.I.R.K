@@ -258,7 +258,7 @@ def test_write_preserves_crlf_frontmatter_and_extra_keys(tmp_path):
     note.write_bytes(b"---\r\nproject: QU.I.R.K.\r\nsource: docs/a.md\r\n"
                      b"updated: 2020-01-01\r\naliases: [Admin]\r\n---\r\n\r\n"
                      b"# A\nold\n")
-    fm, body = parse_note(note.read_text(encoding="utf-8", newline=""))
+    fm, body = parse_note(note.read_bytes().decode("utf-8"))
     assert fm[-1] == "aliases: [Admin]" and body == "# A\nold\n"
     assert write_pair(repo, vault, "docs/a.md", "A.md", TODAY).status == "written"
     assert note.read_bytes() == (
