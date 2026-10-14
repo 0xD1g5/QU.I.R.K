@@ -1072,7 +1072,7 @@ the connector rows.
 | Discovery | TCP port discovery before fingerprinting: nmap by default in the dashboard (its default Top 1000 scope forces nmap) and in the interactive wizard; built-in by default for a `--config` run unless `--discovery nmap` | `--discovery builtin\|nmap`, `--targets-file`, `targets.cidrs` | `nmap` binary (only when nmap discovery runs) | — |
 | TLS | TLS handshake, cert chain, ciphers, key sizes | `scan.ports_tls`, `scan.tls_designated_ports`, `scan.include_sni`, `timeouts.tls_seconds` | `sslyze` (core) | "TLS certificate expired" |
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
-| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS/verify-disabled` advisory when `allow_insecure_jwks` is on |
+| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
 | Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
@@ -1168,9 +1168,11 @@ internal or dev endpoints that use self-signed or expired certificates. It is a
 - TLS certificate verification is disabled for JWKS fetches only (other scan phases
   are unaffected).
 - A `HIGH`-severity `ADVISORY` endpoint row (`ADVISORY_JWKS_VERIFY_DISABLED`, recorded as
-  `JWKS/verify-disabled`) is stored for every JWKS URL fetched. It does not become a
-  finding: neither the CLI findings evaluator nor the dashboard's findings produce one for
-  it, and the HTML report's Endpoint Inventory shows it only as an `ADVISORY` row for the
+  `JWKS/verify-disabled`) is stored for every JWKS URL fetched.
+- Each of those URLs also appears as a `HIGH` finding titled `JWKS fetched with TLS
+  certificate verification disabled`, on the CLI report and on the dashboard Findings
+  page. It is counted in the findings totals but does not change the readiness score.
+- The HTML report's Endpoint Inventory shows the row only as an `ADVISORY` row for the
   JWKS URL, without the label or the severity.
 - QUIRK remains a passive inventory tool — it does not rely on JWKS key material for
   any authentication decision, so a MITM on the JWKS URI cannot escalate privileges.

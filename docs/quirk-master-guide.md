@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,436 lines, in reading order.
+Five guides, 7,438 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -1144,7 +1144,7 @@ connector disposition table" below for all 25 keys.
 | `azure_subscription_id` | string | `null` | Azure subscription UUID |
 | `azure_keyvault_urls` | list[string] | `[]` | Key Vault base URLs (e.g. `https://myvault.vault.azure.net`) |
 | `jwt_targets` | list[string] | `[]` | REST endpoint URLs for JWT scanner |
-| `security.allow_insecure_jwks` | bool | `false` | A `security:` key, not a `connectors:` key (under `connectors:` it is ignored with a warning). Disables TLS cert verification for JWKS fetches; also settable per run with `--allow-insecure-jwks`. Use only for internal/dev endpoints with self-signed certs. When `true`, a `HIGH` advisory finding (`ADVISORY_JWKS_VERIFY_DISABLED`) is emitted for each JWKS fetch. |
+| `security.allow_insecure_jwks` | bool | `false` | A `security:` key, not a `connectors:` key (under `connectors:` it is ignored with a warning). Disables TLS cert verification for JWKS fetches; also settable per run with `--allow-insecure-jwks`. Use only for internal/dev endpoints with self-signed certs. When `true`, each JWKS URL fetched with verification disabled appears as a `HIGH` finding titled `JWKS fetched with TLS certificate verification disabled`; it is counted in the findings totals but does not change the readiness score. |
 | `container_targets` | list[string] | `[]` | Docker image refs for container scanner |
 | `source_targets` | list[string] | `[]` | Local repository directory paths for the source scanner (URLs are rejected — clone first) |
 | `snmp_community` | string | `"public"` | SNMPv2c community string for hardware fingerprinting (requires `quirk-scanner[hw]`). An explicit value in `config.yaml` wins; when the key is absent, `QUIRK_SNMP_COMMUNITY` overrides the `public` default |
@@ -2297,7 +2297,7 @@ default shown; unknown keys under `security:` are ignored.
 |-----|------|---------|-------------|
 | `allow_internal_targets` | bool | `false` | Let the URL-fetching scanners (JWT/JWKS, OpenAPI spec, SAML metadata, REST fuzzer) contact RFC1918, loopback and link-local addresses; a URL on the cloud-metadata address `169.254.169.254` is still refused. CLI: `--allow-internal-targets`. See `security.allow_internal_targets` above. |
 | `allow_cleartext_broker_probe` | bool | `false` | Permit broker management-API probes over plain HTTP and Redis probes with `ssl_cert_reqs=none`. CLI: `--allow-cleartext-broker-probe`. Each RabbitMQ host scanned gets a HIGH advisory; Redis targets get none. |
-| `allow_insecure_jwks` | bool | `false` | Disable TLS certificate verification for JWKS fetches. CLI: `--allow-insecure-jwks`. Each affected target gets a HIGH advisory. This is a `security:` key, not a `connectors:` key. |
+| `allow_insecure_jwks` | bool | `false` | Disable TLS certificate verification for JWKS fetches. CLI: `--allow-insecure-jwks`. Each JWKS URL fetched this way appears as a HIGH finding titled `JWKS fetched with TLS certificate verification disabled` (counted in the findings totals, not in the readiness score). This is a `security:` key, not a `connectors:` key. |
 | `api_token` | string | `""` | Dashboard API token; empty means dashboard authentication is off. Written by `quirk token generate`; the `QUIRK_API_TOKEN` environment variable overrides it. See Dashboard Authentication. |
 | `cors_origins` | list of strings | `[]` | Dashboard CORS allowlist. Empty falls back to the port-aware loopback default; `QUIRK_CORS_ORIGINS` overrides it. See CORS Allowlist. |
 | `trusted_targets` | list of strings | `[]` | Scan-consent allowlist of hosts, IPs and CIDRs; empty allows every target. See `security.trusted_targets` above. |
@@ -2340,7 +2340,7 @@ Authenticated-scanning, fuzzing and OpenAPI flags are covered in more depth in t
 | `--aws-sqs-region REGION` | none (repeatable) | AWS SQS region to probe; may be given more than once |
 | `--allow-internal-targets` | `false` | Let the JWT/JWKS, OpenAPI spec URL, SAML metadata and REST-fuzzer fetches reach RFC1918, loopback and link-local IPs; a URL on the cloud-metadata address `169.254.169.254` is still refused. The SAML scanner emits a HIGH advisory for each internal target it fetches. Same as `security.allow_internal_targets` |
 | `--allow-cleartext-broker-probe` | `false` | Permit broker management-API probes over HTTP (no TLS) and Redis `ssl_cert_reqs=none`. Emits one HIGH advisory per RabbitMQ host scanned; Redis targets get none. Same as `security.allow_cleartext_broker_probe` |
-| `--allow-insecure-jwks` | `false` | Disable TLS certificate verification for JWKS fetches. Emits one HIGH advisory per JWKS URL fetched. Same as `security.allow_insecure_jwks` |
+| `--allow-insecure-jwks` | `false` | Disable TLS certificate verification for JWKS fetches. Each JWKS URL fetched this way appears as a HIGH finding titled `JWKS fetched with TLS certificate verification disabled` (counted in the findings totals, not in the readiness score). Same as `security.allow_insecure_jwks` |
 | `--job-id ID` | none | Dashboard job ID for progress reporting; does nothing when absent (set by the dashboard) |
 | `--db-path PATH` | none | SQLite path for dashboard job-progress writes and for the stage checkpoints `--resume-scan-id` needs; without it no checkpoints are written. Job progress is written only when `--job-id` is also set; nothing checks that the two are given together (set by the dashboard) |
 | `--auth-bearer [REF]` | none | Bearer token reference for the JWT/API scanner: an environment variable name or `@/path/to/file` (the file must be inside the current directory); the bare flag prompts for the value. The scanner currently strips the header before the request is sent, so the target never receives it |
@@ -4457,7 +4457,7 @@ the connector rows.
 | Discovery | TCP port discovery before fingerprinting: nmap by default in the dashboard (its default Top 1000 scope forces nmap) and in the interactive wizard; built-in by default for a `--config` run unless `--discovery nmap` | `--discovery builtin\|nmap`, `--targets-file`, `targets.cidrs` | `nmap` binary (only when nmap discovery runs) | — |
 | TLS | TLS handshake, cert chain, ciphers, key sizes | `scan.ports_tls`, `scan.tls_designated_ports`, `scan.include_sni`, `timeouts.tls_seconds` | `sslyze` (core) | "TLS certificate expired" |
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
-| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS/verify-disabled` advisory when `allow_insecure_jwks` is on |
+| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
 | Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
@@ -4553,9 +4553,11 @@ internal or dev endpoints that use self-signed or expired certificates. It is a
 - TLS certificate verification is disabled for JWKS fetches only (other scan phases
   are unaffected).
 - A `HIGH`-severity `ADVISORY` endpoint row (`ADVISORY_JWKS_VERIFY_DISABLED`, recorded as
-  `JWKS/verify-disabled`) is stored for every JWKS URL fetched. It does not become a
-  finding: neither the CLI findings evaluator nor the dashboard's findings produce one for
-  it, and the HTML report's Endpoint Inventory shows it only as an `ADVISORY` row for the
+  `JWKS/verify-disabled`) is stored for every JWKS URL fetched.
+- Each of those URLs also appears as a `HIGH` finding titled `JWKS fetched with TLS
+  certificate verification disabled`, on the CLI report and on the dashboard Findings
+  page. It is counted in the findings totals but does not change the readiness score.
+- The HTML report's Endpoint Inventory shows the row only as an `ADVISORY` row for the
   JWKS URL, without the label or the severity.
 - QUIRK remains a passive inventory tool — it does not rely on JWKS key material for
   any authentication decision, so a MITM on the JWKS URI cannot escalate privileges.

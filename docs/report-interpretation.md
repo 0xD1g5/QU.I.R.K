@@ -296,7 +296,10 @@ The table below maps common finding titles to their plain-English explanation an
 | SSH quantum planning advisory | INFO | Emitted once for every SSH endpoint whose probe recorded no error (an SSH probe that errored gets an INFO "Informational protocol observation" instead). Its text says the host key or key exchange relies on RSA or classical ECDH, but the finding does not check which algorithms the server offers, so it also appears for a server that already uses a post-quantum hybrid key exchange | Plan migration to post-quantum SSH key exchange using ML-KEM (FIPS 203). OpenSSH has offered the hybrid `mlkem768x25519-sha256` key exchange since 9.9 and uses it by default since 10.0 |
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
 | mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
+| JWKS fetched with TLS certificate verification disabled | HIGH | A JWKS URL was fetched with `allow_insecure_jwks` on, so its TLS certificate check was turned off. One finding per URL fetched | Turn off `security.allow_insecure_jwks` (or `--allow-insecure-jwks`) and fix the endpoint certificate. Counted in the findings totals, but does not change the readiness score |
 | Code-signing certificate uses weak algorithm: *subject* | HIGH | Code-signing certificate uses a weak key or hash: RSA < 2048-bit, EC < 256-bit, or a weak signature hash such as SHA-1 or MD5 | Replace the signing certificate with RSA ≥ 2048-bit / SHA-256 or an ECDSA P-256+ key; re-sign artifacts with the new cert |
+
+Some findings are configuration advisories, such as the JWKS row above. They are listed and counted in the findings totals but are excluded from the readiness score, so they never move the score or its ceilings.
 
 ---
 

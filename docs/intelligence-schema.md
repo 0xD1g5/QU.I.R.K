@@ -21,6 +21,7 @@ Each scan writes `intelligence-<timestamp>.json` in the configured output direct
   - protocol counts, plaintext HTTP counts, mTLS signals
   - certificate observation counts (expired/expiring/self-signed, key type counts)
   - scan error and TLS enum coverage metrics
+  - `finding_severity_counts` (every finding by severity) and `scored_finding_severity_counts` (the same counts without score-neutral configuration advisories, such as the JWKS verify-disabled finding; scoring, the roadmap and score-lift estimates read this one)
 - `score`: readiness score output
   - `total`, `subscores`, `drivers` (a list of reason strings), `rating_cap_reason`, `domains_assessed`, `domains_total`, `score_divisor`, `coverage_disclosure`, `scoring_version`
   - `subscores` contains six entries: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, `data_in_motion` (each 0–25, or `null` for a domain that was not assessed)
