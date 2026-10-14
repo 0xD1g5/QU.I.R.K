@@ -1,5 +1,6 @@
 """Tests for Phase 57 / CR-05, CR-06 / HARDEN-SCAN-05, HARDEN-SCAN-06."""
 import base64
+import contextlib
 import os
 from unittest.mock import patch, MagicMock
 import pytest
@@ -14,6 +15,16 @@ from quirk.scanner.broker_scanner import (
 )
 
 
+
+@contextlib.contextmanager
+def _patch_open(**kw):
+    """Intercept the no-redirect opener used by the RabbitMQ management probe."""
+    opener_open = MagicMock(**kw)
+    with patch("quirk.scanner.broker_scanner.urllib.request.build_opener") as bo:
+        bo.return_value.open = opener_open
+        yield opener_open
+
+
 def test_no_hardcoded_guest_credentials_in_module():
     import pathlib
     import quirk.scanner.broker_scanner as mod
@@ -22,7 +33,7 @@ def test_no_hardcoded_guest_credentials_in_module():
 
 
 def test_default_no_http_probe():
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen") as mock_urlopen:
+    with _patch_open() as mock_urlopen:
         result = _enrich_rabbitmq_mgmt("rabbit.example", 15672)
         mock_urlopen.assert_not_called()
         assert result == {}
@@ -33,7 +44,7 @@ def test_cleartext_optin_anonymous_probe():
     mock_resp.read.return_value = b'{"rabbitmq_version": "3.12"}'
     mock_resp.__enter__ = lambda self: self
     mock_resp.__exit__ = lambda self, *args: None
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen",
+    with _patch_open(
                return_value=mock_resp) as mock_urlopen:
         _enrich_rabbitmq_mgmt("rabbit.example", 15672, allow_cleartext=True)
         assert mock_urlopen.call_count == 1
@@ -49,7 +60,7 @@ def test_cleartext_optin_with_credentials_sends_auth(monkeypatch):
     mock_resp.read.return_value = b'{}'
     mock_resp.__enter__ = lambda self: self
     mock_resp.__exit__ = lambda self, *args: None
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen",
+    with _patch_open(
                return_value=mock_resp) as mock_urlopen:
         _enrich_rabbitmq_mgmt(
             "rabbit.example", 15672,
@@ -71,7 +82,7 @@ def test_credentials_with_unset_env_falls_back_anonymous(monkeypatch):
     mock_resp.read.return_value = b'{}'
     mock_resp.__enter__ = lambda self: self
     mock_resp.__exit__ = lambda self, *args: None
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen",
+    with _patch_open(
                return_value=mock_resp) as mock_urlopen:
         _enrich_rabbitmq_mgmt(
             "rabbit.example", 15672,
@@ -111,7 +122,7 @@ def test_scan_rabbitmq_targets_emits_cleartext_advisory():
     mock_resp.__enter__ = lambda self: self
     mock_resp.__exit__ = lambda self, *args: None
     sec = SecurityCfg(allow_cleartext_broker_probe=True)
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen",
+    with _patch_open(
                return_value=mock_resp):
         endpoints = scan_rabbitmq_targets(
             hosts=["rabbit.example"],
@@ -139,7 +150,7 @@ def test_scan_rabbitmq_targets_emits_credential_advisory(monkeypatch):
     creds = {
         "rabbit.example:15672": BrokerCredential(user="admin", pass_env="TEST_LAB_PASS")
     }
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen",
+    with _patch_open(
                return_value=mock_resp):
         endpoints = scan_rabbitmq_targets(
             hosts=["rabbit.example"],

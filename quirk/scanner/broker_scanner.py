@@ -24,6 +24,7 @@ from cryptography.hazmat.backends import default_backend
 from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_scanner import _pubkey_info, _extract_sans
+from quirk.util.no_redirect import _NoRedirectHandler
 from quirk.util.safe_exc import safe_str
 from quirk.util.weak_crypto import (  # Phase 77 D-05 — closes scanners-protocol/IN-05
     is_pfs_cipher,
@@ -400,8 +401,10 @@ def _enrich_rabbitmq_mgmt(
             sent_auth = True
         # Else: anonymous fallback (D-05) — no header, no error
     req = urllib.request.Request(url, headers=headers)
+    # do not follow redirects: a 3xx surfaces as HTTPError below
+    opener = urllib.request.build_opener(_NoRedirectHandler)
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with opener.open(req, timeout=5) as resp:
             data = json.loads(resp.read())
             return {
                 "rabbitmq_version": data.get("rabbitmq_version"),
