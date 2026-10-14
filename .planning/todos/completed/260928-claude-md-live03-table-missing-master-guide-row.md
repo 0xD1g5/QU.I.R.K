@@ -40,3 +40,10 @@ or gate it", so the next added guide cannot go missing the same way.
 
 - Discovered and reported by plan 211-07; flagged, deliberately not fixed (out of that plan's scope).
 - Vault file mtime predates discovery: existed 2026-09-16.
+
+## Resolution (2026-10-14, Phase 225)
+
+Folded into Phase 225 as D-06 and closed by plan 225-01 (a2da5d49): `scripts/sync_vault_guides.py` enumerates
+docs-to-vault pairs at run time from `git ls-files` (cross-checked against vault `source:` keys) and syncs
+`docs/quirk-master-guide.md` -> `Guides/Complete-Guide.md`; the local CLAUDE.md LIVE-03 table gained the row and a pointer
+to the script. `--check` exit 0 at 9fe5d31e.
