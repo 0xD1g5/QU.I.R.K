@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,444 lines, in reading order.
+Five guides, 7,447 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -2268,6 +2268,9 @@ runs (an unreadable server config refuses with `QRK-DASHBOARD-014`). A recurring
 without `--scan-config` carries the server's `trusted_targets` and `allow_internal_targets` into
 its generated config, so the scan enforces them; with `--scan-config`, that file's own `security`
 block applies.
+If the server config cannot be read when a recurring run started without `--scan-config` is due, the
+run is marked failed and no scan starts. Once the scheduler has read the file with settings in it, the
+file going missing or empty is treated the same way until it is restored or the scheduler is restarted.
 
 ```yaml
 security:

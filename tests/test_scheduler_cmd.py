@@ -587,6 +587,36 @@ def test_dispatch_marks_failed_when_server_config_value_cannot_be_built(tmp_path
     assert len(runs) == 1 and runs[0].status == "failed"
 
 
+@pytest.mark.parametrize("change", ["removed", "emptied"])
+def test_dispatch_marks_failed_when_server_config_goes_missing_after_read(
+    tmp_path, monkeypatch, change
+):
+    """Once the scheduler process has read the server config with settings in
+    it, a later missing or empty read is the unreadable state: the due run is
+    marked failed and no scan starts (only a never-populated file means no
+    server settings)."""
+    _server_cfg(tmp_path, monkeypatch, "security:\n  trusted_targets: [10.0.0.0/24]\n")
+    _gen(tmp_path)  # this process reads the populated file once
+    cfg = tmp_path / "server.yaml"
+    if change == "removed":
+        cfg.unlink()
+    else:
+        cfg.write_text("", encoding="utf-8")
+    db_path = str(tmp_path / "second.db")
+    init_db(db_path)
+    _add_schedule(db_path, name="after-change", cron_expr="* * * * *")
+    spawned = []
+    monkeypatch.setattr(
+        "quirk.cli.scheduler_cmd.subprocess.Popen",
+        lambda *a, **k: spawned.append(a) or FakePopen(0),
+    )
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
+    run_scheduler(["run", "--once", "--config", db_path])
+    assert spawned == []
+    runs = _all_runs(db_path)
+    assert len(runs) == 1 and runs[0].status == "failed"
+
+
 def test_run_scheduler_refuses_authenticated_scan_config(tmp_path, monkeypatch, capsys):
     db_path = _make_db(tmp_path)
     scan = tmp_path / "scan.yaml"
