@@ -497,13 +497,9 @@ def test_valid_references_still_resolve(tmp_path, monkeypatch) -> None:
 
 
 def test_cli_reference_error_output_omits_reference() -> None:
-    import subprocess
-    import sys
+    from tests.cli_helpers import run_cli
 
     marker = "ZQXV9417cliref"
-    proc = subprocess.run(
-        [sys.executable, str(PROJECT_ROOT / "run_scan.py"), "--auth-bearer", marker],
-        capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=120,
-    )
+    proc = run_cli(["--auth-bearer", marker], timeout=120)
     assert proc.returncode != 0
     assert marker not in proc.stderr and marker not in proc.stdout
