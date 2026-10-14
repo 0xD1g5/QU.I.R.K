@@ -32691,9 +32691,9 @@ github.com and PyPI render leg of UAT-85-08.
 
 **Pass Criteria:** All pass.
 
-**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_outbound_fetch.py::test_openapi_hop_out_of_scope_rejected` and `tests/test_outbound_fetch.py::test_saml_metadata_hop_refused` and `tests/test_outbound_fetch.py::test_jwks_metadata_hop_refused` and `tests/test_rest_fuzzer_pinned_session.py::test_main_dispatch_does_not_follow_redirects_and_records_status` and `tests/test_broker_scanner_rabbitmq.py::test_mgmt_probe_does_not_follow_redirects`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_outbound_fetch.py::test_openapi_hop_out_of_scope_rejected` and `tests/test_outbound_fetch.py::test_saml_metadata_hop_refused` and `tests/test_outbound_fetch.py::test_jwks_metadata_hop_refused` and `tests/test_rest_fuzzer_pinned_session.py::test_jwks_dispatch_does_not_follow_redirects` and `tests/test_rest_fuzzer_pinned_session.py::test_every_session_request_site_sets_redirect_flag` and `tests/test_broker_scanner_rabbitmq.py::test_mgmt_probe_does_not_follow_redirects`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-14  **Tester:** automated
-**Notes:** Every cited node was collected and confirmed to resolve before citing.
+**Notes:** Every cited node was collected and confirmed to resolve before citing. The REST fuzzer's main-dispatch behavioural test in the same file is not cited: it needs the optional `schemathesis` extra and skips in the Linux Full Suite job, so the main and alg-confusion dispatch sites are covered here by the structural node, which runs in CI.
 
 ### UAT-225.1-04: Sensor console URL scheme policy at enroll and push
 
