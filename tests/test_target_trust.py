@@ -94,13 +94,8 @@ def test_enforce_trusted_targets_unchanged_with_no_broker_targets():
 # Phase 225.1 / SECH-03 (D-07, D-26): include_ips + dispositioned connector hosts
 # ---------------------------------------------------------------------------
 import dataclasses
-import re
 
 from quirk.util import target_trust as _tt
-
-_HOST_SHAPED = re.compile(
-    r"(_targets|_addr|_url|_urls|_namespaces|_regions|_clusters|_resolver|_endpoint_url)$"
-)
 
 
 def _table():
@@ -203,16 +198,75 @@ def test_dnssec_dispositions():
 
 
 def test_every_host_shaped_connector_field_is_dispositioned():
+    """Run-time walk of EVERY ConnectorsCfg field (no name-suffix filter): each
+    one is either a dispositioned host field or an explicit non-host field with
+    a reason, never both, and neither table names a field that does not exist."""
     from quirk.config import ConnectorsCfg
 
-    matched = [f.name for f in dataclasses.fields(ConnectorsCfg) if _HOST_SHAPED.search(f.name)]
-    print("host-shaped ConnectorsCfg fields matched:", len(matched))
-    assert len(matched) >= 15, matched
-    table = _table()
-    offenders = [n for n in matched if n not in table]
+    names = [f.name for f in dataclasses.fields(ConnectorsCfg)]
+    print("ConnectorsCfg fields walked:", len(names))
+    assert len(names) >= 60, names
+    host = _table()
+    non_host = getattr(_tt, "CONNECTOR_NON_HOST_FIELDS", {})
+    unclassified = [n for n in names if n not in host and n not in non_host]
+    both = sorted(set(host) & set(non_host))
+    stale = sorted((set(host) | set(non_host)) - set(names))
     bad = [
-        n for n, v in table.items()
-        if not (v in ("check", "check-registry") or (v.startswith("exempt: ") and v[8:].strip()))
+        n for n, v in host.items()
+        if not (
+            v in ("check", "check-registry", "check-kubeconfig")
+            or (v.startswith("exempt: ") and v[8:].strip())
+        )
     ]
-    assert not offenders, f"undispositioned host-shaped fields: {offenders}"
+    no_reason = [n for n, v in non_host.items() if not str(v).strip()]
+    assert not unclassified, f"unclassified ConnectorsCfg fields: {unclassified}"
+    assert not both, f"classified as both host and non-host: {both}"
+    assert not stale, f"classification names fields ConnectorsCfg does not have: {stale}"
     assert not bad, f"malformed dispositions: {bad}"
+    assert not no_reason, f"non-host fields without a reason: {no_reason}"
+
+
+def test_azure_keyvault_urls_hosts_are_checked():
+    assert _table()["azure_keyvault_urls"] == "check"
+    with pytest.raises(ValueError, match="azure_keyvault_urls"):
+        enforce_trusted_targets(
+            _cfg(["vault.example"], {"azure_keyvault_urls": ["https://elsewhere.example/"]})
+        )
+    enforce_trusted_targets(
+        _cfg(["vault.example"], {"azure_keyvault_urls": ["https://vault.example/"]})
+    )
+
+
+def _kubeconfig(tmp_path, *servers):
+    clusters = "".join(
+        f"- name: c{i}\n  cluster:\n    server: {srv}\n" for i, srv in enumerate(servers)
+    )
+    path = tmp_path / "kubeconfig"
+    path.write_text("apiVersion: v1\nkind: Config\nclusters:\n" + clusters)
+    return str(path)
+
+
+def test_kubeconfig_cluster_servers_are_checked(tmp_path):
+    assert _table()["k8s_kubeconfig"] == "check-kubeconfig"
+    good = _kubeconfig(tmp_path, "https://api.trusted.example:6443")
+    enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": good}))
+    mixed = _kubeconfig(tmp_path, "https://api.trusted.example:6443", "https://10.9.9.9:6443")
+    with pytest.raises(ValueError, match="k8s_kubeconfig"):
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": mixed}))
+
+
+@pytest.mark.parametrize("shape", ["missing", "directory", "not-yaml", "no-clusters"])
+def test_unusable_kubeconfig_fails_closed(tmp_path, shape):
+    path = tmp_path / "kc"
+    if shape == "directory":
+        path.mkdir()
+    elif shape == "not-yaml":
+        path.write_text("clusters: [unclosed\n")
+    elif shape == "no-clusters":
+        path.write_text("apiVersion: v1\nkind: Config\n")
+    with pytest.raises(ValueError, match="k8s_kubeconfig"):
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": str(path)}))
+
+
+def test_kubeconfig_not_read_when_allowlist_empty(tmp_path):
+    enforce_trusted_targets(_cfg([], {"k8s_kubeconfig": str(tmp_path / "absent")}))

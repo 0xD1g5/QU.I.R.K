@@ -61,15 +61,19 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
     return ValidationResult(False, RC_NOT_IN_ALLOWLIST, host_or_ip[:32])
 
 
-# D-07 / D-26: every host-shaped ConnectorsCfg field must be dispositioned here.
-# "check"          -> every host value is checked against trusted_targets.
-# "check-registry" -> image references; only an EXPLICIT registry host is checked
-#                     (first "/" component containing "." or ":" or == "localhost").
-#                     A reference with no explicit registry (``nginx:1.25``) uses the
-#                     default registry and is not checked.
-# "exempt: <why>"  -> not a scan target; the reason is the record.
-# A run-time test walks dataclasses.fields(ConnectorsCfg) so a new field cannot
-# ship undispositioned. The enable_* flag is deliberately NOT consulted: a stale
+# D-07 / D-26: every ConnectorsCfg field that can name a host is dispositioned here.
+# "check"            -> every host value is checked against trusted_targets.
+# "check-registry"   -> image references; only an EXPLICIT registry host is checked
+#                       (first "/" component containing "." or ":" or == "localhost").
+#                       A reference with no explicit registry (``nginx:1.25``) uses the
+#                       default registry and is not checked.
+# "check-kubeconfig" -> a kubeconfig path; every ``clusters[].cluster.server`` host
+#                       in that file is checked. A file that cannot be used as a
+#                       kubeconfig is checked as the path itself, so it fails closed.
+# "exempt: <why>"    -> not a scan target; the reason is the record.
+# Every other field is listed in CONNECTOR_NON_HOST_FIELDS with a reason. A
+# run-time test walks every dataclasses.fields(ConnectorsCfg) entry and requires
+# one classification each, so a new field cannot ship unclassified. The enable_* flag is deliberately NOT consulted: a stale
 # untrusted host in a disabled connector is refused with the field named, which is
 # safer than a list that silently starts being contacted once the connector is on.
 _CLOUD_ID = (
@@ -89,7 +93,10 @@ CONNECTOR_HOST_FIELD_DISPOSITION: Final[dict] = {
     "broker_targets": "check",
     "vault_addr": "check",
     "aws_endpoint_url": "check",
+    # Each entry is a full vault URL the Key Vault client connects to.
+    "azure_keyvault_urls": "check",
     "container_targets": "check-registry",
+    "k8s_kubeconfig": "check-kubeconfig",
     "dnssec_resolver": (
         "exempt: resolver infrastructure the operator configures for DNSSEC "
         "queries; not a scan target"
@@ -98,12 +105,88 @@ CONNECTOR_HOST_FIELD_DISPOSITION: Final[dict] = {
         "exempt: repository paths scanned from the local filesystem or a clone the "
         "operator configures, not scan targets"
     ),
-    "azure_keyvault_urls": _CLOUD_ID,
     "broker_azure_namespaces": _CLOUD_ID,
     "broker_sqs_regions": _CLOUD_ID,
     "gke_clusters": _CLOUD_ID,
     "aks_clusters": _CLOUD_ID,
 }
+
+
+_FLAG = "on/off switch; names no host"
+_CRED = "credential or credential reference; names no host"
+_CLOUD_SELECTOR = "cloud account, region or project selector used with the provider API"
+_LDAP_BASE = "LDAP search base inside a directory whose host is a checked *_targets field"
+_TIMEOUT = "timeout in seconds"
+_K8S_SELECTOR = (
+    "selects a cluster, context or namespace inside the kubeconfig, whose server "
+    "hosts are checked through k8s_kubeconfig"
+)
+CONNECTOR_NON_HOST_FIELDS: Final[dict] = {
+    "enable_aws": _FLAG, "enable_azure": _FLAG, "enable_jwt": _FLAG,
+    "enable_container": _FLAG, "enable_source": _FLAG, "enable_nmap": _FLAG,
+    "enable_kerberos": _FLAG, "enable_saml": _FLAG, "enable_dnssec": _FLAG,
+    "enable_smime": _FLAG, "enable_adcs": _FLAG, "enable_codesign": _FLAG,
+    "enable_gcp": _FLAG, "enable_db": _FLAG, "enable_s3": _FLAG,
+    "enable_blob": _FLAG, "enable_k8s": _FLAG, "enable_vault": _FLAG,
+    "enable_email": _FLAG, "enable_broker": _FLAG,
+    "enable_authenticated_mode": _FLAG, "enable_snmp": _FLAG,
+    "enable_modbus": _FLAG, "enable_bacnet": _FLAG, "enable_recurring_otics": _FLAG,
+    "vault_tls_verify": "TLS verification switch for vault_addr; names no host",
+    "aws_region": _CLOUD_SELECTOR, "aws_profile": _CLOUD_SELECTOR,
+    "azure_subscription_id": _CLOUD_SELECTOR, "gcp_project_id": _CLOUD_SELECTOR,
+    "k8s_provider": "managed-Kubernetes provider name; names no host",
+    "k8s_cluster_name": _K8S_SELECTOR, "k8s_namespace": _K8S_SELECTOR,
+    "k8s_context": _K8S_SELECTOR,
+    "smime_search_base": _LDAP_BASE, "adcs_search_base": _LDAP_BASE,
+    "codesign_search_base": _LDAP_BASE,
+    "smime_timeout": _TIMEOUT, "adcs_timeout": _TIMEOUT, "codesign_timeout": _TIMEOUT,
+    "adcs_user": _CRED, "adcs_password": _CRED,
+    "pg_scanner_user": _CRED, "pg_scanner_password": _CRED,
+    "mysql_scanner_user": _CRED, "mysql_scanner_password": _CRED,
+    "vault_token": _CRED, "snmp_community": _CRED,
+    "snmp_v3_credentials": (
+        "per-host SNMPv3 credentials looked up for hosts discovered from the "
+        "checked targets; names no additional target"
+    ),
+    "vault_transit_mount": "path inside the vault named by vault_addr",
+    "_user_set_fields": "internal record of which keys the YAML set",
+}
+
+# A kubeconfig larger than this is not parsed; it is checked as the path itself.
+_KUBECONFIG_MAX_BYTES: Final[int] = 1024 * 1024
+
+
+def _kubeconfig_server_hosts(path) -> list:
+    """Hosts of every ``clusters[].cluster.server`` in the kubeconfig at *path*.
+
+    Anything that cannot be read as a kubeconfig with at least one cluster
+    server yields ``[path]`` so the caller checks the path as a unit and
+    fails closed.
+    """
+    import os
+    import stat
+
+    import yaml
+
+    if not isinstance(path, str) or not path.strip():
+        return []
+    path = path.strip()
+    try:
+        st = os.stat(path)
+        if not stat.S_ISREG(st.st_mode) or st.st_size > _KUBECONFIG_MAX_BYTES:
+            return [path]
+        with open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except Exception:  # noqa: BLE001 - any unusable file fails closed
+        return [path]
+    hosts = []
+    clusters = data.get("clusters") if isinstance(data, dict) else None
+    for entry in clusters if isinstance(clusters, list) else []:
+        cluster = entry.get("cluster") if isinstance(entry, dict) else None
+        server = cluster.get("server") if isinstance(cluster, dict) else None
+        host = _extract_host(server) if isinstance(server, str) else None
+        hosts.append(host or path)
+    return hosts or [path]
 
 
 def _extract_host(value) -> "str | None":
@@ -163,14 +246,17 @@ def _field_values(connectors, name):
 
 
 def connector_host_values(connectors) -> list:
-    """``(field_name, host)`` for every host named by a ``check``/``check-registry`` field."""
+    """``(field_name, host)`` for every host named by a ``check*`` field."""
     pairs = []
     if connectors is None:
         return pairs
     for name, disposition in CONNECTOR_HOST_FIELD_DISPOSITION.items():
-        if disposition not in ("check", "check-registry"):
+        if disposition not in ("check", "check-registry", "check-kubeconfig"):
             continue
         for value in _field_values(connectors, name):
+            if disposition == "check-kubeconfig":
+                pairs.extend((name, h) for h in _kubeconfig_server_hosts(value))
+                continue
             host = _registry_host(value) if disposition == "check-registry" else _extract_host(value)
             if host:
                 pairs.append((name, host))

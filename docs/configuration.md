@@ -1514,8 +1514,10 @@ a list of exact hosts/IPs and CIDR ranges QU.I.R.K. is authorized to scan. It is
 check used by **both** the CLI (`quirk`/`run_scan.py`) and the dashboard's "New Scan"
 (`/scan/new`) entry point, with the same matching function. Both entry points check the
 same inputs: `targets.fqdns`, `targets.cidrs`, `targets.include_ips`, and every host-naming
-`connectors.*` field (such as `broker_targets`, `jwt_targets` or `vault_targets`), whether or not
+`connectors.*` field (such as `broker_targets`, `jwt_targets` or `vault_addr`), whether or not
 the connector is enabled. For a container image reference the explicit registry host is checked.
+Each `azure_keyvault_urls` entry is checked by its host. For `k8s_kubeconfig`, every cluster `server`
+host in the named kubeconfig is checked, and a file that cannot be read as a kubeconfig is refused.
 The dashboard checks the targets typed into the form and the Connectors-panel hosts against the
 server's own config file (`QUIRK_CONFIG_PATH`), and writes the server's `trusted_targets` list
 into the generated job config, so the scan subprocess enforces it as well. If the server config
