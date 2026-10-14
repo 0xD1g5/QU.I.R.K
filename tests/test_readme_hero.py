@@ -75,3 +75,83 @@ def test_no_orphan_images_in_docs_images():
             corpus += f.read_text(encoding="utf-8", errors="ignore")
     orphans = [p for p in images if Path(p).name not in corpus]
     assert not orphans, f"Phase 225 D-12: orphan images (no tracked doc references them): {orphans}"
+
+
+# --------------------------------------------------------------------------
+# 225-REVIEW CR-02: the capture serves a snapshot, never the canonical DB, and
+# checks the canonical fingerprint (incl. -wal/-journal) on every exit path.
+# --------------------------------------------------------------------------
+
+def _make_db(path: Path) -> None:
+    import sqlite3
+
+    con = sqlite3.connect(str(path))
+    con.execute("create table scan_jobs (id integer primary key, status text)")
+    con.execute("insert into scan_jobs (status) values ('running')")
+    con.commit()
+    con.close()
+
+
+def test_snapshot_db_is_a_consistent_copy_and_leaves_canonical_untouched(tmp_path):
+    import sqlite3
+
+    from scripts.capture_readme_hero import db_fingerprint, snapshot_db
+
+    canon = tmp_path / "canon dir" / "quirk.db"  # space: exercises the URI form
+    canon.parent.mkdir()
+    _make_db(canon)
+    before_bytes = canon.read_bytes()
+    before = db_fingerprint(canon)
+    snapdir = tmp_path / "snap"
+    snapdir.mkdir()
+    snap = snapshot_db(canon, snapdir)
+    con = sqlite3.connect(str(snap))
+    assert con.execute("select status from scan_jobs").fetchall() == [("running",)]
+    # What the app's lifespan does to the DB it serves -- here, the COPY.
+    con.execute("update scan_jobs set status='failed'")
+    con.execute("alter table scan_jobs add column extra text")
+    con.commit()
+    con.close()
+    assert canon.read_bytes() == before_bytes
+    assert db_fingerprint(canon) == before
+    assert sorted(p.name for p in canon.parent.iterdir()) == ["quirk.db"], (
+        "the read-only snapshot must not leave a journal/wal next to the canonical DB")
+
+
+def test_db_fingerprint_covers_wal_sidecar(tmp_path):
+    from scripts.capture_readme_hero import db_fingerprint
+
+    db = tmp_path / "quirk.db"
+    _make_db(db)
+    base = db_fingerprint(db)
+    assert base["quirk.db-wal"] is None
+    (tmp_path / "quirk.db-wal").write_bytes(b"x")
+    assert db_fingerprint(db) != base, "a -wal change must change the fingerprint"
+
+
+def test_main_never_serves_canonical_and_checks_db_on_abort(tmp_path, monkeypatch, capsys):
+    import pytest
+
+    import scripts.capture_readme_hero as hero
+
+    canon = tmp_path / "quirk.db"
+    _make_db(canon)
+    served: list[Path] = []
+
+    def fake_run(args, db, evidence):  # stands in for the uvicorn + Playwright leg
+        served.append(db)
+        db.write_bytes(db.read_bytes() + b"\0")  # the server writes its DB
+    monkeypatch.setattr(hero, "_run", fake_run)
+    assert hero.main(["--db", str(canon), "--out", str(tmp_path / "o.png")]) == 0
+    assert served and served[0].resolve() != canon.resolve()
+    assert not served[0].exists(), "snapshot temp dir must be removed"
+    capsys.readouterr()
+
+    def mutating_abort(args, db, evidence):  # canonical mutated, then abort
+        canon.write_bytes(canon.read_bytes() + b"\0")
+        raise SystemExit("GAUGE_COUNT: simulated abort")
+    monkeypatch.setattr(hero, "_run", mutating_abort)
+    with pytest.raises(SystemExit, match="GAUGE_COUNT"):
+        hero.main(["--db", str(canon), "--out", str(tmp_path / "o.png")])
+    assert "DB_MUTATED" in capsys.readouterr().err, (
+        "CR-02: the canonical-DB check must run on abort paths too")

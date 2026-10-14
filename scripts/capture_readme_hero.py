@@ -2,8 +2,9 @@
 
 Why this exists: the UAT-85-08 hand capture depended on a chaos-lab profile being
 up and was never reproducible; the dashboard gauges drew mirrored for six months
-and nobody noticed. This script starts a loopback uvicorn against the canonical
-``./quirk-output/quirk.db``, opens the executive page in the dark theme at 2x DPR,
+and nobody noticed. This script snapshots the canonical ``./quirk-output/quirk.db``
+(sqlite3 backup API, read-only source) into a temp dir, starts a loopback uvicorn
+against that COPY, opens the executive page in the dark theme at 2x DPR,
 guards against capturing the login form / unbuilt placeholder, corroborates by
 geometry that each gauge is NOT mirrored, and writes a PNG.
 
@@ -11,7 +12,10 @@ Run: ``.venv/bin/python -m scripts.capture_readme_hero [--out PATH] ...``
 
 Local-only tooling (Playwright is a ``dashboard`` extra). The operator's visual
 confirmation remains the acceptance; the arc-reach check is corroboration only.
-The canonical DB is never mutated: sha256 is compared before and after.
+The canonical DB is never served (225-REVIEW CR-02: the app writes at startup and
+runs init_db migrations per request), so it is not mutated. As corroboration, the
+sha256 of the DB and any -wal/-journal sidecar is compared before and after, on
+EVERY exit path (try/finally), and a mismatch fails loudly with DB_MUTATED.
 """
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ import json
 import math
 import os
 import socket
+import sqlite3
 import struct
 import subprocess
 import sys
@@ -70,6 +75,41 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+_DB_SIDECARS = ("", "-wal", "-journal")
+
+
+def db_fingerprint(db: Path) -> dict[str, str | None]:
+    """sha256 of the DB file and each -wal/-journal sidecar (None if absent).
+
+    -shm is deliberately excluded: it is a shared-memory index that any reader
+    (including a concurrent ``quirk serve``) rewrites without changing content.
+    """
+    out: dict[str, str | None] = {}
+    for suffix in _DB_SIDECARS:
+        p = Path(str(db) + suffix)
+        out[p.name] = _sha256(p) if p.exists() else None
+    return out
+
+
+def snapshot_db(db: Path, dest_dir: Path) -> Path:
+    """Consistent copy of ``db`` into ``dest_dir`` via the sqlite3 backup API.
+
+    The source is opened ``mode=ro`` so this process can never write to the
+    canonical DB (no checkpoint, no journal, no schema migration).
+    """
+    snap = Path(dest_dir) / "quirk.db"
+    src = sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True)
+    try:
+        dst = sqlite3.connect(str(snap))
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+    finally:
+        src.close()
+    return snap
 
 
 def stamp_from_scanned_at(scanned_at: str) -> str:
@@ -363,9 +403,32 @@ def main(argv=None) -> int:
     if not db.is_file():
         raise SystemExit(f"DB_MISSING: {db} does not exist; refusing to start.")
 
-    before = _sha256(db)
+    before = db_fingerprint(db)
     evidence: dict = {"db": str(db), "db_sha256_before": before,
                       "viewport": {"width": args.width, "height": args.height}}
+    mutated = False
+    try:
+        with tempfile.TemporaryDirectory(prefix="quirk-hero-db-") as snapdir:
+            # CR-02: serve a snapshot, never the canonical file.
+            served = snapshot_db(db, Path(snapdir))
+            evidence["served_db"] = "temp snapshot (sqlite3 backup API, ro source)"
+            _run(args, served, evidence)
+    finally:
+        after = db_fingerprint(db)
+        evidence["db_sha256_after"] = after
+        if before != after:
+            mutated = True
+            print(f"DB_MUTATED: canonical DB fingerprint changed during capture: "
+                  f"before={before} after={after}", file=sys.stderr)
+    text = json.dumps(evidence, indent=2, default=str)
+    print(text)
+    if args.evidence_json:
+        Path(args.evidence_json).write_text(text + "\n")
+    return 1 if mutated else 0
+
+
+def _run(args, db: Path, evidence: dict) -> None:
+    """Probe the served snapshot for the canonical scan, then capture."""
     # Resolve the canonical scan first (throwaway server) so the real server can be
     # started with a report dir scoped to that scan's artifacts.
     with serve_dashboard(db) as probe_origin:
@@ -394,17 +457,6 @@ def main(argv=None) -> int:
             capture(args, origin, {"score": score}, evidence)
         finally:
             pass
-    after = _sha256(db)
-    evidence["db_sha256_after"] = after
-    text = json.dumps(evidence, indent=2, default=str)
-    print(text)
-    if args.evidence_json:
-        Path(args.evidence_json).write_text(text + "\n")
-    if before != after:
-        print("DB_MUTATED: canonical DB hash changed during capture.", file=sys.stderr)
-        return 1
-    return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
