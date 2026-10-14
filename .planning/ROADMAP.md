@@ -222,11 +222,11 @@ Plans:
   4. `docs/images/dashboard-hero-1.png` and `-2.png` are removed or referenced: no unreferenced hero image remains in `docs/images/`.
 **Plans**: 5 plans
 Plans:
-- [ ] 225-01-PLAN.md — Vault sync instrument (`scripts/sync_vault_guides.py` --check/--write, MAPPING/EXEMPT, CI logic + completeness tests, registered live skip), first sync pass, 4 new connector pages, local CLAUDE.md LIVE-03 fix
-- [ ] 225-02-PLAN.md — Scripted hero capture (`scripts/capture_readme_hero.py`: mount guard, gauge-reach check, DB hash guard) + orphan hero images removed with classification rows
-- [ ] 225-03-PLAN.md — Capture the hero from the canonical DB, operator HUMAN-UAT gauge confirmation, absolute-URL README + API-true caption + DCL-README-0023..0026 + `tests/test_readme_hero.py`
-- [ ] 225-04-PLAN.md — UAT Series 225 + UAT-85-08 GAP drained + coverage-gaps regen; master-guide final check; final vault sync `--check` = 0
-- [ ] 225-05-PLAN.md — Full suite + CI-view simulation, hand-edited STATE/ROADMAP, push/dispatch/CITRUTH-03 green at HEAD, PR, VALIDATION sign-off, Obsidian phase note
+- [x] 225-01-PLAN.md — Vault sync instrument (`scripts/sync_vault_guides.py` --check/--write, MAPPING/EXEMPT, CI logic + completeness tests, registered live skip), first sync pass, 4 new connector pages, local CLAUDE.md LIVE-03 fix
+- [x] 225-02-PLAN.md — Scripted hero capture (`scripts/capture_readme_hero.py`: mount guard, gauge-reach check, DB hash guard) + orphan hero images removed with classification rows
+- [x] 225-03-PLAN.md — Capture the hero from the canonical DB, operator HUMAN-UAT gauge confirmation, absolute-URL README + API-true caption + DCL-README-0023..0026 + `tests/test_readme_hero.py`
+- [x] 225-04-PLAN.md — UAT Series 225 + UAT-85-08 GAP drained + coverage-gaps regen; master-guide final check; final vault sync `--check` = 0
+- [x] 225-05-PLAN.md — Full suite + CI-view simulation, hand-edited STATE/ROADMAP, push/dispatch/CITRUTH-03 green at HEAD, PR, VALIDATION sign-off, Obsidian phase note
 **UI hint**: yes
 
 ### Phase 226: Release v5.27.0
@@ -249,7 +249,7 @@ Plans:
 | 222.1. Brand Guidelines v2 and Dashboard Re-theme (INSERTED) | 6/6 | Complete (verified passed 12/12 at 92a73017; CI green, Python CI 37096708811 + Dashboard Quality 37096708809; PR #54) | 2026-10-03 |
 | 223. Dashboard Brand Adoption | 6/6 | Complete (verified passed 4/4 at f7e4f05a; CI green, Python CI 38204428916 + Dashboard Quality 38204428939; PR #55) | 2026-10-12 |
 | 224. Doc Claim Ledger & Verification | 18/18 | Complete (verified passed 5/5 at 38df9001 with 1 operator override, goal clause NOT MET AS WRITTEN: deep-doc residual 4.0% disclosed, HORIZON 999.123; CI green, Python CI 38457496020 + Dashboard Quality 38457500158; PR #56 merged at a8875830, gap-closure PR follows) | 2026-10-13 |
-| 225. Doc Publication & Hero Retake | 0/5 | Planned | - |
+| 225. Doc Publication & Hero Retake | 5/5 | In progress (verification pending) | - |
 | 226. Release v5.27.0 | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged)
