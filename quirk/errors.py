@@ -144,6 +144,11 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         cause="PDF export failed due to an unexpected error.",
         fix="Check server logs for the full traceback and file an issue if reproducible.",
     ),
+    "DASHBOARD-014": ErrorEntry(
+        code="DASHBOARD-014",
+        cause="Server configuration file could not be read.",
+        fix="Fix the YAML file named in the server log, or run `quirk doctor`.",
+    ),
 
     # --- SCHED domain (scheduled scans) ---
     "SCHED-001": ErrorEntry(

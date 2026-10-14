@@ -52,6 +52,7 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 | QRK-DASHBOARD-011 | Cannot score a QRAMM session with no answered questions. | Answer at least one question before requesting a score. |
 | QRK-DASHBOARD-012 | Playwright not installed for PDF export. | Run `pip install playwright && playwright install chromium`. |
 | QRK-DASHBOARD-013 | PDF export failed due to an unexpected error. | Check server logs for the full traceback and file an issue if reproducible. |
+| QRK-DASHBOARD-014 | Server configuration file could not be read. | Fix the YAML file named in the server log, or run `quirk doctor`. |
 
 ## DB
 

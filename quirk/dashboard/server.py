@@ -50,8 +50,8 @@ def _operator_token_configured() -> bool:
     operator/dashboard surface is protected.
     """
     try:
-        from quirk.dashboard.api.middleware.auth import _get_configured_token
-        return bool(_get_configured_token())
+        from quirk.util.server_config import resolve_operator_token
+        return bool(resolve_operator_token().token)
     except Exception:
         # Be conservative: if we cannot prove a token is configured, treat it
         # as absent so the guardrail errs toward refusing an exposed bind.
@@ -104,7 +104,19 @@ def serve(
         print(format_error("INSTALL-002"), file=sys.stderr)
         sys.exit(1)
 
-    auth_on = _operator_token_configured()
+    from quirk.util.server_config import resolve_operator_token
+
+    token_state = resolve_operator_token()
+    if token_state.error:
+        print(
+            "REFUSING to start: the server configuration file could not be "
+            f"read ({token_state.error}).\n"
+            "Fix the YAML file, or run quirk doctor. (DASHBOARD-014)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    auth_on = bool(token_state.token)
     loopback = _is_loopback_host(host)
     trust_proxy = _forwarded_allow_ips()
 
