@@ -38,7 +38,7 @@ _PLACEHOLDER_SIGNATURE = "npm run build"
 _SIDEBAR_NAV = 'nav[aria-label="Dashboard navigation"]'
 _LOGIN_FORM = 'form[aria-label="Dashboard login"]'
 _BRAND_NAME = "QU.I.R.K."
-_GAUGES_CARD = "div.flex.flex-wrap.justify-around.gap-8"
+_GAUGES_CARD = "div.flex.flex-wrap.justify-around.gap-7"
 _MAX_PNG_BYTES = 1_048_576
 _REACH_TOLERANCE = 0.02
 _EXPECTED_GAUGES = 7
@@ -301,20 +301,25 @@ def capture(args, origin: str, scan: dict, evidence: dict) -> None:
             def measure():
                 b = page.locator(_GAUGES_CARD).bounding_box()
                 return math.ceil(b["y"] + page.evaluate("() => window.scrollY") + b["height"]), b
+            def nav_deficit():
+                return page.evaluate(
+                    "(sel) => { const n = document.querySelector(sel); return Math.max(0, n.scrollHeight - n.clientHeight); }",
+                    _SIDEBAR_NAV,
+                )
             vh = H
-            for _ in range(4):
+            for _ in range(6):
                 bottom, box = measure()
-                need = bottom + args.pad
-                if need <= vh and vh == need:
+                need = max(bottom + args.pad, vh + nav_deficit())
+                if need == vh:
                     break
                 vh = need
                 page.set_viewport_size({"width": W, "height": vh})
                 page.wait_for_timeout(300)
             bottom, box = measure()
             card_bottom = box["y"] + page.evaluate("() => window.scrollY") + box["height"]
-            clip = {"x": 0, "y": 0, "width": W, "height": math.ceil(card_bottom + args.pad)}
-            if clip["height"] != vh:
-                raise SystemExit(f"VIEWPORT_UNSTABLE: viewport {vh} != clip {clip['height']}.")
+            # Clip is the full viewport: the sidebar is viewport-tall, so the card may
+            # end above the viewport bottom once the sidebar needs more height.
+            clip = {"x": 0, "y": 0, "width": W, "height": vh}
             nav_clipped = page.evaluate(
                 "(sel) => { const n = document.querySelector(sel); return n.scrollHeight > n.clientHeight + 1; }",
                 _SIDEBAR_NAV,
