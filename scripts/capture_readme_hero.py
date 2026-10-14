@@ -161,14 +161,23 @@ def _get(url: str) -> bytes:
 
 @contextlib.contextmanager
 def serve_dashboard(db_path: Path, config_path: str | None = None):
-    """Background a loopback uvicorn serving the dashboard app; yield its origin."""
+    """Background a loopback uvicorn serving the dashboard app; yield its origin.
+
+    Its scratch dir is a TemporaryDirectory removed on exit (225-REVIEW WR-02).
+    """
+    with tempfile.TemporaryDirectory(prefix="quirk-hero-") as tmp:
+        with _serve_dashboard(db_path, config_path, tmp) as origin:
+            yield origin
+
+
+@contextlib.contextmanager
+def _serve_dashboard(db_path: Path, config_path: str | None, tmp: str):
     port = _free_port()
     env = dict(os.environ)
     env["QUIRK_DB_PATH"] = str(db_path)
     env["QUIRK_SERVE_PORT"] = str(port)
     # Auth passthrough only when BOTH token sources resolve empty.
     env.pop("QUIRK_API_TOKEN", None)
-    tmp = tempfile.mkdtemp(prefix="quirk-hero-")
     env["QUIRK_CONFIG_PATH"] = config_path or os.path.join(tmp, "absent", "config.yaml")
     # close_fds=False and no cwd: avoids the macOS fork() SIGSEGV path.
     proc = subprocess.Popen(
@@ -436,8 +445,15 @@ def _run(args, db: Path, evidence: dict) -> None:
     scanned_at = meta0.get("scanned_at")
     if not scanned_at:
         raise SystemExit("NO_SCAN_META: /api/scan/latest meta.scanned_at is missing.")
-    workdir = tempfile.mkdtemp(prefix="quirk-hero-reports-")
-    cfg_path = build_scoped_config(stamp_from_scanned_at(scanned_at), workdir, evidence)
+    # WR-02: the scoped config.yaml copy (which may carry connector credentials)
+    # and the report symlinks live only for the duration of the capture.
+    with tempfile.TemporaryDirectory(prefix="quirk-hero-reports-") as workdir:
+        cfg_path = build_scoped_config(
+            stamp_from_scanned_at(scanned_at), workdir, evidence)
+        _capture_with_server(args, db, cfg_path, evidence)
+
+
+def _capture_with_server(args, db: Path, cfg_path: str, evidence: dict) -> None:
     with serve_dashboard(db, cfg_path) as origin:
         scan = json.loads(_get(origin + "/api/scan/latest"))
         score = scan.get("score") or {}

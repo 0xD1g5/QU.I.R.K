@@ -155,3 +155,92 @@ def test_main_never_serves_canonical_and_checks_db_on_abort(tmp_path, monkeypatc
         hero.main(["--db", str(canon), "--out", str(tmp_path / "o.png")])
     assert "DB_MUTATED" in capsys.readouterr().err, (
         "CR-02: the canonical-DB check must run on abort paths too")
+
+
+class _FakeProc:
+    """Stands in for the uvicorn Popen so the leak test needs no server."""
+
+    def __init__(self, *a, **kw):
+        self.returncode = None
+        self.stdout = None
+        self.popen_kwargs = kw
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self):
+        self.returncode = 0
+
+    kill = terminate
+
+    def wait(self, timeout=None):
+        return self.returncode
+
+    def communicate(self, timeout=None):
+        return (b"", b"")
+
+
+class _FakeResp:
+    status = 200
+
+    def __init__(self, body: bytes):
+        self._body = body
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def test_capture_run_leaves_no_temp_dirs(tmp_path, monkeypatch):
+    """225-REVIEW WR-02: the snapshot dir, the scoped-config/report dir and
+    every serve_dashboard scratch dir are removed -- on success AND abort."""
+    import json
+    import tempfile
+
+    import pytest
+
+    import scripts.capture_readme_hero as hero
+
+    fake_repo = tmp_path / "repo"
+    (fake_repo / "quirk-output").mkdir(parents=True)
+    for name in ("report-20260928-132139.html", "run-stats-20260928-132139.json"):
+        (fake_repo / "quirk-output" / name).write_text("x", encoding="utf-8")
+    (fake_repo / "config.yaml").write_text("api_token: s3cret\n", encoding="utf-8")
+    canon = tmp_path / "quirk.db"
+    _make_db(canon)
+    tmproot = tmp_path / "tmproot"
+    tmproot.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(tmproot))
+    monkeypatch.setattr(hero, "REPO_ROOT", fake_repo)
+    procs: list[_FakeProc] = []
+
+    def popen(*a, **kw):
+        procs.append(_FakeProc(*a, **kw))
+        return procs[-1]
+    monkeypatch.setattr(hero.subprocess, "Popen", popen)
+    meta = json.dumps({"meta": {"scanned_at": "2026-09-28T13:21:39"}}).encode()
+    monkeypatch.setattr(hero.urllib.request, "urlopen",
+                        lambda *a, **kw: _FakeResp(meta))
+    seen: dict = {}
+
+    def fake_capture(args, db, cfg_path, evidence):
+        seen["cfg"] = Path(cfg_path)
+        assert seen["cfg"].is_file() and seen["cfg"].is_relative_to(tmproot)
+        assert "s3cret" in seen["cfg"].read_text(encoding="utf-8")
+    monkeypatch.setattr(hero, "_capture_with_server", fake_capture)
+    assert hero.main(["--db", str(canon), "--out", str(tmp_path / "o.png")]) == 0
+    assert seen["cfg"] and not seen["cfg"].exists()
+    assert len(procs) == 1, "the probe server ran through the real serve_dashboard"
+    assert list(tmproot.iterdir()) == [], "temp dirs leaked on success"
+
+    def boom(args, db, cfg_path, evidence):
+        raise SystemExit("GAUGE_COUNT: simulated abort")
+    monkeypatch.setattr(hero, "_capture_with_server", boom)
+    with pytest.raises(SystemExit, match="GAUGE_COUNT"):
+        hero.main(["--db", str(canon), "--out", str(tmp_path / "o.png")])
+    assert list(tmproot.iterdir()) == [], "temp dirs leaked on abort"
