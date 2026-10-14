@@ -244,3 +244,36 @@ def test_capture_run_leaves_no_temp_dirs(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match="GAUGE_COUNT"):
         hero.main(["--db", str(canon), "--out", str(tmp_path / "o.png")])
     assert list(tmproot.iterdir()) == [], "temp dirs leaked on abort"
+
+
+def test_server_output_goes_to_a_log_file_not_an_unread_pipe(tmp_path, monkeypatch):
+    """225-REVIEW WR-01: an unread PIPE blocks uvicorn once its buffer fills.
+    Output must go to a file, and SERVER_NOT_READY must surface its tail."""
+    import subprocess
+    import tempfile
+
+    import pytest
+
+    import scripts.capture_readme_hero as hero
+
+    tmproot = tmp_path / "tmproot"
+    tmproot.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(tmproot))
+    procs: list[_FakeProc] = []
+
+    def crashing_popen(*a, **kw):
+        proc = _FakeProc(*a, **kw)
+        kw["stdout"].write(b"Traceback: boom-from-uvicorn\n")
+        proc.returncode = 3  # the server died before answering /api/health
+        procs.append(proc)
+        return proc
+    monkeypatch.setattr(hero.subprocess, "Popen", crashing_popen)
+    with pytest.raises(SystemExit) as exc:
+        with hero.serve_dashboard(tmp_path / "quirk.db"):
+            pass
+    out = procs[0].popen_kwargs["stdout"]
+    assert out is not subprocess.PIPE and hasattr(out, "write")
+    assert out.closed, "the log handle must be closed on exit"
+    msg = str(exc.value)
+    assert msg.startswith("SERVER_NOT_READY") and "boom-from-uvicorn" in msg
+    assert list(tmproot.iterdir()) == []

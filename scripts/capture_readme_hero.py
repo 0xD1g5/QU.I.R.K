@@ -179,13 +179,21 @@ def _serve_dashboard(db_path: Path, config_path: str | None, tmp: str):
     # Auth passthrough only when BOTH token sources resolve empty.
     env.pop("QUIRK_API_TOKEN", None)
     env["QUIRK_CONFIG_PATH"] = config_path or os.path.join(tmp, "absent", "config.yaml")
+    # WR-01: server output goes to a log file, never an unread PIPE (a full
+    # pipe buffer blocks uvicorn's event loop mid-capture).
+    log_path = Path(tmp) / "uvicorn.log"
+    log_fh = open(log_path, "wb")
     # close_fds=False and no cwd: avoids the macOS fork() SIGSEGV path.
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "quirk.dashboard.api.app:app",
-         "--host", "127.0.0.1", "--port", str(port)],
-        env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        close_fds=False,
-    )
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "quirk.dashboard.api.app:app",
+             "--host", "127.0.0.1", "--port", str(port)],
+            env=env, stdout=log_fh, stderr=subprocess.STDOUT,
+            close_fds=False,
+        )
+    except BaseException:
+        log_fh.close()
+        raise
     origin = f"http://127.0.0.1:{port}"
     try:
         deadline = time.time() + 30
@@ -202,12 +210,11 @@ def _serve_dashboard(db_path: Path, config_path: str | None, tmp: str):
             time.sleep(1)
         if not ready:
             proc.kill()
-            out = b""
             with contextlib.suppress(Exception):
-                out = proc.communicate(timeout=10)[0] or b""
+                proc.wait(timeout=10)
             raise SystemExit(
                 f"SERVER_NOT_READY: uvicorn did not answer {origin}/api/health in 30s "
-                f"(exit={proc.returncode}):\n" + out.decode("utf-8", "replace")
+                f"(exit={proc.returncode}); log tail:\n" + _log_tail(log_fh, log_path)
             )
         yield origin
     finally:
@@ -219,9 +226,17 @@ def _serve_dashboard(db_path: Path, config_path: str | None, tmp: str):
                 proc.kill()
                 with contextlib.suppress(Exception):
                     proc.wait(timeout=10)
-        with contextlib.suppress(Exception):
-            if proc.stdout is not None:
-                proc.stdout.close()
+        log_fh.close()
+
+
+def _log_tail(log_fh, log_path: Path, limit: int = 8192) -> str:
+    with contextlib.suppress(Exception):
+        log_fh.flush()
+    try:
+        data = log_path.read_bytes()
+    except OSError as exc:
+        return f"<log unreadable: {exc}>"
+    return data[-limit:].decode("utf-8", "replace")
 
 
 def assert_spa_mounted(page) -> None:
