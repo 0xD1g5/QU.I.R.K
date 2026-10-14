@@ -26,6 +26,7 @@ from typing import Dict, List, Optional, Set
 from quirk.models import CryptoEndpoint, HardwareDevice
 from quirk.scanner.hardware_meta import HARDWARE_MATRIX
 from quirk.logging_util import Logger
+from quirk.util.no_redirect import _NoRedirectHandler
 from quirk.util.safe_exc import safe_str
 
 _LOG = logging.getLogger(__name__)
@@ -176,7 +177,13 @@ def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
                 ctx = ssl.create_default_context()
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
-            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            # Redirects are never followed: a 3xx is a response from this
+            # host, and its Location (possibly another host) is not fetched.
+            handlers = [_NoRedirectHandler]
+            if ctx is not None:
+                handlers.append(urllib.request.HTTPSHandler(context=ctx))
+            opener = urllib.request.build_opener(*handlers)
+            with opener.open(req, timeout=timeout) as resp:
                 responded = True
                 # Collect headers into a single searchable string
                 header_text = " ".join(
@@ -189,6 +196,10 @@ def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
                 entry = _match_matrix(combined)
                 if entry:
                     return {"entry": entry, "body": combined, "responded": True}
+        except urllib.error.HTTPError as exc:
+            if 300 <= exc.code < 400:
+                responded = True
+            continue
         except Exception:
             # Any error (connection refused, timeout, SSL, HTTP error, etc.)
             # is silently swallowed — D-04: best-effort, fail to Unknown.
