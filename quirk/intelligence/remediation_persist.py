@@ -31,7 +31,10 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from quirk.compliance import FINGERPRINT_TITLE_ALIASES, normalize_finding_title
 from quirk.db import get_session
-from quirk.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.evidence import (
+    SCORE_NEUTRAL_FINDING_CATEGORIES,
+    build_evidence_summary,
+)
 from quirk.intelligence.remediation import (
     DEFAULT_ITEM_STATE,
     REMEDIATION_CONSTITUENCY,
@@ -89,7 +92,9 @@ def _select_constituent_findings(
 
     fingerprint  -> findings whose normalised title matches a normalised
                     constituency title.
-    severity     -> findings at HIGH or CRITICAL severity, whatever the title.
+    severity     -> findings at HIGH or CRITICAL severity, whatever the title,
+                    except score-neutral categories (D-25), which do not feed
+                    the high-impact item.
     evidence_only -> nothing constitutes it; no finding backs it.
     """
     if kind == "fingerprint":
@@ -99,6 +104,7 @@ def _select_constituent_findings(
         return [
             f for f in findings
             if str(f.get("severity") or "").upper() in _HIGH_IMPACT_SEVERITIES
+            and f.get("category") not in SCORE_NEUTRAL_FINDING_CATEGORIES
         ]
     # "evidence_only" — deliberately zero constituents (see remediation.py).
     return []

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 
@@ -313,15 +313,40 @@ def _dashboard_severity_for_cli_title(cli_title: str) -> str:
     )
 
 
+def _dashboard_category_for_cli_title(cli_title: str) -> Optional[str]:
+    """Read the literal category= of the FindingItem(...) call that emits
+    the dashboard title for *cli_title*, or None when the call sets none."""
+    dashboard_key = next(
+        k for k, v in DASHBOARD_TITLE_BRIDGE.items() if v == cli_title
+    )
+    body, _ = _slice_function(_SCAN_PY.read_text(), "findings_for_endpoint")
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        m = _TITLE_RE.search(line) if re.search(r"\btitle\s*=", line) else None
+        if m and _literal_prefix(m.group(1)) == dashboard_key:
+            for nxt in lines[i + 1:i + 40]:
+                if "FindingItem(" in nxt:
+                    return None
+                cat_m = re.search(r'\bcategory\s*=\s*"([a-z_]+)"', nxt)
+                if cat_m:
+                    return cat_m.group(1)
+            return None
+    raise AssertionError(f"no title= site for {dashboard_key!r} in scan.py")
+
+
 def _compute_reachability(cli_title: str) -> str:
     """Recompute D-08/D-09 reachability from REMEDIATION_CONSTITUENCY plus
-    the dashboard site's own severity literal -- the ground truth this
-    census is checked against."""
+    the dashboard site's own severity and category literals -- the ground
+    truth this census is checked against. A score-neutral category (D-25)
+    never constitutes the severity catch-all."""
+    from quirk.intelligence.evidence import SCORE_NEUTRAL_FINDING_CATEGORIES
+
     for slug, (kind, titles) in REMEDIATION_CONSTITUENCY.items():
         if kind == "fingerprint" and cli_title in titles:
             return "specific"
     severity = _dashboard_severity_for_cli_title(cli_title)
-    if severity in {"HIGH", "CRITICAL"}:
+    category = _dashboard_category_for_cli_title(cli_title)
+    if severity in {"HIGH", "CRITICAL"} and category not in SCORE_NEUTRAL_FINDING_CATEGORIES:
         return "catchall-only"
     return "unreachable"
 
