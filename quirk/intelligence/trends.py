@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Iterable, List, Optional
+from typing import Any, Callable, Iterable, List, Mapping, Optional, Sequence
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -23,6 +23,8 @@ from sqlalchemy.orm import Session
 from quirk.models import CryptoEndpoint
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
+
+FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +203,17 @@ def _sample_findings(
     ]
 
 
-def _score_for_session(endpoints: List[CryptoEndpoint]) -> Optional[float]:
+def _default_report_deriver(endpoints: Sequence[Any]) -> List[Mapping[str, Any]]:
+    """Report-composer default deriver (lazy import avoids an import cycle)."""
+    from quirk.engine.findings_evaluator import derive_report_findings
+
+    return derive_report_findings(endpoints)
+
+
+def _score_for_session(
+    endpoints: List[CryptoEndpoint],
+    findings_deriver: Optional[FindingsDeriver] = None,
+) -> Optional[float]:
     """Compute the readiness score for a list of endpoints.
 
     quirk/intelligence/scoring.py's compute_readiness_score still returns
@@ -210,11 +222,9 @@ def _score_for_session(endpoints: List[CryptoEndpoint]) -> Optional[float]:
     Phase 199 / TRIAGE-10: it preserves whatever score_dict["score"] yields,
     including None (zero domains assessed) or a future fractional value.
     """
-    # D-07 (184.4): intentionally findings-less — the only consumer of this
-    # function's return value is `return score_dict["score"]` immediately below;
-    # no caller of _score_for_session() ever reads a rating/band from it, so a
-    # severity-blind evidence summary here can never diverge from a report band.
-    evidence = build_evidence_summary(endpoints)
+    # Phase 228 (XSURF-07, D-09): findings come from the caller's deriver (dashboard) or the report composer; a findings-less score is not reachable by default.
+    derive = findings_deriver or _default_report_deriver
+    evidence = build_evidence_summary(endpoints, derive(endpoints))
     score_dict = compute_readiness_score(evidence)
     return score_dict["score"]
 
@@ -227,8 +237,14 @@ def compute_trend_report(
     current_ts: datetime,
     previous_ts: Optional[datetime],
     db: Session,
+    *,
+    findings_deriver: Optional[FindingsDeriver] = None,
 ) -> TrendReport:
     """Compare two scan sessions and return a trend report.
+
+    Args:
+        findings_deriver: optional callable mapping a session's endpoints to
+            findings for scoring; defaults to the report composer (D-09).
 
     D-12: Pure function — no datetime.now() inside. Caller supplies timestamps.
     D-06: When previous_ts is None, returns null-delta single-session response.
@@ -272,7 +288,7 @@ def compute_trend_report(
     (scanned_at IS NULL) is expected behavior per D-13.
     """
     current_eps = _fetch_session_endpoints(db, current_ts)
-    current_score = _score_for_session(current_eps) if current_eps else None
+    current_score = _score_for_session(current_eps, findings_deriver) if current_eps else None
 
     # D-06: single-session early return — no previous data to compare
     if previous_ts is None:
@@ -295,7 +311,7 @@ def compute_trend_report(
         )
 
     previous_eps = _fetch_session_endpoints(db, previous_ts)
-    previous_score = _score_for_session(previous_eps) if previous_eps else None
+    previous_score = _score_for_session(previous_eps, findings_deriver) if previous_eps else None
     score_delta = (
         current_score - previous_score
         if current_score is not None and previous_score is not None
