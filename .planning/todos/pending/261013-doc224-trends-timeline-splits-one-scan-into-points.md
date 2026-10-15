@@ -42,3 +42,15 @@ reusing it with a limit of `n` instead of 10. Unknowns: whether any test or the 
 (`tests/test_dashboard_trends.py::test_trends_timeline_n_param` seeds rows without `scan_run_id`, so it should keep
 passing on the legacy path) and the cost of loading all `(scanned_at, scan_run_id)` pairs for large databases, which
 `_list_session_timestamps` already pays. No spike needed.
+
+## Second symptom (found 2026-10-15, Phase 228 plan 07)
+
+A scan whose `scanned_at` carries **sub-millisecond** precision gets **no** timeline point at all. The
+lister truncates to milliseconds (`func.strftime("%Y-%m-%d %H:%M:%f", ...)` in
+`_list_session_timestamps_n`), and `_fetch_session_endpoints` resolves the point by equality
+(`quirk/intelligence/trends.py:124` `CryptoEndpoint.scanned_at == target_ts`), so the truncated stamp
+matches no row. Phase 228's XSURF-07 fixture (`tests/test_cross_surface_parity.py`,
+`test_xsurf07_trend_merge_segment_scores_match_headline`) uses a whole-second stamp to avoid it. The fix
+above (key by `scan_run_id`, millisecond fallback only for legacy rows) closes both symptoms.
+
+- [ ] Test: a scan whose rows carry microsecond `scanned_at` yields exactly one timeline point.
