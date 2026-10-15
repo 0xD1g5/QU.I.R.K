@@ -2,20 +2,44 @@
 gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
-status: phase_complete
-last_updated: "2026-10-15T16:00:00.000Z"
-last_activity: "2026-10-15 -- Phase 226 closed: verified passed 9/9 at 16f458c0 (CI green); v5.27.0 published; follow-up PR #61 awaiting merge. Hand-edited from a pre-image (no gsd-sdk state verbs)"
+status: milestone_complete
+last_updated: "2026-10-15T20:00:00.000Z"
+last_activity: "2026-10-15 -- v5.27 CLOSED + ARCHIVED by hand: audit tech_debt 20/20 at main 53476765; shipped as tag v5.27.0 (PyPI + GitHub Releases); archives at .planning/milestones/v5.27-*, phases moved to v5.27-phases/, REQUIREMENTS.md removed. Next: /gsd-new-milestone (PM review first)"
 progress:
   total_phases: 7
   completed_phases: 7
-  total_plans: 58
-  completed_plans: 58
+  total_plans: 75
+  completed_plans: 75
   percent: 100
 ---
 
 # Project State
 
 ## Deferred Items
+
+### v5.27 milestone close (2026-10-15) — acknowledged and deferred
+
+**Counts re-derived from disk, NOT from `gsd-sdk query audit-open`** (it reported `todos: 5`).
+**169 pending todos, 1 open debug session and 15 audit tech-debt items** (7 groups). The full list is
+in the frontmatter of `.planning/milestones/v5.27-MILESTONE-AUDIT.md` and is not re-tabulated here,
+so it cannot drift from that file.
+
+The todo count rose from 44 at the v5.26 close to 169, and **118 of those are `doc224` product
+defects** that the claim review surfaced (14 high priority). 117 of the 118 have **no owner field**,
+so `test_no_pending_todo_points_at_a_closed_owner` does not police them. Giving the pool an owner is
+the first item for the v5.28 PM review.
+
+| Category | Item | Status |
+|----------|------|--------|
+| requirement | DOC-04 4.0% residual in deep reference docs (8/201) | Accepted as scoped (operator override 2026-10-13); UAT-224-10 intentional FAIL; owned by `999.123` (P2). |
+| integration | W15: bundled JetBrains Mono never served (`/fonts/*` hits the SPA catch-all) | Pre-existing since Phase 54, present in the `v5.27.0` tag; contradicts `BRAND-GUIDELINES.md:149-150`. Effort S. No owner yet. |
+| integration | W12: doc-ledger code-cite drift after 225.1 | Operator declined a ±2-line cite gate (2026-10-13). Only a D-15-style re-run catches it. |
+| todo | `261003-brand-identity-non-dashboard-residue` | Report header still shows the old-blue `QU.I.R.K.` wordmark. |
+| todo | `261015-install-hints-unquoted-and-guard-scope` | Pre-tag code review WR-01..03. |
+| todo | `261014-readme-relative-links-dont-resolve-on-pypi` | 25 links. |
+| backlog | `999.118`–`999.125` | Live owners carried in. `999.120` (P2b, P1, operator-reserved) is the v5.28 anchor; `999.124` and `999.125` are tagged v5.28. |
+| security | One embargoed finding | Records in gitignored `.planning/security-embargo/`, deliberately not described here. |
+| debug | `github-release-notes-and-ci-failures` | Open, with no status field. Its finding #1 (wrong release notes) overlaps REL-06 and needs re-checking. `sensor-enroll-id-mismatch`, which the audit called open, is already `status: resolved`. |
 
 ### v5.26 milestone close (2026-10-02) — acknowledged and deferred
 
@@ -290,11 +314,13 @@ Also carried, not in `audit-open`'s scope:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-02)
+See: .planning/PROJECT.md (updated 2026-10-15)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.26 is closed and archived (2026-10-02).** Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Committed for v5.27 already: the claim-by-claim review of every user-facing doc that gates the social launch (HORIZON 2026-09-30 row). Live owners carried in: `999.118`, `999.119`, `999.120` (P1, operator-reserved).
+**Current focus:** None — **v5.27 is closed and archived (2026-10-15), and it shipped as `v5.27.0`.** The social-launch gate is satisfied. Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Owed at that review: an owner for the 118 `doc224` product-defect todos (14 high), W15, and `999.120` (P2b, P1, operator-reserved), the v5.28 anchor. Surface `999.121` (GUI-first gaps), as the operator asked.
+
+*Superseded:* None — **v5.26 is closed and archived (2026-10-02).** Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Committed for v5.27 already: the claim-by-claim review of every user-facing doc that gates the social launch (HORIZON 2026-09-30 row). Live owners carried in: `999.118`, `999.119`, `999.120` (P1, operator-reserved).
 
 **Carried from v5.24's close, re-attached by hand 2026-09-27:** `state.begin-phase` flattened this
 field to a bare one-liner (documented hazard (f), not corruption — every byte it wrote was correct),
@@ -1443,6 +1469,15 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
+Phase: — (milestone v5.27 closed 2026-10-15; no phase open)
+Plan: —
+Status: v5.27 Launch Readiness CLOSED and ARCHIVED, and SHIPPED as tag `v5.27.0` (PyPI + GitHub
+Releases). 7 of 7 phases, 75 of 75 plans, 20/20 requirements (DOC-04 as scoped). Audit `tech_debt`
+at `main` `53476765`. Archives: `.planning/milestones/v5.27-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`
+and `v5.27-phases/`.
+Last activity: 2026-10-15. Milestone close, hand-written under the pre-image + full-diff protocol.
+
+**Prior position (Phase 226 close, superseded 2026-10-15):**
 Phase: 226 (Release v5.27.0) — COMPLETE 2026-10-15, 17 of 17 plans, verified passed 9/9 at 16f458c0 (7 of 7 phases in v5.27)
 Launch gate: SATISFIED (social launch unblocked) — 6 embargoed findings fixed and disclosed; one finding remains embargoed to a later release
 Branch `phase-226-release-v5-27-0` cut from `main` at observed sha 65921405ed24050531d1345a14ad0349b81f1045 (CI green, head_sha asserted).
@@ -3420,7 +3455,16 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/225.1-pre-release-security-hardening/225.1-16-SUMMARY.md` — Phase 225.1 stopped at 225.1-16
+Resume file: none. v5.27 is closed (2026-10-15), and its phase directories are now under
+`.planning/milestones/v5.27-phases/`. Start the next cycle with `/gsd-new-milestone`.
+
+Last session: 2026-10-15. **Merged #61, confirmed `main` CI, then closed v5.27 by hand.** The close
+re-derived every count from disk instead of reading it. The audit carried two open debug sessions,
+but one was already `resolved`. STATE's frontmatter said `total_plans: 58`; there are 75. The draft
+MILESTONES entry said 12 debt items; the audit holds 15. Three counts drifted in one close, and each
+was caught by recounting rather than by reading.
+
+Earlier resume file (superseded): `.planning/phases/225.1-pre-release-security-hardening/225.1-16-SUMMARY.md` — Phase 225.1 stopped at 225.1-16
 (all plans executed, UAT Series 225.1 committed); resume with `gsd-verifier`. No commit may land between the CI observation and
 the phase-close commit.
 

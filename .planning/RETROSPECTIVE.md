@@ -1366,6 +1366,55 @@ whose containment guard never joins client input into a path at all.
   orchestrator hit, which suggests the trap is environmental and worth a standing note rather than a
   per-session rediscovery.
 
+## Milestone: v5.27 — Launch Readiness
+
+**Shipped:** 2026-10-15 — tag `v5.27.0`, on PyPI and GitHub Releases
+**Phases:** 7 (222–226, with 222.1 and 225.1 inserted) | **Plans:** 75
+**Audit:** `tech_debt` — 20/20 requirements (DOC-04 as scoped), integration 13/15, flows 3/3, Nyquist 7/7
+**Scale:** 185 commits, 449 files, +36,246 / −5,686, 14 days
+
+> **Gap note:** v5.25 and v5.26 have no retrospective section in this file. They are not backfilled
+> here; their records live in MILESTONES.md and the archived audits.
+
+### What Was Built
+- The brand on every served surface (README, report colophon, sidebar, favicon), regenerated from
+  source and byte-gated, with brand guidelines v2 and an Ink-violet UI accent.
+- An 8,927-row doc-claim ledger, each row verified by an independent method and gated in CI. The
+  master guide was regenerated, the vault sync is scripted, and the README hero was retaken.
+- Pre-release security hardening (225.1): six findings fixed and published as advisories.
+- `v5.27.0` released, with a release body composed from the CHANGELOG and a PyPI install verified in
+  a clean venv.
+
+### What Worked
+- **Sketching before deciding.** Palette C, picked from a description, would have reopened the
+  contrast ratchets. Viewing the sketches flipped the call to B the same day.
+- **Measuring the residual instead of claiming zero.** DOC-04 reports 4.0% (8/201, with a Wilson
+  interval) rather than "every claim verified", and the remainder has an owner.
+- **Inserting 225.1 before the tag** instead of shipping known findings and patching afterwards.
+
+### What Was Inefficient
+- **The claim review produced more work than it closed.** Pending todos rose from 44 to 169. 117 of
+  the 118 `doc224` todos have no owner field, so the gate built at the v5.26 close cannot see them.
+- **Embargo leaks through joins and plan text** forced a history rewrite of two public branches
+  (Phase 226). Greps run per diff missed them, and a whole-tree grep with a control caught them.
+- **Ledger code cites drifted** as soon as 225.1 edited 62 files. The ledger gate checks doc anchors,
+  not code cites.
+
+### Patterns Established
+- A claim ledger with a method column: every public claim carries how it was checked.
+- `scripts/sync_vault_guides.py --check` as the vault-sync instrument, in place of hand copying.
+- README images pinned to the release tag, with gates that derive the tag from `pyproject.toml`.
+
+### Key Lessons
+- Counts drift even inside the close itself. Three were wrong here (open debug sessions, STATE's
+  `total_plans` 58 vs 75, and a drafted debt count of 12 vs 15). All three were caught by recounting
+  from disk, none by reading.
+- A review that surfaces defects needs an owner for its output, or it moves debt from invisible to
+  unowned, which is barely better.
+
+### Cost Observations
+- Not measured for this milestone (no per-model session data was recorded).
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
