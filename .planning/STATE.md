@@ -4,7 +4,7 @@ milestone: v5.28
 milestone_name: Score & Finding Truth
 status: executing
 last_updated: "2026-10-15T23:00:00.000Z"
-last_activity: "2026-10-15 -- Phase 227 complete (9/9 plans, verified passed 4/4 at efadfb56, CI green). STATE.md hand-edited from a pre-image; next /gsd-discuss-phase 228"
+last_activity: "2026-10-15 -- Phase 228 context gathered (228-CONTEXT.md, D-01..D-19, 1 todo folded). STATE.md hand-edited; next /gsd-plan-phase 228"
 progress:
   total_phases: 8
   completed_phases: 1
@@ -3481,8 +3481,8 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/227-todo-ownership-gate/227-CONTEXT.md` (Phase 227 context gathered
-2026-10-15; next `/gsd-plan-phase 227`). v5.27's phase directories are under
+Resume file: `.planning/phases/228-cross-surface-score-parity/228-CONTEXT.md` (Phase 228 context gathered
+2026-10-15, 19 decisions, 2 operator flags; next `/gsd-plan-phase 228`). v5.27's phase directories are under
 `.planning/milestones/v5.27-phases/`.
 
 Last session: 2026-10-15. **Merged #61, confirmed `main` CI, then closed v5.27 by hand.** The close
