@@ -5,11 +5,13 @@ source: Phase 224 doc-claim ledger (DOC-04), gap closure GC3-OPS fork G; ledger 
 priority: medium
 area: quirk/cli/sensor_cmd.py (merge output), quirk/merge/scan.py (findings-less scoring), quirk/notify/payload.py + quirk/notify/channels/slack.py (drift band), quirk/intelligence/trends.py (false comment)
 status: pending
-resolves_phase: null
-owner: "999.134"
+resolves_phase: 228
+owner: XSURF-07
 ---
 
 # `quirk sensor merge` and the Slack drift notification show a readiness band computed without findings
+
+Folded into Phase 228 (XSURF-07) on 2026-10-15; closes with XSURF-07.
 
 `merge_scan` scores the merged union with `build_evidence_summary(union, findings=None)` (`quirk/merge/scan.py:246`)
 and returns that result's `rating` (`quirk/merge/scan.py:326`). The comment above the call says no band is ever
