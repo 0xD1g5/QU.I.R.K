@@ -76,7 +76,7 @@ from quirk.discovery.nmap_provider import (
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints, evaluate_codesign_endpoints, evaluate_identity_endpoints
+from quirk.engine.findings_evaluator import derive_report_findings
 from quirk.reports.writer import write_reports
 from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
@@ -4089,34 +4089,11 @@ def main():
     # Findings + persistence + reports
     # ==============================
     with _phase_timer(run_stats, "risk_engine"):
-        findings = evaluate_endpoints(cfg, endpoints)
-        # Phase 32: email-specific findings (EMAIL-08, EMAIL-09).
-        # Titles are unique strings not produced elsewhere, so the (host, port,
-        # title, recommendation) dedup key in evaluate_endpoints will not collide
-        # with these. D-11 layered findings (port 25 + weak cipher) survive.
-        email_findings = evaluate_email_endpoints(email_endpoints)
-        if email_findings:
-            findings = (findings or []) + email_findings
-        # Phase 33: broker-specific findings (layered findings survive _dedupe_findings
-        # because titles differ per protocol; D-11/D-12 carry-forward from Phase 32).
-        broker_findings = evaluate_broker_endpoints(all_broker_eps)
-        if broker_findings:
-            findings = (findings or []) + broker_findings
-        # Phase 99 CTX-03: code-signing expiry/weak-algo findings (ZERO findings
-        # previously — codesign endpoints were collected but never evaluated).
-        codesign_findings = evaluate_codesign_endpoints(codesign_endpoints)
-        if codesign_findings:
-            findings = (findings or []) + codesign_findings
-        # Phase 210 XSURF-02: SAML identity findings. Before this, SAML weakness
-        # was scored into intelligence-*.json (identity_saml_weak_signing_ratio)
-        # but never emitted into findings-*.json, because IdentityFinding
-        # synthesis lived only in the dashboard route. evaluate_identity_endpoints
-        # is the shared evaluator (Phase 210 D-05/D-06) also used by
-        # quirk/dashboard/api/routes/scan.py::_derive_identity_findings, so both
-        # pipelines now report the same SAML findings.
-        identity_findings = evaluate_identity_endpoints(saml_endpoints)
-        if identity_findings:
-            findings = (findings or []) + identity_findings
+        # Phase 228 D-25: one shared composer runs evaluate_endpoints plus the
+        # email (Phase 32), broker (Phase 33), code-signing (Phase 99) and SAML
+        # identity (Phase 210) evaluators, so report/merge/notify share one
+        # definition of "the report's findings".
+        findings = derive_report_findings(endpoints, cfg)
 
     with _phase_timer(run_stats, "db_persist"):
         # RVW-003: stamp the stored session key on every endpoint before the
