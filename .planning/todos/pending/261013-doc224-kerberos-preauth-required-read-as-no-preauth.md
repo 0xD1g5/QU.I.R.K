@@ -5,7 +5,7 @@ source: Phase 224 front-door verification (FD-OVW); ledger rows DCL-OVERVIEW-018
 priority: high
 area: quirk/scanner/kerberos_scanner.py (_probe_kdc), tests/test_kerberos_scanner.py
 status: pending
-resolves_phase: null
+resolves_phase: 230
 ---
 
 # Kerberos etype enumeration never runs against a KDC that requires pre-authentication

@@ -5,7 +5,7 @@ source: Phase 224 front-door verification (FD-OVW); ledger row DCL-OVERVIEW-0193
 priority: high
 area: quirk/intelligence/evidence.py (motion_email_* counters), quirk/scanner/email_scanner.py, quirk/engine/profiles.py
 status: pending
-resolves_phase: null
+resolves_phase: 228
 ---
 
 # Closed mail ports lower the Data in Motion subscore on every default scan

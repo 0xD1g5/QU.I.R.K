@@ -5,7 +5,7 @@ source: Phase 224 gap closure A (docs/report-interpretation.md sections 3.4 and 
 priority: medium
 area: run_scan.py, quirk/intelligence/evidence.py, quirk/engine/findings_evaluator.py, quirk/cbom/classifier.py
 status: pending
-resolves_phase: null
+resolves_phase: 230
 ---
 
 # A bearer token declaring `alg:none` produces no CRITICAL finding in a scan

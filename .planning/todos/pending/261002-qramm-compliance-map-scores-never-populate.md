@@ -1,3 +1,7 @@
+---
+resolves_phase: 231
+---
+
 # QRAMM compliance map: scores never populate (2 causes)
 
 **Filed:** 2026-10-02 (Phase 222.1 operator UAT, step 4 follow-up)

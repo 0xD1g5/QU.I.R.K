@@ -5,7 +5,7 @@ source: Phase 224 GC3-R3 (part 05, docs/report-interpretation.md §2/§3.6 conse
 priority: high
 area: quirk/dashboard/api/routes/trends.py, quirk/intelligence/trends.py, quirk/dashboard/api/routes/merge.py, quirk/merge/scan.py
 status: pending
-resolves_phase: null
+resolves_phase: 228
 ---
 
 # Trend timeline and multi-sensor merge scores ignore the CRITICAL/HIGH consequence ceilings

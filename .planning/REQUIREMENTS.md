@@ -160,3 +160,26 @@ Deferred from this milestone with an owner:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| SCORE-08 | Phase 233 | Pending |
+| SCORE-09 | Phase 234 | Pending |
+| XSURF-05 | Phase 228 | Pending |
+| XSURF-06 | Phase 228 | Pending |
+| XSURF-07 | Phase 228 | Pending |
+| XSURF-08 | Phase 228 | Pending |
+| FIND-11 | Phase 229 | Pending |
+| FIND-12 | Phase 229 | Pending |
+| FIND-13 | Phase 229 | Pending |
+| DETECT-01 | Phase 230 | Pending |
+| DETECT-02 | Phase 230 | Pending |
+| DETECT-03 | Phase 230 | Pending |
+| DETECT-04 | Phase 230 | Pending |
+| DETECT-05 | Phase 230 | Pending |
+| QRAMM-17 | Phase 231 | Pending |
+| QRAMM-18 | Phase 231 | Pending |
+| QRAMM-19 | Phase 231 | Pending |
+| QRAMM-20 | Phase 231 | Pending |
+| POLISH-01 | Phase 232 | Pending |
+| POLISH-02 | Phase 232 | Pending |
+| POLISH-03 | Phase 232 | Pending |
+| POLISH-04 | Phase 232 | Pending |
+| OWN-01 | Phase 227 | Pending |

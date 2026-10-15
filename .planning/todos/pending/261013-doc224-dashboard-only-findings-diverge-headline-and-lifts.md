@@ -5,7 +5,7 @@ source: Phase 224 GC3-R3 (part 05, docs/report-interpretation.md §7.1 lift equa
 priority: high
 area: quirk/dashboard/api/routes/scan.py (findings_for_endpoint/_derive_findings)
 status: pending
-resolves_phase: null
+resolves_phase: 228
 ---
 
 # Dashboard-only findings move the dashboard headline score, ceiling and lift badges away from the report

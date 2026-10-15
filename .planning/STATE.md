@@ -4,9 +4,9 @@ milestone: v5.28
 milestone_name: Score & Finding Truth
 status: planning
 last_updated: "2026-10-15T21:00:00.000Z"
-last_activity: "2026-10-15 -- v5.28 Score & Finding Truth OPENED (PM review: P2b anchor + high-priority doc224 scoring/finding defects + 999.125 + QRAMM fixes + post-launch fixes + doc224 todo ownership). Defining requirements on branch v528-open. STATE.md hand-edited from a pre-image (no state.milestone-switch)"
+last_activity: "2026-10-15 -- v5.28 roadmap approved: 8 phases (227-234), 23 requirements mapped; next /gsd-discuss-phase 227. STATE.md hand-edited from a pre-image"
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -1469,9 +1469,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: Not started (defining requirements)
+Phase: 227 (Todo Ownership Gate) — not started; roadmap approved (8 phases, 227-234)
 Plan: —
-Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15, defining requirements. Phases
+Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15; 23 requirements, roadmap approved. Phases
 continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
 correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
 Last activity: 2026-10-15. Milestone v5.28 started (hand-edited from a pre-image).

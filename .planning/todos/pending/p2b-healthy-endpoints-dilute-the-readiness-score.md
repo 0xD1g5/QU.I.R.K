@@ -4,7 +4,7 @@ created: 2026-09-14
 source: 999.115 scoring-model work (task 22) — survived all six model changes
 priority: P1
 requirement: null
-resolves_phase: null  # was 212 (closed); owner is 999.120
+resolves_phase: 234  # was 212 (closed), then null with owner 999.120; v5.28 Phase 234 (2026-10-15)
 target: next milestone — the last open property in the P1-P8 suite
 ---
 

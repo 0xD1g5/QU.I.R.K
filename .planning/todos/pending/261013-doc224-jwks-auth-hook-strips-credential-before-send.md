@@ -5,7 +5,7 @@ source: Phase 224 GC3 sweep (ledger parts 224-12/224-13, docs/configuration.md A
 priority: high
 area: quirk/scanner/jwt_scanner.py
 status: pending
-resolves_phase: null
+resolves_phase: 230
 ---
 
 # `--auth-*` credentials never reach the JWKS target

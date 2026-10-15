@@ -6,7 +6,7 @@ priority: low
 area: README.md
 status: pending
 owner: v5.28
-resolves_phase: null
+resolves_phase: 232
 ---
 
 # README repo-relative links do not resolve on the PyPI page

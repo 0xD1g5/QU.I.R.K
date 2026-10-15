@@ -5,7 +5,7 @@ source: Phase 224 evidence audit 3 (DCL-OPS-A-1229, docs/operators-guide.md "Cod
 priority: high
 area: quirk/scanner/codesign_scanner.py (scan_codesign_from_tls_endpoints), quirk/scanner/tls_scanner.py (tls_capabilities_json), tests/test_codesign_*.py
 status: pending
-resolves_phase: null
+resolves_phase: 230
 ---
 
 # The code-signing TLS-EKU source never fires in a real scan; fixture-injected tests hide it

@@ -2,6 +2,7 @@
 created: 2026-10-15
 source: Phase 226 code review (226-REVIEW.md WR-01..03), operator chose "file as follow-up"
 priority: P3
+resolves_phase: 232
 ---
 
 # Unquoted `quirk-scanner[extra]` install hints and narrow guard scope

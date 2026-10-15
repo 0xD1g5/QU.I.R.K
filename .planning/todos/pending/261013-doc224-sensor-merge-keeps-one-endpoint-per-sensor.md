@@ -5,7 +5,7 @@ source: Phase 224 doc-claim ledger (DOC-04), gap closure gc2-OPS fork B1; ledger
 priority: high
 area: quirk/merge/scan.py (_assemble_union), quirk/dashboard/api/routes/merge.py (/api/merge/latest per-segment gauges)
 status: pending
-resolves_phase: null
+resolves_phase: 229
 ---
 
 # `sensor merge` keeps exactly one endpoint row per sensor, not the sensor's latest push

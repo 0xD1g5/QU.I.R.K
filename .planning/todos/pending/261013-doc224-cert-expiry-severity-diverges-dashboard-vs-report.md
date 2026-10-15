@@ -5,7 +5,7 @@ source: Phase 224 FD-README (front-door exhaustive pass, ledger rows DCL-README-
 priority: high
 area: quirk/dashboard/api/routes/scan.py (findings_for_endpoint), quirk/engine/findings_evaluator.py
 status: pending
-resolves_phase: null
+resolves_phase: 228
 ---
 
 # A certificate expiring within 30 days is HIGH on the dashboard and MEDIUM in the report

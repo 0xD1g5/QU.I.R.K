@@ -5,7 +5,7 @@ source: Phase 224 GC3 sweep (ledger part 224-13, docs/configuration.md Notificat
 priority: high
 area: quirk/notify/dispatcher.py (_find_two_sessions)
 status: pending
-resolves_phase: null
+resolves_phase: 229
 ---
 
 # Drift notifications compare a scan with itself

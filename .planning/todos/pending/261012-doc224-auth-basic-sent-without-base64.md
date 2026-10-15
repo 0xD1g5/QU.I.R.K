@@ -5,7 +5,7 @@ source: Phase 224 doc-claim ledger (DOC-04, D-10); ledger rows DCL-CONFIG-A-* (c
 priority: medium
 area: quirk/auth/credentials.py
 status: pending
-resolves_phase: null
+resolves_phase: 230
 ---
 
 # `--auth-basic` sends the resolved secret verbatim as `Authorization: Basic <secret>` (no base64)

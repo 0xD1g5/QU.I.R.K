@@ -42,6 +42,7 @@
 - ✅ **v5.25 Score Truth & Release Cut** — Phases 210–214, 40 plans (**SHIPPED 2026-09-28 — tag `v5.25.0`, published to PyPI**, the first tagged release since `v5.21.0` and carrying four milestones of work; audit `tech_debt`, 15/15 requirements with 2 scope-qualified, integration 6/6 seams, Nyquist 5/5) → `.planning/milestones/v5.25-ROADMAP.md`
 - ✅ **v5.26 Accessibility & Instrument Truth** — Phases 215–221 (221 a gap-closure insert), 44 plans (development complete 2026-10-02; untagged; re-audit `tech_debt`, 15/15 requirements, integration 9/10 seams + 0 broken, Nyquist 7/7; merged to main via 11 PRs, #38–#50) → `.planning/milestones/v5.26-ROADMAP.md`
 - ✅ **v5.27 Launch Readiness** — Phases 222–226 incl. the inserts 222.1 and 225.1, 75 plans (**SHIPPED 2026-10-15 — tag `v5.27.0`, published to PyPI + GitHub Releases**, carrying the untagged v5.26 work; audit `tech_debt`, 20/20 requirements with DOC-04 accepted as scoped, integration 13/15, flows 3/3, Nyquist 7/7; launch gate satisfied; merged to main via PRs #46, #52–#61) → `.planning/milestones/v5.27-ROADMAP.md`
+- 🚧 **v5.28 Score & Finding Truth** — Phases 227–234 (in progress)
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -97,6 +98,147 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
 is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
+## Current Milestone: v5.28 Score & Finding Truth (Phases 227–234)
+
+**Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
+The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
+scoring surfaces work.
+Requirements: `.planning/REQUIREMENTS.md` (23: SCORE-08..09, XSURF-05..08, FIND-11..13,
+DETECT-01..05, QRAMM-17..20, POLISH-01..04, OWN-01).
+
+**Sequencing.** OWN-01 opens the milestone (Phase 227) because it is small and independent, and
+landing the todo -> owner gate first means every todo closed by a later phase is policed by it. Every
+phase that moves a score (XSURF in 228, the merge/closure fixes in 229, the `alg: none` score
+treatment in 230) lands BEFORE the P2b work, so the re-measured calibration ladder reflects the final
+model. P2b is split across two phases of its own and shares neither with unrelated work: Phase 233
+builds and records the third measurement instrument (SCORE-08) and the pre-change ladder, and no fix
+shape is chosen until it closes; Phase 234 applies the fix chosen by that measurement (SCORE-09) and
+re-measures all five rungs. **There is no release phase in this milestone** (212 §8: P2b rescales
+every ladder rung, and a tag must not freeze an unmeasured number). Phases 228–232 have no hard
+ordering among themselves beyond the dependencies stated below.
+
+### Phases
+
+- [ ] **Phase 227: Todo Ownership Gate** - Every pending `doc224` todo names a live owner or is closed with evidence, and the todo -> owner gate fails on an ownerless one
+- [ ] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
+- [ ] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
+- [ ] **Phase 230: Findings That Fire** - Code-signing EKU, Kerberos etype, JWKS auth, `--auth-basic` and `alg: none` detection work in real scans
+- [ ] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
+- [ ] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
+- [ ] **Phase 233: P2b Measurement Instrument** - A third, independent instrument measures scan-depth dilution on the calibration ladder and its result is recorded before any fix is chosen
+- [ ] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
+
+### Phase Details
+
+### Phase 227: Todo Ownership Gate
+**Goal**: No pending `doc224` todo is invisible to the gates: each one names a live owner (a v5.28 requirement or a HORIZON backlog row) or is closed with evidence, and a new ownerless one turns CI red.
+**Depends on**: Nothing (first phase of v5.28; independent of the scoring work)
+**Requirements**: OWN-01
+**Success Criteria** (what must be TRUE):
+  1. Counting from disk (not from `audit-open`, which caps its todo count), every pending `doc224` todo under `.planning/todos/pending/` carries an owner field that resolves to a live v5.28 requirement ID or an open HORIZON backlog row; any todo without one has been moved to `todos/completed/` with the closing evidence cited.
+  2. The four out-of-scope high-priority todos (Azure Key Vault keys, Semgrep `p/cryptography` 404, CMVP-refresh error hints, Windows `install.ps1` sensor identity) each name a HORIZON backlog owner.
+  3. `tests/test_backlog_reconciliation_gate.py` fails when a fixture `doc224` todo with no owner field is added, and passes on the real pending pool.
+  4. Each todo named by a v5.28 requirement points at that requirement as its owner, so the phase that closes it is checkable by the gate.
+**Plans**: TBD
+
+### Phase 228: Cross-Surface Score Parity
+**Goal**: For the same scan, the dashboard and the CLI/HTML report show the same headline score, the same consequence ceilings and the same subscores, on every score surface (headline, trend, multi-sensor merge, per-segment).
+**Depends on**: Nothing hard (lands before Phase 233 so the P2b ladder is measured on the parity-fixed model)
+**Requirements**: XSURF-05, XSURF-06, XSURF-07, XSURF-08
+**Success Criteria** (what must be TRUE):
+  1. A scan containing a certificate expiring within 30 days shows that finding at the same severity on the dashboard and in the report, and the headline score is identical on both surfaces.
+  2. A scan with certificate/TLS findings on S/MIME, AD CS, Vault or database rows shows the same headline score, ceiling and lift badges on the dashboard as in the report.
+  3. A scan run that triggers a CRITICAL or HIGH consequence ceiling shows the ceiling-applied score in the trend timeline, the multi-sensor merge score and each per-segment score, matching the headline.
+  4. On a default scan where mail ports refuse the connection, those ports are not counted as plaintext and the Data in Motion subscore is not lowered by them.
+  5. Each closed todo (`261013-doc224-cert-expiry-severity-diverges-dashboard-vs-report`, `-dashboard-only-findings-diverge-headline-and-lifts`, `-trend-and-merge-scores-skip-consequence-ceilings`, `-email-refused-ports-counted-as-plaintext`) is in `todos/completed/` citing its closing commit.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 229: Finding & State Correctness
+**Goal**: Remediation state, drift notifications and merged sensor data reflect what each scan actually observed, so a consultant can trust "open", "closed" and "changed since last scan".
+**Depends on**: Phase 228 (FIND-13 and XSURF-07 both touch the multi-sensor merge score path; merge correctness lands on the ceiling-applied merge)
+**Requirements**: FIND-11, FIND-12, FIND-13
+**Success Criteria** (what must be TRUE):
+  1. A finding detected in a scan is stored as `open` (and read back as `open`, not `not_observed`); when a later scan observes it closed, the closure is recorded on that later scan run, not the prior one; and a plaintext-HTTP finding can reach a closed state.
+  2. With three or more scan runs in the database, the drift notification compares the two newest distinct scan runs and never compares a scan run with itself.
+  3. After two sensors each push a multi-endpoint scan, `quirk sensor merge` and `GET /api/merge/latest` both return every endpoint from each sensor's latest push, not one row per sensor.
+  4. The three owning todos (`261013-doc224-closure-states-...`, `-notifier-session-key-ignores-scan-run-id`, `-sensor-merge-keeps-one-endpoint-per-sensor`) are closed with their commits cited.
+**Plans**: TBD
+
+### Phase 230: Findings That Fire
+**Goal**: Detection paths that exist in the code but never fire in a real scan now produce their findings, each proven by a test that exercises the real capture or the real wire rather than an injected fixture.
+**Depends on**: Nothing hard (lands before Phase 233 because DETECT-05's score treatment changes the model the ladder is measured on)
+**Requirements**: DETECT-01, DETECT-02, DETECT-03, DETECT-04, DETECT-05
+**Success Criteria** (what must be TRUE):
+  1. A real scan with `--inventory-code-signing` against an endpoint serving a code-signing-EKU certificate reports it from the TLS phase's own capture, and the proving test runs the real TLS capture path.
+  2. Kerberos etype enumeration returns the KDC's etypes against a KDC that requires pre-authentication, using the pinned impacket version, rather than reading pre-auth-required as no pre-auth.
+  3. A wire-level test shows the JWKS target receives the `--auth-*` credential headers, while the scan log shows them redacted; `--auth-basic user:pass` sends `Authorization: Basic <base64(user:pass)>`, and its `--help` text and the `docs/configuration.md` row describe the same form.
+  4. A scan that encounters a bearer token declaring `alg: none` produces a CRITICAL finding, and the phase records how that finding is treated by the score.
+  5. The owning todos (`261013-doc224-codesign-tls-eku-path-dead-in-real-scans`, `-kerberos-preauth-required-read-as-no-preauth`) and `999.125` items 1-3 are closed or updated with their closing commits.
+**Plans**: TBD
+
+### Phase 231: QRAMM Scoring Surfaces
+**Goal**: QRAMM's scoring surfaces show what was actually assessed: the compliance map updates after scoring, unanswered dimensions are not scored as level 1, self-assessed dimensions are treated the way the operator decides, and the QRAMM-adjacent CLI commands behave like CLI commands.
+**Depends on**: Nothing (independent of the readiness-score work). QRAMM-19's treatment of SGRM/DPE/ITR is an operator decision taken in this phase's discuss step, before planning.
+**Requirements**: QRAMM-17, QRAMM-18, QRAMM-19, QRAMM-20
+**Success Criteria** (what must be TRUE):
+  1. After a successful Calculate Score, the compliance map tab shows the new rows without a page reload or remount, and the existing no-refetch-loop test stays green.
+  2. A dimension with no answers shows "Not assessed" on the QRAMM scorecard and is not counted as level 1 in the Maturity Distribution.
+  3. Manually assessed SGRM, DPE and ITR rows are shown or excluded on the compliance map exactly as the operator decided in the discuss step, and the same treatment appears on every surface that reads those rows, including the print/PDF QRAMM page.
+  4. `quirk qramm --help`, `quirk doctor --help` and `quirk cve --help` each print their own usage and exit 0 without running anything; an unknown action exits non-zero with an error; and `cve status --format` appears in the help.
+  5. Todo `261002` (Causes A and B plus the scorecard flaw) and `261012-doc224-doctor-qramm-cve-do-not-implement-help` are closed with commits cited.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 232: Post-Launch Visible Fixes
+**Goal**: The small defects a public user sees first are gone: the dashboard's own font loads, install hints work when pasted into zsh, the report header carries the current brand, and the README works on PyPI.
+**Depends on**: Nothing (independent)
+**Requirements**: POLISH-01, POLISH-02, POLISH-03, POLISH-04
+**Success Criteria** (what must be TRUE):
+  1. With `quirk serve` running, `GET /fonts/JetBrainsMono[wght].ttf` returns the font file with a font content type (not `index.html`), the dashboard renders in JetBrains Mono, and a test probes the route.
+  2. Every runtime `quirk-scanner[extra]` install hint printed by the tool runs unchanged when pasted into zsh, and the guard test fails on an unquoted hint of any form, not only bare `quirk[`.
+  3. A generated HTML and PDF report header shows the wordmark as specified in `BRAND-GUIDELINES.md`, with no old electric-blue `QU.I.R.K.` wordmark.
+  4. Every link in `README.md` resolves (HTTP 200) when followed from the PyPI project page rendering.
+  5. Todos `261015-install-hints-unquoted-and-guard-scope`, `261003-brand-identity-non-dashboard-residue` (report-header leg) and `261014-readme-relative-links-dont-resolve-on-pypi` are closed or updated with commits cited, and audit item W15 is recorded as fixed.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 233: P2b Measurement Instrument
+**Goal**: Scan-depth dilution is measured, on the five-rung calibration ladder, by a third instrument independent of the two Phase 212 used, and that measurement (plus the pre-change ladder values) is recorded before any P2b fix shape is chosen. This is a spike: its effort and the fix it points to are decided by its result.
+**Depends on**: Phases 228, 229 and 230 (every score-moving change in the milestone lands first, so the instrument measures the final model)
+**Requirements**: SCORE-08
+**Success Criteria** (what must be TRUE):
+  1. A recorded instrument exists that measures how much the readiness score moves on each calibration-ladder rung when only healthy endpoints are added, and its method is documented as independent of both Phase 212 instruments.
+  2. The instrument's per-rung results and the current (pre-change) score for all five rungs are written into the phase record, with the commit they were measured at.
+  3. The phase record names the fix shape the measurement supports (or states that none of the candidates is supported) and the effort that follows from it, and no scoring code is changed in this phase.
+  4. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` is still `xfail(strict=True)` at phase close.
+**Plans**: TBD
+
+### Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement
+**Goal**: The readiness score no longer rewards scan depth: adding healthy endpoints to an observation does not raise it, and the whole calibration ladder is re-measured on the changed model so every rung's new value is known and agreed across surfaces.
+**Depends on**: Phase 233 (the fix shape is the one Phase 233's measurement supports)
+**Requirements**: SCORE-09
+**Success Criteria** (what must be TRUE):
+  1. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` passes without `xfail`, and its `known_open_defect` row in `tests/skip_registry.py` is removed.
+  2. All five calibration-ladder rungs are re-measured after the change and recorded beside their Phase 233 pre-change values.
+  3. For the same scan, the CLI report and the dashboard show the same new readiness score.
+  4. Re-running the Phase 233 instrument on the changed model shows no score increase from adding only healthy endpoints, and `999.120` is closed with the commit cited.
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 227. Todo Ownership Gate | 0/TBD | Not started | - |
+| 228. Cross-Surface Score Parity | 0/TBD | Not started | - |
+| 229. Finding & State Correctness | 0/TBD | Not started | - |
+| 230. Findings That Fire | 0/TBD | Not started | - |
+| 231. QRAMM Scoring Surfaces | 0/TBD | Not started | - |
+| 232. Post-Launch Visible Fixes | 0/TBD | Not started | - |
+| 233. P2b Measurement Instrument | 0/TBD | Not started | - |
+| 234. P2b Scan-Depth Fix & Ladder Re-measurement | 0/TBD | Not started | - |
+
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
 
 **7 phases (222–226, with 222.1 and 225.1 inserted), 75 plans, 20/20 requirements satisfied.** Audit

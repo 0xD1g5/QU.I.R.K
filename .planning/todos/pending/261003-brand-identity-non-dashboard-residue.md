@@ -5,7 +5,7 @@ source: 261001-adopt-pqc-brand-identity (residue at Phase 223 close)
 priority: low
 area: CLI, reports, GitHub, release packaging
 status: pending
-resolves_phase: null
+resolves_phase: 232
 ---
 
 # Brand identity: non-dashboard residue
