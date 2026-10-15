@@ -10,7 +10,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification-for-downstream-consumers)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.25.0
+# QU.I.R.K. — v5.27.0
 
 **Quantum Infrastructure Readiness Kit** is a consulting-grade cryptographic inventory and quantum-readiness assessment tool.
 
