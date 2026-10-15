@@ -4,7 +4,8 @@ created: 2026-10-13
 source: Phase 224 front-door verification (FD-OVW); ledger row DCL-OVERVIEW-0193 (docs/quirk-overview.md Data at Rest and Data in Motion)
 priority: high
 area: quirk/intelligence/evidence.py (motion_email_* counters), quirk/scanner/email_scanner.py, quirk/engine/profiles.py
-status: pending
+status: completed
+completed: 2026-10-15
 resolves_phase: 228
 owner: XSURF-08
 ---
@@ -32,11 +33,11 @@ Related but distinct: `261013-doc224-smtp-without-starttls-is-a-scan-error-not-a
 reached but offers no STARTTLS) and `email-scanner-host-derivation-is-invisible-to-operators.md` (which hosts are
 probed).
 
-- [ ] Exclude rows whose `tls_blocker_reason` is `CONNECTION_REFUSED` (and probably `TIMEOUT` with no banner) from
+- [x] Exclude rows whose `tls_blocker_reason` is `CONNECTION_REFUSED` (and probably `TIMEOUT` with no banner) from
       the motion counters and from the protocol counts that `_motion_assessed` reads (`quirk/intelligence/scoring.py:363`); count them as "port closed", not as a posture.
-- [ ] Add a scoring test that feeds the scanner's real CONNECTION_REFUSED row shape and asserts Data in Motion stays
+- [x] Add a scoring test that feeds the scanner's real CONNECTION_REFUSED row shape and asserts Data in Motion stays
       unassessed.
-- [ ] Then drop the known-issue sentence from docs/quirk-overview.md and re-check docs/report-interpretation.md's
+- [x] Then drop the known-issue sentence from docs/quirk-overview.md and re-check docs/report-interpretation.md's
       Data in Motion section.
 
 ## Feasibility & Effort
@@ -46,3 +47,10 @@ probed).
 - Effort **S**: a guard in two counter branches plus the `_motion_assessed` input, one test, and golden-fixture
   regeneration if any fixture carries closed-port email rows. Unknown: whether any report text counts these rows
   separately (grep `STARTTLS` in `quirk/reports/`). No spike needed.
+
+## Resolution (Phase 228, 2026-10-15)
+
+- Fix: `e1b68199` excludes refused and timed-out mail rows from the motion counters and from the protocol counts `_motion_assessed` reads; doc-claim ledger re-anchored `82dcd146`.
+- Proof: `tests/test_motion_scoring.py::test_refused_email_rows_leave_data_in_motion_unassessed`, `::test_timeout_email_rows_are_excluded_like_refused`, `::test_refused_email_rows_do_not_dilute_coverage`, `tests/test_cross_surface_parity.py::test_xsurf0508_no_critical_cross_surface_parity` (`ff1f638e`). UAT-228-06, -03, -08.
+- Docs: known-issue sentence dropped, `ce1506b8`.
+- Follow-ups filed: `261015-xsurf-cbom-emits-tls-component-per-unanswered-email-row` (999.132) and `261015-xsurf-motion-tab-lists-refused-port-25-as-starttls-stripping` (999.137).

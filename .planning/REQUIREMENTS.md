@@ -68,7 +68,7 @@ HORIZON prose:
 - [x] **XSURF-07**: Trend timeline, multi-sensor merge and per-segment scores apply the CRITICAL/HIGH
       consequence ceilings, the same as the headline score (todo
       `261013-doc224-trend-and-merge-scores-skip-consequence-ceilings`).
-- [ ] **XSURF-08**: A mail port that refused the connection is not counted as plaintext, so closed
+- [x] **XSURF-08**: A mail port that refused the connection is not counted as plaintext, so closed
       mail ports stop lowering the Data in Motion subscore on a default scan (todo
       `261013-doc224-email-refused-ports-counted-as-plaintext`).
 
@@ -165,7 +165,7 @@ Deferred from this milestone with an owner:
 | XSURF-05 | Phase 228 | Complete |
 | XSURF-06 | Phase 228 | Complete |
 | XSURF-07 | Phase 228 | Complete |
-| XSURF-08 | Phase 228 | Pending |
+| XSURF-08 | Phase 228 | Complete |
 | FIND-11 | Phase 229 | Pending |
 | FIND-12 | Phase 229 | Pending |
 | FIND-13 | Phase 229 | Pending |
